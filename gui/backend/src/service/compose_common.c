@@ -159,6 +159,43 @@ bool ursatz_gui_compose_add_files(cJSON *summary, const char *dir, const char *c
 
 static unsigned g_stage_serial = 0;
 
+UrsatzGuiThemeResult ursatz_gui_compose_stage_make(const char *id, int number, UrsatzGuiComposeStage *stage, char *message,
+                                                   size_t message_size) {
+    char dir[PATH_BYTES];
+    char resolved[PATH_MAX];
+    if (!ursatz_gui_material_version_dir(id, number, dir, sizeof(dir))) {
+        ursatz_gui_compose_say(message, message_size, "the version folder does not fit");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    unsigned serial = __atomic_add_fetch(&g_stage_serial, 1, __ATOMIC_RELAXED);
+    if (snprintf(stage->path, sizeof(stage->path), "%s.stage-%u-%d", dir, serial, (int)getpid()) >= (int)sizeof(stage->path) ||
+        mkdir(stage->path, 0755) != 0 || !realpath(stage->path, resolved) ||
+        snprintf(stage->absolute, sizeof(stage->absolute), "%s", resolved) >= (int)sizeof(stage->absolute)) {
+        ursatz_gui_compose_say(message, message_size, "the version folder could not be made");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    /* the stage's name without its suffix is the folder the version will have */
+    const char *suffix = strstr(stage->absolute, ".stage-");
+    size_t keep = suffix ? (size_t)(suffix - stage->absolute) : strlen(stage->absolute);
+    snprintf(stage->named, sizeof(stage->named), "%.*s", (int)keep, stage->absolute);
+    return URSATZ_GUI_THEME_OK;
+}
+
+void ursatz_gui_compose_stage_finish(const char *id, const cJSON *item, const UrsatzGuiComposeStage *stage) {
+    /* The version written may have another number than the one planned: another writer may have added a version while
+       the Composer ran. */
+    int actual = cJSON_GetObjectItemCaseSensitive(item, "current_version")->valueint;
+    char target[PATH_BYTES];
+    if (ursatz_gui_material_version_dir(id, actual, target, sizeof(target))) {
+        ursatz_gui_theme_remove_folder(target); /* a folder no version named is left over from a failed run */
+        rename(stage->path, target);
+    }
+}
+
+void ursatz_gui_compose_stage_discard(const UrsatzGuiComposeStage *stage) {
+    ursatz_gui_theme_remove_folder(stage->path);
+}
+
 UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, const char *id, bool has_seed,
                                              long long seed, bool update_uses, const ComposerJob *job,
                                              cJSON **out_item, char *message, size_t message_size) {
@@ -183,10 +220,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
     cJSON *brief_summary = NULL;
     cJSON *new_body = NULL;
     cJSON *item = NULL;
-    char dir[PATH_BYTES];
-    char stage[PATH_BYTES + 32];
-    char absolute[PATH_BYTES + 32];
-    char named[PATH_BYTES];
+    UrsatzGuiComposeStage stage;
     bool made = false;
     int number = cJSON_GetObjectItemCaseSensitive(meta, "current_version")->valueint + 1;
 
@@ -195,40 +229,25 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
         result = URSATZ_GUI_THEME_ERR_INVALID;
     } else if (!kind->composable(member, has_brief, message, message_size)) {
         result = URSATZ_GUI_THEME_ERR_INVALID;
-    } else if (!ursatz_gui_material_version_dir(id, number, dir, sizeof(dir))) {
-        ursatz_gui_compose_say(message, message_size, "the version folder does not fit");
-        result = URSATZ_GUI_THEME_ERR_FAILED;
     } else {
         /* The files are made in a folder of their own: another compose of this item may be running, and the number
            this one will get is only known when its version is written. */
-        unsigned serial = __atomic_add_fetch(&g_stage_serial, 1, __ATOMIC_RELAXED);
-        char resolved[PATH_MAX];
-        if (snprintf(stage, sizeof(stage), "%s.stage-%u-%d", dir, serial, (int)getpid()) >= (int)sizeof(stage) ||
-            mkdir(stage, 0755) != 0 || !realpath(stage, resolved) ||
-            snprintf(absolute, sizeof(absolute), "%s", resolved) >= (int)sizeof(absolute)) {
-            ursatz_gui_compose_say(message, message_size, "the version folder could not be made");
-            result = URSATZ_GUI_THEME_ERR_FAILED;
-        } else {
-            /* the stage's name without its suffix is the folder the version will have */
-            char *suffix = strstr(absolute, ".stage-");
-            size_t keep = suffix ? (size_t)(suffix - absolute) : strlen(absolute);
-            snprintf(named, sizeof(named), "%.*s", (int)keep, absolute);
-        }
+        result = ursatz_gui_compose_stage_make(id, number, &stage, message, message_size);
         made = result == URSATZ_GUI_THEME_OK;
     }
 
     char style_path[PATH_BYTES + 64];
-    snprintf(style_path, sizeof(style_path), "%s/brief.style.json", made ? absolute : "");
+    snprintf(style_path, sizeof(style_path), "%s/brief.style.json", made ? stage.absolute : "");
     if (result == URSATZ_GUI_THEME_OK && has_brief) {
         char name[256];
         snprintf(name, sizeof(name), "%s brief", ursatz_gui_compose_text_of(meta, "name"));
         result = ursatz_gui_theme_build_brief(brief_json, name, style_path, &brief_summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        result = kind->build_request(body, absolute, has_brief ? style_path : NULL, &request, message, message_size);
+        result = kind->build_request(body, stage.absolute, has_brief ? style_path : NULL, &request, message, message_size);
     }
     char request_path[PATH_BYTES + 64];
-    snprintf(request_path, sizeof(request_path), "%s/request.json", made ? absolute : "");
+    snprintf(request_path, sizeof(request_path), "%s/request.json", made ? stage.absolute : "");
     if (result == URSATZ_GUI_THEME_OK) {
         char *text = cJSON_Print(request);
         if (!text || !ursatz_gui_theme_write_text(request_path, text)) {
@@ -241,13 +260,13 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
         const cJSON *body_seed = cJSON_GetObjectItemCaseSensitive(member, "seed");
         bool use_seed = has_seed || cJSON_IsNumber(body_seed);
         long long chosen = has_seed ? seed : use_seed ? (long long)body_seed->valuedouble : 0;
-        UrsatzGuiComposeRun run = {absolute, named, request, member, use_seed, chosen, job};
+        UrsatzGuiComposeRun run = {stage.absolute, stage.named, request, member, use_seed, chosen, job};
         result = kind->run(&run, &summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
         /* The files name the version's own folder, not the one they were made in. */
-        ursatz_gui_compose_rebase(request, absolute, named);
-        ursatz_gui_compose_rebase(summary, absolute, named);
+        ursatz_gui_compose_rebase(request, stage.absolute, stage.named);
+        ursatz_gui_compose_rebase(summary, stage.absolute, stage.named);
         char *text = cJSON_Print(request);
         if (!text || !ursatz_gui_theme_write_text(request_path, text)) {
             ursatz_gui_compose_say(message, message_size, "the request could not be written");
@@ -278,17 +297,10 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
         }
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        /* The staging folder becomes the folder of the version that was written (another writer may have added a
-           version while the Composer ran). */
-        int actual = cJSON_GetObjectItemCaseSensitive(item, "current_version")->valueint;
-        char target[PATH_BYTES];
-        if (ursatz_gui_material_version_dir(id, actual, target, sizeof(target))) {
-            ursatz_gui_theme_remove_folder(target); /* a folder no version named is left over from a failed run */
-            rename(stage, target);
-        }
+        ursatz_gui_compose_stage_finish(id, item, &stage);
         *out_item = item;
     } else if (made) {
-        ursatz_gui_theme_remove_folder(stage);
+        ursatz_gui_compose_stage_discard(&stage);
     }
     cJSON_Delete(request);
     cJSON_Delete(summary);

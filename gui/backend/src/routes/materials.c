@@ -1499,29 +1499,20 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
   cJSON_Delete(meta);
   cJSON_Delete(stored);
   long long chosen = has_seed ? (long long)seed->valuedouble : 0;
-  if (!piece) {
-    /* A theme is composed on the job queue: the answer is the job (GET /api/jobs/<id>). */
-    UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_THEME, id);
-    if (job) {
-      job->has_seed = has_seed;
-      job->seed = chosen;
-      job->update_uses = cJSON_IsTrue(update_uses);
-    }
-    cJSON_Delete(body);
-    if (!job) {
-      return send_failure(conn, 500, "out of memory");
-    }
-    return ursatz_gui_jobs_send_accepted(conn, "theme", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
+  /* Composed on the job queue: the answer is the job (GET /api/jobs/<id>). */
+  UrsatzGuiComposeOp op = piece ? URSATZ_GUI_COMPOSE_PIECE : URSATZ_GUI_COMPOSE_THEME;
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(op, id);
+  if (job) {
+    job->has_seed = has_seed;
+    job->seed = chosen;
+    job->update_uses = cJSON_IsTrue(update_uses);
   }
-  cJSON *item = NULL;
-  char message[512];
-  UrsatzGuiThemeResult result =
-      ursatz_gui_piece_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message));
   cJSON_Delete(body);
-  if (result == URSATZ_GUI_THEME_OK) {
-    return send_ok_with(conn, "item", item);
+  if (!job) {
+    return send_failure(conn, 500, "out of memory");
   }
-  return send_composer_failure(conn, result, message, "invalid piece", "the piece could not be composed");
+  return ursatz_gui_jobs_send_accepted(conn, ursatz_gui_compose_job_kind(op), ursatz_gui_compose_job_run, job,
+                                       ursatz_gui_compose_job_free);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/regenerate {section_id, lane?, seed?}: writes one section of a composed
@@ -1545,16 +1536,21 @@ static int handle_piece_regenerate(struct mg_connection *conn, const char *id, c
     cJSON_Delete(body);
     return send_failure(conn, 400, "section_id is a string; lane is a string; seed is a whole number from 0 to 4294967295");
   }
-  cJSON *item = NULL;
-  char message[512];
-  UrsatzGuiThemeResult result =
-      ursatz_gui_piece_regenerate(id, version, section->valuestring, cJSON_IsString(lane) ? lane->valuestring : NULL, has_seed,
-                                  seed, &item, message, sizeof(message));
-  cJSON_Delete(body);
-  if (result == URSATZ_GUI_THEME_OK) {
-    return send_ok_with(conn, "item", item);
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_PIECE_REGENERATE, id);
+  if (job) {
+    job->version = version;
+    job->section = strdup(section->valuestring);
+    job->lane = cJSON_IsString(lane) ? strdup(lane->valuestring) : NULL;
+    job->has_seed = has_seed;
+    job->seed = seed;
   }
-  return send_composer_failure(conn, result, message, "invalid piece", "the section could not be written again");
+  bool built = job && job->section && (!cJSON_IsString(lane) || job->lane);
+  cJSON_Delete(body);
+  if (!built) {
+    ursatz_gui_compose_job_free(job);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return ursatz_gui_jobs_send_accepted(conn, "regenerate", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/variations {section_id, lane, count, seed?}: makes variations of a
@@ -1580,19 +1576,22 @@ static int handle_piece_variations(struct mg_connection *conn, const char *id, c
     cJSON_Delete(body);
     return send_failure(conn, 400, "section_id and lane are strings; count is a whole number from 1 to 8; seed is a whole number from 0 to 4294967295");
   }
-  cJSON *made = NULL;
-  char message[512];
-  UrsatzGuiThemeResult result = ursatz_gui_piece_variations(id, version, section->valuestring, lane->valuestring,
-                                                            (int)count->valuedouble, has_seed, seed, &made, message, sizeof(message));
-  cJSON_Delete(body);
-  if (result != URSATZ_GUI_THEME_OK) {
-    return send_composer_failure(conn, result, message, "invalid piece", "the variations could not be made");
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_PIECE_VARIATIONS, id);
+  if (job) {
+    job->version = version;
+    job->section = strdup(section->valuestring);
+    job->lane = strdup(lane->valuestring);
+    job->count = (int)count->valuedouble;
+    job->has_seed = has_seed;
+    job->seed = seed;
   }
-  if (!cJSON_AddBoolToObject(made, "ok", 1)) {
-    cJSON_Delete(made);
+  bool built = job && job->section && job->lane;
+  cJSON_Delete(body);
+  if (!built) {
+    ursatz_gui_compose_job_free(job);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, made);
+  return ursatz_gui_jobs_send_accepted(conn, "variations", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
 }
 
 /* GET /api/materials/items/<pce-id>/versions/<n>/variations/<set>/<file>: a file of a variations set. */
@@ -1631,15 +1630,17 @@ static int handle_piece_choose(struct mg_connection *conn, const char *id, const
     cJSON_Delete(body);
     return send_failure(conn, 400, "index is a whole number from 1");
   }
-  cJSON *item = NULL;
-  char message[512];
-  UrsatzGuiThemeResult result =
-      ursatz_gui_piece_choose(id, version, set, (int)index->valuedouble, &item, message, sizeof(message));
-  cJSON_Delete(body);
-  if (result == URSATZ_GUI_THEME_OK) {
-    return send_ok_with(conn, "item", item);
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_PIECE_CHOOSE, id);
+  if (job) {
+    job->version = version;
+    job->set = set;
+    job->index = (int)index->valuedouble;
   }
-  return send_composer_failure(conn, result, message, "invalid piece", "the variation could not be chosen");
+  cJSON_Delete(body);
+  if (!job) {
+    return send_failure(conn, 500, "out of memory");
+  }
+  return ursatz_gui_jobs_send_accepted(conn, "choose", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
 }
 
 /* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme or piece version's files. */

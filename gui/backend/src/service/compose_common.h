@@ -68,6 +68,26 @@ UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, c
                                              long long seed, bool update_uses, const ComposerJob *job,
                                              cJSON **out_item, char *message, size_t message_size);
 
+#define URSATZ_GUI_COMPOSE_PATH_BYTES 800
+
+/* The folder a version's files are made in while the Composer runs: beside the version's own, with a name of its own, so
+ * composes of one item may run at once. `absolute` is its resolved path, `named` the version folder it will become. */
+typedef struct {
+    char path[URSATZ_GUI_COMPOSE_PATH_BYTES + 32];
+    char absolute[URSATZ_GUI_COMPOSE_PATH_BYTES + 32];
+    char named[URSATZ_GUI_COMPOSE_PATH_BYTES];
+} UrsatzGuiComposeStage;
+
+/* Makes the staging folder for version number of item id. */
+UrsatzGuiThemeResult ursatz_gui_compose_stage_make(const char *id, int number, UrsatzGuiComposeStage *stage, char *message,
+                                                   size_t message_size);
+
+/* Moves the staging folder to the folder of the version item (an item.json) was written with. */
+void ursatz_gui_compose_stage_finish(const char *id, const cJSON *item, const UrsatzGuiComposeStage *stage);
+
+/* Removes the staging folder and what it holds. */
+void ursatz_gui_compose_stage_discard(const UrsatzGuiComposeStage *stage);
+
 /* Maps a Composer API status to the result of the services: the request refused is INVALID, nothing satisfies it
  * UNPROCESSABLE, a cancel CANCELLED, the rest FAILED (ALLOC for memory). The refusal text goes to message. */
 UrsatzGuiThemeResult ursatz_gui_compose_failure(ComposerStatus status, const ComposerResponse *response, char *message,

@@ -69,9 +69,26 @@ UrsatzGuiComposeJob *ursatz_gui_compose_job_new(UrsatzGuiComposeOp op, const cha
   return job;
 }
 
+const char *ursatz_gui_compose_job_kind(UrsatzGuiComposeOp op) {
+  switch (op) {
+    case URSATZ_GUI_COMPOSE_THEME:
+      return "theme";
+    case URSATZ_GUI_COMPOSE_PIECE:
+      return "piece";
+    case URSATZ_GUI_COMPOSE_PIECE_REGENERATE:
+      return "regenerate";
+    case URSATZ_GUI_COMPOSE_PIECE_VARIATIONS:
+      return "variations";
+    default:
+      return "choose";
+  }
+}
+
 void ursatz_gui_compose_job_free(void *input) {
   UrsatzGuiComposeJob *job = input;
   if (job) {
+    free(job->section);
+    free(job->lane);
     free(job->id);
     free(job);
   }
@@ -80,15 +97,48 @@ void ursatz_gui_compose_job_free(void *input) {
 void ursatz_gui_compose_job_run(void *input, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
   const UrsatzGuiComposeJob *job = input;
   cJSON *item = NULL;
+  cJSON *made = NULL;
   char message[512] = "";
   UrsatzGuiThemeResult result = URSATZ_GUI_THEME_ERR_FAILED;
-  const char *invalid_text = "invalid theme";
-  const char *failed_text = "the theme could not be composed";
+  const char *invalid_text = "invalid piece";
+  const char *failed_text = "the piece could not be composed";
   switch (job->op) {
     case URSATZ_GUI_COMPOSE_THEME:
+      invalid_text = "invalid theme";
+      failed_text = "the theme could not be composed";
       result = ursatz_gui_theme_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, message,
                                         sizeof(message));
       break;
+    case URSATZ_GUI_COMPOSE_PIECE:
+      result = ursatz_gui_piece_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, message,
+                                        sizeof(message));
+      break;
+    case URSATZ_GUI_COMPOSE_PIECE_REGENERATE:
+      failed_text = "the section could not be written again";
+      result = ursatz_gui_piece_regenerate(job->id, job->version, job->section, job->lane, job->has_seed, job->seed,
+                                           composer_job, &item, message, sizeof(message));
+      break;
+    case URSATZ_GUI_COMPOSE_PIECE_VARIATIONS:
+      failed_text = "the variations could not be made";
+      result = ursatz_gui_piece_variations(job->id, job->version, job->section, job->lane, job->count, job->has_seed, job->seed,
+                                           composer_job, &made, message, sizeof(message));
+      break;
+    case URSATZ_GUI_COMPOSE_PIECE_CHOOSE:
+      failed_text = "the variation could not be chosen";
+      result = ursatz_gui_piece_choose(job->id, job->version, job->set, job->index, composer_job, &item, message,
+                                       sizeof(message));
+      break;
   }
+  if (job->op == URSATZ_GUI_COMPOSE_PIECE_VARIATIONS && result == URSATZ_GUI_THEME_OK) {
+    /* the answer is {"ok": true, "set", "variations": [...]} */
+    if (made && cJSON_AddBoolToObject(made, "ok", 1)) {
+      set_json(out, 200, made);
+    } else {
+      cJSON_Delete(made);
+      set_failure(out, 500, "out of memory");
+    }
+    return;
+  }
+  cJSON_Delete(made);
   ursatz_gui_compose_reply(result, item, message, invalid_text, failed_text, out);
 }

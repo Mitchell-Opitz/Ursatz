@@ -6,12 +6,19 @@
 #include <cJSON.h>
 
 #include "job_queue.h"
+#include "piece_service.h"
 #include "theme_service.h"
 
 /* The compose runs of the theme and piece services as jobs on the queue (job_queue.h). A job answers what the route used
  * to send: 200 {"ok": true, "item": {...}}, or the failure with the status of its reason. */
 
-typedef enum { URSATZ_GUI_COMPOSE_THEME } UrsatzGuiComposeOp;
+typedef enum {
+  URSATZ_GUI_COMPOSE_THEME,
+  URSATZ_GUI_COMPOSE_PIECE,
+  URSATZ_GUI_COMPOSE_PIECE_REGENERATE,
+  URSATZ_GUI_COMPOSE_PIECE_VARIATIONS,
+  URSATZ_GUI_COMPOSE_PIECE_CHOOSE
+} UrsatzGuiComposeOp;
 
 typedef struct {
   UrsatzGuiComposeOp op;
@@ -19,7 +26,16 @@ typedef struct {
   bool has_seed;
   long long seed;
   bool update_uses;
+  int version;   /* regenerate, variations, choose: the version worked from */
+  char *section; /* regenerate, variations */
+  char *lane;    /* regenerate (may be NULL), variations */
+  int count;     /* variations */
+  int set;       /* choose */
+  int index;     /* choose */
 } UrsatzGuiComposeJob;
+
+/* The job name the queue shows for op: theme, piece, regenerate, variations or choose. */
+const char *ursatz_gui_compose_job_kind(UrsatzGuiComposeOp op);
 
 /* A job input for op on item id (copied), to hand to ursatz_gui_job_submit with the two functions below; NULL on
  * allocation failure. */
