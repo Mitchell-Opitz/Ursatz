@@ -60,7 +60,8 @@ static cJSON *motive_of(const cJSON *body, const cJSON *reference, char *message
     return ursatz_gui_theme_motive_json(NULL, NULL, motif, "melodic");
 }
 
-/* A section's fill as the request holds it. The plan of a theme fill is copied into dir. */
+/* A section's fill as the request holds it. The plan of a theme fill is copied into dir (NULL: not copied, the request
+   names the source plan). */
 static UrsatzGuiThemeResult build_fill(const cJSON *body, const cJSON *derived_list, const char *pool, const cJSON *section,
                                        const char *dir, cJSON **out, char *message, size_t message_size) {
     const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
@@ -96,8 +97,12 @@ static UrsatzGuiThemeResult build_fill(const cJSON *body, const cJSON *derived_l
             result = URSATZ_GUI_THEME_ERR_INVALID;
         } else {
             snprintf(plan, sizeof(plan), "%s/plan.json", source);
-            snprintf(copy, sizeof(copy), "%s/theme-%s.plan.json", dir, id);
-            if (!copy_file(plan, copy)) {
+            snprintf(copy, sizeof(copy), "%s/theme-%s.plan.json", dir ? dir : "", id);
+            if (!dir) {
+                /* A check writes nothing: the request names the version's own plan. */
+                snprintf(copy, sizeof(copy), "%s", plan);
+                ok = cJSON_AddStringToObject(object, "plan", copy) != NULL;
+            } else if (!copy_file(plan, copy)) {
                 snprintf(message, message_size, "the plan of the theme in section %s could not be copied", id);
                 result = URSATZ_GUI_THEME_ERR_INVALID;
             } else {
@@ -158,7 +163,7 @@ static bool composable(const cJSON *piece, bool has_brief, char *message, size_t
 
 /*
  * The piece request of the Composer (docs/piece-request.md) for the current version of a piece. dir is the new version's
- * folder (absolute), where theme plans are copied. style_path is the brief's style file, or NULL without a brief.
+ * folder (absolute), where theme plans are copied; NULL writes nothing (validate). style_path is the brief's style file, or NULL without a brief.
  */
 static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, const char *style_path, cJSON **out,
                                           char *message, size_t message_size) {
@@ -487,6 +492,37 @@ static void piece_note(const cJSON *summary, char *note, size_t note_size) {
 static const UrsatzGuiComposeKind kPieceKind = {"piece",       "the item is not a piece", composable,
                                                 build_request, run_piece_item,            piece_note,
                                                 body_with_result};
+
+UrsatzGuiThemeResult ursatz_gui_piece_validate(const cJSON *body, bool *complete, cJSON **out_request, char *message,
+                                               size_t message_size) {
+    *complete = false;
+    *out_request = NULL;
+    ursatz_gui_compose_say(message, message_size, "");
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
+    if (!cJSON_IsObject(piece)) {
+        ursatz_gui_compose_say(message, message_size, "the body is not a piece");
+        return URSATZ_GUI_THEME_OK;
+    }
+    const cJSON *brief = cJSON_GetObjectItemCaseSensitive(piece, "brief");
+    bool has_brief = brief && !cJSON_IsNull(brief);
+    if (!composable(piece, has_brief, message, message_size)) {
+        return URSATZ_GUI_THEME_OK;
+    }
+    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
+    if (has_brief && strcmp(ursatz_gui_compose_text_of(structure, "mode"), "style") == 0) {
+        /* The style of the brief is built only when composing. */
+        ursatz_gui_compose_say(message, message_size, "");
+        return URSATZ_GUI_THEME_OK;
+    }
+    cJSON *built = NULL;
+    UrsatzGuiThemeResult result = build_request(body, NULL, NULL, &built, message, message_size);
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = request_with_plans(built, out_request, message, message_size);
+    }
+    cJSON_Delete(built);
+    *complete = result == URSATZ_GUI_THEME_OK;
+    return result;
+}
 
 UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
                                                   const ComposerJob *job, cJSON **out_item, char *message,

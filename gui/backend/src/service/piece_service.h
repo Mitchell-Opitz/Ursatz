@@ -40,6 +40,15 @@ UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, lon
                                                   size_t message_size);
 
 /*
+ * The piece request of the Composer for the body of a piece version, to be checked with composer_api_validate and not
+ * composed (R-276): the plan of each theme fill is read into the request and nothing is written. *complete is false
+ * (and *out_request NULL) when the body cannot be composed yet; message then says why ("" when the brief's style is all
+ * that is missing). On OK with *complete, *out_request is caller-owned.
+ */
+UrsatzGuiThemeResult ursatz_gui_piece_validate(const cJSON *body, bool *complete, cJSON **out_request, char *message,
+                                               size_t message_size);
+
+/*
  * Writes section section_id of version number of piece item id again (R-173): `piece --from <version>/plan.json
  * --request <request.json> --regenerate <section id> [--lane <lane>]`, the eight outputs into the next version's
  * folder. lane is NULL for the whole section, else harmony, bass, melody, inner or all; a section filled with a theme

@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -96,6 +97,32 @@ static int handle_status(struct mg_connection *conn) {
   return send_object(conn, 200, object);
 }
 
+/* The vocabulary (composer_api_vocabulary) is the same for every call, so it is built once and kept (R-270). */
+static pthread_once_t g_vocabulary_once = PTHREAD_ONCE_INIT;
+static char *g_vocabulary = NULL;
+
+static void vocabulary_build(void) {
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  ComposerStatus status = composer_api_vocabulary(&response);
+  UrsatzGuiComposerReply reply;
+  ursatz_gui_composer_reply_take(status, &response, &reply);
+  if (reply.status == COMPOSER_OK && reply.json) {
+    g_vocabulary = reply.json;
+    reply.json = NULL;
+  }
+  ursatz_gui_composer_reply_destroy(&reply);
+}
+
+/* GET /api/composer/vocabulary: the words the Composer reads, as composer_api_vocabulary gives them. */
+static int handle_vocabulary(struct mg_connection *conn) {
+  pthread_once(&g_vocabulary_once, vocabulary_build);
+  if (!g_vocabulary) {
+    return send_error(conn, 500, "composer failed");
+  }
+  return ursatz_gui_send_json_status(conn, 200, "OK", g_vocabulary);
+}
+
 static size_t split_path(char *rest, char *segments[MAX_SEGMENTS]) {
   size_t count = 0;
   char *start = rest;
@@ -144,6 +171,13 @@ static int composer_handler(struct mg_connection *conn, void *cbdata) {
       return send_error(conn, 405, "method not allowed");
     }
     return handle_status(conn);
+  }
+
+  if (count == 1 && strcmp(segments[0], "vocabulary") == 0) {
+    if (strcmp(method, "GET") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    return handle_vocabulary(conn);
   }
 
   return send_error(conn, 404, "not found");
