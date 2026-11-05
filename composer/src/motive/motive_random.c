@@ -177,6 +177,7 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
     if ((options->mode != KEY_STRUCTURE_MODE_MAJOR && options->mode != KEY_STRUCTURE_MODE_MINOR) ||
         (options->form != MOTIVE_SKETCH_FORM_FULL && options->form != MOTIVE_SKETCH_FORM_RHYTHM &&
          options->form != MOTIVE_SKETCH_FORM_CONTOUR) ||
+        (options->strategy != MOTIVE_RANDOM_STRATEGY_SEGMENTS && options->strategy != MOTIVE_RANDOM_STRATEGY_DRAWN) ||
         options->count < 1 || options->count > MOTIVE_RANDOM_MAX_COUNT) {
         return MOTIVE_RANDOM_ERR_ARGUMENT;
     }
