@@ -36,6 +36,7 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 - [analysis-document/rhythm-and-texture.md](analysis-document/rhythm-and-texture.md): rhythm, meter and texture claims.
 - [analysis-document/voice-leading.md](analysis-document/voice-leading.md): voice leading, schema, sequence, marking and counterpoint check claims.
 - [analysis-document/versions.md](analysis-document/versions.md): every schema version and what changed.
+- [text-export.md](text-export.md): the measure-addressed text export of a piece, for pasting into a conversation.
 
 ## How it works inside
 

@@ -1,7 +1,7 @@
 {
   "schema": "ursatz-corpus-index",
   "schema_version": 1,
-  "analyzer_version": "0.6.0",
+  "analyzer_version": "0.7.0",
   "ursatz_commit": "<ursatz_commit>",
   "document_schema_version": 9,
   "input_dir": "<input_dir>",

@@ -46,6 +46,8 @@ Written for this repository (same licence as the repository). Each is a few meas
   imperfect authentic cadence (mm. 1 to 8), the second on a perfect authentic one (mm. 9 to 16). The library hears
   both sentences and the compound period they make.
 
+- `triplet.musicxml`: one measure of 4/4 in C major: three quarter-note triplet notes (C5 D5 E5, 3:2) and a half note
+  (F5). It makes the text export write a tuplet and beats that are not terminating decimals (`1+2/3`).
 - `markings.musicxml`: one part (Piano), four measures in C major, 4/4, one whole note each (C E G C). Measure 1 has
   "Allegro" with a metronome mark of quarter = 120 and p, measure 2 the dynamic text "cresc.", measure 3 f, and
   measure 4 "rit." (with a sound tempo) and mp.

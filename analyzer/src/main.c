@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +13,7 @@
 #include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/report_writer.h>
 #include <ursatz_analyzer/similar_material.h>
+#include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
 
 #include "pipeline/analysis_result_internal.h"
@@ -58,8 +60,9 @@ static void print_usage(const char *program) {
             "       %s --similar <corpus output dir> (--motive <file> | --progression \"<numerals>\") [--min <n/d>] "
             "[--max <n>] [--format text|json]\n"
             "       %s --link-motives <corpus output dir> [--cache <file>] [--depth <1-6>] [--candidates <n>] "
-            "[--format text|json]\n",
-            program, program, program, program, program, program);
+            "[--format text|json]\n"
+            "       %s export [--input-format midi|musicxml] [--measures <first>-<last>] [--title <text>] <input-file-path>\n",
+            program, program, program, program, program, program, program);
 }
 
 static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
@@ -527,7 +530,107 @@ static bool parse_count(const char *text, size_t *out) {
     return true;
 }
 
+/* "12-16" as an inclusive measure range of numbers as written in the score; false for anything else. */
+static bool parse_measure_range(const char *text, int *first, int *last) {
+    char *end = NULL;
+    long a = strtol(text, &end, 10);
+    if (end == text || *end != '-' || a < 0) {
+        return false;
+    }
+    const char *rest = end + 1;
+    long b = strtol(rest, &end, 10);
+    if (end == rest || *end != '\0' || b < 0 || a > INT_MAX || b > INT_MAX || a > b) {
+        return false;
+    }
+    *first = (int)a;
+    *last = (int)b;
+    return true;
+}
+
+/* ursatz-analyzer export: analyzes a file as the default command does and prints the text export (text_export.h) to
+   standard output; nothing is written next to the input. */
+static int run_export(int argc, char *argv[]) {
+    const char *path = NULL;
+    InputFormat input_format = INPUT_FORMAT_AUTO;
+    AnalyzerTextExportOptions options = analyzer_text_export_options_default();
+    bool measures_set = false;
+    for (int i = 2; i < argc; i++) {
+        const char *arg = argv[i];
+        if (strcmp(arg, "--input-format") == 0) {
+            if (i + 1 >= argc || !input_format_parse(argv[++i], &input_format)) {
+                print_usage(argv[0]);
+                return 1;
+            }
+        } else if (strcmp(arg, "--measures") == 0) {
+            if (i + 1 >= argc || measures_set ||
+                !parse_measure_range(argv[++i], &options.first_measure, &options.last_measure)) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            measures_set = true;
+        } else if (strcmp(arg, "--title") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            options.title = argv[++i];
+        } else if (arg[0] == '-' || path) {
+            print_usage(argv[0]);
+            return 1;
+        } else {
+            path = arg;
+        }
+    }
+    if (!path) {
+        print_usage(argv[0]);
+        return 1;
+    }
+
+    ImportedNotes notes;
+    AnalyzerResult *result = NULL;
+    switch (analyzer_run_file(path, input_format, NULL, &notes, &result, NULL, NULL)) {
+    case RUN_FILE_OK:
+        break;
+    case RUN_FILE_ERR_ALLOC:
+        fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
+        return 1;
+    default:
+        return 1;
+    }
+
+    AnalysisDocument *document = analysis_document_build_from_result(path, result);
+    char *json = document ? analysis_document_to_json(document) : NULL;
+    analysis_document_destroy(document);
+    analyzer_result_destroy(result);
+    if (!json) {
+        fprintf(stderr, "Error: out of memory while building the analysis document for '%s'\n", path);
+        imported_notes_destroy(&notes);
+        return 1;
+    }
+
+    char *text = NULL;
+    AnalyzerStatus status = analyzer_text_export_piece(&notes, json, &options, &text);
+    free(json);
+    imported_notes_destroy(&notes);
+    if (status != ANALYZER_OK) {
+        if (status == ANALYZER_ERR_ARGUMENT) {
+            fprintf(stderr, "Error: no measure of '%s' falls in the range given to --measures\n", path);
+        } else if (status == ANALYZER_ERR_LIBRARY) {
+            fprintf(stderr, "Error: cannot write the score of '%s' as MusicXML to export it\n", path);
+        } else {
+            fprintf(stderr, "Error: out of memory while exporting '%s'\n", path);
+        }
+        return 1;
+    }
+    fputs(text, stdout);
+    free(text);
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
+    if (argc >= 2 && strcmp(argv[1], "export") == 0) {
+        return run_export(argc, argv);
+    }
     const char *path = NULL;
     const char *compare_a = NULL;
     const char *compare_b = NULL;
