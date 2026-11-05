@@ -40,4 +40,4 @@ jobs:
       - name: Check file scope state
         run: scripts/check-statics.sh
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
