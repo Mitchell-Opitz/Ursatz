@@ -241,16 +241,16 @@ static void test_midi_round_trip(void) {
     size_t size = 0;
     assert(rendered_plan_midi_bytes(&rendered, NULL, &data, &size, NULL) == PLAN_EXPORT_OK);
 
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitches = NULL;
-    size_t count = 0;
-    MidiMeterImport meter;
-    assert(midi_importer_import_with_meter(data, size, &events, &pitches, &count, &meter) == MIDI_IMPORT_OK);
+    MidiImport import;
+    assert(midi_importer_import_complete(data, size, &import) == MIDI_IMPORT_OK);
+    NoteEvent **events = import.events;
+    PitchNumericValue **pitches = import.pitch_values;
+    size_t count = import.count;
     assert_same_notes(&rendered, events, pitches, count, NULL, NULL);
 
     /* 4/4, declared. */
-    assert(!meter_map_is_defaulted(meter.meter_map));
-    const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(meter.meter_map, 0));
+    assert(!meter_map_is_defaulted(import.meter.meter_map));
+    const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter.meter_map, 0));
     assert(time_signature_top_number(signature) == 4);
     assert(time_signature_bottom_number(signature) == 4);
 
@@ -263,13 +263,7 @@ static void test_midi_round_trip(void) {
     assert(musical_time_numerator(keys.events[0].position) == 0);
 
     midi_key_signature_events_destroy(&keys);
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitches[i]);
-    }
-    free(events);
-    free(pitches);
-    midi_meter_import_destroy(&meter);
+    midi_import_destroy(&import);
     free(data);
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);

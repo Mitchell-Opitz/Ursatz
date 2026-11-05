@@ -1060,21 +1060,11 @@ static unsigned long midi_microseconds_per_quarter(const char *path) {
     unsigned char *bytes = malloc(size);
     assert(bytes && fread(bytes, 1, size, file) == size);
     fclose(file);
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitches = NULL;
-    size_t count = 0;
-    MidiTempoImport tempo;
-    assert(midi_importer_import_with_tempo((const unsigned char *)bytes, size, &events, &pitches, &count, &tempo) ==
-           MIDI_IMPORT_OK);
-    assert(!tempo_map_is_defaulted(tempo.tempo_map) && tempo_map_region_count(tempo.tempo_map) == 1);
-    unsigned long micro = tempo_map_region_microseconds_per_quarter(tempo_map_region(tempo.tempo_map, 0));
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitches[i]);
-    }
-    free(events);
-    free(pitches);
-    midi_tempo_import_destroy(&tempo);
+    MidiImport import;
+    assert(midi_importer_import_complete((const unsigned char *)bytes, size, &import) == MIDI_IMPORT_OK);
+    assert(!tempo_map_is_defaulted(import.tempo.tempo_map) && tempo_map_region_count(import.tempo.tempo_map) == 1);
+    unsigned long micro = tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo.tempo_map, 0));
+    midi_import_destroy(&import);
     free(bytes);
     return micro;
 }
