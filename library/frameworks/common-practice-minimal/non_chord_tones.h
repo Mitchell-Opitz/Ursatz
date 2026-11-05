@@ -4,7 +4,7 @@
 /*
  * The fallback when no classifier is injected. The non-chord-tone owner is motive_tone_roles
  * (src/analysis/motive_tone_roles.h); frameworks cannot call kernel L8, so the owner arrives as a
- * NonChordToneClassifier in CommonPracticeWeightedConfig (docs/ARCHITECTURE.md, Analytic job owners).
+ * NonChordToneClassifier in CommonPracticeWeightedConfig (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

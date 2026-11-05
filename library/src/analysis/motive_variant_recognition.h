@@ -3,7 +3,7 @@
 
 /*
  * Owner of motive matching (motive_variant_recognize with the motive_relation_apply relations)
- * (docs/ARCHITECTURE.md, Analytic job owners).
+ * (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

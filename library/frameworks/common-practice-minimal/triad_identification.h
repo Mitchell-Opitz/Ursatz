@@ -4,7 +4,7 @@
 /*
  * Not the chord identification owner (common_practice_identify_weighted_sequence and
  * common_practice_identify_weighted). Kept only for the subset coverage reports (known duplicate-id
- * gap) (docs/ARCHITECTURE.md, Analytic job owners).
+ * gap) (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

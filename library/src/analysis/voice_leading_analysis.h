@@ -3,7 +3,7 @@
 
 /*
  * Not the motion classification owner (standard_counterpoint_classify_motions). Kept as packaging of
- * caller-supplied motions (docs/ARCHITECTURE.md, Analytic job owners).
+ * caller-supplied motions (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

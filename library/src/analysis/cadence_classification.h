@@ -3,7 +3,7 @@
 
 /*
  * Not the cadence detection owner (harmony_analysis_find_cadences). Kept as packaging of caller
- * candidates into Cadence shells (docs/ARCHITECTURE.md, Analytic job owners).
+ * candidates into Cadence shells (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

@@ -2,7 +2,7 @@
 #define MUSIC_ANALYSIS_VOICE_SEPARATION_H
 
 /*
- * Owner of voice assignment (voice_separate) (docs/ARCHITECTURE.md, Analytic job owners).
+ * Owner of voice assignment (voice_separate) (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

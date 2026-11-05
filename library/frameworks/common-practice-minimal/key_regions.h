@@ -2,8 +2,8 @@
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_REGIONS_H
 
 /*
- * Owner of key identification (key_regions_estimate) (docs/ARCHITECTURE.md, Analytic job owners).
- * Owner of the home key (docs/ARCHITECTURE.md, Analytic job owners).
+ * Owner of key identification (key_regions_estimate) (docs/analytic-job-owners.md).
+ * Owner of the home key (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

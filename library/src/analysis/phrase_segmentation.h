@@ -3,7 +3,7 @@
 
 /*
  * Not the phrase segmentation owner (standard_form_segment_phrases). Kept as an internal step of the
- * kernel boundary detector (docs/ARCHITECTURE.md, Analytic job owners).
+ * kernel boundary detector (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

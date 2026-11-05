@@ -2,7 +2,7 @@
 #define MUSIC_SEMANTICS_SONORITY_SEGMENTATION_H
 
 /*
- * Owner of sonority segmentation (sonority_builder_build_adaptive) (docs/ARCHITECTURE.md, Analytic job
+ * Owner of sonority segmentation (sonority_builder_build_adaptive) (docs/analytic-job-owners.md, Analytic job
  * owners).
  */
 

@@ -4,7 +4,7 @@
 /*
  * Not the non-chord-tone owner (motive_tone_roles, src/analysis/motive_tone_roles.h). The owner arrives as an
  * injected NonChordToneClassifier (standard_counterpoint_melody_nct_labels_with); frameworks cannot call kernel
- * L8 (docs/ARCHITECTURE.md, Analytic job owners).
+ * L8 (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>
