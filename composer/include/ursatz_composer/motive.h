@@ -183,11 +183,6 @@ const char *motive_form_name(MotiveSketchForm form);
  */
 MotiveFormat motive_detect_format(const void *data, size_t size);
 
-/* "D minor", "Bb major", "F# major": a tonic letter A-G, an optional # or b, then major or minor. */
-bool motive_parse_key(const char *text, AnalysisKey *out);
-/* "3/4", "6/8": beats per bar from 1 to 64 over a beat unit of 1, 2, 4, 8 or 16. */
-bool motive_parse_meter(const char *text, PlanMeter *out);
-
 /*
  * A note list, as text:
  *

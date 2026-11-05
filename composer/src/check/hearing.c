@@ -109,10 +109,6 @@ const RenderedPlan *hearing_rendered(const ComposerHearing *hearing) {
     return hearing ? &hearing->rendered : NULL;
 }
 
-int hearing_midi(const ComposerHearing *hearing, size_t event) {
-    return hearing && event < hearing->rendered.count ? hearing->midi[event] : 0;
-}
-
 /* The key lane's key under the span's start. */
 static bool key_under(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
     LaneSpanId first;

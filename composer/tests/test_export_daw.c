@@ -145,11 +145,11 @@ static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
     assert(rendered_plan_midi_bytes(rendered, &options, &data, &size, NULL) == PLAN_EXPORT_OK);
 
     /* The same notes and one declared tempo of 96. */
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitches = NULL;
-    size_t count = 0;
-    MidiTempoImport tempo;
-    assert(midi_importer_import_with_tempo(data, size, &events, &pitches, &count, &tempo) == MIDI_IMPORT_OK);
+    MidiImport import;
+    assert(midi_importer_import_complete(data, size, &import) == MIDI_IMPORT_OK);
+    NoteEvent **events = import.events;
+    PitchNumericValue **pitches = import.pitch_values;
+    size_t count = import.count;
     assert(count == rendered->count);
     bool *used = calloc(count, sizeof(bool));
     for (size_t i = 0; i < rendered->count; i++) {
@@ -164,16 +164,10 @@ static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
         assert(matched);
     }
     free(used);
-    assert(!tempo_map_is_defaulted(tempo.tempo_map));
-    assert(tempo_map_region_count(tempo.tempo_map) == 1);
-    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(tempo.tempo_map, 0)) == 625000UL);
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitches[i]);
-    }
-    free(events);
-    free(pitches);
-    midi_tempo_import_destroy(&tempo);
+    assert(!tempo_map_is_defaulted(import.tempo.tempo_map));
+    assert(tempo_map_region_count(import.tempo.tempo_map) == 1);
+    assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo.tempo_map, 0)) == 625000UL);
+    midi_import_destroy(&import);
 
     /* Names and markers. */
     TrackMeta tracks[16];

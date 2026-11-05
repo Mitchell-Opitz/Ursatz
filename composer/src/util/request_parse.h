@@ -22,7 +22,7 @@ bool request_parse_ratio(const char *text, ComposerRatio *out);
 /* A tonic letter, an optional # or b, whitespace, then major or minor ("D minor", "F# major"); any case for the mode. */
 bool request_parse_key(const char *text, AnalysisKey *key);
 
-/* "3/4", "6/8". The meters the harmony operators support are checked by the caller (harmony_meter_supported). */
+/* "3/4", "6/8": 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16. The meters the harmony operators support are checked by the caller (harmony_meter_supported). */
 bool request_parse_meter(const char *text, PlanMeter *meter);
 
 /* PAC, IAC, HC, DC or PC, any case. */

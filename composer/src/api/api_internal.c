@@ -92,22 +92,6 @@ bool api_member_bool(const cJSON *object, const char *name, bool *out, bool *pre
     return true;
 }
 
-bool api_member_int(const cJSON *object, const char *name, long minimum, long maximum, long *out, bool *present,
-                    ComposerError *error) {
-    const cJSON *item = member(object, name, present);
-    if (!item) {
-        return true;
-    }
-    if (!cJSON_IsNumber(item) || item->valuedouble != (double)(long)item->valuedouble || item->valuedouble < (double)minimum ||
-        item->valuedouble > (double)maximum) {
-        char what[64];
-        snprintf(what, sizeof what, "a whole number from %ld to %ld", minimum, maximum);
-        return member_fail(error, name, what);
-    }
-    *out = (long)item->valuedouble;
-    return true;
-}
-
 bool api_member_whole(const cJSON *object, const char *name, unsigned long minimum, unsigned long maximum,
                       unsigned long *out, bool *present, ComposerError *error) {
     const cJSON *item = member(object, name, present);
@@ -162,62 +146,6 @@ bool api_member_rational(const cJSON *object, const char *name, ComposerRatio *o
     return true;
 }
 
-bool api_member_key(const cJSON *object, const char *name, AnalysisKey *out, bool *present, ComposerError *error) {
-    const char *text = NULL;
-    bool found = false;
-    if (!api_member_string(object, name, &text, &found, error)) {
-        return false;
-    }
-    if (present) {
-        *present = found;
-    }
-    return !found || request_parse_key(text, out) || member_fail(error, name, "a key like \"D minor\"");
-}
-
-bool api_member_meter(const cJSON *object, const char *name, PlanMeter *out, bool *present, ComposerError *error) {
-    const char *text = NULL;
-    bool found = false;
-    if (!api_member_string(object, name, &text, &found, error)) {
-        return false;
-    }
-    if (present) {
-        *present = found;
-    }
-    return !found || request_parse_meter(text, out) || member_fail(error, name, "a meter like \"3/4\"");
-}
-
-bool api_member_cadence(const cJSON *object, const char *name, CadenceType *out, bool *present, ComposerError *error) {
-    const char *text = NULL;
-    bool found = false;
-    if (!api_member_string(object, name, &text, &found, error)) {
-        return false;
-    }
-    if (present) {
-        *present = found;
-    }
-    return !found || request_parse_cadence(text, out) || member_fail(error, name, "PAC, IAC, HC, DC or PC");
-}
-
-bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rational *out, bool *present,
-                       ComposerError *error) {
-    const cJSON *item = member(object, name, present);
-    if (!item) {
-        return true;
-    }
-    char text[32];
-    const char *source = NULL;
-    if (cJSON_IsString(item)) {
-        source = item->valuestring;
-    } else if (cJSON_IsNumber(item)) {
-        snprintf(text, sizeof text, "%g", item->valuedouble);
-        source = text;
-    }
-    if (!source || !request_parse_pickup(source, beat_unit, out)) {
-        return member_fail(error, name, "a number of beats like 1 or \"1/2\"");
-    }
-    return true;
-}
-
 ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, ComposerError *error) {
     ComposerRatio tempo;
     bool has_tempo = false;
@@ -255,4 +183,33 @@ ComposerStatus api_load_style(const char *path, const char *const *without, size
                                                                                                   : COMPOSER_ERR_UNSATISFIABLE,
                     argument ? path_without : path_file, "cannot read style '%s': %s", path,
                     composer_style_result_name(loaded));
+}
+
+ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, ComposerError *error) {
+    bool present;
+    bool plain = false;
+    const char *explain = NULL;
+    memset(out, 0, sizeof(*out));
+    out->export_options = plan_export_options_default();
+    if (!api_member_bool(request, "midi", &out->midi, &present, error) ||
+        !api_member_bool(request, "musicxml", &out->musicxml, &present, error) ||
+        !api_member_bool(request, "plain_midi", &plain, &present, error) ||
+        !api_member_bool(request, "plans", &out->plans, &present, error) ||
+        !api_member_string(request, "explain", &explain, &present, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (explain) {
+        if (strcmp(explain, "text") == 0) {
+            out->explain = 1;
+        } else if (strcmp(explain, "json") == 0) {
+            out->explain = 2;
+        } else {
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
+        }
+    }
+    if (plain) {
+        out->export_options.track_names = false;
+        out->export_options.section_markers = false;
+    }
+    return COMPOSER_OK;
 }

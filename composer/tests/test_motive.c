@@ -9,6 +9,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "util/request_parse.h"
+
 /*
  * Motive input and analysis. The same motive is loaded from MIDI, MusicXML, a note list and JSON and must come out
  * identical; three motives are analyzed against expectations worked out by hand; bad input must give the documented
@@ -193,14 +195,14 @@ static void test_options(void) {
     assert(strcmp(error.location, "meter") == 0);
 
     AnalysisKey key;
-    assert(motive_parse_key("Bb minor", &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(motive_parse_key("F# major", &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
-    assert(!motive_parse_key("H major", &key));
-    assert(!motive_parse_key("D dorian", &key));
+    assert(request_parse_key("Bb minor", &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(request_parse_key("F# major", &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
+    assert(!request_parse_key("H major", &key));
+    assert(!request_parse_key("D dorian", &key));
     PlanMeter meter;
-    assert(motive_parse_meter("6/8", &meter) && meter.beats_per_bar == 6 && meter.beat_unit == 8);
-    assert(!motive_parse_meter("4/5", &meter));
-    assert(!motive_parse_meter("4", &meter));
+    assert(request_parse_meter("6/8", &meter) && meter.beats_per_bar == 6 && meter.beat_unit == 8);
+    assert(!request_parse_meter("4/5", &meter));
+    assert(!request_parse_meter("4", &meter));
 }
 
 /* ------------------------------------------------------------- analysis */

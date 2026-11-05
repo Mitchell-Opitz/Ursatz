@@ -39,9 +39,6 @@ HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out);
 /* The render the hearing keeps: every written lane of the whole plan. Borrowed; do not destroy. */
 const RenderedPlan *hearing_rendered(const ComposerHearing *hearing);
 
-/* The midi number of event i of hearing_rendered, as the Analyzer is given it. */
-int hearing_midi(const ComposerHearing *hearing, size_t event);
-
 /* The plan the hearing was made from. */
 const PiecePlan *hearing_plan(const ComposerHearing *hearing);
 

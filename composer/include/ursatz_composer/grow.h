@@ -200,8 +200,6 @@ typedef struct {
 
 #define GROW_DEFAULT_CANDIDATES 4
 
-void grow_context_default(GrowContext *context);
-
 /*
  * Registers grow-theme: a Grow operator for a Constrained section with an ARCHETYPE and a THEME_PAIRING constraint,
  * whose plan holds the motive m0. context may be NULL for the defaults and must outlive the registry otherwise.

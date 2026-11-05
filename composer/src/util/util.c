@@ -105,3 +105,8 @@ bool util_read_file(const char *path, char **text, size_t *size) {
     fclose(file);
     return *text != NULL;
 }
+
+const char *util_function_name(bool has_function, HarmonicFunction function) {
+    const char *name = has_function ? harmonic_function_name(function) : NULL;
+    return name ? name : "unknown";
+}

@@ -6,6 +6,8 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "util/request_parse.h"
+
 #include <analysis/motive_relation.h>
 
 /*
@@ -17,8 +19,8 @@
 static Motive load(const char *notes, const char *meter, const char *key, MotiveFormat format) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
-    options.has_meter = motive_parse_meter(meter, &options.meter);
-    options.has_key = key && motive_parse_key(key, &options.key);
+    options.has_meter = request_parse_meter(meter, &options.meter);
+    options.has_key = key && request_parse_key(key, &options.key);
     assert(options.has_meter);
     Motive motive;
     MotiveError error;

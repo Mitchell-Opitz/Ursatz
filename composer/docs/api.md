@@ -133,6 +133,8 @@ A member that is not valid is `COMPOSER_ERR_REQUEST` with its path (`/meter`, `/
 is `COMPOSER_ERR_UNSATISFIABLE` with the path `/input/text` (`""` for MIDI bytes) and the library's message and location.
 Schema: `schema/api/motive.request.schema.json`.
 
+Key and meter text. Every entry reads a `key` and a `meter` with one parser (`request_parse_key`, `request_parse_meter`): a key is a tonic letter, an optional `#` or `b`, a space and `major` or `minor` in any case (`"D minor"`, `"F# major"`); a meter is whole numbers only, 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16 (`"3/4"`, `"6/8"`), with no sign and no white space.
+
 ### `composer_api_motive(request_json, job, out)`
 
 Analyzes a motive, as `ursatz-composer motive <input> --json` does. `json`: the document that command prints,

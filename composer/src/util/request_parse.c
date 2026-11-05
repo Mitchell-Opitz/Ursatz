@@ -119,8 +119,8 @@ bool request_parse_meter(const char *text, PlanMeter *meter) {
     }
     memcpy(first, text, (size_t)(slash - text));
     first[slash - text] = '\0';
-    if (!request_parse_whole_number(first, 64, &beats) || !request_parse_whole_number(slash + 1, 64, &unit) || beats == 0 ||
-        unit == 0) {
+    if (!request_parse_whole_number(first, 64, &beats) || !request_parse_whole_number(slash + 1, 16, &unit) || beats == 0 ||
+        (unit != 1 && unit != 2 && unit != 4 && unit != 8 && unit != 16)) {
         return false;
     }
     meter->beats_per_bar = (int)beats;

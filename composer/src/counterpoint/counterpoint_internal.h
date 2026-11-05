@@ -59,9 +59,6 @@ bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, Counter
                                CounterpointCandidate *line, const char **why);
 void counterpoint_context_free(CounterpointContext *context);
 
-/* How the slots of the counter-melody are laid out in the given line's notes: the note a slot sounds with. */
-size_t counterpoint_slot_note(const CounterpointContext *context, size_t slot);
-
 /* Judges the first notes of the given line's counter-melody, as a candidate holds them. */
 typedef struct {
     const char *hard; /* NULL when no hard rule is broken, else which */

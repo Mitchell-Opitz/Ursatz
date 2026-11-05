@@ -60,9 +60,6 @@ Rational motive_time_minus(Rational a, Rational b);
 Rational motive_pickup(const Motive *motive);
 
 
-/* A note's end. */
-Rational motive_note_end(const PlanNote *note);
-
 /*
  * The harmonic role of every note of the motive against the given chords (the library's motive_tone_roles): out has
  * motive->note_count entries. overrides are 0-based note indices with their own role. Returns the library's status:

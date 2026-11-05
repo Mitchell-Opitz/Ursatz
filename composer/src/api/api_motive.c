@@ -11,6 +11,7 @@
 #include <ursatz_composer/motive_tones.h>
 
 #include "api_internal.h"
+#include "util/request_parse.h"
 
 /* "3=passing": the 1-based note and its role (the --tone option's value). */
 static ComposerStatus read_tone(const char *text, size_t note_count, const char *path, MotiveToneOverride *out,
@@ -85,7 +86,7 @@ static ComposerStatus render_motive(const cJSON *request, const Motive *motive, 
     }
     if (has_key) {
         AnalysisKey key;
-        if (!motive_parse_key(key_text, &key)) {
+        if (!request_parse_key(key_text, &key)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/render_key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",

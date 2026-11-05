@@ -15,6 +15,7 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include "util/request_parse.h"
 #include "util/util.h"
 #include "motive/motive_internal.h"
 
@@ -40,11 +41,6 @@ const char *corpus_seed_result_name(CorpusSeedResult result) {
         return "out of memory";
     }
     return "unknown";
-}
-
-void corpus_seed_describe(const CorpusSeed *seed, char *out, size_t size) {
-    snprintf(out, size, "m.%d b.%g - m.%d b.%g", seed->start_measure, seed->start_beat, seed->end_measure,
-             seed->end_beat);
 }
 
 /* --- reading an analysis document ------------------------------------------------- */
@@ -172,7 +168,7 @@ static bool source_key(const DocumentChord *chords, size_t count, int measure, d
             break;
         }
     }
-    return found && motive_parse_key(found->key_label, out);
+    return found && request_parse_key(found->key_label, out);
 }
 
 /* --- the motive ------------------------------------------------------------------- */

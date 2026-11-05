@@ -318,11 +318,6 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
 
 /* ------------------------------------------------------------------ print */
 
-static const char *function_name(bool has_function, HarmonicFunction function) {
-    const char *name = has_function ? harmonic_function_name(function) : NULL;
-    return name ? name : "unknown";
-}
-
 static const char *direction_name(ContourDirection direction) {
     return direction == CONTOUR_DIRECTION_UP ? "up" : direction == CONTOUR_DIRECTION_DOWN ? "down" : "same";
 }
@@ -536,7 +531,7 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
     for (size_t i = 0; i < analysis->candidate_count; i++) {
         const MotiveChordCandidate *candidate = &analysis->candidates[i];
         fprintf(out, "  %zu. %s (%s) fits %.0f%%: %zu of %zu notes are chord tones\n", i + 1, candidate->roman,
-                function_name(candidate->has_function, candidate->function), candidate->fit * 100.0, candidate->chord_tones,
+                util_function_name(candidate->has_function, candidate->function), candidate->fit * 100.0, candidate->chord_tones,
                 analysis->note_count);
     }
 }
@@ -679,7 +674,7 @@ static cJSON *harmony_json(const MotiveAnalysis *analysis) {
         const MotiveChordCandidate *candidate = &analysis->candidates[i];
         cJSON *entry = cJSON_CreateObject();
         ok = entry && add_string(entry, "roman_numeral", candidate->roman) &&
-             add_string(entry, "function", function_name(candidate->has_function, candidate->function)) &&
+             add_string(entry, "function", util_function_name(candidate->has_function, candidate->function)) &&
              plan_json_add(entry, "fit", cJSON_CreateNumber(candidate->fit)) &&
              plan_json_add(entry, "chord_tones", json_number((long)candidate->chord_tones)) &&
              plan_json_add(entry, "non_chord_tones", json_number((long)candidate->non_chord_tones));

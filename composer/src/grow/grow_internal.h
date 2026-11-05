@@ -190,8 +190,6 @@ bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *unit
 bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea);
 /* The place an idea has under a pairing; false when the pairing has no such idea. */
 bool grow_idea_place(const PlanThemePairing *pairing, GrowIdea idea, GrowPlace *place);
-/* The named idea of a place under a pairing. */
-GrowIdea grow_place_idea(const PlanThemePairing *pairing, GrowPlace place);
 /* The eighths of the theme the idea at a place has. */
 size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place);
 /* The material node of an idea's own motive ("i<k>"), else PLAN_NODE_NONE. */
@@ -242,8 +240,5 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
 
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
 NodeId grow_find_theme(const PiecePlan *plan, bool open_only);
-
-/* The chosen candidate's score from a record's last applied step; false when none was applied. */
-bool grow_record_score(const FillRecord *record, GrowScore *out);
 
 #endif

@@ -28,20 +28,8 @@ ComposerStatus api_respond_json(ComposerResponse *out, cJSON *value);
  */
 bool api_member_string(const cJSON *object, const char *name, const char **out, bool *present, ComposerError *error);
 bool api_member_bool(const cJSON *object, const char *name, bool *out, bool *present, ComposerError *error);
-bool api_member_int(const cJSON *object, const char *name, long minimum, long maximum, long *out, bool *present,
-                    ComposerError *error);
 /* A whole number, or a string "3/2" (request_parse_ratio). */
 bool api_member_rational(const cJSON *object, const char *name, ComposerRatio *out, bool *present, ComposerError *error);
-/* "D minor" (request_parse_key). */
-bool api_member_key(const cJSON *object, const char *name, AnalysisKey *out, bool *present, ComposerError *error);
-/* "3/4" (request_parse_meter). */
-bool api_member_meter(const cJSON *object, const char *name, PlanMeter *out, bool *present, ComposerError *error);
-/* "PAC" (request_parse_cadence). */
-bool api_member_cadence(const cJSON *object, const char *name, CadenceType *out, bool *present, ComposerError *error);
-/* A number of beats of beat_unit, or a string "0", "1/2" (request_parse_pickup). */
-bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rational *out, bool *present,
-                       ComposerError *error);
-
 /*
  * A whole number from minimum to maximum, given as a JSON number or as a string of digits ("3"). A value that is not one
  * is refused with the message "<name> must be a whole number from <minimum> to <maximum>, not '<value>'".
@@ -119,6 +107,19 @@ ComposerStatus api_lane_targets(const PiecePlan *plan, NodeId node, bool has_lan
                                 size_t *count, ComposerError *error);
 /* Why a regenerate result refused the target (what names it: "section B"): COMPOSER_ERR_UNSATISFIABLE with the message. */
 ComposerStatus api_refused(RegenerateResult result, const char *what, ComposerError *error);
+
+/* --- the outputs a theme or grow request asks for ---------------------------------------------------- */
+
+typedef struct {
+    bool midi;
+    bool musicxml;
+    bool plans;
+    int explain; /* 0 none, 1 text, 2 json */
+    PlanExportOptions export_options;
+} ApiOutputOptions;
+
+/* "midi", "musicxml", "plain_midi", "plans" and "explain" ("text" or "json"). */
+ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, ComposerError *error);
 
 /* --- reading a request without running it (composer_api_validate) --------------------------------------- */
 

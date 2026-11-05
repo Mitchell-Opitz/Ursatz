@@ -79,12 +79,12 @@ static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *ou
     } else {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be major or minor, not '%s'", mode_text);
     }
-    if (!motive_parse_meter(meter_text, &out->meter)) {
+    if (!request_parse_meter(meter_text, &out->meter)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter",
                         "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8", meter_text);
     }
     if (has_key) {
-        if (!motive_parse_key(key_text, &out->key)) {
+        if (!request_parse_key(key_text, &out->key)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",

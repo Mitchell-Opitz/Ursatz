@@ -19,9 +19,4 @@
 /* The plan the files are written from; NULL on failure. Caller frees with plan_destroy. */
 PiecePlan *motive_render_plan(const Motive *motive);
 
-PlanExportResult motive_export_midi(const Motive *motive, const PlanExportOptions *options, const char *path,
-                                    PlanExportError *error);
-PlanExportResult motive_export_musicxml(const Motive *motive, const PlanExportOptions *options, const char *path,
-                                        PlanExportError *error);
-
 #endif

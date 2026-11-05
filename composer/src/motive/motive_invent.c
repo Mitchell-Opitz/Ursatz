@@ -427,8 +427,3 @@ bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillO
     out->score_denominator = score.denominator;
     return true;
 }
-
-const Motive *motive_invent_candidate_motive(const FillCandidate *candidate) {
-    const InventPayload *payload = candidate ? candidate->payload : NULL;
-    return payload && payload->magic == INVENT_PAYLOAD_MAGIC ? &payload->motive : NULL;
-}

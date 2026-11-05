@@ -179,8 +179,6 @@ bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const Fill
 
 /* The motive and the step of a candidate one of these operators proposed. NULL for any other candidate. */
 const Motive *motive_develop_candidate_motive(const FillCandidate *candidate);
-const MotiveRelationStep *motive_develop_candidate_step(const FillCandidate *candidate);
-
 /* --- invention ---------------------------------------------------------- */
 
 #define MOTIVE_INVENT_OPERATOR_NAME "motive-invent"
@@ -207,8 +205,5 @@ FillResult motive_invent_register(FillOperatorRegistry *registry, const MotiveDe
  */
 bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out);
-
-/* The motive a motive-invent candidate proposes. NULL for any other candidate. */
-const Motive *motive_invent_candidate_motive(const FillCandidate *candidate);
 
 #endif

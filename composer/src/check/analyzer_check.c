@@ -18,11 +18,6 @@
 
 #define MAX_CADENCES 2
 
-const char *analyzer_check_result_name(AnalyzerCheckResult result) {
-    static const char *const NAMES[] = {"ok", "null", "alloc", "not-written", "plan", "analysis"};
-    return (size_t)result < sizeof(NAMES) / sizeof(NAMES[0]) ? NAMES[result] : "unknown";
-}
-
 void analyzer_check_destroy(AnalyzerCheck *check) {
     if (!check) {
         return;
