@@ -1238,7 +1238,15 @@ static void test_variants(void) {
         "a distance with chosen operations is refused");
   cJSON_Delete(refused);
   refused = item_post(id, "variants", "{\"distance\":\"nearby\"}", &status);
-  check(status == 400, "a distance that is not close, medium or far is refused");
+  check(status == 400 && strcmp(string_of(refused, "path"), "/distance") == 0,
+        "a distance that is not close, medium or far is refused by the Composer, with its path in the job failure");
+  cJSON_Delete(refused);
+  refused = item_post(id, "variants", "{\"functions\":[\"beginning\",\"nowhere\"]}", &status);
+  check(status == 400 && string_of(refused, "path")[0] == '/', "a function the Composer does not know is refused with its path");
+  cJSON_Delete(refused);
+  refused = item_post(id, "variants", "{\"functions\":[\"beginning\",\"continuation\",\"contrast\",\"cadential\",\"beginning\"]}",
+                      &status);
+  check(status == 400 && string_of(refused, "path")[0] == '/', "more functions than the Composer takes are refused, not cut to four");
   cJSON_Delete(refused);
   refused = item_post(id, "variants", "{\"chain\":{\"steps\":[{\"op\":\"nonsense\"}]}}", &status);
   check(status == 400, "an unknown operation is refused");
@@ -1776,6 +1784,31 @@ static void test_random_motifs(void) {
   answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
   check(status == 400, "a church mode is refused");
   cJSON_Delete(answer);
+  answer = json_exchange("POST", "/api/materials/render",
+                         "{\"form\":\"melody\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
+                         "\"pickup\":\"0\"}",
+                         &status);
+  check(status == 400 && string_of(answer, "path")[0] == '/', "a form the Composer does not know is refused with its path");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/render",
+                         "{\"form\":\"full\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
+                         "\"pickup\":\"0\",\"tempo\":500}",
+                         &status);
+  check(status == 400 && strcmp(string_of(answer, "path"), "/tempo") == 0, "a tempo above 400 is refused at /tempo");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/render",
+                         "{\"form\":\"full\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
+                         "\"pickup\":\"0\",\"tempo\":\"195/2\"}",
+                         &status);
+  check(status == 200 && ok_true(answer), "a rational tempo is accepted by the render route");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q\",\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
+  check(status == 400 && string_of(answer, "path")[0] == '/', "a mode the Composer does not know is refused with its path");
+  cJSON_Delete(answer);
+
   answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
   check(status == 400, "a count over 16 is refused");
   cJSON_Delete(answer);
