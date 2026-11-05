@@ -46,8 +46,6 @@ typedef enum {
     RETURN_HEAR_ERR_ANALYSIS     /* a section form_hear cannot read, or a detection that failed */
 } ReturnHearResult;
 
-const char *return_hear_result_name(ReturnHearResult result);
-
 /* Hears the returns of plan into *out, which the caller destroys. On failure *out is empty. */
 ReturnHearResult return_hear(const PiecePlan *plan, ReturnHeard *out);
 

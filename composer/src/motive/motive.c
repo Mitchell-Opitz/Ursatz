@@ -227,10 +227,6 @@ Rational motive_pickup(const Motive *motive) {
     return motive->pickup.den == 0 ? motive_time(0, 1) : motive->pickup;
 }
 
-Rational motive_note_end(const PlanNote *note) {
-    return motive_time_plus(note->offset, note->duration);
-}
-
 Rational motive_event_end(const MotiveSketchNote *note) {
     return motive_time_plus(note->onset, note->duration);
 }

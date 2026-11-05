@@ -22,18 +22,6 @@ void grow_outcome_destroy(GrowOutcome *outcome) {
     memset(outcome, 0, sizeof(*outcome));
 }
 
-bool grow_record_score(const FillRecord *record, GrowScore *out) {
-    for (size_t s = 0; record && s < record->step_count; s++) {
-        const FillStep *step = &record->steps[s];
-        if (step->outcome == FILL_STEP_APPLIED && step->chosen >= 0) {
-            out->numerator = step->considered[step->chosen].score_numerator;
-            out->denominator = step->considered[step->chosen].score_denominator ? step->considered[step->chosen].score_denominator : 1;
-            return true;
-        }
-    }
-    return false;
-}
-
 static GrowResult from_piece(PieceResult result) {
     switch (result) {
     case PIECE_OK:

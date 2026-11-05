@@ -38,11 +38,6 @@ size_t fill_suggestions_count(const FillSuggestions *suggestions) {
     return suggestions ? suggestions->count : 0;
 }
 
-FillTarget fill_suggestions_target(const FillSuggestions *suggestions) {
-    FillTarget none = {FILL_TARGET_NODE, 0};
-    return suggestions ? suggestions->target : none;
-}
-
 const char *fill_suggestion_operator(const FillSuggestions *suggestions, size_t index) {
     if (!suggestions || index >= suggestions->count) {
         return NULL;

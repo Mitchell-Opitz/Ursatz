@@ -71,7 +71,4 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
 CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, KeyStructureMode mode,
                                          CorpusSeed *out);
 
-/* "m.3 b.1.5 - m.4 b.2": the passage's span as the Analyzer's own output prints it, into out. */
-void corpus_seed_describe(const CorpusSeed *seed, char *out, size_t size);
-
 #endif

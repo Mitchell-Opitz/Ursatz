@@ -28,22 +28,6 @@
 #define MAX_THEMES 64
 #define ID_SIZE 32
 
-const char *return_hear_result_name(ReturnHearResult result) {
-    switch (result) {
-    case RETURN_HEAR_OK:
-        return "ok";
-    case RETURN_HEAR_ERR_NULL:
-        return "null argument";
-    case RETURN_HEAR_ERR_ALLOC:
-        return "allocation failed";
-    case RETURN_HEAR_ERR_NOT_WRITTEN:
-        return "not written";
-    case RETURN_HEAR_ERR_ANALYSIS:
-        return "analysis failed";
-    }
-    return "unknown";
-}
-
 void return_heard_destroy(ReturnHeard *heard) {
     if (heard) {
         free(heard->pairs);

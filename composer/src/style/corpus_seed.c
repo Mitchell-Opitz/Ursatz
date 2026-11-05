@@ -43,11 +43,6 @@ const char *corpus_seed_result_name(CorpusSeedResult result) {
     return "unknown";
 }
 
-void corpus_seed_describe(const CorpusSeed *seed, char *out, size_t size) {
-    snprintf(out, size, "m.%d b.%g - m.%d b.%g", seed->start_measure, seed->start_beat, seed->end_measure,
-             seed->end_beat);
-}
-
 /* --- reading an analysis document ------------------------------------------------- */
 
 /* The text of a document and its parse; the caller frees both. NULL when it cannot be read or parsed. */

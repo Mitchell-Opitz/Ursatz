@@ -828,7 +828,3 @@ static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *ra
 PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out) {
     return render_checked(plan, NULL, out);
 }
-
-PlanRenderResult plan_render_range(const PiecePlan *plan, PlanSpan range, RenderedPlan *out) {
-    return render_checked(plan, &range, out);
-}

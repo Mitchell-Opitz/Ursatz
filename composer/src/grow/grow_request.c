@@ -130,16 +130,6 @@ bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea) {
     return grow_idea_place(pairing, idea, NULL);
 }
 
-GrowIdea grow_place_idea(const PlanThemePairing *pairing, GrowPlace place) {
-    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
-        GrowPlace at;
-        if (grow_idea_place(pairing, (GrowIdea)idea, &at) && at == place) {
-            return (GrowIdea)idea;
-        }
-    }
-    return GROW_IDEA_BASIC;
-}
-
 size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place) {
     bool continuation = pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
     return (place == GROW_PLACE_FRAGMENT_1 || place == GROW_PLACE_FRAGMENT_2) && continuation ? 1 : 2;
@@ -231,11 +221,6 @@ bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *unit
         *units = room;
     }
     return used;
-}
-
-void grow_context_default(GrowContext *context) {
-    memset(context, 0, sizeof(*context));
-    context->candidates = GROW_DEFAULT_CANDIDATES;
 }
 
 bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells) {

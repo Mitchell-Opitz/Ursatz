@@ -514,8 +514,3 @@ const Motive *motive_develop_candidate_motive(const FillCandidate *candidate) {
     const Payload *payload = candidate ? candidate->payload : NULL;
     return payload && payload->magic == PAYLOAD_MAGIC ? &payload->result : NULL;
 }
-
-const MotiveRelationStep *motive_develop_candidate_step(const FillCandidate *candidate) {
-    const Payload *payload = candidate ? candidate->payload : NULL;
-    return payload && payload->magic == PAYLOAD_MAGIC ? &payload->step : NULL;
-}

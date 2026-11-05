@@ -54,8 +54,6 @@ typedef enum {
     ANALYZER_CHECK_ERR_ANALYSIS     /* the Analyzer could not analyze the fragment */
 } AnalyzerCheckResult;
 
-const char *analyzer_check_result_name(AnalyzerCheckResult result);
-
 /* Checks the section into *out, which the caller destroys. On failure *out is empty and safe to destroy. */
 AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section, AnalyzerCheck *out);
 

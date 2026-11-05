@@ -228,8 +228,7 @@ one, the key it is rendered in. A pickup is written as a short first meter, its 
 one beat in 3/4 is a 1/4 meter), and then the motive's meter from the first barline. In MusicXML the
 first bar is `<measure number="0" implicit="yes">`; the full bars are numbered from 1. A pickup whose
 length is not a meter (1/3 of a beat) cannot be written. Library: `motive_in_key` in
-`<ursatz_composer/motive.h>`, `motive_export_midi` and `motive_export_musicxml` in
-`<ursatz_composer/motive_render.h>`.
+`<ursatz_composer/motive.h>`, `motive_render_plan` in `<ursatz_composer/motive_render.h>`.
 
 With `--json`, a render option adds a top-level `rendered` object next to `motive` and `analysis`:
 

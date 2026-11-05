@@ -33,10 +33,6 @@ void counterpoint_context_free(CounterpointContext *context) {
     memset(context, 0, sizeof(*context));
 }
 
-size_t counterpoint_slot_note(const CounterpointContext *context, size_t slot) {
-    return context->per_bar == 1 ? slot : slot / context->per_bar;
-}
-
 /* The scale degree of a pitch class above the tonic, 1 to 7, or 0 when the key's scale has no such note. */
 static int scale_degree(const AnalysisKey *key, int pitch) {
     int tonic = analysis_key_tonic_pitch_class(key);

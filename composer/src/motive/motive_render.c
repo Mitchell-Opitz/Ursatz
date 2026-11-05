@@ -64,36 +64,3 @@ PiecePlan *motive_render_plan(const Motive *motive) {
     }
     return plan;
 }
-
-static PlanExportResult render_plan_for(const Motive *motive, PiecePlan **out, PlanExportError *error) {
-    *out = motive_render_plan(motive);
-    if (!*out) {
-        if (error) {
-            snprintf(error->message, sizeof(error->message), "the motive cannot be placed in a plan");
-        }
-        return motive ? PLAN_EXPORT_ERR_NOT_REPRESENTABLE : PLAN_EXPORT_ERR_NULL;
-    }
-    return PLAN_EXPORT_OK;
-}
-
-PlanExportResult motive_export_midi(const Motive *motive, const PlanExportOptions *options, const char *path,
-                                    PlanExportError *error) {
-    PiecePlan *plan;
-    PlanExportResult result = render_plan_for(motive, &plan, error);
-    if (result == PLAN_EXPORT_OK) {
-        result = plan_export_midi(plan, options, path, error);
-        plan_destroy(plan);
-    }
-    return result;
-}
-
-PlanExportResult motive_export_musicxml(const Motive *motive, const PlanExportOptions *options, const char *path,
-                                        PlanExportError *error) {
-    PiecePlan *plan;
-    PlanExportResult result = render_plan_for(motive, &plan, error);
-    if (result == PLAN_EXPORT_OK) {
-        result = plan_export_musicxml(plan, options, path, error);
-        plan_destroy(plan);
-    }
-    return result;
-}
