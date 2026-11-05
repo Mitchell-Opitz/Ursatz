@@ -1,5 +1,7 @@
 # recognize command
 
+The `recognize` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer recognize <source> <target> [--format ...] [--form ...] --meter <n/m> [--key <key>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--target-format <format>] [--target-pickup <beats>] [--target-harmony "<text>"] [--target-feature <label:first-last>]... [--basic <file> [--basic-format <format>] [--basic-pickup <beats>] [--basic-harmony "<text>"]] [--depth <n>] [--json]
 ```

@@ -4,7 +4,7 @@ A piece structure (`<ursatz_composer/piece_structure.h>`, R-169) is a game track
 and an ending, each a list of sections with a length in beats, a pickup, a cadence and a fill. The body and the
 turnaround are the loop: the intro is played once before it and the ending once after it. A structure is not a form
 template: the sections are any number of beats long, not only 4 or 8 whole bars ([piece.md](piece.md) has the templates,
-which are unchanged).
+which are unchanged). Back to the [docs index](README.md).
 
 ```c
 PieceSection sections[3] = {
@@ -91,7 +91,7 @@ ending version is built from the realized loop (R-172).
   cadence allow is a theme section: it has the `archetype` and `theme_pairing` of its `into`, and an antecedent's second
   `cadence` (HC), and `grow-theme` builds it as [grow.md](grow.md) says.
 - Any other section is a free phrase: it has `free_phrase`, and `grow-theme` builds it as ideas of a bar
-  ([grow.md](grow.md#free-phrases)).
+  ([grow-harmony.md](grow-harmony.md#free-phrases)).
 - The loop's end (the last section of the turnaround, else the last body section) is held: it has `hold`, and the seam
   stage fills it last against the seam, the section `seam` (one bar, `seam`) that follows it, a Given copy of the body's
   first bar. A theme fill, a progression fill that covers its section and the first body section are not held. See

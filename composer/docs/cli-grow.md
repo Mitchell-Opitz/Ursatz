@@ -1,5 +1,7 @@
 # grow command
 
+The `grow` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|motive|any] [--accompaniment-motive <file>] [--accompaniment-format <format>] [--accompaniment-pickup <beats>] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
@@ -57,7 +59,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--mode <mode>` | `major`, `minor` or `style`: replaces the mode of `--key`, which may then be a tonic alone (`--key D --mode style`). `style` takes the style's most common `mode` and needs `--style` with a `mode` category, else exit 1. The key printed and written is the result. |
 | `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: the style's tempo when `--style` has a `tempo` category, else none. See [export.md](export.md) and [style.md](style.md). |
 | `--plain-midi` | MIDI without track names and section markers. See [export.md](export.md). |
-| `--explain <file>` | Why each candidate was chosen or rejected while the theme was grown: per target the chosen candidate, its runners-up and the rejected ones with their reasons, the form heard, the Analyzer check (with `--check`) and the seeds passed over. JSON when the file name ends in `.json`, else text; with `--suggest`, theme k goes to `<name>-k.<extension>` like the other files. The motives stage names each idea's motive-form with its chain, connection and derivation ([grow.md](grow.md#motive-forms)). See [explain.md](explain.md). |
+| `--explain <file>` | Why each candidate was chosen or rejected while the theme was grown: per target the chosen candidate, its runners-up and the rejected ones with their reasons, the form heard, the Analyzer check (with `--check`) and the seeds passed over. JSON when the file name ends in `.json`, else text; with `--suggest`, theme k goes to `<name>-k.<extension>` like the other files. The motives stage names each idea's motive-form with its chain, connection and derivation ([grow-harmony.md](grow-harmony.md#motive-forms)). See [explain.md](explain.md). |
 | `--format <text\|json>` | How the result is printed on stdout. Text by default. |
 
 ## Seeds

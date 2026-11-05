@@ -1,5 +1,7 @@
 # variants command
 
+The `variants` command of the Composer command line, with options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer variants --list-ops [--json]
 ursatz-composer variants <motive-input> [--format ...] [--form ...] [--meter <n/m>] [--key <key>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--basic <file> [--basic-format <format>] [--basic-pickup <beats>] [--basic-harmony "<text>"]] [--function <name>]... [--distance <close|medium|far>] [--each-op] [--chain <file.json>] [--count <n>] [--seed <n>] [--json]

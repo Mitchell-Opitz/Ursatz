@@ -2,7 +2,7 @@
 
 The fill loop turns a plan with open material into a plan with none. There is one loop. It does
 not matter whether the plan fills top-down, bottom-up or from the middle: that comes only from
-where the Given material sits and which operators are registered.
+where the Given material sits and which operators are registered. Back to the [docs index](README.md).
 
 Headers: `<ursatz_composer/fill_loop.h>`, `fill_operator.h`, `fill_target.h`, `fill_rng.h`,
 `fill_record.h`, `fill_suggest.h`. This branch ships the engine only. Real music operators are

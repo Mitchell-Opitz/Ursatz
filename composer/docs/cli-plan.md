@@ -1,5 +1,7 @@
 # plan command
 
+The `plan` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --like-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
 ```

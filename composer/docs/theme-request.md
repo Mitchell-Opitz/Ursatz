@@ -2,7 +2,7 @@
 
 The JSON file `ursatz-composer theme` reads ([cli-theme.md](cli-theme.md), R-166, R-206). It holds up to 16 motives, the slot
 of the theme and the single ideas each one gives, and the brief. Schema `ursatz-theme-request`, version 2: a version 1
-request is an error (`the request must have "schema_version": 2`).
+request is an error (`the request must have "schema_version": 2`). Back to the [docs index](README.md).
 
 ```json
 {"schema": "ursatz-theme-request", "schema_version": 2,
@@ -100,7 +100,7 @@ list as read.
 
 ## In the API
 
-[`composer_api_theme`](api.md#composer_api_themerequest_json-job-out) reads this request as a JSON text. The motives are inline:
+[`composer_api_theme`](api/theme-and-piece.md#composer_api_themerequest_json-job-out) reads this request as a JSON text. The motives are inline:
 each motive object carries its content in `degrees`, and a motive that names a file (`path`, `file`) is refused with the path
 `/motives/<n>/path`. The `theme` command reads the same request from a file; the file holds the motives inline too, so a
 request file is the request text of the API. The options of the command (`--seed`, `--suggest`, `--check`, `--out`, `--midi`,

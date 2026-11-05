@@ -1,5 +1,7 @@
 # motive command
 
+The `motive` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--tone <n>=<role>]... [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--json]
 ```
@@ -29,7 +31,7 @@ MIDI, a first character of `<` is MusicXML, `{` is JSON, and anything else is a 
 | `degrees` | A degree list, below. Never chosen by `auto`. |
 | `rhythm` | A rhythm-only list, below. Never chosen by `auto`. |
 | `contour` | A contour-only list, below. Never chosen by `auto`. |
-| `json` | A motive document, see [plan-format.md](plan-format.md#motive-documents). |
+| `json` | A motive document, see [motive-format.md](motive-format.md#motive-documents). |
 
 A motive is one voice. A MIDI or MusicXML file with notes sounding together, or with notes in more than
 one MusicXML part, is refused as polyphonic and the message gives the position of the first overlap. No
@@ -123,7 +125,7 @@ Chords. A chord is an upper case numeral `I` to `VII`, with `b` or `#` before it
 
 The onsets are in beats of the motive's meter, which a MIDI or MusicXML file may declare, so with such a file the file is read twice, as for `--pickup`. A text that is not a chord is exit status 1 and names the token and column (`token 2 (column 4)`); a chord that starts outside the motive, or a feature outside its notes, is exit status 2 and names the place (`harmony[1]`, `features[0]`).
 
-The text output lists `Own harmony:`, the features and the role when the motive has them. The `--json` document has them in `motive` and `harmony_text` in `analysis` (see [plan-format.md](plan-format.md#motive-analysis)).
+The text output lists `Own harmony:`, the features and the role when the motive has them. The `--json` document has them in `motive` and `harmony_text` in `analysis` (see [motive-format.md](motive-format.md#motive-analysis)).
 
 The same three options are read by [variants](cli-variants.md) and [grow](cli-grow.md); [random-motive](cli-random-motive.md) takes `--role`.
 
@@ -203,7 +205,7 @@ A rhythm has only the `Rhythm:` section and a contour only the `Contour:` line: 
 sound them, so there are no intervals, range, degrees or harmony.
 
 `--json` prints the motive and its analysis as one JSON document, described in
-[plan-format.md](plan-format.md#motive-analysis). The `analysis` also gives the form, the pickup in beats
+[motive-format.md](motive-format.md#motive-analysis). The `analysis` also gives the form, the pickup in beats
 (`"1"`, `"1/2"`), `notes_text` (the pitches as a note list), `degrees_text` (as a degree list, `null` without
 a key) and, for the two forms, `rhythm_text` or `contour_text`. The same motive gives the same bytes whichever format
 it was read from.

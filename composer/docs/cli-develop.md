@@ -1,5 +1,7 @@
 # develop command
 
+The `develop` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer develop <motive-input> --op <name> [--seed <n>] [--suggest <n>] [--meter <n/m>] [--key <key>] [options]
 ```
@@ -57,7 +59,7 @@ transpose, invert, retrograde, interval change, fragment, liquidate, augment and
 passes its options to the operators as a relation step on the `motive_ref` of the open motive node
 (`--op fragment --position leading --length 3` asks for `fragment position=1 length=3`; an option left out is
 an open parameter of the step, which the operator draws from the seed), and `motive_develop` takes that step.
-The relation steps and their text are in [plan-format.md](plan-format.md#motive-relation-steps). A tonal step
+The relation steps and their text are in [plan-constraints.md](plan-constraints.md#motive-relation-steps). A tonal step
 is counted in the key's scale: a note on a scale degree stays on a degree (F and B in C major never
 become F sharp or C sharp), and a pitch outside the scale keeps its place, raised, in its step.
 

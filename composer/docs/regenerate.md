@@ -1,7 +1,7 @@
 # Locking and regenerating
 
 `<ursatz_composer/regenerate.h>`. Milestone M2: a piece is planned and filled, then taken apart node by node. Material
-the user likes is locked; the rest is written again with a seed, and only what depends on it with it.
+the user likes is locked; the rest is written again with a seed, and only what depends on it with it. Back to the [docs index](README.md).
 
 ## Locking
 

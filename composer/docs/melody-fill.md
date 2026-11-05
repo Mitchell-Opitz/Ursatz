@@ -3,7 +3,7 @@
 A Fill operator for the melody lane. Given a written harmony lane, a written bass lane and a motive, it
 writes the melody over them: the motive's rhythm and contour, chord tones on the strong beats, and
 passing and neighbor tones between. It is a library operator (`melody_fill_register`); the CLI has no
-command for it.
+command for it. Back to the [docs index](README.md).
 
 Header: `<ursatz_composer/melody_fill.h>`.
 
@@ -75,7 +75,7 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
 
 ## Tone roles
 
-A motive made from a request carries its **tones** in the plan (`motive_tones` on its node, [plan-format.md](plan-format.md#constraints)):
+A motive made from a request carries its **tones** in the plan (`motive_tones` on its node, [plan-constraints.md](plan-constraints.md#constraints)):
 the role of every note against the motive's base harmony, its own harmony or the one proposed from the notes
 (`ursatz-composer motive` shows them; the request's `tone_overrides` change them, [theme-request.md](theme-request.md#motives)).
 A developed motive (a `motive_ref` that keeps the notes: transposed, inverted, augmented, diminished, restated, interval changed;

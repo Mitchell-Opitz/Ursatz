@@ -1,5 +1,7 @@
 # progression command
 
+The `progression` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer progression --key <key> --meter <n/m> --bars <n> --cadence <type> [options]
 ```

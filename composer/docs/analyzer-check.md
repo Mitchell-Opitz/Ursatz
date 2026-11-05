@@ -1,7 +1,7 @@
 # The Analyzer check
 
 `<ursatz_composer/analyzer_check.h>`, `src/check/analyzer_check.c`, and `compose_candidates` in
-`<ursatz_composer/compose.h>`. R-080: the Analyzer is the contradiction gate of a composed section, not a score.
+`<ursatz_composer/compose.h>`. R-080: the Analyzer is the contradiction gate of a composed section, not a score. Back to the [docs index](README.md).
 
 A realized section is heard through the Analyzer's result over the notes that start in it: the plan is rendered once with
 every lane (`plan_render`), `analyzer_hear` (`<ursatz_analyzer/composer_api.h>`) analyzes the section's span in the plan's

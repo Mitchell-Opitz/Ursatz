@@ -1,5 +1,7 @@
 # Styles
 
+How a style model from the Analyzer steers the Composer's stages. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer plan --form binary --key C --meter 4/4 --style chorales.style.json --out piece.json
 ursatz-composer fill piece.json --style-weight 2/1
