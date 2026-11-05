@@ -73,3 +73,8 @@ enable_testing()
 add_subdirectory(backend/tests)
 
 add_subdirectory(frontend/tests)
+
+# Default timeouts by label: 30 s, or 1800 s for tests labeled slow.
+include(cmake/TestTimeouts.cmake)
+ursatz_gui_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR}/backend/tests)
+ursatz_gui_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR}/frontend/tests)
