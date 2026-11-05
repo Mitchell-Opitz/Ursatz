@@ -11,7 +11,7 @@ plan workflow, the material commands (progression, counterpoint, develop, grow),
 Each entry has its request and response in a file under `docs/api/` (see [Entries](#entries)), an example in
 [examples](api/examples.md), and its JSON Schemas under `schema/api/` (draft 2020-12). The CLI (`cli/`) includes no header but `composer_api.h` (`scripts/check-cli-api.sh`, run by CI).
 
-A minimal client in C is in the [README](../README.md#using-the-api-from-c).
+A minimal client in C is in [Using the API from C](#using-the-api-from-c).
 
 ## Versioning
 
@@ -143,6 +143,60 @@ The stage each entry reports at the start (`done` of `total`), besides the compo
 cancel is honored at the next report; the entry frees what it built and returns `COMPOSER_ERR_CANCELLED` with no document
 and no plan. Progress and cancel run on the thread that called the entry: a client that shows progress from another thread
 hands the value over itself.
+
+## Using the API from C
+
+Link `ursatz_composer` (add this repo with `add_subdirectory` and `target_link_libraries(app PRIVATE ursatz_composer)`) and
+include the one header.
+
+### Linking
+
+An application that already has the `cjson`, `ursatz` and `ursatz_analyzer` targets adds those first and the Composer after
+them; the Composer adds a target only when it is not there, so the tree keeps one copy of each (pin all four repositories to
+the same commits, `scripts/check-pins.sh`):
+
+```cmake
+add_subdirectory(external/cjson)
+add_subdirectory(external/ursatz)
+add_subdirectory(external/ursatz-analyzer)
+set(URSATZ_COMPOSER_BUILD_CLI OFF CACHE BOOL "")
+add_subdirectory(external/ursatz-composer)
+target_link_libraries(app PRIVATE ursatz_composer)
+```
+
+`URSATZ_COMPOSER_BUILD_CLI` (on only when the Composer is the top project) builds the `ursatz-composer` command; the tests that
+run it are registered only when it is built. `tests/consumer/` is such an application, built by the `consumer_build` test.
+
+This grows a theme from a motive and writes its MIDI file:
+
+```c
+#include <stdio.h>
+#include <ursatz_composer/composer_api.h>
+
+int main(void) {
+    const char *request =
+        "{\"schema\": \"ursatz-theme-request\", \"schema_version\": 2,"
+        " \"into\": \"sentence\", \"key\": \"D\", \"mode\": \"minor\", \"meter\": \"4/4\", \"bars\": 8, \"cadence\": \"PAC\","
+        " \"motives\": [{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:q 3:e 5:e 1':h\"}],"
+        " \"slots\": {\"basic\": \"A\"}, \"seed\": 1, \"midi\": true}";
+
+    ComposerResponse response;
+    ComposerStatus status = composer_api_theme(request, NULL, &response);
+    if (status != COMPOSER_OK) {
+        fprintf(stderr, "%s: %s (at '%s')\n", composer_status_name(status), response.error.message, response.error.path);
+        composer_response_destroy(&response);
+        return 1;
+    }
+    printf("%s\n", response.json);   /* the theme document */
+    FILE *file = fopen("theme.mid", "wb");
+    if (file) {
+        fwrite(response.midi, 1, response.midi_size, file);
+        fclose(file);
+    }
+    composer_response_destroy(&response);
+    return 0;
+}
+```
 
 ## Tests
 
