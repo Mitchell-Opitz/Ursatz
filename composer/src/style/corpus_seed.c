@@ -15,6 +15,7 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include "util/request_parse.h"
 #include "util/util.h"
 #include "motive/motive_internal.h"
 
@@ -172,7 +173,7 @@ static bool source_key(const DocumentChord *chords, size_t count, int measure, d
             break;
         }
     }
-    return found && motive_parse_key(found->key_label, out);
+    return found && request_parse_key(found->key_label, out);
 }
 
 /* --- the motive ------------------------------------------------------------------- */

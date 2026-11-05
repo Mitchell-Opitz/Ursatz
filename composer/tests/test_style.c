@@ -21,6 +21,8 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/style.h>
+
+#include "util/request_parse.h"
 #include "support/test_support.h"
 
 /*
@@ -1097,8 +1099,8 @@ static int test_brief(void) {
     /* The limit halves a connection that is remote, between 1/2 and 3/4, only at 1/2. */
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
-    options.has_meter = motive_parse_meter("4/4", &options.meter);
-    options.has_key = motive_parse_key("C major", &options.key);
+    options.has_meter = request_parse_meter("4/4", &options.meter);
+    options.has_key = request_parse_key("C major", &options.key);
     Motive basic;
     assert(motive_from_notes_text("E4:q G4:e F4:e D4:q C4:q", &options, &basic, NULL) == MOTIVE_OK);
     MotiveScore remote = {5, 8};

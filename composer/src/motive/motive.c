@@ -126,95 +126,10 @@ MotiveFormat motive_detect_format(const void *data, size_t size) {
 
 /* ---------------------------------------------------------- key and meter */
 
-static bool equals_ignore_case(const char *a, const char *b) {
-    while (*a && *b) {
-        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
-            return false;
-        }
-        a++;
-        b++;
-    }
-    return *a == *b;
-}
-
-bool motive_parse_key(const char *text, AnalysisKey *out) {
-    static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
-    if (!text || !out) {
-        return false;
-    }
-    while (isspace((unsigned char)*text)) {
-        text++;
-    }
-    char letter = (char)toupper((unsigned char)*text);
-    if (letter < 'A' || letter > 'G') {
-        return false;
-    }
-    int pc = NATURAL[letter - 'A'];
-    text++;
-    if (*text == '#') {
-        pc++;
-        text++;
-    } else if (*text == 'b') {
-        pc--;
-        text++;
-    }
-    if (!isspace((unsigned char)*text)) {
-        return false;
-    }
-    while (isspace((unsigned char)*text)) {
-        text++;
-    }
-    char mode[8];
-    size_t length = 0;
-    while (text[length] && !isspace((unsigned char)text[length]) && length + 1 < sizeof(mode)) {
-        mode[length] = text[length];
-        length++;
-    }
-    mode[length] = '\0';
-    const char *rest = text + length;
-    while (isspace((unsigned char)*rest)) {
-        rest++;
-    }
-    if (*rest != '\0') {
-        return false;
-    }
-    if (equals_ignore_case(mode, "major")) {
-        out->mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (equals_ignore_case(mode, "minor")) {
-        out->mode = KEY_STRUCTURE_MODE_MINOR;
-    } else {
-        return false;
-    }
-    *out = plan_key_of_pitch_class((pc % 12 + 12) % 12, out->mode);
-    return true;
-}
-
 static bool meter_valid(const PlanMeter *meter) {
     int unit = meter->beat_unit;
     return meter->beats_per_bar >= 1 && meter->beats_per_bar <= 64 &&
            (unit == 1 || unit == 2 || unit == 4 || unit == 8 || unit == 16);
-}
-
-bool motive_parse_meter(const char *text, PlanMeter *out) {
-    if (!text || !out) {
-        return false;
-    }
-    char *end = NULL;
-    long beats = strtol(text, &end, 10);
-    if (end == text || *end != '/') {
-        return false;
-    }
-    const char *unit_text = end + 1;
-    long unit = strtol(unit_text, &end, 10);
-    if (end == unit_text || *end != '\0' || beats < 1 || beats > 64 || unit < 1 || unit > 16) {
-        return false;
-    }
-    PlanMeter meter = {(int)beats, (int)unit, 0};
-    if (!meter_valid(&meter)) {
-        return false;
-    }
-    *out = meter;
-    return true;
 }
 
 AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode) {

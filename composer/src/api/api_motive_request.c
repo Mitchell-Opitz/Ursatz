@@ -194,7 +194,7 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
         return status;
     }
     if (present) {
-        if (!motive_parse_meter(meter_text, &options.meter)) {
+        if (!request_parse_meter(meter_text, &options.meter)) {
             return fail_at(error, COMPOSER_ERR_REQUEST, base, "/meter",
                            "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8", meter_text);
         }
@@ -205,7 +205,7 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
         return status;
     }
     if (present) {
-        if (!motive_parse_key(key_text, &options.key)) {
+        if (!request_parse_key(key_text, &options.key)) {
             return fail_at(error, COMPOSER_ERR_REQUEST, base, "/key",
                            "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                            "for example \"D minor\"",

@@ -6,6 +6,8 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "util/request_parse.h"
+
 /*
  * The round trip of R-139: every variant the Composer makes is recovered. Four fixtures (a full motive in major, a full
  * motive in minor with a pickup and harmony I-V, a rhythm and a contour; features on the full ones) and an accompaniment
@@ -62,12 +64,12 @@ static Motive load(const char *notes, const char *meter, const char *key, Motive
     if (extra) {
         options = *extra;
     }
-    if (!motive_parse_meter(meter, &options.meter)) {
+    if (!request_parse_meter(meter, &options.meter)) {
         fprintf(stderr, "bad meter %s\n", meter);
         exit(2);
     }
     options.has_meter = true;
-    options.has_key = key && motive_parse_key(key, &options.key);
+    options.has_key = key && request_parse_key(key, &options.key);
     Motive motive;
     MotiveError error;
     if (motive_load(notes, strlen(notes), format, &options, &motive, &error) != MOTIVE_OK) {
@@ -100,7 +102,7 @@ static void make_fixtures(Fixture *fixtures) {
     add_feature(&minor, "a", 0, 1);
     PlanMeter meter;
     MotiveError error;
-    if (!motive_parse_meter("4/4", &meter) ||
+    if (!request_parse_meter("4/4", &meter) ||
         motive_harmony_parse("I V@2", &meter, minor.harmony, &minor.harmony_count, &error) != MOTIVE_OK) {
         fprintf(stderr, "cannot read the minor fixture's harmony\n");
         exit(2);
