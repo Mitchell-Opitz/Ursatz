@@ -20,7 +20,7 @@ read by Ursatz's MusicXMLImporter.
   *notated* (the score's own), *embedded in the file* (a MIDI event) or *inferred* (the input has none:
   4/4 is assumed, or the key is found from the notes alone). The same is in the analysis document's
   `metadata.input`. A key is always *detected* from the notes; a notated key signature is only a
-  boundary for the detection (see "Key regions"), for either input.
+  boundary for the detection (see [Key regions](analyses/harmony.md#key-regions-tonicizations-and-modulations)), for either input.
 - **Pitch spelling.** For a MusicXML score the chord roots and basses and the outer-voice pitch names
   follow the score's spelling (`Db` stays `Db`, `C#` stays `C#`). For MIDI, which has none, they are
   spelled by the pipeline's rule (flats in keys that read in flats). Key labels are always spelled by

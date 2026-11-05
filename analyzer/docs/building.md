@@ -46,7 +46,7 @@ Tests:
 - `test_form_plan`: the form tree of the five reference pieces and the three constructed ones: every phrase in
   exactly one section, the sections following each other and closed only by an authentic cadence, the tree's levels
   named `form`, `section`, `phrase`, `subphrase` and `idea`, the letters following from the returns, and the
-  section and return counts and letters as the library gives them (see "Form plan").
+  section and return counts and letters as the library gives them (see [Form plan](analyses/form-and-motive.md#form-plan)).
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_report_snapshots` and `test_document_snapshots`: the Markdown report (MIDI and MusicXML) and the analysis
   document (MIDI, without `analyzer_version`, `ursatz_commit` and `input`) of the five reference pieces, byte for byte
@@ -57,7 +57,7 @@ Tests:
   and beat of the chords covering chosen positions, for the five reference pieces and two
   constructed files (a pickup and a file with no time signature).
 - `test_chord_coverage`: chord coverage of the five reference pieces. Field Nocturne No. 1 must be
-  above 90% (it reads 92.7%); the others must still produce chords. See "Chords and non-chord tones".
+  above 90% (it reads 92.7%); the others must still produce chords. See [Chords and non-chord tones](analyses/harmony.md#chords-and-non-chord-tones).
 - `test_chord_details`: inversion, runner-up present and absent, and four non-chord-tone types and
   an unclassified one, on small constructed files.
 - `test_roman_numerals`: hand-read numerals on constructed pieces (a major and a minor progression,
