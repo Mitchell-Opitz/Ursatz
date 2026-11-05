@@ -128,7 +128,7 @@ The analysis chain (`chain/`, target `ursatz_chain`) is an extension above the n
 
 A framework may depend on L0 to L6, on `theory/framework.h`, `theory/framework_singleton.h`, `rules/rule.h`, `rules/constraint.h`, `rules/preference.h` and `rules/rule_pair.h`, and on another framework only where that edge is recorded in `frameworks/README.md`.
 
-Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests run from the root build like the module ones (since PR #99); see `docs/BUILDING.md`. `tests/test_architecture_tests.c` applies the same layer rules to the test sources (`tests/<module>/` and `frameworks/<name>/tests/`); the test-only edges it allows are listed in its `ALLOWED_TEST_EDGES`, one reason each.
+Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests run from the root build like the module ones (since PR #99); see `docs/BUILDING.md`. `tests/test_architecture_tests.c` applies the same layer rules to the test sources (`tests/<module>/` and `frameworks/<name>/tests/`); the test-only edges it allows are listed in its `ALLOWED_TEST_EDGES`, one reason each. Two of them reach kernel L8 from a framework test: `common-practice-minimal` tests include `analysis/outer_voice.h` and `standard-harmony` tests include `analysis/period_detection.h`; framework sources never include L8.
 
 ## Shared primitives
 
