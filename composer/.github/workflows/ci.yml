@@ -47,3 +47,6 @@ jobs:
         run: scripts/check-hearing.sh
       - name: Test (fast set)
         run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
+      - name: Ten slowest tests
+        if: always()
+        run: scripts/slowest-tests.sh build
