@@ -5,7 +5,11 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 ## Start here
 
 - [README.md](../README.md): What Ursatz is and how to build and use it.
-- [docs/architecture.md](architecture.md): What the library is for, its module map, public API, data flow, layers and dependency rule.
+- [docs/architecture.md](architecture.md): What the library is for, its module map, public API and data flow.
+- [docs/layers-and-dependency-rules.md](layers-and-dependency-rules.md): The layer table, the dependency rule, open and resolved dependency issues.
+- [docs/public-surface.md](public-surface.md): Which headers each library target exposes and the tests that guard it.
+- [docs/placement-rule.md](placement-rule.md): Where an analysis algorithm lives: kernel, framework, chain or app.
+- [docs/vocabulary-enums.md](vocabulary-enums.md): Shared theory enums in src/semantics and when a new one is admitted.
 - [docs/module-status.md](module-status.md): Implementation status and doc of each kernel module.
 - [frameworks/README.md](../frameworks/README.md): Catalog of the 17 Theory Frameworks and their shared conventions.
 - [chain/README.md](../chain/README.md): The analysis chain: stages, owners and how to call it.

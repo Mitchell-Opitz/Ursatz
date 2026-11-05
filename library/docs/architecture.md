@@ -13,7 +13,7 @@ It owns every analysis algorithm (R-217); the apps orchestrate and render.
 
 ## Where it sits
 
-Ursatz depends on no other repo. The Analyzer, the Composer and the GUI pin it as the git submodule `external/ursatz` ([Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer), [Ursatz-Composer](https://github.com/Mitchell-Opitz/Ursatz-Composer), [Ursatz-GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI)), each at a commit on Ursatz `main` that its own `scripts/check-pins.sh` checks. Details are in [Who calls it](#who-calls-it).
+Ursatz depends on no other repo. The Analyzer, the Composer and the GUI pin it as the git submodule `external/ursatz` ([Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md), [Ursatz-Composer](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md), [Ursatz-GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI/blob/main/docs/architecture.md)), each at a commit on Ursatz `main` that its own `scripts/check-pins.sh` checks. Details are in [Who calls it](#who-calls-it).
 
 ## Module map
 
