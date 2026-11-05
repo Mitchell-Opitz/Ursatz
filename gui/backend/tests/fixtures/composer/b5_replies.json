@@ -1,5 +1,5 @@
 {
- "about": "Replies of the GUI backend at the start of P27 B6 (Composer run as a command, Ursatz-GUI main a2082ae) to the requests below, captured before the routes moved to the Composer API. Placeholders: @project is a project id, @source and @target are saved motifs (source_notes, target_notes) in C minor. A refusal is compared by status only (its text came from the command's stderr); the status case is compared on the members it had.",
+ "about": "Replies of the GUI backend at the start of P27 B6 (Composer run as a command, Ursatz-GUI main a2082ae) to the requests below, captured before the routes moved to the Composer API. Placeholders: @project is a project id, @source and @target are saved motifs (source_notes, target_notes) in C minor. A refusal is compared by status only (its text came from the command's stderr); the status case is compared on the members it had. Recaptured at P32 B3 (Composer API 1.3): the motive analyses gained the segments member, and the random cases now hold the segments strategy, the Composer's default.",
  "cases": [
   {
    "body": {
@@ -236,6 +236,16 @@
         "alteration": 0,
         "degree": 1
        }
+      },
+      "segments": {
+       "given": false,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 3
+        }
+       ]
       },
       "tones": [
        {
@@ -579,6 +589,16 @@
         "alteration": 0,
         "degree": 1
        }
+      },
+      "segments": {
+       "given": true,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 2
+        }
+       ]
       },
       "tones": [
        {
@@ -949,6 +969,16 @@
         "degree": 1
        }
       },
+      "segments": {
+       "given": false,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 3
+        }
+       ]
+      },
       "tones": [
        {
         "note": 1,
@@ -1167,6 +1197,16 @@
       ],
       "rhythm_text": "x:q x:q x:h",
       "scale_degrees": null,
+      "segments": {
+       "given": false,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 2
+        }
+       ]
+      },
       "tones": [],
       "warnings": []
      },
@@ -1285,6 +1325,16 @@
       "range": null,
       "rhythm": null,
       "scale_degrees": null,
+      "segments": {
+       "given": false,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 3
+        }
+       ]
+      },
       "tones": [],
       "warnings": []
      },
@@ -1587,6 +1637,16 @@
         "alteration": 0,
         "degree": 5
        }
+      },
+      "segments": {
+       "given": false,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 3
+        }
+       ]
       },
       "tones": [
        {
@@ -1926,6 +1986,16 @@
         "alteration": 0,
         "degree": 1
        }
+      },
+      "segments": {
+       "given": false,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 3
+        }
+       ]
       },
       "tones": [
        {
@@ -2269,6 +2339,16 @@
         "degree": 1
        }
       },
+      "segments": {
+       "given": false,
+       "items": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 1
+        }
+       ]
+      },
       "tones": [
        {
         "note": 1,
@@ -2545,6 +2625,16 @@
        "degree": 1
       }
      },
+     "segments": {
+      "given": false,
+      "items": [
+       {
+        "first": 0,
+        "label": "a",
+        "last": 1
+       }
+      ]
+     },
      "tones": [
       {
        "note": 1,
@@ -2664,6 +2754,16 @@
       }
      ],
      "scale_degrees": null,
+     "segments": {
+      "given": false,
+      "items": [
+       {
+        "first": 0,
+        "label": "a",
+        "last": 1
+       }
+      ]
+     },
      "tones": [],
      "warnings": []
     },
@@ -2820,6 +2920,16 @@
        "alteration": 0,
        "degree": 5
       }
+     },
+     "segments": {
+      "given": false,
+      "items": [
+       {
+        "first": 0,
+        "label": "a",
+        "last": 1
+       }
+      ]
      },
      "tones": [
       {
@@ -4463,404 +4573,113 @@
       "analysis": {
        "bars": {
         "den": 1,
-        "num": 1
+        "num": 2
        },
        "base_harmony": {
-        "given": false,
-        "text": "I"
+        "given": true,
+        "text": "I IV@3"
        },
        "contour": {
         "directions": [
          "up",
+         "down",
+         "same",
          "up",
          "down"
         ],
-        "shape": "arch"
+        "shape": "wave"
        },
-       "degrees_text": "1:q 3:e 6:e 5:q",
+       "degrees_text": "5:q 1':q 5:e 5:e 1':h 4:q",
        "form": "full",
+       "harmony_text": "I IV@3",
        "implied_harmony": {
         "candidates": [
          {
-          "chord_tones": 3,
-          "fit": 0.875,
+          "chord_tones": 5,
+          "fit": 0.8889,
           "function": "tonic",
           "non_chord_tones": 1,
           "roman_numeral": "i"
          },
          {
           "chord_tones": 3,
-          "fit": 0.75,
+          "fit": 0.6667,
           "function": "predominant",
-          "non_chord_tones": 1,
-          "roman_numeral": "VI"
-         },
-         {
-          "chord_tones": 2,
-          "fit": 0.625,
-          "function": "predominant",
-          "non_chord_tones": 2,
+          "non_chord_tones": 3,
           "roman_numeral": "iv"
          },
          {
           "chord_tones": 2,
-          "fit": 0.375,
+          "fit": 0.5556,
           "function": "predominant",
-          "non_chord_tones": 2,
-          "roman_numeral": "III"
-         },
-         {
-          "chord_tones": 1,
-          "fit": 0.25,
-          "function": "dominant",
-          "non_chord_tones": 3,
-          "roman_numeral": "V"
-         },
-         {
-          "chord_tones": 1,
-          "fit": 0.25,
-          "function": "dominant",
-          "non_chord_tones": 3,
-          "roman_numeral": "V7"
-         },
-         {
-          "chord_tones": 1,
-          "fit": 0.125,
-          "function": "predominant",
-          "non_chord_tones": 3,
-          "roman_numeral": "iio"
-         }
-        ],
-        "key_known": true
-       },
-       "intervals": [
-        {
-         "semitones": 3,
-         "steps": 2
-        },
-        {
-         "semitones": 5,
-         "steps": 3
-        },
-        {
-         "semitones": -1,
-         "steps": -1
-        }
-       ],
-       "key": {
-        "mode": "minor",
-        "source": "given",
-        "tonic_pitch_class": 9
-       },
-       "length": {
-        "den": 4,
-        "num": 3
-       },
-       "note_count": 4,
-       "notes_text": "A4:q C5:e F5:e E5:q",
-       "pickup": "0",
-       "range": {
-        "highest": 77,
-        "lowest": 69,
-        "semitones": 8
-       },
-       "rhythm": [
-        {
-         "bar": 0,
-         "beat": {
-          "den": 1,
-          "num": 0
-         },
-         "dotted": false,
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "on_beat": true,
-         "onset": {
-          "den": 1,
-          "num": 0
-         },
-         "rest_before": {
-          "den": 1,
-          "num": 0
-         }
-        },
-        {
-         "bar": 0,
-         "beat": {
-          "den": 1,
-          "num": 1
-         },
-         "dotted": false,
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "on_beat": true,
-         "onset": {
-          "den": 4,
-          "num": 1
-         },
-         "rest_before": {
-          "den": 1,
-          "num": 0
-         }
-        },
-        {
-         "bar": 0,
-         "beat": {
-          "den": 2,
-          "num": 3
-         },
-         "dotted": false,
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "on_beat": false,
-         "onset": {
-          "den": 8,
-          "num": 3
-         },
-         "rest_before": {
-          "den": 1,
-          "num": 0
-         }
-        },
-        {
-         "bar": 0,
-         "beat": {
-          "den": 1,
-          "num": 2
-         },
-         "dotted": false,
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "on_beat": true,
-         "onset": {
-          "den": 2,
-          "num": 1
-         },
-         "rest_before": {
-          "den": 1,
-          "num": 0
-         }
-        }
-       ],
-       "scale_degrees": {
-        "all": [
-         {
-          "alteration": 0,
-          "degree": 1
-         },
-         {
-          "alteration": 0,
-          "degree": 3
-         },
-         {
-          "alteration": 0,
-          "degree": 6
-         },
-         {
-          "alteration": 0,
-          "degree": 5
-         }
-        ],
-        "end": {
-         "alteration": 0,
-         "degree": 5
-        },
-        "start": {
-         "alteration": 0,
-         "degree": 1
-        }
-       },
-       "tones": [
-        {
-         "note": 1,
-         "overridden": false,
-         "resolves_to": null,
-         "role": "chord",
-         "type": null,
-         "unresolved": false
-        },
-        {
-         "note": 2,
-         "overridden": false,
-         "resolves_to": null,
-         "role": "chord",
-         "type": null,
-         "unresolved": false
-        },
-        {
-         "note": 3,
-         "overridden": false,
-         "resolves_to": 4,
-         "role": "non-chord",
-         "type": "appoggiatura",
-         "unresolved": false
-        },
-        {
-         "note": 4,
-         "overridden": false,
-         "resolves_to": null,
-         "role": "chord",
-         "type": null,
-         "unresolved": false
-        }
-       ],
-       "warnings": []
-      },
-      "motive": {
-       "key": {
-        "mode": "minor",
-        "tonic_pitch_class": 9
-       },
-       "meter": {
-        "bars_per_hyperbar": 0,
-        "beat_unit": 4,
-        "beats_per_bar": 3
-       },
-       "notes": [
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 69,
-         "offset": {
-          "den": 1,
-          "num": 0
-         }
-        },
-        {
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "midi_pitch": 72,
-         "offset": {
-          "den": 4,
-          "num": 1
-         }
-        },
-        {
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "midi_pitch": 77,
-         "offset": {
-          "den": 8,
-          "num": 3
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 76,
-         "offset": {
-          "den": 2,
-          "num": 1
-         }
-        }
-       ]
-      }
-     },
-     {
-      "analysis": {
-       "bars": {
-        "den": 1,
-        "num": 2
-       },
-       "base_harmony": {
-        "given": false,
-        "text": "I"
-       },
-       "contour": {
-        "directions": [
-         "up",
-         "down",
-         "up",
-         "down",
-         "up"
-        ],
-        "shape": "wave"
-       },
-       "degrees_text": "1:q 3:e 1:e 1':q 5:q 1':h",
-       "form": "full",
-       "implied_harmony": {
-        "candidates": [
-         {
-          "chord_tones": 6,
-          "fit": 1,
-          "function": "tonic",
-          "non_chord_tones": 0,
-          "roman_numeral": "i"
-         },
-         {
-          "chord_tones": 5,
-          "fit": 0.75,
-          "function": "predominant",
-          "non_chord_tones": 1,
+          "non_chord_tones": 4,
           "roman_numeral": "VI"
          },
          {
           "chord_tones": 4,
-          "fit": 0.6875,
-          "function": "predominant",
+          "fit": 0.4444,
+          "function": "dominant",
           "non_chord_tones": 2,
-          "roman_numeral": "iv"
+          "roman_numeral": "V7"
          },
          {
-          "chord_tones": 2,
-          "fit": 0.3125,
+          "chord_tones": 3,
+          "fit": 0.3333,
+          "function": "dominant",
+          "non_chord_tones": 3,
+          "roman_numeral": "V"
+         },
+         {
+          "chord_tones": 3,
+          "fit": 0.3333,
           "function": "predominant",
-          "non_chord_tones": 4,
+          "non_chord_tones": 3,
           "roman_numeral": "III"
          },
          {
           "chord_tones": 1,
-          "fit": 0.25,
-          "function": "dominant",
+          "fit": 0.1111,
+          "function": "predominant",
           "non_chord_tones": 5,
-          "roman_numeral": "V"
+          "roman_numeral": "iio"
          },
          {
           "chord_tones": 1,
-          "fit": 0.25,
+          "fit": 0.1111,
+          "function": "predominant",
+          "non_chord_tones": 5,
+          "roman_numeral": "VII"
+         },
+         {
+          "chord_tones": 1,
+          "fit": 0.1111,
           "function": "dominant",
           "non_chord_tones": 5,
-          "roman_numeral": "V7"
+          "roman_numeral": "viio"
          }
         ],
         "key_known": true
        },
        "intervals": [
         {
-         "semitones": 3,
-         "steps": 2
-        },
-        {
-         "semitones": -3,
-         "steps": -2
-        },
-        {
-         "semitones": 12,
-         "steps": 7
+         "semitones": 5,
+         "steps": 3
         },
         {
          "semitones": -5,
          "steps": -3
         },
         {
+         "semitones": 0,
+         "steps": 0
+        },
+        {
          "semitones": 5,
          "steps": 3
+        },
+        {
+         "semitones": -7,
+         "steps": -4
         }
        ],
        "key": {
@@ -4873,12 +4692,12 @@
         "num": 3
        },
        "note_count": 6,
-       "notes_text": "A4:q C5:e A4:e A5:q E5:q A5:h",
+       "notes_text": "E5:q A5:q E5:e E5:e A5:h D5:q",
        "pickup": "0",
        "range": {
         "highest": 81,
-        "lowest": 69,
-        "semitones": 12
+        "lowest": 74,
+        "semitones": 7
        },
        "rhythm": [
         {
@@ -4910,34 +4729,13 @@
          },
          "dotted": false,
          "duration": {
-          "den": 8,
+          "den": 4,
           "num": 1
          },
          "on_beat": true,
          "onset": {
           "den": 4,
           "num": 1
-         },
-         "rest_before": {
-          "den": 1,
-          "num": 0
-         }
-        },
-        {
-         "bar": 0,
-         "beat": {
-          "den": 2,
-          "num": 3
-         },
-         "dotted": false,
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "on_beat": false,
-         "onset": {
-          "den": 8,
-          "num": 3
          },
          "rest_before": {
           "den": 1,
@@ -4952,13 +4750,34 @@
          },
          "dotted": false,
          "duration": {
-          "den": 4,
+          "den": 8,
           "num": 1
          },
          "on_beat": true,
          "onset": {
           "den": 2,
           "num": 1
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "bar": 0,
+         "beat": {
+          "den": 2,
+          "num": 5
+         },
+         "dotted": false,
+         "duration": {
+          "den": 8,
+          "num": 1
+         },
+         "on_beat": false,
+         "onset": {
+          "den": 8,
+          "num": 5
          },
          "rest_before": {
           "den": 1,
@@ -4973,7 +4792,7 @@
          },
          "dotted": false,
          "duration": {
-          "den": 4,
+          "den": 2,
           "num": 1
          },
          "on_beat": true,
@@ -4990,17 +4809,17 @@
          "bar": 1,
          "beat": {
           "den": 1,
-          "num": 1
+          "num": 2
          },
          "dotted": false,
          "duration": {
-          "den": 2,
+          "den": 4,
           "num": 1
          },
          "on_beat": true,
          "onset": {
-          "den": 1,
-          "num": 1
+          "den": 4,
+          "num": 5
          },
          "rest_before": {
           "den": 1,
@@ -5012,15 +4831,7 @@
         "all": [
          {
           "alteration": 0,
-          "degree": 1
-         },
-         {
-          "alteration": 0,
-          "degree": 3
-         },
-         {
-          "alteration": 0,
-          "degree": 1
+          "degree": 5
          },
          {
           "alteration": 0,
@@ -5032,17 +4843,40 @@
          },
          {
           "alteration": 0,
+          "degree": 5
+         },
+         {
+          "alteration": 0,
           "degree": 1
+         },
+         {
+          "alteration": 0,
+          "degree": 4
          }
         ],
         "end": {
          "alteration": 0,
-         "degree": 1
+         "degree": 4
         },
         "start": {
          "alteration": 0,
-         "degree": 1
+         "degree": 5
         }
+       },
+       "segments": {
+        "given": true,
+        "items": [
+         {
+          "first": 0,
+          "label": "a",
+          "last": 3
+         },
+         {
+          "first": 4,
+          "label": "b",
+          "last": 5
+         }
+        ]
        },
        "tones": [
         {
@@ -5097,6 +4931,19 @@
        "warnings": []
       },
       "motive": {
+       "features": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 3
+        },
+        {
+         "first": 4,
+         "label": "b",
+         "last": 5
+        }
+       ],
+       "harmony": "I IV@3",
        "key": {
         "mode": "minor",
         "tonic_pitch_class": 9
@@ -5112,7 +4959,7 @@
           "den": 4,
           "num": 1
          },
-         "midi_pitch": 69,
+         "midi_pitch": 76,
          "offset": {
           "den": 1,
           "num": 0
@@ -5120,46 +4967,35 @@
         },
         {
          "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "midi_pitch": 72,
-         "offset": {
-          "den": 4,
-          "num": 1
-         }
-        },
-        {
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "midi_pitch": 69,
-         "offset": {
-          "den": 8,
-          "num": 3
-         }
-        },
-        {
-         "duration": {
           "den": 4,
           "num": 1
          },
          "midi_pitch": 81,
          "offset": {
-          "den": 2,
+          "den": 4,
           "num": 1
          }
         },
         {
          "duration": {
-          "den": 4,
+          "den": 8,
           "num": 1
          },
          "midi_pitch": 76,
          "offset": {
-          "den": 4,
-          "num": 3
+          "den": 2,
+          "num": 1
+         }
+        },
+        {
+         "duration": {
+          "den": 8,
+          "num": 1
+         },
+         "midi_pitch": 76,
+         "offset": {
+          "den": 8,
+          "num": 5
          }
         },
         {
@@ -5169,8 +5005,19 @@
          },
          "midi_pitch": 81,
          "offset": {
-          "den": 1,
+          "den": 4,
+          "num": 3
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
           "num": 1
+         },
+         "midi_pitch": 74,
+         "offset": {
+          "den": 4,
+          "num": 5
          }
         }
        ]
@@ -5180,66 +5027,74 @@
       "analysis": {
        "bars": {
         "den": 1,
-        "num": 1
+        "num": 2
        },
        "base_harmony": {
-        "given": false,
-        "text": "I"
+        "given": true,
+        "text": "I V@3"
        },
        "contour": {
         "directions": [
          "up",
          "down",
-         "up",
+         "down",
          "down"
         ],
-        "shape": "wave"
+        "shape": "arch"
        },
-       "degrees_text": "3:q 5:e 1:e 1':e 5:e",
+       "degrees_text": "3:q. 5:e 1:q #7,:h 5,:q",
        "form": "full",
+       "harmony_text": "I V@3",
        "implied_harmony": {
         "candidates": [
          {
-          "chord_tones": 5,
-          "fit": 1,
+          "chord_tones": 4,
+          "fit": 0.5789,
           "function": "tonic",
-          "non_chord_tones": 0,
+          "non_chord_tones": 1,
           "roman_numeral": "i"
          },
          {
           "chord_tones": 3,
-          "fit": 0.75,
-          "function": "predominant",
+          "fit": 0.5789,
+          "function": "dominant",
           "non_chord_tones": 2,
-          "roman_numeral": "VI"
+          "roman_numeral": "V"
          },
          {
           "chord_tones": 3,
-          "fit": 0.75,
+          "fit": 0.5789,
+          "function": "dominant",
+          "non_chord_tones": 2,
+          "roman_numeral": "V7"
+         },
+         {
+          "chord_tones": 3,
+          "fit": 0.4737,
           "function": "predominant",
           "non_chord_tones": 2,
           "roman_numeral": "III"
          },
          {
           "chord_tones": 2,
-          "fit": 0.25,
-          "function": "dominant",
-          "non_chord_tones": 3,
-          "roman_numeral": "V"
-         },
-         {
-          "chord_tones": 2,
-          "fit": 0.25,
+          "fit": 0.4211,
           "function": "predominant",
           "non_chord_tones": 3,
-          "roman_numeral": "iv"
+          "roman_numeral": "VI"
          },
          {
-          "chord_tones": 2,
-          "fit": 0.25,
+          "chord_tones": 1,
+          "fit": 0.4211,
           "function": "dominant",
-          "non_chord_tones": 3,
-          "roman_numeral": "V7"
+          "non_chord_tones": 4,
+          "roman_numeral": "viio"
+         },
+         {
+          "chord_tones": 1,
+          "fit": 0.1053,
+          "function": "predominant",
+          "non_chord_tones": 4,
+          "roman_numeral": "iv"
          }
         ],
         "key_known": true
@@ -5254,12 +5109,12 @@
          "steps": -4
         },
         {
-         "semitones": 12,
-         "steps": 7
+         "semitones": -1,
+         "steps": -1
         },
         {
-         "semitones": -5,
-         "steps": -3
+         "semitones": -4,
+         "steps": -2
         }
        ],
        "key": {
@@ -5268,15 +5123,15 @@
         "tonic_pitch_class": 9
        },
        "length": {
-        "den": 4,
+        "den": 2,
         "num": 3
        },
        "note_count": 5,
-       "notes_text": "C5:q E5:e A4:e A5:e E5:e",
+       "notes_text": "C5:q. E5:e A4:q G#4:h E4:q",
        "pickup": "0",
        "range": {
-        "highest": 81,
-        "lowest": 69,
+        "highest": 76,
+        "lowest": 64,
         "semitones": 12
        },
        "rhythm": [
@@ -5286,36 +5141,15 @@
           "den": 1,
           "num": 0
          },
-         "dotted": false,
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "on_beat": true,
-         "onset": {
-          "den": 1,
-          "num": 0
-         },
-         "rest_before": {
-          "den": 1,
-          "num": 0
-         }
-        },
-        {
-         "bar": 0,
-         "beat": {
-          "den": 1,
-          "num": 1
-         },
-         "dotted": false,
+         "dotted": true,
          "duration": {
           "den": 8,
-          "num": 1
+          "num": 3
          },
          "on_beat": true,
          "onset": {
-          "den": 4,
-          "num": 1
+          "den": 1,
+          "num": 0
          },
          "rest_before": {
           "den": 1,
@@ -5351,7 +5185,7 @@
          },
          "dotted": false,
          "duration": {
-          "den": 8,
+          "den": 4,
           "num": 1
          },
          "on_beat": true,
@@ -5365,19 +5199,40 @@
          }
         },
         {
-         "bar": 0,
+         "bar": 1,
          "beat": {
-          "den": 2,
-          "num": 5
+          "den": 1,
+          "num": 0
          },
          "dotted": false,
          "duration": {
-          "den": 8,
+          "den": 2,
           "num": 1
          },
-         "on_beat": false,
+         "on_beat": true,
          "onset": {
-          "den": 8,
+          "den": 4,
+          "num": 3
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "bar": 1,
+         "beat": {
+          "den": 1,
+          "num": 2
+         },
+         "dotted": false,
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "on_beat": true,
+         "onset": {
+          "den": 4,
           "num": 5
          },
          "rest_before": {
@@ -5401,8 +5256,8 @@
           "degree": 1
          },
          {
-          "alteration": 0,
-          "degree": 1
+          "alteration": 1,
+          "degree": 7
          },
          {
           "alteration": 0,
@@ -5417,6 +5272,21 @@
          "alteration": 0,
          "degree": 3
         }
+       },
+       "segments": {
+        "given": true,
+        "items": [
+         {
+          "first": 0,
+          "label": "a",
+          "last": 2
+         },
+         {
+          "first": 3,
+          "label": "b",
+          "last": 4
+         }
+        ]
        },
        "tones": [
         {
@@ -5463,6 +5333,448 @@
        "warnings": []
       },
       "motive": {
+       "features": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 2
+        },
+        {
+         "first": 3,
+         "label": "b",
+         "last": 4
+        }
+       ],
+       "harmony": "I V@3",
+       "key": {
+        "mode": "minor",
+        "tonic_pitch_class": 9
+       },
+       "meter": {
+        "bars_per_hyperbar": 0,
+        "beat_unit": 4,
+        "beats_per_bar": 3
+       },
+       "notes": [
+        {
+         "duration": {
+          "den": 8,
+          "num": 3
+         },
+         "midi_pitch": 72,
+         "offset": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "duration": {
+          "den": 8,
+          "num": 1
+         },
+         "midi_pitch": 76,
+         "offset": {
+          "den": 8,
+          "num": 3
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "midi_pitch": 69,
+         "offset": {
+          "den": 2,
+          "num": 1
+         }
+        },
+        {
+         "duration": {
+          "den": 2,
+          "num": 1
+         },
+         "midi_pitch": 68,
+         "offset": {
+          "den": 4,
+          "num": 3
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "midi_pitch": 64,
+         "offset": {
+          "den": 4,
+          "num": 5
+         }
+        }
+       ]
+      }
+     },
+     {
+      "analysis": {
+       "bars": {
+        "den": 1,
+        "num": 2
+       },
+       "base_harmony": {
+        "given": true,
+        "text": "I V@3"
+       },
+       "contour": {
+        "directions": [
+         "up",
+         "same",
+         "down",
+         "up",
+         "same"
+        ],
+        "shape": "wave"
+       },
+       "degrees_text": "5:q 1':q 1':q 5:q #7:q #7:q",
+       "form": "full",
+       "harmony_text": "I V@3",
+       "implied_harmony": {
+        "candidates": [
+         {
+          "chord_tones": 4,
+          "fit": 0.75,
+          "function": "tonic",
+          "non_chord_tones": 2,
+          "roman_numeral": "i"
+         },
+         {
+          "chord_tones": 4,
+          "fit": 0.75,
+          "function": "dominant",
+          "non_chord_tones": 2,
+          "roman_numeral": "V"
+         },
+         {
+          "chord_tones": 4,
+          "fit": 0.75,
+          "function": "dominant",
+          "non_chord_tones": 2,
+          "roman_numeral": "V7"
+         },
+         {
+          "chord_tones": 2,
+          "fit": 0.5,
+          "function": "predominant",
+          "non_chord_tones": 4,
+          "roman_numeral": "III"
+         },
+         {
+          "chord_tones": 2,
+          "fit": 0.25,
+          "function": "predominant",
+          "non_chord_tones": 4,
+          "roman_numeral": "iv"
+         },
+         {
+          "chord_tones": 2,
+          "fit": 0.25,
+          "function": "predominant",
+          "non_chord_tones": 4,
+          "roman_numeral": "VI"
+         },
+         {
+          "chord_tones": 2,
+          "fit": 0.25,
+          "function": "dominant",
+          "non_chord_tones": 4,
+          "roman_numeral": "viio"
+         }
+        ],
+        "key_known": true
+       },
+       "intervals": [
+        {
+         "semitones": 5,
+         "steps": 3
+        },
+        {
+         "semitones": 0,
+         "steps": 0
+        },
+        {
+         "semitones": -5,
+         "steps": -3
+        },
+        {
+         "semitones": 4,
+         "steps": 2
+        },
+        {
+         "semitones": 0,
+         "steps": 0
+        }
+       ],
+       "key": {
+        "mode": "minor",
+        "source": "given",
+        "tonic_pitch_class": 9
+       },
+       "length": {
+        "den": 2,
+        "num": 3
+       },
+       "note_count": 6,
+       "notes_text": "E5:q A5:q A5:q E5:q G#5:q G#5:q",
+       "pickup": "0",
+       "range": {
+        "highest": 81,
+        "lowest": 76,
+        "semitones": 5
+       },
+       "rhythm": [
+        {
+         "bar": 0,
+         "beat": {
+          "den": 1,
+          "num": 0
+         },
+         "dotted": false,
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "on_beat": true,
+         "onset": {
+          "den": 1,
+          "num": 0
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "bar": 0,
+         "beat": {
+          "den": 1,
+          "num": 1
+         },
+         "dotted": false,
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "on_beat": true,
+         "onset": {
+          "den": 4,
+          "num": 1
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "bar": 0,
+         "beat": {
+          "den": 1,
+          "num": 2
+         },
+         "dotted": false,
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "on_beat": true,
+         "onset": {
+          "den": 2,
+          "num": 1
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "bar": 1,
+         "beat": {
+          "den": 1,
+          "num": 0
+         },
+         "dotted": false,
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "on_beat": true,
+         "onset": {
+          "den": 4,
+          "num": 3
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "bar": 1,
+         "beat": {
+          "den": 1,
+          "num": 1
+         },
+         "dotted": false,
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "on_beat": true,
+         "onset": {
+          "den": 1,
+          "num": 1
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        },
+        {
+         "bar": 1,
+         "beat": {
+          "den": 1,
+          "num": 2
+         },
+         "dotted": false,
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "on_beat": true,
+         "onset": {
+          "den": 4,
+          "num": 5
+         },
+         "rest_before": {
+          "den": 1,
+          "num": 0
+         }
+        }
+       ],
+       "scale_degrees": {
+        "all": [
+         {
+          "alteration": 0,
+          "degree": 5
+         },
+         {
+          "alteration": 0,
+          "degree": 1
+         },
+         {
+          "alteration": 0,
+          "degree": 1
+         },
+         {
+          "alteration": 0,
+          "degree": 5
+         },
+         {
+          "alteration": 1,
+          "degree": 7
+         },
+         {
+          "alteration": 1,
+          "degree": 7
+         }
+        ],
+        "end": {
+         "alteration": 1,
+         "degree": 7
+        },
+        "start": {
+         "alteration": 0,
+         "degree": 5
+        }
+       },
+       "segments": {
+        "given": true,
+        "items": [
+         {
+          "first": 0,
+          "label": "a",
+          "last": 2
+         },
+         {
+          "first": 3,
+          "label": "a'",
+          "last": 5
+         }
+        ]
+       },
+       "tones": [
+        {
+         "note": 1,
+         "overridden": false,
+         "resolves_to": null,
+         "role": "chord",
+         "type": null,
+         "unresolved": false
+        },
+        {
+         "note": 2,
+         "overridden": false,
+         "resolves_to": null,
+         "role": "chord",
+         "type": null,
+         "unresolved": false
+        },
+        {
+         "note": 3,
+         "overridden": false,
+         "resolves_to": null,
+         "role": "chord",
+         "type": null,
+         "unresolved": false
+        },
+        {
+         "note": 4,
+         "overridden": false,
+         "resolves_to": null,
+         "role": "chord",
+         "type": null,
+         "unresolved": false
+        },
+        {
+         "note": 5,
+         "overridden": false,
+         "resolves_to": null,
+         "role": "chord",
+         "type": null,
+         "unresolved": false
+        },
+        {
+         "note": 6,
+         "overridden": false,
+         "resolves_to": null,
+         "role": "chord",
+         "type": null,
+         "unresolved": false
+        }
+       ],
+       "warnings": []
+      },
+      "motive": {
+       "features": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 2
+        },
+        {
+         "first": 3,
+         "label": "a'",
+         "last": 5
+        }
+       ],
+       "harmony": "I V@3",
        "key": {
         "mode": "minor",
         "tonic_pitch_class": 9
@@ -5478,7 +5790,7 @@
           "den": 4,
           "num": 1
          },
-         "midi_pitch": 72,
+         "midi_pitch": 76,
          "offset": {
           "den": 1,
           "num": 0
@@ -5486,10 +5798,10 @@
         },
         {
          "duration": {
-          "den": 8,
+          "den": 4,
           "num": 1
          },
-         "midi_pitch": 76,
+         "midi_pitch": 81,
          "offset": {
           "den": 4,
           "num": 1
@@ -5497,18 +5809,7 @@
         },
         {
          "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "midi_pitch": 69,
-         "offset": {
-          "den": 8,
-          "num": 3
-         }
-        },
-        {
-         "duration": {
-          "den": 8,
+          "den": 4,
           "num": 1
          },
          "midi_pitch": 81,
@@ -5519,12 +5820,34 @@
         },
         {
          "duration": {
-          "den": 8,
+          "den": 4,
           "num": 1
          },
          "midi_pitch": 76,
          "offset": {
-          "den": 8,
+          "den": 4,
+          "num": 3
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "midi_pitch": 80,
+         "offset": {
+          "den": 1,
+          "num": 1
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "midi_pitch": 80,
+         "offset": {
+          "den": 4,
           "num": 5
          }
         }
@@ -5560,8 +5883,9 @@
        },
        "base_harmony": null,
        "contour": null,
-       "degrees_text": "1:e 1:e 1:q 1:q 1:q",
+       "degrees_text": "1:q 1:q 1:q 1:q",
        "form": "rhythm",
+       "harmony_text": "I V@2",
        "implied_harmony": {
         "candidates": [],
         "key_known": false
@@ -5576,8 +5900,8 @@
         "den": 1,
         "num": 1
        },
-       "note_count": 5,
-       "notes_text": "D4:e D4:e D4:q D4:q D4:q",
+       "note_count": 4,
+       "notes_text": "D4:q D4:q D4:q D4:q",
        "pickup": "0",
        "range": null,
        "rhythm": [
@@ -5589,34 +5913,13 @@
          },
          "dotted": false,
          "duration": {
-          "den": 8,
+          "den": 4,
           "num": 1
          },
          "on_beat": true,
          "onset": {
           "den": 1,
           "num": 0
-         },
-         "rest_before": {
-          "den": 1,
-          "num": 0
-         }
-        },
-        {
-         "bar": 0,
-         "beat": {
-          "den": 2,
-          "num": 1
-         },
-         "dotted": false,
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "on_beat": false,
-         "onset": {
-          "den": 8,
-          "num": 1
          },
          "rest_before": {
           "den": 1,
@@ -5687,13 +5990,41 @@
          }
         }
        ],
-       "rhythm_text": "x:e x:e x:q x:q x:q",
+       "rhythm_text": "x:q x:q x:q x:q",
        "scale_degrees": null,
+       "segments": {
+        "given": true,
+        "items": [
+         {
+          "first": 0,
+          "label": "a",
+          "last": 1
+         },
+         {
+          "first": 2,
+          "label": "a'",
+          "last": 3
+         }
+        ]
+       },
        "tones": [],
        "warnings": []
       },
       "motive": {
+       "features": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 1
+        },
+        {
+         "first": 2,
+         "label": "a'",
+         "last": 3
+        }
+       ],
        "form": "rhythm",
+       "harmony": "I V@2",
        "key": {
         "mode": "major",
         "tonic_pitch_class": 2
@@ -5706,24 +6037,13 @@
        "notes": [
         {
          "duration": {
-          "den": 8,
+          "den": 4,
           "num": 1
          },
          "midi_pitch": 62,
          "offset": {
           "den": 1,
           "num": 0
-         }
-        },
-        {
-         "duration": {
-          "den": 8,
-          "num": 1
-         },
-         "midi_pitch": 62,
-         "offset": {
-          "den": 8,
-          "num": 1
          }
         },
         {
@@ -5787,25 +6107,22 @@
       "analysis": {
        "bars": {
         "den": 4,
-        "num": 9
+        "num": 5
        },
        "base_harmony": null,
        "contour": {
         "directions": [
-         "down",
          "up",
-         "up",
-         "down",
-         "same",
          "down",
          "up",
          "down"
         ],
         "shape": "wave"
        },
-       "contour_text": "1 0 2 4 3 3 2 4 3",
-       "degrees_text": "2:q 1:q 3:q 5:q 4:q 4:q 3:q 5:q 4:q",
+       "contour_text": "1 2 1 2 0",
+       "degrees_text": "2:q 3:q 2:q 3:q 1:q",
        "form": "contour",
+       "harmony_text": "I I@2",
        "implied_harmony": {
         "candidates": [],
         "key_known": false
@@ -5818,19 +6135,47 @@
        },
        "length": {
         "den": 4,
-        "num": 9
+        "num": 5
        },
-       "note_count": 9,
-       "notes_text": "D4:q C4:q E4:q G4:q F4:q F4:q E4:q G4:q F4:q",
+       "note_count": 5,
+       "notes_text": "D4:q E4:q D4:q E4:q C4:q",
        "pickup": "0",
        "range": null,
        "rhythm": null,
        "scale_degrees": null,
+       "segments": {
+        "given": true,
+        "items": [
+         {
+          "first": 0,
+          "label": "a",
+          "last": 3
+         },
+         {
+          "first": 4,
+          "label": "b",
+          "last": 4
+         }
+        ]
+       },
        "tones": [],
        "warnings": []
       },
       "motive": {
+       "features": [
+        {
+         "first": 0,
+         "label": "a",
+         "last": 3
+        },
+        {
+         "first": 4,
+         "label": "b",
+         "last": 4
+        }
+       ],
        "form": "contour",
+       "harmony": "I I@2",
        "key": {
         "mode": "major",
         "tonic_pitch_class": 0
@@ -5857,87 +6202,43 @@
           "den": 4,
           "num": 1
          },
+         "midi_pitch": 64,
+         "offset": {
+          "den": 4,
+          "num": 1
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "midi_pitch": 62,
+         "offset": {
+          "den": 2,
+          "num": 1
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
+         "midi_pitch": 64,
+         "offset": {
+          "den": 4,
+          "num": 3
+         }
+        },
+        {
+         "duration": {
+          "den": 4,
+          "num": 1
+         },
          "midi_pitch": 60,
          "offset": {
-          "den": 4,
-          "num": 1
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 64,
-         "offset": {
-          "den": 2,
-          "num": 1
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 67,
-         "offset": {
-          "den": 4,
-          "num": 3
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 65,
-         "offset": {
           "den": 1,
           "num": 1
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 65,
-         "offset": {
-          "den": 4,
-          "num": 5
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 64,
-         "offset": {
-          "den": 2,
-          "num": 3
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 67,
-         "offset": {
-          "den": 4,
-          "num": 7
-         }
-        },
-        {
-         "duration": {
-          "den": 4,
-          "num": 1
-         },
-         "midi_pitch": 65,
-         "offset": {
-          "den": 1,
-          "num": 2
          }
         }
        ],

@@ -296,6 +296,16 @@
    "label": "Contour only"
   }
  ],
+ "random_motive_strategies": [
+  {
+   "value": "segments",
+   "label": "Segments"
+  },
+  {
+   "value": "drawn",
+   "label": "Drawn"
+  }
+ ],
  "roles": [
   {
    "value": "melodic",
