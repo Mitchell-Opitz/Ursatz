@@ -237,6 +237,14 @@
       "text": "I",
       "given": false
     },
+    "segments": {
+      "given": false,
+      "items": [{
+          "label": "a",
+          "first": 0,
+          "last": 3
+        }]
+    },
     "tones": [{
         "note": 1,
         "role": "chord",
