@@ -60,7 +60,11 @@ beats (`0`, `1` or `1/2`), an optional Base harmony field and a Segments table
 (named note ranges such as head and tail: label of 1 to 8 characters, first
 and last note counted from 1; rows are added and removed in place; Liquidation
 and the motive-forms keep or drop them, and the variant picker calls the
-`feature` parameter `segment`. The stored field stays `features`). Base harmony is the motif's own chords as the Composer
+`feature` parameter `segment`. The stored field stays `features`). Segments are always present: when none are set the
+Composer proposes them from the rhythm, the rows carry a Proposed tag, and editing, adding or removing a row makes them
+the motif's own (the tag goes). Use proposal clears the rows and marks them proposed, so the save takes the Composer's
+proposal; changed notes, pickup, meter or form propose again while the segments are still proposed. Existing motifs
+without segments were given a proposal once, in a version noted `Segments proposed`. The Random section has one Random button (no Reroll): each press draws another motif built from segments, and Use fills the editor with its notes, base harmony and segments (marked proposed). Base harmony is the motif's own chords as the Composer
 reads them (`I V6@2 I@3`: upper case Roman numerals, `b` or `#` before one
 for an altered root, figures `6`, `64`, `7`, `65`, `43`, `42`, and `@` the
 onset in beats; the first chord needs no onset; up to 8 chords, at most 2 in a
