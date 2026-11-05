@@ -5,6 +5,8 @@
  * `variants` route's answer: {seed, chain: {steps: [{op, params, open}]},
  * kind, kept, changed, derivation, recognizability, motive}. */
 (function (root) {
+  /* The Composer's words (R-270): the phrase functions and the distances are read from the vocabulary when asked. */
+  const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
   const CATEGORY_ORDER = ["exact", "rhythm", "intervals", "harmony", "melody adaptation"];
   const FLAGS = ["unflagged", "approved", "rejected"];
   const KINDS = ["exact", "motive-form", "variant"];
@@ -55,15 +57,16 @@
     return list;
   }
 
-  const FUNCTIONS = ["beginning", "continuation", "contrast", "cadential"];
+  const functions = () => Vocab.values("functions");
 
   /* "Suits: beginning, cadential" for the functions that exist, "Suits: none" without any (R-143). */
-  function suitsLine(functions) {
-    const names = (Array.isArray(functions) ? functions : []).filter((name) => FUNCTIONS.includes(name));
+  function suitsLine(list) {
+    const known = functions();
+    const names = (Array.isArray(list) ? list : []).filter((name) => known.includes(name));
     return `Suits: ${names.length > 0 ? names.join(", ") : "none"}`;
   }
 
-  const SUITS_FILTERS = [{ value: "", text: "Any" }, ...FUNCTIONS.map((name) => ({ value: name, text: titleOf(name) }))];
+  const suitsFilters = () => [{ value: "", text: "Any" }, ...Vocab.list("functions").map((f) => ({ value: String(f.value), text: f.label }))];
   const SUITS_EXPLANATION =
     "Where in a phrase a form fits, worked out from its harmony, rhythm and length (Schoenberg). Theme slots use it to pick forms.";
 
@@ -410,12 +413,7 @@
     return /^\d+$/.test(value) && Number.isSafeInteger(number) && number >= min ? number : NaN;
   }
 
-  const DISTANCES = [
-    { value: "", text: "Any" },
-    { value: "close", text: "Close" },
-    { value: "medium", text: "Medium" },
-    { value: "far", text: "Far" },
-  ];
+  const distances = () => [{ value: "", text: "Any" }, ...Vocab.list("distances").map((d) => ({ value: String(d.value), text: d.label }))];
 
   /* The status after Generate: the seed, or how many came out when the distance left fewer than asked. */
   function generatedNote(variants, count, seed, distance) {
@@ -447,7 +445,7 @@
       body.seed = seed;
     }
     const chain = chainFromSteps(o.steps);
-    const distance = DISTANCES.some((d) => d.value !== "" && d.value === o.distance) ? o.distance : null;
+    const distance = distances().some((d) => d.value !== "" && d.value === o.distance) ? o.distance : null;
     if (chain && distance) {
       return { error: "Distance takes random operations" };
     }
@@ -457,9 +455,9 @@
     if (distance) {
       body.distance = distance;
     }
-    const functions = FUNCTIONS.filter((name) => Array.isArray(o.functions) && o.functions.includes(name));
-    if (functions.length > 0) {
-      body.functions = functions;
+    const chosen = functions().filter((name) => Array.isArray(o.functions) && o.functions.includes(name));
+    if (chosen.length > 0) {
+      body.functions = chosen;
     }
     return { request: jobRequest("POST", itemUrl(id, "variants"), body) };
   }
@@ -693,10 +691,10 @@
     KINDS,
     KIND_LABELS,
     FLAG_LABELS,
-    FUNCTIONS,
+    functions,
     DEFAULT_COUNT,
-    DISTANCES,
-    SUITS_FILTERS,
+    distances,
+    suitsFilters,
     COMMENT_MAX,
     resultNotes,
     eachOpGroups,

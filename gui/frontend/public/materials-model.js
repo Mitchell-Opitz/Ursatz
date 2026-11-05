@@ -426,17 +426,11 @@
   }
 
   const NOTE_HINT = "Pitch:duration, e.g. D4:q F4:e A4:e D5:h. r is a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
-  const MOTIF_ROLES = [
-    { value: "melodic", label: "Melodic" },
-    { value: "accompaniment", label: "Accompaniment" },
-  ];
+  /* The roles and forms of a motif are the Composer's (R-270): the editor offers what the vocabulary lists. */
+  const motifRoles = () => Vocab.list("roles").map(({ value, label }) => ({ value, label }));
   const RHYTHM_HINT = "Rhythm only, e.g. x:q x:e x:e x:h. x is a note, r a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
   const CONTOUR_HINT = "Contour only: ranks separated by spaces, e.g. 0 2 1 3. 0 is the lowest, equal ranks are the same height, no durations.";
-  const MOTIF_FORMS = [
-    { value: "full", label: "Full", enabled: true },
-    { value: "rhythm", label: "Rhythm only", enabled: true },
-    { value: "contour", label: "Contour only", enabled: true },
-  ];
+  const motifForms = () => Vocab.list("motive_forms").map(({ value, label }) => ({ value, label }));
 
   const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
   const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords, at most 2 in a bar; empty uses the harmony proposed from the notes.";
@@ -1023,8 +1017,8 @@
     validateRequest,
     TONIC_HINT,
     keyMode,
-    MOTIF_ROLES,
-    MOTIF_FORMS,
+    motifRoles,
+    motifForms,
     motifFormValues,
     motifFormProblems,
     featureProblems,

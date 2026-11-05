@@ -130,7 +130,7 @@ check(same(rebuilt.motif.features, [{ label: "a", first: 0, last: 1 }]), "body s
 check(rebuilt.uses.length === 1 && rebuilt.motif.derived.source_item === "mot-1", "body keeps uses and derived");
 check(rebuilt.motif.analysis === null, "body leaves the analysis to the backend");
 check(M.buildMotifBody(blank, null).uses.length === 0 && M.buildMotifBody(blank, null).motif.derived === null, "a new body has no uses or derived");
-check(M.MOTIF_FORMS.filter((f) => f.enabled).map((f) => f.value).join() === "full,rhythm,contour", "all three forms are enabled");
+check(M.motifForms().map((f) => f.value).join() === "full,rhythm,contour" && M.motifRoles().map((r) => r.value).join() === "melodic,accompaniment", "the roles and forms are the vocabulary's");
 
 const saveNew = M.buildSaveMotifRequest({ name: " Hook ", project_id: "prj-a", body: rebuilt });
 check(saveNew.url === "/api/materials/items" && JSON.parse(saveNew.body).type === "motif", "a new motif posts an item");

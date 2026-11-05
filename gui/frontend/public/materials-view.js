@@ -734,7 +734,7 @@ function buildMotifEditor(body, tabStatus) {
   }
 
   const role = materialsElement("select");
-  for (const option of MaterialsModel.MOTIF_ROLES) {
+  for (const option of MaterialsModel.motifRoles()) {
     const o = materialsElement("option", "", option.label);
     o.value = option.value;
     role.appendChild(o);
@@ -743,10 +743,9 @@ function buildMotifEditor(body, tabStatus) {
   field("Role", role, "role");
 
   const form = materialsElement("select");
-  for (const option of MaterialsModel.MOTIF_FORMS) {
+  for (const option of MaterialsModel.motifForms()) {
     const o = materialsElement("option", "", option.label);
     o.value = option.value;
-    o.disabled = !option.enabled;
     form.appendChild(o);
   }
   form.value = initial.form;
