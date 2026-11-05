@@ -763,6 +763,8 @@
     const form = v.form === "rhythm" || v.form === "contour" ? v.form : "full";
     const textName = form === "rhythm" ? "rhythm_text" : form === "contour" ? "contour_text" : "notes_text";
     const key = candidateKeyText(candidate);
+    const segments = analysis.segments && Array.isArray(analysis.segments.items) ? analysis.segments.items : [];
+    const baseHarmony = analysis.base_harmony && typeof analysis.base_harmony.text === "string" ? analysis.base_harmony.text : "";
     return {
       uses: [],
       motif: {
@@ -772,8 +774,9 @@
         meter: String(v.meter || "").trim() || "4/4",
         key: key === "" ? null : key,
         pickup: typeof analysis.pickup === "string" && analysis.pickup !== "" ? analysis.pickup : "0",
-        harmony: null,
-        features: [],
+        harmony: baseHarmony === "" ? null : baseHarmony,
+        features: segments.map((segment) => ({ label: segment.label, first: segment.first, last: segment.last })),
+        segments_proposed: true,
         analysis: null,
         degrees: null,
         derived: null,
