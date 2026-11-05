@@ -1,3 +1,6 @@
+# The tests are white-box: they see the internal headers and the libraries the sources use.
+link_libraries(ursatz_composer_internal)
+
 # Helpers the tests share (tests/support).
 add_library(composer_test_support STATIC support/test_support.c)
 target_include_directories(composer_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
