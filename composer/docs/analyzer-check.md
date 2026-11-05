@@ -51,7 +51,7 @@ for each section with a piece part, its first `CADENCE` constraint, and the key.
 
 ## In `compose_run`
 
-`ComposeConfig.analyzer_check` is false by default, so a run without it is what it always was (the P4 baselines and
+`ComposeConfig.analyzer_check` is false by default, so a run without it is unchanged (the baselines and
 byte-identical runs hold). With it, after a complete run has passed the key and cadence checks, every theme section is
 checked. A run with a contradiction is rejected like a key-rejected one: `ComposeOutcome.analyzer_rejected`,
 and the run starts again from the plan as given with the next round's seeds, up to the same twelve rounds. The checks

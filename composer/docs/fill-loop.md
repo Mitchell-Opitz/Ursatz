@@ -5,8 +5,8 @@ not matter whether the plan fills top-down, bottom-up or from the middle: that c
 where the Given material sits and which operators are registered. Back to the [docs index](README.md).
 
 Headers: `<ursatz_composer/fill_loop.h>`, `fill_operator.h`, `fill_target.h`, `fill_rng.h`,
-`fill_record.h`, `fill_suggest.h`. This branch ships the engine only. Real music operators are
-added later and plug in as described below.
+`fill_record.h`, `fill_suggest.h`. The music operators (harmony, motive, grow, form, melody, voicing, accompaniment, counterpoint) are
+registered by their own stages and plug in as described below.
 
 ## Targets
 
@@ -55,7 +55,7 @@ descriptions are carried for the record. `Generator.generate` is not used, since
 | Kind | Target | Does |
 | --- | --- | --- |
 | `FILL_OPERATOR_REFINE` | node | Splits a node into children. |
-| `FILL_OPERATOR_GROW` | node | Builds a node from its children. It fills a node that already exists; the plan has no way yet to insert a node above existing ones. |
+| `FILL_OPERATOR_GROW` | node | Builds a node from its children. It fills a node that already exists; the plan cannot insert a node above existing ones. |
 | `FILL_OPERATOR_FILL` | lane span | Fills a lane span. |
 
 The loop never offers an operator a target of the wrong kind.
@@ -90,7 +90,7 @@ It fills `FillCheck`: `hard_violation` rejects the candidate; the score is a non
 (`score_numerator / score_denominator`, as in Ursatz's `Candidate`), higher is better; `reason` is
 short text for the record. It returns false only when it fails itself, not for a rejected candidate.
 The default, `fill_default_checker`, accepts everything at 0/1. Rule checking against a framework
-plugs in here; none ships on this branch.
+plugs in here; the stages supply their own checkers (for example harmony phrase, motive development and counterpoint).
 
 ## Seeds and records
 

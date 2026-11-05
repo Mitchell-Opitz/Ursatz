@@ -22,11 +22,11 @@ section's own motive), so the same plan always gives the same candidates; only a
 Every form is a full motive in the key's scale between MIDI 58 and 84 (a form below is taken up an octave), no leap wider
 than a fifth unless the basic idea has one, as many notes as the basic idea (a fragment or cadential idea has fewer), and
 fits its idea. An idea that ends in a cadence ends on its tone (the tonic for a PAC, the third for an IAC). The cadential ending's
-two ideas and the consequent's restated idea are not offered anything else, and a slot with no form is left to the P13
+two ideas and the consequent's restated idea are not offered anything else, and a slot with no form is left to the motive
 operators below.
 
 The checker scores a form at 1 plus its connection score (R-145, `(2 x common + rhythm + harmony) / 4`, halved when the
-form is over 3/4 from the basic idea, or over 1/2 at a tempo of 140 quarter notes per minute or more, R-163), so a form always outranks the P13 operators, whose recognizability is at most 1, and
+form is over 3/4 from the basic idea, or over 1/2 at a tempo of 140 quarter notes per minute or more, R-163), so a form always outranks the motive operators, whose recognizability is at most 1, and
 the part after the 1 is the connection. The connection is measured against the idea before (its motive when written, else
 the basic idea); the form's distance from the basic idea is its chain's cost over the cost plus 4.
 

@@ -190,7 +190,7 @@ The operator proposes `GrowContext.candidates` (default 4) candidates, drawn fro
 - **Fragments** (continuation). `fragmented`, leading, 2 or 3 notes, shortened until the fragment fits its idea.
 - **Cadential idea** (continuation). `liquidated`, dropping 1 to half of the motive's notes.
 
-These are the P13 motive refs the structure plans; the motives stage writes the [motive-forms](grow-harmony.md#motive-forms) instead when it has one for the idea, and these when it has none.
+These are the motive refs the structure plans; the motives stage writes the [motive-forms](grow-harmony.md#motive-forms) instead when it has one for the idea, and these when it has none.
 - **Cadential ending.** Two ideas `liquidated` from `m0`, the second dropping at least as many notes as the first.
 
 A candidate is dropped when a motive it asks for cannot be made or does not fit its idea.

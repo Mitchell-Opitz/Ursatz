@@ -11,8 +11,7 @@ the themes in `GrowOutcome.heard`. A theme heard as the form the section asks fo
 for (`requested_beginning`, `requested_ending`).
 
 Measured by `tests/test_grow_sentence_heard.c`, over four keys and meters and seeds 1 to 10 (`ctest` runs it as
-WILL_FAIL, since it asserts that every grown sentence is heard as a sentence). The theme is heard through the Analyzer
-(P25 B7b); the figures measured with the adapter reading the planned chords (the motive-forms) were 28 of 40 (70%) at 8
+WILL_FAIL, since it asserts that every grown sentence is heard as a sentence). The theme is heard through the Analyzer; the figures measured with the adapter reading the planned chords (the motive-forms) were 28 of 40 (70%) at 8
 bars, 12 as a hybrid, none unheard:
 
 | Bars | Heard as a sentence | Heard as another form | No theme |
