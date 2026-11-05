@@ -1,5 +1,7 @@
 # pitch
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L2 (`music-pitch`). Path `src/pitch/`, tests `tests/pitch/`. Depends on `identity` and `core` only. Sibling of `time`; the two do not depend on each other.
 
 ## Provides

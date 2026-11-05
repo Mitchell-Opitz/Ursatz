@@ -1,5 +1,7 @@
 # Accuracy harness
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `tests/accuracy/` measures the whole chain (import, segments, local keys, chords, Roman numerals, and the L3
 adapters) against published annotations and the repository's hand-annotated fixtures, reports the accuracy per piece,
 and fails CI when it drops below a recorded baseline. It is test infrastructure, not library code. Nothing in it

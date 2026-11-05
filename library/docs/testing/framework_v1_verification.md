@@ -1,5 +1,7 @@
 # Framework v1 verification
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Framework v1's finite endpoint is the five-piece reference set in `tests/fixtures/framework-v1-corpus/`: Bach, Minuet in G, BWV Anh. 114; Clementi, Sonatina
 Op. 36 No. 1, first movement; Field, Nocturne No. 1; Field, Nocturne No. 5; Mozart, Sonata K. 545, first movement. Until this suite existed, `CorpusRegression`
 checked only that the five files register, and a manual pass in the GUI had looked at Bach alone. This page records the verification: what is asserted, what

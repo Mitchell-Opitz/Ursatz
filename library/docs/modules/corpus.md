@@ -1,5 +1,7 @@
 # corpus
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L9 (`music-corpus`), sibling to `music-persistence`. Path `src/corpus/`, tests `tests/corpus/`. Depends on `identity` and `persistence` only. Must not depend on `core`, `time`, `pitch`, `events`, `containers`, `structure`, `context`, `semantics`, `relationship`, `interpretation`, `theory`, `rules`, `transform`, `analysis`, `generation`, `io`, or `frameworks/`. Cross-cutting: Analyzer and Generator may each depend on `corpus` as a peer, but neither routes through the other.
 
 ## Provides

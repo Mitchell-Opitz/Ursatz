@@ -1,5 +1,7 @@
 # standard-tonality analysis adapter (L3)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `frameworks/standard-tonality/analysis/` turns L2 facts into standard-tonality's inputs and returns Interpretations. It is the Roman numeral adapter: one Interpretation per chord segment, in the segment's local key, with applied chords. It does not assign harmonic function or cadences (L3.2, L3.3).
 
 ## Input: kernel data only

@@ -1,5 +1,7 @@
 # Motive variant recognition (analysis, L8)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Files: `src/analysis/motive_variant_recognition.h/.c`. Tests: `tests/analysis/test_motive_variant_recognition.c`, `tests/analysis/test_motive_variant_recognition_chains.c`. Part of `analysis` (see `docs/modules/analysis.md`); includes `analysis/motive_relation.h`, `analysis/motive_sketch.h` and C headers. Shared by the Composer's variant recognition and the Analyzer.
 
 Names the chain of motive relations (`docs/modules/motive-relations.md`) that turns one `MotiveSketch` into another, with the chain's distance and the dimensions it kept and changed. The inputs are plain sketches, the notes the analysis chain already produces (R-006: the recognizer reads no audio and no score of its own).

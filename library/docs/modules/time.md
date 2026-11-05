@@ -1,5 +1,7 @@
 # time
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L2 (`music-time`). Path `src/time/`, tests `tests/time/`. Depends on `identity` and `core` only. Sibling of `pitch`; the two do not depend on each other.
 
 ## Provides

@@ -69,7 +69,7 @@ textbook; each README names the chapters it covers.
 
 ## Using a kernel analysis owner
 
-A framework may not include kernel L8 (`analysis/`), so when a job's owner lives there (docs/ARCHITECTURE.md, Analytic job owners) the framework takes it as an injected callback and never re-derives it. The pattern is `StandardFormBoundaryDetector` in `standard-form/analysis/analysis_phrase.h`: the framework declares the function type, the caller (in practice the `chain/` target) passes the L8 owner behind it.
+A framework may not include kernel L8 (`analysis/`), so when a job's owner lives there ([analytic-job-owners.md](../docs/analytic-job-owners.md)) the framework takes it as an injected callback and never re-derives it. The pattern is `StandardFormBoundaryDetector` in `standard-form/analysis/analysis_phrase.h`: the framework declares the function type, the caller (in practice the `chain/` target) passes the L8 owner behind it.
 
 ## Neutral analysis input
 
@@ -91,4 +91,4 @@ framework built as the top-level project still runs its own tests.
 
 ## Public headers
 
-A framework stages the headers others need under its folder name (`standard-form/analysis/analysis_phrase.h`) and keeps its source directories private; the list is in its `CMakeLists.txt` (`ursatz_public_headers`). A header of another framework is always included by that path, never by its bare name; `architecture_header_paths` checks it. Rules and layout: `docs/ARCHITECTURE.md`, Public surface.
+A framework stages the headers others need under its folder name (`standard-form/analysis/analysis_phrase.h`) and keeps its source directories private; the list is in its `CMakeLists.txt` (`ursatz_public_headers`). A header of another framework is always included by that path, never by its bare name; `architecture_header_paths` checks it. Rules and layout: `docs/architecture.md`, Public surface.

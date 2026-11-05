@@ -1,5 +1,7 @@
 # L8 shared notes
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `transform` was retired in P28 B4 (R-287); this page keeps its history. `transform`, `analysis`, and `generation` are built together against Dependency & Layer Spec v2 §2-§3. Like L7's `theory`/`rules` split, but stricter. All three are mutually sideways-restricted the same way L6's four siblings are, with no `transform`-`analysis`-`generation` import in any direction. Each depends on L0-L7 only, never on a sibling. Each module's architecture test enforces this by allowlisting only L0-L7 directories plus its own.
 
 This is why `generation/candidate_evaluator.h`'s `CandidateEvaluation` cannot reuse `analysis/analyzer.h`'s `AnalysisResult`, even though both hold the identical Interpretation/Evidence shape. See `docs/modules/generation.md`.

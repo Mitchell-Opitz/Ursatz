@@ -1,5 +1,7 @@
 # MusicXmlExport
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `src/export/musicxml_export.{h,c}` (the persistence entry point) and `src/export/musicxml_score.c` (the layout and writer), tests `tests/export/`. Layer L9 (`music-export`). Depends on `identity`, `time`, `pitch`, `events` and `persistence` only; the importer's types (`io/`) are not used, so the caller copies an import's members into the input struct.
 
 ## Entry points

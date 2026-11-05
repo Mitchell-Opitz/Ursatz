@@ -1,5 +1,7 @@
 # L6 shared notes
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `context`, `semantics`, `relationship`, and `interpretation` are built together against Dependency & Layer Spec v2 §2-§3 as four mutually-restricted siblings. Rules on this page apply to all four; each module's own page covers only what is specific to it.
 
 ## No sideways imports

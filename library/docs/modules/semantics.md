@@ -1,12 +1,14 @@
 # semantics
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L6 (`music-semantics`). Path `src/semantics/`, tests `tests/semantics/`. One of four L6 siblings; see `docs/modules/l6-notes.md` for rules shared across all four.
 
 ## Provides
 
 `Interval`, `Sonority`, `SonorityBuilder`, `RhythmicPattern`, `Scale`, `Contour`, and the neutral analysis input types below.
 
-Vocabulary enums that stay here (plain names, no `EntityID`, no framework claim; see `docs/ARCHITECTURE.md` for the admission rule). An enum used by one framework lives in that framework; one stays only if two or more frameworks, or kernel code, use it:
+Vocabulary enums that stay here (plain names, no `EntityID`, no framework claim; see `docs/architecture.md` for the admission rule). An enum used by one framework lives in that framework; one stays only if two or more frameworks, or kernel code, use it:
 
 - Shared by two or more frameworks: `VoicePart` (high-baroque-fugue, standard-harmony, standard-voicing), `BeatStrength` (common-practice-minimal, galant-schemas, standard-counterpoint, standard-harmony, standard-meter), `NonChordTone` (common-practice-minimal, standard-counterpoint, standard-harmony), `AppliedChordKind` (standard-harmony, standard-tonality), `KeyChangeExtent` (common-practice-minimal, standard-harmony).
 - Used by kernel code: `CadenceType` (`src/analysis`), `FormLevel` (`src/containers/idea.h`, `subphrase.h`), `SubphraseRole` (`src/containers/subphrase.h`).

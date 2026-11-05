@@ -1,5 +1,7 @@
 # Motive analysis (standard-form, L3.7)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Adapter in `frameworks/standard-form/analysis/` (`analysis_motive*.c`). Entry point: `standard_form_find_motives(input, phrases, segmentation, themes, config, matcher, matcher_context, out)`; release with `standard_form_motives_destroy`.
 
 ## Candidate discovery
