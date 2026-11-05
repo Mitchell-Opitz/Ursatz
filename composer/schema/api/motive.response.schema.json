@@ -50,7 +50,7 @@
     "analysis": {
       "type": "object",
       "required": ["form", "pickup", "notes_text", "degrees_text", "note_count", "length", "bars", "key", "intervals", "contour",
-                   "rhythm", "range", "scale_degrees", "implied_harmony", "base_harmony", "tones", "warnings"],
+                   "rhythm", "range", "scale_degrees", "implied_harmony", "base_harmony", "segments", "tones", "warnings"],
       "properties": {
         "form": { "enum": ["full", "rhythm", "contour"] },
         "pickup": { "type": "string" },
@@ -146,6 +146,26 @@
           "type": ["object", "null"],
           "required": ["text", "given"],
           "properties": { "text": { "type": "string" }, "given": { "type": "boolean" } }
+        },
+        "segments": {
+          "type": "object",
+          "required": ["given", "items"],
+          "properties": {
+            "given": { "type": "boolean" },
+            "items": {
+              "type": "array",
+              "maxItems": 8,
+              "items": {
+                "type": "object",
+                "required": ["label", "first", "last"],
+                "properties": {
+                  "label": { "type": "string", "minLength": 1, "maxLength": 8 },
+                  "first": { "type": "integer", "minimum": 0 },
+                  "last": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
         },
         "tones": {
           "type": "array",
