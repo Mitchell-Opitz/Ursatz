@@ -7,6 +7,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
+#include "motive/motive_segments.h"
 #include "plan/plan_json_internal.h"
 #include "util/util.h"
 
@@ -306,6 +307,13 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     if (result.harmony_known) {
         analyze_harmony(motive, &result);
     }
+    result.segments_given = motive->feature_count > 0;
+    if (result.segments_given) {
+        memcpy(result.segments, motive->features, motive->feature_count * sizeof(result.segments[0]));
+        result.segment_count = motive->feature_count;
+    } else {
+        result.segment_count = motive_segments_propose(&result, result.segments, MOTIVE_MAX_FEATURES);
+    }
     result.base_harmony_known = motive_base_harmony(motive, &result.base_harmony);
     result.tones_known = result.base_harmony_known &&
                          motive_tone_labels(motive, result.base_harmony.chords, result.base_harmony.count, overrides,
@@ -443,6 +451,14 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
     }
     if (motive->accompaniment) {
         fprintf(out, "Role: %s\n", motive_role_name(motive->accompaniment));
+    }
+    if (analysis->segment_count > 0) {
+        fprintf(out, "segments:");
+        for (size_t i = 0; i < analysis->segment_count; i++) {
+            fprintf(out, "%s %s %zu-%zu", i == 0 ? "" : ",", analysis->segments[i].label, analysis->segments[i].first + 1,
+                    analysis->segments[i].last + 1);
+        }
+        fprintf(out, "%s\n", analysis->segments_given ? "" : " (proposed)");
     }
 
     if (analysis->intervals_known) {
@@ -761,6 +777,34 @@ static cJSON *base_harmony_json(const Motive *motive, const MotiveAnalysis *anal
     return object;
 }
 
+/* {"given": bool, "items": [{"label", "first", "last"}]}, notes 0-based and inclusive as the features of a motive. */
+static cJSON *segments_json(const MotiveAnalysis *analysis) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *items = cJSON_CreateArray();
+    bool ok = object && items && plan_json_add(object, "given", cJSON_CreateBool(analysis->segments_given));
+    for (size_t i = 0; ok && i < analysis->segment_count; i++) {
+        cJSON *item = cJSON_CreateObject();
+        ok = item && add_string(item, "label", analysis->segments[i].label) &&
+             plan_json_add(item, "first", json_number((long)analysis->segments[i].first)) &&
+             plan_json_add(item, "last", json_number((long)analysis->segments[i].last));
+        if (ok) {
+            cJSON_AddItemToArray(items, item);
+        } else {
+            cJSON_Delete(item);
+        }
+    }
+    if (ok) {
+        ok = plan_json_add(object, "items", items);
+        items = NULL;
+    }
+    cJSON_Delete(items);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 static const char *tone_role_name(MotiveToneRole role) {
     return role == MOTIVE_TONE_CHORD ? "chord" : (role == MOTIVE_TONE_NON_CHORD ? "non-chord" : "unclassified");
 }
@@ -846,7 +890,8 @@ static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis,
          plan_json_add(body, "rhythm", rhythm_json(analysis)) && plan_json_add(body, "range", range_json(analysis)) &&
          plan_json_add(body, "scale_degrees", degrees_json(analysis)) &&
          plan_json_add(body, "implied_harmony", harmony_json(analysis)) &&
-         plan_json_add(body, "base_harmony", base_harmony_json(motive, analysis));
+         plan_json_add(body, "base_harmony", base_harmony_json(motive, analysis)) &&
+         plan_json_add(body, "segments", segments_json(analysis));
     cJSON *warnings = NULL;
     cJSON *tones = ok ? tones_json(motive, analysis, &warnings) : NULL;
     ok = ok && tones && plan_json_add(body, "tones", tones) && plan_json_add(body, "warnings", warnings);
