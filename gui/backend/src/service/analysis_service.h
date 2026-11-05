@@ -127,11 +127,23 @@ bool ursatz_gui_document_subset(const char *document_json, const char *const *na
                                 char **out_json, char **out_names_json);
 
 /*
- * Reads a piece's stored analysis.json and returns only the named sections (ursatz_gui_document_subset) without
- * importing the source. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ * Reads a piece's stored analysis.json under the piece lock and returns only the named sections
+ * (ursatz_gui_document_subset) without importing the source. With names NULL it returns the whole stored document
+ * text unchanged (count is ignored). URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_document(const char *pieces_dir, const char *id,
                                                           const char *const *names, size_t count, char **out_json);
+
+/*
+ * True when id names a piece of pieces_dir that has its stored metadata (the piece exists as list shows it).
+ */
+bool ursatz_gui_analysis_piece_exists(const char *pieces_dir, const char *id);
+
+/*
+ * The display name (filename) of a piece, under the piece lock: *out_filename is caller-owned (free()), "" when the
+ * piece has none. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists or its metadata is unreadable.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_filename(const char *pieces_dir, const char *id, char **out_filename);
 
 /*
  * Deletes a piece's directory and every file in it.

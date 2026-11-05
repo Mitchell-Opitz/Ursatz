@@ -530,26 +530,19 @@ static void job_progress(size_t done, size_t total, void *context) {
 
 /* Why a piece cannot be added, or NULL when it was. */
 static const char *add_piece(MotiveLinkScope *scope, const char *id) {
-    char file_path[PATH_BYTES + 32];
-    if (!ursatz_gui_collection_is_valid_id(id) ||
-        snprintf(file_path, sizeof(file_path), "%s/%s/meta.json", kPiecesDir, id) >= (int)sizeof(file_path)) {
+    if (!ursatz_gui_collection_is_valid_id(id)) {
         return "not found";
     }
-    cJSON *meta = ursatz_gui_read_json_object(file_path);
-    if (!meta) {
-        return "not found";
-    }
-    cJSON_Delete(meta);
     /* Another schema, Analyzer version or Ursatz commit: analyze the piece again before the run. The error-triggered
        re-analysis below stays as a fallback. */
-    if (ursatz_gui_analysis_ensure_current(kPiecesDir, id) != URSATZ_GUI_ANALYSIS_OK) {
-        return "re-analysis failed";
+    UrsatzGuiAnalysisResult ensured = ursatz_gui_analysis_ensure_current(kPiecesDir, id);
+    if (ensured != URSATZ_GUI_ANALYSIS_OK) {
+        return ensured == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND ? "not found" : "re-analysis failed";
     }
-    snprintf(file_path, sizeof(file_path), "%s/%s/analysis.json", kPiecesDir, id);
 
     for (int attempt = 0; attempt < 2; attempt++) {
-        char *document = ursatz_gui_read_file(file_path, NULL);
-        if (!document) {
+        char *document = NULL;
+        if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_GUI_ANALYSIS_OK) {
             return "unreadable analysis";
         }
         MotiveLinksResult result = motive_link_scope_add_document(scope, id, document);
@@ -1072,16 +1065,13 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
 }
 
 char *ursatz_gui_link_piece_title(const char *piece_id) {
-    char path[PATH_BYTES];
-    cJSON *meta = NULL;
-    if (piece_id && ursatz_gui_collection_is_valid_id(piece_id) &&
-        snprintf(path, sizeof(path), "%s/%s/meta.json", kPiecesDir, piece_id) < (int)sizeof(path)) {
-        meta = ursatz_gui_read_json_object(path);
+    char *filename = NULL;
+    if (!piece_id || !ursatz_gui_collection_is_valid_id(piece_id) ||
+        ursatz_gui_analysis_get_filename(kPiecesDir, piece_id, &filename) != URSATZ_GUI_ANALYSIS_OK) {
+        filename = NULL;
     }
-    const cJSON *filename = cJSON_GetObjectItemCaseSensitive(meta, "filename");
-    char *title = ursatz_gui_dup_string(cJSON_IsString(filename) && filename->valuestring[0] ? filename->valuestring
-                                                                                   : (piece_id ? piece_id : ""));
-    cJSON_Delete(meta);
+    char *title = ursatz_gui_dup_string(filename && filename[0] ? filename : (piece_id ? piece_id : ""));
+    free(filename);
     char *dot = title ? strrchr(title, '.') : NULL;
     if (dot && dot != title) {
         *dot = '\0';

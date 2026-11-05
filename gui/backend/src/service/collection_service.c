@@ -22,6 +22,7 @@
 
 #include <corpus/corpus_api.h>
 
+#include "analysis_service.h"
 #include "id_service.h"
 #include "piece_metadata.h"
 
@@ -66,12 +67,7 @@ bool ursatz_gui_collection_is_valid_id(const char *id) {
 }
 
 bool ursatz_gui_collection_piece_exists(const char *piece_id) {
-    char path[PATH_BYTES];
-    if (!ursatz_gui_collection_is_valid_id(piece_id) ||
-        snprintf(path, sizeof(path), "%s/%s/meta.json", kPiecesDir, piece_id) >= (int)sizeof(path)) {
-        return false;
-    }
-    return path_exists(path);
+    return ursatz_gui_collection_is_valid_id(piece_id) && ursatz_gui_analysis_piece_exists(kPiecesDir, piece_id);
 }
 
 static bool collection_path(const char *id, char *out, size_t out_size) {

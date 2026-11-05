@@ -544,30 +544,20 @@ static void collected_free(Collected *collected) {
  * when the piece is skipped; *alloc_failed set when memory ran out.
  */
 static bool add_piece(StyleProfile *profile, const char *id, const char **reason) {
-    char dir_path[PATH_BYTES];
-    char file_path[PATH_BYTES + 16];
-    if (!ursatz_gui_collection_is_valid_id(id) || snprintf(dir_path, sizeof(dir_path), "%s/%s", kPiecesDir, id) >=
-                                                     (int)sizeof(dir_path)) {
+    if (!ursatz_gui_collection_is_valid_id(id)) {
         *reason = "not found";
-        return false;
-    }
-    snprintf(file_path, sizeof(file_path), "%s/meta.json", dir_path);
-    cJSON *meta = ursatz_gui_read_json_object(file_path);
-    if (!meta) {
-        *reason = "not found";
-        return false;
-    }
-    cJSON_Delete(meta);
-
-    /* Another schema, Analyzer version or Ursatz commit: analyze the piece again first. */
-    if (ursatz_gui_analysis_ensure_current(kPiecesDir, id) != URSATZ_GUI_ANALYSIS_OK) {
-        *reason = "re-analysis failed";
         return false;
     }
 
-    snprintf(file_path, sizeof(file_path), "%s/analysis.json", dir_path);
-    char *document = ursatz_gui_read_file(file_path, NULL);
-    if (!document) {
+    /* Another schema, Analyzer version or Ursatz commit: analyze the piece again first. */
+    UrsatzGuiAnalysisResult ensured = ursatz_gui_analysis_ensure_current(kPiecesDir, id);
+    if (ensured != URSATZ_GUI_ANALYSIS_OK) {
+        *reason = ensured == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND ? "not found" : "re-analysis failed";
+        return false;
+    }
+
+    char *document = NULL;
+    if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_GUI_ANALYSIS_OK) {
         *reason = "unreadable analysis";
         return false;
     }
