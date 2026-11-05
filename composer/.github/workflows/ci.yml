@@ -28,6 +28,8 @@ jobs:
         run: scripts/check-cli-api.sh
       - name: Check file scope state
         run: scripts/check-statics.sh
+      - name: Check that API internals stay in the API layer
+        run: scripts/check-layers.sh
       - name: Check that music is heard through the Analyzer
         run: scripts/check-hearing.sh
       - name: Test (the fast set; the slow sweeps run before a push, see README)
