@@ -931,6 +931,50 @@ static void check_metadata(const char *a, const char *b, const char *c, const ch
 }
 
 /* The summary and per-section shapes of the document (?document=summary and /document?sections=). */
+/* GET /api/analyzer/pieces/<id>/export: the Analyzer's text export, whole and for a measure range. */
+static void check_piece_export(const char *id, const char *expected_title) {
+  char path[320];
+  char what[160];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/export", id);
+  char *whole = http_get(path);
+  check(response_has_status(whole, 200), "export answers 200");
+  check(whole && strstr(whole, "Content-Type: text/plain; charset=utf-8") != NULL, "export is text/plain; charset=utf-8");
+  const char *body = response_body(whole);
+  check(strncmp(body, "# Ursatz export v1: piece\n", 26) == 0, "export starts with the header line");
+  snprintf(what, sizeof(what), "title: %s\n", expected_title);
+  check(strstr(body, what) != NULL, "export names the piece by its file name without the extension");
+  check(strstr(body, "\nm1 4/4\n") != NULL && strstr(body, "\nm2\n") != NULL, "the whole export has measures 1 and 2");
+  free(whole);
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/export?from=2&to=2", id);
+  char *ranged = http_get(path);
+  body = response_body(ranged);
+  check(response_has_status(ranged, 200), "export of a range answers 200");
+  check(strstr(body, "\nm2\n") != NULL && strstr(body, "\nm1 ") == NULL && strstr(body, "\nm3\n") == NULL,
+        "a range lists only the measures in it");
+  free(ranged);
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/export?from=2", id);
+  char *from_only = http_get(path);
+  check(response_has_status(from_only, 200) && strstr(response_body(from_only), "\nm1 ") == NULL &&
+            strstr(response_body(from_only), "\nm2\n") != NULL,
+        "from alone exports to the end");
+  free(from_only);
+
+  const char *bad[] = {"?from=3&to=2", "?from=x", "?to=-1", "?from=9999&to=9999"};
+  for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+    snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/export%s", id, bad[i]);
+    char *response = http_get(path);
+    snprintf(what, sizeof(what), "export%s is 400 with the JSON error shape", bad[i]);
+    check(response_has_status(response, 400) && strstr(response_body(response), "\"ok\":false") != NULL, what);
+    free(response);
+  }
+
+  char *missing = http_get("/api/analyzer/pieces/no-such-piece/export");
+  check(response_has_status(missing, 404), "export of an unknown piece is 404");
+  free(missing);
+}
+
 static void check_document_sections(const char *id) {
   char path[320];
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s?document=summary", id);
@@ -1123,6 +1167,7 @@ int main(void) {
     check_detail(mozart_id, "midi", "midi-note-0", "Mozart 545");
     check_score_meter(mozart_id, false, "Mozart 545");
     check_document_sections(mozart_id);
+    check_piece_export(mozart_id, "Mozart 545");
     check_import_cache(mozart_id);
   }
 
