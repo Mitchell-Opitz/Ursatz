@@ -50,3 +50,6 @@ add_subdirectory(accuracy)
 # Frameworks and the chain never compile kernel sources (R-241).
 add_test(NAME architecture_framework_sources
          COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -P ${PROJECT_SOURCE_DIR}/cmake/check_framework_sources.cmake)
+
+include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
+ursatz_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
