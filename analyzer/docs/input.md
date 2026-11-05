@@ -14,6 +14,10 @@ read by Ursatz's MusicXMLImporter.
 - **Choosing the format.** By extension first; when the extension says nothing, by the file's first
   bytes (an `MThd` header is MIDI, an XML document is MusicXML). `--input-format midi|musicxml` forces
   the format and overrides both. A file whose format cannot be told is an error that names the flag.
+- **From memory.** `input_pipeline_import_memory(bytes, size, format, &notes)` reads the same two formats from bytes
+  instead of a path (`INPUT_FORMAT_AUTO` tells them apart by the first bytes, as for a file). The bytes are written to a
+  private `mkstemp` file under `TMPDIR` (or `/tmp`), imported through `input_pipeline_import_file` and removed before the
+  call returns, so the notes and the errors are those of a file. No bytes, or bytes of no known format, are refused.
 - **What is notated and what is inferred.** MusicXML states what MIDI does not: pitch spelling, the
   time and key signatures as written, the measures, a pickup, parts and voices. The report's Summary
   says which input was read and whether the meter, the key signature and the pitch spelling were
