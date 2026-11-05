@@ -2,6 +2,7 @@
 #define URSATZ_ANALYZER_INPUT_PIPELINE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include <ursatz_analyzer/imported_notes.h>
 
@@ -39,5 +40,16 @@ InputFormat input_format_detect(const char *path);
  * nothing was written to disk and *out is left untouched.
  */
 InputPipelineResult input_pipeline_import_file(const char *path, InputFormat format, ImportedNotes *out);
+
+/*
+ * Reads a MIDI or MusicXML document held in memory (INPUT_FORMAT_AUTO
+ * detects the format from the first bytes, as input_format_detect does for
+ * a file). The bytes go through a private temporary file made with mkstemp
+ * under TMPDIR (or /tmp) that is removed before returning, so the result is
+ * the same as input_pipeline_import_file. Results and ownership are as for
+ * input_pipeline_import_file; a NULL pointer or empty input is
+ * INPUT_PIPELINE_ERR_IMPORT_FAILED.
+ */
+InputPipelineResult input_pipeline_import_memory(const char *bytes, size_t size, InputFormat format, ImportedNotes *out);
 
 #endif
