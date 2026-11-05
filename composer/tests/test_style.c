@@ -937,9 +937,12 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
  * Re-measured at P25 B5, after the melodic moves were judged by standard-counterpoint (the tritone is refused): the harmony
  * means are 0.7168 styled and 0.7204 unstyled to chorales, 0.6704 and 0.6764 to sonatinas; the melody means 0.7606 and
  * 0.7742, 0.7589 and 0.7576. The order holds except the melody to sonatinas (styled 0.0013 further).
+ *
+ * Re-measured at P28 B14, after the bump to Ursatz d2b85ce and Analyzer ee8a901: only the unstyled melody moved, to 0.7726
+ * to chorales and 0.7558 to sonatinas; the styled means and the harmony means are equal. The order is as before.
  */
 static const int STYLED[2][2] = {{716, 760}, {670, 758}};
-static const int UNSTYLED[2][2] = {{720, 774}, {676, 757}};
+static const int UNSTYLED[2][2] = {{720, 772}, {676, 755}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};
