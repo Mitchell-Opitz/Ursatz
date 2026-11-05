@@ -278,4 +278,21 @@ bool ursatz_gui_material_render_tmp_dir(char *out, size_t out_size);
 UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int number, const char *name,
                                                           unsigned char **out_data, size_t *out_size);
 
+/*
+ * One-time re-analysis for tone labels (R-204): every full motif whose current version's analysis has no tones is
+ * analyzed again and saved as a new version with the note "Re-analyzed" (the Re-analyze path). A motif the Composer
+ * refuses or cannot analyze keeps its analysis_error and does not stop the others. A marker file `tones-migrated` in
+ * materials_dir stops later runs; without a Composer nothing is changed and no marker is written. Returns the number of
+ * motifs re-analyzed. Call after ursatz_gui_material_service_init.
+ */
+int ursatz_gui_material_migrate_tones(const char *materials_dir);
+
+/*
+ * One-time clear of the themes for the v2 body (R-205): every theme item is deleted, referenced or not (a piece that used
+ * one then shows its source missing, R-131). A marker file `themes-cleared` in materials_dir stops later runs. A failure
+ * is logged and does not stop the start; no marker is written then, so the next start tries again. Returns the number of
+ * themes deleted. Call after ursatz_gui_material_service_init.
+ */
+int ursatz_gui_material_clear_themes(const char *materials_dir);
+
 #endif /* URSATZ_GUI_MATERIAL_SERVICE_H */

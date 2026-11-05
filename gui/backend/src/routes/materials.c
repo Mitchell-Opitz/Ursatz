@@ -283,117 +283,6 @@ static int handle_list_items(struct mg_connection *conn) {
   return send_ok_with(conn, "items", items);
 }
 
-/* ---- motif analysis on save ----------------------------------------- */
-
-#define ANALYSIS_ERROR_SIZE 400
-
-typedef enum {
-  ANALYSIS_DONE,
-  ANALYSIS_REFUSED,
-  ANALYSIS_ALLOC
-} AnalysisOutcome;
-
-static void set_motif_member(cJSON *motif, const char *name, cJSON *value) {
-  if (cJSON_GetObjectItemCaseSensitive(motif, name)) {
-    cJSON_ReplaceItemInObjectCaseSensitive(motif, name, value);
-  } else {
-    cJSON_AddItemToObject(motif, name, value);
-  }
-}
-
-static void set_motif_analysis(cJSON *motif, cJSON *analysis) {
-  set_motif_member(motif, "analysis", analysis);
-}
-
-/* The text the Composer returned for the form: degrees_text, rhythm_text or contour_text, or NULL. */
-static const char *analysis_degrees_text(const cJSON *output, const char *form) {
-  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(output, "analysis");
-  const char *name = strcmp(form, "rhythm") == 0 ? "rhythm_text" : strcmp(form, "contour") == 0 ? "contour_text" : "degrees_text";
-  const cJSON *text = cJSON_GetObjectItemCaseSensitive(analysis, name);
-  return cJSON_IsString(text) ? text->valuestring : NULL;
-}
-
-/* ---- Composer API requests (R-219) ------------------------------------ */
-
-/* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
-   motif.analysis and its degree, rhythm or contour list as motif.degrees. A body without a valid motif is left alone
-   for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
-   analysis_error (ANALYSIS_ERROR_SIZE bytes, empty when analyzed) names the reason; the reason is also stored as
-   motif.analysis_error, null when analyzed. When the Composer reads the input and refuses it, or a full motif has no key to
-   write its degrees in, the result is REFUSED and refusal holds its message. */
-static AnalysisOutcome analyze_motif_body(cJSON *version_body, char *analysis_error, char *refusal,
-                                          size_t refusal_size, char *refusal_path, size_t refusal_path_size) {
-  analysis_error[0] = '\0';
-  cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
-  if (!cJSON_IsObject(motif)) {
-    return ANALYSIS_DONE;
-  }
-  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
-  const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
-  const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
-  const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
-  if (!cJSON_IsString(form) ||
-      (strcmp(form->valuestring, "full") != 0 && strcmp(form->valuestring, "rhythm") != 0 &&
-       strcmp(form->valuestring, "contour") != 0)) {
-    return ANALYSIS_DONE;
-  }
-  bool has_key = cJSON_IsString(key) && key->valuestring[0] != '\0';
-  if (!cJSON_IsString(notes) || !cJSON_IsString(meter) || !cJSON_IsString(pickup)) {
-    return ANALYSIS_DONE;
-  }
-  bool full = strcmp(form->valuestring, "full") == 0;
-  cJSON *request = ursatz_gui_motif_request(motif);
-  if (!request) {
-    return ANALYSIS_ALLOC;
-  }
-  UrsatzGuiComposerReply reply;
-  bool called = ursatz_gui_motif_motive(request, &reply);
-  cJSON_Delete(request);
-  if (!called) {
-    return ANALYSIS_ALLOC;
-  }
-  cJSON *analysis = NULL;
-  bool refused = false;
-  if (ursatz_gui_composer_reply_refused(&reply)) {
-    refused = true;
-    snprintf(refusal, refusal_size, "%s", reply.message[0] ? reply.message : "composer could not read the motif");
-    snprintf(refusal_path, refusal_path_size, "%s", reply.path);
-  } else {
-    analysis = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
-    if (!analysis) {
-      snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "composer could not analyze the motif%s%.300s",
-               reply.message[0] ? ": " : "", reply.message);
-    }
-  }
-  ursatz_gui_composer_reply_destroy(&reply);
-  if (refused) {
-    return ANALYSIS_REFUSED;
-  }
-  const char *degrees_text = analysis ? analysis_degrees_text(analysis, form->valuestring) : NULL;
-  if (analysis && full && !degrees_text) {
-    cJSON_Delete(analysis);
-    snprintf(refusal, refusal_size, "give a key");
-    refusal_path[0] = '\0';
-    return ANALYSIS_REFUSED;
-  }
-  cJSON *degrees = degrees_text ? cJSON_CreateString(degrees_text) : cJSON_CreateNull();
-  if (!analysis) {
-    analysis = cJSON_CreateNull();
-  }
-  cJSON *reason = analysis_error[0] ? cJSON_CreateString(analysis_error) : cJSON_CreateNull();
-  if (!analysis || !degrees || !reason) {
-    cJSON_Delete(reason);
-    cJSON_Delete(analysis);
-    cJSON_Delete(degrees);
-    return ANALYSIS_ALLOC;
-  }
-  set_motif_analysis(motif, analysis);
-  set_motif_member(motif, "degrees", degrees);
-  set_motif_member(motif, "analysis_error", reason);
-  return ANALYSIS_DONE;
-}
-
 /* Adds "analysis_error" to the item answer when the Composer was unavailable. */
 static int send_item_answer(struct mg_connection *conn, cJSON *item, const char *analysis_error) {
   if (item && analysis_error[0]) {
@@ -879,14 +768,14 @@ static int handle_create_item(struct mg_connection *conn) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
-  char analysis_error[ANALYSIS_ERROR_SIZE];
+  char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
   char refusal_path[128] = "";
-  AnalysisOutcome analysis = analyze_motif_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal),
+  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal),
                                                 refusal_path, sizeof(refusal_path));
-  if (analysis != ANALYSIS_DONE) {
+  if (analysis != URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
     cJSON_Delete(body);
-    return analysis == ANALYSIS_REFUSED ? send_failure_at(conn, 400, refusal, refusal_path)
+    return analysis == URSATZ_GUI_MOTIF_ANALYSIS_REFUSED ? send_failure_at(conn, 400, refusal, refusal_path)
                                         : send_failure(conn, 500, "out of memory");
   }
   cJSON *item = NULL;
@@ -1027,14 +916,14 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
-  char analysis_error[ANALYSIS_ERROR_SIZE];
+  char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
   char refusal_path[128] = "";
-  AnalysisOutcome analysis = analyze_motif_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal),
+  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal),
                                                 refusal_path, sizeof(refusal_path));
-  if (analysis != ANALYSIS_DONE) {
+  if (analysis != URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
     cJSON_Delete(body);
-    return analysis == ANALYSIS_REFUSED ? send_failure_at(conn, 400, refusal, refusal_path)
+    return analysis == URSATZ_GUI_MOTIF_ANALYSIS_REFUSED ? send_failure_at(conn, 400, refusal, refusal_path)
                                         : send_failure(conn, 500, "out of memory");
   }
   cJSON *item = NULL;
@@ -1062,14 +951,14 @@ static int handle_reanalyze(struct mg_connection *conn, const char *id) {
     cJSON_Delete(version_body);
     return send_failure(conn, 400, "only motifs are analyzed");
   }
-  char analysis_error[ANALYSIS_ERROR_SIZE];
+  char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
   char refusal_path[128] = "";
-  AnalysisOutcome analysis = analyze_motif_body(version_body, analysis_error, refusal, sizeof(refusal), refusal_path,
+  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, analysis_error, refusal, sizeof(refusal), refusal_path,
                                                 sizeof(refusal_path));
-  if (analysis != ANALYSIS_DONE) {
+  if (analysis != URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
     cJSON_Delete(version_body);
-    return analysis == ANALYSIS_REFUSED ? send_failure_at(conn, 400, refusal, refusal_path)
+    return analysis == URSATZ_GUI_MOTIF_ANALYSIS_REFUSED ? send_failure_at(conn, 400, refusal, refusal_path)
                                         : send_failure(conn, 500, "out of memory");
   }
   cJSON *item = NULL;
@@ -3385,107 +3274,6 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
     return strcmp(method, "POST") == 0 ? handle_import_motif(conn) : send_method_not_allowed(conn);
   }
   return send_not_found(conn);
-}
-
-/* True when the current version of a motif body is a full motif whose analysis has no tone labels (R-204). */
-static bool lacks_tones(const cJSON *version_body) {
-  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
-  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
-  if (!cJSON_IsString(form) || strcmp(form->valuestring, "full") != 0) {
-    return false;
-  }
-  const cJSON *document = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
-  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
-  return !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(analysis, "tones"));
-}
-
-int ursatz_gui_materials_migrate_tones(const char *materials_dir) {
-  char marker[512];
-  if (snprintf(marker, sizeof(marker), "%s/tones-migrated", materials_dir) >= (int)sizeof(marker)) {
-    return 0;
-  }
-  FILE *done = fopen(marker, "r");
-  if (done) {
-    fclose(done);
-    return 0;
-  }
-  cJSON *items = NULL;
-  if (ursatz_gui_material_item_list(NULL, "motif", &items) != URSATZ_GUI_MATERIAL_OK) {
-    return 0;
-  }
-  int migrated = 0;
-  const cJSON *listed = NULL;
-  cJSON_ArrayForEach(listed, items) {
-    const cJSON *id = cJSON_GetObjectItemCaseSensitive(listed, "id");
-    cJSON *meta = NULL;
-    cJSON *version_body = NULL;
-    if (!cJSON_IsString(id) || ursatz_gui_material_item_get(id->valuestring, &meta, &version_body) != URSATZ_GUI_MATERIAL_OK) {
-      continue;
-    }
-    cJSON_Delete(meta);
-    if (lacks_tones(version_body)) {
-      char analysis_error[ANALYSIS_ERROR_SIZE];
-      char refusal[512] = "";
-      char refusal_path[128] = "";
-      AnalysisOutcome analysis = analyze_motif_body(version_body, analysis_error, refusal, sizeof(refusal), refusal_path,
-                                                    sizeof(refusal_path));
-      if (analysis == ANALYSIS_DONE) {
-        cJSON *item = NULL;
-        if (ursatz_gui_material_item_add_version(id->valuestring, version_body, "Re-analyzed", &item) == URSATZ_GUI_MATERIAL_OK) {
-          migrated++;
-        }
-        cJSON_Delete(item);
-      }
-    }
-    cJSON_Delete(version_body);
-  }
-  cJSON_Delete(items);
-  FILE *out = fopen(marker, "w");
-  if (out) {
-    fputs("tones migrated\n", out);
-    fclose(out);
-  }
-  return migrated;
-}
-
-int ursatz_gui_materials_clear_themes(const char *materials_dir) {
-  char marker[512];
-  if (snprintf(marker, sizeof(marker), "%s/themes-cleared", materials_dir) >= (int)sizeof(marker)) {
-    return 0;
-  }
-  FILE *done = fopen(marker, "r");
-  if (done) {
-    fclose(done);
-    return 0;
-  }
-  cJSON *items = NULL;
-  if (ursatz_gui_material_item_list(NULL, "theme", &items) != URSATZ_GUI_MATERIAL_OK) {
-    fputs("ursatz-gui-backend: the themes could not be listed; they are not cleared\n", stderr);
-    return 0;
-  }
-  int cleared = 0;
-  bool failed = false;
-  const cJSON *listed = NULL;
-  cJSON_ArrayForEach(listed, items) {
-    const cJSON *id = cJSON_GetObjectItemCaseSensitive(listed, "id");
-    if (cJSON_IsString(id) && ursatz_gui_material_item_delete(id->valuestring, true) == URSATZ_GUI_MATERIAL_OK) {
-      cleared++;
-    } else {
-      failed = true;
-      fprintf(stderr, "ursatz-gui-backend: a theme could not be cleared: %s\n", cJSON_IsString(id) ? id->valuestring : "?");
-    }
-  }
-  cJSON_Delete(items);
-  if (!failed) {
-    FILE *out = fopen(marker, "w");
-    if (out) {
-      fputs("themes cleared\n", out);
-      fclose(out);
-    } else {
-      fputs("ursatz-gui-backend: the themes-cleared marker could not be written\n", stderr);
-    }
-  }
-  return cleared;
 }
 
 void ursatz_gui_materials_register(struct mg_context *ctx) {

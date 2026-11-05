@@ -311,3 +311,107 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   ursatz_gui_composer_reply_destroy(&reply);
   return document;
 }
+
+/* ---- analysis on save ---------------------------------------------------- */
+
+static void set_motif_member(cJSON *motif, const char *name, cJSON *value) {
+  if (cJSON_GetObjectItemCaseSensitive(motif, name)) {
+    cJSON_ReplaceItemInObjectCaseSensitive(motif, name, value);
+  } else {
+    cJSON_AddItemToObject(motif, name, value);
+  }
+}
+
+static void set_motif_analysis(cJSON *motif, cJSON *analysis) {
+  set_motif_member(motif, "analysis", analysis);
+}
+
+/* The text the Composer returned for the form: degrees_text, rhythm_text or contour_text, or NULL. */
+static const char *analysis_degrees_text(const cJSON *output, const char *form) {
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(output, "analysis");
+  const char *name = strcmp(form, "rhythm") == 0 ? "rhythm_text" : strcmp(form, "contour") == 0 ? "contour_text" : "degrees_text";
+  const cJSON *text = cJSON_GetObjectItemCaseSensitive(analysis, name);
+  return cJSON_IsString(text) ? text->valuestring : NULL;
+}
+
+/* ---- Composer API requests (R-219) ------------------------------------ */
+
+/* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
+   motif.analysis and its degree, rhythm or contour list as motif.degrees. A body without a valid motif is left alone
+   for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
+   analysis_error (URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE bytes, empty when analyzed) names the reason; the reason is also stored as
+   motif.analysis_error, null when analyzed. When the Composer reads the input and refuses it, or a full motif has no key to
+   write its degrees in, the result is REFUSED and refusal holds its message. */
+UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, char *analysis_error, char *refusal,
+                                          size_t refusal_size, char *refusal_path, size_t refusal_path_size) {
+  analysis_error[0] = '\0';
+  cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  if (!cJSON_IsObject(motif)) {
+    return URSATZ_GUI_MOTIF_ANALYSIS_DONE;
+  }
+  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
+  const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
+  if (!cJSON_IsString(form) ||
+      (strcmp(form->valuestring, "full") != 0 && strcmp(form->valuestring, "rhythm") != 0 &&
+       strcmp(form->valuestring, "contour") != 0)) {
+    return URSATZ_GUI_MOTIF_ANALYSIS_DONE;
+  }
+  bool has_key = cJSON_IsString(key) && key->valuestring[0] != '\0';
+  if (!cJSON_IsString(notes) || !cJSON_IsString(meter) || !cJSON_IsString(pickup)) {
+    return URSATZ_GUI_MOTIF_ANALYSIS_DONE;
+  }
+  bool full = strcmp(form->valuestring, "full") == 0;
+  cJSON *request = ursatz_gui_motif_request(motif);
+  if (!request) {
+    return URSATZ_GUI_MOTIF_ANALYSIS_ALLOC;
+  }
+  UrsatzGuiComposerReply reply;
+  bool called = ursatz_gui_motif_motive(request, &reply);
+  cJSON_Delete(request);
+  if (!called) {
+    return URSATZ_GUI_MOTIF_ANALYSIS_ALLOC;
+  }
+  cJSON *analysis = NULL;
+  bool refused = false;
+  if (ursatz_gui_composer_reply_refused(&reply)) {
+    refused = true;
+    snprintf(refusal, refusal_size, "%s", reply.message[0] ? reply.message : "composer could not read the motif");
+    snprintf(refusal_path, refusal_path_size, "%s", reply.path);
+  } else {
+    analysis = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+    if (!analysis) {
+      snprintf(analysis_error, URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE, "composer could not analyze the motif%s%.300s",
+               reply.message[0] ? ": " : "", reply.message);
+    }
+  }
+  ursatz_gui_composer_reply_destroy(&reply);
+  if (refused) {
+    return URSATZ_GUI_MOTIF_ANALYSIS_REFUSED;
+  }
+  const char *degrees_text = analysis ? analysis_degrees_text(analysis, form->valuestring) : NULL;
+  if (analysis && full && !degrees_text) {
+    cJSON_Delete(analysis);
+    snprintf(refusal, refusal_size, "give a key");
+    refusal_path[0] = '\0';
+    return URSATZ_GUI_MOTIF_ANALYSIS_REFUSED;
+  }
+  cJSON *degrees = degrees_text ? cJSON_CreateString(degrees_text) : cJSON_CreateNull();
+  if (!analysis) {
+    analysis = cJSON_CreateNull();
+  }
+  cJSON *reason = analysis_error[0] ? cJSON_CreateString(analysis_error) : cJSON_CreateNull();
+  if (!analysis || !degrees || !reason) {
+    cJSON_Delete(reason);
+    cJSON_Delete(analysis);
+    cJSON_Delete(degrees);
+    return URSATZ_GUI_MOTIF_ANALYSIS_ALLOC;
+  }
+  set_motif_analysis(motif, analysis);
+  set_motif_member(motif, "degrees", degrees);
+  set_motif_member(motif, "analysis_error", reason);
+  return URSATZ_GUI_MOTIF_ANALYSIS_DONE;
+}
+

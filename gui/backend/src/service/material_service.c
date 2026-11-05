@@ -20,6 +20,7 @@
 
 #include "composer_client.h"
 #include "id_service.h"
+#include "motif_service.h"
 #include "subject_service.h"
 
 #define NAME_MAX_CHARS 200
@@ -2738,4 +2739,105 @@ UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int num
     UNLOCK();
     cJSON_Delete(item);
     return result;
+}
+
+/* True when the current version of a motif body is a full motif whose analysis has no tone labels (R-204). */
+static bool lacks_tones(const cJSON *version_body) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  if (!cJSON_IsString(form) || strcmp(form->valuestring, "full") != 0) {
+    return false;
+  }
+  const cJSON *document = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
+  return !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(analysis, "tones"));
+}
+
+int ursatz_gui_material_migrate_tones(const char *materials_dir) {
+  char marker[512];
+  if (snprintf(marker, sizeof(marker), "%s/tones-migrated", materials_dir) >= (int)sizeof(marker)) {
+    return 0;
+  }
+  FILE *done = fopen(marker, "r");
+  if (done) {
+    fclose(done);
+    return 0;
+  }
+  cJSON *items = NULL;
+  if (ursatz_gui_material_item_list(NULL, "motif", &items) != URSATZ_GUI_MATERIAL_OK) {
+    return 0;
+  }
+  int migrated = 0;
+  const cJSON *listed = NULL;
+  cJSON_ArrayForEach(listed, items) {
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(listed, "id");
+    cJSON *meta = NULL;
+    cJSON *version_body = NULL;
+    if (!cJSON_IsString(id) || ursatz_gui_material_item_get(id->valuestring, &meta, &version_body) != URSATZ_GUI_MATERIAL_OK) {
+      continue;
+    }
+    cJSON_Delete(meta);
+    if (lacks_tones(version_body)) {
+      char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
+      char refusal[512] = "";
+      char refusal_path[128] = "";
+      UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, analysis_error, refusal, sizeof(refusal), refusal_path,
+                                                    sizeof(refusal_path));
+      if (analysis == URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
+        cJSON *item = NULL;
+        if (ursatz_gui_material_item_add_version(id->valuestring, version_body, "Re-analyzed", &item) == URSATZ_GUI_MATERIAL_OK) {
+          migrated++;
+        }
+        cJSON_Delete(item);
+      }
+    }
+    cJSON_Delete(version_body);
+  }
+  cJSON_Delete(items);
+  FILE *out = fopen(marker, "w");
+  if (out) {
+    fputs("tones migrated\n", out);
+    fclose(out);
+  }
+  return migrated;
+}
+
+int ursatz_gui_material_clear_themes(const char *materials_dir) {
+  char marker[512];
+  if (snprintf(marker, sizeof(marker), "%s/themes-cleared", materials_dir) >= (int)sizeof(marker)) {
+    return 0;
+  }
+  FILE *done = fopen(marker, "r");
+  if (done) {
+    fclose(done);
+    return 0;
+  }
+  cJSON *items = NULL;
+  if (ursatz_gui_material_item_list(NULL, "theme", &items) != URSATZ_GUI_MATERIAL_OK) {
+    fputs("ursatz-gui-backend: the themes could not be listed; they are not cleared\n", stderr);
+    return 0;
+  }
+  int cleared = 0;
+  bool failed = false;
+  const cJSON *listed = NULL;
+  cJSON_ArrayForEach(listed, items) {
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(listed, "id");
+    if (cJSON_IsString(id) && ursatz_gui_material_item_delete(id->valuestring, true) == URSATZ_GUI_MATERIAL_OK) {
+      cleared++;
+    } else {
+      failed = true;
+      fprintf(stderr, "ursatz-gui-backend: a theme could not be cleared: %s\n", cJSON_IsString(id) ? id->valuestring : "?");
+    }
+  }
+  cJSON_Delete(items);
+  if (!failed) {
+    FILE *out = fopen(marker, "w");
+    if (out) {
+      fputs("themes cleared\n", out);
+      fclose(out);
+    } else {
+      fputs("ursatz-gui-backend: the themes-cleared marker could not be written\n", stderr);
+    }
+  }
+  return cleared;
 }

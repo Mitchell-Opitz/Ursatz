@@ -68,4 +68,22 @@ const char *ursatz_gui_motif_harmony(const cJSON *motif);
 /* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
 const char *ursatz_gui_motif_role_option(const char *role);
 
+/* The result of ursatz_gui_motif_analyze_body. */
+#define URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE 400
+
+typedef enum {
+  URSATZ_GUI_MOTIF_ANALYSIS_DONE,
+  URSATZ_GUI_MOTIF_ANALYSIS_REFUSED,
+  URSATZ_GUI_MOTIF_ANALYSIS_ALLOC
+} UrsatzGuiMotifAnalysis;
+
+/* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
+ * motif.analysis and its degree, rhythm or contour list as motif.degrees. A body without a valid motif is left alone
+ * for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
+ * analysis_error (URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE bytes, empty when analyzed) names the reason; the reason is also
+ * stored as motif.analysis_error, null when analyzed. When the Composer reads the input and refuses it, or a full motif
+ * has no key to write its degrees in, the result is REFUSED and refusal holds its message. */
+UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, char *analysis_error, char *refusal,
+                                                     size_t refusal_size, char *refusal_path, size_t refusal_path_size);
+
 #endif /* URSATZ_GUI_MOTIF_SERVICE_H */
