@@ -3,7 +3,7 @@
 
 /*
  * Deprecated. Not the key identification owner (key_regions_estimate). Kept while Ursatz-GUI calls it;
- * removed in P27 (docs/ARCHITECTURE.md, Analytic job owners).
+ * removed in P27 (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

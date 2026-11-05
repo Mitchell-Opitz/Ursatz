@@ -28,7 +28,7 @@ Requirements, the full test run and CI are in [docs/BUILDING.md](docs/BUILDING.m
 Link `ursatz` (and the frameworks and `ursatz_chain` you need) from a submodule build. A consumer sees only the
 public headers: kernel headers by their module path (`time/meter_map.h`), framework headers by their folder
 name (`standard-form/analysis/analysis_phrase.h`), the chain as `ursatz_chain/analysis_chain.h`. Details in
-[docs/architecture.md](docs/architecture.md), Public surface.
+[docs/public-surface.md](docs/public-surface.md).
 
 ## Docs
 

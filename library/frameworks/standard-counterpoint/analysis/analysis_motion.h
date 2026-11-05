@@ -2,7 +2,7 @@
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_ANALYSIS_ANALYSIS_MOTION_H
 
 /*
- * Owner of motion classification (standard_counterpoint_classify_motions) (docs/ARCHITECTURE.md,
+ * Owner of motion classification (standard_counterpoint_classify_motions) (docs/analytic-job-owners.md,
  * Analytic job owners).
  */
 

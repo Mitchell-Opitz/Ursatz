@@ -2,7 +2,7 @@
 #define URSATZ_FRAMEWORKS_STANDARD_FORM_ANALYSIS_ANALYSIS_PHRASE_H
 
 /*
- * Owner of phrase segmentation (standard_form_segment_phrases) (docs/ARCHITECTURE.md, Analytic job
+ * Owner of phrase segmentation (standard_form_segment_phrases) (docs/analytic-job-owners.md, Analytic job
  * owners).
  */
 

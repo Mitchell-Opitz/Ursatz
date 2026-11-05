@@ -2,7 +2,7 @@
 #define MUSIC_ANALYSIS_OUTER_VOICE_H
 
 /*
- * Owner of outer-line extraction (outer_voice_extract) (docs/ARCHITECTURE.md, Analytic job owners).
+ * Owner of outer-line extraction (outer_voice_extract) (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

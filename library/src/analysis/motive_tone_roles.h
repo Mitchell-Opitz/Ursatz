@@ -2,7 +2,7 @@
 #define MUSIC_ANALYSIS_MOTIVE_TONE_ROLES_H
 
 /*
- * Owner of non-chord-tone classification (motive_tone_roles) (docs/ARCHITECTURE.md, Analytic job
+ * Owner of non-chord-tone classification (motive_tone_roles) (docs/analytic-job-owners.md, Analytic job
  * owners).
  */
 

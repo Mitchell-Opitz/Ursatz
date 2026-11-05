@@ -4,7 +4,7 @@
 /*
  * Not the motive matching owner: motive_variant_recognize with the motive_relation_apply relations is, and the chain injects it
  * (StandardFormConfig.relation_match). Used alone, the framework matches the pattern, inversion and retrograde kinds and VARIED; it
- * does not match augmentation, diminution or fragments (docs/ARCHITECTURE.md, Analytic job owners).
+ * does not match augmentation, diminution or fragments (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

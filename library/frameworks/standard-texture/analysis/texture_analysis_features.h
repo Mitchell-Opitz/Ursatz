@@ -3,7 +3,7 @@
 
 /*
  * standard_texture_consolidate_voices is not the voice assignment owner (voice_separate). It is
- * texture's merge step over assigned voices, kept (docs/ARCHITECTURE.md, Analytic job owners).
+ * texture's merge step over assigned voices, kept (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

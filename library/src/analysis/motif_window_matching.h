@@ -4,7 +4,7 @@
 /*
  * Not the motive matching owner (motive_variant_recognize with the motive_relation_apply relations).
  * Kept as the exact contour and rhythm primitive, injected into standard-form through the chain bridge
- * in P22 (docs/ARCHITECTURE.md, Analytic job owners).
+ * in P22 (docs/analytic-job-owners.md).
  */
 
 #include <stddef.h>

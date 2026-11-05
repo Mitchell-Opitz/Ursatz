@@ -4,7 +4,7 @@
 /*
  * sonority_builder_build_from_notes is not the sonority segmentation owner
  * (sonority_builder_build_adaptive). Kept as the fixed-grid primitive: a caller-given grid is a
- * different job (docs/ARCHITECTURE.md, Analytic job owners).
+ * different job (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

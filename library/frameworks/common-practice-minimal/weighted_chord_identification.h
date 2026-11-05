@@ -3,7 +3,7 @@
 
 /*
  * Owner of chord identification (common_practice_identify_weighted_sequence and
- * common_practice_identify_weighted) (docs/ARCHITECTURE.md, Analytic job owners).
+ * common_practice_identify_weighted) (docs/analytic-job-owners.md).
  */
 
 #include <stdbool.h>

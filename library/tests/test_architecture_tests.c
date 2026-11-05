@@ -6,7 +6,7 @@
 
 /*
  * Architecture test for the test sources: tests/<module>/ and frameworks/<name>/tests/ follow the same
- * layer rules as the code they test (docs/ARCHITECTURE.md).
+ * layer rules as the code they test (docs/layers-and-dependency-rules.md).
  *
  *  - A kernel test under tests/<module>/ may include its own module and modules in lower layers, and
  *    siblings only where the code allows it (the L9 modules, and rules on theory). It never includes a
