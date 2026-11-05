@@ -57,6 +57,7 @@ add_library(ursatz_analyzer STATIC
     util/json_util.c
     util/file_util.c
     util/misc_util.c
+    export/score_text_reader.c
 )
 configure_file(version.h.in ${PROJECT_BINARY_DIR}/include/ursatz_analyzer/version.h @ONLY)
 target_include_directories(ursatz_analyzer
