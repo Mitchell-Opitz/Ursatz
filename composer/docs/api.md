@@ -1,7 +1,8 @@
 # The Composer API
 
 Everything an application asks of the Composer is a versioned in-process C API (R-219). The one public header is
-`include/ursatz_composer/composer_api.h`. A request is JSON text, a response is a `ComposerResponse`; no Composer type, no
+`include/ursatz_composer/composer_api.h` (it includes only standard headers; every other Composer header is private in
+`src/include/ursatz_composer/`, and Ursatz and the Analyzer are linked PRIVATE). A request is JSON text, a response is a `ComposerResponse`; no Composer type, no
 cJSON type and no file path (except style models and corpus directories) crosses it. The CLI is a client of the same
 functions: it reads its arguments into a request, calls the API and prints the response (R-267).
 

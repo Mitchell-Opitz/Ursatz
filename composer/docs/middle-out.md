@@ -23,7 +23,7 @@ The material is Given lane spans owned by the section, from `bar` (counted from 
 - a melody or a bass line is one span, its notes' offsets from the start of its first bar. A melody may open and end
   with a rest. A bass line has no rest, because the bass lane is read as one unbroken line: its notes tile its bars;
 - a progression is one harmony span for each chord, `cells_per_chord` cells long (a cell is a beat or half a bar,
-  see [harmony_phrase.h](../include/ursatz_composer/harmony_phrase.h): a bar of 2/4 or 3/4 has one, a bar of 4/4 or
+  see [harmony_phrase.h](../src/include/ursatz_composer/harmony_phrase.h): a bar of 2/4 or 3/4 has one, a bar of 4/4 or
   6/8 has two). Each numeral is read in the mode of the key under it (a numeral the harmony operators write, or an
   applied chord such as `V7/V`) and given its function.
 
