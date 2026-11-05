@@ -819,3 +819,7 @@ add_test(NAME consumer_rejects_internals
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_rejects.cmake)
 set_tests_properties(consumer_rejects_internals PROPERTIES DEPENDS consumer_build RESOURCE_LOCK consumer_build_dir)
 set_tests_properties(consumer_build PROPERTIES RESOURCE_LOCK consumer_build_dir)
+
+# Default timeouts by label (cmake/TestTimeouts.cmake), set last so every test above has its labels.
+include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
+ursatz_composer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
