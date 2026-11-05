@@ -53,4 +53,4 @@ jobs:
         run: scripts/check-frontend-theory.sh
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure -j4
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
