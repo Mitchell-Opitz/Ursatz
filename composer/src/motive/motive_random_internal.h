@@ -40,6 +40,11 @@
 extern const NonChordTone MOTIVE_RANDOM_DECORATIONS[];
 #define DECORATION_KINDS 4
 
+/* Lengths in half-beats (1, 2 and 4: the beat unit's half, itself and double) and how often each is drawn. */
+extern const long MOTIVE_RANDOM_DURATIONS[];
+extern const unsigned long MOTIVE_RANDOM_DURATION_WEIGHTS[];
+#define DURATION_KINDS 3
+
 typedef struct {
     long ticks[MAX_NOTES];
     bool on_beat[MAX_NOTES];
@@ -85,5 +90,10 @@ bool motive_random_candidate_closeness(const MotiveRandomOptions *options, const
 
 /* -1, 0 or 1 as a is less than, equal to or more than b. */
 int motive_random_ratio_compare(const ComposerRatio *a, const ComposerRatio *b);
+
+/* One candidate of the SEGMENTS strategy (motive_random_segments.c), as the DRAWN one: *found is false when the draw did
+   not pass (try again); the result is false only when the check itself could not run. */
+bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
+                                      bool *found);
 
 #endif

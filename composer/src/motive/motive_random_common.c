@@ -21,6 +21,9 @@ const NonChordTone MOTIVE_RANDOM_DECORATIONS[DECORATION_KINDS] = {
     NON_CHORD_TONE_PASSING, NON_CHORD_TONE_NEIGHBOR, NON_CHORD_TONE_APPOGGIATURA, NON_CHORD_TONE_ESCAPE_TONE};
 #define DECORATIONS MOTIVE_RANDOM_DECORATIONS
 
+const long MOTIVE_RANDOM_DURATIONS[DURATION_KINDS] = {1, 2, 4};
+const unsigned long MOTIVE_RANDOM_DURATION_WEIGHTS[DURATION_KINDS] = {2, 4, 1};
+
 long motive_random_rung_position(long rung) {
     return (rung / (long)TRIAD_SIZE) * 7 + TRIAD_STEPS[rung % (long)TRIAD_SIZE];
 }
@@ -173,6 +176,16 @@ bool motive_random_apply_form(const MotiveRandomOptions *options, const Motive *
     read.meter = motive_meter(full);
     read.has_key = true;
     read.key = motive_key(full);
+    if (full->chord_count > 0) {
+        read.has_harmony = true;
+        read.harmony_count = full->chord_count;
+        memcpy(read.harmony, full->chords, full->chord_count * sizeof(read.harmony[0]));
+    }
+    if (full->feature_count > 0) {
+        read.has_features = true;
+        read.feature_count = full->feature_count;
+        memcpy(read.features, full->features, full->feature_count * sizeof(read.features[0]));
+    }
     bool rhythm = options->form == MOTIVE_SKETCH_FORM_RHYTHM;
     if (rhythm && motive_pickup(full).num != 0) {
         read.has_pickup = true;

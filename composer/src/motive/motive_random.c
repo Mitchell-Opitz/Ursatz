@@ -20,10 +20,8 @@
 #define MAX_BARS 2
 #define PICKUP_ONE_IN 4        /* a pickup (half a beat or a beat) in one motive of this many */
 
-/* Lengths in half-beats (1, 2 and 4: the beat unit's half, itself and double) and how often each is drawn. */
-static const long DURATIONS[] = {1, 2, 4};
-static const unsigned long DURATION_WEIGHTS[] = {2, 4, 1};
-#define DURATION_KINDS (sizeof(DURATIONS) / sizeof(DURATIONS[0]))
+#define DURATIONS MOTIVE_RANDOM_DURATIONS
+#define DURATION_WEIGHTS MOTIVE_RANDOM_DURATION_WEIGHTS
 
 const char *motive_random_result_name(MotiveRandomResult result) {
     switch (result) {
@@ -158,10 +156,11 @@ static bool draw_drawn_candidate(const MotiveRandomOptions *options, const Analy
     *found = fault == NULL;
     return true;
 }
-/* One candidate by the strategy asked for. SEGMENTS has no builder of its own yet and draws as DRAWN does. */
+/* One candidate by the strategy asked for. */
 static bool draw_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
                            bool *found) {
-    return draw_drawn_candidate(options, key, rng, out, found);
+    return options->strategy == MOTIVE_RANDOM_STRATEGY_DRAWN ? draw_drawn_candidate(options, key, rng, out, found)
+                                                              : motive_random_segments_candidate(options, key, rng, out, found);
 }
 
 /* ---------------------------------------------------------------- the call */

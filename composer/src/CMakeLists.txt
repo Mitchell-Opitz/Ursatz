@@ -83,6 +83,7 @@ add_library(ursatz_composer STATIC
     motive/motive_invent.c
     motive/motive_random.c
     motive/motive_random_common.c
+    motive/motive_random_segments.c
     motive/variant_registry.c
     motive/variant_chain.c
     motive/variant_functions.c
