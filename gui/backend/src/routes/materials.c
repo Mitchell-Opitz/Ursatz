@@ -661,8 +661,8 @@ static char *degrees_to_c_notes(const char *degrees, const char *mode, const cha
     to_c_fail(failure, 400, "degrees must be a list of 1 to 4000 characters");
     return NULL;
   }
-  if (!mode || (strcmp(mode, "major") != 0 && strcmp(mode, "minor") != 0)) {
-    to_c_fail(failure, 400, "mode must be major or minor");
+  if (!mode) {
+    to_c_fail(failure, 400, "mode is needed");
     return NULL;
   }
   if (!meter || !pickup) {
@@ -844,7 +844,7 @@ typedef struct {
   const char *role;
   const char *harmony;
   const cJSON *features;
-  int tempo;
+  const char *tempo; /* the Composer reads it: a whole number or a fraction like 195/2; NULL for none */
 } RenderInput;
 
 typedef struct {
@@ -869,8 +869,8 @@ static void render_fail(RenderFailure *failure, int status, const char *message)
 static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_midi, size_t *out_midi_size,
                          RenderFailure *failure) {
   const char *form = in->form;
-  if (!form || (strcmp(form, "full") != 0 && strcmp(form, "rhythm") != 0 && strcmp(form, "contour") != 0)) {
-    render_fail(failure, 400, "form must be full, rhythm or contour");
+  if (!form) {
+    render_fail(failure, 400, "form is needed");
     return false;
   }
   size_t degrees_length = in->degrees ? strlen(in->degrees) : 0;
@@ -888,16 +888,12 @@ static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_mi
     render_fail(failure, 400, "give a key");
     return false;
   }
-  if (in->tempo < 0 || in->tempo > 400 || (in->tempo > 0 && in->tempo < 20)) {
-    render_fail(failure, 400, "tempo must be 20 to 400");
-    return false;
-  }
   bool full = strcmp(form, "full") == 0;
   cJSON *request = motive_request(full ? "degrees" : form, form, in->degrees, in->meter, has_key ? in->key : NULL, in->pickup);
   if (!request || !add_motive_extras(request, in->harmony, in->features, motif_role_option(in->role)) ||
       !cJSON_AddStringToObject(request, "render_key", render_key) || !cJSON_AddTrueToObject(request, "musicxml") ||
       !cJSON_AddTrueToObject(request, "midi") ||
-      (in->tempo > 0 && !cJSON_AddNumberToObject(request, "tempo", in->tempo))) {
+      (in->tempo && !cJSON_AddStringToObject(request, "tempo", in->tempo))) {
     cJSON_Delete(request);
     render_fail(failure, 500, "out of memory");
     return false;
@@ -980,16 +976,18 @@ static int handle_render(struct mg_connection *conn) {
     in.pickup = "0";
   }
   const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(body, "tempo");
-  if (tempo && !cJSON_IsNull(tempo)) {
-    if (!cJSON_IsNumber(tempo) || tempo->valuedouble != (double)tempo->valueint) {
-      bad = true;
-    } else {
-      in.tempo = tempo->valueint;
-    }
+  char tempo_text[48] = "";
+  if (cJSON_IsString(tempo)) {
+    in.tempo = tempo->valuestring;
+  } else if (cJSON_IsNumber(tempo)) {
+    snprintf(tempo_text, sizeof(tempo_text), "%.15g", tempo->valuedouble);
+    in.tempo = tempo_text;
+  } else if (tempo && !cJSON_IsNull(tempo)) {
+    bad = true;
   }
   if (bad) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "form, degrees, meter, key, pickup, render_key, role and harmony must be text and tempo a whole number");
+    return send_failure(conn, 400, "form, degrees, meter, key, pickup, render_key, role and harmony must be text and tempo a number or text like 195/2");
   }
   char *xml = NULL;
   uint8_t *midi = NULL;
@@ -1758,10 +1756,9 @@ static int handle_variant_operations(struct mg_connection *conn) {
   return send_object(conn, document);
 }
 
-/* The names --function takes; the same four the stored derived.functions hold. */
+/* The names --function takes, the vocabulary's functions; the stored derived.functions hold the same. */
 static bool function_name_ok(const char *name) {
-  return strcmp(name, "beginning") == 0 || strcmp(name, "continuation") == 0 || strcmp(name, "contrast") == 0 ||
-         strcmp(name, "cadential") == 0;
+  return ursatz_gui_composer_vocabulary_has("functions", name);
 }
 
 /* The version body of the basic motive of motif's lineage: the end of its derived.source_item links, at most 32 hops.
@@ -1830,11 +1827,7 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
   }
   const cJSON *function = NULL;
   cJSON *function_list = ok && functions && cJSON_GetArraySize(functions) > 0 ? cJSON_AddArrayToObject(request, "functions") : NULL;
-  int function_count = 0;
   cJSON_ArrayForEach(function, functions) {
-    if (function_count++ == 4) {
-      break;
-    }
     ok = ok && function_list && cJSON_AddItemToArray(function_list, cJSON_CreateString(function->valuestring));
   }
   char count_text[16];
@@ -1966,15 +1959,14 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   }
   int count = 6;
   double seed = -1;
+  /* The names (which functions, which distance, how many) are the Composer's to refuse, with the path at fault. */
   bool functions_ok = !functions || cJSON_IsArray(functions);
   const cJSON *function = NULL;
   cJSON_ArrayForEach(function, functions) {
-    functions_ok = functions_ok && cJSON_IsString(function) && function_name_ok(function->valuestring);
+    functions_ok = functions_ok && cJSON_IsString(function);
   }
-  functions_ok = functions_ok && (!functions || cJSON_GetArraySize(functions) <= 4);
   const char *distance = cJSON_IsString(distance_item) ? distance_item->valuestring : NULL;
-  bool distance_ok = !distance_item || (distance && (strcmp(distance, "close") == 0 || strcmp(distance, "medium") == 0 ||
-                                                      strcmp(distance, "far") == 0));
+  bool distance_ok = !distance_item || distance;
   if (distance_ok && distance && chain) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "distance takes random operations");
@@ -1988,7 +1980,7 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
                                seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
   if (!valid) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16, seed a whole number from 0, distance close, medium or far and functions at most 4 of beginning, continuation, contrast, cadential");
+    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16, seed a whole number from 0, distance a name and functions a list of names");
   }
   if (count_item) {
     count = (int)count_item->valuedouble;

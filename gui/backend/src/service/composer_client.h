@@ -47,6 +47,13 @@ UrsatzGuiComposerBuild ursatz_gui_composer_build(void);
  * limits.seed_max; -1 when the Composer does not give it. */
 double ursatz_gui_composer_seed_max(const char *kind);
 
+/* The position of value in the vocabulary list called list ("theme_slots", "theme_ideas", "functions"...), from 0; -1 when
+ * the list has no such value or the Composer gave no vocabulary. */
+int ursatz_gui_composer_vocabulary_index(const char *list, const char *value);
+
+/* Whether value is in the vocabulary list called list. */
+bool ursatz_gui_composer_vocabulary_has(const char *list, const char *value);
+
 /* The spelling of the tonic of pitch_class (0 to 11) in mode ("major" or "minor") in the vocabulary's pitch_class_names;
  * false when it has none. */
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size);

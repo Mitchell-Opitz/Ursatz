@@ -18,6 +18,7 @@
 #include <unistd.h>
 #endif
 
+#include "composer_client.h"
 #include "id_service.h"
 #include "subject_service.h"
 
@@ -831,16 +832,12 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
                : validate_derived(cJSON_GetObjectItemCaseSensitive(motif, "derived"), error, error_size);
 }
 
-static const char *const kThemeSlots[] = {"basic", "contrasting", "continuation", "cadential", NULL};
 static const char *const kThemePools[] = {"approved-and-unflagged", "approved", "none", NULL};
 static const char *const kThemeMotiveCategories[] = {"motive-degrees", "motive-intervals", "motive-rhythm",
                                                      "motive-nct-figure", NULL};
 /* The members a placeholder theme (form null or a string, slots of anything) does not have. */
 static const char *const kThemeNewMembers[] = {"ideas", "chords", "accompaniment", "brief", "style_weight",
                                                "without", "tempo", "check",         "seed",  "result", NULL};
-static const char *const kThemeIdeas[] = {"basic idea",          "repetition", "contrasting idea", "consequent basic idea",
-                                          "consequent contrasting idea", "fragment 1", "fragment 2", "cadential",
-                                          "cadential 1",         "cadential 2", NULL};
 
 #define THEME_BRIEF_MAX_SCOPES 16
 #define THEME_BRIEF_MAX_PIECES 5000
@@ -890,17 +887,12 @@ static bool theme_reference_ok(const cJSON *reference) {
 }
 
 static UrsatzGuiMaterialResult validate_theme_slots(const cJSON *slots, char *error, size_t error_size) {
-    bool seen[4] = {false, false, false, false};
+    bool seen[THEME_IDEAS_MAX] = {false};
     const cJSON *slot = NULL;
     cJSON_ArrayForEach(slot, slots) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(slot, "slot");
-        int index = -1;
-        for (int i = 0; cJSON_IsString(name) && kThemeSlots[i]; i++) {
-            if (strcmp(name->valuestring, kThemeSlots[i]) == 0) {
-                index = i;
-            }
-        }
-        if (index < 0 || !theme_reference_ok(slot)) {
+        int index = cJSON_IsString(name) ? ursatz_gui_composer_vocabulary_index("theme_slots", name->valuestring) : -1;
+        if (index < 0 || index >= THEME_IDEAS_MAX || !theme_reference_ok(slot)) {
             return invalid_body(error, error_size, "each theme slot needs slot, item_id and version");
         }
         if (seen[index]) {
@@ -920,13 +912,8 @@ static UrsatzGuiMaterialResult validate_theme_ideas(const cJSON *ideas, char *er
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, ideas) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, "idea");
-        int index = -1;
-        for (int i = 0; cJSON_IsString(name) && kThemeIdeas[i]; i++) {
-            if (strcmp(name->valuestring, kThemeIdeas[i]) == 0) {
-                index = i;
-            }
-        }
-        if (index < 0 || !theme_reference_ok(entry)) {
+        int index = cJSON_IsString(name) ? ursatz_gui_composer_vocabulary_index("theme_ideas", name->valuestring) : -1;
+        if (index < 0 || index >= THEME_IDEAS_MAX || !theme_reference_ok(entry)) {
             return invalid_body(error, error_size, "each theme idea needs idea, item_id and version");
         }
         if (seen[index]) {
