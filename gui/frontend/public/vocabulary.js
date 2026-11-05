@@ -102,7 +102,7 @@
       }
       if (status === 200 && body && body.ok) {
         o.show({ ok: true, complete: body.complete === true, message: body.message || "", path: "", field: null, request: body.request || null });
-      } else if (status === 400 && body && typeof body.error === "string") {
+      } else if ((status === 400 || status === 422) && body && typeof body.error === "string") {
         const path = typeof body.path === "string" ? body.path : "";
         o.show({ ok: false, complete: true, message: body.error, path, field: o.field ? o.field(path) : null });
       } else {

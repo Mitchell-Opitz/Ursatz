@@ -351,6 +351,21 @@ static bool composer_refused(const UrsatzGuiComposerReply *reply) {
   return reply->status == COMPOSER_ERR_REQUEST || reply->status == COMPOSER_ERR_UNSATISFIABLE;
 }
 
+/* The status a Composer refusal is sent with: 422 when nothing satisfies a valid request, 400 for a malformed one, 499
+   for a cancelled job, else 500 (ALLOC, INTERNAL). */
+static int composer_failure_status(const UrsatzGuiComposerReply *reply) {
+  switch (reply->status) {
+    case COMPOSER_ERR_UNSATISFIABLE:
+      return 422;
+    case COMPOSER_ERR_REQUEST:
+      return 400;
+    case COMPOSER_ERR_CANCELLED:
+      return 499;
+    default:
+      return 500;
+  }
+}
+
 /* The motive request of the Composer API: input.text, and input.format / input.form when given, meter, key (when not
    NULL) and pickup. NULL on allocation failure. */
 static cJSON *motive_request(const char *format, const char *form, const char *text, const char *meter, const char *key,
@@ -666,7 +681,7 @@ static char *degrees_to_c_notes(const char *degrees, const char *mode, const cha
   }
   char *notes = NULL;
   if (composer_refused(&reply)) {
-    to_c_fail_at(failure, 400, reply.message[0] ? reply.message : "composer could not read the degrees", reply.path);
+    to_c_fail_at(failure, composer_failure_status(&reply), reply.message[0] ? reply.message : "composer could not read the degrees", reply.path);
   } else {
     cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
     const cJSON *text = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "analysis"), "notes_text");
@@ -750,7 +765,8 @@ static int handle_import_motif(struct mg_connection *conn) {
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(composer_status, &response, &reply);
   if (reply.status != COMPOSER_OK) {
-    int failed = send_failure_at(conn, 400, reply.message[0] ? reply.message : "composer could not read the MIDI file",
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
+                                 reply.message[0] ? reply.message : "composer could not read the MIDI file",
                                  reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
@@ -895,7 +911,7 @@ static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_mi
   }
   bool ok = false;
   if (composer_refused(&reply)) {
-    render_fail_at(failure, 400, reply.message[0] ? reply.message : "composer could not render the motif", reply.path);
+    render_fail_at(failure, composer_failure_status(&reply), reply.message[0] ? reply.message : "composer could not render the motif", reply.path);
   } else {
     char *xml = reply.status == COMPOSER_OK && reply.musicxml && reply.midi ? strdup(reply.musicxml) : NULL;
     if (xml) {
@@ -1844,7 +1860,7 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
     /* the command printed the notices on stderr, not in the document */
     cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
   } else {
-    *status = composer_refused(&reply) ? 400 : reply.status == COMPOSER_ERR_CANCELLED ? 499 : 500;
+    *status = composer_failure_status(&reply);
     snprintf(message, message_size, "%s", reply.message[0] ? reply.message : "composer could not make variants");
   }
   ursatz_gui_composer_reply_destroy(&reply);
@@ -2145,7 +2161,7 @@ static int handle_recognize(struct mg_connection *conn) {
   }
   cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
-    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not recognize the motifs", reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
@@ -3049,7 +3065,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   }
   cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
-    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not draw the motives", reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
@@ -3167,7 +3183,7 @@ static int handle_validate(struct mg_connection *conn) {
   cJSON *filled = document ? cJSON_DetachItemFromObjectCaseSensitive(document, "request") : NULL;
   cJSON_Delete(document);
   if (!filled) {
-    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not check the request", reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
