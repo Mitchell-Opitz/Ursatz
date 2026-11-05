@@ -395,6 +395,8 @@ target_compile_definitions(test_corpus PRIVATE
     URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_corpus COMMAND test_corpus)
+# Tests sharing a work directory take a RESOURCE_LOCK named after it, so parallel runs do not collide.
+set_tests_properties(test_corpus PROPERTIES RESOURCE_LOCK corpus_work)
 
 add_test(NAME test_cli_corpus
          COMMAND ${CMAKE_COMMAND}
@@ -428,6 +430,7 @@ target_compile_definitions(test_style_profile PRIVATE
     PROJECT_VERSION_FOR_TESTS="${PROJECT_VERSION}"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_style_profile COMMAND test_style_profile)
+set_tests_properties(test_style_profile PROPERTIES RESOURCE_LOCK style_work)
 
 add_test(NAME test_cli_style_profile
          COMMAND ${CMAKE_COMMAND}
@@ -455,6 +458,7 @@ target_compile_definitions(test_similar_material PRIVATE
     URSATZ_SIMILAR_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/similar_work"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_similar_material COMMAND test_similar_material)
+set_tests_properties(test_similar_material PROPERTIES RESOURCE_LOCK similar_work)
 
 # The --similar flag: the motive file comes from the test program, which writes it.
 add_test(NAME test_cli_similar_motive_file COMMAND test_similar_material --write-motive ${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid)
@@ -480,6 +484,7 @@ target_compile_definitions(test_composer_api PRIVATE
     URSATZ_COMPOSER_API_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/composer_api_work")
 add_test(NAME test_composer_api_smoke COMMAND test_composer_api smoke)
 add_test(NAME test_composer_api COMMAND test_composer_api)
+set_tests_properties(test_composer_api_smoke test_composer_api PROPERTIES RESOURCE_LOCK composer_api_work)
 find_program(VALGRIND_PROGRAM valgrind)
 if(VALGRIND_PROGRAM)
     add_test(NAME test_composer_api_valgrind
@@ -487,6 +492,7 @@ if(VALGRIND_PROGRAM)
                      --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
                      $<TARGET_FILE:test_composer_api> smoke)
     set_tests_properties(test_composer_api_valgrind PROPERTIES LABELS slow)
+    set_tests_properties(test_composer_api_valgrind PROPERTIES RESOURCE_LOCK composer_api_work)
 endif()
 
 add_executable(test_hearing test_hearing.c)
@@ -499,12 +505,14 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hearing_work)
 add_test(NAME test_hearing_smoke COMMAND test_hearing smoke)
 add_test(NAME test_hearing COMMAND test_hearing)
 set_tests_properties(test_hearing PROPERTIES LABELS slow)
+set_tests_properties(test_hearing_smoke test_hearing PROPERTIES RESOURCE_LOCK hearing_work)
 if(VALGRIND_PROGRAM)
     add_test(NAME test_hearing_valgrind
              COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
                      --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
                      $<TARGET_FILE:test_hearing> smoke)
     set_tests_properties(test_hearing_valgrind PROPERTIES LABELS slow)
+    set_tests_properties(test_hearing_valgrind PROPERTIES RESOURCE_LOCK hearing_work)
 endif()
 
 add_executable(test_meter_check test_meter_check.c)
@@ -518,12 +526,14 @@ target_compile_definitions(test_motive_links PRIVATE
     URSATZ_LINKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/links"
     URSATZ_LINKS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/motive_links_work")
 add_test(NAME test_motive_links COMMAND test_motive_links)
+set_tests_properties(test_motive_links PROPERTIES RESOURCE_LOCK motive_links_work)
 if(VALGRIND_PROGRAM)
     add_test(NAME test_motive_links_valgrind
              COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
                      --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
                      $<TARGET_FILE:test_motive_links>)
     set_tests_properties(test_motive_links_valgrind PROPERTIES LABELS slow)
+    set_tests_properties(test_motive_links_valgrind PROPERTIES RESOURCE_LOCK motive_links_work)
 endif()
 add_test(NAME test_cli_link_motives
          COMMAND ${CMAKE_COMMAND}
