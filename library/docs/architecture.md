@@ -2,7 +2,7 @@
 
 [Docs index](README.md): the Ursatz docs by topic.
 
-Ursatz is organized into layered modules, each living under `src/<module>/` with its tests mirrored under `tests/<module>/`. Theory Framework extension modules live outside the layers, under `frameworks/<name>/`. This page explains the library, then covers the layer model and the rules that hold it together. Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
+Ursatz is organized into layered modules, each living under `src/<module>/` with its tests mirrored under `tests/<module>/`. Theory Framework extension modules live outside the layers, under `frameworks/<name>/`. This page explains the library; the layer model and its rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
 
 ## Purpose
 
@@ -19,18 +19,18 @@ Ursatz depends on no other repo. The Analyzer, the Composer and the GUI pin it a
 
 | Directory | What it holds | Doc |
 |---|---|---|
-| `src/<module>/` | Kernel modules L0 to L9, one folder each | [Layers](#layers) and [module-status.md](module-status.md) |
+| `src/<module>/` | Kernel modules L0 to L9, one folder each | [Layers](layers-and-dependency-rules.md#layers) and [module-status.md](module-status.md) |
 | `frameworks/<name>/` | 17 Theory Frameworks built on L7 | [frameworks/README.md](../frameworks/README.md) |
 | `chain/` | The analysis chain `ursatz_chain` | [chain/README.md](../chain/README.md) |
 | `tests/` | Kernel tests mirrored by module, accuracy harness, integration tests | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
-| `cmake/`, `scripts/` | Public header staging, app include report, docs check | [Public surface](#public-surface) |
+| `cmake/`, `scripts/` | Public header staging, app include report, docs check | [Public surface](public-surface.md) |
 | `third_party/` | Vendored XML parser (ezxml), used only by `io` | [io-musicxml](modules/io-musicxml.md) |
 | `examples/` | Usage examples | [README](../README.md) |
 
 ## Public API
 
-The headers the apps include, from the union of `scripts/app_includes.sh` output over the three apps. A consumer sees headers by module path (kernel), folder name (framework) or `ursatz_chain/` (chain); see [Public surface](#public-surface).
+The headers the apps include, from the union of `scripts/app_includes.sh` output over the three apps. A consumer sees headers by module path (kernel), folder name (framework) or `ursatz_chain/` (chain); see [Public surface](public-surface.md).
 
 | Directory | Header | Route or entry | What it does | Doc |
 |---|---|---|---|---|
@@ -106,84 +106,12 @@ One file through the library:
 
 Start at [docs/README.md](README.md), which lists every doc by topic.
 
-## Layers
-
-| Layer | Modules |
-|---|---|
-| L0 | `identity` |
-| L1 | `core` |
-| L2 | `time`, `pitch` (siblings, do not depend on each other) |
-| L3 | `events` |
-| L4 | `containers` |
-| L5 | `structure` |
-| L6 | `context`, `semantics`, `relationship`, `interpretation` (four mutually-restricted siblings) |
-| L7 | `theory`, `rules` (`rules` depends on `theory`; `theory` never depends back) |
-| L8 | `analysis`, `generation` (two mutually-restricted siblings) |
-| L9 | `io` (MIDI import, MIDI key-signature scan), `export` (MusicXML), `persistence` (SQLite), `corpus`, `corpus_stats`, `query` |
-| Extensions | `frameworks/<name>/`: 17 Theory Frameworks built on L7 (see `frameworks/README.md`); `chain/`: the analysis chain (`ursatz_chain`), above the kernel and the frameworks |
-
-## Dependency rule
-
-A module in layer N may depend only on modules in layers 0 through N. It must never depend sideways within its own layer unless that specific dependency is documented, and never depend upward on a higher layer. The documented sideways edges are `rules` on `theory` (L7), `interpretation` on `relationship` through `claim_interpretation.h` (L6), and in L9 `export`, `corpus`, `corpus_stats` and `query` on `persistence` plus `corpus_stats` and `query` on `corpus`. No `src/` module includes a framework header. Frameworks never compile kernel sources (`architecture_framework_sources` checks every `frameworks/*/CMakeLists.txt` and `chain/CMakeLists.txt`); code that needs both a framework and the kernel lives in `chain/`. The former exception, `analysis`'s `ChordIdentification` and `KeyEstimation`, moved into the chain (R-010 finished, R-241).
-
-The analysis chain (`chain/`, target `ursatz_chain`) is an extension above the numbered stack. It may include kernel L0 to L8 and the framework headers named in `chain/tests/test_architecture_chain.c`, and never L9 (`io`, `export`, `persistence`, `corpus`, `corpus_stats`, `query`). Headers are included as `ursatz_chain/<name>.h`. A framework test may link the chain; a framework library may not. The chain keeps the stage inputs it builds (pitches, harmony inputs, prepared harmony, form and motive inputs, voice grid, galant segments) and exposes them through `analysis_chain_*` accessors, and it reads the outer lines on the chord segments (`chain_build_segment_lines`, `analysis_chain_segment_outer_voices`) alongside the lines on the voice segments (`analysis_chain_outer_voices`).
-
-A framework may depend on L0 to L6, on `theory/framework.h`, `theory/framework_singleton.h`, `rules/rule.h`, `rules/constraint.h`, `rules/preference.h` and `rules/rule_pair.h`, and on another framework only where that edge is recorded in `frameworks/README.md`.
-
-Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests run from the root build like the module ones (since PR #99); see `docs/BUILDING.md`. `tests/test_architecture_tests.c` applies the same layer rules to the test sources (`tests/<module>/` and `frameworks/<name>/tests/`); the test-only edges it allows are listed in its `ALLOWED_TEST_EDGES`, one reason each. Two of them reach kernel L8 from a framework test: `common-practice-minimal` tests include `analysis/outer_voice.h` and `standard-harmony` tests include `analysis/period_detection.h`; framework sources never include L8.
-
-## Shared primitives
-
-Small public helpers that every layer above reuses are listed in [shared-primitives.md](shared-primitives.md).
-
-## Vocabulary enums
-
-`src/semantics/` holds plain enums that name theory concepts frameworks share (`CadenceType`, `VoicePart`, `NonChordTone`, and others). Each carries no `EntityID`, no data, and no framework claim, only a name and small name-level predicates. What a name means, and which music it applies to, is always the framework's convention. New enums of this kind are admitted to the kernel only when at least two frameworks need them; a name only one framework uses belongs in that framework. Existing single-framework enums stay until their framework is next changed, then move into it.
-
-## Analytic job owners
-
-One owner per analytic job (R-224). Every other implementation of the job is retired or a thin wrapper, and its header names the owner. The owner table and the production chain are in [analytic-job-owners.md](analytic-job-owners.md).
-
-## Public surface
-
-A library target exposes only the headers it names (R-223). `ursatz_public_headers` (`cmake/UrsatzPublicHeaders.cmake`) copies each public header at configure time to `build/public/<target>/<prefix>/<path>` and makes that folder the target's public include directory. The target's own source directories are private. Re-running configure stages an edited header again.
-
-| Target | Included as | Example |
-|---|---|---|
-| `ursatz` (kernel) | its module folder, no prefix | `time/meter_map.h`, `analysis/motive_sketch.h` |
-| a framework | its folder name, then the path in the framework | `standard-form/analysis/analysis_motive.h`, `common-practice-minimal/key_regions.h` |
-| `ursatz_chain` | `ursatz_chain/` | `ursatz_chain/analysis_chain.h` |
-
-A framework or chain source that includes another framework's header uses that path, never the bare name, so the eight names that exist in more than one framework (`analysis_claim.h`, `analysis_input.h`, `analysis_phrase.h`, `framework.h`, `hierarchy_rules.h`, `key_signature_rules.h`, `rule_pair.h`, `stem_rules.h`) mean one header each. A sibling or a header of the same framework stays bare. `rule_pair.h` stays private in each framework.
-
-The public set of a target is: every header the apps include (`docs/public-headers-baseline.txt`, made by `scripts/app_includes.sh <app checkout>...`), the owners named on this page, every header a framework or the chain takes from another target, every header those include, and nothing named `*_internal.h`. `internal_expansion_technique.h` is a plain enum and is public. A framework with nothing in the set stages nothing.
-
-A test sees the internals of what it tests (`ursatz_test_includes()`); an app does not.
-
-Three tests guard this: `architecture_public_headers` (a public header includes only public headers of its own or a linked target), `public_headers_compile` (a generated file per target includes every public header and compiles with only the staged folders of the target and its links), `architecture_header_paths` (no bare include of another framework's header).
-
-## Placement rule
-
-Every analysis algorithm is library code (R-217). The kernel owns what needs no theory; a framework owns what one theory defines; the chain owns what joins them. The Analyzer orchestrates, combines, caches and exports: it calls owners, places their results in its report, stores them and renders documents. It holds no copy of an algorithm a library owns. What stays in the Analyzer is the names of its own style statistics (`style_label_interval`, `_contour`, `_duration`, `_tempo`, `_density`, `_join`, `_nct_figure`, `_progression` and the style dimension and category tables), the window search and scoring of similar material over stored documents, motive link caching and scope reading, report placement, and document rendering. The Composer and the GUI follow the same rule: a theory rule either app needs is added here first and the app calls it.
-
-## Theory owners
-
-The theory the apps used to copy has one library owner each (R-217, R-223). The table is in [theory-owners.md](theory-owners.md).
-
-## Open issues
-
-- **Theory to Corpus** (Dependency Spec §7.2). The Registry lists `Tendency`, `StatisticalModel`, and `StyleModel` (L7) as depending on `Corpus` (L9). All three accept corpus-derived data only as an opaque, already-computed value; no L7 file includes a corpus header. Detail in `docs/modules/theory.md`.
-
-## Resolved issues
-
-- **Interpretation-family to Framework** (Dependency Spec §7.1, closed). `Interpretation`, `ScaleDegree`, `Chord`, and `Key` (L6) carry an optional `FrameworkReference` (`core`, L1) rather than a live `Framework` reference. `Chord`, `Key`, `ScaleDegree` and `Texture` require it at construction. Detail in `docs/modules/l6-notes.md`.
-- **Reference-type Registry synchronization.** `VoiceReference`, `RelationshipReference`, and `ProvenanceReference` are authorized in the System Registry and implemented in `core`. See `docs/modules/core.md`.
-
-## Module status
-
-The status and doc of each module are in [module-status.md](module-status.md).
-
-## Build and test
-
-See `docs/BUILDING.md`.
-
+- [Layers and dependency rules](layers-and-dependency-rules.md), with the open and resolved dependency issues.
+- [Public surface](public-surface.md): which headers each target exposes.
+- [Placement rule](placement-rule.md): kernel, framework, chain or app.
+- [Vocabulary enums](vocabulary-enums.md): the shared theory names in `src/semantics/`.
+- [Shared primitives](shared-primitives.md): small public helpers every layer reuses.
+- [Analytic job owners](analytic-job-owners.md): one owner per analytic job and the production chain.
+- [Theory owners](theory-owners.md): the library owner of each piece of theory the apps copied.
+- [Module status](module-status.md): status and doc of each module.
+- [Build and test](BUILDING.md).
