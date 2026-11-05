@@ -22,9 +22,29 @@ The Library, Tags panel, Collections, Subjects, Motifs, Themes, Pieces, Motive l
 
 ## Test
 
-```
-ctest --test-dir build
-```
+The tests are split into a fast set and a slow set. The `slow` label is new: a test carries it when it takes over 10 s.
+
+- Fast set (every test without the `slow` label), what a pull request runs:
+
+  ```
+  ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
+  ```
+
+- Slow set (`analyzer_route`, `piece_route`, `styles_route`):
+
+  ```
+  ctest --test-dir build -j$(nproc) -L slow
+  ```
+
+- Full run, both sets:
+
+  ```
+  ctest --test-dir build -j$(nproc)
+  ```
+
+A fast-set test that takes over 10 s is sped up or labeled `slow`. `scripts/slowest-tests.sh build` prints the ten slowest tests of the last run and warns about any fast-set test over 10 s.
+
+CMake sets the timeouts (`cmake/TestTimeouts.cmake`): 30 s for a test without the `slow` label, 1800 s for a slow one. The `Nightly` workflow runs the full suite, so the slow set runs nightly in CI.
 
 The tests and checks are in [docs/testing.md](docs/testing.md).
 
