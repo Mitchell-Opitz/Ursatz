@@ -23,6 +23,9 @@ jobs:
       - name: Check submodule pins
         run: scripts/check-pins.sh
 
+      - name: Check docs
+        run: bash scripts/check-docs.sh
+
       - name: Install dependencies
         run: |
           dpkg -s libsqlite3-dev pkg-config > /dev/null 2>&1 ||
