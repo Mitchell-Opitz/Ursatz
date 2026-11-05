@@ -47,7 +47,7 @@ The GUI entries:
 
 | Header | Entry | What it does | Doc |
 | --- | --- | --- | --- |
-| `input_pipeline.h` | `input_pipeline_import_file` | Imports a file, with its tempo map | [gui-api.md](gui-api.md#import-with-tempo) |
+| `input_pipeline.h` | `input_pipeline_import_file`, `input_pipeline_import_memory` | Imports a file or bytes, with its tempo map | [gui-api.md](gui-api.md#import-with-tempo) |
 | `playback.h` | `analyzer_playback_build`, `analyzer_playback_to_json` | Tempo regions and notes for a player | [gui-api.md](gui-api.md#playback-timing) |
 | `score_export.h` | `analyzer_score_export_musicxml`, `analyzer_score_note_xml_ids`, `analyzer_imported_meter_defaulted` | MusicXML score of the import, note ids, whether the meter was inferred | [gui-api.md](gui-api.md#score-export) |
 

@@ -10,7 +10,7 @@ Its public include directory is `include/`, and consumers include headers as
 
 | Header | Purpose |
 | --- | --- |
-| `input_pipeline.h` | The common input interface: `input_pipeline_import_file` reads a MIDI or MusicXML file (chosen by `InputFormat`, or detected) into `ImportedNotes`. |
+| `input_pipeline.h` | The common input interface: `input_pipeline_import_file` reads a MIDI or MusicXML file (chosen by `InputFormat`, or detected) into `ImportedNotes`; `input_pipeline_import_memory` reads the same from bytes. |
 | `imported_notes.h` | `ImportedNotes`, what every input produces (notes, meter, key signatures, and an `ImportedSource` saying what the input states); `imported_notes_destroy` frees it. |
 | `midi_pipeline.h` | The MIDI backend of the input interface. |
 | `musicxml_pipeline.h` | The MusicXML backend of the input interface. |
@@ -28,7 +28,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `chord_sequence.h` | `analyzer_chord_sequence` and `analyzer_chord_sequence_from_document` give the joined chord sequence (consecutive entries with one numeral, key region and root are one chord) of a result or of a stored document; `analyzer_chord_sequence_free` releases it. |
 | `playback.h` | Playback timing for an import as the GUI player needs it. See [gui-api.md](gui-api.md). |
 | `score_export.h` | MusicXML score export of the imported notes, with the base `xml:id` of each note. See [gui-api.md](gui-api.md). |
-| `text_export.h` | `analyzer_text_export_piece` writes an analyzed piece as measure-addressed text: the notes of the score MusicXML and the claims of the analysis document, each claim in the measure where it starts. See [text-export.md](text-export.md). |
+| `text_export.h` | `analyzer_text_export_piece` writes an analyzed piece as measure-addressed text: the notes of the score MusicXML and the claims of the analysis document, each claim in the measure where it starts. `analyzer_text_export_material` does the same for store material: sections of MusicXML with facts and segment marks the caller passes. See [text-export.md](text-export.md). |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
 | `motive_links.h` | `MotiveLinkScope` (analysis documents), `motive_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `motive_links_render` writes the links as JSON. |
 | `composer_api.h` | Hearing borrowed events into an `AnalyzerResult`, style distance and voice-leading faults, for the Composer. See [composer-api.md](composer-api.md). |

@@ -130,6 +130,56 @@ ursatz-analyzer export [--input-format midi|musicxml] [--measures <first>-<last>
 The command analyzes the file as `ursatz-analyzer <file>` does and prints the export to standard output; it writes no
 file. Exit 1 with a message on a bad flag, bad input or a range with no measure.
 
+## Material
+
+`analyzer_text_export_material` writes the same text for store material: a motif and its variants, a theme and its slot
+motifs, a piece's loop and ending. The caller passes the MusicXML of each section and every other value as a name and a
+string; the Analyzer reads no store or Composer format and prints each value as given (a line break becomes a space).
+
+```c
+AnalyzerStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *material, char **text);
+```
+
+```
+# Ursatz export v1: motif
+name: Rising arch
+id: motif-7
+version: 3
+role: head
+analyzer: <version> ursatz <commit>
+notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
+
+## motif
+notes: C E G E | F A G
+key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
+
+m1 4/4
+ P1 S1 V1: C4 @1 q[a], E4 @2 q, G4 @3 q, E4 @4 q[/a]
+ chord C I @1 c=0.00
+
+## variant 1: invert
+kind: rhythm
+key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
+...
+```
+
+- **Header.** `# Ursatz export v1: <kind>` (`kind` is printed as given: `motif`, `theme`, `piece`), then `name`, `id`
+  and `version` (those the caller gave), the material's facts as `<name>: <value>`, and the `analyzer:` and `notes:`
+  lines.
+- **Sections.** Each section is `## <label>`, its facts, then (when it has MusicXML) the `key:` summary line and its
+  measures, formatted exactly as a piece: each section is imported from memory, analyzed with the default options and
+  written from its own score MusicXML, so its measure numbers and spelling are the Score tab's and its claims sit in
+  the measure where they start. A section with no MusicXML prints its label, facts and `not composed`.
+- **Segments.** A segment is a label and the first and last note it covers, as 0-based indexes into the section's notes
+  in time order (a chord counts once, rests not at all; notes that start together go by part, staff and voice). The
+  first note is followed by `[<label>]` and the last by `[/<label>]`, after any `~`. A one-note segment carries both. A
+  segment with a NULL label, a first after its last, or a note past the section's notes is `ANALYZER_ERR_ARGUMENT`.
+- **Errors.** `ANALYZER_ERR_ARGUMENT` for a NULL material, kind, text or section label; `ANALYZER_ERR_LIBRARY` when a
+  section's bytes cannot be imported (the message is on stderr) or its score cannot be written or read back, and no
+  text is returned; `ANALYZER_ERR_ALLOC`.
+- **Size.** A 2-bar motif with 6 variants is under 8 KB (`test_material_export`). Snapshots are
+  `tests/snapshots/material-<kind>.export.txt`.
+
 ## Versioning
 
 The first line carries the format version. A change to the layout of any line bumps `URSATZ_ANALYZER_TEXT_EXPORT_VERSION`.

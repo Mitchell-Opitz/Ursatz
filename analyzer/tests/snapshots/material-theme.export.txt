@@ -1,0 +1,125 @@
+# Ursatz export v1: theme
+name: Opening theme
+id: theme-3
+version: 2
+form: A A'
+chords: bar 1: i
+slots: 2
+notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
+
+## theme
+key: C minor | meter: 4/4 | tempo: not declared | measures: 1-8
+
+m1 4/4
+ P1 S1 V1: Eb4 @1 e, G4 @1.5 e, C5 @2 e, G4 @2.5 e, C4 @3 e, Eb4 @3.5 e, G4 @4 e, C5 @4.5 e
+ P2 S1 V1: C3 @1 h, C4 @3 h
+ key C minor c=0.05 (m1-m8)
+ chord Cm i @1 c=0.37
+ phrase 1 m1-m7 c=0.03 | form A
+ theme hybrid m1-m7 c=0.03
+ form A m1-m8 c=0.02
+ chord Cm i @2 c=0.04
+ chord Cm i @3 c=0.00
+ motive a m1 @3-@4.5
+ chord Cm i @4 c=0.04
+
+m2
+ P1 S1 V1: G4 @1 h, D5 @3 h
+ P2 S1 V1: B3 @1 h, B2 @3 h
+ chord G/B V6 @1 c=0.40
+ chord Bdim viio @3 c=0.31
+
+m3
+ P1 S1 V1: G4 @1 e, B4 @1.5 e, D5 @2 e, B4 @2.5 e, G4 @3 e, B4 @3.5 e, D5 @4 e, D5 @4.5 e
+ P2 S1 V1: B2 @1 w
+ chord G/B V6 @1 c=0.60
+ motive a m3 @1-@2.5
+ chord Bdim viio @2 c=0.03
+ motive b m3 @2-@3.5
+ chord G/B V6 @3 c=0.59
+ motive a m3 @3-@4.5
+ chord Bdim viio @4 c=0.22
+
+m4
+ P1 S1 V1: C5 @1 h, Eb5 @3 h
+ P2 S1 V1: C3 @1 h, C4 @3 h
+ chord Cm i @1 c=0.31
+ chord Cm i @3 c=0.31
+
+m5
+ P1 S1 V1: Eb4 @1 s, F4 @1.25 s, G4 @1.5 s, F4 @1.75 s, Eb4 @2 s, F4 @2.25 s, G4 @2.5 e, C4 @3 h
+ P2 S1 V1: C3 @1 w
+ chord Cm i @1 c=0.84
+ motive c m5 @1-@1.75
+ motive c m5 @2-@3
+ chord Cm i @3 c=0.84
+
+m6
+ P1 S1 V1: C5 @1 t, D5 @1.125 t, Eb5 @1.25 t, D5 @1.375 t, C5 @1.5 e, C5 @2 q, F5 @3 h
+ P2 S1 V1: F3 @1 w
+ chord Dm7b5/F ii/o6/5 @1 c=0.82
+ chord Fm iv @2 c=0.25
+ chord Fm iv @3 c=0.25
+
+m7
+ P1 S1 V1: D5 @1 e, B4 @1.5 e, G4 @2 e, F4 @2.5 e, G4 @3 e, G4 @3.5 e, D4 @4 e, D4 @4.5 e
+ P2 S1 V1: G3 @1 w
+ chord G V @1 c=0.37
+ cadence HC m7 @1 c=0.03
+ motive b m7 @1-@2.5
+ chord G7 V7 @2 c=0.04
+ chord G7 V7 @3 c=0.04
+ chord G V @4 c=0.25
+ cadence AC m8 @1 c=0.02
+
+m8
+ P1 S1 V1: Eb4 @1 h, C4 @3 h
+ P2 S1 V1: C4 @1 w
+ chord Cm i @1 c=0.31
+ phrase 2 m8 c=0.02 | form A
+ chord Cm i @3 c=0.31
+
+## slot 1: Rising arch v1
+key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
+
+m1 4/4
+ P1 S1 V1: C4 @1 q, E4 @2 q, G4 @3 q, E4 @4 q
+ key C major c=0.24 (m1-m2)
+ chord C I @1 c=0.00
+ phrase 1 m1 c=0.24 | form A
+ form A m1-m2 c=0.24
+ chord Em iii @2 c=0.00
+ chord G V @3 c=0.00
+ cadence HC m1 @3 c=0.24
+ chord Em iii @4 c=0.00
+
+m2
+ P1 S1 V1: F4 @1 q, A4 @2 q, G4 @3 h
+ chord F IV @1 c=0.00
+ phrase 2 m2 c=0.24 | form A
+ chord Am vi @2 c=0.00
+ chord G V @3 c=0.00
+ cadence HC m2 @3 c=0.24
+
+## slot 2: Falling arch v2
+key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
+
+m1 4/4
+ P1 S1 V1: C4 @1 q, E4 @2 q, G4 @3 q, C5 @4 q
+ key C major c=0.12 (m1-m2)
+ chord C I @1 c=0.00
+ phrase 1 m1 c=0.12 | form A
+ form A m1 c=0.12
+ chord Em iii @2 c=0.00
+ chord G V @3 c=0.00
+ cadence PAC m1 @4 c=0.12
+ chord C I @4 c=0.00
+
+m2
+ P1 S1 V1: B4 @1 q, G4 @2 q, C5 @3 h
+ chord Bdim vii° @1 c=0.00
+ phrase 2 m2 c=0.12 | form B
+ form B m2 c=0.12
+ chord G V @2 c=0.00
+ cadence PAC m2 @3 c=0.12
+ chord C I @3 c=0.00

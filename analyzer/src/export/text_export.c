@@ -13,17 +13,11 @@
 #include <ursatz_analyzer/version.h>
 
 #include "export/score_text_reader.h"
+#include "export/text_export_internal.h"
 
 /* ---- a growing string ---- */
 
-typedef struct {
-    char *data;
-    size_t length;
-    size_t capacity;
-    bool failed;
-} Text;
-
-static void text_reserve(Text *text, size_t extra) {
+static void text_reserve_impl(Text *text, size_t extra) {
     if (text->failed || text->length + extra + 1 <= text->capacity) {
         return;
     }
@@ -40,16 +34,16 @@ static void text_reserve(Text *text, size_t extra) {
     text->capacity = capacity;
 }
 
-static void text_add(Text *text, const char *piece) {
+void export_text_add(Text *text, const char *piece) {
     size_t length = strlen(piece);
-    text_reserve(text, length);
+    text_reserve_impl(text, length);
     if (!text->failed) {
         memcpy(text->data + text->length, piece, length + 1);
         text->length += length;
     }
 }
 
-static void text_addf(Text *text, const char *format, ...) {
+void export_text_addf(Text *text, const char *format, ...) {
     char small[256];
     va_list args;
     va_start(args, format);
@@ -60,10 +54,10 @@ static void text_addf(Text *text, const char *format, ...) {
         return;
     }
     if ((size_t)needed < sizeof(small)) {
-        text_add(text, small);
+        export_text_add(text, small);
         return;
     }
-    text_reserve(text, (size_t)needed);
+    text_reserve_impl(text, (size_t)needed);
     if (text->failed) {
         return;
     }
@@ -72,6 +66,7 @@ static void text_addf(Text *text, const char *format, ...) {
     va_end(args);
     text->length += (size_t)needed;
 }
+
 
 AnalyzerTextExportOptions analyzer_text_export_options_default(void) {
     AnalyzerTextExportOptions options = {NULL, 0, 0};
@@ -117,7 +112,7 @@ static TextRational beat_at(const ScoreTextScore *score, size_t m, TextRational 
 /* A beat as exact text: an integer, a terminating decimal ("2.5"), or whole plus fraction ("1+1/3"). */
 static void add_beat(Text *text, TextRational beat) {
     if (beat.den == 1) {
-        text_addf(text, "%lld", (long long)beat.num);
+        export_text_addf(text, "%lld", (long long)beat.num);
         return;
     }
     int64_t scale = 1;
@@ -136,73 +131,83 @@ static void add_beat(Text *text, TextRational beat) {
         while (length > 0 && buffer[length - 1] == '0') {
             buffer[--length] = '\0';
         }
-        text_addf(text, "%lld.%s", (long long)whole, buffer);
+        export_text_addf(text, "%lld.%s", (long long)whole, buffer);
         return;
     }
     int64_t whole = beat.num / beat.den;
-    text_addf(text, "%lld+%lld/%lld", (long long)whole, (long long)(beat.num - whole * beat.den), (long long)beat.den);
+    export_text_addf(text, "%lld+%lld/%lld", (long long)whole, (long long)(beat.num - whole * beat.den), (long long)beat.den);
 }
 
 /* "m12", or "m9-m12" for a range of measures. */
 static void add_measure_range(Text *text, const ScoreTextScore *score, size_t first, size_t last) {
-    text_addf(text, "m%s", score->measures[first].number);
+    export_text_addf(text, "m%s", score->measures[first].number);
     if (last != first) {
-        text_addf(text, "-m%s", score->measures[last].number);
+        export_text_addf(text, "-m%s", score->measures[last].number);
     }
 }
 
 /* ---- notes ---- */
 
 static void add_pitch(Text *text, const ScoreTextPitch *pitch) {
-    text_addf(text, "%c", pitch->step);
+    export_text_addf(text, "%c", pitch->step);
     for (int i = 0; i < pitch->alter; i++) {
-        text_add(text, "#");
+        export_text_add(text, "#");
     }
     for (int i = 0; i > pitch->alter; i--) {
-        text_add(text, "b");
+        export_text_add(text, "b");
     }
-    text_addf(text, "%d", pitch->octave);
+    export_text_addf(text, "%d", pitch->octave);
 }
 
-static void add_event(Text *text, const ScoreTextEvent *event) {
+static void add_marks(Text *text, const ScoreTextEvent *event, const TextExportMarks *marks, bool close) {
+    for (size_t i = 0; marks && i < marks->count; i++) {
+        if (marks->items[i].event == event && marks->items[i].close == close) {
+            export_text_addf(text, close ? "[/%s]" : "[%s]", marks->items[i].label);
+        }
+    }
+}
+
+static void add_event(Text *text, const ScoreTextEvent *event, const TextExportMarks *marks) {
     if (event->rest) {
-        text_add(text, "r");
+        export_text_add(text, "r");
     }
     for (size_t i = 0; i < event->pitch_count; i++) {
         if (i > 0) {
-            text_add(text, "+");
+            export_text_add(text, "+");
         }
         add_pitch(text, &event->pitches[i]);
     }
-    text_add(text, " @");
+    export_text_add(text, " @");
     add_beat(text, event->beat_in_measure);
-    text_add(text, " ");
+    export_text_add(text, " ");
     if (event->tuplet_actual > 0 && event->tuplet_normal > 0) {
-        text_addf(text, "%d:%d", event->tuplet_actual, event->tuplet_normal);
+        export_text_addf(text, "%d:%d", event->tuplet_actual, event->tuplet_normal);
     }
-    text_addf(text, "%c", event->type);
+    export_text_addf(text, "%c", event->type);
     for (int i = 0; i < event->dots; i++) {
-        text_add(text, ".");
+        export_text_add(text, ".");
     }
     if (event->tie_start) {
-        text_add(text, "~");
+        export_text_add(text, "~");
     }
+    add_marks(text, event, marks, false);
+    add_marks(text, event, marks, true);
 }
 
-static void add_measure_notes(Text *text, const ScoreTextMeasure *measure) {
+static void add_measure_notes(Text *text, const ScoreTextMeasure *measure, const TextExportMarks *marks) {
     size_t i = 0;
     while (i < measure->event_count) {
         const ScoreTextEvent *first = &measure->events[i];
-        text_addf(text, " P%d S%d V%d:", first->part, first->staff, first->voice);
+        export_text_addf(text, " P%d S%d V%d:", first->part, first->staff, first->voice);
         bool opened = false;
         while (i < measure->event_count && measure->events[i].part == first->part &&
                measure->events[i].staff == first->staff && measure->events[i].voice == first->voice) {
-            text_add(text, opened ? ", " : " ");
-            add_event(text, &measure->events[i]);
+            export_text_add(text, opened ? ", " : " ");
+            add_event(text, &measure->events[i], marks);
             opened = true;
             i++;
         }
-        text_add(text, "\n");
+        export_text_add(text, "\n");
     }
 }
 
@@ -280,7 +285,7 @@ static void add_confidence(Text *text, const cJSON *claim) {
     if (confidence > 1.0) {
         confidence = 1.0;
     }
-    text_addf(text, " c=%.2f", confidence);
+    export_text_addf(text, " c=%.2f", confidence);
 }
 
 static bool claims_add(Claims *claims, const ScoreTextScore *score, TextRational start, ClaimRank rank, Text *line) {
@@ -312,8 +317,8 @@ static bool claims_add(Claims *claims, const ScoreTextScore *score, TextRational
 /* A line whose text begins with the given words; the caller adds the rest, then hands it to claims_add. */
 static Text line_begin(const char *words) {
     Text line = {NULL, 0, 0, false};
-    text_add(&line, " ");
-    text_add(&line, words);
+    export_text_add(&line, " ");
+    export_text_add(&line, words);
     return line;
 }
 
@@ -336,11 +341,11 @@ static void collect_keys(Claims *claims, const ScoreTextScore *score, const cJSO
             continue;
         }
         Text line = line_begin("key ");
-        text_add(&line, label);
+        export_text_add(&line, label);
         add_confidence(&line, region);
-        text_add(&line, " (");
+        export_text_add(&line, " (");
         add_span_range(&line, score, start, end);
-        text_add(&line, ")");
+        export_text_add(&line, ")");
         claims_add(claims, score, start, RANK_KEY, &line);
     }
 }
@@ -356,18 +361,18 @@ static void collect_key_changes(Claims *claims, const ScoreTextScore *score, con
             continue;
         }
         Text line = line_begin(word);
-        text_add(&line, " ");
+        export_text_add(&line, " ");
         if (rank == RANK_MODULATION && from_key && to_key) {
-            text_addf(&line, "%s to %s", from_key, to_key);
+            export_text_addf(&line, "%s to %s", from_key, to_key);
         } else if (to_key) {
-            text_add(&line, to_key);
+            export_text_add(&line, to_key);
         } else if (string_of(entry, "label")) {
-            text_add(&line, string_of(entry, "label"));
+            export_text_add(&line, string_of(entry, "label"));
         }
         add_confidence(&line, entry);
-        text_add(&line, " (");
+        export_text_add(&line, " (");
         add_span_range(&line, score, start, end);
-        text_add(&line, ")");
+        export_text_add(&line, ")");
         claims_add(claims, score, start, rank, &line);
     }
 }
@@ -400,14 +405,14 @@ static void collect_chords(Claims *claims, const ScoreTextScore *score, const cJ
         const char *numeral = string_of(member(chord, "roman_numeral"), "label");
         size_t m = measure_at(score, start);
         Text line = line_begin("chord ");
-        text_addf(&line, "%s%s", root, quality_suffix(quality));
+        export_text_addf(&line, "%s%s", root, quality_suffix(quality));
         if (bass && strcmp(bass, root) != 0) {
-            text_addf(&line, "/%s", bass);
+            export_text_addf(&line, "/%s", bass);
         }
         if (numeral) {
-            text_addf(&line, " %s", numeral);
+            export_text_addf(&line, " %s", numeral);
         }
-        text_add(&line, " @");
+        export_text_add(&line, " @");
         add_beat(&line, beat_at(score, m, start));
         add_confidence(&line, chord);
         claims_add(claims, score, start, RANK_CHORD, &line);
@@ -445,7 +450,7 @@ static void collect_cadences(Claims *claims, const ScoreTextScore *score, const 
         span_of(member(cadence, "arrival"), &arrival, &ignored);
         size_t m = measure_at(score, arrival);
         Text line = line_begin("cadence ");
-        text_addf(&line, "%s m%s @", cadence_name(type), score->measures[m].number);
+        export_text_addf(&line, "%s m%s @", cadence_name(type), score->measures[m].number);
         add_beat(&line, beat_at(score, m, arrival));
         add_confidence(&line, cadence);
         claims_add(claims, score, start, RANK_CADENCE, &line);
@@ -476,12 +481,12 @@ static void collect_phrases(Claims *claims, const ScoreTextScore *score, const c
             continue;
         }
         Text line = line_begin("phrase ");
-        text_addf(&line, "%d ", (int)index->valuedouble + 1);
+        export_text_addf(&line, "%d ", (int)index->valuedouble + 1);
         add_span_range(&line, score, start, end);
         add_confidence(&line, phrase);
         const char *form = form_section_of_phrase(document, (int)index->valuedouble);
         if (form) {
-            text_addf(&line, " | form %s", form);
+            export_text_addf(&line, " | form %s", form);
         }
         claims_add(claims, score, start, RANK_PHRASE, &line);
     }
@@ -497,7 +502,7 @@ static void collect_labelled(Claims *claims, const ScoreTextScore *score, const 
             continue;
         }
         Text line = line_begin(word);
-        text_addf(&line, " %s ", label);
+        export_text_addf(&line, " %s ", label);
         add_span_range(&line, score, start, end);
         add_confidence(&line, entry);
         claims_add(claims, score, start, rank, &line);
@@ -515,7 +520,7 @@ static void add_motive_letter(Text *text, int index) {
     } while (n >= 0 && length < sizeof(letters) - 1);
     while (length > 0) {
         char one[2] = {letters[--length], '\0'};
-        text_add(text, one);
+        export_text_add(text, one);
     }
 }
 
@@ -539,13 +544,13 @@ static void collect_motives(Claims *claims, const ScoreTextScore *score, const c
             }
             Text line = line_begin("motive ");
             add_motive_letter(&line, (int)index->valuedouble);
-            text_addf(&line, " m%s @", score->measures[first].number);
+            export_text_addf(&line, " m%s @", score->measures[first].number);
             add_beat(&line, beat_at(score, first, start));
-            text_add(&line, "-");
+            export_text_add(&line, "-");
             if (last != first) {
-                text_addf(&line, "m%s", score->measures[last].number);
+                export_text_addf(&line, "m%s", score->measures[last].number);
             }
-            text_add(&line, "@");
+            export_text_add(&line, "@");
             add_beat(&line, beat_at(score, last, end));
             claims_add(claims, score, start, RANK_MOTIVE, &line);
         }
@@ -617,32 +622,98 @@ static void add_tempo(Text *text, const cJSON *document) {
         if (length > 0 && buffer[length - 1] == '.') {
             buffer[--length] = '\0';
         }
-        text_addf(text, "q=%s", buffer);
+        export_text_addf(text, "q=%s", buffer);
     } else {
-        text_add(text, "not declared");
+        export_text_add(text, "not declared");
     }
+}
+
+void text_export_write_summary(Text *text, const cJSON *document, const ScoreTextScore *score, size_t first,
+                               size_t last, bool whole) {
+    const cJSON *regions = member(member(document, "keys"), "regions");
+    const char *key = string_of(cJSON_GetArrayItem(regions, 0), "label");
+    export_text_addf(text, "key: %s | meter: %d/%d | tempo: ", key ? key : "unknown", score->measures[0].beats,
+                     score->measures[0].beat_type);
+    add_tempo(text, document);
+    export_text_addf(text, " | measures: %s-%s", score->measures[first].number, score->measures[last].number);
+    if (!whole) {
+        export_text_addf(text, " of %s-%s", score->measures[0].number,
+                         score->measures[score->measure_count - 1].number);
+    }
+    export_text_add(text, "\n");
+}
+
+void text_export_write_legend(Text *text) {
+    char commit[13];
+    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_ursatz_commit());
+    export_text_addf(text, "analyzer: %s ursatz %s\n", ursatz_analyzer_version(), commit);
+    export_text_add(text,
+                    "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>\n");
 }
 
 static void add_header(Text *text, const cJSON *document, const ScoreTextScore *score, const char *title,
                        size_t first, size_t last, bool whole) {
-    text_addf(text, "# Ursatz export v%d: piece\n", URSATZ_ANALYZER_TEXT_EXPORT_VERSION);
-    text_addf(text, "title: %s\n", title);
+    export_text_addf(text, "# Ursatz export v%d: piece\n", URSATZ_ANALYZER_TEXT_EXPORT_VERSION);
+    export_text_addf(text, "title: %s\n", title);
+    text_export_write_summary(text, document, score, first, last, whole);
+    text_export_write_legend(text);
+}
 
-    const cJSON *regions = member(member(document, "keys"), "regions");
-    const char *key = string_of(cJSON_GetArrayItem(regions, 0), "label");
-    text_addf(text, "key: %s | meter: %d/%d | tempo: ", key ? key : "unknown", score->measures[0].beats,
-              score->measures[0].beat_type);
-    add_tempo(text, document);
-    text_addf(text, " | measures: %s-%s", score->measures[first].number, score->measures[last].number);
-    if (!whole) {
-        text_addf(text, " of %s-%s", score->measures[0].number, score->measures[score->measure_count - 1].number);
+bool text_export_find_range(const ScoreTextScore *score, int first_measure, int last_measure, size_t *first,
+                            size_t *last) {
+    *first = score->measure_count;
+    *last = 0;
+    for (size_t m = 0; m < score->measure_count; m++) {
+        if (in_range(score, m, first_measure, last_measure)) {
+            if (*first == score->measure_count) {
+                *first = m;
+            }
+            *last = m;
+        }
     }
-    text_add(text, "\n");
+    return *first != score->measure_count;
+}
 
-    char commit[13];
-    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_ursatz_commit());
-    text_addf(text, "analyzer: %s ursatz %s\n", ursatz_analyzer_version(), commit);
-    text_add(text, "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>\n");
+/* The measures first to last: each measure line, its notes, then the claims that start in it. false on allocation
+   failure. */
+bool text_export_write_measures(Text *out, const cJSON *document, const ScoreTextScore *score, size_t first,
+                                size_t last, const TextExportMarks *marks) {
+    Claims claims = {NULL, 0, 0, 0, false};
+    collect_keys(&claims, score, document);
+    collect_key_changes(&claims, score, document, "tonicizations", "tonicization", RANK_TONICIZATION);
+    collect_key_changes(&claims, score, document, "modulations", "modulation", RANK_MODULATION);
+    collect_chords(&claims, score, document);
+    collect_cadences(&claims, score, document);
+    collect_phrases(&claims, score, document);
+    collect_labelled(&claims, score, member(document, "themes"), "theme", RANK_THEME);
+    collect_labelled(&claims, score, member(member(document, "form"), "sections"), "form", RANK_FORM);
+    collect_motives(&claims, score, document);
+    qsort(claims.items, claims.count, sizeof(Claim), claim_compare);
+    if (claims.failed) {
+        out->failed = true;
+    }
+
+    size_t next_claim = 0;
+    while (next_claim < claims.count && claims.items[next_claim].measure < first) {
+        next_claim++;
+    }
+    for (size_t m = first; m <= last; m++) {
+        const ScoreTextMeasure *measure = &score->measures[m];
+        export_text_add(out, "\n");
+        export_text_addf(out, "m%s", measure->number);
+        if (measure->time_changed) {
+            export_text_addf(out, " %d/%d", measure->beats, measure->beat_type);
+        }
+        export_text_add(out, "\n");
+        add_measure_notes(out, measure, marks);
+        while (next_claim < claims.count && claims.items[next_claim].measure == m) {
+            export_text_add(out, claims.items[next_claim].line);
+            export_text_add(out, "\n");
+            next_claim++;
+        }
+    }
+    claims_free(&claims);
+    return !out->failed;
 }
 
 AnalyzerStatus analyzer_text_export_piece(const ImportedNotes *notes, const char *document_json,
@@ -682,63 +753,23 @@ AnalyzerStatus analyzer_text_export_piece(const ImportedNotes *notes, const char
         return ANALYZER_ERR_LIBRARY;
     }
 
-    size_t first = score->measure_count;
+    size_t first = 0;
     size_t last = 0;
-    for (size_t m = 0; m < score->measure_count; m++) {
-        if (in_range(score, m, options->first_measure, options->last_measure)) {
-            if (first == score->measure_count) {
-                first = m;
-            }
-            last = m;
-        }
-    }
-    if (first == score->measure_count) {
+    if (!text_export_find_range(score, options->first_measure, options->last_measure, &first, &last)) {
         score_text_destroy(score);
         cJSON_Delete(document);
         return ANALYZER_ERR_ARGUMENT;
     }
     bool whole = first == 0 && last == score->measure_count - 1;
 
-    Claims claims = {NULL, 0, 0, 0, false};
-    collect_keys(&claims, score, document);
-    collect_key_changes(&claims, score, document, "tonicizations", "tonicization", RANK_TONICIZATION);
-    collect_key_changes(&claims, score, document, "modulations", "modulation", RANK_MODULATION);
-    collect_chords(&claims, score, document);
-    collect_cadences(&claims, score, document);
-    collect_phrases(&claims, score, document);
-    collect_labelled(&claims, score, member(document, "themes"), "theme", RANK_THEME);
-    collect_labelled(&claims, score, member(member(document, "form"), "sections"), "form", RANK_FORM);
-    collect_motives(&claims, score, document);
-    qsort(claims.items, claims.count, sizeof(Claim), claim_compare);
-
     const char *title = options->title && options->title[0] ? options->title : NULL;
     if (!title) {
         title = string_of(member(document, "metadata"), "source_file");
     }
-    Text out = {NULL, 0, 0, claims.failed};
+    Text out = {NULL, 0, 0, false};
     add_header(&out, document, score, title ? title : "untitled", first, last, whole);
+    text_export_write_measures(&out, document, score, first, last, NULL);
 
-    size_t next_claim = 0;
-    while (next_claim < claims.count && claims.items[next_claim].measure < first) {
-        next_claim++;
-    }
-    for (size_t m = first; m <= last; m++) {
-        const ScoreTextMeasure *measure = &score->measures[m];
-        text_add(&out, "\n");
-        text_addf(&out, "m%s", measure->number);
-        if (measure->time_changed) {
-            text_addf(&out, " %d/%d", measure->beats, measure->beat_type);
-        }
-        text_add(&out, "\n");
-        add_measure_notes(&out, measure);
-        while (next_claim < claims.count && claims.items[next_claim].measure == m) {
-            text_add(&out, claims.items[next_claim].line);
-            text_add(&out, "\n");
-            next_claim++;
-        }
-    }
-
-    claims_free(&claims);
     score_text_destroy(score);
     cJSON_Delete(document);
     if (out.failed) {

@@ -659,6 +659,14 @@ add_test(NAME test_text_export_snapshots COMMAND test_text_export_snapshots)
 # Over 10 s in the fast set (about 19 s of CPU measured): runs nightly.
 set_tests_properties(test_text_export_snapshots PROPERTIES LABELS slow)
 
+add_executable(test_material_export test_material_export.c)
+target_link_libraries(test_material_export PRIVATE ursatz_analyzer analyzer_test_support)
+target_compile_definitions(test_material_export PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_material_export COMMAND test_material_export)
+
 # Default test timeouts by label (30 s, or 1800 s for tests labeled slow), so local runs match CI.
 include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
 ursatz_analyzer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
