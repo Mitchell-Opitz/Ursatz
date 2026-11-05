@@ -107,6 +107,26 @@ double ursatz_gui_composer_seed_max(const char *kind) {
   return cJSON_IsNumber(value) ? value->valuedouble : -1;
 }
 
+int ursatz_gui_composer_vocabulary_index(const char *list, const char *value) {
+  if (!list || !value || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
+    return -1;
+  }
+  int index = 0;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, list)) {
+    const cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    if (cJSON_IsString(name) && strcmp(name->valuestring, value) == 0) {
+      return index;
+    }
+    index++;
+  }
+  return -1;
+}
+
+bool ursatz_gui_composer_vocabulary_has(const char *list, const char *value) {
+  return ursatz_gui_composer_vocabulary_index(list, value) >= 0;
+}
+
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size) {
   if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !mode) {
     return false;

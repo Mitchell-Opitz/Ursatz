@@ -1,5 +1,7 @@
 #include "compose_jobs.h"
 
+#include "compose_common.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,13 +15,20 @@ void ursatz_gui_job_result_json(UrsatzGuiJobResult *out, int status, cJSON *obje
   }
 }
 
-void ursatz_gui_job_result_failure(UrsatzGuiJobResult *out, int status, const char *message) {
+void ursatz_gui_job_result_failure_at(UrsatzGuiJobResult *out, int status, const char *message, const char *path) {
   cJSON *object = cJSON_CreateObject();
   if (object) {
     cJSON_AddBoolToObject(object, "ok", 0);
     cJSON_AddStringToObject(object, "error", message);
+    if (path && path[0] != '\0') {
+      cJSON_AddStringToObject(object, "path", path);
+    }
   }
   ursatz_gui_job_result_json(out, status, object);
+}
+
+void ursatz_gui_job_result_failure(UrsatzGuiJobResult *out, int status, const char *message) {
+  ursatz_gui_job_result_failure_at(out, status, message, NULL);
 }
 
 void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const char *message, const char *invalid_text,
@@ -40,16 +49,16 @@ void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const ch
       ursatz_gui_job_result_failure(out, 404, message[0] ? message : "not found");
       break;
     case URSATZ_GUI_THEME_ERR_INVALID:
-      ursatz_gui_job_result_failure(out, 400, message[0] ? message : invalid_text);
+      ursatz_gui_job_result_failure_at(out, 400, message[0] ? message : invalid_text, ursatz_gui_compose_failure_path());
       break;
     case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
-      ursatz_gui_job_result_failure(out, 422, message[0] ? message : "stuck");
+      ursatz_gui_job_result_failure_at(out, 422, message[0] ? message : "stuck", ursatz_gui_compose_failure_path());
       break;
     case URSATZ_GUI_THEME_ERR_CANCELLED:
       ursatz_gui_job_result_failure(out, 499, "cancelled");
       break;
     default:
-      ursatz_gui_job_result_failure(out, 500, message[0] ? message : failed_text);
+      ursatz_gui_job_result_failure_at(out, 500, message[0] ? message : failed_text, ursatz_gui_compose_failure_path());
       break;
   }
   cJSON_Delete(item);
@@ -102,6 +111,7 @@ void ursatz_gui_compose_job_run(void *input, const ComposerJob *composer_job, Ur
   UrsatzGuiThemeResult result = URSATZ_GUI_THEME_ERR_FAILED;
   const char *invalid_text = "invalid piece";
   const char *failed_text = "the piece could not be composed";
+  ursatz_gui_compose_failure_path_clear();
   switch (job->op) {
     case URSATZ_GUI_COMPOSE_THEME:
       invalid_text = "invalid theme";

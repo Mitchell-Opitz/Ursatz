@@ -805,6 +805,7 @@ function buildPieceEditor(ctx) {
     const answer = await sendMaterialsRequest(PiecesModel.composeRequest(state, options));
     setBusy(false);
     if (!answer.ok) {
+      validation.refuse(answer.data);
       ctx.statusEl.style.whiteSpace = "pre-wrap";
       ctx.statusEl.classList.add("error");
       ctx.statusEl.textContent = MaterialsModel.errorText(answer.data, "The piece could not be composed");

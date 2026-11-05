@@ -93,6 +93,13 @@ void ursatz_gui_compose_stage_discard(const UrsatzGuiComposeStage *stage);
 UrsatzGuiThemeResult ursatz_gui_compose_failure(ComposerStatus status, const ComposerResponse *response, char *message,
                                                 size_t message_size);
 
+/* The request member at fault (ComposerError.path) of the last ursatz_gui_compose_failure on this thread, "" when it had
+ * none. A job reads it after its service call, to answer with "path" as the synchronous routes do. */
+const char *ursatz_gui_compose_failure_path(void);
+
+/* Forgets that path; a job calls it before its service call. */
+void ursatz_gui_compose_failure_path_clear(void);
+
 /* Writes the plan object as the library writes plan files (composer_api_export with plan_file) to path. */
 UrsatzGuiThemeResult ursatz_gui_compose_write_plan(const cJSON *plan, const char *path, char *message,
                                                    size_t message_size);

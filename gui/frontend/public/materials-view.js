@@ -184,39 +184,45 @@ async function mountProjectPicker() {
 
 /* Checks a form with the Composer while it is edited (R-276). options: {roots (elements whose input, change and click
  * events change the form), build() (the validate request of the model), field(path) (the model's fieldForPath),
- * fields() (the elements by field name)}. Returns {element (the Composer's message, shown as given), check(), now()}.
+ * fields() (the elements by field name)}. Returns {element (the Composer's message, shown as given), check(), now(),
+ * refuse(data) (marks the field a failed job's path names)}.
  * The refused field is marked with the class field-invalid; an incomplete form shows nothing. */
 function attachFormValidation(options) {
   const message = document.createElement("div");
   message.className = "materials-field-error";
   let marked = [];
-  const validator = Vocabulary.createValidator({
-    build: options.build,
-    field: options.field,
-    show(result) {
-      if (options.onResult) {
-        options.onResult(result);
-      }
-      for (const el of marked) {
-        el.classList.remove("field-invalid");
-      }
-      marked = [];
-      message.textContent = !result.ok && result.complete ? result.message : "";
-      const target = result.field ? options.fields()[result.field] : null;
-      if (target) {
-        const holder = target.closest("label") || target;
-        holder.classList.add("field-invalid");
-        marked.push(holder);
-      }
-    },
-  });
+  function show(result) {
+    if (options.onResult) {
+      options.onResult(result);
+    }
+    for (const el of marked) {
+      el.classList.remove("field-invalid");
+    }
+    marked = [];
+    message.textContent = !result.ok && result.complete ? result.message : "";
+    const target = result.field ? options.fields()[result.field] : null;
+    if (target) {
+      const holder = target.closest("label") || target;
+      holder.classList.add("field-invalid");
+      marked.push(holder);
+    }
+  }
+  const validator = Vocabulary.createValidator({ build: options.build, field: options.field, show });
   for (const root of options.roots) {
     for (const type of ["input", "change", "click"]) {
       root.addEventListener(type, () => validator.check());
     }
   }
   validator.check();
-  return { element: message, check: validator.check, now: validator.now };
+  /* A job's failure answer {error, path} marks the field as the validate route does; no path marks nothing. */
+  function refuse(data) {
+    const path = data && typeof data.path === "string" ? data.path : "";
+    if (path === "") {
+      return;
+    }
+    show({ ok: false, complete: true, message: String(data.error || ""), path, field: options.field(path) });
+  }
+  return { element: message, check: validator.check, now: validator.now, refuse };
 }
 
 function materialsElement(tag, className, text) {
@@ -728,7 +734,7 @@ function buildMotifEditor(body, tabStatus) {
   }
 
   const role = materialsElement("select");
-  for (const option of MaterialsModel.MOTIF_ROLES) {
+  for (const option of MaterialsModel.motifRoles()) {
     const o = materialsElement("option", "", option.label);
     o.value = option.value;
     role.appendChild(o);
@@ -737,10 +743,9 @@ function buildMotifEditor(body, tabStatus) {
   field("Role", role, "role");
 
   const form = materialsElement("select");
-  for (const option of MaterialsModel.MOTIF_FORMS) {
+  for (const option of MaterialsModel.motifForms()) {
     const o = materialsElement("option", "", option.label);
     o.value = option.value;
-    o.disabled = !option.enabled;
     form.appendChild(o);
   }
   form.value = initial.form;

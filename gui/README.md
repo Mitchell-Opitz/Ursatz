@@ -124,7 +124,10 @@ they are edited (400 ms after the last change, `POST /api/materials/items/valida
 a note list, meter, pickup or chord it cannot read shows its message, as given,
 under the field its request path names. The tone choices, the modes and the tone
 abbreviations are the Composer's lists (`GET /api/composer/vocabulary`); the
-choice for no override is empty.
+choice for no override is empty. So are the roles and forms of a motif, the phrase
+functions and distances of the variant tree, and the slots a theme form has (the
+slots of its ideas): the frontend and the backend keep none of these lists, and
+`scripts/check-frontend-theory.sh` refuses their old table names.
 
 Tone labels (R-195, R-196): under the note list the Tones row has one chip per
 note, `<note> <label>` with `-> <n>` for the note it resolves to. The label is
@@ -968,7 +971,7 @@ intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
 - `POST /api/materials/motifs/to-c` `{degrees, mode, meter, pickup?}` writes a
   full motif's degrees as C notes: `composer_api_motive` with `input.format`
   `degrees`, `key` `"C <mode>"`, `meter` and `pickup`, answering `{ok, notes_text}`.
-  `degrees` is 1 to 4000 characters and `mode` `major` or `minor`.
+  `degrees` is 1 to 4000 characters; the Composer refuses a mode it does not know.
 - `POST /api/materials/motifs/import` answers the notes in C: `{notes_text,
   meter, key: "C <mode>", moved_from: "D minor" | null, key_found, pickup,
   analysis}`. With no key found the notes are unchanged and the key is `C
@@ -982,8 +985,8 @@ A motif's stored `motif.degrees` is shown in the score workspace and sounded
 in the motif's stored key (C major or C minor). Nothing is saved.
 
 - `POST /api/materials/render` takes `{form, degrees, meter, key?, pickup?,
-  render_key?, tempo?, role?, harmony?, features?}` (`form` `full`, `rhythm` or `contour`;
-  `degrees` 1 to 4000 characters; `tempo` 20 to 400) and answers
+  render_key?, tempo?, role?, harmony?, features?}` (`degrees` 1 to 4000 characters; `tempo` a number or text like `195/2`;
+  the form and the tempo range are the Composer's to refuse) and answers
   `{ok, musicxml, playback}`. The route calls `composer_api_motive_render` with
   `input.format` `degrees` (`rhythm` or `contour` for those forms), `input.form`, `meter`, `key`
   (when given), `pickup`, `harmony`, `features`, `role`, `render_key`, `tempo` and `musicxml: true`; the
@@ -1142,8 +1145,8 @@ per feature (at most 8) and `role` from the body (as options of `variants`, whic
 as `--basic` with `--basic-format`, `--basic-pickup` and `--basic-harmony`, so
 remoteness is measured from the basic motive, not from the parent.
 
-- `POST .../variants` also takes `functions`, up to four of `beginning`,
-  `continuation`, `contrast` and `cadential`, sent as `--function`; only
+- `POST .../variants` also takes `functions` (the vocabulary's, up to the
+  Composer's limit of four), sent as `--function`; only
   forms that suit one of them come back (the Composer fails when none does).
   The generate panel has a checkbox for each, labelled `Only variants that
   suit`.
@@ -1151,7 +1154,7 @@ remoteness is measured from the basic motive, not from the parent.
   as `--distance` (R-189): `close` draws 1-step chains with remoteness at most
   a third, `medium` 2 steps up to two thirds, `far` 3 or 4 steps above that.
   It is refused with a `chain` (400 `distance takes random operations`) and
-  `400` for any other value. The Generate panel has a `Distance` select (Any,
+  `400` with the Composer's message and `path` for any other value. The Generate panel has a `Distance` select (Any,
   Close, Medium, Far; default Any), switched off while operations are chosen.
   When the distance leaves fewer variants than the count, the status says
   `<n> of <count> found at this distance.`
@@ -1686,7 +1689,8 @@ A route that runs long work validates the request, queues the job and answers `2
 The routes check the shape of a request before it reaches the Composer: types, counts in range, form letters
 (`^[A-Z]'*$`), lanes, node ids and the length of text. The words of music (keys, meters, pickups, note lists, harmony)
 are the Composer's to read: it refuses what it does not read with a message and the `path` of the member at fault
-(`400`, nothing starts).
+(`400`, nothing starts). A job the Composer refuses fails with the same `error` and `path` in its result
+(`{"ok": false, "error", "path"}`, no `path` when no member is at fault), and the Theme and Piece forms mark that field.
 
 Routes (bodies are JSON; success bodies have `"ok":true`):
 

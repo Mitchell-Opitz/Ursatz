@@ -451,23 +451,16 @@
     return text(s.hybrid).split("+");
   }
 
-  /* The slots the form has, in order: basic always; contrasting for an antecedent or cbi beginning or a consequent
-   * ending; continuation for a continuation ending; cadential for a continuation or cadential ending. */
-  function formSlots(state) {
-    const [beginning, ending] = pairing(state);
-    const has = {
-      basic: true,
-      contrasting: beginning === "antecedent" || beginning === "cbi" || ending === "consequent",
-      continuation: ending === "continuation",
-      cadential: ending === "continuation" || ending === "cadential",
-    };
-    return slotNames().filter((name) => has[name]);
-  }
-
   /* The form's ideas in order, each {idea, slot} with the slot it takes its motif from. */
   function formIdeas(state) {
     const [beginning, ending] = pairing(state);
     return [...halfIdeas("theme_beginnings", beginning), ...halfIdeas("theme_endings", ending)];
+  }
+
+  /* The slots the form has, in order: those its ideas take their motif from (the vocabulary's theme_ideas). */
+  function formSlots(state) {
+    const used = new Set(formIdeas(state).map((entry) => entry.slot));
+    return slotNames().filter((name) => used.has(name));
   }
 
   /* The ideas that can have a motif of their own: those of the form but the basic idea (the basic slot). */

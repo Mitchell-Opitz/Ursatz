@@ -363,7 +363,7 @@ const VariantTreeView = (function () {
     rejectedBox.checked = loadShowRejected();
     rejectedLabel.appendChild(rejectedBox);
     const distance = h("select");
-    for (const option of VariantTree.DISTANCES) {
+    for (const option of VariantTree.distances()) {
       const o = h("option", "", option.text);
       o.value = option.value;
       distance.appendChild(o);
@@ -372,7 +372,7 @@ const VariantTreeView = (function () {
     distanceLabel.appendChild(distance);
     const functionBoxes = new Map();
     const functionFilter = h("span", "variant-function-filter", "Only variants that suit ");
-    for (const name of VariantTree.FUNCTIONS) {
+    for (const name of VariantTree.functions()) {
       const label = h("label", "filter-field", `${name} `);
       const box = h("input");
       box.type = "checkbox";
@@ -388,7 +388,7 @@ const VariantTreeView = (function () {
     /* The Suits filter narrows the candidates and the saved variants shown, not what is generated or stored. */
     const suitsRow = h("div", "variant-suits");
     const suits = h("select");
-    for (const option of VariantTree.SUITS_FILTERS) {
+    for (const option of VariantTree.suitsFilters()) {
       const o = h("option", "", option.text);
       o.value = option.value;
       suits.appendChild(o);
@@ -676,7 +676,7 @@ const VariantTreeView = (function () {
         count: count.value,
         seed: seed.value,
         steps,
-        functions: VariantTree.FUNCTIONS.filter((name) => functionBoxes.get(name).checked),
+        functions: VariantTree.functions().filter((name) => functionBoxes.get(name).checked),
         distance: distance.value,
       });
       if (made.error) {

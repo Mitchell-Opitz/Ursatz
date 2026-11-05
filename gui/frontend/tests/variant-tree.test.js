@@ -2,6 +2,7 @@
  * with depth, flags and the rejected filter, the operation groups, chain
  * steps from the picker, generate and reroll requests, candidate naming and
  * candidate bodies. Plain Node script: `node frontend/tests/variant-tree.test.js`. */
+require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
 const V = require("../public/variant-tree.js");
 
 let failures = 0;
@@ -135,7 +136,7 @@ check(V.generateRequest("m1", { distance: "close", steps: [{ op: "invert" }] }).
 check(V.generatedNote([1, 2], 6, 9, "close") === "2 of 6 found at this distance." && V.generatedNote([1, 2], 6, 9, "") === "Seed 9" &&
   V.generatedNote([1, 2, 3, 4, 5, 6], 6, 9, "far") === "Seed 9" && V.generatedNote([], 6, 9, "far") === "No variants came out", "the status says how many were found at the distance");
 check(V.suitsLine(["beginning", "bogus", "cadential"]) === "Suits: beginning, cadential" && V.suitsLine([]) === "Suits: none" && V.suitsLine(null) === "Suits: none", "the suits line lists the functions or none");
-check(same(V.SUITS_FILTERS.map((f) => f.text), ["Any", "Beginning", "Continuation", "Contrast", "Cadential"]), "the Suits filter offers Any and the four functions");
+check(same(V.suitsFilters().map((f) => f.text), ["Any", "Beginning", "Continuation", "Contrast", "Cadential"]), "the Suits filter offers Any and the four functions");
 check(V.suitsMatch(["contrast"], "") && V.suitsMatch(["contrast", "cadential"], "cadential") && !V.suitsMatch(["contrast"], "cadential") && !V.suitsMatch(undefined, "cadential"), "a form passes the filter when it suits the function");
 const suitsTree = { id: "m1", name: "Opening", current_version: 1, derived: null, children: [
   { id: "s1", name: "One", current_version: 1, derived: { kind: "variant", flag: "unflagged", functions: ["beginning"] }, children: [
