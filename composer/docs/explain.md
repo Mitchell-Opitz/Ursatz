@@ -1,7 +1,7 @@
 # The explanation of a run
 
 `<ursatz_composer/explain.h>`, `src/check/explain.c`, `fill --explain` and `grow --explain`. It reports why each
-candidate was chosen or rejected. It is put together from what a run already keeps and changes no choice.
+candidate was chosen or rejected. It is put together from what a run already keeps and changes no choice. Back to the [docs index](README.md).
 
 ## What it holds
 

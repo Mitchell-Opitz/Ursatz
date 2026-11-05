@@ -4,7 +4,7 @@ A piece structure (`<ursatz_composer/piece_structure.h>`, R-169) is a game track
 and an ending, each a list of sections with a length in beats, a pickup, a cadence and a fill. The body and the
 turnaround are the loop: the intro is played once before it and the ending once after it. A structure is not a form
 template: the sections are any number of beats long, not only 4 or 8 whole bars ([piece.md](piece.md) has the templates,
-which are unchanged).
+which are unchanged). Back to the [docs index](README.md).
 
 ```c
 PieceSection sections[3] = {

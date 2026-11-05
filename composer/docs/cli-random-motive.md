@@ -1,5 +1,7 @@
 # random-motive command
 
+The `random-motive` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer random-motive --mode <major|minor> --meter <n/m> [--key <key>] [--form <full|rhythm|contour>] [--role <melodic|accompaniment>] [--style <file>] [--style-without <category>]... [--count <n>] [--seed <n>] [--json]
 ```

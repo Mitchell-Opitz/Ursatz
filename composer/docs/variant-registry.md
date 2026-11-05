@@ -1,5 +1,7 @@
 # Variant registry
 
+The registry of variant operations and how each turns a motive into a variant. Back to the [docs index](README.md).
+
 ```c
 #include <ursatz_composer/variant_registry.h>
 ```

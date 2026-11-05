@@ -11,13 +11,13 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 The Composer builds as a subproject of an application that already defines `cjson`, `ursatz` and `ursatz_analyzer`, and
 `URSATZ_COMPOSER_BUILD_CLI` turns the command off. The API is 1.1: `composer_api_vocabulary` also serves `theme_bars`,
 `theme_first_cadences`, `theme_beginnings`, `theme_endings`, `style_weights` and, in `limits`, `tempo_min`, `tempo_max`,
-`seed_max`, `piece_sections` and `piece_beats`. See [docs/api.md](docs/api.md).
+`seed_max`, `piece_sections` and `piece_beats`. See [api.md](api.md).
 
 ## Version 0.3.0 (phase P26)
 
 Everything an application asks of the Composer is the composer API, 1.0 (R-219); the CLI is a client of it and nothing else:
 `cli/` includes only `composer_api.h`, checked by `scripts/check-cli-api.sh`. The API gained the `limits` of
-`composer_api_vocabulary` and the `plan_file` member of `composer_api_export`. See [docs/api.md](docs/api.md).
+`composer_api_vocabulary` and the `plan_file` member of `composer_api_export`. See [api.md](api.md).
 
 ## Version 0.2.0 (phase P25)
 

@@ -1,5 +1,7 @@
 # develop command
 
+The `develop` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer develop <motive-input> --op <name> [--seed <n>] [--suggest <n>] [--meter <n/m>] [--key <key>] [options]
 ```

@@ -3,7 +3,7 @@
 A plan is written as a MIDI file or a MusicXML file. The Composer renders the plan (`render.h`) and hands the notes,
 meter and key signatures to Ursatz's MIDI renderer (`midi_renderer_render_with_options`) and MusicXML exporter
 (`musicxml_export_write_score`). Every command that writes `--midi` or `--musicxml` (`grow`, `fill`, `regenerate`,
-`variations`, `harmonize`, `progression`, `counterpoint`, `develop`, `export`) shares these options.
+`variations`, `harmonize`, `progression`, `counterpoint`, `develop`, `export`) shares these options. Back to the [docs index](README.md).
 
 Notes are spelled in the key in force at their onset: a note of the key's scale takes its signature spelling
 (`standard_tonality_key_signature_of`), any other is placed on the line of fifths, sharp in a sharp key or none, flat in a

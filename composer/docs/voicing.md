@@ -4,7 +4,7 @@
 a bass lane that are already written and voices the progression in four parts, soprano, alto, tenor and bass, by the
 rules of `standard-voicing`, with the voices joined by `standard-counterpoint` and `standard-harmony` (R-066). It is the
 texture stage of [grow](grow.md) when the request asks for a voicing, and it applies to any plan that has the targets
-below. The hearing that checks it, `voice_hear`, is described at the end.
+below. The hearing that checks it, `voice_hear`, is described at the end. Back to the [docs index](README.md).
 
 ## The target
 

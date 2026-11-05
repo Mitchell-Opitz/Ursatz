@@ -1,5 +1,7 @@
 # lock and regenerate commands
 
+The `lock` and `regenerate` commands of the Composer command line, with options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer lock <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] --out <plan.json> [--format text|json]
 ursatz-composer regenerate <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] [--seed <n>] --out <plan.json> [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format text|json]

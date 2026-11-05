@@ -2,7 +2,7 @@
 
 `grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a theme from one motive: its structure (a
 sentence, a period or one of the seven hybrids), then the motives made from the motive, the harmony, the bass and the
-melody, and, when asked, an accompaniment or a four-part voicing, each through the fill loop. The [grow command](cli-grow.md) runs it.
+melody, and, when asked, an accompaniment or a four-part voicing, each through the fill loop. The [grow command](cli-grow.md) runs it. Back to the [docs index](README.md).
 
 ```c
 GrowRequest request = {.motive = &motive, .key = key, .meter = meter, .bars = 8,

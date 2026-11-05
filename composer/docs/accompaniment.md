@@ -3,7 +3,7 @@
 `accompaniment` (`<ursatz_composer/accompaniment.h>`) is a Fill operator for the inner voice lanes. It reads a
 harmony lane, a bass lane and a melody lane that are already written and writes an accompaniment under the melody and
 over the bass, in the inner voices 1 to 3 (R-065). Patterns are Composer vocabulary: the library names none (R-063).
-It is the texture stage of [grow](grow.md), and it applies to any plan that has the targets below.
+It is the texture stage of [grow](grow.md), and it applies to any plan that has the targets below. Back to the [docs index](README.md).
 
 ## The target
 

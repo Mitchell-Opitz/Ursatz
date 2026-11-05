@@ -2,7 +2,7 @@
 
 A piece can be planned from the middle: a phrase's melody, a progression or a bass line is placed in a plan, in any
 section and from any bar of it, and the stages grow the form around it and fill the rest. What was given is never
-changed (R-071). `<ursatz_composer/given.h>`.
+changed (R-071). `<ursatz_composer/given.h>`. Back to the [docs index](README.md).
 
 ```c
 GivenResult plan_give_melody(PiecePlan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);

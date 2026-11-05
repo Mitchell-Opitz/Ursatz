@@ -1,5 +1,7 @@
 # variations and harmonize commands
 
+The `variations` and `harmonize` commands of the Composer command line, with options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer variations <plan.json> (--node <id> | --section <letter>) [--lane harmony|bass|melody|inner] --count <n> [--seed <n>] --out-dir <dir> [--midi] [--musicxml] [--tempo <bpm>] [--plain-midi] [--format text|json]
 ursatz-composer harmonize <plan.json> --section <letter> --count <n> [--seed <n>] --out-dir <dir> [--midi] [--musicxml] [--tempo <bpm>] [--plain-midi] [--format text|json]

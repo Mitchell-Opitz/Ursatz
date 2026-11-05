@@ -2,7 +2,7 @@
 
 `<ursatz_composer/seam_hear.h>`, `src/piece/seam.c`, `src/piece/seam_hear.c` and the seam stage of `compose_run`. A game
 track loops: the last bar of the loop leads back into the first bar of the body (R-171). The loop's end is filled last,
-against a Given copy of that first bar, and four soft rules say how well it leads in. Nothing is rejected for the seam.
+against a Given copy of that first bar, and four soft rules say how well it leads in. Nothing is rejected for the seam. Back to the [docs index](README.md).
 
 ## The hold
 

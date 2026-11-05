@@ -2,7 +2,7 @@
 
 The JSON file `ursatz-composer piece` reads ([cli-piece.md](cli-piece.md), R-173). It holds the structure of a looping game
 track (an intro, a body, a turnaround and an ending, [piece-structure.md](piece-structure.md)) and the brief. Schema
-`ursatz-piece-request`, version 1.
+`ursatz-piece-request`, version 1. Back to the [docs index](README.md).
 
 ```json
 {"schema": "ursatz-piece-request", "schema_version": 1,

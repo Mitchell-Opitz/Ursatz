@@ -3,7 +3,7 @@
 A Fill operator for the melody lane. Given a written harmony lane, a written bass lane and a motive, it
 writes the melody over them: the motive's rhythm and contour, chord tones on the strong beats, and
 passing and neighbor tones between. It is a library operator (`melody_fill_register`); the CLI has no
-command for it.
+command for it. Back to the [docs index](README.md).
 
 Header: `<ursatz_composer/melody_fill.h>`.
 

@@ -3,7 +3,7 @@
 `piece_build_plan` (`<ursatz_composer/piece.h>`) plans a short piece from a named form template, and `compose_run`
 (`<ursatz_composer/compose.h>`) fills every section of the plan with the grow stages. A piece is a row of theme sections
 as [grow](grow.md) builds them (4 or 8 bars each), so every section can be heard with `form_hear`. Large forms (sonata,
-rondo) are not offered: standard-form and the kernel do not analyze them.
+rondo) are not offered: standard-form and the kernel do not analyze them. Back to the [docs index](README.md).
 
 ```c
 PieceRequest request = {.form = FORM_TEMPLATE_TERNARY, .key = key, .meter = meter, .bars = 24, .motive = NULL};

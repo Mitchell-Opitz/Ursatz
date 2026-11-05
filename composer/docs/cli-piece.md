@@ -1,5 +1,7 @@
 # piece command
 
+The `piece` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer piece <request.json> [--seed <n>] [--check] [--out <loop-plan.json>] [--ending-out <ending-plan.json>] [--midi <loop.mid>] [--musicxml <loop.musicxml>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
 ```

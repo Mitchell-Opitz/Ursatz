@@ -3,7 +3,7 @@
 The counterpoint operator (`<ursatz_composer/counterpoint.h>`, `src/counterpoint/`) writes a counter-melody against a
 given line in the first, second, third or fourth species of strict counterpoint. It is a Fill operator named
 `counterpoint-species`, and `counterpoint_checker` holds its candidates to the rules of Ursatz's standard-counterpoint
-framework. The composing logic is the Composer's; every rule it is held to is the framework's.
+framework. The composing logic is the Composer's; every rule it is held to is the framework's. Back to the [docs index](README.md).
 
 Times inside the operator are `Rational` positions in whole notes from the start of the target. A bar is the meter's
 beats over its beat unit, so a meter whose beat unit does not divide 128 (the old whole note grid) is accepted, and a bar is no

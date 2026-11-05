@@ -1,5 +1,7 @@
 # counterpoint command
 
+The `counterpoint` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer counterpoint <line> --species <1-4> [--above|--below] --key <key> --meter <n/m> [--mode <major|minor>] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format text|json]
 ```

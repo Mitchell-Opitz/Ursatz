@@ -1,5 +1,7 @@
 # theme command
 
+The `theme` command of the Composer command line, with options and output. Back to the [docs index](README.md).
+
 ```sh
 ursatz-composer theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
 ```

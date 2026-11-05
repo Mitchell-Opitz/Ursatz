@@ -4,7 +4,7 @@
 There is one analysis path in the Composer (R-257): the plan is rendered once, `analyzer_hear` (`<ursatz_analyzer/composer_api.h>`)
 analyzes the notes that start inside the span, and `form_hear` reads the themes, phrases and cadences of the Analyzer's
 result (`analysis_chain_themes`, `analysis_chain_phrases`, `analysis_chain_cadences` of `analyzer_result_chain`). It is how
-the Composer checks the form of what it wrote with the framework's rules, never with rules of its own.
+the Composer checks the form of what it wrote with the framework's rules, never with rules of its own. Back to the [docs index](README.md).
 
 ```c
 FormHeard heard;

@@ -5,7 +5,7 @@ A piece plan is written as JSON by `plan_to_json` / `plan_write_json_file` and r
 name, a version and a JSON Schema ([`schema/plan.v2.schema.json`](../schema/plan.v2.schema.json), JSON Schema 2020-12),
 and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
 name, a note may carry its spelling. Writing always gives format version 2 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
-Reading takes version 2 and version 1, the format of every plan saved before it ([Format versions](#format-versions)).
+Reading takes version 2 and version 1, the format of every plan saved before it ([Format versions](#format-versions)). Back to the [docs index](README.md).
 
 The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
 newline. The same plan always gives the same bytes.
