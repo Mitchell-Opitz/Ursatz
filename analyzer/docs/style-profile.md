@@ -1,5 +1,7 @@
 # Style profiles
 
+Style profiles: counting labels over a corpus, the style model file and comparing styles. Back to the [docs index](README.md).
+
 ```sh
 ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]
 ursatz-analyzer --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]

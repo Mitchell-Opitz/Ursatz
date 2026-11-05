@@ -16,6 +16,8 @@ jobs:
           git submodule update --init --recursive
       - name: Check submodule pins
         run: scripts/check-pins.sh
+      - name: Check docs
+        run: bash scripts/check-docs.sh
       - name: Configure
         run: cmake -S . -B build
       - name: Build

@@ -1,8 +1,9 @@
 # GUI API
 
+The public Analyzer entries the GUI calls: import with tempo, playback timing and score export. Back to the [docs index](README.md).
+
 What the GUI asks the library for today, as public Analyzer headers (R-218): import with tempo, playback timing and
-score export. Each gives the output the GUI's own code gave at its pin (`src/service/analysis_service.c`). The GUI
-switches onto them in P27. Storage of pieces, titles and composers stays a GUI edge.
+score export. Each gives the output the GUI's own code gave at its pin (`src/service/analysis_service.c`). Storage of pieces, titles and composers stays a GUI edge.
 
 ## Import with tempo
 
