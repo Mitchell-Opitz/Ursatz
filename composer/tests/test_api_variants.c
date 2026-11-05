@@ -274,6 +274,44 @@ static void expect_refused(ComposerStatus (*entry)(const char *, const ComposerJ
     composer_response_destroy(&response);
 }
 
+/* The strategy member: segments is the default and gives segments and a given harmony; drawn gives neither. */
+static void test_random_strategy(void) {
+    static const char *const REQUESTS[] = {
+        "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":3,\"seed\":4}",
+        "{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"segments\",\"count\":3,\"seed\":4}",
+        "{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"drawn\",\"count\":3,\"seed\":4}",
+    };
+    char *documents[3];
+    for (size_t r = 0; r < 3; r++) {
+        ComposerResponse response;
+        assert(composer_api_random_motive(REQUESTS[r], NULL, &response) == COMPOSER_OK);
+        documents[r] = strdup(response.json);
+        cJSON *document = cJSON_Parse(response.json);
+        const cJSON *motives = cJSON_GetObjectItemCaseSensitive(document, "motives");
+        assert(cJSON_GetArraySize(motives) == 3);
+        const cJSON *motive = NULL;
+        cJSON_ArrayForEach(motive, motives) {
+            const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motive, "analysis");
+            const cJSON *segments = cJSON_GetObjectItemCaseSensitive(analysis, "segments");
+            const cJSON *base = cJSON_GetObjectItemCaseSensitive(analysis, "base_harmony");
+            const cJSON *items = cJSON_GetObjectItemCaseSensitive(segments, "items");
+            assert(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(segments, "given")) == (r < 2));
+            assert(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(base, "given")) == (r < 2));
+            assert(cJSON_GetArraySize(items) >= 1 &&
+                   strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(items, 0), "label")->valuestring, "a") == 0);
+            assert(r == 2 || cJSON_GetArraySize(items) >= 2);
+            const cJSON *stored = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motive, "motive"), "features");
+            assert((r < 2) == (stored && cJSON_GetArraySize(stored) >= 2));
+        }
+        cJSON_Delete(document);
+        composer_response_destroy(&response);
+    }
+    assert(strcmp(documents[0], documents[1]) == 0 && strcmp(documents[0], documents[2]) != 0);
+    for (size_t r = 0; r < 3; r++) {
+        free(documents[r]);
+    }
+}
+
 static void test_refusals(void) {
     expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"style\":\"no-such-style.json\"}",
                    COMPOSER_ERR_UNSATISFIABLE, "/style");
@@ -288,6 +326,8 @@ static void test_refusals(void) {
                    "/count");
     expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"api_version\":7}", COMPOSER_ERR_REQUEST,
                    "/api_version");
+    expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"dice\"}", COMPOSER_ERR_REQUEST,
+                   "/strategy");
 
     const char *const input = "\"input\":{\"text\":\"1:q 3:e 5:e 1':h\",\"format\":\"degrees\"},\"meter\":\"4/4\",\"key\":\"C major\"";
     char request[512];
@@ -376,6 +416,7 @@ int main(void) {
     test_variants();
     test_recognize();
     test_random();
+    test_random_strategy();
     test_refusals();
     test_cancel();
     printf("test_api_variants: ok\n");

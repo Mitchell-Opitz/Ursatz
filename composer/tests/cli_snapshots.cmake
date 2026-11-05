@@ -195,6 +195,9 @@ run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recogniz
 run_case(random-motive-style json random-motive --mode major --meter 4/4 --key "C major" --form full --role accompaniment
          --strategy drawn --count 2 --seed 5 --json)
 
+# Random motives of the default strategy: segments, a harmony plan and the segment labels.
+run_case(random-motive-segments json random-motive --mode minor --meter 4/4 --count 3 --seed 2 --json)
+
 # The theme case the GUI runs (--format json --out --midi --musicxml) is the theme-* cases above, which write all three files.
 
 # Piece regenerate of the theme-filled section, one lane (the plan from piece-theme-fill above).
