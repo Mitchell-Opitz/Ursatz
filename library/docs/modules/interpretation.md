@@ -1,5 +1,7 @@
 # interpretation
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L6 (`music-interpretation`). Path `src/interpretation/`, tests `tests/interpretation/`. One of four L6 siblings; see `docs/modules/l6-notes.md` for rules shared across all four, including the now-closed Interpretation-to-Framework open issue.
 
 ## Provides

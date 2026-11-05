@@ -1,5 +1,7 @@
 # Motive link (analysis, L8)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Files: `src/analysis/motive_link.h/.c`, with the step text in `src/analysis/motive_relation.c` and the fingerprint in `src/analysis/motive_sketch.c`. Tests: `tests/analysis/test_motive_link.c` and `tests/analysis/test_motive_link_groups.c` (each with a valgrind run). Part of `analysis` (see `docs/modules/analysis.md`); includes `analysis/motive_variant_recognition.h` and `analysis/motive_sketch.h`.
 
 A link claims that one motive is a chain of motive relations (`docs/modules/motive-relations.md`) from another, at most `max_depth` steps long. It is built on the variant recognizer (`docs/modules/motive-variant-recognition.md`) with every relation allowed; callers that need a link to be writable in a composer's registry check that themselves.

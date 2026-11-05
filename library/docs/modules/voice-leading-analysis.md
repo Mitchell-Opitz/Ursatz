@@ -1,5 +1,7 @@
 # Voice leading analysis
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Two framework adapters read a voice-pitch grid (one row per segment, one column per voice, voice 0 on top) and report voice-leading facts as durable claims. Neither framework includes the other; the chain (voice separation → grid → adapters) is built only in `tests/integration/`.
 
 ## Voice-pitch grid

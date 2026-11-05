@@ -1,5 +1,7 @@
 # query
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Sibling to `music-corpus` and `corpus_stats`. Path `src/query/`, tests `tests/query/`. Depends on `identity`, `core` (for `ProvenanceReference`), `semantics` (for `ContourDirection`), `persistence` (for `PersistenceHandle` and its context queries) and `corpus` (for `CorpusStoreHandle` and its piece-ref listing) only. Must not depend on `time`, `pitch`, `events`, `containers`, `structure`, `context`, `interpretation`, `relationship`, `theory`, `rules`, `transform`, `analysis`, `generation`, `io`, `corpus_stats` or `frameworks/` -- in particular not on `analysis`: a search returns what analysis has already persisted, it never runs analysis. Enforced by `tests/query/test_architecture_query.c`.
 
 ## Provides

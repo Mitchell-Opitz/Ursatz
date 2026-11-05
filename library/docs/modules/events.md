@@ -1,5 +1,7 @@
 # events
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L3 (`music-events`). Path `src/events/`, tests `tests/events/`. Depends on `identity`, `core`, `time`, and `pitch` only. Must not depend on `containers` (L4).
 
 ## Provides

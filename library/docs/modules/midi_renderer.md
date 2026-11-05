@@ -1,5 +1,7 @@
 # MIDIRenderer
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `src/io/midi_renderer.{h,c}`, tests `tests/io/test_midi_renderer*.c`. Part of `music-io` (L9); same dependencies as the rest of the module (`identity`, `core`, `time`, `pitch`, `events`).
 
 `midi_renderer_render` writes NoteEvents (with the index-paired PitchNumericValues `midi_importer_import` returns), an optional MeterMap, an optional TempoMap and optional key signature events to a Standard MIDI File of format 1. It is the inverse of `MIDIImporter` and changes none of the importer, `smf_reader`, MeterMap or TempoMap.

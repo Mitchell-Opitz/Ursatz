@@ -1,5 +1,7 @@
 # generation
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L8 (`music-generation`). Path `src/generation/`, tests `tests/generation/`. One of three mutually-restricted L8 siblings (with `transform` and `analysis`); see `docs/modules/l8-notes.md` for the sibling rule and shared L8 notes.
 
 ## Provides

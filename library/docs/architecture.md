@@ -1,5 +1,7 @@
 # Architecture
 
+[Docs index](README.md): the Ursatz docs by topic.
+
 Ursatz is organized into layered modules, each living under `src/<module>/` with its tests mirrored under `tests/<module>/`. Theory Framework extension modules live outside the layers, under `frameworks/<name>/`. This page explains the library, then covers the layer model and the rules that hold it together. Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
 
 ## Purpose

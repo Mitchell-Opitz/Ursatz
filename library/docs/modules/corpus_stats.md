@@ -1,5 +1,7 @@
 # corpus_stats
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Sibling to `music-corpus`. Path `src/corpus_stats/`, tests `tests/corpus_stats/`. Depends on `identity`, `persistence`, `interpretation` (for `Chord`/`chord_label`), and `corpus` (for `CorpusStoreHandle` and its piece-ref listing) only. Must not depend on `core`, `time`, `pitch`, `events`, `containers`, `structure`, `context`, `semantics`, `relationship`, `theory`, `rules`, `transform`, `analysis`, `generation`, `io`, or `frameworks/`.
 
 ## Provides

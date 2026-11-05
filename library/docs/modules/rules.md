@@ -1,5 +1,7 @@
 # rules
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L7 (`music-rules`). Path `src/rules/`, tests `tests/rules/`. Sibling of `theory`, and the one L7/L8 sibling pair that is not mutually restricted. `Rule`, `Constraint`, and `Preference` each hold a direct, unowned `Framework` reference (the same reference-only pattern `Context` uses for its own parent field).
 
 ## Provides

@@ -1,5 +1,7 @@
 # Building Ursatz
 
+[Docs index](README.md): the Ursatz docs by topic.
+
 ## Requirements
 - CMake 3.20+
 - A C11 compiler (gcc, clang, MSVC, or MinGW)

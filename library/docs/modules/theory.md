@@ -1,5 +1,7 @@
 # theory
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L7 (`music-theory`). Path `src/theory/`, tests `tests/theory/`. Sibling of `rules`; unlike L6, `rules` depends directly on `theory`, but `theory` never depends back on `rules`.
 
 ## Provides

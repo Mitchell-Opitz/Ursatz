@@ -1,5 +1,7 @@
 # standard-harmony analysis adapter (L3)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `frameworks/standard-harmony/analysis/` turns chord segments into standard-harmony's inputs and returns Interpretations: harmonic function, phrase model labels, six-four types and prolongations. It uses the existing rules (`harmony_function_of`, `harmony_phrase_model_label`, `harmony_six_four_classify`, `harmony_prolongation_of`, `harmony_applied_function`) and does not repeat them. It detects no cadences and segments no phrases (L3.3, L3.6).
 
 ## Input

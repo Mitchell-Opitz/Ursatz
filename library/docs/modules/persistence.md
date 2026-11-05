@@ -1,5 +1,7 @@
 # persistence
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L9 (`music-persistence`). Path `src/persistence/`, tests `tests/persistence/`. Depends on `identity`, `core`, `time`, `pitch`, `events`, `interpretation`, `relationship` and `structure` only (the last two for the repositories of their own types). Must not depend on `containers`, `context`, `semantics`, `theory`, `rules`, `transform`, `analysis`, `generation`, `io`, or `frameworks/`.
 
 ## Provides

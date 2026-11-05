@@ -1,5 +1,7 @@
 # Motive tone roles (analysis, L8)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Files: `src/analysis/motive_tone_roles.h/.c`, internal `src/analysis/motive_chord_internal.h` (chord lookup shared with the harmony relations). Test: `tests/analysis/test_motive_tone_roles.c`. Part of `analysis` (see `docs/modules/analysis.md`); includes `analysis/motive_sketch.h` and `semantics/non_chord_tone.h`.
 
 Labels every note of a `MotiveSketch` (`docs/modules/motive-relations.md`) against the sketch's chords: a chord tone, a non-chord tone of one of the ten `NonChordTone` types, or unclassified. It is for a melody on its own; the polyphonic classifier in common-practice-minimal is unchanged.

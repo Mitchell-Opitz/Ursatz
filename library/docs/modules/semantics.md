@@ -1,5 +1,7 @@
 # semantics
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L6 (`music-semantics`). Path `src/semantics/`, tests `tests/semantics/`. One of four L6 siblings; see `docs/modules/l6-notes.md` for rules shared across all four.
 
 ## Provides

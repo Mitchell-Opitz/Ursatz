@@ -1,5 +1,7 @@
 # io
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L9 (`music-io`). Path `src/io/`, tests `tests/io/`. Depends on `identity`, `core`, `time`, `pitch`, and `events` only (and, for `MusicXMLImporter`, the vendored XML parser in `third_party/ezxml`, which nothing else may use). Must not depend on `containers` (L4) or anything above it, and must not depend on `theory`, `rules`, `transform`, `analysis`, `generation`, `frameworks/`, or `music-analysis`.
 
 ## Provides

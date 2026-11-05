@@ -1,5 +1,7 @@
 # analysis
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L8 (`music-analysis`). Path `src/analysis/`, tests `tests/analysis/`. One of two mutually-restricted L8 siblings (with `generation`); see `docs/modules/l8-notes.md` for the sibling rule and shared L8 notes.
 
 ## Provides

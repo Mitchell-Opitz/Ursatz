@@ -1,5 +1,7 @@
 # Form analysis
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 `frameworks/standard-form/analysis/` finds phrases, ideas and subphrases, themes and phrase expansion or contraction from real cadences and the soprano. It applies standard-form's existing rules and length conventions and defines no form of its own. standard-form includes no other framework and no kernel analysis (the architecture test enforces both, and now scans `analysis/` too): the input is neutral structs the caller fills, built by `chain_build_form_input` in `chain/` from the standard-harmony cadences, the L2 soprano and the `MeterMap`.
 
 Measure and beat time are `Rational` and `score_time_*` (`time/score_time.h`) over `time/meter_arithmetic.h`; an overflow skips the item or fails the read.

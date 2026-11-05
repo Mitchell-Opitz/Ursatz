@@ -1,5 +1,7 @@
 # Rhythm and meter analysis (standard-meter, L3.8)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Adapter in `frameworks/standard-meter/analysis/` (`meter_analysis_*.c`). It reads syncopation, hemiola, hypermeter and per-phrase rhythmic density from real music against the rules of `standard-meter`. The adapter includes no other framework and no kernel analysis; the architecture test scans `analysis/` as well as the framework.
 
 Time is `Rational` and `score_time_*` (`time/score_time.h`). `meter_analysis_position.c` holds the pickup-aware beat grid, `standard_meter_level_at` and `standard_meter_beat_of` (a `double` beat), since they read the framework's own beat grid rather than the signature's unit.

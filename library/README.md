@@ -10,10 +10,18 @@ explicit, named Theory Framework.
   import, MusicXML export, SQLite persistence, and corpus storage.
 - `frameworks/`: 17 Theory Framework extension modules (tonality, harmony, counterpoint,
   form, meter, notation, and more). See [frameworks/README.md](frameworks/README.md).
+- `chain/`: the analysis chain `ursatz_chain`. See [chain/README.md](chain/README.md).
 
-See [docs/BUILDING.md](docs/BUILDING.md) for build and test instructions, and
-[docs/architecture.md](docs/architecture.md) for the layer model and current module status.
-Per-module detail lives under `docs/modules/`.
+## Build and test
+
+```sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure -LE slow
+bash scripts/check-docs.sh
+```
+
+Requirements, the full test run and CI are in [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Using the library
 
@@ -21,3 +29,8 @@ Link `ursatz` (and the frameworks and `ursatz_chain` you need) from a submodule 
 public headers: kernel headers by their module path (`time/meter_map.h`), framework headers by their folder
 name (`standard-form/analysis/analysis_phrase.h`), the chain as `ursatz_chain/analysis_chain.h`. Details in
 [docs/architecture.md](docs/architecture.md), Public surface.
+
+## Docs
+
+- [docs/README.md](docs/README.md): every doc by topic.
+- [docs/architecture.md](docs/architecture.md): what the library is for, its module map, public API and data flow.

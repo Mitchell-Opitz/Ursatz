@@ -1,5 +1,7 @@
 # core
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Layer L1 (`music-core`). Path `src/core/`, tests `tests/core/`. Depends on `identity` only.
 
 ## Provides

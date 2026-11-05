@@ -1,5 +1,7 @@
 # Texture analysis (standard-texture, L3.9)
 
+[Docs index](../README.md): the Ursatz docs by topic.
+
 Adapter in `frameworks/standard-texture/analysis/` (`texture_analysis_*.c`). It measures texture features per measure from separated voices, classifies each measure with `standard-texture`'s rules, and merges the measures into passages with change points. The adapter includes no other framework and no kernel analysis; the architecture test scans `analysis/` as well as the framework.
 
 ## Input
