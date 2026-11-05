@@ -16,6 +16,8 @@ jobs:
           git submodule update --init --recursive
       - name: Check submodule pins
         run: scripts/check-pins.sh
+      - name: Check the docs
+        run: bash scripts/check-docs.sh
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev pkg-config
       - name: Configure
