@@ -33,6 +33,16 @@ void ursatz_gui_composer_reply_destroy(UrsatzGuiComposerReply *reply);
  * Composer could not give it. */
 const char *ursatz_gui_composer_vocabulary(void);
 
+/* The linked Composer's build as composer_api_versions gives it, read on the first call and kept for the process. Each
+ * pointer is a string owned by the client; all are "" when the Composer could not give its versions. */
+typedef struct {
+  const char *api_version;
+  const char *composer_version;
+  const char *ursatz_commit;
+} UrsatzGuiComposerBuild;
+
+UrsatzGuiComposerBuild ursatz_gui_composer_build(void);
+
 /* The spelling of the tonic of pitch_class (0 to 11) in mode ("major" or "minor") in the vocabulary's pitch_class_names;
  * false when it has none. */
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size);

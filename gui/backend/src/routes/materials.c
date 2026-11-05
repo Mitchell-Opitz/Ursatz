@@ -1485,8 +1485,9 @@ static int handle_version_file(struct mg_connection *conn, const char *id, const
 }
 
 /* The render cache of a motif version (R-275): items/<id>/v<n>/render/ holds score.musicxml and motif.mid, and
-   render.json {composer_version, render_key, tempo} names what they were made with. A version never changes, so the
-   files stand for the same key, tempo and Composer version. */
+   render.json {api_version, composer_version, ursatz_commit, render_key, tempo} names what they were made with. A
+   version never changes, so the files stand for the same key, tempo and Composer build (its API version, release and
+   Ursatz commit, composer_api_versions). */
 static bool render_cache_dir(const char *id, int number, char *out, size_t out_size) {
   char version_dir[512];
   return ursatz_gui_material_version_dir(id, number, version_dir, sizeof(version_dir)) &&
@@ -1497,19 +1498,26 @@ static bool render_cache_file(const char *dir, const char *name, char *out, size
   return snprintf(out, out_size, "%s/%s", dir, name) < (int)out_size;
 }
 
-/* True when render.json in dir names this render key, tempo and the linked Composer. */
+/* True when the string member name of meta equals value and value is not empty. */
+static bool render_meta_is(const cJSON *meta, const char *name, const char *value) {
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, name);
+  return cJSON_IsString(item) && value[0] != '\0' && strcmp(item->valuestring, value) == 0;
+}
+
+/* True when render.json in dir names this render key, tempo and the linked Composer build. */
 static bool render_cache_matches(const char *dir, const char *render_key, int tempo) {
   char path[640];
   if (!render_cache_file(dir, "render.json", path, sizeof(path))) {
     return false;
   }
   cJSON *meta = ursatz_gui_read_json_object(path);
-  const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "composer_version");
+  UrsatzGuiComposerBuild build = ursatz_gui_composer_build();
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(meta, "render_key");
   const cJSON *cached_tempo = cJSON_GetObjectItemCaseSensitive(meta, "tempo");
-  bool same = cJSON_IsString(version) && strcmp(version->valuestring, composer_api_version()) == 0 &&
-              cJSON_IsString(key) && strcmp(key->valuestring, render_key) == 0 && cJSON_IsNumber(cached_tempo) &&
-              cached_tempo->valueint == tempo;
+  bool same = render_meta_is(meta, "api_version", build.api_version) &&
+              render_meta_is(meta, "composer_version", build.composer_version) &&
+              render_meta_is(meta, "ursatz_commit", build.ursatz_commit) && cJSON_IsString(key) &&
+              strcmp(key->valuestring, render_key) == 0 && cJSON_IsNumber(cached_tempo) && cached_tempo->valueint == tempo;
   cJSON_Delete(meta);
   return same;
 }
@@ -1541,7 +1549,10 @@ static void render_cache_write(const char *id, int number, const char *render_ke
   if (!meta) {
     return;
   }
-  cJSON_AddStringToObject(meta, "composer_version", composer_api_version());
+  UrsatzGuiComposerBuild build = ursatz_gui_composer_build();
+  cJSON_AddStringToObject(meta, "api_version", build.api_version);
+  cJSON_AddStringToObject(meta, "composer_version", build.composer_version);
+  cJSON_AddStringToObject(meta, "ursatz_commit", build.ursatz_commit);
   cJSON_AddStringToObject(meta, "render_key", render_key);
   cJSON_AddNumberToObject(meta, "tempo", tempo);
   char *meta_text = cJSON_PrintUnformatted(meta);

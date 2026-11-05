@@ -64,6 +64,39 @@ const char *ursatz_gui_composer_vocabulary(void) {
   return g_vocabulary;
 }
 
+static pthread_once_t g_build_once = PTHREAD_ONCE_INIT;
+static char g_build_api[32];
+static char g_build_composer[64];
+static char g_build_ursatz[64];
+
+static void build_copy(char *out, size_t out_size, const cJSON *item) {
+  if (cJSON_IsString(item) && strlen(item->valuestring) < out_size) {
+    memcpy(out, item->valuestring, strlen(item->valuestring) + 1);
+  }
+}
+
+static void build_read(void) {
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  ComposerStatus status = composer_api_versions(&response);
+  UrsatzGuiComposerReply reply;
+  ursatz_gui_composer_reply_take(status, &response, &reply);
+  cJSON *versions = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  if (versions) {
+    build_copy(g_build_api, sizeof(g_build_api), cJSON_GetObjectItemCaseSensitive(versions, "api_version"));
+    build_copy(g_build_composer, sizeof(g_build_composer), cJSON_GetObjectItemCaseSensitive(versions, "composer_version"));
+    build_copy(g_build_ursatz, sizeof(g_build_ursatz), cJSON_GetObjectItemCaseSensitive(versions, "ursatz_commit"));
+  }
+  cJSON_Delete(versions);
+  ursatz_gui_composer_reply_destroy(&reply);
+}
+
+UrsatzGuiComposerBuild ursatz_gui_composer_build(void) {
+  pthread_once(&g_build_once, build_read);
+  UrsatzGuiComposerBuild build = {g_build_api, g_build_composer, g_build_ursatz};
+  return build;
+}
+
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size) {
   if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !mode) {
     return false;
