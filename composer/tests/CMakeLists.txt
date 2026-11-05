@@ -51,6 +51,12 @@ if(VALGRIND_PROGRAM)
                      $<TARGET_FILE:test_plan_json>)
     set_tests_properties(test_plan_json_valgrind PROPERTIES LABELS slow)
 endif()
+# test_plan_json and its valgrind run write the plan files in the build directory that test_plan_schema reads.
+foreach(plan_test test_plan_json test_plan_json_valgrind test_plan_schema)
+    if(TEST ${plan_test})
+        set_tests_properties(${plan_test} PROPERTIES RESOURCE_LOCK plan_json_files)
+    endif()
+endforeach()
 
 if(TARGET ursatz-composer)
 add_executable(test_render_plan test_render_plan.c)
@@ -342,6 +348,8 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
 foreach(mode fixture theme refused progression partial)
     add_test(NAME test_piece_fills_${mode} COMMAND test_piece_fills ${mode}
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
+    # Every mode writes piece_fills_theme.json and piece_fills_out.txt in the one directory.
+    set_tests_properties(test_piece_fills_${mode} PROPERTIES RESOURCE_LOCK piece_fills)
 endforeach()
 endif()
 
@@ -784,6 +792,19 @@ if(VALGRIND_PROGRAM)
              COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
                      $<TARGET_FILE:test_job_cancel> cancel)
 endif()
+
+# Each API test writes its requests and responses in the build directory under names no other test uses, and its valgrind run
+# writes the same names again, so a test and its valgrind run share a lock. test_api_schema reads every one of them.
+set(API_FILE_LOCKS "")
+foreach(api_test core motive variants theme piece plan_workflow material vocabulary)
+    list(APPEND API_FILE_LOCKS api_${api_test}_files)
+    foreach(variant test_api_${api_test} test_api_${api_test}_valgrind)
+        if(TEST ${variant})
+            set_tests_properties(${variant} PROPERTIES RESOURCE_LOCK api_${api_test}_files)
+        endif()
+    endforeach()
+endforeach()
+set_tests_properties(test_api_schema PROPERTIES RESOURCE_LOCK "${API_FILE_LOCKS}")
 
 # A project that adds cJSON, Ursatz and the Analyzer first and the Composer after them, with its command off, builds and runs.
 add_test(NAME consumer_build
