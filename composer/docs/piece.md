@@ -229,8 +229,7 @@ stuck more the longer the form: in A minor 3/4 with a given motive none of the s
 | `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
 
 Every completed run passes every check. The share of runs that complete is below 100% for every template but variations
-(rounded binary was 100% until the motive-forms of P14 B8 left one run stuck, was 100% again once the tritone was refused,
-and is 65% since the checks hear the plan through the Analyzer, P25 B7b: the key check reads the cadences the Analyzer
+(rounded binary is 65% because the checks hear the plan through the Analyzer: the key check reads the cadences the Analyzer
 hears, which are not those of the planned chords), so the other five tests are `WILL_FAIL`, with the measured shares (the
 stage is where the last round of a stuck run ended; before the Analyzer: binary 14 of 20, rounded binary 20, ternary 16):
 

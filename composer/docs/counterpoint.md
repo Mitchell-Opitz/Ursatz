@@ -66,8 +66,7 @@ group for a written target.
 
 ## Out of scope
 
-Fifth species, invertible counterpoint and imitation. A counter-melody inside a grown theme or a piece is not planned in
-this phase; the operator applies to any plan that has the target above.
+Fifth species, invertible counterpoint and imitation. A counter-melody inside a grown theme or a piece is not planned; the operator applies to any plan that has the target above.
 
 ## Measured
 

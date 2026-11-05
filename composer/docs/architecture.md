@@ -13,10 +13,10 @@ What the Ursatz-Composer is, how its parts fit and where each is documented. Bac
 
 | Direction | Repo | How it is pinned |
 |---|---|---|
-| Below | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) (kernel and frameworks) | git submodule `external/ursatz`, linked PRIVATE |
-| Below | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer) (hearing, styles, corpus) | git submodule `external/ursatz-analyzer`, linked PRIVATE |
+| Below | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) (kernel and frameworks) | git submodule `external/ursatz`, linked PRIVATE |
+| Below | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md) (hearing, styles, corpus) | git submodule `external/ursatz-analyzer`, linked PRIVATE |
 | Vendored | cJSON 1.7.18 | `external/cjson`, added before the submodules |
-| Above | [Ursatz-GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI) | links `ursatz_composer` and includes only `composer_api.h` |
+| Above | [Ursatz-GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI/blob/main/docs/architecture.md) | links `ursatz_composer` and includes only `composer_api.h` |
 
 The pins are checked by `scripts/check-pins.sh` (see [building.md](building.md#submodules)).
 
@@ -80,9 +80,9 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 | `analyzer_version`, `analyzer_ursatz_commit` (`<ursatz_analyzer/version.h>`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | The versions written into a plan and returned by `composer_api_versions` |
 | `analyzer_chord_sequence_free`, similar material and corpus readers (`<ursatz_analyzer/similar_material.h>`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | Seeding a piece from a corpus; staleness of analyzed documents |
 | Style profile and labels (`<ursatz_analyzer/style_profile.h>`, `style_labels.h`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | Style models the harmony and melody stages prefer |
-| `<standard-harmony/...>`, `<standard-counterpoint/...>`, `<standard-voicing/...>`, `<standard-texture/...>`, `<standard-tonality/...>`, `<standard-form/...>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) | Theory rules: phrase model, melodic moves, voicing, scales, phrase form |
-| `<analysis/motive_sketch.h>`, `<analysis/motive_relation.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) | The motive value and the relation steps that make a motive from another |
-| `<core/rational.h>`, `<time/...>`, `<pitch/...>`, `<semantics/...>`, `<io/midi_importer.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) | Exact time, pitch spelling, cadence and key types, MIDI import |
+| `<standard-harmony/...>`, `<standard-counterpoint/...>`, `<standard-voicing/...>`, `<standard-texture/...>`, `<standard-tonality/...>`, `<standard-form/...>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | Theory rules: phrase model, melodic moves, voicing, scales, phrase form |
+| `<analysis/motive_sketch.h>`, `<analysis/motive_relation.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | The motive value and the relation steps that make a motive from another |
+| `<core/rational.h>`, `<time/...>`, `<pitch/...>`, `<semantics/...>`, `<io/midi_importer.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | Exact time, pitch spelling, cadence and key types, MIDI import |
 
 The rules for what comes from which library are in [building.md](building.md#library-primitives).
 

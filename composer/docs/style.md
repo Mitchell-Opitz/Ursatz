@@ -120,7 +120,7 @@ Under `chorales` melody is closer and harmony is not, and under `sonatinas` (two
 harmony is not: a known limit, the styled mean is held to its baseline (R-075). The melody means rose (they were 0.4756 and
 0.4944, 0.4519 and 0.4550) when styles began to be read with every category (R-162): the two fixtures have no motive
 categories and the sentences do, and a category the model lacks is distance 1, for the styled and the unstyled runs alike.
-The harmony figures are those of the P14 B8 table (the harmony of the first two columns was 0.6875 and 0.7245 before it). A larger weight did not help (1 to 64 measured). The Analyzer
+A larger weight did not help (1 to 64 measured). The Analyzer
 also hears the Composer's chords through the notes only (`ii7` where `ii` was written), which blurs the harmony labels.
 
 ## Blending
