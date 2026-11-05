@@ -577,3 +577,7 @@ endforeach()
 add_test(NAME test_consumer_isolation
          COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${PROJECT_BINARY_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
+
+# Default test timeouts by label (30 s, or 1800 s for tests labeled slow), so local runs match CI.
+include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
+ursatz_analyzer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
