@@ -136,11 +136,20 @@ range are drawn from defaults in the Composer.
 | `meter` | `"4/4"`, `"3/4"`, `"2/4"`, `"6/8"` or any meter, or `"random"`. Required |
 | `key` | `"D minor"`; its mode must be the mode (`/key`). Default C major or A minor |
 | `form` | `"full"` (default), `"rhythm"` or `"contour"` |
+| `strategy` | `"segments"` (default) or `"drawn"`: how the motive is made (below). Anything else is a refusal with `/strategy` |
 | `role` | `"melodic"` or `"accompaniment"` |
 | `style` | a style model file: 8 candidates are drawn for each motive and the closest to it kept. A file that cannot be read is `COMPOSER_ERR_UNSATISFIABLE` with `/style` |
 | `style_without` | up to 8 style categories read without; needs `style` |
 | `count` | 1 to 16, default 1 |
 | `seed` | 0 to 4294967295, default from the clock |
+
+**Strategy.** `"segments"` builds each motive the way a motive is made, from segments (Schoenberg's motives): one to three
+segments, `a`, its repeat `a'` on the next chord and a new `b`, with one chord on each segment from a harmony plan (`I V`,
+`I IV`, `I I`, `I V I`, `I IV I`) and an ending that slows down on a chord tone of the last chord. The motive comes with its
+harmony and its segments as its own, so in the response `analysis.base_harmony.given` and `analysis.segments.given` are
+true and the motive's `harmony` and `features` are set; a rhythm or contour motive keeps them too. `"drawn"` is the earlier
+strategy: a rhythm drawn note by note over a frame of chord tones of I, with no harmony or features of its own (the harmony
+and segments in the analysis are proposed). The vocabulary serves the names as `random_motive_strategies`.
 
 **Random mode and meter (R-269).** `"random"` is drawn from the seed by the rule the GUI used before the Composer drew, so a
 GUI seed draws what it drew: `m = ((seed + 1) * 2654435761) mod 2^32`; the mode is major when `(m >> 8)` is even and
