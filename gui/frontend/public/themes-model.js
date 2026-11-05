@@ -7,6 +7,7 @@
  *    tempo, check, seed}
  * with tempo and seed as the text typed (blank for none). */
 (function (root) {
+  const Req = root.ApiRequest || (typeof require === "function" ? require("./request.js") : null);
   const Materials = root.MaterialsModel || (typeof require === "function" ? require("./materials-model.js") : null);
   /* The Composer's words (R-270, R-276): every list below is read from the vocabulary when asked, so the model keeps no
    * table of music. The form state holds the words as the Composer spells them. */
@@ -47,14 +48,6 @@
   ];
   const THEME_TAB_KEY = "ursatz.theme.tab";
   const MAX_SLOTS = 4;
-  function jsonRequest(method, url, body) {
-    const request = { method, url };
-    if (body !== undefined) {
-      request.headers = { "Content-Type": "application/json" };
-      request.body = JSON.stringify(body);
-    }
-    return request;
-  }
 
   function text(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -543,14 +536,12 @@
 
   /* The form field a request path is about, or null. */
   function fieldForPath(path) {
-    const text_ = typeof path === "string" ? path : "";
-    const hit = FIELD_PATHS.find(([prefix]) => text_ === prefix || text_.startsWith(`${prefix}/`));
-    return hit ? hit[1] : null;
+    return Req.fieldForPath(path, FIELD_PATHS);
   }
 
   /* The request that asks the backend to check the form with the Composer (POST /api/materials/items/validate). */
   function validateRequest(state) {
-    return jsonRequest("POST", "/api/materials/items/validate", { type: "theme", body: bodyFromForm(state) });
+    return Req.validateRequest("theme", bodyFromForm(state));
   }
 
   /* --- requests -------------------------------------------------------- */
@@ -565,7 +556,7 @@
     if (text(note)) {
       request.note = text(note);
     }
-    return jsonRequest("POST", itemUrl(state.id, "/versions"), request);
+    return Req.jsonRequest("POST", itemUrl(state.id, "/versions"), request);
   }
 
   /* POST compose for the form state. options: {seed, update_uses}; a seed in
@@ -580,7 +571,7 @@
     if (o.update_uses) {
       body.update_uses = true;
     }
-    return Object.assign(jsonRequest("POST", itemUrl(state.id, "/compose"), body), { job: true });
+    return Object.assign(Req.jsonRequest("POST", itemUrl(state.id, "/compose"), body), { job: true });
   }
 
   function versionFileUrl(id, number, name) {

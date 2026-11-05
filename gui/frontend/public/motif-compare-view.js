@@ -14,9 +14,7 @@ const MotifCompareView = (function () {
     return el;
   }
 
-  function errorText(data, fallback) {
-    return data && typeof data.error === "string" && data.error !== "" ? data.error : fallback;
-  }
+  const errorText = ApiRequest.errorText;
 
   function setStatus(el, text, isError) {
     el.textContent = text;
