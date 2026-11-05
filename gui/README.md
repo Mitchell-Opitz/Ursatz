@@ -6,6 +6,28 @@ section by section next to the score. Pieces can be grouped into
 Collections. This repo is a host/shell around independent tool modules, not
 a monolithic application.
 
+## Views
+
+The Library, Tags panel, Collections, Subjects, Motifs, Themes, Pieces, Motive links, Analysis and Health views are described in [docs/views/](docs/views/library.md):
+
+- [Library and navigation](docs/views/library.md): upload, the table, filters, the Tags panel.
+- [Motifs](docs/views/motifs.md): the Materials views and the Motif editor.
+- [Themes and pieces](docs/views/themes-and-pieces.md): the Themes view, the Pieces view, item references.
+- [Analysis and score](docs/views/analysis-and-score.md): Subjects, Motive links, the Analysis view, the Score and the Inspector.
+- [Playback](docs/views/playback.md): playing pieces and motifs.
+
+## Documentation
+
+[docs/README.md](docs/README.md) lists every doc, starting with [docs/architecture.md](docs/architecture.md).
+
+## Test
+
+```
+ctest --test-dir build
+```
+
+The tests and checks are in [docs/testing.md](docs/testing.md).
+
 ## Building
 
 ```
@@ -32,12 +54,13 @@ are visible):
   `backend/include` includes an Ursatz header other than the two storage edge
   headers above, an Analyzer header outside `ursatz_analyzer/`, a Composer header
   other than `ursatz_composer/composer_api.h`, or any `*_internal.h`.
+- `scripts/check-docs.sh` fails when a README is over 10 KB, another doc over 20 KB, a relative link or anchor does not resolve, or a file under `docs/` is missing from `docs/README.md`.
 - `scripts/check-frontend-theory.sh` fails when a file under `frontend/public`
   (not `vendor/`) defines `playbackFromMidi`, `randomSettings`, `defaultCadence`,
   `parseHarmonyToken`, `HARMONY_TOKEN`, `KEY_TONICS`, `RANDOM_METERS`,
   `chordProblems` or `numeralsOk`.
 
-Done-when for the client boundary (P27), checked by hand: analyze a reference
+Done-when for the client boundary, checked by hand: analyze a reference
 piece (same claims and score as before the phase); make the "Knight's house"
 theme with the same seeded plan; during a compose `ps` shows no
 `ursatz-composer` process; opening a piece imports it once (the import counter);
@@ -46,7 +69,7 @@ all checks above pass.
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
 `external/ursatz-composer`, pinned at PR #95 (`10ea20b`, version 0.4.1, API 1.1). The backend links the Composer
-library from the submodule (see Composer routes), without the command, and it reuses the cJSON, Ursatz and Analyzer
+library from the submodule (see [Composer routes](docs/api/composer-routes.md#composer-routes)), without the command, and it reuses the cJSON, Ursatz and Analyzer
 targets above. If the submodules are missing the build stops: run `git submodule update --init
 --recursive` and build again.
 
