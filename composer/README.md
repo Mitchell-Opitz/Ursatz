@@ -21,12 +21,22 @@ git clone --recurse-submodules https://github.com/Mitchell-Opitz/Ursatz-Composer
 cd Ursatz-Composer
 cmake -S . -B build
 cmake --build build
-ctest --test-dir build --output-on-failure -LE slow
 ```
 
-If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`. The slow tests, the submodule
-pins and the library layout are in [docs/building.md](docs/building.md); the source directories are in
-[docs/structure.md](docs/structure.md).
+If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`. The submodule pins and the
+library layout are in [docs/building.md](docs/building.md); the source directories are in [docs/structure.md](docs/structure.md).
+
+## Tests
+
+Tests are split by the `slow` label so a pull request run stays short.
+
+- The fast set is every test without the `slow` label. It is what a pull request runs in CI:
+  `ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow`
+- The slow set is the tests labeled `slow`: `ctest --test-dir build -j$(nproc) -L slow`. It runs nightly in CI.
+- The full run is both sets: `ctest --test-dir build -j$(nproc)`. Run it before a push that changes behavior.
+- A fast-set test over 10 s is sped up or labeled `slow`. After a run, `scripts/slowest-tests.sh build` prints the ten
+  slowest tests and warns about any fast-set test over 10 s.
+- Timeouts come from `cmake/TestTimeouts.cmake`: 30 s for a test in the fast set and 1800 s for a slow one, unless the test sets its own.
 
 ## Usage
 
