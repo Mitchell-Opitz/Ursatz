@@ -12,6 +12,75 @@ int ursatz_gui_send_json_status(struct mg_connection *conn, int status, const ch
   return status;
 }
 
+const char *ursatz_gui_reason_phrase(int status) {
+  switch (status) {
+    case 200:
+      return "OK";
+    case 202:
+      return "Accepted";
+    case 204:
+      return "No Content";
+    case 400:
+      return "Bad Request";
+    case 404:
+      return "Not Found";
+    case 405:
+      return "Method Not Allowed";
+    case 409:
+      return "Conflict";
+    case 413:
+      return "Payload Too Large";
+    case 422:
+      return "Unprocessable Entity";
+    case 503:
+      return "Service Unavailable";
+    case 504:
+      return "Gateway Timeout";
+    default:
+      return status < 500 ? "Bad Request" : "Internal Server Error";
+  }
+}
+
+void ursatz_gui_send_json(struct mg_connection *conn, const char *body) {
+  size_t len = strlen(body);
+  mg_send_http_ok(conn, "application/json", (long)len);
+  mg_write(conn, body, len);
+}
+
+int ursatz_gui_send_failure(struct mg_connection *conn, int status, const char *message) {
+  cJSON *object = cJSON_CreateObject();
+  char *text = NULL;
+  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "message", message)) {
+    text = cJSON_PrintUnformatted(object);
+  }
+  cJSON_Delete(object);
+  if (!text) {
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
+  }
+  if (status == 200) {
+    ursatz_gui_send_json(conn, text);
+  } else {
+    ursatz_gui_send_json_status(conn, status, ursatz_gui_reason_phrase(status), text);
+  }
+  free(text);
+  return status;
+}
+
+int ursatz_gui_send_object(struct mg_connection *conn, int status, cJSON *object) {
+  char *text = object ? cJSON_PrintUnformatted(object) : NULL;
+  cJSON_Delete(object);
+  if (!text) {
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
+  }
+  if (status == 200) {
+    ursatz_gui_send_json(conn, text);
+  } else {
+    ursatz_gui_send_json_status(conn, status, ursatz_gui_reason_phrase(status), text);
+  }
+  free(text);
+  return status;
+}
+
 static int send_body_failure(struct mg_connection *conn, int status, const char *reason, const char *message) {
   cJSON *object = cJSON_CreateObject();
   char *text = NULL;

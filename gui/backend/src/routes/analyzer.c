@@ -63,12 +63,6 @@ static unsigned char *read_request_body(struct mg_connection *conn, size_t *out_
   return buffer;
 }
 
-static void send_json(struct mg_connection *conn, const char *body) {
-  size_t len = strlen(body);
-  mg_send_http_ok(conn, "application/json", (long)len);
-  mg_write(conn, body, len);
-}
-
 static void send_musicxml_export_error(struct mg_connection *conn, const char *message) {
   char body[192];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
@@ -212,14 +206,14 @@ static int handle_post(struct mg_connection *conn) {
   size_t body_size = 0;
   unsigned char *body_data = read_request_body(conn, &body_size);
   if (!body_data) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
     return 400;
   }
 
   char *filename = read_filename_header(conn);
   if (!filename) {
     free(body_data);
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
@@ -238,7 +232,7 @@ static int handle_post(struct mg_connection *conn) {
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     free(filename);
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to save piece\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to save piece\"}");
     return 200;
   }
 
@@ -254,11 +248,11 @@ static int handle_post(struct mg_connection *conn) {
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
-  send_json(conn, buf.data);
+  ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
 }
@@ -358,7 +352,7 @@ static int handle_get(struct mg_connection *conn) {
   UrsatzGuiAnalysisResult result = ursatz_gui_analysis_list(kPiecesDir, &pieces, &count);
 
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
 
@@ -385,11 +379,11 @@ static int handle_get(struct mg_connection *conn) {
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
-  send_json(conn, buf.data);
+  ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
 }
@@ -416,14 +410,14 @@ static int handle_get_groups(struct mg_connection *conn) {
   UrsatzGuiPieceSummary *pieces = NULL;
   size_t count = 0;
   if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
   UrsatzGuiMetaGroups groups;
   UrsatzGuiMetaResult grouped = ursatz_gui_meta_group(pieces, count, &groups);
   free_pieces(pieces, count);
   if (grouped != URSATZ_GUI_META_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
@@ -441,10 +435,10 @@ static int handle_get_groups(struct mg_connection *conn) {
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
-  send_json(conn, buf.data);
+  ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
 }
@@ -472,11 +466,11 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
-    send_json(conn, "{\"ok\":false,\"message\":\"piece not found\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"piece not found\"}");
     return 200;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
     return 200;
   }
 
@@ -519,7 +513,7 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
                                     &names_json)) {
       ursatz_gui_piece_detail_destroy(detail);
       json_buffer_destroy(&buf);
-      send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
+      ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
       return 200;
     }
     json_buffer_append(&buf, summary_json);
@@ -544,11 +538,11 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
 
-  send_json(conn, buf.data);
+  ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
 }
@@ -625,7 +619,7 @@ static int send_updated_piece(struct mg_connection *conn, const char *id) {
   UrsatzGuiPieceSummary *pieces = NULL;
   size_t count = 0;
   if (ursatz_gui_analysis_list(kPiecesDir, &pieces, &count) != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
     return 200;
   }
   JsonBuffer buf;
@@ -643,10 +637,10 @@ static int send_updated_piece(struct mg_connection *conn, const char *id) {
 
   if (!buf.ok) {
     json_buffer_destroy(&buf);
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
-  send_json(conn, buf.data);
+  ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
 }
@@ -687,7 +681,7 @@ static bool read_notation_member(const cJSON *item, UrsatzGuiNotation *out) {
 static int handle_patch_piece(struct mg_connection *conn, const char *id) {
   char *body = read_patch_body(conn);
   if (!body) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to read request body\"}");
     return 200;
   }
   cJSON *root = cJSON_Parse(body);
@@ -714,7 +708,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
   if (filename) {
     if (!cJSON_IsString(filename) || !filename->valuestring || filename->valuestring[0] == '\0') {
       cJSON_Delete(root);
-      send_json(conn, "{\"ok\":false,\"message\":\"invalid filename\"}");
+      ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"invalid filename\"}");
       return 200;
     }
     update.filename = filename->valuestring;
@@ -778,7 +772,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
   if (bad_member) {
     status = send_invalid_member(conn, bad_member);
   } else if (!any) {
-    send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
   } else {
     char message[96] = "";
     UrsatzGuiAnalysisResult result =
@@ -798,7 +792,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
       status = ursatz_gui_send_json_status(conn, 400, "Bad Request", text ? text : "{\"ok\":false,\"message\":\"invalid metadata\"}");
       free(text);
     } else if (result != URSATZ_GUI_ANALYSIS_OK) {
-      send_json(conn, "{\"ok\":false,\"message\":\"failed to update piece\"}");
+      ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to update piece\"}");
     } else {
       status = send_updated_piece(conn, id);
     }
@@ -819,7 +813,7 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
     return 404;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to delete piece\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to delete piece\"}");
     return 200;
   }
 
@@ -834,7 +828,7 @@ static int handle_delete_piece(struct mg_connection *conn, const char *id) {
     fprintf(stderr, "analyzer: piece %s deleted, but it could not be removed from every subject\n", id);
   }
 
-  send_json(conn, "{\"ok\":true}");
+  ursatz_gui_send_json(conn, "{\"ok\":true}");
   return 200;
 }
 
@@ -851,7 +845,7 @@ static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    send_json(conn, "{\"ok\":false,\"message\":\"failed to analyze piece again\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to analyze piece again\"}");
     return 200;
   }
 
@@ -862,10 +856,10 @@ static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
   json_buffer_append(&buf, "}");
   if (!buf.ok) {
     json_buffer_destroy(&buf);
-    send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
+    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
     return 200;
   }
-  send_json(conn, buf.data);
+  ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
 }
@@ -935,7 +929,7 @@ static int handle_get_piece_document(struct mg_connection *conn, const char *id)
     json_buffer_destroy(&buf);
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
   }
-  send_json(conn, buf.data);
+  ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
   return 200;
 }
@@ -986,7 +980,7 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
 
-  send_json(conn, meter_defaulted ? "{\"ok\":true,\"meter_defaulted\":true}" : "{\"ok\":true,\"meter_defaulted\":false}");
+  ursatz_gui_send_json(conn, meter_defaulted ? "{\"ok\":true,\"meter_defaulted\":true}" : "{\"ok\":true,\"meter_defaulted\":false}");
   return 200;
 }
 
@@ -1006,7 +1000,7 @@ static int handle_get_piece_playback(struct mg_connection *conn, const char *id)
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to build playback\"}");
   }
 
-  send_json(conn, json);
+  ursatz_gui_send_json(conn, json);
   free(json);
   return 200;
 }

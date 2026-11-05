@@ -14,45 +14,12 @@
 static const char *kComposerPrefix = "/api/composer";
 #define MAX_SEGMENTS 8
 
-static const char *reason_phrase(int status) {
-  switch (status) {
-    case 200:
-      return "OK";
-    case 400:
-      return "Bad Request";
-    case 404:
-      return "Not Found";
-    case 405:
-      return "Method Not Allowed";
-    case 422:
-      return "Unprocessable Entity";
-    case 503:
-      return "Service Unavailable";
-    case 504:
-      return "Gateway Timeout";
-    default:
-      return "Internal Server Error";
-  }
-}
-
-/* Sends a cJSON object (and frees it). */
-static int send_object(struct mg_connection *conn, int status, cJSON *object) {
-  char *text = object ? cJSON_PrintUnformatted(object) : NULL;
-  cJSON_Delete(object);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"error\":\"out of memory\"}");
-  }
-  int sent = ursatz_gui_send_json_status(conn, status, reason_phrase(status), text);
-  free(text);
-  return sent;
-}
-
 static int send_error(struct mg_connection *conn, int status, const char *error) {
   cJSON *object = cJSON_CreateObject();
   if (object) {
     cJSON_AddStringToObject(object, "error", error);
   }
-  return send_object(conn, status, object);
+  return ursatz_gui_send_object(conn, status, object);
 }
 
 /* GET /api/composer/status: the versions the Composer was built with (composer_api_versions). "version" keeps the
@@ -71,7 +38,7 @@ static int handle_status(struct mg_connection *conn) {
       cJSON_AddStringToObject(object, "stderr", reply.message);
     }
     ursatz_gui_composer_reply_destroy(&reply);
-    return send_object(conn, 500, object);
+    return ursatz_gui_send_object(conn, 500, object);
   }
   ursatz_gui_composer_reply_destroy(&reply);
   const cJSON *composer_version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
@@ -93,7 +60,7 @@ static int handle_status(struct mg_connection *conn) {
     cJSON_Delete(object);
     return send_error(conn, 500, "composer failed");
   }
-  return send_object(conn, 200, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 /* GET /api/composer/vocabulary: the words the Composer reads, as composer_api_vocabulary gives them (built once and

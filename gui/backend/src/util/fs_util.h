@@ -12,6 +12,12 @@ char *ursatz_gui_dup_string(const char *value);
 /* The current UTC time as "YYYY-MM-DDTHH:MM:SSZ". */
 void ursatz_gui_iso_utc_now(char *out, size_t out_size);
 
+/* True when path exists (a file or a directory). */
+bool ursatz_gui_path_exists(const char *path);
+
+/* Copies text into message when there is room for it. */
+void ursatz_gui_copy_message(char *message, size_t size, const char *text);
+
 /* True when path is an existing directory. */
 bool ursatz_gui_path_is_dir(const char *path);
 

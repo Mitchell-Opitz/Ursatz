@@ -35,31 +35,6 @@ static const char *kSubjectsPrefix = "/api/subjects";
 static const size_t kMaxRequestBodySize = 256 * 1024;
 static const int kMaxSegments = 8;
 
-static const char *reason_for(int status) {
-  switch (status) {
-    case 200:
-      return "OK";
-    case 404:
-      return "Not Found";
-    case 405:
-      return "Method Not Allowed";
-    case 409:
-      return "Conflict";
-    case 413:
-      return "Payload Too Large";
-    case 422:
-      return "Unprocessable Entity";
-    case 500:
-      return "Internal Server Error";
-    case 503:
-      return "Service Unavailable";
-    case 504:
-      return "Gateway Timeout";
-    default:
-      return "Bad Request";
-  }
-}
-
 /* Sends {"ok":false,"error":...} with the given status. The message goes through cJSON, so it is escaped. */
 /* The failure answer {"ok":false,"error":...}; a non-empty path (the request member the Composer refused, as a JSON
    Pointer) is added as "path". */
@@ -72,27 +47,15 @@ static int send_failure_at(struct mg_connection *conn, int status, const char *m
   }
   cJSON_Delete(object);
   if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, reason_for(500), "{\"ok\":false,\"error\":\"out of memory\"}");
+    return ursatz_gui_send_json_status(conn, 500, ursatz_gui_reason_phrase(500), "{\"ok\":false,\"error\":\"out of memory\"}");
   }
-  ursatz_gui_send_json_status(conn, status, reason_for(status), text);
+  ursatz_gui_send_json_status(conn, status, ursatz_gui_reason_phrase(status), text);
   free(text);
   return status;
 }
 
 static int send_failure(struct mg_connection *conn, int status, const char *message) {
   return send_failure_at(conn, status, message, NULL);
-}
-
-/* Sends object as the 200 response and frees it. */
-static int send_object(struct mg_connection *conn, cJSON *object) {
-  char *text = object ? cJSON_PrintUnformatted(object) : NULL;
-  cJSON_Delete(object);
-  if (!text) {
-    return send_failure(conn, 500, "out of memory");
-  }
-  ursatz_gui_send_json_status(conn, 200, reason_for(200), text);
-  free(text);
-  return 200;
 }
 
 /* {"ok":true,<key>:value}; value is moved into the answer (and freed on failure). */
@@ -108,11 +71,11 @@ static int send_ok_with(struct mg_connection *conn, const char *key, cJSON *valu
     cJSON_Delete(object);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int send_ok(struct mg_connection *conn) {
-  ursatz_gui_send_json_status(conn, 200, reason_for(200), "{\"ok\":true}");
+  ursatz_gui_send_json_status(conn, 200, ursatz_gui_reason_phrase(200), "{\"ok\":true}");
   return 200;
 }
 
@@ -447,7 +410,7 @@ static int handle_motifs_to_c(struct mg_connection *conn) {
     return send_failure(conn, 500, "out of memory");
   }
   free(notes);
-  return send_object(conn, answer);
+  return ursatz_gui_send_object(conn, 200, answer);
 }
 
 /* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers
@@ -545,7 +508,7 @@ static int handle_import_motif(struct mg_connection *conn) {
   cJSON_AddStringToObject(answer, "pickup", pickup->valuestring);
   cJSON_AddItemToObject(answer, "analysis", cJSON_DetachItemFromObjectCaseSensitive(document, "analysis"));
   cJSON_Delete(document);
-  return send_object(conn, answer);
+  return ursatz_gui_send_object(conn, 200, answer);
 }
 
 typedef struct {
@@ -651,7 +614,7 @@ static int send_playback_text(struct mg_connection *conn, char *json) {
   if (!playback) {
     return send_failure(conn, 500, "could not build the playback from the MIDI file");
   }
-  return send_object(conn, playback);
+  return ursatz_gui_send_object(conn, 200, playback);
 }
 
 /* Sends {"ok":true,"musicxml":...,"playback":{...}} and frees xml and playback. */
@@ -665,7 +628,7 @@ static int send_render_answer(struct mg_connection *conn, char *xml, cJSON *play
   }
   free(xml);
   cJSON_AddItemToObject(answer, "playback", playback);
-  return send_object(conn, answer);
+  return ursatz_gui_send_object(conn, 200, answer);
 }
 
 /* POST /api/materials/render {form, degrees, meter, key?, pickup?, render_key?, tempo?, role?}: nothing is saved. */
@@ -824,7 +787,7 @@ static int handle_get_item(struct mg_connection *conn, const char *id) {
   cJSON_AddItemToObject(object, "uses_status", uses_status);
   cJSON_AddItemToObject(object, "used_by", used_by);
   cJSON_AddItemToObject(object, "subjects", subjects);
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_patch_item(struct mg_connection *conn, const char *id) {
@@ -883,7 +846,7 @@ static int handle_delete_item(struct mg_connection *conn, const char *id) {
     if (!text) {
       return send_failure(conn, 500, "out of memory");
     }
-    ursatz_gui_send_json_status(conn, 409, reason_for(409), text);
+    ursatz_gui_send_json_status(conn, 409, ursatz_gui_reason_phrase(409), text);
     free(text);
     return 409;
   }
@@ -988,7 +951,7 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
     return send_failure(conn, 500, "out of memory");
   }
   cJSON_AddItemToObject(object, "body", version_body);
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 /* A version number from a path segment, 1 to 1000000. */
@@ -1464,7 +1427,7 @@ static int handle_variant_operations(struct mg_connection *conn) {
     cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, document);
+  return ursatz_gui_send_object(conn, 200, document);
 }
 
 /* The names --function takes, the vocabulary's functions; the stored derived.functions hold the same. */
@@ -1664,7 +1627,7 @@ static int handle_op_checks_get(struct mg_connection *conn, const char *id) {
     cJSON_Delete(checks);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, checks);
+  return ursatz_gui_send_object(conn, 200, checks);
 }
 
 /* PUT /api/materials/items/<id>/op-checks {checks}: replaces the marks. The file is not a version. */
@@ -1685,7 +1648,7 @@ static int handle_op_checks_put(struct mg_connection *conn, const char *id) {
     cJSON_Delete(stored);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, stored);
+  return ursatz_gui_send_object(conn, 200, stored);
 }
 
 /* The motif member of the version body a {item, version} reference names, with the body kept in *body. NULL with
@@ -1800,7 +1763,7 @@ static int handle_recognize(struct mg_connection *conn) {
     cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, document);
+  return ursatz_gui_send_object(conn, 200, document);
 }
 
 /* The analysis text of a variant's motive document for the form: notes_text (degrees_text when degrees is set),
@@ -2705,7 +2668,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
     cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, document);
+  return ursatz_gui_send_object(conn, 200, document);
 }
 
 /* ---- validate ----------------------------------------------------------- */
@@ -2719,7 +2682,7 @@ static int send_incomplete(struct mg_connection *conn, const char *message) {
     cJSON_Delete(object);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 /* POST /api/materials/items/validate {type: "motif"|"theme"|"piece", body}: the Composer reads the request the body
@@ -2812,7 +2775,7 @@ static int handle_validate(struct mg_connection *conn) {
     cJSON_Delete(answer);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, answer);
+  return ursatz_gui_send_object(conn, 200, answer);
 }
 
 static int route_items(struct mg_connection *conn, const char *method, char segments[][256], int count) {
@@ -3155,7 +3118,7 @@ static int send_subject_after(struct mg_connection *conn, cJSON *subject, bool a
     return send_failure(conn, 500, "out of memory");
   }
   cJSON_AddItemToObject(object, "subject", subject);
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 /* kind is "items", "pieces" or "related"; POST adds the link, DELETE removes it. */

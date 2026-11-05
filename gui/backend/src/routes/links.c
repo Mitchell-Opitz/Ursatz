@@ -14,49 +14,6 @@
 
 static const char *kLinksPrefix = "/api/links";
 
-static void send_json(struct mg_connection *conn, const char *body) {
-  size_t len = strlen(body);
-  mg_send_http_ok(conn, "application/json", (long)len);
-  mg_write(conn, body, len);
-}
-
-/* Sends {"ok":false,"message":...} with the given status. The message goes through cJSON, so it is escaped. */
-static int send_failure(struct mg_connection *conn, int status, const char *message) {
-  cJSON *object = cJSON_CreateObject();
-  char *text = NULL;
-  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "message", message)) {
-    text = cJSON_PrintUnformatted(object);
-  }
-  cJSON_Delete(object);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
-  }
-  const char *reason = status == 404   ? "Not Found"
-                       : status == 409 ? "Conflict"
-                       : status == 422 ? "Unprocessable Entity"
-                       : status == 500 ? "Internal Server Error"
-                                       : "Bad Request";
-  ursatz_gui_send_json_status(conn, status, reason, text);
-  free(text);
-  return status;
-}
-
-/* Sends object as the response with the given status (200 or 202) and frees it. */
-static int send_object(struct mg_connection *conn, int status, cJSON *object) {
-  char *text = object ? cJSON_PrintUnformatted(object) : NULL;
-  cJSON_Delete(object);
-  if (!text) {
-    return send_failure(conn, 500, "out of memory");
-  }
-  if (status == 200) {
-    send_json(conn, text);
-  } else {
-    ursatz_gui_send_json_status(conn, status, "Accepted", text);
-  }
-  free(text);
-  return status;
-}
-
 /* --- scope ---------------------------------------------------------------- */
 
 /* A string member, or NULL when it is missing or null. *bad is set when it is some other type. */
@@ -156,19 +113,19 @@ static bool add_run_titles(cJSON *run) {
 static int send_link_failure(struct mg_connection *conn, UrsatzGuiLinkResult result) {
   switch (result) {
     case URSATZ_GUI_LINK_ERR_INVALID_SCOPE:
-      return send_failure(conn, 400, "invalid scope");
+      return ursatz_gui_send_failure(conn, 400, "invalid scope");
     case URSATZ_GUI_LINK_ERR_NOT_FOUND:
-      return send_failure(conn, 404, "not found");
+      return ursatz_gui_send_failure(conn, 404, "not found");
     case URSATZ_GUI_LINK_ERR_EMPTY:
-      return send_failure(conn, 422, "the scope names no pieces");
+      return ursatz_gui_send_failure(conn, 422, "the scope names no pieces");
     case URSATZ_GUI_LINK_ERR_BUSY:
-      return send_failure(conn, 409, "a run is in progress");
+      return ursatz_gui_send_failure(conn, 409, "a run is in progress");
     case URSATZ_GUI_LINK_ERR_ALLOC:
-      return send_failure(conn, 500, "out of memory");
+      return ursatz_gui_send_failure(conn, 500, "out of memory");
     case URSATZ_GUI_LINK_ERR_FAILED:
     case URSATZ_GUI_LINK_OK:
     default:
-      return send_failure(conn, 500, "link operation failed");
+      return ursatz_gui_send_failure(conn, 500, "link operation failed");
   }
 }
 
@@ -178,20 +135,20 @@ static int send_ok_with(struct mg_connection *conn, int status, const char *key,
   if (!object || !value || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, key, value)) {
     cJSON_Delete(value);
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, status, object);
+  return ursatz_gui_send_object(conn, status, object);
 }
 
 static int handle_start_run(struct mg_connection *conn) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
-    return send_failure(conn, 400, "invalid request body");
+    return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
   UrsatzGuiLinkScope scope;
   if (!parse_scope(cJSON_GetObjectItemCaseSensitive(body, "scope"), &scope)) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "invalid scope");
+    return ursatz_gui_send_failure(conn, 400, "invalid scope");
   }
   char *id = NULL;
   UrsatzGuiLinkResult result = ursatz_gui_link_run_start(&scope, &id);
@@ -221,12 +178,12 @@ static int handle_get_run(struct mg_connection *conn, const char *id) {
   cJSON *run = NULL;
   UrsatzGuiLinkResult result = ursatz_gui_link_run_get(id, &run);
   if (result != URSATZ_GUI_LINK_OK) {
-    return result == URSATZ_GUI_LINK_ERR_NOT_FOUND ? send_failure(conn, 404, "run not found")
+    return result == URSATZ_GUI_LINK_ERR_NOT_FOUND ? ursatz_gui_send_failure(conn, 404, "run not found")
                                                     : send_link_failure(conn, result);
   }
   if (!add_run_titles(run)) {
     cJSON_Delete(run);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
   return send_ok_with(conn, 200, "run", run);
 }
@@ -234,12 +191,12 @@ static int handle_get_run(struct mg_connection *conn, const char *id) {
 static int handle_delete_run(struct mg_connection *conn, const char *id) {
   UrsatzGuiLinkResult result = ursatz_gui_link_run_delete(id);
   if (result == URSATZ_GUI_LINK_ERR_NOT_FOUND) {
-    return send_failure(conn, 404, "run not found");
+    return ursatz_gui_send_failure(conn, 404, "run not found");
   }
   if (result != URSATZ_GUI_LINK_OK) {
     return send_link_failure(conn, result);
   }
-  send_json(conn, "{\"ok\":true}");
+  ursatz_gui_send_json(conn, "{\"ok\":true}");
   return 200;
 }
 
@@ -253,7 +210,7 @@ static int handle_piece_links(struct mg_connection *conn, const char *piece_id) 
   cJSON_ArrayForEach(entry, links) {
     if (!add_link_titles(cJSON_GetObjectItemCaseSensitive(entry, "link"))) {
       cJSON_Delete(links);
-      return send_failure(conn, 500, "out of memory");
+      return ursatz_gui_send_failure(conn, 500, "out of memory");
     }
   }
   return send_ok_with(conn, 200, "links", links);
@@ -301,7 +258,7 @@ static int links_handler(struct mg_connection *conn, void *cbdata) {
 
   if (strncmp(rest, "runs/", 5) == 0) {
     if (!path_id(rest + 5, id, sizeof(id)) || !ursatz_gui_collection_is_valid_id(id)) {
-      return send_failure(conn, 404, "run not found");
+      return ursatz_gui_send_failure(conn, 404, "run not found");
     }
     if (strcmp(method, "GET") == 0) {
       return handle_get_run(conn, id);
@@ -315,7 +272,7 @@ static int links_handler(struct mg_connection *conn, void *cbdata) {
 
   if (strncmp(rest, "pieces/", 7) == 0) {
     if (!path_id(rest + 7, id, sizeof(id)) || !ursatz_gui_collection_is_valid_id(id)) {
-      return send_failure(conn, 404, "piece not found");
+      return ursatz_gui_send_failure(conn, 404, "piece not found");
     }
     if (strcmp(method, "GET") == 0) {
       return handle_piece_links(conn, id);

@@ -16,44 +16,6 @@ static const char *kStylesPrefix = "/api/styles";
 /* A style built from ids names every piece of a filtered Library. */
 static const size_t kMaxPieceIds = URSATZ_GUI_STYLE_BRIEF_MAX_PIECES;
 
-static void send_json(struct mg_connection *conn, const char *body) {
-  size_t len = strlen(body);
-  mg_send_http_ok(conn, "application/json", (long)len);
-  mg_write(conn, body, len);
-}
-
-/* Sends {"ok":false,"message":...} with the given status. The message goes through cJSON, so it is escaped. */
-static int send_failure(struct mg_connection *conn, int status, const char *message) {
-  cJSON *object = cJSON_CreateObject();
-  char *text = NULL;
-  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "message", message)) {
-    text = cJSON_PrintUnformatted(object);
-  }
-  cJSON_Delete(object);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
-  }
-  const char *reason = status == 404   ? "Not Found"
-                       : status == 422 ? "Unprocessable Entity"
-                       : status == 500 ? "Internal Server Error"
-                                       : "Bad Request";
-  ursatz_gui_send_json_status(conn, status, reason, text);
-  free(text);
-  return status;
-}
-
-/* Sends object as the 200 response and frees it. */
-static int send_object(struct mg_connection *conn, cJSON *object) {
-  char *text = object ? cJSON_PrintUnformatted(object) : NULL;
-  cJSON_Delete(object);
-  if (!text) {
-    return send_failure(conn, 500, "out of memory");
-  }
-  send_json(conn, text);
-  free(text);
-  return 200;
-}
-
 static cJSON *string_or_null(const char *text) {
   return text && text[0] != '\0' ? cJSON_CreateString(text) : cJSON_CreateNull();
 }
@@ -270,21 +232,21 @@ static cJSON *style_json(const UrsatzGuiStyle *style) {
 static int send_style_failure(struct mg_connection *conn, UrsatzGuiStyleResult result) {
   switch (result) {
     case URSATZ_GUI_STYLE_ERR_INVALID_NAME:
-      return send_failure(conn, 400, "invalid name");
+      return ursatz_gui_send_failure(conn, 400, "invalid name");
     case URSATZ_GUI_STYLE_ERR_INVALID_SOURCE:
-      return send_failure(conn, 400, "invalid source");
+      return ursatz_gui_send_failure(conn, 400, "invalid source");
     case URSATZ_GUI_STYLE_ERR_NOT_FOUND:
-      return send_failure(conn, 404, "style not found");
+      return ursatz_gui_send_failure(conn, 404, "style not found");
     case URSATZ_GUI_STYLE_ERR_NO_PIECES:
-      return send_failure(conn, 422, "no analyzable pieces");
+      return ursatz_gui_send_failure(conn, 422, "no analyzable pieces");
     case URSATZ_GUI_STYLE_ERR_SOURCE_MISSING:
-      return send_failure(conn, 422, "source not found");
+      return ursatz_gui_send_failure(conn, 422, "source not found");
     case URSATZ_GUI_STYLE_ERR_ALLOC:
-      return send_failure(conn, 500, "out of memory");
+      return ursatz_gui_send_failure(conn, 500, "out of memory");
     case URSATZ_GUI_STYLE_ERR_FAILED:
     case URSATZ_GUI_STYLE_OK:
     default:
-      return send_failure(conn, 500, "style operation failed");
+      return ursatz_gui_send_failure(conn, 500, "style operation failed");
   }
 }
 
@@ -303,17 +265,17 @@ static int send_built_style(struct mg_connection *conn, const char *id) {
     cJSON_Delete(entry);
     cJSON_Delete(skipped);
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
   cJSON_AddItemToObject(object, "style", entry);
   cJSON_AddItemToObject(object, "skipped", skipped);
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_build_style(struct mg_connection *conn) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
-    return send_failure(conn, 400, "invalid request body");
+    return ursatz_gui_send_failure(conn, 400, "invalid request body");
   }
 
   const cJSON *name_item = cJSON_GetObjectItemCaseSensitive(body, "name");
@@ -322,13 +284,13 @@ static int handle_build_style(struct mg_connection *conn) {
   const cJSON *ids_item = cJSON_GetObjectItemCaseSensitive(body, "piece_ids");
   if (name_item && !cJSON_IsString(name_item)) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "invalid name");
+    return ursatz_gui_send_failure(conn, 400, "invalid name");
   }
   const cJSON *brief_item = cJSON_GetObjectItemCaseSensitive(body, "brief");
   int sources = (filter_item != NULL) + (collection_item != NULL) + (ids_item != NULL) + (brief_item != NULL);
   if (sources != 1) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "give exactly one of filter, collection_id, piece_ids and brief");
+    return ursatz_gui_send_failure(conn, 400, "give exactly one of filter, collection_id, piece_ids and brief");
   }
 
   UrsatzGuiStyleSource source;
@@ -374,7 +336,7 @@ static int handle_build_style(struct mg_connection *conn) {
       ids = calloc((size_t)length, sizeof(*ids));
       if (!ids) {
         cJSON_Delete(body);
-        return send_failure(conn, 500, "out of memory");
+        return ursatz_gui_send_failure(conn, 500, "out of memory");
       }
       const cJSON *item = NULL;
       cJSON_ArrayForEach(item, ids_item) {
@@ -392,7 +354,7 @@ static int handle_build_style(struct mg_connection *conn) {
     free(ids);
     ursatz_gui_style_brief_free(&brief);
     cJSON_Delete(body);
-    return send_failure(conn, strcmp(failure, "out of memory") == 0 ? 500 : 400, failure);
+    return ursatz_gui_send_failure(conn, strcmp(failure, "out of memory") == 0 ? 500 : 400, failure);
   }
 
   char *id = NULL;
@@ -402,10 +364,10 @@ static int handle_build_style(struct mg_connection *conn) {
   ursatz_gui_style_brief_free(&brief);
   cJSON_Delete(body);
   if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_COLLECTION) {
-    return send_failure(conn, 404, "collection not found");
+    return ursatz_gui_send_failure(conn, 404, "collection not found");
   }
   if (result == URSATZ_GUI_STYLE_ERR_NOT_FOUND && source.kind == URSATZ_GUI_STYLE_SOURCE_BRIEF) {
-    return send_failure(conn, 404, "brief source not found");
+    return ursatz_gui_send_failure(conn, 404, "brief source not found");
   }
   if (result != URSATZ_GUI_STYLE_OK) {
     return send_style_failure(conn, result);
@@ -436,9 +398,9 @@ static int handle_list_styles(struct mg_connection *conn) {
   ursatz_gui_style_free_list(styles, count);
   if (!built) {
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_get_style(struct mg_connection *conn, const char *id) {
@@ -453,10 +415,10 @@ static int handle_get_style(struct mg_connection *conn, const char *id) {
   if (!body || !cJSON_AddBoolToObject(object, "ok", 1)) {
     cJSON_Delete(body);
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
   cJSON_AddItemToObject(object, "style", body);
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_rebuild_style(struct mg_connection *conn, const char *id) {
@@ -472,7 +434,7 @@ static int handle_delete_style(struct mg_connection *conn, const char *id) {
   if (result != URSATZ_GUI_STYLE_OK) {
     return send_style_failure(conn, result);
   }
-  send_json(conn, "{\"ok\":true}");
+  ursatz_gui_send_json(conn, "{\"ok\":true}");
   return 200;
 }
 
@@ -519,7 +481,7 @@ static int styles_handler(struct mg_connection *conn, void *cbdata) {
 
   /* An id that cannot name a style is an unknown style. */
   if (!ursatz_gui_collection_is_valid_id(id)) {
-    return send_failure(conn, 404, "style not found");
+    return ursatz_gui_send_failure(conn, 404, "style not found");
   }
 
   if (!slash) {

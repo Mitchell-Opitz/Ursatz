@@ -14,6 +14,7 @@
 #include "material_service.h"
 #include "style_service.h"
 #include "util/fs_util.h"
+#include "util/json_util.h"
 
 #define PATH_BYTES 800
 #define POOL_MAX 64
@@ -61,7 +62,7 @@ UrsatzGuiThemeResult ursatz_gui_theme_update_sources(const char *id, char *messa
         return URSATZ_GUI_THEME_ERR_NOT_FOUND;
     }
     if (result != URSATZ_GUI_MATERIAL_OK) {
-        ursatz_gui_compose_say(message, message_size, "the uses could not be read");
+        ursatz_gui_copy_message(message, message_size, "the uses could not be read");
         return URSATZ_GUI_THEME_ERR_FAILED;
     }
     UrsatzGuiThemeResult outcome = URSATZ_GUI_THEME_OK;
@@ -71,17 +72,17 @@ UrsatzGuiThemeResult ursatz_gui_theme_update_sources(const char *id, char *messa
             cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(use, "missing"))) {
             continue;
         }
-        const char *source_id = ursatz_gui_compose_text_of(use, "item_id");
+        const char *source_id = ursatz_gui_json_string(use, "item_id");
         bool done = false;
         for (const cJSON *earlier = status; earlier && earlier != use; earlier = earlier->next) {
-            done = done || strcmp(ursatz_gui_compose_text_of(earlier, "item_id"), source_id) == 0;
+            done = done || strcmp(ursatz_gui_json_string(earlier, "item_id"), source_id) == 0;
         }
         if (done) {
             continue;
         }
         result = ursatz_gui_material_update_use(id, source_id, NULL);
         if (result != URSATZ_GUI_MATERIAL_OK) {
-            ursatz_gui_compose_say(message, message_size, "a source could not be updated");
+            ursatz_gui_copy_message(message, message_size, "a source could not be updated");
             outcome = URSATZ_GUI_THEME_ERR_FAILED;
             break;
         }
@@ -97,7 +98,7 @@ static const cJSON *used_motif(const cJSON *body, const char *item_id, int versi
     const cJSON *use = NULL;
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
         const cJSON *number = cJSON_GetObjectItemCaseSensitive(use, "version");
-        if (strcmp(ursatz_gui_compose_text_of(use, "item_id"), item_id) == 0 && cJSON_IsNumber(number) && number->valueint == version) {
+        if (strcmp(ursatz_gui_json_string(use, "item_id"), item_id) == 0 && cJSON_IsNumber(number) && number->valueint == version) {
             return cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(use, "copy"), "motif");
         }
     }
@@ -110,9 +111,9 @@ cJSON *ursatz_gui_theme_motive_json(const char *id, const char *item, const cJSO
     cJSON *object = cJSON_CreateObject();
     bool ok = object && (item ? cJSON_AddStringToObject(object, "item", item) != NULL
                               : !id || cJSON_AddStringToObject(object, "id", id) != NULL);
-    ok = ok && cJSON_AddStringToObject(object, "form", "full") && ursatz_gui_compose_add_copy_or_null(object, motif, "degrees") &&
-         ursatz_gui_compose_add_copy_or_null(object, motif, "pickup") && ursatz_gui_compose_add_copy_or_null(object, motif, "harmony") &&
-         ursatz_gui_compose_add_copy_or_null(object, motif, "features") && cJSON_AddStringToObject(object, "role", role);
+    ok = ok && cJSON_AddStringToObject(object, "form", "full") && ursatz_gui_json_add_copy_or_null(object, motif, "degrees") &&
+         ursatz_gui_json_add_copy_or_null(object, motif, "pickup") && ursatz_gui_json_add_copy_or_null(object, motif, "harmony") &&
+         ursatz_gui_json_add_copy_or_null(object, motif, "features") && cJSON_AddStringToObject(object, "role", role);
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -155,7 +156,7 @@ static void chain_text(const cJSON *operations, char *out, size_t size) {
 static const cJSON *find_derived(const cJSON *list, const char *id) {
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, list) {
-        if (strcmp(ursatz_gui_compose_text_of(entry, "id"), id) == 0) {
+        if (strcmp(ursatz_gui_json_string(entry, "id"), id) == 0) {
             return entry;
         }
     }
@@ -176,7 +177,7 @@ static bool leads_to(const cJSON *list, const char *start_id, const char *target
         if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"))) {
             return false;
         }
-        const char *source = ursatz_gui_compose_text_of(derived, "source_item");
+        const char *source = ursatz_gui_json_string(derived, "source_item");
         if (strcmp(source, target) == 0) {
             return true;
         }
@@ -198,7 +199,7 @@ UrsatzGuiThemeResult ursatz_gui_theme_add_pool(const cJSON *list, const char *sl
             if (cJSON_GetArraySize(forms) >= POOL_MAX) {
                 return URSATZ_GUI_THEME_OK;
             }
-            const char *id = ursatz_gui_compose_text_of(entry, "id");
+            const char *id = ursatz_gui_json_string(entry, "id");
             if (strcmp(id, slot_item) == 0 || !leads_to(list, id, slot_item)) {
                 continue;
             }
@@ -213,8 +214,8 @@ UrsatzGuiThemeResult ursatz_gui_theme_add_pool(const cJSON *list, const char *sl
             const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
             const cJSON *degrees = cJSON_GetObjectItemCaseSensitive(motif, "degrees");
             UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
-            if (strcmp(ursatz_gui_compose_text_of(derived, "flag"), flags[pass]) == 0 && strcmp(ursatz_gui_compose_text_of(motif, "form"), "full") == 0 &&
-                strcmp(ursatz_gui_compose_text_of(motif, "role"), "melodic") == 0 && cJSON_IsString(degrees)) {
+            if (strcmp(ursatz_gui_json_string(derived, "flag"), flags[pass]) == 0 && strcmp(ursatz_gui_json_string(motif, "form"), "full") == 0 &&
+                strcmp(ursatz_gui_json_string(motif, "role"), "melodic") == 0 && cJSON_IsString(degrees)) {
                 cJSON *form = ursatz_gui_theme_motive_json(NULL, id, motif, "melodic");
                 char chain[CHAIN_TEXT_MAX];
                 chain_text(cJSON_GetObjectItemCaseSensitive(derived, "operations"), chain, sizeof(chain));
@@ -248,24 +249,24 @@ static bool composable(const cJSON *theme, bool has_brief, char *message, size_t
     if (!cJSON_IsObject(form) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "into")) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "mode")) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "meter"))) {
-        ursatz_gui_compose_say(message, message_size, "the theme form needs into, mode and meter");
+        ursatz_gui_copy_message(message, message_size, "the theme form needs into, mode and meter");
         return false;
     }
-    if (strcmp(ursatz_gui_compose_text_of(form, "into"), "hybrid") == 0 && !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "hybrid"))) {
-        ursatz_gui_compose_say(message, message_size, "a hybrid theme form needs hybrid");
+    if (strcmp(ursatz_gui_json_string(form, "into"), "hybrid") == 0 && !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "hybrid"))) {
+        ursatz_gui_copy_message(message, message_size, "a hybrid theme form needs hybrid");
         return false;
     }
-    if (strcmp(ursatz_gui_compose_text_of(form, "mode"), "style") == 0 && !has_brief) {
-        ursatz_gui_compose_say(message, message_size, "the mode style needs a brief");
+    if (strcmp(ursatz_gui_json_string(form, "mode"), "style") == 0 && !has_brief) {
+        ursatz_gui_copy_message(message, message_size, "the mode style needs a brief");
         return false;
     }
     bool has_basic = false;
     const cJSON *slot = NULL;
     cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
-        has_basic = has_basic || strcmp(ursatz_gui_compose_text_of(slot, "slot"), "basic") == 0;
+        has_basic = has_basic || strcmp(ursatz_gui_json_string(slot, "slot"), "basic") == 0;
     }
     if (!has_basic) {
-        ursatz_gui_compose_say(message, message_size, "the theme needs a basic slot");
+        ursatz_gui_copy_message(message, message_size, "the theme needs a basic slot");
         return false;
     }
     return true;
@@ -320,7 +321,7 @@ static cJSON *theme_motive_json(const char *id, const cJSON *motif) {
 static UrsatzGuiThemeResult motive_for(const cJSON *body, MotiveSet *set, cJSON *motives, const char *what,
                                        const cJSON *reference, char id[MOTIVE_ID_BYTES], char *message,
                                        size_t message_size) {
-    const char *item_id = ursatz_gui_compose_text_of(reference, "item_id");
+    const char *item_id = ursatz_gui_json_string(reference, "item_id");
     int version = cJSON_GetObjectItemCaseSensitive(reference, "version")->valueint;
     for (int i = 0; i < set->count; i++) {
         if (set->version[i] == version && strcmp(set->item_id[i], item_id) == 0) {
@@ -334,7 +335,7 @@ static UrsatzGuiThemeResult motive_for(const cJSON *body, MotiveSet *set, cJSON 
         return URSATZ_GUI_THEME_ERR_INVALID;
     }
     if (set->count >= MOTIVE_MAX) {
-        ursatz_gui_compose_say(message, message_size, "a theme can use at most 16 motifs");
+        ursatz_gui_copy_message(message, message_size, "a theme can use at most 16 motifs");
         return URSATZ_GUI_THEME_ERR_INVALID;
     }
     snprintf(id, MOTIVE_ID_BYTES, "M%d", set->count + 1);
@@ -374,9 +375,9 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
             break;
         }
         char what[32];
-        snprintf(what, sizeof(what), "%s slot", ursatz_gui_compose_text_of(slot, "slot"));
+        snprintf(what, sizeof(what), "%s slot", ursatz_gui_json_string(slot, "slot"));
         result = motive_for(body, &set, motives, what, slot, id, message, message_size);
-        if (result == URSATZ_GUI_THEME_OK && !cJSON_AddStringToObject(slots, ursatz_gui_compose_text_of(slot, "slot"), id)) {
+        if (result == URSATZ_GUI_THEME_OK && !cJSON_AddStringToObject(slots, ursatz_gui_json_string(slot, "slot"), id)) {
             result = URSATZ_GUI_THEME_ERR_ALLOC;
         }
     }
@@ -386,9 +387,9 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
             break;
         }
         char what[64];
-        snprintf(what, sizeof(what), "%s idea", ursatz_gui_compose_text_of(idea, "idea"));
+        snprintf(what, sizeof(what), "%s idea", ursatz_gui_json_string(idea, "idea"));
         result = motive_for(body, &set, motives, what, idea, id, message, message_size);
-        if (result == URSATZ_GUI_THEME_OK && !cJSON_AddStringToObject(ideas, ursatz_gui_compose_text_of(idea, "idea"), id)) {
+        if (result == URSATZ_GUI_THEME_OK && !cJSON_AddStringToObject(ideas, ursatz_gui_json_string(idea, "idea"), id)) {
             result = URSATZ_GUI_THEME_ERR_ALLOC;
         }
     }
@@ -398,7 +399,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
               cJSON_AddStringToObject(request, "key", "C");
     static const char *const form_members[] = {"into", "hybrid", "mode", "meter", "bars", "cadence", "first_cadence"};
     for (size_t i = 0; ok && i < sizeof(form_members) / sizeof(form_members[0]); i++) {
-        ok = ursatz_gui_compose_add_copy_if(request, form, form_members[i]);
+        ok = ursatz_gui_json_add_copy_if(request, form, form_members[i]);
     }
     for (int s = 0; ok && s < SLOT_COUNT; s++) {
         if (!cJSON_GetObjectItemCaseSensitive(slots, kSlotNames[s])) {
@@ -430,18 +431,18 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
     const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
     if (ok && (!accompaniment || cJSON_IsNull(accompaniment))) {
         ok = cJSON_AddNullToObject(request, "accompaniment") != NULL;
-    } else if (ok && strcmp(ursatz_gui_compose_text_of(accompaniment, "pattern"), "motive") != 0) {
+    } else if (ok && strcmp(ursatz_gui_json_string(accompaniment, "pattern"), "motive") != 0) {
         cJSON *pattern = cJSON_CreateObject();
-        ok = pattern && cJSON_AddStringToObject(pattern, "pattern", ursatz_gui_compose_text_of(accompaniment, "pattern")) &&
+        ok = pattern && cJSON_AddStringToObject(pattern, "pattern", ursatz_gui_json_string(accompaniment, "pattern")) &&
              cJSON_AddItemToObject(request, "accompaniment", pattern);
         if (!ok) {
             cJSON_Delete(pattern);
         }
     } else if (ok) {
-        const cJSON *motif = used_motif(body, ursatz_gui_compose_text_of(accompaniment, "item_id"),
+        const cJSON *motif = used_motif(body, ursatz_gui_json_string(accompaniment, "item_id"),
                                         cJSON_GetObjectItemCaseSensitive(accompaniment, "version")->valueint);
         if (!motif || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(motif, "degrees"))) {
-            ursatz_gui_compose_say(message, message_size, "the accompaniment motif has no degrees");
+            ursatz_gui_copy_message(message, message_size, "the accompaniment motif has no degrees");
             result = URSATZ_GUI_THEME_ERR_INVALID;
             ok = false;
         } else {
@@ -457,14 +458,14 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
     }
     ok = ok && cJSON_AddNullToObject(request, "voicing") != NULL;
     if (ok && style_path) {
-        ok = cJSON_AddStringToObject(request, "style", style_path) && ursatz_gui_compose_add_copy_if(request, theme, "style_weight");
+        ok = cJSON_AddStringToObject(request, "style", style_path) && ursatz_gui_json_add_copy_if(request, theme, "style_weight");
         without = cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(theme, "without"), 1);
         if (ok && without && cJSON_GetArraySize(without) > 0) {
             ok = cJSON_AddItemToObject(request, "without", without);
             without = ok ? NULL : without;
         }
     }
-    ok = ok && ursatz_gui_compose_add_copy_or_null(request, theme, "tempo");
+    ok = ok && ursatz_gui_json_add_copy_or_null(request, theme, "tempo");
 
     cJSON_Delete(without);
     cJSON_Delete(motives);
@@ -488,7 +489,7 @@ UrsatzGuiThemeResult ursatz_gui_theme_build_brief(const cJSON *brief_json, const
     UrsatzGuiStyleBrief brief;
     const char *failure = ursatz_gui_style_brief_parse(brief_json, &brief);
     if (failure) {
-        ursatz_gui_compose_say(message, message_size, failure);
+        ursatz_gui_copy_message(message, message_size, failure);
         return strcmp(failure, "out of memory") == 0 ? URSATZ_GUI_THEME_ERR_ALLOC : URSATZ_GUI_THEME_ERR_INVALID;
     }
     UrsatzGuiStyleSource source;
@@ -504,16 +505,16 @@ UrsatzGuiThemeResult ursatz_gui_theme_build_brief(const cJSON *brief_json, const
     ursatz_gui_style_brief_free(&brief);
     UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
     if (built == URSATZ_GUI_STYLE_ERR_NOT_FOUND) {
-        ursatz_gui_compose_say(message, message_size, "a collection, subject, project or style of the brief was not found");
+        ursatz_gui_copy_message(message, message_size, "a collection, subject, project or style of the brief was not found");
         result = URSATZ_GUI_THEME_ERR_UNPROCESSABLE;
     } else if (built == URSATZ_GUI_STYLE_ERR_NO_PIECES) {
-        ursatz_gui_compose_say(message, message_size, "none of the brief's pieces could be used");
+        ursatz_gui_copy_message(message, message_size, "none of the brief's pieces could be used");
         result = URSATZ_GUI_THEME_ERR_UNPROCESSABLE;
     } else if (built == URSATZ_GUI_STYLE_ERR_INVALID_SOURCE) {
-        ursatz_gui_compose_say(message, message_size, "invalid brief");
+        ursatz_gui_copy_message(message, message_size, "invalid brief");
         result = URSATZ_GUI_THEME_ERR_INVALID;
     } else if (built != URSATZ_GUI_STYLE_OK) {
-        ursatz_gui_compose_say(message, message_size, "the brief could not be built");
+        ursatz_gui_copy_message(message, message_size, "the brief could not be built");
         result = built == URSATZ_GUI_STYLE_ERR_ALLOC ? URSATZ_GUI_THEME_ERR_ALLOC : URSATZ_GUI_THEME_ERR_FAILED;
     }
     cJSON *summary = result == URSATZ_GUI_THEME_OK ? cJSON_CreateObject() : NULL;
@@ -582,7 +583,7 @@ static UrsatzGuiThemeResult run_theme(const UrsatzGuiComposeRun *run, cJSON **ou
     if (status != COMPOSER_OK) {
         result = ursatz_gui_compose_failure(status, &response, message, message_size);
     } else if (!(document = cJSON_Parse(response.json)) || !response.plan_json || !response.midi || !response.musicxml) {
-        ursatz_gui_compose_say(message, message_size, "composer output unreadable");
+        ursatz_gui_copy_message(message, message_size, "composer output unreadable");
         result = URSATZ_GUI_THEME_ERR_FAILED;
     }
     for (size_t i = 0; result == URSATZ_GUI_THEME_OK && i < 3; i++) {
@@ -591,7 +592,7 @@ static UrsatzGuiThemeResult run_theme(const UrsatzGuiComposeRun *run, cJSON **ou
         const void *data = i == 0 ? (const void *)response.plan_json : i == 1 ? (const void *)response.midi : (const void *)response.musicxml;
         size_t size = i == 1 ? response.midi_size : strlen((const char *)data);
         if (!ursatz_gui_write_file_atomic(path, data, size)) {
-            ursatz_gui_compose_say(message, message_size, "a file of the version could not be written");
+            ursatz_gui_copy_message(message, message_size, "a file of the version could not be written");
             result = URSATZ_GUI_THEME_ERR_FAILED;
         }
     }
@@ -683,10 +684,10 @@ UrsatzGuiThemeResult ursatz_gui_theme_validate(const cJSON *body, bool *complete
                                                size_t message_size) {
     *complete = false;
     *out_request = NULL;
-    ursatz_gui_compose_say(message, message_size, "");
+    ursatz_gui_copy_message(message, message_size, "");
     const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
     if (!cJSON_IsObject(theme)) {
-        ursatz_gui_compose_say(message, message_size, "the body is not a theme");
+        ursatz_gui_copy_message(message, message_size, "the body is not a theme");
         return URSATZ_GUI_THEME_OK;
     }
     const cJSON *brief = cJSON_GetObjectItemCaseSensitive(theme, "brief");
@@ -695,9 +696,9 @@ UrsatzGuiThemeResult ursatz_gui_theme_validate(const cJSON *body, bool *complete
         return URSATZ_GUI_THEME_OK;
     }
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
-    if (has_brief && strcmp(ursatz_gui_compose_text_of(form, "mode"), "style") == 0) {
+    if (has_brief && strcmp(ursatz_gui_json_string(form, "mode"), "style") == 0) {
         /* The style of the brief is built only when composing. */
-        ursatz_gui_compose_say(message, message_size, "");
+        ursatz_gui_copy_message(message, message_size, "");
         return URSATZ_GUI_THEME_OK;
     }
     UrsatzGuiThemeResult result = build_request(body, NULL, out_request, message, message_size);
@@ -711,7 +712,7 @@ UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, lon
     if (out_item) {
         *out_item = NULL;
     }
-    ursatz_gui_compose_say(message, message_size, "");
+    ursatz_gui_copy_message(message, message_size, "");
     cJSON *item = NULL;
     UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kThemeKind, id, has_seed, seed, update_uses, job, &item, message, message_size);
     if (result == URSATZ_GUI_THEME_OK && out_item) {

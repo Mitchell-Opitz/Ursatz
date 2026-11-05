@@ -1,5 +1,6 @@
 #include "style_service.h"
 #include "util/fs_util.h"
+#include "util/json_util.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -1029,10 +1030,6 @@ static bool style_dir_path(const char *id, char *out, size_t out_size) {
 }
 
 /* A copy of a string member, "" when it is absent or not a string. */
-static char *string_member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    return ursatz_gui_dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
-}
 
 /* Copies the string members of an array; *out is NULL when there are none. */
 static bool string_array_copy(const cJSON *array, char ***out, size_t *out_count) {
@@ -1100,12 +1097,12 @@ static bool load_brief(const cJSON *json, UrsatzGuiStyleBrief *out) {
                 continue;
             }
             char *fields[6];
-            fields[0] = string_member(entry, "collection_id");
-            fields[1] = string_member(filter, "composer");
-            fields[2] = string_member(filter, "source");
-            fields[3] = string_member(filter, "tag");
-            fields[4] = string_member(entry, "subject_id");
-            fields[5] = string_member(entry, "project_id");
+            fields[0] = ursatz_gui_json_string_copy(entry, "collection_id");
+            fields[1] = ursatz_gui_json_string_copy(filter, "composer");
+            fields[2] = ursatz_gui_json_string_copy(filter, "source");
+            fields[3] = ursatz_gui_json_string_copy(filter, "tag");
+            fields[4] = ursatz_gui_json_string_copy(entry, "subject_id");
+            fields[5] = ursatz_gui_json_string_copy(entry, "project_id");
             bool filled = true;
             for (int i = 0; i < 6; i++) {
                 filled = filled && fields[i] != NULL;
@@ -1225,18 +1222,18 @@ static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
 
     /* The directory name is the id; a copy of it inside the file is not trusted. */
     style->id = ursatz_gui_dup_string(id);
-    style->name = string_member(meta, "name");
-    style->created_at = string_member(meta, "created_at");
-    style->updated_at = string_member(meta, "updated_at");
+    style->name = ursatz_gui_json_string_copy(meta, "name");
+    style->created_at = ursatz_gui_json_string_copy(meta, "created_at");
+    style->updated_at = ursatz_gui_json_string_copy(meta, "updated_at");
 
     const cJSON *source = cJSON_GetObjectItemCaseSensitive(meta, "source");
     const cJSON *kind = cJSON_GetObjectItemCaseSensitive(source, "kind");
     const cJSON *filter = cJSON_GetObjectItemCaseSensitive(source, "filter");
     style->source_kind = source_kind_from_label(cJSON_IsString(kind) ? kind->valuestring : NULL);
-    style->filter_composer = string_member(filter, "composer");
-    style->filter_source = string_member(filter, "source");
-    style->filter_tag = string_member(filter, "tag");
-    style->collection_id = string_member(source, "collection_id");
+    style->filter_composer = ursatz_gui_json_string_copy(filter, "composer");
+    style->filter_source = ursatz_gui_json_string_copy(filter, "source");
+    style->filter_tag = ursatz_gui_json_string_copy(filter, "tag");
+    style->collection_id = ursatz_gui_json_string_copy(source, "collection_id");
     bool ok = style->id && style->name && style->created_at && style->updated_at && style->filter_composer &&
               style->filter_source && style->filter_tag && style->collection_id &&
               string_array_copy(cJSON_GetObjectItemCaseSensitive(source, "piece_ids"), &style->source_piece_ids,
@@ -1258,8 +1255,8 @@ static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
             if (!ok) {
                 break;
             }
-            style->skipped[style->skipped_count].id = string_member(entry, "id");
-            style->skipped[style->skipped_count].reason = string_member(entry, "reason");
+            style->skipped[style->skipped_count].id = ursatz_gui_json_string_copy(entry, "id");
+            style->skipped[style->skipped_count].reason = ursatz_gui_json_string_copy(entry, "reason");
             if (!style->skipped[style->skipped_count].id || !style->skipped[style->skipped_count].reason) {
                 free(style->skipped[style->skipped_count].id);
                 free(style->skipped[style->skipped_count].reason);
