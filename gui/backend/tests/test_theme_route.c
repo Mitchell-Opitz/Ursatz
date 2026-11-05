@@ -887,20 +887,24 @@ static void test_failures(const Motifs *m) {
   }
   version_dir(theme, 2, dir, sizeof(dir));
 
-  /* A chord in the last bar that the PAC does not allow: nothing satisfies the request. */
-  char more[300];
-  snprintf(more, sizeof(more), ",\"chords\":[{\"bar\":7,\"text\":\"II\"}]");
-  theme_body(slots, more, body, sizeof(body));
-  char *stuck = create_item("theme", "Stuck", body, &status);
-  char stuck_dir[200];
-  version_dir(stuck, 2, stuck_dir, sizeof(stuck_dir));
-  cJSON *answer = compose(stuck, "{\"seed\":1}", &status);
+  /* A basic motive of five beats in a 4/4 theme does not fit one bar: the Composer refuses it at once as
+     UNSATISFIABLE (the chord-bar refusal is covered by the Composer's own tests). */
+  char *long_motif = create_motif("Long", "full", "melodic", "C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e C4:e Eb4:e",
+                                  "null");
+  check(long_motif != NULL, "the motif longer than one bar is saved");
+  slots_of(long_motif ? long_motif : m->a, m->b, slots, sizeof(slots));
+  theme_body(slots, "", body, sizeof(body));
+  char *refused = create_item("theme", "Refused", body, &status);
+  char refused_dir[200];
+  version_dir(refused, 2, refused_dir, sizeof(refused_dir));
+  cJSON *answer = compose(refused, "{\"seed\":1}", &status);
   check(status == 422 && !ok_true(answer), "a request nothing satisfies is 422");
   check(strlen(string_of(answer, "error")) > 0, "the answer carries the Composer's message");
   cJSON_Delete(answer);
-  check(current_version(stuck) == 1 && !dir_exists(stuck_dir) && no_stage_left(stuck),
-        "a stuck run writes no version and leaves no folder");
-  free(stuck);
+  check(current_version(refused) == 1 && !dir_exists(refused_dir) && no_stage_left(refused),
+        "a refused run writes no version and leaves no folder");
+  free(refused);
+  free(long_motif);
 
   free(theme);
 }

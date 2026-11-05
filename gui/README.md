@@ -950,9 +950,10 @@ then stores the output as `motif.analysis` (scale degrees, implied harmony,
 intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
 (`^[A-Ga-g][#b]? (major|minor)$`) are checked before the request is built.
 
-- A note list or key the Composer refuses is 400 with its message and, as
-  `path`, the request member at fault (`/meter`, `/harmony`, `/input/text`);
-  no version is written.
+- A note list or key the Composer refuses is 400 (a malformed request) or 422
+  (`COMPOSER_ERR_UNSATISFIABLE`: a valid request nothing satisfies) with its
+  message and, as `path`, the request member at fault (`/meter`, `/harmony`,
+  `/input/text`); no version is written.
 - A failure of the Composer that is not the request's (out of memory, an
   internal error): the version is saved with `analysis: null` and
   `motif.analysis_error` holds the reason (`composer could not analyze the
@@ -988,7 +989,7 @@ in the motif's stored key (C major or C minor). Nothing is saved.
   (when given), `pickup`, `harmony`, `features`, `role`, `render_key`, `tempo` and `musicxml: true`; the
   MusicXML is the response's `musicxml`, not a file.
   `render_key` defaults to `key`; without either the answer is 400 "give a
-  key". A list the Composer refuses is 400 with its message.
+  key". A list the Composer refuses is 400 (malformed) or 422 (nothing satisfies it) with its message.
 - `playback` is the Analyzer's playback of the render's MIDI file
   (`analyzer_playback_to_json`: `tempo_source`, `tempo`, `parts`, `end`,
   `notes`). Positions are whole notes from the pickup start, so the first note
@@ -1000,8 +1001,9 @@ in the motif's stored key (C major or C minor). Nothing is saved.
   `key` defaults to the motif's own key, and a version without degrees is 404.
   Both come from one render kept under the version in
   `items/<id>/v<n>/render/`: `score.musicxml`, `motif.mid` and `render.json`
-  `{composer_version, render_key, tempo}`. A request with the same key, tempo
-  and Composer version reads these files, so the Composer runs at most once
+  `{api_version, composer_version, ursatz_commit, render_key, tempo}` (the three
+  versions from `composer_api_versions`). A request with the same key, tempo
+  and Composer build and Ursatz commit reads these files, an older cache missing once, so the Composer runs at most once
   per version and key.
 - `GET /api/materials/items/<id>/versions/<n>/playback?file=theme|loop|ending`
   answers the playback of a theme or piece version's `theme.mid`, `loop.mid`
@@ -1656,8 +1658,9 @@ links the Composer library (`add_subdirectory(external/ursatz-composer)` with th
 cJSON, Ursatz and Analyzer targets the GUI builds, so one version of each is in the build. A request is a cJSON
 object printed to text, never an argument list; `service/composer_client.c` moves the answer into an
 `UrsatzGuiComposerReply` (`status`, `json`, `plan_json`, `midi`, `musicxml`, and the refusal `message` and `path`). The
-CLI's exit 1 is `COMPOSER_ERR_REQUEST`, exit 2 `COMPOSER_ERR_UNSATISFIABLE`; both are a refusal (400 with the Composer's
-message and the `path` of the request member at fault, additive to `error`), anything else a failure of the run.
+CLI's exit 1 is `COMPOSER_ERR_REQUEST`, exit 2 `COMPOSER_ERR_UNSATISFIABLE`; a request error is 400 and an unsatisfiable
+request is 422 on every route, each with the Composer's message and the `path` of the request member at fault (additive
+to `error`); anything else is a failure of the run (500, or 499 when cancelled).
 
 The long runs (theme and piece composes, regenerate, variations and choose, variants, each-op and reroll) are calls of
 the same API on a job queue (R-219, R-274); no request thread waits on a compose and no process is started. The Composer
@@ -1700,7 +1703,7 @@ Routes (bodies are JSON; success bodies have `"ok":true`):
   body would compose (or, for a motif, analyze) with and has the Composer read it without composing
   (`composer_api_validate`; nothing is written). `{"ok":true,"complete":true,"request"}` gives the request with the
   Composer's defaults filled; `{"ok":true,"complete":false,"message"}` means the body is not composable yet (no
-  Composer call); a request the Composer refuses is `400` with its message and `path` (the member at fault).
+  Composer call); a request the Composer refuses is `400` (malformed) or `422` (nothing satisfies it) with its message and `path` (the member at fault).
 - `GET /api/jobs/<id>`: `{"ok": true, "job": {"id", "kind", "state", "stage", "done", "total", "http_status"?,
   "result"?}}`. `http_status` and `result` (the body the route answered before jobs) are there once the job is done or
   failed. `404` for an unknown job.
@@ -1845,9 +1848,9 @@ ctest --test-dir build
 ```
 
 Requires CMake 3.20 or newer, a C11 compiler, SQLite development headers and
-pkg-config. Ursatz is a git submodule at `external/ursatz`, pinned at PR #183
-(`0c17cb1`). The Analyzer (version 0.5.0) is a second submodule,
-`external/ursatz-analyzer`, pinned at PR #60 (`9145f9f`). cJSON 1.7.18 is
+pkg-config. Ursatz is a git submodule at `external/ursatz`, pinned at PR #195
+(`d2b85ce`). The Analyzer (version 0.6.0) is a second submodule,
+`external/ursatz-analyzer`, pinned at PR #67 (`ee8a901`). cJSON 1.7.18 is
 vendored at `external/cjson` and added first, so the Ursatz Analyzer reuses it.
 `scripts/check-pins.sh` fails when a pin is not on its remote's `main` or when
 one repository is pinned at two commits; CI runs it after the submodule
@@ -1874,7 +1877,7 @@ all checks above pass.
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
-`external/ursatz-composer`, pinned at PR #90 (`8d7a665`, version 0.4.0, API 1.1). The backend links the Composer
+`external/ursatz-composer`, pinned at PR #95 (`10ea20b`, version 0.4.1, API 1.1). The backend links the Composer
 library from the submodule (see Composer routes), without the command, and it reuses the cJSON, Ursatz and Analyzer
 targets above. If the submodules are missing the build stops: run `git submodule update --init
 --recursive` and build again.

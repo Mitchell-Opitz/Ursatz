@@ -20,7 +20,7 @@ static int failures = 0;
 
 #define OK URSATZ_GUI_MATERIAL_OK
 
-static char g_dir[64];
+static char g_dir[512];
 
 static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"D4:q F4:e A4:e D5:h\","
@@ -207,7 +207,7 @@ static void test_items_and_versions(void) {
     cJSON_Delete(current);
 
     /* A new version never rewrites an earlier one. */
-    char v1_path[200];
+    char v1_path[700];
     snprintf(v1_path, sizeof(v1_path), "%s/items/%s/v1.json", g_dir, motif);
     char *v1_before = read_all(v1_path);
     cJSON *second = cJSON_Parse(kMotifBody);
@@ -302,7 +302,7 @@ static void test_items_and_versions(void) {
 
     CHECK(ursatz_gui_material_item_delete(theme, false) == OK, "delete the theme");
     CHECK(ursatz_gui_material_item_get(theme, &meta, NULL) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "theme is gone");
-    char theme_dir[200];
+    char theme_dir[700];
     snprintf(theme_dir, sizeof(theme_dir), "%s/items/%s/v1.json", g_dir, theme);
     CHECK(access(theme_dir, F_OK) != 0, "theme versions are gone");
     CHECK(ursatz_gui_material_item_delete(theme, false) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "delete twice");
@@ -955,7 +955,7 @@ static void test_op_checks(void) {
     char *motif = new_item("motif", "Marked", home, kMotifBody);
     char *theme = new_item("theme", "Not a motif", home, kThemeBody);
     CHECK(motif && theme, "create a motif and a theme for the marks");
-    char path[256];
+    char path[700];
     snprintf(path, sizeof(path), "%s/items/%s/op-checks.json", g_dir, motif);
     char error[200] = "";
 
@@ -1054,7 +1054,7 @@ static void remove_store(void) {
         cJSON_Delete(projects);
     }
     ursatz_gui_material_service_shutdown();
-    char path[100];
+    char path[540];
     snprintf(path, sizeof(path), "%s/projects", g_dir);
     rmdir(path);
     snprintf(path, sizeof(path), "%s/items", g_dir);
@@ -1063,7 +1063,7 @@ static void remove_store(void) {
 }
 
 int main(void) {
-    snprintf(g_dir, sizeof(g_dir), "materials_%d", (int)getpid());
+    snprintf(g_dir, sizeof(g_dir), "%s/materials_%d", URSATZ_GUI_TEST_STORE_DIR, (int)getpid());
     CHECK(ursatz_gui_material_service_init(g_dir), "init");
 
     test_general_project();

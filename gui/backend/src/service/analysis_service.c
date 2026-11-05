@@ -1007,13 +1007,6 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_notation(const char *pieces_dir,
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
-                                                          const char *new_filename) {
-    UrsatzGuiMetaUpdate update = {0};
-    update.filename = new_filename;
-    return ursatz_gui_analysis_update_metadata(pieces_dir, id, &update, NULL, 0);
-}
-
 static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const char *id) {
     char dir_path[320];
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {

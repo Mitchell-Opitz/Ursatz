@@ -2399,7 +2399,7 @@
     "error": "Error: cannot load '/tmp/ursatz-to-c-BHKoV6' (value) at token 2 (column 5): '9' is not a scale degree; use 1 to 7, with an optional # or b before it",
     "ok": false
    },
-   "status": 400
+   "status": 422
   },
   {
    "body": null,
@@ -2699,7 +2699,7 @@
       ],
       "shape": "ascending"
      },
-     "degrees_text": "5,:q #6,:q",
+     "degrees_text": "5,:q 7,:q",
      "form": "full",
      "implied_harmony": {
       "candidates": [
@@ -2737,7 +2737,7 @@
      "intervals": [
       {
        "semitones": 3,
-       "steps": 1
+       "steps": 2
       }
      ],
      "key": {
@@ -2808,13 +2808,13 @@
         "degree": 5
        },
        {
-        "alteration": 1,
-        "degree": 6
+        "alteration": -1,
+        "degree": 7
        }
       ],
       "end": {
-       "alteration": 1,
-       "degree": 6
+       "alteration": -1,
+       "degree": 7
       },
       "start": {
        "alteration": 0,
@@ -2847,7 +2847,7 @@
     "key_found": true,
     "meter": "3/4",
     "moved_from": "G major",
-    "notes_text": "G3:q A#3:q",
+    "notes_text": "G3:q B3:q",
     "ok": true,
     "pickup": "0"
    },
@@ -2863,7 +2863,7 @@
     "error": "Error: cannot load '/tmp/ursatz-import-MR9rIP' (polyphonic) at at 0/1 (note 2): the note sounds while the note before it still sounds; a motive is one voice",
     "ok": false
    },
-   "status": 400
+   "status": 422
   },
   {
    "body": {
@@ -6005,7 +6005,7 @@
    "reply": {
     "available": true,
     "ok": true,
-    "version": "ursatz-composer 0.4.0"
+    "version": "ursatz-composer 0.4.1"
    },
    "status": 200
   }

@@ -195,15 +195,6 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_notation(const char *pieces_dir,
                                                           UrsatzGuiNotation *out);
 
 /*
- * Rewrites the filename in the piece's meta.json (the display name shown in
- * the Library view): ursatz_gui_analysis_update_metadata with only filename.
- * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. The
- * caller rejects an empty new_filename; this stores whatever it is given.
- */
-UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir, const char *id,
-                                                          const char *new_filename);
-
-/*
  * Runs the Analyzer again on the piece's stored source and rewrites
  * analysis.json, then the analyzer_version and document_schema_version in
  * meta.json (filename, format and uploaded_at stay). The piece is unchanged

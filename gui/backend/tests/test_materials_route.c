@@ -660,7 +660,7 @@ static void test_motif_import(void) {
 
   size = midi_file(file, two_voices, sizeof(two_voices));
   answer = import_exchange(file, size, "", &status);
-  check(status == 400 && strlen(string_of(answer, "error")) > 0, "a polyphonic MIDI file is 400 with the Composer's message");
+  check(status == 422 && strlen(string_of(answer, "error")) > 0, "a polyphonic MIDI file is 422 with the Composer's message");
   cJSON_Delete(answer);
 
   answer = import_exchange(file, 0, "", &status);
@@ -2154,14 +2154,14 @@ static void test_refusal_paths(void) {
 
   answer = json_exchange("POST", "/api/materials/motifs/to-c",
                          "{\"degrees\":\"1:q 3:q 5:q 1:q 3:q 5:q 1:q\",\"mode\":\"major\",\"meter\":\"4/4\",\"pickup\":\"4\"}", &status);
-  check(status == 400 && strcmp(string_of(answer, "path"), "/input/text") == 0, "a pickup the bar cannot hold is refused at /input/text");
+  check(status == 422 && strcmp(string_of(answer, "path"), "/input/text") == 0, "a pickup the bar cannot hold is refused at /input/text");
   cJSON_Delete(answer);
 
   answer = json_exchange("POST", "/api/materials/render",
                          "{\"form\":\"full\",\"degrees\":\"1:q 9:q\",\"meter\":\"4/4\",\"key\":\"D minor\",\"render_key\":\"D minor\","
                          "\"pickup\":\"0\"}",
                          &status);
-  check(status == 400 && strcmp(string_of(answer, "path"), "/input/text") == 0 && strstr(string_of(answer, "error"), "9") != NULL,
+  check(status == 422 && strcmp(string_of(answer, "path"), "/input/text") == 0 && strstr(string_of(answer, "error"), "9") != NULL,
         "a degree list that is not one is refused at /input/text");
   cJSON_Delete(answer);
 
@@ -2195,7 +2195,7 @@ static void test_validation(void) {
 
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"body\":%s}", kBadMotifBody);
   answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
-  check(status == 400 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/input/text") == 0,
+  check(status == 422 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/input/text") == 0,
         "notes the Composer cannot read are refused at /input/text");
   cJSON_Delete(answer);
 

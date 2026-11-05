@@ -351,6 +351,21 @@ static bool composer_refused(const UrsatzGuiComposerReply *reply) {
   return reply->status == COMPOSER_ERR_REQUEST || reply->status == COMPOSER_ERR_UNSATISFIABLE;
 }
 
+/* The status a Composer refusal is sent with: 422 when nothing satisfies a valid request, 400 for a malformed one, 499
+   for a cancelled job, else 500 (ALLOC, INTERNAL). */
+static int composer_failure_status(const UrsatzGuiComposerReply *reply) {
+  switch (reply->status) {
+    case COMPOSER_ERR_UNSATISFIABLE:
+      return 422;
+    case COMPOSER_ERR_REQUEST:
+      return 400;
+    case COMPOSER_ERR_CANCELLED:
+      return 499;
+    default:
+      return 500;
+  }
+}
+
 /* The motive request of the Composer API: input.text, and input.format / input.form when given, meter, key (when not
    NULL) and pickup. NULL on allocation failure. */
 static cJSON *motive_request(const char *format, const char *form, const char *text, const char *meter, const char *key,
@@ -666,7 +681,7 @@ static char *degrees_to_c_notes(const char *degrees, const char *mode, const cha
   }
   char *notes = NULL;
   if (composer_refused(&reply)) {
-    to_c_fail_at(failure, 400, reply.message[0] ? reply.message : "composer could not read the degrees", reply.path);
+    to_c_fail_at(failure, composer_failure_status(&reply), reply.message[0] ? reply.message : "composer could not read the degrees", reply.path);
   } else {
     cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
     const cJSON *text = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "analysis"), "notes_text");
@@ -750,7 +765,8 @@ static int handle_import_motif(struct mg_connection *conn) {
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(composer_status, &response, &reply);
   if (reply.status != COMPOSER_OK) {
-    int failed = send_failure_at(conn, 400, reply.message[0] ? reply.message : "composer could not read the MIDI file",
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
+                                 reply.message[0] ? reply.message : "composer could not read the MIDI file",
                                  reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
@@ -895,7 +911,7 @@ static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_mi
   }
   bool ok = false;
   if (composer_refused(&reply)) {
-    render_fail_at(failure, 400, reply.message[0] ? reply.message : "composer could not render the motif", reply.path);
+    render_fail_at(failure, composer_failure_status(&reply), reply.message[0] ? reply.message : "composer could not render the motif", reply.path);
   } else {
     char *xml = reply.status == COMPOSER_OK && reply.musicxml && reply.midi ? strdup(reply.musicxml) : NULL;
     if (xml) {
@@ -1485,8 +1501,9 @@ static int handle_version_file(struct mg_connection *conn, const char *id, const
 }
 
 /* The render cache of a motif version (R-275): items/<id>/v<n>/render/ holds score.musicxml and motif.mid, and
-   render.json {composer_version, render_key, tempo} names what they were made with. A version never changes, so the
-   files stand for the same key, tempo and Composer version. */
+   render.json {api_version, composer_version, ursatz_commit, render_key, tempo} names what they were made with. A
+   version never changes, so the files stand for the same key, tempo and Composer build (its API version, release and
+   Ursatz commit, composer_api_versions). */
 static bool render_cache_dir(const char *id, int number, char *out, size_t out_size) {
   char version_dir[512];
   return ursatz_gui_material_version_dir(id, number, version_dir, sizeof(version_dir)) &&
@@ -1497,19 +1514,26 @@ static bool render_cache_file(const char *dir, const char *name, char *out, size
   return snprintf(out, out_size, "%s/%s", dir, name) < (int)out_size;
 }
 
-/* True when render.json in dir names this render key, tempo and the linked Composer. */
+/* True when the string member name of meta equals value and value is not empty. */
+static bool render_meta_is(const cJSON *meta, const char *name, const char *value) {
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, name);
+  return cJSON_IsString(item) && value[0] != '\0' && strcmp(item->valuestring, value) == 0;
+}
+
+/* True when render.json in dir names this render key, tempo and the linked Composer build. */
 static bool render_cache_matches(const char *dir, const char *render_key, int tempo) {
   char path[640];
   if (!render_cache_file(dir, "render.json", path, sizeof(path))) {
     return false;
   }
   cJSON *meta = ursatz_gui_read_json_object(path);
-  const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "composer_version");
+  UrsatzGuiComposerBuild build = ursatz_gui_composer_build();
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(meta, "render_key");
   const cJSON *cached_tempo = cJSON_GetObjectItemCaseSensitive(meta, "tempo");
-  bool same = cJSON_IsString(version) && strcmp(version->valuestring, composer_api_version()) == 0 &&
-              cJSON_IsString(key) && strcmp(key->valuestring, render_key) == 0 && cJSON_IsNumber(cached_tempo) &&
-              cached_tempo->valueint == tempo;
+  bool same = render_meta_is(meta, "api_version", build.api_version) &&
+              render_meta_is(meta, "composer_version", build.composer_version) &&
+              render_meta_is(meta, "ursatz_commit", build.ursatz_commit) && cJSON_IsString(key) &&
+              strcmp(key->valuestring, render_key) == 0 && cJSON_IsNumber(cached_tempo) && cached_tempo->valueint == tempo;
   cJSON_Delete(meta);
   return same;
 }
@@ -1541,7 +1565,10 @@ static void render_cache_write(const char *id, int number, const char *render_ke
   if (!meta) {
     return;
   }
-  cJSON_AddStringToObject(meta, "composer_version", composer_api_version());
+  UrsatzGuiComposerBuild build = ursatz_gui_composer_build();
+  cJSON_AddStringToObject(meta, "api_version", build.api_version);
+  cJSON_AddStringToObject(meta, "composer_version", build.composer_version);
+  cJSON_AddStringToObject(meta, "ursatz_commit", build.ursatz_commit);
   cJSON_AddStringToObject(meta, "render_key", render_key);
   cJSON_AddNumberToObject(meta, "tempo", tempo);
   char *meta_text = cJSON_PrintUnformatted(meta);
@@ -1755,8 +1782,11 @@ static cJSON *lineage_root(const cJSON *motif) {
   return cJSON_IsObject(derived) ? (cJSON_Delete(root), NULL) : root;
 }
 
-/* The largest seed the Composer takes: its cap is 4294967295 less the 16 variants of a run. */
-static const double kMaxVariantSeed = 4294967279.0;
+/* The largest seed a variants request takes: limits.seed_max.variants of the vocabulary, -1 when it is not given (no
+   seed is then valid). */
+static double max_variant_seed(void) {
+  return ursatz_gui_composer_seed_max("variants");
+}
 
 /* Runs the Composer API `variants` on the motif member of a version body (its degrees, form, meter, key, pickup, harmony,
    features and role). chain (an object {"steps": [...]}) is optional and means random chains when NULL; seed is optional
@@ -1830,7 +1860,7 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
     /* the command printed the notices on stderr, not in the document */
     cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
   } else {
-    *status = composer_refused(&reply) ? 400 : reply.status == COMPOSER_ERR_CANCELLED ? 499 : 500;
+    *status = composer_failure_status(&reply);
     snprintf(message, message_size, "%s", reply.message[0] ? reply.message : "composer could not make variants");
   }
   ursatz_gui_composer_reply_destroy(&reply);
@@ -1949,7 +1979,7 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
                (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
-                               seed_item->valuedouble <= kMaxVariantSeed &&
+                               seed_item->valuedouble <= max_variant_seed() &&
                                seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
   if (!valid) {
     cJSON_Delete(body);
@@ -1981,7 +2011,7 @@ static int handle_each_op(struct mg_connection *conn, const char *id) {
   if (cJSON_IsNull(seed_item)) {
     seed_item = NULL;
   }
-  if (seed_item && (!cJSON_IsNumber(seed_item) || seed_item->valuedouble < 0 || seed_item->valuedouble > kMaxVariantSeed ||
+  if (seed_item && (!cJSON_IsNumber(seed_item) || seed_item->valuedouble < 0 || seed_item->valuedouble > max_variant_seed() ||
                     seed_item->valuedouble != (double)(long long)seed_item->valuedouble)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "seed is a whole number from 0");
@@ -2131,7 +2161,7 @@ static int handle_recognize(struct mg_connection *conn) {
   }
   cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
-    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not recognize the motifs", reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
@@ -2746,7 +2776,7 @@ static void reroll_run(const char *id, const ComposerJob *composer_job, UrsatzGu
   double base = cJSON_IsNumber(stored_seed) ? stored_seed->valuedouble : 0;
   double seed = 0;
   for (int attempt = 0; chain && attempt < 16; attempt++) {
-    seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
+    seed = fmod(base + 1000003.0 + attempt, max_variant_seed() + 1);
     cJSON_Delete(document);
     document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, false, chain, 1, seed, composer_job,
                             &status, message, sizeof(message));
@@ -3035,7 +3065,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   }
   cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
-    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not draw the motives", reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
@@ -3153,7 +3183,7 @@ static int handle_validate(struct mg_connection *conn) {
   cJSON *filled = document ? cJSON_DetachItemFromObjectCaseSensitive(document, "request") : NULL;
   cJSON_Delete(document);
   if (!filled) {
-    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+    int failed = send_failure_at(conn, composer_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not check the request", reply.path);
     ursatz_gui_composer_reply_destroy(&reply);
     return failed;
