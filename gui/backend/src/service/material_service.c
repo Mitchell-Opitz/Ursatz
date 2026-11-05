@@ -2766,7 +2766,7 @@ int ursatz_gui_material_migrate_tones(const char *materials_dir) {
       char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
       char refusal[512] = "";
       char refusal_path[128] = "";
-      UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, analysis_error, refusal, sizeof(refusal), refusal_path,
+      UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, NULL, analysis_error, refusal, sizeof(refusal), refusal_path,
                                                     sizeof(refusal_path));
       if (analysis == URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
         cJSON *item = NULL;

@@ -334,6 +334,52 @@ static const char *analysis_degrees_text(const cJSON *output, const char *form) 
   return cJSON_IsString(text) ? text->valuestring : NULL;
 }
 
+/* True when a string member differs between two motif members (a missing member equals an empty one). */
+static bool member_text_differs(const cJSON *motif, const cJSON *previous, const char *name) {
+  const cJSON *now = cJSON_GetObjectItemCaseSensitive(motif, name);
+  const cJSON *before = cJSON_GetObjectItemCaseSensitive(previous, name);
+  const char *now_text = cJSON_IsString(now) ? now->valuestring : "";
+  const char *before_text = cJSON_IsString(before) ? before->valuestring : "";
+  return strcmp(now_text, before_text) != 0;
+}
+
+/* True when the segments of a motif body are to be proposed by the Composer (R-312): it has no features, or its
+   segments are still proposed (segments_proposed) and its notes, pickup, meter or form differ from the previous version.
+   previous_body is the previous version's body, NULL when there is none (the segments then stay as they are). */
+static bool segments_to_propose(const cJSON *motif, const cJSON *previous_body) {
+  const cJSON *features = cJSON_GetObjectItemCaseSensitive(motif, "features");
+  if (!cJSON_IsArray(features) || cJSON_GetArraySize(features) == 0) {
+    return true;
+  }
+  if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")) || !previous_body) {
+    return false;
+  }
+  const cJSON *previous = cJSON_GetObjectItemCaseSensitive(previous_body, "motif");
+  return !cJSON_IsObject(previous) || member_text_differs(motif, previous, "notes") ||
+         member_text_differs(motif, previous, "pickup") || member_text_differs(motif, previous, "meter") ||
+         member_text_differs(motif, previous, "form");
+}
+
+/* Stores the proposed segments of an analysis document as motif.features with segments_proposed true. False on
+   allocation failure; a document without segments leaves the motif as it is. */
+static bool store_proposed_segments(cJSON *motif, const cJSON *document) {
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
+  const cJSON *segments = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(analysis, "segments"), "items");
+  if (!cJSON_IsArray(segments)) {
+    return true;
+  }
+  cJSON *features = cJSON_Duplicate(segments, 1);
+  cJSON *flag = cJSON_CreateTrue();
+  if (!features || !flag) {
+    cJSON_Delete(features);
+    cJSON_Delete(flag);
+    return false;
+  }
+  set_motif_member(motif, "features", features);
+  set_motif_member(motif, "segments_proposed", flag);
+  return true;
+}
+
 /* ---- Composer API requests (R-219) ------------------------------------ */
 
 /* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
@@ -342,8 +388,8 @@ static const char *analysis_degrees_text(const cJSON *output, const char *form) 
    analysis_error (URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE bytes, empty when analyzed) names the reason; the reason is also stored as
    motif.analysis_error, null when analyzed. When the Composer reads the input and refuses it, or a full motif has no key to
    write its degrees in, the result is REFUSED and refusal holds its message. */
-UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, char *analysis_error, char *refusal,
-                                          size_t refusal_size, char *refusal_path, size_t refusal_path_size) {
+UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, const cJSON *previous_body, char *analysis_error,
+                                          char *refusal, size_t refusal_size, char *refusal_path, size_t refusal_path_size) {
   analysis_error[0] = '\0';
   cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
   if (!cJSON_IsObject(motif)) {
@@ -364,7 +410,13 @@ UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, char *
     return URSATZ_GUI_MOTIF_ANALYSIS_DONE;
   }
   bool full = strcmp(form->valuestring, "full") == 0;
+  /* Segments to propose: the request sends no features, and the proposal comes back as the motif's features. */
+  bool propose = segments_to_propose(motif, previous_body);
+  cJSON *kept_features = propose ? cJSON_DetachItemFromObjectCaseSensitive(motif, "features") : NULL;
   cJSON *request = ursatz_gui_motif_request(motif);
+  if (kept_features) {
+    cJSON_AddItemToObject(motif, "features", kept_features);
+  }
   if (!request) {
     return URSATZ_GUI_MOTIF_ANALYSIS_ALLOC;
   }
@@ -404,6 +456,13 @@ UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, char *
   }
   cJSON *reason = analysis_error[0] ? cJSON_CreateString(analysis_error) : cJSON_CreateNull();
   if (!analysis || !degrees || !reason) {
+    cJSON_Delete(reason);
+    cJSON_Delete(analysis);
+    cJSON_Delete(degrees);
+    return URSATZ_GUI_MOTIF_ANALYSIS_ALLOC;
+  }
+  bool stored = !propose || !cJSON_IsObject(analysis) || store_proposed_segments(motif, analysis);
+  if (!stored) {
     cJSON_Delete(reason);
     cJSON_Delete(analysis);
     cJSON_Delete(degrees);

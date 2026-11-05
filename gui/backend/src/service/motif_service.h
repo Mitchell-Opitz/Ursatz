@@ -82,8 +82,13 @@ typedef enum {
  * for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
  * analysis_error (URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE bytes, empty when analyzed) names the reason; the reason is also
  * stored as motif.analysis_error, null when analyzed. When the Composer reads the input and refuses it, or a full motif
- * has no key to write its degrees in, the result is REFUSED and refusal holds its message. */
-UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, char *analysis_error, char *refusal,
-                                                     size_t refusal_size, char *refusal_path, size_t refusal_path_size);
+ * has no key to write its degrees in, the result is REFUSED and refusal holds its message.
+ * Segments (R-312): when the motif has no features, or segments_proposed is true and its notes, pickup, meter or form
+ * differ from previous_body (the previous version's body; NULL for none), the request sends no features and the
+ * Composer's proposal is stored as motif.features with segments_proposed true. Otherwise the features are kept and sent
+ * as they are, and segments_proposed is kept (false when absent). */
+UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, const cJSON *previous_body, char *analysis_error,
+                                                     char *refusal, size_t refusal_size, char *refusal_path,
+                                                     size_t refusal_path_size);
 
 #endif /* URSATZ_GUI_MOTIF_SERVICE_H */
