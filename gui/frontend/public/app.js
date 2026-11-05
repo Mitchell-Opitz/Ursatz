@@ -1432,14 +1432,46 @@ function buildNotationRow(data) {
   return row;
 }
 
+/* GET a plain-text export (the Analyzer's text, docs/text-export.md). Rejects with an Error carrying the route's
+   message when the status is not 200. */
+async function fetchExportText(url) {
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (error) {
+    throw new Error("Could not reach the backend.");
+  }
+  if (res.ok) {
+    return res.text();
+  }
+  let message = `Export failed (${res.status}).`;
+  try {
+    const body = await res.json();
+    if (body && body.message) {
+      message = body.message;
+    }
+  } catch (error) {
+    // Keep the status message.
+  }
+  throw new Error(message);
+}
+
 /* Data mode: the Provenance list, then the claim tabs. */
 function renderDataMode(dataEl, data, tabId) {
   dataEl.innerHTML = `
     <div class="sidebar-label">Provenance</div>
     <dl id="analysis-provenance" class="provenance-list"></dl>
+    <div id="analysis-export" class="analysis-export"></div>
     <div id="analysis-tabs" class="analysis-tabs"></div>
     <div id="analysis-claims" class="analysis-claims"></div>
   `;
+  dataEl.querySelector("#analysis-export").appendChild(
+    ExportControl.create({
+      fetchText: (query) => fetchExportText(`/api/analyzer/pieces/${data.id}/export${query}`),
+      filename: () => (data.filename || "").replace(/\.[^.]*$/, "") || data.id,
+      withRange: true,
+    }),
+  );
   renderProvenancePanel(data.document);
   renderAnalysisTabs(data, tabId);
 }
