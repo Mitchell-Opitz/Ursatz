@@ -18,7 +18,7 @@ while IFS= read -r hit; do
 done < <(
     grep -rnE "\b($detectors)" src cli --include='*.c' --include='*.h' || true
     grep -rnE "\b$render" src cli --include='*.c' --include='*.h' |
-        grep -vE '^src/(check/hearing|render/export|render/render|fill/variations)\.c:' || true
+        grep -vE '^src/(check/hearing|render/export|render/render|fill/variations)\.c:|^src/include/ursatz_composer/render\.h:' || true
 )
 
 if [ "$failed" -ne 0 ]; then
