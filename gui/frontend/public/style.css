@@ -2500,3 +2500,12 @@ button.button-danger:disabled {
   border-radius: 0.6em;
   opacity: 0.75;
 }
+
+.materials-tag {
+  font-size: 0.75rem;
+  font-weight: normal;
+  padding: 0 0.4em;
+  border: 1px solid currentColor;
+  border-radius: 0.6em;
+  opacity: 0.75;
+}

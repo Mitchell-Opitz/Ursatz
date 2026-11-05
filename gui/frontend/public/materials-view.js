@@ -916,13 +916,24 @@ function buildMotifEditor(body, tabStatus) {
   field("Base harmony", harmony, "harmony");
   hintUnder("harmony", MaterialsModel.HARMONY_HINT);
 
-  el.appendChild(materialsElement("h2", "section-title", "Segments"));
+  const segmentsTitle = materialsElement("h2", "section-title", "Segments");
+  const proposedTag = materialsElement("span", "materials-tag", "Proposed");
+  segmentsTitle.append(" ", proposedTag);
+  el.appendChild(segmentsTitle);
   el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
   const featureTable = materialsElement("table", "library-table materials-features");
   el.appendChild(featureTable);
   errors.features = materialsElement("div", "materials-field-error");
   el.appendChild(errors.features);
   let featureRows = initial.features.map((feature) => ({ ...feature }));
+  /* True while the segments are the Composer's proposal; any edit of the rows makes them the motif's own. */
+  let segmentsProposed = initial.segmentsProposed;
+
+  function setProposed(value) {
+    segmentsProposed = value;
+    proposedTag.hidden = !segmentsProposed;
+  }
+  setProposed(segmentsProposed);
 
   function drawFeatures() {
     featureTable.innerHTML = "";
@@ -943,6 +954,7 @@ function buildMotifEditor(body, tabStatus) {
         input.setAttribute("aria-label", `Segment ${index + 1} ${prop}`);
         input.addEventListener("input", () => {
           row[prop] = prop === "label" ? input.value : input.value.trim() === "" ? NaN : Number(input.value);
+          setProposed(false);
         });
         const cell = materialsElement("td");
         cell.appendChild(input);
@@ -952,6 +964,7 @@ function buildMotifEditor(body, tabStatus) {
       remove.type = "button";
       remove.addEventListener("click", () => {
         featureRows.splice(index, 1);
+        setProposed(false);
         drawFeatures();
       });
       const last = materialsElement("td");
@@ -965,9 +978,19 @@ function buildMotifEditor(body, tabStatus) {
   addFeature.type = "button";
   addFeature.addEventListener("click", () => {
     featureRows.push(MaterialsModel.newFeatureRow(featureRows));
+    setProposed(false);
     drawFeatures();
   });
   el.appendChild(addFeature);
+  /* Clears the rows and marks them proposed: the save then takes the Composer's proposal. */
+  const useProposal = materialsElement("button", "button-secondary", "Use proposal");
+  useProposal.type = "button";
+  useProposal.addEventListener("click", () => {
+    featureRows = [];
+    setProposed(true);
+    drawFeatures();
+  });
+  el.appendChild(useProposal);
 
   function values() {
     return {
@@ -981,6 +1004,7 @@ function buildMotifEditor(body, tabStatus) {
       harmony: harmony.value,
       toneOverrides: { ...toneOverrides },
       features: featureRows.map((row) => ({ ...row })),
+      segmentsProposed,
     };
   }
 
