@@ -2,6 +2,8 @@
 
 The public headers of the `ursatz_analyzer` library, its CMake targets and the pipeline stages behind them. Back to the [docs index](README.md). The GUI entries are in [gui-api.md](gui-api.md) and the Composer entries in [composer-api.md](composer-api.md).
 
+## Library
+
 The pipeline builds as the `ursatz_analyzer` static library. The CLI and the tests link it.
 Its public include directory is `include/`, and consumers include headers as
 `<ursatz_analyzer/xxx.h>`. Everything under `src/` is private.
