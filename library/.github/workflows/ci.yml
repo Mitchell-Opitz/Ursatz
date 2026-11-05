@@ -28,7 +28,7 @@ jobs:
       - name: Build
         run: cmake --build build -j
       - name: Test
-        run: ctest --test-dir build --output-on-failure --no-tests=error -LE slow
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
       - name: Accuracy gate
         run: ./build/tests/accuracy/accuracy_harness
       - name: Upload accuracy report
