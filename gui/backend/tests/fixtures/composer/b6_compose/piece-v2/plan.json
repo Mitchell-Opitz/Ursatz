@@ -2,8 +2,8 @@
   "format": "ursatz-composer-plan",
   "format_version": 2,
   "metadata": {
-    "composer_version": "0.4.0",
-    "ursatz_commit": "0c17cb11fcaa1b1cd2cf79642da3e0ca55a6ce88"
+    "composer_version": "0.4.1",
+    "ursatz_commit": "d2b85cedb7bb3788197206dc6d7a18efeef6372a"
   },
   "meter": {
     "spans": [{
