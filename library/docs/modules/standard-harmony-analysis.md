@@ -80,3 +80,18 @@ An inverted V or an arrival on an inverted tonic is not a cadence (it prolongs, 
 - A cadential 6/4 is recognised by its beat (not weaker than the V), its bass on 5 and the V after it; a 6/4 on a weaker beat than its V is read as another type or left unclassified.
 - The alto and tenor are not in the input, so a 6/4 whose inner voices move is read from the soprano alone.
 - Tonic lines are the framework's, so a tonic prolongation not of the listed kinds is not found, and dominant prolongation is limited as above.
+
+## Weak arrivals and boundary cadences
+
+Cadence arrivals below `min_arrival_strength` (MEDIUM) are found when `allow_weak_arrival` is on (default true): a
+root-position tonic directly after a root-position V that starts on a stronger beat than the tonic (at equal strength,
+on the beat against a tonic off it, the weak beat and the weak half beat after it), and the tonic is long
+(`arrival_min_beats`), followed by a soprano rest, or ends the piece. The claim records the arrival's beat strength
+(`arrival_beat_strength`). Half cadences arriving on a weak beat are not found.
+
+Cadences at formal boundaries (`harmony_analysis_add_boundary_cadences`, a post-pass): the caller passes the section start
+times it found, as data, and the cadences already found. A root-position V that ends a run directly before a section start
+is a half cadence ending the earlier section, even when the tonic follows (R-038); the tonic starts the new section and is
+not a cadential arrival, so an authentic cadence read into it is replaced. A V with no tonic or predominant before it is left
+alone. Sections are not recomputed from the added half cadences. The Framework v1 chain has no section step yet and takes a
+section start at each key region that returns to the home key.
