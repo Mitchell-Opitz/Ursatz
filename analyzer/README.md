@@ -22,6 +22,22 @@ ctest --test-dir build --output-on-failure
 
 Build details, the test list and the CI checks are in [docs/building.md](docs/building.md).
 
+## Tests
+
+Every test is in one of two sets. The fast set is every test without the `slow` label; pull request CI runs it in parallel:
+
+```sh
+ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
+```
+
+The slow set is the tests labeled `slow` (the valgrind runs and the longest suites). Run it with
+`ctest --test-dir build -j$(nproc) -L slow`; the full run is `ctest --test-dir build -j$(nproc)`. CI runs the slow set
+nightly (and on demand) in the `Nightly` workflow, which runs the full suite.
+
+A fast-set test that takes over 10 s is sped up or labeled `slow` (`scripts/slowest-tests.sh build` prints the ten slowest
+tests and warns about fast-set tests over 10 s). Timeouts come from `cmake/TestTimeouts.cmake`, so local runs match CI:
+30 s for a test without the `slow` label, 1800 s for a test with it.
+
 ## Usage
 
 ```sh
