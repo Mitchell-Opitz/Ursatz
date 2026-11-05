@@ -1447,8 +1447,8 @@ async function fetchExportText(url) {
   let message = `Export failed (${res.status}).`;
   try {
     const body = await res.json();
-    if (body && body.message) {
-      message = body.message;
+    if (body && (body.message || body.error)) {
+      message = body.message || body.error;
     }
   } catch (error) {
     // Keep the status message.

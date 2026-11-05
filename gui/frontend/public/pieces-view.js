@@ -384,6 +384,7 @@ function buildPieceResult(ctx) {
 function pieceVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.innerHTML = "";
   viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
+  viewEl.appendChild(buildMaterialExport(id, number, title));
   const piece = body && body.piece ? body.piece : {};
   const state = PiecesModel.stateFromBody(body, id);
   /* The cadences a section leaves unchosen come from the Composer (the validate route); the facts are drawn again when
@@ -417,7 +418,8 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
 }
 
 /*
- * The piece editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer)}.
+ * The piece editor. ctx: {id, body, usesStatus, items (all items), statusEl, saved(answer), version and title (the
+ * current version number and the item name, for Export)}.
  * Returns {el, state, problems(), save(note)}.
  */
 function buildPieceEditor(ctx) {
@@ -454,6 +456,9 @@ function buildPieceEditor(ctx) {
 
   /* Header */
   el.appendChild(materialsElement("h2", "section-title", "Piece"));
+  if (ctx.version) {
+    el.appendChild(buildMaterialExport(ctx.id, ctx.version, ctx.title));
+  }
   const header = materialsElement("div", "upload-controls");
   const key = themeField(header, "Key", themeInput("D or Bb", state.key));
   const mode = themeField(header, "Mode", themeSelect(PiecesModel.MODES, state.mode));
