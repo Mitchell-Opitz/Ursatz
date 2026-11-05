@@ -18,7 +18,7 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 | Path | Pinned at |
 | --- | --- |
 | `external/ursatz` | Ursatz `main` at PR #195 (`d2b85ce`). |
-| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #67 (`ee8a901`), version 0.6.0. |
+| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #73 (`168b7c2`), version 0.7.0. |
 
 cJSON 1.7.18 is vendored at `external/cjson` and added before the submodules, so the Analyzer reuses it. `scripts/check-pins.sh`
 fails when a pin is not on its remote's `main` or when one repository is pinned at two commits; CI runs it after the
