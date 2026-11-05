@@ -302,21 +302,19 @@ function buildItemTable(rows, onOpen) {
 }
 
 /* The Random section of the New Motif page: one button draws one motif from the Composer (seed, mode and meter all
- * drawn) and shows its score and playback in the score workspace. Reroll draws the next seed; "Use" hands the
+ * drawn) and shows its score and playback in the score workspace. Pressing it again draws another; "Use" hands the
  * motif's form values to onUse(values) to fill the editor. Nothing is stored. */
 function buildRandomMotifs(statusEl, onUse) {
   const section = materialsElement("section", "panel materials-random");
   section.appendChild(materialsElement("h2", "section-title", "Random"));
   const buttons = materialsElement("div", "button-row");
   const draw = materialsElement("button", "", "Random");
-  const reroll = materialsElement("button", "", "Reroll");
   const use = materialsElement("button", "", "Use");
-  for (const button of [draw, reroll, use]) {
+  for (const button of [draw, use]) {
     button.type = "button";
   }
-  reroll.hidden = true;
   use.hidden = true;
-  buttons.append(draw, reroll, use);
+  buttons.append(draw, use);
   const infoEl = materialsElement("div", "variant-meta");
   const selectedEl = materialsElement("div", "materials-score-mount");
   let workspace = null;
@@ -343,7 +341,6 @@ function buildRandomMotifs(statusEl, onUse) {
   async function drawSeed(seed) {
     const values = { form: "full", role: "melodic", seed };
     draw.disabled = true;
-    reroll.disabled = true;
     statusEl.classList.remove("error");
     statusEl.textContent = "Drawing a motif...";
     const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(values));
@@ -351,7 +348,6 @@ function buildRandomMotifs(statusEl, onUse) {
     const drawn = MaterialsModel.drawnSettings(answer.data);
     if (!motive || !drawn) {
       draw.disabled = false;
-      reroll.disabled = false;
       fail(answer.data, "Could not draw a motif");
       return;
     }
@@ -360,7 +356,6 @@ function buildRandomMotifs(statusEl, onUse) {
     const candidate = MaterialsModel.randomCandidate(motive, seed);
     const rendered = await sendMaterialsRequest(MaterialsModel.renderRequest(VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, values), candidate)));
     draw.disabled = false;
-    reroll.disabled = false;
     if (!rendered.ok) {
       fail(rendered.data, "Could not render the motif");
       return;
@@ -374,12 +369,10 @@ function buildRandomMotifs(statusEl, onUse) {
     const playback = URL.createObjectURL(new Blob([JSON.stringify(rendered.data.playback)], { type: "application/json" }));
     blobUrls = [xml, playback];
     workspace = ScoreWorkspace.mount(selectedEl, { title: "Random motif", subtitle: `seed ${seed}`, musicxmlUrl: xml, playbackUrl: playback });
-    reroll.hidden = false;
     use.hidden = false;
   }
 
   draw.addEventListener("click", () => drawSeed(Math.floor(Math.random() * 2147483648)));
-  reroll.addEventListener("click", () => current && drawSeed(MaterialsModel.rerollSeed(current.candidate.seed)));
   use.addEventListener("click", () => current && onUse(MaterialsModel.motifFormValues(MaterialsModel.randomCandidateToBody(current.candidate, current.values))));
   section.append(buttons, infoEl, selectedEl);
   return section;

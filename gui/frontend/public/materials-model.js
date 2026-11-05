@@ -784,11 +784,6 @@
     };
   }
 
-  /* The next seed for rerolling one candidate: the candidate's own plus one. */
-  function rerollSeed(candidateSeed) {
-    return Number.isInteger(candidateSeed) ? candidateSeed + 1 : 0;
-  }
-
   /* The score and playback URLs of one stored version, sounded in its stored key. */
   function versionScoreUrls(id, number) {
     const base = `/api/materials/items/${encodeURIComponent(id)}/versions/${Number(number)}`;
@@ -1023,7 +1018,6 @@
     randomCandidateToBody,
     candidateKeyText,
     randomCandidate,
-    rerollSeed,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
