@@ -11,8 +11,8 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 
 ## Where it sits
 
-- Below: the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library, a git submodule at `external/ursatz`. `scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`. Details in [building.md](building.md#version-header-and-pin-check).
-- Above: the [Composer](https://github.com/Mitchell-Opitz/Ursatz-Composer) calls `composer_api.h`, and the [GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI) calls the playback and score export entries and reads the analysis document. Both link `ursatz_analyzer`.
+- Below: the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) library, a git submodule at `external/ursatz`. `scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`. Details in [building.md](building.md#version-header-and-pin-check).
+- Above: the [Composer](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md) calls `composer_api.h`, and the [GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI/blob/main/docs/architecture.md) calls the playback and score export entries and reads the analysis document. Both link `ursatz_analyzer`.
 
 ## Module map
 
@@ -74,7 +74,7 @@ A stored document is current only when its schema version, analyzer version and 
 
 ## What it calls below
 
-The Ursatz headers the Analyzer includes, found by `scripts/check-library-includes.sh`, which allows only staged public paths. All come from [Ursatz](https://github.com/Mitchell-Opitz/Ursatz).
+The Ursatz headers the Analyzer includes, found by `scripts/check-library-includes.sh`, which allows only staged public paths. All come from [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md).
 
 | Entry used | From which repo | For what |
 | --- | --- | --- |
