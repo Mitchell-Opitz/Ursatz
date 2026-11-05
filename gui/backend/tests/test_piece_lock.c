@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -42,6 +43,7 @@ static void thread_join(thread_t thread) {
 #include <cJSON.h>
 
 #include "service/analysis_service.h"
+#include "service/link_service.h"
 #include "service/piece_lock.h"
 
 #ifndef URSATZ_GUI_TEST_SOURCE
@@ -358,10 +360,95 @@ static void test_delete_during_reads(void) {
   check(document_bad == 0, "every document read before the delete parses");
 }
 
+/* ---- the reads of the link and style services ---- */
+
+static void sleep_ms(unsigned ms) {
+#ifdef _WIN32
+  Sleep(ms);
+#else
+  struct timespec pause = {ms / 1000, (long)(ms % 1000) * 1000000L};
+  nanosleep(&pause, NULL);
+#endif
+}
+
+typedef struct {
+  const char *id;
+  volatile int done;
+  bool document_ok;  /* the whole stored document came back and parses */
+  bool filename_ok;  /* the display name came back */
+  bool title_ok;     /* the link service's title is the display name without its extension */
+} ServiceRead;
+
+/* What the link and style services read of a piece: the whole stored document, and the display name. */
+static thread_result_t THREAD_CALL read_like_services(void *arg) {
+  ServiceRead *read = arg;
+  char *document = NULL;
+  read->document_ok = false;
+  if (ursatz_gui_analysis_get_document(kPiecesDir, read->id, NULL, 0, &document) == URSATZ_GUI_ANALYSIS_OK && document) {
+    cJSON *parsed = cJSON_Parse(document);
+    read->document_ok = cJSON_IsObject(parsed);
+    cJSON_Delete(parsed);
+  }
+  free(document);
+  char *filename = NULL;
+  read->filename_ok = ursatz_gui_analysis_get_filename(kPiecesDir, read->id, &filename) == URSATZ_GUI_ANALYSIS_OK &&
+                      filename && strcmp(filename, "services.musicxml") == 0;
+  free(filename);
+  char *title = ursatz_gui_link_piece_title(read->id);
+  read->title_ok = title && strcmp(title, "services") == 0;
+  free(title);
+  read->done = 1;
+  return THREAD_RETURN;
+}
+
+static void test_service_reads(void) {
+  char *id = upload_piece(URSATZ_GUI_TEST_SOURCE, "services.musicxml");
+  check(id != NULL, "a piece is uploaded for the service reads");
+  if (!id) {
+    return;
+  }
+  char *stored = NULL;
+  char path[512];
+  size_t size = 0;
+  if (snprintf(path, sizeof(path), "%s/%s/analysis.json", kPiecesDir, id) < (int)sizeof(path)) {
+    stored = read_all(path, &size);
+  }
+  char *whole = NULL;
+  check(stored != NULL && ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &whole) == URSATZ_GUI_ANALYSIS_OK &&
+            whole && strcmp(whole, stored) == 0,
+        "a document read without names is the stored analysis.json, unchanged");
+  free(whole);
+  free(stored);
+
+  ServiceRead read = {id, 0, false, false, false};
+  check(ursatz_gui_piece_lock(id), "the test holds the piece lock");
+  thread_t thread;
+  bool started = thread_start(&thread, read_like_services, &read);
+  sleep_ms(300);
+  check(started && read.done == 0, "the document, name and title reads wait while the piece lock is held");
+  ursatz_gui_piece_unlock(id);
+  if (started) {
+    thread_join(thread);
+  }
+  check(read.done == 1 && read.document_ok && read.filename_ok && read.title_ok,
+        "the reads answer once the lock is released");
+
+  char *missing = NULL;
+  check(ursatz_gui_analysis_get_document(kPiecesDir, "no-such-piece", NULL, 0, &missing) ==
+                URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND &&
+            ursatz_gui_analysis_get_filename(kPiecesDir, "no-such-piece", &missing) == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND &&
+            !ursatz_gui_analysis_piece_exists(kPiecesDir, "no-such-piece") &&
+            ursatz_gui_analysis_piece_exists(kPiecesDir, id),
+        "a missing piece is not found by the reads and exists only once uploaded");
+  ursatz_gui_analysis_delete_piece(kPiecesDir, id);
+  free(id);
+}
+
 int main(void) {
   test_lock_table();
   test_concurrent_writers();
   test_delete_during_reads();
+  test_service_reads();
   check(ursatz_gui_piece_lock_entries() == 0, "no lock entry is left behind");
   return failures == 0 ? 0 : 1;
 }
