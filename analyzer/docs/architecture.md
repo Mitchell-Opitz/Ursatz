@@ -37,6 +37,7 @@ The CLI commands, from [the README](../README.md#usage):
 | Command | What it does | Doc |
 | --- | --- | --- |
 | `ursatz-analyzer <file>` | Writes `<stem>.report.md` and `<stem>.analysis.json` | [analysis-document.md](analysis-document.md) |
+| `export <file>` | Prints the measure-addressed text export of a piece | [text-export.md](text-export.md) |
 | `--corpus <dir>` | Analyzes a folder into documents and a corpus index | [corpus.md](corpus.md) |
 | `--style-profile`, `--compare-styles` | Counts and compares styles | [style-profile.md](style-profile.md) |
 | `--similar <dir>` | Finds similar material by motive or progression | [similar-material.md](similar-material.md) |
@@ -64,8 +65,9 @@ The other public headers (analysis result, report, document, corpus, staleness, 
 
 | Name | File | Current value | Doc |
 | --- | --- | --- | --- |
-| `URSATZ_ANALYZER_VERSION`, `ursatz_analyzer_version()` | `<ursatz_analyzer/version.h>`, generated from `src/version.h.in` at configure time | 0.6.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-pin-check) |
+| `URSATZ_ANALYZER_VERSION`, `ursatz_analyzer_version()` | `<ursatz_analyzer/version.h>`, generated from `src/version.h.in` at configure time | 0.7.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-pin-check) |
 | `URSATZ_ANALYZER_URSATZ_COMMIT` | `<ursatz_analyzer/version.h>` | the Ursatz commit the build was made against | [building.md](building.md#version-header-and-pin-check) |
+| `URSATZ_ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/text_export.h` | 1 | [text-export.md](text-export.md) |
 | `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analysis_document.h` | 9 | [versions.md](analysis-document/versions.md) |
 | analysis document schema | `schema/analysis-document.v9.schema.json` | v9 | [analysis-document.md](analysis-document.md) |
 | corpus index, motive links, motive link cache, similar material, style model schemas | `schema/*.v1.schema.json` | v1 each | [corpus.md](corpus.md), [motive-links.md](motive-links.md), [similar-material.md](similar-material.md), [style-profile.md](style-profile.md) |

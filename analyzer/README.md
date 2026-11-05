@@ -69,6 +69,14 @@ than the file's before they are analyzed (see [Notation readings](docs/input.md#
 not to corpus, style or similar-material runs.
 
 ```sh
+ursatz-analyzer export [--input-format midi|musicxml] [--measures <first>-<last>] [--title <text>] <input-file-path>
+```
+
+Prints the notes of the score and the analysis claims as plain text, one block per measure, to standard output. It writes
+no file. `--measures` limits the export to a range of measure numbers as written in the score. See
+[docs/text-export.md](docs/text-export.md).
+
+```sh
 ursatz-analyzer --corpus <dir> [--out <dir>] [--resume] [--markdown]
 ```
 
