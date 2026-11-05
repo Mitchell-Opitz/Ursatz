@@ -401,7 +401,7 @@ static ComposerStatus make_each_op(const Filter *filter, bool detail, unsigned l
     size_t skipped_count = 0;
     ComposerStatus status = COMPOSER_OK;
     for (size_t i = 0; i < rows; i++) {
-        if (composer_job_step(job, "variants", (unsigned)i, (unsigned)rows)) {
+        if (job_step(job, "variants", (unsigned)i, (unsigned)rows)) {
             status = cancelled(&out->error);
             break;
         }
@@ -572,7 +572,7 @@ static ComposerStatus make_variants(const cJSON *request, const ComposerJob *job
     unsigned long draws = filtered ? count * VARIANTS_DRAWS_PER_COUNT : count;
     status = COMPOSER_OK;
     for (unsigned long i = 0; i < draws && made < count && status == COMPOSER_OK; i++) {
-        if (composer_job_step(job, "variants", (unsigned)i, (unsigned)draws)) {
+        if (job_step(job, "variants", (unsigned)i, (unsigned)draws)) {
             status = cancelled(error);
             break;
         }
@@ -749,7 +749,7 @@ static ComposerStatus read_recognize_motive(const cJSON *request, const char *na
 
 static ComposerStatus recognize_request(const cJSON *request, const ComposerJob *job, ComposerResponse *out) {
     ComposerError *error = &out->error;
-    if (composer_job_step(job, "recognize", 0, 1)) {
+    if (job_step(job, "recognize", 0, 1)) {
         return cancelled(error);
     }
     const cJSON *meter = cJSON_GetObjectItemCaseSensitive(request, "meter");

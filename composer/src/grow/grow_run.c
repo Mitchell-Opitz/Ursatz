@@ -4,7 +4,7 @@
 
 #include <ursatz_composer/compose.h>
 
-#include "api/api_internal.h"
+#include "util/job.h"
 #include "grow/grow_internal.h"
 
 void grow_outcome_destroy(GrowOutcome *outcome) {
@@ -69,7 +69,7 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     if (grow_find_theme(plan, true) == PLAN_NODE_NONE) {
         return GROW_ERR_BAD_REQUEST;
     }
-    if (composer_job_step(config->job, "grow", 0, 1)) {
+    if (job_step(config->job, "grow", 0, 1)) {
         outcome->cancelled = true;
         return GROW_ERR_STUCK;
     }

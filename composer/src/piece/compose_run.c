@@ -6,7 +6,7 @@
 
 #include <standard-form/phrase_level_form.h>
 
-#include "api/api_internal.h"
+#include "util/job.h"
 
 #include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/analyzer_check.h>
@@ -610,7 +610,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
     /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
        climax, so a melody that gets stuck is written again, from the next seed, a few times. */
     size_t attempts = stage == COMPOSE_STAGE_MELODY ? COMPOSE_MELODY_ATTEMPTS : 1;
-    if (composer_job_step(config->job, compose_stage_name(stage), (unsigned)stage, (unsigned)COMPOSE_STAGE_COUNT)) {
+    if (job_step(config->job, compose_stage_name(stage), (unsigned)stage, (unsigned)COMPOSE_STAGE_COUNT)) {
         outcome->cancelled = true;
         return PIECE_ERR_STUCK;
     }

@@ -48,10 +48,6 @@ static ComposerStatus fail_alloc(ComposerError *error) {
     return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-static bool job_cancelled(const ComposerJob *job) {
-    return job && job->cancelled && job->cancelled(job->user);
-}
-
 /* A member's value as text for a message: a string as it is, a number with %g. */
 static const char *value_text(const cJSON *item, char *buffer, size_t size) {
     if (cJSON_IsString(item)) {
@@ -391,7 +387,7 @@ ComposerStatus composer_api_counterpoint(const char *request_json, const Compose
         unsigned long tries = (unsigned long)API_SEED_TRIES * options.suggest;
         for (unsigned long attempt = 0; attempt < tries && made < options.suggest && status == COMPOSER_OK; attempt++) {
             Result result;
-            if (composer_job_step(job, "counterpoint", (unsigned)attempt, (unsigned)tries)) {
+            if (job_step(job, "counterpoint", (unsigned)attempt, (unsigned)tries)) {
                 status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
                 break;
             }

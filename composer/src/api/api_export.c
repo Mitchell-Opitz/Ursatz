@@ -66,7 +66,7 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
     if (status != COMPOSER_OK) {
         return status;
     }
-    if (composer_job_step(job, "export", 0, 1)) {
+    if (job_step(job, "export", 0, 1)) {
         cJSON_Delete(request);
         return api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
     }

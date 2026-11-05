@@ -192,7 +192,7 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
     }
     unsigned total = (unsigned)(PIECE_SEEDS_PER_VARIATION * requested);
     for (size_t attempt = 0; status == COMPOSER_OK && kept < requested && attempt < total; attempt++) {
-        if (composer_job_step(job, "variations", (unsigned)attempt, total)) {
+        if (job_step(job, "variations", (unsigned)attempt, total)) {
             status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
             break;
         }

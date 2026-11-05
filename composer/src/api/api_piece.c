@@ -894,7 +894,7 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
     unsigned long last_seed = seed;
     /* The seeds are tried one after another; a stuck run is passed over, and a request no seed can mend ends the search. */
     for (unsigned attempt = 0; status == COMPOSER_OK && attempt < PIECE_SEED_TRIES && result == PIECE_ERR_STUCK; attempt++) {
-        if (composer_job_step(job, "seed", attempt, PIECE_SEED_TRIES)) {
+        if (job_step(job, "seed", attempt, PIECE_SEED_TRIES)) {
             status = fail_cancelled(&out->error);
             break;
         }

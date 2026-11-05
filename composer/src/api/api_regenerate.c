@@ -66,10 +66,6 @@ static cJSON *reopened_json(const Reopened *reopened) {
     return extra;
 }
 
-static bool job_cancelled(const ComposerJob *job) {
-    return job && job->cancelled && job->cancelled(job->user);
-}
-
 ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     cJSON *root = NULL;
@@ -131,7 +127,7 @@ ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJ
     bool done = false;
     unsigned long used = seed;
     for (unsigned long attempt = 0; attempt < API_SEED_TRIES && !done && status == COMPOSER_OK; attempt++) {
-        if (composer_job_step(job, "seed", (unsigned)attempt, API_SEED_TRIES)) {
+        if (job_step(job, "seed", (unsigned)attempt, API_SEED_TRIES)) {
             status = fail_cancelled(&out->error);
             break;
         }

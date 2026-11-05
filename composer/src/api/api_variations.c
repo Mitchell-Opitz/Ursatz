@@ -15,10 +15,6 @@ static ComposerStatus fail_alloc(ComposerError *error) {
     return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-static bool job_cancelled(const ComposerJob *job) {
-    return job && job->cancelled && job->cancelled(job->user);
-}
-
 /* The MusicXML of a version as it is in memory (its ids are the ones a plan file renumbers). */
 static ComposerStatus variation_musicxml(const PiecePlan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
     RenderedPlan rendered;
@@ -125,7 +121,7 @@ static ComposerStatus run_variations(const char *request_json, const ComposerJob
     char what[96] = "";
     if (status == COMPOSER_OK) {
         api_target_describe(plan, &target, what, sizeof what);
-        if (composer_job_step(job, "variations", 0, (unsigned)count)) {
+        if (job_step(job, "variations", 0, (unsigned)count)) {
             status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
         }
     }

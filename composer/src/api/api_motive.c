@@ -129,7 +129,7 @@ static ComposerStatus render_motive(const cJSON *request, const Motive *motive, 
 /* The motive's input: text in the request, or the bytes of a MIDI file when bytes is not NULL. */
 static ComposerStatus analyze_request(const cJSON *request, const unsigned char *bytes, size_t size, bool render,
                                       const ComposerJob *job, ComposerResponse *out) {
-    if (composer_job_step(job, "motive", 0, 1)) {
+    if (job_step(job, "motive", 0, 1)) {
         return api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
     }
     Motive motive;
