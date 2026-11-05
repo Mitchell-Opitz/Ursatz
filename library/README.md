@@ -16,10 +16,18 @@ explicit, named Theory Framework.
 
 ```sh
 cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure -LE slow
+cmake --build build -j
 bash scripts/check-docs.sh
 ```
+
+- Fast set (every test without the `slow` label), what pull request CI runs:
+  `ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow`
+- Slow set: `ctest --test-dir build -j$(nproc) -L slow`
+- Full run, both sets: `ctest --test-dir build -j$(nproc) --output-on-failure`
+- The 10 s rule: a fast-set test that takes over 10 s is sped up or labeled `slow`. CI prints the ten slowest tests and
+  warns about each fast-set test over 10 s.
+- Timeouts come from `cmake/TestTimeouts.cmake`: 30 s for fast-set tests, 1800 s for `slow` tests.
+- The slow set runs nightly in CI (`.github/workflows/nightly.yml`).
 
 Requirements, the full test run and CI are in [docs/BUILDING.md](docs/BUILDING.md).
 

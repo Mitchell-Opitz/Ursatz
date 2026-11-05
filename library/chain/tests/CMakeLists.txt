@@ -33,6 +33,8 @@ target_link_libraries(test_analysis_chain PRIVATE ursatz_chain)
 target_compile_definitions(test_analysis_chain PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 add_test(NAME analysis_chain COMMAND test_analysis_chain)
+# 13 s measured (serial, 10 s rule); runs in the nightly.
+set_tests_properties(analysis_chain PROPERTIES LABELS slow)
 
 # Memcheck for the bridges and the input builders. Skips silently if valgrind isn't installed.
 find_program(URSATZ_CHAIN_VALGRIND valgrind)
@@ -45,6 +47,8 @@ if(URSATZ_CHAIN_VALGRIND)
            COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_analysis_chain>)
   set_tests_properties(analysis_chain_valgrind PROPERTIES ENVIRONMENT "URSATZ_CHAIN_PIECE=field1")
+  # 14 s measured (serial, 10 s rule); runs in the nightly.
+  set_tests_properties(analysis_chain_valgrind PROPERTIES LABELS slow)
   add_test(NAME chain_inputs_valgrind
            COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_chain_inputs>)

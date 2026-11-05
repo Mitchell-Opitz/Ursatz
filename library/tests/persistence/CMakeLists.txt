@@ -34,3 +34,12 @@ if(URSATZ_PERSISTENCE_VALGRIND)
                      $<TARGET_FILE:test_${persistence_test_name}>)
   endforeach()
 endif()
+
+# Each test and its _valgrind variant run the same binary in the same directory and write the same
+# .sqlite files, so ctest -j must not run a pair at once.
+foreach(persistence_test_name persistence_lifecycle persistence_note_events persistence_uncertainty persistence_chord_key persistence_relationship persistence_motif persistence_cadence_phrase persistence_old_schema)
+  set_property(TEST ${persistence_test_name} APPEND PROPERTY RESOURCE_LOCK ${persistence_test_name})
+  if(URSATZ_PERSISTENCE_VALGRIND)
+    set_property(TEST ${persistence_test_name}_valgrind APPEND PROPERTY RESOURCE_LOCK ${persistence_test_name})
+  endif()
+endforeach()

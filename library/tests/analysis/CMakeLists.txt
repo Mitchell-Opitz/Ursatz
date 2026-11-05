@@ -16,6 +16,8 @@ add_ursatz_test(motive_relation)
 add_ursatz_test(motive_relation_params)
 add_ursatz_test(motive_tone_roles)
 add_ursatz_test(motive_variant_recognition)
+# 130 s measured (serial, 10 s rule); runs in the nightly.
+set_tests_properties(motive_variant_recognition PROPERTIES LABELS slow)
 add_ursatz_test(motive_variant_recognition_chains)
 # Every frame relation in a chain of two with every other case, both orders (about 2 minutes); CI runs ctest -LE slow.
 add_test(NAME motive_variant_recognition_frame_chains COMMAND test_motive_variant_recognition frame-chains)
@@ -31,6 +33,8 @@ if(URSATZ_ANALYSIS_VALGRIND)
   add_test(NAME motive_link_valgrind
            COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_motive_link>)
+  # 18 s measured (serial, 10 s rule); runs in the nightly.
+  set_tests_properties(motive_link_valgrind PROPERTIES LABELS slow)
 endif()
 
 # Scoped memcheck for the motive tone roles test, same pattern.

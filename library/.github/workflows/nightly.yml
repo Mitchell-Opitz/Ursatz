@@ -1,0 +1,32 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  full-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache
+      - name: Configure
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: cmake -S . -B build
+      - name: Build
+        run: cmake --build build -j
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc)
+      - name: Ten slowest tests
+        if: always()
+        run: bash scripts/slowest-tests.sh build
