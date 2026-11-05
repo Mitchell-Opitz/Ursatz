@@ -633,7 +633,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.1") == 0);
+    assert(strcmp(composer_api_version(), "1.2") == 0);
     test_lists();
     test_round_trip();
     test_theme_form_lists();

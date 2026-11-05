@@ -138,6 +138,12 @@ target_link_libraries(test_motive_meter PRIVATE ursatz_composer cjson)
 target_include_directories(test_motive_meter PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_motive_meter PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_motive_meter COMMAND test_motive_meter)
+
+add_executable(test_motive_segments test_motive_segments.c)
+target_link_libraries(test_motive_segments PRIVATE ursatz_composer)
+target_include_directories(test_motive_segments PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_motive_segments PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_segments COMMAND test_motive_segments)
 find_program(VALGRIND_PROGRAM valgrind)
 if(VALGRIND_PROGRAM)
     add_test(NAME test_motive_meter_valgrind
