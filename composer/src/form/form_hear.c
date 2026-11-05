@@ -6,6 +6,7 @@
 #include <standard-form/analysis/analysis_theme.h>
 #include <standard-form/phrase_level_form.h>
 #include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/result_chain.h>
 #include <ursatz_chain/analysis_chain.h>
 
 #include <ursatz_composer/lanes.h>

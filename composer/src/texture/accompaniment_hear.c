@@ -13,6 +13,7 @@
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
+#include <ursatz_analyzer/result_chain.h>
 #include <ursatz_chain/analysis_chain.h>
 
 #include "render/render_notes.h"
