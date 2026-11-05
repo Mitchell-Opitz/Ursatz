@@ -73,6 +73,11 @@ In the library, `FillConfig`, `ComposeConfig` and `GrowConfig` carry `const Comp
 (`FILL_ERR_OPERATOR_FAILED`, `PIECE_ERR_STUCK`, `GROW_ERR_STUCK`). `compose_run` tries no further round and
 `compose_candidates` no further candidate after a cancel. With no job nothing changes: the same seed gives the same plan.
 
+The engine reports through the engine job hook in `src/util/job.h`: `job_step(job, stage, done, total)` calls `progress` and
+returns whether the job is cancelled, and `job_cancelled(job)` asks `cancelled` alone. `fill_loop.c`, `compose_run.c`,
+`grow_run.c` and the API files use these two and nothing else; `api/api_internal.h` is for `src/api/` only
+(`scripts/check-layers.sh` in CI).
+
 ## Threading
 
 No entry keeps state between calls or shares state with another: one request per call, and a caller may run requests on
