@@ -1,6 +1,7 @@
 #ifndef URSATZ_COMPOSER_MOTIVE_RANDOM_H
 #define URSATZ_COMPOSER_MOTIVE_RANDOM_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include <ursatz_composer/motive.h>
@@ -10,7 +11,7 @@
 /*
  * Random motives. The caller names a mode and a meter, and optionally a key, a form and a style; the motive's length,
  * pickup, number of notes, rhythm and range are not options (R-120). They are drawn inside the defaults named at the top
- * of motive_random.c, which are meant to be tuned there.
+ * of motive_random.c (DRAWN) and motive_random_segments.c (SEGMENTS), which are meant to be tuned there.
  *
  * Every motive keeps standard-counterpoint's hard melodic rules, the ones motive invention keeps. The same options and
  * seed give the same motives: all the random numbers come from one FillRng seeded with `seed`.
@@ -27,6 +28,22 @@
  */
 
 #define MOTIVE_RANDOM_MAX_COUNT 16
+
+/*
+ * Strategy. SEGMENTS (the zero value, so the default) builds a motive from a harmony plan and segments, the way a motive is
+ * made: a rhythm cell, a repeat of it on the next chord, a contrasting cell, an ending that slows down. DRAWN is the
+ * earlier strategy: a rhythm drawn note by note over a frame of chord tones of I.
+ */
+typedef enum {
+    MOTIVE_RANDOM_STRATEGY_SEGMENTS = 0,
+    MOTIVE_RANDOM_STRATEGY_DRAWN
+} MotiveRandomStrategy;
+
+/* "segments" or "drawn". */
+const char *motive_random_strategy_name(MotiveRandomStrategy strategy);
+
+/* Reads "segments" or "drawn" (as written, any case). False for any other text. */
+bool motive_random_strategy_parse(const char *name, MotiveRandomStrategy *out);
 
 typedef enum {
     MOTIVE_RANDOM_OK = 0,
@@ -46,6 +63,8 @@ typedef struct {
     MotiveSketchForm form;
     /* NULL for no style. Not owned. */
     const ComposerStyle *style;
+    /* How the motive is made; the zero value is SEGMENTS. */
+    MotiveRandomStrategy strategy;
     /* How many motives, 1 to MOTIVE_RANDOM_MAX_COUNT. */
     size_t count;
     unsigned long seed;

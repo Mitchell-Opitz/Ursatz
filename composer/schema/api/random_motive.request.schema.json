@@ -32,6 +32,12 @@
         "contour"
       ]
     },
+    "strategy": {
+      "enum": [
+        "segments",
+        "drawn"
+      ]
+    },
     "role": {
       "enum": [
         "melodic",

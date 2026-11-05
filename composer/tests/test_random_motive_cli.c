@@ -17,8 +17,8 @@
 /* Runs the command with these arguments; stdout and stderr go to files. Returns the exit status. */
 static int run(const char *arguments, const char *out_file, const char *err_file) {
     char command[2048];
-    snprintf(command, sizeof(command), "\"%s\" random-motive %s >%s 2>%s", COMPOSER_CLI_PATH, arguments, out_file,
-             err_file);
+    snprintf(command, sizeof(command), "\"%s\" random-motive --strategy drawn %s >%s 2>%s", COMPOSER_CLI_PATH, arguments,
+             out_file, err_file);
     int status = system(command);
     assert(WIFEXITED(status));
     return WEXITSTATUS(status);

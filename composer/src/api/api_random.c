@@ -47,6 +47,7 @@ static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *ou
     const char *meter_text = NULL;
     const char *key_text = NULL;
     const char *form_text = NULL;
+    const char *strategy_text = NULL;
     const char *role_text = NULL;
     bool present = false;
     bool has_mode = false;
@@ -102,6 +103,14 @@ static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *ou
     }
     if (present && !motive_form_parse(form_text, &out->form)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/form", "form must be full, rhythm or contour, not '%s'", form_text);
+    }
+    out->strategy = MOTIVE_RANDOM_STRATEGY_SEGMENTS;
+    if (!api_member_string(request, "strategy", &strategy_text, &present, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (present && !motive_random_strategy_parse(strategy_text, &out->strategy)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/strategy", "strategy must be segments or drawn, not '%s'",
+                        strategy_text);
     }
     if (!api_member_string(request, "role", &role_text, has_role, error)) {
         return COMPOSER_ERR_REQUEST;

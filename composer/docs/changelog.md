@@ -4,7 +4,9 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 
 ## Unreleased (phase P32)
 
-The API is 1.2: every motive analysis document (`composer_api_motive`, `composer_api_motive_from_midi`, `composer_api_motive_render`, `composer_api_random_motive` and the variants) has `analysis.segments`, `{"given", "items"}`: the motive's own features when it has any, otherwise a proposal from its bars and rhythmic groups. See [motive-format.md](motive-format.md#segments).
+The API is 1.3: `composer_api_random_motive` takes `strategy`, `"segments"` (the default: motives built from a harmony plan and repeated segments, returned with their harmony and segments as their own) or `"drawn"` (the earlier strategy, unchanged); `composer_api_vocabulary` serves `random_motive_strategies`. The CLI takes `random-motive --strategy`. See [api/motives.md](api/motives.md) and [cli-random-motive.md](cli-random-motive.md).
+
+The API was 1.2 before: every motive analysis document (`composer_api_motive`, `composer_api_motive_from_midi`, `composer_api_motive_render`, `composer_api_random_motive` and the variants) has `analysis.segments`, `{"given", "items"}`: the motive's own features when it has any, otherwise a proposal from its bars and rhythmic groups. See [motive-format.md](motive-format.md#segments).
 
 ## Version 0.4.1 (phase P28)
 

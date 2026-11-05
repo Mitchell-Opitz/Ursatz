@@ -12,6 +12,7 @@
     "cadences",
     "theme_cadences",
     "motive_forms",
+    "random_motive_strategies",
     "roles",
     "functions",
     "distances",
@@ -79,6 +80,13 @@
       }
     },
     "motive_forms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "random_motive_strategies": {
       "type": "array",
       "minItems": 1,
       "items": {
