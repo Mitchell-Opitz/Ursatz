@@ -170,6 +170,45 @@ static void check(const MotiveSketch *source, const MotiveSketch *given, const S
     assert(motive_sketch_equal(&result, &want));
 }
 
+/*
+ * D minor, "D4:q F4:e A4:e D5:h" with the feature a = 1..2. Liquidate-features alone gives D4:q F4:q D5:h with the
+ * source's implied chord (i) as its own. By default the recognizer also starts from the chordless source with the
+ * implied chord at 0 and explains these notes with one liquidate (B6); with implied_start off it returns the
+ * liquidate-features step that made them. A caller that keeps the implied chord only for the relations that give
+ * chords (the Composer) turns the start off, since a liquidate found from that start does not replay for it.
+ */
+static MotiveSketch d_minor(bool with_chord) {
+    Shape shape = {"d minor",
+                   {{62, 0, 1, 1, 4}, {65, 1, 4, 1, 8}, {69, 3, 8, 1, 8}, {74, 1, 2, 1, 2}},
+                   4, 1, 1, {{"a", 1, 2}}, 1, with_chord};
+    MotiveSketch sketch = build(&shape);
+    sketch.tonic_pc = 2;
+    sketch.minor = true;
+    sketch.tonic_letter = PITCH_LETTER_D;
+    assert(motive_sketch_validate(&sketch));
+    return sketch;
+}
+
+static void check_implied_start(void) {
+    MotiveSketch source = d_minor(false);
+    MotiveSketch given = d_minor(true);
+    const MotiveRelationStep made = make(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0);
+    MotiveSketch target;
+    assert(motive_relation_apply(&given, &made, &target) == MOTIVE_RELATION_OK);
+    assert(target.note_count == 3 && target.chord_count == 1);
+
+    MotiveRecognition found;
+    MotiveRecognizeOptions options;
+    motive_recognize_options_default(&options);
+    assert(options.implied_start);
+    assert(motive_variant_recognize(&source, &target, &options, &found) == MOTIVE_RECOGNIZE_OK);
+    assert(found.found && found.step_count == 1 && found.steps[0].kind == MOTIVE_RELATION_LIQUIDATE);
+
+    options.implied_start = false;
+    assert(motive_variant_recognize(&source, &target, &options, &found) == MOTIVE_RECOGNIZE_OK);
+    assert(found.found && found.step_count == 1 && found.steps[0].kind == MOTIVE_RELATION_LIQUIDATE_FEATURES);
+}
+
 int main(void) {
     MotiveSketch source = build(&SOURCE);
     /* The source as the Composer's relations see it: with its best implied chord (I) at 0. */
@@ -189,6 +228,7 @@ int main(void) {
     const Explanation set_42[] = {{{MOTIVE_RELATION_INTERVAL_CHANGE, MOTIVE_RELATION_ANCILLARY_FILL}, 2},
                                   {{MOTIVE_RELATION_ADD_INTERVAL, MOTIVE_RELATION_INTERVAL_CHANGE}, 2}};
     check(&source, &given, &SEED_42, made_42, set_42, 2);
+    check_implied_start();
     printf("motive_variant_recognition_chains: ok\n");
     return 0;
 }
