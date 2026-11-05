@@ -261,6 +261,12 @@ static void test_scopes(void) {
 static cJSON *run_and_wait(const UrsatzGuiLinkScope *scope, char *out_id, size_t out_size) {
     char *id = NULL;
     UrsatzGuiLinkResult started = ursatz_gui_link_run_start(scope, &id);
+    /* A run reports "done" a moment before its worker frees the slot, so on a busy machine the next start can
+       still see the slot taken. Start again until it is free. */
+    for (int tries = 0; started == URSATZ_GUI_LINK_ERR_BUSY && tries < 200; tries++) {
+        sleep_ms(50);
+        started = ursatz_gui_link_run_start(scope, &id);
+    }
     CHECK(started == URSATZ_GUI_LINK_OK && id, "run starts");
     if (started != URSATZ_GUI_LINK_OK || !id) {
         return NULL;
