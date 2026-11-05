@@ -607,7 +607,7 @@ command line, read as JSON (docs/plan-format.md).
 
 ```
 composer_api_versions(&out)
-json: {"composer_version":"0.4.0","api_version":"1.1","analyzer_version":"0.6.0","ursatz_commit":"d2b85ce…","plan_format_version":2}
+json: {"composer_version":"0.4.1","api_version":"1.1","analyzer_version":"0.6.0","ursatz_commit":"d2b85ce…","plan_format_version":2}
 ```
 
 ### Export

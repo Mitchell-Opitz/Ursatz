@@ -403,6 +403,10 @@ stages fill around it ([docs/middle-out.md](docs/middle-out.md)).
 `form_hear` hears the phrase-level form of a written plan with standard-form's analysis adapter. See
 [docs/form-hear.md](docs/form-hear.md).
 
+## Version 0.4.1 (phase P28)
+
+`composer_api.h` is the only public header; every other header is private to the Composer (`src/include/`) and its dependencies are linked PRIVATE. The API is unchanged (1.1).
+
 ## Version 0.4.0 (phase P27)
 
 The Composer builds as a subproject of an application that already defines `cjson`, `ursatz` and `ursatz_analyzer`, and
