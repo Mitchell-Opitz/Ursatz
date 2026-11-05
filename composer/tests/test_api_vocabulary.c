@@ -131,6 +131,7 @@ static void test_lists(void) {
 
     static const char *const NAMES[] = {"meters",         "modes",          "piece_modes",   "keys",
                                         "pitch_class_names", "cadences",    "theme_cadences", "motive_forms",
+                                        "random_motive_strategies",
                                         "roles",          "functions",      "distances",     "theme_slots",
                                         "theme_ideas",    "theme_motive_categories", "theme_pools", "accompaniment_patterns",
                                         "piece_parts",    "piece_intos",    "fill_kinds",    "tone_labels"};
@@ -216,6 +217,16 @@ static void test_round_trip(void) {
     cJSON_ArrayForEach(entry, list("motive_forms")) {
         cJSON *request = random_request("major", "4/4");
         assert(cJSON_AddStringToObject(request, "form", value_of(entry)));
+        accepted("random_motive", request);
+        cJSON_Delete(request);
+    }
+    /* The strategies the vocabulary serves are the ones the request takes: segments (the default) and drawn. */
+    assert(cJSON_GetArraySize(list("random_motive_strategies")) == 2);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 0)), "segments") == 0);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("random_motive_strategies"), 1)), "drawn") == 0);
+    cJSON_ArrayForEach(entry, list("random_motive_strategies")) {
+        cJSON *request = random_request("major", "4/4");
+        assert(cJSON_AddStringToObject(request, "strategy", value_of(entry)));
         accepted("random_motive", request);
         cJSON_Delete(request);
     }

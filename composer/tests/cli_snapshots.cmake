@@ -160,7 +160,7 @@ endforeach()
 
 run_case(motive json motive "${FIXTURES}/motive_d_minor.json" --json)
 run_case(variants-each-op json variants "${FIXTURES}/motive_d_minor.json" --each-op --seed 1 --json)
-run_case(random-motive json random-motive --mode minor --meter 3/4 --count 3 --seed 1 --json)
+run_case(random-motive json random-motive --mode minor --meter 3/4 --strategy drawn --count 3 --seed 1 --json)
 
 # --- GUI shapes ----------------------------------------------------------------------
 # The calls the GUI backend makes (Ursatz-GUI routes/materials.c, service/theme_service.c, service/piece_service.c), with the
@@ -193,7 +193,7 @@ run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recogniz
          --target-format degrees --meter 4/4 --key "C major" --pickup 0 --json)
 # Random motives with a role (the style variant is covered by the API tests).
 run_case(random-motive-style json random-motive --mode major --meter 4/4 --key "C major" --form full --role accompaniment
-         --count 2 --seed 5 --json)
+         --strategy drawn --count 2 --seed 5 --json)
 
 # The theme case the GUI runs (--format json --out --midi --musicxml) is the theme-* cases above, which write all three files.
 

@@ -44,6 +44,7 @@ static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long se
     options.has_key = scenario->has_key;
     options.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     options.form = MOTIVE_SKETCH_FORM_FULL;
+    options.strategy = MOTIVE_RANDOM_STRATEGY_DRAWN;
     options.count = COUNT;
     options.seed = seed;
     return options;

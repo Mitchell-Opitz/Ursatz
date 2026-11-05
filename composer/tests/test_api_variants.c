@@ -206,7 +206,7 @@ static const struct {
 static void test_random(void) {
     ComposerResponse response;
     char *request = print(cJSON_Parse("{\"mode\":\"major\",\"meter\":\"4/4\",\"key\":\"C major\",\"form\":\"full\","
-                                      "\"role\":\"accompaniment\",\"count\":2,\"seed\":5}"));
+                                      "\"role\":\"accompaniment\",\"strategy\":\"drawn\",\"count\":2,\"seed\":5}"));
     assert(composer_api_random_motive(request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "random-motive-style.stdout.json");
     assert(!strstr(response.json, "\"drawn\""));
@@ -214,7 +214,7 @@ static void test_random(void) {
     composer_response_destroy(&response);
     free(request);
 
-    request = print(cJSON_Parse("{\"mode\":\"minor\",\"meter\":\"3/4\",\"count\":3,\"seed\":1}"));
+    request = print(cJSON_Parse("{\"mode\":\"minor\",\"meter\":\"3/4\",\"strategy\":\"drawn\",\"count\":3,\"seed\":1}"));
     assert(composer_api_random_motive(request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "random-motive.stdout.json");
     composer_response_destroy(&response);
@@ -229,7 +229,7 @@ static void test_random(void) {
         assert(strcmp((const char *const[]){"4/4", "3/4", "2/4", "6/8"}[(mixed >> 16) % 4], DRAWS[i].meter) == 0);
 
         char text[160];
-        snprintf(text, sizeof text, "{\"mode\":\"random\",\"meter\":\"random\",\"seed\":%lu}", DRAWS[i].seed);
+        snprintf(text, sizeof text, "{\"mode\":\"random\",\"meter\":\"random\",\"strategy\":\"drawn\",\"seed\":%lu}", DRAWS[i].seed);
         assert(composer_api_random_motive(text, NULL, &response) == COMPOSER_OK);
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *drawn = cJSON_GetObjectItemCaseSensitive(document, "drawn");
