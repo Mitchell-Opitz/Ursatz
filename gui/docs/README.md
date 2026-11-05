@@ -29,3 +29,4 @@ Every doc of the Ursatz GUI, one line each. Back to the [README](../README.md).
 - [storage.md](storage.md): the piece, material, theme, piece and subject stores and their files.
 - [motifs-backend.md](motifs-backend.md): motif analysis on save, the variant tree, comparing and linking motifs, motive-forms and random motifs.
 - [frontend.md](frontend.md): how the frontend is organized, the score layers and the score geometry.
+- [backend-modules.md](backend-modules.md): the backend helper modules, the backend services and who calls the Composer.
