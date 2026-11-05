@@ -13,6 +13,10 @@ A link claims that one motive is a chain of motive relations (`docs/modules/moti
 - `motive_link_candidates(sketches, groups, count, per_sketch, min_nearness, &pairs, &pair_count)`: for each sketch its `per_sketch` nearest others in a different group (`groups[i]`, the piece) whose nearness is at least `min_nearness`, nearest first, equal nearness by index, as unordered `MotiveLinkPair`s (`low < high`) sorted and unique. `*pairs` is owned (free), NULL for none. `INVALID` for `per_sketch` 0, `min_nearness` outside 0 to 1 or a NULL argument.
 - `motive_link_groups(count, pairs, linked, pair_count, &group_of, &group_count)`: the connected components of the pairs whose `linked[p]` is true. Groups are numbered from 0 in the order of their lowest member; `group_of[i]` is `(size_t)-1` for a sketch no linked pair touches. The Analyzer ordered its groups largest first; a caller that needs that order sorts the groups itself.
 
+## Choosing and grouping
+
+`motive_link_candidates` and `motive_link_groups` (`analysis/motive_link.h`) choose the pairs of sketches in different pieces worth comparing (the nearest few above the gate) and the groups the linked pairs join. They take plain arrays and carry no document fields. See API above for the calls.
+
 ## The gate
 
 A pair whose nearness is below `min_nearness` is `gated`: nothing is searched and `linked` is false. The gate exists because a miss is expensive (below). Motives that share neither rhythm, intervals nor contour sit near 0.25 (harmony is 1 when neither has chords), so the default 0.5 refuses only pairs that share almost nothing.
