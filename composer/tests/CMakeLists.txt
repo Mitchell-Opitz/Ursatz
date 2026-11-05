@@ -791,3 +791,10 @@ add_test(NAME consumer_build
                  --build-generator "${CMAKE_GENERATOR}" --build-target consumer
                  --build-options -DCOMPOSER_ROOT=${PROJECT_SOURCE_DIR}
                  --test-command ${CMAKE_CURRENT_BINARY_DIR}/consumer/consumer)
+# A consumer that links the Composer cannot include any other ursatz_composer/ header or any Ursatz or Analyzer header.
+add_test(NAME consumer_rejects_internals
+         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/consumer
+                 "-DTARGETS=reject_composer_header;reject_analyzer_header;reject_library_header"
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_rejects.cmake)
+set_tests_properties(consumer_rejects_internals PROPERTIES DEPENDS consumer_build RESOURCE_LOCK consumer_build_dir)
+set_tests_properties(consumer_build PROPERTIES RESOURCE_LOCK consumer_build_dir)
