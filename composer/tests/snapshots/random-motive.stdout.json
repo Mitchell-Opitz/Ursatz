@@ -1,7 +1,6 @@
 {
   "seed": 1,
-  "motives": [
-    {
+  "motives": [{
       "motive": {
         "meter": {
           "beats_per_bar": 3,
@@ -438,6 +437,18 @@
           "text": "I",
           "given": false
         },
+        "segments": {
+          "given": false,
+          "items": [{
+              "label": "a",
+              "first": 0,
+              "last": 3
+            }, {
+              "label": "b",
+              "first": 4,
+              "last": 8
+            }]
+        },
         "tones": [{
             "note": 1,
             "role": "chord",
@@ -504,8 +515,7 @@
           }],
         "warnings": []
       }
-    },
-    {
+    }, {
       "motive": {
         "meter": {
           "beats_per_bar": 3,
@@ -748,6 +758,14 @@
           "text": "I",
           "given": false
         },
+        "segments": {
+          "given": false,
+          "items": [{
+              "label": "a",
+              "first": 0,
+              "last": 3
+            }]
+        },
         "tones": [{
             "note": 1,
             "role": "chord",
@@ -779,8 +797,7 @@
           }],
         "warnings": []
       }
-    },
-    {
+    }, {
       "motive": {
         "meter": {
           "beats_per_bar": 3,
@@ -983,6 +1000,14 @@
           "text": "I",
           "given": false
         },
+        "segments": {
+          "given": false,
+          "items": [{
+              "label": "a",
+              "first": 0,
+              "last": 2
+            }]
+        },
         "tones": [{
             "note": 1,
             "role": "chord",
@@ -1007,6 +1032,5 @@
           }],
         "warnings": []
       }
-    }
-  ]
+    }]
 }

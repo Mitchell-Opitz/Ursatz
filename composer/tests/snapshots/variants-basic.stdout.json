@@ -239,6 +239,14 @@
         "text": "I",
         "given": false
       },
+      "segments": {
+        "given": false,
+        "items": [{
+            "label": "a",
+            "first": 0,
+            "last": 3
+          }]
+      },
       "tones": [{
           "note": 1,
           "role": "chord",
@@ -494,6 +502,14 @@
           "base_harmony": {
             "text": "V",
             "given": true
+          },
+          "segments": {
+            "given": false,
+            "items": [{
+                "label": "a",
+                "first": 0,
+                "last": 2
+              }]
           },
           "tones": [{
               "note": 1,
@@ -784,6 +800,14 @@
             "text": "I",
             "given": false
           },
+          "segments": {
+            "given": false,
+            "items": [{
+                "label": "a",
+                "first": 0,
+                "last": 3
+              }]
+          },
           "tones": [{
               "note": 1,
               "role": "chord",
@@ -1006,6 +1030,14 @@
             "text": "I V@1/2",
             "given": true
           },
+          "segments": {
+            "given": false,
+            "items": [{
+                "label": "a",
+                "first": 0,
+                "last": 1
+              }]
+          },
           "tones": [{
               "note": 1,
               "role": "chord",
@@ -1207,6 +1239,14 @@
           "base_harmony": {
             "text": "I",
             "given": true
+          },
+          "segments": {
+            "given": false,
+            "items": [{
+                "label": "a",
+                "first": 0,
+                "last": 1
+              }]
           },
           "tones": [{
               "note": 1,

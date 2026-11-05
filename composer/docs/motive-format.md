@@ -64,6 +64,7 @@ document above) and an `analysis` member (and, from `motive --render-key`, `--mi
 | `harmony_text` | Only for a motive with chords of its own: the chords as text, as `harmony` above. |
 | `implied_harmony` | `key_known`, and `candidates`, best fit first: `roman_numeral`, `function`, `fit` (the share of the motive that is chord tones, 0 to 1, to four places), `chord_tones` and `non_chord_tones`. Empty without a key, and for a rhythm or a contour. |
 | `base_harmony` | `null` without a key, and for a rhythm or a contour. Otherwise `text` (the base harmony as `harmony` above) and `given` (true when it is the motive's own harmony, false when it was proposed from the notes; at most 2 chords in a bar). |
+| `segments` | `given` and `items`, always written: the motive's own `features` when it has any (`given` true), otherwise a proposal (`given` false). Each item is `label`, `first` and `last` (0-based note indices, inclusive, as a feature). See [Segments](#segments). |
 | `tones` | One object per note, `[]` when `base_harmony` is `null`: `note` (1-based), `role` (`chord`, `non-chord` or `unclassified`), `type` (`passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`, `changing-tone` or `pedal` for a non-chord tone, else `null`), `resolves_to` (1-based note or `null`), `unresolved` and `overridden` (the label came from `--tone`). |
 | `warnings` | One string per unresolved note: `Note 3 (B5) does not resolve`. |
 
@@ -71,3 +72,17 @@ For the motive above, `scale_degrees` gives `1 3 5 1`, the contour is `ascending
 and `+5` semitones, `+2`, `+2` and `+3` steps. The best implied chord is `i`, with `fit` 1.
 
 The analysis is deterministic: the same motive gives the same document, byte for byte.
+
+### Segments
+
+A motif is built from segments, the motives Schoenberg finds inside it: short runs of notes, each with its own rhythm, that the motif states, repeats and varies. A segment is a stored feature (`label`, `first`, `last`), and the analysis always carries them in `segments`: the motive's own when it has any, which are kept as given and never changed, otherwise a proposal from the notes. The text summary prints them as `segments: a 1-3, a' 4-6` (1-based), with `(proposed)` after a proposal.
+
+The proposal, in order:
+
+1. A new segment starts before a note that follows a rest, before a note that follows a note at least a beat long and at least twice the duration of the note before that one, and before the first note of each full bar when that note is on beat 1. A pickup stays with the first segment.
+2. A group of one note joins the group before it (the first group joins the next), unless that note is alone in its bar: a whole-bar note is a segment of its own.
+3. More than 8 groups: the adjacent pair with the fewest notes is joined, earliest first, until there are 8.
+4. Labels are the letters `a` to `h` in order of first appearance of a rhythm. A group whose duration sequence repeats an earlier group's takes that group's letter with one `'` for each earlier occurrence (`a`, `a'`, `a''`).
+5. A motive with one group is one segment `a` over every note. A motive with only a contour has no rhythm and is one segment.
+
+The proposal is deterministic.

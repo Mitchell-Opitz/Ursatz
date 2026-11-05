@@ -244,6 +244,14 @@
       "text": "I V@3",
       "given": true
     },
+    "segments": {
+      "given": true,
+      "items": [{
+          "label": "a",
+          "first": 0,
+          "last": 2
+        }]
+    },
     "tones": [{
         "note": 1,
         "role": "chord",

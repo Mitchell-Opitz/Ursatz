@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P32)
+
+The API is 1.2: every motive analysis document (`composer_api_motive`, `composer_api_motive_from_midi`, `composer_api_motive_render`, `composer_api_random_motive` and the variants) has `analysis.segments`, `{"given", "items"}`: the motive's own features when it has any, otherwise a proposal from its bars and rhythmic groups. See [motive-format.md](motive-format.md#segments).
+
 ## Version 0.4.1 (phase P28)
 
 `composer_api.h` is the only public header; every other header is private to the Composer (`src/include/`) and its dependencies are linked PRIVATE. The API is unchanged (1.1).

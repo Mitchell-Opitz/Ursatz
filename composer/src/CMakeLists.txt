@@ -76,6 +76,7 @@ add_library(ursatz_composer STATIC
     motive/motive_render.c
     motive/motive_import.c
     motive/motive_analysis.c
+    motive/motive_segments.c
     motive/motive_develop.c
     motive/motive_develop_operator.c
     motive/motive_recognizability.c

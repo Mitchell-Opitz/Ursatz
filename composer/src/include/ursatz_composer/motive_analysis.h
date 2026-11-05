@@ -109,6 +109,8 @@ typedef struct {
     bool rhythm_known;
     bool range_known;
     Rational length;
+    /* One beat of the meter in whole notes. */
+    Rational beat_length;
     /* How many bars the motive is: its length over a bar. */
     Rational bars;
 
@@ -142,6 +144,12 @@ typedef struct {
 
     bool tones_known;
     MotiveToneLabel tones[MOTIVE_MAX_NOTES];
+
+    /* The motive's segments: its own features when it has any (segments_given), otherwise a proposal from its bars and
+       rhythmic groups (docs/motive-format.md, "Segments"). Notes are 0-based and inclusive, as features. */
+    MotiveSketchFeature segments[MOTIVE_MAX_FEATURES];
+    size_t segment_count;
+    bool segments_given;
 } MotiveAnalysis;
 
 /* Analyzes the motive into *out. False for a motive that is not valid (see motive.h), leaving *out untouched. */

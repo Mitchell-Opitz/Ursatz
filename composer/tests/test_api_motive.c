@@ -106,6 +106,37 @@ static void test_gui_shapes(void) {
     composer_response_destroy(&other);
 }
 
+/* Segments are in every analysis: the motive's own features when it has them, otherwise a proposal. */
+static void test_segments(void) {
+    ComposerResponse response;
+    const char *without = "{\"input\":{\"text\":\"C4:q D4:q E4:q F4:q | C4:q D4:q E4:q F4:q\"},\"meter\":\"4/4\",\"key\":\"C major\"}";
+    assert(composer_api_motive(without, NULL, &response) == COMPOSER_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    assert(document);
+    cJSON *segments = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "analysis"), "segments");
+    assert(cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(segments, "given")));
+    cJSON *items = cJSON_GetObjectItemCaseSensitive(segments, "items");
+    assert(cJSON_GetArraySize(items) == 2);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(items, 1), "label")->valuestring, "a'") == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+
+    const char *with = "{\"input\":{\"text\":\"C4:q D4:q E4:q F4:q | C4:q D4:q E4:q F4:q\"},\"meter\":\"4/4\",\"key\":\"C major\","
+                       "\"features\":[\"x:0-4\"]}";
+    assert(composer_api_motive(with, NULL, &response) == COMPOSER_OK);
+    document = cJSON_Parse(response.json);
+    assert(document);
+    segments = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "analysis"), "segments");
+    assert(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(segments, "given")));
+    items = cJSON_GetObjectItemCaseSensitive(segments, "items");
+    assert(cJSON_GetArraySize(items) == 1);
+    cJSON *item = cJSON_GetArrayItem(items, 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(item, "label")->valuestring, "x") == 0);
+    assert(cJSON_GetObjectItemCaseSensitive(item, "last")->valueint == 4);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+}
+
 static void test_midi(void) {
     size_t size = 0;
     unsigned char *bytes = (unsigned char *)test_read_file(COMPOSER_FIXTURE_DIR "/motive_d_minor.mid", &size);
@@ -236,6 +267,7 @@ static void test_job(void) {
 
 int main(void) {
     test_gui_shapes();
+    test_segments();
     test_midi();
     test_render();
     test_refusals();

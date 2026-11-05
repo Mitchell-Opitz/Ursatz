@@ -50,7 +50,7 @@ Key and meter text. Every entry reads a `key` and a `meter` with one parser (`re
 
 Analyzes a motive, as `ursatz-composer motive <input> --json` does. `json`: the document that command prints,
 `{"motive", "analysis"}`: the motive in the motive-document format and its analysis (intervals, contour, rhythm, range,
-scale degrees, implied harmony, base harmony and the tone labels with their warnings). Schema:
+scale degrees, implied harmony, base harmony, the segments and the tone labels with their warnings). `analysis.segments` is `{"given": bool, "items": [{"label", "first", "last"}]}`: the motive's own `features` when it has any, otherwise a proposal (API 1.2; see [motive-format.md](../motive-format.md#segments)); every response that carries a motive analysis has it. Schema:
 `schema/api/motive.response.schema.json`.
 
 ## `composer_api_motive_from_midi(bytes, size, request_json, job, out)`
