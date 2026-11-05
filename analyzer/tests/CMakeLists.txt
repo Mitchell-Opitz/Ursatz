@@ -643,6 +643,13 @@ target_link_libraries(test_score_text_reader PRIVATE ursatz_analyzer)
 target_include_directories(test_score_text_reader PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME test_score_text_reader COMMAND test_score_text_reader)
 
+add_executable(test_text_export test_text_export.c)
+target_link_libraries(test_text_export PRIVATE ursatz_analyzer)
+target_compile_definitions(test_text_export PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_text_export COMMAND test_text_export)
+
 # Default test timeouts by label (30 s, or 1800 s for tests labeled slow), so local runs match CI.
 include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
 ursatz_analyzer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
