@@ -119,8 +119,10 @@ typedef struct {
 } Analyzed;
 
 static Analyzed analyze(const char *name, const Note *notes, size_t count) {
-    char path[128];
-    snprintf(path, sizeof(path), "/tmp/ursatz_analyzer_chord_details_%s.mid", name);
+    char path[512];
+    char file_name[128];
+    snprintf(file_name, sizeof(file_name), "chord_details_%s.mid", name);
+    test_temp_path(path, sizeof(path), file_name);
     write_fixture(path, notes, count);
 
     ImportedNotes imported;

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
@@ -23,6 +24,15 @@ static void append_u32(unsigned char *buf, size_t *pos, uint32_t v) {
 static void append_u16(unsigned char *buf, size_t *pos, uint16_t v) {
     unsigned char b[2] = {(unsigned char)(v >> 8), (unsigned char)v};
     append_bytes(buf, pos, b, 2);
+}
+
+void test_temp_path(char *out, size_t size, const char *name) {
+    const char *dir = getenv("TMPDIR");
+    if (dir == NULL || dir[0] == '\0') {
+        dir = "/tmp";
+    }
+    int written = snprintf(out, size, "%s/ursatz_analyzer_%ld_%s", dir, (long)getpid(), name);
+    assert(written > 0 && (size_t)written < size);
 }
 
 size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body,

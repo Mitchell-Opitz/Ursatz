@@ -34,6 +34,9 @@ char *test_read_file(const char *path);
 /* Writes the text to the file; false on failure. */
 bool test_write_file(const char *path, const char *data);
 
+/* Writes "<TMPDIR or /tmp>/ursatz_analyzer_<pid>_<name>" into out, so parallel test processes never share a file. */
+void test_temp_path(char *out, size_t size, const char *name);
+
 /* Imports a file (the format is detected), runs the pipeline and returns the parsed analysis document the
    caller deletes. Asserts on any failure. */
 cJSON *test_analyze_midi(const char *path);

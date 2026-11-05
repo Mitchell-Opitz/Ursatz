@@ -254,11 +254,13 @@ int main(void) {
         check_piece(path, PIECES[i].name, &PIECES[i]);
     }
 
-    const char *pickup_path = "/tmp/ursatz_analyzer_pickup_fixture.mid";
+    char pickup_path[512];
+    test_temp_path(pickup_path, sizeof(pickup_path), "pickup_fixture.mid");
     write_pickup_fixture(pickup_path);
     check_piece(pickup_path, "pickup.mid", &PICKUP);
 
-    const char *no_meter_path = "/tmp/ursatz_analyzer_no_meter_fixture.mid";
+    char no_meter_path[512];
+    test_temp_path(no_meter_path, sizeof(no_meter_path), "no_meter_fixture.mid");
     write_no_meter_fixture(no_meter_path);
     check_piece(no_meter_path, "no_meter.mid", &NO_METER);
 

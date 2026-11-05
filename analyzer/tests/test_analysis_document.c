@@ -94,7 +94,10 @@ int main(void) {
     unsigned char buf[256];
     size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
-    const char *path = "/tmp/ursatz_analyzer_document_fixture.mid";
+    char path[512];
+    test_temp_path(path, sizeof(path), "document_fixture.mid");
+    char expected_document_path[512];
+    test_temp_path(expected_document_path, sizeof(expected_document_path), "document_fixture.analysis.json");
     FILE *file = fopen(path, "wb");
     assert(file != NULL);
     assert(fwrite(buf, 1, size, file) == size);
@@ -116,7 +119,7 @@ int main(void) {
     free(again);
 
     char *document_path = derive_analysis_document_path(path);
-    assert(strcmp(document_path, "/tmp/ursatz_analyzer_document_fixture.analysis.json") == 0);
+    assert(strcmp(document_path, expected_document_path) == 0);
     free(document_path);
 
     cJSON *document = cJSON_Parse(json);
@@ -126,7 +129,7 @@ int main(void) {
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(cJSON_IsObject(metadata));
-    assert(strcmp(string(metadata, "source_file"), "ursatz_analyzer_document_fixture.mid") == 0);
+    assert(strcmp(string(metadata, "source_file"), strrchr(path, '/') + 1) == 0);
     assert(strlen(string(metadata, "analyzer_version")) > 0);
     assert(strlen(string(metadata, "ursatz_commit")) > 0);
     assert(number(metadata, "note_count") == 11);
