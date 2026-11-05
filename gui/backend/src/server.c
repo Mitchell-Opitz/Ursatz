@@ -69,6 +69,9 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
   /* Motifs analyzed before tone labels existed are analyzed again, once (R-204). */
   ursatz_gui_material_migrate_tones(kMaterialsDir);
 
+  /* Motifs without segments are given a proposal, once (R-312). */
+  ursatz_gui_material_migrate_segments(kMaterialsDir);
+
   /* Themes of the old body are deleted, once (R-205). */
   ursatz_gui_material_clear_themes(kMaterialsDir);
 
