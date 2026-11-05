@@ -33,6 +33,7 @@
 #include <ursatz_analyzer/playback.h>
 #include <ursatz_analyzer/score_export.h>
 #include <ursatz_analyzer/staleness.h>
+#include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/version.h>
 
 
@@ -1340,6 +1341,74 @@ static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_di
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
+static UrsatzGuiAnalysisResult get_piece_export_unlocked(const char *pieces_dir, const char *id, int first_measure,
+                                                              int last_measure, char **out_text, char message[256]) {
+    message[0] = '\0';
+    UrsatzGuiAnalysisResult current = ensure_current_unlocked(pieces_dir, id);
+    if (current == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+        return current;
+    }
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
+    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    char *title = meta_string_copy(meta, "filename");
+    cJSON_Delete(meta);
+    if (!title) {
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    char *title_dot = strrchr(title, '.');
+    if (title_dot && title_dot != title) {
+        *title_dot = '\0';
+    }
+
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    char *document_json = ursatz_gui_read_file(analysis_path, NULL);
+    if (!document_json) {
+        free(title);
+        return ursatz_gui_path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED
+                                                : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+
+    bool import_failed = false;
+    UrsatzGuiImportEntry *import = acquire_import(dir_path, id, format, &import_failed);
+    if (!import) {
+        free(title);
+        free(document_json);
+        return import_failed ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+
+    AnalyzerTextExportOptions options = analyzer_text_export_options_default();
+    options.title = title;
+    options.first_measure = first_measure;
+    options.last_measure = last_measure;
+    char *text = NULL;
+    AnalyzerStatus status =
+        analyzer_text_export_piece(ursatz_gui_import_entry_notes(import), document_json, &options, &text);
+    ursatz_gui_import_cache_release(import);
+    free(title);
+    free(document_json);
+    if (status == ANALYZER_ERR_ALLOC) {
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    if (status != ANALYZER_OK) {
+        fprintf(stderr, "ursatz_gui_analysis_get_piece_export: analyzer_text_export_piece failed for piece '%s' "
+                         "with AnalyzerStatus=%d\n",
+                id, (int)status);
+        snprintf(message, 256, "%s", status == ANALYZER_ERR_ARGUMENT ? "ANALYZER_ERR_ARGUMENT" : "ANALYZER_ERR_LIBRARY");
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+    *out_text = text;
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
 bool ursatz_gui_document_subset(const char *document_json, const char *const *names, size_t count,
                                 char **out_json, char **out_names_json) {
     cJSON *document = cJSON_Parse(document_json);
@@ -1551,6 +1620,19 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *piece
         return result;
     }
     result = get_piece_playback_unlocked(pieces_dir, id, out_json);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_export(const char *pieces_dir, const char *id,
+                                                              int first_measure, int last_measure, char **out_text,
+                                                              char message[256]) {
+    UrsatzGuiAnalysisResult result;
+    message[0] = '\0';
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_piece_export_unlocked(pieces_dir, id, first_measure, last_measure, out_text, message);
     ursatz_gui_piece_unlock(id);
     return result;
 }
