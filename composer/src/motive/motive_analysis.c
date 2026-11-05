@@ -259,6 +259,7 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     result.rhythm_known = motive->form != MOTIVE_SKETCH_FORM_CONTOUR;
     result.range_known = full;
     result.length = length;
+    result.beat_length = motive_time(1, (unsigned long)motive_meter(motive).beat_unit);
     result.key_known = motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
     result.key_source = motive->key_source;
     if (result.key_known) {

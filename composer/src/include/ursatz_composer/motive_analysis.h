@@ -109,6 +109,8 @@ typedef struct {
     bool rhythm_known;
     bool range_known;
     Rational length;
+    /* One beat of the meter in whole notes. */
+    Rational beat_length;
     /* How many bars the motive is: its length over a bar. */
     Rational bars;
 
