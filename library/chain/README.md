@@ -58,7 +58,7 @@ The chain also keeps the inputs it builds for its stages, until `analysis_chain_
 Known behavior, kept from the test glue the chain replaced (deleted in P22 B5; the chain's results on four reference pieces are fixed as expected values in `chain/tests/test_analysis_chain.c`):
 
 - The notes are read in the order of `analysis_note_compare` (onset, pitch, id). The glue read them in the importer's order, which differs among simultaneous notes. Segments, keys, chords, numerals, outer lines, cadences, phrases and the rest come out equal; sums over a segment's members run in another order, so scores and uncertainties agree to within rounding (1e-9, below the library's own tie tolerance), and the few voice assignments that depend on the order of simultaneous notes can differ (texture).
-- The outer lines are extracted on the segmentation that keeps every melody note (`analysis_chain_outer_voices`, one entry per voice segment). The harmony, form, meter, melody and schema builders index lines by chord segment, so the chain maps them with `chain_build_segment_lines`: entry i is the entry of the voice segment sounding at the start of chord segment i, absent when none does (`analysis_chain_segment_outer_voices`). Until P24 the builders read the voice-segment lines by chord-segment index, which agrees only where nothing merged.
+- The outer lines are extracted on the segmentation that keeps every melody note (`analysis_chain_outer_voices`, one entry per voice segment). The harmony, form, meter, melody and schema builders index lines by chord segment, so the chain maps them with `chain_build_segment_lines`: entry i is the entry of the voice segment sounding at the start of chord segment i, absent when none does (`analysis_chain_segment_outer_voices`).
 
 ## Tests
 

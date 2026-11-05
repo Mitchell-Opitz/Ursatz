@@ -26,7 +26,7 @@ Every Interpretation targets the segment's Sonority id (a prolongation's targets
 
 ## Function
 
-One Interpretation per valid segment (`analysis_function.h`). A diatonic chord's function is `harmony_function_of`: I tonic, ii and IV strong and iii and vi weak predominants, V and vii dominant, the inversion not mattering; in minor VII is a weak predominant. An applied chord is dominant toward its target (`harmony_applied_function`, added in this branch because no rule gave one): the claim records DOMINANT, `applied` and `applied_to`.
+One Interpretation per valid segment (`analysis_function.h`). A diatonic chord's function is `harmony_function_of`: I tonic, ii and IV strong and iii and vi weak predominants, V and vii dominant, the inversion not mattering; in minor VII is a weak predominant. An applied chord is dominant toward its target (`harmony_applied_function`, since no rule gives one): the claim records DOMINANT, `applied` and `applied_to`.
 
 ## Six-fours
 
