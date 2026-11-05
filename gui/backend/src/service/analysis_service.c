@@ -35,14 +35,6 @@
 #include <ursatz_analyzer/staleness.h>
 #include <ursatz_analyzer/version.h>
 
-static bool path_exists(const char *path) {
-#ifdef _WIN32
-    return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
-#else
-    struct stat st;
-    return stat(path, &st) == 0;
-#endif
-}
 
 #define PIECE_ID_MAX_TRIES 8
 
@@ -637,7 +629,7 @@ static bool find_source_path(const char *dir_path, char *out, size_t out_size) {
     static const char *const kNames[] = {"source.mid", "source.musicxml", "source.xml", "source.mxl"};
     for (size_t i = 0; i < sizeof(kNames) / sizeof(kNames[0]); i++) {
         snprintf(out, out_size, "%s/%s", dir_path, kNames[i]);
-        if (path_exists(out)) {
+        if (ursatz_gui_path_exists(out)) {
             return true;
         }
     }
@@ -1396,7 +1388,11 @@ static UrsatzGuiAnalysisResult get_document_unlocked(const char *pieces_dir, con
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
     char *document_json = ursatz_gui_read_file(analysis_path, NULL);
     if (!document_json) {
-        return path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+        return ursatz_gui_path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    if (!names) {
+        *out_json = document_json;
+        return URSATZ_GUI_ANALYSIS_OK;
     }
     bool ok = ursatz_gui_document_subset(document_json, names, count, out_json, NULL);
     free(document_json);
@@ -1455,6 +1451,31 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_document(const char *pieces_dir,
     result = get_document_unlocked(pieces_dir, id, names, count, out_json);
     ursatz_gui_piece_unlock(id);
     return result;
+}
+
+bool ursatz_gui_analysis_piece_exists(const char *pieces_dir, const char *id) {
+    char dir_path[320];
+    char meta_path[400];
+    return piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path)) &&
+           snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path) < (int)sizeof(meta_path) &&
+           ursatz_gui_path_exists(meta_path);
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_filename(const char *pieces_dir, const char *id, char **out_filename) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    char dir_path[320];
+    cJSON *meta = piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path)) ? read_meta_file(dir_path) : NULL;
+    if (!meta) {
+        ursatz_gui_piece_unlock(id);
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    *out_filename = meta_string_copy(meta, "filename");
+    cJSON_Delete(meta);
+    ursatz_gui_piece_unlock(id);
+    return *out_filename ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id) {

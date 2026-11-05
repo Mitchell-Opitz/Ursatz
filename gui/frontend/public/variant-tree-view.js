@@ -20,9 +20,7 @@ const VariantTreeView = (function () {
     el.classList.toggle("error", Boolean(isError));
   }
 
-  function errorText(data, fallback) {
-    return data && typeof data.error === "string" && data.error !== "" ? data.error : fallback;
-  }
+  const errorText = ApiRequest.errorText;
 
   function chipRow(chips) {
     const row = h("span", "variant-chips");

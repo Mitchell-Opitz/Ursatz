@@ -2,6 +2,7 @@
  * and items, item rows, version labels and the current project filter. No
  * DOM; materials-view.js renders from these. */
 (function (root) {
+  const Req = root.ApiRequest || (typeof require === "function" ? require("./request.js") : null);
   /* The Composer's words (R-270, R-276): the modes, tone labels and tonic spellings are read when asked. */
   const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
   const ALL_PROJECTS = "all";
@@ -16,17 +17,9 @@
     return TYPES.find((entry) => entry.type === type) || null;
   }
 
-  function jsonRequest(method, url, body) {
-    const request = { method, url };
-    if (body !== undefined) {
-      request.headers = { "Content-Type": "application/json" };
-      request.body = JSON.stringify(body);
-    }
-    return request;
-  }
 
   function buildProjectListRequest() {
-    return jsonRequest("GET", "/api/materials/projects");
+    return Req.jsonRequest("GET", "/api/materials/projects");
   }
 
   function buildCreateProjectRequest(name, description) {
@@ -34,17 +27,17 @@
     if (description) {
       body.description = String(description);
     }
-    return jsonRequest("POST", "/api/materials/projects", body);
+    return Req.jsonRequest("POST", "/api/materials/projects", body);
   }
 
   function buildRenameProjectRequest(id, name) {
-    return jsonRequest("PATCH", `/api/materials/projects/${encodeURIComponent(id)}`, {
+    return Req.jsonRequest("PATCH", `/api/materials/projects/${encodeURIComponent(id)}`, {
       name: String(name || "").trim(),
     });
   }
 
   function buildDeleteProjectRequest(id) {
-    return jsonRequest("DELETE", `/api/materials/projects/${encodeURIComponent(id)}`);
+    return Req.jsonRequest("DELETE", `/api/materials/projects/${encodeURIComponent(id)}`);
   }
 
   /* The items of one type, narrowed to a project unless the filter is "all". */
@@ -53,15 +46,15 @@
     if (projectFilter && projectFilter !== ALL_PROJECTS) {
       url += `&project=${encodeURIComponent(projectFilter)}`;
     }
-    return jsonRequest("GET", url);
+    return Req.jsonRequest("GET", url);
   }
 
   function buildItemGetRequest(id) {
-    return jsonRequest("GET", `/api/materials/items/${encodeURIComponent(id)}`);
+    return Req.jsonRequest("GET", `/api/materials/items/${encodeURIComponent(id)}`);
   }
 
   function buildVersionGetRequest(id, number) {
-    return jsonRequest("GET", `/api/materials/items/${encodeURIComponent(id)}/versions/${Number(number)}`);
+    return Req.jsonRequest("GET", `/api/materials/items/${encodeURIComponent(id)}/versions/${Number(number)}`);
   }
 
   /* The version 1 body of a new item; the editors (motif B7, later themes and
@@ -92,7 +85,7 @@
   }
 
   function buildCreateItemRequest(type, name, projectId) {
-    return jsonRequest("POST", "/api/materials/items", {
+    return Req.jsonRequest("POST", "/api/materials/items", {
       type,
       name: String(name || "").trim(),
       project_id: projectId,
@@ -110,16 +103,9 @@
     if (typeof f.project_id === "string" && f.project_id !== "") {
       body.project_id = f.project_id;
     }
-    return jsonRequest("PATCH", `/api/materials/items/${encodeURIComponent(id)}`, body);
+    return Req.jsonRequest("PATCH", `/api/materials/items/${encodeURIComponent(id)}`, body);
   }
 
-  /* The error text of a failed answer, or the fallback. */
-  function errorText(data, fallback) {
-    if (data && typeof data.error === "string" && data.error !== "") {
-      return data.error;
-    }
-    return fallback || "Request failed";
-  }
 
   function projectsFrom(data) {
     return data && Array.isArray(data.projects) ? data.projects : [];
@@ -268,7 +254,7 @@
 
   /* Moves a use to the source's current version (writes a new version). */
   function buildUpdateUseRequest(id, sourceId) {
-    return jsonRequest(
+    return Req.jsonRequest(
       "POST",
       `/api/materials/items/${encodeURIComponent(id)}/uses/${encodeURIComponent(sourceId)}/update`,
       {},
@@ -299,7 +285,7 @@
   }
 
   function buildDeleteItemRequest(id, force) {
-    return jsonRequest("DELETE", `/api/materials/items/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
+    return Req.jsonRequest("DELETE", `/api/materials/items/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
   }
 
   /* The warning for a refused delete (status 409 with used_by), or null when
@@ -317,7 +303,7 @@
   }
 
   function buildAllItemsRequest() {
-    return jsonRequest("GET", "/api/materials/items");
+    return Req.jsonRequest("GET", "/api/materials/items");
   }
 
   /* Items to pick from, by name (case-insensitive part), type and project
@@ -365,7 +351,7 @@
     if (note && String(note).trim() !== "") {
       request.note = String(note).trim();
     }
-    return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
+    return Req.jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
   }
 
   const MOTIF_TABS = [
@@ -422,7 +408,7 @@
 
   /* Analyzes the current version of a motif again; the answer is the new version. */
   function buildReanalyzeRequest(id) {
-    return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/reanalyze`, {});
+    return Req.jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/reanalyze`, {});
   }
 
   const NOTE_HINT = "Pitch:duration, e.g. D4:q F4:e A4:e D5:h. r is a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
@@ -583,7 +569,7 @@
     if (typeof motif.degrees !== "string" || motif.degrees === "") {
       return null;
     }
-    return jsonRequest("POST", "/api/materials/motifs/to-c", {
+    return Req.jsonRequest("POST", "/api/materials/motifs/to-c", {
       degrees: motif.degrees,
       mode: motifModes().includes(mode) ? mode : "major",
       meter: typeof motif.meter === "string" ? motif.meter : "4/4",
@@ -635,16 +621,14 @@
 
   /* The editor field a request path of the Composer belongs to (R-276): the note list for /input and /tones. */
   function fieldForPath(path) {
-    const value = String(path || "");
     const table = [["/meter", "meter"], ["/pickup", "pickup"], ["/harmony", "harmony"], ["/features", "features"], ["/key", "mode"]];
-    const hit = table.find(([prefix]) => value === prefix || value.startsWith(`${prefix}/`));
-    return hit ? hit[1] : "notes";
+    return Req.fieldForPath(path, table, "notes");
   }
 
   /* The request that asks the backend to check the editor values with the Composer (POST
    * /api/materials/items/validate); previous is the body being edited, or null for a new motif. */
   function validateRequest(values, previous) {
-    return jsonRequest("POST", "/api/materials/items/validate", { type: "motif", body: buildMotifBody(values, previous) });
+    return Req.validateRequest("motif", buildMotifBody(values, previous));
   }
 
   /* Messages for the feature rows (1-based first and last note). */
@@ -728,14 +712,14 @@
     if (Array.isArray(motif.features) && motif.features.length > 0) {
       request.features = motif.features.map((feature) => ({ label: feature.label, first: feature.first, last: feature.last }));
     }
-    return jsonRequest("POST", "/api/materials/render", request);
+    return Req.jsonRequest("POST", "/api/materials/render", request);
   }
 
   /* The random motif POST for a seed: one motif, form full, with the mode and the meter left to the Composer, which
    * draws them from the seed (R-269). Without a key the Composer writes C major or A minor. values: {seed}. */
   function randomRequest(values) {
     const v = values || {};
-    return jsonRequest("POST", "/api/materials/motifs/random", {
+    return Req.jsonRequest("POST", "/api/materials/motifs/random", {
       mode: "random",
       meter: "random",
       form: "full",
@@ -835,7 +819,7 @@
   function buildSaveMotifRequest(options) {
     const o = options || {};
     if (!o.id) {
-      return jsonRequest("POST", "/api/materials/items", {
+      return Req.jsonRequest("POST", "/api/materials/items", {
         type: "motif",
         name: String(o.name || "").trim(),
         project_id: o.project_id,
@@ -847,7 +831,7 @@
     if (o.note && String(o.note).trim() !== "") {
       request.note = String(o.note).trim();
     }
-    return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(o.id)}/versions`, request);
+    return Req.jsonRequest("POST", `/api/materials/items/${encodeURIComponent(o.id)}/versions`, request);
   }
 
   function timeText(time) {
@@ -957,7 +941,7 @@
     newItemBody,
     buildCreateItemRequest,
     buildUpdateItemRequest,
-    errorText,
+    errorText: Req.errorText,
     projectsFrom,
     projectName,
     projectOptions,

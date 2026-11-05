@@ -142,3 +142,20 @@ bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out
   }
   return false;
 }
+
+bool ursatz_gui_composer_reply_refused(const UrsatzGuiComposerReply *reply) {
+  return reply->status == COMPOSER_ERR_REQUEST || reply->status == COMPOSER_ERR_UNSATISFIABLE;
+}
+
+int ursatz_gui_composer_reply_failure_status(const UrsatzGuiComposerReply *reply) {
+  switch (reply->status) {
+    case COMPOSER_ERR_UNSATISFIABLE:
+      return 422;
+    case COMPOSER_ERR_REQUEST:
+      return 400;
+    case COMPOSER_ERR_CANCELLED:
+      return 499;
+    default:
+      return 500;
+  }
+}

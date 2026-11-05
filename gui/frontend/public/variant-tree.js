@@ -5,6 +5,7 @@
  * `variants` route's answer: {seed, chain: {steps: [{op, params, open}]},
  * kind, kept, changed, derivation, recognizability, motive}. */
 (function (root) {
+  const Req = root.ApiRequest || (typeof require === "function" ? require("./request.js") : null);
   /* The Composer's words (R-270): the phrase functions and the distances are read from the vocabulary when asked. */
   const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
   const CATEGORY_ORDER = ["exact", "rhythm", "intervals", "harmony", "melody adaptation"];
@@ -15,18 +16,10 @@
   const DEFAULT_COUNT = 6;
   const MAX_COUNT = 16;
 
-  function jsonRequest(method, url, body) {
-    const request = { method, url };
-    if (body !== undefined) {
-      request.headers = { "Content-Type": "application/json" };
-      request.body = JSON.stringify(body);
-    }
-    return request;
-  }
 
   /* A request the backend runs as a job (backend-jobs.js). */
   function jobRequest(method, url, body) {
-    return Object.assign(jsonRequest(method, url, body), { job: true });
+    return Object.assign(Req.jsonRequest(method, url, body), { job: true });
   }
 
   function itemUrl(id, tail) {
@@ -310,11 +303,11 @@
   }
 
   function opChecksRequest(id) {
-    return jsonRequest("GET", itemUrl(id, "op-checks"));
+    return Req.jsonRequest("GET", itemUrl(id, "op-checks"));
   }
 
   function opChecksPutRequest(id, checks) {
-    return jsonRequest("PUT", itemUrl(id, "op-checks"), { checks });
+    return Req.jsonRequest("PUT", itemUrl(id, "op-checks"), { checks });
   }
 
   /* The operations of GET /api/materials/variant-operations by category, in
@@ -507,12 +500,12 @@
     if (name && String(name).trim() !== "") {
       body.name = String(name).trim();
     }
-    return jsonRequest("POST", itemUrl(id, "variants/save"), body);
+    return Req.jsonRequest("POST", itemUrl(id, "variants/save"), body);
   }
 
   /* The promote request: the variant becomes a motif of its own, named and in a project. */
   function promoteRequest(id, name, projectId) {
-    return jsonRequest("POST", itemUrl(id, "promote"), { name: String(name || "").trim(), project_id: projectId });
+    return Req.jsonRequest("POST", itemUrl(id, "promote"), { name: String(name || "").trim(), project_id: projectId });
   }
 
   /* The promoted list line: "<name> (opens it)" with the derivation under it. */
@@ -525,7 +518,7 @@
     if (kind) {
       body.kind = kind;
     }
-    return jsonRequest("POST", itemUrl(id, "flag"), body);
+    return Req.jsonRequest("POST", itemUrl(id, "flag"), body);
   }
 
   function rerollRequest(id) {
@@ -533,16 +526,16 @@
   }
 
   function treeRequest(id) {
-    return jsonRequest("GET", itemUrl(id, "variant-tree"));
+    return Req.jsonRequest("GET", itemUrl(id, "variant-tree"));
   }
 
   function operationsRequest() {
-    return jsonRequest("GET", "/api/materials/variant-operations");
+    return Req.jsonRequest("GET", "/api/materials/variant-operations");
   }
 
   /* The recognize request: how the target motif (an {item, version} reference) derives from the source. */
   function compareRequest(source, target) {
-    return jsonRequest("POST", "/api/materials/recognize", {
+    return Req.jsonRequest("POST", "/api/materials/recognize", {
       source: { item: source.item, version: source.version },
       target: { item: target.item, version: target.version },
     });
@@ -550,7 +543,7 @@
 
   /* The link-form request: the target item becomes a form of the source, from the recognition the compare gave. */
   function linkFormRequest(targetId, source, recognition) {
-    return jsonRequest("POST", itemUrl(targetId, "link-form"), {
+    return Req.jsonRequest("POST", itemUrl(targetId, "link-form"), {
       source: { item: source.item, version: source.version },
       recognition,
     });

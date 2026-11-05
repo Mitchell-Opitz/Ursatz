@@ -9,6 +9,7 @@
  *   {kind: "empty"} | {kind: "motif", item_id, version, into, hybrid} | {kind: "theme", item_id, version}
  *   | {kind: "progression", numerals, cells}. */
 (function (root) {
+  const Req = root.ApiRequest || (typeof require === "function" ? require("./request.js") : null);
   const Themes = root.ThemesModel || (typeof require === "function" ? require("./themes-model.js") : null);
 
   /* The Composer's words (R-270, R-276), read when asked: the vocabulary is loaded after the scripts. */
@@ -485,19 +486,12 @@
 
   /* The form field a request path is about, or null. */
   function fieldForPath(path) {
-    const value = typeof path === "string" ? path : "";
-    const hit = FIELD_PATHS.find(([prefix]) => value === prefix || value.startsWith(`${prefix}/`));
-    return hit ? hit[1] : null;
+    return Req.fieldForPath(path, FIELD_PATHS);
   }
 
   /* The request that asks the backend to check the form with the Composer (POST /api/materials/items/validate). */
   function validateRequest(state) {
-    return {
-      method: "POST",
-      url: "/api/materials/items/validate",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "piece", body: bodyFromState(state) }),
-    };
+    return Req.validateRequest("piece", bodyFromState(state));
   }
 
   /* --- requests -------------------------------------------------------- */

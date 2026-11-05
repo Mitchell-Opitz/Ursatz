@@ -2,6 +2,7 @@
  * counts, collapsible like the Tags panel. groupRows and kindLabel are pure;
  * mount renders into the page. */
 (function (root) {
+  const Req = root.ApiRequest || (typeof require === "function" ? require("./request.js") : null);
   const OPEN_KEY = "ursatz.subjectsPanel.open";
   const KINDS = [
     { kind: "character", title: "Characters" },
@@ -134,23 +135,15 @@
     return { refresh };
   }
 
-  function jsonRequest(method, url, body) {
-    const request = { method, url };
-    if (body !== undefined) {
-      request.headers = { "Content-Type": "application/json" };
-      request.body = JSON.stringify(body);
-    }
-    return request;
-  }
 
   const SUBJECTS_URL = "/api/subjects";
 
   function buildSubjectListRequest() {
-    return jsonRequest("GET", SUBJECTS_URL);
+    return Req.jsonRequest("GET", SUBJECTS_URL);
   }
 
   function buildSubjectGetRequest(id) {
-    return jsonRequest("GET", `${SUBJECTS_URL}/${encodeURIComponent(id)}`);
+    return Req.jsonRequest("GET", `${SUBJECTS_URL}/${encodeURIComponent(id)}`);
   }
 
   /* fields: name, kind, note; the note is left out when empty. */
@@ -160,7 +153,7 @@
     if (f.note && String(f.note).trim() !== "") {
       body.note = String(f.note).trim();
     }
-    return jsonRequest("POST", SUBJECTS_URL, body);
+    return Req.jsonRequest("POST", SUBJECTS_URL, body);
   }
 
   /* Only the fields that are given go in; an empty note is sent so it can be cleared. */
@@ -176,16 +169,16 @@
     if (typeof f.note === "string") {
       body.note = f.note.trim();
     }
-    return jsonRequest("PATCH", `${SUBJECTS_URL}/${encodeURIComponent(id)}`, body);
+    return Req.jsonRequest("PATCH", `${SUBJECTS_URL}/${encodeURIComponent(id)}`, body);
   }
 
   function buildDeleteSubjectRequest(id) {
-    return jsonRequest("DELETE", `${SUBJECTS_URL}/${encodeURIComponent(id)}`);
+    return Req.jsonRequest("DELETE", `${SUBJECTS_URL}/${encodeURIComponent(id)}`);
   }
 
   /* group is "items", "pieces" or "related"; add true links, false removes. */
   function buildLinkRequest(subjectId, group, otherId, add) {
-    return jsonRequest(
+    return Req.jsonRequest(
       add ? "POST" : "DELETE",
       `${SUBJECTS_URL}/${encodeURIComponent(subjectId)}/${group}/${encodeURIComponent(otherId)}`,
     );
@@ -270,13 +263,6 @@
     return (Array.isArray(list) ? list : []).filter((entry) => entry.id !== subjectId);
   }
 
-  /* The error text of a failed answer, or the fallback. */
-  function errorText(data, fallback) {
-    if (data && typeof data.error === "string" && data.error !== "") {
-      return data.error;
-    }
-    return fallback || "Request failed";
-  }
 
   const api = {
     KINDS,
@@ -297,7 +283,7 @@
     chipRows,
     withSubject,
     withoutSubject,
-    errorText,
+    errorText: Req.errorText,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

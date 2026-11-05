@@ -2,6 +2,7 @@
 add_library(ursatz_gui_core STATIC
   src/server.c
   src/util/fs_util.c
+  src/util/json_util.c
   src/routes/route_util.c
   src/service/persistence_service.c
   src/service/analysis_service.c
@@ -14,6 +15,7 @@ add_library(ursatz_gui_core STATIC
   src/service/job_queue.c
   src/service/compose_jobs.c
   src/service/material_service.c
+  src/service/motif_service.c
   src/service/compose_common.c
   src/service/piece_lock.c
   src/service/theme_service.c

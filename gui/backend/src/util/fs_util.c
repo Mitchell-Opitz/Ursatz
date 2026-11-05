@@ -15,6 +15,21 @@
 
 #define TMP_PATH_BYTES 408
 
+bool ursatz_gui_path_exists(const char *path) {
+#ifdef _WIN32
+    return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
+#else
+    struct stat st;
+    return stat(path, &st) == 0;
+#endif
+}
+
+void ursatz_gui_copy_message(char *message, size_t size, const char *text) {
+    if (message && size > 0) {
+        snprintf(message, size, "%s", text);
+    }
+}
+
 char *ursatz_gui_dup_string(const char *value) {
     if (!value) {
         return NULL;

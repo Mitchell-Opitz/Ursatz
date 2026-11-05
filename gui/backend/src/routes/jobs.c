@@ -11,43 +11,13 @@
 
 static const char *kJobsPrefix = "/api/jobs";
 
-static const char *reason_phrase(int status) {
-  switch (status) {
-    case 200:
-      return "OK";
-    case 202:
-      return "Accepted";
-    case 204:
-      return "No Content";
-    case 404:
-      return "Not Found";
-    case 405:
-      return "Method Not Allowed";
-    case 503:
-      return "Service Unavailable";
-    default:
-      return "Internal Server Error";
-  }
-}
-
-static int send_object(struct mg_connection *conn, int status, cJSON *object) {
-  char *text = object ? cJSON_PrintUnformatted(object) : NULL;
-  cJSON_Delete(object);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"error\":\"out of memory\"}");
-  }
-  int sent = ursatz_gui_send_json_status(conn, status, reason_phrase(status), text);
-  free(text);
-  return sent;
-}
-
 static int send_error(struct mg_connection *conn, int status, const char *error) {
   cJSON *object = cJSON_CreateObject();
   if (object) {
     cJSON_AddBoolToObject(object, "ok", 0);
     cJSON_AddStringToObject(object, "error", error);
   }
-  return send_object(conn, status, object);
+  return ursatz_gui_send_object(conn, status, object);
 }
 
 int ursatz_gui_jobs_send_accepted(struct mg_connection *conn, const char *kind, UrsatzGuiJobFn run, void *input,
@@ -64,7 +34,7 @@ int ursatz_gui_jobs_send_accepted(struct mg_connection *conn, const char *kind, 
     cJSON_Delete(object);
     return send_error(conn, 500, "out of memory");
   }
-  return send_object(conn, 202, object);
+  return ursatz_gui_send_object(conn, 202, object);
 }
 
 /* GET /api/jobs/<id>: {"ok": true, "job": {id, kind, state, stage, done, total, http_status?, result?}}. */
@@ -92,7 +62,7 @@ static int handle_get(struct mg_connection *conn, const char *id) {
     cJSON_Delete(object);
     return send_error(conn, 500, "out of memory");
   }
-  return send_object(conn, 200, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 /* DELETE /api/jobs/<id>: asks the job to stop (204). */

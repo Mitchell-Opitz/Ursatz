@@ -26,6 +26,13 @@ typedef struct {
  * then destroys response. reply is overwritten, not freed first. */
 void ursatz_gui_composer_reply_take(ComposerStatus status, ComposerResponse *response, UrsatzGuiComposerReply *reply);
 
+/* The CLI's exit 1 and 2: the Composer read the request and refused it. */
+bool ursatz_gui_composer_reply_refused(const UrsatzGuiComposerReply *reply);
+
+/* The status a Composer refusal is sent with: 422 when nothing satisfies a valid request, 400 for a malformed one, 499
+ * for a cancelled job, else 500 (ALLOC, INTERNAL). */
+int ursatz_gui_composer_reply_failure_status(const UrsatzGuiComposerReply *reply);
+
 /* Frees the members and zeroes the reply. Safe on a zeroed reply and when called twice. */
 void ursatz_gui_composer_reply_destroy(UrsatzGuiComposerReply *reply);
 

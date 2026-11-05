@@ -318,6 +318,7 @@ const sandbox = {
   Number,
   Math,
 };
+sandbox.ApiRequest = require("../public/request.js");
 vm.createContext(sandbox);
 const View = vm.runInContext(fs.readFileSync(`${__dirname}/../public/variant-tree-view.js`, "utf8") + "\n;VariantTreeView", sandbox);
 

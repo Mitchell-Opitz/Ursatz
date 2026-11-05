@@ -7,25 +7,12 @@
 #include <cJSON.h>
 
 #include "theme_service.h"
+#include "util/fs_util.h"
+#include "util/json_util.h"
 #include "ursatz_composer/composer_api.h"
 
 /* What the theme and the piece service share when they compose an item into a new version: the small JSON helpers and
  * the steps around the Composer run. Composes of one item may run at once (each makes its files in a staging folder). */
-
-/* Copies text into message when there is room for it. */
-void ursatz_gui_compose_say(char *message, size_t size, const char *text);
-
-/* The string member name of object, or "" when it is missing or not a string. */
-const char *ursatz_gui_compose_text_of(const cJSON *object, const char *name);
-
-/* Adds child to parent as name, or frees it. false on allocation failure. */
-bool ursatz_gui_compose_attach(cJSON *parent, const char *name, cJSON *child);
-
-/* Adds a copy of src's member name to dst, or null when src lacks it. false on allocation failure. */
-bool ursatz_gui_compose_add_copy_or_null(cJSON *dst, const cJSON *src, const char *name);
-
-/* Adds a copy of src's member name to dst when it is there and not null. false on allocation failure. */
-bool ursatz_gui_compose_add_copy_if(cJSON *dst, const cJSON *src, const char *name);
 
 /* What a kind's run is given: the folder the files go to while the run is going (stage), the folder the version will
  * have (named; the summary names its files there), the request as the Composer command read it (paths and all) and

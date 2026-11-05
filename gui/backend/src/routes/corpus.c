@@ -15,49 +15,8 @@ static const char *kCorpusPrefix = "/api/corpus";
 /* "Add all matching" sends every id of a filtered Library in one request. */
 static const size_t kMaxPieceIds = 5000;
 
-static void send_json(struct mg_connection *conn, const char *body) {
-  size_t len = strlen(body);
-  mg_send_http_ok(conn, "application/json", (long)len);
-  mg_write(conn, body, len);
-}
-
-/* Sends {"ok":false,"message":...} with the given status (200 for the
- * failures this route has always answered with 200). The message goes
- * through cJSON, so it is escaped. */
-static int send_failure(struct mg_connection *conn, int status, const char *message) {
-  cJSON *object = cJSON_CreateObject();
-  char *text = NULL;
-  if (object && cJSON_AddBoolToObject(object, "ok", 0) && cJSON_AddStringToObject(object, "message", message)) {
-    text = cJSON_PrintUnformatted(object);
-  }
-  cJSON_Delete(object);
-  if (!text) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
-  }
-  if (status == 200) {
-    send_json(conn, text);
-  } else {
-    const char *reason = status == 404 ? "Not Found" : status == 500 ? "Internal Server Error" : "Bad Request";
-    ursatz_gui_send_json_status(conn, status, reason, text);
-  }
-  free(text);
-  return status;
-}
-
 static void send_ok_false(struct mg_connection *conn, const char *message) {
-  send_failure(conn, 200, message);
-}
-
-/* Sends object as the 200 response and frees it. */
-static int send_object(struct mg_connection *conn, cJSON *object) {
-  char *text = object ? cJSON_PrintUnformatted(object) : NULL;
-  cJSON_Delete(object);
-  if (!text) {
-    return send_failure(conn, 500, "out of memory");
-  }
-  send_json(conn, text);
-  free(text);
-  return 200;
+  ursatz_gui_send_failure(conn, 200, message);
 }
 
 static const char *collection_message(UrsatzGuiCollectionResult result) {
@@ -87,7 +46,7 @@ static const char *collection_message(UrsatzGuiCollectionResult result) {
 /* A missing collection is a 404; every other failure keeps the route's
  * 200 with {"ok":false,...}. */
 static int send_collection_failure(struct mg_connection *conn, UrsatzGuiCollectionResult result) {
-  return send_failure(conn, result == URSATZ_GUI_COLLECTION_ERR_NOT_FOUND ? 404 : 200, collection_message(result));
+  return ursatz_gui_send_failure(conn, result == URSATZ_GUI_COLLECTION_ERR_NOT_FOUND ? 404 : 200, collection_message(result));
 }
 
 /* The members every collection answer carries. */
@@ -114,15 +73,15 @@ static int send_collection_summary(struct mg_connection *conn, const char *id) {
   ursatz_gui_collection_destroy(collection);
   if (!built) {
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_create_corpus(struct mg_connection *conn) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
-    return send_failure(conn, 200, "invalid request body");
+    return ursatz_gui_send_failure(conn, 200, "invalid request body");
   }
 
   const cJSON *id_item = cJSON_GetObjectItemCaseSensitive(body, "id");
@@ -130,15 +89,15 @@ static int handle_create_corpus(struct mg_connection *conn) {
   const cJSON *description_item = cJSON_GetObjectItemCaseSensitive(body, "description");
   if (!cJSON_IsString(name_item)) {
     cJSON_Delete(body);
-    return send_failure(conn, 200, "invalid name");
+    return ursatz_gui_send_failure(conn, 200, "invalid name");
   }
   if (id_item && !cJSON_IsString(id_item)) {
     cJSON_Delete(body);
-    return send_failure(conn, 200, "invalid id");
+    return ursatz_gui_send_failure(conn, 200, "invalid id");
   }
   if (description_item && !cJSON_IsString(description_item)) {
     cJSON_Delete(body);
-    return send_failure(conn, 200, "invalid description");
+    return ursatz_gui_send_failure(conn, 200, "invalid description");
   }
 
   const char *description = description_item ? description_item->valuestring : "";
@@ -149,7 +108,7 @@ static int handle_create_corpus(struct mg_connection *conn) {
     id = malloc(strlen(id_item->valuestring) + 1);
     if (!id) {
       cJSON_Delete(body);
-      return send_failure(conn, 200, "out of memory");
+      return ursatz_gui_send_failure(conn, 200, "out of memory");
     }
     strcpy(id, id_item->valuestring);
     result = ursatz_gui_collection_create_with_id(id, name_item->valuestring, description);
@@ -191,9 +150,9 @@ static int handle_list_corpora(struct mg_connection *conn) {
   ursatz_gui_collection_free_entries(entries, count);
   if (!built) {
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_get_corpus(struct mg_connection *conn, const char *id) {
@@ -219,30 +178,30 @@ static int handle_get_corpus(struct mg_connection *conn, const char *id) {
   ursatz_gui_collection_destroy(collection);
   if (!built) {
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_patch_corpus(struct mg_connection *conn, const char *id) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
-    return send_failure(conn, 200, "invalid request body");
+    return ursatz_gui_send_failure(conn, 200, "invalid request body");
   }
 
   const cJSON *name_item = cJSON_GetObjectItemCaseSensitive(body, "name");
   const cJSON *description_item = cJSON_GetObjectItemCaseSensitive(body, "description");
   if (!name_item && !description_item) {
     cJSON_Delete(body);
-    return send_failure(conn, 200, "nothing to update");
+    return ursatz_gui_send_failure(conn, 200, "nothing to update");
   }
   if (name_item && !cJSON_IsString(name_item)) {
     cJSON_Delete(body);
-    return send_failure(conn, 200, "invalid name");
+    return ursatz_gui_send_failure(conn, 200, "invalid name");
   }
   if (description_item && !cJSON_IsString(description_item)) {
     cJSON_Delete(body);
-    return send_failure(conn, 200, "invalid description");
+    return ursatz_gui_send_failure(conn, 200, "invalid description");
   }
 
   UrsatzGuiCollectionResult result = ursatz_gui_collection_update(
@@ -259,7 +218,7 @@ static int handle_delete_corpus(struct mg_connection *conn, const char *id) {
   if (result != URSATZ_GUI_COLLECTION_OK) {
     return send_collection_failure(conn, result);
   }
-  send_json(conn, "{\"ok\":true}");
+  ursatz_gui_send_json(conn, "{\"ok\":true}");
   return 200;
 }
 
@@ -269,7 +228,7 @@ static int handle_delete_corpus(struct mg_connection *conn, const char *id) {
 static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) {
   cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
-    return send_failure(conn, 200, "invalid request body");
+    return ursatz_gui_send_failure(conn, 200, "invalid request body");
   }
 
   const cJSON *single = cJSON_GetObjectItemCaseSensitive(body, "piece_id");
@@ -315,14 +274,14 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
   if (failure) {
     free(ids);
     cJSON_Delete(body);
-    return send_failure(conn, failure_status, failure);
+    return ursatz_gui_send_failure(conn, failure_status, failure);
   }
 
   /* An unknown collection is a 404 before any piece is looked at. */
   if (!ursatz_gui_collection_exists(corpus_id)) {
     free(ids);
     cJSON_Delete(body);
-    return send_failure(conn, 404, "collection not found");
+    return ursatz_gui_send_failure(conn, 404, "collection not found");
   }
   for (size_t i = 0; i < count; i++) {
     if (!ursatz_gui_collection_piece_exists(ids[i])) {
@@ -330,7 +289,7 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
       snprintf(message, sizeof(message), "unknown piece: %s", ids[i]);
       free(ids);
       cJSON_Delete(body);
-      return send_failure(conn, 400, message);
+      return ursatz_gui_send_failure(conn, 400, message);
     }
   }
 
@@ -347,9 +306,9 @@ static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) 
   if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddNumberToObject(object, "added", (double)added) ||
       !cJSON_AddNumberToObject(object, "already", (double)already)) {
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id, const char *piece_id) {
@@ -357,7 +316,7 @@ static int handle_remove_piece(struct mg_connection *conn, const char *corpus_id
   if (result != URSATZ_GUI_COLLECTION_OK) {
     return send_collection_failure(conn, result);
   }
-  send_json(conn, "{\"ok\":true}");
+  ursatz_gui_send_json(conn, "{\"ok\":true}");
   return 200;
 }
 
@@ -383,9 +342,9 @@ static int handle_list_pieces(struct mg_connection *conn, const char *corpus_id)
   ursatz_gui_collection_destroy(collection);
   if (!built) {
     cJSON_Delete(object);
-    return send_failure(conn, 500, "out of memory");
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, object);
+  return ursatz_gui_send_object(conn, 200, object);
 }
 
 /*

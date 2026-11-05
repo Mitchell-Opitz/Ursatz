@@ -1,5 +1,6 @@
 #include "collection_service.h"
 #include "util/fs_util.h"
+#include "util/json_util.h"
 #include "util/store_lock.h"
 
 #include <ctype.h>
@@ -22,6 +23,7 @@
 
 #include <corpus/corpus_api.h>
 
+#include "analysis_service.h"
 #include "id_service.h"
 #include "piece_metadata.h"
 
@@ -44,14 +46,6 @@ static UrsatzGuiLock g_lock = URSATZ_GUI_LOCK_INIT;
 /* The helpers below mirror analysis_service.c's file helpers; each store
  * keeps its own copy so neither depends on the other's internals. */
 
-static bool path_exists(const char *path) {
-#ifdef _WIN32
-    return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
-#else
-    struct stat st;
-    return stat(path, &st) == 0;
-#endif
-}
 
 bool ursatz_gui_collection_is_valid_id(const char *id) {
     if (!id || id[0] == '\0' || strlen(id) > ID_MAX_BYTES) {
@@ -66,12 +60,7 @@ bool ursatz_gui_collection_is_valid_id(const char *id) {
 }
 
 bool ursatz_gui_collection_piece_exists(const char *piece_id) {
-    char path[PATH_BYTES];
-    if (!ursatz_gui_collection_is_valid_id(piece_id) ||
-        snprintf(path, sizeof(path), "%s/%s/meta.json", kPiecesDir, piece_id) >= (int)sizeof(path)) {
-        return false;
-    }
-    return path_exists(path);
+    return ursatz_gui_collection_is_valid_id(piece_id) && ursatz_gui_analysis_piece_exists(kPiecesDir, piece_id);
 }
 
 static bool collection_path(const char *id, char *out, size_t out_size) {
@@ -100,10 +89,6 @@ void ursatz_gui_collection_destroy(UrsatzGuiCollection *collection) {
     }
 }
 
-static char *string_member(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
-    return ursatz_gui_dup_string(cJSON_IsString(item) ? item->valuestring : "");
-}
 
 /* Loads <dir>/<id>.json into collection (zeroed by the caller). */
 static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollection *collection) {
@@ -113,7 +98,7 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
     }
     char *text = ursatz_gui_read_file(path, NULL);
     if (!text) {
-        return path_exists(path) ? URSATZ_GUI_COLLECTION_ERR_FAILED : URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
+        return ursatz_gui_path_exists(path) ? URSATZ_GUI_COLLECTION_ERR_FAILED : URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
     }
     cJSON *root = cJSON_Parse(text);
     free(text);
@@ -124,10 +109,10 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
 
     /* The file name is the id; a copy of it inside the file is not trusted. */
     collection->id = ursatz_gui_dup_string(id);
-    collection->name = string_member(root, "name");
-    collection->description = string_member(root, "description");
-    collection->created_at = string_member(root, "created_at");
-    collection->updated_at = string_member(root, "updated_at");
+    collection->name = ursatz_gui_json_string_copy(root, "name");
+    collection->description = ursatz_gui_json_string_copy(root, "description");
+    collection->created_at = ursatz_gui_json_string_copy(root, "created_at");
+    collection->updated_at = ursatz_gui_json_string_copy(root, "updated_at");
     bool ok = collection->id && collection->name && collection->description && collection->created_at &&
               collection->updated_at;
 
@@ -474,7 +459,7 @@ bool ursatz_gui_collection_service_init(const char *dir, const char *legacy_db_p
         strcpy(g_dir, dir);
         /* First start with a collections/ directory that does not exist yet:
          * bring over what the old corpus store held. */
-        if (!existed && legacy_db_path && path_exists(legacy_db_path) && !import_legacy_corpora(legacy_db_path)) {
+        if (!existed && legacy_db_path && ursatz_gui_path_exists(legacy_db_path) && !import_legacy_corpora(legacy_db_path)) {
             remove_store_dir();
             g_dir[0] = '\0';
             ok = false;
@@ -500,7 +485,7 @@ static UrsatzGuiCollectionResult create_locked(const char *id, const char *name,
     if (!collection_path(id, path, sizeof(path))) {
         return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
     }
-    if (path_exists(path)) {
+    if (ursatz_gui_path_exists(path)) {
         return URSATZ_GUI_COLLECTION_ERR_ALREADY_EXISTS;
     }
 
@@ -649,7 +634,7 @@ UrsatzGuiCollectionResult ursatz_gui_collection_list(UrsatzGuiCollectionEntry **
 bool ursatz_gui_collection_exists(const char *id) {
     char path[PATH_BYTES];
     LOCK();
-    bool exists = g_ready && collection_path(id, path, sizeof(path)) && path_exists(path);
+    bool exists = g_ready && collection_path(id, path, sizeof(path)) && ursatz_gui_path_exists(path);
     UNLOCK();
     return exists;
 }
@@ -720,7 +705,7 @@ UrsatzGuiCollectionResult ursatz_gui_collection_delete(const char *id) {
         result = URSATZ_GUI_COLLECTION_ERR_NOT_INITIALIZED;
     } else if (!collection_path(id, path, sizeof(path))) {
         result = URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
-    } else if (!path_exists(path)) {
+    } else if (!ursatz_gui_path_exists(path)) {
         result = URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
     } else {
         result = remove(path) == 0 ? URSATZ_GUI_COLLECTION_OK : URSATZ_GUI_COLLECTION_ERR_FAILED;

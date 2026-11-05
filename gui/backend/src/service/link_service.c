@@ -1,5 +1,6 @@
 #include "link_service.h"
 #include "util/fs_util.h"
+#include "util/json_util.h"
 #include "util/store_lock.h"
 
 #include <stdio.h>
@@ -530,26 +531,19 @@ static void job_progress(size_t done, size_t total, void *context) {
 
 /* Why a piece cannot be added, or NULL when it was. */
 static const char *add_piece(MotiveLinkScope *scope, const char *id) {
-    char file_path[PATH_BYTES + 32];
-    if (!ursatz_gui_collection_is_valid_id(id) ||
-        snprintf(file_path, sizeof(file_path), "%s/%s/meta.json", kPiecesDir, id) >= (int)sizeof(file_path)) {
+    if (!ursatz_gui_collection_is_valid_id(id)) {
         return "not found";
     }
-    cJSON *meta = ursatz_gui_read_json_object(file_path);
-    if (!meta) {
-        return "not found";
-    }
-    cJSON_Delete(meta);
     /* Another schema, Analyzer version or Ursatz commit: analyze the piece again before the run. The error-triggered
        re-analysis below stays as a fallback. */
-    if (ursatz_gui_analysis_ensure_current(kPiecesDir, id) != URSATZ_GUI_ANALYSIS_OK) {
-        return "re-analysis failed";
+    UrsatzGuiAnalysisResult ensured = ursatz_gui_analysis_ensure_current(kPiecesDir, id);
+    if (ensured != URSATZ_GUI_ANALYSIS_OK) {
+        return ensured == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND ? "not found" : "re-analysis failed";
     }
-    snprintf(file_path, sizeof(file_path), "%s/%s/analysis.json", kPiecesDir, id);
 
     for (int attempt = 0; attempt < 2; attempt++) {
-        char *document = ursatz_gui_read_file(file_path, NULL);
-        if (!document) {
+        char *document = NULL;
+        if (ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &document) != URSATZ_GUI_ANALYSIS_OK) {
             return "unreadable analysis";
         }
         MotiveLinksResult result = motive_link_scope_add_document(scope, id, document);
@@ -869,17 +863,13 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
 
 /* --- reading runs --------------------------------------------------------- */
 
-static const char *string_member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    return cJSON_IsString(item) ? item->valuestring : "";
-}
 
 /* Newest first: by created_at, then id, both descending. */
 static int compare_runs(const void *left, const void *right) {
     const cJSON *a = *(const cJSON *const *)left;
     const cJSON *b = *(const cJSON *const *)right;
-    int by_time = strcmp(string_member(b, "created_at"), string_member(a, "created_at"));
-    return by_time != 0 ? by_time : strcmp(string_member(b, "id"), string_member(a, "id"));
+    int by_time = strcmp(ursatz_gui_json_string(b, "created_at"), ursatz_gui_json_string(a, "created_at"));
+    return by_time != 0 ? by_time : strcmp(ursatz_gui_json_string(b, "id"), ursatz_gui_json_string(a, "id"));
 }
 
 static void runs_free(cJSON **runs, size_t count) {
@@ -946,7 +936,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_list(cJSON **out_runs) {
             ok = copy_member(entry, runs[i], kKeys[k]);
         }
         /* A running run reports what the worker has now, not what it last wrote. */
-        if (ok && g_state.active && strcmp(string_member(runs[i], "id"), g_state.id) == 0) {
+        if (ok && g_state.active && strcmp(ursatz_gui_json_string(runs[i], "id"), g_state.id) == 0) {
             ok = set_member(entry, "done", cJSON_CreateNumber((double)g_state.done)) &&
                  set_member(entry, "total", cJSON_CreateNumber((double)g_state.total));
         }
@@ -1029,7 +1019,7 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
         const cJSON *run = runs[i];
         const cJSON *scope = cJSON_GetObjectItemCaseSensitive(run, "scope");
         const cJSON *links = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(run, "result"), "links");
-        if (strcmp(string_member(run, "status"), "done") != 0 || !scope) {
+        if (strcmp(ursatz_gui_json_string(run, "status"), "done") != 0 || !scope) {
             continue;
         }
         char *scope_text = cJSON_PrintUnformatted(scope);
@@ -1045,13 +1035,13 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
         const cJSON *link = NULL;
         const cJSON *taken = newest && result == URSATZ_GUI_LINK_OK ? links : NULL;
         cJSON_ArrayForEach(link, taken) {
-            const char *a = string_member(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
-            const char *b = string_member(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
+            const char *a = ursatz_gui_json_string(cJSON_GetObjectItemCaseSensitive(link, "a"), "piece");
+            const char *b = ursatz_gui_json_string(cJSON_GetObjectItemCaseSensitive(link, "b"), "piece");
             if (strcmp(a, piece_id) != 0 && strcmp(b, piece_id) != 0) {
                 continue;
             }
             cJSON *entry = cJSON_CreateObject();
-            if (!entry || !cJSON_AddStringToObject(entry, "run", string_member(run, "id")) ||
+            if (!entry || !cJSON_AddStringToObject(entry, "run", ursatz_gui_json_string(run, "id")) ||
                 !cJSON_AddItemToObject(entry, "scope", cJSON_Duplicate(scope, 1)) ||
                 !cJSON_AddItemToObject(entry, "link", cJSON_Duplicate(link, 1))) {
                 cJSON_Delete(entry);
@@ -1072,16 +1062,13 @@ UrsatzGuiLinkResult ursatz_gui_link_piece_links(const char *piece_id, cJSON **ou
 }
 
 char *ursatz_gui_link_piece_title(const char *piece_id) {
-    char path[PATH_BYTES];
-    cJSON *meta = NULL;
-    if (piece_id && ursatz_gui_collection_is_valid_id(piece_id) &&
-        snprintf(path, sizeof(path), "%s/%s/meta.json", kPiecesDir, piece_id) < (int)sizeof(path)) {
-        meta = ursatz_gui_read_json_object(path);
+    char *filename = NULL;
+    if (!piece_id || !ursatz_gui_collection_is_valid_id(piece_id) ||
+        ursatz_gui_analysis_get_filename(kPiecesDir, piece_id, &filename) != URSATZ_GUI_ANALYSIS_OK) {
+        filename = NULL;
     }
-    const cJSON *filename = cJSON_GetObjectItemCaseSensitive(meta, "filename");
-    char *title = ursatz_gui_dup_string(cJSON_IsString(filename) && filename->valuestring[0] ? filename->valuestring
-                                                                                   : (piece_id ? piece_id : ""));
-    cJSON_Delete(meta);
+    char *title = ursatz_gui_dup_string(filename && filename[0] ? filename : (piece_id ? piece_id : ""));
+    free(filename);
     char *dot = title ? strrchr(title, '.') : NULL;
     if (dot && dot != title) {
         *dot = '\0';
