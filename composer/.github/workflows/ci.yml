@@ -45,5 +45,5 @@ jobs:
         run: scripts/check-layers.sh
       - name: Check that music is heard through the Analyzer
         run: scripts/check-hearing.sh
-      - name: Test (the fast set; the slow sweeps run before a push, see README)
-        run: ctest --test-dir build --output-on-failure -LE slow
+      - name: Test (fast set)
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
