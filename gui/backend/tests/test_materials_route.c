@@ -1904,6 +1904,103 @@ static void test_tones(void) {
   free(item);
   free(plain);
 }
+
+/* ---- segments (R-312) ------------------------------------------------------ */
+
+static const char *kNoFeaturesBody =
+    "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q E4:q G4:q C4:q D4:q E4:q G4:h\","
+    "\"meter\":\"4/4\",\"key\":\"C major\",\"pickup\":\"0\",\"harmony\":null,\"features\":[],\"analysis\":null,\"derived\":null}}";
+
+static const cJSON *motif_features(const cJSON *motif) {
+  return cJSON_GetObjectItemCaseSensitive(motif, "features");
+}
+
+/* The current body of an item with motif.notes replaced, saved as a new version through the route. Returns the status. */
+static int save_version_with_notes(const char *id, const char *notes) {
+  char path[300];
+  int status = 0;
+  snprintf(path, sizeof(path), "/api/materials/items/%s", id);
+  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *body = cJSON_DetachItemFromObjectCaseSensitive(answer, "body");
+  cJSON_Delete(answer);
+  cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
+  cJSON_ReplaceItemInObjectCaseSensitive(motif, "notes", cJSON_CreateString(notes));
+  cJSON *request = cJSON_CreateObject();
+  cJSON_AddStringToObject(request, "note", "Changed the notes");
+  cJSON_AddItemToObject(request, "body", body);
+  char *text = cJSON_PrintUnformatted(request);
+  cJSON_Delete(request);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", id);
+  cJSON *saved = json_exchange("POST", path, text, &status);
+  free(text);
+  cJSON_Delete(saved);
+  return status;
+}
+
+static void test_segments(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+
+  /* A motif without features is saved with the Composer's proposal, marked proposed. */
+  char *plain = create_item("motif", "Proposed", project, kNoFeaturesBody);
+  check(plain != NULL, "a motif without features is saved");
+  const cJSON *motif = saved_motif(plain, 1);
+  check(cJSON_GetArraySize(motif_features(motif)) >= 1 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")),
+        "a motif without features stores the proposed segments, marked proposed");
+  check(strcmp(string_of(cJSON_GetArrayItem(motif_features(motif), 0), "label"), "a") == 0,
+        "the proposal starts with segment a");
+
+  /* A motif with features keeps them. */
+  char *given = create_item("motif", "Given", project, kMotifBody);
+  check(given != NULL, "a motif with features is saved");
+  motif = saved_motif(given, 1);
+  check(cJSON_GetArraySize(motif_features(motif)) == 1 && strcmp(string_of(cJSON_GetArrayItem(motif_features(motif), 0), "label"), "a") == 0 &&
+            number_of(cJSON_GetArrayItem(motif_features(motif), 0), "last") == 2 &&
+            !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")),
+        "a motif with features keeps them, not proposed");
+
+  /* New notes with proposed segments propose again: stale segments past the new notes would be refused. */
+  check(save_version_with_notes(plain, "C4:h D4:h") == 200, "new notes on a motif with proposed segments are saved");
+  motif = saved_motif(plain, 2);
+  const cJSON *last_segment = cJSON_GetArrayItem(motif_features(motif), cJSON_GetArraySize(motif_features(motif)) - 1);
+  check(cJSON_GetArraySize(motif_features(motif)) >= 1 && number_of(last_segment, "last") <= 1 &&
+            cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")),
+        "new notes with proposed segments give a new proposal");
+
+  /* New notes with given segments keep them. */
+  check(save_version_with_notes(given, "C4:q Eb4:e G4:e D5:h") == 200, "new notes on a motif with given segments are saved");
+  motif = saved_motif(given, 2);
+  check(cJSON_GetArraySize(motif_features(motif)) == 1 && number_of(cJSON_GetArrayItem(motif_features(motif), 0), "last") == 2 &&
+            !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")),
+        "new notes with given segments keep the segments");
+
+  /* The migration: a motif whose current version has no features gets one version; a motif with features gets none. */
+  cJSON *bare = cJSON_Parse(kNoFeaturesBody);
+  cJSON *added = NULL;
+  check(ursatz_gui_material_item_add_version(plain, bare, "Before segments", &added) == URSATZ_GUI_MATERIAL_OK,
+        "a version without features is written");
+  cJSON_Delete(added);
+  cJSON_Delete(bare);
+  remove("materials/segments-migrated");
+  int plain_versions = saved_version_count(plain);
+  int given_versions = saved_version_count(given);
+  int migrated = ursatz_gui_material_migrate_segments("materials");
+  check(migrated >= 1 && saved_version_count(plain) == plain_versions + 1, "the migration adds a version to a motif without features");
+  check(saved_version_count(given) == given_versions, "the migration leaves a motif with features alone");
+  motif = saved_motif(plain, plain_versions + 1);
+  check(cJSON_GetArraySize(motif_features(motif)) >= 1 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")),
+        "the migrated version holds the proposal, marked proposed");
+  FILE *marker = fopen("materials/segments-migrated", "r");
+  check(marker != NULL, "the migration leaves its marker file");
+  if (marker) {
+    fclose(marker);
+  }
+  int after_first = saved_version_count(plain);
+  check(ursatz_gui_material_migrate_segments("materials") == 0 && saved_version_count(plain) == after_first,
+        "the migration does not run twice");
+  free(plain);
+  free(given);
+}
 #endif
 
 /* The one-time clear deletes every theme (referenced or not), leaves its marker, and does not run twice. */
@@ -2371,6 +2468,7 @@ int main(void) {
 #endif
 #ifndef _WIN32
   test_tones();
+  test_segments();
 #endif
   test_clear_themes();
   test_body_limit();
