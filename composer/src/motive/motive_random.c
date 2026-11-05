@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/motive_analysis.h>
@@ -42,6 +43,22 @@ const char *motive_random_result_name(MotiveRandomResult result) {
         return "alloc";
     }
     return "unknown";
+}
+
+const char *motive_random_strategy_name(MotiveRandomStrategy strategy) {
+    return strategy == MOTIVE_RANDOM_STRATEGY_DRAWN ? "drawn" : "segments";
+}
+
+bool motive_random_strategy_parse(const char *name, MotiveRandomStrategy *out) {
+    if (name && strcasecmp(name, "segments") == 0) {
+        *out = MOTIVE_RANDOM_STRATEGY_SEGMENTS;
+        return true;
+    }
+    if (name && strcasecmp(name, "drawn") == 0) {
+        *out = MOTIVE_RANDOM_STRATEGY_DRAWN;
+        return true;
+    }
+    return false;
 }
 
 /* ---------------------------------------------------------------- rhythm */
@@ -125,7 +142,7 @@ static bool tones_as_drawn(const Motive *motive, const Melody *melody) {
  * One full motive that passes the melodic rules. *found is false when the draw did not (try again); the result is false
  * only when the check itself could not run.
  */
-static bool draw_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
+static bool draw_drawn_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
                            bool *found) {
     Rhythm rhythm;
     Melody melody;
@@ -141,6 +158,12 @@ static bool draw_candidate(const MotiveRandomOptions *options, const AnalysisKey
     *found = fault == NULL;
     return true;
 }
+/* One candidate by the strategy asked for. SEGMENTS has no builder of its own yet and draws as DRAWN does. */
+static bool draw_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
+                           bool *found) {
+    return draw_drawn_candidate(options, key, rng, out, found);
+}
+
 /* ---------------------------------------------------------------- the call */
 
 static bool valid_beat_unit(int unit) {
