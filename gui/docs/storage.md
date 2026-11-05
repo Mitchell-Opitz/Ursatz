@@ -105,8 +105,10 @@ materials/
   is written: an object with a `uses` array, and the member of its own type
   (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
   `notes`, `meter`, `key`, `pickup`, `harmony` (null or text, at most 200
-  characters), `features`, `analysis` and `derived`; the rules are listed in
-  `service/material_service.h`.
+  characters), `features`, `segments_proposed`, `analysis` and `derived`; the rules are listed in
+  `service/material_service.h`. `features` are the motif's segments. `segments_proposed` (a bool; a body without it
+  reads as false) is true while the segments are the Composer's proposal rather than ones Michelle set: the proposal is
+  stored as `features` and proposed again when the notes, pickup, meter or form change.
 - Projects and items are passed as cJSON objects; the caller frees what it
   receives.
 

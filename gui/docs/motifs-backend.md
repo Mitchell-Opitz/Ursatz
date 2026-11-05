@@ -36,6 +36,14 @@ intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
   meter, key: "C <mode>", moved_from: "D minor" | null, key_found, pickup,
   analysis}`. With no key found the notes are unchanged and the key is `C
   major`.
+- Segments are always present (R-312). When the motif has no `features`, or `segments_proposed` is true and its notes,
+  pickup, meter or form differ from the previous version, the request sends no `features`; the Composer proposes
+  segments and they are stored as `features` with `segments_proposed` true (`analysis.analysis.segments.items`). Otherwise the
+  features go to the Composer as given and `segments_proposed` is kept (false when absent). This holds for create, add
+  version and re-analyze (which compares nothing: the notes are the same).
+- One-time migration `ursatz_gui_material_migrate_segments` (marker `materials/segments-migrated`, run in `server.c` after
+  the tones migration): every motif item, variants included, whose current version has no features gets a new version
+  noted `Segments proposed` with the proposal and `segments_proposed` true. Motifs with features are untouched.
 - `rhythm` and `contour` motifs are analyzed on save like full ones: `motif.analysis` holds the Composer's result and
   `motif.degrees` the rhythm or contour list. The stored `pickup` is passed to the Composer.
 
@@ -195,8 +203,10 @@ The New Motif page has a Random section with one button and no fields. Random dr
 and sent with `mode` and `meter` set to `random`; the Composer draws the mode (major or minor) and the meter (`4/4`,
 `3/4`, `2/4` or `6/8`) from the seed and answers them as `drawn`, form full, no key (the Composer writes C major or A
 minor), no style. Its score is shown at full width in the score workspace with playback (nothing stored), with
-Reroll (the next seed, which draws its own mode and meter) and Use, which fills the editor above (notes, mode, meter,
-pickup) to name and save; nothing is stored until Save. The backend fills in the analysis and degrees as for any motif.
+Use, which fills the editor above (notes, mode, meter, pickup, base harmony and segments) to name and save; pressing Random
+again draws another motif (there is no Reroll). The Composer's default strategy builds the motif from segments, so the
+candidate comes with its base harmony and its segments; `randomCandidateToBody` keeps both (`harmony`, `features`,
+`segments_proposed` true). Nothing is stored until Save. The backend fills in the analysis and degrees as for any motif.
 
 - `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` calls the Composer's
   `composer_api_random_motive` and answers its JSON (`seed`, `motives`, and `drawn` when `mode` or `meter` was `random`) plus
@@ -204,4 +214,4 @@ pickup) to name and save; nothing is stored until Save. The backend fills in the
   16, `seed` a whole number from 0 (the Composer holds its upper limit). A bad input or an unknown style is 400. The style model path comes from `ursatz_gui_style_model_path`.
 - Pure helpers in `materials-model.js`: `randomRequest` (one motif), `drawnSettings` (the mode and meter the answer
   names), `randomCandidateToBody`,
-  `candidateKeyText`, `rerollSeed`.
+  `candidateKeyText`.

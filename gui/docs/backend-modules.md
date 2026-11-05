@@ -46,7 +46,7 @@ and answers.
 
 `routes/composer.c` answers the status route with `composer_api_versions` itself and the vocabulary route from
 `composer_client.c`; `routes/materials.c`, `routes/links.c` and the other routes call no `composer_api_*` entry. The material store's one-time migrations (`ursatz_gui_material_migrate_tones`,
-`ursatz_gui_material_clear_themes`) are in `service/material_service.c`, which calls `motif_service.c` to analyze a
+`ursatz_gui_material_migrate_segments`, `ursatz_gui_material_clear_themes`) are in `service/material_service.c`, which calls `motif_service.c` to analyze a
 motif again.
 
 Piece documents are read only through `service/analysis_service.c`, under the piece lock: `ursatz_gui_analysis_get_document`

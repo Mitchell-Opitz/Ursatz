@@ -734,7 +734,7 @@ static int handle_create_item(struct mg_connection *conn) {
   char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
   char refusal_path[128] = "";
-  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal),
+  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body((cJSON *)version_body, NULL, analysis_error, refusal, sizeof(refusal),
                                                 refusal_path, sizeof(refusal_path));
   if (analysis != URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
     cJSON_Delete(body);
@@ -882,8 +882,16 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
   char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
   char refusal_path[128] = "";
-  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal),
-                                                refusal_path, sizeof(refusal_path));
+  /* The previous version tells whether proposed segments are to be proposed again (R-312). */
+  cJSON *previous_meta = NULL;
+  cJSON *previous_body = NULL;
+  if (ursatz_gui_material_item_get(id, &previous_meta, &previous_body) != URSATZ_GUI_MATERIAL_OK) {
+    previous_body = NULL;
+  }
+  cJSON_Delete(previous_meta);
+  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body((cJSON *)version_body, previous_body, analysis_error, refusal,
+                                                sizeof(refusal), refusal_path, sizeof(refusal_path));
+  cJSON_Delete(previous_body);
   if (analysis != URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
     cJSON_Delete(body);
     return analysis == URSATZ_GUI_MOTIF_ANALYSIS_REFUSED ? send_failure_at(conn, 400, refusal, refusal_path)
@@ -917,7 +925,7 @@ static int handle_reanalyze(struct mg_connection *conn, const char *id) {
   char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
   char refusal_path[128] = "";
-  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, analysis_error, refusal, sizeof(refusal), refusal_path,
+  UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, NULL, analysis_error, refusal, sizeof(refusal), refusal_path,
                                                 sizeof(refusal_path));
   if (analysis != URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
     cJSON_Delete(version_body);

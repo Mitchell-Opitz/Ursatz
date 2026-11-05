@@ -2766,7 +2766,7 @@ int ursatz_gui_material_migrate_tones(const char *materials_dir) {
       char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
       char refusal[512] = "";
       char refusal_path[128] = "";
-      UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, analysis_error, refusal, sizeof(refusal), refusal_path,
+      UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, NULL, analysis_error, refusal, sizeof(refusal), refusal_path,
                                                     sizeof(refusal_path));
       if (analysis == URSATZ_GUI_MOTIF_ANALYSIS_DONE) {
         cJSON *item = NULL;
@@ -2782,6 +2782,68 @@ int ursatz_gui_material_migrate_tones(const char *materials_dir) {
   FILE *out = fopen(marker, "w");
   if (out) {
     fputs("tones migrated\n", out);
+    fclose(out);
+  }
+  return migrated;
+}
+
+/* True when the current version of a motif body has a motif with no features (R-312). */
+static bool lacks_segments(const cJSON *version_body) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  if (!cJSON_IsObject(motif)) {
+    return false;
+  }
+  const cJSON *features = cJSON_GetObjectItemCaseSensitive(motif, "features");
+  return !cJSON_IsArray(features) || cJSON_GetArraySize(features) == 0;
+}
+
+int ursatz_gui_material_migrate_segments(const char *materials_dir) {
+  char marker[512];
+  if (snprintf(marker, sizeof(marker), "%s/segments-migrated", materials_dir) >= (int)sizeof(marker)) {
+    return 0;
+  }
+  FILE *done = fopen(marker, "r");
+  if (done) {
+    fclose(done);
+    return 0;
+  }
+  cJSON *items = NULL;
+  if (ursatz_gui_material_item_list(NULL, "motif", &items) != URSATZ_GUI_MATERIAL_OK) {
+    return 0;
+  }
+  int migrated = 0;
+  const cJSON *listed = NULL;
+  cJSON_ArrayForEach(listed, items) {
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(listed, "id");
+    cJSON *meta = NULL;
+    cJSON *version_body = NULL;
+    if (!cJSON_IsString(id) || ursatz_gui_material_item_get(id->valuestring, &meta, &version_body) != URSATZ_GUI_MATERIAL_OK) {
+      continue;
+    }
+    cJSON_Delete(meta);
+    if (lacks_segments(version_body)) {
+      char analysis_error[URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE];
+      char refusal[512] = "";
+      char refusal_path[128] = "";
+      UrsatzGuiMotifAnalysis analysis = ursatz_gui_motif_analyze_body(version_body, NULL, analysis_error, refusal, sizeof(refusal),
+                                                    refusal_path, sizeof(refusal_path));
+      const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+      if (analysis == URSATZ_GUI_MOTIF_ANALYSIS_DONE &&
+          cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed"))) {
+        cJSON *item = NULL;
+        if (ursatz_gui_material_item_add_version(id->valuestring, version_body, "Segments proposed", &item) ==
+            URSATZ_GUI_MATERIAL_OK) {
+          migrated++;
+        }
+        cJSON_Delete(item);
+      }
+    }
+    cJSON_Delete(version_body);
+  }
+  cJSON_Delete(items);
+  FILE *out = fopen(marker, "w");
+  if (out) {
+    fputs("segments migrated\n", out);
     fclose(out);
   }
   return migrated;

@@ -418,7 +418,8 @@
   const CONTOUR_HINT = "Contour only: ranks separated by spaces, e.g. 0 2 1 3. 0 is the lowest, equal ranks are the same height, no durations.";
   const motifForms = () => Vocab.list("motive_forms").map(({ value, label }) => ({ value, label }));
 
-  const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
+  const SEGMENTS_HINT =
+    "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them. When none are set, the Composer proposes them from the rhythm.";
   const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords, at most 2 in a bar; empty uses the harmony proposed from the notes.";
   const HARMONY_MAX_CHARS = 200;
   const HARMONY_DEFAULT_PLACEHOLDER = "I (proposed)";
@@ -536,6 +537,7 @@
             last: Number(feature.last) + 1,
           }))
         : [],
+      segmentsProposed: motif.segments_proposed === true,
     };
   }
 
@@ -685,6 +687,7 @@
           first: Number(feature.first) - 1,
           last: Number(feature.last) - 1,
         })),
+        segments_proposed: values.segmentsProposed === true,
         analysis: null,
         degrees: typeof motif.degrees === "string" ? motif.degrees : null,
         derived: motif.derived || null,
@@ -760,6 +763,8 @@
     const form = v.form === "rhythm" || v.form === "contour" ? v.form : "full";
     const textName = form === "rhythm" ? "rhythm_text" : form === "contour" ? "contour_text" : "notes_text";
     const key = candidateKeyText(candidate);
+    const segments = analysis.segments && Array.isArray(analysis.segments.items) ? analysis.segments.items : [];
+    const baseHarmony = analysis.base_harmony && typeof analysis.base_harmony.text === "string" ? analysis.base_harmony.text : "";
     return {
       uses: [],
       motif: {
@@ -769,18 +774,14 @@
         meter: String(v.meter || "").trim() || "4/4",
         key: key === "" ? null : key,
         pickup: typeof analysis.pickup === "string" && analysis.pickup !== "" ? analysis.pickup : "0",
-        harmony: null,
-        features: [],
+        harmony: baseHarmony === "" ? null : baseHarmony,
+        features: segments.map((segment) => ({ label: segment.label, first: segment.first, last: segment.last })),
+        segments_proposed: true,
         analysis: null,
         degrees: null,
         derived: null,
       },
     };
-  }
-
-  /* The next seed for rerolling one candidate: the candidate's own plus one. */
-  function rerollSeed(candidateSeed) {
-    return Number.isInteger(candidateSeed) ? candidateSeed + 1 : 0;
   }
 
   /* The score and playback URLs of one stored version, sounded in its stored key. */
@@ -1017,7 +1018,6 @@
     randomCandidateToBody,
     candidateKeyText,
     randomCandidate,
-    rerollSeed,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

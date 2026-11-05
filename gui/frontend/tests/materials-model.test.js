@@ -323,7 +323,29 @@ const wrapped = M.randomCandidate(drawnMotive, 5);
 check(wrapped.seed === 5 && wrapped.motive.analysis.notes_text === "C4:q E4:e G4:e" && M.candidateKeyText(wrapped) === "C major", "a motive as the Composer draws it is wrapped for the page");
 check(M.randomCandidateToBody(wrapped, { form: "full", meter: "4/4" }).motif.notes === "C4:q E4:e G4:e", "a drawn candidate gives its notes to the editor");
 check(M.randomCandidate(candidate.motive ? candidate : null, 7).motive.analysis.notes_text === "c4:q eb4:e g4:e", "an already wrapped candidate is kept");
-check(M.rerollSeed(3) === 4 && M.rerollSeed(undefined) === 0, "reroll uses the next seed");
+check(M.rerollSeed === undefined, "the model has no reroll seed (one Random button)");
+const segmentedCandidate = {
+  seed: 3,
+  motive: {
+    motive: { key: { tonic_pitch_class: 0, mode: "major" } },
+    analysis: {
+      notes_text: "c4:q d4:q e4:h", pickup: "0",
+      base_harmony: { given: true, text: "I V" },
+      segments: { given: true, items: [{ label: "a", first: 0, last: 0 }, { label: "a'", first: 1, last: 2 }] },
+    },
+  },
+};
+const segmentedBody = M.randomCandidateToBody(segmentedCandidate, { form: "full", meter: "4/4" });
+check(same(segmentedBody.motif.features, [{ label: "a", first: 0, last: 0 }, { label: "a'", first: 1, last: 2 }]) && segmentedBody.motif.segments_proposed === true,
+  "a random motif keeps its segments, marked proposed");
+check(segmentedBody.motif.harmony === "I V", "a random motif keeps its base harmony");
+check(M.randomCandidateToBody(candidate, {}).motif.harmony === null && same(M.randomCandidateToBody(candidate, {}).motif.features, []), "a candidate without segments or harmony saves none");
+const proposedBody = { motif: { notes: "C4:q", features: [{ label: "a", first: 0, last: 0 }], segments_proposed: true } };
+check(M.motifFormValues(proposedBody).segmentsProposed === true && M.motifFormValues({ motif: {} }).segmentsProposed === false && M.motifFormValues(null).segmentsProposed === false, "form values read segments_proposed, false when absent");
+check(M.buildMotifBody(M.motifFormValues(proposedBody), proposedBody).motif.segments_proposed === true, "the body carries segments_proposed");
+check(M.buildMotifBody({ ...M.motifFormValues(proposedBody), segmentsProposed: false }, proposedBody).motif.segments_proposed === false, "an edited segment list is not proposed");
+check(M.buildMotifBody(M.motifFormValues(null), null).motif.segments_proposed === false, "a new motif body is not proposed");
+check(M.motifBodyChanged({ ...M.motifFormValues(proposedBody), segmentsProposed: false }, proposedBody), "taking over proposed segments is a body change");
 
 check(M.analysisRows({ analysis: null, analysis_error: "composer not found" }).message === "Not analyzed: composer not found", "the stored reason is read when no argument is given");
 check(M.analysisRows({ analysis: null, analysis_error: "stored" }, "given").message === "Not analyzed: given", "an argument wins over the stored reason");

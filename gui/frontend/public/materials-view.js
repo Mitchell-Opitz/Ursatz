@@ -302,21 +302,19 @@ function buildItemTable(rows, onOpen) {
 }
 
 /* The Random section of the New Motif page: one button draws one motif from the Composer (seed, mode and meter all
- * drawn) and shows its score and playback in the score workspace. Reroll draws the next seed; "Use" hands the
+ * drawn) and shows its score and playback in the score workspace. Pressing it again draws another; "Use" hands the
  * motif's form values to onUse(values) to fill the editor. Nothing is stored. */
 function buildRandomMotifs(statusEl, onUse) {
   const section = materialsElement("section", "panel materials-random");
   section.appendChild(materialsElement("h2", "section-title", "Random"));
   const buttons = materialsElement("div", "button-row");
   const draw = materialsElement("button", "", "Random");
-  const reroll = materialsElement("button", "", "Reroll");
   const use = materialsElement("button", "", "Use");
-  for (const button of [draw, reroll, use]) {
+  for (const button of [draw, use]) {
     button.type = "button";
   }
-  reroll.hidden = true;
   use.hidden = true;
-  buttons.append(draw, reroll, use);
+  buttons.append(draw, use);
   const infoEl = materialsElement("div", "variant-meta");
   const selectedEl = materialsElement("div", "materials-score-mount");
   let workspace = null;
@@ -343,7 +341,6 @@ function buildRandomMotifs(statusEl, onUse) {
   async function drawSeed(seed) {
     const values = { form: "full", role: "melodic", seed };
     draw.disabled = true;
-    reroll.disabled = true;
     statusEl.classList.remove("error");
     statusEl.textContent = "Drawing a motif...";
     const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(values));
@@ -351,7 +348,6 @@ function buildRandomMotifs(statusEl, onUse) {
     const drawn = MaterialsModel.drawnSettings(answer.data);
     if (!motive || !drawn) {
       draw.disabled = false;
-      reroll.disabled = false;
       fail(answer.data, "Could not draw a motif");
       return;
     }
@@ -360,7 +356,6 @@ function buildRandomMotifs(statusEl, onUse) {
     const candidate = MaterialsModel.randomCandidate(motive, seed);
     const rendered = await sendMaterialsRequest(MaterialsModel.renderRequest(VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, values), candidate)));
     draw.disabled = false;
-    reroll.disabled = false;
     if (!rendered.ok) {
       fail(rendered.data, "Could not render the motif");
       return;
@@ -374,12 +369,10 @@ function buildRandomMotifs(statusEl, onUse) {
     const playback = URL.createObjectURL(new Blob([JSON.stringify(rendered.data.playback)], { type: "application/json" }));
     blobUrls = [xml, playback];
     workspace = ScoreWorkspace.mount(selectedEl, { title: "Random motif", subtitle: `seed ${seed}`, musicxmlUrl: xml, playbackUrl: playback });
-    reroll.hidden = false;
     use.hidden = false;
   }
 
   draw.addEventListener("click", () => drawSeed(Math.floor(Math.random() * 2147483648)));
-  reroll.addEventListener("click", () => current && drawSeed(MaterialsModel.rerollSeed(current.candidate.seed)));
   use.addEventListener("click", () => current && onUse(MaterialsModel.motifFormValues(MaterialsModel.randomCandidateToBody(current.candidate, current.values))));
   section.append(buttons, infoEl, selectedEl);
   return section;
@@ -916,13 +909,24 @@ function buildMotifEditor(body, tabStatus) {
   field("Base harmony", harmony, "harmony");
   hintUnder("harmony", MaterialsModel.HARMONY_HINT);
 
-  el.appendChild(materialsElement("h2", "section-title", "Segments"));
+  const segmentsTitle = materialsElement("h2", "section-title", "Segments");
+  const proposedTag = materialsElement("span", "materials-tag", "Proposed");
+  segmentsTitle.append(" ", proposedTag);
+  el.appendChild(segmentsTitle);
   el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
   const featureTable = materialsElement("table", "library-table materials-features");
   el.appendChild(featureTable);
   errors.features = materialsElement("div", "materials-field-error");
   el.appendChild(errors.features);
   let featureRows = initial.features.map((feature) => ({ ...feature }));
+  /* True while the segments are the Composer's proposal; any edit of the rows makes them the motif's own. */
+  let segmentsProposed = initial.segmentsProposed;
+
+  function setProposed(value) {
+    segmentsProposed = value;
+    proposedTag.hidden = !segmentsProposed;
+  }
+  setProposed(segmentsProposed);
 
   function drawFeatures() {
     featureTable.innerHTML = "";
@@ -943,6 +947,7 @@ function buildMotifEditor(body, tabStatus) {
         input.setAttribute("aria-label", `Segment ${index + 1} ${prop}`);
         input.addEventListener("input", () => {
           row[prop] = prop === "label" ? input.value : input.value.trim() === "" ? NaN : Number(input.value);
+          setProposed(false);
         });
         const cell = materialsElement("td");
         cell.appendChild(input);
@@ -952,6 +957,7 @@ function buildMotifEditor(body, tabStatus) {
       remove.type = "button";
       remove.addEventListener("click", () => {
         featureRows.splice(index, 1);
+        setProposed(false);
         drawFeatures();
       });
       const last = materialsElement("td");
@@ -965,9 +971,19 @@ function buildMotifEditor(body, tabStatus) {
   addFeature.type = "button";
   addFeature.addEventListener("click", () => {
     featureRows.push(MaterialsModel.newFeatureRow(featureRows));
+    setProposed(false);
     drawFeatures();
   });
   el.appendChild(addFeature);
+  /* Clears the rows and marks them proposed: the save then takes the Composer's proposal. */
+  const useProposal = materialsElement("button", "button-secondary", "Use proposal");
+  useProposal.type = "button";
+  useProposal.addEventListener("click", () => {
+    featureRows = [];
+    setProposed(true);
+    drawFeatures();
+  });
+  el.appendChild(useProposal);
 
   function values() {
     return {
@@ -981,6 +997,7 @@ function buildMotifEditor(body, tabStatus) {
       harmony: harmony.value,
       toneOverrides: { ...toneOverrides },
       features: featureRows.map((row) => ({ ...row })),
+      segmentsProposed,
     };
   }
 
