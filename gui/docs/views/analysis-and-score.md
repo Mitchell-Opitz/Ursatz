@@ -56,6 +56,12 @@ the meter check) with `GET .../document?sections=`. The other sections load when
 (`loadTabState` in `analysis-tabs.js`) and are kept per piece in the page (`createDocumentCache`), so a section is
 fetched once. A tab's count shows once its sections have loaded.
 
+Export sits at the top of the Data view. Export fetches `GET /api/analyzer/pieces/<id>/export` once and then
+shows Copy and Download .txt (the file is the piece title as a slug, `.txt`). The optional From and To measure
+inputs limit the export to those measures; changing them asks again. The text is the Analyzer's
+([format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)), pasted into a conversation to say "measure 27 is flagged as X, I read it as Y". An error
+shows beside the buttons.
+
 A Notation row (R-110) sits under the toolbar and at the top of the Data
 view's "Rhythm and meter" tab. It shows the reading the analysis used, the
 meter check's line from the `meter-fit` claim ("Declared 4/4 fits 41%. 3/4 with

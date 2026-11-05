@@ -2509,3 +2509,23 @@ button.button-danger:disabled {
   border-radius: 0.6em;
   opacity: 0.75;
 }
+
+.analysis-export {
+  display: flex;
+  margin: 0.75rem 0;
+}
+
+.export-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.export-control input {
+  width: 4.5rem;
+}
+
+.export-message {
+  font-size: 0.85rem;
+}

@@ -868,6 +868,7 @@ static const char *kMusicXmlSuffix = "/musicxml";
 static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
 static const char *kPlaybackSuffix = "/playback";
 static const char *kDocumentSuffix = "/document";
+static const char *kExportSuffix = "/export";
 
 #define DOCUMENT_SECTIONS_MAX 64
 #define DOCUMENT_SECTION_NAME_MAX 64
@@ -931,6 +932,76 @@ static int handle_get_piece_document(struct mg_connection *conn, const char *id)
   }
   ursatz_gui_send_json(conn, buf.data);
   json_buffer_destroy(&buf);
+  return 200;
+}
+
+/* Reads a measure number of the export range: digits only, at most 6. False when it is not one. */
+static bool parse_export_measure(const char *text, int *out) {
+  size_t length = strlen(text);
+  if (length == 0 || length > 6) {
+    return false;
+  }
+  int value = 0;
+  for (size_t i = 0; i < length; i++) {
+    if (text[i] < '0' || text[i] > '9') {
+      return false;
+    }
+    value = value * 10 + (text[i] - '0');
+  }
+  *out = value;
+  return true;
+}
+
+/* GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]: the Analyzer's text export of the piece (text/plain). */
+static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
+  const struct mg_request_info *info = mg_get_request_info(conn);
+  const char *bad_range = "{\"ok\":false,\"message\":\"from and to must be measure numbers, from not after to\"}";
+  char from_text[16];
+  char to_text[16];
+  bool has_from = query_value(info, "from", 0, from_text, sizeof(from_text));
+  bool has_to = query_value(info, "to", 0, to_text, sizeof(to_text));
+  int first = 0;
+  int last = 0;
+  if ((has_from && !parse_export_measure(from_text, &first)) || (has_to && !parse_export_measure(to_text, &last))) {
+    return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_range);
+  }
+  if (has_from || has_to) {
+    if (!has_from) {
+      first = 1;
+    }
+    if (!has_to) {
+      last = 999999;
+    }
+    if (first > last) {
+      return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_range);
+    }
+  }
+
+  char *text = NULL;
+  char export_message[256] = "";
+  UrsatzGuiAnalysisResult result =
+      ursatz_gui_analysis_get_piece_export(kPiecesDir, id, first, last, &text, export_message);
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
+                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
+  }
+  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED && strcmp(export_message, "ANALYZER_ERR_ARGUMENT") == 0) {
+    return ursatz_gui_send_json_status(conn, 400, "Bad Request",
+                            "{\"ok\":false,\"message\":\"no measure in that range\"}");
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error",
+                            "{\"ok\":false,\"message\":\"failed to export the analysis\"}");
+  }
+
+  size_t len = strlen(text);
+  mg_send_http_ok(conn, "text/plain; charset=utf-8", (long)len);
+  mg_write(conn, text, len);
+  free(text);
   return 200;
 }
 
@@ -1028,6 +1099,7 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
     size_t reanalyze_suffix_len = strlen(kReanalyzeSuffix);
     size_t playback_suffix_len = strlen(kPlaybackSuffix);
     size_t document_suffix_len = strlen(kDocumentSuffix);
+    size_t export_suffix_len = strlen(kExportSuffix);
 
     if (strcmp(info->request_method, "POST") == 0 && rest_len > reanalyze_suffix_len &&
         strcmp(rest + rest_len - reanalyze_suffix_len, kReanalyzeSuffix) == 0) {
@@ -1079,6 +1151,19 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
       memcpy(id, rest, id_len);
       id[id_len] = '\0';
       return handle_get_piece_document(conn, id);
+    }
+
+    if (strcmp(info->request_method, "GET") == 0 && rest_len > export_suffix_len &&
+        strcmp(rest + rest_len - export_suffix_len, kExportSuffix) == 0) {
+      char id[256];
+      size_t id_len = rest_len - export_suffix_len;
+      if (id_len >= sizeof(id)) {
+        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+        return 404;
+      }
+      memcpy(id, rest, id_len);
+      id[id_len] = '\0';
+      return handle_get_piece_export(conn, id);
     }
 
     if (strcmp(info->request_method, "GET") == 0 && rest_len > playback_suffix_len &&

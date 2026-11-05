@@ -285,4 +285,20 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_meter_defaulted(const char
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *pieces_dir, const char *id,
                                                                 char **out_json);
 
+/*
+ * The piece's text export (the Analyzer's analyzer_text_export_piece, docs/text-export.md), under the piece lock: the
+ * cached import, the stored analysis.json (made current first, as ursatz_gui_analysis_get_piece does) and the title
+ * from meta.json (the filename without its extension). first_measure and last_measure are an inclusive range of
+ * measure numbers as written in the score; 0 and 0 export the whole piece. The GUI builds no line of the text.
+ *
+ * On URSATZ_GUI_ANALYSIS_OK, *out_text is newly allocated and caller-owned (free() it).
+ * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists. URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the
+ * stored source no longer imports. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if the export failed; message is then
+ * "ANALYZER_ERR_ARGUMENT" (an empty range, or a stored document the Analyzer will not read) or
+ * "ANALYZER_ERR_LIBRARY", and is empty for every other outcome.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_export(const char *pieces_dir, const char *id,
+                                                              int first_measure, int last_measure, char **out_text,
+                                                              char message[256]);
+
 #endif /* URSATZ_GUI_ANALYSIS_SERVICE_H */

@@ -57,6 +57,14 @@ Tags and Actions.
   density (attacks per beat)". A style built from a brief reads "Brief" as its source (briefs are made in the Themes
   view; the Collections view builds none).
 
+## Export control
+
+`frontend/public/export-control.js` (global `ExportControl`) is the shared Export button. `ExportControl.create({fetchText,
+filename, withRange})` returns an element with Export, then Copy (clipboard, or a hidden textarea and
+`execCommand("copy")`; reads "Copied" for 2 s) and Download .txt, and From and To inputs when `withRange`. The
+helpers `exportFilename(name)` and `rangeQuery(from, to)` are pure. The control builds no line of the text: the
+backend returns the Analyzer's export ([format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)).
+
 ## Score layers
 
 `frontend/public/score-layers.js` (global `ScoreLayers`, no DOM) is the data
