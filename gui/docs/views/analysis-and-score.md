@@ -193,7 +193,7 @@ loaded by `index.html` before `app.js` and by the frontend tests):
 ### Layers on the score
 
 The Layers rail (left of the score) lists the layers of
-[Score layers](../../README.md#score-layers) in groups, each with a switch, its color, its
+[Score layers](../frontend.md#score-layers) in groups, each with a switch, its color, its
 name and the number of items in the piece. A layer with no items is disabled
 ("None found in this piece"). The chips at the top apply a preset (None,
 Harmony, Structure). Everything is off by default; the choice is remembered
