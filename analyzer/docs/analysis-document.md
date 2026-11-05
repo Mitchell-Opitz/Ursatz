@@ -1,5 +1,7 @@
 # Analysis document
 
+The structure of the analysis JSON document: top level, metadata, meter, sources and the claim index. Back to the [docs index](README.md).
+
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is

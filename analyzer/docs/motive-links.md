@@ -1,5 +1,7 @@
 # Motive links
 
+Motive links: how the families of motives in different pieces are linked, scored and cached. Back to the [docs index](README.md).
+
 ```sh
 ursatz-analyzer --link-motives <corpus output dir> [--cache <file>] [--depth <1-6>] [--candidates <n>] [--format text|json]
 ```
@@ -32,7 +34,7 @@ step such as `transpose by=12` is a move between those, not between the written 
 ## Candidates, the gate and directions
 
 Recognizing a pair that is not a link costs time: a depth-2 miss takes about 330 ms in the default build (Ursatz's
-[motive-link.md](../external/ursatz/docs/modules/motive-link.md)). So each family takes only the families of other pieces
+[motive-link.md](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/modules/motive-link.md)). So each family takes only the families of other pieces
 at nearness at least 1/2 (the mean of the four dimension similarities, `motive_link_nearness`), nearest first, ties by
 piece order and then family index, and at most `--candidates` of them (default 4). The union of these as unordered pairs
 is what gets compared, each pair once. The kernel picks them (`motive_link_candidates`).

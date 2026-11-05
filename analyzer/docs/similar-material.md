@@ -1,5 +1,7 @@
 # Similar material
 
+The similar material search over a corpus, by motive or by progression. Back to the [docs index](README.md).
+
 ```sh
 ursatz-analyzer --similar <corpus output dir> (--motive <file> | --progression "<numerals>") [--min <n/d>] [--max <n>] [--format text|json]
 ```

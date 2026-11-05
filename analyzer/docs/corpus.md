@@ -1,5 +1,7 @@
 # Corpus mode
 
+Corpus mode, which analyzes every piece in a folder into documents and a corpus index. Back to the [docs index](README.md).
+
 ```sh
 ursatz-analyzer --corpus <dir> [--out <dir>] [--resume] [--markdown]
 ```

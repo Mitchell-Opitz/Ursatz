@@ -1,5 +1,7 @@
 # Composer API
 
+The in-process entries the Composer calls to hear a fragment, measure style distance and list voice-leading faults. Back to the [docs index](README.md).
+
 Library: `include/ursatz_analyzer/composer_api.h`, part of the `ursatz_analyzer` target. Calls are in process; there is
 no server and no file. The header includes only public Analyzer headers and Ursatz kernel headers.
 
