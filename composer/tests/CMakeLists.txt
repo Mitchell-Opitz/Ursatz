@@ -51,6 +51,12 @@ if(VALGRIND_PROGRAM)
                      $<TARGET_FILE:test_plan_json>)
     set_tests_properties(test_plan_json_valgrind PROPERTIES LABELS slow)
 endif()
+# test_plan_json and its valgrind run write the plan files in the build directory that test_plan_schema reads.
+foreach(plan_test test_plan_json test_plan_json_valgrind test_plan_schema)
+    if(TEST ${plan_test})
+        set_tests_properties(${plan_test} PROPERTIES RESOURCE_LOCK plan_json_files)
+    endif()
+endforeach()
 
 if(TARGET ursatz-composer)
 add_executable(test_render_plan test_render_plan.c)
@@ -176,6 +182,8 @@ add_executable(test_grow_sentence test_grow_sentence.c)
 target_link_libraries(test_grow_sentence PRIVATE ursatz_composer)
 target_compile_options(test_grow_sentence PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_sentence COMMAND test_grow_sentence)
+# Measured 12.0 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_grow_sentence PROPERTIES LABELS slow)
 
 add_executable(test_grow_sentence_heard test_grow_sentence_heard.c)
 target_link_libraries(test_grow_sentence_heard PRIVATE ursatz_composer)
@@ -226,6 +234,8 @@ target_compile_definitions(test_grow_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FIL
                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_grow_cli ursatz-composer)
 add_test(NAME test_grow_cli COMMAND test_grow_cli)
+# Measured 11.6 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_grow_cli PROPERTIES LABELS slow)
 endif()
 
 add_executable(test_accompaniment test_accompaniment.c)
@@ -240,6 +250,8 @@ target_link_libraries(test_grow_accompaniment PRIVATE ursatz_composer)
 target_include_directories(test_grow_accompaniment PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_grow_accompaniment PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_accompaniment COMMAND test_grow_accompaniment)
+# Measured 13.5 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_grow_accompaniment PROPERTIES LABELS slow)
 add_test(NAME test_grow_accompaniment_heard COMMAND test_grow_accompaniment heard)
 # standard-texture does not hear every grown theme as melody and accompaniment in every measure (measured, with the cause,
 # in docs/accompaniment.md): the test asserts that it does, so it fails, and the failure is expected. Not tuned away, not
@@ -269,6 +281,8 @@ target_compile_options(test_counterpoint PRIVATE -Wall -Wextra -Wpedantic)
 foreach(species 1 2 3 4)
     add_test(NAME test_counterpoint_species_${species} COMMAND test_counterpoint ${species})
 endforeach()
+# Species 3 measured 26.9 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_counterpoint_species_3 PROPERTIES LABELS slow)
 add_test(NAME test_counterpoint_not_applicable COMMAND test_counterpoint na)
 
 if(TARGET ursatz-composer)
@@ -342,6 +356,8 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
 foreach(mode fixture theme refused progression partial)
     add_test(NAME test_piece_fills_${mode} COMMAND test_piece_fills ${mode}
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
+    # Every mode writes piece_fills_theme.json and piece_fills_out.txt in the one directory.
+    set_tests_properties(test_piece_fills_${mode} PROPERTIES RESOURCE_LOCK piece_fills)
 endforeach()
 endif()
 
@@ -360,6 +376,8 @@ target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)
 foreach(mode smoke exact ornament reharmonize reregister)
     add_test(NAME test_form_return_${mode} COMMAND test_form_return ${mode})
 endforeach()
+# Reregister measured 14.6 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_form_return_reregister PROPERTIES LABELS slow)
 
 add_executable(test_return_heard test_return_heard.c)
 target_link_libraries(test_return_heard PRIVATE ursatz_composer)
@@ -367,6 +385,8 @@ target_compile_options(test_return_heard PRIVATE -Wall -Wextra -Wpedantic)
 # The returns heard in composed pieces: the smoke test is quick; the sweep fails when a share falls below its baseline.
 add_test(NAME test_return_heard_smoke COMMAND test_return_heard smoke)
 add_test(NAME test_return_heard_heard COMMAND test_return_heard heard)
+# Measured 20.8 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_return_heard_heard PROPERTIES LABELS slow)
 
 if(TARGET ursatz-composer)
 add_executable(test_plan_cli test_plan_cli.c)
@@ -376,6 +396,8 @@ target_compile_definitions(test_plan_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FIL
                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_plan_cli ursatz-composer)
 add_test(NAME test_plan_cli COMMAND test_plan_cli)
+# Measured 24.6 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_plan_cli PROPERTIES LABELS slow)
 endif()
 
 # Chords given at exact onsets (given.h plan_give_chords).
@@ -457,6 +479,8 @@ add_test(NAME test_cli_snapshots
          COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
                  -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake)
+# Measured 20.1 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_cli_snapshots PROPERTIES LABELS slow)
 endif()
 
 add_executable(test_analyzer_check test_analyzer_check.c)
@@ -554,6 +578,8 @@ foreach(mode motive same plan progression no-match cli)
     add_test(NAME test_corpus_seed_${mode} COMMAND test_corpus_seed ${mode}
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
 endforeach()
+# The same mode measured 36.2 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_corpus_seed_same PROPERTIES LABELS slow)
 endif()
 
 add_executable(test_variant_registry test_variant_registry.c)
@@ -571,6 +597,8 @@ target_compile_definitions(test_variants_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET
                                                      COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_variants_cli ursatz-composer)
 add_test(NAME test_variants_cli COMMAND test_variants_cli)
+# Measured 43.9 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_variants_cli PROPERTIES LABELS slow)
 endif()
 
 add_executable(test_motive_random test_motive_random.c)
@@ -635,6 +663,8 @@ target_compile_definitions(test_theme_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FI
 add_dependencies(test_theme_cli ursatz-composer)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
 add_test(NAME test_theme_cli COMMAND test_theme_cli WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
+# Measured 11.6 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_theme_cli PROPERTIES LABELS slow)
 endif()
 
 if(TARGET ursatz-composer)
@@ -785,6 +815,19 @@ if(VALGRIND_PROGRAM)
                      $<TARGET_FILE:test_job_cancel> cancel)
 endif()
 
+# Each API test writes its requests and responses in the build directory under names no other test uses, and its valgrind run
+# writes the same names again, so a test and its valgrind run share a lock. test_api_schema reads every one of them.
+set(API_FILE_LOCKS "")
+foreach(api_test core motive variants theme piece plan_workflow material vocabulary)
+    list(APPEND API_FILE_LOCKS api_${api_test}_files)
+    foreach(variant test_api_${api_test} test_api_${api_test}_valgrind)
+        if(TEST ${variant})
+            set_tests_properties(${variant} PROPERTIES RESOURCE_LOCK api_${api_test}_files)
+        endif()
+    endforeach()
+endforeach()
+set_tests_properties(test_api_schema PROPERTIES RESOURCE_LOCK "${API_FILE_LOCKS}")
+
 # A project that adds cJSON, Ursatz and the Analyzer first and the Composer after them, with its command off, builds and runs.
 add_test(NAME consumer_build
          COMMAND ${CMAKE_CTEST_COMMAND} --build-and-test ${CMAKE_CURRENT_SOURCE_DIR}/consumer ${CMAKE_CURRENT_BINARY_DIR}/consumer
@@ -798,3 +841,10 @@ add_test(NAME consumer_rejects_internals
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_rejects.cmake)
 set_tests_properties(consumer_rejects_internals PROPERTIES DEPENDS consumer_build RESOURCE_LOCK consumer_build_dir)
 set_tests_properties(consumer_build PROPERTIES RESOURCE_LOCK consumer_build_dir)
+# consumer_build measured 42.6 s of CPU on a warm tree and 169 s of wall time on a cold one, over the 10 s fast-set limit.
+# consumer_rejects_internals needs its build tree, so it is slow with it.
+set_tests_properties(consumer_build consumer_rejects_internals PROPERTIES LABELS slow)
+
+# Default timeouts by label (cmake/TestTimeouts.cmake), set last so every test above has its labels.
+include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
+ursatz_composer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
