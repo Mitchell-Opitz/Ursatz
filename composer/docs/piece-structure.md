@@ -91,7 +91,7 @@ ending version is built from the realized loop (R-172).
   cadence allow is a theme section: it has the `archetype` and `theme_pairing` of its `into`, and an antecedent's second
   `cadence` (HC), and `grow-theme` builds it as [grow.md](grow.md) says.
 - Any other section is a free phrase: it has `free_phrase`, and `grow-theme` builds it as ideas of a bar
-  ([grow.md](grow.md#free-phrases)).
+  ([grow-harmony.md](grow-harmony.md#free-phrases)).
 - The loop's end (the last section of the turnaround, else the last body section) is held: it has `hold`, and the seam
   stage fills it last against the seam, the section `seam` (one bar, `seam`) that follows it, a Given copy of the body's
   first bar. A theme fill, a progression fill that covers its section and the first body section are not held. See

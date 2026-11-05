@@ -27,7 +27,7 @@ The output of `grow`, with:
 when `ideas` gives it one, else the motive of its slot. `source` is `motive` (the motive of the slot, exactly), `idea` (the
 motive `ideas` gives the idea, exactly), `registry` (a form of the variant registry, with its chain) or `operator` (a motive
 development operator, with its label). `item` is always `null`. `connection` is the form's connection score
-([grow.md](grow.md#motive-forms)) in percent, `null` for the basic idea, an idea with a motive of its own and the operators.
+([grow-harmony.md](grow-harmony.md#motive-forms)) in percent, `null` for the basic idea, an idea with a motive of its own and the operators.
 
 ## Exit status
 

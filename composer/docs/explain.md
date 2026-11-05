@@ -21,11 +21,11 @@ attempt is the one explained, as it is elsewhere.
 A scored candidate whose checker did not hold a shaping rule (R-164) names it: the candidate's reason ends in `; not held:` and
 the names, which the text prints as `(not held: ...)` and the JSON gives as `not_held`. The names are `ending-reduction`, `waves`,
 `central-range` and `monotony` for a melody ([melody-fill.md](melody-fill.md#the-shaping-rules)) and `root-progression` for a
-harmony ([grow.md](grow.md#the-harmony)). A candidate that held them all says nothing.
+harmony ([grow-harmony.md](grow-harmony.md#the-harmony)). A candidate that held them all says nothing.
 
 Reasons are the checkers' own strings; nothing is put into words beyond them. A motive-form candidate of the motives stage
-([grow.md](grow.md#motive-forms)) is labelled with its chain, its connection score in percent and its derivation (`transpose 90%:
-Transposed +2 steps of the key's scale. Kept the`, cut at 63 characters), and scores 1 plus the connection. A saved form from a pool ([grow.md](grow.md#the-pool)) is labelled `pool <item> <connection>%:
+([grow-harmony.md](grow-harmony.md#motive-forms)) is labelled with its chain, its connection score in percent and its derivation (`transpose 90%:
+Transposed +2 steps of the key's scale. Kept the`, cut at 63 characters), and scores 1 plus the connection. A saved form from a pool ([grow-harmony.md](grow-harmony.md#the-pool)) is labelled `pool <item> <connection>%:
 <chain>`, with the item and the chain it was saved with, and scores 1 plus the connection plus 1/2 (approved) or 1/4 (unflagged).
 
 ## The style term
