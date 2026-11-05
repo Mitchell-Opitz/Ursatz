@@ -45,7 +45,10 @@ target_compile_definitions(test_styles_route PRIVATE
 )
 
 ursatz_gui_add_test(material_service test_material_service.c ${CMAKE_CURRENT_BINARY_DIR}/material_service)
-# The test creates its own materials_<pid>/ store in its working directory.
+# The test creates its own materials_<pid>/ store in the build tree (URSATZ_GUI_TEST_STORE_DIR) and removes it.
+target_compile_definitions(test_material_service PRIVATE
+  URSATZ_GUI_TEST_STORE_DIR="${CMAKE_CURRENT_BINARY_DIR}/material_service"
+)
 
 ursatz_gui_add_test(subject_service test_subject_service.c ${CMAKE_CURRENT_BINARY_DIR}/subject_service)
 # The test creates its own materials_<pid>/, subjects_<pid>/ and pieces/ in its working directory.
