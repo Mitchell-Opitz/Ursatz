@@ -30,6 +30,11 @@ parallel) are left out of that command and of CI. Run them all, with plain `ctes
 
 If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`.
 
+`include/ursatz_composer/composer_api.h` is the only public header and includes only standard headers. The Composer links Ursatz
+and the Analyzer PRIVATE, so a target that links `ursatz_composer` includes that one header and no Ursatz or Analyzer header
+(a consumer links `cjson` itself if it parses responses). The other headers are in `src/include/ursatz_composer/`, private to the
+Composer and its tests. `scripts/check-library-includes.sh` and the `consumer_rejects_internals` test hold this.
+
 ### Submodules
 
 | Path | Pinned at |
@@ -66,7 +71,7 @@ lanes of the plan (R-019) hold library values:
 | Key names and signatures | `<standard-tonality/tonal_key.h>`: `standard_tonality_key_tonic_of_pitch_class`, `standard_tonality_key_fifths`, `standard_tonality_key_signature_of`. |
 | Roman numerals of plain chords | `<standard-tonality/roman_numeral_grammar.h>`: parse reads every form, format writes the canonical one (`viio`, `viiø7`, `65`, `43`, `42`). Applied chords keep `harmony_applied_label`. |
 | Plan time, spans and the positions inside an operator | `<core/rational.h>`: a `PlanSpan` is a `Rational` start and length; the operators work on `Rational` positions from the start of their target (`src/util/position.h` wraps the checked arithmetic), and `<time/time_rational.h>` bridges to `MusicalTime`. No meter is refused for a grid. |
-| A motive | `<analysis/motive_sketch.h>`: `MotiveSketch`, which the Composer names `Motive` (`typedef MotiveSketch Motive`, `include/ursatz_composer/motive.h`). Its notes are `pitch` (`MOTIVE_SKETCH_PITCH_UNKNOWN` in a rhythm motive), `onset` and `duration`; its meter is the sketch's `bar` and `beat` and its key the sketch's scale and tonic spelling, read and set only through `motive_meter_of`, `motive_set_meter`, `motive_key_of` and `motive_set_key`. A motive keeps no per-note spelling and no hyperbar. |
+| A motive | `<analysis/motive_sketch.h>`: `MotiveSketch`, which the Composer names `Motive` (`typedef MotiveSketch Motive`, `src/include/ursatz_composer/motive.h`). Its notes are `pitch` (`MOTIVE_SKETCH_PITCH_UNKNOWN` in a rhythm motive), `onset` and `duration`; its meter is the sketch's `bar` and `beat` and its key the sketch's scale and tonic spelling, read and set only through `motive_meter_of`, `motive_set_meter`, `motive_key_of` and `motive_set_key`. A motive keeps no per-note spelling and no hyperbar. |
 | How a motive is made from another | `<analysis/motive_relation.h>`: `MotiveRelationStep`, a relation kind and up to 4 parameter values. It is the only transform spec: `motive_develop` takes it, a `PlanMotiveRef` holds it (`step`, or none for a plain reference to the source) and the plan file writes its text (`"step": "transpose tonal=1 by=2"`). The variant registry rows name their relation and describe their parameters through `motive_relation_param_info`; `docs/plan-format.md#motive-relation-steps` has the table. |
 | Cadence type | `<semantics/cadence_type.h>`: `CadenceType`. The plan file and the command line name the five a plan holds PAC, IAC, HC, DC and PC (`plan_cadence_names` in `src/util/plan_util.c`). |
 | Harmonic function | `<standard-harmony/harmonic_function.h>`: `HarmonicFunction`, with `PlanHarmony.has_function` false for chords loaded from an Analyzer result and for a plan file chord with no `function`. |
@@ -78,7 +83,8 @@ lanes of the plan (R-019) hold library values:
 
 | Directory | Holds |
 | --- | --- |
-| `include/ursatz_composer/` | The public headers. |
+| `include/ursatz_composer/` | The one public header, `composer_api.h`. |
+| `src/include/ursatz_composer/` | The private headers. |
 | `src/plan/` | The piece plan, its lanes, states, constraints and JSON. |
 | `src/render/` | Rendering a plan to NoteEvents, MIDI and MusicXML. |
 | `src/fill/` | The fill loop, its operators, seeds and records. |
@@ -402,6 +408,10 @@ stages fill around it ([docs/middle-out.md](docs/middle-out.md)).
 
 `form_hear` hears the phrase-level form of a written plan with standard-form's analysis adapter. See
 [docs/form-hear.md](docs/form-hear.md).
+
+## Version 0.4.1 (phase P28)
+
+`composer_api.h` is the only public header; every other header is private to the Composer (`src/include/`) and its dependencies are linked PRIVATE. The API is unchanged (1.1).
 
 ## Version 0.4.0 (phase P27)
 

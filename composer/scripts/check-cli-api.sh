@@ -33,7 +33,7 @@ while IFS=: read -r file line text; do
     if found_in "$name" cli; then
         continue
     fi
-    if found_in "$name" src; then
+    if found_in "$name" src src/include; then
         report "$file" "$line" "$name" "a private header of the Composer"
     elif found_in "$name" include external/ursatz external/ursatz-analyzer external/ursatz-analyzer/include external/ursatz/include; then
         report "$file" "$line" "$name" "a header of Ursatz or the Analyzer"

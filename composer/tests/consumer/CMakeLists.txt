@@ -19,3 +19,10 @@ add_subdirectory(${COMPOSER_ROOT} ursatz-composer)
 add_executable(consumer consumer.c)
 target_link_libraries(consumer PRIVATE ursatz_composer cjson)
 target_compile_options(consumer PRIVATE -Wall -Wextra -Wpedantic)
+
+# Each of these must fail to compile, because the Composer links its libraries PRIVATE and installs one public header.
+# They are not built by default; consumer_rejects_internals builds them one at a time and checks the reason.
+foreach(reject reject_composer_header reject_analyzer_header reject_library_header)
+    add_executable(${reject} EXCLUDE_FROM_ALL ${reject}.c)
+    target_link_libraries(${reject} PRIVATE ursatz_composer)
+endforeach()

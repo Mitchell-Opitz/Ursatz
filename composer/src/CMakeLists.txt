@@ -133,11 +133,16 @@ add_library(ursatz_composer STATIC
 )
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(ursatz_composer
-    PUBLIC ursatz ursatz_analyzer ursatz_analyzer::chain standard_harmony galant_schemas scale_harmonization
-    PRIVATE common_practice_minimal standard_counterpoint standard_form standard_meter standard_texture standard_tonality standard_voicing cjson
+    PRIVATE ursatz ursatz_analyzer ursatz_analyzer::chain standard_harmony galant_schemas scale_harmonization common_practice_minimal standard_counterpoint standard_form standard_meter standard_tonality standard_voicing cjson
+)
+# The tests reach the internal headers and the libraries the sources use; no consumer does.
+add_library(ursatz_composer_internal INTERFACE)
+target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(ursatz_composer_internal INTERFACE
+    ursatz ursatz_analyzer ursatz_analyzer::chain standard_harmony galant_schemas scale_harmonization common_practice_minimal standard_counterpoint standard_form standard_meter standard_tonality standard_voicing cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"

@@ -71,7 +71,7 @@ basic idea, or a motive that is not a full motive of two notes or more in the th
 
 ### Given chords
 
-`GrowRequest.chords` (`chord_count`) gives chords of the theme (R-208), `GivenChord` of [given.h](../include/ursatz_composer/given.h):
+`GrowRequest.chords` (`chord_count`) gives chords of the theme (R-208), `GivenChord` of [given.h](../src/include/ursatz_composer/given.h):
 a Roman numeral, an onset from the theme's start and a length. `grow_build_plan` gives them to the theme section with
 `plan_give_chords` once the section is made, one Given harmony span for each, exactly its onset and length;
 `GROW_ERR_BAD_REQUEST` when it refuses them. The harmony stage opens targets only over the gaps (`given_gaps`), so the chords
