@@ -23,6 +23,7 @@
 #include "../service/compose_jobs.h"
 #include "jobs.h"
 #include "../service/material_service.h"
+#include "../service/material_export_service.h"
 #include "../service/motif_service.h"
 #include "../service/style_service.h"
 #include "../service/subject_service.h"
@@ -2786,6 +2787,38 @@ static int handle_validate(struct mg_connection *conn) {
   return ursatz_gui_send_object(conn, 200, answer);
 }
 
+/* GET /api/materials/items/<id>/export[?version=<n>]: the Analyzer's text export of a motif, theme or piece (text/plain).
+   The current version unless version is given. */
+static int handle_get_item_export(struct mg_connection *conn, const char *id) {
+  char version_text[16];
+  int version = 0;
+  if (query_value(conn, "version", version_text, sizeof(version_text))) {
+    char *end = NULL;
+    long parsed = strtol(version_text, &end, 10);
+    if (end == version_text || *end != '\0' || parsed < 1 || parsed > 999999) {
+      return send_failure(conn, 400, "version must be a whole number from 1");
+    }
+    version = (int)parsed;
+  }
+  char *text = NULL;
+  char message[URSATZ_GUI_MATERIAL_EXPORT_MESSAGE_SIZE];
+  UrsatzGuiMaterialExportResult result = ursatz_gui_material_export(id, version, &text, message);
+  if (result == URSATZ_GUI_MATERIAL_EXPORT_NOT_FOUND) {
+    return send_failure(conn, 404, "item or version not found");
+  }
+  if (result == URSATZ_GUI_MATERIAL_EXPORT_REFUSED) {
+    return send_failure(conn, 422, message[0] ? message : "composer could not render the motif");
+  }
+  if (result != URSATZ_GUI_MATERIAL_EXPORT_OK) {
+    return send_failure(conn, 500, result == URSATZ_GUI_MATERIAL_EXPORT_ALLOC ? "out of memory" : "failed to export the item");
+  }
+  size_t length = strlen(text);
+  mg_send_http_ok(conn, "text/plain; charset=utf-8", (long)length);
+  mg_write(conn, text, length);
+  free(text);
+  return 200;
+}
+
 static int route_items(struct mg_connection *conn, const char *method, char segments[][256], int count) {
   bool get = strcmp(method, "GET") == 0;
   bool post = strcmp(method, "POST") == 0;
@@ -2809,6 +2842,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 3 && strcmp(segments[2], "versions") == 0) {
     return post ? handle_add_version(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "export") == 0) {
+    return get ? handle_get_item_export(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "reanalyze") == 0) {
     return post ? handle_reanalyze(conn, segments[1]) : send_method_not_allowed(conn);
