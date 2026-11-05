@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Fails when src/, include/ or cli/ includes an Ursatz header that is not under a staged public root of the build, an
-# Analyzer header outside external/ursatz-analyzer/include/ursatz_analyzer/, or any *_internal.h of either, or when a
+# Analyzer header outside external/ursatz-analyzer/include/ursatz_analyzer/, or any *_internal.h of either, or when the
+# public include directory holds anything but composer_api.h, composer_api.h includes a non-standard header, or
+# src/CMakeLists.txt links a library PUBLIC (a consumer must see no Ursatz or Analyzer header through the Composer), or when a
 # CMake file reads SOURCE_DIR of an Ursatz or Analyzer target or a path under external/ursatz/tests or
 # external/ursatz-analyzer/src. Prints each offending line. Run after the build; the build directory is the first argument.
 set -euo pipefail
@@ -42,10 +44,24 @@ analyzer_has() {
         grep -q "/$name\$"
 }
 
+# The public include directory holds only the API header, and that header includes only standard headers.
+for header in include/ursatz_composer/*; do
+    [ "$(basename "$header")" = composer_api.h ] || report "$header" 1 "$(basename "$header")" "public header other than composer_api.h"
+done
+while IFS=: read -r line text; do
+    case "$text" in
+        *"<stdbool.h>"* | *"<stddef.h>"* | *"<stdint.h>"*) ;;
+        *) report include/ursatz_composer/composer_api.h "$line" "$text" "composer_api.h includes only standard headers" ;;
+    esac
+done < <(grep -nE '^[[:space:]]*#[[:space:]]*include' include/ursatz_composer/composer_api.h || true)
+if grep -E 'target_link_libraries\(ursatz_composer[[:space:]]*$' -A3 src/CMakeLists.txt | grep -qE '(PUBLIC|INTERFACE)[[:space:]]'; then
+    report src/CMakeLists.txt 1 "target_link_libraries(ursatz_composer" "libraries are linked PRIVATE"
+fi
+
 while IFS=: read -r file line text; do
     name="$(printf '%s' "$text" | sed -E 's/^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]([^">]+)[">].*/\1/')"
     local_found=0
-    for dir in src include cli "$(dirname "$file")" external/cjson; do
+    for dir in src src/include include cli "$(dirname "$file")" external/cjson; do
         if [ -e "$dir/$name" ]; then
             local_found=1
             break
