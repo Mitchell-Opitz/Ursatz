@@ -123,6 +123,9 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     options.contour = source->form == MOTIVE_SKETCH_FORM_CONTOUR;
     options.admit = admit_step;
     options.admit_context = source;
+    /* The Composer gives the implied chord per step in motive_relation_develop and keeps it only for harmony rows
+       (changes_harmony, incl. liquidate-features), so a chain found from an implied-chord start does not replay. */
+    options.implied_start = false;
     MotiveRecognition recognition;
     MotiveRecognizeResult searched = motive_variant_recognize(from, to, &options, &recognition);
     if (searched == MOTIVE_RECOGNIZE_NO_MEMORY) {
