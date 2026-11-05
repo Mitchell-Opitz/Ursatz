@@ -9,6 +9,8 @@ endfunction()
 ursatz_gui_add_test(health_route test_health_route.c ${CMAKE_CURRENT_BINARY_DIR}/health_route)
 
 ursatz_gui_add_test(analyzer_route test_analyzer_route.c ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
+# Slow: about 363 s in a -j4 run (R-307).
+set_tests_properties(analyzer_route PROPERTIES LABELS slow)
 # The test compares the stored analysis with what the Analyzer CLI writes for the same file, in its own
 # working directory (pieces/ and cli/ are created there).
 add_dependencies(test_analyzer_route ursatz-analyzer)
@@ -38,6 +40,8 @@ target_compile_definitions(test_composer_route PRIVATE
 )
 
 ursatz_gui_add_test(styles_route test_styles_route.c ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
+# Slow: about 260 s in a -j4 run (R-307).
+set_tests_properties(styles_route PROPERTIES LABELS slow)
 # The test builds styles from the reference pieces; it creates pieces/, collections/ and styles/ in its own
 # working directory.
 target_compile_definitions(test_styles_route PRIVATE
@@ -90,6 +94,8 @@ target_compile_definitions(test_theme_route PRIVATE
 )
 
 ursatz_gui_add_test(piece_route test_piece_route.c ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
+# Slow: about 279 s in a -j4 run (R-307).
+set_tests_properties(piece_route PROPERTIES LABELS slow)
 # The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
 # there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
 target_compile_definitions(test_piece_route PRIVATE
