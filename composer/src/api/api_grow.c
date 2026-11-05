@@ -639,7 +639,7 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
     const GrowBriefText *text = setup->text;
     unsigned long tries = (unsigned long)GROW_MAX_SEED_TRIES * setup->suggest;
     for (unsigned long attempt = 0; attempt < tries && run->made < setup->suggest; attempt++) {
-        if (composer_job_step(setup->job, "grow", (unsigned)attempt, (unsigned)tries)) {
+        if (job_step(setup->job, "grow", (unsigned)attempt, (unsigned)tries)) {
             return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
         }
         GrowTheme theme;

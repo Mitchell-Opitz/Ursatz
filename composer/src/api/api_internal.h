@@ -11,6 +11,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/style.h>
+#include "util/job.h"
 
 /* Parses the request text into *out (the caller deletes it). Checks "api_version" when present. On failure sets error and returns the status. */
 ComposerStatus api_parse_request(const char *text, cJSON **out, ComposerError *error);
@@ -20,9 +21,6 @@ ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char 
 
 /* Prints the value unformatted into out->json and deletes it. Returns COMPOSER_OK or COMPOSER_ERR_ALLOC (with error set). */
 ComposerStatus api_respond_json(ComposerResponse *out, cJSON *value);
-
-/* Reports progress when the job has a callback; returns true when the job is cancelled. A NULL job never cancels. */
-bool composer_job_step(const ComposerJob *job, const char *stage, unsigned done, unsigned total);
 
 /*
  * Member readers. Each reads the member name of object: absent or null leaves *out as it is and sets *present (when not

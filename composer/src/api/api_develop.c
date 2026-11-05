@@ -595,7 +595,7 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
         config.checker_context = &context;
         config.job = job;
         FillTarget target = {FILL_TARGET_NODE, scene.target};
-        if (composer_job_step(job, "develop", 0, 1)) {
+        if (job_step(job, "develop", 0, 1)) {
             status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
         } else if (fill_suggest(scene.plan, registry, &config, target, (size_t)suggest, &suggestions) != FILL_OK) {
             status = job && job->cancelled && job->cancelled(job->user)

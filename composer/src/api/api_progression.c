@@ -56,10 +56,6 @@ static ComposerStatus fail_alloc(ComposerError *error) {
     return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-static bool job_cancelled(const ComposerJob *job) {
-    return job && job->cancelled && job->cancelled(job->user);
-}
-
 /* --- reading the request --------------------------------------------------------------------------------- */
 
 /*
@@ -764,7 +760,7 @@ ComposerStatus composer_api_progression(const char *request_json, const Composer
             /* The alternatives are the candidates the harmony stage proposes, each taken through the other stages. */
             size_t proposed = count_suggestions(&options, &parameters, seed);
             for (size_t i = 0; i < proposed && made < options.suggest && status == COMPOSER_OK; i++) {
-                if (composer_job_step(job, "progression", (unsigned)i, (unsigned)proposed)) {
+                if (job_step(job, "progression", (unsigned)i, (unsigned)proposed)) {
                     status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
                 } else if (make_progression(&options, &parameters, seed, (long)i, &built[made]) == MADE) {
                     made++;
@@ -772,7 +768,7 @@ ComposerStatus composer_api_progression(const char *request_json, const Composer
             }
         } else {
             for (int attempt = 0; attempt < API_SEED_TRIES && made == 0 && status == COMPOSER_OK; attempt++) {
-                if (composer_job_step(job, "progression", (unsigned)attempt, API_SEED_TRIES)) {
+                if (job_step(job, "progression", (unsigned)attempt, API_SEED_TRIES)) {
                     status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
                     break;
                 }

@@ -195,7 +195,7 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     if (status != COMPOSER_OK) {
         return status;
     }
-    if (composer_job_step(job, "random-motive", 0, 1)) {
+    if (job_step(job, "random-motive", 0, 1)) {
         composer_style_destroy(style);
         return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
     }

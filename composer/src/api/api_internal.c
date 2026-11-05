@@ -51,16 +51,6 @@ ComposerStatus api_respond_json(ComposerResponse *out, cJSON *value) {
     return COMPOSER_OK;
 }
 
-bool composer_job_step(const ComposerJob *job, const char *stage, unsigned done, unsigned total) {
-    if (!job) {
-        return false;
-    }
-    if (job->progress) {
-        job->progress(job->user, stage, done, total);
-    }
-    return job->cancelled ? job->cancelled(job->user) : false;
-}
-
 /* The member, or NULL (with *present false) when it is absent or null. */
 static const cJSON *member(const cJSON *object, const char *name, bool *present) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);

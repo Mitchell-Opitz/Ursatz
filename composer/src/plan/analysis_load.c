@@ -12,6 +12,7 @@
 #include <time/time_span.h>
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/version.h>
+#include <ursatz_analyzer/result_chain.h>
 #include <ursatz_chain/analysis_chain.h>
 
 #include <ursatz_composer/lanes.h>
