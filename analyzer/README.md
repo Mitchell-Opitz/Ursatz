@@ -726,7 +726,7 @@ minor-key `1 b6 5` reads the same as one in major), the intervals in semitones a
 non-chord-tone type of each note's segment, and a fingerprint of the prototype as a library `MotiveSketch`
 (`src/pipeline/motive_sketch_map.c` is the one mapping from features to the sketch, shared by the report and the
 motive links). Each occurrence carries its notes' degrees. See
-[docs/analysis-document.md](docs/analysis-document.md#motives) and [docs/style-profile.md](docs/style-profile.md).
+[docs/analysis-document.md](docs/analysis-document/motive-and-melody.md#motives) and [docs/style-profile.md](docs/style-profile.md).
 
 Measured on the reference pieces (MIDI):
 
