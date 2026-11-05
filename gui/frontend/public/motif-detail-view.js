@@ -52,6 +52,7 @@ const MotifDetailView = (function () {
       panes[tab.id].setAttribute("role", "tabpanel");
     }
     const wrapper = materialsElement("div", "motifs-section");
+    wrapper.appendChild(buildMaterialExport(id, item.current_version, item.name));
     wrapper.appendChild(bar);
     for (const tab of MaterialsModel.MOTIF_TABS) {
       wrapper.appendChild(panes[tab.id]);

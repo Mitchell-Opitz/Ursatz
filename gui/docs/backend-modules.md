@@ -42,6 +42,7 @@ and answers.
 | Themes | `service/theme_service.c` | `composer_api_theme` |
 | Pieces | `service/piece_service.c` | `composer_api_piece`, `_piece_variations` |
 | Export | `service/compose_common.c` | `composer_api_export` |
+| Material export | `service/material_export_service.c` | `composer_api_motive_render` (through `motif_service.c`); it gathers the MusicXML and the store values and the Analyzer's `analyzer_text_export_material` writes the text (`GET /api/materials/items/<id>/export`) |
 | Build and vocabulary | `service/composer_client.c` | `composer_api_versions`, `_vocabulary`; the reply type, `ursatz_gui_composer_reply_refused` and `_failure_status` |
 
 `routes/composer.c` answers the status route with `composer_api_versions` itself and the vocabulary route from

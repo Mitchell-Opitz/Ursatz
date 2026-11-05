@@ -118,3 +118,8 @@ available. The Variants section says why a motif cannot be varied when it has
 no degrees. The helpers (`motifFormValues`,
 `motifFormProblems`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
 in `materials-model.js`.
+
+Export sits at the top of the motif page. It fetches `GET /api/materials/items/<id>/export?version=<n>` for the
+current version once and then shows Copy and Download .txt (the file is the motif name as a slug, `.txt`). The text is
+the Analyzer's: the motif with its segments marked on the notes and a section for each of its variants, ready to paste
+into a conversation. An error shows beside the buttons.

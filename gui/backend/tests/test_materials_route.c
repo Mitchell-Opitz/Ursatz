@@ -2414,6 +2414,155 @@ static void test_validation(void) {
   free(keyed);
 }
 
+/* ---- the text export of motifs, themes and pieces (P31 B5) ------------------------------------------------------ */
+
+#ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
+/* GET /api/materials/items/<id>/export<query>: the whole response (caller frees). */
+static char *export_response(const char *id, const char *query) {
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/export%s", id, query);
+  return http_exchange("GET", path, NULL, "", 0);
+}
+
+/* Copies a file of the Composer's capture b6_compose/<capture> into the folder of version 1 of item id, as a composed
+ * version keeps it. */
+static bool install_capture(const char *id, const char *capture, const char *name) {
+  char from[700];
+  snprintf(from, sizeof(from), "%s/b6_compose/%s/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, capture, name);
+  char *bytes = read_whole_file(from);
+  char dir[300];
+  snprintf(dir, sizeof(dir), "materials/items/%s/v1", id);
+  MKDIR(dir);
+  char to[400];
+  snprintf(to, sizeof(to), "%s/%s", dir, name);
+  FILE *file = bytes ? fopen(to, "wb") : NULL;
+  bool ok = file && fwrite(bytes, 1, strlen(bytes), file) == strlen(bytes);
+  if (file) {
+    fclose(file);
+  }
+  free(bytes);
+  return ok;
+}
+
+static void test_material_export(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+
+  /* A motif with a segment and one variant. */
+  char *motif = create_item("motif", "Opening", project, kMotifBody);
+  check(motif != NULL, "the motif to export is saved");
+  char *source = variant_source();
+  char *variant = source ? save_inverted(source, 3) : NULL;
+  check(source && variant, "a motif and one variant of it are saved");
+  if (!motif || !source || !variant) {
+    free(motif);
+    free(source);
+    free(variant);
+    return;
+  }
+  char *response = export_response(motif, "");
+  const char *text = response_body(response);
+  check(response_has_status(response, 200) && strstr(response, "Content-Type: text/plain; charset=utf-8") != NULL,
+        "the export is served as text/plain");
+  check(strncmp(text, "# Ursatz export v1: motif\nname: Opening\n", 40) == 0, "the export starts with the header lines");
+  check(strstr(text, "\n## motif\n") != NULL && strstr(text, "role: melodic\n") != NULL &&
+            strstr(text, "notes: C4:q Eb4:e G4:e C5:h\n") != NULL && strstr(text, "base harmony: ") != NULL &&
+            strstr(text, "tones: 1 ") != NULL,
+        "the motif section has the stored facts and the Composer's base harmony and tones");
+  check(strstr(text, "q[a]") != NULL && strstr(text, "[/a]") != NULL, "the segment is marked on its notes");
+  free(response);
+
+  response = export_response(source, "?version=1");
+  text = response_body(response);
+  check(response_has_status(response, 200) && strstr(text, "\n## variant 1: invert\n") != NULL &&
+            strstr(text, "kind: motive-form\n") != NULL && strstr(text, "\nkept: rhythm") != NULL &&
+            strstr(text, "\nchanged: intervals") != NULL && strstr(text, "\nfunctions: ") != NULL && strstr(text, "flag: unflagged\n") != NULL,
+        "the source motif's export has a section for its variant with the derived facts");
+  free(response);
+  response = export_response(variant, "");
+  check(response_has_status(response, 200) && strstr(response_body(response), "## variant") == NULL,
+        "a variant's own export has no variant sections");
+  free(response);
+
+  /* The version and the item must exist. */
+  response = export_response(motif, "?version=2");
+  check(response_has_status(response, 404) && strstr(response_body(response), "\"ok\":false") != NULL,
+        "an unknown version is a 404");
+  free(response);
+  response = export_response("mot-0000000000000000", "");
+  check(response_has_status(response, 404) && strstr(response_body(response), "\"error\"") != NULL,
+        "an unknown item is a 404 in the route's error shape");
+  free(response);
+  response = export_response(motif, "?version=abc");
+  check(response_has_status(response, 400), "a version that is not a number is a 400");
+  free(response);
+
+  /* A theme made from the capture's form, with its motif in the basic slot. */
+  char body[2048];
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\",\"meter\":\"4/4\","
+           "\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\","
+           "\"version\":1}],\"chords\":[{\"bar\":0,\"text\":\"i\"}]}}",
+           motif);
+  char *composed = create_item("theme", "Composed theme", project, body);
+  char *plain = create_item("theme", "Plain theme", project, body);
+  check(composed && plain, "two themes with a slot motif are saved");
+  if (composed && plain) {
+    check(install_capture(composed, "theme-v2", "theme.musicxml"), "the captured theme.musicxml is put in version 1");
+    response = export_response(composed, "");
+    text = response_body(response);
+    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v1: theme\n", 26) == 0 &&
+              strstr(text, "into: sentence\n") != NULL && strstr(text, "bars: 8\n") != NULL &&
+              strstr(text, "bar 0: i\n") != NULL && strstr(text, "slot basic: Opening v1\n") != NULL,
+          "a composed theme's header has its form, chords and slots");
+    const char *theme_section = strstr(text, "\n## theme\n");
+    const char *slot_section = strstr(text, "\n## slot basic: Opening v1\n");
+    check(theme_section && slot_section && theme_section < slot_section && strstr(theme_section, "\nm1") != NULL &&
+              strstr(theme_section, "not composed") == NULL,
+          "the theme section holds the captured score and the slot motif follows as a section");
+    free(response);
+
+    response = export_response(plain, "");
+    text = response_body(response);
+    const char *plain_theme = strstr(text, "\n## theme\n");
+    check(response_has_status(response, 200) && plain_theme && strstr(plain_theme, "not composed") != NULL,
+          "an uncomposed theme says not composed");
+    free(response);
+  }
+
+  /* A piece made from the capture's structure, with the capture's loop and ending. */
+  const char *piece_body =
+      "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\",\"sections\":["
+      "{\"id\":\"s0\",\"part\":\"intro\",\"letter\":\"I\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null},"
+      "{\"id\":\"s1\",\"part\":\"body\",\"letter\":\"A\",\"beats\":32,\"pickup\":\"0\",\"cadence\":\"PAC\",\"fill\":null},"
+      "{\"id\":\"s2\",\"part\":\"turnaround\",\"letter\":\"T\",\"beats\":4,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}";
+  char *piece = create_item("piece", "Composed piece", project, piece_body);
+  check(piece != NULL, "a piece with a structure is saved");
+  if (piece) {
+    check(install_capture(piece, "piece-v4", "loop.musicxml") && install_capture(piece, "piece-v4", "ending.musicxml"),
+          "the captured loop and ending are put in version 1");
+    response = export_response(piece, "");
+    text = response_body(response);
+    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v1: piece\n", 26) == 0 &&
+              strstr(text, "key: D\n") != NULL && strstr(text, "mode: minor\n") != NULL &&
+              strstr(text, "A body: 32 beats, fill empty, cadence PAC\n") != NULL &&
+              strstr(text, "I intro: 8 beats, fill empty, cadence none\n") != NULL,
+          "a piece's header has its structure and one fact for each section");
+    const char *loop = strstr(text, "\n## loop\n");
+    const char *ending = strstr(text, "\n## ending\n");
+    check(loop && ending && loop < ending && strstr(loop, "\nm1") != NULL && strstr(text, "not composed") == NULL,
+          "the loop and the ending hold the captured scores");
+    free(response);
+  }
+  free(motif);
+  free(source);
+  free(variant);
+  free(composed);
+  free(plain);
+  free(piece);
+}
+#endif
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -2465,6 +2614,7 @@ int main(void) {
 #ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
   test_replies_match_the_command();
   test_served_defaults_and_draws();
+  test_material_export();
 #endif
 #ifndef _WIN32
   test_tones();

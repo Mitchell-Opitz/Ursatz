@@ -37,6 +37,19 @@ Items:
   version and answers `{"item"}`.
 - `GET /api/materials/items/<id>/versions/<n>`: `{"number","body"}`; `404`
   outside 1 to the current version.
+- `GET /api/materials/items/<id>/export[?version=<n>]`: the Analyzer's text export of a motif, theme or piece
+  (`analyzer_text_export_material`, [format](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/text-export.md)),
+  `200 text/plain; charset=utf-8`; the current version unless `version` is given. The route calls
+  `ursatz_gui_material_export` (`service/material_export_service.c`) and nothing else. A motif's text has a `motif`
+  section (the Composer's render of its request, its segments from `features` marked on the notes, the facts role, form,
+  meter, key, pickup, notes, base harmony and tones) and one `variant <n>: <operations>` section for each of its variants
+  (facts kind, kept, changed, functions, flag). A theme's header carries its form, chords (`bar <n>`) and slots; its
+  `theme` section is the version's `theme.musicxml`, and each filled slot is a `slot <slot>: <motif name> v<n>`
+  section. A piece's header carries the structure's key, mode and meter and one fact for each section (`<letter>
+  <part>: <beats> beats, fill <kind>, cadence <cadence>`); its `loop` and `ending` sections are the version's
+  `loop.musicxml` and `ending.musicxml`. A section whose file the version lacks (not composed) prints `not composed`.
+  `404` for an unknown item or version, `400` for a `version` that is not a whole number from 1, `422` when the Composer
+  refuses to render a motif (its message), `500` when the Analyzer or the store fails.
 - `POST /api/materials/items/<id>/uses/<source>/update`: writes a new version
   of the item with every use of `<source>` moved to the source's current
   version; answers `{"item"}`.

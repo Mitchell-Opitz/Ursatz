@@ -2510,7 +2510,8 @@ button.button-danger:disabled {
   opacity: 0.75;
 }
 
-.analysis-export {
+.analysis-export,
+.materials-export {
   display: flex;
   margin: 0.75rem 0;
 }

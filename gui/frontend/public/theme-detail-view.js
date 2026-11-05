@@ -6,7 +6,7 @@ const ThemeDetailView = (function () {
   /* ctx: {id, item, data (the item answer), statusEl, allItems, nameOf, rerender()}.
    * Appends the tab bar and panes to content, inside a `themes-section` wrapper. */
   function render(content, ctx) {
-    const { item, data } = ctx;
+    const { id, item, data } = ctx;
     const bar = materialsElement("div", "analysis-tabs");
     bar.setAttribute("role", "tablist");
     const panes = {};
@@ -49,6 +49,7 @@ const ThemeDetailView = (function () {
       areas[tab.id] = buildStatusArea(panes[tab.id]);
     }
     const wrapper = materialsElement("div", "themes-section");
+    wrapper.appendChild(buildMaterialExport(id, item.current_version, item.name));
     wrapper.appendChild(bar);
     for (const tab of ThemesModel.THEME_TABS) {
       wrapper.appendChild(panes[tab.id]);

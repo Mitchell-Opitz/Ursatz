@@ -225,6 +225,19 @@ function attachFormValidation(options) {
   return { element: message, check: validator.check, now: validator.now, refuse };
 }
 
+/* The Export control of one item version (P31 B5): the Analyzer's text of a motif, theme or piece, to Copy or Download.
+ * version is the stored version number; the file is named after the item. */
+function buildMaterialExport(id, version, name) {
+  const wrap = materialsElement("div", "materials-export");
+  wrap.appendChild(
+    ExportControl.create({
+      fetchText: () => fetchExportText(`/api/materials/items/${encodeURIComponent(id)}/export?version=${Number(version)}`),
+      filename: () => name,
+    }),
+  );
+  return wrap;
+}
+
 function materialsElement(tag, className, text) {
   const el = document.createElement(tag);
   if (className) {
@@ -1330,6 +1343,8 @@ async function renderMaterialsDetail(type, id, analysisError) {
   if (type === "piece") {
     const editor = buildPieceEditor({
       id,
+      version: item.current_version,
+      title: item.name,
       body: answer.data.body,
       usesStatus: answer.data.uses_status,
       items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
