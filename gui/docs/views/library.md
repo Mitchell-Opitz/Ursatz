@@ -38,7 +38,7 @@ The Library, Tags panel and the other top-level views of the GUI. [Docs index](.
 - **Analysis**: one piece. The top-level Analysis nav entry reopens the piece
   viewed last this session; before any piece has been opened it points at
   the Library.
-- **Collections**: named groups of piece ids (the [Corpus routes](../../README.md#corpus-routes)).
+- **Collections**: named groups of piece ids (the [Corpus routes](../api/analysis-routes.md#corpus-routes)).
 - **Subjects**: named characters, places, ideas and notes that items and
   Library pieces link to (see [Subjects views](analysis-and-score.md#subjects-views)).
 - **Motifs**, **Themes**, **Pieces**: the items of the material store (see
