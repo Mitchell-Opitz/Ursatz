@@ -120,6 +120,19 @@ ComposerStatus api_lane_targets(const PiecePlan *plan, NodeId node, bool has_lan
 /* Why a regenerate result refused the target (what names it: "section B"): COMPOSER_ERR_UNSATISFIABLE with the message. */
 ComposerStatus api_refused(RegenerateResult result, const char *what, ComposerError *error);
 
+/* --- the outputs a theme or grow request asks for ---------------------------------------------------- */
+
+typedef struct {
+    bool midi;
+    bool musicxml;
+    bool plans;
+    int explain; /* 0 none, 1 text, 2 json */
+    PlanExportOptions export_options;
+} ApiOutputOptions;
+
+/* "midi", "musicxml", "plain_midi", "plans" and "explain" ("text" or "json"). */
+ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, ComposerError *error);
+
 /* --- reading a request without running it (composer_api_validate) --------------------------------------- */
 
 /* Reads the request as its entry does and stops before composing: COMPOSER_OK, or the status the entry would give. */

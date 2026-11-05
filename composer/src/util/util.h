@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <standard-harmony/harmonic_function.h>
+
 /* Small helpers the sources share. Private: not installed, not part of the API. */
 
 /* The absolute value of an int. */
@@ -38,6 +40,9 @@ bool util_scale_degree(int tonic_pitch_class, bool minor, int pitch, int *degree
 
 /* The semitones above the tonic of a degree (1 to 7) in the major scale or the natural minor. */
 int util_scale_semitone(bool minor, int degree);
+
+/* The name of a chord's harmonic function, "unknown" for a chord with none. */
+const char *util_function_name(bool has_function, HarmonicFunction function);
 
 /* A malloc'd copy of the text ("" for NULL), or NULL when out of memory. The caller frees it. */
 char *util_copy_string(const char *text);

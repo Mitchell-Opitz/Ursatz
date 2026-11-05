@@ -515,11 +515,6 @@ static size_t count_suggestions(const Options *options, const Parameters *parame
 
 /* --- the result ------------------------------------------------------------------------------------------- */
 
-static const char *function_name(const PlanHarmony *harmony) {
-    const char *name = harmony->has_function ? harmonic_function_name(harmony->function) : NULL;
-    return name ? name : "unknown";
-}
-
 typedef struct {
     int bar;
     int beat;
@@ -558,7 +553,7 @@ static size_t collect_rows(const Options *options, const Built *built, Row *rows
         rows[i].bar = bar;
         rows[i].beat = (int)(offset.num * options->meter.beat_unit / (long)offset.den) + 1;
         memcpy(rows[i].roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
-        rows[i].function = function_name(harmony);
+        rows[i].function = util_function_name(harmony->has_function, harmony->function);
         rows[i].bass[0] = '\0';
 
         LaneSpanId basses[2];

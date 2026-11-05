@@ -256,3 +256,32 @@ ComposerStatus api_load_style(const char *path, const char *const *without, size
                     argument ? path_without : path_file, "cannot read style '%s': %s", path,
                     composer_style_result_name(loaded));
 }
+
+ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, ComposerError *error) {
+    bool present;
+    bool plain = false;
+    const char *explain = NULL;
+    memset(out, 0, sizeof(*out));
+    out->export_options = plan_export_options_default();
+    if (!api_member_bool(request, "midi", &out->midi, &present, error) ||
+        !api_member_bool(request, "musicxml", &out->musicxml, &present, error) ||
+        !api_member_bool(request, "plain_midi", &plain, &present, error) ||
+        !api_member_bool(request, "plans", &out->plans, &present, error) ||
+        !api_member_string(request, "explain", &explain, &present, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (explain) {
+        if (strcmp(explain, "text") == 0) {
+            out->explain = 1;
+        } else if (strcmp(explain, "json") == 0) {
+            out->explain = 2;
+        } else {
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
+        }
+    }
+    if (plain) {
+        out->export_options.track_names = false;
+        out->export_options.section_markers = false;
+    }
+    return COMPOSER_OK;
+}

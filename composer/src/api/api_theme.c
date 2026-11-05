@@ -507,45 +507,8 @@ static ComposerStatus fail_alloc(ComposerError *error) {
     return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-typedef struct {
-    bool midi;
-    bool musicxml;
-    bool plans;
-    int explain; /* 0 none, 1 text, 2 json */
-    PlanExportOptions export_options;
-} ThemeOutputs;
-
-static ComposerStatus read_outputs(const cJSON *request, ThemeOutputs *outputs, ComposerError *error) {
-    bool present;
-    bool plain = false;
-    const char *explain = NULL;
-    memset(outputs, 0, sizeof(*outputs));
-    outputs->export_options = plan_export_options_default();
-    if (!api_member_bool(request, "midi", &outputs->midi, &present, error) ||
-        !api_member_bool(request, "musicxml", &outputs->musicxml, &present, error) ||
-        !api_member_bool(request, "plain_midi", &plain, &present, error) ||
-        !api_member_bool(request, "plans", &outputs->plans, &present, error) ||
-        !api_member_string(request, "explain", &explain, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
-    }
-    if (explain) {
-        if (strcmp(explain, "text") == 0) {
-            outputs->explain = 1;
-        } else if (strcmp(explain, "json") == 0) {
-            outputs->explain = 2;
-        } else {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
-        }
-    }
-    if (plain) {
-        outputs->export_options.track_names = false;
-        outputs->export_options.section_markers = false;
-    }
-    return COMPOSER_OK;
-}
-
 /* Adds, for each theme of the document, its plan (with "plans") and its explanation (with "explain"). */
-static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, const ThemeOutputs *outputs,
+static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, const ApiOutputOptions *outputs,
                                         ComposerError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
@@ -582,7 +545,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const GrowTheme *theme, const ThemeOutputs *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
     PlanJsonError json_error;
     out->plan_json = plan_to_json(theme->plan, &json_error);
     if (!out->plan_json) {
@@ -622,7 +585,7 @@ typedef struct {
     bool ran;
 } ThemeState;
 
-static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, ThemeOutputs *outputs, ComposerError *error) {
+static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, ApiOutputOptions *outputs, ComposerError *error) {
     const cJSON *request = state->request;
     const char *schema;
     const cJSON *version = cJSON_GetObjectItemCaseSensitive(request, "schema_version");
@@ -641,7 +604,7 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, T
         status = read_brief(&state->theme, request, &state->brief, error);
     }
     if (status == COMPOSER_OK) {
-        status = read_outputs(request, outputs, error);
+        status = api_read_output_options(request, outputs, error);
     }
     if (status != COMPOSER_OK) {
         return status;
@@ -726,7 +689,7 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
     memset(out, 0, sizeof *out);
     ThemeState state;
     memset(&state, 0, sizeof(state));
-    ThemeOutputs outputs;
+    ApiOutputOptions outputs;
     ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);
     if (status == COMPOSER_OK) {
         status = theme_prepare(&state, job, &outputs, &out->error);
@@ -774,7 +737,7 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
 ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
     ThemeState state;
     memset(&state, 0, sizeof(state));
-    ThemeOutputs outputs;
+    ApiOutputOptions outputs;
     memset(&outputs, 0, sizeof(outputs));
     state.request = cJSON_Duplicate(request, true);
     ComposerStatus status = state.request ? theme_prepare(&state, NULL, &outputs, error) : fail_alloc(error);

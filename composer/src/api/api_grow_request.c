@@ -129,14 +129,6 @@ typedef struct {
 } GrowRequestText;
 
 typedef struct {
-    bool midi;
-    bool musicxml;
-    bool plans;
-    int explain; /* 0 none, 1 text, 2 json */
-    PlanExportOptions export_options;
-} Outputs;
-
-typedef struct {
     cJSON *request;
     cJSON *line;                       /* the request with the key resolved, which the motive is read from */
     cJSON *accompaniment_line;         /* the accompaniment motive's request */
@@ -220,35 +212,6 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
     return COMPOSER_OK;
 }
 
-static ComposerStatus read_outputs(const cJSON *request, Outputs *outputs, ComposerError *error) {
-    bool found;
-    bool plain = false;
-    const char *explain = NULL;
-    memset(outputs, 0, sizeof(*outputs));
-    outputs->export_options = plan_export_options_default();
-    if (!api_member_bool(request, "midi", &outputs->midi, &found, error) ||
-        !api_member_bool(request, "musicxml", &outputs->musicxml, &found, error) ||
-        !api_member_bool(request, "plain_midi", &plain, &found, error) ||
-        !api_member_bool(request, "plans", &outputs->plans, &found, error) ||
-        !api_member_string(request, "explain", &explain, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
-    }
-    if (explain) {
-        if (strcmp(explain, "text") == 0) {
-            outputs->explain = 1;
-        } else if (strcmp(explain, "json") == 0) {
-            outputs->explain = 2;
-        } else {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
-        }
-    }
-    if (plain) {
-        outputs->export_options.track_names = false;
-        outputs->export_options.section_markers = false;
-    }
-    return COMPOSER_OK;
-}
-
 /* The motive request with the key the brief settled on, and the meter and the role of an accompaniment motive. */
 static ComposerStatus make_lines(State *state, ComposerError *error) {
     char key[24];
@@ -278,7 +241,7 @@ static ComposerStatus make_lines(State *state, ComposerError *error) {
     return COMPOSER_OK;
 }
 
-static ComposerStatus grow_prepare(State *state, const ComposerJob *job, Outputs *outputs, ComposerError *error) {
+static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutputOptions *outputs, ComposerError *error) {
     const cJSON *request = state->request;
     GrowSetup *setup = &state->setup;
     bool found;
@@ -329,7 +292,7 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, Outputs
         return COMPOSER_ERR_REQUEST;
     }
     setup->seed = seeded ? seed : api_default_seed();
-    status = read_outputs(request, outputs, error);
+    status = api_read_output_options(request, outputs, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -411,7 +374,7 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, Outputs
 /* --- the outputs ----------------------------------------------------------------------------------------- */
 
 /* Adds, to each theme of the document, its plan (with "plans"), its explanation and its MusicXML (when asked). */
-static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, const Outputs *outputs, ComposerError *error) {
+static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, const ApiOutputOptions *outputs, ComposerError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
         cJSON *item = cJSON_GetArrayItem(themes, (int)k);
@@ -462,7 +425,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const GrowTheme *theme, const Outputs *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
     ApiOutputs files;
     memset(&files, 0, sizeof(files));
     files.midi = outputs->midi;
@@ -471,7 +434,7 @@ static ComposerStatus render_first(const GrowTheme *theme, const Outputs *output
     return api_render_outputs(theme->plan, &files, out);
 }
 
-static ComposerStatus add_notices(cJSON *document, const State *state, const Outputs *outputs, ComposerError *error) {
+static ComposerStatus add_notices(cJSON *document, const State *state, const ApiOutputOptions *outputs, ComposerError *error) {
     (void)outputs;
     char only[96] = "";
     if (state->setup.suggested && state->run.made < state->setup.suggest) {
@@ -494,7 +457,7 @@ static ComposerStatus add_notices(cJSON *document, const State *state, const Out
 ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     State state;
-    Outputs outputs;
+    ApiOutputOptions outputs;
     memset(&state, 0, sizeof(state));
     memset(&outputs, 0, sizeof(outputs));
     ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);

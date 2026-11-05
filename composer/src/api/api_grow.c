@@ -689,11 +689,6 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
 
 static const char *const KIND_NAMES[] = {"form", "section", "phrase", "subphrase", "idea", "motive"};
 
-static const char *function_name(const PlanHarmony *harmony) {
-    const char *name = harmony->has_function ? harmonic_function_name(harmony->function) : NULL;
-    return name ? name : "unknown";
-}
-
 static double in_bars(Rational time, Rational bar) {
     return ((double)time.num / (double)time.den) / ((double)bar.num / (double)bar.den);
 }
@@ -863,7 +858,7 @@ static cJSON *chords_json(const PiecePlan *plan, NodeId theme_node, const PlanMe
         if (!item || !cJSON_AddNumberToObject(item, "bar", (double)((int)bars + 1)) ||
             !cJSON_AddNumberToObject(item, "beat", (double)((int)(rest_num * meter->beat_unit / (long)rest_den) + 1)) ||
             !cJSON_AddStringToObject(item, "chord", harmony->roman_numeral) ||
-            !cJSON_AddStringToObject(item, "function", function_name(harmony)) ||
+            !cJSON_AddStringToObject(item, "function", util_function_name(harmony->has_function, harmony->function)) ||
             !cJSON_AddStringToObject(item, "bass", bass) || !cJSON_AddItemToArray(list, item)) {
             cJSON_Delete(item);
             cJSON_Delete(list);
