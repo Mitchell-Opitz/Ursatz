@@ -43,6 +43,10 @@ typedef struct {
 
 UrsatzGuiComposerBuild ursatz_gui_composer_build(void);
 
+/* The largest seed a request of kind ("variants", "random_motive", "theme" or "piece") reads, from the vocabulary's
+ * limits.seed_max; -1 when the Composer does not give it. */
+double ursatz_gui_composer_seed_max(const char *kind);
+
 /* The spelling of the tonic of pitch_class (0 to 11) in mode ("major" or "minor") in the vocabulary's pitch_class_names;
  * false when it has none. */
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size);

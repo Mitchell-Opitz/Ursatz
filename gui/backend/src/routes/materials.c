@@ -1766,8 +1766,11 @@ static cJSON *lineage_root(const cJSON *motif) {
   return cJSON_IsObject(derived) ? (cJSON_Delete(root), NULL) : root;
 }
 
-/* The largest seed the Composer takes: its cap is 4294967295 less the 16 variants of a run. */
-static const double kMaxVariantSeed = 4294967279.0;
+/* The largest seed a variants request takes: limits.seed_max.variants of the vocabulary, -1 when it is not given (no
+   seed is then valid). */
+static double max_variant_seed(void) {
+  return ursatz_gui_composer_seed_max("variants");
+}
 
 /* Runs the Composer API `variants` on the motif member of a version body (its degrees, form, meter, key, pickup, harmony,
    features and role). chain (an object {"steps": [...]}) is optional and means random chains when NULL; seed is optional
@@ -1960,7 +1963,7 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
                (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
-                               seed_item->valuedouble <= kMaxVariantSeed &&
+                               seed_item->valuedouble <= max_variant_seed() &&
                                seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
   if (!valid) {
     cJSON_Delete(body);
@@ -1992,7 +1995,7 @@ static int handle_each_op(struct mg_connection *conn, const char *id) {
   if (cJSON_IsNull(seed_item)) {
     seed_item = NULL;
   }
-  if (seed_item && (!cJSON_IsNumber(seed_item) || seed_item->valuedouble < 0 || seed_item->valuedouble > kMaxVariantSeed ||
+  if (seed_item && (!cJSON_IsNumber(seed_item) || seed_item->valuedouble < 0 || seed_item->valuedouble > max_variant_seed() ||
                     seed_item->valuedouble != (double)(long long)seed_item->valuedouble)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "seed is a whole number from 0");
@@ -2757,7 +2760,7 @@ static void reroll_run(const char *id, const ComposerJob *composer_job, UrsatzGu
   double base = cJSON_IsNumber(stored_seed) ? stored_seed->valuedouble : 0;
   double seed = 0;
   for (int attempt = 0; chain && attempt < 16; attempt++) {
-    seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
+    seed = fmod(base + 1000003.0 + attempt, max_variant_seed() + 1);
     cJSON_Delete(document);
     document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, false, chain, 1, seed, composer_job,
                             &status, message, sizeof(message));

@@ -97,6 +97,16 @@ UrsatzGuiComposerBuild ursatz_gui_composer_build(void) {
   return build;
 }
 
+double ursatz_gui_composer_seed_max(const char *kind) {
+  if (!kind || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
+    return -1;
+  }
+  const cJSON *limits = cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "limits");
+  const cJSON *table = cJSON_GetObjectItemCaseSensitive(limits, "seed_max");
+  const cJSON *value = cJSON_GetObjectItemCaseSensitive(table, kind);
+  return cJSON_IsNumber(value) ? value->valuedouble : -1;
+}
+
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size) {
   if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !mode) {
     return false;
