@@ -43,8 +43,21 @@ bool ursatz_gui_compose_add_copy_if(cJSON *dst, const cJSON *src, const char *na
     return !member || cJSON_IsNull(member) || ursatz_gui_compose_attach(dst, name, cJSON_Duplicate(member, 1));
 }
 
+/* The request member at fault of the last failure this thread mapped; a job runs on one thread, so it reads it after
+ * its service call returns. */
+static _Thread_local char g_failure_path[128];
+
+const char *ursatz_gui_compose_failure_path(void) {
+    return g_failure_path;
+}
+
+void ursatz_gui_compose_failure_path_clear(void) {
+    g_failure_path[0] = '\0';
+}
+
 UrsatzGuiThemeResult ursatz_gui_compose_failure(ComposerStatus status, const ComposerResponse *response, char *message,
                                                 size_t message_size) {
+    snprintf(g_failure_path, sizeof(g_failure_path), "%s", response ? response->error.path : "");
     if (response && response->error.message[0] != '\0') {
         ursatz_gui_compose_say(message, message_size, response->error.message);
     }

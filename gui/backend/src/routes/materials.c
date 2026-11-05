@@ -1792,9 +1792,13 @@ static double max_variant_seed(void) {
    features and role). chain (an object {"steps": [...]}) is optional and means random chains when NULL; seed is optional
    (negative: the clock). job reports progress and asks for cancel. On success returns the Composer's document; otherwise
    NULL with *status (400 when the Composer refuses the input, 499 for a cancel, else 500) and message set. */
+/* The request member at fault of the last refused run_variants on this thread (a job runs on one thread), "" when none. */
+static _Thread_local char g_variants_path[128];
+
 static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const char *distance,
                            bool each_op, const cJSON *chain, int count, double seed, const ComposerJob *job, int *status,
                            char *message, size_t message_size) {
+  g_variants_path[0] = '\0';
   bool bad = false;
   const char *form = optional_string(motif, "form", &bad);
   const char *degrees = optional_string(motif, "degrees", &bad);
@@ -1862,6 +1866,7 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
   } else {
     *status = composer_failure_status(&reply);
     snprintf(message, message_size, "%s", reply.message[0] ? reply.message : "composer could not make variants");
+    snprintf(g_variants_path, sizeof(g_variants_path), "%s", reply.path);
   }
   ursatz_gui_composer_reply_destroy(&reply);
   return document;
@@ -2804,7 +2809,8 @@ static void reroll_run(const char *id, const ComposerJob *composer_job, UrsatzGu
     bool same = document != NULL;
     cJSON_Delete(document);
     cJSON_Delete(current);
-    job_failure(out, same ? 409 : status, same ? "rerolling gives the same motif" : message);
+    ursatz_gui_job_result_failure_at(out, same ? 409 : status, same ? "rerolling gives the same motif" : message,
+                                     same ? NULL : g_variants_path);
     return;
   }
   const cJSON *chain_out = cJSON_GetObjectItemCaseSensitive(variant, "chain");
@@ -2877,7 +2883,7 @@ static void variants_run(const VariantsJob *input, const ComposerJob *composer_j
   cJSON_Delete(basic_body);
   cJSON_Delete(item_body);
   if (!document) {
-    job_failure(out, status, message);
+    ursatz_gui_job_result_failure_at(out, status, message, g_variants_path);
     return;
   }
   const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");

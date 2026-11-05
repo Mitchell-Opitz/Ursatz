@@ -996,6 +996,7 @@ function buildThemeEditor(ctx) {
     const answer = await sendMaterialsRequest(ThemesModel.composeRequest(state, options));
     setBusy(false);
     if (!answer.ok) {
+      validation.refuse(answer.data);
       status.show(MaterialsModel.errorText(answer.data, "The theme could not be composed"), true);
       return;
     }

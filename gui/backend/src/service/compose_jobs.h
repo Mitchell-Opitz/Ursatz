@@ -52,6 +52,10 @@ void ursatz_gui_job_result_json(UrsatzGuiJobResult *out, int status, cJSON *obje
 /* Fills out with {"ok": false, "error": message} and the status. */
 void ursatz_gui_job_result_failure(UrsatzGuiJobResult *out, int status, const char *message);
 
+/* The same with the request member at fault as "path" (the Composer's ComposerError.path); no path member when it is NULL
+ * or empty. */
+void ursatz_gui_job_result_failure_at(UrsatzGuiJobResult *out, int status, const char *message, const char *path);
+
 /* Fills out with the answer for a service result: the item on OK, else the failure (status 404, 400, 422, 499, 500) with
  * message or the given text. Takes item (freed). */
 void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const char *message, const char *invalid_text,
