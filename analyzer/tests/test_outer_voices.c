@@ -9,6 +9,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "cJSON.h"
+#include "test_support.h"
 
 /*
  * Soprano and bass scale degrees per chord, and the outer_voices section of the analysis document, on small
@@ -423,14 +424,22 @@ static void test_monophonic(const char *path) {
 }
 
 int main(void) {
-    test_progression("/tmp/ursatz_analyzer_outer_progression.mid");
-    test_tonicization("/tmp/ursatz_analyzer_outer_tonicization.mid");
-    test_texture("/tmp/ursatz_analyzer_outer_texture.mid");
-    test_monophonic("/tmp/ursatz_analyzer_outer_monophonic.mid");
-    remove("/tmp/ursatz_analyzer_outer_progression.mid");
-    remove("/tmp/ursatz_analyzer_outer_tonicization.mid");
-    remove("/tmp/ursatz_analyzer_outer_texture.mid");
-    remove("/tmp/ursatz_analyzer_outer_monophonic.mid");
+    char progression[512];
+    char tonicization[512];
+    char texture[512];
+    char monophonic[512];
+    test_temp_path(progression, sizeof(progression), "outer_progression.mid");
+    test_temp_path(tonicization, sizeof(tonicization), "outer_tonicization.mid");
+    test_temp_path(texture, sizeof(texture), "outer_texture.mid");
+    test_temp_path(monophonic, sizeof(monophonic), "outer_monophonic.mid");
+    test_progression(progression);
+    test_tonicization(tonicization);
+    test_texture(texture);
+    test_monophonic(monophonic);
+    remove(progression);
+    remove(tonicization);
+    remove(texture);
+    remove(monophonic);
     if (failures > 0) {
         fprintf(stderr, "test_outer_voices: %d failure(s)\n", failures);
         return 1;

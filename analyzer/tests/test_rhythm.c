@@ -309,7 +309,8 @@ static bool write_midi(const char *path, unsigned numerator, unsigned exponent, 
 
 /* Four measures of 4/4: eighth-note triplets on the first two beats of the first, then quarter notes. */
 static void check_triplets(void) {
-    const char *path = "/tmp/ursatz_analyzer_test_triplets.mid";
+    char path[512];
+    test_temp_path(path, sizeof(path), "test_triplets.mid");
     TestNote notes[32];
     size_t count = 0;
     for (unsigned i = 0; i < 6; i++) {
@@ -343,7 +344,8 @@ static void check_triplets(void) {
 
 /* Three measures of 6/8: a duplet on the first beat of the first (two notes of a dotted eighth), then eighths. */
 static void check_duplet(void) {
-    const char *path = "/tmp/ursatz_analyzer_test_duplet.mid";
+    char path[512];
+    test_temp_path(path, sizeof(path), "test_duplet.mid");
     TestNote notes[32];
     size_t count = 0;
     notes[count++] = (TestNote){0, 360, 72};
@@ -376,7 +378,8 @@ static void check_duplet(void) {
 
 /* Six measures of 3/4: quarter notes, then two measures of three half notes (a hemiola), then quarter notes. */
 static void check_hemiola(void) {
-    const char *path = "/tmp/ursatz_analyzer_test_hemiola.mid";
+    char path[512];
+    test_temp_path(path, sizeof(path), "test_hemiola.mid");
     static const unsigned char quarters[] = {72, 74, 76, 77, 79, 81, 74, 72, 71, 72, 74, 72};
     static const unsigned char halves[] = {79, 77, 76};
     TestNote notes[32];

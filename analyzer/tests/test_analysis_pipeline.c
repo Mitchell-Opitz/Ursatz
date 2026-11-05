@@ -60,7 +60,8 @@ int main(void) {
     unsigned char buf[256];
     size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
-    const char *path = "/tmp/ursatz_analyzer_test_fixture.mid";
+    char path[512];
+    test_temp_path(path, sizeof(path), "test_fixture.mid");
     FILE *file = fopen(path, "wb");
     assert(file != NULL);
     assert(fwrite(buf, 1, size, file) == size);

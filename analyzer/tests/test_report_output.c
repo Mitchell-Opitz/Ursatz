@@ -64,7 +64,10 @@ int main(void) {
     unsigned char buf[256];
     size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
-    const char *input_path = "/tmp/ursatz_analyzer_report_test_fixture.mid";
+    char input_path[512];
+    test_temp_path(input_path, sizeof(input_path), "report_test_fixture.mid");
+    char expected_output_path[512];
+    test_temp_path(expected_output_path, sizeof(expected_output_path), "report_test_fixture.report.md");
     FILE *file = fopen(input_path, "wb");
     assert(file != NULL);
     assert(fwrite(buf, 1, size, file) == size);
@@ -84,7 +87,7 @@ int main(void) {
 
     char *output_path = derive_report_path(input_path);
     assert(output_path != NULL);
-    assert(strcmp(output_path, "/tmp/ursatz_analyzer_report_test_fixture.report.md") == 0);
+    assert(strcmp(output_path, expected_output_path) == 0);
 
     assert(write_report_file(output_path, markdown));
 
@@ -99,7 +102,7 @@ int main(void) {
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     remove(input_path);
-    remove("/tmp/ursatz_analyzer_report_test_fixture.report.md");
+    remove(expected_output_path);
 
     printf("test_report_output: ok\n");
     return 0;

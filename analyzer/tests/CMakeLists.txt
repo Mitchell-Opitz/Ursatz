@@ -159,7 +159,7 @@ target_link_libraries(test_chord_details PRIVATE ursatz_analyzer analyzer_test_s
 add_test(NAME test_chord_details COMMAND test_chord_details)
 
 add_executable(test_key_regions test_key_regions.c)
-target_link_libraries(test_key_regions PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_key_regions PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_key_regions PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Expected to fail: Ursatz's key-region detection does not reach the hand-read regions (see README, Known
@@ -179,7 +179,7 @@ target_compile_definitions(test_roman_numerals PRIVATE
 add_test(NAME test_roman_numerals COMMAND test_roman_numerals)
 
 add_executable(test_outer_voices test_outer_voices.c)
-target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer analyzer_test_support cjson)
 add_test(NAME test_outer_voices COMMAND test_outer_voices)
 
 add_executable(test_cadences test_cadences.c)

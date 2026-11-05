@@ -546,7 +546,8 @@ static void test_reference_piece(const char *file) {
 }
 
 int main(void) {
-    const char *path = "/tmp/ursatz_analyzer_roman_numerals.mid";
+    char path[512];
+    test_temp_path(path, sizeof(path), "roman_numerals.mid");
     test_major(path);
     test_minor(path);
     test_inversions(path);

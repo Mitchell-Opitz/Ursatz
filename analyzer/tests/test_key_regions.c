@@ -9,6 +9,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "cJSON.h"
+#include "test_support.h"
 
 /*
  * Key regions, tonicizations, modulations and pivot chords.
@@ -459,14 +460,22 @@ int main(int argc, char **argv) {
         return 2;
     }
     if (strcmp(argv[1], "constructed") == 0) {
-        test_no_modulation("/tmp/ursatz_analyzer_key_regions_none.mid");
-        test_excursion_with_cadence("/tmp/ursatz_analyzer_key_regions_tonicization.mid");
-        test_modulation("/tmp/ursatz_analyzer_key_regions_modulation.mid");
-        test_key_signature_disagreement("/tmp/ursatz_analyzer_key_regions_signature.mid");
-        remove("/tmp/ursatz_analyzer_key_regions_none.mid");
-        remove("/tmp/ursatz_analyzer_key_regions_tonicization.mid");
-        remove("/tmp/ursatz_analyzer_key_regions_modulation.mid");
-        remove("/tmp/ursatz_analyzer_key_regions_signature.mid");
+        char none[512];
+        char tonicization[512];
+        char modulation[512];
+        char signature[512];
+        test_temp_path(none, sizeof(none), "key_regions_none.mid");
+        test_temp_path(tonicization, sizeof(tonicization), "key_regions_tonicization.mid");
+        test_temp_path(modulation, sizeof(modulation), "key_regions_modulation.mid");
+        test_temp_path(signature, sizeof(signature), "key_regions_signature.mid");
+        test_no_modulation(none);
+        test_excursion_with_cadence(tonicization);
+        test_modulation(modulation);
+        test_key_signature_disagreement(signature);
+        remove(none);
+        remove(tonicization);
+        remove(modulation);
+        remove(signature);
     } else {
         for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
             if (strcmp(argv[1], PIECES[i].name) == 0) {
