@@ -1,0 +1,234 @@
+# Ursatz export v1: piece
+name: Night piece
+id: piece-2
+version: 4
+key: Eb minor
+A loop: 8 beats, fill none, cadence HC
+notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
+
+## loop
+key: D minor | meter: 4/4 | tempo: not declared | measures: 1-13
+
+m1 4/4
+ P1 S1 V1: D5 @1 q, A4 @2 q, Bb4 @3 h
+ P2 S1 V1: D3 @1 h, G2 @3 h
+ key D minor c=0.07 (m1-m13)
+ chord Dm i @1 c=0.25
+ phrase 1 m1-m4 c=0.04 | form A
+ form A m1-m4 c=0.04
+ chord Dm i @2 c=0.25
+ chord Gm iv @3 c=0.31
+
+m2
+ P1 S1 V1: A4 @1 q, A4 @2 q, Db5 @3 q, A4 @4 q
+ P2 S1 V1: A2 @1 w
+ chord A V @1 c=0.35
+ cadence IAC m3 @1 c=0.04
+ motive a m2 @2-@5
+ chord A V @3 c=0.35
+ motive b m2 @3-m3@2
+ chord A V @4 c=0.35
+
+m3
+ P1 S1 V1: A4 @1 q, D4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w~
+ chord Dm i @1 c=0.36
+ motive c m3 @1-m4@5
+ chord Dm i @2 c=0.36
+
+m4
+ P1 S1 V1: F4 @1 q, E4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.43
+ chord Em7b5/D ii/o4/2 @2 c=0.58
+ chord Dm i @3 c=0.36
+
+m5
+ P1 S1 V1: A4 @1 q, D4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w~
+ chord Dm i @1 c=0.36
+ phrase 2 m5-m9 c=0.04 | form B
+ form B m5-m13 c=0.03
+ motive c m5 @1-m6@5
+ chord Dm i @2 c=0.36
+
+m6
+ P1 S1 V1: F4 @1 q, E4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.43
+ chord Em7b5/D ii/o4/2 @2 c=0.58
+ chord Dm i @3 c=0.00
+
+m7
+ P1 S1 V1: D5 @1 q, A4 @2 q, F4 @3 q, D4 @4 q
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.25
+ chord Dm i @2 c=0.25
+ chord Dm i @3 c=0.35
+ motive d m7 @3-m8@2
+ chord Dm i @4 c=0.35
+
+m8
+ P1 S1 V1: D5 @1 q, G4 @2 q, Bb4 @3 q, G4 @4 q
+ P2 S1 V1: G3 @1 w
+ chord Gm iv @1 c=0.36
+ chord Gm iv @2 c=0.36
+ motive a m8 @2-@5
+ chord Gm iv @3 c=0.35
+ motive d m8 @3-m9@2
+ chord Gm iv @4 c=0.35
+
+m9
+ P1 S1 V1: G5 @1 q, E5 @2 q, E5 @3 q, E5 @4 q
+ P2 S1 V1: A3 @1 w
+ chord A7 V7 @1 c=0.36
+ cadence HC m9 @1 c=0.04
+ motive b m9 @1-@4
+ chord A V @2 c=0.31
+ cadence AC m10 @1 c=0.03
+
+m10
+ P1 S1 V1: F5 @1 w
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.31
+ phrase 3 m10-m11 c=0.03 | form B
+
+m11
+ P1 S1 V1: D5 @1 q, A4 @2 q, A4 @3 h
+ P2 S1 V1: D3 @1 h, A3 @3 h
+ chord Dm i @1 c=0.31
+ chord Dm i @2 c=0.25
+ chord Dm/A i6/4 @3 c=0.25
+
+m12
+ P1 S1 V1: F5 @1 q, F4 @2 q, A4 @3 q, D4 @4 q
+ P2 S1 V1: D3 @1 h, D3 @3 h
+ chord Dm i @1 c=0.23
+ phrase 4 m12-m13 c=0.04 | form B
+ chord Dm i @3 c=0.36
+ chord Dm i @4 c=0.36
+
+m13
+ P1 S1 V1: E4 @1 h, r @3 h
+ P2 S1 V1: A2 @1 h, r @3 h
+ chord A V @1 c=0.36
+ cadence HC m13 @1 c=0.04
+
+## ending
+key: D minor | meter: 4/4 | tempo: not declared | measures: 1-14
+
+m1 4/4
+ P1 S1 V1: D5 @1 q, A4 @2 q, Bb4 @3 h
+ P2 S1 V1: D3 @1 h, G2 @3 h
+ key D minor c=0.08 (m1-m14)
+ chord Dm i @1 c=0.25
+ phrase 1 m1-m4 c=0.05 | form A
+ form A m1-m4 c=0.05
+ chord Dm i @2 c=0.25
+ chord Gm iv @3 c=0.31
+ motive a m1 @3-m2@3
+
+m2
+ P1 S1 V1: A4 @1 q, A4 @2 q, Db5 @3 q, A4 @4 q
+ P2 S1 V1: A2 @1 w
+ chord A V @1 c=0.35
+ cadence IAC m3 @1 c=0.05
+ motive b m2 @2-@5
+ chord A V @3 c=0.35
+ motive c m2 @3-m3@2
+ chord A V @4 c=0.35
+
+m3
+ P1 S1 V1: A4 @1 q, D4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w~
+ chord Dm i @1 c=0.36
+ motive d m3 @1-m4@5
+ chord Dm i @2 c=0.36
+
+m4
+ P1 S1 V1: F4 @1 q, E4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.43
+ chord Em7b5/D ii/o4/2 @2 c=0.58
+ chord Dm i @3 c=0.36
+
+m5
+ P1 S1 V1: A4 @1 q, D4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w~
+ chord Dm i @1 c=0.36
+ phrase 2 m5-m9 c=0.05 | form B
+ form B m5-m14 c=0.04
+ motive d m5 @1-m6@5
+ chord Dm i @2 c=0.36
+
+m6
+ P1 S1 V1: F4 @1 q, E4 @2 q, D4 @3 h
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.43
+ chord Em7b5/D ii/o4/2 @2 c=0.58
+ chord Dm i @3 c=0.00
+
+m7
+ P1 S1 V1: D5 @1 q, A4 @2 q, F4 @3 q, D4 @4 q
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.25
+ chord Dm i @2 c=0.25
+ motive e m7 @2-@5
+ chord Dm i @3 c=0.35
+ motive f m7 @3-m8@2
+ chord Dm i @4 c=0.35
+
+m8
+ P1 S1 V1: D5 @1 q, G4 @2 q, Bb4 @3 q, G4 @4 q
+ P2 S1 V1: G3 @1 w
+ chord Gm iv @1 c=0.36
+ chord Gm iv @2 c=0.36
+ motive b m8 @2-@5
+ chord Gm iv @3 c=0.35
+ motive f m8 @3-m9@2
+ chord Gm iv @4 c=0.35
+ motive g m8 @4-m9@3
+
+m9
+ P1 S1 V1: G5 @1 q, E5 @2 q, E5 @3 q, E5 @4 q
+ P2 S1 V1: A3 @1 w
+ chord A7 V7 @1 c=0.36
+ cadence HC m9 @1 c=0.05
+ motive c m9 @1-@4
+ chord A V @2 c=0.31
+ cadence AC m10 @1 c=0.04
+
+m10
+ P1 S1 V1: F5 @1 w
+ P2 S1 V1: D3 @1 w
+ chord Dm i @1 c=0.31
+ phrase 3 m10-m11 c=0.04 | form B
+
+m11
+ P1 S1 V1: D5 @1 q, A4 @2 q, A4 @3 h
+ P2 S1 V1: D3 @1 h, A3 @3 h
+ chord Dm i @1 c=0.31
+ chord Dm i @2 c=0.25
+ chord Dm/A i6/4 @3 c=0.25
+
+m12
+ P1 S1 V1: F5 @1 q, F4 @2 q, F5 @3 q, D5 @4 q
+ P2 S1 V1: D3 @1 h, D3 @3 h
+ chord Dm i @1 c=0.25
+ phrase 4 m12-m14 c=0.08 | form B
+ motive g m12 @2-@5
+ motive e m12 @3-m13@3
+ chord Dm i @4 c=0.25
+
+m13
+ P1 S1 V1: Bb4 @1 h, A4 @3 q, A4 @4 q
+ P2 S1 V1: G3 @1 h, A3 @3 h
+ chord Gm iv @1 c=0.31
+ motive a m13 @1-@5
+ chord A V @3 c=0.00
+ cadence PAC m14 @1 c=0.08
+
+m14
+ P1 S1 V1: D5 @1 h, r @3 h
+ P2 S1 V1: D3 @1 h, r @3 h
+ chord Dm i @1 c=0.00

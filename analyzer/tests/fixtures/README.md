@@ -9,6 +9,8 @@ Copies of the Ursatz files the tests read, so no test reads `external/ursatz/tes
 | `arpeggiation-investigation/Bach_Prelude_C_Major.mid` | `tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid` |
 | `annotations/bach114_melody.txt`, `field1_texture.txt`, `field5_rhythm.txt`, `mozart545_motives.txt` | `tests/fixtures/annotations/` |
 | `galant/galant_fixture.txt`, `galant_annotation.txt` | `tests/fixtures/galant/` |
+| `export/theme.musicxml`, `export/piece-loop.musicxml`, `export/piece-ending.musicxml` | Ursatz-GUI `backend/tests/fixtures/composer/b6_compose/theme-v2/theme.musicxml`, `piece-v4/loop.musicxml`, `piece-v4/ending.musicxml` (Composer output, not Ursatz) |
+| `export/motif*.musicxml` | Written by hand in the Composer's rendered form: a 2-bar motif and two variants (material export tests) |
 | `chorales/<name>.musicxml` | `tests/accuracy/corpus/<name>/score.musicxml` |
 
 Update a copy by recopying it from the Ursatz commit the submodule is pinned to and naming that commit here.
