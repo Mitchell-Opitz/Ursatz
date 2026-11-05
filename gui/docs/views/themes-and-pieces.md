@@ -132,6 +132,15 @@ as small scores with Choose, which makes one the next version. A section
 filled with a theme offers harmony and bass only; an ending section offers
 neither. Harmonize is Variations on harmony.
 
+## Export
+
+Export sits at the top of a theme's page and in a piece's header, and again on each older piece version opened read
+only (the control of the Analysis view, without the measure range). It fetches `GET /api/materials/items/<id>/export?version=<n>`
+once and then shows Copy and Download .txt (the file is the item name as a slug, `.txt`). A theme exports its form,
+chords, slots, its composed score and a section for each slot motif; a piece exports its structure and its loop and
+ending scores. A theme or piece that was not composed still exports its facts, and each score reads `not composed`.
+An error shows beside the buttons.
+
 ## Item references in the GUI
 
 An item's detail has a Uses section (Derived from on a motif, in its Other tab): each use shows the source's name, type,
