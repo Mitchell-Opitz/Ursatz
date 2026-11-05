@@ -19,6 +19,7 @@ typedef struct {
     const char *meter_text;
     const char *key_text;
     const char *form_text;
+    const char *strategy_text;
     const char *style_path;
     CliStyleWithout without;
     const char *count_text;
@@ -37,6 +38,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --meter <n/m>        beats over a beat unit, as in 4/4 or 6/8 (required); random draws 4/4, 3/4, 2/4 or 6/8 from the seed\n");
     fprintf(out, "  --key <key>          for example \"D minor\"; its mode must be --mode. Default: C major or A minor\n");
     fprintf(out, "  --form <form>        full (pitches and rhythm, the default), rhythm or contour\n");
+    fprintf(out, "  --strategy <name>    segments (the default: a harmony plan and repeated segments) or drawn (a rhythm drawn note by note)\n");
     motive_extras_print_help(out, true);
     fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motive and keep the closest to it\n");
     fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; needs --style)\n");
@@ -71,13 +73,14 @@ static int read_options(int argc, char **argv, Options *options) {
                 return added;
             }
         } else if (strcmp(argument, "--mode") == 0 || strcmp(argument, "--meter") == 0 ||
-                   strcmp(argument, "--key") == 0 || strcmp(argument, "--form") == 0 ||
+                   strcmp(argument, "--key") == 0 || strcmp(argument, "--form") == 0 || strcmp(argument, "--strategy") == 0 ||
                    strcmp(argument, "--style") == 0 || strcmp(argument, "--count") == 0 ||
                    strcmp(argument, "--seed") == 0) {
             const char **slot = strcmp(argument, "--mode") == 0    ? &options->mode_text
                                 : strcmp(argument, "--meter") == 0 ? &options->meter_text
                                 : strcmp(argument, "--key") == 0   ? &options->key_text
                                 : strcmp(argument, "--form") == 0  ? &options->form_text
+                                : strcmp(argument, "--strategy") == 0 ? &options->strategy_text
                                 : strcmp(argument, "--style") == 0 ? &options->style_path
                                 : strcmp(argument, "--count") == 0 ? &options->count_text
                                                                    : &options->seed_text;
@@ -133,7 +136,7 @@ static bool add_members(cJSON *request, const Options *options) {
         const char *name;
         const char *text;
     } texts[] = {{"mode", options->mode_text}, {"meter", options->meter_text}, {"key", options->key_text},
-                 {"form", options->form_text}, {"style", options->style_path}, {"count", options->count_text},
+                 {"form", options->form_text}, {"strategy", options->strategy_text}, {"style", options->style_path}, {"count", options->count_text},
                  {"seed", options->seed_text}, {"role", options->extras.role_text}};
     for (size_t i = 0; ok && i < sizeof texts / sizeof texts[0]; i++) {
         ok = !texts[i].text || cJSON_AddStringToObject(request, texts[i].name, texts[i].text) != NULL;

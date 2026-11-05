@@ -128,6 +128,7 @@ static const char *const CADENCE_LABELS[PLAN_CADENCE_COUNT] = {"Perfect authenti
                                                                "Half cadence", "Deceptive cadence", "Plagal cadence"};
 static const char *const MOTIVE_FORM_LABELS[] = {"Full", "Rhythm only", "Contour only"};
 static const char *const ROLE_LABELS[] = {"Melodic", "Accompaniment"};
+static const char *const RANDOM_STRATEGY_LABELS[] = {"Segments", "Drawn"};
 static const char *const PART_LABELS[PIECE_PART_COUNT] = {"Intro", "Loop body", "Turnaround", "Ending"};
 static const char *const FILL_LABELS[] = {"Empty", "Motif", "Theme", "Progression"};
 
@@ -277,14 +278,21 @@ static bool add_pickups(cJSON *root) {
 
 static bool add_library_lists(cJSON *root) {
     cJSON *forms = add_list(root, "motive_forms");
+    cJSON *strategies = add_list(root, "random_motive_strategies");
     cJSON *roles = add_list(root, "roles");
     cJSON *parts = add_list(root, "piece_parts");
     cJSON *fills = add_list(root, "fill_kinds");
-    if (!forms || !roles || !parts || !fills) {
+    if (!forms || !strategies || !roles || !parts || !fills) {
         return false;
     }
     for (int form = MOTIVE_SKETCH_FORM_FULL; form <= MOTIVE_SKETCH_FORM_CONTOUR; form++) {
         if (!add_choice(forms, motive_form_name((MotiveSketchForm)form), MOTIVE_FORM_LABELS[form - MOTIVE_SKETCH_FORM_FULL])) {
+            return false;
+        }
+    }
+    for (int strategy = MOTIVE_RANDOM_STRATEGY_SEGMENTS; strategy <= MOTIVE_RANDOM_STRATEGY_DRAWN; strategy++) {
+        if (!add_choice(strategies, motive_random_strategy_name((MotiveRandomStrategy)strategy),
+                        RANDOM_STRATEGY_LABELS[strategy - MOTIVE_RANDOM_STRATEGY_SEGMENTS])) {
             return false;
         }
     }
