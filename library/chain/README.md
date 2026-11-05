@@ -26,7 +26,7 @@ analysis_chain_destroy(chain);
 
 `notes` is an `AnalysisNoteSet` (sorted by `analysis_note_compare`, every note with its `NoteEvent` and a known pitch, one `MeterMap`). The key events are `AnalysisKeyEvent`s (a key signature as a key at a time). Everything is borrowed and must outlive the chain.
 
-Stages, in the order they run, with the owner each calls (`docs/ARCHITECTURE.md`, Analytic job owners):
+Stages, in the order they run, with the owner each calls ([docs/analytic-job-owners.md](../docs/analytic-job-owners.md)):
 
 | Stage (`ANALYSIS_CHAIN_STAGE_*`) | Builder | Owner |
 |---|---|---|

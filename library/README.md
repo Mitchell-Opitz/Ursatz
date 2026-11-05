@@ -12,7 +12,7 @@ explicit, named Theory Framework.
   form, meter, notation, and more). See [frameworks/README.md](frameworks/README.md).
 
 See [docs/BUILDING.md](docs/BUILDING.md) for build and test instructions, and
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layer model and current module status.
+[docs/architecture.md](docs/architecture.md) for the layer model and current module status.
 Per-module detail lives under `docs/modules/`.
 
 ## Using the library
@@ -20,4 +20,4 @@ Per-module detail lives under `docs/modules/`.
 Link `ursatz` (and the frameworks and `ursatz_chain` you need) from a submodule build. A consumer sees only the
 public headers: kernel headers by their module path (`time/meter_map.h`), framework headers by their folder
 name (`standard-form/analysis/analysis_phrase.h`), the chain as `ursatz_chain/analysis_chain.h`. Details in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), Public surface.
+[docs/architecture.md](docs/architecture.md), Public surface.
