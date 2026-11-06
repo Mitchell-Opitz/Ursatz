@@ -165,6 +165,13 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
 ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error);
 void api_grow_run_destroy(GrowRun *run);
 
+/*
+ * The refusal of a motif longer than the basic idea it fills, at path: "the motif is 3 bars; the basic idea of an 8-bar
+ * theme is 2". The motif's bars are those it takes from its start, a pickup included.
+ */
+ComposerStatus api_fail_motif_long(ComposerError *error, const char *path, const Motive *motive, const PlanMeter *meter,
+                                   size_t theme_bars, size_t idea_bars);
+
 /* COMPOSER_OK when name is a style category a style can be read without, else a request error at /style_without. */
 ComposerStatus api_style_category_check(const char *name, ComposerError *error);
 

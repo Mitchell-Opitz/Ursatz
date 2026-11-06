@@ -816,10 +816,13 @@ static ComposerStatus read_edit(const cJSON *request, char **text, PieceEdit *ed
     return api_piece_read_lanes(cJSON_GetObjectItemCaseSensitive(regenerate, "lanes"), "/regenerate/lanes", edit, error);
 }
 
-ComposerStatus api_piece_fail_compose(PieceResult result, const PieceMade *last, unsigned long first_seed, unsigned long last_seed,
-                                      ComposerError *error) {
+ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
+                                      unsigned long first_seed, unsigned long last_seed, ComposerError *error) {
     if (result == PIECE_ERR_MOTIVE_TOO_LONG) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the motive does not fit in one bar of the meter");
+        size_t theme_bars;
+        size_t idea_bars;
+        piece_structure_basic_idea(&request->structure, &theme_bars, &idea_bars);
+        return api_fail_motif_long(error, "/motive", request->structure.motive, &request->structure.meter, theme_bars, idea_bars);
     }
     if (result == PIECE_ERR_BAD_REQUEST) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/request",
@@ -911,7 +914,7 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
         }
     }
     if (status == COMPOSER_OK && result != PIECE_OK) {
-        status = api_piece_fail_compose(result, &piece, seed, last_seed, &out->error);
+        status = api_piece_fail_compose(request, result, &piece, seed, last_seed, &out->error);
     }
     if (status == COMPOSER_OK) {
         cJSON *document = piece_document(request, &piece, &edit, section, edit.text != NULL);

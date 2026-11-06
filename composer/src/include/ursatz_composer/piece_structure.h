@@ -129,6 +129,12 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity);
 PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out);
 
 /*
+ * The theme size the structure's motive has to fit: the bars of the shortest section (4, or 8 when every section is 8
+ * bars) and the bars of the basic idea in it (1 of 4, 2 of 8).
+ */
+void piece_structure_basic_idea(const PieceStructure *structure, size_t *theme_bars, size_t *idea_bars);
+
+/*
  * The ending version (R-172) into *out, which the caller destroys with plan_destroy: a copy of the realized loop plan's
  * intro and body, every lane Given (plan_give_section), with the turnaround, the seam and their spans dropped, and the
  * ending sections of the structure appended open after the body's end, filled as piece_structure_build_plan fills them

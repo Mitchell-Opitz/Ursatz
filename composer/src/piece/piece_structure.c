@@ -604,6 +604,16 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     return PIECE_OK;
 }
 
+void piece_structure_basic_idea(const PieceStructure *structure, size_t *theme_bars, size_t *idea_bars) {
+    size_t per_bar = structure->meter.beats_per_bar > 0 ? (size_t)structure->meter.beats_per_bar : 1;
+    size_t shortest = 8;
+    for (size_t i = 0; i < structure->section_count; i++) {
+        shortest = structure->sections[i].beats == 8 * per_bar ? shortest : 4;
+    }
+    *theme_bars = shortest;
+    *idea_bars = shortest == 8 ? 2 : 1;
+}
+
 PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out) {
     return build(structure, NULL, out);
 }

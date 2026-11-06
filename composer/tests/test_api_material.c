@@ -517,7 +517,7 @@ static void test_grow_refusals(void) {
     request = grow_request("sentence");
     cJSON_ReplaceItemInObject(request, "meter", cJSON_CreateString("3/4"));
     cJSON_ReplaceItemInObject(cJSON_GetObjectItemCaseSensitive(request, "input"), "text", cJSON_CreateString("D4:w D4:w D4:q"));
-    expect_refused(composer_api_grow, request, COMPOSER_ERR_UNSATISFIABLE, "", "does not fit in one bar of 3/4");
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_UNSATISFIABLE, "", "the motif is 3 bars; the basic idea of a 8-bar theme is 2");
 }
 
 /* --- progress and cancel -------------------------------------------------------------------------- */

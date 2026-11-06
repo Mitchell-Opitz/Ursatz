@@ -147,7 +147,7 @@ ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *pla
 cJSON *api_piece_plan_object(const PiecePlan *plan);
 
 /* The failure of a piece no seed composed: what the last try ran into. */
-ComposerStatus api_piece_fail_compose(PieceResult result, const PieceMade *last, unsigned long first_seed,
-                                      unsigned long last_seed, ComposerError *error);
+ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
+                                      unsigned long first_seed, unsigned long last_seed, ComposerError *error);
 
 #endif

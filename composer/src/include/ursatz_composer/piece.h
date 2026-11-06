@@ -77,6 +77,12 @@ size_t piece_material_bars(size_t section_count);
 /* The same for a motive that takes motive_bars bars: m0 takes them, and so does each of the five motives a section holds. */
 size_t piece_material_bars_of(size_t section_count, size_t motive_bars);
 
+/*
+ * The theme size the request's motive has to fit: the bars of the shortest theme section (4 or 8) and the bars of the basic
+ * idea in it (1 of 4, 2 of 8). False when the request has no such layout.
+ */
+bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *idea_bars);
+
 /* Builds the plan of the request into *out, which the caller destroys with plan_destroy. */
 PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out);
 

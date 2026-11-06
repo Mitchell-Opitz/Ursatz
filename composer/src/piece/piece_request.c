@@ -224,6 +224,20 @@ static bool template_buildable(const FormTemplate *layout, const PlanMeter *mete
     return true;
 }
 
+bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *idea_bars) {
+    FormTemplate layout;
+    if (!request || !form_template_layout(request->form, request->bars, request->count, &layout)) {
+        return false;
+    }
+    size_t shortest = 8;
+    for (size_t i = 0; i < layout.section_count; i++) {
+        shortest = layout.sections[i].bars == 8 ? shortest : 4;
+    }
+    *theme_bars = shortest;
+    *idea_bars = shortest == 8 ? 2 : 1;
+    return true;
+}
+
 PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     if (!request || !out) {
         return PIECE_ERR_NULL;
