@@ -327,7 +327,9 @@ ComposerStatus composer_api_vocabulary(ComposerResponse *out);
  * "random_motive" (of composer_api_random_motive). json: {"request": <the request with the Composer's defaults filled>}: a
  * motive gets its "meter", "role", "input" "format" and "form" when it has none and its "harmony" as [{"numeral", "onset"}]
  * (the onset in beats of the meter, as "3/2"); a piece gets the "cadence" of every section that has none and the default
- * ending section; a random motive gets its "seed" and the "mode" and "meter" a "random" drew; a theme comes back as it is.
+ * ending section; a random motive gets its "seed" and the "mode" and "meter" a "random" drew; a theme comes back as it is
+ * after its plan is built without seeding: a theme request is refused as Compose would refuse it before seeding, with the
+ * path of the field (COMPOSER_ERR_UNSATISFIABLE), one refusal at a time.
  * A request that an entry would refuse is refused the same way, with its message and path. An unknown kind is
  * COMPOSER_ERR_REQUEST with path /kind.
  */

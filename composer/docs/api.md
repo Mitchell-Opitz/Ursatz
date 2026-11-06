@@ -97,7 +97,7 @@ Every entry has its request and response in the file named here and its JSON Sch
 | `composer_api_piece`, `composer_api_piece_variations` | [theme-and-piece.md](api/theme-and-piece.md) |
 | `composer_api_plan`, `composer_api_fill`, `composer_api_lock`, `composer_api_regenerate`, `composer_api_variations`, `composer_api_harmonize` | [plan-workflow.md](api/plan-workflow.md) |
 | `composer_api_progression`, `composer_api_counterpoint`, `composer_api_develop`, `composer_api_grow` | [material-commands.md](api/material-commands.md) |
-| `composer_api_vocabulary`, `composer_api_validate` | [vocabulary-and-validation.md](api/vocabulary-and-validation.md) |
+| `composer_api_vocabulary`, `composer_api_validate` (for a theme, it builds the plan and refuses what Compose refuses before seeding) | [vocabulary-and-validation.md](api/vocabulary-and-validation.md) |
 | Examples of every entry | [examples.md](api/examples.md) |
 
 ## Error paths

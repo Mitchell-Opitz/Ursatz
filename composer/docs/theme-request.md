@@ -101,10 +101,31 @@ none of them is changed. The harmony and bass operators write chords on the cell
 two for 4/4 or 6/8), so an onset must fall on one: in 4/4 a second chord starts at `@2`, in 6/8 at `@3`, and a bar of 2/4 or
 3/4 takes one chord. Any other onset, such as the "and" of beat 2 (`@3/2`), is an error (exit 1), not shifted to a cell.
 
-A bad `bar`, text, onset or count exits 1 naming the bar (`chords bar 2: ...`). Chords that leave a stage with a target it
-cannot write (a last bar `V` under a perfect cadence, a gap between two Given chords nothing connects) exit 2 with `the given
-chords in bar <n> do not allow the <cadence>`, `<n>` counted from 0 as `bar` is. The JSON output has a `chords` member, the
+A bad `bar`, text, onset or count exits 1 naming the bar (`chords bar 2: ...`). A chord in a bar the cadence fixes
+that cannot arrive it (a last bar `V` under a perfect cadence) exits 2 before any seed is tried, see
+[Refusals before composing](#refusals-before-composing). Chords that leave a stage with a target it cannot write while
+seeding (a gap between two Given chords nothing connects) exit 2 with `the given chords in bar <n> do not allow the <cadence>`
+(path `/chords` in the API), `<n>` counted from 0 as `bar` is. The JSON output has a `chords` member, the
 list as read.
+
+## Refusals before composing
+
+`composer_api_validate("theme", ...)` builds the plan of the request without seeding and refuses what Compose would refuse
+before it seeds; Compose gives the same message and path. One refusal is given, the first in this order:
+
+| Path | Refused when |
+|---|---|
+| `/bars` or `/hybrid` | the pairing cannot be built in the meter or the bar count |
+| `/cadence` | the cadence is not a PAC, an IAC or an HC |
+| `/first_cadence` | an antecedent's cadence is not weaker than the theme's, or has no room |
+| `/slots/basic` | the basic motif has fewer than two notes, or is longer than its idea ("the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent") |
+| `/slots/<slot>` | a slot has no place in the pairing, or its motif has fewer than two notes, another meter or key, or is longer than its idea |
+| `/ideas/<name>` | the same for the motif of an idea |
+| `/slots/contrasting`, `/ideas/<name>` | given beside a part-length basic motif |
+| `/accompaniment`, `/voicing` | the accompaniment is not valid, or a voicing is given with one |
+| `/chords/<n>` | the chord of entry `n` of `chords` is in the last bar of the theme (or of an antecedent) and cannot arrive its cadence: `chords bar 7: V cannot end a PAC; the cadence needs a tonic chord in root position`. A PAC needs a root-position tonic, an IAC a tonic, an HC the dominant |
+
+What fails only while seeding (a theme no seed can write) is not found by validation.
 
 ## In the API
 
