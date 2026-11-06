@@ -359,6 +359,32 @@ static ComposerStatus refuse(const char *name, const char *value, ComposerRespon
     return refuse_with(edits, 1, response);
 }
 
+/* The development setting (B3 of P34): echoed in the brief, balanced when absent, named in the explanation. */
+static void expect_development(const char *value, const char *expected) {
+    const char *const edits[][2] = {{"development", value}, {"explain", "\"text\""}};
+    ComposerResponse response;
+    assert(refuse_with(edits, 2, &response) == COMPOSER_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    assert(document);
+    const cJSON *brief = cJSON_GetObjectItemCaseSensitive(document, "brief");
+    const cJSON *echoed = cJSON_GetObjectItemCaseSensitive(brief, "development");
+    assert(cJSON_IsString(echoed) && strcmp(echoed->valuestring, expected) == 0);
+    const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
+    const cJSON *explanation = cJSON_GetObjectItemCaseSensitive(theme, "explanation");
+    char line[48];
+    snprintf(line, sizeof(line), "development: %s", expected);
+    assert(cJSON_IsString(explanation) && strstr(explanation->valuestring, line));
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+}
+
+static void test_development_setting(void) {
+    expect_development(NULL, "balanced");
+    expect_development("\"balanced\"", "balanced");
+    expect_development("\"melody\"", "melody");
+    expect_development("\"theme\"", "theme");
+}
+
 static void expect_refused(const char *name, const char *value, ComposerStatus status, const char *path, const char *message) {
     ComposerResponse response;
     ComposerStatus got = refuse(name, value, &response);
@@ -464,6 +490,8 @@ static void test_refused(void) {
     expect_refused("ideas", "{\"repetition\": \"B\"}", COMPOSER_ERR_REQUEST, "/ideas/repetition", "which the request does not have");
     expect_refused("chords", "[{\"bar\": 9, \"text\": \"I\"}]", COMPOSER_ERR_REQUEST, "/chords/0", "the theme has bars 0 to 7");
     expect_refused("style", "\"no-such-style.json\"", COMPOSER_ERR_UNSATISFIABLE, "/style", "cannot read style");
+    expect_refused("development", "\"wild\"", COMPOSER_ERR_REQUEST, "/development", "development must be melody, balanced or theme");
+    expect_refused("development", "3", COMPOSER_ERR_REQUEST, "/development", "development");
     expect_refused("tempo", "500", COMPOSER_ERR_REQUEST, "/tempo", "tempo must be from 20 to 400");
     expect_refused("explain", "\"xml\"", COMPOSER_ERR_REQUEST, "/explain", "explain must be");
     /* A theme no seed can write: a last bar V under a perfect cadence. */
@@ -494,6 +522,7 @@ int main(int argc, char **argv) {
         test_snapshots();
         test_suggest_plans_explain();
         test_developments();
+        test_development_setting();
         test_progress();
         test_threads();
     }
