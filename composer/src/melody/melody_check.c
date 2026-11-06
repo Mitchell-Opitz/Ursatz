@@ -671,8 +671,9 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     if (ok && !verdict->hard) {
         check_tendency(melody, verdict);
     }
-    /* The target with the phrase's climax writes the phrase's single highest note. */
-    if (ok && !verdict->hard && melody->context.idea && melody->context.phrase_has_top &&
+    /* The target with the phrase's climax writes the phrase's single highest note, when it generates notes (R-335): a target
+       of realized notes alone cannot be bent to make a climax, and its tops count with the soft rules. */
+    if (ok && !verdict->hard && melody_has_generated(melody) && melody->context.idea && melody->context.phrase_has_top &&
         melody_role(&melody->context, &melody->params) == MELODY_ROLE_CLIMAX) {
         int top = 0;
         for (size_t i = 0; i < melody->count; i++) {

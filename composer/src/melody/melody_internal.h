@@ -147,6 +147,16 @@ typedef struct {
     size_t pickup_count;
 } MelodyCandidate;
 
+/* Whether any note of the melody is generated, not a motive's (R-335): the climax rules are hard only then. */
+static inline bool melody_has_generated(const MelodyCandidate *melody) {
+    for (size_t i = 0; i < melody->count; i++) {
+        if (melody->notes[i].motive_index < 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
 void melody_context_zero(MelodyContext *context);
 

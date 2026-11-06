@@ -496,8 +496,10 @@ bool melody_build(const MelodyContext *context, const MelodyFillParams *params, 
     /* A melody with two notes as high as its highest has no one climax. */
     bool assigned = layout(context, &arch, out) && melody_realize(context, params, shift, keep_figures, out) &&
                     assign(context, &arch, rng, out) && place_pickup(context, &arch, rng, out);
-    /* The phrase has one highest note: the whole phrase, or the target with its climax, has one. */
+    /* The phrase has one highest note: the whole phrase, or the target with its climax, has one, when it generates notes
+       (R-335). A target of realized notes alone is scored by melody_contour_score instead. */
     MelodyRole role = melody_role(context, &arch);
-    bool unique = assigned && ((role != MELODY_ROLE_WHOLE && role != MELODY_ROLE_CLIMAX) || melody_contour_unique(out));
+    bool unique = assigned && ((role != MELODY_ROLE_WHOLE && role != MELODY_ROLE_CLIMAX) || !melody_has_generated(out) ||
+                               melody_contour_unique(out));
     return unique;
 }
