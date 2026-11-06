@@ -526,6 +526,7 @@
     ["/chords", "chords"],
     ["/harmony", "chords"],
     ["/accompaniment", "accompaniment"],
+    ["/voicing", "accompaniment"],
     ["/style_weight", "weight"],
     ["/tempo", "tempo"],
     ["/seed", "seed"],
@@ -534,9 +535,35 @@
     ["/motives", "slots"],
   ];
 
-  /* The form field a request path is about, or null. */
+  /* A JSON Pointer segment as the name it stands for. */
+  function pointerName(segment) {
+    return segment.replace(/~1/g, "/").replace(/~0/g, "~");
+  }
+
+  /* The form field a request path is about, or null. A path under /slots/<slot> names `slot:<slot>` (the row of that
+   * slot) and one under /ideas/<name> names `idea:<name>` (the row of that idea). */
   function fieldForPath(path) {
-    return Req.fieldForPath(path, FIELD_PATHS);
+    const value = typeof path === "string" ? path : "";
+    const hit = /^\/(slots|ideas)\/([^/]+)/.exec(value);
+    if (hit) {
+      const name = pointerName(hit[2]);
+      if (hit[1] === "ideas") {
+        return `idea:${name}`;
+      }
+      return slotNames().includes(name) ? `slot:${name}` : "slots";
+    }
+    return Req.fieldForPath(value, FIELD_PATHS);
+  }
+
+  /* The bar (from 0) of the chord a path under /chords/<index> names, or null. The index is the entry of the chords
+   * the form sends, which are the filled bars in order (chordEntries). */
+  function chordBarOfPath(state, path) {
+    const hit = /^\/chords\/(\d+)(\/|$)/.exec(typeof path === "string" ? path : "");
+    if (!hit) {
+      return null;
+    }
+    const entry = chordEntries(state)[Number(hit[1])];
+    return entry ? entry.bar : null;
   }
 
   /* The request that asks the backend to check the form with the Composer (POST /api/materials/items/validate). */
@@ -795,6 +822,7 @@
       return motiveCategories();
     },
     fieldForPath,
+    chordBarOfPath,
     validateRequest,
     SWITCH_TEXT,
     THEME_TABS,

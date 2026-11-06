@@ -660,6 +660,7 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
   const section = materialsElement("section", "panel materials-editor theme-editor");
   section.appendChild(materialsElement("h2", "section-title", "Slots"));
   const rows = {};
+  const ideaRows = {};
   for (const slot of ThemesModel.SLOT_NAMES) {
     const row = materialsElement("div", "theme-slot");
     row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
@@ -696,6 +697,9 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
     }
     drawn = key;
     ideasHost.innerHTML = "";
+    for (const name of Object.keys(ideaRows)) {
+      delete ideaRows[name];
+    }
     for (const { idea, slot } of ThemesModel.formIdeas(state)) {
       if (idea === "basic idea") {
         continue;
@@ -715,6 +719,7 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
       };
       title();
       row.append(heading, buildThemeMotifUse(itemsOf, own(), set, null));
+      ideaRows[idea] = row;
       ideasHost.appendChild(row);
     }
   }
@@ -725,6 +730,17 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
       rows[slot].hidden = !shown.includes(slot);
     }
     drawIdeas();
+  };
+  /* The rows a refusal marks: the row of a slot, and the row of an idea (when the form has it). */
+  section.rowFields = () => {
+    const fields = {};
+    for (const slot of ThemesModel.SLOT_NAMES) {
+      fields[`slot:${slot}`] = rows[slot];
+    }
+    for (const [idea, row] of Object.entries(ideaRows)) {
+      fields[`idea:${idea}`] = row;
+    }
+    return fields;
   };
   section.refreshSlots();
   return section;
@@ -748,6 +764,10 @@ function buildThemeChordRow(state) {
   element.appendChild(row);
   const hint = materialsElement("div", "materials-hint");
   element.appendChild(hint);
+  /* Marks the field of one bar (from 0) a refusal names; no bar clears the mark. */
+  function mark(bar) {
+    fields.forEach((field, at) => field.classList.toggle("field-invalid", at === bar));
+  }
   function refresh() {
     fields.forEach((field, bar) => {
       field.hidden = bar >= state.bars;
@@ -756,7 +776,7 @@ function buildThemeChordRow(state) {
     hint.textContent = ThemesModel.chordHint(state.meter);
   }
   refresh();
-  return { element, refresh };
+  return { element, refresh, mark };
 }
 
 function buildThemeAdvancedSection(state, itemsOf) {
@@ -872,7 +892,9 @@ function buildThemeEditor(ctx) {
     roots: [theme, structure, sections.slots, sections.advanced],
     build: () => ThemesModel.validateRequest(state),
     field: ThemesModel.fieldForPath,
+    onResult: (result) => chordRow.mark(result.ok ? null : ThemesModel.chordBarOfPath(state, result.path)),
     fields: () => ({
+      ...sections.slots.rowFields(),
       into,
       hybrid: beginningSelect,
       mode,
