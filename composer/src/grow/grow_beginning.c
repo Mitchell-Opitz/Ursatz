@@ -35,6 +35,11 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         if (request->has_start_change) {
             return false;
         }
+        /* A part-length motive is the whole presentation: no repetition to draw. */
+        if (spec->part_whole) {
+            spec->statement_response = false;
+            return true;
+        }
         /* Statement-response goes from tonic to dominant and back, which needs a cell for each. */
         bool can_respond = spec->basic_cells >= 2;
         uint64_t response = fill_rng_below(rng, 2);
@@ -53,7 +58,7 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         if (request->has_start_change && spec->beginning_shape != PLAN_HARMONY_SHAPE_PHRASE_MODEL) {
             return false;
         }
-        return draw_contrasting_idea(request, rng, spec);
+        return spec->part_whole || draw_contrasting_idea(request, rng, spec);
     case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
         if (request->has_start_change) {
             return false;
@@ -71,6 +76,18 @@ static PlanResult make_phrase(GrowBuild *build) {
     return result == PLAN_OK ? plan_node_add_constraint(build->plan, build->phrase, &build->cadence) : result;
 }
 
+/*
+ * A part filled whole by a motive: one idea as long as the part, its melody the motive itself (m0, not the shorter basic
+ * idea made from it), asking for the cadence the part ends in, if it has one.
+ */
+static PlanResult build_whole_part(GrowBuild *build, NodeId container, const PlanConstraint *cadence, NodeId *idea) {
+    PlanMotiveRef ref;
+    memset(&ref, 0, sizeof(ref));
+    ref.motive = build->request->source;
+    PlanResult result = grow_add_node(build, container, PLAN_NODE_IDEA, BASIC_START, BEGINNING_UNITS, "basic idea", idea);
+    return result == PLAN_OK ? grow_add_melody_target(build, *idea, &ref, cadence) : result;
+}
+
 /* A presentation: a basic idea and its repetition, each over a prolongation. */
 static PlanResult build_presentation(GrowBuild *build) {
     const GrowThemeSpec *spec = build->spec;
@@ -83,6 +100,15 @@ static PlanResult build_presentation(GrowBuild *build) {
     if (result == PLAN_OK) {
         result = grow_add_node(build, build->phrase, PLAN_NODE_SUBPHRASE, 0, BEGINNING_UNITS, "presentation",
                                &presentation);
+    }
+    if (result == PLAN_OK && spec->part_whole) {
+        PlanHarmonyShape whole;
+        memset(&whole, 0, sizeof(whole));
+        whole.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
+        whole.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
+        whole.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
+        result = build_whole_part(build, presentation, NULL, &ideas[0]);
+        return result == PLAN_OK ? grow_add_chord_targets(build, ideas[0], &whole, NULL) : result;
     }
     if (result == PLAN_OK) {
         result = grow_add_node(build, presentation, PLAN_NODE_IDEA, BASIC_START, BASIC_UNITS, "basic idea", &ideas[0]);
@@ -177,6 +203,9 @@ static PlanResult build_antecedent(GrowBuild *build) {
     shape.split_at_bars = spec->beginning_split;
     if (result == PLAN_OK) {
         result = grow_add_chord_targets(build, antecedent, &shape, &weak);
+    }
+    if (result == PLAN_OK && spec->part_whole) {
+        return build_whole_part(build, antecedent, &weak, &ideas[0]);
     }
     return result == PLAN_OK ? build_ideas(build, antecedent, &weak, ideas) : result;
 }

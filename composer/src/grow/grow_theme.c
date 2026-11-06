@@ -561,6 +561,23 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
     return false;
 }
 
+/* A motive as long as the first part: its leading idea-length bars are the basic idea (see grow_part_basic_idea). */
+static bool draw_part_whole(const ThemeRequest *request, GrowThemeSpec *spec) {
+    Motive basic;
+    MotiveRelationStep step;
+    if (!grow_part_basic_idea(&spec->source, request->bar, request->bars, request->pairing.beginning, &basic, &step)) {
+        return false;
+    }
+    memset(&spec->section_ref, 0, sizeof(spec->section_ref));
+    spec->section_ref.motive = request->source;
+    spec->section_ref.has_step = true;
+    spec->section_ref.step = step;
+    spec->has_section_motive = true;
+    spec->part_whole = true;
+    spec->source = basic;
+    return true;
+}
+
 /* Draws every choice of one candidate from rng. False when the draw does not make a sentence the motive fits. */
 static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     memset(spec, 0, sizeof(*spec));
@@ -574,6 +591,12 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
     if (!grow_read_motive(plan, request->source, &request->meter, &request->key, &spec->source) ||
         spec->source.note_count < 2) {
         return false;
+    }
+    size_t basic_bars = request->bars == 4 ? 1 : 2;
+    if (grow_motive_fit(&spec->source, request->bar, basic_bars) == GROW_FIT_LONGER) {
+        if (request->has_motive_ref || !draw_part_whole(request, spec)) {
+            return false;
+        }
     }
     if (request->has_motive_ref) {
         Motive m0 = spec->source;

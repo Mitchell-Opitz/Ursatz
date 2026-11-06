@@ -244,7 +244,8 @@ static void test_four_bar_refused(void) {
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 4;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
+    /* A compound basic idea is one idea: no part for a 2-bar motive to fill. */
+    request.pairing.beginning = PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;

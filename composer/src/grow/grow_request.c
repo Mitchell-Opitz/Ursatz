@@ -253,6 +253,34 @@ bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars)
            rational_mul_int(bar, (long long)idea_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
 }
 
+bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning) {
+    Rational room = {0, 1};
+    size_t part_bars = theme_bars / 2;
+    return (beginning == PLAN_THEME_BEGINNING_PRESENTATION || beginning == PLAN_THEME_BEGINNING_ANTECEDENT) &&
+           grow_motive_fit(motive, bar, part_bars) == GROW_FIT_WHOLE &&
+           rational_mul_int(bar, (long long)part_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
+}
+
+bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning,
+                          Motive *basic, MotiveRelationStep *step) {
+    Rational idea_end = {0, 1};
+    size_t leading = 0;
+    if (!grow_motive_fills_part(motive, bar, theme_bars, beginning) ||
+        rational_add(motive_pickup(motive), grow_scaled(bar, theme_bars == 4 ? 1 : 2), &idea_end) != RATIONAL_OK) {
+        return false;
+    }
+    /* The notes that start inside the idea's bars; a note running past the idea's end makes no basic idea. */
+    while (leading < motive->note_count && rational_cmp(motive->notes[leading].onset, idea_end) < 0) {
+        leading++;
+    }
+    memset(step, 0, sizeof(*step));
+    step->kind = MOTIVE_RELATION_FRAGMENT;
+    step->value[0] = MOTIVE_FRAGMENT_LEADING;
+    step->value[1] = (long)leading;
+    return leading >= 2 && leading < motive->note_count && motive_develop(motive, step, basic) == MOTIVE_DEV_OK &&
+           basic->note_count >= 2 && rational_cmp(basic->length, idea_end) <= 0;
+}
+
 size_t grow_motive_layout_bars(const Motive *motive, Rational bar) {
     Rational span = {0, 1};
     long long bars = 0;
@@ -395,9 +423,18 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     Rational bar = grow_bar_length(&request->meter);
     size_t basic_units = 0;
     /* The basic motive fills the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. */
-    if (!grow_slot_used(&request->pairing, GROW_SLOT_BASIC, &basic_units) ||
-        !grow_motive_fits_idea(request->motive, bar, idea_bars(request->bars, basic_units))) {
+    if (!grow_slot_used(&request->pairing, GROW_SLOT_BASIC, &basic_units)) {
         return GROW_ERR_MOTIVE_TOO_LONG;
+    }
+    /* A motive as long as the presentation or the antecedent fills that part whole (it has no ideas of its own). */
+    bool part_whole = false;
+    if (!grow_motive_fits_idea(request->motive, bar, idea_bars(request->bars, basic_units))) {
+        Motive basic;
+        MotiveRelationStep step;
+        part_whole = grow_part_basic_idea(request->motive, bar, request->bars, request->pairing.beginning, &basic, &step);
+        if (!part_whole) {
+            return GROW_ERR_MOTIVE_TOO_LONG;
+        }
     }
     /* The slot motives, each a node of the material after m0. */
     size_t slot_count = 0;
@@ -405,7 +442,8 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     size_t extra_bars = grow_motive_layout_bars(request->motive, bar) - 1;
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
         if (request->slot_motives[slot]) {
-            if (!slot_motive_valid(request, slot, bar)) {
+            /* A part-length motive leaves no contrasting or repeating idea to give a motive to. */
+            if ((part_whole && slot == GROW_SLOT_CONTRASTING) || !slot_motive_valid(request, slot, bar)) {
                 return GROW_ERR_BAD_REQUEST;
             }
             slot_count++;
@@ -416,7 +454,10 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     size_t idea_count = 0;
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         if (request->idea_motives[idea]) {
-            if (!idea_motive_valid(request, (GrowIdea)idea, bar)) {
+            GrowPlace place;
+            if ((part_whole && grow_idea_place(&request->pairing, (GrowIdea)idea, &place) &&
+                 place == GROW_PLACE_REPETITION) ||
+                !idea_motive_valid(request, (GrowIdea)idea, bar)) {
                 return GROW_ERR_BAD_REQUEST;
             }
             idea_count++;

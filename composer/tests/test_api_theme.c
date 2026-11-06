@@ -367,8 +367,8 @@ static void expect_motif_refused(const char *meter, const char *degrees, const c
 
 /* A motif longer than the basic idea of its theme is refused, with the bars of both and the path of the slot. */
 static void test_motif_too_long(void) {
-    expect_motif_refused("\"4/4\"", "1:w 3:w 5:w", "8", "the motif is 3 bars; the basic idea of a 8-bar theme is 2");
-    expect_motif_refused("\"4/4\"", "1:w 3:w", "4", "the motif is 2 bars; the basic idea of a 4-bar theme is 1");
+    expect_motif_refused("\"4/4\"", "1:w 3:w 5:w", "8", "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent");
+    expect_motif_refused("\"4/4\"", "1:w 3:w", "4", "the motif is 2 bars; a 4-bar theme takes a motif of up to 1 bars, or of 2 for its presentation or antecedent");
 }
 
 /* A 2-bar motif in 3/4 is the basic idea of an 8-bar theme. */
