@@ -78,7 +78,19 @@ typedef struct {
     size_t fragment_segment[2];
     bool fragment_sequence;
     Motive fragment_motive[2];
-    bool segment_room;                     /* the material has bars to put the fragments' segments in */
+    bool segment_room;                     /* the material has bars to put the motives grow-theme makes in */
+    /*
+     * The ideas that end the theme as liquidations by segments (ch. VIII): m0 as the motive-forms read it (liquid_base,
+     * its segments its features), liquidated step by step until the result fits the idea and its last note can take the
+     * cadence. liquidated[place] is the result, has_liquidated[place] says the idea is that motive restated, and
+     * liquidation_steps[place] is the steps it took. An idea without one is liquidated by notes (liquidate_drop,
+     * cadential_drop).
+     */
+    Motive liquid_base;
+    bool has_liquid_base;
+    Motive liquidated[GROW_PLACE_COUNT];
+    bool has_liquidated[GROW_PLACE_COUNT];
+    size_t liquidation_steps[GROW_PLACE_COUNT];
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
     bool ending_split;                     /* no chord of the ending crosses a barline */
@@ -149,8 +161,9 @@ typedef struct {
     NodeId source;           /* the motive node the ideas are made from: m0, or the section's own motive */
     size_t motive_bars;      /* the bars a derived motive node takes in the material: those of the longest motive given */
     size_t slot_base;        /* the bar of the material motive slot 1 goes in; slot k goes (k - 1) * motive_bars after it */
-    size_t segment_base;     /* the bar of the material the segment motives of the fragments go in, one bar each */
+    size_t result_base;      /* the bar of the material the motives grow-theme makes go in, one bar each */
     NodeId segment_node[2];  /* the material node of the segment fragment k is made from, else PLAN_NODE_NONE */
+    NodeId liquid_node[GROW_PLACE_COUNT]; /* the material node holding an idea's liquidation, else PLAN_NODE_NONE */
 } GrowBuild;
 
 /* A length of count units. */

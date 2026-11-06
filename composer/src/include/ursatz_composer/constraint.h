@@ -64,6 +64,11 @@ typedef struct {
     NodeId motive;
     bool has_step;
     MotiveRelationStep step;
+    /*
+     * The liquidation steps (ch. VIII) the motive node holds is made by, each a liquidate-features step with steps 1 and
+     * shorten 1; 0 for none. A record: grow-theme makes the liquidated motive itself.
+     */
+    size_t steps;
 } PlanMotiveRef;
 
 /* Whether the ref restates its source exactly (an exact step; a transposition of it may be drawn, see motive_develop.h). */
