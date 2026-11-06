@@ -43,6 +43,11 @@
 #define MELODY_NCT_APPOGGIATURA (1u << 2)  /* approached by leap, left by step the other way */
 #define MELODY_NCT_SUSPENSION (1u << 3)    /* held into the next chord, left by step down */
 #define MELODY_NCT_ANTICIPATION (1u << 4)  /* sounds the next chord's note early, then repeats it */
+/* Figures only a realized motive's own notes add (R-336); the generator's defaults do not include them. */
+#define MELODY_NCT_RETARDATION (1u << 5)   /* held into the next chord, left by step up; counts on a strong beat */
+#define MELODY_NCT_ESCAPE (1u << 6)        /* left by a leap the other way after a step */
+#define MELODY_NCT_DOUBLE_NEIGHBOR (1u << 7)
+#define MELODY_NCT_CHANGING_TONE (1u << 8)
 
 /*
  * tolerance is how far, in semitones, an interval of the placed motive may differ from the motive's own interval

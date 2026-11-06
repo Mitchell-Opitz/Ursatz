@@ -104,6 +104,14 @@ static unsigned nct_bit(NonChordTone tone) {
         return MELODY_NCT_SUSPENSION;
     case NON_CHORD_TONE_ANTICIPATION:
         return MELODY_NCT_ANTICIPATION;
+    case NON_CHORD_TONE_RETARDATION:
+        return MELODY_NCT_RETARDATION;
+    case NON_CHORD_TONE_ESCAPE_TONE:
+        return MELODY_NCT_ESCAPE;
+    case NON_CHORD_TONE_DOUBLE_NEIGHBOR:
+        return MELODY_NCT_DOUBLE_NEIGHBOR;
+    case NON_CHORD_TONE_CHANGING_TONE:
+        return MELODY_NCT_CHANGING_TONE;
     default:
         return 0;
     }
@@ -112,7 +120,7 @@ static unsigned nct_bit(NonChordTone tone) {
 /* Range, and a chord tone on every strong beat (but for the figures that put a non-chord tone there). */
 static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     const MelodyContext *context = &melody->context;
-    unsigned strong_figures = MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION;
+    unsigned strong_figures = MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION;
     /* The pickup is held to the range, and to the melodic rules in check_melodic; no chord tone is asked of it. */
     for (size_t i = 0; !verdict->hard && i < melody->pickup_count; i++) {
         if (melody->pickup_notes[i].pitch < melody->params.range_low ||
