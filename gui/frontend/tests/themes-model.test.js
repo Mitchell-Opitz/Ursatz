@@ -353,6 +353,25 @@ check(T.bodyFromForm(T.emptyState("c")).theme.chords.length === 0, "no chords ty
 check(T.formFromBody(chordBody, "c").chords[2] === "IV", "the chords round trip through the body");
 check(T.chordsText(T.formFromBody(chordBody, "c")) === "Bar 1: I V@2; Bar 3: IV", "the facts row lists the given chords");
 
+/* refusal paths and their tabs */
+check(T.fieldForPath("/slots/basic") === "slot:basic", "a path under /slots/basic marks the basic slot row");
+check(T.fieldForPath("/slots/contrasting") === "slot:contrasting", "a path under /slots/contrasting marks the contrasting slot row");
+check(T.fieldForPath("/ideas/basic idea") === "idea:basic idea", "a path under /ideas names the idea row");
+check(T.fieldForPath("/ideas/a~1b/item_id") === "idea:a/b", "an idea name is read from its JSON Pointer segment");
+check(T.fieldForPath("/slots") === "slots" && T.fieldForPath("/slots/9") === "slots", "a slot list or an unknown slot marks the slots");
+check(T.fieldForPath("/chords/3") === "chords", "a path under /chords/<index> marks the chord row");
+check(T.fieldForPath("/voicing") === "accompaniment", "/voicing marks the accompaniment");
+check(T.fieldForPath("/first_cadence") === "firstCadence", "/first_cadence marks the first cadence");
+const chordsGiven = chordState({ 0: "I", 3: "V", 7: "V" });
+check(T.chordBarOfPath(chordsGiven, "/chords/1") === 3 && T.chordBarOfPath(chordsGiven, "/chords/2/text") === 7, "a chord index names the bar of that entry");
+check(T.chordBarOfPath(chordsGiven, "/chords/5") === null && T.chordBarOfPath(chordsGiven, "/bars") === null, "an unknown entry or another path names no bar");
+check(T.tabOfField("slot:basic") === "structure" && T.tabOfField("idea:x") === "structure" && T.tabOfField("chords") === "structure", "slots, ideas and chords are on the Structure tab");
+check(T.tabOfField("meter") === "theme" && T.tabOfField("accompaniment") === "theme" && T.tabOfField("nothing") === null, "meter and accompaniment are on the Theme tab");
+check(T.refusalText("V cannot end a PAC", "/chords/3", "theme") === "on Structure: V cannot end a PAC", "a refusal on another tab names that tab");
+check(T.refusalText("V cannot end a PAC", "/chords/3", "structure") === "V cannot end a PAC", "a refusal on the open tab has no tab name");
+check(T.refusalText("too slow", "/tempo", "structure") === "on Theme: too slow", "a Theme field refused while Structure is open names the Theme tab");
+check(T.refusalText("no", "", "theme") === "no" && T.refusalText("no", "/unknown", "other") === "no", "a refusal without a field keeps its text");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
