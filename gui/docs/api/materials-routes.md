@@ -72,7 +72,9 @@ Items:
   request wins over the body's. A bad body or an item that is not a composable theme is `400` at once; the job ends
   with `400` for a request the Composer refuses (its message), `404` for an unknown item, `422` when the Composer is
   stuck or the brief has no piece it can use, and `499` when it is cancelled. A failed or cancelled run writes no
-  version and leaves no folder.
+  version and leaves no folder. A request the Composer refuses before seeding (a motif too long for the form, a chord that
+  cannot end the cadence) answers `400` or `422` with the same message and `path` as `items/validate` (see
+  [Composer routes](composer-routes.md)).
 - `POST /api/materials/items/<pce-id>/compose`: `{"seed"?,"update_uses"?}` composes the piece into a new version
   (R-173, R-174) and answers `{"item"}`. `update_uses` is as for a theme. The request is built from the current
   version: the motive and each motif fill from their uses' copies (degrees, pickup, harmony, features, role), each

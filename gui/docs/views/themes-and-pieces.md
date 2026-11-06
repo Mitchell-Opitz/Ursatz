@@ -13,10 +13,13 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   motif sets it to that motif's mode unless it was changed by hand), meter and
   tempo (blank takes the brief's). An Advanced section, closed by default,
   holds the accompaniment, the brief, the switches, weight, Check with the
-  Analyzer and Seed. Below are the composed theme (Result) and the one Save row.
+  Analyzer and Seed. Below is the composed theme (Result).
 - Structure tab: form: into (sentence, period, hybrid with its pairing, and the
   first cadence for a period or hybrid), bars and cadence, all from the Composer's
   vocabulary. A theme is always in C: there is no key. The slots are below.
+- The Save row (version note, Save, Compose) and the status line sit above the tabs, so they show on Theme,
+  Structure, Used by and Other. Saves, errors and progress show in that one line whatever tab is open. After Save or
+  Compose the page opens again on the tab that was open.
 - Used by tab: the items that use the theme. Other tab: the versions with their
   notes (View opens one read only) and Derived from.
 - Slots: only the slots the form has are shown. Basic idea (required) is always
@@ -39,8 +42,10 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   only: a second chord at `@2` in 4/4, `@3` in 6/8, none in 2/4 and 3/4 (the
   hint under the row follows the meter). The Composer checks the chords, like the
   other values of the theme (meter, bars, hybrid, tempo, seed), while the form is edited
-  (`POST /api/materials/items/validate`, 400 ms after the last change): its message shows under the
-  Save row, as given, and the field its request path names is marked. It does not block the form: a
+  (`POST /api/materials/items/validate`, 400 ms after the last change): its message shows in the
+  Save row and the status line, as given, and the field its request path names is marked: a form field, the row of a
+  slot (`/slots/<slot>`) or of an idea (`/ideas/<name>`), or the chord row and the bar of the chord at `/chords/<index>`.
+  When that field is on a tab that is not open, the status line names the tab (`on Structure: ...`). It does not block the form: a
   draft the Composer refuses still saves, and Compose refuses it with the same path. Only what the
   form lacks to be a request (the basic motif, a motif for an idea, the accompaniment motif, a brief
   for the mode From the brief) stops Save and Compose. The Composer reads a chord as a numeral with
@@ -48,7 +53,7 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   of the meter; its message names the bar. Bars 8 to 4 clears the chords of bars 5 to
   8 with a status line. The body keeps `chords` as `[{bar, text}]` (bar from 0)
   for filled bars only; the result lists them as Given chords. A Composer
-  refusal naming a bar shows in the tab status.
+  refusal naming a bar shows in the status line.
 - Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
   or a motif with the role accompaniment.
 - Brief: collections, composer / source / tag filters, subjects, projects,
