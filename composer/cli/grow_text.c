@@ -56,8 +56,7 @@ static void print_theme_text(const cJSON *theme) {
     }
     printf("\nmotive developments (m0 is the motive given)\n");
     cJSON_ArrayForEach(row, cJSON_GetObjectItemCaseSensitive(theme, "developments")) {
-        const char *idea = string_of(row, "idea");
-        printf("  %s for %s: %s\n", string_of(row, "motive"), idea[0] ? idea : "(unused)", string_of(row, "development"));
+        printf("  %s: %s\n", string_of(row, "motive"), string_of(row, "summary"));
     }
     if (cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(theme, "slots"))) {
         printf("\nslots (the motive each idea is made from)\n");
