@@ -56,6 +56,39 @@ check(back.slots.length === 2 && back.accompaniment.kind === "motive" && back.pi
 check(back.switches["motive-rhythm"] === false && back.switches["motive-degrees"] === true, "the form reads the switches back");
 const sentence = T.bodyFromForm({ ...filled(), into: "sentence", hybrid: "cbi+cadential", firstCadence: "HC" });
 check(sentence.theme.form.hybrid === null && sentence.theme.form.first_cadence === null, "a sentence has no pairing and no first cadence");
+
+/* development setting */
+check(T.emptyState("x").development === "balanced" && body.theme.form.development === "balanced", "the default development is balanced");
+const developed = T.bodyFromForm({ ...filled(), development: "theme" });
+check(developed.theme.form.development === "theme", "bodyFromForm writes the development");
+check(T.formFromBody(developed, "thm-1").development === "theme", "a stored body with a development reads it back");
+const older = JSON.parse(JSON.stringify(developed));
+delete older.theme.form.development;
+check(T.formFromBody(older, "thm-1").development === "balanced", "a stored body without a development reads as balanced");
+const odd = JSON.parse(JSON.stringify(developed));
+odd.theme.form.development = "wild";
+check(T.formFromBody(odd, "thm-1").development === "balanced", "an unknown stored development reads as balanced");
+check(T.bodyFromForm({ ...filled(), development: "wild" }).theme.form.development === "balanced", "an unknown development is written as balanced");
+check(same(T.DEVELOPMENTS.map((entry) => entry.value), ["melody", "balanced", "theme"]), "the development choices");
+check(T.fieldForPath("/development") === "development", "/development marks the development");
+check(T.tabOfField("development") === "structure", "the development is on the structure tab");
+const devView = T.resultView({
+  summary: {
+    themes: [
+      {
+        developments: [
+          { motive: "m1", idea: "repetition", development: "restated, exact", segment: null, summary: "repetition: restates the basic idea" },
+          { motive: "m2", idea: "fragment 1", development: "fragmented", segment: "b", summary: "fragment 1: segment b, sequenced" },
+        ],
+      },
+    ],
+  },
+});
+check(devView.developments.length === 2 && devView.developments[1].segment === "b" && devView.developments[0].segment === "", "the result lists each idea's segment");
+check(devView.developments[0].text === "repetition: restates the basic idea", "a development row shows its summary");
+const oldView = T.resultView({ summary: { themes: [{ developments: [{ motive: "m1", idea: "repetition", development: "restated, exact" }] }] } });
+check(oldView.developments[0].text === "restated, exact" && oldView.developments[0].segment === "", "a version composed before summaries shows the development text");
+check(T.resultView({}).developments.length === 0, "an empty result has no developments");
 check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").mode === "major", "a placeholder theme gives the defaults");
 check(T.bodyFromForm(T.emptyState("x")).theme.brief === null && T.bodyFromForm(T.emptyState("x")).theme.accompaniment === null, "the defaults have no brief and no accompaniment");
 
