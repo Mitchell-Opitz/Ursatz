@@ -197,6 +197,17 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         (!request_parse_cadence(text->cadence, &out->cadence) || !api_theme_cadence_ok(out->cadence))) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/cadence", "cadence must be PAC, IAC or HC, not '%s'", text->cadence);
     }
+    out->development = GROW_DEVELOP_BALANCED;
+    if (text->development) {
+        if (strcmp(text->development, "melody") == 0) {
+            out->development = GROW_DEVELOP_MELODY;
+        } else if (strcmp(text->development, "theme") == 0) {
+            out->development = GROW_DEVELOP_THEME;
+        } else if (strcmp(text->development, "balanced") != 0) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/development", "development must be melody, balanced or theme, not '%s'",
+                            text->development);
+        }
+    }
     out->first_cadence = CADENCE_TYPE_HALF;
     if (text->first_cadence) {
         if (out->pairing.beginning != PLAN_THEME_BEGINNING_ANTECEDENT) {
@@ -588,6 +599,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.basic = setup->motive;
+    config.context.development = setup->development;
     config.style = setup->style;
     config.style_weight = setup->style_weight;
     config.tempo = setup->tempo;

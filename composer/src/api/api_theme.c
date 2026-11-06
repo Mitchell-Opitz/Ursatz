@@ -441,7 +441,9 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     const char *voicing;
     const char *style;
     const char *weight;
+    const char *development;
     if (!api_request_string(request, "", "into", true, &into, error) ||
+        !api_request_string(request, "", "development", false, &development, error) ||
         !api_request_string(request, "", "hybrid", false, &hybrid, error) ||
         !api_request_string(request, "", "key", true, &key, error) || !api_request_string(request, "", "mode", true, &mode, error) ||
         !api_request_string(request, "", "meter", true, &meter, error) ||
@@ -463,6 +465,7 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     text->meter = meter;
     text->cadence = cadence;
     text->first_cadence = first_cadence;
+    text->development = development;
     text->style_weight = style ? weight : NULL; /* read only with a style */
     text->has_style = style != NULL;
     brief->style = style;

@@ -411,7 +411,7 @@ static void test_cancel(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.8") == 0);
+    assert(strcmp(composer_api_version(), "1.9") == 0);
     test_operations();
     test_variants();
     test_recognize();

@@ -71,6 +71,7 @@ typedef struct {
     const char *accompaniment;
     const char *texture;
     const char *style_weight;
+    const char *development; /* "melody", "balanced" or "theme"; NULL for balanced */
     bool voicing;
     bool accompaniment_motive; /* an accompaniment motive is given (a file for grow, a member of the request for theme) */
     bool has_style;
@@ -94,6 +95,7 @@ typedef struct {
     bool has_voicing;
     PlanVoicing voicing;
     ComposerRatio style_weight;
+    GrowDevelopment development;
     const Motive *motive;                    /* the basic motive */
     const Motive *accompaniment_motive;      /* NULL for none */
     const GrowMaterial *material;            /* NULL for grow itself */

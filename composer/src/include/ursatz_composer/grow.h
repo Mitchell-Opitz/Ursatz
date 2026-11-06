@@ -208,8 +208,12 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
 
 /* --- the structure operator -------------------------------------------- */
 
+/* How far a theme's presentation and continuation stray from its motif (ch. XI). All-zero is balanced. */
+typedef enum { GROW_DEVELOP_BALANCED = 0, GROW_DEVELOP_MELODY, GROW_DEVELOP_THEME, GROW_DEVELOP_COUNT } GrowDevelopment;
+
 typedef struct {
     size_t candidates; /* the structures grow-theme proposes; 0 means 4 */
+    GrowDevelopment development; /* the weights of the repetition, the fragments and the liquidation (grow_beginning.c, grow_ending.c) */
     /*
      * The basic motive the request was made from, for the features (segments) and pickup the plan does not keep. Set by
      * the compose run from GrowConfig.basic; NULL for none. grow-theme uses it only when its notes are m0's.
