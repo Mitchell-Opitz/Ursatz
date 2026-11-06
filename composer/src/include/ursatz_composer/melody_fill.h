@@ -46,7 +46,7 @@
 
 /*
  * tolerance is how far, in semitones, an interval of the placed motive may differ from the motive's own interval
- * between the same two notes. range_low and range_high are MIDI pitches, both included. start_cell is the cell of
+ * between the same two notes. range_low and range_high are the melody voice's range, MIDI pitches both included. start_cell is the cell of
  * the phrase the motive starts on (0 is the first), the time before it a rest. nct_types is the set of
  * MELODY_NCT_ bits that may be written; none means every note is a chord tone. density is how many notes make
  * up a cell after the motive, or 0 for the motive's own rhythm over again. climax_position is how far through the
@@ -66,7 +66,7 @@ typedef struct {
 } MelodyFillParams;
 
 /*
- * The defaults: tolerance 2, MIDI 60 to 79 (C4 to G5), start_cell 0, passing and neighbor tones only, the
+ * The defaults: tolerance 2, MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), and the climax 667 thousandths of the way through.
  */
 MelodyFillParams melody_fill_params_default(void);
