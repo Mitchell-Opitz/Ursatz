@@ -789,7 +789,7 @@ function buildThemeAdvancedSection(state, itemsOf) {
 
 /*
  * The theme editor, in the sections the tabs mount. ctx: {id, item, body, subjects, usesStatus, items (all items),
- * status (a tab status writer), nameInput, projectSelect, saved()}.
+ * status (the page status line writer), openTab() (the id of the open tab), statusText() (what the line shows), nameInput, projectSelect, saved()}.
  * Returns {state, problems(), save(note), compose(options), sections: {notices, theme, structure, slots, result
  * (the save row, mounted by the page above the tabs)}}.
  */
@@ -892,7 +892,10 @@ function buildThemeEditor(ctx) {
     roots: [theme, structure, sections.slots, sections.advanced],
     build: () => ThemesModel.validateRequest(state),
     field: ThemesModel.fieldForPath,
-    onResult: (result) => chordRow.mark(result.ok ? null : ThemesModel.chordBarOfPath(state, result.path)),
+    onResult: (result) => {
+      chordRow.mark(result.ok ? null : ThemesModel.chordBarOfPath(state, result.path));
+      showRefusal(result);
+    },
     fields: () => ({
       ...sections.slots.rowFields(),
       into,
@@ -906,6 +909,21 @@ function buildThemeEditor(ctx) {
       chords: chordRow.element,
     }),
   });
+
+  /* A refusal of the live check shows in the status line of the open tab, led by the tab of its field when that is
+   * another tab; the line is cleared again only when it still holds that refusal. */
+  let refusalShown = "";
+  function showRefusal(result) {
+    if (!result.ok && result.complete) {
+      refusalShown = ThemesModel.refusalText(result.message, result.path, ctx.openTab());
+      status.show(refusalShown, true);
+    } else if (refusalShown !== "") {
+      if (ctx.statusText() === refusalShown) {
+        status.clear();
+      }
+      refusalShown = "";
+    }
+  }
 
   function problems() {
     const list = ThemesModel.formProblems(state);
@@ -1019,7 +1037,10 @@ function buildThemeEditor(ctx) {
     setBusy(false);
     if (!answer.ok) {
       validation.refuse(answer.data);
-      status.show(MaterialsModel.errorText(answer.data, "The theme could not be composed"), true);
+      status.show(
+        ThemesModel.refusalText(MaterialsModel.errorText(answer.data, "The theme could not be composed"), answer.data && answer.data.path, ctx.openTab()),
+        true,
+      );
       return;
     }
     ctx.saved();

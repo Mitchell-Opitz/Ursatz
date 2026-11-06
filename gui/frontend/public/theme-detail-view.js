@@ -14,6 +14,7 @@ const ThemeDetailView = (function () {
     const mounted = {};
     /* The page status line, mounted once between the Save row and the panes: a message shows on every tab. */
     const statusLine = buildStatusArea();
+    ctx.statusLine = statusLine;
     ctx.status = MaterialsModel.motifTabStatus(statusLine);
     const builders = {
       theme: (pane) => buildThemePane(pane, ctx),
@@ -23,6 +24,7 @@ const ThemeDetailView = (function () {
     };
 
     let current = null;
+    ctx.openTab = () => current;
     function show(tabId) {
       ThemesModel.writeThemeTab(tabId);
       current = tabId;
@@ -77,6 +79,8 @@ const ThemeDetailView = (function () {
         usesStatus: ctx.data.uses_status,
         items: ctx.allItems,
         status: ctx.status,
+        openTab: () => ctx.openTab(),
+        statusText: () => ctx.statusLine.textContent,
         nameInput: ctx.nameInput,
         projectSelect: ctx.projectSelect,
         saved: () => ctx.rerender(),

@@ -555,6 +555,43 @@
     return Req.fieldForPath(value, FIELD_PATHS);
   }
 
+  /* The tab each form field is on (the Theme tab holds the theme fields and Advanced, the Structure tab the form, slots
+   * and chords). */
+  const FIELD_TABS = {
+    mode: "theme",
+    meter: "theme",
+    tempo: "theme",
+    accompaniment: "theme",
+    weight: "theme",
+    seed: "theme",
+    into: "structure",
+    hybrid: "structure",
+    bars: "structure",
+    cadence: "structure",
+    firstCadence: "structure",
+    chords: "structure",
+    slots: "structure",
+    ideas: "structure",
+  };
+
+  /* The id of the tab a field (as fieldForPath names it) is on, or null. */
+  function tabOfField(field) {
+    if (typeof field !== "string") {
+      return null;
+    }
+    if (/^(slot|idea):/.test(field)) {
+      return "structure";
+    }
+    return FIELD_TABS[field] || null;
+  }
+
+  /* The status line text of a refusal: the message, led by `on <Tab>: ` when its field is on a tab that is not open. */
+  function refusalText(message, path, openTab) {
+    const tabId = tabOfField(fieldForPath(path));
+    const tab = THEME_TABS.find((entry) => entry.id === tabId);
+    return tab && tab.id !== openTab ? `on ${tab.label}: ${message}` : message;
+  }
+
   /* The bar (from 0) of the chord a path under /chords/<index> names, or null. The index is the entry of the chords
    * the form sends, which are the filled bars in order (chordEntries). */
   function chordBarOfPath(state, path) {
@@ -823,6 +860,8 @@
     },
     fieldForPath,
     chordBarOfPath,
+    tabOfField,
+    refusalText,
     validateRequest,
     SWITCH_TEXT,
     THEME_TABS,
