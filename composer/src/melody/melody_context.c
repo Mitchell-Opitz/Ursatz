@@ -179,6 +179,7 @@ static void read_tones(const PiecePlan *plan, NodeId node, MelodyContext *contex
             case MOTIVE_RELATION_DIMINISH:
             case MOTIVE_RELATION_EXACT:
             case MOTIVE_RELATION_INTERVAL_CHANGE:
+            case MOTIVE_RELATION_DOMINANT_FORM: /* the notes keep their roles in the dominant (R-209) */
                 break;
             case MOTIVE_RELATION_RETROGRADE:
                 reversed = !reversed;
