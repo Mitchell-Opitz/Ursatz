@@ -840,6 +840,8 @@ function buildThemeEditor(ctx) {
     "First cadence",
     themeSelect([{ value: "", label: "Default" }, ...ThemesModel.FIRST_CADENCES], state.firstCadence),
   );
+  const development = themeField(form, "Development", themeSelect(ThemesModel.DEVELOPMENTS, state.development));
+  form.appendChild(materialsElement("div", "materials-hint", ThemesModel.DEVELOPMENT_HELP));
   function syncForm() {
     state.into = into.value;
     state.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
@@ -852,6 +854,7 @@ function buildThemeEditor(ctx) {
     }
     state.cadence = cadence.value;
     state.firstCadence = firstCadence.value;
+    state.development = development.value;
     beginningSelect.parentElement.hidden = state.into !== "hybrid";
     endingSelect.parentElement.hidden = state.into !== "hybrid";
     firstCadence.parentElement.hidden = state.into === "sentence";
@@ -863,7 +866,7 @@ function buildThemeEditor(ctx) {
     }
   }
   let chordRow = null;
-  for (const control of [into, beginningSelect, endingSelect, meter, bars, cadence, firstCadence]) {
+  for (const control of [into, beginningSelect, endingSelect, meter, bars, cadence, firstCadence, development]) {
     control.addEventListener("input", syncForm);
   }
   mode.addEventListener("input", () => {
@@ -905,6 +908,7 @@ function buildThemeEditor(ctx) {
       bars,
       cadence,
       firstCadence,
+      development,
       tempo,
       chords: chordRow.element,
     }),

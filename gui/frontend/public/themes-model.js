@@ -1,7 +1,7 @@
 /* Themes view (P16): the theme form state, the version body it makes, its
  * problems, the brief picks, the compose request and the rows of a result.
  * No DOM; themes-view.js renders from these. The form state is
- *   {id, uses, into, hybrid, mode, meter, bars, cadence, firstCadence,
+ *   {id, uses, into, hybrid, mode, meter, bars, cadence, firstCadence, development,
  *    slots: [{slot, item_id, version}], ideas: [{idea, item_id, version}], accompaniment: {kind, pattern,
  *    item_id, version}, picks: [...], switches: {<category>: bool}, weight,
  *    tempo, check, seed}
@@ -22,6 +22,15 @@
   const barChoices = () => Vocab.values("theme_bars").map(Number);
   const cadences = () => Vocab.values("theme_cadences");
   const firstCadences = () => Vocab.values("theme_first_cadences");
+  /* How far the theme strays from the motif (Composer API 1.9); balanced is the default and what a body without the
+   * member reads as. */
+  const DEVELOPMENTS = [
+    { value: "melody", label: "Melody" },
+    { value: "balanced", label: "Balanced" },
+    { value: "theme", label: "Theme" },
+  ];
+  const DEVELOPMENT_HELP =
+    "How far the theme strays from the motif: Melody repeats, Theme develops (Schoenberg ch. XI).";
   const pools = () => Vocab.list("theme_pools");
   const patterns = () => Vocab.list("accompaniment_patterns");
   const weights = () => Vocab.list("style_weights");
@@ -80,6 +89,7 @@
       bars: 8,
       cadence: "PAC",
       firstCadence: "",
+      development: "balanced",
       slots: [],
       ideas: [],
       chords: Array(CHORD_BARS).fill(""),
@@ -341,6 +351,7 @@
         bars: Number(s.bars),
         cadence: s.cadence,
         first_cadence: firstCadence,
+        development: DEVELOPMENTS.some((entry) => entry.value === s.development) ? s.development : "balanced",
       },
       slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
       ideas: ideaEntries(s.ideas, ownIdeaNames(s)),
@@ -383,6 +394,9 @@
     }
     if (firstCadences().includes(form.first_cadence)) {
       state.firstCadence = form.first_cadence;
+    }
+    if (DEVELOPMENTS.some((entry) => entry.value === form.development)) {
+      state.development = form.development;
     }
     state.slots = slotEntries((Array.isArray(theme.slots) ? theme.slots : []).filter((slot) => slot && typeof slot === "object"));
     state.ideas = (Array.isArray(theme.ideas) ? theme.ideas : [])
@@ -523,6 +537,7 @@
     ["/bars", "bars"],
     ["/first_cadence", "firstCadence"],
     ["/cadence", "cadence"],
+    ["/development", "development"],
     ["/chords", "chords"],
     ["/harmony", "chords"],
     ["/accompaniment", "accompaniment"],
@@ -569,6 +584,7 @@
     bars: "structure",
     cadence: "structure",
     firstCadence: "structure",
+    development: "structure",
     chords: "structure",
     slots: "structure",
     ideas: "structure",
@@ -846,6 +862,8 @@
     get FIRST_CADENCES() {
       return firstCadences();
     },
+    DEVELOPMENTS,
+    DEVELOPMENT_HELP,
     get POOLS() {
       return pools();
     },
