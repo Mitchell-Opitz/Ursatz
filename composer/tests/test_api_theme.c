@@ -438,7 +438,7 @@ static void test_refused(void) {
     expect_refused("tempo", "500", COMPOSER_ERR_REQUEST, "/tempo", "tempo must be from 20 to 400");
     expect_refused("explain", "\"xml\"", COMPOSER_ERR_REQUEST, "/explain", "explain must be");
     /* A theme no seed can write: a last bar V under a perfect cadence. */
-    expect_refused("chords", "[{\"bar\": 7, \"text\": \"V\"}]", COMPOSER_ERR_UNSATISFIABLE, "", "the given chords in bar 7");
+    expect_refused("chords", "[{\"bar\": 7, \"text\": \"V\"}]", COMPOSER_ERR_UNSATISFIABLE, "", "this theme cannot be grown as asked");
 
     ComposerResponse response;
     assert(composer_api_theme("{\"api_version\": 7}", NULL, &response) == COMPOSER_ERR_REQUEST);

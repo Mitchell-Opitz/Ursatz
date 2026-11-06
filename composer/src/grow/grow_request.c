@@ -440,6 +440,96 @@ static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, G
     return GROW_OK;
 }
 
+/* The degree (1 to 7) a numeral is built on, ignoring accidentals and case; 0 when it cannot be read. */
+static int numeral_degree(const char *numeral, bool *inverted) {
+    static const char *const ROMANS[] = {"VII", "VI", "IV", "V", "III", "II", "I"};
+    static const int DEGREES[] = {7, 6, 4, 5, 3, 2, 1};
+    char upper[16];
+    size_t length = 0;
+    const char *at = numeral;
+    while (*at == 'b' || *at == '#') {
+        at++;
+    }
+    while (*at && length + 1 < sizeof(upper) && strchr("ivIV", *at)) {
+        upper[length++] = (char)(*at >= 'a' ? *at - 'a' + 'A' : *at);
+        at++;
+    }
+    upper[length] = '\0';
+    int degree = 0;
+    for (size_t i = 0; i < sizeof(DEGREES) / sizeof(DEGREES[0]); i++) {
+        if (strcmp(upper, ROMANS[i]) == 0) {
+            degree = DEGREES[i];
+        }
+    }
+    /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7 and none are root position. */
+    while (*at == 'o' || *at == '+' || *at == '/' || *at == '\xc2' || *at == '\xb0') {
+        at++;
+    }
+    *inverted = *at && *at != '7' && *at != '9' && *at != '@';
+    return numeral[0] == 'b' || numeral[0] == '#' ? 0 : degree;
+}
+
+/* The name of a cadence the plan can end in, and what it needs of the chord that arrives. */
+static const char *cadence_label(CadenceType cadence) {
+    return cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? "PAC" : cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? "IAC" : "HC";
+}
+
+static const char *cadence_needs(CadenceType cadence) {
+    return cadence == CADENCE_TYPE_PERFECT_AUTHENTIC   ? "a tonic chord in root position"
+           : cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? "a tonic chord"
+                                                         : "the dominant";
+}
+
+/* Whether a chord can arrive the cadence: the tonic (root position for a PAC), or the dominant for a half cadence. */
+static bool cadence_allows(CadenceType cadence, const char *numeral) {
+    bool inverted;
+    int degree = numeral_degree(numeral, &inverted);
+    return cadence == CADENCE_TYPE_HALF ? degree == 5
+           : cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? degree == 1 && !inverted
+                                                       : degree == 1;
+}
+
+/* The first given chord that starts in `bar` and cannot arrive `cadence`, refused at its entry of "chords"; else GROW_OK. */
+static GrowResult check_cadence_bar(const GrowRequest *request, Rational bar_length, long bar, CadenceType cadence,
+                                    GrowRefusal *refusal) {
+    long entry = -1;
+    long previous_bar = -1;
+    for (size_t i = 0; i < request->chord_count; i++) {
+        const GivenChord *chord = &request->chords[i];
+        Rational at = {0, 1};
+        long at_bar = -1;
+        long long whole;
+        if (rational_div(chord->onset, bar_length, &at) == RATIONAL_OK && rational_floor(at, &whole) == RATIONAL_OK) {
+            at_bar = (long)whole;
+        }
+        /* The chords of one bar are one entry of the request's list. */
+        if (at_bar != previous_bar) {
+            entry++;
+            previous_bar = at_bar;
+        }
+        if (at_bar == bar && !cadence_allows(cadence, chord->numeral)) {
+            char path[64];
+            snprintf(path, sizeof(path), "/chords/%ld", entry);
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "chords bar %ld: %s cannot end a %s; the cadence needs %s", bar,
+                          chord->numeral, cadence_label(cadence), cadence_needs(cadence));
+        }
+    }
+    return GROW_OK;
+}
+
+GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType first, GrowRefusal *refusal) {
+    Rational bar = grow_bar_length(&request->meter);
+    if (request->chord_count == 0 || !request->chords) {
+        return GROW_OK;
+    }
+    /* The cadence fixes the harmony of the last bar of the theme, and of the first part for an antecedent. */
+    GrowResult result = check_cadence_bar(request, bar, (long)request->bars - 1, request->cadence, refusal);
+    if (result == GROW_OK && request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+        result = check_cadence_bar(request, bar, (long)request->bars / 2 - 1, first, refusal);
+    }
+    return result;
+}
+
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     return grow_build_plan_checked(request, out, NULL);
 }
@@ -712,6 +802,9 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     if (result == GROW_OK && request->chord_count > 0 &&
         plan_give_chords(plan, theme_id, request->chords, request->chord_count) != GIVEN_OK) {
         result = refuse(refusal, GROW_ERR_BAD_REQUEST, "/chords", "the given chords do not fit the theme");
+    }
+    if (result == GROW_OK) {
+        result = grow_check_given_cadences(request, first, refusal);
     }
     if (result == GROW_OK) {
         result = from_plan(plan_node_set_state(plan, section, PLAN_STATE_REALIZED));
