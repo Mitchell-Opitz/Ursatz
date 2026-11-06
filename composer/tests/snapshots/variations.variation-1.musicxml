@@ -867,7 +867,7 @@
       </note>
       <note xml:id="composer-span-72-note-9">
         <pitch>
-          <step>F</step>
+          <step>G</step>
           <octave>5</octave>
         </pitch>
         <duration>1</duration>
@@ -878,7 +878,7 @@
       </note>
       <note xml:id="composer-span-72-note-10">
         <pitch>
-          <step>G</step>
+          <step>F</step>
           <octave>5</octave>
         </pitch>
         <duration>1</duration>
