@@ -29,7 +29,7 @@ The request has no `corpus` member: a theme is grown from its motives only.
 "cadence", "first_cadence", "accompaniment", "texture", "voicing", "tempo": {"qpm", "from"}, "brief": {"tempo", "mode",
 "density", "without"}, "chords": [{"bar", "text"}], "themes": [{"seed", "structure", "chords", "developments", "slots",
 "score", "requested", "heard", "heard_as_requested", "heard_text", "style_distance"}]}`. `plan_json`: the plan of the first
-theme. Progress is reported once for each seed tried (`"grow"`) and for each compose stage of the run; a cancel is
+theme. Each item of `developments` is `{"motive", "idea", "development", "segment", "summary"}`: `segment` is the label of the motif's segment the idea is made from or `null`, `summary` one line naming the idea, its source and its operation (API 1.8, [explain.md](../explain.md#the-summary-line-of-a-developed-idea)). Progress is reported once for each seed tried (`"grow"`) and for each compose stage of the run; a cancel is
 `COMPOSER_ERR_CANCELLED` with no document and no plan. A request no seed can write is `COMPOSER_ERR_UNSATISFIABLE`
 (`the given chords in bar <n> do not allow the PAC`, `no theme could be grown for ...`). The same request and seed give the
 same theme on any thread; the entry keeps no state, so requests may run at the same time. Schemas:
