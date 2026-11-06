@@ -83,7 +83,11 @@ const ThemeDetailView = (function () {
         statusText: () => ctx.statusLine.textContent,
         nameInput: ctx.nameInput,
         projectSelect: ctx.projectSelect,
-        saved: () => ctx.rerender(),
+        saved: () => {
+          /* The page is drawn again: it opens on the tab that was open when Save or Compose ran. */
+          ThemesModel.writeThemeTab(ctx.openTab());
+          ctx.rerender();
+        },
       });
     }
     return ctx.editor;
