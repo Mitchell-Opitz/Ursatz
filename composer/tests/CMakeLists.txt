@@ -867,6 +867,13 @@ set_tests_properties(consumer_build consumer_rejects_internals PROPERTIES LABELS
 include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
 ursatz_composer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
 
+add_executable(test_grow_motif_realized test_grow_motif_realized.c)
+target_link_libraries(test_grow_motif_realized PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_motif_realized PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_motif_realized PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_motif_realized PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_motif_realized COMMAND test_grow_motif_realized)
+
 add_executable(test_grow_whole_motif test_grow_whole_motif.c)
 target_link_libraries(test_grow_whole_motif PRIVATE ursatz_composer)
 target_include_directories(test_grow_whole_motif PRIVATE ${PROJECT_SOURCE_DIR}/src)
