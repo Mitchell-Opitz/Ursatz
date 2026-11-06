@@ -179,6 +179,16 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     request.bars = count;
+    PlanSpan first_half = request.span;
+    first_half.length = grow_scaled(request.bar, count / 2);
+    static const PlanLaneKind GIVEN_LANES[] = {PLAN_LANE_MELODY, PLAN_LANE_HARMONY, PLAN_LANE_BASS};
+    for (size_t l = 0; l < sizeof(GIVEN_LANES) / sizeof(GIVEN_LANES[0]); l++) {
+        LaneSpanId held[GROW_MAX_GAPS];
+        size_t found = plan_lane_find(plan, GIVEN_LANES[l], 0, first_half, held, GROW_MAX_GAPS);
+        for (size_t i = 0; i < found && i < GROW_MAX_GAPS; i++) {
+            request.given_first_half = request.given_first_half || plan_lane_span_state(plan, held[i]) == PLAN_STATE_GIVEN;
+        }
+    }
     *out = request;
     return true;
 }
