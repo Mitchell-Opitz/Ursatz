@@ -16,7 +16,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 3
+#define COMPOSER_API_VERSION_MINOR 4
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

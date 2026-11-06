@@ -228,6 +228,14 @@ bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
 /* The length of a bar of the meter. */
 Rational grow_bar_length(const PlanMeter *meter);
 
+/* How a motif compares with the idea it fills: shorter (grown to the idea), as long (placed as written), longer. */
+typedef enum { GROW_FIT_SHORTER, GROW_FIT_WHOLE, GROW_FIT_LONGER } GrowMotiveFit;
+/*
+ * The motif's bars, ceil((length less its pickup) / bar), against the bars of the idea it fills. A pickup stays before
+ * the idea's first barline, so it does not count. A motif of no length is shorter.
+ */
+GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars);
+
 /* The node named "m0" of the plan (its Given source motive), else PLAN_NODE_NONE. */
 NodeId grow_find_source(const PiecePlan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */

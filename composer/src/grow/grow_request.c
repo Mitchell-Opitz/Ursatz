@@ -236,6 +236,16 @@ Rational grow_bar_length(const PlanMeter *meter) {
     return bar;
 }
 
+GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars) {
+    Rational span = {0, 1};
+    long long bars = 0;
+    if (bar.num <= 0 || rational_sub(motive->length, motive_pickup(motive), &span) != RATIONAL_OK || span.num <= 0 ||
+        rational_div(span, bar, &span) != RATIONAL_OK || rational_ceil(span, &bars) != RATIONAL_OK) {
+        return GROW_FIT_SHORTER;
+    }
+    return bars < (long long)idea_bars ? GROW_FIT_SHORTER : (bars == (long long)idea_bars ? GROW_FIT_WHOLE : GROW_FIT_LONGER);
+}
+
 static Rational times(Rational time, size_t count) {
     Rational out = {0, 1};
     if (rational_mul_int(time, (long long)count, &out) != RATIONAL_OK) {
