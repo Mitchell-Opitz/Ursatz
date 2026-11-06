@@ -95,37 +95,43 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     if (ok) {
         shift_count = melody_realize_shifts(read, params, shifts);
     }
-    for (size_t attempt = 0; ok && shift_count > 0 && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
-        bool repeat = false;
-        PhraseVerdict verdict;
-        /* The first half of the attempts keeps the figures the framework labels; the second moves every clash to a chord tone. */
-        if (!melody_build(read, params, shifts[attempt % shift_count], attempt < MELODY_ATTEMPTS / 2, rng, scratch)) {
-            continue;
-        }
-        /* Only melodies that pass the hard rules are proposed; none passing leaves the span open. */
-        if (!melody_judge(scratch, &verdict)) {
-            ok = false;
+    /* The strict round first; a motive that no strict attempt composes gets a relaxed round (R-338). */
+    for (size_t round = 0; ok && shift_count > 0 && round < 2 && read->motive_count > 0; round++) {
+        if (round == 1 && kept_count > 0) {
             break;
         }
-        if (verdict.hard) {
-            continue;
+        for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
+            bool repeat = false;
+            PhraseVerdict verdict;
+            /* The first half of the attempts keeps the figures the framework labels; the second moves every clash to a chord tone. */
+            if (!melody_build(read, params, shifts[attempt % shift_count], attempt < MELODY_ATTEMPTS / 2, round == 1, rng, scratch)) {
+                continue;
+            }
+            /* Only melodies that pass the hard rules are proposed; none passing leaves the span open. */
+            if (!melody_judge(scratch, &verdict)) {
+                ok = false;
+                break;
+            }
+            if (verdict.hard) {
+                continue;
+            }
+            for (size_t i = 0; i < kept_count; i++) {
+                repeat = repeat || same_melody(kept[i], scratch);
+            }
+            if (repeat) {
+                continue;
+            }
+            MelodyCandidate *payload = malloc(sizeof(*payload));
+            char label[FILL_LABEL_MAX];
+            if (!payload) {
+                ok = false;
+                break;
+            }
+            *payload = *scratch;
+            melody_label(payload, label, sizeof(label));
+            ok = fill_candidates_add(out, label, payload, free);
+            kept[kept_count++] = payload;
         }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_melody(kept[i], scratch);
-        }
-        if (repeat) {
-            continue;
-        }
-        MelodyCandidate *payload = malloc(sizeof(*payload));
-        char label[FILL_LABEL_MAX];
-        if (!payload) {
-            ok = false;
-            break;
-        }
-        *payload = *scratch;
-        melody_label(payload, label, sizeof(label));
-        ok = fill_candidates_add(out, label, payload, free);
-        kept[kept_count++] = payload;
     }
     free(scratch);
     free(read);

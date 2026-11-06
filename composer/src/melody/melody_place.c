@@ -336,10 +336,11 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
 }
 
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
-                  FillRng *rng, MelodyCandidate *out) {
+                  bool relaxed, FillRng *rng, MelodyCandidate *out) {
     MelodyFillParams arch = arch_params(context, params);
     memset(out, 0, sizeof(*out));
     out->magic = MELODY_PAYLOAD_MAGIC;
+    out->relaxed = relaxed;
     out->context = *context;
     /* The checker holds every note to the voice's range: the arch caps are for the notes that are generated (R-327). */
     out->params = *params;

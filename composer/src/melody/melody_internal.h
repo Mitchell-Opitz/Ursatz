@@ -143,6 +143,7 @@ typedef struct {
     size_t count;
     MelodyNote pickup_notes[MELODY_MAX_PICKUP]; /* the anacrusis, oldest first, onsets from -context.pickup */
     size_t pickup_count;
+    bool relaxed; /* built and judged by the relaxed rules (R-338): the strict ones left no melody for this motive */
 } MelodyCandidate;
 
 /* Whether any note of the melody is generated, not a motive's (R-335): the climax rules are hard only then. */
@@ -295,7 +296,7 @@ bool melody_check(const void *payload, FillCheck *out);
  * does not fit the phrase or the range, or a strong beat has no chord tone near enough to its contour).
  */
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
-                  FillRng *rng, MelodyCandidate *out);
+                  bool relaxed, FillRng *rng, MelodyCandidate *out);
 
 /*
  * Realizes the motive of the context in a candidate whose notes are laid out (layout): the motive's notes, each moved
