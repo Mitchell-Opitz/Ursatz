@@ -439,6 +439,8 @@ static void test_refused(void) {
     expect_refused("explain", "\"xml\"", COMPOSER_ERR_REQUEST, "/explain", "explain must be");
     /* A theme no seed can write: a last bar V under a perfect cadence. */
     expect_refused("chords", "[{\"bar\": 7, \"text\": \"V\"}]", COMPOSER_ERR_UNSATISFIABLE, "/chords/0", "chords bar 7: V cannot end a PAC");
+    expect_refused("chords", "[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 7, \"text\": \"I6\"}]", COMPOSER_ERR_UNSATISFIABLE,
+                   "/chords/1", "chords bar 7: i6 cannot end a PAC; the cadence needs a tonic chord in root position");
 
     ComposerResponse response;
     assert(composer_api_theme("{\"api_version\": 7}", NULL, &response) == COMPOSER_ERR_REQUEST);
