@@ -1,1 +1,1 @@
-Error: the given chords in bar 3 do not allow the PAC
+Error: chords bar 3: V cannot end a PAC; the cadence needs a tonic chord in root position

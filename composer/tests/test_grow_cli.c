@@ -326,18 +326,18 @@ static void test_cannot_be_satisfied(void) {
     expect_failure("grow_cli_long.txt --into sentence --key \"D minor\" --meter 4/4", 2, "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent");
     /* One note is not a motive to grow a theme from. */
     write_text("grow_cli_single.txt", "D4:q\n");
-    expect_failure("grow_cli_single.txt --into sentence --key \"D minor\" --meter 4/4", 2, "cannot be grown as asked");
+    expect_failure("grow_cli_single.txt --into sentence --key \"D minor\" --meter 4/4", 2, "the basic motif needs at least two notes");
     /* An input that cannot be loaded as a motive. */
     expect_failure(FIXTURE("no_such_file.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "cannot load");
     expect_failure(FIXTURE("motive_polyphonic.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "polyphonic");
     write_text("grow_cli_long34.txt", "D4:w D4:w D4:q\n");
     expect_failure("grow_cli_long34.txt --into sentence --key \"D minor\" --meter 3/4", 2, "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent");
     /* An antecedent cannot end more strongly than the theme. */
-    expect_failure(BASE " --into period --first-cadence IAC --cadence IAC", 2, "cannot be grown as asked");
-    expect_failure(BASE " --into period --cadence HC", 2, "cannot be grown as asked");
+    expect_failure(BASE " --into period --first-cadence IAC --cadence IAC", 2, "an antecedent ends in a cadence weaker than the theme's");
+    expect_failure(BASE " --into period --cadence HC", 2, "an antecedent ends in a cadence weaker than the theme's");
     /* No file is left behind by a request that failed. */
     remove("grow_cli_never.json");
-    expect_failure(BASE " --into period --cadence HC --out grow_cli_never.json", 2, "cannot be grown as asked");
+    expect_failure(BASE " --into period --cadence HC --out grow_cli_never.json", 2, "an antecedent ends in a cadence weaker than the theme's");
     assert(fopen("grow_cli_never.json", "rb") == NULL);
 }
 
