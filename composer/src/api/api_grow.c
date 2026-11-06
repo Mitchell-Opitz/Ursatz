@@ -725,7 +725,8 @@ static const char *relation_word(const PlanMotiveRef *ref) {
     }
     switch (ref->step.kind) {
     case MOTIVE_RELATION_TRANSPOSE:
-        return "transposed";
+        /* A transposition by steps of the key is a sequence (ch. V). */
+        return ref->step.value[0] != 0 ? "sequence" : "transposed";
     case MOTIVE_RELATION_INVERT:
         return "inverted";
     case MOTIVE_RELATION_RETROGRADE:

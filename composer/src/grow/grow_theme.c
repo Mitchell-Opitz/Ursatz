@@ -281,6 +281,11 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
             *dev = spec->contrast;
         } else if (spec->repetition == GROW_REPEAT_DOMINANT_FORM) {
             dev->kind = MOTIVE_RELATION_DOMINANT_FORM;
+        } else if (spec->repetition == GROW_REPEAT_SEQUENCE) {
+            /* One step up in the key's scale, the chord moving with it (grow_beginning.c). */
+            dev->kind = MOTIVE_RELATION_TRANSPOSE;
+            dev->value[0] = 1;
+            dev->value[1] = 1;
         } else {
             dev->kind = MOTIVE_RELATION_EXACT;
         }
@@ -877,9 +882,14 @@ static PlanHarmonyShape gap_shape(const PlanHarmonyShape *shape, bool at_start, 
     return out;
 }
 
-PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
-                                  const PlanConstraint *cadence) {
+/* The chords of an owner: open targets asking for the shape, or, with a degree, that one diatonic chord written whole. */
+static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
+                                    const PlanConstraint *cadence, int degree) {
     PiecePlan *plan = build->plan;
+    PhraseChord fixed;
+    if (degree > 0 && !harmony_make_chord(build->request->key.mode, degree, 0, false, false, 1, &fixed)) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
     PlanSpan span = plan_node_span(plan, owner);
     Rational span_end;
     PlanSpan gaps[GROW_MAX_GAPS];
@@ -893,13 +903,22 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
         Rational gap_end;
         PlanConstraint constraint;
         memset(&payload, 0, sizeof(payload));
-        strcpy(payload.harmony.roman_numeral, "I");
-        payload.harmony.has_function = false;
+        if (degree > 0) {
+            harmony_chord_payload(&fixed, &payload);
+        } else {
+            strcpy(payload.harmony.roman_numeral, "I");
+            payload.harmony.has_function = false;
+        }
         result = plan_span_end(gaps[g], &gap_end);
         bool at_start = rational_cmp(gaps[g].start, span.start) == 0;
         bool at_end = result == PLAN_OK && rational_cmp(gap_end, span_end) == 0;
         if (result == PLAN_OK) {
             result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, gaps[g], &payload, &harmony);
+        }
+        if (degree > 0) {
+            /* A chord written whole has no shape to ask for. */
+            result = result == PLAN_OK ? plan_lane_span_set_state(plan, harmony, PLAN_STATE_REALIZED) : result;
+            continue;
         }
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_HARMONY_SHAPE;
@@ -933,6 +952,17 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
         result = add_voicing_targets(build, owner, span, cadence);
     }
     return result;
+}
+
+PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
+                                  const PlanConstraint *cadence) {
+    return add_chord_targets(build, owner, shape, cadence, 0);
+}
+
+PlanResult grow_add_chord_written(GrowBuild *build, NodeId owner, int degree) {
+    PlanHarmonyShape unused;
+    memset(&unused, 0, sizeof(unused));
+    return add_chord_targets(build, owner, &unused, NULL, degree);
 }
 
 /* The bars the material holds, counted. */

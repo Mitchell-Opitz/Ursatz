@@ -136,11 +136,21 @@ static PlanResult build_presentation(GrowBuild *build) {
     repetition_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
     repetition_shape.starts_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
     repetition_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
-    if (result == PLAN_OK) {
-        result = grow_add_chord_targets(build, ideas[0], &basic_shape, NULL);
-    }
-    if (result == PLAN_OK) {
-        result = grow_add_chord_targets(build, ideas[1], &repetition_shape, NULL);
+    if (spec->repetition == GROW_REPEAT_SEQUENCE) {
+        /* The chord moves with the melody: the basic idea's tonic and the repetition's chord a step up (I to ii, i to iio). */
+        if (result == PLAN_OK) {
+            result = grow_add_chord_written(build, ideas[0], 1);
+        }
+        if (result == PLAN_OK) {
+            result = grow_add_chord_written(build, ideas[1], 2);
+        }
+    } else {
+        if (result == PLAN_OK) {
+            result = grow_add_chord_targets(build, ideas[0], &basic_shape, NULL);
+        }
+        if (result == PLAN_OK) {
+            result = grow_add_chord_targets(build, ideas[1], &repetition_shape, NULL);
+        }
     }
 
     /* The melody to write for each idea. */
