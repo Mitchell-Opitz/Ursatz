@@ -22,13 +22,9 @@
  * MOVE_LIMIT semitones of the node's pitches, moved by one octave for the whole idea.
  */
 
-#define SEEDS 5
-/*
- * How far from its motive's pitch (moved by one octave) a note of an idea may be. R-328 moves a clash to the nearest chord tone, two
- * semitones in a triad; the framework's rules (a forbidden leap, parallel fifths with the bass, a dissonance) sometimes ask for the
- * next one (R-335), so a note may be four semitones off.
- */
-#define MOVE_LIMIT 4
+#define SEEDS 10
+/* How far from its motive's pitch (moved by one octave) a note of an idea may be: R-328 moves a clash to the nearest chord tone, two semitones in a triad. */
+#define MOVE_LIMIT 2
 #define CHORDS 9
 
 static NodeId find_node(const PiecePlan *plan, const char *name) {
