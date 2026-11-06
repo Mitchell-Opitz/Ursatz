@@ -223,12 +223,18 @@ A candidate is dropped when a motive it asks for cannot be made or does not fit 
 
 ### The checks
 
-`grow_checker` asks standard-form's own rule functions of the planned structure.
-
-| Form | Hard | Soft (the score is the share that hold) |
-| --- | --- | --- |
-| Sentence | `standard_form_subphrase_roles_in_order`, `standard_form_phrase_is_sentential`, `standard_form_pairing_form` a sentence, `standard_form_basic_idea_length_valid`, and each fragment shorter than the basic idea, as an idea and as a motive (`standard_form_is_fragmentation`) | `standard_form_sentence_is_archetypal`, `standard_form_presentation_length_usual` (which 4 bars do not meet), `standard_form_continuation_balanced`, and `standard_form_idea_reads_as_repetition` on the repetition's contour against `m0` |
-| Period | `standard_form_phrase_roles_in_order`, `standard_form_period_phrase_ideas_valid`, `standard_form_period_cadences_valid`, the basic idea's length, a contrasting idea that does not read as a repetition of `m0` (contour), the antecedent's cadence weaker than the consequent's by `harmony_cadence_strength` | `standard_form_antecedent_cadence_usual`, `standard_form_consequent_cadence_usual`, `standard_form_antecedent_length_usual`, `standard_form_consequent_length_usual`, `standard_form_consequent_contrast_usual` (the two contrasting ideas differ) |
-| Hybrid | `standard_form_pairing_is_hybrid`, the basic idea's length, a contrasting idea that does not read as a repetition, the antecedent's cadence weaker than the ending's, and for a continuation each fragment shorter than the basic idea | `standard_form_pairing_commonality` as three rules, of which a very common pairing meets all three, a slightly less common one two, an occasional one one and a rare one none; for a presentation the usual length and the repetition reading as one; for a continuation the balance |
+`grow_checker` asks standard-form's own rule functions of the planned structure; the rules are in [grow-hearing.md](grow-hearing.md#the-checks).
 
 The motive-forms, the pool, the harmony, the melody and the free phrases are in [grow-harmony.md](grow-harmony.md); how the result is heard is in [grow-hearing.md](grow-hearing.md).
+
+## Compose rates
+
+A theme is composed when `api_grow_run` returns it within `GROW_MAX_SEED_TRIES` (16) seeds of its start seed; this is separate from being heard as requested ([grow-hearing.md](grow-hearing.md)). `test_grow_compose_rates` runs every pairing at 4 and 8 bars for the two reference motifs in `tests/fixtures/rates` (a 2-bar 3/4 motif in A minor, a 1-bar 4/4 motif in C major), start seeds 1 to 10, no chords, check off, suggest 1, and asserts at least 8 of 10 for every buildable case. Run it with `ctest --test-dir build -R test_grow_compose_rates` (slow set, about 14 s; `test_grow_compose_rates_fast` runs seed 1 of each case). Composed of 10:
+
+| Pairing (beginning + ending) | 2-bar 4 bars | 2-bar 8 bars | 1-bar 4 bars | 1-bar 8 bars |
+| --- | --- | --- | --- | --- |
+| presentation + continuation / consequent / cadential | 10 | 10 | 10 | 10 |
+| antecedent + continuation / consequent / cadential | 10 | 10 | 10 | 10 |
+| compound + continuation / consequent / cadential | not buildable | 10 | 10 | 10 |
+
+Each row is three pairings with the same rate. Not buildable: the 2-bar motif is longer than the 1-bar basic idea of a compound 4-bar theme and is refused before seeding.

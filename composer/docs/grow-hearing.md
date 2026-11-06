@@ -1,6 +1,6 @@
 # Growing a theme: hearing the result
 
-How `grow_run` hears the grown theme, with periods and hybrids; the hearing itself is in [form-hear.md](form-hear.md). Back to the [docs index](README.md).
+How `grow_run` hears the grown theme, with periods and hybrids; the hearing itself is in [form-hear.md](form-hear.md). Back to the [docs index](README.md). Whether a theme composes at all is a separate measure from how it is heard: the compose rates are in [grow.md](grow.md#compose-rates).
 
 ## Hearing the result
 
@@ -83,3 +83,13 @@ and hears every written lane, which moved the shares as above. They are not anal
   samples, where it needs a match): 2 of 40 after a presentation, 19 of 40 after a compound basic idea.
 - **A compound basic idea and a continuation is heard 40 times in 40** since the motive-forms; before them 39, the other theme's contrasting idea read as a
   repetition of its basic idea, which makes it a presentation, so a sentence.
+
+## The checks
+
+`grow_checker` asks standard-form's own rule functions of the planned structure.
+
+| Form | Hard | Soft (the score is the share that hold) |
+| --- | --- | --- |
+| Sentence | `standard_form_subphrase_roles_in_order`, `standard_form_phrase_is_sentential`, `standard_form_pairing_form` a sentence, `standard_form_basic_idea_length_valid`, and each fragment shorter than the basic idea, as an idea and as a motive (`standard_form_is_fragmentation`) | `standard_form_sentence_is_archetypal`, `standard_form_presentation_length_usual` (which 4 bars do not meet), `standard_form_continuation_balanced`, and `standard_form_idea_reads_as_repetition` on the repetition's contour against `m0` |
+| Period | `standard_form_phrase_roles_in_order`, `standard_form_period_phrase_ideas_valid`, `standard_form_period_cadences_valid`, the basic idea's length, a contrasting idea that does not read as a repetition of `m0` (contour), the antecedent's cadence weaker than the consequent's by `harmony_cadence_strength` | `standard_form_antecedent_cadence_usual`, `standard_form_consequent_cadence_usual`, `standard_form_antecedent_length_usual`, `standard_form_consequent_length_usual`, `standard_form_consequent_contrast_usual` (the two contrasting ideas differ) |
+| Hybrid | `standard_form_pairing_is_hybrid`, the basic idea's length, a contrasting idea that does not read as a repetition, the antecedent's cadence weaker than the ending's, and for a continuation each fragment shorter than the basic idea | `standard_form_pairing_commonality` as three rules, of which a very common pairing meets all three, a slightly less common one two, an occasional one one and a rare one none; for a presentation the usual length and the repetition reading as one; for a continuation the balance |
