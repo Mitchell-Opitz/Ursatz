@@ -302,7 +302,7 @@ static bool stage_done(const PiecePlan *plan, ComposeStage stage, const NodeId *
     return true;
 }
 
-static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage stage, const ComposeConfig *config,
+static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage stage, const GrowContext *grow,
                                  const MotiveDevelopContext *motives, const MelodyFillParams *melody,
                                  const AccompanimentParams *accompaniment, const VoicingParams *voicing) {
     FillResult result = FILL_OK;
@@ -310,7 +310,7 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
     case COMPOSE_STAGE_INVENT:
         return motive_invent_register(registry, motives);
     case COMPOSE_STAGE_STRUCTURE:
-        return grow_register(registry, &config->context);
+        return grow_register(registry, grow);
     case COMPOSE_STAGE_MOTIVES:
         /* The motive-forms first: a slot they have no form for is left to the P13 operators. */
         result = grow_form_register(registry, motives);
@@ -669,7 +669,10 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         if (attempt > 0 && !run->sentences) {
             melody.climax_position = CLIMAX_RETRIES[attempt];
         }
-        FillResult registered = register_stage(registry, stage, config, &run->motives, &melody, &run->accompaniment,
+        /* The structure stage reads the basic motive's features (the segments of a theme); the context outlives the registry. */
+        GrowContext grow = config->context;
+        grow.basic = run->motives.basic;
+        FillResult registered = register_stage(registry, stage, &grow, &run->motives, &melody, &run->accompaniment,
                                                &run->voicing);
         FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;
         fill_registry_destroy(registry);

@@ -73,6 +73,10 @@ lies inside its parent's.
 | `state` | string | `given`, `constrained` or `realized`. |
 | `constraints` | array | See Constraints. |
 
+### Motive refs: the segment and the steps
+
+A `motive_ref` constraint may carry two members that record how a developed idea was made (P34, ch. VIII), both optional: `"segment": "b"`, the label of the segment of the basic motif its motive node is made from (a continuation's fragments), and `"steps": 2`, how many liquidation steps by segments made it (a cadential idea). A plan without them reads as no segment and no steps, and writing it again leaves them out. Regenerating a section or locking a lane keeps them with the rest of the constraint. They name what happened; the motive operators do not read them. (The `steps` of an older file's `transform` is that transform's own.) See [plan-constraints.md](plan-constraints.md#motive-relation-steps).
+
 ## Lane claims
 
 Each lane span is a claim in the section for its lane:

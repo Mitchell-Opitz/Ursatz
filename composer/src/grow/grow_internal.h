@@ -62,7 +62,35 @@ typedef struct {
     size_t cadential_drop[2];              /* notes the two ideas of a cadential ending drop of m0 */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
     GrowRepetition repetition;             /* how the presentation repeats the basic idea */
+    /*
+     * The segments of the motive m0 (R-311): its features when the compose run's basic motive is it and has any, else
+     * motive_segments_propose's. Labels as given; first and last are note indices of m0. Not written back to the motive.
+     */
+    MotiveSketchFeature segments[MOTIVE_MAX_FEATURES];
+    size_t segment_count;
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */
+    /*
+     * A continuation's fragments from the segments (ch. VIII): fragment k is the segment fragment_segment[k] of m0 as a
+     * motive of its own (fragment_motive[k]) when fragment_from_segment[k]; else the leading fragment of m0 above.
+     * fragment_sequence: fragment 2 is fragment 1's segment in sequence one step down (tonal), else the next segment.
+     */
+    bool fragment_from_segment[2];
+    size_t fragment_segment[2];
+    bool fragment_sequence;
+    Motive fragment_motive[2];
+    bool segment_room;                     /* the material has bars to put the motives grow-theme makes in */
+    /*
+     * The ideas that end the theme as liquidations by segments (ch. VIII): m0 as the motive-forms read it (liquid_base,
+     * its segments its features), liquidated step by step until the result fits the idea and its last note can take the
+     * cadence. liquidated[place] is the result, has_liquidated[place] says the idea is that motive restated, and
+     * liquidation_steps[place] is the steps it took. An idea without one is liquidated by notes (liquidate_drop,
+     * cadential_drop).
+     */
+    Motive liquid_base;
+    bool has_liquid_base;
+    Motive liquidated[GROW_PLACE_COUNT];
+    bool has_liquidated[GROW_PLACE_COUNT];
+    size_t liquidation_steps[GROW_PLACE_COUNT];
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
     bool ending_split;                     /* no chord of the ending crosses a barline */
@@ -133,6 +161,9 @@ typedef struct {
     NodeId source;           /* the motive node the ideas are made from: m0, or the section's own motive */
     size_t motive_bars;      /* the bars a derived motive node takes in the material: those of the longest motive given */
     size_t slot_base;        /* the bar of the material motive slot 1 goes in; slot k goes (k - 1) * motive_bars after it */
+    size_t result_base;      /* the bar of the material the motives grow-theme makes go in, one bar each */
+    NodeId segment_node[2];  /* the material node of the segment fragment k is made from, else PLAN_NODE_NONE */
+    NodeId liquid_node[GROW_PLACE_COUNT]; /* the material node holding an idea's liquidation, else PLAN_NODE_NONE */
 } GrowBuild;
 
 /* A length of count units. */
@@ -209,6 +240,8 @@ size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place);
 NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea);
 /* The name of the idea's material node. */
 const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size);
+/* Whether the idea is a segment of m0 (a continuation's fragment, ch. VIII), and the segment when it is. */
+bool grow_idea_segment(const GrowThemeSpec *spec, GrowPlace idea, const MotiveSketchFeature **segment);
 /* The motive an idea is made from: its own, else its slot's, else the spec's source. */
 const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea);
 /* The motive node an idea's motive ref names: its slot's own node, else the build's source. */
@@ -275,6 +308,13 @@ size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 NodeId grow_find_source(const PiecePlan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */
 bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out);
+
+/*
+ * One segment of a motive as a motive of its own: its notes from time 0 (no pickup), with the source's meter and key, the
+ * base harmony chords that sound under it (onsets moved to the segment) and the tone roles of its notes. False for a
+ * segment of fewer than two notes or one that does not lie in the source.
+ */
+bool grow_segment_motive(const Motive *source, const MotiveSketchFeature *segment, Motive *out);
 
 /* The development of m0 each idea after the basic idea is, as a spec the motive operators read. */
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out);

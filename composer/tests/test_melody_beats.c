@@ -170,7 +170,9 @@ static void add_accompaniment_motive(Piece *piece) {
 
 /* The melody span to fill, with its motive and, when pickup_32nds is not 0, a pickup of that many 32nds of a whole note. */
 static void add_melody_target(Piece *piece, PlanSpan span, NodeId motive, long pickup_32nds) {
-    PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint ref;
+    memset(&ref, 0, sizeof(ref));
+    ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     Rational pickup = fraction(pickup_32nds, 32);
     piece->span = span;
     piece->body = span;

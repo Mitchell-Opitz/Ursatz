@@ -886,7 +886,49 @@ typedef struct {
     char motive[16];
     const char *idea;
     char how[96];
+    char segment[PLAN_SEGMENT_LABEL_MAX + 1]; /* the segment the idea is made from, empty for none */
+    char summary[192];
 } Development;
+
+static cJSON *string_or_null(const char *text);
+
+/* The motive the ideas are made from, in words: a segment, a slot's own motif, else the basic idea. */
+static void source_words(const PiecePlan *plan, const PlanMotiveRef *ref, char *out, size_t size) {
+    static const char *const SLOT_WORDS[] = {"basic idea", "contrasting motif", "continuation motif", "cadential motif"};
+    const char *name = plan_has_node(plan, ref->motive) ? plan_node_name(plan, ref->motive) : NULL;
+    if (ref->segment[0] != '\0') {
+        snprintf(out, size, "segment %s", ref->segment);
+    } else if (ref->steps > 0 || !name) {
+        snprintf(out, size, "basic idea");
+    } else if (name[0] == 's' && name[1] >= '1' && name[1] <= '3' && name[2] == '\0') {
+        snprintf(out, size, "%s", SLOT_WORDS[name[1] - '0']);
+    } else if (name[0] == 'i' && name[1] >= '0' && name[1] <= '9' && name[2] == '\0') {
+        snprintf(out, size, "its own motif");
+    } else {
+        snprintf(out, size, "basic idea");
+    }
+}
+
+/*
+ * One line naming an idea, its source and its operation (ch. VIII): "repetition = basic idea, dominant form",
+ * "fragment 2 = segment b, 1 step down (tonal)", "cadential = basic idea, segments liquidated, 2 steps". The idea is named
+ * as the plan names it; `how` is describe_ref's text, without the word it starts with when the operation is a restatement or
+ * a sequence (the operation says it).
+ */
+static void summarize_development(const PiecePlan *plan, const PlanMotiveRef *ref, const char *idea, const char *how,
+                                  char *out, size_t size) {
+    char source[48];
+    char operation[96];
+    source_words(plan, ref, source, sizeof(source));
+    if (ref->steps > 0) {
+        snprintf(operation, sizeof(operation), "segments liquidated, %zu step%s", ref->steps, ref->steps == 1 ? "" : "s");
+    } else if (strncmp(how, "restated, ", 10) == 0 || strncmp(how, "sequence, ", 10) == 0) {
+        snprintf(operation, sizeof(operation), "%s", how + 10);
+    } else {
+        snprintf(operation, sizeof(operation), "%s", how);
+    }
+    snprintf(out, size, "%s = %s, %s", idea[0] != '\0' ? idea : "(unused)", source, operation);
+}
 
 /* The motives made from m0 (every motive node with a motive_ref) and the idea each one is the melody of. */
 static size_t collect_developments(const PiecePlan *plan, NodeId theme, Development *out) {
@@ -918,6 +960,9 @@ static size_t collect_developments(const PiecePlan *plan, NodeId theme, Developm
             }
         }
         describe_ref(&ref->params.motive, out[count].how, sizeof(out[count].how));
+        snprintf(out[count].segment, sizeof(out[count].segment), "%s", ref->params.motive.segment);
+        summarize_development(plan, &ref->params.motive, out[count].idea, out[count].how, out[count].summary,
+                              sizeof(out[count].summary));
         count++;
     }
     return count;
@@ -931,7 +976,9 @@ static cJSON *developments_json(const PiecePlan *plan, NodeId theme) {
         cJSON *item = cJSON_CreateObject();
         if (!item || !cJSON_AddStringToObject(item, "motive", developments[i].motive) ||
             !cJSON_AddStringToObject(item, "idea", developments[i].idea) ||
-            !cJSON_AddStringToObject(item, "development", developments[i].how) || !cJSON_AddItemToArray(list, item)) {
+            !cJSON_AddStringToObject(item, "development", developments[i].how) ||
+            !cJSON_AddItemToObject(item, "segment", string_or_null(developments[i].segment)) ||
+            !cJSON_AddStringToObject(item, "summary", developments[i].summary) || !cJSON_AddItemToArray(list, item)) {
             cJSON_Delete(item);
             cJSON_Delete(list);
             return NULL;

@@ -60,10 +60,19 @@ typedef enum {
  * An open parameter is a transpose with by 0, an invert with axis -1, an interval-change with amount 0, a fragment
  * with position 0 or length 0, a liquidate with drop 0, an augment or diminish with ratio 0:0 (2:1 and 1:2).
  */
+#define PLAN_SEGMENT_LABEL_MAX 8 /* the longest label of a motive's segment (MOTIVE_FEATURE_LABEL_MAX) */
+
 typedef struct {
     NodeId motive;
     bool has_step;
     MotiveRelationStep step;
+    /* The label of the segment of the basic motive the motive node is made from (ch. VIII); empty for none. */
+    char segment[PLAN_SEGMENT_LABEL_MAX + 1];
+    /*
+     * The liquidation steps (ch. VIII) the motive node holds is made by, each a liquidate-features step with steps 1 and
+     * shorten 1; 0 for none. A record: grow-theme makes the liquidated motive itself.
+     */
+    size_t steps;
 } PlanMotiveRef;
 
 /* Whether the ref restates its source exactly (an exact step; a transposition of it may be drawn, see motive_develop.h). */

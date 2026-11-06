@@ -109,7 +109,9 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PlanConstraint archetype = {PLAN_CONSTRAINT_ARCHETYPE, {0}};
     archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
-    PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint motive_ref;
+    memset(&motive_ref, 0, sizeof(motive_ref));
+    motive_ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     motive_ref.params.motive.motive = m1;
     motive_ref.params.motive.has_step = true;
     motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_TRANSPOSE, .value = {0, -2}};
@@ -192,7 +194,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     case PLAN_CONSTRAINT_MOTIVE_REF:
         return a->params.motive.motive == b->params.motive.motive &&
                a->params.motive.has_step == b->params.motive.has_step &&
-               memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0;
+               memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0 &&
+               strcmp(a->params.motive.segment, b->params.motive.segment) == 0 && a->params.motive.steps == b->params.motive.steps;
     case PLAN_CONSTRAINT_KEY:
         return a->params.key.tonic_letter == b->params.key.tonic_letter &&
                a->params.key.tonic_accidental == b->params.key.tonic_accidental && a->params.key.mode == b->params.key.mode;

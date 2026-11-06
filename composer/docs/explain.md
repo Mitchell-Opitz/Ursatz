@@ -28,6 +28,14 @@ Reasons are the checkers' own strings; nothing is put into words beyond them. A 
 Transposed +2 steps of the key's scale. Kept the`, cut at 63 characters), and scores 1 plus the connection. A saved form from a pool ([grow-harmony.md](grow-harmony.md#the-pool)) is labelled `pool <item> <connection>%:
 <chain>`, with the item and the chain it was saved with, and scores 1 plus the connection plus 1/2 (approved) or 1/4 (unflagged).
 
+## The summary line of a developed idea
+
+The theme result lists each developed idea (`developments`, and the `motive developments` of the text output) with a
+`summary` of one line that names the idea as the plan does, its source and its operation: `repetition = basic idea,
+dominant form`, `fragment 1 = segment b, exact`, `fragment 2 = segment b, 1 step down (tonal)`, `cadential = basic idea,
+segments liquidated, 2 steps`. The item also has `segment`, the label of the segment the idea is made from, or `null`.
+The text output prints `<motive>: <summary>` for each (`m3: fragment 2 = segment b, 1 step down (tonal)`).
+
 ## The style term
 
 `FillConsidered` has `style_numerator` and `style_denominator`: the part of the score a style added (weight times how

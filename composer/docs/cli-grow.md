@@ -87,7 +87,7 @@ Per theme, in text:
 - the chords, one row for each, with the bar and the beat (both from 1), the roman numeral, the
   function and the bass notes under the chord;
 - the motive developments: `m0` is the motive given; each other motive is made from it for an idea
-  (`m1 for repetition: restated, exact`);
+  (`m2: fragment 1 = segment b, exact`, each line naming the idea, its source and its operation);
 - the standard-form rule score: the share of the structure's soft rules that hold, with the heard form
   counted as one more (`5/5 (100%)`);
 - the form heard.

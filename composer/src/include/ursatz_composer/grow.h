@@ -210,6 +210,11 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
 
 typedef struct {
     size_t candidates; /* the structures grow-theme proposes; 0 means 4 */
+    /*
+     * The basic motive the request was made from, for the features (segments) and pickup the plan does not keep. Set by
+     * the compose run from GrowConfig.basic; NULL for none. grow-theme uses it only when its notes are m0's.
+     */
+    const Motive *basic;
 } GrowContext;
 
 #define GROW_DEFAULT_CANDIDATES 4

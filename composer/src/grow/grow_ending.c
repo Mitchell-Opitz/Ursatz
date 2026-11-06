@@ -1,7 +1,12 @@
+#include <stdio.h>
 #include <string.h>
+
+#include <ursatz_composer/variant_registry.h>
 
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
+#include "util/plan_util.h"
+#include "motive/motive_internal.h"
 
 /* Chords a phrase-model progression has before its last: a tonic, up to two predominants, a dominant. */
 #define PHRASE_MODEL_SLOTS 4
@@ -12,6 +17,214 @@
 /* The ideas of a continuation, in eighths of the theme. */
 static const size_t IDEA_START[GROW_PLACE_COUNT] = {0, 2, 4, 5, 6};
 static const size_t IDEA_UNITS[GROW_PLACE_COUNT] = {2, 2, 1, 1, 2};
+
+/* The weights of fragment 1's segment: a segment lettered other than `a` first, then one lettered `a` (ch. VIII). */
+static const unsigned FRAGMENT_SEGMENT_WEIGHTS[2] = {2, 1};
+/* The weights of fragment 2: fragment 1's segment in sequence one step down, then the next segment. */
+static const unsigned FRAGMENT_2_WEIGHTS[2] = {3, 1};
+
+/* The segment of m0 as a fragment's motive: a proper part of m0 (a fragment shorter than it) of two notes or more. */
+static bool segment_fragment(const GrowThemeSpec *spec, size_t index, Motive *out) {
+    return grow_segment_motive(&spec->source, &spec->segments[index], out) && out->note_count < spec->source.note_count &&
+           rational_cmp(out->length, spec->source.length) < 0;
+}
+
+/* Whether a fragment idea, made as the spec now says, fits the room. */
+static bool fragment_fits(const GrowThemeSpec *spec, GrowPlace idea, Rational room) {
+    Motive result;
+    return grow_idea_develop(spec, idea, &result) && rational_cmp(result.length, room) <= 0;
+}
+
+static void clear_segment_fragments(GrowThemeSpec *spec) {
+    spec->fragment_from_segment[0] = false;
+    spec->fragment_from_segment[1] = false;
+    spec->fragment_sequence = false;
+}
+
+/*
+ * The fragments of a continuation from the segments of m0 (ch. VIII): fragment 1 is a segment that fits its room, one
+ * lettered other than `a` preferred, and fragment 2 is that segment in sequence one step down or the next segment. False,
+ * with nothing set, when m0 has no segment that fits: the leading fragments of m0 are made as before.
+ */
+static bool draw_segment_fragments(FillRng *rng, GrowThemeSpec *spec, Rational unit) {
+    Rational room1 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1]);
+    Rational room2 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2]);
+    size_t fits[MOTIVE_MAX_FEATURES];
+    size_t count = 0;
+    unsigned total = 0;
+    if (!spec->segment_room || grow_idea_own(spec, GROW_PLACE_FRAGMENT_1) || grow_idea_own(spec, GROW_PLACE_FRAGMENT_2)) {
+        return false;
+    }
+    for (size_t s = 0; s < spec->segment_count; s++) {
+        Motive motive;
+        if (segment_fragment(spec, s, &motive) && rational_cmp(motive.length, room1) <= 0) {
+            fits[count++] = s;
+            total += FRAGMENT_SEGMENT_WEIGHTS[spec->segments[s].label[0] == 'a' ? 1 : 0];
+        }
+    }
+    if (count == 0) {
+        return false;
+    }
+    uint64_t pick = fill_rng_below(rng, total);
+    size_t chosen = fits[count - 1];
+    for (size_t i = 0; i < count; i++) {
+        unsigned weight = FRAGMENT_SEGMENT_WEIGHTS[spec->segments[fits[i]].label[0] == 'a' ? 1 : 0];
+        if (pick < weight) {
+            chosen = fits[i];
+            break;
+        }
+        pick -= weight;
+    }
+    bool sequence = fill_rng_below(rng, FRAGMENT_2_WEIGHTS[0] + FRAGMENT_2_WEIGHTS[1]) < FRAGMENT_2_WEIGHTS[0];
+    segment_fragment(spec, chosen, &spec->fragment_motive[0]);
+    spec->fragment_from_segment[0] = true;
+    spec->fragment_segment[0] = chosen;
+    spec->fragment_from_segment[1] = true;
+    for (int attempt = 0; attempt < 2; attempt++, sequence = !sequence) {
+        spec->fragment_sequence = sequence;
+        if (sequence) {
+            spec->fragment_segment[1] = chosen;
+            spec->fragment_motive[1] = spec->fragment_motive[0];
+        } else if (chosen + 1 < spec->segment_count && segment_fragment(spec, chosen + 1, &spec->fragment_motive[1])) {
+            spec->fragment_segment[1] = chosen + 1;
+        } else {
+            continue;
+        }
+        if (fragment_fits(spec, GROW_PLACE_FRAGMENT_2, room2)) {
+            return true;
+        }
+    }
+    clear_segment_fragments(spec);
+    return false;
+}
+
+/* The pitches an idea made by the motive-forms may use (grow_form.c), so the melody has room to place it. */
+#define LIQUID_LOW 58
+#define LIQUID_HIGH 84
+/* The widest leap such an idea may have, a fifth, unless m0 has a wider one. */
+#define LIQUID_LEAP 7
+
+/* Whether every pitch of the motive is in range and in the key's scale (a minor key also has the raised seventh). */
+static bool liquid_in_range(const Motive *motive) {
+    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
+    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
+    for (size_t i = 0; i < motive->note_count; i++) {
+        int pitch = motive_pitch(motive, i);
+        if (pitch < LIQUID_LOW || pitch > LIQUID_HIGH) {
+            return false;
+        }
+        if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
+            !(motive->minor ? MINOR : MAJOR)[((pitch - motive->tonic_pc) % 12 + 12) % 12]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static int widest_leap(const Motive *motive) {
+    int widest = 0;
+    for (size_t i = 1; i < motive->note_count; i++) {
+        int leap = motive_pitch(motive, i) - motive_pitch(motive, i - 1);
+        widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
+    }
+    return widest;
+}
+
+/*
+ * The cadence rule of P33: an idea that ends the theme (or the first part) ends on the cadence's tone, the tonic for a PAC,
+ * the third for an IAC, with the rhythm kept. The last note moves to the nearest such pitch (other = false) or the next
+ * nearest on the other side (other = true); other cadences leave it. False when the motive has no key to read the tone in.
+ */
+static bool liquid_take_cadence(Motive *motive, bool has_cadence, CadenceType cadence, bool other) {
+    if (!has_cadence || (cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC)) {
+        return true;
+    }
+    if (motive->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
+        return false;
+    }
+    int want = (motive->tonic_pc + (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? 0 : (motive->minor ? 3 : 4))) % 12;
+    MotiveSketchNote *last = &motive->notes[motive->note_count - 1];
+    int pitch = motive_pitch(motive, motive->note_count - 1);
+    int shift = (((want - pitch) % 12) + 12) % 12;
+    int nearest = shift > 6 ? shift - 12 : shift;
+    last->pitch = pitch + (other ? (nearest > 0 ? nearest - 12 : nearest + 12) : nearest);
+    return true;
+}
+
+/*
+ * Liquidates the segments of m0 (ch. VIII) one step at a time, from `from` steps (at least 1) to as many as m0 has
+ * segments: each step is a liquidate-features operation with steps 1 and shorten 1, as grow_form.c offers. Stops at the
+ * first count of steps whose result is a form the motive-forms accept: fewer notes than m0, in range, no wider a leap than
+ * m0's (a fifth at least), within the room, and, when the idea ends in a cadence, its last note moved to the cadence's tone. False
+ * when none is.
+ */
+static bool liquidate_segments(const GrowThemeSpec *spec, size_t from, Rational room, bool has_cadence,
+                               CadenceType cadence, size_t *steps, Motive *out) {
+    const Motive *base = &spec->liquid_base;
+    int allowed = widest_leap(base) > LIQUID_LEAP ? widest_leap(base) : LIQUID_LEAP;
+    if (!spec->has_liquid_base || spec->segment_count < 2) {
+        return false;
+    }
+    for (size_t count = from > 0 ? from : 1; count <= spec->segment_count && count <= VARIANT_CHAIN_MAX; count++) {
+        VariantChain chain;
+        Motive result;
+        VariantRecord record;
+        memset(&chain, 0, sizeof(chain));
+        for (size_t t = 0; t < count; t++) {
+            if (!variant_step_init(&chain.steps[t], "liquidate-features") ||
+                !variant_step_set(&chain.steps[t], "steps", 1, 0) || !variant_step_set(&chain.steps[t], "shorten", 1, 0)) {
+                return false;
+            }
+        }
+        chain.step_count = count;
+        if (variant_apply_chain(base, &chain, 1, &result, &record) != VARIANT_OK || result.note_count < 1 ||
+            result.note_count >= base->note_count) {
+            continue;
+        }
+        /* A form below the range is taken up an octave, as the motive-forms do. */
+        int lowest = 127;
+        int highest = 0;
+        for (size_t i = 0; i < result.note_count; i++) {
+            lowest = motive_pitch(&result, i) < lowest ? motive_pitch(&result, i) : lowest;
+            highest = motive_pitch(&result, i) > highest ? motive_pitch(&result, i) : highest;
+        }
+        if (lowest < LIQUID_LOW && highest + 12 <= LIQUID_HIGH) {
+            for (size_t i = 0; i < result.note_count; i++) {
+                if (result.notes[i].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN) {
+                    result.notes[i].pitch += 12;
+                }
+            }
+        }
+        for (int other = 0; other < 2; other++) {
+            Motive moved = result;
+            if (!liquid_take_cadence(&moved, has_cadence, cadence, other != 0)) {
+                break;
+            }
+            if (moved.form == MOTIVE_SKETCH_FORM_FULL && liquid_in_range(&moved) && widest_leap(&moved) <= allowed &&
+                rational_cmp(moved.length, room) <= 0) {
+                *steps = count;
+                *out = moved;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* Keeps the liquidation as the idea's motive: the idea restates it exactly (grow_idea_dev). */
+static void keep_liquidation(GrowThemeSpec *spec, GrowPlace idea, size_t steps, const Motive *result) {
+    spec->liquidated[idea] = *result;
+    spec->has_liquidated[idea] = true;
+    spec->liquidation_steps[idea] = steps;
+}
+
+/* The room an idea of `units` eighths has in the material: its own length, or the bars of a derived motive if shorter. */
+static Rational idea_room(const GrowThemeSpec *spec, Rational unit, size_t units) {
+    Rational idea = grow_scaled(unit, units);
+    Rational bar = grow_bar_length(&spec->meter);
+    Rational node = grow_scaled(bar, grow_motive_layout_bars(&spec->source, bar));
+    return rational_cmp(idea, node) < 0 ? idea : node;
+}
 
 /* The longest leading fragment of at most `wanted` notes that fits an idea of `room`; 0 when none does. */
 static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, Rational room) {
@@ -46,9 +259,20 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     if (spec->liquidate_drop >= count) {
         spec->liquidate_drop = count - 1;
     }
-    if (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
-        fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0) {
+    /* Fragments are segments of m0 when it has them that fit, else its leading notes. */
+    if (!draw_segment_fragments(rng, spec, unit) &&
+        (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
+         fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0)) {
         return false;
+    }
+    /* The cadential idea liquidates the segments of m0 until a residue fits and meets the cadence; else it drops notes. */
+    if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
+        size_t steps;
+        Motive result;
+        if (liquidate_segments(spec, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]), true, request->cadence,
+                               &steps, &result)) {
+            keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, &result);
+        }
     }
     /* Each idea after the presentation is made from m0 and has to fit in the room it has. */
     for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea < GROW_PLACE_COUNT; idea++) {
@@ -111,6 +335,15 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
     size_t second = first + (size_t)fill_rng_below(rng, most - first + 1);
     spec->cadential_drop[0] = first;
     spec->cadential_drop[1] = second;
+    /* Both ideas liquidate the segments of m0, the second at least as far as the first; else they drop notes. */
+    size_t steps[2];
+    Motive made[2];
+    if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL_1) && !grow_idea_own(spec, GROW_PLACE_CADENTIAL_2) &&
+        liquidate_segments(spec, 1, idea_room(spec, unit, 2), false, request->cadence, &steps[0], &made[0]) &&
+        liquidate_segments(spec, steps[0], idea_room(spec, unit, 2), true, request->cadence, &steps[1], &made[1])) {
+        keep_liquidation(spec, GROW_PLACE_CADENTIAL_1, steps[0], &made[0]);
+        keep_liquidation(spec, GROW_PLACE_CADENTIAL_2, steps[1], &made[1]);
+    }
     spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
     /* A cadential progression has no pivot to open a key with. */
@@ -183,16 +416,61 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
         PlanMotiveRef ref = refs[slot];
         ref.motive = motives[slot];
+        /* The segment and the steps are recorded on the motive node; the melody asks for the node. */
+        ref.segment[0] = '\0';
+        ref.steps = 0;
         result = grow_add_melody_target(build, ideas[slot], &ref, slot == last_slot ? &build->cadence : NULL);
     }
     return result;
+}
+
+/* One Given motive node in the material, `at` bars after the first of the bars grow-theme made motives go in. */
+static PlanResult add_made_node(GrowBuild *build, size_t at, const Motive *motive, const char *name, NodeId *out) {
+    Rational start;
+    PlanResult result = plan_result_of_rational(
+        rational_add(build->material_span.start, grow_scaled(build->request->bar, build->result_base + at), &start));
+    return result == PLAN_OK ? motive_attach(build->plan, build->material, start, motive, name, out, NULL) : result;
+}
+
+/* The motive nodes of what grow-theme made: the segments the fragments are made from, the liquidated ideas. */
+static PlanResult add_made_nodes(GrowBuild *build) {
+    const GrowThemeSpec *spec = build->spec;
+    size_t at = 0;
+    PlanResult result = PLAN_OK;
+    for (size_t k = 0; k < 2; k++) {
+        if (!spec->fragment_from_segment[k]) {
+            continue;
+        }
+        if (k == 1 && spec->fragment_from_segment[0] && spec->fragment_segment[1] == spec->fragment_segment[0]) {
+            build->segment_node[1] = build->segment_node[0];
+            continue;
+        }
+        char name[32];
+        snprintf(name, sizeof(name), "segment %s", spec->segments[spec->fragment_segment[k]].label);
+        result = add_made_node(build, at++, &spec->fragment_motive[k], name, &build->segment_node[k]);
+        if (result != PLAN_OK) {
+            return result;
+        }
+    }
+    for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea < GROW_PLACE_COUNT; idea++) {
+        if (spec->has_liquidated[idea]) {
+            char name[32];
+            snprintf(name, sizeof(name), "liquidated %zu", (size_t)idea - GROW_PLACE_FRAGMENT_1 + 1);
+            result = add_made_node(build, at++, &spec->liquidated[idea], name, &build->liquid_node[idea]);
+            if (result != PLAN_OK) {
+                return result;
+            }
+        }
+    }
+    return PLAN_OK;
 }
 
 static PlanResult build_continuation(GrowBuild *build) {
     static const char *const NAMES[GROW_PLACE_COUNT] = {NULL, NULL, "fragment 1", "fragment 2", "cadential"};
     NodeId continuation;
     PlanHarmonyShape shape;
-    PlanResult result = make_container(build, "second phrase", "continuation", &continuation);
+    PlanResult result = add_made_nodes(build);
+    result = result == PLAN_OK ? make_container(build, "second phrase", "continuation", &continuation) : result;
     memset(&shape, 0, sizeof(shape));
     shape.kind = build->spec->ending_shape;
     shape.starts_on = build->request->has_end_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;
@@ -227,7 +505,8 @@ static PlanResult build_cadential(GrowBuild *build) {
     static const char *const NAMES[GROW_PLACE_COUNT] = {NULL, NULL, "cadential 1", "cadential 2", NULL};
     NodeId cadential;
     PlanHarmonyShape shape;
-    PlanResult result = make_container(build, "second phrase", "cadential", &cadential);
+    PlanResult result = add_made_nodes(build);
+    result = result == PLAN_OK ? make_container(build, "second phrase", "cadential", &cadential) : result;
     memset(&shape, 0, sizeof(shape));
     shape.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
     shape.split_at_bars = build->spec->ending_split;

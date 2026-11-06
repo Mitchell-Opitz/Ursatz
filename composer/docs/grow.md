@@ -220,11 +220,11 @@ The operator proposes `GrowContext.candidates` (default 4) candidates, drawn fro
 - **Restated basic idea** (consequent). `restated`, as the repetition: the motive stage may keep it or transpose it.
   The melody says it again as the basic idea was said, from the first half, however far back it is (see below).
 - **Compound basic idea.** Its prolongation goes tonic to tonic or tonic to dominant.
-- **Fragments** (continuation). `fragmented`, leading, 2 or 3 notes, shortened until the fragment fits its idea.
-- **Cadential idea** (continuation). `liquidated`, dropping 1 to half of the motive's notes.
+- **Fragments** (continuation). [Segments](grow-segments.md), else `fragmented`, leading, 2 or 3 notes.
+- **Cadential idea** (continuation). [Segments](grow-segments.md) `liquidated`, else dropping notes.
 
 These are the motive refs the structure plans; the motives stage writes the [motive-forms](grow-harmony.md#motive-forms) instead when it has one for the idea, and these when it has none.
-- **Cadential ending.** Two ideas `liquidated` from `m0`, the second dropping at least as many notes as the first.
+- **Cadential ending.** Two ideas `liquidated` by segments or notes, the second at least as far as the first.
 
 A candidate is dropped when a motive it asks for cannot be made or does not fit its idea.
 

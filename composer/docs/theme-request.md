@@ -41,6 +41,11 @@ request, with a `pickup` in beats, its own `harmony` as Roman numerals (or `null
 indices) and a `role`. Only `form: "full"` is read. A slot or an idea takes a melodic motive; the accompaniment motive is of the
 accompaniment role.
 
+The `features` are the segments the theme's continuation uses (ch. VIII): fragment 1 is one of them, fragment 2 is that
+segment one step down or the next, and the cadential idea liquidates them ([grow.md](grow.md#choices)). A motive without
+features gets the Composer's proposed segments for the run, which are not written back. A segment of fewer than two notes
+is not used, and a segment that is the whole motif is not a fragment.
+
 A motive may also have `tone_overrides`, `{"<n>": "<role>"}`: the role of note `<n>` (1 from the first), `chord` or a non-chord tone
 (`passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`,
 `changing-tone`, `pedal`), as the `motive` command's `--tone` writes it. It replaces the role the motive's base harmony gives the

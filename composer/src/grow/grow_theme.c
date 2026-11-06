@@ -12,6 +12,7 @@
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
@@ -280,7 +281,7 @@ int grow_pairing_archetype(const PlanThemePairing *pairing) {
 
 bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep *dev) {
     memset(dev, 0, sizeof(*dev));
-    if (grow_idea_own(spec, idea)) {
+    if (grow_idea_own(spec, idea) || spec->has_liquidated[idea]) {
         /* The idea's own motive, or the slot's own motive beginning the slot, is the idea as it is. */
         dev->kind = MOTIVE_RELATION_EXACT;
         return true;
@@ -303,6 +304,15 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
     case GROW_PLACE_FRAGMENT_1:
     case GROW_PLACE_FRAGMENT_2: {
         size_t second = idea == GROW_PLACE_FRAGMENT_2;
+        if (grow_idea_segment(spec, idea, NULL)) {
+            /* A segment is the fragment as it is, or in sequence one step down in the key's scale. */
+            dev->kind = second && spec->fragment_sequence ? MOTIVE_RELATION_TRANSPOSE : MOTIVE_RELATION_EXACT;
+            if (dev->kind == MOTIVE_RELATION_TRANSPOSE) {
+                dev->value[0] = 1;
+                dev->value[1] = -1;
+            }
+            return true;
+        }
         if (spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
             if (second) {
                 *dev = spec->consequent_contrast;
@@ -338,6 +348,11 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
     MotiveRelationStep dev;
     memset(out, 0, sizeof(*out));
     out->motive = source;
+    out->steps = spec->has_liquidated[idea] ? spec->liquidation_steps[idea] : 0;
+    const MotiveSketchFeature *segment;
+    if (grow_idea_segment(spec, idea, &segment)) {
+        snprintf(out->segment, sizeof(out->segment), "%s", segment->label);
+    }
     if (grow_idea_dev(spec, idea, &dev)) {
         out->has_step = true;
         out->step = dev;
@@ -346,7 +361,28 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
     }
 }
 
+bool grow_idea_segment(const GrowThemeSpec *spec, GrowPlace idea, const MotiveSketchFeature **segment) {
+    if (spec->pairing.ending != PLAN_THEME_ENDING_CONTINUATION ||
+        (idea != GROW_PLACE_FRAGMENT_1 && idea != GROW_PLACE_FRAGMENT_2)) {
+        return false;
+    }
+    size_t k = idea == GROW_PLACE_FRAGMENT_2;
+    if (!spec->fragment_from_segment[k]) {
+        return false;
+    }
+    if (segment) {
+        *segment = &spec->segments[spec->fragment_segment[k]];
+    }
+    return true;
+}
+
 const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
+    if (grow_idea_segment(spec, idea, NULL)) {
+        return &spec->fragment_motive[idea == GROW_PLACE_FRAGMENT_2];
+    }
+    if (spec->has_liquidated[idea]) {
+        return &spec->liquidated[idea];
+    }
     if (idea != GROW_PLACE_BASIC && spec->has_idea_source[idea]) {
         return &spec->idea_source[idea];
     }
@@ -355,6 +391,12 @@ const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
 }
 
 NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
+    if (grow_idea_segment(build->spec, idea, NULL)) {
+        return build->segment_node[idea == GROW_PLACE_FRAGMENT_2];
+    }
+    if (build->spec->has_liquidated[idea]) {
+        return build->liquid_node[idea];
+    }
     if (idea != GROW_PLACE_BASIC && build->request->idea_node[idea] != PLAN_NODE_NONE) {
         return build->request->idea_node[idea];
     }
@@ -602,8 +644,102 @@ static bool draw_part_whole(const ThemeRequest *request, GrowThemeSpec *spec) {
     return true;
 }
 
+_Static_assert(PLAN_SEGMENT_LABEL_MAX == MOTIVE_FEATURE_LABEL_MAX, "a plan's segment label holds a feature label");
+
+/* The bars a derived motive node takes in the material: those of the longest motive the theme is made from. */
+static size_t derived_bars(const GrowThemeSpec *spec, Rational bar) {
+    size_t bars = grow_motive_layout_bars(&spec->source, bar);
+    for (size_t k = 0; k < GROW_SLOT_COUNT; k++) {
+        size_t slot_bars = spec->has_slot_source[k] ? grow_motive_layout_bars(&spec->slot_source[k], bar) : 0;
+        bars = slot_bars > bars ? slot_bars : bars;
+    }
+    for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
+        size_t idea_bars = spec->has_idea_source[k] ? grow_motive_layout_bars(&spec->idea_source[k], bar) : 0;
+        bars = idea_bars > bars ? idea_bars : bars;
+    }
+    return bars;
+}
+
+/* The motives grow-theme makes in the material, one bar each: the two segments of the fragments and the liquidation. */
+#define MADE_NODES 3
+
+static size_t count_bars(PlanSpan material_span, Rational bar);
+
+/* Whether the material has bars after the motives for the fragments' segments (a plan made before them may not). */
+static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {
+    NodeId material = plan_node_parent(plan, request->source);
+    PlanSpan span = plan_node_span(plan, material);
+    size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + MADE_NODES;
+    return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
+}
+
+/*
+ * The segments of the theme's motive (R-311): the features of the compose run's basic motive when the motive is its first
+ * notes (a section's own motive is made from m0 and is not), else a proposal from the motive's bars and rhythmic groups.
+ * The run's segments only: nothing is written back to the motif.
+ */
+static void draw_segments(const GrowContext *shared, GrowThemeSpec *spec) {
+    Motive motive = spec->source;
+    const Motive *basic = shared ? shared->basic : NULL;
+    bool same = basic && !spec->has_section_motive && basic->note_count >= motive.note_count;
+    for (size_t i = 0; same && i < motive.note_count; i++) {
+        same = motive_pitch(basic, i) == motive_pitch(&motive, i) &&
+               rational_cmp(basic->notes[i].onset, motive.notes[i].onset) == 0 &&
+               rational_cmp(basic->notes[i].duration, motive.notes[i].duration) == 0;
+    }
+    if (same) {
+        motive.pickup = basic->pickup;
+        motive.feature_count = 0;
+        for (size_t f = 0; f < basic->feature_count; f++) {
+            if (basic->features[f].last < motive.note_count) {
+                motive.features[motive.feature_count++] = basic->features[f];
+            }
+        }
+    }
+    MotiveAnalysis analysis;
+    spec->segment_count = 0;
+    if (!motive_analyze(&motive, &analysis)) {
+        return;
+    }
+    spec->segment_count = analysis.segment_count < MOTIVE_MAX_FEATURES ? analysis.segment_count : MOTIVE_MAX_FEATURES;
+    memcpy(spec->segments, analysis.segments, spec->segment_count * sizeof(spec->segments[0]));
+}
+
+/*
+ * m0 as the motive-forms read it (grow_form.c): with the basic motive's harmony, features, pickup and role when m0 is the
+ * basic motive itself, else the notes alone; its segments (its features, or a proposal) become its features, so that
+ * liquidate-features liquidates segments.
+ */
+static void draw_liquid_base(const GrowContext *shared, GrowThemeSpec *spec) {
+    const Motive *basic = shared ? shared->basic : NULL;
+    Motive base = spec->source;
+    bool same = basic && !spec->has_section_motive && basic->note_count == base.note_count;
+    for (size_t i = 0; same && i < base.note_count; i++) {
+        same = motive_pitch(basic, i) == motive_pitch(&base, i) &&
+               rational_cmp(basic->notes[i].onset, base.notes[i].onset) == 0 &&
+               rational_cmp(basic->notes[i].duration, base.notes[i].duration) == 0;
+    }
+    if (same) {
+        memcpy(base.chords, basic->chords, sizeof(base.chords));
+        base.chord_count = basic->chord_count;
+        memcpy(base.features, basic->features, sizeof(base.features));
+        base.feature_count = basic->feature_count;
+        base.accompaniment = basic->accompaniment;
+        base.pickup = basic->pickup;
+    }
+    MotiveAnalysis analysis;
+    if (!motive_analyze(&base, &analysis)) {
+        return;
+    }
+    base.feature_count = analysis.segment_count < MOTIVE_MAX_FEATURES ? analysis.segment_count : MOTIVE_MAX_FEATURES;
+    memcpy(base.features, analysis.segments, base.feature_count * sizeof(base.features[0]));
+    spec->liquid_base = base;
+    spec->has_liquid_base = true;
+}
+
 /* Draws every choice of one candidate from rng. False when the draw does not make a sentence the motive fits. */
-static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
+static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const GrowContext *shared, FillRng *rng,
+                      GrowThemeSpec *spec) {
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_PAYLOAD_MAGIC;
     spec->bars = request->bars;
@@ -652,6 +788,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
         }
         spec->has_idea_source[place] = true;
     }
+    draw_segments(shared, spec);
+    draw_liquid_base(shared, spec);
+    spec->segment_room = material_has_room(plan, request, spec);
     /* The basic idea is two bars of eight, one of four. */
     spec->basic_cells = request->bars == 4 ? request->cells_per_bar : 2 * request->cells_per_bar;
     return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec);
@@ -661,6 +800,13 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
     return a->has_section_motive == b->has_section_motive && motive_equal(&a->source, &b->source) &&
            a->repetition == b->repetition && a->fragment_notes[0] == b->fragment_notes[0] &&
            a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop &&
+           a->fragment_from_segment[0] == b->fragment_from_segment[0] &&
+           a->fragment_from_segment[1] == b->fragment_from_segment[1] &&
+           a->fragment_segment[0] == b->fragment_segment[0] && a->fragment_segment[1] == b->fragment_segment[1] &&
+           a->fragment_sequence == b->fragment_sequence &&
+           a->liquidation_steps[GROW_PLACE_FRAGMENT_1] == b->liquidation_steps[GROW_PLACE_FRAGMENT_1] &&
+           a->liquidation_steps[GROW_PLACE_FRAGMENT_2] == b->liquidation_steps[GROW_PLACE_FRAGMENT_2] &&
+           a->liquidation_steps[GROW_PLACE_CADENTIAL] == b->liquidation_steps[GROW_PLACE_CADENTIAL] &&
            a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
            same_kind(&a->consequent_contrast, &b->consequent_contrast) &&
            a->cadential_drop[0] == b->cadential_drop[0] && a->cadential_drop[1] == b->cadential_drop[1];
@@ -675,14 +821,32 @@ static const char *repetition_name(GrowRepetition repetition) {
     return NAMES[repetition];
 }
 
+/* The continuation of the label: the fragments (leading notes, or segments) and how the cadential idea is liquidated. */
+static void continuation_label(const GrowThemeSpec *spec, char *out, size_t size) {
+    char fragments[48];
+    char liquidated[32];
+    if (spec->fragment_from_segment[0]) {
+        snprintf(fragments, sizeof(fragments), "segment %s then %s%s", spec->segments[spec->fragment_segment[0]].label,
+                 spec->segments[spec->fragment_segment[1]].label, spec->fragment_sequence ? " down" : "");
+    } else {
+        snprintf(fragments, sizeof(fragments), "%zu+%zu notes", spec->fragment_notes[0], spec->fragment_notes[1]);
+    }
+    if (spec->has_liquidated[GROW_PLACE_CADENTIAL]) {
+        snprintf(liquidated, sizeof(liquidated), "segments, %zu steps", spec->liquidation_steps[GROW_PLACE_CADENTIAL]);
+    } else {
+        snprintf(liquidated, sizeof(liquidated), "drop %zu", spec->liquidate_drop);
+    }
+    snprintf(out, size, "fragments %s, cadential %s", fragments, liquidated);
+}
+
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
         spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
-        snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
-                 repetition_name(spec->repetition), spec->fragment_notes[0],
-                 spec->fragment_notes[1], spec->liquidate_drop);
+        char continuation[96];
+        continuation_label(spec, continuation, sizeof(continuation));
+        snprintf(label, size, "sentence %zu bars %s %s", spec->bars, repetition_name(spec->repetition), continuation);
         return;
     }
     size_t used = (size_t)snprintf(label, size, "%s + %s %zu bars", BEGINNINGS[spec->pairing.beginning],
@@ -693,8 +857,9 @@ static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
         used += (size_t)snprintf(label + used, size - used, " contrast %s", dev_name(&spec->contrast));
     }
     if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
-        snprintf(label + used, size - used, " fragments %zu+%zu drop %zu", spec->fragment_notes[0],
-                 spec->fragment_notes[1], spec->liquidate_drop);
+        char continuation[96];
+        continuation_label(spec, continuation, sizeof(continuation));
+        snprintf(label + used, size - used, " %s", continuation);
     } else if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
         snprintf(label + used, size - used, " consequent contrast %s", dev_name(&spec->consequent_contrast));
     } else if (used < size) {
@@ -721,7 +886,7 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
             return false;
         }
         bool repeat = false;
-        if (!draw_spec(plan, &request, rng, spec)) {
+        if (!draw_spec(plan, &request, shared, rng, spec)) {
             free(spec);
             continue;
         }
@@ -976,16 +1141,20 @@ PlanResult grow_add_chord_written(GrowBuild *build, NodeId owner, int degree) {
 }
 
 /* The bars the material holds, counted. */
-static size_t material_bars(const GrowBuild *build) {
+static size_t count_bars(PlanSpan material_span, Rational bar) {
     Rational length = {0, 1};
     size_t count = 0;
-    while (rational_cmp(length, build->material_span.length) < 0 && count < 4096) {
-        if (rational_add(length, build->request->bar, &length) != RATIONAL_OK) {
+    while (rational_cmp(length, material_span.length) < 0 && count < 4096) {
+        if (rational_add(length, bar, &length) != RATIONAL_OK) {
             break;
         }
         count++;
     }
     return count;
+}
+
+static size_t material_bars(const GrowBuild *build) {
+    return count_bars(build->material_span, build->request->bar);
 }
 
 /*
@@ -1206,18 +1375,18 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.material_span = plan_node_span(plan, build.material);
     build.source = request.source;
     /* A derived motive takes the bars of the longest motive the theme is made from. */
-    build.motive_bars = grow_motive_layout_bars(&spec->source, request.bar);
-    for (size_t k = 0; k < GROW_SLOT_COUNT; k++) {
-        size_t bars = spec->has_slot_source[k] ? grow_motive_layout_bars(&spec->slot_source[k], request.bar) : 0;
-        build.motive_bars = bars > build.motive_bars ? bars : build.motive_bars;
-    }
+    build.motive_bars = derived_bars(spec, request.bar);
+    build.segment_node[0] = PLAN_NODE_NONE;
+    build.segment_node[1] = PLAN_NODE_NONE;
+    /* A section's motives: its own, when it has one, and the four the ideas are made from, then the fragments' segments. */
+    size_t made = (spec->fragment_from_segment[0] ? 1 : 0) + (spec->fragment_from_segment[1] ? 1 : 0);
     for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
-        size_t bars = spec->has_idea_source[k] ? grow_motive_layout_bars(&spec->idea_source[k], request.bar) : 0;
-        build.motive_bars = bars > build.motive_bars ? bars : build.motive_bars;
+        made += spec->has_liquidated[k] ? 1 : 0;
+        build.liquid_node[k] = PLAN_NODE_NONE;
     }
-    /* A section's motives: its own, when it has one, and the four the ideas are made from. */
     build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
-                                          ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * build.motive_bars);
+                                          ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * build.motive_bars +
+                                              made);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
         result = add_section_motive(&build, build.slot_base, &build.source);
@@ -1226,6 +1395,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     if (result != PLAN_OK) {
         return result;
     }
+    build.result_base = build.slot_base + (GROW_PLACE_COUNT - 1) * build.motive_bars;
     result = grow_beginning_build(&build);
     return result == PLAN_OK ? grow_ending_build(&build) : result;
 }
