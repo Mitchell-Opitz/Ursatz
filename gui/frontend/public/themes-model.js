@@ -745,6 +745,15 @@
       chain: entry.chain || "",
       connection: percent(entry.connection),
     }));
+    /* One row for each developed idea: its summary line (a version composed before API 1.8 has only the
+     * development text) and the label of the motif's segment it came from. */
+    const developments = (Array.isArray(theme.developments) ? theme.developments : [])
+      .filter((entry) => entry && typeof entry === "object")
+      .map((entry) => ({
+        idea: entry.idea || "",
+        text: text(entry.summary) !== "" ? entry.summary : entry.development || "",
+        segment: typeof entry.segment === "string" ? entry.segment : "",
+      }));
     const brief = summary.brief || {};
     const tempo = brief.tempo || {};
     const mode = brief.mode || {};
@@ -754,6 +763,7 @@
     return {
       seed: Number.isInteger(r.seed) ? r.seed : null,
       rows,
+      developments,
       brief: {
         tempo: Number.isFinite(tempo.qpm) ? `${tempo.qpm} (${FROM_TEXT[tempo.from] || tempo.from})` : "not set",
         mode: mode.mode ? `${mode.mode} (${FROM_TEXT[mode.from] || mode.from})` : "",

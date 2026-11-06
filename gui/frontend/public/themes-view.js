@@ -497,6 +497,18 @@ function buildThemeResult(ctx) {
     table.appendChild(tr);
   }
   section.appendChild(table);
+  if (view.developments.length > 0) {
+    section.appendChild(materialsElement("h3", "section-title", "Development"));
+    const list = materialsElement("ul", "theme-developments");
+    for (const entry of view.developments) {
+      const item = materialsElement("li", "", entry.text);
+      if (entry.segment !== "") {
+        item.append(" ", materialsElement("span", "materials-tag", entry.segment));
+      }
+      list.appendChild(item);
+    }
+    section.appendChild(list);
+  }
   const midi = materialsElement("a", "back-link clickable", "Download MIDI");
   midi.href = ThemesModel.versionFileUrl(ctx.id, ctx.version, "theme.mid");
   midi.download = "theme.mid";
