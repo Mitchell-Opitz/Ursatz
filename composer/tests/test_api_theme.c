@@ -367,8 +367,8 @@ static void expect_motif_refused(const char *meter, const char *degrees, const c
 
 /* A motif longer than the basic idea of its theme is refused, with the bars of both and the path of the slot. */
 static void test_motif_too_long(void) {
-    expect_motif_refused("\"4/4\"", "1:w 3:w 5:w", "8", "the motif is 3 bars; the basic idea of a 8-bar theme is 2");
-    expect_motif_refused("\"4/4\"", "1:w 3:w", "4", "the motif is 2 bars; the basic idea of a 4-bar theme is 1");
+    expect_motif_refused("\"4/4\"", "1:w 3:w 5:w", "8", "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent");
+    expect_motif_refused("\"4/4\"", "1:w 3:w", "4", "the motif is 2 bars; a 4-bar theme takes a motif of up to 1 bars, or of 2 for its presentation or antecedent");
 }
 
 /* A 2-bar motif in 3/4 is the basic idea of an 8-bar theme. */
@@ -385,6 +385,37 @@ static void test_two_bar_motif(void) {
     cJSON *document = cJSON_Parse(response.json);
     assert(document && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(document, "themes")) == 1);
     cJSON_Delete(document);
+    composer_response_destroy(&response);
+}
+
+/* A 4-bar motif fills the presentation of an 8-bar sentence; a contrasting slot beside it is refused with its path. */
+static void test_part_length_motif(void) {
+    const char *motives = "[{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:w 3:w 5:w 3:w\", \"pickup\": \"0\", "
+                          "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}]";
+    const char *const edits[][2] = {{"motives", motives}};
+    ComposerResponse response;
+    ComposerStatus status = refuse_with(edits, 1, &response);
+    if (status != COMPOSER_OK) {
+        fprintf(stderr, "4-bar motif: %s: %s at '%s'\n", composer_status_name(status), response.error.message, response.error.path);
+    }
+    assert(status == COMPOSER_OK);
+    composer_response_destroy(&response);
+
+    const char *two = "[{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:w 3:w 5:w 3:w\", \"pickup\": \"0\", "
+                      "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}, "
+                      "{\"id\": \"B\", \"form\": \"full\", \"degrees\": \"5:q 3:q 1:h\", \"pickup\": \"0\", "
+                      "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}]";
+    const char *const slot_edits[][2] = {{"motives", two}, {"slots", "{\"basic\": \"A\", \"contrasting\": \"B\"}"}};
+    status = refuse_with(slot_edits, 2, &response);
+    assert(status == COMPOSER_ERR_REQUEST);
+    assert(strcmp(response.error.path, "/slots/contrasting") == 0);
+    assert(strstr(response.error.message, "the basic motif fills the whole presentation; leave the contrasting idea out"));
+    composer_response_destroy(&response);
+
+    const char *const idea_edits[][2] = {{"motives", two}, {"ideas", "{\"repetition\": \"B\"}"}};
+    status = refuse_with(idea_edits, 2, &response);
+    assert(status == COMPOSER_ERR_REQUEST);
+    assert(strcmp(response.error.path, "/ideas/repetition") == 0);
     composer_response_destroy(&response);
 }
 
@@ -426,6 +457,7 @@ int main(int argc, char **argv) {
     test_cancel_first();
     test_refused();
     test_motif_too_long();
+    test_part_length_motif();
     if (!quick) {
         test_two_bar_motif();
         test_snapshots();

@@ -71,6 +71,12 @@ typedef struct {
      */
     bool has_section_motive;
     PlanMotiveRef section_ref;
+    /*
+     * The motive is as long as the first part (presentation or antecedent) and fills it whole: the part is one idea with
+     * the motive as its melody, and source is the motive's first idea-length bars (made as the section's motive), the
+     * basic idea the second half is made from.
+     */
+    bool part_whole;
     /* The motives of the slots that have their own (GROW_SLOT_BASIC is source); the ideas of the slot are made from it. */
     Motive slot_source[GROW_SLOT_COUNT];
     bool has_slot_source[GROW_SLOT_COUNT];
@@ -238,6 +244,18 @@ typedef enum { GROW_FIT_SHORTER, GROW_FIT_WHOLE, GROW_FIT_LONGER } GrowMotiveFit
 GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars);
 /* Whether the motive fits an idea of idea_bars bars: not longer by grow_motive_fit, and its length (pickup included) within it. */
 bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars);
+/*
+ * Whether a motive longer than the basic idea is exactly as long as the first part of a theme of theme_bars bars, and the
+ * beginning is one with a part to fill whole: a presentation or an antecedent (a compound basic idea is one idea).
+ */
+bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning);
+/*
+ * The basic idea a part-length motive gives the rest of the theme: its leading notes that start inside the idea's
+ * bars, as the MotiveRelationStep (a leading fragment) that makes it from the motive. False when the motive is not
+ * part-length, fewer than two notes start inside the idea, or a note runs past the idea's end.
+ */
+bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning,
+                          Motive *basic, MotiveRelationStep *step);
 /* The bars a motive's node takes in the material, ceil(length / bar), at least one: its pickup is part of the node. */
 size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 

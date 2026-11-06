@@ -81,7 +81,16 @@ or idea motive, the bars of its place):
 | --- | --- |
 | `GROW_FIT_SHORTER` | The motif is grown to the idea: it is placed at the start, and its rhythm is repeated with new pitches to the idea's end. |
 | `GROW_FIT_WHOLE` | The motif is the idea: its notes are placed as written, bent to the idea's chords by its tone roles, and nothing is filled after it. When the idea ends the theme, the last note takes the nearest tone of the cadence's chord, its rhythm kept. |
-| `GROW_FIT_LONGER` | Refused: `GROW_ERR_MOTIVE_TOO_LONG` for the basic motive, `GROW_ERR_BAD_REQUEST` for a slot or idea motive. |
+| `GROW_FIT_LONGER` | Refused: `GROW_ERR_MOTIVE_TOO_LONG` for the basic motive (unless it is as long as the first part, see below), `GROW_ERR_BAD_REQUEST` for a slot or idea motive. |
+
+A basic motif exactly as long as the first part of the theme (4 bars of an 8-bar theme, 2 of a 4-bar one) fills that part
+whole when the beginning is a presentation or an antecedent (`grow_motive_fills_part`). The part is one idea, `basic idea`: the
+motif is its melody, placed as written, and an antecedent's weak cadence moves the last note as above. It has no repetition or
+contrasting idea, so a contrasting slot motive or a repetition or contrasting idea motive is `GROW_ERR_BAD_REQUEST` (the theme
+API: `/slots/contrasting`, `/ideas/<name>`). The basic idea the rest of the theme is made from is the motif's leading notes that
+start inside the first idea-length bars (`grow_part_basic_idea`), made as the section's motive; fewer than two such notes, or a
+note running past that idea, is refused. Any other longer motif, and any longer than the basic idea in a compound basic idea,
+is `GROW_ERR_MOTIVE_TOO_LONG`.
 
 The ideas made from a whole motif (the repetition, the dominant form, the consequent's restatement and a section's drawn
 motive) develop all of it and must fit the idea they fill. Each motive in the material takes its own bars, laid end to end.

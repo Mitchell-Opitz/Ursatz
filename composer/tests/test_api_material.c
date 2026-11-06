@@ -517,7 +517,7 @@ static void test_grow_refusals(void) {
     request = grow_request("sentence");
     cJSON_ReplaceItemInObject(request, "meter", cJSON_CreateString("3/4"));
     cJSON_ReplaceItemInObject(cJSON_GetObjectItemCaseSensitive(request, "input"), "text", cJSON_CreateString("D4:w D4:w D4:q"));
-    expect_refused(composer_api_grow, request, COMPOSER_ERR_UNSATISFIABLE, "", "the motif is 3 bars; the basic idea of a 8-bar theme is 2");
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_UNSATISFIABLE, "", "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent");
 }
 
 /* --- progress and cancel -------------------------------------------------------------------------- */
@@ -594,7 +594,7 @@ static void test_cancel(void) {
 }
 
 static void test_version(void) {
-    assert(strcmp(composer_api_version(), "1.4") == 0);
+    assert(strcmp(composer_api_version(), "1.5") == 0);
 }
 
 int main(int argc, char **argv) {

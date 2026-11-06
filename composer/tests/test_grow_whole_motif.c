@@ -244,7 +244,8 @@ static void test_four_bar_refused(void) {
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 4;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
+    /* A compound basic idea is one idea: no part for a 2-bar motive to fill. */
+    request.pairing.beginning = PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;
@@ -298,8 +299,96 @@ static void test_period_slot(void) {
     plan_destroy(plan);
 }
 
+/* A 4-bar 4/4 motif as long as the antecedent fills it whole: bars 1 to 4 are the motif's rhythm. */
+static const char *const FOUR_BARS = "E4:q G4:e F4:e D4:q C4:q | G4:q E4:q D4:q C4:q | E4:q G4:q C5:q G4:q | D5:q B4:q A4:q G4:q";
+
+static void check_whole_part(PiecePlan *plan, const Motive *motive) {
+    NodeId idea = find_node(plan, "basic idea");
+    assert(idea != PLAN_NODE_NONE);
+    PlanSpan span = plan_node_span(plan, idea);
+    assert(rational_cmp(span.length, (Rational){4, 1}) == 0);
+    LaneSpanId ids[8];
+    assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 8) == 1);
+    const PlanNotes *notes = &plan_lane_span_payload(plan, ids[0])->notes;
+    assert(notes->note_count == motive->note_count);
+    for (size_t n = 0; n < notes->note_count; n++) {
+        assert(rational_cmp(notes->notes[n].offset, motive->notes[n].onset) == 0);
+        assert(rational_cmp(notes->notes[n].duration, motive->notes[n].duration) == 0);
+    }
+}
+
+static GrowRequest part_request(const Motive *motive, PlanThemeBeginning beginning, PlanThemeEnding ending) {
+    GrowRequest request;
+    memset(&request, 0, sizeof(request));
+    request.motive = motive;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    request.bars = 8;
+    request.pairing.beginning = beginning;
+    request.pairing.ending = ending;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    return request;
+}
+
+static void test_part_length(void) {
+    Rational none = {0, 1};
+    Motive motive = make_motive(FOUR_BARS, 4, 4, false, 0, none);
+    static const PlanThemeBeginning BEGINNINGS[] = {PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_BEGINNING_PRESENTATION};
+    static const PlanThemeEnding ENDINGS[] = {PLAN_THEME_ENDING_CONSEQUENT, PLAN_THEME_ENDING_CONTINUATION,
+                                              PLAN_THEME_ENDING_CADENTIAL};
+    for (size_t b = 0; b < 2; b++) {
+        for (size_t e = 0; e < 3; e++) {
+            GrowRequest request = part_request(&motive, BEGINNINGS[b], ENDINGS[e]);
+            if (grow_pairing_archetype(&request.pairing) < 0) {
+                continue;
+            }
+            for (unsigned long seed = 1; seed <= 3; seed++) {
+                PiecePlan *plan = NULL;
+                GrowOutcome outcome;
+                GrowConfig config;
+                memset(&config, 0, sizeof(config));
+                config.seed = seed;
+                assert(grow_build_plan(&request, &plan) == GROW_OK);
+                GrowResult result = grow_run(plan, &config, &outcome);
+                if (result != GROW_OK) {
+                    fprintf(stderr, "part %zu/%zu seed %lu: stuck at %s\n", b, e, seed, grow_stage_name(outcome.stuck_stage));
+                }
+                assert(result == GROW_OK && !outcome.stuck);
+                check_whole_part(plan, &motive);
+                plan_destroy(plan);
+            }
+        }
+    }
+}
+
+/* A 4-bar motif with a compound basic idea, a 3-bar motif, and a contrasting slot beside a part-length motif are refused. */
+static void test_part_length_refused(void) {
+    Rational none = {0, 1};
+    Motive motive = make_motive(FOUR_BARS, 4, 4, false, 0, none);
+    PiecePlan *plan = NULL;
+    GrowRequest compound = part_request(&motive, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, PLAN_THEME_ENDING_CONTINUATION);
+    assert(grow_build_plan(&compound, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    Motive three = make_motive("E4:q G4:q C5:q G4:q | D5:q B4:q A4:q G4:q | E4:w", 4, 4, false, 0, none);
+    GrowRequest request = part_request(&three, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    /* A 5-bar motif is longer than the part too. */
+    Motive five = make_motive("C4:w C4:w C4:w C4:w C4:w", 4, 4, false, 0, none);
+    request.motive = &five;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    Motive contrasting = make_motive("E5:q C5:q A4:q G4:q", 4, 4, false, 0, none);
+    request = part_request(&motive, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
+    request.slot_motives[GROW_SLOT_CONTRASTING] = &contrasting;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+    request = part_request(&motive, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
+    request.idea_motives[GROW_IDEA_REPETITION] = &contrasting;
+    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+}
+
 int main(void) {
     test_four_bar_refused();
+    test_part_length();
+    test_part_length_refused();
     test_period_slot();
     test_variety();
     test_fit();

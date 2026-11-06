@@ -88,8 +88,12 @@ static const char *judge_sentence(const GrowThemeSpec *spec, Soft *soft) {
     ask(soft, standard_form_sentence_is_archetypal(spec->bars, half, half, true));
     ask(soft, standard_form_presentation_length_usual(half));
     ask(soft, standard_form_continuation_balanced(half, half));
-    ask(soft, spec->has_developed[GROW_PLACE_REPETITION] &&
-                  standard_form_idea_reads_as_repetition(grow_same_contour(&spec->source, &spec->developed[GROW_PLACE_REPETITION])));
+    /* A presentation filled whole by a motive has no repetition to read as one. */
+    if (!spec->part_whole) {
+        ask(soft, spec->has_developed[GROW_PLACE_REPETITION] &&
+                      standard_form_idea_reads_as_repetition(
+                          grow_same_contour(&spec->source, &spec->developed[GROW_PLACE_REPETITION])));
+    }
     return NULL;
 }
 
@@ -125,8 +129,11 @@ static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
     ask(soft, standard_form_consequent_cadence_usual(spec->cadence));
     ask(soft, standard_form_antecedent_length_usual(half));
     ask(soft, standard_form_consequent_length_usual(half, half));
-    ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_PLACE_CONTRAST],
-                                                                     &spec->developed[GROW_PLACE_CONSEQUENT_CONTRAST])));
+    /* An antecedent filled whole has no contrasting idea of its own to differ from the consequent's. */
+    if (!spec->part_whole) {
+        ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_PLACE_CONTRAST],
+                                                                         &spec->developed[GROW_PLACE_CONSEQUENT_CONTRAST])));
+    }
     return NULL;
 }
 
@@ -151,7 +158,9 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
     }
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
         ask(soft, standard_form_presentation_length_usual(half));
-        ask(soft, spec->has_developed[GROW_PLACE_REPETITION] && reads_as_repetition(spec, GROW_PLACE_REPETITION));
+        if (!spec->part_whole) {
+            ask(soft, spec->has_developed[GROW_PLACE_REPETITION] && reads_as_repetition(spec, GROW_PLACE_REPETITION));
+        }
     }
     if (spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         ask(soft, standard_form_continuation_balanced(half, half));
@@ -174,7 +183,7 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
         return "basic idea length not valid";
     }
     /* A contrasting idea that keeps m0's contour would read as its repetition. */
-    if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION &&
+    if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION && !spec->part_whole &&
         (!spec->has_developed[GROW_PLACE_CONTRAST] ||
          (!grow_idea_own(spec, GROW_PLACE_CONTRAST) && reads_as_repetition(spec, GROW_PLACE_CONTRAST)))) {
         return "contrasting idea reads as a repetition";

@@ -640,6 +640,16 @@ ComposerStatus api_fail_motif_long(ComposerError *error, const char *path, const
                     bars, theme_bars, idea_bars);
 }
 
+/* A theme's motif longer than its part: the lengths a theme of these bars takes (the basic idea, or the first part). */
+static ComposerStatus fail_motif_long_theme(ComposerError *error, const char *path, const Motive *motive,
+                                            const PlanMeter *meter, size_t theme_bars) {
+    size_t bars = motive ? grow_motive_layout_bars(motive, grow_bar_length(meter)) : 0;
+    return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path,
+                    "the motif is %zu bars; a %zu-bar theme takes a motif of up to %zu bars, or of %zu for its "
+                    "presentation or antecedent",
+                    bars, theme_bars, theme_bars == 4 ? (size_t)1 : (size_t)2, theme_bars / 2);
+}
+
 ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error) {
     memset(run, 0, sizeof(*run));
     run->chord_bar = -1;
@@ -670,8 +680,8 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
             }
         } else if (result != GROW_ERR_STUCK) {
             return result == GROW_ERR_MOTIVE_TOO_LONG
-                       ? api_fail_motif_long(error, setup->material ? "/slots/basic" : "", setup->motive, &setup->meter,
-                                             setup->bars, setup->bars == 4 ? 1 : 2)
+                       ? fail_motif_long_theme(error, setup->material ? "/slots/basic" : "", setup->motive, &setup->meter,
+                                               setup->bars)
                    : result == GROW_ERR_BAD_REQUEST
                        ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
                                   "this theme cannot be grown as asked: the motive needs at least two notes, an "
