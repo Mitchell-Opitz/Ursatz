@@ -121,7 +121,8 @@ typedef struct {
     NodeId material;         /* the idea of the material section the motive nodes go in */
     PlanSpan material_span;
     NodeId source;           /* the motive node the ideas are made from: m0, or the section's own motive */
-    size_t slot_base;        /* the bar of the material motive slot 1 goes in; slot k goes k - 1 bars after it */
+    size_t motive_bars;      /* the bars a derived motive node takes in the material: those of the longest motive given */
+    size_t slot_base;        /* the bar of the material motive slot 1 goes in; slot k goes (k - 1) * motive_bars after it */
 } GrowBuild;
 
 /* A length of count units. */
@@ -129,7 +130,7 @@ Rational grow_scaled(Rational unit, size_t count);
 /* A node of the theme, Realized, from start_unit units after the theme's start and units long. */
 PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
                          const char *name, NodeId *out);
-/* The motive node m<slot> in the material, made from the ref, at bar slot_base + slot - 1 of the material. */
+/* The motive node m<slot> in the material, made from the ref, at bar slot_base + (slot - 1) * motive_bars of the material. */
 PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out);
 /* A harmony span and the bass span beside it, both open, over an idea or a subphrase. */
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,

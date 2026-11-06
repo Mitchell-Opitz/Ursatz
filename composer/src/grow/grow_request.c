@@ -407,6 +407,17 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
             extra_bars += grow_motive_layout_bars(request->idea_motives[idea], bar) - 1;
         }
     }
+    /* The derived motives take the bars of the longest motive given: the section's own and the four of the ideas. */
+    size_t longest = grow_motive_layout_bars(request->motive, bar);
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
+        size_t bars = request->slot_motives[slot] ? grow_motive_layout_bars(request->slot_motives[slot], bar) : 0;
+        longest = bars > longest ? bars : longest;
+    }
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        size_t bars = request->idea_motives[idea] ? grow_motive_layout_bars(request->idea_motives[idea], bar) : 0;
+        longest = bars > longest ? bars : longest;
+    }
+    extra_bars += GROW_PLACE_COUNT * (longest - 1);
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars;
     if (accompaniment_motive && rational_cmp(accompaniment_motive->length, bar) > 0) {
         return GROW_ERR_BAD_REQUEST;
