@@ -110,9 +110,9 @@ static inline bool melody_on_cell(const MelodyContext *context, Rational positio
 /* Where a target sits in its phrase's arch (see melody_role). A target that is the whole phrase is MELODY_ROLE_WHOLE. */
 typedef enum {
     MELODY_ROLE_WHOLE,
-    MELODY_ROLE_BEFORE, /* the phrase's climax falls in a later target: no note above range_high - 3 */
+    MELODY_ROLE_BEFORE, /* the phrase's climax falls in a later target: no generated note above range_high - 3 */
     MELODY_ROLE_CLIMAX, /* the phrase's climax falls in this target: it writes the phrase's highest note */
-    MELODY_ROLE_AFTER   /* the climax is written: every note is below it */
+    MELODY_ROLE_AFTER   /* the climax is written: every generated note is below it */
 } MelodyRole;
 
 /* The position of the target at which the phrase's climax falls, which may lie before 0 or past the end. */

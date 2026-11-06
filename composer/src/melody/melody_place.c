@@ -306,7 +306,6 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
     int high = params->range_high;
     MelodyContour contour;
     size_t before = 0; /* the anchor before this one */
-    int first_floor = -1; /* the lowest pitch the first note may take, for the target with the phrase's climax */
     memset(&contour, 0, sizeof(contour));
     for (size_t i = 0; i < out->count; i++) {
         MelodyNote *note = &out->notes[i];
@@ -316,7 +315,6 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         unsigned mask;
         int ideal;
         int top = high;
-        int reach = MAX_MOVE;
         if (!melody_is_anchor(context, params, out, i)) {
             continue;
         }
@@ -328,60 +326,27 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         if (i + 1 == out->count) {
             mask &= melody_cadence_mask(context);
         }
-        if (note->motive_index < 0) {
-            if (!contour.made && !melody_contour_plan(context, params, out, i, rng, &contour)) {
-                return false;
-            }
-            climax = !contour.in_motive && i == contour.climax;
-            top = climax ? high : (contour.cap < high ? contour.cap : high);
+        /* Only generated notes are placed here: a motive's notes are realized already and are the anchors they follow. */
+        if (!contour.made && !melody_contour_plan(context, params, out, i, rng, &contour)) {
+            return false;
         }
-        if (i == 0) {
-            ideal = context->motive_pitch[0];
-            reach = 127;
-            /* The target with the phrase's climax rises above every note the phrase has had, and the motive may be
-               all there is of it, so the motive is placed high enough to be that. */
-            if (context->idea && context->phrase_has_top && melody_role(context, params) == MELODY_ROLE_CLIMAX) {
-                int rise = 0;
-                for (size_t k = 1; k < context->motive_count; k++) {
-                    rise = context->motive_pitch[k] - context->motive_pitch[0] > rise
-                               ? context->motive_pitch[k] - context->motive_pitch[0]
-                               : rise;
-                }
-                int wanted_top = context->phrase_top + 1 + (int)fill_rng_below(rng, 3);
-                ideal = wanted_top - rise > ideal ? wanted_top - rise : ideal;
-                ideal = ideal + rise > params->range_high ? params->range_high - rise : ideal;
-                first_floor = context->phrase_top + 1 - rise;
-            }
-        } else if (note->motive_index >= 0 && out->notes[before].motive_index >= 0) {
-            size_t k = (size_t)note->motive_index;
-            size_t then = (size_t)out->notes[before].motive_index;
-            ideal = out->notes[before].pitch + context->motive_pitch[k] - context->motive_pitch[then];
-            reach = params->tolerance * (int)(i - before);
-        } else {
-            ideal = melody_contour_ideal(context, &contour, out, i, before);
-            /* A leap of a fourth or more is answered by a step back, unless this is the climax or the end. */
-            if (adjacent && (before > 0 || context->lead_in_count > 0) && i + 1 < out->count) {
-                int leap = out->notes[before].pitch -
-                           (before > 0 ? out->notes[before - 1].pitch : context->lead_in[context->lead_in_count - 1]);
-                if (leap >= MELODY_RECOVER_FROM || leap <= -MELODY_RECOVER_FROM) {
-                    ideal = out->notes[before].pitch + (leap > 0 ? -2 : 2);
-                }
+        climax = !contour.in_motive && i == contour.climax;
+        top = climax ? high : (contour.cap < high ? contour.cap : high);
+        ideal = melody_contour_ideal(context, &contour, out, i, before);
+        /* A leap of a fourth or more is answered by a step back, unless this is the climax or the end. */
+        if (adjacent && (before > 0 || context->lead_in_count > 0) && i + 1 < out->count) {
+            int leap = out->notes[before].pitch -
+                       (before > 0 ? out->notes[before - 1].pitch : context->lead_in[context->lead_in_count - 1]);
+            if (leap >= MELODY_RECOVER_FROM || leap <= -MELODY_RECOVER_FROM) {
+                ideal = out->notes[before].pitch + (leap > 0 ? -2 : 2);
             }
         }
         size_t count = options_for(mask, low, top, ideal, options);
         size_t kept = 0;
         for (size_t j = 0; j < count; j++) {
             int move = options[j].pitch - out->notes[before].pitch;
-            bool repeat = note->motive_index < 0 && adjacent && move == 0;
-            if (i > 0 && ((adjacent && !leap_allowed(move)) || repeat)) {
-                continue;
-            }
-            if (i == 0 && first_floor >= 0 && options[j].pitch < first_floor) {
-                continue;
-            }
-            /* The first note of a target that follows written melody joins it by a leap standard-counterpoint allows. */
-            if (i == 0 && context->lead_in_count > 0 &&
-                !leap_allowed(options[j].pitch - context->lead_in[context->lead_in_count - 1])) {
+            bool repeat = adjacent && move == 0;
+            if ((adjacent && !leap_allowed(move)) || repeat) {
                 continue;
             }
             /* The last note of a target that comes before written melody leads to its first note by a leap allowed. */
@@ -395,15 +360,7 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
                 return false;
             }
-        } else if (!pick(options, kept, reach, rng, context->restating, &note->pitch) &&
-                   /* The chord tone a figure of the motive resolves to keeps its interval within the tolerance where a chord tone
-                      allows it, else it takes the nearest chord tone (R-215). */
-                   !(resolves_figure(context, params, out->notes, out->count, i) &&
-                     pick(options, kept, 127, rng, context->restating, &note->pitch)) &&
-                   /* The last note of a motive that fills its idea whole, which ends the theme, moves to the nearest tone of the
-                      cadence's chord, its rhythm kept. */
-                   !(note->motive_index >= 0 && i + 1 == out->count && context->has_cadence &&
-                     pick(options, kept, 127, rng, true, &note->pitch))) {
+        } else if (!pick(options, kept, MAX_MOVE, rng, false, &note->pitch)) {
             return false;
         }
         if (i > 0 && before + 1 < i) {
@@ -415,28 +372,11 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                                                                                                 : contour.cap;
             }
             for (size_t j = before + 1; j < i; j++) {
-                const MelodyNote *weak = &out->notes[j];
-                if (weak->motive_index >= 0 && out->notes[before].motive_index >= 0) {
-                    between[j] = out->notes[before].pitch + context->motive_pitch[weak->motive_index] -
-                                 context->motive_pitch[out->notes[before].motive_index];
-                } else {
-                    between[j] = out->notes[before].pitch +
-                                 (note->pitch - out->notes[before].pitch) * (int)(j - before) / (int)(i - before);
-                }
+                between[j] = out->notes[before].pitch +
+                             (note->pitch - out->notes[before].pitch) * (int)(j - before) / (int)(i - before);
             }
-            MelodyFillParams region = *params;
-            if (context->motive_tone_count > 0) {
-                mark_chord_tones(context, out->notes, before, i);
-                region.nct_types |= place_figures(context, params, out->notes, out->count, before, i);
-            }
-            if (!melody_fill_between(context, &region, out->notes, out->count, before, i, between, cap, rng)) {
-                give_up_figures(out->notes, before, i);
-                region = *params;
-                if (!melody_fill_between(context, &region, out->notes, out->count, before, i, between, cap, rng)) {
-                    return false;
-                }
-            } else {
-                out->params.nct_types |= region.nct_types;
+            if (!melody_fill_between(context, params, out->notes, out->count, before, i, between, cap, rng)) {
+                return false;
             }
         }
         before = i;
@@ -551,7 +491,8 @@ bool melody_build(const MelodyContext *context, const MelodyFillParams *params, 
     memset(out, 0, sizeof(*out));
     out->magic = MELODY_PAYLOAD_MAGIC;
     out->context = *context;
-    out->params = arch;
+    /* The checker holds every note to the voice's range: the arch caps are for the notes that are generated (R-327). */
+    out->params = *params;
     /* A melody with two notes as high as its highest has no one climax. */
     bool assigned = layout(context, &arch, out) && melody_realize(context, params, shift, keep_figures, out) &&
                     assign(context, &arch, rng, out) && place_pickup(context, &arch, rng, out);
