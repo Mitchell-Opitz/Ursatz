@@ -660,8 +660,9 @@ static size_t derived_bars(const GrowThemeSpec *spec, Rational bar) {
     return bars;
 }
 
-/* The motives grow-theme makes in the material, one bar each: the two segments of the fragments and the liquidation. */
-#define MADE_NODES 3
+/* The most motives grow-theme makes in the material, one bar each: the two segments of the fragments and a liquidation for each of
+   the two fragments and the cadential idea (apply takes a bar for every one it makes). */
+#define MADE_NODES 5
 
 static size_t count_bars(PlanSpan material_span, Rational bar);
 
