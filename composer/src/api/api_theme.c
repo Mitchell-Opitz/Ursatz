@@ -18,6 +18,7 @@
 #include "api_grow.h"
 #include "api_internal.h"
 #include "api_vocabulary.h"
+#include "grow/grow_internal.h"
 #include "util/request_parse.h"
 
 /*
@@ -328,6 +329,36 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
     return COMPOSER_OK;
 }
 
+/*
+ * A basic motif as long as the presentation or the antecedent fills that part whole: it leaves no contrasting or repeating
+ * idea, so a contrasting slot or the motive of that idea is refused where it is given.
+ */
+static ComposerStatus refuse_idea_beside_part(const GrowMaterial *material, const ThemeRequest *theme,
+                                              const GrowSetup *setup, ComposerError *error) {
+    Motive basic;
+    MotiveRelationStep step;
+    if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), setup->bars, setup->pairing.beginning, &basic,
+                              &step)) {
+        return COMPOSER_OK;
+    }
+    const char *part = setup->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? "antecedent" : "presentation";
+    char path[96];
+    if (theme->slot_motive[GROW_SLOT_CONTRASTING]) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/slots/contrasting",
+                        "the basic motif fills the whole %s; leave the contrasting idea out", part);
+    }
+    for (int idea = GROW_IDEA_BASIC + 1; idea < GROW_IDEA_COUNT; idea++) {
+        GrowPlace place;
+        if (theme->idea_motive[idea] && grow_idea_place(&setup->pairing, (GrowIdea)idea, &place) &&
+            place == GROW_PLACE_REPETITION) {
+            snprintf(path, sizeof path, "/ideas/%.80s", grow_idea_name((GrowIdea)idea));
+            return api_fail(error, COMPOSER_ERR_REQUEST, path,
+                            "the basic motif fills the whole %s; leave the contrasting idea out", part);
+        }
+    }
+    return COMPOSER_OK;
+}
+
 /* Fills the motives of the material once the key and the meter are known (the style has given the mode). */
 static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *theme, const cJSON *request,
                                     const GrowSetup *setup, ComposerError *error) {
@@ -380,7 +411,8 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
         }
         material->has_accompaniment_motive = true;
     }
-    return read_chords(material, request, &setup->meter, &setup->key, error);
+    status = refuse_idea_beside_part(material, theme, setup, error);
+    return status != COMPOSER_OK ? status : read_chords(material, request, &setup->meter, &setup->key, error);
 }
 
 /* --- the brief ---------------------------------------------------------------------------------------- */
