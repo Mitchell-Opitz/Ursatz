@@ -131,6 +131,12 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
             ok = motive_relation_step_text(&constraint->params.motive.step, text, sizeof(text)) &&
                  plan_json_add(object, "step", cJSON_CreateString(text));
         }
+        if (ok && constraint->params.motive.segment[0] != '\0') {
+            ok = plan_json_add(object, "segment", cJSON_CreateString(constraint->params.motive.segment));
+        }
+        if (ok && constraint->params.motive.steps > 0) {
+            ok = plan_json_add(object, "steps", json_number((long)constraint->params.motive.steps));
+        }
         break;
     case PLAN_CONSTRAINT_KEY:
         ok = ok && key_members_json(object, &constraint->params.key);
@@ -934,9 +940,31 @@ static bool read_motive_ref(JsonReader *reader, const cJSON *item, const char *p
         return false;
     }
     ref->motive = (NodeId)number_value;
+    /* The segment and the liquidation steps the motive is made from, both optional (ch. VIII). */
+    const cJSON *segment = cJSON_GetObjectItemCaseSensitive(item, "segment");
+    /* An older file's "transform" has a "steps" of its own (plan_motive_ref_from_transform), which this is not. */
+    const cJSON *steps = cJSON_GetObjectItemCaseSensitive(item, "transform")
+                             ? NULL
+                             : cJSON_GetObjectItemCaseSensitive(item, "steps");
+    char at[PLAN_JSON_PATH_MAX];
+    if (segment) {
+        json_child_path(at, path, "segment");
+        if (!cJSON_IsString(segment) || segment->valuestring[0] == '\0' ||
+            strlen(segment->valuestring) > PLAN_SEGMENT_LABEL_MAX) {
+            return json_bad_format(reader, at, "expected a segment label of 1 to 8 characters");
+        }
+        strcpy(ref->segment, segment->valuestring);
+    }
+    if (steps) {
+        long count;
+        json_child_path(at, path, "steps");
+        if (!json_read_long(reader, steps, at, 1, 8, &count)) {
+            return false;
+        }
+        ref->steps = (size_t)count;
+    }
     const cJSON *step = cJSON_GetObjectItemCaseSensitive(item, "step");
     const cJSON *transform = cJSON_GetObjectItemCaseSensitive(item, "transform");
-    char at[PLAN_JSON_PATH_MAX];
     if (step) {
         json_child_path(at, path, "step");
         if (!cJSON_IsString(step)) {

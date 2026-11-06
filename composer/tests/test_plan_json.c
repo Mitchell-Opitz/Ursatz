@@ -109,7 +109,9 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PlanConstraint archetype = {PLAN_CONSTRAINT_ARCHETYPE, {0}};
     archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
-    PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint motive_ref;
+    memset(&motive_ref, 0, sizeof(motive_ref));
+    motive_ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     motive_ref.params.motive.motive = m1;
     motive_ref.params.motive.has_step = true;
     motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_TRANSPOSE, .value = {0, -2}};

@@ -156,7 +156,9 @@ static Fixture build(const Scenario *scenario, bool with_development) {
            PLAN_OK);
     if (with_development) {
         PlanSpan second = {time_plus(extra.start, fixture.bar_length), fixture.bar_length};
-        PlanConstraint develop = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+        PlanConstraint develop;
+        memset(&develop, 0, sizeof(develop));
+        develop.kind = PLAN_CONSTRAINT_MOTIVE_REF;
         assert(plan_add_node(fixture.plan, idea, PLAN_NODE_MOTIVE, second, "developed", &fixture.developed) ==
                PLAN_OK);
         develop.params.motive.motive = fixture.source;
@@ -217,7 +219,9 @@ static NodeId motive_for(const Fixture *fixture, bool developed, bool *is_develo
 
 static void add_target(Fixture *fixture, NodeId motive, bool transposed) {
     fixture->target = add_notes(fixture->plan, fixture->owner, PLAN_LANE_MELODY, fixture->span, 60);
-    PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint ref;
+    memset(&ref, 0, sizeof(ref));
+    ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     ref.params.motive.motive = motive;
     ref.params.motive.has_step = transposed;
     ref.params.motive.step.kind = MOTIVE_RELATION_TRANSPOSE;
@@ -683,7 +687,11 @@ static IdeaFixture build_ideas(int beats, int unit, KeyStructureMode mode, int t
     cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(plan_lane_span_add_constraint(fixture.plan, id, &cadence) == PLAN_OK);
 
-    PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint ref;
+
+    memset(&ref, 0, sizeof(ref));
+
+    ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     ref.params.motive.motive = fixture.source;
     fixture.first = add_notes(fixture.plan, first_idea, PLAN_LANE_MELODY, first_span, 60);
     fixture.second = add_notes(fixture.plan, second_idea, PLAN_LANE_MELODY, second_span, 60);
@@ -883,7 +891,9 @@ static ToneScene build_tone_scene(bool keyed) {
         id = add_notes(scene.plan, phrase, PLAN_LANE_BASS, bars[bar], BASS[bar]);
         assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     }
-    PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint ref;
+    memset(&ref, 0, sizeof(ref));
+    ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     ref.params.motive.motive = scene.source;
     scene.first = add_notes(scene.plan, idea_one, PLAN_LANE_MELODY, bar_zero, 60);
     scene.second = add_notes(scene.plan, idea_two, PLAN_LANE_MELODY, bar_one, 60);

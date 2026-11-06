@@ -416,6 +416,9 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
         PlanMotiveRef ref = refs[slot];
         ref.motive = motives[slot];
+        /* The segment and the steps are recorded on the motive node; the melody asks for the node. */
+        ref.segment[0] = '\0';
+        ref.steps = 0;
         result = grow_add_melody_target(build, ideas[slot], &ref, slot == last_slot ? &build->cadence : NULL);
     }
     return result;

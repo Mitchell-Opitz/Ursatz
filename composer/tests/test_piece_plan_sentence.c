@@ -205,7 +205,9 @@ int main(void) {
     length.params.bars = 8;
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
     cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint motive_ref;
+    memset(&motive_ref, 0, sizeof(motive_ref));
+    motive_ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     motive_ref.params.motive.motive = m1;
     motive_ref.params.motive.has_step = true;
     motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_INVERT, .value = {-1, 0}};
@@ -219,7 +221,11 @@ int main(void) {
     assert(plan_lane_span_add_constraint(plan, harmony_two, &motive_ref) == PLAN_OK);
     assert(plan_lane_span_constraint_count(plan, harmony_two) == 1);
 
-    PlanConstraint bad_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    PlanConstraint bad_ref;
+
+    memset(&bad_ref, 0, sizeof(bad_ref));
+
+    bad_ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     bad_ref.params.motive.motive = phrase;
     assert(plan_node_add_constraint(plan, phrase, &bad_ref) == PLAN_ERR_BAD_PAYLOAD);
     assert(plan_node_remove_constraint(plan, phrase, 0) == PLAN_OK);

@@ -349,6 +349,10 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
     memset(out, 0, sizeof(*out));
     out->motive = source;
     out->steps = spec->has_liquidated[idea] ? spec->liquidation_steps[idea] : 0;
+    const MotiveSketchFeature *segment;
+    if (grow_idea_segment(spec, idea, &segment)) {
+        snprintf(out->segment, sizeof(out->segment), "%s", segment->label);
+    }
     if (grow_idea_dev(spec, idea, &dev)) {
         out->has_step = true;
         out->step = dev;
@@ -639,6 +643,8 @@ static bool draw_part_whole(const ThemeRequest *request, GrowThemeSpec *spec) {
     spec->source = basic;
     return true;
 }
+
+_Static_assert(PLAN_SEGMENT_LABEL_MAX == MOTIVE_FEATURE_LABEL_MAX, "a plan's segment label holds a feature label");
 
 /* The bars a derived motive node takes in the material: those of the longest motive the theme is made from. */
 static size_t derived_bars(const GrowThemeSpec *spec, Rational bar) {
