@@ -282,6 +282,13 @@ NodeId grow_find_source(const PiecePlan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */
 bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out);
 
+/*
+ * One segment of a motive as a motive of its own: its notes from time 0 (no pickup), with the source's meter and key, the
+ * base harmony chords that sound under it (onsets moved to the segment) and the tone roles of its notes. False for a
+ * segment of fewer than two notes or one that does not lie in the source.
+ */
+bool grow_segment_motive(const Motive *source, const MotiveSketchFeature *segment, Motive *out);
+
 /* The development of m0 each idea after the basic idea is, as a spec the motive operators read. */
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out);
 /* The specs those refs make, to make the result here with the same Ursatz call the operators use. */
