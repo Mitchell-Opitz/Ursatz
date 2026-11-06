@@ -246,6 +246,13 @@ GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_ba
     return bars < (long long)idea_bars ? GROW_FIT_SHORTER : (bars == (long long)idea_bars ? GROW_FIT_WHOLE : GROW_FIT_LONGER);
 }
 
+bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars) {
+    Rational room = {0, 1};
+    /* A pickup is part of the motive's length, so it counts toward the idea's: the motive is placed from its start. */
+    return grow_motive_fit(motive, bar, idea_bars) != GROW_FIT_LONGER &&
+           rational_mul_int(bar, (long long)idea_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
+}
+
 size_t grow_motive_layout_bars(const Motive *motive, Rational bar) {
     Rational span = {0, 1};
     long long bars = 0;
@@ -306,6 +313,12 @@ bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePa
            (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars, cells_per_bar, first)));
 }
 
+/* The bars of an idea that has `units` eighths of a theme of `bars` bars, at least one (a half-bar idea is a bar's). */
+static size_t idea_bars(size_t bars, size_t units) {
+    size_t whole = bars * units / 8;
+    return whole < 1 ? 1 : whole;
+}
+
 /* Whether a slot's motive is one the theme can be built from: see GrowRequest.slot_motives. */
 static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rational bar) {
     const Motive *motive = request->slot_motives[slot];
@@ -320,12 +333,12 @@ static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rationa
           motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR)))) {
         return false;
     }
-    /* The first idea of the slot has units eighths of the theme; the longest is a bar. */
+    /* The first idea of the slot has units eighths of the theme; the longest is as long as that idea. */
     if (units > 0 && rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
         rational_cmp(motive->length, room) > 0) {
         return false;
     }
-    return rational_cmp(motive->length, bar) <= 0;
+    return grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units));
 }
 
 /* Whether the motive of a single idea is one the theme can be built from: see GrowRequest.idea_motives. */
@@ -347,7 +360,7 @@ static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rationa
         rational_cmp(motive->length, room) > 0) {
         return false;
     }
-    return rational_cmp(motive->length, bar) <= 0;
+    return grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units));
 }
 
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
@@ -380,7 +393,10 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         return GROW_ERR_BAD_REQUEST;
     }
     Rational bar = grow_bar_length(&request->meter);
-    if (rational_cmp(request->motive->length, bar) > 0) {
+    size_t basic_units = 0;
+    /* The basic motive fills the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. */
+    if (!grow_slot_used(&request->pairing, GROW_SLOT_BASIC, &basic_units) ||
+        !grow_motive_fits_idea(request->motive, bar, idea_bars(request->bars, basic_units))) {
         return GROW_ERR_MOTIVE_TOO_LONG;
     }
     /* The slot motives, each a node of the material after m0. */

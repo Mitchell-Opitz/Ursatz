@@ -144,7 +144,8 @@ typedef struct {
      * (the consequent contrasting idea, fragment 2, cadential 2) are made from it as the basic motive's are, and the
      * remoteness of their forms is measured from it. Refused (GROW_ERR_BAD_REQUEST) with a motive that is not a full
      * motive of two notes or more in the theme's key and meter, longer than the idea it begins (two bars of eight for
-     * the contrasting idea and the cadential idea or cadential 1, one for fragment 1), or for a slot the pairing has no
+     * the contrasting idea and the cadential idea or cadential 1, one for fragment 1; a motive as long as the idea
+     * fills it whole, as written), or for a slot the pairing has no
      * idea for (a contrasting slot in a sentence, a continuation slot without a continuation). Must outlive
      * grow_build_plan only.
      */
@@ -179,7 +180,7 @@ typedef enum {
     GROW_OK = 0,
     GROW_ERR_NULL,
     GROW_ERR_ALLOC,
-    GROW_ERR_MOTIVE_TOO_LONG, /* the motive does not fit in one bar of the meter */
+    GROW_ERR_MOTIVE_TOO_LONG, /* the motive is longer than the basic idea it fills (two bars of an 8-bar theme, one of 4) */
     GROW_ERR_BAD_REQUEST,     /* a meter the harmony operators do not support, bars not 4 or 8, a pairing not built
                                  yet, a cadence other than PAC, IAC or HC, a motive of one note, an accompaniment
                                  that is not valid or is Alberti in a compound meter, an accompaniment and a

@@ -63,7 +63,7 @@ typedef enum {
     PIECE_OK = 0,
     PIECE_ERR_NULL,
     PIECE_ERR_ALLOC,
-    PIECE_ERR_MOTIVE_TOO_LONG, /* the motive does not fit in one bar of the meter */
+    PIECE_ERR_MOTIVE_TOO_LONG, /* the motive is longer than the basic idea it fills (2 bars of an 8-bar section, else 1) */
     PIECE_ERR_BAD_REQUEST,     /* a meter or key not supported, a motive of one note, an accompaniment that is not
                                   valid, a section grow-theme cannot build in the meter */
     PIECE_ERR_STUCK,           /* a stage left a target open */
@@ -74,6 +74,8 @@ const char *piece_result_name(PieceResult result);
 
 /* The material bars a piece of section_count sections holds: m0, then five bars a section. */
 size_t piece_material_bars(size_t section_count);
+/* The same for a motive that takes motive_bars bars: m0 takes them, and so does each of the five motives a section holds. */
+size_t piece_material_bars_of(size_t section_count, size_t motive_bars);
 
 /* Builds the plan of the request into *out, which the caller destroys with plan_destroy. */
 PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out);

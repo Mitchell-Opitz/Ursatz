@@ -358,13 +358,13 @@ static void test_bad_requests(void) {
     changed.cadence = CADENCE_TYPE_DECEPTIVE;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
 
-    /* A motive that does not fit in a bar. */
+    /* A motive longer than the basic idea (two bars of eight): three whole notes. */
     Motive long_motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.has_meter = true;
     options.meter = request.meter;
-    assert(motive_from_notes_text("E4:q G4:q F4:q D4:q C4:q", &options, &long_motive, NULL) == MOTIVE_OK);
+    assert(motive_from_notes_text("E4:w G4:w F4:w", &options, &long_motive, NULL) == MOTIVE_OK);
     changed = request;
     changed.motive = &long_motive;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);

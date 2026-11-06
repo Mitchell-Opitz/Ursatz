@@ -321,8 +321,8 @@ static void test_bad_arguments(void) {
 }
 
 static void test_cannot_be_satisfied(void) {
-    /* A motive longer than a bar. */
-    write_text("grow_cli_long.txt", "D4:w D4:q\n");
+    /* A motive longer than the basic idea (two bars of eight). */
+    write_text("grow_cli_long.txt", "D4:w D4:w D4:q\n");
     expect_failure("grow_cli_long.txt --into sentence --key \"D minor\" --meter 4/4", 2, "does not fit in one bar of 4/4");
     /* One note is not a motive to grow a theme from. */
     write_text("grow_cli_single.txt", "D4:q\n");
@@ -330,7 +330,8 @@ static void test_cannot_be_satisfied(void) {
     /* An input that cannot be loaded as a motive. */
     expect_failure(FIXTURE("no_such_file.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "cannot load");
     expect_failure(FIXTURE("motive_polyphonic.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "polyphonic");
-    expect_failure(FIXTURE("motive_d_minor.txt") " --into sentence --key \"D minor\" --meter 3/4", 2, "does not fit in one bar of 3/4");
+    write_text("grow_cli_long34.txt", "D4:w D4:w D4:q\n");
+    expect_failure("grow_cli_long34.txt --into sentence --key \"D minor\" --meter 3/4", 2, "does not fit in one bar of 3/4");
     /* An antecedent cannot end more strongly than the theme. */
     expect_failure(BASE " --into period --first-cadence IAC --cadence IAC", 2, "cannot be grown as asked");
     expect_failure(BASE " --into period --cadence HC", 2, "cannot be grown as asked");
