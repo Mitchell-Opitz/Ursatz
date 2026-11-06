@@ -16,7 +16,11 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   Analyzer and Seed. Below is the composed theme (Result).
 - Structure tab: form: into (sentence, period, hybrid with its pairing, and the
   first cadence for a period or hybrid), bars and cadence, all from the Composer's
-  vocabulary. A theme is always in C: there is no key. The slots are below.
+  vocabulary. Development (Melody, Balanced, Theme; Balanced by default) says
+  how far the theme strays from the motif: Melody repeats, Theme develops
+  (Schoenberg ch. XI). It is the body's `form.development`, sent to the
+  Composer as the request's `development`; a body saved without it reads as
+  Balanced. A theme is always in C: there is no key. The slots are below.
 - The Save row (version note, Save, Compose) and the status line sit above the tabs, so they show on Theme,
   Structure, Used by and Other. Saves, errors and progress show in that one line whatever tab is open. After Save or
   Compose the page opens again on the tab that was open.
@@ -76,7 +80,10 @@ The Result panel of the current version, and of any version opened from the
 versions list (read-only), has a row for each idea (idea, slot, motif, source,
 chain, connection), the brief's tempo, mode and note density, the motive
 categories read without, the style distance, the form heard and the Analyzer
-check. Below it are the score of `theme.musicxml` in the score workspace and a
+check. A Development list names each composed idea's development in the
+Composer's summary line and, when the idea comes from one of the motif's
+segments, that segment's label; a version composed before the summary line
+shows the development text. Below it are the score of `theme.musicxml` in the score workspace and a
 MIDI download. Playback is served by the backend, built by the Analyzer from
 `theme.mid` (`GET .../versions/<n>/playback?file=theme`).
 
