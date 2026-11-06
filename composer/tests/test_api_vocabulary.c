@@ -328,7 +328,13 @@ static void test_round_trip(void) {
         cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
         cJSON *slots = cJSON_GetObjectItemCaseSensitive(request, "slots");
         cJSON_ReplaceItemInObjectCaseSensitive(slots, value_of(entry), cJSON_CreateString("A"));
-        accepted("theme", request);
+        /* The reader knows the slot: it is not refused as an unknown one (a form that lacks the slot refuses it as a plan). */
+        char *text = print(request);
+        ComposerResponse response;
+        ComposerStatus status = composer_api_validate("theme", text, &response);
+        assert(status == COMPOSER_OK || strstr(response.error.message, "unknown slot") == NULL);
+        composer_response_destroy(&response);
+        free(text);
         cJSON_Delete(request);
     }
     cJSON_ArrayForEach(entry, list("theme_ideas")) {

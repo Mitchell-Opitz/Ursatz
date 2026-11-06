@@ -542,35 +542,42 @@ void api_grow_run_destroy(GrowRun *run) {
     run->chord_bar = -1;
 }
 
+/* The request of the theme for a seed: the setup and its material, which it points into and must outlive it. */
+void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowRequest *request) {
+    const GrowMaterial *material = setup->material;
+    (void)seed;
+    memset(request, 0, sizeof(*request));
+    request->motive = setup->motive;
+    request->source = setup->seeded ? &setup->source : NULL;
+    request->key = setup->key;
+    request->meter = setup->meter;
+    request->bars = setup->bars;
+    request->pairing = setup->pairing;
+    request->cadence = setup->cadence;
+    request->first_cadence = setup->first_cadence;
+    request->has_accompaniment = setup->has_accompaniment;
+    request->accompaniment = setup->accompaniment;
+    request->accompaniment_motive = setup->accompaniment_motive;
+    request->has_voicing = setup->has_voicing;
+    request->voicing = setup->voicing;
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; material && slot < GROW_SLOT_COUNT; slot++) {
+        request->slot_motives[slot] = material->has_slot[slot] ? &material->slot_motives[slot] : NULL;
+    }
+    for (int idea = 0; material && idea < GROW_IDEA_COUNT; idea++) {
+        request->idea_motives[idea] = material->has_idea[idea] ? &material->idea_motives[idea] : NULL;
+    }
+    if (material) {
+        request->chords = material->chord_count > 0 ? material->chords : NULL;
+        request->chord_count = material->chord_count;
+    }
+}
+
 /* Builds the plan and runs the stages for one seed. GROW_ERR_STUCK is the only result a later seed can mend. */
 static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t attempt, GrowTheme *theme, GrowRun *run,
                            bool *cancelled) {
     const GrowMaterial *material = setup->material;
     GrowRequest request;
-    memset(&request, 0, sizeof(request));
-    request.motive = setup->motive;
-    request.source = setup->seeded ? &setup->source : NULL;
-    request.key = setup->key;
-    request.meter = setup->meter;
-    request.bars = setup->bars;
-    request.pairing = setup->pairing;
-    request.cadence = setup->cadence;
-    request.first_cadence = setup->first_cadence;
-    request.has_accompaniment = setup->has_accompaniment;
-    request.accompaniment = setup->accompaniment;
-    request.accompaniment_motive = setup->accompaniment_motive;
-    request.has_voicing = setup->has_voicing;
-    request.voicing = setup->voicing;
-    for (GrowSlot slot = GROW_SLOT_CONTRASTING; material && slot < GROW_SLOT_COUNT; slot++) {
-        request.slot_motives[slot] = material->has_slot[slot] ? &material->slot_motives[slot] : NULL;
-    }
-    for (int idea = 0; material && idea < GROW_IDEA_COUNT; idea++) {
-        request.idea_motives[idea] = material->has_idea[idea] ? &material->idea_motives[idea] : NULL;
-    }
-    if (material) {
-        request.chords = material->chord_count > 0 ? material->chords : NULL;
-        request.chord_count = material->chord_count;
-    }
+    api_grow_request_for(setup, seed, &request);
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
     GrowResult built = grow_build_plan(&request, &theme->plan);
