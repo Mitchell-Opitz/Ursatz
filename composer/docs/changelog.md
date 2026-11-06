@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P34)
+
+A presentation repeats its basic idea in one of three ways, drawn per seed (ch. V): exact, in its dominant form, or in sequence one step up with its chord a step up (I to ii, i to iio). `GrowThemeSpec.repetition` (`GrowRepetition`) replaces `statement_response`, the weights are `REPEAT_WEIGHTS` in `grow_beginning.c` (2, 1, 1), and `describe_ref` names them `restated, exact`, `dominant form` and `sequence, 1 step up (tonal)`. The API is 1.7 (a new value of the theme result's `development` text only). Seeded theme output changes for presentations (new draws); the snapshots and expectations changed are named in the phase notes. A sequence is the transposition by one step and writes its chords whole, so it is not drawn over Given material in the first half; the share of 8-bar sentences heard as a sentence fell from 75% to 50% ([grow-hearing.md](grow-hearing.md)). See [grow.md](grow.md#choices).
+
 ## Unreleased (phase P33)
 
 The compose rates are measured and held by a test: every buildable pairing at 4 and 8 bars composes on at least 8 of 10 start seeds for a 2-bar 3/4 and a 1-bar 4/4 reference motif, and none needed a fix. The API stays 1.6. See [grow.md](grow.md#compose-rates).
