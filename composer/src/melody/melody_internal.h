@@ -297,9 +297,6 @@ bool melody_check(const void *payload, FillCheck *out);
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
                   FillRng *rng, MelodyCandidate *out);
 
-/* The highest pitch the generated notes of the target may take in the phrase's arch (the range, less the arch's cap). */
-int melody_arch_high(const MelodyContext *context, const MelodyFillParams *params);
-
 /*
  * Realizes the motive of the context in a candidate whose notes are laid out (layout): the motive's notes, each moved
  * `shift` semitones, are bent to the chords as a whole (R-328). With keep_figures a clash that the framework labels as a

@@ -249,10 +249,6 @@ static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFi
     return adjusted;
 }
 
-int melody_arch_high(const MelodyContext *context, const MelodyFillParams *params) {
-    return arch_params(context, params).range_high;
-}
-
 /* The pitch a step (a semitone or a tone, within the scale) from `from` in a direction, in range; -1 when none. */
 static int scale_step(unsigned scale, int from, int direction, int low, int high) {
     for (int distance = 1; distance <= 2; distance++) {
