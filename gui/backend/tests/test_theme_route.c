@@ -888,10 +888,10 @@ static void test_failures(const Motifs *m) {
   }
   version_dir(theme, 2, dir, sizeof(dir));
 
-  /* A basic motive of five beats in a 4/4 theme does not fit one bar: the Composer refuses it at once as
+  /* A basic motive of nine bars in an 8-bar 4/4 theme fits no idea: the Composer refuses it at once as
      UNSATISFIABLE (the chord-bar refusal is covered by the Composer's own tests). */
-  char *long_motif = create_motif("Long", "full", "melodic", "C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e C4:e Eb4:e",
-                                  "null");
+  char *long_motif = create_motif("Long", "full", "melodic",
+                                  "C4:w Eb4:w G4:w Eb4:w C4:w Eb4:w G4:w Eb4:w C5:w", "null");
   check(long_motif != NULL, "the motif longer than one bar is saved");
   slots_of(long_motif ? long_motif : m->a, m->b, slots, sizeof(slots));
   theme_body(slots, "", body, sizeof(body));
