@@ -564,20 +564,39 @@ static bool offer_exact(Proposal *proposal) {
     return variant_step_init(&chain.steps[0], "exact") ? offer(proposal, &chain, 1, NULL, false) : true;
 }
 
-/* Transpositions of the basic idea by steps of its key's scale. */
-static bool offer_transpositions(Proposal *proposal) {
-    static const long STEPS[] = {1, 2, 3, -1, -2, -3};
-    for (size_t i = 0; i < sizeof(STEPS) / sizeof(STEPS[0]); i++) {
+/* The transpositions of the basic idea by the given steps of its key's scale. */
+static bool offer_steps(Proposal *proposal, const long *steps, size_t count) {
+    for (size_t i = 0; i < count; i++) {
         VariantChain chain;
         memset(&chain, 0, sizeof(chain));
         chain.step_count = 1;
         if (variant_step_init(&chain.steps[0], "transpose") && variant_step_set(&chain.steps[0], "tonal", 1, 0) &&
-            variant_step_set(&chain.steps[0], "by", STEPS[i], 0) &&
+            variant_step_set(&chain.steps[0], "by", steps[i], 0) &&
             !offer(proposal, &chain, 1, NULL, false)) {
             return false;
         }
     }
     return true;
+}
+
+/*
+ * Transpositions of the basic idea by steps of its key's scale. A sequence (the ref asks for a tonal step) offers that
+ * step alone; when it does not fit, the other steps stand in for it.
+ */
+static bool offer_transpositions(Proposal *proposal) {
+    static const long STEPS[] = {1, 2, 3, -1, -2, -3};
+    const MotiveRelationStep *asked = &proposal->request->ref.step;
+    if (proposal->request->ref.has_step && asked->kind == MOTIVE_RELATION_TRANSPOSE && asked->value[0] != 0 &&
+        asked->value[1] != 0) {
+        size_t before = proposal->out->count;
+        if (!offer_steps(proposal, &asked->value[1], 1)) {
+            return false;
+        }
+        if (proposal->out->count > before) {
+            return true;
+        }
+    }
+    return offer_steps(proposal, STEPS, sizeof(STEPS) / sizeof(STEPS[0]));
 }
 
 static bool form_applies(const PiecePlan *plan, FillTarget target, void *context) {

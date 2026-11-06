@@ -17,6 +17,29 @@ static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, CadenceTy
                                                                                : PLAN_HARMONY_SHAPE_CADENTIAL;
 }
 
+/* How often a presentation repeats its basic idea in each way (ch. V), by GrowRepetition: exact, dominant form, sequence. */
+static const unsigned REPEAT_WEIGHTS[GROW_REPEAT_COUNT] = {2, 1, 1};
+
+/* The dominant form and the sequence go to another chord and back or on, which needs a cell for each. */
+static GrowRepetition draw_repetition(FillRng *rng, bool can_move, bool can_sequence) {
+    unsigned weight_of[GROW_REPEAT_COUNT];
+    uint64_t total = 0;
+    for (int kind = 0; kind < GROW_REPEAT_COUNT; kind++) {
+        bool allowed = kind == GROW_REPEAT_EXACT || (can_move && (kind != GROW_REPEAT_SEQUENCE || can_sequence));
+        weight_of[kind] = allowed ? REPEAT_WEIGHTS[kind] : 0;
+        total += weight_of[kind];
+    }
+    uint64_t pick = fill_rng_below(rng, total);
+    for (int kind = 0; kind < GROW_REPEAT_COUNT; kind++) {
+        uint64_t weight = weight_of[kind];
+        if (pick < weight) {
+            return (GrowRepetition)kind;
+        }
+        pick -= weight;
+    }
+    return GROW_REPEAT_EXACT;
+}
+
 /* The contrasting idea is made from m0 and has to fit its room. */
 static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     /* A contrasting slot with a motive of its own gives the idea as it is (grow_idea_dev). */
@@ -37,13 +60,11 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         }
         /* A part-length motive is the whole presentation: no repetition to draw. */
         if (spec->part_whole) {
-            spec->statement_response = false;
+            spec->repetition = GROW_REPEAT_EXACT;
             return true;
         }
-        /* Statement-response goes from tonic to dominant and back, which needs a cell for each. */
-        bool can_respond = spec->basic_cells >= 2;
-        uint64_t response = fill_rng_below(rng, 2);
-        spec->statement_response = can_respond && response == 1;
+        /* A sequence writes its chords whole, which Given material under the presentation would not fit. */
+        spec->repetition = draw_repetition(rng, spec->basic_cells >= 2, !request->given_first_half);
         if (!grow_idea_develop(spec, GROW_PLACE_REPETITION, &spec->developed[GROW_PLACE_REPETITION]) ||
             rational_cmp(spec->developed[GROW_PLACE_REPETITION].length,
                               grow_scaled(grow_unit(request), SECOND_UNITS)) > 0) {
@@ -131,15 +152,26 @@ static PlanResult build_presentation(GrowBuild *build) {
     memset(&repetition_shape, 0, sizeof(repetition_shape));
     basic_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
     basic_shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
-    basic_shape.ends_on = spec->statement_response ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
+    bool answers = spec->repetition == GROW_REPEAT_DOMINANT_FORM;
+    basic_shape.ends_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
     repetition_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
-    repetition_shape.starts_on = spec->statement_response ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
+    repetition_shape.starts_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
     repetition_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
-    if (result == PLAN_OK) {
-        result = grow_add_chord_targets(build, ideas[0], &basic_shape, NULL);
-    }
-    if (result == PLAN_OK) {
-        result = grow_add_chord_targets(build, ideas[1], &repetition_shape, NULL);
+    if (spec->repetition == GROW_REPEAT_SEQUENCE) {
+        /* The chord moves with the melody: the basic idea's tonic and the repetition's chord a step up (I to ii, i to iio). */
+        if (result == PLAN_OK) {
+            result = grow_add_chord_written(build, ideas[0], 1);
+        }
+        if (result == PLAN_OK) {
+            result = grow_add_chord_written(build, ideas[1], 2);
+        }
+    } else {
+        if (result == PLAN_OK) {
+            result = grow_add_chord_targets(build, ideas[0], &basic_shape, NULL);
+        }
+        if (result == PLAN_OK) {
+            result = grow_add_chord_targets(build, ideas[1], &repetition_shape, NULL);
+        }
     }
 
     /* The melody to write for each idea. */

@@ -200,9 +200,16 @@ of a cadential ending). The theme section becomes Realized.
 
 The operator proposes `GrowContext.candidates` (default 4) candidates, drawn from the run's seed:
 
-- **Repetition** (presentation). *Exact*: `restated`, the harmony tonic to tonic in both ideas. *Statement-response*:
-  `transposed`, tonal, one step up; the basic idea's harmony goes tonic to dominant and the repetition's dominant to
-  tonic. Not offered when the basic idea has one cell (a bar of 2/4 or 3/4 in 4 bars).
+- **Repetition** (presentation). One of three (ch. V), drawn by weight (`REPEAT_WEIGHTS` at the top of
+  `src/grow/grow_beginning.c`, `GrowThemeSpec.repetition`): *exact* (weight 2), `restated`, the harmony tonic to tonic in
+  both ideas; *dominant form* (1), the `dominant-form` variant operation applied to the basic idea, the basic idea's
+  harmony going tonic to dominant and the repetition's dominant to tonic; *sequence* (1), `sequence, 1 step up (tonal)`,
+  the basic idea moved one step up in the key with its chord moved with it: the basic idea is the tonic and the
+  repetition the chord a step up (I to ii, i to iio), each written whole. The dominant form and the sequence are not
+  offered when the basic idea has one cell (a bar of 2/4 or 3/4 in 4 bars), and a sequence is not drawn when a Given melody,
+  harmony or bass lies in the first half (its chords are written whole); a motif as long as the presentation draws no
+  repetition. The weights apply to the options a request allows. The motive of a sequence is the transposition by
+  exactly one step when that fits the idea, else the other steps (`offer_transpositions`).
 - **Contrasting idea** (antecedent, compound basic idea, and the consequent's). A development of `m0` whose contour
   differs from `m0`'s: a tonal inversion about a note within two semitones of the first, every interval widened or
   narrowed by one or two semitones, or one interval changed by one to four semitones. It must fit its idea and stay

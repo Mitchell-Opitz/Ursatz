@@ -430,7 +430,7 @@ static void test_regenerate(void) {
     expect_failure("--from loop.json --request request.json --regenerate a --lane tenor", 1, "--lane must be");
 
     /* The body's first melody, written again: the turnaround is refilled and the seam copies the new first bar. */
-    char *shown = piece_output("--from loop.json --request request.json --regenerate a --lane melody --seed 5 --format json "
+    char *shown = piece_output("--from loop.json --request request.json --regenerate a --lane melody --seed 8 --format json "
                                "--out regen.json --ending-out regen_ending.json");
     assert(strstr(shown, "\"regenerated\":{\"section\":\"a\",\"lane\":\"melody\"}"));
     free(shown);
@@ -574,7 +574,7 @@ static void test_harmonize_theme(void) {
     expect_failure("--from theme_loop.json --request theme_request.json --regenerate a --seed 1", 1, "filled with a theme");
     expect_failure("--from theme_loop.json --request theme_request.json --regenerate a --lane melody --seed 1", 1, "filled with a theme");
     char *shown = piece_output("--from theme_loop.json --request theme_request.json --variations a --lane harmony --count 3 "
-                               "--seed 1 --out-dir harmonize --format json");
+                               "--seed 3 --out-dir harmonize --format json");
     size_t kept = count_of(shown, "\"index\":");
     assert(kept >= 2 && kept <= 3);
     free(shown);

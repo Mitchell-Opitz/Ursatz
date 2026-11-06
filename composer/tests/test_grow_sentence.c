@@ -465,7 +465,8 @@ static void test_motive_forms(void) {
     GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
     size_t dominant = 0;
     size_t halved = 0;
-    for (unsigned long seed = 1; seed <= 10; seed++) {
+    /* Seeds 1 to 10, and on to 30 until a dominant form has been drawn (the repetition is drawn by weight, B1 of P34). */
+    for (unsigned long seed = 1; seed <= 30 && (seed <= 10 || dominant == 0); seed++) {
         PiecePlan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;

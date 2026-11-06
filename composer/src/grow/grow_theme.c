@@ -13,6 +13,7 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/variant_registry.h>
 
 #include "util/plan_util.h"
 #include "grow/grow_internal.h"
@@ -178,6 +179,16 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     request.bars = count;
+    PlanSpan first_half = request.span;
+    first_half.length = grow_scaled(request.bar, count / 2);
+    static const PlanLaneKind GIVEN_LANES[] = {PLAN_LANE_MELODY, PLAN_LANE_HARMONY, PLAN_LANE_BASS};
+    for (size_t l = 0; l < sizeof(GIVEN_LANES) / sizeof(GIVEN_LANES[0]); l++) {
+        LaneSpanId held[GROW_MAX_GAPS];
+        size_t found = plan_lane_find(plan, GIVEN_LANES[l], 0, first_half, held, GROW_MAX_GAPS);
+        for (size_t i = 0; i < found && i < GROW_MAX_GAPS; i++) {
+            request.given_first_half = request.given_first_half || plan_lane_span_state(plan, held[i]) == PLAN_STATE_GIVEN;
+        }
+    }
     *out = request;
     return true;
 }
@@ -278,7 +289,10 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
     case GROW_PLACE_REPETITION: /* also the contrasting idea of the other beginnings */
         if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
             *dev = spec->contrast;
-        } else if (spec->statement_response) {
+        } else if (spec->repetition == GROW_REPEAT_DOMINANT_FORM) {
+            dev->kind = MOTIVE_RELATION_DOMINANT_FORM;
+        } else if (spec->repetition == GROW_REPEAT_SEQUENCE) {
+            /* One step up in the key's scale, the chord moving with it (grow_beginning.c). */
             dev->kind = MOTIVE_RELATION_TRANSPOSE;
             dev->value[0] = 1;
             dev->value[1] = 1;
@@ -351,8 +365,18 @@ NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
 
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
     MotiveRelationStep dev;
-    return grow_idea_dev(spec, idea, &dev) &&
-           motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
+    if (!grow_idea_dev(spec, idea, &dev)) {
+        return false;
+    }
+    /* The dominant form is a variant operation: the motive operators do not develop it (ch. V). */
+    if (dev.kind == MOTIVE_RELATION_DOMINANT_FORM) {
+        VariantChain chain;
+        memset(&chain, 0, sizeof(chain));
+        chain.step_count = 1;
+        return variant_step_init(&chain.steps[0], "dominant-form") &&
+               variant_apply_chain(grow_idea_source(spec, idea), &chain, 0, out, NULL) == VARIANT_OK;
+    }
+    return motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
 }
 
 bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
@@ -635,7 +659,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
     return a->has_section_motive == b->has_section_motive && motive_equal(&a->source, &b->source) &&
-           a->statement_response == b->statement_response && a->fragment_notes[0] == b->fragment_notes[0] &&
+           a->repetition == b->repetition && a->fragment_notes[0] == b->fragment_notes[0] &&
            a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop &&
            a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
            same_kind(&a->consequent_contrast, &b->consequent_contrast) &&
@@ -646,20 +670,25 @@ static const char *dev_name(const MotiveRelationStep *dev) {
     return dev->kind == MOTIVE_RELATION_INVERT ? "inverted" : "intervals changed";
 }
 
+static const char *repetition_name(GrowRepetition repetition) {
+    static const char *const NAMES[GROW_REPEAT_COUNT] = {"exact", "dominant form", "sequence"};
+    return NAMES[repetition];
+}
+
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
         spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
-                 spec->statement_response ? "statement-response" : "exact", spec->fragment_notes[0],
+                 repetition_name(spec->repetition), spec->fragment_notes[0],
                  spec->fragment_notes[1], spec->liquidate_drop);
         return;
     }
     size_t used = (size_t)snprintf(label, size, "%s + %s %zu bars", BEGINNINGS[spec->pairing.beginning],
                                    ENDINGS[spec->pairing.ending], spec->bars);
     if (used < size && spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
-        used += (size_t)snprintf(label + used, size - used, " %s", spec->statement_response ? "statement-response" : "exact");
+        used += (size_t)snprintf(label + used, size - used, " %s", repetition_name(spec->repetition));
     } else if (used < size) {
         used += (size_t)snprintf(label + used, size - used, " contrast %s", dev_name(&spec->contrast));
     }
@@ -863,9 +892,14 @@ static PlanHarmonyShape gap_shape(const PlanHarmonyShape *shape, bool at_start, 
     return out;
 }
 
-PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
-                                  const PlanConstraint *cadence) {
+/* The chords of an owner: open targets asking for the shape, or, with a degree, that one diatonic chord written whole. */
+static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
+                                    const PlanConstraint *cadence, int degree) {
     PiecePlan *plan = build->plan;
+    PhraseChord fixed;
+    if (degree > 0 && !harmony_make_chord(build->request->key.mode, degree, 0, false, false, 1, &fixed)) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
     PlanSpan span = plan_node_span(plan, owner);
     Rational span_end;
     PlanSpan gaps[GROW_MAX_GAPS];
@@ -879,13 +913,22 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
         Rational gap_end;
         PlanConstraint constraint;
         memset(&payload, 0, sizeof(payload));
-        strcpy(payload.harmony.roman_numeral, "I");
-        payload.harmony.has_function = false;
+        if (degree > 0) {
+            harmony_chord_payload(&fixed, &payload);
+        } else {
+            strcpy(payload.harmony.roman_numeral, "I");
+            payload.harmony.has_function = false;
+        }
         result = plan_span_end(gaps[g], &gap_end);
         bool at_start = rational_cmp(gaps[g].start, span.start) == 0;
         bool at_end = result == PLAN_OK && rational_cmp(gap_end, span_end) == 0;
         if (result == PLAN_OK) {
             result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, gaps[g], &payload, &harmony);
+        }
+        if (degree > 0) {
+            /* A chord written whole has no shape to ask for. */
+            result = result == PLAN_OK ? plan_lane_span_set_state(plan, harmony, PLAN_STATE_REALIZED) : result;
+            continue;
         }
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_HARMONY_SHAPE;
@@ -919,6 +962,17 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
         result = add_voicing_targets(build, owner, span, cadence);
     }
     return result;
+}
+
+PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
+                                  const PlanConstraint *cadence) {
+    return add_chord_targets(build, owner, shape, cadence, 0);
+}
+
+PlanResult grow_add_chord_written(GrowBuild *build, NodeId owner, int degree) {
+    PlanHarmonyShape unused;
+    memset(&unused, 0, sizeof(unused));
+    return add_chord_targets(build, owner, &unused, NULL, degree);
 }
 
 /* The bars the material holds, counted. */

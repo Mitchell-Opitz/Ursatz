@@ -42,6 +42,9 @@ typedef enum {
     GROW_PLACE_CADENTIAL_2 = GROW_PLACE_FRAGMENT_2
 } GrowPlace;
 
+/* How a presentation repeats its basic idea (ch. V). */
+typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
+
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
 typedef struct {
     unsigned long magic;
@@ -58,7 +61,7 @@ typedef struct {
     MotiveRelationStep consequent_contrast;     /* the contrasting idea of a consequent */
     size_t cadential_drop[2];              /* notes the two ideas of a cadential ending drop of m0 */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
-    bool statement_response;               /* the repetition is a step up, the harmony goes tonic to dominant and back */
+    GrowRepetition repetition;             /* how the presentation repeats the basic idea */
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
@@ -114,6 +117,7 @@ typedef struct {
     PlanMotiveRef motive_ref; /* to m0, with a transform; parameters left open are drawn by grow-theme */
     NodeId slot_node[GROW_SLOT_COUNT]; /* the material node of each slot with a motive of its own, else PLAN_NODE_NONE */
     NodeId idea_node[GROW_PLACE_COUNT]; /* the material node of each place with a motive of its own (R-206), else none */
+    bool given_first_half;   /* Given melody, harmony or bass lies in the first half: its chords are not written whole */
 } GrowThemeRequest;
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
@@ -138,6 +142,8 @@ PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, siz
                          const char *name, NodeId *out);
 /* The motive node m<slot> in the material, made from the ref, at bar slot_base + (slot - 1) * motive_bars of the material. */
 PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out);
+/* One diatonic chord of the key (degree 1 to 7) written whole over the owner, with the bass and the rest open as for targets. */
+PlanResult grow_add_chord_written(GrowBuild *build, NodeId owner, int degree);
 /* A harmony span and the bass span beside it, both open, over an idea or a subphrase. */
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                   const PlanConstraint *cadence);

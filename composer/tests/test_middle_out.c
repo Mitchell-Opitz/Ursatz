@@ -64,7 +64,7 @@ typedef struct {
 } Baseline;
 
 /* Of 10 runs and, for the melody and the progression, 30 sections (3 a run); the bass has 2 sections a run. */
-static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 16, 18}, {10, 2, 19}, {10, 20, 20}};
+static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 18, 16}, {10, 2, 19}, {10, 19, 17}};
 
 /* --- the plans ----------------------------------------------------------------------- */
 

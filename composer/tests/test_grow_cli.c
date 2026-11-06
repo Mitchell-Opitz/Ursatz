@@ -118,7 +118,7 @@ static void test_each_form(void) {
     free(out);
 
     /* A sentence heard as one says so. */
-    out = output_of(BASE " --into sentence --seed 7");
+    out = output_of(BASE " --into sentence --seed 8");
     assert(strstr(out, "\nheard as sentence\n") != NULL);
     free(out);
 }
@@ -535,7 +535,7 @@ static void test_library_slots_and_pool(void) {
     request.slot_motives[GROW_SLOT_CADENTIAL] = &cadential;
     assert(grow_build_plan(&request, &plan) == GROW_OK);
     assert(library_find(plan, "s2") != PLAN_NODE_NONE && library_find(plan, "s3") != PLAN_NODE_NONE);
-    config.seed = 2;
+    config.seed = 1;
     GrowResult ran = grow_run(plan, &config, &outcome);
     assert(ran == GROW_OK);
     assert(node_holds(plan, library_find(plan, "m1"), &basic));

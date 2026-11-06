@@ -493,7 +493,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "transpose tonal=1 by=1"
+                          "step": "dominant-form"
                         }]
                     }
                   }, {
@@ -516,7 +516,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "fragment position=1 length=3"
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -562,7 +562,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "liquidate drop=1"
+                          "step": "liquidate drop=2"
                         }]
                     }
                   }],
@@ -751,7 +751,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 11,
-            "step": "transpose tonal=1 by=1"
+            "step": "dominant-form"
           }],
         "payload": {
           "notes": [{
@@ -821,11 +821,11 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 16,
-            "step": "fragment position=1 length=3"
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
-              "midi_pitch": 66,
+              "midi_pitch": 71,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -835,7 +835,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 71,
+              "midi_pitch": 73,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -845,7 +845,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 71,
               "offset": {
                 "num": 3,
                 "den": 8
@@ -941,7 +941,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 18,
-            "step": "liquidate drop=1"
+            "step": "liquidate drop=2"
           }, {
             "kind": "cadence",
             "type": "hc"
@@ -1054,7 +1054,7 @@
         "constraints": [],
         "payload": {
           "notes": [{
-              "midi_pitch": 69,
+              "midi_pitch": 59,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -1064,7 +1064,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 73,
+              "midi_pitch": 62,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -1074,7 +1074,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 76,
+              "midi_pitch": 66,
               "offset": {
                 "num": 3,
                 "den": 8
@@ -1084,7 +1084,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 81,
+              "midi_pitch": 71,
               "offset": {
                 "num": 1,
                 "den": 2
@@ -1104,8 +1104,8 @@
           "den": 1
         },
         "end": {
-          "num": 13,
-          "den": 2
+          "num": 51,
+          "den": 8
         }
       },
       "note_ids": [],
@@ -1134,16 +1134,6 @@
               "offset": {
                 "num": 1,
                 "den": 4
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
-              }
-            }, {
-              "midi_pitch": 69,
-              "offset": {
-                "num": 3,
-                "den": 8
               },
               "duration": {
                 "num": 1,

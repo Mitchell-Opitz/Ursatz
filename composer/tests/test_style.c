@@ -590,10 +590,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * (P18b B2), which changed the variations chosen (seeds 2 and 5), then again after the harmony rows began to draw values that
  * move a note (P18b B7), which changed the variations chosen (seeds 2 to 5), then again when the numerals were written in the
  * library grammar (P25 B3: viio, 65 for 6/5), which changed the numerals in the plan's JSON (seeds 1, 2, 4 and 5), then again when the melodic moves were judged by standard-counterpoint, which refuses the tritone (P25 B5, all seeds), then again when a motive ref was written as its relation step (P25 B6b: "step" in place of "transform" and its members in the plan's JSON, all seeds; the notes are the same). then again when the plan file got its own format (P25 B9: version 2, the hash is of the plan text from "meter" on so the versions in the metadata do not move it; the notes are the same). A run without a
- * style is byte for byte the same.
+ * style is byte for byte the same. Then again when the presentation drew its repetition by weight, exact, dominant form or
+ * sequence (P34 B1), which changed seeds 2, 3 and 5.
  */
-static const unsigned long long MAIN_HASH[5] = {0xc14af5af88371da3ULL, 0x9c4e58507b8c6699ULL, 0xb49bd7dbac4e51f9ULL,
-                                                0x9a5bd5872404e71eULL, 0xb2d8cd3b3cc905abULL};
+static const unsigned long long MAIN_HASH[5] = {0xc14af5af88371da3ULL, 0x4f605497afebc3c8ULL, 0x78e73e54d3300342ULL,
+                                                0x9a5bd5872404e71eULL, 0xda5ede77f391c89bULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
@@ -768,10 +769,10 @@ static int test_motive_preference(void) {
     char plain[64];
     char preferred[64];
     char restored[64];
-    repetition_degrees(2, NULL, plain);
-    repetition_degrees(2, styled, preferred);
-    repetition_degrees(2, switched_off, restored);
-    assert(strcmp(plain, "7 2 1 6 5") == 0);
+    repetition_degrees(3, NULL, plain);
+    repetition_degrees(3, styled, preferred);
+    repetition_degrees(3, switched_off, restored);
+    assert(strcmp(plain, "3 5 4 2 1") == 0);
     assert(strcmp(preferred, "4 6 5 3 2") == 0);
     assert(strcmp(restored, plain) == 0);
     composer_style_destroy(styled);
@@ -942,9 +943,14 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
  *
  * Re-measured at P28 B14, after the bump to Ursatz d2b85ce and Analyzer ee8a901: only the unstyled melody moved, to 0.7726
  * to chorales and 0.7558 to sonatinas; the styled means and the harmony means are equal. The order is as before.
+ *
+ * Re-measured at P34 B1, after the presentation drew its repetition by weight and a sequence wrote its chords whole (I, then
+ * ii): the harmony means are 0.7496 styled and 0.7199 unstyled to chorales, 0.6619 and 0.6763 to sonatinas; the melody means
+ * 0.7555 and 0.7751, 0.7601 and 0.7572. The styled harmony to chorales is further than before (0.7168) and now further than
+ * the unstyled one, which the style cannot change in a sequence's two written chords (notes.md of Claude Master).
  */
-static const int STYLED[2][2] = {{716, 760}, {670, 758}};
-static const int UNSTYLED[2][2] = {{720, 772}, {676, 755}};
+static const int STYLED[2][2] = {{749, 755}, {661, 760}};
+static const int UNSTYLED[2][2] = {{719, 775}, {676, 757}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};

@@ -339,8 +339,11 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  *
  * Re-measured at P25 B5, after the melodic moves were judged by standard-counterpoint (the tritone is refused): 0.7168,
  * 0.7197, 0.7029 to chorales and 0.6754, 0.6770, 0.6656 to sonatinas.
+ *
+ * Re-measured at P34 B1, after the presentation drew its repetition by weight (a sequence writes its chords whole): 0.7496,
+ * 0.7468, 0.7107 to chorales and 0.6819, 0.6839, 0.6610 to sonatinas.
  */
-static const int HARMONY_BASELINE[3][2] = {{7168, 6754}, {7197, 6770}, {7029, 6656}};
+static const int HARMONY_BASELINE[3][2] = {{7496, 6819}, {7468, 6839}, {7107, 6610}};
 #define MELODY_ONLY_REACH 200
 
 static int ten_thousandths(double value) {

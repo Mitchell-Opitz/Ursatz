@@ -16,9 +16,12 @@ bars, 12 as a hybrid, none unheard:
 
 | Bars | Heard as a sentence | Heard as another form | No theme |
 | --- | --- | --- | --- |
-| 8 | 30 of 40 (75%) | 9 | 1 |
+| 8 | 20 of 40 (50%) | 17 | 3 |
 | 4 | 0 of 40 (0%) | 0 | 40 |
-| all | 30 of 80 (37%) | 9 | 41 |
+| all | 20 of 80 (25%) | 17 | 43 |
+
+Measured again when the presentation drew its repetition by weight (P34 B1): the sequence and the dominant form are heard
+as a hybrid, so the share heard as a sentence fell from 75% to 50% at 8 bars.
 
 The causes below were found with the adapter reading the planned chords; the Analyzer identifies the chords from the notes
 and hears every written lane, which moved the shares as above. They are not analysed again here. They are limits of the
