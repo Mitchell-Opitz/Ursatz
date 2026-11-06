@@ -235,6 +235,8 @@ typedef enum { GROW_FIT_SHORTER, GROW_FIT_WHOLE, GROW_FIT_LONGER } GrowMotiveFit
  * the idea's first barline, so it does not count. A motif of no length is shorter.
  */
 GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars);
+/* The bars a motive's node takes in the material, ceil(length / bar), at least one: its pickup is part of the node. */
+size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 
 /* The node named "m0" of the plan (its Given source motive), else PLAN_NODE_NONE. */
 NodeId grow_find_source(const PiecePlan *plan);
