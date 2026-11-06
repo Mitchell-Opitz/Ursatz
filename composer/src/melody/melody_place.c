@@ -164,6 +164,10 @@ static bool resolves_figure(const MelodyContext *context, const MelodyFillParams
 bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                       size_t i) {
     const MelodyNote *note = &melody->notes[i];
+    /* A motive's note is realized before the others are placed (melody_realize): a fixed anchor. */
+    if (note->motive_index >= 0) {
+        return true;
+    }
     if (is_figure_of_motive(context, params, melody->notes, melody->count, i)) {
         return false;
     }
@@ -314,6 +318,10 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         int top = high;
         int reach = MAX_MOVE;
         if (!melody_is_anchor(context, params, out, i)) {
+            continue;
+        }
+        if (note->motive_index >= 0) {
+            before = i;
             continue;
         }
         mask = melody_need_mask(context, params, note);
@@ -537,15 +545,16 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
     return true;
 }
 
-bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out) {
+bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
+                  FillRng *rng, MelodyCandidate *out) {
     MelodyFillParams arch = arch_params(context, params);
     memset(out, 0, sizeof(*out));
     out->magic = MELODY_PAYLOAD_MAGIC;
     out->context = *context;
     out->params = arch;
     /* A melody with two notes as high as its highest has no one climax. */
-    bool assigned = layout(context, &arch, out) && assign(context, &arch, rng, out) &&
-                    place_pickup(context, &arch, rng, out);
+    bool assigned = layout(context, &arch, out) && melody_realize(context, params, shift, keep_figures, out) &&
+                    assign(context, &arch, rng, out) && place_pickup(context, &arch, rng, out);
     /* The phrase has one highest note: the whole phrase, or the target with its climax, has one. */
     MelodyRole role = melody_role(context, &arch);
     bool unique = assigned && ((role != MELODY_ROLE_WHOLE && role != MELODY_ROLE_CLIMAX) || melody_contour_unique(out));

@@ -251,10 +251,12 @@ unsigned melody_shaping_broken(const MelodyCandidate *melody);
 bool melody_check(const void *payload, FillCheck *out);
 
 /*
- * Builds one melody for the context, choosing only with rng. False when the motive cannot be placed (it does not
- * fit the phrase or the range, or a strong beat has no chord tone near enough to its contour).
+ * Builds one melody for the context: the motive's notes realized `shift` semitones away (melody_realize, with or without
+ * keep_figures), then the notes that fill the rest, choosing only with rng. False when the motive cannot be placed (it
+ * does not fit the phrase or the range, or a strong beat has no chord tone near enough to its contour).
  */
-bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out);
+bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
+                  FillRng *rng, MelodyCandidate *out);
 
 /*
  * Realizes the motive of the context in a candidate whose notes are laid out (layout): the motive's notes, each moved

@@ -86,19 +86,21 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     size_t kept_count = 0;
     MelodyCandidate *scratch = malloc(sizeof(*scratch));
     bool ok = read && scratch;
+    int shifts[5];
+    size_t shift_count = 0;
     /* A span the operator does not read, or a motive that cannot be placed, leaves the span open. */
     if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !melody_context_read(plan, (LaneSpanId)target.id, read))) {
         ok = false;
     }
-    for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
+    /* The octave of the motive's notes is chosen per attempt from the ranked shifts (R-334); one that fits none leaves the span open. */
+    if (ok) {
+        shift_count = melody_realize_shifts(read, params, shifts);
+    }
+    for (size_t attempt = 0; ok && shift_count > 0 && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
         bool repeat = false;
         PhraseVerdict verdict;
-        /* A motive that cannot be placed by its tone roles in half the attempts is placed as it was before tones, rather than
-           leave the span open (R-215). */
-        if (attempt == MELODY_ATTEMPTS / 2 && kept_count == 0) {
-            read->motive_tone_count = 0;
-        }
-        if (!melody_build(read, params, rng, scratch)) {
+        /* The first half of the attempts keeps the figures the framework labels; the second moves every clash to a chord tone. */
+        if (!melody_build(read, params, shifts[attempt % shift_count], attempt < MELODY_ATTEMPTS / 2, rng, scratch)) {
             continue;
         }
         /* Only melodies that pass the hard rules are proposed; none passing leaves the span open. */
