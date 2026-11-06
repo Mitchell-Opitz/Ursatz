@@ -34,7 +34,7 @@
           <beat-type>4</beat-type>
         </time>
       </attributes>
-      <note xml:id="composer-span-11-note-0">
+      <note xml:id="composer-span-23-note-0">
         <pitch>
           <step>D</step>
           <octave>4</octave>
@@ -43,7 +43,7 @@
         <voice>1</voice>
         <type>quarter</type>
       </note>
-      <note xml:id="composer-span-11-note-1">
+      <note xml:id="composer-span-23-note-1">
         <pitch>
           <step>F</step>
           <octave>4</octave>
@@ -53,7 +53,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-11-note-2">
+      <note xml:id="composer-span-23-note-2">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -63,7 +63,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-11-note-3">
+      <note xml:id="composer-span-23-note-3">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -75,7 +75,7 @@
       </note>
     </measure>
     <measure number="2">
-      <note xml:id="composer-span-12-note-0">
+      <note xml:id="composer-span-24-note-0">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -85,7 +85,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-12-note-1">
+      <note xml:id="composer-span-24-note-1">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -96,7 +96,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-12-note-2">
+      <note xml:id="composer-span-24-note-2">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -106,7 +106,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-12-note-3">
+      <note xml:id="composer-span-24-note-3">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -116,7 +116,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-12-note-4">
+      <note xml:id="composer-span-24-note-4">
         <pitch>
           <step>D</step>
           <alter>-1</alter>
@@ -127,7 +127,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-12-note-5">
+      <note xml:id="composer-span-24-note-5">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -137,7 +137,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-12-note-6">
+      <note xml:id="composer-span-24-note-6">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -148,7 +148,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-12-note-7">
+      <note xml:id="composer-span-24-note-7">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -160,169 +160,6 @@
       </note>
     </measure>
     <measure number="3">
-      <note xml:id="composer-span-3-note-0">
-        <pitch>
-          <step>F</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-      <note xml:id="composer-span-3-note-1">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="composer-span-3-note-2">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
-      </note>
-      <note xml:id="composer-span-3-note-3">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>half</type>
-      </note>
-    </measure>
-    <measure number="4">
-      <note xml:id="composer-span-3-note-4">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-      <note xml:id="composer-span-3-note-5">
-        <pitch>
-          <step>B</step>
-          <alter>-1</alter>
-          <octave>4</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="composer-span-3-note-6">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
-      </note>
-      <note xml:id="composer-span-3-note-7">
-        <pitch>
-          <step>E</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>half</type>
-      </note>
-    </measure>
-    <measure number="5">
-      <note xml:id="composer-span-4-note-0">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-      <note xml:id="composer-span-4-note-1">
-        <pitch>
-          <step>D</step>
-          <alter>-1</alter>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="composer-span-4-note-2">
-        <pitch>
-          <step>E</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
-      </note>
-      <note xml:id="composer-span-4-note-3">
-        <pitch>
-          <step>E</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>half</type>
-      </note>
-    </measure>
-    <measure number="6">
-      <note xml:id="composer-span-4-note-4">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-      <note xml:id="composer-span-4-note-5">
-        <pitch>
-          <step>C</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="composer-span-4-note-6">
-        <pitch>
-          <step>B</step>
-          <alter>-1</alter>
-          <octave>4</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
-      </note>
-      <note xml:id="composer-span-4-note-7">
-        <pitch>
-          <step>A</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>half</type>
-      </note>
-    </measure>
-    <measure number="7">
       <note xml:id="composer-span-5-note-0">
         <pitch>
           <step>F</step>
@@ -334,7 +171,7 @@
       </note>
       <note xml:id="composer-span-5-note-1">
         <pitch>
-          <step>G</step>
+          <step>A</step>
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
@@ -342,117 +179,37 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-5-note-2_a">
+      <note xml:id="composer-span-5-note-2">
         <pitch>
-          <step>F</step>
-          <octave>4</octave>
+          <step>D</step>
+          <octave>5</octave>
         </pitch>
         <duration>1</duration>
-        <tie type="start"/>
         <voice>1</voice>
         <type>eighth</type>
         <beam number="1">end</beam>
-        <notations>
-          <tied type="start"/>
-        </notations>
-      </note>
-      <note xml:id="composer-span-5-note-2_b">
-        <pitch>
-          <step>F</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>1</duration>
-        <tie type="stop"/>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">begin</beam>
-        <notations>
-          <tied type="stop"/>
-        </notations>
       </note>
       <note xml:id="composer-span-5-note-3">
         <pitch>
-          <step>E</step>
-          <octave>4</octave>
+          <step>D</step>
+          <octave>5</octave>
         </pitch>
-        <duration>1</duration>
+        <duration>4</duration>
         <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
+        <type>half</type>
       </note>
+    </measure>
+    <measure number="4">
       <note xml:id="composer-span-5-note-4">
         <pitch>
-          <step>D</step>
+          <step>A</step>
           <octave>4</octave>
         </pitch>
         <duration>2</duration>
         <voice>1</voice>
         <type>quarter</type>
       </note>
-    </measure>
-    <measure number="8">
-      <note xml:id="composer-span-6-note-0">
-        <pitch>
-          <step>B</step>
-          <alter>-1</alter>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-      <note xml:id="composer-span-6-note-1">
-        <pitch>
-          <step>C</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="composer-span-6-note-2">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
-      </note>
-      <note xml:id="composer-span-6-note-3">
-        <pitch>
-          <step>G</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-      </note>
-      <note xml:id="composer-span-6-note-4">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="composer-span-6-note-5">
-        <pitch>
-          <step>D</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>1</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <beam number="1">end</beam>
-      </note>
-    </measure>
-    <measure number="9">
-      <note xml:id="composer-span-7-note-0">
+      <note xml:id="composer-span-5-note-5">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -462,7 +219,240 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-7-note-1_a">
+      <note xml:id="composer-span-5-note-6">
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">end</beam>
+      </note>
+      <note xml:id="composer-span-5-note-7">
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+    </measure>
+    <measure number="5">
+      <note xml:id="composer-span-8-note-0">
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+      <note xml:id="composer-span-8-note-1">
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="composer-span-8-note-2">
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">end</beam>
+      </note>
+      <note xml:id="composer-span-8-note-3">
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+    </measure>
+    <measure number="6">
+      <note xml:id="composer-span-8-note-4">
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+      <note xml:id="composer-span-8-note-5">
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="composer-span-8-note-6">
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">end</beam>
+      </note>
+      <note xml:id="composer-span-8-note-7">
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+    </measure>
+    <measure number="7">
+      <note xml:id="composer-span-17-note-0">
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+      <note xml:id="composer-span-17-note-1">
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="composer-span-17-note-2">
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">end</beam>
+      </note>
+      <note xml:id="composer-span-17-note-3">
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+      <note xml:id="composer-span-17-note-4">
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="composer-span-17-note-5">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">end</beam>
+      </note>
+    </measure>
+    <measure number="8">
+      <note xml:id="composer-span-18-note-0">
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+      <note xml:id="composer-span-18-note-1">
+        <pitch>
+          <step>C</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="composer-span-18-note-2">
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">end</beam>
+      </note>
+      <note xml:id="composer-span-18-note-3">
+        <pitch>
+          <step>G</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>quarter</type>
+      </note>
+      <note xml:id="composer-span-18-note-4">
+        <pitch>
+          <step>D</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="composer-span-18-note-5">
+        <pitch>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">end</beam>
+      </note>
+    </measure>
+    <measure number="9">
+      <note xml:id="composer-span-19-note-0">
+        <pitch>
+          <step>A</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>1</duration>
+        <voice>1</voice>
+        <type>eighth</type>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="composer-span-19-note-1_a">
         <pitch>
           <step>E</step>
           <octave>5</octave>
@@ -476,7 +466,7 @@
           <tied type="start"/>
         </notations>
       </note>
-      <note xml:id="composer-span-7-note-1_b">
+      <note xml:id="composer-span-19-note-1_b">
         <pitch>
           <step>E</step>
           <octave>5</octave>
@@ -491,7 +481,7 @@
           <tied type="start"/>
         </notations>
       </note>
-      <note xml:id="composer-span-7-note-1_c">
+      <note xml:id="composer-span-19-note-1_c">
         <pitch>
           <step>E</step>
           <octave>5</octave>
@@ -505,7 +495,7 @@
           <tied type="stop"/>
         </notations>
       </note>
-      <note xml:id="composer-span-7-note-2">
+      <note xml:id="composer-span-19-note-2">
         <pitch>
           <step>E</step>
           <octave>5</octave>
@@ -515,7 +505,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-7-note-3">
+      <note xml:id="composer-span-19-note-3">
         <pitch>
           <step>E</step>
           <octave>5</octave>
@@ -526,7 +516,7 @@
       </note>
     </measure>
     <measure number="10">
-      <note xml:id="composer-span-7-note-4">
+      <note xml:id="composer-span-19-note-4">
         <pitch>
           <step>D</step>
           <octave>5</octave>
@@ -537,7 +527,7 @@
       </note>
     </measure>
     <measure number="11">
-      <note xml:id="composer-span-15-note-0">
+      <note xml:id="composer-span-27-note-0">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -546,7 +536,7 @@
         <voice>1</voice>
         <type>quarter</type>
       </note>
-      <note xml:id="composer-span-15-note-1">
+      <note xml:id="composer-span-27-note-1">
         <pitch>
           <step>D</step>
           <octave>5</octave>
@@ -556,7 +546,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-15-note-2">
+      <note xml:id="composer-span-27-note-2">
         <pitch>
           <step>F</step>
           <octave>5</octave>
@@ -566,7 +556,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-15-note-3">
+      <note xml:id="composer-span-27-note-3">
         <pitch>
           <step>E</step>
           <octave>5</octave>
@@ -577,7 +567,7 @@
       </note>
     </measure>
     <measure number="12">
-      <note xml:id="composer-span-16-note-0">
+      <note xml:id="composer-span-28-note-0">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -586,7 +576,7 @@
         <voice>1</voice>
         <type>quarter</type>
       </note>
-      <note xml:id="composer-span-16-note-1">
+      <note xml:id="composer-span-28-note-1">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -597,7 +587,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-16-note-2_a">
+      <note xml:id="composer-span-28-note-2_a">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -611,7 +601,7 @@
           <tied type="start"/>
         </notations>
       </note>
-      <note xml:id="composer-span-16-note-2_b">
+      <note xml:id="composer-span-28-note-2_b">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -625,7 +615,7 @@
           <tied type="stop"/>
         </notations>
       </note>
-      <note xml:id="composer-span-16-note-3">
+      <note xml:id="composer-span-28-note-3">
         <pitch>
           <step>G</step>
           <octave>4</octave>
@@ -635,7 +625,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-16-note-4">
+      <note xml:id="composer-span-28-note-4">
         <pitch>
           <step>F</step>
           <octave>4</octave>
@@ -646,7 +636,7 @@
       </note>
     </measure>
     <measure number="13">
-      <note xml:id="composer-span-27-note-0">
+      <note xml:id="composer-span-44-note-0">
         <pitch>
           <step>D</step>
           <octave>4</octave>
@@ -655,7 +645,7 @@
         <voice>1</voice>
         <type>quarter</type>
       </note>
-      <note xml:id="composer-span-27-note-1">
+      <note xml:id="composer-span-44-note-1">
         <pitch>
           <step>F</step>
           <octave>4</octave>
@@ -665,7 +655,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-27-note-2">
+      <note xml:id="composer-span-44-note-2">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -675,7 +665,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-27-note-3">
+      <note xml:id="composer-span-44-note-3">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -687,7 +677,7 @@
       </note>
     </measure>
     <measure number="14">
-      <note xml:id="composer-span-28-note-0">
+      <note xml:id="composer-span-45-note-0">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -697,7 +687,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-28-note-1">
+      <note xml:id="composer-span-45-note-1">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -708,7 +698,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-28-note-2">
+      <note xml:id="composer-span-45-note-2">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -718,7 +708,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-28-note-3">
+      <note xml:id="composer-span-45-note-3">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -728,7 +718,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-28-note-4">
+      <note xml:id="composer-span-45-note-4">
         <pitch>
           <step>D</step>
           <alter>-1</alter>
@@ -739,7 +729,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-28-note-5">
+      <note xml:id="composer-span-45-note-5">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -749,7 +739,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-28-note-6">
+      <note xml:id="composer-span-45-note-6">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -760,7 +750,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-28-note-7">
+      <note xml:id="composer-span-45-note-7">
         <pitch>
           <step>A</step>
           <octave>4</octave>
@@ -781,7 +771,7 @@
           <beat-type>4</beat-type>
         </time>
       </attributes>
-      <note xml:id="composer-span-10-note-0">
+      <note xml:id="composer-span-22-note-0">
         <pitch>
           <step>D</step>
           <octave>3</octave>
@@ -790,7 +780,7 @@
         <voice>1</voice>
         <type>half</type>
       </note>
-      <note xml:id="composer-span-23-note-0">
+      <note xml:id="composer-span-35-note-0">
         <pitch>
           <step>G</step>
           <octave>2</octave>
@@ -801,7 +791,7 @@
       </note>
     </measure>
     <measure number="2">
-      <note xml:id="composer-span-24-note-0">
+      <note xml:id="composer-span-36-note-0">
         <pitch>
           <step>A</step>
           <octave>2</octave>
@@ -812,61 +802,67 @@
       </note>
     </measure>
     <measure number="3">
-      <note xml:id="composer-span-31-note-0">
+      <note xml:id="composer-span-52-note-0_a">
         <pitch>
           <step>D</step>
           <octave>3</octave>
         </pitch>
         <duration>8</duration>
+        <tie type="start"/>
         <voice>1</voice>
         <type>whole</type>
+        <notations>
+          <tied type="start"/>
+        </notations>
       </note>
     </measure>
     <measure number="4">
-      <note xml:id="composer-span-45-note-0">
+      <note xml:id="composer-span-52-note-0_b">
         <pitch>
-          <step>E</step>
+          <step>D</step>
           <octave>3</octave>
         </pitch>
-        <duration>4</duration>
+        <duration>8</duration>
+        <tie type="stop"/>
         <voice>1</voice>
-        <type>half</type>
-      </note>
-      <note xml:id="composer-span-45-note-1">
-        <pitch>
-          <step>E</step>
-          <octave>2</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>half</type>
+        <type>whole</type>
+        <notations>
+          <tied type="stop"/>
+        </notations>
       </note>
     </measure>
     <measure number="5">
-      <note xml:id="composer-span-33-note-0">
+      <note xml:id="composer-span-54-note-0_a">
         <pitch>
           <step>D</step>
-          <alter>-1</alter>
           <octave>3</octave>
         </pitch>
         <duration>8</duration>
+        <tie type="start"/>
         <voice>1</voice>
         <type>whole</type>
+        <notations>
+          <tied type="start"/>
+        </notations>
       </note>
     </measure>
     <measure number="6">
-      <note xml:id="composer-span-46-note-0">
+      <note xml:id="composer-span-54-note-0_b">
         <pitch>
           <step>D</step>
           <octave>3</octave>
         </pitch>
         <duration>8</duration>
+        <tie type="stop"/>
         <voice>1</voice>
         <type>whole</type>
+        <notations>
+          <tied type="stop"/>
+        </notations>
       </note>
     </measure>
     <measure number="7">
-      <note xml:id="composer-span-35-note-0">
+      <note xml:id="composer-span-56-note-0">
         <pitch>
           <step>D</step>
           <octave>3</octave>
@@ -877,30 +873,21 @@
       </note>
     </measure>
     <measure number="8">
-      <note xml:id="composer-span-47-note-0">
+      <note xml:id="composer-span-64-note-0">
         <pitch>
           <step>G</step>
           <octave>3</octave>
         </pitch>
-        <duration>4</duration>
+        <duration>8</duration>
         <voice>1</voice>
-        <type>half</type>
-      </note>
-      <note xml:id="composer-span-47-note-1">
-        <pitch>
-          <step>G</step>
-          <octave>2</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>half</type>
+        <type>whole</type>
       </note>
     </measure>
     <measure number="9">
-      <note xml:id="composer-span-48-note-0">
+      <note xml:id="composer-span-65-note-0">
         <pitch>
           <step>A</step>
-          <octave>2</octave>
+          <octave>3</octave>
         </pitch>
         <duration>8</duration>
         <voice>1</voice>
@@ -908,7 +895,7 @@
       </note>
     </measure>
     <measure number="10">
-      <note xml:id="composer-span-49-note-0">
+      <note xml:id="composer-span-66-note-0">
         <pitch>
           <step>D</step>
           <octave>3</octave>
@@ -919,7 +906,7 @@
       </note>
     </measure>
     <measure number="11">
-      <note xml:id="composer-span-14-note-0">
+      <note xml:id="composer-span-26-note-0">
         <pitch>
           <step>D</step>
           <octave>3</octave>
@@ -928,7 +915,7 @@
         <voice>1</voice>
         <type>half</type>
       </note>
-      <note xml:id="composer-span-25-note-0">
+      <note xml:id="composer-span-37-note-0">
         <pitch>
           <step>A</step>
           <octave>3</octave>
@@ -939,7 +926,7 @@
       </note>
     </measure>
     <measure number="12">
-      <note xml:id="composer-span-26-note-0">
+      <note xml:id="composer-span-38-note-0">
         <pitch>
           <step>D</step>
           <octave>3</octave>
@@ -950,7 +937,7 @@
       </note>
     </measure>
     <measure number="13">
-      <note xml:id="composer-span-37-note-0">
+      <note xml:id="composer-span-58-note-0">
         <pitch>
           <step>D</step>
           <octave>3</octave>
@@ -959,10 +946,10 @@
         <voice>1</voice>
         <type>half</type>
       </note>
-      <note xml:id="composer-span-50-note-0">
+      <note xml:id="composer-span-67-note-0">
         <pitch>
           <step>G</step>
-          <octave>2</octave>
+          <octave>3</octave>
         </pitch>
         <duration>4</duration>
         <voice>1</voice>
@@ -970,19 +957,19 @@
       </note>
     </measure>
     <measure number="14">
-      <note xml:id="composer-span-51-note-0">
+      <note xml:id="composer-span-68-note-0">
         <pitch>
           <step>A</step>
-          <octave>2</octave>
+          <octave>3</octave>
         </pitch>
         <duration>4</duration>
         <voice>1</voice>
         <type>half</type>
       </note>
-      <note xml:id="composer-span-51-note-1">
+      <note xml:id="composer-span-68-note-1">
         <pitch>
           <step>A</step>
-          <octave>3</octave>
+          <octave>2</octave>
         </pitch>
         <duration>4</duration>
         <voice>1</voice>

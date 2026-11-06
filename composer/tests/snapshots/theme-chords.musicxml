@@ -118,8 +118,7 @@
     <measure number="3">
       <note xml:id="composer-span-14-note-0">
         <pitch>
-          <step>F</step>
-          <alter>1</alter>
+          <step>B</step>
           <octave>4</octave>
         </pitch>
         <duration>2</duration>
@@ -128,8 +127,9 @@
       </note>
       <note xml:id="composer-span-14-note-1">
         <pitch>
-          <step>B</step>
-          <octave>4</octave>
+          <step>C</step>
+          <alter>1</alter>
+          <octave>5</octave>
         </pitch>
         <duration>1</duration>
         <voice>1</voice>
@@ -138,8 +138,8 @@
       </note>
       <note xml:id="composer-span-14-note-2">
         <pitch>
-          <step>D</step>
-          <octave>5</octave>
+          <step>B</step>
+          <octave>4</octave>
         </pitch>
         <duration>1</duration>
         <voice>1</voice>
