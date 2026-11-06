@@ -311,6 +311,14 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
     size_t lead = melody->context.lead_in_count;
     size_t trail = melody->context.has_lead_out ? 1 : 0;
     size_t pickup = melody->pickup_count;
+    /* A realized motive starts and ends as its own pitches do: the join to the idea before or after it is not held to the
+       melodic rules, as a repetition of a motive that ends a sixth above where it starts could not be said (R-335). */
+    if (pickup == 0 && melody->count > 0 && melody->notes[0].motive_index >= 0) {
+        lead = 0;
+    }
+    if (melody->count > 0 && melody->notes[melody->count - 1].motive_index >= 0) {
+        trail = 0;
+    }
     size_t total = lead + pickup + melody->count + trail;
     PitchSpelling **spellings = calloc(total, sizeof(*spellings));
     bool ok = spellings != NULL;
