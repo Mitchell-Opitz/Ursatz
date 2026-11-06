@@ -1,5 +1,6 @@
 #include "melody/melody_internal.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <core/rational.h>
@@ -183,6 +184,12 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
         }
         size_t count = options_for(mask, low, top, ideal, options);
         size_t kept = 0;
+        size_t strong_before = SIZE_MAX; /* the last note before this one that starts on a strong beat, when it has a pitch */
+        for (size_t q = i; q > 0 && strong_before == SIZE_MAX; q--) {
+            if (out->notes[q - 1].strong && (out->notes[q - 1].motive_index >= 0 || q - 1 <= before)) {
+                strong_before = q - 1;
+            }
+        }
         for (size_t j = 0; j < count; j++) {
             int move = options[j].pitch - out->notes[before].pitch;
             bool repeat = adjacent && move == 0;
@@ -193,6 +200,13 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if (adjacent && melody_parallel_perfects(out->notes[before].pitch, options[j].pitch,
                                                      melody_bass_at(context, out->notes[before].onset),
                                                      melody_bass_at(context, note->onset))) {
+                continue;
+            }
+            /* Nor against the last strong beat before it, which is where the Analyzer reads parallels between the notes. */
+            if (strong_before != SIZE_MAX && strong_before != before &&
+                melody_parallel_perfects(out->notes[strong_before].pitch, options[j].pitch,
+                                         melody_bass_at(context, out->notes[strong_before].onset),
+                                         melody_bass_at(context, note->onset))) {
                 continue;
             }
             /* A chord tone that is dissonant against the bass is not written (the checker rejects it). */
@@ -222,6 +236,18 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                 }
                 options[kept++] = options[j];
             }
+            /* Of those, the ones that are not in parallel with the bass and not dissonant over it, when there are any. */
+            size_t clean = 0;
+            for (size_t j = 0; j < kept; j++) {
+                bool parallel = adjacent && melody_parallel_perfects(out->notes[before].pitch, options[j].pitch,
+                                                                     melody_bass_at(context, out->notes[before].onset),
+                                                                     melody_bass_at(context, note->onset));
+                if (!parallel &&
+                    !melody_dissonant_over_bass(context, options[j].pitch, note->onset, position_add(note->onset, note->duration))) {
+                    options[clean++] = options[j];
+                }
+            }
+            kept = clean > 0 ? clean : kept;
             if (!pick(options, kept, 127, rng, &note->pitch)) {
                 return false;
             }
