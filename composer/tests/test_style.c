@@ -591,10 +591,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * move a note (P18b B7), which changed the variations chosen (seeds 2 to 5), then again when the numerals were written in the
  * library grammar (P25 B3: viio, 65 for 6/5), which changed the numerals in the plan's JSON (seeds 1, 2, 4 and 5), then again when the melodic moves were judged by standard-counterpoint, which refuses the tritone (P25 B5, all seeds), then again when a motive ref was written as its relation step (P25 B6b: "step" in place of "transform" and its members in the plan's JSON, all seeds; the notes are the same). then again when the plan file got its own format (P25 B9: version 2, the hash is of the plan text from "meter" on so the versions in the metadata do not move it; the notes are the same). A run without a
  * style is byte for byte the same. Then again when the presentation drew its repetition by weight, exact, dominant form or
- * sequence (P34 B1), which changed seeds 2, 3 and 5.
+ * sequence (P34 B1), which changed seeds 2, 3 and 5. Then again when the continuation took its fragments and its cadential
+ * idea from the segments of the motif (P34 B2), which changed all five.
  */
-static const unsigned long long MAIN_HASH[5] = {0xc14af5af88371da3ULL, 0x4f605497afebc3c8ULL, 0x78e73e54d3300342ULL,
-                                                0x9a5bd5872404e71eULL, 0xda5ede77f391c89bULL};
+static const unsigned long long MAIN_HASH[5] = {0x636e9c68b4a7753bULL, 0x4041f6010f207a80ULL, 0x5578355e86c21682ULL,
+                                                0x7e6d50e5495e545eULL, 0x36855e3260d5e533ULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;

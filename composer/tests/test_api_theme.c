@@ -181,6 +181,35 @@ static void test_suggest_plans_explain(void) {
     free(printed);
 }
 
+/* The developments of a theme carry the segment each idea is made from (or null) and a one-line summary (B2 of P34). */
+static void test_developments(void) {
+    char *text = test_read_file(THEME("one-motive.json"), NULL);
+    cJSON *request = cJSON_Parse(text);
+    free(text);
+    assert(request && cJSON_AddNumberToObject(request, "seed", 1));
+    char *printed = cJSON_PrintUnformatted(request);
+    cJSON_Delete(request);
+    ComposerResponse response;
+    assert(composer_api_theme(printed, NULL, &response) == COMPOSER_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    assert(document);
+    const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
+    const cJSON *developments = cJSON_GetObjectItemCaseSensitive(theme, "developments");
+    assert(cJSON_GetArraySize(developments) == 4);
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, developments) {
+        const cJSON *idea = cJSON_GetObjectItemCaseSensitive(item, "idea");
+        const cJSON *segment = cJSON_GetObjectItemCaseSensitive(item, "segment");
+        const cJSON *summary = cJSON_GetObjectItemCaseSensitive(item, "summary");
+        assert(cJSON_IsString(idea) && (cJSON_IsString(segment) || cJSON_IsNull(segment)));
+        assert(cJSON_IsString(summary) && strncmp(summary->valuestring, idea->valuestring, strlen(idea->valuestring)) == 0);
+        assert(strstr(summary->valuestring, " = ") != NULL);
+    }
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+}
+
 /* --- cancel ---------------------------------------------------------------------------------------- */
 
 typedef struct {
@@ -464,6 +493,7 @@ int main(int argc, char **argv) {
         test_two_bar_motif();
         test_snapshots();
         test_suggest_plans_explain();
+        test_developments();
         test_progress();
         test_threads();
     }

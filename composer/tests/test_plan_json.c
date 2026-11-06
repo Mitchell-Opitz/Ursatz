@@ -194,7 +194,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     case PLAN_CONSTRAINT_MOTIVE_REF:
         return a->params.motive.motive == b->params.motive.motive &&
                a->params.motive.has_step == b->params.motive.has_step &&
-               memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0;
+               memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0 &&
+               strcmp(a->params.motive.segment, b->params.motive.segment) == 0 && a->params.motive.steps == b->params.motive.steps;
     case PLAN_CONSTRAINT_KEY:
         return a->params.key.tonic_letter == b->params.key.tonic_letter &&
                a->params.key.tonic_accidental == b->params.key.tonic_accidental && a->params.key.mode == b->params.key.mode;

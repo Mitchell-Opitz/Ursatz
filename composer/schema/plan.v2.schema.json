@@ -190,7 +190,9 @@
             "required": ["motive"],
             "properties": {
               "motive": { "type": "integer", "minimum": 1 },
-              "step": { "type": "string", "minLength": 1 }
+              "step": { "type": "string", "minLength": 1 },
+              "segment": { "type": "string", "minLength": 1, "maxLength": 8 },
+              "steps": { "type": "integer", "minimum": 1, "maximum": 8 }
             }
           }
         },

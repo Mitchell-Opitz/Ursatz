@@ -878,6 +878,11 @@ target_link_libraries(test_grow_repetitions PRIVATE ursatz_composer)
 target_compile_options(test_grow_repetitions PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_repetitions COMMAND test_grow_repetitions)
 
+add_executable(test_grow_segment_fragments test_grow_segment_fragments.c)
+target_link_libraries(test_grow_segment_fragments PRIVATE ursatz_composer cjson)
+target_compile_options(test_grow_segment_fragments PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_segment_fragments COMMAND test_grow_segment_fragments)
+
 add_executable(test_grow_compose_rates test_grow_compose_rates.c)
 target_link_libraries(test_grow_compose_rates PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_grow_compose_rates PRIVATE ${PROJECT_SOURCE_DIR}/src)

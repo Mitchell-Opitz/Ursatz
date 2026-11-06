@@ -23,10 +23,10 @@ bar  beat chord      function     bass
 8    1    i          tonic        D3
 
 motive developments (m0 is the motive given)
-  m1 for repetition: sequence, 1 step up (tonal)
-  m2 for fragment 1: fragmented, leading, 2 notes
-  m3 for fragment 2: fragmented, leading, 3 notes
-  m4 for cadential: liquidated, drop 2
+  m1: repetition = basic idea, 1 step up (tonal)
+  m2: fragment 1 = basic idea, fragmented, leading, 2 notes
+  m3: fragment 2 = basic idea, fragmented, leading, 3 notes
+  m4: cadential = basic idea, liquidated, drop 2
 
 slots (the motive each idea is made from)
   basic idea: basic slot, motive A, motive

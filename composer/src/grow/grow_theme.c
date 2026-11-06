@@ -821,14 +821,32 @@ static const char *repetition_name(GrowRepetition repetition) {
     return NAMES[repetition];
 }
 
+/* The continuation of the label: the fragments (leading notes, or segments) and how the cadential idea is liquidated. */
+static void continuation_label(const GrowThemeSpec *spec, char *out, size_t size) {
+    char fragments[48];
+    char liquidated[32];
+    if (spec->fragment_from_segment[0]) {
+        snprintf(fragments, sizeof(fragments), "segment %s then %s%s", spec->segments[spec->fragment_segment[0]].label,
+                 spec->segments[spec->fragment_segment[1]].label, spec->fragment_sequence ? " down" : "");
+    } else {
+        snprintf(fragments, sizeof(fragments), "%zu+%zu notes", spec->fragment_notes[0], spec->fragment_notes[1]);
+    }
+    if (spec->has_liquidated[GROW_PLACE_CADENTIAL]) {
+        snprintf(liquidated, sizeof(liquidated), "segments, %zu steps", spec->liquidation_steps[GROW_PLACE_CADENTIAL]);
+    } else {
+        snprintf(liquidated, sizeof(liquidated), "drop %zu", spec->liquidate_drop);
+    }
+    snprintf(out, size, "fragments %s, cadential %s", fragments, liquidated);
+}
+
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
         spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
-        snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
-                 repetition_name(spec->repetition), spec->fragment_notes[0],
-                 spec->fragment_notes[1], spec->liquidate_drop);
+        char continuation[96];
+        continuation_label(spec, continuation, sizeof(continuation));
+        snprintf(label, size, "sentence %zu bars %s %s", spec->bars, repetition_name(spec->repetition), continuation);
         return;
     }
     size_t used = (size_t)snprintf(label, size, "%s + %s %zu bars", BEGINNINGS[spec->pairing.beginning],
@@ -839,8 +857,9 @@ static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
         used += (size_t)snprintf(label + used, size - used, " contrast %s", dev_name(&spec->contrast));
     }
     if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
-        snprintf(label + used, size - used, " fragments %zu+%zu drop %zu", spec->fragment_notes[0],
-                 spec->fragment_notes[1], spec->liquidate_drop);
+        char continuation[96];
+        continuation_label(spec, continuation, sizeof(continuation));
+        snprintf(label + used, size - used, " %s", continuation);
     } else if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
         snprintf(label + used, size - used, " consequent contrast %s", dev_name(&spec->consequent_contrast));
     } else if (used < size) {

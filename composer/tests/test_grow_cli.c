@@ -103,7 +103,7 @@ static void test_each_form(void) {
         assert(strstr(out, "bar  beat chord") != NULL);
         /* The first chord is the tonic, in bar 1, and the theme ends on one. */
         assert(strstr(out, "\n1    1    i ") != NULL);
-        assert(strstr(out, "motive developments (m0 is the motive given)\n  m1 for ") != NULL);
+        assert(strstr(out, "motive developments (m0 is the motive given)\n  m1: ") != NULL);
         assert(strstr(out, "standard-form rule score ") != NULL);
         assert(strstr(out, "\nheard as ") != NULL || strstr(out, "\nno theme heard\n") != NULL);
         free(out);

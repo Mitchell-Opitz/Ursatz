@@ -269,7 +269,9 @@
             "required": [
               "motive",
               "idea",
-              "development"
+              "development",
+              "segment",
+              "summary"
             ],
             "properties": {
               "motive": {
@@ -279,6 +281,15 @@
                 "type": "string"
               },
               "development": {
+                "type": "string"
+              },
+              "segment": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "summary": {
                 "type": "string"
               }
             },
