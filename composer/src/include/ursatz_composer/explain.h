@@ -77,6 +77,7 @@ typedef struct {
     char heard_form[32];       /* the phrase-level form heard first, "none" when no theme was heard */
     char requested_form[32];   /* "none" when the section asked for none */
     bool heard_as_requested;
+    char development[16];      /* a theme's development setting ("melody", "balanced", "theme"), "" for none (the caller sets it) */
 } ExplainSection;
 
 typedef struct {

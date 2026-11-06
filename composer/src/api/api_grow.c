@@ -1268,7 +1268,8 @@ cJSON *api_brief_json(const GrowBrief *brief) {
         !cJSON_AddStringToObject(mode, "from", brief->mode_from) || !cJSON_AddItemToObject(object, "tempo", tempo) ||
         !cJSON_AddItemToObject(object, "mode", mode) ||
         !cJSON_AddItemToObject(object, "density", brief->has_density ? ratio_number(&brief->density) : cJSON_CreateNull()) ||
-        !cJSON_AddItemToObject(object, "without", without)) {
+        !cJSON_AddItemToObject(object, "without", without) ||
+        (brief->development && !cJSON_AddStringToObject(object, "development", brief->development))) {
         /* Whatever was not added to the object is still ours. */
         if (!object || !cJSON_GetObjectItem(object, "tempo")) {
             cJSON_Delete(tempo);
@@ -1291,6 +1292,10 @@ cJSON *api_brief_json(const GrowBrief *brief) {
     return object;
 }
 
+const char *api_development_name(GrowDevelopment development) {
+    return development == GROW_DEVELOP_MELODY ? "melody" : development == GROW_DEVELOP_THEME ? "theme" : "balanced";
+}
+
 void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     memset(out, 0, sizeof(*out));
     out->tempo = setup->tempo;
@@ -1300,6 +1305,7 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     out->has_density = composer_style_density(setup->style, &out->density);
     out->without = setup->without;
     out->without_count = setup->without_count;
+    out->development = setup->material ? api_development_name(setup->development) : NULL; /* a theme's, not a grow's */
 }
 
 static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const GrowThemeInfo *info, Rational bar) {

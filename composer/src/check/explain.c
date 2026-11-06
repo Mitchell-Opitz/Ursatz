@@ -576,6 +576,9 @@ char *explain_to_text(const Explanation *explanation) {
         bool lettered = section->letter[0] && strcmp(section->letter, section->name) != 0;
         put(&buffer, "section %s%s%s%s\n", section->name, lettered ? " (" : "", lettered ? section->letter : "",
             lettered ? ")" : "");
+        if (section->development[0]) {
+            put(&buffer, "  development: %s\n", section->development);
+        }
         if (section->heard) {
             put(&buffer, "  heard as %s, asked for %s%s\n", section->heard_form, section->requested_form,
                 section->heard_as_requested ? " (as requested)" : "");
@@ -734,6 +737,9 @@ static cJSON *section_json(const ExplainSection *section) {
               plan_json_add(heard, "form", cJSON_CreateString(section->heard_form)) &&
               plan_json_add(heard, "requested", cJSON_CreateString(section->requested_form)) &&
               plan_json_add(heard, "as_requested", cJSON_CreateBool(section->heard_as_requested));
+    if (ok && section->development[0]) {
+        ok = plan_json_add(object, "development", cJSON_CreateString(section->development));
+    }
     if (ok) {
         ok = plan_json_add(object, "form", heard);
         heard = NULL;

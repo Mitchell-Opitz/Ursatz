@@ -39,7 +39,11 @@ typedef struct {
     ComposerRatio density;
     const char *const *without;
     size_t without_count;
+    const char *development;  /* "melody", "balanced" or "theme" for a theme; NULL for none (not echoed) */
 } GrowBrief;
+
+/* "melody", "balanced" or "theme". */
+const char *api_development_name(GrowDevelopment development);
 
 /* The motives of a theme run (the `theme` request's), besides the basic one. */
 typedef struct {

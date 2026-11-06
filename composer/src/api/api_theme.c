@@ -543,8 +543,8 @@ static ComposerStatus fail_alloc(ComposerError *error) {
 }
 
 /* Adds, for each theme of the document, its plan (with "plans") and its explanation (with "explain"). */
-static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, const ApiOutputOptions *outputs,
-                                        ComposerError *error) {
+static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
+                                        const ApiOutputOptions *outputs, ComposerError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
         cJSON *item = cJSON_GetArrayItem(themes, (int)k);
@@ -566,6 +566,8 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
                                                      &explanation);
             char *text = NULL;
             if (built == EXPLAIN_OK) {
+                snprintf(explanation.sections[0].development, sizeof(explanation.sections[0].development), "%s",
+                         api_development_name(setup_development));
                 text = outputs->explain == 2 ? explain_to_json(&explanation) : explain_to_text(&explanation);
                 explain_destroy(&explanation);
             }
@@ -745,7 +747,7 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
         const cJSON *chords = cJSON_GetObjectItemCaseSensitive(state.request, "chords");
         info.chords = cJSON_IsArray(chords) ? chords : NULL;
         cJSON *document = api_grow_result_json(&state.setup, &state.run, &info);
-        status = document ? add_theme_members(document, &state.run, &outputs, &out->error) : fail_alloc(&out->error);
+        status = document ? add_theme_members(document, &state.run, state.setup.development, &outputs, &out->error) : fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
             status = render_first(&state.run.themes[0], &outputs, out);
         }
