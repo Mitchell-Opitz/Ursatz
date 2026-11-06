@@ -580,7 +580,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     api_grow_request_for(setup, seed, &request);
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
-    GrowResult built = grow_build_plan(&request, &theme->plan);
+    GrowResult built = grow_build_plan_checked(&request, &theme->plan, &run->refusal);
     if (built != GROW_OK) {
         return built;
     }
@@ -647,16 +647,6 @@ ComposerStatus api_fail_motif_long(ComposerError *error, const char *path, const
                     bars, theme_bars, idea_bars);
 }
 
-/* A theme's motif longer than its part: the lengths a theme of these bars takes (the basic idea, or the first part). */
-static ComposerStatus fail_motif_long_theme(ComposerError *error, const char *path, const Motive *motive,
-                                            const PlanMeter *meter, size_t theme_bars) {
-    size_t bars = motive ? grow_motive_layout_bars(motive, grow_bar_length(meter)) : 0;
-    return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path,
-                    "the motif is %zu bars; a %zu-bar theme takes a motif of up to %zu bars, or of %zu for its "
-                    "presentation or antecedent",
-                    bars, theme_bars, theme_bars == 4 ? (size_t)1 : (size_t)2, theme_bars / 2);
-}
-
 ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error) {
     memset(run, 0, sizeof(*run));
     run->chord_bar = -1;
@@ -686,20 +676,16 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
                 run->themes[run->made++] = theme;
             }
         } else if (result != GROW_ERR_STUCK) {
-            return result == GROW_ERR_MOTIVE_TOO_LONG
-                       ? fail_motif_long_theme(error, setup->material ? "/slots/basic" : "", setup->motive, &setup->meter,
-                                               setup->bars)
-                   : result == GROW_ERR_BAD_REQUEST
-                       ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
-                                  "this theme cannot be grown as asked: the motive needs at least two notes, an "
-                                  "antecedent needs --first-cadence weaker than --cadence, and the pairing must be "
-                                  "one the harmony operators can write in %s",
-                                  text->meter)
+            /* A refusal before seeding says why and where: its path is that of the field in a theme request. */
+            const GrowRefusal *refusal = &run->refusal;
+            return refusal->message[0] != '\0'
+                       ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, setup->material ? refusal->path : "", "%s",
+                                  refusal->message)
                        : api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", grow_result_name(result));
         }
     }
     if (run->made == 0 && run->chord_bar >= 0) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the given chords in bar %ld do not allow the %s",
+        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, setup->material ? "/chords" : "", "the given chords in bar %ld do not allow the %s",
                         run->chord_bar, text->cadence ? text->cadence : "PAC");
     }
     if (run->made == 0) {

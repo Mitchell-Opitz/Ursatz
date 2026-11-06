@@ -131,6 +131,7 @@ typedef struct {
     ComposeRejection *passed; /* the seeds passed over, in the order tried (explain.h), kept for the explanation */
     size_t passed_count;
     long chord_bar;           /* the bar of the first target a stuck run left open when it holds given chords, else -1 */
+    GrowRefusal refusal;      /* why the plan was refused before seeding, when it was */
     unsigned long last_seed;
 } GrowRun;
 
