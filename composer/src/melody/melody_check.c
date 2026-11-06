@@ -92,8 +92,8 @@ static size_t note_before(const MelodyCandidate *melody, Rational position) {
     return melody->count;
 }
 
-static unsigned nct_bit(NonChordTone tone) {
-    switch (tone) {
+unsigned melody_nct_bit(int tone) {
+    switch ((NonChordTone)tone) {
     case NON_CHORD_TONE_PASSING:
         return MELODY_NCT_PASSING;
     case NON_CHORD_TONE_NEIGHBOR:
@@ -139,8 +139,12 @@ static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) 
     }
 }
 
-/* Labels the leftover tones of each chord's segment with the framework, and holds each to the types allowed. */
-static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, unsigned *tones) {
+/*
+ * Labels the leftover tones of each chord's segment with the framework, and holds each to the types allowed. With `loose`
+ * (a survey, not a check) nothing is rejected: every melody note the labeler cannot classify has its loose[] set, and
+ * `tones` holds the figure of every note it classifies, whether the parameters allow it or not.
+ */
+static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, unsigned *tones, bool *loose) {
     const MelodyContext *context = &melody->context;
     size_t total = 0;
     size_t used = 0;
@@ -204,17 +208,20 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
         }
         for (size_t k = 0; !verdict->hard && k < count; k++) {
             const CommonPracticeMember *member = &segments[s].members[labels[k].member_index];
-            if (member->voice_id == BASS_VOICE) {
-                verdict->hard = "bass note outside its chord";
+            bool bass = member->voice_id == BASS_VOICE;
+            size_t note = bass ? melody->count : (size_t)strtoul(member->note_id + 1, NULL, 10);
+            if (bass) {
+                verdict->hard = loose ? verdict->hard : "bass note outside its chord";
             } else if (!labels[k].classified) {
-                verdict->hard = "non-chord tone of no figure";
-            } else if (!(nct_bit(labels[k].tone) & melody->params.nct_types)) {
-                verdict->hard = "non-chord tone of a figure not allowed";
-            } else if (tones && member->note_id[0] == 'm') {
-                size_t note = (size_t)strtoul(member->note_id + 1, NULL, 10);
-                if (note < melody->count && !tones[note]) {
-                    tones[note] = nct_bit(labels[k].tone);
+                if (loose && note < melody->count) {
+                    loose[note] = true;
+                } else if (!loose) {
+                    verdict->hard = "non-chord tone of no figure";
                 }
+            } else if (!loose && !(melody_nct_bit((int)labels[k].tone) & melody->params.nct_types)) {
+                verdict->hard = "non-chord tone of a figure not allowed";
+            } else if (tones && note < melody->count && !tones[note]) {
+                tones[note] = melody_nct_bit((int)labels[k].tone);
             }
         }
         free(labels);
@@ -598,7 +605,18 @@ bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
     }
     memset(&verdict, 0, sizeof(verdict));
     memset(types, 0, melody->count * sizeof(*types));
-    return check_tones(melody, &verdict, types);
+    return check_tones(melody, &verdict, types, NULL);
+}
+
+bool melody_nct_survey(const MelodyCandidate *melody, unsigned *types, bool *unclassified) {
+    PhraseVerdict verdict;
+    if (!melody || !types || !unclassified || melody->count == 0 || melody->count > MELODY_MAX_NOTES) {
+        return false;
+    }
+    memset(&verdict, 0, sizeof(verdict));
+    memset(types, 0, melody->count * sizeof(*types));
+    memset(unclassified, 0, melody->count * sizeof(*unclassified));
+    return check_tones(melody, &verdict, types, unclassified);
 }
 
 bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
@@ -610,7 +628,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     }
     check_basics(melody, verdict);
     if (!verdict->hard) {
-        ok = check_tones(melody, verdict, NULL);
+        ok = check_tones(melody, verdict, NULL, NULL);
     }
     if (ok && !verdict->hard) {
         ok = check_melodic(melody, verdict);

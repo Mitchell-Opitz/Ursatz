@@ -237,6 +237,14 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict);
  * notes to, for the style's non-chord tone figures.
  */
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types);
+/*
+ * Surveys the labeling of a melody without judging it: types[i] is the MELODY_NCT_ bit of the figure the framework gives
+ * note i (0 for a chord tone or a note it cannot classify), and unclassified[i] is set for a note outside its chord that
+ * it cannot classify. Every figure counts, whatever params.nct_types allows. False when the melody cannot be labeled.
+ */
+bool melody_nct_survey(const MelodyCandidate *melody, unsigned *types, bool *unclassified);
+/* The MELODY_NCT_ bit of a NonChordTone (an int), 0 for a type the operator has no bit for. */
+unsigned melody_nct_bit(int tone);
 /* The SHAPING_ bits (check/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
 unsigned melody_shaping_broken(const MelodyCandidate *melody);
 /* The checker's verdict on a melody candidate's payload. */
@@ -247,6 +255,20 @@ bool melody_check(const void *payload, FillCheck *out);
  * fit the phrase or the range, or a strong beat has no chord tone near enough to its contour).
  */
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out);
+
+/*
+ * Realizes the motive of the context in a candidate whose notes are laid out (layout): the motive's notes, each moved
+ * `shift` semitones, are bent to the chords as a whole (R-328). With keep_figures a clash that the framework labels as a
+ * figure stays; every other clash moves to the nearest chord tone, or to a pitch that keeps its own figure. The figures
+ * kept are added to out->params.nct_types. Uses no random numbers. False when a note falls out of the range.
+ */
+bool melody_realize(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
+                    MelodyCandidate *out);
+/*
+ * The octave shifts of {0, -12, 12, -24, 24} that put every motive note in the range, best first (R-334); shifts holds
+ * five. Returns how many.
+ */
+size_t melody_realize_shifts(const MelodyContext *context, const MelodyFillParams *params, int *shifts);
 
 /* How many of the standard counterpoint melodic rules have a soft preference. */
 unsigned melody_melodic_soft_rules(void);
