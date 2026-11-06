@@ -190,8 +190,21 @@ typedef enum {
 
 const char *grow_result_name(GrowResult result);
 
+/* Why a request was refused before any seeding, and the request path of the field that caused it (B3 of P33). */
+typedef struct {
+    GrowResult result;
+    char path[64];     /* the JSON pointer of the field, "" when no field is to blame */
+    char message[256];
+} GrowRefusal;
+
 /* Builds the plan of the request into *out, which the caller destroys with plan_destroy. */
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out);
+
+/*
+ * grow_build_plan with the reason for a refusal: when refusal is not NULL and the result is not GROW_OK, it holds the
+ * result, the path of the field and a message. Only the first refusal is reported.
+ */
+GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal);
 
 /* --- the structure operator -------------------------------------------- */
 
