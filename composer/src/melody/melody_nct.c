@@ -101,6 +101,17 @@ static bool search(const MelodyContext *context, const MelodyFillParams *params,
         for (size_t i = from > 3 ? from - 3 : 0; i <= to; i++) {
             run[used++] = notes[i].pitch;
         }
+        for (size_t i = from + 1; i < to; i++) {
+            if (melody_dissonant_over_bass(context, notes[i].pitch, notes[i].onset, position_add(notes[i].onset, notes[i].duration))) {
+                return false;
+            }
+        }
+        for (size_t i = from + 1; i <= to; i++) {
+            if (melody_parallel_perfects(notes[i - 1].pitch, notes[i].pitch, melody_bass_at(context, notes[i - 1].onset),
+                                         melody_bass_at(context, notes[i].onset))) {
+                return false;
+            }
+        }
         return leap_allowed(notes[to].pitch - notes[to - 1].pitch) &&
                (to - 1 == from || melody_figure_ok(context, params, notes, count, to - 1)) &&
                melody_window_hard(context, run, used) == 0;

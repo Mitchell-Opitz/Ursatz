@@ -485,6 +485,22 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
     return ok;
 }
 
+int melody_bass_at(const MelodyContext *context, Rational position) {
+    int pitch = -1;
+    for (size_t b = 0; b < context->bass_count; b++) {
+        if (rational_cmp(context->bass[b].onset, position) <= 0 && rational_cmp(position, context->bass[b].end) < 0) {
+            pitch = context->bass[b].pitch;
+        }
+    }
+    return pitch;
+}
+
+bool melody_parallel_perfects(int from, int to, int bass_from, int bass_to) {
+    int a = util_pitch_class(from - bass_from);
+    int b = util_pitch_class(to - bass_to);
+    return bass_from >= 0 && bass_to >= 0 && from != to && a == b && (a == 0 || a == 7);
+}
+
 bool melody_dissonant_over_bass(const MelodyContext *context, int pitch, Rational onset, Rational end) {
     bool dissonant = false;
     unsigned pitch_bit = 1u << util_pitch_class(pitch);

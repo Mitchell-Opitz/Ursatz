@@ -4,6 +4,8 @@
 #include <string.h>
 #include "util/util.h"
 
+#include <standard-counterpoint/melodic_rules.h>
+
 /* How far, in semitones, a note moves to re-form its own figure (R-335). */
 #define FIGURE_REACH 2
 /* The octave shifts a realized idea may take, nearest first, the lower before the higher (R-334). */
@@ -47,24 +49,6 @@ static bool better(const Pick *a, const Pick *b) {
     return a->pitch < b->pitch;
 }
 
-/* The pitch of the bass sounding at a position, or -1 when none does. */
-static int bass_at(const MelodyContext *context, Rational position) {
-    int pitch = -1;
-    for (size_t b = 0; b < context->bass_count; b++) {
-        if (rational_cmp(context->bass[b].onset, position) <= 0 && rational_cmp(position, context->bass[b].end) < 0) {
-            pitch = context->bass[b].pitch;
-        }
-    }
-    return pitch;
-}
-
-/* Whether two melody notes, with the bass under each, move in parallel octaves or fifths (the checker's hard rule). */
-static bool parallel_perfects(int from, int to, int bass_from, int bass_to) {
-    int a = util_pitch_class(from - bass_from);
-    int b = util_pitch_class(to - bass_to);
-    return bass_from >= 0 && bass_to >= 0 && from != to && a == b && (a == 0 || a == 7);
-}
-
 /* How a pitch for note k compares: its distance from the target, the hard melodic rules the run of notes around it breaks, and its intervals to the neighbours against the motive's. */
 static Pick measure(const Realize *r, size_t k, int pitch) {
     const MelodyContext *context = r->context;
@@ -94,16 +78,16 @@ static Pick measure(const Realize *r, size_t k, int pitch) {
         int own = context->motive_pitch[k] - context->motive_pitch[k - 1];
         pick.error += util_absolute(leap - own);
         pick.away = util_absolute(leap);
-        pick.forbidden += parallel_perfects(r->out->notes[k - 1].pitch, pitch,
-                                            bass_at(context, r->out->notes[k - 1].onset),
-                                            bass_at(context, r->out->notes[k].onset));
+        pick.forbidden += melody_parallel_perfects(r->out->notes[k - 1].pitch, pitch,
+                                            melody_bass_at(context, r->out->notes[k - 1].onset),
+                                            melody_bass_at(context, r->out->notes[k].onset));
     }
     if (k + 1 < r->count) {
         int leap = r->out->notes[k + 1].pitch - pitch;
         int own = context->motive_pitch[k + 1] - context->motive_pitch[k];
         pick.error += util_absolute(leap - own);
-        pick.forbidden += parallel_perfects(pitch, r->out->notes[k + 1].pitch, bass_at(context, r->out->notes[k].onset),
-                                            bass_at(context, r->out->notes[k + 1].onset));
+        pick.forbidden += melody_parallel_perfects(pitch, r->out->notes[k + 1].pitch, melody_bass_at(context, r->out->notes[k].onset),
+                                            melody_bass_at(context, r->out->notes[k + 1].onset));
     }
     return pick;
 }
@@ -238,15 +222,58 @@ static unsigned run_hard(const Realize *r, size_t from, size_t upto) {
     return melody_window_hard(r->context, run, used);
 }
 
-/* Whether the line holds the hard melodic rules and has no parallel octaves or fifths with the bass. */
+/*
+ * Whether the first generated note, when it is an anchor right after the motive's last note, has a pitch to take: a tone of
+ * its chord in the range, by a leap the melodic rules allow and not in parallel octaves or fifths with the bass. The motive's
+ * last note is not left where nothing can follow it.
+ */
+static bool tail_reachable(const Realize *r) {
+    const MelodyNote *next = &r->out->notes[r->count];
+    if (r->count >= r->out->count || !melody_is_anchor(r->context, r->params, r->out, r->count)) {
+        return true;
+    }
+    unsigned mask = melody_need_mask(r->context, r->params, next);
+    if (r->count + 1 == r->out->count) {
+        mask &= melody_cadence_mask(r->context);
+    }
+    int last = r->out->notes[r->count - 1].pitch;
+    /* The generated notes stay under the top of the phrase so far, but for a climax the contour may plan above it. */
+    int top = 0;
+    int high = melody_arch_high(r->context, r->params);
+    for (size_t k = 0; k < r->count; k++) {
+        top = r->out->notes[k].pitch > top ? r->out->notes[k].pitch : top;
+    }
+    if (r->context->idea && r->context->phrase_has_top && r->context->phrase_top > top) {
+        top = r->context->phrase_top;
+    }
+    int ceiling = high;
+    if (r->context->idea && melody_role(r->context, r->params) != MELODY_ROLE_CLIMAX) {
+        int middle = (r->params->range_low + high) / 2;
+        ceiling = top + 2 > middle ? top + 2 : middle;
+        ceiling = ceiling < high ? ceiling : high;
+    }
+    for (int p = r->params->range_low; p <= r->params->range_high; p++) {
+        if (!(p < top && p <= high) && !(p > top && p <= ceiling)) {
+            continue;
+        }
+        if (((mask >> util_pitch_class(p)) & 1u) && p != last && standard_counterpoint_melodic_semitones_allowed(p - last) &&
+            !melody_parallel_perfects(last, p, melody_bass_at(r->context, r->out->notes[r->count - 1].onset),
+                                      melody_bass_at(r->context, next->onset))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Whether the line holds the hard melodic rules, has no parallel octaves or fifths with the bass, and leaves a pitch for the note after it. */
 static bool line_clean(const Realize *r) {
     for (size_t k = 1; k < r->count; k++) {
-        if (parallel_perfects(r->out->notes[k - 1].pitch, r->out->notes[k].pitch,
-                              bass_at(r->context, r->out->notes[k - 1].onset), bass_at(r->context, r->out->notes[k].onset))) {
+        if (melody_parallel_perfects(r->out->notes[k - 1].pitch, r->out->notes[k].pitch,
+                              melody_bass_at(r->context, r->out->notes[k - 1].onset), melody_bass_at(r->context, r->out->notes[k].onset))) {
             return false;
         }
     }
-    return run_hard(r, 0, r->count) == 0;
+    return run_hard(r, 0, r->count) == 0 && tail_reachable(r);
 }
 
 /* The most notes a repair tries before it leaves the line as it is. */
@@ -291,9 +318,9 @@ static bool repair_from(Repair *s, size_t d) {
         s->budget--;
         r->out->notes[k].pitch = options[i].pitch;
         if (run_hard(r, from, k + 1) == 0 &&
-            (k == 0 || !parallel_perfects(r->out->notes[k - 1].pitch, options[i].pitch,
-                                          bass_at(r->context, r->out->notes[k - 1].onset),
-                                          bass_at(r->context, r->out->notes[k].onset))) &&
+            (k == 0 || !melody_parallel_perfects(r->out->notes[k - 1].pitch, options[i].pitch,
+                                          melody_bass_at(r->context, r->out->notes[k - 1].onset),
+                                          melody_bass_at(r->context, r->out->notes[k].onset))) &&
             repair_from(s, d + 1)) {
             return true;
         }

@@ -189,6 +189,16 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if ((adjacent && !leap_allowed(move)) || repeat) {
                 continue;
             }
+            /* Not in parallel octaves or fifths with the bass against the note before. */
+            if (adjacent && melody_parallel_perfects(out->notes[before].pitch, options[j].pitch,
+                                                     melody_bass_at(context, out->notes[before].onset),
+                                                     melody_bass_at(context, note->onset))) {
+                continue;
+            }
+            /* A chord tone that is dissonant against the bass is not written (the checker rejects it). */
+            if (melody_dissonant_over_bass(context, options[j].pitch, note->onset, position_add(note->onset, note->duration))) {
+                continue;
+            }
             /* The last note of a target that comes before written melody leads to its first note by a leap allowed. */
             if (i + 1 == out->count && context->has_lead_out && !leap_allowed(context->lead_out - options[j].pitch)) {
                 continue;
@@ -237,6 +247,10 @@ static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFi
         adjusted.range_high = context->phrase_top - 1;
     }
     return adjusted;
+}
+
+int melody_arch_high(const MelodyContext *context, const MelodyFillParams *params) {
+    return arch_params(context, params).range_high;
 }
 
 /* The pitch a step (a semitone or a tone, within the scale) from `from` in a direction, in range; -1 when none. */

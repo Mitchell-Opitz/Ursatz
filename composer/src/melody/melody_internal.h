@@ -249,6 +249,13 @@ unsigned melody_motive_waived(const MelodyContext *context);
 #define MELODY_WINDOW_MAX (MOTIVE_MAX_NOTES + 4)
 unsigned melody_window_hard(const MelodyContext *context, const int *pitches, size_t count);
 
+/* The pitch of the bass sounding at a position, or -1 when none does. */
+int melody_bass_at(const MelodyContext *context, Rational position);
+/*
+ * Whether two melody pitches, over the bass pitches under them, move in parallel octaves or fifths: the pairs the checker
+ * rejects, for choosing among pitches (the checker's own rule decides).
+ */
+bool melody_parallel_perfects(int from, int to, int bass_from, int bass_to);
 /*
  * Whether a note of this pitch, sounding from onset to end, is a chord tone that is dissonant against a bass note under it
  * and not the chord's seventh: the checker rejects it ("dissonance against the bass").
@@ -289,6 +296,9 @@ bool melody_check(const void *payload, FillCheck *out);
  */
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
                   FillRng *rng, MelodyCandidate *out);
+
+/* The highest pitch the generated notes of the target may take in the phrase's arch (the range, less the arch's cap). */
+int melody_arch_high(const MelodyContext *context, const MelodyFillParams *params);
 
 /*
  * Realizes the motive of the context in a candidate whose notes are laid out (layout): the motive's notes, each moved
