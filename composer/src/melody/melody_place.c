@@ -205,7 +205,27 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             }
             options[kept++] = options[j];
         }
-        if (climax) {
+        /* Relaxed (R-338): a climax that cannot be reached by an allowed leap, or an anchor with no option, takes the chord
+           tones of the whole range that are an allowed leap from the note before and to the lead-out, not a repeat. */
+        bool fall_back = out->relaxed && ((climax && adjacent && !leap_allowed(contour.climax_pitch - out->notes[before].pitch)) ||
+                                          (!climax && kept == 0));
+        if (fall_back) {
+            count = options_for(mask, out->params.range_low, out->params.range_high, ideal, options);
+            kept = 0;
+            for (size_t j = 0; j < count; j++) {
+                int move = options[j].pitch - out->notes[before].pitch;
+                if (adjacent && (!leap_allowed(move) || move == 0)) {
+                    continue;
+                }
+                if (i + 1 == out->count && context->has_lead_out && !leap_allowed(context->lead_out - options[j].pitch)) {
+                    continue;
+                }
+                options[kept++] = options[j];
+            }
+            if (!pick(options, kept, 127, rng, &note->pitch)) {
+                return false;
+            }
+        } else if (climax) {
             note->pitch = contour.climax_pitch;
             if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
                 return false;
@@ -225,7 +245,7 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                 between[j] = out->notes[before].pitch +
                              (note->pitch - out->notes[before].pitch) * (int)(j - before) / (int)(i - before);
             }
-            if (!melody_fill_between(context, params, out->notes, out->count, before, i, between, cap, rng)) {
+            if (!melody_fill_between(context, params, out->notes, out->count, before, i, between, cap, rng, out->relaxed)) {
                 return false;
             }
         }
@@ -350,7 +370,7 @@ bool melody_build(const MelodyContext *context, const MelodyFillParams *params, 
     /* The phrase has one highest note: the whole phrase, or the target with its climax, has one, when it generates notes
        (R-335). A target of realized notes alone is scored by melody_contour_score instead. */
     MelodyRole role = melody_role(context, &arch);
-    bool unique = assigned && ((role != MELODY_ROLE_WHOLE && role != MELODY_ROLE_CLIMAX) || !melody_has_generated(out) ||
-                               melody_contour_unique(out));
+    bool unique = assigned && (relaxed || (role != MELODY_ROLE_WHOLE && role != MELODY_ROLE_CLIMAX) ||
+                               !melody_has_generated(out) || melody_contour_unique(out));
     return unique;
 }

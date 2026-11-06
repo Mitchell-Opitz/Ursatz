@@ -93,20 +93,21 @@ typedef struct {
 
 /* Gives notes j to to - 1 pitches, the best-fitting first, checking each note once the one after it is set. */
 static bool search(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes, size_t count,
-                   size_t from, size_t to, size_t j, const int *ideal, int cap, FillRng *rng, int *budget) {
+                   size_t from, size_t to, size_t j, const int *ideal, int cap, FillRng *rng, int *budget, size_t run_from,
+                   bool bass_checks) {
     if (j == to) {
         /* The run from the anchors before the notes to the anchor after them holds the framework's melodic rules (outlines too). */
         int run[MELODY_WINDOW_MAX];
         size_t used = 0;
-        for (size_t i = from > 3 ? from - 3 : 0; i <= to; i++) {
+        for (size_t i = run_from; i <= to; i++) {
             run[used++] = notes[i].pitch;
         }
-        for (size_t i = from + 1; i < to; i++) {
+        for (size_t i = from + 1; bass_checks && i < to; i++) {
             if (melody_dissonant_over_bass(context, notes[i].pitch, notes[i].onset, position_add(notes[i].onset, notes[i].duration))) {
                 return false;
             }
         }
-        for (size_t i = from + 1; i <= to; i++) {
+        for (size_t i = from + 1; bass_checks && i <= to; i++) {
             if (melody_parallel_perfects(notes[i - 1].pitch, notes[i].pitch, melody_bass_at(context, notes[i - 1].onset),
                                          melody_bass_at(context, notes[i].onset))) {
                 return false;
@@ -147,7 +148,7 @@ static bool search(const MelodyContext *context, const MelodyFillParams *params,
         if (j - 1 > from && !melody_figure_ok(context, params, notes, count, j - 1)) {
             continue;
         }
-        if (search(context, params, notes, count, from, to, j + 1, ideal, cap, rng, budget)) {
+        if (search(context, params, notes, count, from, to, j + 1, ideal, cap, rng, budget, run_from, bass_checks)) {
             return true;
         }
     }
@@ -155,10 +156,27 @@ static bool search(const MelodyContext *context, const MelodyFillParams *params,
 }
 
 bool melody_fill_between(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes,
-                         size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng) {
+                         size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng, bool relaxed) {
     int budget = SEARCH_BUDGET;
+    size_t run_from = from > 3 ? from - 3 : 0;
     if (to <= from + 1) {
         return true;
     }
-    return search(context, params, notes, count, from, to, from + 1, ideal, cap, rng, &budget);
+    if (!relaxed) {
+        return search(context, params, notes, count, from, to, from + 1, ideal, cap, rng, &budget, run_from, true);
+    }
+    /* Relaxed (R-338): the run starts at the nearest motive note at or before the first anchor, so it holds one at most. */
+    size_t lowest = run_from;
+    run_from = from;
+    for (size_t i = from + 1; i > lowest; i--) {
+        if (notes[i - 1].motive_index >= 0) {
+            run_from = i - 1;
+            break;
+        }
+    }
+    if (search(context, params, notes, count, from, to, from + 1, ideal, cap, rng, &budget, run_from, true)) {
+        return true;
+    }
+    budget = SEARCH_BUDGET;
+    return search(context, params, notes, count, from, to, from + 1, ideal, cap, rng, &budget, run_from, false);
 }

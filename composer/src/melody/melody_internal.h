@@ -201,10 +201,11 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
 /*
  * Gives the notes between from and to, which are non-chord-tone candidates, pitches with the pitches of notes from
  * and to fixed: chord tones, or the non-chord tones of figures that hold. ideal[j] is the pitch the note j would
- * take if it could, and nothing above cap is used. False when no assignment holds.
+ * take if it could, and nothing above cap is used. False when no assignment holds. Relaxed (R-338), the melodic rules are
+ * held over a run that starts at the nearest motive note, and a second search drops the parallel and bass checks.
  */
 bool melody_fill_between(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes,
-                         size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng);
+                         size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng, bool relaxed);
 
 /*
  * A note that must be a chord tone: the first and the last, any on a strong beat, any as long as a cell, and any
