@@ -67,8 +67,13 @@ A slot the pairing has no idea for (a contrasting slot in a sentence) cannot be 
 than `basic` must be a full motive of two notes or more, in the key and meter, and no longer than the idea it begins: two bars
 of eight for the contrasting idea and the cadential idea, one for fragment 1. A motif as long as its idea is that idea, placed
 as written; a shorter one is grown to the idea ([grow.md](grow.md#how-a-motif-fills-its-idea)). The basic motif may be as long
-as the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. A longer one is refused at `/slots/basic` with "the motif is 3
-bars; the basic idea of a 8-bar theme is 2".
+as the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. It may also be as long as the first part, the presentation of a
+sentence or the antecedent of a period (4 bars of an 8-bar theme, 2 of a 4-bar one): that part is then the motif, placed as
+written, with no repetition or contrasting idea, and a `contrasting` slot or a motive for the `repetition` or `contrasting
+idea` idea is refused at `/slots/contrasting` or `/ideas/<name>` with "the basic motif fills the whole presentation; leave the
+contrasting idea out" (or "antecedent"). A compound basic idea has no such part. Any other longer motif is refused at
+`/slots/basic` with "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or
+antecedent" (for a 4-bar theme, up to 1 bar or 2).
 
 ## Ideas
 
