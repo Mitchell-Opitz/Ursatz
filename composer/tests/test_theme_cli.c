@@ -465,7 +465,7 @@ static void test_chords(void) {
     fputs(hc + strlen("\"cadence\": \"HC\""), file);
     fclose(file);
     free(cadence);
-    expect_failure("theme_chords_contradiction.json --seed 1", 2, "the given chords in bar 3 do not allow the PAC");
+    expect_failure("theme_chords_contradiction.json --seed 1", 2, "chords bar 3: V cannot end a PAC; the cadence needs a tonic chord in root position");
 }
 
 /* ----------------------------------------------------------- tone roles */
@@ -552,7 +552,7 @@ static void test_errors(void) {
     fputs(into + strlen("\"period\""), file);
     fclose(file);
     free(text);
-    expect_failure("theme_unused.json --seed 1", 2, "cannot be grown as asked");
+    expect_failure("theme_unused.json --seed 1", 2, "the contrasting idea has no place in this pairing");
     /* No file at all. */
     assert(run("theme", "", "theme_out.txt", "theme_err.txt") == 1);
 }

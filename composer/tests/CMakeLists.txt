@@ -736,6 +736,12 @@ target_compile_definitions(test_api_theme PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE
 add_test(NAME test_api_theme COMMAND test_api_theme WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(test_api_theme PROPERTIES FIXTURES_SETUP api_responses_written)
 
+add_executable(test_api_validate test_api_validate.c)
+target_link_libraries(test_api_validate PRIVATE ursatz_composer composer_test_support cjson)
+target_compile_options(test_api_validate PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_api_validate PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_test(NAME test_api_validate COMMAND test_api_validate WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
 add_executable(test_api_piece test_api_piece.c)
 target_link_libraries(test_api_piece PRIVATE ursatz_composer composer_test_support cjson)
 target_compile_options(test_api_piece PRIVATE -Wall -Wextra -Wpedantic)

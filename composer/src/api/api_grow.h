@@ -131,6 +131,7 @@ typedef struct {
     ComposeRejection *passed; /* the seeds passed over, in the order tried (explain.h), kept for the explanation */
     size_t passed_count;
     long chord_bar;           /* the bar of the first target a stuck run left open when it holds given chords, else -1 */
+    GrowRefusal refusal;      /* why the plan was refused before seeding, when it was */
     unsigned long last_seed;
 } GrowRun;
 
@@ -163,6 +164,12 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
  * what was made, also on failure; destroy it either way.
  */
 ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error);
+
+/*
+ * The GrowRequest the theme is built from for a seed (the plan does not depend on it today): the setup's brief and its
+ * material's motives and chords. The request points into the setup and the material, which must outlive it.
+ */
+void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowRequest *request);
 void api_grow_run_destroy(GrowRun *run);
 
 /*

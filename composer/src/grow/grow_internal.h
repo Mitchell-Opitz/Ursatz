@@ -243,6 +243,12 @@ typedef enum { GROW_FIT_SHORTER, GROW_FIT_WHOLE, GROW_FIT_LONGER } GrowMotiveFit
  */
 GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars);
 /* Whether the motive fits an idea of idea_bars bars: not longer by grow_motive_fit, and its length (pickup included) within it. */
+/*
+ * Whether every given chord in a bar the cadence fixes (the last bar of the theme, and of the first part of an antecedent)
+ * is one that cadence allows; else GROW_ERR_BAD_REQUEST with the first refusal, at /chords/<entry>. `first` is the
+ * antecedent's cadence.
+ */
+GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType first, GrowRefusal *refusal);
 bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars);
 /*
  * Whether a motive longer than the basic idea is exactly as long as the first part of a theme of theme_bars bars, and the

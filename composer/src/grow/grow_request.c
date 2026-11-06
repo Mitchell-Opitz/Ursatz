@@ -1,5 +1,6 @@
 #include <ursatz_composer/grow.h>
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -318,6 +319,19 @@ static bool cadences_ordered(CadenceType first, CadenceType last) {
                harmony_cadence_strength(last);
 }
 
+/* Records a refusal: its result, the request path of its field and its message. */
+static GrowResult refuse(GrowRefusal *refusal, GrowResult result, const char *path, const char *format, ...) {
+    if (refusal) {
+        va_list args;
+        refusal->result = result;
+        snprintf(refusal->path, sizeof(refusal->path), "%s", path);
+        va_start(args, format);
+        vsnprintf(refusal->message, sizeof(refusal->message), format, args);
+        va_end(args);
+    }
+    return result;
+}
+
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment) {
     bool compound = meter->beat_unit == 8 && meter->beats_per_bar % 3 == 0;
     int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
@@ -347,53 +361,185 @@ static size_t idea_bars(size_t bars, size_t units) {
     return whole < 1 ? 1 : whole;
 }
 
-/* Whether a slot's motive is one the theme can be built from: see GrowRequest.slot_motives. */
-static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rational bar) {
-    const Motive *motive = request->slot_motives[slot];
-    size_t units;
+/* Why a motive given for an idea of `units` eighths of the theme cannot be used there, NULL when it can. */
+static const char *motive_reason(const GrowRequest *request, const Motive *motive, size_t units, Rational bar) {
     Rational room;
-    bool used = grow_slot_used(&request->pairing, slot, &units);
-    if (!used || motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2 ||
-        motive_meter(motive).beats_per_bar != request->meter.beats_per_bar ||
-        motive_meter(motive).beat_unit != request->meter.beat_unit ||
-        (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
-         (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
-          motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR)))) {
-        return false;
+    if (motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2) {
+        return "needs a full motif of at least two notes";
     }
-    /* The first idea of the slot has units eighths of the theme; the longest is as long as that idea. */
-    if (units > 0 && rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
-        rational_cmp(motive->length, room) > 0) {
-        return false;
+    if (motive_meter(motive).beats_per_bar != request->meter.beats_per_bar ||
+        motive_meter(motive).beat_unit != request->meter.beat_unit) {
+        return "is not in the theme's meter";
     }
-    return grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units));
+    if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
+        (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
+         motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR))) {
+        return "is not in the theme's key";
+    }
+    /* The idea has units eighths of the theme; the longest motive is as long as that idea. */
+    if ((units > 0 && rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
+         rational_cmp(motive->length, room) > 0) ||
+        !grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units))) {
+        return "is longer than the idea it fills";
+    }
+    return NULL;
+}
+
+/* Whether a slot's motive is one the theme can be built from: see GrowRequest.slot_motives. */
+static GrowResult slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rational bar, GrowRefusal *refusal) {
+    size_t units;
+    char path[64];
+    snprintf(path, sizeof(path), "/slots/%s", grow_slot_name(slot));
+    if (!grow_slot_used(&request->pairing, slot, &units)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the %s idea has no place in this pairing", grow_slot_name(slot));
+    }
+    const char *reason = motive_reason(request, request->slot_motives[slot], units, bar);
+    return reason ? refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the %s motif %s", grow_slot_name(slot), reason) : GROW_OK;
 }
 
 /* Whether the motive of a single idea is one the theme can be built from: see GrowRequest.idea_motives. */
-static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rational bar) {
-    const Motive *motive = request->idea_motives[idea];
+static GrowResult idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rational bar, GrowRefusal *refusal) {
     GrowPlace place;
-    Rational room;
-    if (idea == GROW_IDEA_BASIC || !grow_idea_place(&request->pairing, idea, &place) ||
-        motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2 ||
-        motive_meter(motive).beats_per_bar != request->meter.beats_per_bar ||
-        motive_meter(motive).beat_unit != request->meter.beat_unit ||
-        (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
-         (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
-          motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR)))) {
-        return false;
+    char path[64];
+    snprintf(path, sizeof(path), "/ideas/%.50s", grow_idea_name(idea));
+    if (idea == GROW_IDEA_BASIC || !grow_idea_place(&request->pairing, idea, &place)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the idea %s has no place in this pairing", grow_idea_name(idea));
     }
-    size_t units = grow_place_units(&request->pairing, place);
-    if (rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
-        rational_cmp(motive->length, room) > 0) {
-        return false;
+    const char *reason = motive_reason(request, request->idea_motives[idea], grow_place_units(&request->pairing, place), bar);
+    return reason ? refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the motif of idea %s %s", grow_idea_name(idea), reason)
+                  : GROW_OK;
+}
+
+/* Why the pairing, the bars, the cadences or the key cannot be built, with the field to blame. */
+static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, GrowRefusal *refusal) {
+    size_t cells_per_bar;
+    bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    CadenceType cadence = request->cadence;
+    if (request->bars != 4 && request->bars != 8) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "a theme has 4 or 8 bars, not %zu", request->bars);
     }
-    return grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units));
+    if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || grow_pairing_archetype(&request->pairing) < 0) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/hybrid", "this pairing cannot be built in %d/%d",
+                      (int)request->meter.beats_per_bar, (int)request->meter.beat_unit);
+    }
+    if (cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
+        cadence != CADENCE_TYPE_HALF) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/cadence", "a theme ends in a PAC, an IAC or an HC");
+    }
+    if (antecedent && !cadences_ordered(first, cadence)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/first_cadence",
+                      "an antecedent ends in a cadence weaker than the theme's (an HC or an IAC below a PAC)");
+    }
+    if (!half_fits(request->bars, cells_per_bar, cadence)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "%zu bars leave no room for the cadence", request->bars);
+    }
+    if (antecedent && !half_fits(request->bars, cells_per_bar, first)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/first_cadence", "half of %zu bars leaves no room for the first cadence",
+                      request->bars);
+    }
+    return GROW_OK;
+}
+
+/* The degree (1 to 7) a numeral is built on, ignoring accidentals and case; 0 when it cannot be read. */
+static int numeral_degree(const char *numeral, bool *inverted) {
+    static const char *const ROMANS[] = {"VII", "VI", "IV", "V", "III", "II", "I"};
+    static const int DEGREES[] = {7, 6, 4, 5, 3, 2, 1};
+    char upper[16];
+    size_t length = 0;
+    const char *at = numeral;
+    while (*at == 'b' || *at == '#') {
+        at++;
+    }
+    while (*at && length + 1 < sizeof(upper) && strchr("ivIV", *at)) {
+        upper[length++] = (char)(*at >= 'a' ? *at - 'a' + 'A' : *at);
+        at++;
+    }
+    upper[length] = '\0';
+    int degree = 0;
+    for (size_t i = 0; i < sizeof(DEGREES) / sizeof(DEGREES[0]); i++) {
+        if (strcmp(upper, ROMANS[i]) == 0) {
+            degree = DEGREES[i];
+        }
+    }
+    /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7 and none are root position. */
+    while (*at == 'o' || *at == '+' || *at == '/' || *at == '\xc2' || *at == '\xb0') {
+        at++;
+    }
+    *inverted = *at && *at != '7' && *at != '9' && *at != '@';
+    return numeral[0] == 'b' || numeral[0] == '#' ? 0 : degree;
+}
+
+/* The name of a cadence the plan can end in, and what it needs of the chord that arrives. */
+static const char *cadence_label(CadenceType cadence) {
+    return cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? "PAC" : cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? "IAC" : "HC";
+}
+
+static const char *cadence_needs(CadenceType cadence) {
+    return cadence == CADENCE_TYPE_PERFECT_AUTHENTIC   ? "a tonic chord in root position"
+           : cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? "a tonic chord"
+                                                         : "the dominant";
+}
+
+/* Whether a chord can arrive the cadence: the tonic (root position for a PAC), or the dominant for a half cadence. */
+static bool cadence_allows(CadenceType cadence, const char *numeral) {
+    bool inverted;
+    int degree = numeral_degree(numeral, &inverted);
+    return cadence == CADENCE_TYPE_HALF ? degree == 5
+           : cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? degree == 1 && !inverted
+                                                       : degree == 1;
+}
+
+/* The first given chord that starts in `bar` and cannot arrive `cadence`, refused at its entry of "chords"; else GROW_OK. */
+static GrowResult check_cadence_bar(const GrowRequest *request, Rational bar_length, long bar, CadenceType cadence,
+                                    GrowRefusal *refusal) {
+    long entry = -1;
+    long previous_bar = -1;
+    for (size_t i = 0; i < request->chord_count; i++) {
+        const GivenChord *chord = &request->chords[i];
+        Rational at = {0, 1};
+        long at_bar = -1;
+        long long whole;
+        if (rational_div(chord->onset, bar_length, &at) == RATIONAL_OK && rational_floor(at, &whole) == RATIONAL_OK) {
+            at_bar = (long)whole;
+        }
+        /* The chords of one bar are one entry of the request's list. */
+        if (at_bar != previous_bar) {
+            entry++;
+            previous_bar = at_bar;
+        }
+        if (at_bar == bar && !cadence_allows(cadence, chord->numeral)) {
+            char path[64];
+            snprintf(path, sizeof(path), "/chords/%ld", entry);
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "chords bar %ld: %s cannot end a %s; the cadence needs %s", bar,
+                          chord->numeral, cadence_label(cadence), cadence_needs(cadence));
+        }
+    }
+    return GROW_OK;
+}
+
+GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType first, GrowRefusal *refusal) {
+    Rational bar = grow_bar_length(&request->meter);
+    if (request->chord_count == 0 || !request->chords) {
+        return GROW_OK;
+    }
+    /* The cadence fixes the harmony of the last bar of the theme, and of the first part for an antecedent. */
+    GrowResult result = check_cadence_bar(request, bar, (long)request->bars - 1, request->cadence, refusal);
+    if (result == GROW_OK && request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+        result = check_cadence_bar(request, bar, (long)request->bars / 2 - 1, first, refusal);
+    }
+    return result;
 }
 
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
+    return grow_build_plan_checked(request, out, NULL);
+}
+
+GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal) {
+    if (refusal) {
+        memset(refusal, 0, sizeof(*refusal));
+    }
     if (!request || !request->motive || !out) {
-        return GROW_ERR_NULL;
+        return refuse(refusal, GROW_ERR_NULL, "", "no request");
     }
     *out = NULL;
     /* An antecedent ends in a weak cadence, HC unless the request says IAC, and the theme in a stronger one. */
@@ -412,29 +558,32 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         accompaniment.pattern = PLAN_ACCOMPANIMENT_MOTIVE;
         snprintf(accompaniment.motive_node, sizeof(accompaniment.motive_node), "%s", GROW_ACCOMPANIMENT_NAME);
     }
-    if (!grow_theme_buildable(&request->meter, request->bars, &request->pairing, request->cadence, first) ||
-        request->motive->note_count < 2 || analysis_key_tonic_pitch_class(&request->key) < 0 || analysis_key_tonic_pitch_class(&request->key) > 11 ||
-        (has_accompaniment && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
-        (has_accompaniment && request->has_voicing) ||
-        (accompaniment_motive && (!accompaniment_motive->accompaniment ||
-                                  accompaniment_motive->note_count < 1))) {
-        return GROW_ERR_BAD_REQUEST;
+    GrowResult checked = grow_theme_buildable(&request->meter, request->bars, &request->pairing, request->cadence, first)
+                             ? GROW_OK
+                             : theme_refusal(request, first, refusal);
+    if (checked != GROW_OK) {
+        return checked;
+    }
+    if (request->motive->note_count < 2) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/slots/basic", "the basic motif needs at least two notes");
+    }
+    if (analysis_key_tonic_pitch_class(&request->key) < 0 || analysis_key_tonic_pitch_class(&request->key) > 11) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/key", "the key has no tonic");
     }
     Rational bar = grow_bar_length(&request->meter);
     size_t basic_units = 0;
     /* The basic motive fills the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. */
     if (!grow_slot_used(&request->pairing, GROW_SLOT_BASIC, &basic_units)) {
-        return GROW_ERR_MOTIVE_TOO_LONG;
+        return refuse(refusal, GROW_ERR_MOTIVE_TOO_LONG, "/slots/basic", "this pairing has no basic idea");
     }
     /* A motive as long as the presentation or the antecedent fills that part whole (it has no ideas of its own). */
     bool part_whole = false;
+    bool too_long = false;
     if (!grow_motive_fits_idea(request->motive, bar, idea_bars(request->bars, basic_units))) {
         Motive basic;
         MotiveRelationStep step;
         part_whole = grow_part_basic_idea(request->motive, bar, request->bars, request->pairing.beginning, &basic, &step);
-        if (!part_whole) {
-            return GROW_ERR_MOTIVE_TOO_LONG;
-        }
+        too_long = !part_whole;
     }
     /* The slot motives, each a node of the material after m0. */
     size_t slot_count = 0;
@@ -443,8 +592,14 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
         if (request->slot_motives[slot]) {
             /* A part-length motive leaves no contrasting or repeating idea to give a motive to. */
-            if ((part_whole && slot == GROW_SLOT_CONTRASTING) || !slot_motive_valid(request, slot, bar)) {
-                return GROW_ERR_BAD_REQUEST;
+            if (part_whole && slot == GROW_SLOT_CONTRASTING) {
+                return refuse(refusal, GROW_ERR_BAD_REQUEST, "/slots/contrasting",
+                              "the basic motif fills the whole %s; leave the contrasting idea out",
+                              antecedent ? "antecedent" : "presentation");
+            }
+            GrowResult valid = slot_motive_valid(request, slot, bar, refusal);
+            if (valid != GROW_OK) {
+                return valid;
             }
             slot_count++;
             extra_bars += grow_motive_layout_bars(request->slot_motives[slot], bar) - 1;
@@ -455,14 +610,38 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         if (request->idea_motives[idea]) {
             GrowPlace place;
-            if ((part_whole && grow_idea_place(&request->pairing, (GrowIdea)idea, &place) &&
-                 place == GROW_PLACE_REPETITION) ||
-                !idea_motive_valid(request, (GrowIdea)idea, bar)) {
-                return GROW_ERR_BAD_REQUEST;
+            if (part_whole && grow_idea_place(&request->pairing, (GrowIdea)idea, &place) && place == GROW_PLACE_REPETITION) {
+                char path[64];
+                snprintf(path, sizeof(path), "/ideas/%.50s", grow_idea_name((GrowIdea)idea));
+                return refuse(refusal, GROW_ERR_BAD_REQUEST, path,
+                              "the basic motif fills the whole %s; leave the contrasting idea out",
+                              antecedent ? "antecedent" : "presentation");
+            }
+            GrowResult valid = idea_motive_valid(request, (GrowIdea)idea, bar, refusal);
+            if (valid != GROW_OK) {
+                return valid;
             }
             idea_count++;
             extra_bars += grow_motive_layout_bars(request->idea_motives[idea], bar) - 1;
         }
+    }
+    if (has_accompaniment && !grow_accompaniment_valid(&request->meter, &accompaniment)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/accompaniment",
+                      "the accompaniment is not valid here (a pattern, a texture and a range the meter allows)");
+    }
+    if (accompaniment_motive && (!accompaniment_motive->accompaniment || accompaniment_motive->note_count < 1 ||
+                                 rational_cmp(accompaniment_motive->length, bar) > 0)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/accompaniment", "the accompaniment motif is not an accompaniment of up to a bar");
+    }
+    if (has_accompaniment && request->has_voicing) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/voicing", "a voicing and an accompaniment cannot be given together");
+    }
+    if (too_long) {
+        size_t bars = grow_motive_layout_bars(request->motive, bar);
+        return refuse(refusal, GROW_ERR_MOTIVE_TOO_LONG, "/slots/basic",
+                      "the motif is %zu bars; a %zu-bar theme takes a motif of up to %zu bars, or of %zu for its "
+                      "presentation or antecedent",
+                      bars, request->bars, request->bars == 4 ? (size_t)1 : (size_t)2, request->bars / 2);
     }
     /* The derived motives take the bars of the longest motive given: the section's own and the four of the ideas. */
     size_t longest = grow_motive_layout_bars(request->motive, bar);
@@ -476,9 +655,6 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     }
     extra_bars += GROW_PLACE_COUNT * (longest - 1);
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars;
-    if (accompaniment_motive && rational_cmp(accompaniment_motive->length, bar) > 0) {
-        return GROW_ERR_BAD_REQUEST;
-    }
 
     PiecePlan *plan = plan_create();
     if (!plan) {
@@ -623,10 +799,12 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
                                                              GROW_ACCOMPANIMENT_NAME, NULL, NULL))
                                    : result;
     }
-    if (result == GROW_OK && request->chord_count > 0) {
-        result = plan_give_chords(plan, theme_id, request->chords, request->chord_count) == GIVEN_OK
-                     ? GROW_OK
-                     : GROW_ERR_BAD_REQUEST;
+    if (result == GROW_OK && request->chord_count > 0 &&
+        plan_give_chords(plan, theme_id, request->chords, request->chord_count) != GIVEN_OK) {
+        result = refuse(refusal, GROW_ERR_BAD_REQUEST, "/chords", "the given chords do not fit the theme");
+    }
+    if (result == GROW_OK) {
+        result = grow_check_given_cadences(request, first, refusal);
     }
     if (result == GROW_OK) {
         result = from_plan(plan_node_set_state(plan, section, PLAN_STATE_REALIZED));
@@ -639,6 +817,9 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     }
     if (result != GROW_OK) {
         plan_destroy(plan);
+        if (refusal && refusal->message[0] == '\0') {
+            refuse(refusal, result, "", "the theme plan could not be built");
+        }
         return result;
     }
     *out = plan;

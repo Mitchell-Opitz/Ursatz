@@ -773,6 +773,21 @@ ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
     memset(&outputs, 0, sizeof(outputs));
     state.request = cJSON_Duplicate(request, true);
     ComposerStatus status = state.request ? theme_prepare(&state, NULL, &outputs, error) : fail_alloc(error);
+    if (status == COMPOSER_OK) {
+        /* Build the plan as Compose would, without seeding: the first refusal is the answer. */
+        GrowRequest grow;
+        PiecePlan *plan = NULL;
+        GrowRefusal refusal;
+        api_grow_request_for(&state.setup, state.setup.seed, &grow);
+        GrowResult built = grow_build_plan_checked(&grow, &plan, &refusal);
+        if (built == GROW_OK) {
+            plan_destroy(plan);
+        } else if (built == GROW_ERR_ALLOC) {
+            status = fail_alloc(error);
+        } else {
+            status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, refusal.path, "%s", refusal.message);
+        }
+    }
     free(state.material);
     composer_style_destroy(state.style);
     cJSON_Delete(state.request);
