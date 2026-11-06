@@ -12,6 +12,7 @@
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/variant_registry.h>
 
@@ -602,8 +603,41 @@ static bool draw_part_whole(const ThemeRequest *request, GrowThemeSpec *spec) {
     return true;
 }
 
+/*
+ * The segments of the theme's motive (R-311): the features of the compose run's basic motive when the motive is its first
+ * notes (a section's own motive is made from m0 and is not), else a proposal from the motive's bars and rhythmic groups.
+ * The run's segments only: nothing is written back to the motif.
+ */
+static void draw_segments(const GrowContext *shared, GrowThemeSpec *spec) {
+    Motive motive = spec->source;
+    const Motive *basic = shared ? shared->basic : NULL;
+    bool same = basic && !spec->has_section_motive && basic->note_count >= motive.note_count;
+    for (size_t i = 0; same && i < motive.note_count; i++) {
+        same = motive_pitch(basic, i) == motive_pitch(&motive, i) &&
+               rational_cmp(basic->notes[i].onset, motive.notes[i].onset) == 0 &&
+               rational_cmp(basic->notes[i].duration, motive.notes[i].duration) == 0;
+    }
+    if (same) {
+        motive.pickup = basic->pickup;
+        motive.feature_count = 0;
+        for (size_t f = 0; f < basic->feature_count; f++) {
+            if (basic->features[f].last < motive.note_count) {
+                motive.features[motive.feature_count++] = basic->features[f];
+            }
+        }
+    }
+    MotiveAnalysis analysis;
+    spec->segment_count = 0;
+    if (!motive_analyze(&motive, &analysis)) {
+        return;
+    }
+    spec->segment_count = analysis.segment_count < MOTIVE_MAX_FEATURES ? analysis.segment_count : MOTIVE_MAX_FEATURES;
+    memcpy(spec->segments, analysis.segments, spec->segment_count * sizeof(spec->segments[0]));
+}
+
 /* Draws every choice of one candidate from rng. False when the draw does not make a sentence the motive fits. */
-static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
+static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const GrowContext *shared, FillRng *rng,
+                      GrowThemeSpec *spec) {
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_PAYLOAD_MAGIC;
     spec->bars = request->bars;
@@ -652,6 +686,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
         }
         spec->has_idea_source[place] = true;
     }
+    draw_segments(shared, spec);
     /* The basic idea is two bars of eight, one of four. */
     spec->basic_cells = request->bars == 4 ? request->cells_per_bar : 2 * request->cells_per_bar;
     return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec);
@@ -721,7 +756,7 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
             return false;
         }
         bool repeat = false;
-        if (!draw_spec(plan, &request, rng, spec)) {
+        if (!draw_spec(plan, &request, shared, rng, spec)) {
             free(spec);
             continue;
         }

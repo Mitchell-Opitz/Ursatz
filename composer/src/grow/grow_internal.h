@@ -62,6 +62,12 @@ typedef struct {
     size_t cadential_drop[2];              /* notes the two ideas of a cadential ending drop of m0 */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
     GrowRepetition repetition;             /* how the presentation repeats the basic idea */
+    /*
+     * The segments of the motive m0 (R-311): its features when the compose run's basic motive is it and has any, else
+     * motive_segments_propose's. Labels as given; first and last are note indices of m0. Not written back to the motive.
+     */
+    MotiveSketchFeature segments[MOTIVE_MAX_FEATURES];
+    size_t segment_count;
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
