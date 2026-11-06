@@ -57,6 +57,9 @@ Routes (bodies are JSON; success bodies have `"ok":true`):
   (`composer_api_validate`; nothing is written). `{"ok":true,"complete":true,"request"}` gives the request with the
   Composer's defaults filled; `{"ok":true,"complete":false,"message"}` means the body is not composable yet (no
   Composer call); a request the Composer refuses is `400` (malformed) or `422` (nothing satisfies it) with its message and `path` (the member at fault).
+  For a theme the Composer checks the whole plan, so validate refuses what Compose refuses before seeding: a motif too long
+  for the form (`/slots/<slot>`, `/ideas/<name>`), a given chord that cannot end the cadence (`/chords/<index>`, the entry of
+  the chords sent), a pairing nothing satisfies. A 2-bar motif in 3/4 with one chord a bar is accepted.
 - `GET /api/jobs/<id>`: `{"ok": true, "job": {"id", "kind", "state", "stage", "done", "total", "http_status"?,
   "result"?}}`. `http_status` and `result` (the body the route answered before jobs) are there once the job is done or
   failed. `404` for an unknown job.

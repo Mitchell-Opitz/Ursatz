@@ -526,6 +526,7 @@
     ["/chords", "chords"],
     ["/harmony", "chords"],
     ["/accompaniment", "accompaniment"],
+    ["/voicing", "accompaniment"],
     ["/style_weight", "weight"],
     ["/tempo", "tempo"],
     ["/seed", "seed"],
@@ -534,9 +535,72 @@
     ["/motives", "slots"],
   ];
 
-  /* The form field a request path is about, or null. */
+  /* A JSON Pointer segment as the name it stands for. */
+  function pointerName(segment) {
+    return segment.replace(/~1/g, "/").replace(/~0/g, "~");
+  }
+
+  /* The form field a request path is about, or null. A path under /slots/<slot> names `slot:<slot>` (the row of that
+   * slot) and one under /ideas/<name> names `idea:<name>` (the row of that idea). */
   function fieldForPath(path) {
-    return Req.fieldForPath(path, FIELD_PATHS);
+    const value = typeof path === "string" ? path : "";
+    const hit = /^\/(slots|ideas)\/([^/]+)/.exec(value);
+    if (hit) {
+      const name = pointerName(hit[2]);
+      if (hit[1] === "ideas") {
+        return `idea:${name}`;
+      }
+      return slotNames().includes(name) ? `slot:${name}` : "slots";
+    }
+    return Req.fieldForPath(value, FIELD_PATHS);
+  }
+
+  /* The tab each form field is on (the Theme tab holds the theme fields and Advanced, the Structure tab the form, slots
+   * and chords). */
+  const FIELD_TABS = {
+    mode: "theme",
+    meter: "theme",
+    tempo: "theme",
+    accompaniment: "theme",
+    weight: "theme",
+    seed: "theme",
+    into: "structure",
+    hybrid: "structure",
+    bars: "structure",
+    cadence: "structure",
+    firstCadence: "structure",
+    chords: "structure",
+    slots: "structure",
+    ideas: "structure",
+  };
+
+  /* The id of the tab a field (as fieldForPath names it) is on, or null. */
+  function tabOfField(field) {
+    if (typeof field !== "string") {
+      return null;
+    }
+    if (/^(slot|idea):/.test(field)) {
+      return "structure";
+    }
+    return FIELD_TABS[field] || null;
+  }
+
+  /* The status line text of a refusal: the message, led by `on <Tab>: ` when its field is on a tab that is not open. */
+  function refusalText(message, path, openTab) {
+    const tabId = tabOfField(fieldForPath(path));
+    const tab = THEME_TABS.find((entry) => entry.id === tabId);
+    return tab && tab.id !== openTab ? `on ${tab.label}: ${message}` : message;
+  }
+
+  /* The bar (from 0) of the chord a path under /chords/<index> names, or null. The index is the entry of the chords
+   * the form sends, which are the filled bars in order (chordEntries). */
+  function chordBarOfPath(state, path) {
+    const hit = /^\/chords\/(\d+)(\/|$)/.exec(typeof path === "string" ? path : "");
+    if (!hit) {
+      return null;
+    }
+    const entry = chordEntries(state)[Number(hit[1])];
+    return entry ? entry.bar : null;
   }
 
   /* The request that asks the backend to check the form with the Composer (POST /api/materials/items/validate). */
@@ -795,6 +859,9 @@
       return motiveCategories();
     },
     fieldForPath,
+    chordBarOfPath,
+    tabOfField,
+    refusalText,
     validateRequest,
     SWITCH_TEXT,
     THEME_TABS,

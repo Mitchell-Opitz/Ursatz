@@ -12,8 +12,10 @@ const ThemeDetailView = (function () {
     const panes = {};
     const buttons = {};
     const mounted = {};
-    const areas = {};
-    ctx.status = tabStatus(areas, () => current);
+    /* The page status line, mounted once between the Save row and the panes: a message shows on every tab. */
+    const statusLine = buildStatusArea();
+    ctx.statusLine = statusLine;
+    ctx.status = MaterialsModel.motifTabStatus(statusLine);
     const builders = {
       theme: (pane) => buildThemePane(pane, ctx),
       structure: (pane) => buildStructurePane(pane, ctx),
@@ -22,6 +24,7 @@ const ThemeDetailView = (function () {
     };
 
     let current = null;
+    ctx.openTab = () => current;
     function show(tabId) {
       ThemesModel.writeThemeTab(tabId);
       current = tabId;
@@ -46,11 +49,11 @@ const ThemeDetailView = (function () {
       bar.appendChild(button);
       panes[tab.id] = materialsElement("div", "materials-tab-pane");
       panes[tab.id].setAttribute("role", "tabpanel");
-      areas[tab.id] = buildStatusArea(panes[tab.id]);
     }
     const wrapper = materialsElement("div", "themes-section");
     wrapper.appendChild(buildMaterialExport(id, item.current_version, item.name));
     wrapper.appendChild(bar);
+    wrapper.append(editorOf(ctx).sections.result, statusLine);
     for (const tab of ThemesModel.THEME_TABS) {
       wrapper.appendChild(panes[tab.id]);
     }
@@ -58,24 +61,12 @@ const ThemeDetailView = (function () {
     show(ThemesModel.readThemeTab());
   }
 
-  /* The status area at the top of a tab: saves, errors and progress of every section of the tab show here. */
-  function buildStatusArea(pane) {
+  /* The status line of the page: saves, errors and progress of every section show here, whatever tab is open. */
+  function buildStatusArea() {
     const area = materialsElement("div", "motif-tab-status");
     area.setAttribute("role", "status");
     area.style.whiteSpace = "pre-wrap";
-    pane.appendChild(area);
     return area;
-  }
-
-  /* One status writer for the page: a message shows in the status area of the tab that is open and clears the
-   * others. */
-  function tabStatus(areas, currentTab) {
-    function show(text, isError) {
-      for (const [tabId, area] of Object.entries(areas)) {
-        MaterialsModel.motifTabStatus(area).show(tabId === currentTab() ? text : "", isError);
-      }
-    }
-    return { show, clear: () => show("", false) };
   }
 
   /* The editor is built when the page opens; the Theme and Structure tabs mount its sections. */
@@ -88,15 +79,21 @@ const ThemeDetailView = (function () {
         usesStatus: ctx.data.uses_status,
         items: ctx.allItems,
         status: ctx.status,
+        openTab: () => ctx.openTab(),
+        statusText: () => ctx.statusLine.textContent,
         nameInput: ctx.nameInput,
         projectSelect: ctx.projectSelect,
-        saved: () => ctx.rerender(),
+        saved: () => {
+          /* The page is drawn again: it opens on the tab that was open when Save or Compose ran. */
+          ThemesModel.writeThemeTab(ctx.openTab());
+          ctx.rerender();
+        },
       });
     }
     return ctx.editor;
   }
 
-  /* Subjects, the theme fields, Advanced, the composed theme, then the one Save row. */
+  /* Subjects, the theme fields, Advanced, then the composed theme. The Save row sits above the tabs. */
   function buildThemePane(pane, ctx) {
     const { id, item, data } = ctx;
     const sections = editorOf(ctx).sections;
@@ -115,7 +112,6 @@ const ThemeDetailView = (function () {
     if (resultEl) {
       pane.appendChild(resultEl);
     }
-    pane.appendChild(sections.result);
   }
 
   function buildStructurePane(pane, ctx) {

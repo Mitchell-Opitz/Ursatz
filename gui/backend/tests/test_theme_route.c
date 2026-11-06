@@ -888,10 +888,10 @@ static void test_failures(const Motifs *m) {
   }
   version_dir(theme, 2, dir, sizeof(dir));
 
-  /* A basic motive of five beats in a 4/4 theme does not fit one bar: the Composer refuses it at once as
+  /* A basic motive of nine bars in an 8-bar 4/4 theme fits no idea: the Composer refuses it at once as
      UNSATISFIABLE (the chord-bar refusal is covered by the Composer's own tests). */
-  char *long_motif = create_motif("Long", "full", "melodic", "C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e C4:e Eb4:e",
-                                  "null");
+  char *long_motif = create_motif("Long", "full", "melodic",
+                                  "C4:w Eb4:w G4:w Eb4:w C4:w Eb4:w G4:w Eb4:w C5:w", "null");
   check(long_motif != NULL, "the motif longer than one bar is saved");
   slots_of(long_motif ? long_motif : m->a, m->b, slots, sizeof(slots));
   theme_body(slots, "", body, sizeof(body));
@@ -1296,6 +1296,62 @@ static void test_real_composer(const Motifs *m) {
   free(second);
 }
 
+/* A 2-bar 3/4 basic motif in an 8-bar theme: validate accepts it (the Composer checks the plan before any seeding), refuses a
+ * given V in the last bar of a PAC theme at its /chords/<index> path, and compose builds a version. */
+static void test_two_bar_theme(void) {
+  int status = 0;
+  char *motif = create_item_plain(
+      "motif", "Two bars",
+      "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:q G4:q F4:q D4:q G3:q\","
+      "\"meter\":\"3/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}");
+  check(motif != NULL, "the 2-bar 3/4 motif is saved");
+  if (!motif) {
+    return;
+  }
+  static const char *const tonic_chords[] = {"I", "IV", "I", "IV", "I", "IV", "V", "I"};
+  static const char *const dominant_end[] = {"I", "IV", "I", "IV", "I", "IV", "I", "V"};
+  char body[2400];
+  char chords[600];
+  char request[2800];
+  for (int variant = 0; variant < 2; variant++) {
+    const char *const *list = variant == 0 ? tonic_chords : dominant_end;
+    chords[0] = '\0';
+    for (int bar = 0; bar < 8; bar++) {
+      char entry[64];
+      snprintf(entry, sizeof(entry), "%s{\"bar\":%d,\"text\":\"%s\"}", bar > 0 ? "," : "", bar, list[bar]);
+      strcat(chords, entry);
+    }
+    snprintf(body, sizeof(body),
+             "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\","
+             "\"meter\":\"3/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},"
+             "\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}],\"chords\":[%s]}}",
+             motif, chords);
+    snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
+    cJSON *answer = exchange("POST", "/api/materials/items/validate", request, &status);
+    if (variant == 0) {
+      check(status == 200 && ok_true(answer), "validate accepts a 2-bar 3/4 basic motif with 8 one-chord bars");
+    } else {
+      check((status == 400 || status == 422) && !ok_true(answer) && strncmp(string_of(answer, "path"), "/chords/", 8) == 0,
+            "validate refuses a given V in the last bar of a PAC theme at its /chords/<index> path");
+    }
+    cJSON_Delete(answer);
+  }
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\","
+           "\"meter\":\"3/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},"
+           "\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]}}",
+           motif);
+  char *theme = create_item("theme", "Two bar theme", body, &status);
+  check(theme != NULL, "the 2-bar 3/4 theme is saved");
+  if (theme) {
+    cJSON *answer = compose(theme, "{\"seed\":1}", &status);
+    check(status == 200 && ok_true(answer) && current_version(theme) == 2, "compose of the 2-bar 3/4 theme returns a composed version");
+    cJSON_Delete(answer);
+  }
+  free(theme);
+  free(motif);
+}
+
 int main(void) {
   system("rm -rf materials subjects pieces collections styles");
 
@@ -1325,6 +1381,7 @@ int main(void) {
     test_concurrent(&motifs);
     test_jobs_route(&motifs);
     test_real_composer(&motifs);
+    test_two_bar_theme();
   }
 
   ursatz_gui_server_stop(ctx);

@@ -660,6 +660,7 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
   const section = materialsElement("section", "panel materials-editor theme-editor");
   section.appendChild(materialsElement("h2", "section-title", "Slots"));
   const rows = {};
+  const ideaRows = {};
   for (const slot of ThemesModel.SLOT_NAMES) {
     const row = materialsElement("div", "theme-slot");
     row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
@@ -696,6 +697,9 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
     }
     drawn = key;
     ideasHost.innerHTML = "";
+    for (const name of Object.keys(ideaRows)) {
+      delete ideaRows[name];
+    }
     for (const { idea, slot } of ThemesModel.formIdeas(state)) {
       if (idea === "basic idea") {
         continue;
@@ -715,6 +719,7 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
       };
       title();
       row.append(heading, buildThemeMotifUse(itemsOf, own(), set, null));
+      ideaRows[idea] = row;
       ideasHost.appendChild(row);
     }
   }
@@ -725,6 +730,17 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
       rows[slot].hidden = !shown.includes(slot);
     }
     drawIdeas();
+  };
+  /* The rows a refusal marks: the row of a slot, and the row of an idea (when the form has it). */
+  section.rowFields = () => {
+    const fields = {};
+    for (const slot of ThemesModel.SLOT_NAMES) {
+      fields[`slot:${slot}`] = rows[slot];
+    }
+    for (const [idea, row] of Object.entries(ideaRows)) {
+      fields[`idea:${idea}`] = row;
+    }
+    return fields;
   };
   section.refreshSlots();
   return section;
@@ -748,6 +764,10 @@ function buildThemeChordRow(state) {
   element.appendChild(row);
   const hint = materialsElement("div", "materials-hint");
   element.appendChild(hint);
+  /* Marks the field of one bar (from 0) a refusal names; no bar clears the mark. */
+  function mark(bar) {
+    fields.forEach((field, at) => field.classList.toggle("field-invalid", at === bar));
+  }
   function refresh() {
     fields.forEach((field, bar) => {
       field.hidden = bar >= state.bars;
@@ -756,7 +776,7 @@ function buildThemeChordRow(state) {
     hint.textContent = ThemesModel.chordHint(state.meter);
   }
   refresh();
-  return { element, refresh };
+  return { element, refresh, mark };
 }
 
 function buildThemeAdvancedSection(state, itemsOf) {
@@ -769,9 +789,9 @@ function buildThemeAdvancedSection(state, itemsOf) {
 
 /*
  * The theme editor, in the sections the tabs mount. ctx: {id, item, body, subjects, usesStatus, items (all items),
- * status (a tab status writer), nameInput, projectSelect, saved()}.
+ * status (the page status line writer), openTab() (the id of the open tab), statusText() (what the line shows), nameInput, projectSelect, saved()}.
  * Returns {state, problems(), save(note), compose(options), sections: {notices, theme, structure, slots, result
- * (the save row)}}.
+ * (the save row, mounted by the page above the tabs)}}.
  */
 function buildThemeEditor(ctx) {
   const state = ThemesModel.formFromBody(ctx.body, ctx.id);
@@ -872,7 +892,12 @@ function buildThemeEditor(ctx) {
     roots: [theme, structure, sections.slots, sections.advanced],
     build: () => ThemesModel.validateRequest(state),
     field: ThemesModel.fieldForPath,
+    onResult: (result) => {
+      chordRow.mark(result.ok ? null : ThemesModel.chordBarOfPath(state, result.path));
+      showRefusal(result);
+    },
     fields: () => ({
+      ...sections.slots.rowFields(),
       into,
       hybrid: beginningSelect,
       mode,
@@ -884,6 +909,21 @@ function buildThemeEditor(ctx) {
       chords: chordRow.element,
     }),
   });
+
+  /* A refusal of the live check shows in the status line of the open tab, led by the tab of its field when that is
+   * another tab; the line is cleared again only when it still holds that refusal. */
+  let refusalShown = "";
+  function showRefusal(result) {
+    if (!result.ok && result.complete) {
+      refusalShown = ThemesModel.refusalText(result.message, result.path, ctx.openTab());
+      status.show(refusalShown, true);
+    } else if (refusalShown !== "") {
+      if (ctx.statusText() === refusalShown) {
+        status.clear();
+      }
+      refusalShown = "";
+    }
+  }
 
   function problems() {
     const list = ThemesModel.formProblems(state);
@@ -997,7 +1037,10 @@ function buildThemeEditor(ctx) {
     setBusy(false);
     if (!answer.ok) {
       validation.refuse(answer.data);
-      status.show(MaterialsModel.errorText(answer.data, "The theme could not be composed"), true);
+      status.show(
+        ThemesModel.refusalText(MaterialsModel.errorText(answer.data, "The theme could not be composed"), answer.data && answer.data.path, ctx.openTab()),
+        true,
+      );
       return;
     }
     ctx.saved();
