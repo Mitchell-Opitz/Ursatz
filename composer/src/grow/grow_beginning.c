@@ -37,13 +37,13 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         }
         /* A part-length motive is the whole presentation: no repetition to draw. */
         if (spec->part_whole) {
-            spec->statement_response = false;
+            spec->repetition = GROW_REPEAT_EXACT;
             return true;
         }
         /* Statement-response goes from tonic to dominant and back, which needs a cell for each. */
         bool can_respond = spec->basic_cells >= 2;
         uint64_t response = fill_rng_below(rng, 2);
-        spec->statement_response = can_respond && response == 1;
+        spec->repetition = can_respond && response == 1 ? GROW_REPEAT_DOMINANT_FORM : GROW_REPEAT_EXACT;
         if (!grow_idea_develop(spec, GROW_PLACE_REPETITION, &spec->developed[GROW_PLACE_REPETITION]) ||
             rational_cmp(spec->developed[GROW_PLACE_REPETITION].length,
                               grow_scaled(grow_unit(request), SECOND_UNITS)) > 0) {
@@ -131,9 +131,10 @@ static PlanResult build_presentation(GrowBuild *build) {
     memset(&repetition_shape, 0, sizeof(repetition_shape));
     basic_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
     basic_shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
-    basic_shape.ends_on = spec->statement_response ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
+    bool answers = spec->repetition == GROW_REPEAT_DOMINANT_FORM;
+    basic_shape.ends_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
     repetition_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
-    repetition_shape.starts_on = spec->statement_response ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
+    repetition_shape.starts_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
     repetition_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
     if (result == PLAN_OK) {
         result = grow_add_chord_targets(build, ideas[0], &basic_shape, NULL);

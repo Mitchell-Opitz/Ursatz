@@ -278,7 +278,7 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
     case GROW_PLACE_REPETITION: /* also the contrasting idea of the other beginnings */
         if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
             *dev = spec->contrast;
-        } else if (spec->statement_response) {
+        } else if (spec->repetition == GROW_REPEAT_DOMINANT_FORM) {
             dev->kind = MOTIVE_RELATION_TRANSPOSE;
             dev->value[0] = 1;
             dev->value[1] = 1;
@@ -635,7 +635,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
     return a->has_section_motive == b->has_section_motive && motive_equal(&a->source, &b->source) &&
-           a->statement_response == b->statement_response && a->fragment_notes[0] == b->fragment_notes[0] &&
+           a->repetition == b->repetition && a->fragment_notes[0] == b->fragment_notes[0] &&
            a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop &&
            a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
            same_kind(&a->consequent_contrast, &b->consequent_contrast) &&
@@ -646,20 +646,25 @@ static const char *dev_name(const MotiveRelationStep *dev) {
     return dev->kind == MOTIVE_RELATION_INVERT ? "inverted" : "intervals changed";
 }
 
+static const char *repetition_name(GrowRepetition repetition) {
+    static const char *const NAMES[GROW_REPEAT_COUNT] = {"exact", "dominant form", "sequence"};
+    return NAMES[repetition];
+}
+
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
         spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         snprintf(label, size, "sentence %zu bars %s fragments %zu+%zu drop %zu", spec->bars,
-                 spec->statement_response ? "statement-response" : "exact", spec->fragment_notes[0],
+                 repetition_name(spec->repetition), spec->fragment_notes[0],
                  spec->fragment_notes[1], spec->liquidate_drop);
         return;
     }
     size_t used = (size_t)snprintf(label, size, "%s + %s %zu bars", BEGINNINGS[spec->pairing.beginning],
                                    ENDINGS[spec->pairing.ending], spec->bars);
     if (used < size && spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
-        used += (size_t)snprintf(label + used, size - used, " %s", spec->statement_response ? "statement-response" : "exact");
+        used += (size_t)snprintf(label + used, size - used, " %s", repetition_name(spec->repetition));
     } else if (used < size) {
         used += (size_t)snprintf(label + used, size - used, " contrast %s", dev_name(&spec->contrast));
     }

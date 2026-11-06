@@ -42,6 +42,9 @@ typedef enum {
     GROW_PLACE_CADENTIAL_2 = GROW_PLACE_FRAGMENT_2
 } GrowPlace;
 
+/* How a presentation repeats its basic idea (ch. V). */
+typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
+
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
 typedef struct {
     unsigned long magic;
@@ -58,7 +61,7 @@ typedef struct {
     MotiveRelationStep consequent_contrast;     /* the contrasting idea of a consequent */
     size_t cadential_drop[2];              /* notes the two ideas of a cadential ending drop of m0 */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
-    bool statement_response;               /* the repetition is a step up, the harmony goes tonic to dominant and back */
+    GrowRepetition repetition;             /* how the presentation repeats the basic idea */
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
