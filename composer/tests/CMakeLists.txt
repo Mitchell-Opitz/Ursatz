@@ -872,3 +872,13 @@ target_link_libraries(test_grow_whole_motif PRIVATE ursatz_composer)
 target_include_directories(test_grow_whole_motif PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_grow_whole_motif PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_whole_motif COMMAND test_grow_whole_motif)
+
+add_executable(test_grow_compose_rates test_grow_compose_rates.c)
+target_link_libraries(test_grow_compose_rates PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_compose_rates PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_compose_rates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_compose_rates PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_compose_rates COMMAND test_grow_compose_rates)
+# Measured 13.7 s of CPU, over the 10 s fast-set limit; test_grow_compose_rates_fast (1.7 s) runs seed 1 of every case.
+set_tests_properties(test_grow_compose_rates PROPERTIES LABELS slow)
+add_test(NAME test_grow_compose_rates_fast COMMAND test_grow_compose_rates fast)
