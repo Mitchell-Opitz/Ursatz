@@ -342,8 +342,11 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  *
  * Re-measured at P34 B1, after the presentation drew its repetition by weight (a sequence writes its chords whole): 0.7496,
  * 0.7468, 0.7107 to chorales and 0.6819, 0.6839, 0.6610 to sonatinas.
+ *
+ * Re-measured at P35 B1, after a motive's notes were realized and the structure stage reserved a bar for every motive it makes
+ * (R-338): 0.7255, 0.7270, 0.7171 to chorales and 0.6530, 0.6551, 0.6495 to sonatinas.
  */
-static const int HARMONY_BASELINE[3][2] = {{7496, 6819}, {7468, 6839}, {7107, 6610}};
+static const int HARMONY_BASELINE[3][2] = {{7255, 6530}, {7270, 6551}, {7171, 6495}};
 #define MELODY_ONLY_REACH 200
 
 static int ten_thousandths(double value) {

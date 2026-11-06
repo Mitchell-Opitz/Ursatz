@@ -3,6 +3,8 @@
 #include <string.h>
 #include "util/util.h"
 
+#include <standard-counterpoint/melodic_rules.h>
+
 /* The most the climax is placed above the top of the motive, past the pitch above it, in semitones. */
 #define CLIMAX_RISE 4
 #define CLIMAX_SCALE 1000
@@ -115,6 +117,10 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
         int found = -1;
         for (int pitch = top + 1; pitch <= ceiling; pitch++) {
             if (has_reach && pitch - reach_from > CLIMB_REACH) {
+                continue;
+            }
+            /* The climax right after the motive's last note is reached by a leap the melodic rules allow. */
+            if (best == first && best > 0 && !standard_counterpoint_melodic_semitones_allowed(pitch - melody->notes[best - 1].pitch)) {
                 continue;
             }
             if (((mask >> (((pitch % 12) + 12) % 12)) & 1u) &&

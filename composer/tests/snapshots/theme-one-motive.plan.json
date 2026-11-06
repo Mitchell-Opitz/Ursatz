@@ -73,8 +73,8 @@
           "den": 1
         },
         "end": {
-          "num": 2,
-          "den": 1
+          "num": 1,
+          "den": 2
         }
       },
       "note_ids": [],
@@ -108,8 +108,8 @@
           "den": 1
         },
         "end": {
-          "num": 4,
-          "den": 1
+          "num": 5,
+          "den": 2
         }
       },
       "note_ids": [],
@@ -211,7 +211,7 @@
         }
       },
       "note_ids": [],
-      "label": "V",
+      "label": "V7",
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
@@ -222,7 +222,7 @@
         "state": "realized",
         "constraints": [],
         "payload": {
-          "roman_numeral": "V",
+          "roman_numeral": "V7",
           "function": "dominant"
         }
       }
@@ -254,6 +254,118 @@
           }],
         "payload": {
           "roman_numeral": "i",
+          "function": "tonic"
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 1,
+          "den": 2
+        },
+        "end": {
+          "num": 1,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "viio6",
+      "uncertainty": null,
+      "key_label": "D minor",
+      "composer": {
+        "id": 22,
+        "owner": 9,
+        "lane": "harmony",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "roman_numeral": "viio6",
+          "function": "dominant"
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 1,
+          "den": 1
+        },
+        "end": {
+          "num": 2,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "i6",
+      "uncertainty": null,
+      "key_label": "D minor",
+      "composer": {
+        "id": 23,
+        "owner": 9,
+        "lane": "harmony",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "roman_numeral": "i6",
+          "function": "tonic"
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 5,
+          "den": 2
+        },
+        "end": {
+          "num": 3,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "viio6",
+      "uncertainty": null,
+      "key_label": "D minor",
+      "composer": {
+        "id": 24,
+        "owner": 10,
+        "lane": "harmony",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "roman_numeral": "viio6",
+          "function": "dominant"
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 3,
+          "den": 1
+        },
+        "end": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "i6",
+      "uncertainty": null,
+      "key_label": "D minor",
+      "composer": {
+        "id": 25,
+        "owner": 10,
+        "lane": "harmony",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "roman_numeral": "i6",
           "function": "tonic"
         }
       }
@@ -568,7 +680,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "fragment position=1 length=3"
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -591,7 +703,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "fragment position=1 length=3"
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -737,7 +849,7 @@
           }],
         "payload": {
           "notes": [{
-              "midi_pitch": 65,
+              "midi_pitch": 62,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -747,7 +859,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 69,
+              "midi_pitch": 65,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -757,7 +869,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 69,
               "offset": {
                 "num": 3,
                 "den": 8
@@ -767,7 +879,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 73,
               "offset": {
                 "num": 1,
                 "den": 2
@@ -787,7 +899,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 69,
+              "midi_pitch": 70,
               "offset": {
                 "num": 5,
                 "den": 4
@@ -797,7 +909,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 67,
+              "midi_pitch": 72,
               "offset": {
                 "num": 11,
                 "den": 8
@@ -807,7 +919,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 65,
+              "midi_pitch": 74,
               "offset": {
                 "num": 3,
                 "den": 2
@@ -847,7 +959,7 @@
           }],
         "payload": {
           "notes": [{
-              "midi_pitch": 65,
+              "midi_pitch": 62,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -857,7 +969,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 69,
+              "midi_pitch": 65,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -867,7 +979,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 69,
               "offset": {
                 "num": 3,
                 "den": 8
@@ -877,7 +989,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 73,
               "offset": {
                 "num": 1,
                 "den": 2
@@ -897,7 +1009,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 69,
+              "midi_pitch": 70,
               "offset": {
                 "num": 5,
                 "den": 4
@@ -907,7 +1019,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 67,
+              "midi_pitch": 72,
               "offset": {
                 "num": 11,
                 "den": 8
@@ -917,7 +1029,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 65,
+              "midi_pitch": 74,
               "offset": {
                 "num": 3,
                 "den": 2
@@ -953,11 +1065,11 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 16,
-            "step": "fragment position=1 length=3"
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
-              "midi_pitch": 65,
+              "midi_pitch": 74,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -967,10 +1079,30 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 67,
+              "midi_pitch": 77,
               "offset": {
                 "num": 1,
                 "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 76,
+              "offset": {
+                "num": 3,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              }
+            }, {
+              "midi_pitch": 74,
+              "offset": {
+                "num": 5,
+                "den": 8
               },
               "duration": {
                 "num": 1,
@@ -980,41 +1112,11 @@
               "midi_pitch": 69,
               "offset": {
                 "num": 3,
-                "den": 8
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
-              }
-            }, {
-              "midi_pitch": 65,
-              "offset": {
-                "num": 1,
-                "den": 2
-              },
-              "duration": {
-                "num": 1,
-                "den": 4
-              }
-            }, {
-              "midi_pitch": 64,
-              "offset": {
-                "num": 3,
                 "den": 4
               },
               "duration": {
                 "num": 1,
-                "den": 8
-              }
-            }, {
-              "midi_pitch": 62,
-              "offset": {
-                "num": 7,
-                "den": 8
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
+                "den": 4
               }
             }]
         }
@@ -1043,11 +1145,11 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 17,
-            "step": "fragment position=1 length=3"
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
-              "midi_pitch": 70,
+              "midi_pitch": 74,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -1057,34 +1159,34 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 72,
-              "offset": {
-                "num": 1,
-                "den": 4
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
-              }
-            }, {
-              "midi_pitch": 74,
-              "offset": {
-                "num": 3,
-                "den": 8
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
-              }
-            }, {
               "midi_pitch": 79,
               "offset": {
                 "num": 1,
-                "den": 2
+                "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 77,
+              "offset": {
+                "num": 3,
+                "den": 8
               },
               "duration": {
                 "num": 1,
                 "den": 4
+              }
+            }, {
+              "midi_pitch": 76,
+              "offset": {
+                "num": 5,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
               }
             }, {
               "midi_pitch": 74,
@@ -1094,17 +1196,7 @@
               },
               "duration": {
                 "num": 1,
-                "den": 8
-              }
-            }, {
-              "midi_pitch": 70,
-              "offset": {
-                "num": 7,
-                "den": 8
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
+                "den": 4
               }
             }]
         }
@@ -1150,7 +1242,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 76,
+              "midi_pitch": 73,
               "offset": {
                 "num": 1,
                 "den": 8
@@ -1160,7 +1252,7 @@
                 "den": 2
               }
             }, {
-              "midi_pitch": 76,
+              "midi_pitch": 73,
               "offset": {
                 "num": 5,
                 "den": 8
@@ -1170,7 +1262,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 76,
+              "midi_pitch": 73,
               "offset": {
                 "num": 3,
                 "den": 4
@@ -1266,8 +1358,8 @@
           "den": 1
         },
         "end": {
-          "num": 21,
-          "den": 2
+          "num": 83,
+          "den": 8
         }
       },
       "note_ids": [],
@@ -1301,16 +1393,6 @@
                 "num": 1,
                 "den": 8
               }
-            }, {
-              "midi_pitch": 69,
-              "offset": {
-                "num": 3,
-                "den": 8
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
-              }
             }]
         }
       }
@@ -1322,8 +1404,8 @@
           "den": 1
         },
         "end": {
-          "num": 23,
-          "den": 2
+          "num": 91,
+          "den": 8
         }
       },
       "note_ids": [],
@@ -1352,16 +1434,6 @@
               "offset": {
                 "num": 1,
                 "den": 4
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
-              }
-            }, {
-              "midi_pitch": 69,
-              "offset": {
-                "num": 3,
-                "den": 8
               },
               "duration": {
                 "num": 1,
@@ -1425,8 +1497,8 @@
           "den": 1
         },
         "end": {
-          "num": 2,
-          "den": 1
+          "num": 1,
+          "den": 2
         }
       },
       "note_ids": [],
@@ -1447,8 +1519,8 @@
                 "den": 1
               },
               "duration": {
-                "num": 2,
-                "den": 1
+                "num": 1,
+                "den": 2
               }
             }]
         }
@@ -1461,8 +1533,8 @@
           "den": 1
         },
         "end": {
-          "num": 4,
-          "den": 1
+          "num": 5,
+          "den": 2
         }
       },
       "note_ids": [],
@@ -1483,8 +1555,8 @@
                 "den": 1
               },
               "duration": {
-                "num": 2,
-                "den": 1
+                "num": 1,
+                "den": 2
               }
             }]
         }
@@ -1529,6 +1601,170 @@
       "framework": "ursatz-composer",
       "span": {
         "start": {
+          "num": 1,
+          "den": 2
+        },
+        "end": {
+          "num": 1,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "bass",
+      "uncertainty": null,
+      "composer": {
+        "id": 26,
+        "owner": 9,
+        "lane": "bass",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "notes": [{
+              "midi_pitch": 52,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }]
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 1,
+          "den": 1
+        },
+        "end": {
+          "num": 2,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "bass",
+      "uncertainty": null,
+      "composer": {
+        "id": 27,
+        "owner": 9,
+        "lane": "bass",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "notes": [{
+              "midi_pitch": 53,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }, {
+              "midi_pitch": 41,
+              "offset": {
+                "num": 1,
+                "den": 2
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }]
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 5,
+          "den": 2
+        },
+        "end": {
+          "num": 3,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "bass",
+      "uncertainty": null,
+      "composer": {
+        "id": 28,
+        "owner": 10,
+        "lane": "bass",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "notes": [{
+              "midi_pitch": 52,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }]
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 3,
+          "den": 1
+        },
+        "end": {
+          "num": 4,
+          "den": 1
+        }
+      },
+      "note_ids": [],
+      "label": "bass",
+      "uncertainty": null,
+      "composer": {
+        "id": 29,
+        "owner": 10,
+        "lane": "bass",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "notes": [{
+              "midi_pitch": 53,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }, {
+              "midi_pitch": 41,
+              "offset": {
+                "num": 1,
+                "den": 2
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }]
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
           "num": 5,
           "den": 1
         },
@@ -1541,7 +1777,7 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 22,
+        "id": 30,
         "owner": 12,
         "lane": "bass",
         "voice": 0,
@@ -1556,17 +1792,7 @@
               },
               "duration": {
                 "num": 1,
-                "den": 2
-              }
-            }, {
-              "midi_pitch": 43,
-              "offset": {
-                "num": 1,
-                "den": 2
-              },
-              "duration": {
-                "num": 1,
-                "den": 2
+                "den": 1
               }
             }]
         }
@@ -1587,7 +1813,7 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 23,
+        "id": 31,
         "owner": 12,
         "lane": "bass",
         "voice": 0,
@@ -1595,7 +1821,7 @@
         "constraints": [],
         "payload": {
           "notes": [{
-              "midi_pitch": 45,
+              "midi_pitch": 57,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -1623,7 +1849,7 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 24,
+        "id": 32,
         "owner": 12,
         "lane": "bass",
         "voice": 0,
@@ -1638,17 +1864,7 @@
               },
               "duration": {
                 "num": 1,
-                "den": 2
-              }
-            }, {
-              "midi_pitch": 50,
-              "offset": {
-                "num": 1,
-                "den": 2
-              },
-              "duration": {
-                "num": 1,
-                "den": 2
+                "den": 1
               }
             }]
         }

@@ -20,17 +20,19 @@
  * Anything else, the operator does not apply to. The loop never offers a Given span, so Given melody is never
  * overwritten, and the harmony and bass lanes are never touched.
  *
- * The motive is placed at the start of the phrase (params.start_cell), keeping its rhythm. Each of its notes takes
- * a pitch that keeps the motive's interval to the note before within params.tolerance, and a note on a strong
- * beat (the start of a cell: the places a chord may start) is a chord tone of the harmony lane's chord. The
- * motive is transposed so that its first note is a chord tone, keeping its scale degree when that degree is one.
- * Between the notes on strong beats the notes of the weak beats are chord tones, or non-chord tones of a figure
- * params.nct_types allows, approached and left as the NonChordTone framework defines the figure. After the motive
- * the rhythm is the motive's again (params.density 0), or an even subdivision of the cell. The melody is written
- * as one Realized span over the phrase.
+ * The motive is realized at the start of the phrase (params.start_cell), keeping its rhythm and every pitch: each
+ * note is aimed at its own pitch, moved by one octave for the whole idea (the one that puts every note in the range),
+ * and a note that is a tone of every chord it sounds through stays. A clash stays when the NonChordTone framework labels
+ * it as a figure (of any type: the motive's own escape tones and retardations too); otherwise it moves, to a pitch within
+ * two semitones that re-forms its own figure, else to the nearest chord tone, and never in a way that breaks a hard
+ * rule the motive does not. The last note of an idea that ends a cadence moves to the cadence's tone. A melody that
+ * carries the motive is not rejected for the melodic rules the motive itself breaks. After the motive the notes are
+ * generated: on a strong beat a chord tone, between them chord tones or non-chord tones of a figure params.nct_types
+ * allows, approached and left as the NonChordTone framework defines the figure; the rhythm is the motive's again
+ * (params.density 0), or an even subdivision of the cell. The melody is written as one Realized span over the phrase.
  *
- * The phrase is shaped as one arch: a single highest note, the climax, placed about two thirds of the way through
- * (params.climax_position), approached from below and left downward, with no other note as high. A leap of a
+ * The generated notes are shaped as one arch: a single highest note, the climax, placed about two thirds of the way
+ * through (params.climax_position), approached from below and left downward, with no other note as high. A leap of a
  * fourth or more is followed by a step the other way where it can be, notes are not repeated needlessly, and no
  * note leaves params.range_low to params.range_high.
  */
@@ -43,10 +45,14 @@
 #define MELODY_NCT_APPOGGIATURA (1u << 2)  /* approached by leap, left by step the other way */
 #define MELODY_NCT_SUSPENSION (1u << 3)    /* held into the next chord, left by step down */
 #define MELODY_NCT_ANTICIPATION (1u << 4)  /* sounds the next chord's note early, then repeats it */
+/* Figures only a realized motive's own notes add (R-336); the generator's defaults do not include them. */
+#define MELODY_NCT_RETARDATION (1u << 5)   /* held into the next chord, left by step up; counts on a strong beat */
+#define MELODY_NCT_ESCAPE (1u << 6)        /* left by a leap the other way after a step */
+#define MELODY_NCT_DOUBLE_NEIGHBOR (1u << 7)
+#define MELODY_NCT_CHANGING_TONE (1u << 8)
 
 /*
- * tolerance is how far, in semitones, an interval of the placed motive may differ from the motive's own interval
- * between the same two notes. range_low and range_high are MIDI pitches, both included. start_cell is the cell of
+ * range_low and range_high are the melody voice's range, MIDI pitches both included. start_cell is the cell of
  * the phrase the motive starts on (0 is the first), the time before it a rest. nct_types is the set of
  * MELODY_NCT_ bits that may be written; none means every note is a chord tone. density is how many notes make
  * up a cell after the motive, or 0 for the motive's own rhythm over again. climax_position is how far through the
@@ -55,7 +61,6 @@
  * with the others; true gives the scores the checker gave before them.
  */
 typedef struct {
-    int tolerance;
     int range_low;
     int range_high;
     unsigned start_cell;
@@ -66,7 +71,7 @@ typedef struct {
 } MelodyFillParams;
 
 /*
- * The defaults: tolerance 2, MIDI 60 to 79 (C4 to G5), start_cell 0, passing and neighbor tones only, the
+ * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), and the climax 667 thousandths of the way through.
  */
 MelodyFillParams melody_fill_params_default(void);

@@ -270,7 +270,7 @@ static void check_beat_melody(const Chord *chords, size_t count, const Piece *pi
         if (notes[n].onset % (2 * TICKS_PER_BEAT) == 0) {
             assert(in_chord(chord_at(chords, count, notes[n].onset), notes[n].pitch));
         }
-        assert(notes[n].pitch >= 60 && notes[n].pitch <= 79);
+        assert(notes[n].pitch >= 60 && notes[n].pitch <= 84);
     }
     const char *violation = "unread";
     assert(melody_check_lane(piece->plan, piece->span, c_major(), NULL, &violation));
@@ -342,7 +342,7 @@ static void check_pickup_melody(const Chord *chords, size_t count, const Piece *
     bool tone = start > 0 && in_chord(chord_at(chords, count, start), last);
     assert(step || tone);
     for (size_t n = 0; n < pickup; n++) {
-        assert(notes[n].pitch >= 60 && notes[n].pitch <= 79);
+        assert(notes[n].pitch >= 60 && notes[n].pitch <= 84);
     }
     /* The checker, over the phrase that follows the pickup, agrees. */
     const char *violation = "unread";

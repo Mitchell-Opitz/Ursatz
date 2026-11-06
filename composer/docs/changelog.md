@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P35)
+
+Melody-fill realizes a motive's notes instead of re-deriving them (R-326 to R-328, R-333 to R-339): the melody voice's range is C4 to C6 (84, was 79), each idea says its motive's pitches moved by one octave and bent to its chords only as they ask (a clash the NonChordTone framework labels a figure is kept, escape tones and retardations included), and only the notes after the motive are generated, under the arch. `MelodyFillParams.tolerance` is gone. A motive no strict attempt composes is composed relaxed. The API version does not change; seeded theme and piece output does, and the snapshots, hashes and baselines changed are named in the phase notes. Fixed on the way: the structure stage reserves a bar for every motive it makes, so a section regenerated in a full material no longer fails to apply. See [melody-fill.md](melody-fill.md).
+
 ## Unreleased (phase P34)
 
 A theme request takes `"development": "melody" | "balanced" | "theme"` (ch. XI, default `balanced`): how far the presentation and the continuation stray from the motif. It sets the weights of the repetition (exact, dominant form, sequence), of fragment 1's segment, of fragment 2 (sequence or next segment) and the steps of a liquidation; `balanced` is the weights of before. `melody` brings the exact repetition back and keeps a liquidation to one step; `theme` favours the sequence and segment `b` and liquidates in two steps or more. The API is 1.9: the brief of the result gains `"development"` and the explanation names it. A wrong value is a request error at `/development`. See [grow-development.md](grow-development.md).

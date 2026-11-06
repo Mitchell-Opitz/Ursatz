@@ -74,6 +74,11 @@ typedef struct {
      */
     int motive_tone[MOTIVE_MAX_NOTES];
     size_t motive_tone_count;
+    /*
+     * The bits of standard-counterpoint's melodic rules (1u << rule) that are hard and that the motive's own pitches
+     * break (R-335): the motive is given material, so a candidate with motive notes is not rejected for them.
+     */
+    unsigned motive_waived;
 
     /*
      * A target that stands for an idea or a subphrase of a phrase (not the whole phrase) reads the phrase it is in,
@@ -110,9 +115,9 @@ static inline bool melody_on_cell(const MelodyContext *context, Rational positio
 /* Where a target sits in its phrase's arch (see melody_role). A target that is the whole phrase is MELODY_ROLE_WHOLE. */
 typedef enum {
     MELODY_ROLE_WHOLE,
-    MELODY_ROLE_BEFORE, /* the phrase's climax falls in a later target: no note above range_high - 3 */
+    MELODY_ROLE_BEFORE, /* the phrase's climax falls in a later target: no generated note above range_high - 3 */
     MELODY_ROLE_CLIMAX, /* the phrase's climax falls in this target: it writes the phrase's highest note */
-    MELODY_ROLE_AFTER   /* the climax is written: every note is below it */
+    MELODY_ROLE_AFTER   /* the climax is written: every generated note is below it */
 } MelodyRole;
 
 /* The position of the target at which the phrase's climax falls, which may lie before 0 or past the end. */
@@ -127,8 +132,6 @@ typedef struct {
     int motive_index;
     bool strong; /* it starts on a cell */
     size_t chord; /* the chord sounding at its onset */
-    bool fixed;      /* a figure of the motive's tones whose pitch is set; the search between anchors keeps it (R-215) */
-    bool chord_only; /* a figure that could not be formed: the search gives it a chord tone */
 } MelodyNote;
 
 /* A candidate's payload. */
@@ -140,10 +143,24 @@ typedef struct {
     size_t count;
     MelodyNote pickup_notes[MELODY_MAX_PICKUP]; /* the anacrusis, oldest first, onsets from -context.pickup */
     size_t pickup_count;
+    bool relaxed; /* built and judged by the relaxed rules (R-338): the strict ones left no melody for this motive */
 } MelodyCandidate;
+
+/* Whether any note of the melody is generated, not a motive's (R-335): the climax rules are hard only then. */
+static inline bool melody_has_generated(const MelodyCandidate *melody) {
+    for (size_t i = 0; i < melody->count; i++) {
+        if (melody->notes[i].motive_index < 0) {
+            return true;
+        }
+    }
+    return false;
+}
 
 /* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
 void melody_context_zero(MelodyContext *context);
+
+/* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
+#define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)
 
 /* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
 bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
@@ -184,10 +201,11 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
 /*
  * Gives the notes between from and to, which are non-chord-tone candidates, pitches with the pitches of notes from
  * and to fixed: chord tones, or the non-chord tones of figures that hold. ideal[j] is the pitch the note j would
- * take if it could, and nothing above cap is used. False when no assignment holds.
+ * take if it could, and nothing above cap is used. False when no assignment holds. Relaxed (R-338), the melodic rules are
+ * held over a run that starts at the nearest motive note, and a second search drops the parallel and bass checks.
  */
 bool melody_fill_between(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes,
-                         size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng);
+                         size_t count, size_t from, size_t to, const int *ideal, int cap, FillRng *rng, bool relaxed);
 
 /*
  * A note that must be a chord tone: the first and the last, any on a strong beat, any as long as a cell, and any
@@ -223,6 +241,29 @@ bool melody_contour_unique(const MelodyCandidate *melody);
  */
 void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigned *total);
 
+/* The melodic rules the motive's own pitches break, as MelodyContext.motive_waived reads them. */
+unsigned melody_motive_waived(const MelodyContext *context);
+
+/*
+ * The hard melodic rules (bits 1u << rule, as MelodyContext.motive_waived) a short run of pitches breaks, by the same
+ * framework check as the checker, less the rules the motive waives. At most MELODY_WINDOW_MAX pitches.
+ */
+#define MELODY_WINDOW_MAX (MOTIVE_MAX_NOTES + 4)
+unsigned melody_window_hard(const MelodyContext *context, const int *pitches, size_t count);
+
+/* The pitch of the bass sounding at a position, or -1 when none does. */
+int melody_bass_at(const MelodyContext *context, Rational position);
+/*
+ * Whether two melody pitches, over the bass pitches under them, move in parallel octaves or fifths: the pairs the checker
+ * rejects, for choosing among pitches (the checker's own rule decides).
+ */
+bool melody_parallel_perfects(int from, int to, int bass_from, int bass_to);
+/*
+ * Whether a note of this pitch, sounding from onset to end, is a chord tone that is dissonant against a bass note under it
+ * and not the chord's seventh: the checker rejects it ("dissonance against the bass").
+ */
+bool melody_dissonant_over_bass(const MelodyContext *context, int pitch, Rational onset, Rational end);
+
 /* The pitch classes the last note may be: the cadence's stable tone (the tonic for a PAC, the third for an IAC). */
 unsigned melody_cadence_mask(const MelodyContext *context);
 
@@ -237,16 +278,40 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict);
  * notes to, for the style's non-chord tone figures.
  */
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types);
+/*
+ * Surveys the labeling of a melody without judging it: types[i] is the MELODY_NCT_ bit of the figure the framework gives
+ * note i (0 for a chord tone or a note it cannot classify), and unclassified[i] is set for a note outside its chord that
+ * it cannot classify. Every figure counts, whatever params.nct_types allows. False when the melody cannot be labeled.
+ */
+bool melody_nct_survey(const MelodyCandidate *melody, unsigned *types, bool *unclassified);
+/* The MELODY_NCT_ bit of a NonChordTone (an int), 0 for a type the operator has no bit for. */
+unsigned melody_nct_bit(int tone);
 /* The SHAPING_ bits (check/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
 unsigned melody_shaping_broken(const MelodyCandidate *melody);
 /* The checker's verdict on a melody candidate's payload. */
 bool melody_check(const void *payload, FillCheck *out);
 
 /*
- * Builds one melody for the context, choosing only with rng. False when the motive cannot be placed (it does not
- * fit the phrase or the range, or a strong beat has no chord tone near enough to its contour).
+ * Builds one melody for the context: the motive's notes realized `shift` semitones away (melody_realize, with or without
+ * keep_figures), then the notes that fill the rest, choosing only with rng. False when the motive cannot be placed (it
+ * does not fit the phrase or the range, or a strong beat has no chord tone near enough to its contour).
  */
-bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out);
+bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
+                  bool relaxed, FillRng *rng, MelodyCandidate *out);
+
+/*
+ * Realizes the motive of the context in a candidate whose notes are laid out (layout): the motive's notes, each moved
+ * `shift` semitones, are bent to the chords as a whole (R-328). With keep_figures a clash that the framework labels as a
+ * figure stays; every other clash moves to the nearest chord tone, or to a pitch that keeps its own figure. The figures
+ * kept are added to out->params.nct_types. Uses no random numbers. False when a note falls out of the range.
+ */
+bool melody_realize(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
+                    MelodyCandidate *out);
+/*
+ * The octave shifts of {0, -12, 12, -24, 24} that put every motive note in the range, best first (R-334); shifts holds
+ * five. Returns how many.
+ */
+size_t melody_realize_shifts(const MelodyContext *context, const MelodyFillParams *params, int *shifts);
 
 /* How many of the standard counterpoint melodic rules have a soft preference. */
 unsigned melody_melodic_soft_rules(void);

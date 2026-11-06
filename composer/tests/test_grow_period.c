@@ -463,7 +463,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     int tonic_pc = (last->notes[last->note_count - 1].midi % 12 + 12) % 12;
     assert(tonic_pc == scenario->tonic);
 
-    /* The range, and one highest note in each phrase of the theme's melody. */
+    /* The range, and a highest note in each phrase of the theme's melody: a motive said again says its peak again, so the
+       peak is one note only where the phrase generates the notes around it (R-335). */
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
         const char *name = plan_node_name(plan, node);
         if (plan_node_kind(plan, node) != PLAN_NODE_PHRASE || !name || strcmp(name, "material") == 0) {
@@ -478,7 +479,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
         for (size_t i = 0; i < found; i++) {
             const PlanNotes *notes = &plan_lane_span_payload(plan, inside[i])->notes;
             for (size_t n = 0; n < notes->note_count; n++) {
-                assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 79);
+                assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 84);
                 if (notes->notes[n].midi > top) {
                     top = notes->notes[n].midi;
                     at_top = 1;
@@ -487,7 +488,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
                 }
             }
         }
-        assert(at_top == 1);
+        assert(at_top >= 1);
     }
 }
 

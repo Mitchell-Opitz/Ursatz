@@ -8,9 +8,8 @@
 
 #include "melody/melody_internal.h"
 
-#define DEFAULT_TOLERANCE 2
 #define DEFAULT_RANGE_LOW 60
-#define DEFAULT_RANGE_HIGH 79
+#define DEFAULT_RANGE_HIGH 84
 #define DEFAULT_START_CELL 0
 #define DEFAULT_NCT_TYPES (MELODY_NCT_PASSING | MELODY_NCT_NEIGHBOR)
 #define DEFAULT_DENSITY 0
@@ -21,14 +20,14 @@
 #define MELODY_KEEP 6
 
 MelodyFillParams melody_fill_params_default(void) {
-    MelodyFillParams params = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                               DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX, false};
+    MelodyFillParams params = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
+                               DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
     return params;
 }
 
 static const MelodyFillParams *params_of(void *context) {
-    static const MelodyFillParams defaults = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                                              DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX, false};
+    static const MelodyFillParams defaults = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
+                                              DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
     return context ? context : &defaults;
 }
 
@@ -86,45 +85,53 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     size_t kept_count = 0;
     MelodyCandidate *scratch = malloc(sizeof(*scratch));
     bool ok = read && scratch;
+    int shifts[5];
+    size_t shift_count = 0;
     /* A span the operator does not read, or a motive that cannot be placed, leaves the span open. */
     if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !melody_context_read(plan, (LaneSpanId)target.id, read))) {
         ok = false;
     }
-    for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
-        bool repeat = false;
-        PhraseVerdict verdict;
-        /* A motive that cannot be placed by its tone roles in half the attempts is placed as it was before tones, rather than
-           leave the span open (R-215). */
-        if (attempt == MELODY_ATTEMPTS / 2 && kept_count == 0) {
-            read->motive_tone_count = 0;
-        }
-        if (!melody_build(read, params, rng, scratch)) {
-            continue;
-        }
-        /* Only melodies that pass the hard rules are proposed; none passing leaves the span open. */
-        if (!melody_judge(scratch, &verdict)) {
-            ok = false;
+    /* The octave of the motive's notes is chosen per attempt from the ranked shifts (R-334); one that fits none leaves the span open. */
+    if (ok) {
+        shift_count = melody_realize_shifts(read, params, shifts);
+    }
+    /* The strict round first; a motive that no strict attempt composes gets a relaxed round (R-338). */
+    for (size_t round = 0; ok && shift_count > 0 && round < 2 && read->motive_count > 0; round++) {
+        if (round == 1 && kept_count > 0) {
             break;
         }
-        if (verdict.hard) {
-            continue;
+        for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
+            bool repeat = false;
+            PhraseVerdict verdict;
+            /* The first half of the attempts keeps the figures the framework labels; the second moves every clash to a chord tone. */
+            if (!melody_build(read, params, shifts[attempt % shift_count], attempt < MELODY_ATTEMPTS / 2, round == 1, rng, scratch)) {
+                continue;
+            }
+            /* Only melodies that pass the hard rules are proposed; none passing leaves the span open. */
+            if (!melody_judge(scratch, &verdict)) {
+                ok = false;
+                break;
+            }
+            if (verdict.hard) {
+                continue;
+            }
+            for (size_t i = 0; i < kept_count; i++) {
+                repeat = repeat || same_melody(kept[i], scratch);
+            }
+            if (repeat) {
+                continue;
+            }
+            MelodyCandidate *payload = malloc(sizeof(*payload));
+            char label[FILL_LABEL_MAX];
+            if (!payload) {
+                ok = false;
+                break;
+            }
+            *payload = *scratch;
+            melody_label(payload, label, sizeof(label));
+            ok = fill_candidates_add(out, label, payload, free);
+            kept[kept_count++] = payload;
         }
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_melody(kept[i], scratch);
-        }
-        if (repeat) {
-            continue;
-        }
-        MelodyCandidate *payload = malloc(sizeof(*payload));
-        char label[FILL_LABEL_MAX];
-        if (!payload) {
-            ok = false;
-            break;
-        }
-        *payload = *scratch;
-        melody_label(payload, label, sizeof(label));
-        ok = fill_candidates_add(out, label, payload, free);
-        kept[kept_count++] = payload;
     }
     free(scratch);
     free(read);
@@ -185,7 +192,7 @@ FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFill
     operator_.generator.name = MELODY_FILL_OPERATOR_NAME;
     operator_.generator.supported_inputs = "PiecePlan melody lane span over a written harmony and bass lane";
     operator_.generator.supported_outputs = "PiecePlan melody lane span";
-    operator_.generator.configuration_description = "interval tolerance, melody range, motive start cell, non-chord tone types and density";
+    operator_.generator.configuration_description = "melody range, motive start cell, non-chord tone types and density";
     operator_.generator.constraints_description = "chord tones on strong beats, NonChordTone figures, standard-counterpoint melodic and harmonic rules";
     operator_.generator.deterministic = true;
     operator_.generator.version = "1";

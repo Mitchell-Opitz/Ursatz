@@ -660,8 +660,9 @@ static size_t derived_bars(const GrowThemeSpec *spec, Rational bar) {
     return bars;
 }
 
-/* The motives grow-theme makes in the material, one bar each: the two segments of the fragments and the liquidation. */
-#define MADE_NODES 3
+/* The most motives grow-theme makes in the material, one bar each: the two segments of the fragments and a liquidation for each of
+   the two fragments and the cadential idea (apply takes a bar for every one it makes). */
+#define MADE_NODES 5
 
 static size_t count_bars(PlanSpan material_span, Rational bar);
 
@@ -670,6 +671,22 @@ static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request
     NodeId material = plan_node_parent(plan, request->source);
     PlanSpan span = plan_node_span(plan, material);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + MADE_NODES;
+    return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
+}
+
+/*
+ * Whether the material has the bars apply takes for the motives the drawn spec makes: the same count apply uses, the
+ * fragments' segments and a liquidation for each idea that has one, which the estimate before the draw (MADE_NODES) can
+ * fall short of.
+ */
+static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {
+    NodeId material = plan_node_parent(plan, request->source);
+    PlanSpan span = plan_node_span(plan, material);
+    size_t made = (spec->fragment_from_segment[0] ? 1 : 0) + (spec->fragment_from_segment[1] ? 1 : 0);
+    for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
+        made += spec->has_liquidated[k] ? 1 : 0;
+    }
+    size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + made;
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
 }
 
@@ -793,7 +810,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     spec->segment_room = material_has_room(plan, request, spec);
     /* The basic idea is two bars of eight, one of four. */
     spec->basic_cells = request->bars == 4 ? request->cells_per_bar : 2 * request->cells_per_bar;
-    return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec);
+    return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) && made_nodes_fit(plan, request, spec);
 }
 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {

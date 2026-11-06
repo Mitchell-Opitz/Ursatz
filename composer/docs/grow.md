@@ -80,7 +80,7 @@ or idea motive, the bars of its place):
 | Fit | Meaning |
 | --- | --- |
 | `GROW_FIT_SHORTER` | The motif is grown to the idea: it is placed at the start, and its rhythm is repeated with new pitches to the idea's end. |
-| `GROW_FIT_WHOLE` | The motif is the idea: its notes are placed as written, bent to the idea's chords by its tone roles, and nothing is filled after it. When the idea ends the theme, the last note takes the nearest tone of the cadence's chord, its rhythm kept. |
+| `GROW_FIT_WHOLE` | The motif is the idea: its notes are realized, bent only as the chords ask, nothing filled after, the last on the cadence tone ([melody-fill.md](melody-fill.md)). |
 | `GROW_FIT_LONGER` | Refused: `GROW_ERR_MOTIVE_TOO_LONG` for the basic motive (unless it is as long as the first part, see below), `GROW_ERR_BAD_REQUEST` for a slot or idea motive. |
 
 A basic motif exactly as long as the first part of the theme (4 bars of an 8-bar theme, 2 of a 4-bar one) fills that part
@@ -215,8 +215,7 @@ The operator proposes `GrowContext.candidates` (default 4) candidates, drawn fro
   narrowed by one or two semitones, or one interval changed by one to four semitones. It must fit its idea and stay
   between MIDI 58 and 84. One is chosen at random among those that do; when the consequent's cadence is a PAC or an
   IAC, among those whose last note is the cadence's tone (the tonic, or the third) when there are any, so the melody
-  can end where the cadence needs it. The consequent's is never the antecedent's. The melody is not asked to follow it
-  note for note: it takes the motive as the intervals to keep within the tolerance.
+  can end where the cadence needs it. The consequent's is never the antecedent's.
 - **Restated basic idea** (consequent). `restated`, as the repetition: the motive stage may keep it or transpose it.
   The melody says it again as the basic idea was said, from the first half, however far back it is (see below).
 - **Compound basic idea.** Its prolongation goes tonic to tonic or tonic to dominant.

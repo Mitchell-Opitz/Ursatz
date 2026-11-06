@@ -202,13 +202,14 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     int tonic_pc = (last->notes[last->note_count - 1].midi % 12 + 12) % 12;
     assert(tonic_pc == scenario->tonic);
 
-    /* One highest note in the theme's melody. */
+    /* A highest note in the theme's melody: a motive said again says its peak again, so it is one note only where the theme
+       generates the notes around it (R-335). */
     int top = 0;
     size_t at_top = 0;
     for (size_t i = 0; i < melodies; i++) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 79);
+            assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 84);
             if (notes->notes[n].midi > top) {
                 top = notes->notes[n].midi;
                 at_top = 1;
@@ -217,7 +218,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
             }
         }
     }
-    assert(at_top == 1);
+    assert(at_top >= 1);
 }
 
 /* The material is not part of the piece: it is skipped, and the piece ends with the theme. */

@@ -140,6 +140,18 @@ static void test_compose(void) {
         assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, (PlanSpan){at, (Rational){1, 64}}, &chord, 1) == 1);
         assert(chord_has(plan_lane_span_payload(plan, chord)->harmony.roman_numeral, notes->notes[n].midi % 12));
     }
+    /* The notes are the motif's pitches (R-328), moved by one octave for the whole idea, a note bent to its chords by at most
+       two semitones. */
+    static const int SHIFTS[] = {0, -12, 12, -24, 24};
+    bool placed = false;
+    for (size_t s = 0; s < sizeof(SHIFTS) / sizeof(SHIFTS[0]) && !placed; s++) {
+        placed = true;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            int apart = notes->notes[n].midi - (motive.notes[n].pitch + SHIFTS[s]);
+            placed = placed && (apart < 0 ? -apart : apart) <= 2;
+        }
+    }
+    assert(placed);
     plan_destroy(plan);
 }
 

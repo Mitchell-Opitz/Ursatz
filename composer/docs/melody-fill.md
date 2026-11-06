@@ -1,8 +1,8 @@
 # The melody operator
 
 A Fill operator for the melody lane. Given a written harmony lane, a written bass lane and a motive, it
-writes the melody over them: the motive's rhythm and contour, chord tones on the strong beats, and
-passing and neighbor tones between. It is a library operator (`melody_fill_register`); the CLI has no
+writes the melody over them in two jobs (R-326): it **realizes** the motive, whose notes it keeps and bends only as the chords ask,
+and it **generates** the notes after the motive, chord tones on the strong beats with passing and neighbor tones between. It is a library operator (`melody_fill_register`); the CLI has no
 command for it. Back to the [docs index](README.md).
 
 Header: `<ursatz_composer/melody_fill.h>`.
@@ -46,8 +46,8 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
   seventh, and a sixth is allowed only as the ascending minor one.
 - **Climax.** The climax position (`climax_position`, thousandths of the phrase) falls in one target. That
   target writes the phrase's single highest note, higher than every melody note before it in the phrase
-  (a hard rule); a target before it keeps every note at or below `range_high - 3`, and stays in the lower half
-  of the range where its motive allows; a target after it stays below the climax note.
+  (a hard rule where the target generates notes, strict only); a target before it keeps its generated notes at or below `range_high - 3`, and stays in the lower half
+  of the range where its motive allows; a target after it keeps its generated notes below the climax note.
 - **End tone.** The end tone rule applies only to a target with a cadence constraint, on the span or its
   owner. A target without one has no end-tone rule, and its last note needs only to be a chord tone.
 - **Exact restatement.** A target whose `motive_ref` is `restated` takes the whole melody of the written span it
@@ -59,17 +59,26 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
 
 ## What it writes
 
-- **Placement.** The motive starts at `start_cell`. Each note keeps its interval to the note before
-  within `tolerance` semitones. The first note is the chord tone nearest the motive's first pitch: that
-  pitch itself when it is a chord tone of the first chord, a transposition otherwise.
+- **Realize** (`melody_realize`, no random numbers). The motive starts at `start_cell`, keeping its rhythm. Each note is aimed at
+  its own pitch moved by one octave for the whole idea (the shift: of 0, -12, 12, -24, 24 those that put every note in the range,
+  ranked: for the phrase's climax target the top at or up to 2 semitones above the phrase's top first, then the smaller shift,
+  then the lower; R-334). In order: a note that is a tone of every chord it sounds through stays; every other note is labeled by
+  the NonChordTone framework (`melody_nct_types`) and a clash it classifies as a figure of any type, escape tones and retardations
+  included, is kept and its type allowed in the melody (R-336); an unclassified one moves, first to a pitch within 2 semitones that
+  re-forms its own tone role, else to the nearest tone of its chords (ties: the pitch whose intervals to its neighbours are nearest
+  the motive's, then the one farther from the note before); labeling and moving repeat until nothing moves; the last note of an idea
+  with a cadence moves to the nearest cadence tone. A note moves only for its chords (R-338): never for a melodic, bass or climax
+  rule. The octave and the figures are chosen per attempt: of 48 attempts the shifts cycle, the first 24 keep labeled figures and
+  the last 24 move every clash.
+- **Generate.** The notes after the motive are placed as before: the anchors, then the notes between, under the arch below.
 - **Strong beats** (the start of a cell, where a chord may start) carry chord tones, as do notes as long
   as a cell and notes held into the next chord.
 - **Between chord tones**, notes are chord tones or non-chord tones of the figures in `nct_types`,
   approached and left as the NonChordTone framework defines them. After the motive the rhythm is the
   motive's again (`density` 0) or an even subdivision of the cell.
-- **Contour.** One climax, `climax_position` thousandths of the way through, approached from below and
-  left downward; no other note is as high. Leaps of a fourth or more are followed by a step the other way
-  where the chord allows. Notes stay inside the range.
+- **Contour.** The generated notes make one climax, `climax_position` thousandths of the way through, approached from below and
+  left downward, with no other generated note as high; the realized notes keep their pitches anywhere in the range. Leaps of a
+  fourth or more are followed by a step the other way where the chord allows. Notes stay inside the range.
 - **Cadence.** The last note is the cadence's stable tone: the tonic for a PAC or PC, the third of the
   tonic for an IAC (the soprano the harmony operators' recognizer is told).
 
@@ -83,22 +92,21 @@ a retrograde reads the labels in reverse) takes the tones of the motive it was m
 whose label count is not its note count, is placed as it always was. An exact restatement keeps the tones of the notes of the
 motive; the notes after them have none.
 
-Placed by its tones, the motive bends to the chords it lands on, a repetition over a new chord included:
+The tones name the figure a clash is moved to: a note whose role is a non-chord tone type moves first to a pitch within 2 semitones
+that the labeler gives that same type, else to a chord tone. A figure the labeler classifies is kept whatever its role. A motive
+whose tones are not there is bent by the labeler alone.
 
-- **Chord tones.** A note labelled a chord tone is a tone of the chord under it, the one nearest the pitch the interval rule gives
-  (the interval to the note before kept within `tolerance` where a chord tone allows it, else the nearest chord tone). Those on a
-  strong beat, held notes and the first and last note are placed first, as for any motive; the others are chosen between them, from
-  the chord tones only.
-- **Non-chord tones.** A note labelled passing, neighbor, appoggiatura, suspension or anticipation, between a chord tone and the
-  chord tone it resolves to, keeps its type and is formed again on the chords it lands on once they are placed: a passing tone
-  between its two neighbours, a neighbor tone or an appoggiatura a step (a tone, else a semitone, in the scale of the chord) from
-  the tone it resolves to, on the side it was on in the motive, a suspension a step above that tone, an anticipation on that tone's
-  pitch. The figure is kept only if the NonChordTone framework reads it as that figure alone (so a passing tone between two notes of
-  one pitch, or a neighbor tone not between two equal ones, cannot be formed); a figure that cannot be formed becomes the nearest
-  chord tone. Its type is then allowed in the melody, whatever `nct_types` says, unless `nct_types` is empty. A note with any
-  other label (retardation, escape, double neighbor, changing tone, pedal, unclassified) is placed as before.
-- **Fallback.** When no melody has passed the hard rules in half of the attempts (24 of 48), the rest are made as if the motive had no tones, so
-  a motive that cannot be bent to its chords leaves the span no more often open than it was.
+## Strict and relaxed (R-338)
+
+A motive's notes are fixed, so the generated notes may have no pitch the strict rules allow. `melody_generate` runs its 48 attempts
+strict; when none passes and the target has motive notes it runs 48 more **relaxed** (`MelodyCandidate.relaxed`), never otherwise.
+A relaxed melody is held to the melodic rules only over its generated runs (each run with the realized note either side, by the
+framework's check); the other melodic rules, parallel fifths and octaves against the bass, a chord tone dissonant over the bass, an
+unresolved leading tone or seventh and a climax not above the phrase before it score with the soft rules; voice crossing, figures,
+strong-beat chord tones and the cadence tone stay hard. Its generated notes fall back past the arch and the bass checks when no
+option passes, and the fill search starts at the nearest motive note and tries again without the bass checks.
+`melody_check_lane` judges a written lane with motive notes strict, then relaxed. Realized notes are not held to the rules the motive
+itself breaks (`motive_waived`), nor is the join to the idea before or after it.
 
 ## Spans on beats
 
@@ -129,10 +137,9 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `tolerance` | 2 | Semitones an interval of the placed motive may differ from the motive's own. |
-| `range_low`, `range_high` | 60, 79 | MIDI range of the melody (C4 to G5), both included. |
+| `range_low`, `range_high` | 60, 84 | MIDI range of the melody voice (C4 to C6), both included (R-327). |
 | `start_cell` | 0 | Cell of the phrase the motive starts on; the time before it is a rest. |
-| `nct_types` | passing, neighbor | `MELODY_NCT_` bits: `PASSING`, `NEIGHBOR`, `APPOGGIATURA`, `SUSPENSION`, `ANTICIPATION`. 0 writes chord tones only. |
+| `nct_types` | passing, neighbor | `MELODY_NCT_` bits: `PASSING`, `NEIGHBOR`, `APPOGGIATURA`, `SUSPENSION`, `ANTICIPATION`; a realized motive adds `RETARDATION`, `ESCAPE`, `DOUBLE_NEIGHBOR`, `CHANGING_TONE` for its own figures. 0 writes chord tones only. |
 | `density` | 0 | Notes to a cell after the motive; 0 repeats the motive's rhythm. |
 | `climax_position` | 667 | Where the climax falls, in thousandths of the phrase. |
 | `plain_shaping` | false | True leaves out the four shaping rules below, for tests and comparisons; there is no CLI option. |
