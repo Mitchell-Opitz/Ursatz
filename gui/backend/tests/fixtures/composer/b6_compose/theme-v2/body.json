@@ -53,7 +53,8 @@
       "from": "request"
      },
      "density": 0.5,
-     "without": []
+     "without": [],
+     "development": "balanced"
     },
     "chords": [],
     "themes": [
@@ -184,29 +185,37 @@
         "beat": 1,
         "chord": "i",
         "function": "tonic",
-        "bass": "C3"
+        "bass": "C4"
        }
       ],
       "developments": [
        {
         "motive": "m1",
         "idea": "repetition",
-        "development": "restated, exact"
+        "development": "restated, exact",
+        "segment": null,
+        "summary": "repetition = basic idea, exact"
        },
        {
         "motive": "m2",
         "idea": "fragment 1",
-        "development": "fragmented, leading, 2 notes"
+        "development": "fragmented, leading, 2 notes",
+        "segment": null,
+        "summary": "fragment 1 = basic idea, fragmented, leading, 2 notes"
        },
        {
         "motive": "m3",
         "idea": "fragment 2",
-        "development": "fragmented, leading, 2 notes"
+        "development": "fragmented, leading, 3 notes",
+        "segment": null,
+        "summary": "fragment 2 = basic idea, fragmented, leading, 3 notes"
        },
        {
         "motive": "m4",
         "idea": "cadential",
-        "development": "restated, exact"
+        "development": "restated, exact",
+        "segment": null,
+        "summary": "cadential = cadential motif, exact"
        }
       ],
       "slots": [
@@ -243,7 +252,7 @@
         "motive": "M1",
         "source": "operator",
         "item": null,
-        "chain": "fragment leading 2 notes",
+        "chain": "fragment leading 3 notes",
         "connection": null
        },
        {
@@ -253,30 +262,30 @@
         "source": "motive",
         "item": null,
         "chain": null,
-        "connection": 66
+        "connection": 69
        }
       ],
       "score": {
-       "numerator": 5,
+       "numerator": 4,
        "denominator": 5
       },
       "requested": "sentence",
-      "heard": "sentence",
-      "heard_as_requested": true,
-      "heard_text": "heard as sentence",
+      "heard": null,
+      "heard_as_requested": false,
+      "heard_text": "no theme heard",
       "style_distance": {
        "harmony": 0.8981,
-       "rhythm": 0.252,
-       "melody": 0.8067,
-       "form": 0.625,
-       "overall": 0.6454
+       "rhythm": 0.2639,
+       "melody": 0.8046,
+       "form": 0.5,
+       "overall": 0.6166
       }
      }
     ],
     "files": [
-     "/tmp/claude-0/build/backend/tests/theme_route/materials/items/thm-a30cc2a41bea020c/v2/plan.json",
-     "/tmp/claude-0/build/backend/tests/theme_route/materials/items/thm-a30cc2a41bea020c/v2/theme.mid",
-     "/tmp/claude-0/build/backend/tests/theme_route/materials/items/thm-a30cc2a41bea020c/v2/theme.musicxml"
+     "/tmp/claude-0/gui-build/backend/tests/theme_route/materials/items/thm-b771edd68b2666dd/v2/plan.json",
+     "/tmp/claude-0/gui-build/backend/tests/theme_route/materials/items/thm-b771edd68b2666dd/v2/theme.mid",
+     "/tmp/claude-0/gui-build/backend/tests/theme_route/materials/items/thm-b771edd68b2666dd/v2/theme.musicxml"
     ]
    },
    "brief": {

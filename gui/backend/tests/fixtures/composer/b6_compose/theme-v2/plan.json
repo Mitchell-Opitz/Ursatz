@@ -3,7 +3,7 @@
   "format_version": 2,
   "metadata": {
     "composer_version": "0.4.1",
-    "ursatz_commit": "d2b85cedb7bb3788197206dc6d7a18efeef6372a"
+    "ursatz_commit": "168b7c25d499052757f1cdaa8e55d4d580144f0e"
   },
   "meter": {
     "spans": [{
@@ -14,7 +14,7 @@
             "den": 1
           },
           "end": {
-            "num": 17,
+            "num": 20,
             "den": 1
           }
         },
@@ -44,7 +44,7 @@
           "den": 1
         },
         "end": {
-          "num": 17,
+          "num": 20,
           "den": 1
         }
       },
@@ -379,7 +379,7 @@
         "den": 1
       },
       "end": {
-        "num": 17,
+        "num": 20,
         "den": 1
       }
     },
@@ -580,7 +580,7 @@
             "den": 1
           },
           "end": {
-            "num": 17,
+            "num": 20,
             "den": 1
           }
         },
@@ -593,7 +593,7 @@
                 "den": 1
               },
               "end": {
-                "num": 17,
+                "num": 20,
                 "den": 1
               }
             },
@@ -606,7 +606,7 @@
                     "den": 1
                   },
                   "end": {
-                    "num": 17,
+                    "num": 20,
                     "den": 1
                   }
                 },
@@ -734,7 +734,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "fragment position=1 length=2"
+                          "step": "fragment position=1 length=3"
                         }]
                     }
                   }, {
@@ -1332,7 +1332,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 18,
-            "step": "fragment position=1 length=2"
+            "step": "fragment position=1 length=3"
           }],
         "payload": {
           "notes": [{
@@ -1363,7 +1363,17 @@
               },
               "duration": {
                 "num": 1,
-                "den": 4
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 67,
+              "offset": {
+                "num": 3,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
               }
             }, {
               "midi_pitch": 68,
@@ -1489,7 +1499,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 67,
+              "midi_pitch": 63,
               "offset": {
                 "num": 1,
                 "den": 1
@@ -1661,8 +1671,8 @@
           "den": 1
         },
         "end": {
-          "num": 49,
-          "den": 4
+          "num": 99,
+          "den": 8
         }
       },
       "note_ids": [],
@@ -1691,6 +1701,16 @@
               "offset": {
                 "num": 1,
                 "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 67,
+              "offset": {
+                "num": 1,
+                "den": 4
               },
               "duration": {
                 "num": 1,
@@ -2154,7 +2174,7 @@
         "constraints": [],
         "payload": {
           "notes": [{
-              "midi_pitch": 48,
+              "midi_pitch": 60,
               "offset": {
                 "num": 0,
                 "den": 1
