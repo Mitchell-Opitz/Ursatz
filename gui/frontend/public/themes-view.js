@@ -771,7 +771,7 @@ function buildThemeAdvancedSection(state, itemsOf) {
  * The theme editor, in the sections the tabs mount. ctx: {id, item, body, subjects, usesStatus, items (all items),
  * status (a tab status writer), nameInput, projectSelect, saved()}.
  * Returns {state, problems(), save(note), compose(options), sections: {notices, theme, structure, slots, result
- * (the save row)}}.
+ * (the save row, mounted by the page above the tabs)}}.
  */
 function buildThemeEditor(ctx) {
   const state = ThemesModel.formFromBody(ctx.body, ctx.id);
