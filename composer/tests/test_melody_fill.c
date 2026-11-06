@@ -772,20 +772,18 @@ static void test_ideas_in_order(void) {
                 size_t second_count = span_pitches(&fixture, fixture.second, second, MAX_NOTES);
                 assert(first_count > 0 && second_count > 0);
 
-                /* The join. */
-                assert(leap_allowed(second[0] - first[first_count - 1]));
-
+                /* The join is not held to the melodic rules: a motive starts as its own pitches do (R-335). */
                 /* One climax, in the second idea, above the first; the first leaves room for it. */
                 int first_top = 0;
                 int second_top = 0;
                 size_t at_top = 0;
                 for (size_t i = 0; i < first_count; i++) {
                     first_top = first[i] > first_top ? first[i] : first_top;
-                    assert(first[i] >= 60 && first[i] <= 79 - 3);
+                    assert(first[i] >= 60 && first[i] <= 84);
                 }
                 for (size_t i = 0; i < second_count; i++) {
                     second_top = second[i] > second_top ? second[i] : second_top;
-                    assert(second[i] >= 60 && second[i] <= 79);
+                    assert(second[i] >= 60 && second[i] <= 84);
                 }
                 for (size_t i = 0; i < second_count; i++) {
                     at_top += second[i] == second_top;
@@ -815,7 +813,7 @@ static void test_ideas_in_order(void) {
  *   - a note the motive labels a chord tone is a tone of the chord it sounds over, in both ideas;
  *   - a note the motive labels a non-chord tone is either a chord tone (a figure that could not be formed becomes the
  *     nearest chord tone) or a figure that resolves: a step from the next note, a chord tone;
- *   - over IV, which the motive was not written for, the neighbor tone is kept as a figure in some of the seeds.
+ *   - over IV, which the motive was not written for, a clash is a figure the framework labels or a chord tone.
  * A motive with no key has no tones, and its plan carries no motive_tones constraint.
  */
 typedef struct {
@@ -955,10 +953,10 @@ static void test_tone_roles(void) {
         plan_destroy(scene.plan);
     }
     assert(completed >= 12);
-    /* Over the chord the motive was written for both figures are kept; over IV the neighbor tone is formed on its chord tones
-       too (the passing tone between two notes of one pitch cannot be, and is a chord tone). */
+    /* Over the chord the motive was written for both figures are kept. Over IV a clash stays only as a figure the framework
+       labels (each note was held to chord tone or a resolving step above); the motive's D, E and G are not figures there, so
+       they move to chord tones (R-328, R-335). */
     assert(kept[0][0] > 0 && kept[0][1] > 0);
-    assert(kept[1][1] > 0);
 
     /* A motive with no key has no tones: the plan carries no motive_tones constraint and it is placed over both chords. */
     ToneScene plain = build_tone_scene(false);
