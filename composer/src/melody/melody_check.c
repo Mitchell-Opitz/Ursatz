@@ -20,6 +20,7 @@
 
 #include "check/shaping.h"
 #include "melody/melody_internal.h"
+#include "util/plan_util.h"
 #include "util/util.h"
 
 /*
@@ -817,6 +818,7 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, co
         ok = plan_span_end(lane_span, &lane_end) == PLAN_OK &&
              (plan_span_contains(span, lane_span) ||
               (rational_cmp(lane_span.start, span.start) < 0 && rational_cmp(lane_end, phrase_end) == 0));
+        size_t first_note = melody->count;
         for (size_t n = 0; ok && n < notes->note_count; n++) {
             MelodyNote *note = &melody->notes[melody->count];
             Rational onset = position_add(position_sub(base, origin), notes->notes[n].offset);
@@ -839,6 +841,29 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, co
                 note->chord = melody_chord_at(&melody->context, note->onset);
                 melody->count++;
             }
+        }
+        /* The motive the span says (its motive_ref) is what the checker held it to: its first notes are the motive's. */
+        for (size_t c = 0; ok && c < plan_lane_span_constraint_count(plan, ids[i]); c++) {
+            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, ids[i], c);
+            LaneSpanId motive_span;
+            if (constraint->kind != PLAN_CONSTRAINT_MOTIVE_REF || !plan_has_node(plan, constraint->params.motive.motive) ||
+                !plan_melody_span_of(plan, constraint->params.motive.motive, &motive_span)) {
+                continue;
+            }
+            const PlanNotes *motive = &plan_lane_span_payload(plan, motive_span)->notes;
+            if (motive->note_count == 0 || motive->note_count > MOTIVE_MAX_NOTES || melody->count - first_note < motive->note_count) {
+                continue;
+            }
+            melody->context.motive_count = motive->note_count;
+            for (size_t k = 0; k < motive->note_count; k++) {
+                melody->context.motive_pitch[k] = motive->notes[k].midi;
+                melody->notes[first_note + k].motive_index = (int)k;
+            }
+            melody->context.motive_waived |= melody_motive_waived(&melody->context);
+            /* A motive's own figures are the framework's to name: every type is allowed in a melody that carries one. */
+            melody->params.nct_types |= MELODY_NCT_PASSING | MELODY_NCT_NEIGHBOR | MELODY_NCT_APPOGGIATURA |
+                                        MELODY_NCT_SUSPENSION | MELODY_NCT_ANTICIPATION | MELODY_NCT_RETARDATION |
+                                        MELODY_NCT_ESCAPE | MELODY_NCT_DOUBLE_NEIGHBOR | MELODY_NCT_CHANGING_TONE;
         }
     }
     PhraseVerdict verdict;
