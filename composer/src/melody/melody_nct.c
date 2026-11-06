@@ -110,17 +110,12 @@ static bool search(const MelodyContext *context, const MelodyFillParams *params,
     }
     MelodyNote *note = &notes[j];
     unsigned allowed = context->chord_mask[note->chord];
-    if (params->nct_types && !note->chord_only) {
+    if (params->nct_types) {
         allowed |= melody_scale_mask(context, note->chord);
     }
     Try tries[TRIES_PER_NOTE];
     size_t kept = 0;
     int high = params->range_high < cap ? params->range_high : cap;
-    if (note->fixed) {
-        /* A figure of the motive's tones already has its pitch. */
-        tries[kept++] = (Try){note->pitch, 0};
-        high = params->range_low - 1;
-    }
     for (int pitch = params->range_low; pitch <= high; pitch++) {
         if (!((allowed >> util_pitch_class(pitch)) & 1u) || !leap_allowed(pitch - notes[j - 1].pitch)) {
             continue;

@@ -8,7 +8,6 @@
 
 #include "melody/melody_internal.h"
 
-#define DEFAULT_TOLERANCE 2
 #define DEFAULT_RANGE_LOW 60
 #define DEFAULT_RANGE_HIGH 84
 #define DEFAULT_START_CELL 0
@@ -21,14 +20,14 @@
 #define MELODY_KEEP 6
 
 MelodyFillParams melody_fill_params_default(void) {
-    MelodyFillParams params = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                               DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX, false};
+    MelodyFillParams params = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
+                               DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
     return params;
 }
 
 static const MelodyFillParams *params_of(void *context) {
-    static const MelodyFillParams defaults = {DEFAULT_TOLERANCE, DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH,
-                                              DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY, DEFAULT_CLIMAX, false};
+    static const MelodyFillParams defaults = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
+                                              DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
     return context ? context : &defaults;
 }
 
@@ -187,7 +186,7 @@ FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFill
     operator_.generator.name = MELODY_FILL_OPERATOR_NAME;
     operator_.generator.supported_inputs = "PiecePlan melody lane span over a written harmony and bass lane";
     operator_.generator.supported_outputs = "PiecePlan melody lane span";
-    operator_.generator.configuration_description = "interval tolerance, melody range, motive start cell, non-chord tone types and density";
+    operator_.generator.configuration_description = "melody range, motive start cell, non-chord tone types and density";
     operator_.generator.constraints_description = "chord tones on strong beats, NonChordTone figures, standard-counterpoint melodic and harmonic rules";
     operator_.generator.deterministic = true;
     operator_.generator.version = "1";
