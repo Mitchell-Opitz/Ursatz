@@ -24,7 +24,7 @@ seed + 5; the compose run's invention stage takes seed + 6), so a grown theme is
 
 | Field | Meaning |
 | --- | --- |
-| `motive` | The motive. It must fit in one bar of the meter (`GROW_ERR_MOTIVE_TOO_LONG` otherwise) and have two notes or more. |
+| `motive` | The motive. It must be no longer than the basic idea (`GROW_ERR_MOTIVE_TOO_LONG` otherwise) and have two notes or more. See [How a motif fills its idea](#how-a-motif-fills-its-idea). |
 | `key`, `meter` | The key and meter. The harmony operators write for 2/4, 3/4, 4/4 and 6/8 only. |
 | `bars` | 8, with a basic idea of 2 bars, or 4, with one of 1 bar. |
 | `pairing` | Any of the nine pairings of a beginning (presentation, antecedent, compound basic idea) and an ending (continuation, consequent, cadential). Presentation and continuation make a sentence, antecedent and consequent a period, the other seven a hybrid (`standard_form_pairing_form`). |
@@ -46,13 +46,14 @@ A theme can be built from more than the basic motive (R-166). `GrowSlot` names t
 (the basic idea, the repetition of a presentation, the consequent's basic idea), `contrasting` (the contrasting idea, the
 consequent's contrasting idea), `continuation` (fragment 1 and 2) and `cadential` (the cadential idea, cadential 1 and 2).
 `GrowRequest.slot_motives` gives a motive to each slot but the basic one. A slot motive is added to the material as the node
-`s1` (contrasting), `s2` (continuation) or `s3` (cadential), a Given melody span, after `m0`; the material is a bar longer for
-each. The first idea of the slot is the motive itself (exact, or a saved form of it, see below); the later ideas of the slot
+`s1` (contrasting), `s2` (continuation) or `s3` (cadential), a Given melody span, after `m0`; the material is as many bars
+longer as the motive has bars. The first idea of the slot is the motive itself (exact, or a saved form of it, see below); the later ideas of the slot
 (the consequent's contrasting idea, fragment 2, cadential 2) are made from it as the basic motive's are, and the remoteness of
 their forms is measured from it. The basic idea's ideas are unchanged.
 
 `GROW_ERR_BAD_REQUEST` for a slot motive that is not a full motive of two notes or more in the theme's key and meter, that is
-longer than the first idea of its slot (two bars of eight for the contrasting idea and the cadential idea, one for fragment 1),
+longer than the first idea of its slot (two bars of eight for the contrasting idea and the cadential idea, one for fragment 1; a
+motive as long as the idea fills it whole),
 or for a slot the pairing has no idea for (a contrasting slot in a sentence, a continuation slot without a continuation, a
 cadential slot in a period). A slot motive keeps no harmony, features or role (a plan keeps only the notes).
 
@@ -62,12 +63,28 @@ cadential slot in a period). A slot motive keeps no harmony, features or role (a
 `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,
 `cadential 2`); `grow_idea_in_pairing` says whether a pairing has one (R-206). `GrowRequest.idea_motives` gives a single idea a
 motive of its own, in place of its slot's for that idea. It is added to the material as the node `i<k>` (k the `GrowIdea`
-value), a Given melody span after the slot motives (the material is a bar longer for each), and the idea's melody asks for it
+value), a Given melody span after the slot motives (the material is as many bars longer as the motive has bars), and the idea's melody asks for it
 directly, as an exact restatement: the motives stage makes no motive for that idea. The other ideas of the slot are made as
 before, and the same `Motive` may back several nodes. Melody-fill places an exact restatement of a motive of its own as that
 motive, not as a copy of the idea before it. `GROW_ERR_BAD_REQUEST` for an idea the pairing does not have, an entry for the
 basic idea, or a motive that is not a full motive of two notes or more in the theme's key and meter or is longer than its idea
-(a bar, or the idea's eighths of the theme when less).
+(the idea's bars: two bars of eight for the contrasting idea and the cadential idea, one for fragment 1 and in a 4-bar theme).
+
+### How a motif fills its idea
+
+A motif's length in bars is `ceil((length less its pickup) / bar)`; the pickup stays before the idea's first barline, and
+the motif is placed from its start, so a pickup counts toward the length the idea has room for. `grow_motive_fit` compares
+the motif's bars with the bars of the idea it fills (2 for the basic idea of an 8-bar theme, 1 for a 4-bar one; for a slot
+or idea motive, the bars of its place):
+
+| Fit | Meaning |
+| --- | --- |
+| `GROW_FIT_SHORTER` | The motif is grown to the idea: it is placed at the start, and its rhythm is repeated with new pitches to the idea's end. |
+| `GROW_FIT_WHOLE` | The motif is the idea: its notes are placed as written, bent to the idea's chords by its tone roles, and nothing is filled after it. When the idea ends the theme, the last note takes the nearest tone of the cadence's chord, its rhythm kept. |
+| `GROW_FIT_LONGER` | Refused: `GROW_ERR_MOTIVE_TOO_LONG` for the basic motive, `GROW_ERR_BAD_REQUEST` for a slot or idea motive. |
+
+The ideas made from a whole motif (the repetition, the dominant form, the consequent's restatement and a section's drawn
+motive) develop all of it and must fit the idea they fill. Each motive in the material takes its own bars, laid end to end.
 
 ### Given chords
 

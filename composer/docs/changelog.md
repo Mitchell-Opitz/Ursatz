@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P33)
+
+The API is 1.4: a motif as long as the idea it fills is that idea, placed as written, so a 2-bar motif is the basic idea of an 8-bar theme or of a piece of 8-bar sections (a shorter one is grown to the idea as before). The basic, slot and idea motives and the motive of a piece or plan may be as long as their idea; a longer one is refused with "the motif is 3 bars; the basic idea of a 8-bar theme is 2", at `/slots/basic` for a theme request and `/motive` for a piece or plan request. A section's drawn motive may be as long as its idea. The snapshot `piece-loop-and-ending` (stdout, plan and MIDI) changes because a drawn section motive of 2 bars is no longer refused. See [grow.md](grow.md#how-a-motif-fills-its-idea).
+
 ## Unreleased (phase P32)
 
 The API is 1.3: `composer_api_random_motive` takes `strategy`, `"segments"` (the default: motives built from a harmony plan and repeated segments, returned with their harmony and segments as their own) or `"drawn"` (the earlier strategy, unchanged); `composer_api_vocabulary` serves `random_motive_strategies`. The CLI takes `random-motive --strategy`. See [api/motives.md](api/motives.md) and [cli-random-motive.md](cli-random-motive.md).

@@ -94,5 +94,5 @@ With given material a line follows for each (`given melody phrase.txt at B:1`, `
 | --- | --- |
 | 0 | The plan was written. |
 | 1 | Usage or an invalid argument: a missing required option, an unknown form, a size the form does not have (the message lists the sizes it has), a bad key, mode, meter, seed or format, or an accompaniment the meter cannot have; a `--given-*` with no `--at` (when there is a form), an `--at` or `--cells` out of place, a section letter the piece does not have, a bar that is not a whole number from 1. |
-| 2 | The request cannot be satisfied: the motive cannot be loaded, does not fit in one bar of the meter, or has fewer than two notes; given material cannot be loaded or placed (past the section's end, across a change of key, over other given material, notes or numerals that cannot be placed). |
+| 2 | The request cannot be satisfied: the motive cannot be loaded, is longer than the basic idea of a theme section, or has fewer than two notes; given material cannot be loaded or placed (past the section's end, across a change of key, over other given material, notes or numerals that cannot be placed). |
 | 3 | The plan could not be written. Nothing is left behind: the file is written beside its name and renamed. |

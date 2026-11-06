@@ -26,7 +26,7 @@ track (an intro, a body, a turnaround and an ending, [piece-structure.md](piece-
 | --- | --- |
 | `key`, `mode` | The tonic (or a key like `"D minor"`) and `minor`, `major` or `style`. `style` takes the style's most common mode and needs a `style`. |
 | `meter` | `2/4`, `3/4`, `4/4` or `6/8`. |
-| `motive` | `null`, or the piece's basic motive (a degree list as in the [theme request](theme-request.md#motives), melodic). With `null` the basic motive is the own motive of the first motif section, else one invented. |
+| `motive` | `null`, or the piece's basic motive (a degree list as in the [theme request](theme-request.md#motives), melodic). With `null` the basic motive is the own motive of the first motif section, else one invented. It may be as long as the basic idea of every theme section: 2 bars when all are 8 bars, else 1. A longer one is refused at `/motive`. |
 | `accompaniment`, `voicing` | As in the theme request, on every section: `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `"satb"` or `"chorale"`, not both. The pattern `motive` is not available in a piece. |
 | `style`, `style_weight`, `without`, `tempo` | As in the theme request. The tempo goes into the MIDI and MusicXML files of both versions. |
 
