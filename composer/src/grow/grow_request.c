@@ -654,7 +654,9 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         longest = bars > longest ? bars : longest;
     }
     extra_bars += GROW_PLACE_COUNT * (longest - 1);
-    size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars;
+    /* A continuation's fragments are segments of m0 in two more nodes of the material (grow_ending.c). */
+    size_t segment_bars = request->pairing.ending == PLAN_THEME_ENDING_CONTINUATION ? 2 : 0;
+    size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars + segment_bars;
 
     PiecePlan *plan = plan_create();
     if (!plan) {

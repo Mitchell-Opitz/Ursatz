@@ -1,7 +1,10 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
+#include "util/plan_util.h"
+#include "motive/motive_internal.h"
 
 /* Chords a phrase-model progression has before its last: a tonic, up to two predominants, a dominant. */
 #define PHRASE_MODEL_SLOTS 4
@@ -12,6 +15,86 @@
 /* The ideas of a continuation, in eighths of the theme. */
 static const size_t IDEA_START[GROW_PLACE_COUNT] = {0, 2, 4, 5, 6};
 static const size_t IDEA_UNITS[GROW_PLACE_COUNT] = {2, 2, 1, 1, 2};
+
+/* The weights of fragment 1's segment: a segment lettered other than `a` first, then one lettered `a` (ch. VIII). */
+static const unsigned FRAGMENT_SEGMENT_WEIGHTS[2] = {2, 1};
+/* The weights of fragment 2: fragment 1's segment in sequence one step down, then the next segment. */
+static const unsigned FRAGMENT_2_WEIGHTS[2] = {3, 1};
+
+/* The segment of m0 as a fragment's motive: a proper part of m0 (a fragment shorter than it) of two notes or more. */
+static bool segment_fragment(const GrowThemeSpec *spec, size_t index, Motive *out) {
+    return grow_segment_motive(&spec->source, &spec->segments[index], out) && out->note_count < spec->source.note_count &&
+           rational_cmp(out->length, spec->source.length) < 0;
+}
+
+/* Whether a fragment idea, made as the spec now says, fits the room. */
+static bool fragment_fits(const GrowThemeSpec *spec, GrowPlace idea, Rational room) {
+    Motive result;
+    return grow_idea_develop(spec, idea, &result) && rational_cmp(result.length, room) <= 0;
+}
+
+static void clear_segment_fragments(GrowThemeSpec *spec) {
+    spec->fragment_from_segment[0] = false;
+    spec->fragment_from_segment[1] = false;
+    spec->fragment_sequence = false;
+}
+
+/*
+ * The fragments of a continuation from the segments of m0 (ch. VIII): fragment 1 is a segment that fits its room, one
+ * lettered other than `a` preferred, and fragment 2 is that segment in sequence one step down or the next segment. False,
+ * with nothing set, when m0 has no segment that fits: the leading fragments of m0 are made as before.
+ */
+static bool draw_segment_fragments(FillRng *rng, GrowThemeSpec *spec, Rational unit) {
+    Rational room1 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1]);
+    Rational room2 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2]);
+    size_t fits[MOTIVE_MAX_FEATURES];
+    size_t count = 0;
+    unsigned total = 0;
+    if (!spec->segment_room || grow_idea_own(spec, GROW_PLACE_FRAGMENT_1) || grow_idea_own(spec, GROW_PLACE_FRAGMENT_2)) {
+        return false;
+    }
+    for (size_t s = 0; s < spec->segment_count; s++) {
+        Motive motive;
+        if (segment_fragment(spec, s, &motive) && rational_cmp(motive.length, room1) <= 0) {
+            fits[count++] = s;
+            total += FRAGMENT_SEGMENT_WEIGHTS[spec->segments[s].label[0] == 'a' ? 1 : 0];
+        }
+    }
+    if (count == 0) {
+        return false;
+    }
+    uint64_t pick = fill_rng_below(rng, total);
+    size_t chosen = fits[count - 1];
+    for (size_t i = 0; i < count; i++) {
+        unsigned weight = FRAGMENT_SEGMENT_WEIGHTS[spec->segments[fits[i]].label[0] == 'a' ? 1 : 0];
+        if (pick < weight) {
+            chosen = fits[i];
+            break;
+        }
+        pick -= weight;
+    }
+    bool sequence = fill_rng_below(rng, FRAGMENT_2_WEIGHTS[0] + FRAGMENT_2_WEIGHTS[1]) < FRAGMENT_2_WEIGHTS[0];
+    segment_fragment(spec, chosen, &spec->fragment_motive[0]);
+    spec->fragment_from_segment[0] = true;
+    spec->fragment_segment[0] = chosen;
+    spec->fragment_from_segment[1] = true;
+    for (int attempt = 0; attempt < 2; attempt++, sequence = !sequence) {
+        spec->fragment_sequence = sequence;
+        if (sequence) {
+            spec->fragment_segment[1] = chosen;
+            spec->fragment_motive[1] = spec->fragment_motive[0];
+        } else if (chosen + 1 < spec->segment_count && segment_fragment(spec, chosen + 1, &spec->fragment_motive[1])) {
+            spec->fragment_segment[1] = chosen + 1;
+        } else {
+            continue;
+        }
+        if (fragment_fits(spec, GROW_PLACE_FRAGMENT_2, room2)) {
+            return true;
+        }
+    }
+    clear_segment_fragments(spec);
+    return false;
+}
 
 /* The longest leading fragment of at most `wanted` notes that fits an idea of `room`; 0 when none does. */
 static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, Rational room) {
@@ -46,8 +129,10 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     if (spec->liquidate_drop >= count) {
         spec->liquidate_drop = count - 1;
     }
-    if (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
-        fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0) {
+    /* Fragments are segments of m0 when it has them that fit, else its leading notes. */
+    if (!draw_segment_fragments(rng, spec, unit) &&
+        (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
+         fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0)) {
         return false;
     }
     /* Each idea after the presentation is made from m0 and has to fit in the room it has. */
@@ -188,11 +273,40 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     return result;
 }
 
+/* The motive nodes of the segments the fragments are made from, in the bars of the material after the idea motives. */
+static PlanResult add_segment_nodes(GrowBuild *build) {
+    const GrowThemeSpec *spec = build->spec;
+    size_t at = 0;
+    for (size_t k = 0; k < 2; k++) {
+        if (!spec->fragment_from_segment[k]) {
+            continue;
+        }
+        if (k == 1 && spec->fragment_from_segment[0] && spec->fragment_segment[1] == spec->fragment_segment[0]) {
+            build->segment_node[1] = build->segment_node[0];
+            continue;
+        }
+        char name[32];
+        Rational start;
+        snprintf(name, sizeof(name), "segment %s", spec->segments[spec->fragment_segment[k]].label);
+        PlanResult result = plan_result_of_rational(
+            rational_add(build->material_span.start, grow_scaled(build->request->bar, build->segment_base + at), &start));
+        result = result == PLAN_OK ? motive_attach(build->plan, build->material, start, &spec->fragment_motive[k], name,
+                                                   &build->segment_node[k], NULL)
+                                   : result;
+        if (result != PLAN_OK) {
+            return result;
+        }
+        at++;
+    }
+    return PLAN_OK;
+}
+
 static PlanResult build_continuation(GrowBuild *build) {
     static const char *const NAMES[GROW_PLACE_COUNT] = {NULL, NULL, "fragment 1", "fragment 2", "cadential"};
     NodeId continuation;
     PlanHarmonyShape shape;
-    PlanResult result = make_container(build, "second phrase", "continuation", &continuation);
+    PlanResult result = add_segment_nodes(build);
+    result = result == PLAN_OK ? make_container(build, "second phrase", "continuation", &continuation) : result;
     memset(&shape, 0, sizeof(shape));
     shape.kind = build->spec->ending_shape;
     shape.starts_on = build->request->has_end_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;

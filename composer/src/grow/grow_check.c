@@ -54,9 +54,10 @@ static const char *judge_continuation(const GrowThemeSpec *spec) {
     for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea <= GROW_PLACE_FRAGMENT_2; idea++) {
         /* A slot's own motive begins its slot as it is: only a fragment of it is shorter than its source. */
         bool own = grow_idea_own(spec, idea);
+        /* A segment is a part of m0 already: the fragment is shorter than m0. */
+        const Motive *from = grow_idea_segment(spec, idea, NULL) ? &spec->source : grow_idea_source(spec, idea);
         if (!spec->has_developed[idea] ||
-            (!own && !standard_form_is_fragmentation(ticks_of(grow_idea_source(spec, idea)->length),
-                                                     ticks_of(spec->developed[idea].length)))) {
+            (!own && !standard_form_is_fragmentation(ticks_of(from->length), ticks_of(spec->developed[idea].length)))) {
             return "fragment not shorter than the basic idea";
         }
     }

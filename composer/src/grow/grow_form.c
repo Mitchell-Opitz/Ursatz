@@ -641,6 +641,13 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     case SLOT_FRAGMENT_1:
         return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : offer_liquidation(&proposal, 1);
     case SLOT_FRAGMENT_2:
+        /* A segment is the fragment as it is, or one step down in sequence (the ref asks for it). */
+        if (plan_motive_ref_restates(&request.ref)) {
+            return offer_exact(&proposal);
+        }
+        if (request.ref.has_step && request.ref.step.kind == MOTIVE_RELATION_TRANSPOSE) {
+            return offer_transpositions(&proposal);
+        }
         return offer_liquidation(&proposal, 2);
     case SLOT_CADENTIAL_ENDING:
         return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : true;

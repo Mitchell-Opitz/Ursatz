@@ -69,6 +69,16 @@ typedef struct {
     MotiveSketchFeature segments[MOTIVE_MAX_FEATURES];
     size_t segment_count;
     size_t fragment_notes[2];              /* notes of the leading fragments the two fragment ideas are */
+    /*
+     * A continuation's fragments from the segments (ch. VIII): fragment k is the segment fragment_segment[k] of m0 as a
+     * motive of its own (fragment_motive[k]) when fragment_from_segment[k]; else the leading fragment of m0 above.
+     * fragment_sequence: fragment 2 is fragment 1's segment in sequence one step down (tonal), else the next segment.
+     */
+    bool fragment_from_segment[2];
+    size_t fragment_segment[2];
+    bool fragment_sequence;
+    Motive fragment_motive[2];
+    bool segment_room;                     /* the material has bars to put the fragments' segments in */
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
     bool ending_split;                     /* no chord of the ending crosses a barline */
@@ -139,6 +149,8 @@ typedef struct {
     NodeId source;           /* the motive node the ideas are made from: m0, or the section's own motive */
     size_t motive_bars;      /* the bars a derived motive node takes in the material: those of the longest motive given */
     size_t slot_base;        /* the bar of the material motive slot 1 goes in; slot k goes (k - 1) * motive_bars after it */
+    size_t segment_base;     /* the bar of the material the segment motives of the fragments go in, one bar each */
+    NodeId segment_node[2];  /* the material node of the segment fragment k is made from, else PLAN_NODE_NONE */
 } GrowBuild;
 
 /* A length of count units. */
@@ -215,6 +227,8 @@ size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place);
 NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea);
 /* The name of the idea's material node. */
 const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size);
+/* Whether the idea is a segment of m0 (a continuation's fragment, ch. VIII), and the segment when it is. */
+bool grow_idea_segment(const GrowThemeSpec *spec, GrowPlace idea, const MotiveSketchFeature **segment);
 /* The motive an idea is made from: its own, else its slot's, else the spec's source. */
 const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea);
 /* The motive node an idea's motive ref names: its slot's own node, else the build's source. */
