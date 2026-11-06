@@ -13,6 +13,7 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/variant_registry.h>
 
 #include "util/plan_util.h"
 #include "grow/grow_internal.h"
@@ -279,9 +280,7 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
         if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
             *dev = spec->contrast;
         } else if (spec->repetition == GROW_REPEAT_DOMINANT_FORM) {
-            dev->kind = MOTIVE_RELATION_TRANSPOSE;
-            dev->value[0] = 1;
-            dev->value[1] = 1;
+            dev->kind = MOTIVE_RELATION_DOMINANT_FORM;
         } else {
             dev->kind = MOTIVE_RELATION_EXACT;
         }
@@ -351,8 +350,18 @@ NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
 
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
     MotiveRelationStep dev;
-    return grow_idea_dev(spec, idea, &dev) &&
-           motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
+    if (!grow_idea_dev(spec, idea, &dev)) {
+        return false;
+    }
+    /* The dominant form is a variant operation: the motive operators do not develop it (ch. V). */
+    if (dev.kind == MOTIVE_RELATION_DOMINANT_FORM) {
+        VariantChain chain;
+        memset(&chain, 0, sizeof(chain));
+        chain.step_count = 1;
+        return variant_step_init(&chain.steps[0], "dominant-form") &&
+               variant_apply_chain(grow_idea_source(spec, idea), &chain, 0, out, NULL) == VARIANT_OK;
+    }
+    return motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
 }
 
 bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {

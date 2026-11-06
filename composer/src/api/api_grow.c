@@ -742,6 +742,8 @@ static const char *relation_word(const PlanMotiveRef *ref) {
         return "interval changed";
     case MOTIVE_RELATION_LIQUIDATE:
         return "liquidated";
+    case MOTIVE_RELATION_DOMINANT_FORM:
+        return "dominant form";
     default:
         return "none";
     }
