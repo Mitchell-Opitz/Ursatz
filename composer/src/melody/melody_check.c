@@ -120,7 +120,7 @@ unsigned melody_nct_bit(int tone) {
 /* Range, and a chord tone on every strong beat (but for the figures that put a non-chord tone there). */
 static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     const MelodyContext *context = &melody->context;
-    unsigned strong_figures = MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION;
+    unsigned strong_figures = MELODY_STRONG_FIGURES;
     /* The pickup is held to the range, and to the melodic rules in check_melodic; no chord tone is asked of it. */
     for (size_t i = 0; !verdict->hard && i < melody->pickup_count; i++) {
         if (melody->pickup_notes[i].pitch < melody->params.range_low ||
@@ -277,6 +277,31 @@ unsigned melody_motive_waived(const MelodyContext *context) {
         }
     }
     return hard;
+}
+
+unsigned melody_window_hard(const MelodyContext *context, const int *pitches, size_t count) {
+    PitchSpelling *spellings[MELODY_WINDOW_MAX];
+    unsigned hard = 0;
+    unsigned soft = 0;
+    bool spelled = count > 1 && count <= MELODY_WINDOW_MAX;
+    memset(spellings, 0, sizeof(spellings));
+    for (size_t i = 0; spelled && i < count; i++) {
+        spellings[i] = spell_melody(&context->key, pitches[i]);
+        spelled = spellings[i] != NULL;
+    }
+    if (spelled) {
+        StandardCounterpointLine line = {(const PitchSpelling *const *)spellings, count};
+        StandardCounterpointLimits limits = standard_counterpoint_default_limits();
+        if (!standard_counterpoint_melodic_check(&line, &limits, &hard, &soft)) {
+            hard = 0;
+        }
+    }
+    for (size_t i = 0; i < MELODY_WINDOW_MAX; i++) {
+        if (spellings[i]) {
+            pitch_spelling_destroy(spellings[i]);
+        }
+    }
+    return hard & ~(1u << STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA) & ~context->motive_waived;
 }
 
 /* standard-counterpoint's melodic rules over the melody. */
@@ -449,6 +474,29 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
     free(lower);
     free(strong);
     return ok;
+}
+
+bool melody_dissonant_over_bass(const MelodyContext *context, int pitch, Rational onset, Rational end) {
+    bool dissonant = false;
+    unsigned pitch_bit = 1u << util_pitch_class(pitch);
+    for (size_t b = 0; !dissonant && b < context->bass_count; b++) {
+        if (rational_cmp(context->bass[b].onset, end) >= 0 || rational_cmp(context->bass[b].end, onset) <= 0) {
+            continue;
+        }
+        size_t sounding = context->bass[b].chord;
+        PitchSpelling *upper = spell_melody(&context->key, pitch);
+        PitchSpelling *lower = harmony_spell_pitch(&context->key, harmony_member_degree(context->key.mode, &context->chords[sounding]),
+                                                   context->bass[b].pitch);
+        dissonant = upper && lower && !standard_counterpoint_pitches_consonant(lower, upper) &&
+                    (context->chord_mask[sounding] & pitch_bit) && !(context->chord_seventh[sounding] & pitch_bit);
+        if (upper) {
+            pitch_spelling_destroy(upper);
+        }
+        if (lower) {
+            pitch_spelling_destroy(lower);
+        }
+    }
+    return dissonant;
 }
 
 /* standard-harmony's resolution of the leading tone and the seventh, for the melody as the outer voice. */

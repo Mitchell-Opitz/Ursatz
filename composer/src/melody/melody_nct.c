@@ -95,8 +95,15 @@ typedef struct {
 static bool search(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes, size_t count,
                    size_t from, size_t to, size_t j, const int *ideal, int cap, FillRng *rng, int *budget) {
     if (j == to) {
+        /* The run from the anchors before the notes to the anchor after them holds the framework's melodic rules (outlines too). */
+        int run[MELODY_WINDOW_MAX];
+        size_t used = 0;
+        for (size_t i = from > 3 ? from - 3 : 0; i <= to; i++) {
+            run[used++] = notes[i].pitch;
+        }
         return leap_allowed(notes[to].pitch - notes[to - 1].pitch) &&
-               (to - 1 == from || melody_figure_ok(context, params, notes, count, to - 1));
+               (to - 1 == from || melody_figure_ok(context, params, notes, count, to - 1)) &&
+               melody_window_hard(context, run, used) == 0;
     }
     if ((*budget)-- <= 0) {
         return false;

@@ -160,6 +160,9 @@ static inline bool melody_has_generated(const MelodyCandidate *melody) {
 /* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
 void melody_context_zero(MelodyContext *context);
 
+/* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
+#define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)
+
 /* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
 bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
 /* The index of the chord sounding at a position of the phrase. */
@@ -240,6 +243,19 @@ void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigne
 
 /* The melodic rules the motive's own pitches break, as MelodyContext.motive_waived reads them. */
 unsigned melody_motive_waived(const MelodyContext *context);
+
+/*
+ * The hard melodic rules (bits 1u << rule, as MelodyContext.motive_waived) a short run of pitches breaks, by the same
+ * framework check as the checker, less the rules the motive waives. At most MELODY_WINDOW_MAX pitches.
+ */
+#define MELODY_WINDOW_MAX (MOTIVE_MAX_NOTES + 4)
+unsigned melody_window_hard(const MelodyContext *context, const int *pitches, size_t count);
+
+/*
+ * Whether a note of this pitch, sounding from onset to end, is a chord tone that is dissonant against a bass note under it
+ * and not the chord's seventh: the checker rejects it ("dissonance against the bass").
+ */
+bool melody_dissonant_over_bass(const MelodyContext *context, int pitch, Rational onset, Rational end);
 
 /* The pitch classes the last note may be: the cadence's stable tone (the tonic for a PAC, the third for an IAC). */
 unsigned melody_cadence_mask(const MelodyContext *context);
