@@ -17,6 +17,26 @@ static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, CadenceTy
                                                                                : PLAN_HARMONY_SHAPE_CADENTIAL;
 }
 
+/* How often a presentation repeats its basic idea in each way (ch. V), by GrowRepetition: exact, dominant form, sequence. */
+static const unsigned REPEAT_WEIGHTS[GROW_REPEAT_COUNT] = {2, 1, 1};
+
+/* The dominant form and the sequence go to another chord and back or on, which needs a cell for each. */
+static GrowRepetition draw_repetition(FillRng *rng, bool can_move) {
+    uint64_t total = 0;
+    for (int kind = 0; kind < GROW_REPEAT_COUNT; kind++) {
+        total += kind == GROW_REPEAT_EXACT || can_move ? REPEAT_WEIGHTS[kind] : 0;
+    }
+    uint64_t pick = fill_rng_below(rng, total);
+    for (int kind = 0; kind < GROW_REPEAT_COUNT; kind++) {
+        uint64_t weight = kind == GROW_REPEAT_EXACT || can_move ? REPEAT_WEIGHTS[kind] : 0;
+        if (pick < weight) {
+            return (GrowRepetition)kind;
+        }
+        pick -= weight;
+    }
+    return GROW_REPEAT_EXACT;
+}
+
 /* The contrasting idea is made from m0 and has to fit its room. */
 static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     /* A contrasting slot with a motive of its own gives the idea as it is (grow_idea_dev). */
@@ -40,10 +60,7 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
             spec->repetition = GROW_REPEAT_EXACT;
             return true;
         }
-        /* Statement-response goes from tonic to dominant and back, which needs a cell for each. */
-        bool can_respond = spec->basic_cells >= 2;
-        uint64_t response = fill_rng_below(rng, 2);
-        spec->repetition = can_respond && response == 1 ? GROW_REPEAT_DOMINANT_FORM : GROW_REPEAT_EXACT;
+        spec->repetition = draw_repetition(rng, spec->basic_cells >= 2);
         if (!grow_idea_develop(spec, GROW_PLACE_REPETITION, &spec->developed[GROW_PLACE_REPETITION]) ||
             rational_cmp(spec->developed[GROW_PLACE_REPETITION].length,
                               grow_scaled(grow_unit(request), SECOND_UNITS)) > 0) {
