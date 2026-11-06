@@ -564,10 +564,16 @@ static bool offer_exact(Proposal *proposal) {
     return variant_step_init(&chain.steps[0], "exact") ? offer(proposal, &chain, 1, NULL, false) : true;
 }
 
-/* Transpositions of the basic idea by steps of its key's scale. */
+/* Transpositions of the basic idea by steps of its key's scale; the one step the ref asks for, when it asks for one. */
 static bool offer_transpositions(Proposal *proposal) {
     static const long STEPS[] = {1, 2, 3, -1, -2, -3};
+    const MotiveRelationStep *asked = &proposal->request->ref.step;
+    bool sequence = proposal->request->ref.has_step && asked->kind == MOTIVE_RELATION_TRANSPOSE && asked->value[0] != 0 &&
+                    asked->value[1] != 0;
     for (size_t i = 0; i < sizeof(STEPS) / sizeof(STEPS[0]); i++) {
+        if (sequence && STEPS[i] != asked->value[1]) {
+            continue;
+        }
         VariantChain chain;
         memset(&chain, 0, sizeof(chain));
         chain.step_count = 1;
