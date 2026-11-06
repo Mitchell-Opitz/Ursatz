@@ -74,6 +74,11 @@ typedef struct {
      */
     int motive_tone[MOTIVE_MAX_NOTES];
     size_t motive_tone_count;
+    /*
+     * The bits of standard-counterpoint's melodic rules (1u << rule) that are hard and that the motive's own pitches
+     * break (R-335): the motive is given material, so a candidate with motive notes is not rejected for them.
+     */
+    unsigned motive_waived;
 
     /*
      * A target that stands for an idea or a subphrase of a phrase (not the whole phrase) reads the phrase it is in,
@@ -222,6 +227,9 @@ bool melody_contour_unique(const MelodyCandidate *melody);
  * recovered by a step the other way, and not many repeated notes. *held of *total.
  */
 void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigned *total);
+
+/* The melodic rules the motive's own pitches break, as MelodyContext.motive_waived reads them. */
+unsigned melody_motive_waived(const MelodyContext *context);
 
 /* The pitch classes the last note may be: the cadence's stable tone (the tonic for a PAC, the third for an IAC). */
 unsigned melody_cadence_mask(const MelodyContext *context);

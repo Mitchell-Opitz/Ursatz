@@ -254,6 +254,31 @@ static unsigned harmonic_soft_rules(void) {
     return count;
 }
 
+unsigned melody_motive_waived(const MelodyContext *context) {
+    PitchSpelling *spellings[MOTIVE_MAX_NOTES];
+    unsigned hard = 0;
+    unsigned soft = 0;
+    bool spelled = context->motive_count > 0 && context->motive_count <= MOTIVE_MAX_NOTES;
+    memset(spellings, 0, sizeof(spellings));
+    for (size_t k = 0; spelled && k < context->motive_count; k++) {
+        spellings[k] = spell_melody(&context->key, context->motive_pitch[k]);
+        spelled = spellings[k] != NULL;
+    }
+    if (spelled) {
+        StandardCounterpointLine line = {(const PitchSpelling *const *)spellings, context->motive_count};
+        StandardCounterpointLimits limits = standard_counterpoint_default_limits();
+        if (!standard_counterpoint_melodic_check(&line, &limits, &hard, &soft)) {
+            hard = 0;
+        }
+    }
+    for (size_t k = 0; k < MOTIVE_MAX_NOTES; k++) {
+        if (spellings[k]) {
+            pitch_spelling_destroy(spellings[k]);
+        }
+    }
+    return hard;
+}
+
 /* standard-counterpoint's melodic rules over the melody. */
 static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     /* A target that follows written melody is read as one line with the last notes of it, so a leap or a run across
@@ -286,6 +311,13 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
         } else {
             /* A tonal melody need not end by step, as a strict counterpoint line must. */
             hard &= ~(1u << STANDARD_COUNTERPOINT_MELODIC_RULE_CLAUSULA_VERA);
+            /* The rules the motive's own line breaks are not asked of a melody that carries it (R-335). */
+            for (size_t i = 0; i < melody->count; i++) {
+                if (melody->notes[i].motive_index >= 0) {
+                    hard &= ~melody->context.motive_waived;
+                    break;
+                }
+            }
             for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
                 if (hard & (1u << rule)) {
                     verdict->hard = standard_counterpoint_melodic_rule_name((StandardCounterpointMelodicRule)rule);

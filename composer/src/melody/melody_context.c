@@ -599,7 +599,7 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
     }
     return read_idea_chords(plan, context) && read_idea_bass(plan, context) &&
            read_idea_melody(plan, context, phrase) && read_motive(plan, context) &&
-           (restate_previous(plan, context), true);
+           (restate_previous(plan, context), true) && ((context->motive_waived = melody_motive_waived(context)), true);
 }
 
 /*
@@ -659,5 +659,6 @@ bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext
         return false;
     }
     out->target = target;
-    return (!has_pickup || read_pickup(plan, span.start, pickup.params.pickup, out)) && read_motive(plan, out);
+    return (!has_pickup || read_pickup(plan, span.start, pickup.params.pickup, out)) && read_motive(plan, out) &&
+           ((out->motive_waived = melody_motive_waived(out)), true);
 }
