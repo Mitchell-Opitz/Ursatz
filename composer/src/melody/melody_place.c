@@ -67,7 +67,8 @@ static MelodyNote *push(MelodyCandidate *out, Rational onset, Rational duration)
 }
 
 /*
- * The notes of the phrase: the motive's, then notes that fill the rest. With a density the rest is notes of an
+ * The notes of the phrase: the motive's, then notes that fill the rest. A motive as long as the phrase (an idea it fills
+ * whole) is all there is: its notes are placed as written and nothing is filled after it. With a density the rest is notes of an
  * even length, that many to a cell; without one it is the motive's rhythm over again, each note as long as the
  * time from one onset of the motive to the next, the last as long as it is.
  */
@@ -390,7 +391,11 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                    /* The chord tone a figure of the motive resolves to keeps its interval within the tolerance where a chord tone
                       allows it, else it takes the nearest chord tone (R-215). */
                    !(resolves_figure(context, params, out->notes, out->count, i) &&
-                     pick(options, kept, 127, rng, context->restating, &note->pitch))) {
+                     pick(options, kept, 127, rng, context->restating, &note->pitch)) &&
+                   /* The last note of a motive that fills its idea whole, which ends the theme, moves to the nearest tone of the
+                      cadence's chord, its rhythm kept. */
+                   !(note->motive_index >= 0 && i + 1 == out->count && context->has_cadence &&
+                     pick(options, kept, 127, rng, true, &note->pitch))) {
             return false;
         }
         if (i > 0 && before + 1 < i) {

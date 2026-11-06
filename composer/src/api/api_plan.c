@@ -831,10 +831,13 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     }
     PiecePlan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);
-    free(motive);
     if (built != PIECE_OK) {
-        return built == PIECE_ERR_MOTIVE_TOO_LONG
-                   ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/motive", "the motive does not fit in one bar of %s", state->meter_text)
+        size_t theme_bars = 8;
+        size_t idea_bars = 2;
+        (void)piece_basic_idea(&request, &theme_bars, &idea_bars);
+        ComposerStatus failed =
+               built == PIECE_ERR_MOTIVE_TOO_LONG
+                   ? api_fail_motif_long(error, "/motive", request.motive, &state->meter, theme_bars, idea_bars)
                : built == PIECE_ERR_BAD_SIZE
                    ? api_fail(error, COMPOSER_ERR_REQUEST, "/form", "%s has no such size", form_template_name(state->form))
                : built == PIECE_ERR_BAD_REQUEST
@@ -843,7 +846,10 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
                               "section must be one the harmony operators can write in %s",
                               state->meter_text)
                    : api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", piece_result_name(built));
+        free(motive);
+        return failed;
     }
+    free(motive);
     status = place_given(state, plan, error);
     if (status != COMPOSER_OK) {
         plan_destroy(plan);

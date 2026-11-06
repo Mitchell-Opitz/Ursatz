@@ -860,3 +860,9 @@ set_tests_properties(consumer_build consumer_rejects_internals PROPERTIES LABELS
 # Default timeouts by label (cmake/TestTimeouts.cmake), set last so every test above has its labels.
 include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
 ursatz_composer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(test_grow_whole_motif test_grow_whole_motif.c)
+target_link_libraries(test_grow_whole_motif PRIVATE ursatz_composer)
+target_include_directories(test_grow_whole_motif PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_grow_whole_motif PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_whole_motif COMMAND test_grow_whole_motif)

@@ -19,6 +19,7 @@
 
 #include "api_internal.h"
 #include "api_vocabulary.h"
+#include "grow/grow_internal.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
 #include "util/util.h"
@@ -632,6 +633,13 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     return ran;
 }
 
+ComposerStatus api_fail_motif_long(ComposerError *error, const char *path, const Motive *motive, const PlanMeter *meter,
+                                   size_t theme_bars, size_t idea_bars) {
+    size_t bars = motive ? grow_motive_layout_bars(motive, grow_bar_length(meter)) : 0;
+    return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "the motif is %zu bars; the basic idea of a %zu-bar theme is %zu",
+                    bars, theme_bars, idea_bars);
+}
+
 ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error) {
     memset(run, 0, sizeof(*run));
     run->chord_bar = -1;
@@ -662,8 +670,8 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
             }
         } else if (result != GROW_ERR_STUCK) {
             return result == GROW_ERR_MOTIVE_TOO_LONG
-                       ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the motive does not fit in one bar of %s",
-                                  text->meter)
+                       ? api_fail_motif_long(error, setup->material ? "/slots/basic" : "", setup->motive, &setup->meter,
+                                             setup->bars, setup->bars == 4 ? 1 : 2)
                    : result == GROW_ERR_BAD_REQUEST
                        ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
                                   "this theme cannot be grown as asked: the motive needs at least two notes, an "

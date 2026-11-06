@@ -445,7 +445,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
  * The section's own motive: the section's MOTIVE_REF made concrete, every parameter it leaves open drawn from rng, so
  * the motive operators propose exactly this one (an inversion about the first note, a diminution or augmentation by
  * half or double, or by the next ratio the meter can write, an interval changed by a semitone or two, a tonal transposition by up to three steps). The result
- * must fit one bar and have two notes or more. A diminution or augmentation no usual ratio can write in the meter is
+ * must fit the basic idea (two bars of eight, one of four) and have two notes or more. A diminution or augmentation no usual ratio can write in the meter is
  * made an interval change instead. False when the ref asks for a transform a basic idea is not made from (a fragment,
  * a liquidation) or the draw does not come out.
  */
@@ -550,7 +550,7 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
         }
         ref.step = dev;
         if (motive_develop(m0, &dev, &result) != MOTIVE_DEV_OK || result.note_count < 2 ||
-            rational_cmp(result.length, request->bar) > 0) {
+            rational_cmp(result.length, grow_scaled(request->bar, request->bars == 4 ? 1 : 2)) > 0) {
             continue;
         }
         spec->has_section_motive = true;
@@ -710,9 +710,10 @@ PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *r
         *out = build->request->idea_node[slot];
         return PLAN_OK;
     }
-    PlanSpan span = {{0, 1}, build->request->bar};
-    PlanResult result = plan_result_of_rational(rational_add(build->material_span.start,
-                                      grow_scaled(build->request->bar, build->slot_base + slot - 1), &span.start));
+    size_t bars = build->motive_bars > 0 ? build->motive_bars : 1;
+    PlanSpan span = {{0, 1}, grow_scaled(build->request->bar, bars)};
+    PlanResult result = plan_result_of_rational(rational_add(
+        build->material_span.start, grow_scaled(build->request->bar, build->slot_base + (slot - 1) * bars), &span.start));
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, build->material, PLAN_NODE_MOTIVE, span, MOTIVE_NAMES[slot], out);
     }
@@ -1089,7 +1090,7 @@ static PlanResult add_section_motive(GrowBuild *build, size_t bar_index, NodeId 
     char name[64];
     const char *section = plan_node_name(build->plan, build->request->section);
     snprintf(name, sizeof(name), "%s motive", section ? section : "section");
-    PlanSpan span = {{0, 1}, build->request->bar};
+    PlanSpan span = {{0, 1}, grow_scaled(build->request->bar, build->motive_bars > 0 ? build->motive_bars : 1)};
     PlanResult result =
         plan_result_of_rational(rational_add(build->material_span.start, grow_scaled(build->request->bar, bar_index), &span.start));
     if (result == PLAN_OK) {
@@ -1127,13 +1128,23 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.material = plan_node_parent(plan, request.source);
     build.material_span = plan_node_span(plan, build.material);
     build.source = request.source;
+    /* A derived motive takes the bars of the longest motive the theme is made from. */
+    build.motive_bars = grow_motive_layout_bars(&spec->source, request.bar);
+    for (size_t k = 0; k < GROW_SLOT_COUNT; k++) {
+        size_t bars = spec->has_slot_source[k] ? grow_motive_layout_bars(&spec->slot_source[k], request.bar) : 0;
+        build.motive_bars = bars > build.motive_bars ? bars : build.motive_bars;
+    }
+    for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
+        size_t bars = spec->has_idea_source[k] ? grow_motive_layout_bars(&spec->idea_source[k], request.bar) : 0;
+        build.motive_bars = bars > build.motive_bars ? bars : build.motive_bars;
+    }
     /* A section's motives: its own, when it has one, and the four the ideas are made from. */
     build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
-                                     (spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1);
+                                          ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * build.motive_bars);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
         result = add_section_motive(&build, build.slot_base, &build.source);
-        build.slot_base++;
+        build.slot_base += build.motive_bars;
     }
     if (result != PLAN_OK) {
         return result;

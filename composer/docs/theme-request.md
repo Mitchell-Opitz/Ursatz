@@ -65,7 +65,10 @@ gives nothing.
 
 A slot the pairing has no idea for (a contrasting slot in a sentence) cannot be grown (exit 2). The motive of a slot other
 than `basic` must be a full motive of two notes or more, in the key and meter, and no longer than the idea it begins: two bars
-of eight for the contrasting idea and the cadential idea, one for fragment 1.
+of eight for the contrasting idea and the cadential idea, one for fragment 1. A motif as long as its idea is that idea, placed
+as written; a shorter one is grown to the idea ([grow.md](grow.md#how-a-motif-fills-its-idea)). The basic motif may be as long
+as the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. A longer one is refused at `/slots/basic` with "the motif is 3
+bars; the basic idea of a 8-bar theme is 2".
 
 ## Ideas
 

@@ -467,25 +467,29 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         !grow_cells_per_bar(&structure->meter, &cells)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    if (motive && rational_cmp(motive->length, bar) > 0) {
-        return PIECE_ERR_MOTIVE_TOO_LONG;
-    }
+    size_t motive_bars = motive ? grow_motive_layout_bars(motive, bar) : 1;
     /* The sections laid out are the intro, the body and the turnaround; the ending version lays out the ending. */
     size_t laid = 0;
     size_t beats = 0;
-    size_t material_bars = 1;
+    size_t material_bars = motive_bars;
     size_t per_bar = (size_t)structure->meter.beats_per_bar;
     bool has_ending = false;
+    /* The motive fills the basic idea of every section laid out: 2 bars of an 8-bar theme, 1 of a 4-bar one or a free phrase. */
+    size_t basic_bars = 2;
     for (size_t i = 0; i < copy.section_count; i++) {
         has_ending = has_ending || copy.sections[i].part == PIECE_PART_ENDING;
         if (loop_plan ? copy.sections[i].part != PIECE_PART_TURNAROUND : copy.sections[i].part != PIECE_PART_ENDING) {
+            basic_bars = copy.sections[i].beats == 8 * per_bar ? basic_bars : 1;
             laid = i + 1;
             beats += copy.sections[i].beats;
-            material_bars += MATERIAL_BARS_PER_SECTION + (copy.sections[i].beats + per_bar - 1) / per_bar;
+            material_bars += MATERIAL_BARS_PER_SECTION * motive_bars + (copy.sections[i].beats + per_bar - 1) / per_bar;
         }
     }
     if (loop_plan && !has_ending) {
         return PIECE_ERR_BAD_REQUEST;
+    }
+    if (motive && !grow_motive_fits_idea(motive, bar, basic_bars)) {
+        return PIECE_ERR_MOTIVE_TOO_LONG;
     }
     PiecePlan *plan = plan_create();
     if (!plan) {
@@ -598,6 +602,16 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     }
     *out = plan;
     return PIECE_OK;
+}
+
+void piece_structure_basic_idea(const PieceStructure *structure, size_t *theme_bars, size_t *idea_bars) {
+    size_t per_bar = structure->meter.beats_per_bar > 0 ? (size_t)structure->meter.beats_per_bar : 1;
+    size_t shortest = 8;
+    for (size_t i = 0; i < structure->section_count; i++) {
+        shortest = structure->sections[i].beats == 8 * per_bar ? shortest : 4;
+    }
+    *theme_bars = shortest;
+    *idea_bars = shortest == 8 ? 2 : 1;
 }
 
 PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out) {

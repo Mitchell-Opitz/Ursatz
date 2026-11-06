@@ -39,7 +39,11 @@ const char *piece_result_name(PieceResult result) {
 }
 
 size_t piece_material_bars(size_t section_count) {
-    return 1 + MATERIAL_BARS_PER_SECTION * section_count;
+    return piece_material_bars_of(section_count, 1);
+}
+
+size_t piece_material_bars_of(size_t section_count, size_t motive_bars) {
+    return motive_bars + MATERIAL_BARS_PER_SECTION * motive_bars * section_count;
 }
 
 static Rational bars_of(Rational bar, size_t count) {
@@ -220,6 +224,20 @@ static bool template_buildable(const FormTemplate *layout, const PlanMeter *mete
     return true;
 }
 
+bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *idea_bars) {
+    FormTemplate layout;
+    if (!request || !form_template_layout(request->form, request->bars, request->count, &layout)) {
+        return false;
+    }
+    size_t shortest = 8;
+    for (size_t i = 0; i < layout.section_count; i++) {
+        shortest = layout.sections[i].bars == 8 ? shortest : 4;
+    }
+    *theme_bars = shortest;
+    *idea_bars = shortest == 8 ? 2 : 1;
+    return true;
+}
+
 PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     if (!request || !out) {
         return PIECE_ERR_NULL;
@@ -241,16 +259,22 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         return PIECE_ERR_BAD_REQUEST;
     }
     Rational bar = grow_bar_length(&request->meter);
-    if (request->motive && rational_cmp(request->motive->length, bar) > 0) {
+    /* The motive fills the basic idea of every section: 2 bars of an 8-bar theme section, 1 of a 4-bar one. */
+    size_t basic_bars = 2;
+    for (size_t i = 0; i < layout.section_count; i++) {
+        basic_bars = layout.sections[i].bars == 8 ? basic_bars : 1;
+    }
+    if (request->motive && !grow_motive_fits_idea(request->motive, bar, basic_bars)) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
+    size_t motive_bars = request->motive ? grow_motive_layout_bars(request->motive, bar) : 1;
 
     PiecePlan *plan = plan_create();
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
     PlanSpan piece = {{0, 1}, bars_of(bar, layout.bars)};
-    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars(layout.section_count) + request->given_melodies)};
+    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(layout.section_count, motive_bars) + request->given_melodies)};
     PlanSpan form = {{0, 1}, {0, 1}};
     PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(piece.length, material.length, &form.length)));
     NodeId form_id = PLAN_NODE_NONE;

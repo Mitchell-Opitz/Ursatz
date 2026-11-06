@@ -14,7 +14,7 @@ The command is a wrapper of the [composer API](api.md): it reads its arguments, 
 
 The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a MusicXML file, a note
 list or a motive JSON file. `--key` and `--meter` are required and are given to the loader, so a file
-that declares another meter is an error. The motive must fit in one bar of the meter and have at
+that declares another meter is an error. The motive must be no longer than the basic idea (2 bars of an 8-bar theme, 1 of a 4-bar one) and have at
 least two notes. The meters are 2/4, 3/4, 4/4 and 6/8.
 
 ## Forms
@@ -116,7 +116,7 @@ theme (see [grow.md](grow.md)).
 | --- | --- |
 | 0 | Success. |
 | 1 | Usage or an invalid argument. |
-| 2 | The request cannot be satisfied: the input cannot be loaded, the motive is longer than a bar or has one note, a period asks for a weak cadence that is not weaker than the theme's, or no seed works. |
+| 2 | The request cannot be satisfied: the input cannot be loaded, the motive is longer than the basic idea or has one note, a period asks for a weak cadence that is not weaker than the theme's, or no seed works. |
 | 3 | An output file could not be written. No output file is left behind. |
 
 ## Example

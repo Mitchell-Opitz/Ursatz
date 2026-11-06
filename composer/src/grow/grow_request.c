@@ -236,6 +236,33 @@ Rational grow_bar_length(const PlanMeter *meter) {
     return bar;
 }
 
+GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars) {
+    Rational span = {0, 1};
+    long long bars = 0;
+    if (bar.num <= 0 || rational_sub(motive->length, motive_pickup(motive), &span) != RATIONAL_OK || span.num <= 0 ||
+        rational_div(span, bar, &span) != RATIONAL_OK || rational_ceil(span, &bars) != RATIONAL_OK) {
+        return GROW_FIT_SHORTER;
+    }
+    return bars < (long long)idea_bars ? GROW_FIT_SHORTER : (bars == (long long)idea_bars ? GROW_FIT_WHOLE : GROW_FIT_LONGER);
+}
+
+bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars) {
+    Rational room = {0, 1};
+    /* A pickup is part of the motive's length, so it counts toward the idea's: the motive is placed from its start. */
+    return grow_motive_fit(motive, bar, idea_bars) != GROW_FIT_LONGER &&
+           rational_mul_int(bar, (long long)idea_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
+}
+
+size_t grow_motive_layout_bars(const Motive *motive, Rational bar) {
+    Rational span = {0, 1};
+    long long bars = 0;
+    if (bar.num <= 0 || rational_div(motive->length, bar, &span) != RATIONAL_OK || rational_ceil(span, &bars) != RATIONAL_OK ||
+        bars < 1) {
+        return 1;
+    }
+    return (size_t)bars;
+}
+
 static Rational times(Rational time, size_t count) {
     Rational out = {0, 1};
     if (rational_mul_int(time, (long long)count, &out) != RATIONAL_OK) {
@@ -286,6 +313,12 @@ bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePa
            (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars, cells_per_bar, first)));
 }
 
+/* The bars of an idea that has `units` eighths of a theme of `bars` bars, at least one (a half-bar idea is a bar's). */
+static size_t idea_bars(size_t bars, size_t units) {
+    size_t whole = bars * units / 8;
+    return whole < 1 ? 1 : whole;
+}
+
 /* Whether a slot's motive is one the theme can be built from: see GrowRequest.slot_motives. */
 static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rational bar) {
     const Motive *motive = request->slot_motives[slot];
@@ -300,12 +333,12 @@ static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rationa
           motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR)))) {
         return false;
     }
-    /* The first idea of the slot has units eighths of the theme; the longest is a bar. */
+    /* The first idea of the slot has units eighths of the theme; the longest is as long as that idea. */
     if (units > 0 && rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
         rational_cmp(motive->length, room) > 0) {
         return false;
     }
-    return rational_cmp(motive->length, bar) <= 0;
+    return grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units));
 }
 
 /* Whether the motive of a single idea is one the theme can be built from: see GrowRequest.idea_motives. */
@@ -327,7 +360,7 @@ static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rationa
         rational_cmp(motive->length, room) > 0) {
         return false;
     }
-    return rational_cmp(motive->length, bar) <= 0;
+    return grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units));
 }
 
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
@@ -360,17 +393,23 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         return GROW_ERR_BAD_REQUEST;
     }
     Rational bar = grow_bar_length(&request->meter);
-    if (rational_cmp(request->motive->length, bar) > 0) {
+    size_t basic_units = 0;
+    /* The basic motive fills the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. */
+    if (!grow_slot_used(&request->pairing, GROW_SLOT_BASIC, &basic_units) ||
+        !grow_motive_fits_idea(request->motive, bar, idea_bars(request->bars, basic_units))) {
         return GROW_ERR_MOTIVE_TOO_LONG;
     }
     /* The slot motives, each a node of the material after m0. */
     size_t slot_count = 0;
+    /* The bars the motives take beyond the one each has in the base layout: a motive takes its own bars. */
+    size_t extra_bars = grow_motive_layout_bars(request->motive, bar) - 1;
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
         if (request->slot_motives[slot]) {
             if (!slot_motive_valid(request, slot, bar)) {
                 return GROW_ERR_BAD_REQUEST;
             }
             slot_count++;
+            extra_bars += grow_motive_layout_bars(request->slot_motives[slot], bar) - 1;
         }
     }
     /* The motives of single ideas follow the slot motives. */
@@ -381,9 +420,21 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
                 return GROW_ERR_BAD_REQUEST;
             }
             idea_count++;
+            extra_bars += grow_motive_layout_bars(request->idea_motives[idea], bar) - 1;
         }
     }
-    size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count;
+    /* The derived motives take the bars of the longest motive given: the section's own and the four of the ideas. */
+    size_t longest = grow_motive_layout_bars(request->motive, bar);
+    for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
+        size_t bars = request->slot_motives[slot] ? grow_motive_layout_bars(request->slot_motives[slot], bar) : 0;
+        longest = bars > longest ? bars : longest;
+    }
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        size_t bars = request->idea_motives[idea] ? grow_motive_layout_bars(request->idea_motives[idea], bar) : 0;
+        longest = bars > longest ? bars : longest;
+    }
+    extra_bars += GROW_PLACE_COUNT * (longest - 1);
+    size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars;
     if (accompaniment_motive && rational_cmp(accompaniment_motive->length, bar) > 0) {
         return GROW_ERR_BAD_REQUEST;
     }
@@ -496,27 +547,29 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         result = from_plan(motive_attach_sourced(plan, idea, material.start, request->motive, GROW_SOURCE_NAME,
                                                  request->source, NULL, NULL));
     }
-    /* The slot motives follow m0, a bar each. */
-    size_t slot_bar = 1;
+    /* The slot motives follow m0, each at its own bars. */
+    size_t slot_bar = grow_motive_layout_bars(request->motive, bar);
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; result == GROW_OK && slot < GROW_SLOT_COUNT; slot++) {
         Rational start;
         if (!request->slot_motives[slot]) {
             continue;
         }
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, slot_bar++), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, slot_bar), &start)));
+        slot_bar += grow_motive_layout_bars(request->slot_motives[slot], bar);
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->slot_motives[slot],
                                                              grow_slot_node_name(slot), NULL, NULL))
                                    : result;
     }
-    /* The motives of single ideas follow the slot motives, a bar each. */
-    size_t idea_bar = 1 + slot_count;
+    /* The motives of single ideas follow the slot motives, each at its own bars. */
+    size_t idea_bar = slot_bar;
     for (int idea_at = 0; result == GROW_OK && idea_at < GROW_IDEA_COUNT; idea_at++) {
         Rational start;
         char name[8];
         if (!request->idea_motives[idea_at]) {
             continue;
         }
-        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, idea_bar++), &start)));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, idea_bar), &start)));
+        idea_bar += grow_motive_layout_bars(request->idea_motives[idea_at], bar);
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->idea_motives[idea_at],
                                                              grow_idea_node_name((GrowIdea)idea_at, name, sizeof(name)),
                                                              NULL, NULL))

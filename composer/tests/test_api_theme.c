@@ -303,16 +303,18 @@ static void test_threads(void) {
 
 /* --- refused requests ---------------------------------------------------------------------------- */
 
-/* The one-motive request with member `name` set to the JSON text `value` (NULL removes it). */
-static ComposerStatus refuse(const char *name, const char *value, ComposerResponse *response) {
+/* The one-motive request with each member of `edits` ({name, JSON text or NULL to remove}) set. */
+static ComposerStatus refuse_with(const char *const edits[][2], size_t count, ComposerResponse *response) {
     char *text = test_read_file(THEME("one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request);
-    cJSON_DeleteItemFromObjectCaseSensitive(request, name);
-    if (value) {
-        cJSON *item = cJSON_Parse(value);
-        assert(item && cJSON_AddItemToObject(request, name, item));
+    for (size_t i = 0; i < count; i++) {
+        cJSON_DeleteItemFromObjectCaseSensitive(request, edits[i][0]);
+        if (edits[i][1]) {
+            cJSON *item = cJSON_Parse(edits[i][1]);
+            assert(item && cJSON_AddItemToObject(request, edits[i][0], item));
+        }
     }
     assert(cJSON_AddNumberToObject(request, "seed", 1));
     char *printed = cJSON_PrintUnformatted(request);
@@ -320,6 +322,12 @@ static ComposerStatus refuse(const char *name, const char *value, ComposerRespon
     ComposerStatus status = composer_api_theme(printed, NULL, response);
     free(printed);
     return status;
+}
+
+/* The one-motive request with member `name` set to the JSON text `value` (NULL removes it). */
+static ComposerStatus refuse(const char *name, const char *value, ComposerResponse *response) {
+    const char *const edits[][2] = {{name, value}};
+    return refuse_with(edits, 1, response);
 }
 
 static void expect_refused(const char *name, const char *value, ComposerStatus status, const char *path, const char *message) {
@@ -333,6 +341,50 @@ static void expect_refused(const char *name, const char *value, ComposerStatus s
     assert(strcmp(response.error.path, path) == 0);
     assert(strstr(response.error.message, message));
     assert(!response.json && !response.plan_json && !response.midi && !response.musicxml);
+    composer_response_destroy(&response);
+}
+
+/* A motive of one 4/4 motive text (degrees) in a theme of `bars` bars, refused with the length of the motif and of its idea. */
+static void expect_motif_refused(const char *meter, const char *degrees, const char *bars, const char *message) {
+    char motives[200];
+    snprintf(motives, sizeof motives,
+             "[{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"%s\", \"pickup\": \"0\", \"harmony\": null, "
+             "\"features\": [], \"role\": \"melodic\"}]",
+             degrees);
+    const char *const edits[][2] = {{"motives", motives}, {"meter", meter}, {"bars", bars}};
+    ComposerResponse response;
+    ComposerStatus status = refuse_with(edits, 3, &response);
+    if (status != COMPOSER_ERR_UNSATISFIABLE || strcmp(response.error.path, "/slots/basic") != 0 ||
+        !strstr(response.error.message, message)) {
+        fprintf(stderr, "%s: %s '%s' at '%s'\n", message, composer_status_name(status), response.error.message,
+                response.error.path);
+    }
+    assert(status == COMPOSER_ERR_UNSATISFIABLE);
+    assert(strcmp(response.error.path, "/slots/basic") == 0);
+    assert(strstr(response.error.message, message));
+    composer_response_destroy(&response);
+}
+
+/* A motif longer than the basic idea of its theme is refused, with the bars of both and the path of the slot. */
+static void test_motif_too_long(void) {
+    expect_motif_refused("\"4/4\"", "1:w 3:w 5:w", "8", "the motif is 3 bars; the basic idea of a 8-bar theme is 2");
+    expect_motif_refused("\"4/4\"", "1:w 3:w", "4", "the motif is 2 bars; the basic idea of a 4-bar theme is 1");
+}
+
+/* A 2-bar motif in 3/4 is the basic idea of an 8-bar theme. */
+static void test_two_bar_motif(void) {
+    const char *motives = "[{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:q 3:q 5:q 5:q 3:q 1:q\", \"pickup\": \"0\", "
+                          "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}]";
+    const char *const edits[][2] = {{"motives", motives}, {"meter", "\"3/4\""}};
+    ComposerResponse response;
+    ComposerStatus status = refuse_with(edits, 2, &response);
+    if (status != COMPOSER_OK) {
+        fprintf(stderr, "2-bar 3/4: %s: %s at '%s'\n", composer_status_name(status), response.error.message, response.error.path);
+    }
+    assert(status == COMPOSER_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    assert(document && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(document, "themes")) == 1);
+    cJSON_Delete(document);
     composer_response_destroy(&response);
 }
 
@@ -373,7 +425,9 @@ int main(int argc, char **argv) {
     bool quick = argc > 1 && strcmp(argv[1], "quick") == 0;
     test_cancel_first();
     test_refused();
+    test_motif_too_long();
     if (!quick) {
+        test_two_bar_motif();
         test_snapshots();
         test_suggest_plans_explain();
         test_progress();
