@@ -39,7 +39,11 @@ typedef struct {
     ComposerRatio density;
     const char *const *without;
     size_t without_count;
+    const char *development;  /* "melody", "balanced" or "theme" for a theme; NULL for none (not echoed) */
 } GrowBrief;
+
+/* "melody", "balanced" or "theme". */
+const char *api_development_name(GrowDevelopment development);
 
 /* The motives of a theme run (the `theme` request's), besides the basic one. */
 typedef struct {
@@ -71,6 +75,7 @@ typedef struct {
     const char *accompaniment;
     const char *texture;
     const char *style_weight;
+    const char *development; /* "melody", "balanced" or "theme"; NULL for balanced */
     bool voicing;
     bool accompaniment_motive; /* an accompaniment motive is given (a file for grow, a member of the request for theme) */
     bool has_style;
@@ -94,6 +99,7 @@ typedef struct {
     bool has_voicing;
     PlanVoicing voicing;
     ComposerRatio style_weight;
+    GrowDevelopment development;
     const Motive *motive;                    /* the basic motive */
     const Motive *accompaniment_motive;      /* NULL for none */
     const GrowMaterial *material;            /* NULL for grow itself */

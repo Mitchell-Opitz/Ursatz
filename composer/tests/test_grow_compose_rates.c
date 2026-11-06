@@ -21,6 +21,7 @@
  * (api_grow_run returns a theme within GROW_MAX_SEED_TRIES of the start seed). Cases the pairing cannot be built in are
  * printed as "not buildable". A table of case, composed of 10 and the stages the failures were stuck in is printed. Each
  * buildable case composes at least 8 of 10. With the argument "fast" only start seed 1 is run and it must compose.
+ * Each case is run for the three development settings (B3 of P34), and each must hold.
  * Composing, not being heard as requested: docs/grow-hearing.md.
  */
 
@@ -83,8 +84,9 @@ int main(int argc, char **argv) {
     bool fast = argc > 1 && strcmp(argv[1], "fast") == 0;
     int failures = 0;
     if (!fast) {
-        printf("%-52s %s\n", "case", "composed of 10 (stuck stages of the failures)");
+        printf("%-62s %s\n", "case", "composed of 10 (stuck stages of the failures)");
     }
+    for (int development = 0; development < GROW_DEVELOP_COUNT; development++) {
     for (size_t r = 0; r < sizeof(REFERENCES) / sizeof(REFERENCES[0]); r++) {
         Motive motive = load_motive(REFERENCES[r].file);
         for (size_t b = 0; b < 3; b++) {
@@ -109,8 +111,10 @@ int main(int argc, char **argv) {
                     setup.motive = &motive;
                     setup.explain = true;
                     setup.suggest = 1;
-                    char name[96];
-                    snprintf(name, sizeof(name), "%s %s+%s %zu bars", REFERENCES[r].name, BEGINNINGS[b], ENDINGS[e], bars);
+                    setup.development = (GrowDevelopment)development;
+                    char name[112];
+                    snprintf(name, sizeof(name), "%s %s+%s %zu bars (%s)", REFERENCES[r].name, BEGINNINGS[b], ENDINGS[e], bars,
+                             api_development_name(setup.development));
                     /* Not buildable: the pairing cannot be built, or the plan refuses the motif before any seeding. */
                     GrowRequest request;
                     GrowRefusal refusal;
@@ -122,7 +126,7 @@ int main(int argc, char **argv) {
                     plan_destroy(plan);
                     if (!buildable) {
                         if (!fast) {
-                            printf("%-52s not buildable%s%s\n", name, refusal.message[0] ? ": " : "", refusal.message);
+                            printf("%-62s not buildable%s%s\n", name, refusal.message[0] ? ": " : "", refusal.message);
                         }
                         continue;
                     }
@@ -134,7 +138,7 @@ int main(int argc, char **argv) {
                         composed += compose_from(&setup, seed, stuck) ? 1 : 0;
                     }
                     if (!fast) {
-                        printf("%-52s %2d of %d", name, composed, START_SEEDS);
+                        printf("%-62s %2d of %d", name, composed, START_SEEDS);
                         for (int stage = 0; stage <= GROW_STAGE_COUNT; stage++) {
                             if (stuck[stage] > 0) {
                                 printf("  %s x%d", stage == GROW_STAGE_COUNT ? "refused" : grow_stage_name((GrowStage)stage),
@@ -151,6 +155,7 @@ int main(int argc, char **argv) {
                 }
             }
         }
+    }
     }
     if (failures > 0) {
         fprintf(stderr, "%d cases below the rate\n", failures);

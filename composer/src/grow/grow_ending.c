@@ -18,10 +18,22 @@
 static const size_t IDEA_START[GROW_PLACE_COUNT] = {0, 2, 4, 5, 6};
 static const size_t IDEA_UNITS[GROW_PLACE_COUNT] = {2, 2, 1, 1, 2};
 
-/* The weights of fragment 1's segment: a segment lettered other than `a` first, then one lettered `a` (ch. VIII). */
-static const unsigned FRAGMENT_SEGMENT_WEIGHTS[2] = {2, 1};
-/* The weights of fragment 2: fragment 1's segment in sequence one step down, then the next segment. */
-static const unsigned FRAGMENT_2_WEIGHTS[2] = {3, 1};
+/*
+ * The weights of the choices of a continuation by GrowDevelopment (ch. VIII, XI); the balanced rows are the default. A 0
+ * removes the choice; when every choice a request allows is 0, the balanced row is used for that draw.
+ */
+/* Fragment 1's segment: a segment lettered other than `a` first, then one lettered `a`. */
+static const unsigned FRAGMENT_SEGMENT_WEIGHTS[GROW_DEVELOP_COUNT][2] = {
+    [GROW_DEVELOP_MELODY] = {1, 2}, [GROW_DEVELOP_BALANCED] = {2, 1}, [GROW_DEVELOP_THEME] = {3, 1}};
+/* Fragment 2: fragment 1's segment in sequence one step down, then the next segment (exact). */
+static const unsigned FRAGMENT_2_WEIGHTS[GROW_DEVELOP_COUNT][2] = {
+    [GROW_DEVELOP_MELODY] = {1, 3}, [GROW_DEVELOP_BALANCED] = {3, 1}, [GROW_DEVELOP_THEME] = {1, 0}};
+/* The steps a liquidation takes: from `least` (a motive with fewer than 2 segments cannot take 2) to `most`, 0 for as many as it has segments. */
+static const struct {
+    size_t least;
+    size_t most;
+} LIQUIDATION_STEPS[GROW_DEVELOP_COUNT] = {
+    [GROW_DEVELOP_MELODY] = {1, 1}, [GROW_DEVELOP_BALANCED] = {1, 0}, [GROW_DEVELOP_THEME] = {2, 0}};
 
 /* The segment of m0 as a fragment's motive: a proper part of m0 (a fragment shorter than it) of two notes or more. */
 static bool segment_fragment(const GrowThemeSpec *spec, size_t index, Motive *out) {
@@ -46,7 +58,9 @@ static void clear_segment_fragments(GrowThemeSpec *spec) {
  * lettered other than `a` preferred, and fragment 2 is that segment in sequence one step down or the next segment. False,
  * with nothing set, when m0 has no segment that fits: the leading fragments of m0 are made as before.
  */
-static bool draw_segment_fragments(FillRng *rng, GrowThemeSpec *spec, Rational unit) {
+static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, GrowThemeSpec *spec, Rational unit) {
+    const unsigned *segment_weights = FRAGMENT_SEGMENT_WEIGHTS[development];
+    const unsigned *sequence_weights = FRAGMENT_2_WEIGHTS[development];
     Rational room1 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1]);
     Rational room2 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2]);
     size_t fits[MOTIVE_MAX_FEATURES];
@@ -59,7 +73,7 @@ static bool draw_segment_fragments(FillRng *rng, GrowThemeSpec *spec, Rational u
         Motive motive;
         if (segment_fragment(spec, s, &motive) && rational_cmp(motive.length, room1) <= 0) {
             fits[count++] = s;
-            total += FRAGMENT_SEGMENT_WEIGHTS[spec->segments[s].label[0] == 'a' ? 1 : 0];
+            total += segment_weights[spec->segments[s].label[0] == 'a' ? 1 : 0];
         }
     }
     if (count == 0) {
@@ -68,14 +82,14 @@ static bool draw_segment_fragments(FillRng *rng, GrowThemeSpec *spec, Rational u
     uint64_t pick = fill_rng_below(rng, total);
     size_t chosen = fits[count - 1];
     for (size_t i = 0; i < count; i++) {
-        unsigned weight = FRAGMENT_SEGMENT_WEIGHTS[spec->segments[fits[i]].label[0] == 'a' ? 1 : 0];
+        unsigned weight = segment_weights[spec->segments[fits[i]].label[0] == 'a' ? 1 : 0];
         if (pick < weight) {
             chosen = fits[i];
             break;
         }
         pick -= weight;
     }
-    bool sequence = fill_rng_below(rng, FRAGMENT_2_WEIGHTS[0] + FRAGMENT_2_WEIGHTS[1]) < FRAGMENT_2_WEIGHTS[0];
+    bool sequence = fill_rng_below(rng, sequence_weights[0] + sequence_weights[1]) < sequence_weights[0];
     segment_fragment(spec, chosen, &spec->fragment_motive[0]);
     spec->fragment_from_segment[0] = true;
     spec->fragment_segment[0] = chosen;
@@ -158,14 +172,18 @@ static bool liquid_take_cadence(Motive *motive, bool has_cadence, CadenceType ca
  * m0's (a fifth at least), within the room, and, when the idea ends in a cadence, its last note moved to the cadence's tone. False
  * when none is.
  */
-static bool liquidate_segments(const GrowThemeSpec *spec, size_t from, Rational room, bool has_cadence,
-                               CadenceType cadence, size_t *steps, Motive *out) {
+static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment development, size_t from, Rational room,
+                               bool has_cadence, CadenceType cadence, size_t *steps, Motive *out) {
+    size_t least = LIQUIDATION_STEPS[development].least;
+    size_t most = LIQUIDATION_STEPS[development].most;
+    from = from < least ? least : from;
     const Motive *base = &spec->liquid_base;
     int allowed = widest_leap(base) > LIQUID_LEAP ? widest_leap(base) : LIQUID_LEAP;
     if (!spec->has_liquid_base || spec->segment_count < 2) {
         return false;
     }
-    for (size_t count = from > 0 ? from : 1; count <= spec->segment_count && count <= VARIANT_CHAIN_MAX; count++) {
+    for (size_t count = from > 0 ? from : 1;
+         count <= spec->segment_count && count <= VARIANT_CHAIN_MAX && (most == 0 || count <= most); count++) {
         VariantChain chain;
         Motive result;
         VariantRecord record;
@@ -260,7 +278,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
         spec->liquidate_drop = count - 1;
     }
     /* Fragments are segments of m0 when it has them that fit, else its leading notes. */
-    if (!draw_segment_fragments(rng, spec, unit) &&
+    if (!draw_segment_fragments(rng, request->development, spec, unit) &&
         (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
          fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0)) {
         return false;
@@ -269,8 +287,8 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
         size_t steps;
         Motive result;
-        if (liquidate_segments(spec, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]), true, request->cadence,
-                               &steps, &result)) {
+        if (liquidate_segments(spec, request->development, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]), true,
+                               request->cadence, &steps, &result)) {
             keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, &result);
         }
     }
@@ -339,8 +357,8 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
     size_t steps[2];
     Motive made[2];
     if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL_1) && !grow_idea_own(spec, GROW_PLACE_CADENTIAL_2) &&
-        liquidate_segments(spec, 1, idea_room(spec, unit, 2), false, request->cadence, &steps[0], &made[0]) &&
-        liquidate_segments(spec, steps[0], idea_room(spec, unit, 2), true, request->cadence, &steps[1], &made[1])) {
+        liquidate_segments(spec, request->development, 1, idea_room(spec, unit, 2), false, request->cadence, &steps[0], &made[0]) &&
+        liquidate_segments(spec, request->development, steps[0], idea_room(spec, unit, 2), true, request->cadence, &steps[1], &made[1])) {
         keep_liquidation(spec, GROW_PLACE_CADENTIAL_1, steps[0], &made[0]);
         keep_liquidation(spec, GROW_PLACE_CADENTIAL_2, steps[1], &made[1]);
     }

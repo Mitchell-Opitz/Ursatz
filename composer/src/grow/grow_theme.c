@@ -874,6 +874,7 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     if (!read_request(plan, target, &request)) {
         return grow_free_applies(plan, target) ? grow_free_generate(plan, target, rng, shared, out) : true;
     }
+    request.development = shared ? shared->development : GROW_DEVELOP_BALANCED;
     size_t wanted = shared && shared->candidates > 0 ? shared->candidates : GROW_DEFAULT_CANDIDATES;
     GrowThemeSpec *kept[16];
     size_t kept_count = 0;

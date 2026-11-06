@@ -63,6 +63,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow.md](grow.md): growing a theme from a motive: request, slots, stages and structure.
 - [grow-harmony.md](grow-harmony.md): the motive-forms, harmony, melody and free phrases of the grow stages.
 - [grow-segments.md](grow-segments.md): segments of the motif as fragments and liquidation in a theme (P34).
+- [grow-development.md](grow-development.md): the theme `development` setting and its weight tables (P34).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from form templates and the compose run.
 - [loop-seam.md](loop-seam.md): how the end of a loop leads back into its start.

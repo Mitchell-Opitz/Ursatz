@@ -7,7 +7,7 @@ request is an error (`the request must have "schema_version": 2`). Back to the [
 ```json
 {"schema": "ursatz-theme-request", "schema_version": 2,
  "into": "sentence", "hybrid": null, "key": "D", "mode": "minor", "meter": "4/4", "bars": 8,
- "cadence": "PAC", "first_cadence": null,
+ "cadence": "PAC", "first_cadence": null, "development": "balanced",
  "motives": [{"id": "A", "form": "full", "degrees": "1:q b3:e 5:e 1':h", "pickup": "0", "harmony": null,
               "features": [{"label": "a", "first": 0, "last": 1}], "role": "melodic"},
              {"id": "R", "form": "full", "degrees": "5:e 4:e 3:e 2:e 1:h", "pickup": "0", "harmony": null,
@@ -29,6 +29,7 @@ request is an error (`the request must have "schema_version": 2`). Back to the [
 | `key`, `mode` | The tonic (or a key like `"D minor"`) and `minor`, `major` or `style`. `style` takes the mode from the style's `mode` category and needs a `style`. |
 | `meter`, `bars` | `2/4`, `3/4`, `4/4` or `6/8`; 4 or 8 bars (default 8). |
 | `cadence`, `first_cadence` | As the options of [grow](cli-grow.md): PAC (default), IAC or HC; the weak cadence of an antecedent. |
+| `development` | `melody`, `balanced` (default) or `theme` (ch. XI, API 1.9): how far the presentation and the continuation stray from the motif. `melody` keeps them close (exact repetitions, a segment `a` and the next segment, liquidation of one step at most); `theme` develops it (sequences, segment `b`, fragment 2 always a sequence, liquidation of two steps or more). The weights are in [grow-development.md](grow-development.md). The brief of the result and the explanation name it. |
 | `accompaniment` | `null`, `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `{"pattern": "motive", "motive": {"degrees", "pickup", "form", "role": "accompaniment"}}`, a saved accompaniment motive as the pattern. |
 | `voicing` | `null`, `"satb"` (alto and tenor under the grown melody) or `"chorale"` (four parts, the melody written too). Not with an accompaniment. |
 | `style`, `style_weight`, `without` | An absolute path to a style model file, how strongly it is preferred, and the categories to read it without (the per-item switch for the motive categories, R-162). `style_weight` and `without` are read only with a `style`. A style gives the mode (`mode: "style"`), the tempo and the note density (R-163). |
@@ -122,6 +123,7 @@ before it seeds; Compose gives the same message and path. One refusal is given, 
 |---|---|
 | `/bars` or `/hybrid` | the pairing cannot be built in the meter or the bar count |
 | `/cadence` | the cadence is not a PAC, an IAC or an HC |
+| `/development` | it is not `melody`, `balanced` or `theme` |
 | `/first_cadence` | an antecedent's cadence is not weaker than the theme's, or has no room |
 | `/slots/basic` | the basic motif has fewer than two notes, or is longer than its idea ("the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent") |
 | `/slots/<slot>` | a slot has no place in the pairing, or its motif has fewer than two notes, another meter or key, or is longer than its idea |

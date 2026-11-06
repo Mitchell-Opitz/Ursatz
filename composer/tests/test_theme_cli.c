@@ -361,7 +361,7 @@ static void test_fast_minor(void) {
     /* The brief and the slots are in the JSON. */
     out = theme_output("theme_fast_minor.json --seed 97 --format json");
     assert(strstr(out, "\"brief\":{\"tempo\":{\"qpm\":170,\"from\":\"style\"},\"mode\":{\"mode\":\"minor\",\"from\":\"style\"},"
-                       "\"density\":2,\"without\":[]}") != NULL);
+                       "\"density\":2,\"without\":[],\"development\":\"balanced\"}") != NULL);
     assert(strstr(out, "\"slots\":[{\"idea\":\"basic idea\",\"slot\":\"basic\",\"motive\":\"A\",\"source\":\"motive\"") != NULL);
     free(out);
 }

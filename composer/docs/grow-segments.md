@@ -14,8 +14,8 @@ one note, and a segment that is the whole motif, is not a fragment.
 
 ## Fragments
 
-Fragment 1 is a segment that fits its idea, drawn by `FRAGMENT_SEGMENT_WEIGHTS` (`src/grow/grow_ending.c`: a letter other than
-`a` 2, `a` 1). Fragment 2 is fragment 1's segment in sequence one step down in the key (`transpose tonal=1 by=-1`, weight 3) or the
+Fragment 1 is a segment that fits its idea, drawn by `FRAGMENT_SEGMENT_WEIGHTS` (`src/grow/grow_ending.c`; balanced: a letter
+other than `a` 2, `a` 1; the [development setting](grow-development.md) changes them). Fragment 2 is fragment 1's segment in sequence one step down in the key (`transpose tonal=1 by=-1`, weight 3) or the
 next segment (`exact`, weight 1), the other when one does not fit (`FRAGMENT_2_WEIGHTS`). Each segment is a Given motive node
 `segment <label>` in the material, after the idea motives, laid out by its own bars; the fragment's motive node is made from it,
 and a fragment shorter than its idea is grown as a shorter motif is ([grow.md](grow.md#how-a-motif-fills-its-idea)). The plan
