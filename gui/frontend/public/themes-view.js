@@ -497,6 +497,18 @@ function buildThemeResult(ctx) {
     table.appendChild(tr);
   }
   section.appendChild(table);
+  if (view.developments.length > 0) {
+    section.appendChild(materialsElement("h3", "section-title", "Development"));
+    const list = materialsElement("ul", "theme-developments");
+    for (const entry of view.developments) {
+      const item = materialsElement("li", "", entry.text);
+      if (entry.segment !== "") {
+        item.append(" ", materialsElement("span", "materials-tag", entry.segment));
+      }
+      list.appendChild(item);
+    }
+    section.appendChild(list);
+  }
   const midi = materialsElement("a", "back-link clickable", "Download MIDI");
   midi.href = ThemesModel.versionFileUrl(ctx.id, ctx.version, "theme.mid");
   midi.download = "theme.mid";
@@ -840,6 +852,8 @@ function buildThemeEditor(ctx) {
     "First cadence",
     themeSelect([{ value: "", label: "Default" }, ...ThemesModel.FIRST_CADENCES], state.firstCadence),
   );
+  const development = themeField(form, "Development", themeSelect(ThemesModel.DEVELOPMENTS, state.development));
+  form.appendChild(materialsElement("div", "materials-hint", ThemesModel.DEVELOPMENT_HELP));
   function syncForm() {
     state.into = into.value;
     state.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
@@ -852,6 +866,7 @@ function buildThemeEditor(ctx) {
     }
     state.cadence = cadence.value;
     state.firstCadence = firstCadence.value;
+    state.development = development.value;
     beginningSelect.parentElement.hidden = state.into !== "hybrid";
     endingSelect.parentElement.hidden = state.into !== "hybrid";
     firstCadence.parentElement.hidden = state.into === "sentence";
@@ -863,7 +878,7 @@ function buildThemeEditor(ctx) {
     }
   }
   let chordRow = null;
-  for (const control of [into, beginningSelect, endingSelect, meter, bars, cadence, firstCadence]) {
+  for (const control of [into, beginningSelect, endingSelect, meter, bars, cadence, firstCadence, development]) {
     control.addEventListener("input", syncForm);
   }
   mode.addEventListener("input", () => {
@@ -905,6 +920,7 @@ function buildThemeEditor(ctx) {
       bars,
       cadence,
       firstCadence,
+      development,
       tempo,
       chords: chordRow.element,
     }),
