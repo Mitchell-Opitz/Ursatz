@@ -175,8 +175,6 @@ PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, siz
                          const char *name, NodeId *out);
 /* The motive node m<slot> in the material, made from the ref, at bar slot_base + (slot - 1) * motive_bars of the material. */
 PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out);
-/* One diatonic chord of the key (degree 1 to 7) written whole over the owner, with the bass and the rest open as for targets. */
-PlanResult grow_add_chord_written(GrowBuild *build, NodeId owner, int degree);
 /* A harmony span and the bass span beside it, both open, over an idea or a subphrase. */
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                   const PlanConstraint *cadence);
