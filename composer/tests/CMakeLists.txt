@@ -951,3 +951,12 @@ target_compile_definitions(test_grow_fidelity PRIVATE COMPOSER_FIXTURE_DIR="${CM
 target_compile_options(test_grow_fidelity PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_fidelity_sentence COMMAND test_grow_fidelity sentence)
 add_test(NAME test_grow_fidelity_period COMMAND test_grow_fidelity period)
+
+add_executable(test_grow_fidelity_sweep test_grow_fidelity_sweep.c)
+target_link_libraries(test_grow_fidelity_sweep PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_fidelity_sweep PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_fidelity_sweep PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_fidelity_sweep PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_fidelity_sweep COMMAND test_grow_fidelity_sweep)
+# Composes 80 themes for each of the three settings and reads every idea's fidelity: minutes, so slow; the fast set has test_grow_fidelity_sentence and _period.
+set_tests_properties(test_grow_fidelity_sweep PROPERTIES LABELS slow)
