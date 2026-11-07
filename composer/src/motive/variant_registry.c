@@ -80,7 +80,17 @@ static MotiveDevResult apply_transpose(const Motive *source, const VariantValue 
         step.value[0] = 1;
         step.value[1] = steps > 3 ? steps - 7 : steps;
     }
-    return motive_develop(source, &step, out);
+    MotiveDevResult status = motive_develop(source, &step, out);
+    if (status == MOTIVE_DEV_OK && step.value[0] != 0) {
+        /* A tonal transposition moves the harmony with the melody: each chord's degree by the same scale steps, onsets
+           kept. A real (chromatic) transposition keeps the source's chords. */
+        for (size_t i = 0; i < out->chord_count; i++) {
+            long degree = ((long)out->chords[i].degree - 1 + step.value[1]) % 7;
+            out->chords[i].degree = (int)((degree + 7) % 7 + 1);
+            out->chords[i].alteration = 0;
+        }
+    }
+    return status;
 }
 
 static void describe_transpose(const VariantValue *values, char *out, size_t size) {
