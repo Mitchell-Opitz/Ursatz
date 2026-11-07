@@ -112,7 +112,7 @@ static void read_theme(const PiecePlan *plan, const Motive *basic, GrowDevelopme
         assert(grow_idea_fidelity(plan, span, basic, &fidelity));
         /* An idea whose ref cuts the motive down is ranked but never refused (R-355). */
         add_idea(&stats[role], &fidelity,
-                 grow_ref_shortens(&ref, from_segment) ? (MotiveScore){0, 1} : grow_fidelity_minimum(development, role));
+                 grow_ref_departs(&ref, from_segment) ? (MotiveScore){0, 1} : grow_fidelity_minimum(development, role));
     }
 }
 

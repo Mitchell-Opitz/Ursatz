@@ -380,11 +380,11 @@ bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out);
 bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
 
 /*
- * Whether the ref cuts the motive down itself, so its fidelity is measured against the whole source and is low by what it
- * was asked to be (a fragment by notes, a liquidation, a condensation, with no segment to measure against, R-355). Such an
- * idea is ranked but never refused.
+ * Whether the ref itself makes the idea differ from its source (a liquidation, a fragment by notes, an inversion, any relation
+ * but exact, a transposition, a dominant form and a segment's own fragment, R-355), so its fidelity is low by what it was asked
+ * to be. Such an idea is ranked but never refused.
  */
-bool grow_ref_shortens(const PlanMotiveRef *ref, bool from_segment);
+bool grow_ref_departs(const PlanMotiveRef *ref, bool from_segment);
 
 /*
  * The melody stage's fidelity checker (R-355). Measuring is the costly part (the recognizer, R-307), so a candidate whose
@@ -396,7 +396,7 @@ typedef struct {
     struct {
         unsigned long long key;
         MotiveFidelity fidelity;
-        bool shortens;
+        bool departs;
     } entries[GROW_FIDELITY_CACHE];
     size_t count; /* entries made so far; the oldest is replaced once full */
 } GrowFidelityCache;
@@ -417,10 +417,9 @@ typedef struct {
  * under n/d (role)". Otherwise the score becomes
  *   ((agree * 100 + floor(100 * fidelity)) * (total + 1) + held) / (201 * (total + 1))
  * where held/total is the inner score, so agreement ranks first, then fidelity, then the melody rules' share; the style
- * part the inner left (a part of held/total) is scaled as held is, so it stays a part of the score. An idea whose ref itself cuts the motive down (a fragment by notes, a liquidation, a
- * condensation, with no segment to measure against) is ranked but never refused: its score against the whole source is low
- * by what it was asked to be. Every other candidate passes through unchanged. A cadential idea's agreement is not
- * measured (the search never reaches its residue, R-355) and counts as no agreement.
+ * part the inner left (a part of held/total) is scaled as held is, so it stays a part of the score. An idea whose ref makes
+ * it differ from its source (grow_ref_departs) is ranked but never refused. Every other candidate passes through unchanged.
+ * A cadential idea's agreement is not measured (the search never reaches its residue, R-355) and counts as no agreement.
  */
 bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out);

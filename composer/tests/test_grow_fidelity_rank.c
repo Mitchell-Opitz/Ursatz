@@ -83,7 +83,7 @@ static size_t check_minimums(const PiecePlan *plan, const Motive *basic, GrowDev
         memset(&fidelity, 0, sizeof(fidelity));
         fidelity.score = recognizability.total;
         /* An idea whose ref cuts the motive down is ranked but never refused (R-355). */
-        MotiveScore minimum = grow_ref_shortens(&ref, from_segment) ? (MotiveScore){0, 1} : grow_fidelity_minimum(development, role);
+        MotiveScore minimum = grow_ref_departs(&ref, from_segment) ? (MotiveScore){0, 1} : grow_fidelity_minimum(development, role);
         if (below(fidelity.score.numerator, fidelity.score.denominator, minimum.numerator, minimum.denominator)) {
             fprintf(stderr, "%s: idea \"%s\" has fidelity %lu/%lu under its minimum %lu/%lu\n", label, plan_node_name(plan, idea),
                     fidelity.score.numerator, fidelity.score.denominator, minimum.numerator, minimum.denominator);

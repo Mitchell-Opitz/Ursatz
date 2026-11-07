@@ -261,24 +261,24 @@ static unsigned long long measurement_key(LaneSpanId span, const PlanNote *notes
     return hash;
 }
 
-static bool cache_find(const GrowFidelityCache *cache, unsigned long long key, MotiveFidelity *out, bool *shortens) {
+static bool cache_find(const GrowFidelityCache *cache, unsigned long long key, MotiveFidelity *out, bool *departs) {
     size_t used = cache ? (cache->count < GROW_FIDELITY_CACHE ? cache->count : GROW_FIDELITY_CACHE) : 0;
     for (size_t i = 0; i < used; i++) {
         if (cache->entries[i].key == key) {
             *out = cache->entries[i].fidelity;
-            *shortens = cache->entries[i].shortens;
+            *departs = cache->entries[i].departs;
             return true;
         }
     }
     return false;
 }
 
-static void cache_add(GrowFidelityCache *cache, unsigned long long key, const MotiveFidelity *fidelity, bool shortens) {
+static void cache_add(GrowFidelityCache *cache, unsigned long long key, const MotiveFidelity *fidelity, bool departs) {
     if (cache) {
         size_t slot = cache->count % GROW_FIDELITY_CACHE;
         cache->entries[slot].key = key;
         cache->entries[slot].fidelity = *fidelity;
-        cache->entries[slot].shortens = shortens;
+        cache->entries[slot].departs = departs;
         cache->count++;
     }
 }
@@ -291,21 +291,35 @@ static void cache_add(GrowFidelityCache *cache, unsigned long long key, const Mo
  */
 #define RANKING_DEPTH 1u
 
-/* Whether the ref cuts the motive down itself, measured against the whole source: a fragment by notes, a liquidation, a condensation. */
-bool grow_ref_shortens(const PlanMotiveRef *ref, bool from_segment) {
-    if (from_segment) {
+/*
+ * Whether the ref itself makes the idea differ from its source: a liquidation, a fragment by notes, an inversion, any relation
+ * but exact, a transposition, a dominant form and a segment's own fragment. Such an idea's score against the source is low
+ * by what it was asked to be, so it is ranked but never refused.
+ */
+bool grow_ref_departs(const PlanMotiveRef *ref, bool from_segment) {
+    if (ref->steps > 0) {
+        return true;
+    }
+    if (!ref->has_step || plan_motive_ref_restates(ref)) {
         return false;
     }
-    return ref->steps > 0 || (ref->has_step && (ref->step.kind == MOTIVE_RELATION_FRAGMENT ||
-                                                ref->step.kind == MOTIVE_RELATION_LIQUIDATE ||
-                                                ref->step.kind == MOTIVE_RELATION_CONDENSE));
+    switch (ref->step.kind) {
+    case MOTIVE_RELATION_EXACT:
+    case MOTIVE_RELATION_TRANSPOSE:
+    case MOTIVE_RELATION_DOMINANT_FORM:
+        return false;
+    case MOTIVE_RELATION_FRAGMENT:
+        return !from_segment;
+    default:
+        return true;
+    }
 }
 
-/* The idea's fidelity for these realized notes: from the cache, else measured. *shortens says its ref cuts the motive down. */
+/* The idea's fidelity for these realized notes: from the cache, else measured. *departs says its ref makes the idea differ from its source. */
 static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *notes, size_t count, GrowIdeaRole role,
-                    const GrowFidelityContext *context, MotiveFidelity *out, bool *shortens) {
+                    const GrowFidelityContext *context, MotiveFidelity *out, bool *departs) {
     unsigned long long key = measurement_key(span, notes, count);
-    if (cache_find(context->cache, key, out, shortens)) {
+    if (cache_find(context->cache, key, out, departs)) {
         return true;
     }
     Motive source;
@@ -329,9 +343,9 @@ static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *note
     } else {
         measured = motive_fidelity_depth(&source, &realized, &ref, from_segment, RANKING_DEPTH, out);
     }
-    *shortens = grow_ref_shortens(&ref, from_segment);
+    *departs = grow_ref_departs(&ref, from_segment);
     if (measured) {
-        cache_add(context->cache, key, out, *shortens);
+        cache_add(context->cache, key, out, *departs);
     }
     return measured;
 }
@@ -383,13 +397,13 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
     GrowIdeaRole role = plan_node_kind(plan, owner) == PLAN_NODE_IDEA ? grow_idea_role(plan_node_name(plan, owner))
                                                                        : GROW_ROLE_NONE;
     MotiveFidelity measured;
-    bool shortens = false;
-    if (role == GROW_ROLE_NONE || !measure(plan, span, notes, count, role, fidelity_context, &measured, &shortens)) {
+    bool departs = false;
+    if (role == GROW_ROLE_NONE || !measure(plan, span, notes, count, role, fidelity_context, &measured, &departs)) {
         return true;
     }
     MotiveScore minimum = fidelity_context->minimum ? *fidelity_context->minimum
                                                     : grow_fidelity_minimum(fidelity_context->development, role);
-    if (!shortens && measured.score.numerator * minimum.denominator < minimum.numerator * measured.score.denominator) {
+    if (!departs && measured.score.numerator * minimum.denominator < minimum.numerator * measured.score.denominator) {
         out->hard_violation = true;
         snprintf(out->reason, sizeof(out->reason), "motive fidelity %lu/%lu under %lu/%lu (%s)", measured.score.numerator,
                  measured.score.denominator, minimum.numerator, minimum.denominator, role_name(role));
