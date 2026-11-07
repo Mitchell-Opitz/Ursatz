@@ -914,6 +914,13 @@ target_link_libraries(test_grow_segment_fragments PRIVATE ursatz_composer cjson)
 target_compile_options(test_grow_segment_fragments PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_segment_fragments COMMAND test_grow_segment_fragments)
 
+add_executable(test_grow_liquidated_residue test_grow_liquidated_residue.c)
+target_link_libraries(test_grow_liquidated_residue PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_liquidated_residue PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_liquidated_residue PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_liquidated_residue PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_liquidated_residue COMMAND test_grow_liquidated_residue)
+
 add_executable(test_grow_development test_grow_development.c)
 target_link_libraries(test_grow_development PRIVATE ursatz_composer cjson)
 target_compile_options(test_grow_development PRIVATE -Wall -Wextra -Wpedantic)

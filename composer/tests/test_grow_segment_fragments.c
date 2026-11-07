@@ -13,7 +13,8 @@
  * Continuations from segments (B2 of P34): a 2-bar 4/4 motif with the segments `a` (bar 1) and `b` (bar 2) in an 8-bar
  * sentence, over seeds 1 to 10. A fragment is a segment of the motif and has that segment's rhythm; every developed idea has
  * a summary; a motif with no features is given proposed segments and its fragments name them; the cadential idea liquidates
- * segments in at least one step and at most as many as the motif has; the plan's JSON keeps the segment and the steps.
+ * segments in at least one step and at most as many as the motif has, and names the segment its residue keeps; the plan's
+ * JSON keeps the segment and the steps.
  */
 
 #define SEEDS 10
@@ -172,19 +173,17 @@ static void test_proposed_segments(void) {
     assert(named >= SEEDS);
 }
 
-/* The cadential idea liquidates segments in 1 to 2 steps (the motif has 2 segments), else drops notes (no steps). */
+/* The cadential idea liquidates segments in 1 to 2 steps (the motif has 2 segments) and names the segment it keeps; no
+   idea drops notes (R-345). */
 static void test_liquidation_steps(void) {
     Motive motive = make_motive(true);
-    size_t liquidated = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         PiecePlan *plan = grow(&motive, seed);
-        size_t steps = ref_of(plan, "m4")->steps;
-        assert(steps <= 2);
-        liquidated += steps > 0 ? 1 : 0;
+        const PlanMotiveRef *ref = ref_of(plan, "m4");
+        assert(ref->steps >= 1 && ref->steps <= 2);
+        assert(strcmp(ref->segment, "a") == 0 || strcmp(ref->segment, "b") == 0);
         plan_destroy(plan);
     }
-    printf("the cadential idea liquidates segments in %zu of %d runs\n", liquidated, SEEDS);
-    assert(liquidated >= 8);
 }
 
 /* The plan's JSON keeps the segment and the steps, and reads them back. */
@@ -250,7 +249,7 @@ static void test_summaries(void) {
         }
         if (strcmp(idea->valuestring, "cadential") == 0) {
             cadential = true;
-            assert(strstr(summary->valuestring, "basic idea, ") != NULL);
+            assert(strstr(summary->valuestring, "= segment ") != NULL && strstr(summary->valuestring, "liquidated") != NULL);
         }
     }
     assert(fragment && cadential);
