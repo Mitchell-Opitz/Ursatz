@@ -130,13 +130,13 @@
       "seam": {
        "progression": true,
        "no_parallels": true,
-       "step": true,
-       "leading_tone": false,
+       "step": false,
+       "leading_tone": true,
        "held": 3
       },
       "analyzer_check": null,
       "style_distance": null,
-      "plan": "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/plan.json"
+      "plan": "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/plan.json"
      },
      "ending": {
       "sections": [
@@ -192,16 +192,16 @@
       "seam": null,
       "analyzer_check": null,
       "style_distance": null,
-      "plan": "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/ending-plan.json"
+      "plan": "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending-plan.json"
      }
     },
     "files": [
-     "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/plan.json",
-     "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/ending-plan.json",
-     "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/loop.mid",
-     "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/loop.musicxml",
-     "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/ending.mid",
-     "/tmp/claude-0/gui-build/backend/tests/piece_route/materials/items/pce-0451c40f08e4fcb1/v3/ending.musicxml"
+     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/plan.json",
+     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending-plan.json",
+     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/loop.mid",
+     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/loop.musicxml",
+     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending.mid",
+     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending.musicxml"
     ]
    },
    "brief": {

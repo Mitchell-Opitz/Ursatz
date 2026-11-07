@@ -12,20 +12,20 @@
   "slots": [
    {
     "slot": "basic",
-    "item_id": "mot-0e115cffd26092a5",
+    "item_id": "mot-368aef0a3c8ae4a9",
     "version": 1
    },
    {
     "slot": "cadential",
-    "item_id": "mot-25e4efc18a765d4c",
+    "item_id": "mot-e7cb5ba8399bdbc8",
     "version": 1
    }
   ],
   "brief": {
    "scopes": [],
    "piece_ids": [
-    "piece-b1dc1f438e9c237f",
-    "piece-0bb84fb61bfa905d"
+    "piece-90d2eb8026e09752",
+    "piece-41ab95cd0e14260a"
    ],
    "style_ids": []
   },
@@ -122,42 +122,14 @@
         "beat": 1,
         "chord": "i",
         "function": "tonic",
-        "bass": "C3"
-       },
-       {
-        "bar": 2,
-        "beat": 1,
-        "chord": "viio6",
-        "function": "dominant",
-        "bass": "D3"
-       },
-       {
-        "bar": 2,
-        "beat": 3,
-        "chord": "i6",
-        "function": "tonic",
-        "bass": "D#3"
+        "bass": "C3 C4"
        },
        {
         "bar": 3,
         "beat": 1,
-        "chord": "i",
-        "function": "tonic",
-        "bass": "C3"
-       },
-       {
-        "bar": 4,
-        "beat": 1,
-        "chord": "viio6",
-        "function": "dominant",
+        "chord": "iio",
+        "function": "predominant",
         "bass": "D3"
-       },
-       {
-        "bar": 4,
-        "beat": 3,
-        "chord": "i6",
-        "function": "tonic",
-        "bass": "D#3"
        },
        {
         "bar": 5,
@@ -178,23 +150,23 @@
         "beat": 1,
         "chord": "V",
         "function": "dominant",
-        "bass": "G3"
+        "bass": "G3 G2"
        },
        {
         "bar": 8,
         "beat": 1,
         "chord": "i",
         "function": "tonic",
-        "bass": "C4"
+        "bass": "C3"
        }
       ],
       "developments": [
        {
         "motive": "m1",
         "idea": "repetition",
-        "development": "restated, exact",
+        "development": "sequence, 1 step up (tonal)",
         "segment": null,
-        "summary": "repetition = basic idea, exact"
+        "summary": "repetition = basic idea, 1 step up (tonal)"
        },
        {
         "motive": "m2",
@@ -206,9 +178,9 @@
        {
         "motive": "m3",
         "idea": "fragment 2",
-        "development": "fragmented, leading, 3 notes",
+        "development": "fragmented, leading, 2 notes",
         "segment": null,
-        "summary": "fragment 2 = basic idea, fragmented, leading, 3 notes"
+        "summary": "fragment 2 = basic idea, fragmented, leading, 2 notes"
        },
        {
         "motive": "m4",
@@ -232,10 +204,10 @@
         "idea": "repetition",
         "slot": "basic",
         "motive": "M1",
-        "source": "motive",
+        "source": "registry",
         "item": null,
-        "chain": null,
-        "connection": 87
+        "chain": "transpose",
+        "connection": 77
        },
        {
         "idea": "fragment 1",
@@ -244,7 +216,7 @@
         "source": "registry",
         "item": null,
         "chain": "liquidate-features",
-        "connection": 45
+        "connection": 33
        },
        {
         "idea": "fragment 2",
@@ -252,7 +224,7 @@
         "motive": "M1",
         "source": "operator",
         "item": null,
-        "chain": "fragment leading 3 notes",
+        "chain": "fragment leading 2 notes",
         "connection": null
        },
        {
@@ -262,7 +234,7 @@
         "source": "motive",
         "item": null,
         "chain": null,
-        "connection": 69
+        "connection": 66
        }
       ],
       "score": {
@@ -274,18 +246,18 @@
       "heard_as_requested": false,
       "heard_text": "no theme heard",
       "style_distance": {
-       "harmony": 0.8981,
+       "harmony": 0.889,
        "rhythm": 0.2639,
-       "melody": 0.8046,
+       "melody": 0.7996,
        "form": 0.5,
-       "overall": 0.6166
+       "overall": 0.6131
       }
      }
     ],
     "files": [
-     "/tmp/claude-0/gui-build/backend/tests/theme_route/materials/items/thm-b771edd68b2666dd/v2/plan.json",
-     "/tmp/claude-0/gui-build/backend/tests/theme_route/materials/items/thm-b771edd68b2666dd/v2/theme.mid",
-     "/tmp/claude-0/gui-build/backend/tests/theme_route/materials/items/thm-b771edd68b2666dd/v2/theme.musicxml"
+     "/home/user/ursatz-gui/build/backend/tests/theme_route/materials/items/thm-592c5d41bdf6b030/v2/plan.json",
+     "/home/user/ursatz-gui/build/backend/tests/theme_route/materials/items/thm-592c5d41bdf6b030/v2/theme.mid",
+     "/home/user/ursatz-gui/build/backend/tests/theme_route/materials/items/thm-592c5d41bdf6b030/v2/theme.musicxml"
     ]
    },
    "brief": {
@@ -303,7 +275,7 @@
  },
  "uses": [
   {
-   "item_id": "mot-0e115cffd26092a5",
+   "item_id": "mot-368aef0a3c8ae4a9",
    "version": 1,
    "copy": {
     "uses": [],
@@ -314,7 +286,6 @@
      "meter": "4/4",
      "key": "C minor",
      "pickup": "0",
-     "features": [],
      "analysis": {
       "motive": {
        "meter": {
@@ -748,6 +719,16 @@
         "text": "I",
         "given": false
        },
+       "segments": {
+        "given": false,
+        "items": [
+         {
+          "label": "a",
+          "first": 0,
+          "last": 7
+         }
+        ]
+       },
        "tones": [
         {
          "note": 1,
@@ -818,13 +799,21 @@
       }
      },
      "derived": null,
+     "features": [
+      {
+       "label": "a",
+       "first": 0,
+       "last": 7
+      }
+     ],
+     "segments_proposed": true,
      "degrees": "1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
      "analysis_error": null
     }
    }
   },
   {
-   "item_id": "mot-25e4efc18a765d4c",
+   "item_id": "mot-e7cb5ba8399bdbc8",
    "version": 1,
    "copy": {
     "uses": [],
@@ -835,7 +824,6 @@
      "meter": "4/4",
      "key": "C minor",
      "pickup": "0",
-     "features": [],
      "analysis": {
       "motive": {
        "meter": {
@@ -1290,6 +1278,16 @@
         "text": "I II@2",
         "given": false
        },
+       "segments": {
+        "given": false,
+        "items": [
+         {
+          "label": "a",
+          "first": 0,
+          "last": 7
+         }
+        ]
+       },
        "tones": [
         {
          "note": 1,
@@ -1362,6 +1360,14 @@
       }
      },
      "derived": null,
+     "features": [
+      {
+       "label": "a",
+       "first": 0,
+       "last": 7
+      }
+     ],
+     "segments_proposed": true,
      "degrees": "5:e 4:e 3:e 2:e 4:e 3:e 2:e 1:e",
      "analysis_error": null
     }
