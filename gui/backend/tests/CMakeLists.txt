@@ -85,6 +85,9 @@ target_compile_definitions(test_links_route PRIVATE
 )
 
 ursatz_gui_add_test(theme_route test_theme_route.c ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
+# Slow: every theme the real Composer composes now measures its developments (Composer API 1.10, about 1 s a theme), which
+# took the test to about 30 s (R-307).
+set_tests_properties(theme_route PROPERTIES LABELS slow)
 # The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
 # there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
 target_compile_definitions(test_theme_route PRIVATE

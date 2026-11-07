@@ -746,14 +746,28 @@
       connection: percent(entry.connection),
     }));
     /* One row for each developed idea: its summary line (a version composed before API 1.8 has only the
-     * development text) and the label of the motif's segment it came from. */
+     * development text), what the Composer heard against it with the score (API 1.10; shown, never
+     * computed here) and the label of the motif's segment it came from. */
     const developments = (Array.isArray(theme.developments) ? theme.developments : [])
       .filter((entry) => entry && typeof entry === "object")
-      .map((entry) => ({
-        idea: entry.idea || "",
-        text: text(entry.summary) !== "" ? entry.summary : entry.development || "",
-        segment: typeof entry.segment === "string" ? entry.segment : "",
-      }));
+      .map((entry) => {
+        const text0 = text(entry.summary) !== "" ? entry.summary : entry.development || "";
+        const fidelity = typeof entry.fidelity === "number" ? entry.fidelity : null;
+        const minimum = typeof entry.minimum === "number" ? entry.minimum : null;
+        const heard = typeof entry.heard === "string" ? entry.heard : "";
+        return {
+          idea: entry.idea || "",
+          text: text0,
+          intended: text0,
+          heard,
+          fidelity: fidelity === null ? "" : percent(fidelity * 100),
+          minimum: minimum === null ? "" : percent(minimum * 100),
+          mismatch:
+            heard !== "" &&
+            (entry.heard_agrees === false || (fidelity !== null && minimum !== null && fidelity < minimum)),
+          segment: typeof entry.segment === "string" ? entry.segment : "",
+        };
+      });
     const brief = summary.brief || {};
     const tempo = brief.tempo || {};
     const mode = brief.mode || {};

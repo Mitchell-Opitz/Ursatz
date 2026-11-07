@@ -30,7 +30,7 @@ The tests are split into a fast set and a slow set. The `slow` label is new: a t
   ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
   ```
 
-- Slow set (`analyzer_route`, `piece_route`, `styles_route`):
+- Slow set (`analyzer_route`, `piece_route`, `styles_route`, `theme_route`):
 
   ```
   ctest --test-dir build -j$(nproc) -L slow

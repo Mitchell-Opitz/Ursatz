@@ -89,6 +89,17 @@ check(devView.developments[0].text === "repetition: restates the basic idea", "a
 const oldView = T.resultView({ summary: { themes: [{ developments: [{ motive: "m1", idea: "repetition", development: "restated, exact" }] }] } });
 check(oldView.developments[0].text === "restated, exact" && oldView.developments[0].segment === "", "a version composed before summaries shows the development text");
 check(T.resultView({}).developments.length === 0, "an empty result has no developments");
+const fidelityOf = (entry) =>
+  T.resultView({ summary: { themes: [{ developments: [{ motive: "m1", idea: "repetition", development: "restated", summary: "repetition: restates the basic idea", ...entry }] }] } }).developments[0];
+const agreed = fidelityOf({ fidelity: 0.82, minimum: 0.75, heard: "exact", heard_agrees: true });
+check(agreed.intended === "repetition: restates the basic idea" && agreed.heard === "exact", "a development row shows intended against heard");
+check(agreed.fidelity === "82%" && agreed.minimum === "75%" && agreed.mismatch === false, "an agreeing idea at or over its minimum is no mismatch");
+check(fidelityOf({ fidelity: 0.82, minimum: 0.75, heard: "transposed", heard_agrees: false }).mismatch === true, "a heard that does not agree is a mismatch");
+check(fidelityOf({ fidelity: 0.5, minimum: 0.75, heard: "exact", heard_agrees: true }).mismatch === true, "a fidelity under the minimum is a mismatch");
+const unmeasured = fidelityOf({ fidelity: null, minimum: null, heard: null, heard_agrees: null });
+check(unmeasured.heard === "" && unmeasured.fidelity === "" && unmeasured.minimum === "" && unmeasured.mismatch === false, "an idea that was not measured shows no score and no mismatch");
+check(unmeasured.text === "repetition: restates the basic idea", "an idea without a heard keeps its single line");
+check(oldView.developments[0].heard === "" && oldView.developments[0].mismatch === false, "a version composed before API 1.10 has no heard and no mismatch");
 check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").mode === "major", "a placeholder theme gives the defaults");
 check(T.bodyFromForm(T.emptyState("x")).theme.brief === null && T.bodyFromForm(T.emptyState("x")).theme.accompaniment === null, "the defaults have no brief and no accompaniment");
 
