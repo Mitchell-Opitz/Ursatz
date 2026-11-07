@@ -1322,11 +1322,16 @@ static void test_development(const Motifs *m) {
     const cJSON *themes = member(member(member(theme_of(answer), "result"), "summary"), "themes");
     const cJSON *developments = member(cJSON_GetArrayItem(themes, 0), "developments");
     bool summaries = cJSON_GetArraySize(developments) > 0;
+    bool measured = summaries;
     cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, (cJSON *)developments) {
       summaries = summaries && strlen(string_of(entry, "summary")) > 0;
+      /* Composer API 1.10: what was heard against what was intended, each member a value or null. */
+      measured = measured && member(entry, "fidelity") && member(entry, "minimum") && member(entry, "heard") &&
+                 member(entry, "heard_agrees");
     }
     check(summaries, "the result lists each idea's development with a summary");
+    check(measured, "every development item carries fidelity, minimum, heard and heard_agrees");
     cJSON_Delete(answer);
   }
   free(theme);
