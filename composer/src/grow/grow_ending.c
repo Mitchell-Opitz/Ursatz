@@ -122,8 +122,11 @@ static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, Gr
 /* The widest leap such an idea may have, a fifth, unless m0 has a wider one. */
 #define LIQUID_LEAP 7
 
-/* Whether every pitch of the motive is in range and in the key's scale (a minor key also has the raised seventh). */
-static bool liquid_in_range(const Motive *motive) {
+/*
+ * Whether every pitch of the motive is in range and, when `in_scale`, in the key's scale (a minor key also has the raised
+ * seventh). A residue keeps to the scale when m0 does (liquid_diatonic); a chromatic m0's residue keeps to the range only.
+ */
+static bool liquid_in_range(const Motive *motive, bool in_scale) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
     for (size_t i = 0; i < motive->note_count; i++) {
@@ -131,12 +134,17 @@ static bool liquid_in_range(const Motive *motive) {
         if (pitch < LIQUID_LOW || pitch > LIQUID_HIGH) {
             return false;
         }
-        if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
+        if (in_scale && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
             !(motive->minor ? MINOR : MAJOR)[((pitch - motive->tonic_pc) % 12 + 12) % 12]) {
             return false;
         }
     }
     return true;
+}
+
+/* Whether every pitch of the motive is in its key's scale. */
+static bool liquid_diatonic(const Motive *motive) {
+    return grow_motive_in_range(motive, 0, 127, true);
 }
 
 static int widest_leap(const Motive *motive) {
@@ -268,8 +276,8 @@ static bool liquidate_base(const GrowThemeSpec *spec, const Motive *base, size_t
             if (!liquid_take_cadence(&moved, has_cadence, cadence, other != 0)) {
                 break;
             }
-            if (moved.form == MOTIVE_SKETCH_FORM_FULL && liquid_in_range(&moved) && widest_leap(&moved) <= allowed &&
-                rational_cmp(moved.length, room) <= 0 && residue_keeps(&moved, spec)) {
+            if (moved.form == MOTIVE_SKETCH_FORM_FULL && liquid_in_range(&moved, liquid_diatonic(base)) &&
+                widest_leap(&moved) <= allowed && rational_cmp(moved.length, room) <= 0 && residue_keeps(&moved, spec)) {
                 *steps = count;
                 *segment = residue_segment(&moved, spec);
                 *out = moved;
@@ -390,8 +398,8 @@ static bool head_residue(const GrowThemeSpec *spec, const Motive *base, int allo
                 if (!liquid_take_cadence(&moved, has_cadence, cadence, other == 1)) {
                     break;
                 }
-                if (liquid_in_range(&moved) && widest_leap(&moved) <= allowed && residue_keeps(&moved, spec) &&
-                    !same_notes(&moved, base)) {
+                if (liquid_in_range(&moved, liquid_diatonic(base)) && widest_leap(&moved) <= allowed &&
+                    residue_keeps(&moved, spec) && !same_notes(&moved, base)) {
                     *steps = base->feature_count > 0 ? base->feature_count : 1;
                     *segment = residue_segment(&moved, spec);
                     *out = moved;
