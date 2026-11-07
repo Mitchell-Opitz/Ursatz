@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
@@ -251,7 +252,51 @@ int main(void) {
         plan_destroy(plan);
     }
     assert(given_runs >= 8);
-    printf("test_grow_motive_harmony: ok (%zu sentences: %zu exact, %zu dominant, %zu sequence; %zu periods; %zu given)\n",
-           composed, seen[0], seen[1], seen[2], periods, given_runs);
+    /* A motif with no harmony of its own: its developed motives carry chords proposed from the notes, which are not held,
+       so the harmony stage never writes a step by harmony-motive (R-348). */
+    Motive chordless;
+    MotiveOptions options;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter.beats_per_bar = 4;
+    options.meter.beat_unit = 4;
+    options.has_key = true;
+    options.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    assert(motive_from_degrees_text("1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e", &options, &chordless, NULL) == MOTIVE_OK);
+    assert(chordless.chord_count == 0);
+    size_t chordless_runs = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        GrowRequest request;
+        memset(&request, 0, sizeof(request));
+        request.motive = &chordless;
+        request.key = options.key;
+        request.meter = options.meter;
+        request.bars = 8;
+        request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
+        request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+        request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+        PiecePlan *plan = NULL;
+        GrowOutcome outcome;
+        GrowConfig config;
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        config.basic = &chordless;
+        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        if (grow_run(plan, &config, &outcome) == GROW_OK) {
+            const FillRecord *record = outcome.records[GROW_STAGE_HARMONY];
+            assert(record && record->step_count > 0);
+            for (size_t i = 0; i < record->step_count; i++) {
+                for (size_t c = 0; c < record->steps[i].considered_count; c++) {
+                    assert(strcmp(record->steps[i].considered[c].operator_name, "harmony-motive") != 0);
+                }
+            }
+            chordless_runs++;
+        }
+        grow_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    assert(chordless_runs >= 8);
+    printf("test_grow_motive_harmony: ok (%zu sentences: %zu exact, %zu dominant, %zu sequence; %zu periods; %zu given; %zu chordless)\n",
+           composed, seen[0], seen[1], seen[2], periods, given_runs, chordless_runs);
     return 0;
 }
