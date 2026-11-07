@@ -565,6 +565,14 @@
                           "kind": "motive_ref",
                           "motive": 7,
                           "step": "exact"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "I",
+                              "onset": "0/1",
+                              "length": "1/1"
+                            }],
+                          "tones": ["chord", "passing", "chord", "passing", "chord"]
                         }]
                     }
                   }, {
@@ -588,6 +596,14 @@
                           "kind": "motive_ref",
                           "motive": 6,
                           "step": "exact"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "I",
+                              "onset": "0/1",
+                              "length": "1/1"
+                            }],
+                          "tones": ["chord", "chord", "chord", "chord"]
                         }]
                     }
                   }, {
@@ -610,7 +626,15 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 7,
-                          "step": "interval-change interval=4 amount=-2"
+                          "step": "interval-change interval=4 amount=-3"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "I",
+                              "onset": "0/1",
+                              "length": "1/1"
+                            }],
+                          "tones": ["chord", "passing", "chord", "neighbor", "chord"]
                         }]
                     }
                   }],
@@ -1158,7 +1182,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 16,
-            "step": "interval-change interval=4 amount=-2"
+            "step": "interval-change interval=4 amount=-3"
           }, {
             "kind": "cadence",
             "type": "pac"
@@ -1473,7 +1497,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 64,
+              "midi_pitch": 65,
               "offset": {
                 "num": 1,
                 "den": 2

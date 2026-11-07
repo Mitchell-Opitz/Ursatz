@@ -595,11 +595,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * idea from the segments of the motif (P34 B2), which changed all five.
  */
 /*
- * Re-recorded at P35 B1, after a motive's notes were realized and the melody was composed relaxed where no strict attempt passes
- * (R-338): all five changed.
+ * Re-recorded at P36 B1, after every development operation wrote the idea's notes and chords from its plan ref (R-329): all
+ * five changed. Before: P35 B1 (realized motive notes, R-338).
  */
-static const unsigned long long MAIN_HASH[5] = {0x816f70e05cf74edeULL, 0xdcd37304c0769f12ULL, 0x58607fa419fef7a2ULL,
-                                                0xb0943b41f1a120b4ULL, 0x886fb53ead4cb33eULL};
+static const unsigned long long MAIN_HASH[5] = {0xbfbfa68030e42af9ULL, 0xe3f4155a30363167ULL, 0x61fa1b3328f391acULL,
+                                                0x1350c208f465d367ULL, 0xcc0cfb635ae5e7e7ULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
@@ -957,8 +957,11 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
 /* Re-measured at P35 B1 (realized motive notes, R-328; relaxed melodies, R-338): the harmony means are 0.7255 styled and 0.7449 unstyled to chorales, 0.6441
    and 0.7136 to sonatinas; the styled melody to chorales is no longer closer
    than the unstyled one, the notes of a motive being its own, so the style has fewer melodies to choose among. */
-static const int STYLED[2][2] = {{725, 796}, {644, 744}};
-static const int UNSTYLED[2][2] = {{744, 793}, {713, 750}};
+/* Re-measured at P36 B1 (every idea is the step its ref names, R-329): the harmony means are 0.7545 styled and 0.7497 unstyled to
+   chorales, 0.7152 and 0.7271 to sonatinas; the melody means 0.8071 and 0.7926, 0.7677 and 0.7593. All are further than at P35 B1:
+   the motives' own chords are not yet read by the harmony stage (B2 of P36), so the chords do not follow the notes. */
+static const int STYLED[2][2] = {{754, 807}, {715, 767}};
+static const int UNSTYLED[2][2] = {{749, 792}, {727, 759}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};

@@ -465,7 +465,6 @@ static void test_motive_forms(void) {
     Motive motive = make_motive(&SCENARIOS[0]);
     GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
     size_t dominant = 0;
-    size_t halved = 0;
     /* Seeds 1 to 10, and on to 30 until a dominant form has been drawn (the repetition is drawn by weight, B1 of P34). */
     for (unsigned long seed = 1; seed <= 30 && (seed <= 10 || dominant == 0); seed++) {
         PiecePlan *plan = NULL;
@@ -507,13 +506,11 @@ static void test_motive_forms(void) {
             }
         }
 
-        /* The fragments: each half the unit of the one before (the basic idea, a bar here, then half, then a quarter). */
+        /* The fragments are the leading notes of the basic idea the plan names (P36 B1), each shorter than it; the halving by
+           features is the liquidation of B3. */
         Motive m2 = written_motive(plan, "m2", &motive);
         Motive m3 = written_motive(plan, "m3", &motive);
-        assert(ticks(m3.length) <= ticks(m2.length) && ticks(m2.length) < ticks(m0.length));
-        if (ticks(m2.length) * 2 == ticks(m0.length) && ticks(m3.length) * 4 == ticks(m0.length)) {
-            halved++;
-        }
+        assert(ticks(m3.length) < ticks(m0.length) && ticks(m2.length) < ticks(m0.length));
 
         /* The same seed gives the same theme, motives and records. */
         PiecePlan *again = NULL;
@@ -536,7 +533,6 @@ static void test_motive_forms(void) {
         plan_destroy(again);
     }
     assert(dominant > 0);
-    assert(halved > 0);
 }
 
 int main(void) {

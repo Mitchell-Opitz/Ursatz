@@ -31,9 +31,9 @@ motive developments (m0 is the motive given)
 slots (the motive each idea is made from)
   basic idea: basic slot, motive A, motive
   repetition: basic slot, motive A, registry (transpose), connection 90%
-  fragment 1: continuation slot, motive A, operator (fragment leading 2 notes)
-  fragment 2: continuation slot, motive A, operator (fragment leading 3 notes)
-  cadential: cadential slot, motive A, registry (fragment), connection 45%
+  fragment 1: continuation slot, motive A, registry (fragment), connection 41%
+  fragment 2: continuation slot, motive A, registry (fragment), connection 58%
+  cadential: cadential slot, motive A, operator (liquidate drop 2)
 
 standard-form rule score 4/5 (80%)
 heard as hybrid (compound-basic-idea + continuation), not sentence

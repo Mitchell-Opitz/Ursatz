@@ -226,8 +226,10 @@ foreach(beginning RANGE 2)
             # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test asserts
             # that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
             # The compound basic idea and a continuation was heard in every run (the motive-forms) until the Analyzer heard
-            # the plan: 38 of 40 now (docs/grow.md).
-            set_tests_properties(test_grow_period_heard_${beginning_name}_${ending_name} PROPERTIES WILL_FAIL TRUE)
+            # the plan: 38 of 40, and again 40 of 40 since P36 B1 (every idea is the step its ref names), so its test passes.
+            if(NOT (beginning EQUAL 2 AND ending EQUAL 0))
+                set_tests_properties(test_grow_period_heard_${beginning_name}_${ending_name} PROPERTIES WILL_FAIL TRUE)
+            endif()
         endif()
     endforeach()
 endforeach()
@@ -338,8 +340,9 @@ endforeach()
 # Every completed run passes every check; the share of runs that complete is below 100% for all but variations
 # (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed. Rounded binary was at
 # 100% until the motive-forms (P14 B8) left one run stuck, was at 100% again since the tritone is refused (P25 B5), and is
-# at 13 of 20 since the checks hear the plan through the Analyzer (P25 B7b): it rejects more key plans (docs/piece.md).
-set_tests_properties(test_piece_keys_binary test_piece_keys_rounded-binary test_piece_keys_ternary test_piece_keys_loop
+# at 13 of 20 since the checks hear the plan through the Analyzer (P25 B7b): it rejects more key plans (docs/piece.md), and
+# at 20 of 20 again since P36 B1 (a contrasting idea stays in the key), so its test passes.
+set_tests_properties(test_piece_keys_binary test_piece_keys_ternary test_piece_keys_loop
                      test_piece_keys_layered PROPERTIES WILL_FAIL TRUE)
 
 add_executable(test_piece_structure test_piece_structure.c)
