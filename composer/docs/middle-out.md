@@ -84,7 +84,9 @@ what is Given around a target:
   fifth, seventh by inversion, `harmony_chord_bass_pc`) is the pitch class of the Given bass note sounding where the
   chord starts;
 - *a Given melody* over it is harmonized: a note that starts on a strong beat (the first cell of a bar) is a tone of the
-  chord there (`melody_chord_mask`);
+  chord there (`melody_chord_mask`); a phrase model whose dealt V falls on a downbeat the melody does not hold as a tone
+  of V (the tonic, in a continuation) opens that V on the cadential six-four, which carries the tonic, and V keeps the
+  rest of its cells;
 - *Given chords* before and after it: the chords are heard with them (up to 8 each side, the ones before trimmed to
   start on a barline) and a cadence the recognizer hears that arrives inside the target and is not the target's own at
   its end, or that the target's last chord leads into the Given chords, rejects the candidate. A cadence is not heard at a
@@ -106,7 +108,8 @@ These were met, and are the limits of what is built:
 - the harmony operators write a small vocabulary (a phrase model: the tonic, a predominant, the dominant, the tonic; the
   prolongation figures), so a given melody is harmonized only when its strong-beat notes are tones of chords from it. A
   melody whose downbeats are not (a suspension on the downbeat, a downbeat on `D` in the last bar) leaves the harmony
-  target with no candidate, and the run is stuck at the harmony stage;
+  target with no candidate, and the run is stuck at the harmony stage (a tonic on the downbeat where the phrase model's V
+  stands is the one case answered, by the cadential six-four above);
 - a phrase model never lets a chord cross a barline in a continuation (`split_at_bars`), so the downbeat of every bar of
   a continuation is a tone of the chord of that bar;
 - a harmony target must begin and end on a beat ([grow.md](grow.md)), so a Given progression that ends between beats
