@@ -172,7 +172,7 @@ void harmony_motive_read(const PiecePlan *plan, PhraseRequest *request) {
 /* Combinations of fills proposed for one target. */
 #define HARMONY_MOTIVE_CANDIDATES 8
 #define MAX_RUNS 16
-#define FILLS_PER_RUN 4
+#define FILLS_PER_RUN 8
 
 typedef struct {
     size_t first;
@@ -351,6 +351,43 @@ static bool fill_open_run(const PhraseRequest *request, Run run, FillRng *rng, R
     }
     fill_candidates_clear(&list);
     free(sub);
+    if (prolongation) {
+        /* The plain chord first, then each diatonic chord of the key the shape allows on these cells, the tonic first. */
+        out->fills[0].chord_count = 0;
+        if (!plain_fill(request, run, &out->fills[0])) {
+            return false;
+        }
+        out->fill_count = 1;
+        for (int degree = 1; degree <= 7 && out->fill_count < FILLS_PER_RUN; degree++) {
+            PhraseChord chord;
+            Fill *fill = &out->fills[out->fill_count];
+            bool same = false;
+            fill->chord_count = 0;
+            if (!harmony_make_chord(request->mode, degree, 0, false, false, 1, &chord) ||
+                !append_chord(request, &chord, run.first, run.count, fill)) {
+                continue;
+            }
+            for (size_t i = 0; i < out->fill_count; i++) {
+                same = same || (out->fills[i].chord_count == fill->chord_count &&
+                                strcmp(out->fills[i].chords[0].roman, fill->chords[0].roman) == 0);
+            }
+            size_t cells[HARMONY_MAX_CHORDS];
+            for (size_t i = 0; i < fill->chord_count; i++) {
+                cells[i] = fill->chords[i].cells;
+            }
+            /* A run that touches an anchor of the shape holds a chord the anchor allows. */
+            bool anchored = !request->has_shape ||
+                            ((run.first != 0 || anchor_keeps(request->shape.starts_on, &fill->chords[0])) &&
+                             (run.first + run.count != request->cells ||
+                              anchor_keeps(request->shape.ends_on, &fill->chords[fill->chord_count - 1])));
+            if (!same && anchored &&
+                (!request->has_shape ||
+                 harmony_shape_keeps_in(&request->shape, cells, fill->chord_count, &request->metre, false))) {
+                out->fill_count++;
+            }
+        }
+        return true;
+    }
     if (out->fill_count == 0) {
         out->fills[0].chord_count = 0;
         if (!plain_fill(request, run, &out->fills[0])) {
@@ -451,15 +488,16 @@ static bool motive_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         free(runs);
         return true; /* no candidates: the other operators write this target */
     }
-    size_t combinations = 1;
+    size_t total = 1;
     for (size_t i = 0; i < run_count; i++) {
-        combinations *= runs[i].fill_count;
-        if (combinations > HARMONY_MOTIVE_CANDIDATES) {
-            combinations = HARMONY_MOTIVE_CANDIDATES;
-        }
+        total *= runs[i].fill_count;
     }
+    /* The order the combinations are tried in starts where the seed says, so another seed proposes other fills first. */
+    size_t offset = total > 1 ? (size_t)fill_rng_below(rng, total) : 0;
+    size_t combinations = total < HARMONY_MOTIVE_CANDIDATES ? total : HARMONY_MOTIVE_CANDIDATES;
     bool memory = true;
-    for (size_t pick = 0; memory && pick < combinations; pick++) {
+    for (size_t step = 0; memory && step < combinations; step++) {
+        size_t pick = (offset + step) % total;
         PhraseChord *chords = calloc(HARMONY_MAX_CHORDS, sizeof(PhraseChord));
         size_t count = 0;
         if (!chords) {
