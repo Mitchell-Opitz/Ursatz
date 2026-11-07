@@ -61,7 +61,6 @@ typedef struct {
     size_t taken_count;
     Rational room;   /* the longest a form may be: the motive node's bar, or the idea if it is shorter */
     PlanSpan idea;
-    bool answers_in_dominant; /* the idea's chords start on the dominant: a response to the basic idea */
     bool has_cadence; /* the idea's melody ends in a cadence */
     CadenceType cadence;
     MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
@@ -224,19 +223,6 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
         }
     }
     request.idea = plan_node_span(plan, idea);
-    LaneSpanId lanes[FORM_IDEAS];
-    size_t lane_count = plan_node_lane_spans(plan, idea, lanes, FORM_IDEAS);
-    for (size_t i = 0; i < lane_count && i < FORM_IDEAS; i++) {
-        for (size_t k = 0; plan_lane_span_lane(plan, lanes[i]) == PLAN_LANE_HARMONY &&
-                           k < plan_lane_span_constraint_count(plan, lanes[i]);
-             k++) {
-            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, lanes[i], k);
-            if (constraint->kind == PLAN_CONSTRAINT_HARMONY_SHAPE &&
-                constraint->params.harmony_shape.starts_on == PLAN_HARMONY_ANCHOR_DOMINANT) {
-                request.answers_in_dominant = true;
-            }
-        }
-    }
     request.room = rational_cmp(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
     request.previous = request.basic;
     request.limit = context->remoteness_limit;
@@ -522,42 +508,6 @@ static bool offer_operations(Proposal *proposal, const char *function, bool cont
     return true;
 }
 
-/* The motive's first chord (its own harmony, else its best implied chord) is the unaltered tonic. */
-static bool opens_on_tonic(const Motive *motive) {
-    if (motive->chord_count > 0) {
-        return motive->chords[0].degree == 1 && motive->chords[0].alteration == 0;
-    }
-    MotiveSketchChord implied;
-    return motive_implied_chord(motive, &implied) && implied.degree == 1 && implied.alteration == 0;
-}
-
-/* The basic idea in its dominant form. */
-static bool offer_dominant_form(Proposal *proposal) {
-    VariantChain chain;
-    memset(&chain, 0, sizeof(chain));
-    chain.step_count = 1;
-    return variant_step_init(&chain.steps[0], "dominant-form") ? offer(proposal, &chain, 1, NULL, false) : true;
-}
-
-/*
- * The liquidation of a continuation in units that halve (ch. VIII): the first fragment is the basic idea's characteristic
- * features liquidated and shortened by half, the second is the first liquidated and shortened again. Both are chains
- * from the basic idea, so a fragment does not wait for the one before it.
- */
-static bool offer_liquidation(Proposal *proposal, size_t times) {
-    VariantChain chain;
-    memset(&chain, 0, sizeof(chain));
-    for (size_t t = 0; t < times; t++) {
-        VariantStep *step = &chain.steps[t];
-        if (!variant_step_init(step, "liquidate-features") || !variant_step_set(step, "steps", 1, 0) ||
-            !variant_step_set(step, "shorten", 1, 0)) {
-            return true;
-        }
-    }
-    chain.step_count = times;
-    return offer(proposal, &chain, 1, NULL, false);
-}
-
 static bool offer_exact(Proposal *proposal) {
     VariantChain chain;
     memset(&chain, 0, sizeof(chain));
@@ -565,43 +515,11 @@ static bool offer_exact(Proposal *proposal) {
     return variant_step_init(&chain.steps[0], "exact") ? offer(proposal, &chain, 1, NULL, false) : true;
 }
 
-/* The transpositions of the basic idea by the given steps of its key's scale. */
-static bool offer_steps(Proposal *proposal, const long *steps, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        VariantChain chain;
-        memset(&chain, 0, sizeof(chain));
-        chain.step_count = 1;
-        if (variant_step_init(&chain.steps[0], "transpose") && variant_step_set(&chain.steps[0], "tonal", 1, 0) &&
-            variant_step_set(&chain.steps[0], "by", steps[i], 0) &&
-            !offer(proposal, &chain, 1, NULL, false)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-/*
- * Transpositions of the basic idea by steps of its key's scale. A sequence (the ref asks for a tonal step) offers that
- * step alone; when it does not fit, the other steps stand in for it.
- */
-static bool offer_transpositions(Proposal *proposal) {
-    static const long STEPS[] = {1, 2, 3, -1, -2, -3};
-    const MotiveRelationStep *asked = &proposal->request->ref.step;
-    if (proposal->request->ref.has_step && asked->kind == MOTIVE_RELATION_TRANSPOSE && asked->value[0] != 0 &&
-        asked->value[1] != 0) {
-        size_t before = proposal->out->count;
-        if (!offer_steps(proposal, &asked->value[1], 1)) {
-            return false;
-        }
-        if (proposal->out->count > before) {
-            return true;
-        }
-    }
-    return offer_steps(proposal, STEPS, sizeof(STEPS) / sizeof(STEPS[0]));
-}
-
 /* The basic idea developed as the ref says: the one candidate of a slot that is not a contrast. */
 static bool offer_developed(Proposal *proposal, bool contrast) {
+    if (plan_motive_ref_restates(&proposal->request->ref)) {
+        return offer_exact(proposal);
+    }
     VariantChain chain;
     return grow_develop_chain(&proposal->request->ref, &chain) ? offer(proposal, &chain, GROW_DEVELOP_SEED, NULL, contrast) : true;
 }
