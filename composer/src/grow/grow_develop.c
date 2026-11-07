@@ -113,3 +113,21 @@ bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive 
     return source && out && grow_develop_chain(ref, &chain) &&
            variant_apply_chain(source, &chain, GROW_DEVELOP_SEED, out, NULL) == VARIANT_OK;
 }
+
+bool grow_motive_in_range(const Motive *motive, int low, int high, bool in_scale) {
+    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
+    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
+    for (size_t i = 0; i < motive->note_count; i++) {
+        int pitch = motive_pitch(motive, i);
+        if (pitch < low || pitch > high) {
+            return false;
+        }
+        if (in_scale && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
+            int degree = ((pitch - motive->tonic_pc) % 12 + 12) % 12;
+            if (!(motive->minor ? MINOR : MAJOR)[degree]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}

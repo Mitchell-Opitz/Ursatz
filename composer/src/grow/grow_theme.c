@@ -446,7 +446,11 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
     MotiveRelationStep exact[CONTRAST_MAX];
     size_t fit_count = 0;
     size_t exact_count = 0;
+    bool diatonic = grow_motive_in_range(source, 0, 127, true);
 
+    /* In the key's scale first when the motive is; if no development of it is, in range only. */
+    for (int pass = 0; pass < 2 && fit_count == 0; pass++) {
+    bool in_scale = pass == 0 && diatonic;
     for (int kind = 0; kind < 3; kind++) {
         /* Mirrored in the key's steps about a note near the first, so the contour turns over; every interval
            widened or narrowed; or the one interval changed. */
@@ -472,11 +476,8 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
                     rational_cmp(result.length, room) > 0 || (avoid && same_kind(avoid, &dev))) {
                     continue;
                 }
-                bool inside = true;
-                for (size_t k = 0; k < result.note_count; k++) {
-                    inside = inside && motive_pitch(&result, k) >= CONTRAST_LOW && motive_pitch(&result, k) <= CONTRAST_HIGH;
-                }
-                if (!inside) {
+                /* In range, and in the key's scale when the motive is, as the motives stage takes a form (grow_form.c). */
+                if (!grow_motive_in_range(&result, CONTRAST_LOW, CONTRAST_HIGH, in_scale)) {
                     continue;
                 }
                 if (fit_count < CONTRAST_MAX) {
@@ -487,6 +488,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
                 }
             }
         }
+    }
     }
     /* One that lands where the cadence needs it, if there is one. */
     const MotiveRelationStep *pool = exact_count > 0 ? exact : fits;

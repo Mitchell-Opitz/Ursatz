@@ -326,6 +326,8 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
  * its parameters set from the step). Deterministic: a fixed seed of 1 draws any open parameter. False when it does not apply.
  */
 bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive *out);
+/* Whether every pitch of the motive is within low to high and, with in_scale and a key, in its scale (a minor key also has the raised seventh). */
+bool grow_motive_in_range(const Motive *motive, int low, int high, bool in_scale);
 /* The chain grow_develop_motive applies, and the seed it draws open parameters from. False when the ref has no chain. */
 #define GROW_DEVELOP_SEED 1ul
 bool grow_develop_chain(const PlanMotiveRef *ref, VariantChain *chain);
