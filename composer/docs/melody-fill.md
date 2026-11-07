@@ -169,6 +169,10 @@ The strict-species rules for the first interval, the last interval, the largest 
 approached by step are not asked of a tonal melody. The one climax, its place, recovered leaps and few
 repeated notes also score.
 
+### The fidelity checker
+
+The compose run's melody stage does not pass `melody_fill_checker` alone: `grow_fidelity_checker` wraps it (and the style checker, when a style is set). A candidate for an idea that is made from a motive, and has a role, is refused when its motive notes sound too little like the motive and is otherwise ranked by whether the motive is heard as the plan intended it, then by how close it is, then by the rules above. `melody_candidate_realized` gives the notes of a candidate that carry the motive. See [grow-development.md](grow-development.md#ranking-and-refusing-by-fidelity). `melody_fill_checker` on its own is unchanged, and so are `MELODY_ATTEMPTS` and `MELODY_KEEP`.
+
 ### The shaping rules
 
 Four more soft rules, from Schoenberg's *Fundamentals of Musical Composition* (R-164). Each is one rule that holds or
