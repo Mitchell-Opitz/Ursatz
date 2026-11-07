@@ -1269,9 +1269,12 @@ static void test_regenerate(const Items *m) {
   answer = post_json(piece, "versions/6/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":3,\"seed\":20}", &status);
   check(status == 200 && ok_true(answer) && number_of(answer, "set") == 1, "variations answer 200 with set 1");
   const cJSON *list = member(answer, "variations");
+  /* The Composer skips a seed whose variation repeats one it has (a realized motive gives the same notes), so the seeds
+     rise from the one given but need not be consecutive. */
+  int second_seed = (int)number_of(cJSON_GetArrayItem(list, 1), "seed");
   check(cJSON_GetArraySize(list) == 3 && number_of(cJSON_GetArrayItem(list, 0), "index") == 1 &&
-            number_of(cJSON_GetArrayItem(list, 0), "seed") == 20 && number_of(cJSON_GetArrayItem(list, 1), "seed") == 21 &&
-            number_of(cJSON_GetArrayItem(list, 2), "seed") == 22,
+            number_of(cJSON_GetArrayItem(list, 0), "seed") == 20 && second_seed > 20 &&
+            number_of(cJSON_GetArrayItem(list, 2), "seed") > second_seed,
         "three variations with distinct seeds");
   const cJSON *second = cJSON_GetArrayItem(list, 1);
   check(number_of(member(second, "score"), "denominator") > 0 && cJSON_IsObject(member(second, "seam")) &&
@@ -1316,8 +1319,10 @@ static void test_regenerate(const Items *m) {
   free(response);
 
   /* The next set is numbered across the versions. */
-  answer = post_json(piece, "versions/5/variations", "{\"section_id\":\"s0\",\"lane\":\"bass\",\"count\":2}", &status);
-  check(status == 200 && number_of(answer, "set") == 2 && cJSON_GetArraySize(member(answer, "variations")) == 2,
+  answer = post_json(piece, "versions/5/variations", "{\"section_id\":\"s0\",\"lane\":\"bass\",\"count\":2,\"seed\":30}", &status);
+  /* At most the count asked for: the Composer drops a seed whose bass repeats one the set has. */
+  int bass_made = cJSON_GetArraySize(member(answer, "variations"));
+  check(status == 200 && number_of(answer, "set") == 2 && bass_made >= 1 && bass_made <= 2,
         "a set made in another version is numbered after every set of the item");
   cJSON_Delete(answer);
   check(post_status(piece, "versions/6/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":9}") == 400, "nine variations are refused");
@@ -1336,7 +1341,9 @@ static void test_regenerate(const Items *m) {
   check(status == 200 && ok_true(answer) && number_of(member(answer, "item"), "current_version") == before + 1,
         "choose answers 200 and writes the next version");
   versions = member(member(answer, "item"), "versions");
-  check(strcmp(string_of(cJSON_GetArrayItem(versions, before), "note"), "chose variation 2 seed 21") == 0, "the note names the variation and its seed");
+  char chosen_note[64];
+  snprintf(chosen_note, sizeof(chosen_note), "chose variation 2 seed %d", second_seed);
+  check(strcmp(string_of(cJSON_GetArrayItem(versions, before), "note"), chosen_note) == 0, "the note names the variation and its seed");
   cJSON_Delete(answer);
   check(version_files_exist(piece, before + 1, true), "the chosen version holds the eight files");
   version_dir(piece, before + 1, dir, sizeof(dir));
@@ -1346,7 +1353,7 @@ static void test_regenerate(const Items *m) {
   check(files_equal(path, chosen_plan), "the Composer built the version from the chosen plan");
   answer = get_item(piece, &status);
   result = member(piece_of_answer(answer), "result");
-  check(number_of(result, "seed") == 21 && number_of(member(result, "summary"), "seed") == 21 &&
+  check(number_of(result, "seed") == second_seed && number_of(member(result, "summary"), "seed") == second_seed &&
             cJSON_IsObject(member(member(member(result, "summary"), "versions"), "loop")) &&
             cJSON_IsObject(member(member(member(result, "summary"), "versions"), "ending")),
         "the result holds the variation's seed and both versions");
@@ -1515,7 +1522,7 @@ int main(void) {
   bool made = make_items(&items);
   check(made, "the motifs, their forms and the themes are saved");
   if (made) {
-    check(compose_theme(items.theme, 21) && current_version(items.theme) == 2, "the theme is composed (version 2, seed 21)");
+    check(compose_theme(items.theme, 1) && current_version(items.theme) == 2, "the theme is composed (version 2, seed 1)");
     test_bodies(&items);
     test_compose(&items);
     test_files(&items);
