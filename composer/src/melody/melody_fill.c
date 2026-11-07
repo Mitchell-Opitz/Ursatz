@@ -188,6 +188,35 @@ static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCan
     return result;
 }
 
+bool melody_candidate_realized(const FillCandidate *candidate, LaneSpanId *target, PlanNote *notes, size_t *count,
+                               size_t capacity) {
+    const MelodyCandidate *melody = candidate ? candidate->payload : NULL;
+    size_t found = 0;
+    if (!melody || !target || !notes || !count || melody->magic != MELODY_PAYLOAD_MAGIC) {
+        return false;
+    }
+    for (size_t i = 0; i < melody->count; i++) {
+        const MelodyNote *note = &melody->notes[i];
+        if (note->motive_index < 0) {
+            continue;
+        }
+        if (found >= capacity) {
+            return false;
+        }
+        notes[found].midi = note->pitch;
+        notes[found].spelled = false;
+        notes[found].offset = position_add(note->onset, melody->context.pickup);
+        notes[found].duration = note->duration;
+        found++;
+    }
+    if (found == 0) {
+        return false;
+    }
+    *target = melody->context.target;
+    *count = found;
+    return true;
+}
+
 FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFillParams *params) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));

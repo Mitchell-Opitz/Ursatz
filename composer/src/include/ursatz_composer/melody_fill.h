@@ -104,6 +104,15 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, co
                        const char **violation);
 
 /*
+ * The notes of a melody-fill candidate that carry the motive (the idea's realized notes, R-354), as melody_apply would
+ * write them: onsets from the start of the target span, the pickup before them. *target is the span the candidate is for.
+ * At most capacity notes are written and *count is how many. False for a candidate that is not a melody-fill payload, has
+ * no note that carries the motive, or holds more of them than capacity.
+ */
+bool melody_candidate_realized(const FillCandidate *candidate, LaneSpanId *target, PlanNote *notes, size_t *count,
+                               size_t capacity);
+
+/*
  * Registers the operator with these parameters. The registry keeps the pointer, not a copy, so params must
  * outlive it (NULL means the defaults).
  */
