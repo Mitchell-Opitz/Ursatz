@@ -166,4 +166,11 @@ static inline void motive_payload_destroy(void *payload) {
     free(payload);
 }
 
+/*
+ * motive_attach in another state: a motive node and its melody span written as `state` (Given for motive_attach). The motives
+ * grow-theme makes are the run's own and Realized, so a regenerated section can remove them (R-346).
+ */
+PlanResult motive_attach_as(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+                            PlanState state, NodeId *out_node, LaneSpanId *out_span);
+
 #endif
