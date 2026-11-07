@@ -30,4 +30,13 @@ typedef struct {
 bool motive_fidelity(const Motive *source, const Motive *realized, const PlanMotiveRef *ref, bool from_segment,
                      MotiveFidelity *out);
 
+/*
+ * motive_fidelity with the recognizer's search cut to `depth` steps (motive_fidelity searches two). A search cut short
+ * hears "not recognized" for a chain longer than depth, so `found` and `agrees` are true only for what it reaches; the
+ * score does not depend on the depth. For callers that need the score and the agreement of a ref that asks for no more
+ * than one step, at the recognizer's lower cost (R-307).
+ */
+bool motive_fidelity_depth(const Motive *source, const Motive *realized, const PlanMotiveRef *ref, bool from_segment,
+                           unsigned depth, MotiveFidelity *out);
+
 #endif

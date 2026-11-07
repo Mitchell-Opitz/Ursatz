@@ -272,6 +272,19 @@ static void cache_add(GrowFidelityCache *cache, unsigned long long key, const Mo
     }
 }
 
+/*
+ * The recognizer's search depth for ranking. A ref that agrees only with an empty chain or one transposition (no step,
+ * a restatement, a segment's fragment, a transposition, a dominant form) is decided at one step; the rest (a liquidation,
+ * a contrasting step) may need two (R-354). The agreement a search cut short misses is none, and the score is the same.
+ */
+static unsigned ranking_depth(const PlanMotiveRef *ref, bool from_segment) {
+    bool one_step = ref->steps == 0 && (!ref->has_step || plan_motive_ref_restates(ref) ||
+                                        (from_segment && ref->step.kind == MOTIVE_RELATION_FRAGMENT) ||
+                                        ref->step.kind == MOTIVE_RELATION_TRANSPOSE ||
+                                        ref->step.kind == MOTIVE_RELATION_DOMINANT_FORM);
+    return one_step ? 1u : 2u;
+}
+
 /* The idea's fidelity for these realized notes: from the cache, else measured. */
 static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *notes, size_t count, GrowIdeaRole role,
                     const GrowFidelityContext *context, MotiveFidelity *out) {
@@ -298,7 +311,7 @@ static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *note
             snprintf(out->heard, sizeof(out->heard), "not recognized");
         }
     } else {
-        measured = motive_fidelity(&source, &realized, &ref, from_segment, out);
+        measured = motive_fidelity_depth(&source, &realized, &ref, from_segment, ranking_depth(&ref, from_segment), out);
     }
     if (measured) {
         cache_add(context->cache, key, out);

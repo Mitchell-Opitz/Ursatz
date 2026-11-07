@@ -143,8 +143,8 @@ static bool agrees_with(const VariantChain *heard, const PlanMotiveRef *ref, boo
     }
 }
 
-bool motive_fidelity(const Motive *source, const Motive *realized, const PlanMotiveRef *ref, bool from_segment,
-                     MotiveFidelity *out) {
+bool motive_fidelity_depth(const Motive *source, const Motive *realized, const PlanMotiveRef *ref, bool from_segment,
+                           unsigned depth, MotiveFidelity *out) {
     MotiveRecognizability recognizability;
     VariantChain chain;
     VariantRecognition recognition;
@@ -153,7 +153,7 @@ bool motive_fidelity(const Motive *source, const Motive *realized, const PlanMot
     }
     memset(&chain, 0, sizeof(chain));
     memset(&recognition, 0, sizeof(recognition));
-    if (variant_recognize_depth(source, realized, HEARD_DEPTH, &chain, &recognition) != VARIANT_OK) {
+    if (variant_recognize_depth(source, realized, depth, &chain, &recognition) != VARIANT_OK) {
         return false;
     }
     MotiveFidelity result;
@@ -169,4 +169,9 @@ bool motive_fidelity(const Motive *source, const Motive *realized, const PlanMot
     }
     *out = result;
     return true;
+}
+
+bool motive_fidelity(const Motive *source, const Motive *realized, const PlanMotiveRef *ref, bool from_segment,
+                     MotiveFidelity *out) {
+    return motive_fidelity_depth(source, realized, ref, from_segment, HEARD_DEPTH, out);
 }
