@@ -737,8 +737,10 @@ target_link_libraries(test_api_theme PRIVATE ursatz_composer composer_test_suppo
 target_compile_options(test_api_theme PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_api_theme PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
                            COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_api_theme COMMAND test_api_theme WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+# Two tests of one executable (each theme measures its ideas' fidelity, about 1 s, R-332; together 12 s, over the 10 s rule).
+add_test(NAME test_api_theme COMMAND test_api_theme responses WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(test_api_theme PROPERTIES FIXTURES_SETUP api_responses_written)
+add_test(NAME test_api_theme_runs COMMAND test_api_theme runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(test_api_validate test_api_validate.c)
 target_link_libraries(test_api_validate PRIVATE ursatz_composer composer_test_support cjson)

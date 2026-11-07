@@ -181,7 +181,9 @@ static void test_suggest_plans_explain(void) {
     free(printed);
 }
 
-/* The developments of a theme carry the segment each idea is made from (or null) and a one-line summary (B2 of P34). */
+/* The developments of a theme carry the segment each idea is made from (or null) and a one-line summary (B2 of P34), and
+ * each idea's fidelity to its source, the minimum its role asks, the relation heard and whether it is the one intended
+ * (API 1.10, R-332). */
 static void test_developments(void) {
     char *text = test_read_file(THEME("one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
@@ -196,6 +198,7 @@ static void test_developments(void) {
     const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
     const cJSON *developments = cJSON_GetObjectItemCaseSensitive(theme, "developments");
     assert(cJSON_GetArraySize(developments) == 4);
+    int measured = 0;
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, developments) {
         const cJSON *idea = cJSON_GetObjectItemCaseSensitive(item, "idea");
@@ -204,7 +207,22 @@ static void test_developments(void) {
         assert(cJSON_IsString(idea) && (cJSON_IsString(segment) || cJSON_IsNull(segment)));
         assert(cJSON_IsString(summary) && strncmp(summary->valuestring, idea->valuestring, strlen(idea->valuestring)) == 0);
         assert(strstr(summary->valuestring, " = ") != NULL);
+        const cJSON *fidelity = cJSON_GetObjectItemCaseSensitive(item, "fidelity");
+        const cJSON *minimum = cJSON_GetObjectItemCaseSensitive(item, "minimum");
+        const cJSON *heard = cJSON_GetObjectItemCaseSensitive(item, "heard");
+        const cJSON *agrees = cJSON_GetObjectItemCaseSensitive(item, "heard_agrees");
+        assert(fidelity && minimum && heard && agrees); /* every item has the four members */
+        if (cJSON_IsNull(fidelity)) {
+            assert(cJSON_IsNull(minimum) && cJSON_IsNull(heard) && cJSON_IsNull(agrees));
+            continue;
+        }
+        assert(cJSON_IsNumber(fidelity) && cJSON_IsNumber(minimum) && cJSON_IsString(heard) && cJSON_IsBool(agrees));
+        assert(fidelity->valuedouble >= 0 && fidelity->valuedouble <= 1 && minimum->valuedouble >= 0);
+        assert(fidelity->valuedouble >= minimum->valuedouble); /* a departing idea's minimum is 0 */
+        assert(heard->valuestring[0] != '\0');
+        measured++;
     }
+    assert(measured > 0);
     cJSON_Delete(document);
     composer_response_destroy(&response);
     free(printed);
@@ -514,17 +532,33 @@ static void test_refused(void) {
  * With the argument "quick" only the cancel and the refused requests run, which stop before a theme is heard: the valgrind
  * run uses it, because hearing a theme leaks in the Analyzer's make_kernel_window (notes.md).
  */
+/*
+ * No argument runs everything. "quick" runs the refusals only (the valgrind run). "responses" runs the refusals and the cases
+ * that write the responses the schema test reads; "runs" runs the setting, progress and thread cases. The two halves are
+ * separate tests because every theme measures the fidelity of its ideas (R-332), which takes about 1 s a theme.
+ */
 int main(int argc, char **argv) {
-    bool quick = argc > 1 && strcmp(argv[1], "quick") == 0;
-    test_cancel_first();
-    test_refused();
-    test_motif_too_long();
-    test_part_length_motif();
-    if (!quick) {
+    const char *part = argc > 1 ? argv[1] : "";
+    bool quick = strcmp(part, "quick") == 0;
+    bool responses = strcmp(part, "") == 0 || strcmp(part, "responses") == 0;
+    bool runs = strcmp(part, "") == 0 || strcmp(part, "runs") == 0;
+    if (!quick && !responses && !runs) {
+        fprintf(stderr, "test_api_theme: unknown part \"%s\"\n", part);
+        return 2;
+    }
+    if (!runs) {
+        test_cancel_first();
+        test_refused();
+        test_motif_too_long();
+        test_part_length_motif();
+    }
+    if (responses) {
         test_two_bar_motif();
         test_snapshots();
         test_suggest_plans_explain();
         test_developments();
+    }
+    if (runs) {
         test_development_setting();
         test_progress();
         test_threads();
