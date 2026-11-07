@@ -419,7 +419,8 @@ typedef struct {
  * where held/total is the inner score, so agreement ranks first, then fidelity, then the melody rules' share; the style
  * part the inner left (a part of held/total) is scaled as held is, so it stays a part of the score. An idea whose ref makes
  * it differ from its source (grow_ref_departs) is ranked but never refused. Every other candidate passes through unchanged.
- * A cadential idea's agreement is not measured (the search never reaches its residue, R-355) and counts as no agreement.
+ * A cadential idea is for its cadence: it is refused under its minimum (its score only; the search never reaches its residue)
+ * but ranked by the melody rules alone, which put the cadence tone first.
  */
 bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out);

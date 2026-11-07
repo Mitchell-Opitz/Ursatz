@@ -409,6 +409,11 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
                  measured.score.denominator, minimum.numerator, minimum.denominator, role_name(role));
         return true;
     }
+    /* A cadential idea is for the cadence: it is refused under its minimum but not ranked by fidelity, so the melody rules'
+       own score (the cadence tone first) still chooses among those that stand. */
+    if (role == GROW_ROLE_CADENTIAL) {
+        return true;
+    }
     unsigned long quantized = measured.score.numerator * 100 / measured.score.denominator;
     Wide held = out->score_numerator;
     Wide total = out->score_denominator;
