@@ -40,13 +40,14 @@ static bool whole_octaves(bool tonal, long by) {
     return modulo(by, tonal ? OCTAVE_STEPS : OCTAVE_SEMITONES) == 0;
 }
 
-/* The chain without its octave transpositions. */
+/* The chain without its octave transpositions and its exact steps (the recognizer's chain for a motive that is the source is one exact step). */
 static VariantChain drop_octaves(const VariantChain *chain) {
     VariantChain kept;
     memset(&kept, 0, sizeof(kept));
     for (size_t i = 0; i < chain->step_count && i < VARIANT_CHAIN_MAX; i++) {
         const VariantStep *step = &chain->steps[i];
-        if (!is_transpose(step) || !whole_octaves(step_tonal(step), step_by(step))) {
+        bool octave = is_transpose(step) && whole_octaves(step_tonal(step), step_by(step));
+        if (!octave && strcmp(step->op, "exact") != 0) {
             kept.steps[kept.step_count++] = *step;
         }
     }
