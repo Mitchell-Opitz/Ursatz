@@ -943,3 +943,11 @@ target_include_directories(test_motive_fidelity PRIVATE ${PROJECT_SOURCE_DIR}/sr
 target_compile_definitions(test_motive_fidelity PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 target_compile_options(test_motive_fidelity PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_motive_fidelity COMMAND test_motive_fidelity)
+
+add_executable(test_grow_fidelity test_grow_fidelity.c)
+target_link_libraries(test_grow_fidelity PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_fidelity PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_fidelity PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_fidelity PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_fidelity_sentence COMMAND test_grow_fidelity sentence)
+add_test(NAME test_grow_fidelity_period COMMAND test_grow_fidelity period)
