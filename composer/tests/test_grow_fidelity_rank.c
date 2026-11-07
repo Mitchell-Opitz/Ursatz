@@ -82,7 +82,8 @@ static size_t check_minimums(const PiecePlan *plan, const Motive *basic, GrowDev
         MotiveFidelity fidelity;
         memset(&fidelity, 0, sizeof(fidelity));
         fidelity.score = recognizability.total;
-        MotiveScore minimum = grow_fidelity_minimum(development, role);
+        /* An idea whose ref cuts the motive down is ranked but never refused (R-355). */
+        MotiveScore minimum = grow_ref_shortens(&ref, from_segment) ? (MotiveScore){0, 1} : grow_fidelity_minimum(development, role);
         if (below(fidelity.score.numerator, fidelity.score.denominator, minimum.numerator, minimum.denominator)) {
             fprintf(stderr, "%s: idea \"%s\" has fidelity %lu/%lu under its minimum %lu/%lu\n", label, plan_node_name(plan, idea),
                     fidelity.score.numerator, fidelity.score.denominator, minimum.numerator, minimum.denominator);
@@ -162,9 +163,11 @@ static size_t check_refusal(PiecePlan *plan, const Motive *basic, LaneSpanId spa
         assert(grow_fidelity_checker(plan, target, operator_, &list.items[c], &raised, &strict));
         assert(!plain.hard_violation); /* the generator proposes only what the melody rules pass */
         if (!ranked.hard_violation) {
-            /* Agreement, then fidelity, then the melody rules' share: over 201 (total + 1). */
-            assert(ranked.score_denominator == 201ul * (plain.score_denominator + 1));
+            /* Agreement, then fidelity, then the melody rules' share, over 201 (total + 1): it holds at least the melody rules'
+               share, held/total over 201 (total + 1), and is under 1. */
             assert(ranked.score_numerator < ranked.score_denominator);
+            assert(!below(ranked.score_numerator, ranked.score_denominator, plain.score_numerator,
+                          plain.score_denominator * 201ul * (plain.score_denominator + 1)));
         } else {
             assert(strncmp(ranked.reason, "motive fidelity ", 16) == 0);
         }

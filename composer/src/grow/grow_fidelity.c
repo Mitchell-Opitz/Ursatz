@@ -6,6 +6,7 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "grow/grow_internal.h"
+#include "style/style_internal.h"
 #include "util/plan_util.h"
 
 /*
@@ -335,6 +336,21 @@ static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *note
     return measured;
 }
 
+/* A fraction in lowest terms and below 2^32 on both sides, as the fill loop compares scores in 64 bits (style_check.c does the same). */
+static void set_reduced(unsigned long *numerator_out, unsigned long *denominator_out, Wide numerator, Wide denominator) {
+    Wide divisor = wide_gcd(numerator, denominator);
+    if (divisor > 1) {
+        numerator /= divisor;
+        denominator /= divisor;
+    }
+    while (numerator >= ((Wide)1 << 32) || denominator >= ((Wide)1 << 32)) {
+        numerator >>= 1;
+        denominator >>= 1;
+    }
+    *numerator_out = (unsigned long)numerator;
+    *denominator_out = denominator ? (unsigned long)denominator : 1ul;
+}
+
 bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out) {
     const GrowFidelityContext *fidelity_context = context;
@@ -380,9 +396,15 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
         return true;
     }
     unsigned long quantized = measured.score.numerator * 100 / measured.score.denominator;
-    unsigned long held = out->score_numerator;
-    unsigned long total = out->score_denominator;
-    out->score_numerator = ((measured.agrees ? 100ul : 0ul) + quantized) * (total + 1) + held;
-    out->score_denominator = 201ul * (total + 1);
+    Wide held = out->score_numerator;
+    Wide total = out->score_denominator;
+    Wide scale = 201 * (total + 1);
+    set_reduced(&out->score_numerator, &out->score_denominator, ((measured.agrees ? 100u : 0u) + (Wide)quantized) * (total + 1) + held,
+                scale);
+    /* The style's part stays a part of the score: it is scaled as the held share is, held/total over 201 (total + 1). */
+    if (out->style_denominator > 0) {
+        set_reduced(&out->style_numerator, &out->style_denominator, (Wide)out->style_numerator * total,
+                    (Wide)out->style_denominator * scale);
+    }
     return true;
 }

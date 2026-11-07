@@ -417,7 +417,7 @@ typedef struct {
  * under n/d (role)". Otherwise the score becomes
  *   ((agree * 100 + floor(100 * fidelity)) * (total + 1) + held) / (201 * (total + 1))
  * where held/total is the inner score, so agreement ranks first, then fidelity, then the melody rules' share; the style
- * part the inner left is kept. An idea whose ref itself cuts the motive down (a fragment by notes, a liquidation, a
+ * part the inner left (a part of held/total) is scaled as held is, so it stays a part of the score. An idea whose ref itself cuts the motive down (a fragment by notes, a liquidation, a
  * condensation, with no segment to measure against) is ranked but never refused: its score against the whole source is low
  * by what it was asked to be. Every other candidate passes through unchanged. A cadential idea's agreement is not
  * measured (the search never reaches its residue, R-355) and counts as no agreement.
