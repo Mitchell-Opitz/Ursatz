@@ -399,6 +399,7 @@ typedef struct {
     FillCheckerFn inner;      /* the melody stage's own checker, run first */
     void *inner_context;
     GrowFidelityCache *cache; /* NULL for none */
+    const MotiveScore *minimum; /* NULL for the table's (grow_fidelity_minimum); else the minimum of every role, for tests */
 } GrowFidelityContext;
 
 /*

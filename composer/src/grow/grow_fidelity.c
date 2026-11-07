@@ -346,7 +346,8 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
     if (role == GROW_ROLE_NONE || !measure(plan, span, notes, count, role, fidelity_context, &measured)) {
         return true;
     }
-    MotiveScore minimum = grow_fidelity_minimum(fidelity_context->development, role);
+    MotiveScore minimum = fidelity_context->minimum ? *fidelity_context->minimum
+                                                    : grow_fidelity_minimum(fidelity_context->development, role);
     if (measured.score.numerator * minimum.denominator < minimum.numerator * measured.score.denominator) {
         out->hard_violation = true;
         snprintf(out->reason, sizeof(out->reason), "motive fidelity %lu/%lu under %lu/%lu (%s)", measured.score.numerator,
