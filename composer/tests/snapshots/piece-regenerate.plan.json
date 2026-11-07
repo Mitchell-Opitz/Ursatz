@@ -1825,37 +1825,17 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 67,
+              "midi_pitch": 61,
               "offset": {
                 "num": 3,
                 "den": 8
               },
               "duration": {
-                "num": 1,
-                "den": 4
-              }
-            }, {
-              "midi_pitch": 69,
-              "offset": {
                 "num": 5,
                 "den": 8
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
               }
             }, {
-              "midi_pitch": 73,
-              "offset": {
-                "num": 3,
-                "den": 4
-              },
-              "duration": {
-                "num": 1,
-                "den": 4
-              }
-            }, {
-              "midi_pitch": 74,
+              "midi_pitch": 62,
               "offset": {
                 "num": 1,
                 "den": 1

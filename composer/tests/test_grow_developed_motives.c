@@ -145,7 +145,28 @@ static void check_node(const PiecePlan *plan, NodeId node, const PlanMotiveRef *
     const PlanMotiveTones *source_tones = node_tones(plan, ref->motive);
     MotiveRelationKind kind = ref->has_step ? ref->step.kind : MOTIVE_RELATION_EXACT;
 
-    if (ref->segment[0] != '\0') {
+    if (ref->segment[0] != '\0' && ref->steps > 0) {
+        /* A liquidated residue names the segment it keeps: its first two durations are the segment's, or both halved (R-345). */
+        bool found = false;
+        for (size_t f = 0; f < basic->feature_count; f++) {
+            if (strcmp(basic->features[f].label, ref->segment) != 0) {
+                continue;
+            }
+            size_t first = basic->features[f].first;
+            assert(notes->note_count >= 2);
+            bool equal = true;
+            bool halved = true;
+            for (size_t n = 0; n < 2; n++) {
+                Rational doubled = notes->notes[n].duration;
+                doubled.num *= 2;
+                equal = equal && rational_cmp(notes->notes[n].duration, basic->notes[first + n].duration) == 0;
+                halved = halved && rational_cmp(doubled, basic->notes[first + n].duration) == 0;
+            }
+            assert(equal || halved);
+            found = true;
+        }
+        assert(found);
+    } else if (ref->segment[0] != '\0') {
         /* A segment fragment has the segment's rhythm: the notes of m0 from the segment's first to its last. */
         bool found = false;
         for (size_t f = 0; f < basic->feature_count; f++) {

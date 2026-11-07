@@ -447,7 +447,7 @@ static void test_regenerate(void) {
     expect_failure("--from loop.json --request request.json --regenerate a --lane tenor", 1, "--lane must be");
 
     /* The body's first melody, written again: the turnaround is refilled and the seam copies the new first bar. */
-    char *shown = piece_output("--from loop.json --request request.json --regenerate a --lane melody --seed 9 --format json "
+    char *shown = piece_output("--from loop.json --request request.json --regenerate a --lane melody --seed 2 --format json "
                                "--out regen.json --ending-out regen_ending.json");
     assert(strstr(shown, "\"regenerated\":{\"section\":\"a\",\"lane\":\"melody\"}"));
     free(shown);

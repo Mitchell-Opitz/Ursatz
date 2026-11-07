@@ -243,6 +243,20 @@ static const PlanNotes *motive_notes(const PiecePlan *plan, const char *name) {
     return &plan_lane_span_payload(plan, span)->notes;
 }
 
+/* The motive_ref of a motive node. */
+static const PlanMotiveRef *motive_ref(const PiecePlan *plan, const char *name) {
+    NodeId node = find_node(plan, name);
+    assert(node != PLAN_NODE_NONE);
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+        if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
+            return &constraint->params.motive;
+        }
+    }
+    assert(!"the node has a motive_ref");
+    return NULL;
+}
+
 /* The length of a motive node's melody, in ticks. */
 static long motive_length(const PiecePlan *plan, const char *name) {
     NodeId node = find_node(plan, name);
@@ -333,10 +347,13 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
         assert(!standard_form_idea_reads_as_repetition(same_contour(m0, motive_notes(plan, "m3"))));
     }
     if (ending == PLAN_THEME_ENDING_CADENTIAL) {
-        /* Two ideas liquidated from m0, the second at least as much as the first. */
-        const PlanNotes *first = motive_notes(plan, "m2");
-        const PlanNotes *second = motive_notes(plan, "m3");
-        assert(first->note_count < m0->note_count && second->note_count <= first->note_count);
+        /* Two ideas liquidated from m0, each a residue that keeps a segment (R-345, R-350), the second at least as far as
+           the first; no residue has more notes than m0. */
+        const PlanMotiveRef *first = motive_ref(plan, "m2");
+        const PlanMotiveRef *second = motive_ref(plan, "m3");
+        assert(first->steps >= 1 && first->segment[0] != '\0' && second->segment[0] != '\0');
+        assert(second->steps >= first->steps);
+        assert(motive_notes(plan, "m2")->note_count <= m0->note_count && motive_notes(plan, "m3")->note_count <= m0->note_count);
     }
 
     /* The period's rules, on the cadences the two phrases carry. */

@@ -443,9 +443,12 @@ static void test_two_bar_motif(void) {
     composer_response_destroy(&response);
 }
 
-/* A 4-bar motif fills the presentation of an 8-bar sentence; a contrasting slot beside it is refused with its path. */
+/*
+ * A 4-bar motif fills the presentation of an 8-bar sentence; a contrasting slot beside it is refused with its path. Its
+ * first bar is two notes: a motif whose segments are each one note has no liquidated residue (R-345), so no sentence ends.
+ */
 static void test_part_length_motif(void) {
-    const char *motives = "[{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:w 3:w 5:w 3:w\", \"pickup\": \"0\", "
+    const char *motives = "[{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:h 2:h 3:w 5:w 3:w\", \"pickup\": \"0\", "
                           "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}]";
     const char *const edits[][2] = {{"motives", motives}};
     ComposerResponse response;
