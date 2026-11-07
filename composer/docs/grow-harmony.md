@@ -4,26 +4,32 @@ The motive-forms, the pool, the harmony, the melody and the free phrases of the 
 
 ## Motive-forms
 
-The motives stage writes the motive node of each idea. `motive-form` (`<ursatz_composer/grow_form.h>`, `src/grow/grow_form.c`)
-asks the [variant registry](variant-registry.md) for forms of the basic idea that suit the idea's place and ranks them by
-how well they connect (`motive_connection`, `<ursatz_composer/motive_connect.h>`). The slot is the name of the idea whose
-melody asks for the motive node. A candidate is a chain of registry steps applied to the basic idea (`m0`, or the
-section's own motive), so the same plan always gives the same candidates; only a tie in the score is settled by the run's seed.
+The motives stage writes the motive node of each idea as concrete notes with its own chords and tone roles. `motive-form` (`<ursatz_composer/grow_form.h>`, `src/grow/grow_form.c`)
+offers, for each idea, the motive its `motive_ref` names: `grow_develop_motive` (`src/grow/grow_develop.c`) maps the ref's step to one
+chain of the [variant registry](variant-registry.md) and applies it to the basic idea, and the candidate is ranked by how well it connects
+(`motive_connection`, `<ursatz_composer/motive_connect.h>`). The slot is the name of the idea whose melody asks for the motive node. The
+structure stage uses the same function to check the ideas, so the same plan always gives the same candidates (a fixed seed of 1 draws any
+open parameter).
 
-| Idea | Forms |
+| Idea | Candidate |
 | --- | --- |
-| repetition, restated | `exact` when the repetition is a plain restatement (its melody restates the basic idea) |
-| repetition, answering | the `dominant-form` of the basic idea when the repetition's chords start on the dominant and the basic idea opens on the tonic; else a tonal transposition of 1 to 3 steps either way |
+| repetition, restated | the ref's step: `exact`, `dominant-form`, or a tonal `transpose` (a sequence), the chords moved with the notes |
 | consequent's basic idea | `exact` |
-| contrasting ideas (antecedent, compound basic idea, consequent) | a one-step chain of any row whose result has the function `contrast` (R-143) and a contour other than the basic idea's, and is not another idea's motive |
-| fragment 1, fragment 2 (continuation) | `liquidate-features` with `steps 1` and `shorten 1` on the basic idea, and twice: the units halve (ch. VIII), so a basic idea of 2 bars gives 1 bar, then 1/2 bar |
-| cadential idea (continuation) | a one-step chain whose result has the function `cadential` and fewer notes than the basic idea |
+| fragments (continuation), cadential idea, cadential ending | the ref's step: `fragment`, `liquidate`, `liquidate-features` with `steps` of the ref, or `exact` for a segment |
+| contrasting ideas (antecedent, compound basic idea, consequent) | the ref's step first; when its result does not pass, the pool's forms and a one-step chain of any row whose result has the function `contrast` (R-143) and a contour other than the basic idea's, and is not another idea's motive |
 
-Every form is a full motive in the key's scale between MIDI 58 and 84 (a form below is taken up an octave), no leap wider
+The contrasting idea is the only slot with other offers; the pool is offered for no other slot. When a contrasting idea is made by another
+step than its ref's (the drawn step did not fit), the node's `motive_ref` is rewritten to name the step that was applied, so the
+developments of the result and the explanation say what sounds. A pool form of several steps keeps the ref and records its chain.
+
+Every form is a full motive between MIDI 58 and 84 (a form below is taken up an octave) in the key's scale, no leap wider
 than a fifth unless the basic idea has one, as many notes as the basic idea (a fragment or cadential idea has fewer), and
-fits its idea. An idea that ends in a cadence ends on its tone (the tonic for a PAC, the third for an IAC). The cadential ending's
-two ideas and the consequent's restated idea are not offered anything else, and a slot with no form is left to the motive
-operators below.
+fits its idea. An idea that ends in a cadence ends on its tone (the tonic for a PAC, the third for an IAC). A slot the motive-forms
+have no candidate for is left to the motive operators below, which write the node the same way.
+
+A motive node carries, beside its melody lane span, its own `MOTIVE_TONES`: the chords of the developed motive (its own harmony, else its
+best implied chord) and the tone role of each note against them (R-197). The melody stage reads the node's own tones first and walks the
+`motive_ref` chain only for a node without them. The harmony stage does not read these chords yet; it does from B2 of P36.
 
 The checker scores a form at 1 plus its connection score (R-145, `(2 x common + rhythm + harmony) / 4`, halved when the
 form is over 3/4 from the basic idea, or over 1/2 at a tempo of 140 quarter notes per minute or more, R-163), so a form always outranks the motive operators, whose recognizability is at most 1, and

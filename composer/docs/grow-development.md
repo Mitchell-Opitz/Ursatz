@@ -17,6 +17,15 @@ One table per decision, indexed by `GrowDevelopment`, at the top of the file tha
 
 A weight of 0 removes the option. The weights apply to the options a request allows: when every option allowed is 0 (a theme setting with a one-cell basic idea, which allows no dominant form or sequence, leaves only the exact repetition), the balanced weights are used for that draw. A `theme` fragment 2 is the sequence unless it does not fit its idea, when the next segment is used; a liquidation the steps cannot meet drops notes as before. Exact repetitions are a choice again with `melody`.
 
+## What sounds
+
+Every development is one function: `grow_develop_motive(source, ref, out)` (`src/grow/grow_develop.c`) turns the ref of an idea into a chain of
+the [variant registry](variant-registry.md) (no step or an exact step is `exact`; a liquidation with `steps` is that many `liquidate-features`
+steps; every other kind is the registry row of that relation, its parameters set from the step) and applies it with a fixed seed of 1. The structure
+stage's checks (`grow_idea_develop`) and the motives stage both call it, so the plan's `exact`, `sequence` or `segment b, 1 step down` is what the
+idea sounds, notes and chords. The motives stage offers exactly that motive for every slot; the contrasting idea is the only slot with other offers
+([grow-harmony.md](grow-harmony.md#motive-forms)).
+
 ## Effect
 
 For the 2-bar two-segment motif of `tests/test_grow_segment_fragments.c` in an 8-bar sentence, seeds 1 to 10: `melody` draws no sequence repetition and its fragments quote the motif most (share of note pairs with the motif's duration and interval 0.94, `balanced` 0.89, `theme` 0.86); every `theme` run has a sequence for fragment 2 and a sequence repetition. `tests/test_grow_development.c` asserts the order; the compose rates hold for the three settings (`test_grow_compose_rates`, `test_grow_compose_rates_fast`).
