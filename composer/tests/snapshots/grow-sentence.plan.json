@@ -1032,7 +1032,7 @@
                 "den": 2
               }
             }, {
-              "midi_pitch": 77,
+              "midi_pitch": 74,
               "offset": {
                 "num": 1,
                 "den": 1
@@ -1052,7 +1052,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 77,
               "offset": {
                 "num": 11,
                 "den": 8
@@ -1062,7 +1062,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 77,
               "offset": {
                 "num": 3,
                 "den": 2

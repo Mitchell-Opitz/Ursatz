@@ -358,6 +358,11 @@ typedef enum {
 /* GROW_ROLE_NONE for a NULL name or one that is no idea's. */
 GrowIdeaRole grow_idea_role(const char *idea_name);
 /*
+ * The least fidelity (R-354's score) an idea of the role may have under the development setting before the melody stage
+ * refuses it (R-355); 0 for GROW_ROLE_NONE, GROW_ROLE_CONTRAST and values out of range.
+ */
+MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role);
+/*
  * The motive an idea's melody span asks for is made from, as the ref says: the span's MOTIVE_REF names the idea's motive
  * node; that node's own MOTIVE_REF gives the source node and the ref (a node with none, m0 or a motive given for the idea,
  * is its own source, with the span's ref). A ref that names a segment makes the source that segment of m0 (the labelled
@@ -373,6 +378,52 @@ bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const M
 bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out);
 /* The two above and motive_fidelity. */
 bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
+
+/*
+ * Whether the ref itself makes the idea differ from its source (a liquidation, a fragment by notes, an inversion, any relation
+ * but exact, a transposition, a dominant form and a segment's own fragment, R-355), so its fidelity is low by what it was asked
+ * to be. Such an idea is ranked but never refused.
+ */
+bool grow_ref_departs(const PlanMotiveRef *ref, bool from_segment);
+
+/*
+ * The melody stage's fidelity checker (R-355). Measuring is the costly part (the recognizer, R-307), so a candidate whose
+ * realized notes were measured before for the same span, in any octave, is not measured again: the cache holds those
+ * results for the length of one stage run (zero it before use; NULL in the context means none).
+ */
+#define GROW_FIDELITY_CACHE 128
+typedef struct {
+    struct {
+        unsigned long long key;
+        MotiveFidelity fidelity;
+        bool departs;
+    } entries[GROW_FIDELITY_CACHE];
+    size_t count; /* entries made so far; the oldest is replaced once full */
+} GrowFidelityCache;
+
+typedef struct {
+    GrowDevelopment development;
+    const Motive *basic;      /* the basic motive the run was made from (grow_idea_fidelity_source), may be NULL */
+    FillCheckerFn inner;      /* the melody stage's own checker, run first */
+    void *inner_context;
+    GrowFidelityCache *cache; /* NULL for none */
+    const MotiveScore *minimum; /* NULL for the table's (grow_fidelity_minimum); else the minimum of every role, for tests */
+} GrowFidelityContext;
+
+/*
+ * Runs context->inner first; a hard violation stands. For a melody-fill candidate whose target span has a MOTIVE_REF and
+ * whose owner idea has a role (grow_idea_role): the realized notes (melody_candidate_realized) are measured against the
+ * idea's source, and a score under the role's minimum (grow_fidelity_minimum) is a hard violation, "motive fidelity n/d
+ * under n/d (role)". Otherwise the score becomes
+ *   ((agree * 100 + floor(100 * fidelity)) * (total + 1) + held) / (201 * (total + 1))
+ * where held/total is the inner score, so agreement ranks first, then fidelity, then the melody rules' share; the style
+ * part the inner left (a part of held/total) is scaled as held is, so it stays a part of the score. An idea whose ref makes
+ * it differ from its source (grow_ref_departs) is ranked but never refused. Every other candidate passes through unchanged.
+ * A cadential idea is for its cadence: it is refused under its minimum (its score only; the search never reaches its residue)
+ * but ranked by the melody rules alone, which put the cadence tone first.
+ */
+bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                           const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
 NodeId grow_find_theme(const PiecePlan *plan, bool open_only);

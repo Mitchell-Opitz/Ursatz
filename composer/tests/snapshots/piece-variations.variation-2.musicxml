@@ -389,7 +389,7 @@
       </note>
       <note xml:id="composer-span-26-note-2_a">
         <pitch>
-          <step>F</step>
+          <step>D</step>
           <octave>5</octave>
         </pitch>
         <duration>1</duration>
@@ -403,7 +403,7 @@
       </note>
       <note xml:id="composer-span-26-note-2_b">
         <pitch>
-          <step>F</step>
+          <step>D</step>
           <octave>5</octave>
         </pitch>
         <duration>1</duration>
@@ -417,7 +417,7 @@
       </note>
       <note xml:id="composer-span-26-note-3">
         <pitch>
-          <step>E</step>
+          <step>C</step>
           <octave>5</octave>
         </pitch>
         <duration>1</duration>
@@ -427,8 +427,9 @@
       </note>
       <note xml:id="composer-span-26-note-4">
         <pitch>
-          <step>D</step>
-          <octave>5</octave>
+          <step>B</step>
+          <alter>-1</alter>
+          <octave>4</octave>
         </pitch>
         <duration>2</duration>
         <voice>1</voice>

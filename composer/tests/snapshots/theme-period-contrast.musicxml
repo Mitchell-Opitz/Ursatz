@@ -85,7 +85,7 @@
       </note>
       <note xml:id="composer-span-7-note-5">
         <pitch>
-          <step>G</step>
+          <step>A</step>
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
@@ -95,7 +95,7 @@
       </note>
       <note xml:id="composer-span-7-note-6">
         <pitch>
-          <step>A</step>
+          <step>G</step>
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
@@ -272,7 +272,8 @@
       </note>
       <note xml:id="composer-span-11-note-5">
         <pitch>
-          <step>G</step>
+          <step>B</step>
+          <alter>-1</alter>
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
@@ -282,7 +283,7 @@
       </note>
       <note xml:id="composer-span-11-note-6">
         <pitch>
-          <step>A</step>
+          <step>G</step>
           <octave>4</octave>
         </pitch>
         <duration>1</duration>

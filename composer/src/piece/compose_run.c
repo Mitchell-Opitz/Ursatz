@@ -665,6 +665,21 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             fill.checker = style_stage_checker;
             fill.checker_context = &style_context;
         }
+        /* The melody stage's candidates are also ranked and refused by how faithful each idea is to its motive (R-355); the
+           cache of measurements lives as long as this attempt. */
+        GrowFidelityContext fidelity_context;
+        GrowFidelityCache *fidelity_cache = NULL;
+        if (stage == COMPOSE_STAGE_MELODY) {
+            fidelity_cache = calloc(1, sizeof(*fidelity_cache));
+            fidelity_context.development = config->context.development;
+            fidelity_context.basic = run->motives.basic;
+            fidelity_context.inner = fill.checker;
+            fidelity_context.inner_context = fill.checker_context;
+            fidelity_context.cache = fidelity_cache;
+            fidelity_context.minimum = NULL;
+            fill.checker = grow_fidelity_checker;
+            fill.checker_context = &fidelity_context;
+        }
         FillRecord *seam_record = NULL;
         FillRecord **record = run->seam ? &seam_record : (again ? NULL : &outcome->records[stage]);
         if (record && !run->seam) {
@@ -691,6 +706,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
                                                &run->voicing);
         FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;
         fill_registry_destroy(registry);
+        free(fidelity_cache);
         if (run->seam && !record_keep(&outcome->records[COMPOSE_STAGE_SEAM], seam_record)) {
             free(open_at_start);
             return PIECE_ERR_ALLOC;
