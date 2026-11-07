@@ -319,6 +319,12 @@ bool grow_segment_motive(const Motive *source, const MotiveSketchFeature *segmen
 
 /* The development of m0 each idea after the basic idea is, as a spec the motive operators read. */
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out);
+/*
+ * The motive the ref makes from source through the variant registry: one chain (no step or an exact step is `exact`; a
+ * liquidation with ref->steps is that many liquidate-features steps; every other kind the registry row of that relation,
+ * its parameters set from the step). Deterministic: a fixed seed of 1 draws any open parameter. False when it does not apply.
+ */
+bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive *out);
 /* The specs those refs make, to make the result here with the same Ursatz call the operators use. */
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
 
