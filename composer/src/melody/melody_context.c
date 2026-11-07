@@ -207,6 +207,12 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
     }
     context->motive_node = constraint.params.motive.motive;
     context->restated = plan_motive_ref_restates(&constraint.params.motive);
+    /* A residue: the span's ref, or the motive node's own, names the liquidation's steps. */
+    context->liquidated = constraint.params.motive.steps > 0;
+    for (size_t i = 0; !context->liquidated && i < plan_node_constraint_count(plan, context->motive_node); i++) {
+        const PlanConstraint *own = plan_node_constraint_at(plan, context->motive_node, i);
+        context->liquidated = own->kind == PLAN_CONSTRAINT_MOTIVE_REF && own->params.motive.steps > 0;
+    }
     context->motive_given = plan_lane_span_state(plan, span) == PLAN_STATE_GIVEN;
     context->motive_count = notes->note_count;
     context->motive_length = POSITION_ZERO;

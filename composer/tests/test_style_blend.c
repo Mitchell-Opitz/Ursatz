@@ -351,7 +351,11 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  * 0.7127, 0.7149 to sonatinas. All are further than at P35 B1, and the distance to sonatinas no longer falls with the weight
  * (0.7149 at weight 1 against 0.7120 at 0): the motives' own chords are not yet read by the harmony stage (B2 of P36).
  */
-static const int HARMONY_BASELINE[3][2] = {{7545, 7120}, {7590, 7127}, {7564, 7149}};
+/*
+ * Re-measured at P36 B3 (liquidated residues, R-345): 0.7343, 0.7304, 0.7360 to chorales and 0.6970, 0.6933, 0.6935 to sonatinas;
+ * all closer than at B1, and the distance to sonatinas falls with the weight again.
+ */
+static const int HARMONY_BASELINE[3][2] = {{7343, 6970}, {7304, 6933}, {7360, 6935}};
 /* How far the full weight's distance to the second style may be above the zero weight's (a known limit until B2 of P36). */
 #define HARMONY_FALL_SLACK 50
 #define MELODY_ONLY_REACH 200

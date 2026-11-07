@@ -236,7 +236,7 @@ The motive-forms, the pool, the harmony, the melody and the free phrases are in 
 
 ## Compose rates
 
-A theme is composed when `api_grow_run` returns it within `GROW_MAX_SEED_TRIES` (16) seeds of its start seed; this is separate from being heard as requested ([grow-hearing.md](grow-hearing.md)). `test_grow_compose_rates` runs every pairing at 4 and 8 bars for the two reference motifs in `tests/fixtures/rates` (a 2-bar 3/4 motif in A minor, a 1-bar 4/4 motif in C major), start seeds 1 to 10, no chords, check off, suggest 1, and asserts at least 8 of 10 for every buildable case. Run it with `ctest --test-dir build -R test_grow_compose_rates` (slow set, about 14 s; `test_grow_compose_rates_fast` runs seed 1 of each case). Composed of 10:
+A theme is composed when `api_grow_run` returns it within `GROW_MAX_SEED_TRIES` (16) seeds of its start seed; this is separate from being heard as requested ([grow-hearing.md](grow-hearing.md)). `test_grow_compose_rates` runs every pairing at 4 and 8 bars for the two reference motifs in `tests/fixtures/rates` (a 2-bar 3/4 motif in A minor, a 1-bar 4/4 motif in C major), start seeds 1 to 10, no chords, check off, suggest 1, and asserts at least 8 of 10 for every buildable case. Run it with `ctest --test-dir build -R test_grow_compose_rates` (slow set, about 35 s; `test_grow_compose_rates_fast` runs seed 1 of each case). Composed of 10:
 
 | Pairing (beginning + ending) | 2-bar 4 bars | 2-bar 8 bars | 1-bar 4 bars | 1-bar 8 bars |
 | --- | --- | --- | --- | --- |
@@ -244,4 +244,4 @@ A theme is composed when `api_grow_run` returns it within `GROW_MAX_SEED_TRIES` 
 | antecedent + continuation / consequent / cadential | 10 | 10 | 10 | 10 |
 | compound + continuation / consequent / cadential | not buildable | 10 | 10 | 10 |
 
-Each row is three pairings with the same rate. Not buildable: the 2-bar motif is longer than the 1-bar basic idea of a compound 4-bar theme and is refused before seeding.
+Each row is three pairings with the same rate (P36 B3, all settings). Not buildable: the 2-bar motif is longer than the 1-bar basic idea of a compound 4-bar theme and is refused before seeding.

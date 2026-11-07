@@ -152,8 +152,8 @@
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
-        "id": 10,
-        "owner": 12,
+        "id": 11,
+        "owner": 13,
         "lane": "harmony",
         "voice": 0,
         "state": "realized",
@@ -187,8 +187,8 @@
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
-        "id": 19,
-        "owner": 12,
+        "id": 20,
+        "owner": 13,
         "lane": "harmony",
         "voice": 0,
         "state": "realized",
@@ -215,8 +215,8 @@
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
-        "id": 20,
-        "owner": 12,
+        "id": 21,
+        "owner": 13,
         "lane": "harmony",
         "voice": 0,
         "state": "realized",
@@ -243,8 +243,8 @@
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
-        "id": 21,
-        "owner": 12,
+        "id": 22,
+        "owner": 13,
         "lane": "harmony",
         "voice": 0,
         "state": "realized",
@@ -274,7 +274,7 @@
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
-        "id": 22,
+        "id": 23,
         "owner": 9,
         "lane": "harmony",
         "voice": 0,
@@ -302,7 +302,7 @@
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
-        "id": 23,
+        "id": 24,
         "owner": 10,
         "lane": "harmony",
         "voice": 0,
@@ -330,7 +330,7 @@
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
-        "id": 24,
+        "id": 25,
         "owner": 10,
         "lane": "harmony",
         "voice": 0,
@@ -466,7 +466,7 @@
                     },
                     "children": [],
                     "composer": {
-                      "id": 13,
+                      "id": 14,
                       "state": "realized",
                       "constraints": []
                     }
@@ -485,7 +485,7 @@
                     },
                     "children": [],
                     "composer": {
-                      "id": 14,
+                      "id": 15,
                       "state": "realized",
                       "constraints": []
                     }
@@ -504,13 +504,13 @@
                     },
                     "children": [],
                     "composer": {
-                      "id": 15,
+                      "id": 16,
                       "state": "realized",
                       "constraints": []
                     }
                   }],
                 "composer": {
-                  "id": 12,
+                  "id": 13,
                   "state": "realized",
                   "constraints": []
                 }
@@ -642,6 +642,33 @@
                     }
                   }, {
                     "kind": "motive",
+                    "label": "liquidated 3",
+                    "span": {
+                      "start": {
+                        "num": 13,
+                        "den": 1
+                      },
+                      "end": {
+                        "num": 111,
+                        "den": 8
+                      }
+                    },
+                    "children": [],
+                    "composer": {
+                      "id": 12,
+                      "state": "realized",
+                      "constraints": [{
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "I",
+                              "onset": "0/1",
+                              "length": "7/8"
+                            }],
+                          "tones": ["chord", "chord", "chord"]
+                        }]
+                    }
+                  }, {
+                    "kind": "motive",
                     "label": "m2",
                     "span": {
                       "start": {
@@ -655,7 +682,7 @@
                     },
                     "children": [],
                     "composer": {
-                      "id": 16,
+                      "id": 17,
                       "state": "realized",
                       "constraints": [{
                           "kind": "motive_ref",
@@ -686,20 +713,20 @@
                     },
                     "children": [],
                     "composer": {
-                      "id": 17,
+                      "id": 18,
                       "state": "realized",
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "fragment position=1 length=2"
+                          "step": "fragment position=1 length=3"
                         }, {
                           "kind": "motive_tones",
                           "harmony": [{
                               "numeral": "I",
                               "onset": "0/1",
-                              "length": "3/8"
+                              "length": "1/2"
                             }],
-                          "tones": ["chord", "chord"]
+                          "tones": ["chord", "chord", "chord"]
                         }]
                     }
                   }, {
@@ -717,12 +744,14 @@
                     },
                     "children": [],
                     "composer": {
-                      "id": 18,
+                      "id": 19,
                       "state": "realized",
                       "constraints": [{
                           "kind": "motive_ref",
-                          "motive": 6,
-                          "step": "liquidate drop=1"
+                          "motive": 12,
+                          "step": "exact",
+                          "segment": "a",
+                          "steps": 1
                         }, {
                           "kind": "motive_tones",
                           "harmony": [{
@@ -1049,6 +1078,62 @@
       "framework": "ursatz-composer",
       "span": {
         "start": {
+          "num": 13,
+          "den": 1
+        },
+        "end": {
+          "num": 111,
+          "den": 8
+        }
+      },
+      "note_ids": [],
+      "label": "melody",
+      "uncertainty": null,
+      "composer": {
+        "id": 10,
+        "owner": 12,
+        "lane": "melody",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "notes": [{
+              "midi_pitch": 62,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              }
+            }, {
+              "midi_pitch": 65,
+              "offset": {
+                "num": 1,
+                "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 62,
+              "offset": {
+                "num": 3,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }]
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
           "num": 4,
           "den": 1
         },
@@ -1061,14 +1146,14 @@
       "label": "melody",
       "uncertainty": null,
       "composer": {
-        "id": 12,
-        "owner": 13,
+        "id": 13,
+        "owner": 14,
         "lane": "melody",
         "voice": 0,
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 16,
+            "motive": 17,
             "step": "fragment position=1 length=2"
           }],
         "payload": {
@@ -1141,15 +1226,15 @@
       "label": "melody",
       "uncertainty": null,
       "composer": {
-        "id": 13,
-        "owner": 14,
+        "id": 14,
+        "owner": 15,
         "lane": "melody",
         "voice": 0,
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 17,
-            "step": "fragment position=1 length=2"
+            "motive": 18,
+            "step": "fragment position=1 length=3"
           }],
         "payload": {
           "notes": [{
@@ -1173,19 +1258,9 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 77,
+              "midi_pitch": 82,
               "offset": {
                 "num": 3,
-                "den": 8
-              },
-              "duration": {
-                "num": 1,
-                "den": 4
-              }
-            }, {
-              "midi_pitch": 76,
-              "offset": {
-                "num": 5,
                 "den": 8
               },
               "duration": {
@@ -1193,14 +1268,34 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 70,
+              "offset": {
+                "num": 1,
+                "den": 2
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              }
+            }, {
+              "midi_pitch": 69,
               "offset": {
                 "num": 3,
                 "den": 4
               },
               "duration": {
                 "num": 1,
-                "den": 4
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 67,
+              "offset": {
+                "num": 7,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
               }
             }]
         }
@@ -1221,15 +1316,15 @@
       "label": "melody",
       "uncertainty": null,
       "composer": {
-        "id": 14,
-        "owner": 15,
+        "id": 15,
+        "owner": 16,
         "lane": "melody",
         "voice": 0,
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 18,
-            "step": "liquidate drop=1"
+            "motive": 19,
+            "step": "exact"
           }, {
             "kind": "cadence",
             "type": "pac"
@@ -1256,23 +1351,13 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 73,
+              "midi_pitch": 61,
               "offset": {
                 "num": 3,
                 "den": 8
               },
               "duration": {
-                "num": 1,
-                "den": 2
-              }
-            }, {
-              "midi_pitch": 61,
-              "offset": {
-                "num": 7,
-                "den": 8
-              },
-              "duration": {
-                "num": 1,
+                "num": 5,
                 "den": 8
               }
             }, {
@@ -1304,7 +1389,7 @@
       "label": "melody",
       "uncertainty": null,
       "composer": {
-        "id": 15,
+        "id": 16,
         "owner": 11,
         "lane": "melody",
         "voice": 0,
@@ -1370,8 +1455,8 @@
       "label": "melody",
       "uncertainty": null,
       "composer": {
-        "id": 16,
-        "owner": 16,
+        "id": 17,
+        "owner": 17,
         "lane": "melody",
         "voice": 0,
         "state": "realized",
@@ -1408,54 +1493,8 @@
           "den": 1
         },
         "end": {
-          "num": 91,
-          "den": 8
-        }
-      },
-      "note_ids": [],
-      "label": "melody",
-      "uncertainty": null,
-      "composer": {
-        "id": 17,
-        "owner": 17,
-        "lane": "melody",
-        "voice": 0,
-        "state": "realized",
-        "constraints": [],
-        "payload": {
-          "notes": [{
-              "midi_pitch": 62,
-              "offset": {
-                "num": 0,
-                "den": 1
-              },
-              "duration": {
-                "num": 1,
-                "den": 4
-              }
-            }, {
-              "midi_pitch": 65,
-              "offset": {
-                "num": 1,
-                "den": 4
-              },
-              "duration": {
-                "num": 1,
-                "den": 8
-              }
-            }]
-        }
-      }
-    }, {
-      "framework": "ursatz-composer",
-      "span": {
-        "start": {
-          "num": 12,
-          "den": 1
-        },
-        "end": {
-          "num": 103,
-          "den": 8
+          "num": 23,
+          "den": 2
         }
       },
       "note_ids": [],
@@ -1490,7 +1529,63 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 74,
+              "midi_pitch": 69,
+              "offset": {
+                "num": 3,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }]
+        }
+      }
+    }, {
+      "framework": "ursatz-composer",
+      "span": {
+        "start": {
+          "num": 12,
+          "den": 1
+        },
+        "end": {
+          "num": 103,
+          "den": 8
+        }
+      },
+      "note_ids": [],
+      "label": "melody",
+      "uncertainty": null,
+      "composer": {
+        "id": 19,
+        "owner": 19,
+        "lane": "melody",
+        "voice": 0,
+        "state": "realized",
+        "constraints": [],
+        "payload": {
+          "notes": [{
+              "midi_pitch": 62,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              }
+            }, {
+              "midi_pitch": 65,
+              "offset": {
+                "num": 1,
+                "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 62,
               "offset": {
                 "num": 3,
                 "den": 8
@@ -1591,8 +1686,8 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 11,
-        "owner": 12,
+        "id": 12,
+        "owner": 13,
         "lane": "bass",
         "voice": 0,
         "state": "realized",
@@ -1627,7 +1722,7 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 25,
+        "id": 26,
         "owner": 9,
         "lane": "bass",
         "voice": 0,
@@ -1673,7 +1768,7 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 26,
+        "id": 27,
         "owner": 10,
         "lane": "bass",
         "voice": 0,
@@ -1709,7 +1804,7 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 27,
+        "id": 28,
         "owner": 10,
         "lane": "bass",
         "voice": 0,
@@ -1745,8 +1840,8 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 28,
-        "owner": 12,
+        "id": 29,
+        "owner": 13,
         "lane": "bass",
         "voice": 0,
         "state": "realized",
@@ -1781,8 +1876,8 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 29,
-        "owner": 12,
+        "id": 30,
+        "owner": 13,
         "lane": "bass",
         "voice": 0,
         "state": "realized",
@@ -1817,8 +1912,8 @@
       "label": "bass",
       "uncertainty": null,
       "composer": {
-        "id": 30,
-        "owner": 12,
+        "id": 31,
+        "owner": 13,
         "lane": "bass",
         "voice": 0,
         "state": "realized",

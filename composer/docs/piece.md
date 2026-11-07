@@ -229,14 +229,14 @@ stuck more the longer the form: in A minor 3/4 with a given motive none of the s
 | `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
 
 Every completed run passes every check. The share of runs that complete is below 100% for every template but variations
-(rounded binary is 65% because the checks hear the plan through the Analyzer: the key check reads the cadences the Analyzer
+(rounded binary is 95% because the checks hear the plan through the Analyzer: the key check reads the cadences the Analyzer
 hears, which are not those of the planned chords), so the other five tests are `WILL_FAIL`, with the measured shares (the
 stage is where the last round of a stuck run ended; before the Analyzer: binary 14 of 20, rounded binary 20, ternary 16):
 
 | Template | Runs complete | Of them change key | Stuck at |
 | --- | --- | --- | --- |
 | binary | 11 of 20 (55%) | 9 | melody 5, bass 2, harmony 2 |
-| rounded binary | 13 of 20 (65%) | 9 | melody 4, bass 2, texture 1 |
+| rounded binary | 19 of 20 (95%, P36 B3) | 15 | texture 1 (a key change heard as a tonicization) |
 | ternary | 11 of 20 (55%) | 9 | melody 3, bass 3, harmony 2, structure 1 |
 | variations | 20 of 20 (100%) | 16 | |
 | loop | 10 of 20 (50%) | 0 | A minor only, all harmony |

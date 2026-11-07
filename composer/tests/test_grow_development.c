@@ -169,7 +169,8 @@ static void test_ordered_by_setting(void) {
         }
         if (ORDER[s] == GROW_DEVELOP_THEME) {
             assert(fragment_sequences == SEEDS);
-            assert(least_steps == 0 || least_steps >= 2);
+            /* A residue that keeps a segment may take one step when two keep none (the widened draw, R-345). */
+            assert(least_steps >= 1);
         }
     }
     assert(mean[0] > mean[1]);

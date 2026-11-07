@@ -59,6 +59,7 @@ typedef struct {
     CadenceType cadence;
     bool motive_given; /* the motive is the original, not a development */
     bool restated; /* the motive_ref is an exact restatement of its source */
+    bool liquidated; /* the motive is a liquidated residue (its motive node's motive_ref has steps, R-345) */
     NodeId motive_node;
     size_t motive_count;
     int motive_pitch[MOTIVE_MAX_NOTES];

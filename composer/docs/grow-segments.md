@@ -31,11 +31,28 @@ The motives stage writes a fragment as the step its ref names, through one funct
 The cadential idea of a continuation, and both ideas of a cadential ending, liquidate the segments: `liquidate-features` with
 `steps 1` and `shorten 1`, applied to `m0` with its segments as its features, one more step each draw (at most as many as the
 motif has segments) until the result has fewer notes than `m0`, fits its idea, stays in range and in the key, has no leap wider
-than a fifth (or `m0`'s) and its last note can take the cadence: the idea that ends the theme has that note moved to the nearest
-tone of the cadence, the rhythm kept (P33 B1). The two ideas of a cadential ending take at least as many steps, the second as
-far as the first. The result is a Realized motive node `liquidated <n>` (the run's own: a regenerated section removes it with the rest it made, and the material has room for ten bars per section, `GROW_MADE_NODES`) the idea restates exactly, and the plan records the number
-of steps on the idea's motive node: `"steps": 2`. When no number of steps meets that, the idea is `liquidated` by notes as before
-(`liquidate_drop`, `cadential_drop`), with no steps.
+than a fifth (or `m0`'s), its last note can take the cadence (moved to the nearest tone of the cadence, the rhythm kept, P33 B1),
+and the residue keeps a segment (R-345, `residue_keeps` in `src/grow/grow_ending.c`): its first two notes have the durations of
+a segment's first two, one to one or both halved (`shorten`), and its first interval is that segment's in scale steps, same
+direction and size. The two ideas of a cadential ending take at least as many steps, the second as far as the first.
+
+When no step count keeps a segment, the draw is widened (`around_head`): each segment in turn keeps its head (the whole
+segment, then one note fewer, down to two) and the rest of `m0` is liquidated around it, every step count. When that finds
+nothing either, as for a one-segment one-bar motif or the one-bar source of a 4-bar theme, where the rest after the head is
+one note or a span the library cannot write as one note, the idea is a head residue (R-350, `head_residue`): a segment's first
+two notes (whole, then halved) and a close on `m0`'s last pitch moved to the cadence's tone (else in the octave nearest the
+head's second note), lasting `m0`'s last duration or else the head's second, the first that fits. No draw: the first accepted
+wins. The label says `head of <segment>`. A residue keeps to the key's scale when `m0` does; a chromatic `m0`'s keeps to the
+range. A motif whose segments are each one note has no residue, so no continuation or cadential ending is made from it.
+
+The result is a Realized motive node `liquidated <n>` (the run's own: a regenerated section removes it with the rest it made,
+and the material has room for ten bars per section, `GROW_MADE_NODES`) the idea restates exactly, and the plan records on the
+idea's motive node the segment the residue keeps and the steps: `"segment": "a", "steps": 2` (a head residue has as many steps
+as `m0` has segments). That node is the only source of a theme's cadential idea: the motive-forms restate it, and the P13
+`motive-fragment` operator is not reached for it (it stays registered for pieces).
+
+A draw whose residue cannot keep a segment fails, and the structure stage tries its next seed. No idea is liquidated by notes
+any more: `liquidate_drop`, `cadential_drop` and the `liquidate` steps of R-321's fallback are gone from themes (R-330, R-345).
 
 ## In the result
 

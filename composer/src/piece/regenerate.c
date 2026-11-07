@@ -165,6 +165,26 @@ static NodeId owner_node(const PiecePlan *plan, FillTarget target) {
     return target.kind == FILL_TARGET_NODE ? (NodeId)target.id : plan_lane_span_owner(plan, (LaneSpanId)target.id);
 }
 
+
+/*
+ * Whether a span can be written again: a harmony span only from the shape grow gave it or its owner's other spans. A
+ * chord written whole (a presentation in sequence's I and ii, R-348) has none and is kept as it is.
+ */
+static bool harmony_rebuildable(const PiecePlan *plan, LaneSpanId id) {
+    if (plan_lane_span_lane(plan, id) != PLAN_LANE_HARMONY) {
+        return true;
+    }
+    NodeId owner = plan_lane_span_owner(plan, id);
+    for (LaneSpanId other = 1; other <= plan_lane_span_count(plan); other++) {
+        if (plan_has_lane_span(plan, other) && plan_lane_span_lane(plan, other) == PLAN_LANE_HARMONY &&
+            plan_lane_span_owner(plan, other) == owner &&
+            plan_lane_span_find_constraint(plan, other, PLAN_CONSTRAINT_HARMONY_SHAPE) != NULL) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* The section a section that returns another is reopened as: a return is made from its source. */
 static NodeId return_section_of(const PiecePlan *plan, FillTarget target) {
     NodeId section = plan_section_of(plan, owner_node(plan, target));
@@ -257,7 +277,7 @@ static RegenerateResult scope_build(const PiecePlan *plan, const FillTarget *tar
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         NodeId section = plan_section_of(plan, plan_lane_span_owner(plan, id));
         if (scope.span_marked[id] && span_is_reopened(plan, id) && !(section != PLAN_NODE_NONE && whole[section]) &&
-            !in_material(plan, plan_lane_span_owner(plan, id))) {
+            !in_material(plan, plan_lane_span_owner(plan, id)) && harmony_rebuildable(plan, id)) {
             list[found++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
         }
     }
