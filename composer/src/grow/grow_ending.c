@@ -9,6 +9,7 @@
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "util/plan_util.h"
+#include "util/position.h"
 #include "motive/motive_internal.h"
 
 /* Chords a phrase-model progression has before its last: a tonic, up to two predominants, a dominant. */
@@ -317,18 +318,98 @@ static bool around_head(const Motive *base, size_t first, size_t last, Motive *o
     return out->feature_count > 0;
 }
 
+/* Whether two motives have the same notes: count, pitches and durations. */
+static bool same_notes(const Motive *a, const Motive *b) {
+    if (a->note_count != b->note_count) {
+        return false;
+    }
+    for (size_t i = 0; i < a->note_count; i++) {
+        if (motive_pitch(a, i) != motive_pitch(b, i) || rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * The head residue (R-350), for a motive liquidate-features cannot keep a head in: three notes, a segment's first two
+ * (whole, then each duration halved) and a close on base's last pitch, moved to the cadence's tone (nearest, then the
+ * other side). The close lasts base's last duration, else the head's second, the first that keeps the residue within the
+ * room. Accepted when in range, no wider a leap than `allowed`, it keeps a segment (residue_keeps) and is not base
+ * itself; `steps` is base's feature count (at least 1). No draw: the first accepted wins.
+ */
+static bool head_residue(const GrowThemeSpec *spec, const Motive *base, int allowed, Rational room, bool has_cadence,
+                         CadenceType cadence, size_t *steps, size_t *segment, Motive *out) {
+    for (size_t f = 0; f < base->feature_count; f++) {
+        const MotiveSketchFeature *feature = &base->features[f];
+        if (feature->last <= feature->first || feature->first + 1 >= base->note_count) {
+            continue;
+        }
+        for (int halved = 0; halved < 2; halved++) {
+            Motive residue = *base;
+            residue.note_count = 3;
+            for (size_t i = 0; i < 2; i++) {
+                residue.notes[i] = base->notes[feature->first + i];
+                if (halved) {
+                    residue.notes[i].duration = position_div(residue.notes[i].duration, 2);
+                }
+            }
+            residue.notes[0].onset = POSITION_ZERO;
+            residue.notes[1].onset = residue.notes[0].duration;
+            residue.notes[2].pitch = base->notes[base->note_count - 1].pitch;
+            residue.notes[2].onset = position_add(residue.notes[1].onset, residue.notes[1].duration);
+            const Rational closes[2] = {base->notes[base->note_count - 1].duration, residue.notes[1].duration};
+            bool fits = false;
+            for (size_t c = 0; c < 2 && !fits; c++) {
+                residue.notes[2].duration = closes[c];
+                residue.length = position_add(residue.notes[2].onset, closes[c]);
+                fits = rational_cmp(residue.length, room) <= 0;
+            }
+            if (!fits) {
+                continue;
+            }
+            residue.feature_count = 1;
+            residue.features[0] = *feature;
+            residue.features[0].first = 0;
+            residue.features[0].last = 1;
+            residue.chord_count = 0;
+            for (size_t k = 0; k < base->chord_count; k++) {
+                if (rational_cmp(base->chords[k].onset, residue.notes[2].onset) < 0) {
+                    residue.chords[residue.chord_count++] = base->chords[k];
+                }
+            }
+            for (int other = 0; other < (has_cadence ? 2 : 1); other++) {
+                Motive moved = residue;
+                if (!liquid_take_cadence(&moved, has_cadence, cadence, other != 0)) {
+                    break;
+                }
+                if (liquid_in_range(&moved) && widest_leap(&moved) <= allowed && residue_keeps(&moved, spec) &&
+                    !same_notes(&moved, base)) {
+                    *steps = base->feature_count > 0 ? base->feature_count : 1;
+                    *segment = residue_segment(&moved, spec);
+                    *out = moved;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 /*
  * Liquidates the segments of m0 (ch. VIII) one step at a time, from `from` steps (at least the development's least) to as
  * many as m0 has segments (liquidate_base). When no count keeps a segment, the draw is widened (R-345): each segment of m0
  * in turn keeps its head (the whole segment, then one note fewer, down to two) and the rest of m0 is liquidated around
- * it, every step count from `from`. False when none keeps one.
+ * it, every step count from `from`. Last, the head residue (head_residue, `head` set). False when none keeps one.
  */
 static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment development, size_t from, Rational room,
-                               bool has_cadence, CadenceType cadence, size_t *steps, size_t *segment, Motive *out) {
+                               bool has_cadence, CadenceType cadence, size_t *steps, size_t *segment, bool *head,
+                               Motive *out) {
     size_t least = LIQUIDATION_STEPS[development].least;
     size_t most = LIQUIDATION_STEPS[development].most;
     const Motive *base = &spec->liquid_base;
     int allowed = widest_leap(base) > LIQUID_LEAP ? widest_leap(base) : LIQUID_LEAP;
+    *head = false;
     if (!spec->has_liquid_base) {
         return false;
     }
@@ -346,12 +427,16 @@ static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment develo
             }
         }
     }
-    return false;
+    /* A motive too short to keep a head in by liquidate-features gets a head residue (R-350). */
+    *head = head_residue(spec, base, allowed, room, has_cadence, cadence, steps, segment, out);
+    return *head;
 }
 
 /* Keeps the liquidation as the idea's motive: the idea restates it exactly (grow_idea_dev). */
-static void keep_liquidation(GrowThemeSpec *spec, GrowPlace idea, size_t steps, size_t segment, const Motive *result) {
+static void keep_liquidation(GrowThemeSpec *spec, GrowPlace idea, size_t steps, size_t segment, bool head,
+                             const Motive *result) {
     spec->liquidated[idea] = *result;
+    spec->liquidation_head[idea] = head;
     spec->has_liquidated[idea] = true;
     spec->liquidation_steps[idea] = steps;
     spec->liquidation_segment[idea] = segment;
@@ -409,12 +494,13 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
         size_t steps;
         size_t segment;
+        bool head;
         Motive result;
         if (!liquidate_segments(spec, request->development, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]),
-                                true, request->cadence, &steps, &segment, &result)) {
+                                true, request->cadence, &steps, &segment, &head, &result)) {
             return false;
         }
-        keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, segment, &result);
+        keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, segment, head, &result);
     }
     /* Each idea after the presentation is made from m0 and has to fit in the room it has. */
     for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea < GROW_PLACE_COUNT; idea++) {
@@ -484,15 +570,16 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
     for (size_t k = 0; k < 2; k++) {
         size_t steps;
         size_t segment;
+        bool head;
         Motive made;
         if (grow_idea_own(spec, IDEAS[k])) {
             continue;
         }
         if (!liquidate_segments(spec, request->development, from, idea_room(spec, unit, 2), k == 1, request->cadence,
-                                &steps, &segment, &made)) {
+                                &steps, &segment, &head, &made)) {
             return false;
         }
-        keep_liquidation(spec, IDEAS[k], steps, segment, &made);
+        keep_liquidation(spec, IDEAS[k], steps, segment, head, &made);
         from = steps;
     }
     spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;

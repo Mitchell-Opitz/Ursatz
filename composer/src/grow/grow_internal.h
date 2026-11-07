@@ -94,6 +94,7 @@ typedef struct {
     bool has_liquidated[GROW_PLACE_COUNT];
     size_t liquidation_steps[GROW_PLACE_COUNT];
     size_t liquidation_segment[GROW_PLACE_COUNT];
+    bool liquidation_head[GROW_PLACE_COUNT]; /* the residue is a head residue (R-350): a segment's head and a close */
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
     bool ending_split;                     /* no chord of the ending crosses a barline */
