@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "motive/motive_internal.h"
@@ -428,7 +429,11 @@ static PlanResult develop_apply(PiecePlan *plan, FillTarget target, const FillCa
     notes.notes.note_count = payload->result.note_count;
     LaneSpanId id;
     PlanResult result = plan_add_lane_span(plan, target.id, PLAN_LANE_MELODY, 0, span, &notes, &id);
-    return result == PLAN_OK ? plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED) : result;
+    if (result == PLAN_OK) {
+        result = plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED);
+    }
+    /* A node the motive-forms left to these operators has its tone roles beside its notes too (R-197). */
+    return result == PLAN_OK ? motive_node_write_tones(plan, target.id, &payload->result) : result;
 }
 
 static FillResult register_operator(FillOperatorRegistry *registry, const char *name, const char *description,
