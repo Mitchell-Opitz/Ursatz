@@ -12,6 +12,8 @@
 /* Tb, two PD, D, and the Te and IV of a plagal cadence. */
 #define MAX_BEFORE_FINAL 6
 #define MAX_CHORDS (MAX_BEFORE_FINAL + 1)
+/* The most chords a deal holds: a dominant opened on the cadential six-four adds one. */
+#define MAX_DEALT (MAX_CHORDS + 1)
 
 typedef struct {
     int degree;
@@ -74,6 +76,24 @@ void harmony_progression_destroy(void *payload) {
         free(progression->chords);
         free(progression);
     }
+}
+
+/*
+ * A dealt V whose first downbeat the Given melody does not hold as a tone of V opens on the cadential six-four, which
+ * carries the tonic there, and V keeps the rest of its cells. False when the cadence has no dominant to open, the V has
+ * a single cell, or the chords still do not fit.
+ */
+static bool open_on_cadential_six_four(const PhraseRequest *request, PhraseChord *chords, size_t *count, size_t dominant) {
+    PhraseChord six_four;
+    if (request->cadence == CADENCE_TYPE_HALF || chords[dominant].cells < 2 || *count >= MAX_DEALT ||
+        !harmony_make_chord(request->mode, 1, 2, false, true, 1, &six_four)) {
+        return false;
+    }
+    memmove(&chords[dominant + 1], &chords[dominant], (*count - dominant) * sizeof(PhraseChord));
+    chords[dominant] = six_four;
+    chords[dominant + 1].cells--;
+    (*count)++;
+    return harmony_given_fits(request, chords, *count, NULL);
 }
 
 /* Deals tried before a request is given up on, for a plagal cadence whose first tonic must land on a downbeat. */
@@ -173,6 +193,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     for (size_t i = 0; run && i < run->count; i++) {
         before[before_count++] = (ChordSpec){run->degrees[i], false};
     }
+    size_t dominant = before_count;
     if (!half) {
         before[before_count++] = (ChordSpec){5, seventh};
     }
@@ -222,7 +243,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         }
     }
 
-    PhraseChord *chords = calloc(MAX_CHORDS, sizeof(PhraseChord));
+    PhraseChord *chords = calloc(MAX_DEALT, sizeof(PhraseChord));
     if (!chords) {
         return false;
     }
@@ -236,14 +257,17 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         free(chords);
         return false;
     }
-    /* Chords that do not stand on the given bass or carry the given melody are dealt again. */
-    if (request->has_given && !harmony_given_fits(request, chords, before_count + 1, NULL)) {
+    size_t count = before_count + 1;
+    /* Chords that do not stand on the given bass or carry the given melody are dealt again, after the dominant is
+       tried on the cadential six-four. No random number is drawn for it, so a deal that fits is unchanged. */
+    if (request->has_given && !harmony_given_fits(request, chords, count, NULL) &&
+        !(!half && open_on_cadential_six_four(request, chords, &count, dominant))) {
         free(chords);
         return false;
     }
     out->request = *request;
     out->chords = chords;
-    out->count = before_count + 1;
+    out->count = count;
     return true;
 }
 
