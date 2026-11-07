@@ -320,9 +320,8 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
                 dev->kind = MOTIVE_RELATION_EXACT;
             }
         } else if (spec->pairing.ending == PLAN_THEME_ENDING_CADENTIAL) {
-            dev->kind = MOTIVE_RELATION_LIQUIDATE;
-            dev->value[0] = (long)spec->cadential_drop[second];
-            dev->value[2] = 1;
+            /* A cadential idea is its liquidated residue (has_liquidated above) or its own motive: no note liquidation. */
+            return false;
         } else {
             dev->kind = MOTIVE_RELATION_FRAGMENT;
             dev->value[0] = MOTIVE_FRAGMENT_LEADING;
@@ -332,13 +331,8 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
         return true;
     }
     case GROW_PLACE_CADENTIAL:
-        if (spec->pairing.ending != PLAN_THEME_ENDING_CONTINUATION) {
-            return false;
-        }
-        dev->kind = MOTIVE_RELATION_LIQUIDATE;
-        dev->value[0] = (long)spec->liquidate_drop;
-        dev->value[2] = 1;
-        return true;
+        /* The cadential idea is its liquidated residue (has_liquidated above) or its own motive: no note liquidation. */
+        return false;
     default:
         return false;
     }
@@ -808,7 +802,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
     return a->has_section_motive == b->has_section_motive && motive_equal(&a->source, &b->source) &&
            a->repetition == b->repetition && a->fragment_notes[0] == b->fragment_notes[0] &&
-           a->fragment_notes[1] == b->fragment_notes[1] && a->liquidate_drop == b->liquidate_drop &&
+           a->fragment_notes[1] == b->fragment_notes[1] &&
            a->fragment_from_segment[0] == b->fragment_from_segment[0] &&
            a->fragment_from_segment[1] == b->fragment_from_segment[1] &&
            a->fragment_segment[0] == b->fragment_segment[0] && a->fragment_segment[1] == b->fragment_segment[1] &&
@@ -823,8 +817,7 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
            a->liquidation_head[GROW_PLACE_FRAGMENT_2] == b->liquidation_head[GROW_PLACE_FRAGMENT_2] &&
            a->liquidation_head[GROW_PLACE_CADENTIAL] == b->liquidation_head[GROW_PLACE_CADENTIAL] &&
            a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
-           same_kind(&a->consequent_contrast, &b->consequent_contrast) &&
-           a->cadential_drop[0] == b->cadential_drop[0] && a->cadential_drop[1] == b->cadential_drop[1];
+           same_kind(&a->consequent_contrast, &b->consequent_contrast);
 }
 
 static const char *dev_name(const MotiveRelationStep *dev) {
@@ -834,6 +827,17 @@ static const char *dev_name(const MotiveRelationStep *dev) {
 static const char *repetition_name(GrowRepetition repetition) {
     static const char *const NAMES[GROW_REPEAT_COUNT] = {"exact", "dominant form", "sequence"};
     return NAMES[repetition];
+}
+
+/* How an idea is liquidated: "head of a", "segments, 2 steps", or "own" for an idea with a motive of its own. */
+static void liquidation_label(const GrowThemeSpec *spec, GrowPlace idea, char *out, size_t size) {
+    if (!spec->has_liquidated[idea]) {
+        snprintf(out, size, "own");
+    } else if (spec->liquidation_head[idea]) {
+        snprintf(out, size, "head of %s", spec->segments[spec->liquidation_segment[idea]].label);
+    } else {
+        snprintf(out, size, "segments, %zu steps", spec->liquidation_steps[idea]);
+    }
 }
 
 /* The continuation of the label: the fragments (leading notes, or segments) and how the cadential idea is liquidated. */
@@ -846,14 +850,7 @@ static void continuation_label(const GrowThemeSpec *spec, char *out, size_t size
     } else {
         snprintf(fragments, sizeof(fragments), "%zu+%zu notes", spec->fragment_notes[0], spec->fragment_notes[1]);
     }
-    if (spec->has_liquidated[GROW_PLACE_CADENTIAL] && spec->liquidation_head[GROW_PLACE_CADENTIAL]) {
-        snprintf(liquidated, sizeof(liquidated), "head of %s",
-                 spec->segments[spec->liquidation_segment[GROW_PLACE_CADENTIAL]].label);
-    } else if (spec->has_liquidated[GROW_PLACE_CADENTIAL]) {
-        snprintf(liquidated, sizeof(liquidated), "segments, %zu steps", spec->liquidation_steps[GROW_PLACE_CADENTIAL]);
-    } else {
-        snprintf(liquidated, sizeof(liquidated), "drop %zu", spec->liquidate_drop);
-    }
+    liquidation_label(spec, GROW_PLACE_CADENTIAL, liquidated, sizeof(liquidated));
     snprintf(out, size, "fragments %s, cadential %s", fragments, liquidated);
 }
 
@@ -881,7 +878,11 @@ static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     } else if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
         snprintf(label + used, size - used, " consequent contrast %s", dev_name(&spec->consequent_contrast));
     } else if (used < size) {
-        snprintf(label + used, size - used, " drops %zu+%zu", spec->cadential_drop[0], spec->cadential_drop[1]);
+        char first[32];
+        char second[32];
+        liquidation_label(spec, GROW_PLACE_CADENTIAL_1, first, sizeof(first));
+        liquidation_label(spec, GROW_PLACE_CADENTIAL_2, second, sizeof(second));
+        snprintf(label + used, size - used, " cadential %s then %s", first, second);
     }
 }
 

@@ -60,7 +60,6 @@ typedef struct {
     PlanHarmonyAnchor compound_ends_on;    /* where a compound basic idea's prolongation ends */
     MotiveRelationStep contrast;                /* the contrasting idea of an antecedent or a compound basic idea */
     MotiveRelationStep consequent_contrast;     /* the contrasting idea of a consequent */
-    size_t cadential_drop[2];              /* notes the two ideas of a cadential ending drop of m0 */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
     GrowRepetition repetition;             /* how the presentation repeats the basic idea */
     /*
@@ -85,8 +84,8 @@ typedef struct {
      * its segments its features), liquidated step by step until the result fits the idea and its last note can take the
      * cadence. liquidated[place] is the result, has_liquidated[place] says the idea is that motive restated, and
      * liquidation_steps[place] is the steps it took. liquidation_segment[place] is the segment of m0 (an index of
-     * segments) whose rhythm and head interval the residue keeps (R-345). An idea without one is liquidated by notes
-     * (liquidate_drop, cadential_drop).
+     * segments) whose rhythm and head interval the residue keeps (R-345). Every cadential idea without a motive of its
+     * own has one: a draw with none fails, and no idea is liquidated by notes.
      */
     Motive liquid_base;
     bool has_liquid_base;
@@ -95,7 +94,6 @@ typedef struct {
     size_t liquidation_steps[GROW_PLACE_COUNT];
     size_t liquidation_segment[GROW_PLACE_COUNT];
     bool liquidation_head[GROW_PLACE_COUNT]; /* the residue is a head residue (R-350): a segment's head and a close */
-    size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
     bool ending_split;                     /* no chord of the ending crosses a barline */
     int ending_cap;                        /* max_cells_per_chord of the ending; 0 for none */

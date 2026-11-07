@@ -477,12 +477,6 @@ static bool keep_idea(GrowThemeSpec *spec, GrowPlace idea, Rational unit, size_t
 static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
     size_t first = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
     size_t second = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
-    size_t count = grow_idea_source(spec, GROW_PLACE_CADENTIAL)->note_count;
-    size_t drop_most = count / 2 > 1 ? count / 2 : 1;
-    spec->liquidate_drop = 1 + (size_t)fill_rng_below(rng, drop_most);
-    if (spec->liquidate_drop >= count) {
-        spec->liquidate_drop = count - 1;
-    }
     /* Fragments are segments of m0 when it has them that fit, else its leading notes. */
     if (!draw_segment_fragments(rng, request->development, spec, unit) &&
         (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
@@ -554,15 +548,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
 }
 
 /* A cadential ending is two ideas liquidated from m0, the second at least as much as the first. */
-static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
-    size_t count = grow_idea_source(spec, GROW_PLACE_CADENTIAL_2)->note_count;
-    size_t most = count - 1;
-    size_t drop_most = count / 2 > 1 ? count / 2 : 1;
-    size_t first = 1 + (size_t)fill_rng_below(rng, drop_most);
-    first = first > most ? most : first;
-    size_t second = first + (size_t)fill_rng_below(rng, most - first + 1);
-    spec->cadential_drop[0] = first;
-    spec->cadential_drop[1] = second;
+static bool draw_cadential(const GrowThemeRequest *request, GrowThemeSpec *spec, Rational unit) {
     /* Each idea without a motive of its own liquidates the segments of m0, the second at least as far as the first; a draw
        where either has no residue that keeps a segment fails (R-345). */
     static const GrowPlace IDEAS[2] = {GROW_PLACE_CADENTIAL_1, GROW_PLACE_CADENTIAL_2};
@@ -600,7 +586,7 @@ bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSp
     case PLAN_THEME_ENDING_CONSEQUENT:
         return draw_consequent(request, rng, spec, unit);
     case PLAN_THEME_ENDING_CADENTIAL:
-        return draw_cadential(request, rng, spec, unit);
+        return draw_cadential(request, spec, unit);
     }
     return false;
 }
