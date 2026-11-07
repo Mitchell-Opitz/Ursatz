@@ -338,9 +338,10 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
     if (!plan || !operator_ || !candidate || !out) {
         return false;
     }
-    /* A target with motive chords keeps them, whichever operator made the candidate. */
+    /* A target with motive chords keeps them, whichever operator made the candidate, when the motif has harmony of its own. */
     const PhraseProgression *written = candidate->payload;
-    if (written && written->request.has_motive && written->count > 0 && written->count <= HARMONY_MAX_CHORDS &&
+    bool hold_motive_chords = context && *(const bool *)context;
+    if (hold_motive_chords && written && written->request.has_motive && written->count > 0 && written->count <= HARMONY_MAX_CHORDS &&
         changed_motive_cell(written) < written->request.cells) {
         memset(out, 0, sizeof(*out));
         out->score_denominator = 1;

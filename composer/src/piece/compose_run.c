@@ -303,6 +303,14 @@ static bool stage_done(const PiecePlan *plan, ComposeStage stage, const NodeId *
     return true;
 }
 
+/* The harmony stage's checker context when the motif has harmony of its own: the chords development gave are held (R-348). */
+static const bool HOLD_MOTIVE_CHORDS = true;
+
+/* Whether the run's basic motive has harmony of its own: only then are the chords of its developed motives the motif's. */
+static bool motif_has_harmony(const MotiveDevelopContext *motives) {
+    return motives && motives->basic && motives->basic->chord_count > 0;
+}
+
 static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage stage, const GrowContext *grow,
                                  const MotiveDevelopContext *motives, const MelodyFillParams *melody,
                                  const AccompanimentParams *accompaniment, const VoicingParams *voicing) {
@@ -318,7 +326,9 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
         return result == FILL_OK ? motive_develop_register(registry, motives) : result;
     case COMPOSE_STAGE_HARMONY:
         /* The harmony operators write chords that stand on a Given bass, carry a Given melody and join Given chords. */
-        result = harmony_motive_register(registry);
+        /* A motif with no harmony of its own gets chords proposed from its notes: those are not held, the stage writes the
+           chords as it does for a phrase without motives. */
+        result = motif_has_harmony(motives) ? harmony_motive_register(registry) : FILL_OK;
         result = result == FILL_OK ? harmony_prolong_register_given(registry) : result;
         return result == FILL_OK ? harmony_phrase_register_given(registry) : result;
     case COMPOSE_STAGE_BASS:
@@ -634,6 +644,9 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         fill.checker = checker_of(stage);
         fill.checker_context =
             stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_INVENT ? (void *)&run->motives : NULL;
+        if (stage == COMPOSE_STAGE_HARMONY && motif_has_harmony(&run->motives)) {
+            fill.checker_context = (void *)&HOLD_MOTIVE_CHORDS;
+        }
         /* With a style, the harmony and melody checkers also prefer what is closer to it, the structure checker the
            form (where the plan leaves it open) and the motives checker the motives (motive categories only). */
         StyleCheckContext style_context;
