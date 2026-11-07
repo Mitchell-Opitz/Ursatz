@@ -36,6 +36,18 @@ dominant form`, `fragment 1 = segment b, exact`, `fragment 2 = segment b, 1 step
 segments liquidated, 2 steps`. The item also has `segment`, the label of the segment the idea is made from, or `null`.
 The text output prints `<motive>: <summary>` for each (`m3: fragment 2 = segment b, 1 step down (tonal)`).
 
+## Intended against heard
+
+Each developed idea of the theme result also says how faithful its notes are to what the plan asked for (`fidelity`,
+`minimum`, `heard`, `heard_agrees` in `developments`, API 1.10). The plan's `development` and `summary` are what was
+intended: `fragment 2 = segment b, 1 step down (tonal)`. `fidelity` is the recognizability of the notes the melody holds
+against the idea's source (0 to 1), and `heard` is what the recognizer finds between the two ("exact", a transposition,
+"cut to the leading 2 notes", "transposed -1 step of the key's scale", "not recognized"), with whole-octave transpositions left out because the melody sits in its
+register. `heard_agrees` is true when the heard relation is the intended one, so a repetition planned as exact but heard
+as a narrowed interval reads `false` (the melody rules bent a note to its chord). `minimum` is the least fidelity the melody
+stage accepts for the idea's role and the request's `development` setting ([grow-development.md](grow-development.md#ranking-and-refusing-by-fidelity));
+an idea whose operation makes it differ from its source has minimum 0. The members are `null` for an idea with no melody to measure. The text output of `theme` does not print them.
+
 ## The style term
 
 `FillConsidered` has `style_numerator` and `style_denominator`: the part of the score a style added (weight times how

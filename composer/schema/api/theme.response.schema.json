@@ -274,7 +274,11 @@
               "idea",
               "development",
               "segment",
-              "summary"
+              "summary",
+              "fidelity",
+              "minimum",
+              "heard",
+              "heard_agrees"
             ],
             "properties": {
               "motive": {
@@ -294,6 +298,34 @@
               },
               "summary": {
                 "type": "string"
+              },
+              "fidelity": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "minimum": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "heard": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "heard_agrees": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
               }
             },
             "additionalProperties": false

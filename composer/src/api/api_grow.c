@@ -900,6 +900,11 @@ typedef struct {
     char how[96];
     char segment[PLAN_SEGMENT_LABEL_MAX + 1]; /* the segment the idea is made from, empty for none */
     char summary[192];
+    bool measured;  /* the idea has a melody span whose fidelity was measured (R-332) */
+    double fidelity; /* the score as a fraction, 3 decimals */
+    double minimum;  /* the least the melody stage accepts for the idea's role and setting; 0 for an idea its ref makes differ */
+    char heard[96];  /* the relation the recognizer hears between the idea and its source */
+    bool agrees;     /* the heard relation is the one the ref intended */
 } Development;
 
 static cJSON *string_or_null(const char *text);
@@ -942,8 +947,44 @@ static void summarize_development(const PiecePlan *plan, const PlanMotiveRef *re
     snprintf(out, size, "%s = %s, %s", idea[0] != '\0' ? idea : "(unused)", source, operation);
 }
 
-/* The motives made from m0 (every motive node with a motive_ref) and the idea each one is the melody of. */
-static size_t collect_developments(const PiecePlan *plan, NodeId theme, Development *out) {
+static double score_fraction(MotiveScore score) {
+    double value = (double)score.numerator / (double)(score.denominator > 0 ? score.denominator : 1);
+    return (double)(long)(value * 1000.0 + 0.5) / 1000.0;
+}
+
+/*
+ * The idea's fidelity to its source and the relation heard (R-332): the same measure the melody stage ranks and refuses by
+ * (grow_idea_fidelity), with the minimum of the idea's role under the development setting. An idea whose ref makes it differ
+ * from its source (grow_ref_departs) has no minimum: it is ranked, never refused. Left unmeasured when the plan cannot say.
+ */
+static void measure_development(const PiecePlan *plan, LaneSpanId span, const Motive *basic, GrowDevelopment development,
+                                Development *out) {
+    MotiveFidelity fidelity;
+    Motive source;
+    PlanMotiveRef ref;
+    bool from_segment = false;
+    out->measured = false;
+    if (!grow_idea_fidelity(plan, span, basic, &fidelity) ||
+        !grow_idea_fidelity_source(plan, span, basic, &source, &ref, &from_segment)) {
+        return;
+    }
+    MotiveScore minimum = {0, 1};
+    if (!grow_ref_departs(&ref, from_segment)) {
+        minimum = grow_fidelity_minimum(development, grow_idea_role(out->idea));
+    }
+    out->measured = true;
+    out->fidelity = score_fraction(fidelity.score);
+    out->minimum = score_fraction(minimum);
+    snprintf(out->heard, sizeof(out->heard), "%s", fidelity.heard);
+    out->agrees = fidelity.agrees;
+}
+
+/*
+ * The motives made from m0 (every motive node with a motive_ref) and the idea each one is the melody of, with the idea's
+ * fidelity when it has a melody span (basic is the motive the run was made from, development its setting).
+ */
+static size_t collect_developments(const PiecePlan *plan, NodeId theme, const Motive *basic, GrowDevelopment development,
+                                   Development *out) {
     size_t count = 0;
     LaneSpanId melodies[MAX_LANE_SPANS];
     size_t melody_count = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), melodies, MAX_LANE_SPANS);
@@ -962,14 +1003,22 @@ static size_t collect_developments(const PiecePlan *plan, NodeId theme, Developm
         }
         snprintf(out[count].motive, sizeof(out[count].motive), "%s", name);
         out[count].idea = "";
+        out[count].measured = false;
+        LaneSpanId idea_span = 0;
+        bool has_span = false;
         for (size_t m = 0; m < melody_count && m < MAX_LANE_SPANS; m++) {
             for (size_t c = 0; c < plan_lane_span_constraint_count(plan, melodies[m]); c++) {
                 const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, melodies[m], c);
                 if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && constraint->params.motive.motive == id) {
                     const char *idea = plan_node_name(plan, plan_lane_span_owner(plan, melodies[m]));
                     out[count].idea = idea ? idea : "";
+                    idea_span = melodies[m];
+                    has_span = true;
                 }
             }
+        }
+        if (has_span) {
+            measure_development(plan, idea_span, basic, development, &out[count]);
         }
         describe_ref(&ref->params.motive, out[count].how, sizeof(out[count].how));
         snprintf(out[count].segment, sizeof(out[count].segment), "%s", ref->params.motive.segment);
@@ -980,9 +1029,9 @@ static size_t collect_developments(const PiecePlan *plan, NodeId theme, Developm
     return count;
 }
 
-static cJSON *developments_json(const PiecePlan *plan, NodeId theme) {
+static cJSON *developments_json(const PiecePlan *plan, NodeId theme, const Motive *basic, GrowDevelopment development) {
     Development developments[MAX_DEVELOPMENTS];
-    size_t count = collect_developments(plan, theme, developments);
+    size_t count = collect_developments(plan, theme, basic, development, developments);
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < count; i++) {
         cJSON *item = cJSON_CreateObject();
@@ -990,7 +1039,15 @@ static cJSON *developments_json(const PiecePlan *plan, NodeId theme) {
             !cJSON_AddStringToObject(item, "idea", developments[i].idea) ||
             !cJSON_AddStringToObject(item, "development", developments[i].how) ||
             !cJSON_AddItemToObject(item, "segment", string_or_null(developments[i].segment)) ||
-            !cJSON_AddStringToObject(item, "summary", developments[i].summary) || !cJSON_AddItemToArray(list, item)) {
+            !cJSON_AddStringToObject(item, "summary", developments[i].summary) ||
+            !cJSON_AddItemToObject(item, "fidelity",
+                                   developments[i].measured ? cJSON_CreateNumber(developments[i].fidelity) : cJSON_CreateNull()) ||
+            !cJSON_AddItemToObject(item, "minimum",
+                                   developments[i].measured ? cJSON_CreateNumber(developments[i].minimum) : cJSON_CreateNull()) ||
+            !cJSON_AddItemToObject(item, "heard", developments[i].measured ? cJSON_CreateString(developments[i].heard) : cJSON_CreateNull()) ||
+            !cJSON_AddItemToObject(item, "heard_agrees",
+                                   developments[i].measured ? cJSON_CreateBool(developments[i].agrees) : cJSON_CreateNull()) ||
+            !cJSON_AddItemToArray(list, item)) {
             cJSON_Delete(item);
             cJSON_Delete(list);
             return NULL;
@@ -1320,7 +1377,8 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
     bool ok = object && score && cJSON_AddNumberToObject(object, "seed", (double)theme->seed) &&
               cJSON_AddItemToObject(object, "structure", structure_json(plan, node, bar)) &&
               cJSON_AddItemToObject(object, "chords", chords_json(plan, node, &setup->meter)) &&
-              cJSON_AddItemToObject(object, "developments", developments_json(plan, node));
+              cJSON_AddItemToObject(object, "developments",
+                                    developments_json(plan, node, setup->motive, setup->development));
     if (ok && info) {
         ok = cJSON_AddItemToObject(object, "slots", slots_json(info, plan, &theme->outcome));
     }
