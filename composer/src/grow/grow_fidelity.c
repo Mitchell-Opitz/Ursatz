@@ -18,22 +18,22 @@
  * The least fidelity an idea may have, by development setting and role (R-355). R-355 starts balanced at presentation 3/4,
  * continuation 1/2, cadential 3/10, melody 1/10 higher and theme 1/10 lower; the compose rates (R-317) lowered them in steps
  * of 1/20, as far as the melody rules' own bends need (a clash with the chords moves a note, R-328, and the segment of a
- * fragment is two or three notes): presentation 7/10 (melody 7/10, theme 13/20), continuation 7/20 in every setting, cadential
- * melody 7/20. Contrast and none are 0: a contrasting idea is meant to stray; it is scored and shown, never refused.
+ * fragment is two or three notes): presentation 11/20 and continuation 7/20 in every setting, cadential melody 7/20. Contrast
+ * and none are 0: a contrasting idea is meant to stray; it is scored and shown, never refused.
  */
 static const MotiveScore FIDELITY_MINIMUM[GROW_DEVELOP_COUNT][GROW_ROLE_CONTRAST + 1] = {
     [GROW_DEVELOP_BALANCED] = {[GROW_ROLE_NONE] = {0, 1},
-                               [GROW_ROLE_PRESENTATION] = {7, 10},
+                               [GROW_ROLE_PRESENTATION] = {11, 20},
                                [GROW_ROLE_CONTINUATION] = {7, 20},
                                [GROW_ROLE_CADENTIAL] = {3, 10},
                                [GROW_ROLE_CONTRAST] = {0, 1}},
     [GROW_DEVELOP_MELODY] = {[GROW_ROLE_NONE] = {0, 1},
-                             [GROW_ROLE_PRESENTATION] = {7, 10},
+                             [GROW_ROLE_PRESENTATION] = {11, 20},
                              [GROW_ROLE_CONTINUATION] = {7, 20},
                              [GROW_ROLE_CADENTIAL] = {7, 20},
                              [GROW_ROLE_CONTRAST] = {0, 1}},
     [GROW_DEVELOP_THEME] = {[GROW_ROLE_NONE] = {0, 1},
-                            [GROW_ROLE_PRESENTATION] = {13, 20},
+                            [GROW_ROLE_PRESENTATION] = {11, 20},
                             [GROW_ROLE_CONTINUATION] = {7, 20},
                             [GROW_ROLE_CADENTIAL] = {1, 5},
                             [GROW_ROLE_CONTRAST] = {0, 1}},
