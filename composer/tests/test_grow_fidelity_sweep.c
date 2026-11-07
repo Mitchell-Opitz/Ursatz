@@ -17,16 +17,25 @@
 #endif
 
 /*
- * Fidelity over the sweep motifs (B1 of P37, R-354, R-355): the four motifs as an 8-bar sentence and an 8-bar period in
- * their own key and meter, PAC, seeds 1 to 10, for each development setting. Prints, for each setting and role, the lowest
- * score, the share of ideas heard as intended, and the share the recognizer found a chain for: the measurement B2 sets
- * its minimums from. Asserts only that every buildable case composes (at least MIN_COMPOSED of the seeds, R-317).
+ * Fidelity over the sweep motifs (B1 and B2 of P37, R-354, R-355): the four motifs as an 8-bar sentence and an 8-bar
+ * period in their own key and meter, PAC, seeds 1 to 10, for each development setting. Prints, for each setting and role,
+ * the lowest score, the share of ideas heard as intended, and the share the recognizer found a chain for. Asserts that every
+ * buildable case composes (at least MIN_COMPOSED of the seeds, R-317), that every composed idea is at or above its role's
+ * minimum for the setting, and that presentation and continuation ideas are heard as intended at least as often as the baselines below.
  * Slow: CI runs ctest -LE slow.
  */
 
 #define SEEDS 10
 #define MIN_COMPOSED 8
 #define ROLE_COUNT 5
+/*
+ * The share of presentation and continuation ideas heard as intended, as measured over this sweep (R-355's goal is 90): the
+ * melody rules bend a note that clashes with its chord (R-328), the recognizer then hears interval changes where the plan
+ * asked for an exact or a transposed idea, and every kept candidate of a target bends alike, so ranking has little to choose
+ * from. Presentation measured 20 to 26% and continuation 75%; the baselines are a little under. Raised only upward.
+ */
+#define AGREE_PERCENT_PRESENTATION 15
+#define AGREE_PERCENT_CONTINUATION 70
 
 typedef struct {
     const char *name;
@@ -47,6 +56,7 @@ typedef struct {
     size_t ideas;
     size_t agree;
     size_t found;
+    size_t under; /* below the role's minimum */
     bool has_lowest;
     MotiveScore lowest;
 } RoleStats;
@@ -70,8 +80,9 @@ static bool score_below(MotiveScore a, MotiveScore b) {
     return (unsigned long long)a.numerator * b.denominator < (unsigned long long)b.numerator * a.denominator;
 }
 
-static void add_idea(RoleStats *stats, const MotiveFidelity *fidelity) {
+static void add_idea(RoleStats *stats, const MotiveFidelity *fidelity, MotiveScore minimum) {
     stats->ideas++;
+    stats->under += score_below(fidelity->score, minimum) ? 1 : 0;
     stats->agree += fidelity->agrees ? 1 : 0;
     stats->found += fidelity->found ? 1 : 0;
     if (!stats->has_lowest || score_below(fidelity->score, stats->lowest)) {
@@ -81,7 +92,7 @@ static void add_idea(RoleStats *stats, const MotiveFidelity *fidelity) {
 }
 
 /* Reads every idea with a role of a composed theme into the setting's stats. */
-static void read_theme(const PiecePlan *plan, const Motive *basic, RoleStats stats[ROLE_COUNT]) {
+static void read_theme(const PiecePlan *plan, const Motive *basic, GrowDevelopment development, RoleStats stats[ROLE_COUNT]) {
     for (NodeId idea = 1; idea <= plan_node_count(plan); idea++) {
         LaneSpanId span;
         GrowIdeaRole role =
@@ -91,11 +102,17 @@ static void read_theme(const PiecePlan *plan, const Motive *basic, RoleStats sta
             continue;
         }
         memset(&fidelity, 0, sizeof(fidelity));
+        Motive source;
+        PlanMotiveRef ref;
+        bool from_segment = false;
+        assert(grow_idea_fidelity_source(plan, span, basic, &source, &ref, &from_segment));
         if (!grow_idea_fidelity(plan, span, basic, &fidelity)) {
             fprintf(stderr, "idea \"%s\" has no source or no realized notes\n", plan_node_name(plan, idea));
         }
         assert(grow_idea_fidelity(plan, span, basic, &fidelity));
-        add_idea(&stats[role], &fidelity);
+        /* An idea whose ref cuts the motive down is ranked but never refused (R-355). */
+        add_idea(&stats[role], &fidelity,
+                 grow_ref_shortens(&ref, from_segment) ? (MotiveScore){0, 1} : grow_fidelity_minimum(development, role));
     }
 }
 
@@ -151,7 +168,7 @@ int main(void) {
                     setup.seed = seed;
                     if (api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1) {
                         composed++;
-                        read_theme(run.themes[0].plan, &motive, stats);
+                        read_theme(run.themes[0].plan, &motive, (GrowDevelopment)development, stats);
                     }
                     api_grow_run_destroy(&run);
                 }
@@ -172,11 +189,24 @@ int main(void) {
             }
             printf("%-14s %6zu %9lu/%-4lu %6zu%% %7zu%%\n", ROLE_NAMES[role], s->ideas, s->lowest.numerator, s->lowest.denominator,
                    s->agree * 100 / s->ideas, s->found * 100 / s->ideas);
+            if (s->under > 0) {
+                fprintf(stderr, "%s, %s: %zu of %zu ideas under the minimum\n", api_development_name((GrowDevelopment)development),
+                        ROLE_NAMES[role], s->under, s->ideas);
+                failures++;
+            }
+            int baseline = role == GROW_ROLE_PRESENTATION ? AGREE_PERCENT_PRESENTATION
+                           : role == GROW_ROLE_CONTINUATION ? AGREE_PERCENT_CONTINUATION
+                                                            : 0;
+            if (s->agree * 100 < s->ideas * (size_t)baseline) {
+                fprintf(stderr, "%s, %s: %zu of %zu ideas heard as intended, under %d%%\n",
+                        api_development_name((GrowDevelopment)development), ROLE_NAMES[role], s->agree, s->ideas, baseline);
+                failures++;
+            }
         }
         printf("\n");
     }
     if (failures > 0) {
-        fprintf(stderr, "%d buildable cases composed on fewer than %d of %d seeds\n", failures, MIN_COMPOSED, SEEDS);
+        fprintf(stderr, "%d failures: cases composed on fewer than %d of %d seeds, roles under their minimum or under their heard-as-intended baseline\n", failures, MIN_COMPOSED, SEEDS);
         return 1;
     }
     return 0;
