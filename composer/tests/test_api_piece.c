@@ -701,6 +701,94 @@ static void test_refused_edits(char *plan) {
     free(text);
 }
 
+/* The melody entries of a loop plan that lie inside [start, end) whole notes, as an array of {span, notes}. */
+static cJSON *melody_between(const char *plan_json, long start, long end) {
+    cJSON *plan = cJSON_Parse(plan_json);
+    cJSON *found = cJSON_CreateArray();
+    assert(plan && found);
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(plan, "melody")) {
+        const cJSON *span = cJSON_GetObjectItemCaseSensitive(entry, "span");
+        const cJSON *from = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(span, "start"), "num");
+        const cJSON *to = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(span, "end"), "num");
+        const cJSON *den = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(span, "end"), "den");
+        if (from->valuedouble >= (double)start && to->valuedouble / den->valuedouble <= (double)end) {
+            cJSON *copy = cJSON_CreateObject();
+            assert(copy && cJSON_AddItemToObject(copy, "span", cJSON_Duplicate(span, 1)) &&
+                   cJSON_AddItemToObject(copy, "notes", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(
+                       cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(entry, "composer"), "payload"), "notes"), 1)));
+            assert(cJSON_AddItemToArray(found, copy));
+        }
+    }
+    cJSON_Delete(plan);
+    return found;
+}
+
+/*
+ * The harmony of a theme section is regenerated (the GUI's regenerate of a placed theme): a motive that carries its own
+ * chords keeps them in the theme, but the placed theme's melody holds no motive refs, so the target is the phrase model
+ * around a Given melody that stands on the tonic at every downbeat of the continuation. It is composed again, and the
+ * section's melody is the one composed before.
+ */
+static void test_regenerate_theme_harmony(void) {
+    static const unsigned theme_seeds[2] = {1, 6};
+    for (size_t t = 0; t < 2; t++) {
+        char *text = test_read_file(FIXTURE("theme/c-minor-arpeggio.json"), NULL);
+        cJSON *theme_request = cJSON_Parse(text);
+        free(text);
+        assert(theme_request && cJSON_AddNumberToObject(theme_request, "seed", theme_seeds[t]));
+        char *printed = cJSON_PrintUnformatted(theme_request);
+        cJSON_Delete(theme_request);
+        ComposerResponse theme;
+        assert(composer_api_theme(printed, NULL, &theme) == COMPOSER_OK);
+        free(printed);
+        char *plan = strdup(theme.plan_json);
+        composer_response_destroy(&theme);
+        assert(plan);
+
+        printed = print(api_request(piece_fixture("theme-fill.json", plan), 1));
+        ComposerResponse composed;
+        ComposerStatus status = composer_api_piece(printed, NULL, &composed);
+        if (status != COMPOSER_OK) {
+            fprintf(stderr, "theme seed %u: %s: %s\n", theme_seeds[t], composer_status_name(status), composed.error.message);
+        }
+        assert(status == COMPOSER_OK);
+        free(printed);
+        char *loop = strdup(composed.plan_json);
+        composer_response_destroy(&composed);
+        assert(loop);
+        /* Section a runs from bar 2 (the intro's 8 beats) for 8 bars. */
+        cJSON *melody = melody_between(loop, 2, 10);
+        assert(cJSON_GetArraySize(melody) > 0);
+
+        for (unsigned seed = 1; seed <= 4; seed++) {
+            cJSON *request = api_request(piece_fixture("theme-fill.json", plan), seed);
+            add_edit(request, loop, "a", "harmony");
+            printed = print(request);
+            ComposerResponse again;
+            status = composer_api_piece(printed, NULL, &again);
+            if (status != COMPOSER_OK) {
+                fprintf(stderr, "theme seed %u, regenerate seed %u: %s: %s\n", theme_seeds[t], seed, composer_status_name(status),
+                        again.error.message);
+            }
+            assert(status == COMPOSER_OK);
+            free(printed);
+            cJSON *document = cJSON_Parse(again.json);
+            const cJSON *regenerated = cJSON_GetObjectItemCaseSensitive(document, "regenerated");
+            assert(strcmp(cJSON_GetObjectItemCaseSensitive(regenerated, "section")->valuestring, "a") == 0);
+            assert(strcmp(cJSON_GetObjectItemCaseSensitive(regenerated, "lane")->valuestring, "harmony") == 0);
+            cJSON *now = melody_between(again.plan_json, 2, 10);
+            assert(cJSON_Compare(melody, now, 1));
+            cJSON_Delete(now);
+            cJSON_Delete(document);
+            composer_response_destroy(&again);
+        }
+        cJSON_Delete(melody);
+        free(loop);
+        free(plan);
+    }
+}
+
 /*
  * With the argument "quick" only the cancel at the first step and the refused requests run, which stop before a piece is
  * heard: the valgrind run uses it, because hearing a piece leaks in the Analyzer's make_kernel_window (notes.md).
@@ -719,6 +807,7 @@ int main(int argc, char **argv) {
         test_variations(plan);
         test_outputs(plan);
         test_kept_sections(plan);
+        test_regenerate_theme_harmony();
         test_cancel(plan, false);
         test_cancel_edit(plan);
         test_refused(plan);

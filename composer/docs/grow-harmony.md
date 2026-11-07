@@ -98,7 +98,10 @@ to the end (the whole last bar of a span of bars); a span that holds no downbeat
 cell boundary after the lead, where the recognizer may not hear the cadence. `harmony_phrase_min_cells(cadence, meter)`
 is the fewest cells a span can have (the cells the cadence needs before its last chord, and one for it), and a span with
 fewer cells gets no candidates; `harmony_phrase_min_bars` is the same for a span of whole bars, which ends in a whole
-bar. The schema and sequence operators need whole cells from a cell boundary, so they skip a span with a lead or a tail
+bar. Around a Given melody the dealt V may stand under a downbeat that is not one of its tones (the continuation of a
+placed theme holds the tonic on every downbeat): a V of two cells or more then opens on the cadential six-four (`i64`,
+one cell) and keeps the rest, tried after the deal fails the Given melody and before the next deal, with no random number
+drawn, so a deal that fits is unchanged. The schema and sequence operators need whole cells from a cell boundary, so they skip a span with a lead or a tail
 (no candidates, not an error). A chord of one beat gets one bass note. Given material around a target with part cells is
 not read: the Given operators decline such a target.
 
