@@ -599,6 +599,12 @@ static bool offer_transpositions(Proposal *proposal) {
     return offer_steps(proposal, STEPS, sizeof(STEPS) / sizeof(STEPS[0]));
 }
 
+/* The basic idea developed as the ref says: the one candidate of a slot that is not a contrast. */
+static bool offer_developed(Proposal *proposal, bool contrast) {
+    VariantChain chain;
+    return grow_develop_chain(&proposal->request->ref, &chain) ? offer(proposal, &chain, GROW_DEVELOP_SEED, NULL, contrast) : true;
+}
+
 static bool form_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
     MotiveDevelopContext shared = context_or_default(context);
@@ -615,42 +621,28 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         return true;
     }
     Proposal proposal = {&request, out};
-    if (shared->pool_count > 0 && !offer_pool(&proposal, shared->pool, shared->pool_count)) {
-        return false;
-    }
     switch (request.slot) {
-    case SLOT_RESTATED:
-        return offer_exact(&proposal);
-    case SLOT_REPETITION:
-        /* A restated repetition (the melody restates the basic idea) stays exact. A response is the dominant form when
-           the basic idea opens on the tonic and the chords answer on the dominant; else a transposition. */
-        if (plan_motive_ref_restates(&request.ref)) {
-            return offer_exact(&proposal);
-        }
-        if (request.answers_in_dominant && opens_on_tonic(&request.basic) && !offer_dominant_form(&proposal)) {
+    case SLOT_CONTRAST: {
+        /* The only slot with other offers: the drawn step first, then the pool and every operation when it does not fit. */
+        if (!offer_developed(&proposal, true)) {
             return false;
         }
-        return out->count > 0 ? true : offer_transpositions(&proposal);
-    case SLOT_CONTRAST:
-        /* The first idea of a slot with its own motive restates it (grow_idea_dev). */
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal)
-                                                                : offer_operations(&proposal, "contrast", true);
-    case SLOT_CADENTIAL:
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal)
-                                                                : offer_operations(&proposal, "cadential", false);
+        if (out->count > 0 || plan_motive_ref_restates(&request.ref)) {
+            return true;
+        }
+        if (shared->pool_count > 0 && !offer_pool(&proposal, shared->pool, shared->pool_count)) {
+            return false;
+        }
+        return offer_operations(&proposal, "contrast", true);
+    }
+    case SLOT_REPETITION:
+    case SLOT_RESTATED:
     case SLOT_FRAGMENT_1:
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : offer_liquidation(&proposal, 1);
     case SLOT_FRAGMENT_2:
-        /* A segment is the fragment as it is, or one step down in sequence (the ref asks for it). */
-        if (plan_motive_ref_restates(&request.ref)) {
-            return offer_exact(&proposal);
-        }
-        if (request.ref.has_step && request.ref.step.kind == MOTIVE_RELATION_TRANSPOSE) {
-            return offer_transpositions(&proposal);
-        }
-        return offer_liquidation(&proposal, 2);
+    case SLOT_CADENTIAL:
     case SLOT_CADENTIAL_ENDING:
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : true;
+        /* The idea is the step its ref names, applied to the motive it is made from. */
+        return offer_developed(&proposal, false);
     case SLOT_NONE:
         break;
     }

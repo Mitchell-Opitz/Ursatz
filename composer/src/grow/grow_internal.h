@@ -3,6 +3,7 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive_develop.h>
+#include <ursatz_composer/variant_registry.h>
 
 /* The bars the material section holds: room for the motive and every motive made from it. */
 #define GROW_MATERIAL_BARS 8
@@ -325,6 +326,9 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
  * its parameters set from the step). Deterministic: a fixed seed of 1 draws any open parameter. False when it does not apply.
  */
 bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive *out);
+/* The chain grow_develop_motive applies, and the seed it draws open parameters from. False when the ref has no chain. */
+#define GROW_DEVELOP_SEED 1ul
+bool grow_develop_chain(const PlanMotiveRef *ref, VariantChain *chain);
 /* The specs those refs make, to make the result here with the same Ursatz call the operators use. */
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
 

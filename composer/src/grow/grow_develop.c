@@ -4,8 +4,6 @@
 
 #include "grow/grow_internal.h"
 
-/* The seed an open parameter of a developed motive is drawn from: the same motive and ref always give the same result. */
-#define DEVELOP_SEED 1ul
 
 static void set_value(VariantValue *value, long number, long den) {
     value->set = true;
@@ -82,26 +80,28 @@ static bool liquidation_chain(size_t steps, VariantChain *chain) {
     return true;
 }
 
-bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive *out) {
-    if (!source || !ref || !out) {
+bool grow_develop_chain(const PlanMotiveRef *ref, VariantChain *chain) {
+    if (!ref || !chain) {
         return false;
     }
-    VariantChain chain;
-    memset(&chain, 0, sizeof(chain));
+    memset(chain, 0, sizeof(*chain));
     if (ref->has_step && ref->step.kind == MOTIVE_RELATION_LIQUIDATE && ref->steps > 0) {
-        if (!liquidation_chain(ref->steps, &chain)) {
-            return false;
-        }
-    } else {
-        MotiveRelationKind kind = ref->has_step ? ref->step.kind : MOTIVE_RELATION_EXACT;
-        const VariantOperation *row = row_of(kind);
-        if (!row || !variant_step_init(&chain.steps[0], row->name)) {
-            return false;
-        }
-        if (ref->has_step) {
-            set_values(row, &ref->step, &chain.steps[0]);
-        }
-        chain.step_count = 1;
+        return liquidation_chain(ref->steps, chain);
     }
-    return variant_apply_chain(source, &chain, DEVELOP_SEED, out, NULL) == VARIANT_OK;
+    MotiveRelationKind kind = ref->has_step ? ref->step.kind : MOTIVE_RELATION_EXACT;
+    const VariantOperation *row = row_of(kind);
+    if (!row || !variant_step_init(&chain->steps[0], row->name)) {
+        return false;
+    }
+    if (ref->has_step) {
+        set_values(row, &ref->step, &chain->steps[0]);
+    }
+    chain->step_count = 1;
+    return true;
+}
+
+bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive *out) {
+    VariantChain chain;
+    return source && out && grow_develop_chain(ref, &chain) &&
+           variant_apply_chain(source, &chain, GROW_DEVELOP_SEED, out, NULL) == VARIANT_OK;
 }
