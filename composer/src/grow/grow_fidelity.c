@@ -12,6 +12,37 @@
  * node's length, in the key and meter of the lanes over the span. Pure reads: nothing is written to the plan.
  */
 
+/*
+ * The least fidelity an idea may have, by development setting and role (R-355). Balanced: presentation 3/4, continuation 1/2,
+ * cadential 3/10, contrast and none 0 (a contrasting idea is meant to stray; it is scored and shown, never refused). The
+ * melody setting keeps the ideas closer, 1/10 higher; the theme setting lets them stray, 1/10 lower.
+ */
+static const MotiveScore FIDELITY_MINIMUM[GROW_DEVELOP_COUNT][GROW_ROLE_CONTRAST + 1] = {
+    [GROW_DEVELOP_BALANCED] = {[GROW_ROLE_NONE] = {0, 1},
+                               [GROW_ROLE_PRESENTATION] = {3, 4},
+                               [GROW_ROLE_CONTINUATION] = {1, 2},
+                               [GROW_ROLE_CADENTIAL] = {3, 10},
+                               [GROW_ROLE_CONTRAST] = {0, 1}},
+    [GROW_DEVELOP_MELODY] = {[GROW_ROLE_NONE] = {0, 1},
+                             [GROW_ROLE_PRESENTATION] = {17, 20},
+                             [GROW_ROLE_CONTINUATION] = {3, 5},
+                             [GROW_ROLE_CADENTIAL] = {2, 5},
+                             [GROW_ROLE_CONTRAST] = {0, 1}},
+    [GROW_DEVELOP_THEME] = {[GROW_ROLE_NONE] = {0, 1},
+                            [GROW_ROLE_PRESENTATION] = {13, 20},
+                            [GROW_ROLE_CONTINUATION] = {2, 5},
+                            [GROW_ROLE_CADENTIAL] = {1, 5},
+                            [GROW_ROLE_CONTRAST] = {0, 1}},
+};
+
+MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role) {
+    MotiveScore none = {0, 1};
+    if ((int)development < 0 || development >= GROW_DEVELOP_COUNT || (int)role < GROW_ROLE_NONE || role > GROW_ROLE_CONTRAST) {
+        return none;
+    }
+    return FIDELITY_MINIMUM[development][role];
+}
+
 GrowIdeaRole grow_idea_role(const char *idea_name) {
     static const struct {
         const char *name;

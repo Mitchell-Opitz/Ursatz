@@ -358,6 +358,11 @@ typedef enum {
 /* GROW_ROLE_NONE for a NULL name or one that is no idea's. */
 GrowIdeaRole grow_idea_role(const char *idea_name);
 /*
+ * The least fidelity (R-354's score) an idea of the role may have under the development setting before the melody stage
+ * refuses it (R-355); 0 for GROW_ROLE_NONE, GROW_ROLE_CONTRAST and values out of range.
+ */
+MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role);
+/*
  * The motive an idea's melody span asks for is made from, as the ref says: the span's MOTIVE_REF names the idea's motive
  * node; that node's own MOTIVE_REF gives the source node and the ref (a node with none, m0 or a motive given for the idea,
  * is its own source, with the span's ref). A ref that names a segment makes the source that segment of m0 (the labelled
