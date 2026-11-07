@@ -179,29 +179,35 @@ static bool realized_motive(const PiecePlan *plan, LaneSpanId melody, const Plan
     return true;
 }
 
-bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
-    if (!plan || !out || !plan_has_lane_span(plan, melody) || plan_lane_span_lane(plan, melody) != PLAN_LANE_MELODY) {
-        return false;
-    }
+/* The length of the idea's motive node: the end of its last note, the pickup part of it (R-319). */
+static bool node_length_of(const PiecePlan *plan, LaneSpanId melody, Rational *length) {
     const PlanConstraint *asked = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
     LaneSpanId node_span;
     if (!asked || !plan_has_node(plan, asked->params.motive.motive) ||
         !plan_melody_span_of(plan, asked->params.motive.motive, &node_span)) {
         return false;
     }
-    /* The idea's motive node is as long as the end of its last note; the pickup is part of that length (R-319). */
     const PlanNotes *carried = &plan_lane_span_payload(plan, node_span)->notes;
+    return notes_end(carried, carried->note_count, length);
+}
+
+/* How many of the notes, in order, start before the idea's motive node ends. */
+static size_t notes_inside(const PlanNote *notes, size_t count, Rational node_length) {
+    size_t inside = 0;
+    while (inside < count && inside < MOTIVE_MAX_NOTES && rational_cmp(notes[inside].offset, node_length) < 0) {
+        inside++;
+    }
+    return inside;
+}
+
+bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
     Rational node_length;
-    if (!notes_end(carried, carried->note_count, &node_length)) {
+    if (!plan || !out || !plan_has_lane_span(plan, melody) || plan_lane_span_lane(plan, melody) != PLAN_LANE_MELODY ||
+        !node_length_of(plan, melody, &node_length)) {
         return false;
     }
     const PlanNotes *written = &plan_lane_span_payload(plan, melody)->notes;
-    size_t inside = 0;
-    while (inside < written->note_count && inside < MOTIVE_MAX_NOTES &&
-           rational_cmp(written->notes[inside].offset, node_length) < 0) {
-        inside++;
-    }
-    return realized_motive(plan, melody, written->notes, inside, out);
+    return realized_motive(plan, melody, written->notes, notes_inside(written->notes, written->note_count, node_length), out);
 }
 
 bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out) {
@@ -330,8 +336,16 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
     PlanNote notes[MOTIVE_MAX_NOTES];
     size_t count = 0;
     LaneSpanId span;
+    /* Of the notes that carry a motive, those inside the idea's motive node are the idea's realized notes, as in the plan (an
+       idea over several bars can carry more motive notes than its node holds). */
+    Rational node_length;
     if (!melody_candidate_realized(candidate, &span, notes, &count, MOTIVE_MAX_NOTES) || span != (LaneSpanId)target.id ||
-        !plan_has_lane_span(plan, span) || !plan_lane_span_find_constraint(plan, span, PLAN_CONSTRAINT_MOTIVE_REF)) {
+        !plan_has_lane_span(plan, span) || !plan_lane_span_find_constraint(plan, span, PLAN_CONSTRAINT_MOTIVE_REF) ||
+        !node_length_of(plan, span, &node_length)) {
+        return true;
+    }
+    count = notes_inside(notes, count, node_length);
+    if (count == 0) {
         return true;
     }
     NodeId owner = plan_lane_span_owner(plan, span);
