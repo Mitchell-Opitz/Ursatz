@@ -598,9 +598,9 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * Re-recorded at P36 B1, after every development operation wrote the idea's notes and chords from its plan ref (R-329): all
  * five changed. Before: P35 B1 (realized motive notes, R-338).
  */
-/* Re-recorded at P36 B3 (liquidated residues, R-345). */
-static const unsigned long long MAIN_HASH[5] = {0x2fbf141d079214b5ULL, 0xd7d125680cfed013ULL, 0xf00c353a7a341f98ULL,
-                                                0xd8917a74dfdac22dULL, 0x76fce9db5106980aULL};
+/* Re-recorded at P36 B3 (liquidated residues, R-345) and at P37 B2 (ideas ranked by fidelity, R-355: seeds 1, 3 and 5). */
+static const unsigned long long MAIN_HASH[5] = {0x0a947488498a3fe5ULL, 0xd7d125680cfed013ULL, 0x09f6d8f3606878fbULL,
+                                                0xd8917a74dfdac22dULL, 0x1739b7abbedb6cf7ULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
@@ -967,7 +967,9 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
    B1; the styled melody to sonatinas is further (0.7740 against the bound 0.767), the residue's own rhythm leaving the style
    fewer melodies after the cadential idea to choose among. */
 static const int STYLED[2][2] = {{754, 807}, {715, 774}};
-static const int UNSTYLED[2][2] = {{724, 798}, {683, 758}};
+/* Re-measured at P37 B2 (ideas ranked by fidelity, R-355): the unstyled means are 0.7217 and 0.7975 to chorales, 0.6858 and 0.7575 to
+   sonatinas (harmony, melody); the styled means are as before. */
+static const int UNSTYLED[2][2] = {{721, 797}, {685, 757}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};
