@@ -379,6 +379,41 @@ bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out);
 /* The two above and motive_fidelity. */
 bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
 
+/*
+ * The melody stage's fidelity checker (R-355). Measuring is the costly part (the recognizer, R-307), so a candidate whose
+ * realized notes were measured before for the same span, in any octave, is not measured again: the cache holds those
+ * results for the length of one stage run (zero it before use; NULL in the context means none).
+ */
+#define GROW_FIDELITY_CACHE 128
+typedef struct {
+    struct {
+        unsigned long long key;
+        MotiveFidelity fidelity;
+    } entries[GROW_FIDELITY_CACHE];
+    size_t count; /* entries made so far; the oldest is replaced once full */
+} GrowFidelityCache;
+
+typedef struct {
+    GrowDevelopment development;
+    const Motive *basic;      /* the basic motive the run was made from (grow_idea_fidelity_source), may be NULL */
+    FillCheckerFn inner;      /* the melody stage's own checker, run first */
+    void *inner_context;
+    GrowFidelityCache *cache; /* NULL for none */
+} GrowFidelityContext;
+
+/*
+ * Runs context->inner first; a hard violation stands. For a melody-fill candidate whose target span has a MOTIVE_REF and
+ * whose owner idea has a role (grow_idea_role): the realized notes (melody_candidate_realized) are measured against the
+ * idea's source, and a score under the role's minimum (grow_fidelity_minimum) is a hard violation, "motive fidelity n/d
+ * under n/d (role)". Otherwise the score becomes
+ *   ((agree * 100 + floor(100 * fidelity)) * (total + 1) + held) / (201 * (total + 1))
+ * where held/total is the inner score, so agreement ranks first, then fidelity, then the melody rules' share; the style
+ * part the inner left is kept. Every other candidate passes through unchanged. A cadential idea's agreement is not
+ * measured (the search never reaches its residue, R-355) and counts as no agreement.
+ */
+bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                           const FillCandidate *candidate, void *context, FillCheck *out);
+
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
 NodeId grow_find_theme(const PiecePlan *plan, bool open_only);
 

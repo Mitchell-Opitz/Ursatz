@@ -1,6 +1,8 @@
+#include <stdio.h>
 #include <string.h>
 
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/motive_analysis.h>
 
 #include "grow/grow_internal.h"
@@ -158,17 +160,33 @@ bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const M
     return grow_read_motive(plan, source_node, &meter, &key, source);
 }
 
+/* The notes as a motive in the meter and key of the lanes over the span; its length is the end of its last note. */
+static bool realized_motive(const PiecePlan *plan, LaneSpanId melody, const PlanNote *notes, size_t count, Motive *out) {
+    PlanMeter meter;
+    AnalysisKey key;
+    Rational length;
+    if (count == 0 || count > MOTIVE_MAX_NOTES || !read_meter_key(plan, plan_lane_span_span(plan, melody), &meter, &key)) {
+        return false;
+    }
+    PlanNotes written = {notes, count};
+    if (!notes_end(&written, count, &length)) {
+        return false;
+    }
+    motive_init(out, meter);
+    motive_set_key(out, &key, MOTIVE_SKETCH_KEY_GIVEN);
+    motive_set_lane_notes(out, notes, count);
+    out->length = length;
+    return true;
+}
+
 bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
     if (!plan || !out || !plan_has_lane_span(plan, melody) || plan_lane_span_lane(plan, melody) != PLAN_LANE_MELODY) {
         return false;
     }
     const PlanConstraint *asked = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
     LaneSpanId node_span;
-    PlanMeter meter;
-    AnalysisKey key;
     if (!asked || !plan_has_node(plan, asked->params.motive.motive) ||
-        !plan_melody_span_of(plan, asked->params.motive.motive, &node_span) ||
-        !read_meter_key(plan, plan_lane_span_span(plan, melody), &meter, &key)) {
+        !plan_melody_span_of(plan, asked->params.motive.motive, &node_span)) {
         return false;
     }
     /* The idea's motive node is as long as the end of its last note; the pickup is part of that length (R-319). */
@@ -183,15 +201,7 @@ bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
            rational_cmp(written->notes[inside].offset, node_length) < 0) {
         inside++;
     }
-    Rational length;
-    if (inside == 0 || !notes_end(written, inside, &length)) {
-        return false;
-    }
-    motive_init(out, meter);
-    motive_set_key(out, &key, MOTIVE_SKETCH_KEY_GIVEN);
-    motive_set_lane_notes(out, written->notes, inside);
-    out->length = length;
-    return true;
+    return realized_motive(plan, melody, written->notes, inside, out);
 }
 
 bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out) {
@@ -201,4 +211,139 @@ bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *
     bool from_segment = false;
     return out && grow_idea_fidelity_source(plan, melody, basic, &source, &ref, &from_segment) &&
            grow_idea_realized(plan, melody, &realized) && motive_fidelity(&source, &realized, &ref, from_segment, out);
+}
+
+/* --- the checker ------------------------------------------------------------ */
+
+static const char *role_name(GrowIdeaRole role) {
+    switch (role) {
+    case GROW_ROLE_PRESENTATION:
+        return "presentation";
+    case GROW_ROLE_CONTINUATION:
+        return "continuation";
+    case GROW_ROLE_CADENTIAL:
+        return "cadential";
+    case GROW_ROLE_CONTRAST:
+        return "contrast";
+    case GROW_ROLE_NONE:
+        break;
+    }
+    return "none";
+}
+
+static unsigned long long hash_value(unsigned long long hash, long long value) {
+    return (hash ^ (unsigned long long)value) * 1099511628211ull;
+}
+
+/*
+ * The key of a measurement: the span and the notes' shape with the octave taken out (every pitch less the octave of the
+ * first), since the fidelity of the same notes an octave higher or lower is the same (R-354 drops whole octaves).
+ */
+static unsigned long long measurement_key(LaneSpanId span, const PlanNote *notes, size_t count) {
+    unsigned long long hash = hash_value(14695981039346656037ull, (long long)span);
+    int octave = count > 0 ? (notes[0].midi >= 0 ? notes[0].midi / 12 : -((11 - notes[0].midi) / 12)) * 12 : 0;
+    for (size_t i = 0; i < count; i++) {
+        hash = hash_value(hash, notes[i].midi - octave);
+        hash = hash_value(hash, notes[i].offset.num);
+        hash = hash_value(hash, notes[i].offset.den);
+        hash = hash_value(hash, notes[i].duration.num);
+        hash = hash_value(hash, notes[i].duration.den);
+    }
+    return hash;
+}
+
+static bool cache_find(const GrowFidelityCache *cache, unsigned long long key, MotiveFidelity *out) {
+    size_t used = cache ? (cache->count < GROW_FIDELITY_CACHE ? cache->count : GROW_FIDELITY_CACHE) : 0;
+    for (size_t i = 0; i < used; i++) {
+        if (cache->entries[i].key == key) {
+            *out = cache->entries[i].fidelity;
+            return true;
+        }
+    }
+    return false;
+}
+
+static void cache_add(GrowFidelityCache *cache, unsigned long long key, const MotiveFidelity *fidelity) {
+    if (cache) {
+        size_t slot = cache->count % GROW_FIDELITY_CACHE;
+        cache->entries[slot].key = key;
+        cache->entries[slot].fidelity = *fidelity;
+        cache->count++;
+    }
+}
+
+/* The idea's fidelity for these realized notes: from the cache, else measured. */
+static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *notes, size_t count, GrowIdeaRole role,
+                    const GrowFidelityContext *context, MotiveFidelity *out) {
+    unsigned long long key = measurement_key(span, notes, count);
+    if (cache_find(context->cache, key, out)) {
+        return true;
+    }
+    Motive source;
+    Motive realized;
+    PlanMotiveRef ref;
+    bool from_segment = false;
+    if (!grow_idea_fidelity_source(plan, span, context->basic, &source, &ref, &from_segment) ||
+        !realized_motive(plan, span, notes, count, &realized)) {
+        return false;
+    }
+    bool measured;
+    if (role == GROW_ROLE_CADENTIAL) {
+        /* Only the score: a cadential idea's residue is liquidated in more steps than the search reaches (R-355). */
+        MotiveRecognizability recognizability;
+        measured = motive_recognizability(&source, &realized, NULL, &recognizability);
+        if (measured) {
+            memset(out, 0, sizeof(*out));
+            out->score = recognizability.total;
+            snprintf(out->heard, sizeof(out->heard), "not recognized");
+        }
+    } else {
+        measured = motive_fidelity(&source, &realized, &ref, from_segment, out);
+    }
+    if (measured) {
+        cache_add(context->cache, key, out);
+    }
+    return measured;
+}
+
+bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+                           const FillCandidate *candidate, void *context, FillCheck *out) {
+    const GrowFidelityContext *fidelity_context = context;
+    if (!fidelity_context || !fidelity_context->inner || !plan || !operator_ || !candidate || !out) {
+        return false;
+    }
+    if (!fidelity_context->inner(plan, target, operator_, candidate, fidelity_context->inner_context, out)) {
+        return false;
+    }
+    if (out->hard_violation || strcmp(operator_->generator.name, MELODY_FILL_OPERATOR_NAME) != 0 ||
+        target.kind != FILL_TARGET_LANE_SPAN) {
+        return true;
+    }
+    PlanNote notes[MOTIVE_MAX_NOTES];
+    size_t count = 0;
+    LaneSpanId span;
+    if (!melody_candidate_realized(candidate, &span, notes, &count, MOTIVE_MAX_NOTES) || span != (LaneSpanId)target.id ||
+        !plan_has_lane_span(plan, span) || !plan_lane_span_find_constraint(plan, span, PLAN_CONSTRAINT_MOTIVE_REF)) {
+        return true;
+    }
+    NodeId owner = plan_lane_span_owner(plan, span);
+    GrowIdeaRole role = plan_node_kind(plan, owner) == PLAN_NODE_IDEA ? grow_idea_role(plan_node_name(plan, owner))
+                                                                       : GROW_ROLE_NONE;
+    MotiveFidelity measured;
+    if (role == GROW_ROLE_NONE || !measure(plan, span, notes, count, role, fidelity_context, &measured)) {
+        return true;
+    }
+    MotiveScore minimum = grow_fidelity_minimum(fidelity_context->development, role);
+    if (measured.score.numerator * minimum.denominator < minimum.numerator * measured.score.denominator) {
+        out->hard_violation = true;
+        snprintf(out->reason, sizeof(out->reason), "motive fidelity %lu/%lu under %lu/%lu (%s)", measured.score.numerator,
+                 measured.score.denominator, minimum.numerator, minimum.denominator, role_name(role));
+        return true;
+    }
+    unsigned long quantized = measured.score.numerator * 100 / measured.score.denominator;
+    unsigned long held = out->score_numerator;
+    unsigned long total = out->score_denominator;
+    out->score_numerator = ((measured.agrees ? 100ul : 0ul) + quantized) * (total + 1) + held;
+    out->score_denominator = 201ul * (total + 1);
+    return true;
 }
