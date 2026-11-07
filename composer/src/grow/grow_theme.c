@@ -653,23 +653,19 @@ static size_t derived_bars(const GrowThemeSpec *spec, Rational bar) {
     return bars;
 }
 
-/* The most motives grow-theme makes in the material, one bar each: the two segments of the fragments and a liquidation for each of
-   the two fragments and the cadential idea (apply takes a bar for every one it makes). */
-#define MADE_NODES 5
-
 static size_t count_bars(PlanSpan material_span, Rational bar);
 
 /* Whether the material has bars after the motives for the fragments' segments (a plan made before them may not). */
 static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {
     NodeId material = plan_node_parent(plan, request->source);
     PlanSpan span = plan_node_span(plan, material);
-    size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + MADE_NODES;
+    size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + GROW_MADE_NODES;
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
 }
 
 /*
  * Whether the material has the bars apply takes for the motives the drawn spec makes: the same count apply uses, the
- * fragments' segments and a liquidation for each idea that has one, which the estimate before the draw (MADE_NODES) can
+ * fragments' segments and a liquidation for each idea that has one, which the estimate before the draw (GROW_MADE_NODES) can
  * fall short of.
  */
 static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {

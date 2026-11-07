@@ -164,8 +164,9 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
 
 /* The weak cadence an antecedent ends in. */
 #define ANTECEDENT_CADENCE CADENCE_TYPE_HALF
-/* The bars of material a section holds beside the bars of its own: its motive and the four its ideas are made from. */
-#define MATERIAL_BARS_PER_SECTION 5
+/* The bars of material a section holds beside the bars of its own: its motive, the four its ideas are made from and the ones
+   grow-theme makes beside them (GROW_MADE_NODES). */
+#define MATERIAL_BARS_PER_SECTION (5 + GROW_MADE_NODES)
 
 /* A length of `count` beats of the meter. */
 static Rational beats_of(const PlanMeter *meter, size_t count) {

@@ -11,8 +11,8 @@
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"
 
-/* Each section's own motive and the four motives grow-theme makes for its ideas. */
-#define MATERIAL_BARS_PER_SECTION 5
+/* Each section's own motive, the four motives grow-theme makes for its ideas and the ones it makes beside them (GROW_MADE_NODES). */
+#define MATERIAL_BARS_PER_SECTION (5 + GROW_MADE_NODES)
 /* The placeholder note an open melody span holds until motive-invent writes it. */
 #define INVENT_PLACEHOLDER 60
 /* The weak cadence an antecedent ends in. */

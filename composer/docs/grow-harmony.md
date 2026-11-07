@@ -29,7 +29,7 @@ have no candidate for is left to the motive operators below, which write the nod
 
 A motive node carries, beside its melody lane span, its own `MOTIVE_TONES`: the chords of the developed motive (its own harmony, else its
 best implied chord) and the tone role of each note against them (R-197). The melody stage reads the node's own tones first and walks the
-`motive_ref` chain only for a node without them. The harmony stage does not read these chords yet; it does from B2 of P36.
+`motive_ref` chain only for a node without them. The harmony stage reads them when the motif has harmony of its own ([below](#chords-from-developed-motives)).
 
 The checker scores a form at 1 plus its connection score (R-145, `(2 x common + rhythm + harmony) / 4`, halved when the
 form is over 3/4 from the basic idea, or over 1/2 at a tempo of 140 quarter notes per minute or more, R-163), so a form always outranks the motive operators, whose recognizability is at most 1, and
@@ -56,6 +56,28 @@ much higher can still outweigh the flag. A pool form equal to another candidate 
 The record and `grow --explain` name each form: the label is the chain, the connection in percent and the derivation in
 plain words ("transpose 90%: Transposed +2 steps of the key's scale. Kept the"), cut at 63 characters; the score shown is 1
 plus the connection. A pool form is labelled `pool <item> <connection>%: <chain>`.
+
+## Chords from developed motives
+
+When the motif has harmony of its own (`Motive.chord_count > 0`, R-348), the chords its developed motives carry are held (R-344).
+`harmony_motive_read` (`src/harmony/harmony_motive.c`) reads, for each melody span over a harmony target that is still open and names
+a motive node by a `motive_ref`, the chords of that node's `MOTIVE_TONES` as degrees in the theme's key ("I" is the tonic of a minor key
+too); each chord holds the cells from the one its onset falls in to the next chord's onset or the end of the idea. A cell with such a
+chord is *fixed*, any other is *free*: the cadence's cells (the last downbeat's chord and the dominant before it, the whole target for
+a cadential shape), a shape anchor (first or last cell) whose anchor the chord breaks, and every cell no motive chord covers.
+
+`harmony-motive` (`FILL_OPERATOR_FILL`, registered before the other harmony operators, only for a motif with harmony) applies to a
+target with a fixed cell. It proposes the fixed chords as they are and fills each run of free cells: the phrase model over the run
+(a run before the end is a half-cadence progression), and for a prolongation the plain chord (the anchor's, else the one next to it) and
+then each diatonic chord of the key the shape allows, tonic first. The order the combinations are tried in starts at an offset drawn
+from the seed, so another seed proposes other fills first (`HARMONY_MOTIVE_CANDIDATES` 8; the operator stays deterministic). Each
+combination is checked whole against the shape, the given material and the cadence the target asks for, and its candidates are
+judged open-ended (the cadence, not the phrase model, which fixed motive chords cannot meet).
+
+`harmony_prolong_checker` rejects any candidate, whichever operator made it, that changes a fixed chord ("changes the chord its motive's
+development gives"); the stage's checker context says whether the motif has harmony, so a motif without it keeps the harmony stage as
+it always was: its developed motives carry chords proposed from the notes, which are not held. A melody span already written (a
+reharmonized return, a kept melody) is judged as before.
 
 ## The harmony
 

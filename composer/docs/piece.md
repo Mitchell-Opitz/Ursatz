@@ -149,8 +149,8 @@ motive as a Given melody span, or, when none is given, a Constrained one-bar spa
 A section's basic idea takes its motive from `m0`. A section may carry a `motive_ref` to `m0` with a transform, and
 `grow-theme` then adds the section's own motive node ("<section> motive") to the material and builds the basic idea
 from it. The templates give B sections an inverted `m0`, and Var k the diminished (k odd) or interval-changed (k even)
-`m0`, so contrasting sections sound different; returning sections use their source's. The material holds `m0` and five
-bars for each section (`piece_material_bars`); each section's motives go after the ones already there.
+`m0`, so contrasting sections sound different; returning sections use their source's. The material holds `m0` and ten
+bars for each section (its motive, the four its ideas are made from and up to five made motives) (`piece_material_bars`); each section's motives go after the ones already there.
 
 ## Inventing a motive
 

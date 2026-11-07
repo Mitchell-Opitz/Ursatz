@@ -187,6 +187,12 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
 /* The key lane over the section: see grow_theme.c. False when the lane does not tile the section. */
 bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
+/*
+ * The most motives grow-theme makes in the material, one bar each: the two segments of the fragments and a liquidation for each of
+ * the two fragments and the cadential idea (apply takes a bar for every one it makes).
+ */
+#define GROW_MADE_NODES 5
+
 size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
 
 /*

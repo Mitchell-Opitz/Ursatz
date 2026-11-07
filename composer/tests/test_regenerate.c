@@ -583,6 +583,32 @@ static int test_dependents(void) {
     return 0;
 }
 
+/* The motive nodes the plan holds that no node or lane span names by a motive_ref: made motives a regeneration left behind. */
+static unsigned unnamed_motives(const PiecePlan *plan) {
+    unsigned unnamed = 0;
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_MOTIVE) {
+            continue;
+        }
+        bool named = false;
+        for (NodeId other = 1; !named && other <= plan_node_count(plan); other++) {
+            for (size_t i = 0; plan_has_node(plan, other) && !named && i < plan_node_constraint_count(plan, other); i++) {
+                const PlanConstraint *constraint = plan_node_constraint_at(plan, other, i);
+                named = constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && constraint->params.motive.motive == id &&
+                        other != id;
+            }
+        }
+        for (LaneSpanId span = 1; !named && span <= plan_lane_span_count(plan); span++) {
+            for (size_t i = 0; plan_has_lane_span(plan, span) && !named && i < plan_lane_span_constraint_count(plan, span); i++) {
+                const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, span, i);
+                named = constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && constraint->params.motive.motive == id;
+            }
+        }
+        unnamed += named ? 0 : 1;
+    }
+    return unnamed;
+}
+
 /* ------------------------------------------------------------ section */
 
 static int test_section(void) {
@@ -611,6 +637,8 @@ static int test_section(void) {
         assert(plan_node_state(piece.plan, piece.a) == PLAN_STATE_GIVEN);
         assert(plan_node_state(piece.plan, piece.b) == PLAN_STATE_REALIZED);
         assert(outcome.section_count == 1);
+        /* No made motive is left behind by the regeneration: every motive node is named by a motive_ref (R-346). */
+        assert(unnamed_motives(piece.plan) == 0);
         changed_harmony += strcmp(harmony_before, harmony_after) != 0;
         changed_bass += strcmp(bass_before, bass_after) != 0;
         changed_melody += strcmp(melody_before, melody_after) != 0;

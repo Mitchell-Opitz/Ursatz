@@ -523,8 +523,8 @@ static void test_regenerate(void) {
     char *old_tune = dump_lane(before, PLAN_LANE_MELODY, 0, 0, 2);
     char *new_tune = dump_lane(after, PLAN_LANE_MELODY, 0, 0, 2);
     /* The chords stay. The tune is made again over the new bass (the melody depends on it): the notes of an idea that do not
-       fit the chords are moved to them, so its pitches may differ, but not its rhythm. Equal pitches wait for the harmony
-       stage to take the motives' chords (B2 of P36). */
+       fit the chords are moved to them, so its pitches may differ, but not its rhythm. This piece's motif has no harmony of its
+       own, so its developed motives' chords are not held (R-348) and equal pitches cannot be asked of it (P36 B2). */
     assert(strcmp(old_chords, new_chords) == 0);
     char *old_rhythm = rhythm_of(old_tune);
     char *new_rhythm = rhythm_of(new_tune);

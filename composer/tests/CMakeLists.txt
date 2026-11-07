@@ -902,6 +902,13 @@ target_compile_definitions(test_grow_developed_motives PRIVATE COMPOSER_FIXTURE_
 target_compile_options(test_grow_developed_motives PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_developed_motives COMMAND test_grow_developed_motives)
 
+add_executable(test_grow_motive_harmony test_grow_motive_harmony.c)
+target_link_libraries(test_grow_motive_harmony PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_motive_harmony PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_motive_harmony PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_motive_harmony PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_motive_harmony COMMAND test_grow_motive_harmony)
+
 add_executable(test_grow_segment_fragments test_grow_segment_fragments.c)
 target_link_libraries(test_grow_segment_fragments PRIVATE ursatz_composer cjson)
 target_compile_options(test_grow_segment_fragments PRIVATE -Wall -Wextra -Wpedantic)

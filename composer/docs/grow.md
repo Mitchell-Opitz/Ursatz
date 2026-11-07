@@ -101,12 +101,13 @@ motive) develop all of it and must fit the idea they fill. Each motive in the ma
 a Roman numeral, an onset from the theme's start and a length. `grow_build_plan` gives them to the theme section with
 `plan_give_chords` once the section is made, one Given harmony span for each, exactly its onset and length;
 `GROW_ERR_BAD_REQUEST` when it refuses them. The harmony stage opens targets only over the gaps (`given_gaps`), so the chords
-stay as they are, the bass is written over them, and a gap between Given chords is judged with the Given chords before it: a
-gap of one chord is allowed when it follows Given chords, and is heard as the end of the chain they make. The harmony and bass
-operators write a chord on the cells of the meter only, so the `theme` command refuses any other onset
-([theme-request.md](theme-request.md#chords)); `plan_give_chords` itself takes any onset (`given_cell_length` is the grid).
-A run stuck at the harmony, bass or melody stage with a chord in or next to the span it left open says so, naming the bar
+stay, the bass is written over them, and a gap is judged with the Given chords before it (one chord after them is
+heard as the end of their chain). The harmony and bass operators write a chord on the cells of the meter only, so the `theme` command refuses any other onset
+([theme-request.md](theme-request.md#chords)).
+A run stuck at the harmony, bass or melody stage next to a given chord names the bar
 (`the given chords in bar <n> do not allow the <cadence>`, exit 2).
+
+The order: given, then motive ([grow-harmony.md](grow-harmony.md#chords-from-developed-motives)), then filled.
 
 ## The plan
 
@@ -129,7 +130,7 @@ with the stage in `GrowOutcome.stuck_stage`. `GrowOutcome.records` keeps the `Fi
 | --- | --- | --- |
 | structure | `grow-theme` | `grow_checker` |
 | motives | `motive-form`, then `motive-restate`, `motive-fragment`, `motive-rhythm` | `grow_motives_checker` |
-| harmony | `harmony-prolongation`, `harmony-phrase-model` | `harmony_prolong_checker` |
+| harmony | `harmony-motive`, `harmony-prolongation`, `harmony-phrase-model` | `harmony_prolong_checker` |
 | bass | `harmony-bass` | `harmony_phrase_checker` |
 | melody | `melody-fill` | `melody_fill_checker` |
 | texture | `accompaniment`, `voicing-satb` | `texture_checker` |

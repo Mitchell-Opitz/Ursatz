@@ -442,12 +442,12 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     return result;
 }
 
-/* One Given motive node in the material, `at` bars after the first of the bars grow-theme made motives go in. */
+/* One Realized motive node in the material (the run's own, R-346), `at` bars after the first of the bars grow-theme made motives go in. */
 static PlanResult add_made_node(GrowBuild *build, size_t at, const Motive *motive, const char *name, NodeId *out) {
     Rational start;
     PlanResult result = plan_result_of_rational(
         rational_add(build->material_span.start, grow_scaled(build->request->bar, build->result_base + at), &start));
-    return result == PLAN_OK ? motive_attach(build->plan, build->material, start, motive, name, out, NULL) : result;
+    return result == PLAN_OK ? motive_attach_as(build->plan, build->material, start, motive, name, PLAN_STATE_REALIZED, out, NULL) : result;
 }
 
 /* The motive nodes of what grow-theme made: the segments the fragments are made from, the liquidated ideas. */

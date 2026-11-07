@@ -1,3 +1,4 @@
+#include <ursatz_composer/harmony_motive.h>
 #include <ursatz_composer/harmony_prolong.h>
 
 #include <stdio.h>
@@ -317,15 +318,46 @@ FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
     return register_prolong(registry, true);
 }
 
+/* The first cell whose fixed motive chord the progression changes, or the request's cell count when it keeps them all. */
+static size_t changed_motive_cell(const PhraseProgression *progression) {
+    const PhraseRequest *request = &progression->request;
+    size_t cell = 0;
+    for (size_t i = 0; i < progression->count; i++) {
+        for (size_t c = cell; c < cell + progression->chords[i].cells && c < request->cells; c++) {
+            if (request->motive_fixed[c] && strcmp(request->motive_chord[c].roman, progression->chords[i].roman) != 0) {
+                return c;
+            }
+        }
+        cell += progression->chords[i].cells;
+    }
+    return request->cells;
+}
+
 bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                              const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;
     }
-    if (strcmp(operator_->generator.name, HARMONY_PROLONG_OPERATOR_NAME) != 0) {
-        return harmony_phrase_checker(plan, target, operator_, candidate, context, out);
+    /* A target with motive chords keeps them, whichever operator made the candidate, when the motif has harmony of its own. */
+    const PhraseProgression *written = candidate->payload;
+    bool hold_motive_chords = context && *(const bool *)context;
+    if (hold_motive_chords && written && written->request.has_motive && written->count > 0 && written->count <= HARMONY_MAX_CHORDS &&
+        changed_motive_cell(written) < written->request.cells) {
+        memset(out, 0, sizeof(*out));
+        out->score_denominator = 1;
+        out->hard_violation = true;
+        snprintf(out->reason, sizeof(out->reason), "changes the chord its motive's development gives");
+        return true;
     }
     const PhraseProgression *progression = candidate->payload;
+    /* The motive operator's candidate over a prolongation is judged as a prolongation is, except that the cadence its
+       motives' own chords make (a V to I of the motive repeated) is theirs and not asked away. */
+    bool motive_prolongation = strcmp(operator_->generator.name, HARMONY_MOTIVE_OPERATOR_NAME) == 0 && progression &&
+                               progression->request.has_shape &&
+                               progression->request.shape.kind == PLAN_HARMONY_SHAPE_PROLONGATION;
+    if (strcmp(operator_->generator.name, HARMONY_PROLONG_OPERATOR_NAME) != 0 && !motive_prolongation) {
+        return harmony_phrase_checker(plan, target, operator_, candidate, context, out);
+    }
     if (!progression || progression->count == 0 || progression->count > HARMONY_MAX_CHORDS) {
         return false;
     }
@@ -333,7 +365,7 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
        heard from the harmony and the beats alone. */
     HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, CADENCE_TYPE_HALF,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
-                          true, NULL, NULL, false, &progression->request.metre};
+                          !motive_prolongation, NULL, NULL, false, &progression->request.metre};
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;
