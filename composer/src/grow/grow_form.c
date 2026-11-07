@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_connect.h>
+#include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "grow/grow_internal.h"
@@ -692,6 +693,26 @@ static PlanResult name_applied_step(PiecePlan *plan, NodeId node, const Payload 
     return PLAN_OK;
 }
 
+/*
+ * The developed motive's own chords and tone roles beside its notes (R-197): the node's MOTIVE_TONES over the result's
+ * chords, with the labels against them, replacing one the node already has. A motive without tones is left without.
+ */
+static PlanResult write_tones(PiecePlan *plan, NodeId node, const Motive *result) {
+    PlanConstraint tones;
+    if (!motive_tones_constraint(result, &tones)) {
+        return PLAN_OK;
+    }
+    for (size_t i = plan_node_constraint_count(plan, node); i > 0; i--) {
+        if (plan_node_constraint_at(plan, node, i - 1)->kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
+            PlanResult removed = plan_node_remove_constraint(plan, node, i - 1);
+            if (removed != PLAN_OK) {
+                return removed;
+            }
+        }
+    }
+    return plan_node_add_constraint(plan, node, &tones);
+}
+
 static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     const Payload *payload = candidate->payload;
@@ -708,6 +729,9 @@ static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandi
     PlanResult result = plan_add_lane_span(plan, target.id, PLAN_LANE_MELODY, 0, span, &notes, &id);
     if (result == PLAN_OK) {
         result = plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED);
+    }
+    if (result == PLAN_OK) {
+        result = write_tones(plan, target.id, &payload->result);
     }
     return result == PLAN_OK ? name_applied_step(plan, target.id, payload) : result;
 }
