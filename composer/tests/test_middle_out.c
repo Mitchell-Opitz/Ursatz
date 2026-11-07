@@ -64,7 +64,9 @@ typedef struct {
 } Baseline;
 
 /* Of 10 runs and, for the melody and the progression, 30 sections (3 a run); the bass has 2 sections a run. */
-static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 18, 16}, {10, 2, 19}, {10, 19, 17}};
+static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 26, 16}, {10, 8, 21}, {10, 20, 19}};
+/* Re-recorded at P36 B1 (every idea is the step its ref names): the melody's sections heard rose from 18 to 26 and its cadences
+   stay at 16; the progression's rose from 2 to 8 and 19 to 21; the bass's from 19 to 20 and 17 to 19. */
 
 /* --- the plans ----------------------------------------------------------------------- */
 

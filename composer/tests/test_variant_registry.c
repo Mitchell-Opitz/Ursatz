@@ -310,6 +310,7 @@ static void test_own_harmony_in_kept_and_changed(void) {
 
     /* Moving the pitches leaves the chords where they were: kept, whatever chord the new notes imply. */
     VariantStep step = step_of("transpose");
+    assert(variant_step_set(&step, "tonal", 0, 0));
     assert(variant_step_set(&step, "by", 2, 0));
     assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
     assert(out.chord_count == 2 && out.chords[1].degree == 5);
@@ -328,6 +329,34 @@ static void test_own_harmony_in_kept_and_changed(void) {
     assert(variant_step_set(&step, "length", 2, 0));
     assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
     assert(out.chord_count == 1 && changed(&record, "harmony"));
+}
+
+/* A tonal transposition moves the chords with the notes, by the same scale steps; a real one keeps them (R-343). */
+static void test_tonal_transpose_moves_harmony(void) {
+    Motive source = source_motive();
+    MotiveError error;
+    assert(motive_harmony_parse("I", &(PlanMeter){motive_meter(&source).beats_per_bar, motive_meter(&source).beat_unit, 0}, source.chords, &source.chord_count, &error) == MOTIVE_OK);
+    Motive out;
+    VariantRecord record;
+
+    VariantStep step = step_of("transpose");
+    assert(variant_step_set(&step, "tonal", 1, 0));
+    assert(variant_step_set(&step, "by", 1, 0));
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 2 && out.chords[0].alteration == 0);
+
+    /* Down a step from the tonic wraps to the seventh degree. */
+    step = step_of("transpose");
+    assert(variant_step_set(&step, "tonal", 1, 0));
+    assert(variant_step_set(&step, "by", -1, 0));
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 7);
+
+    step = step_of("transpose");
+    assert(variant_step_set(&step, "tonal", 0, 0));
+    assert(variant_step_set(&step, "by", 2, 0));
+    assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 1);
 }
 
 static void test_augment_keeps_rhythm_proportions(void) {
@@ -1152,6 +1181,7 @@ int main(void) {
     test_transpose_tonal_is_exact();
     test_invert_changes_contour();
     test_own_harmony_in_kept_and_changed();
+    test_tonal_transpose_moves_harmony();
     test_frame_rows_apply();
     test_tone_rows_draw_applicable_values();
     test_variant_marks();

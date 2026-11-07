@@ -3,6 +3,7 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive_develop.h>
+#include <ursatz_composer/variant_registry.h>
 
 /* The bars the material section holds: room for the motive and every motive made from it. */
 #define GROW_MATERIAL_BARS 8
@@ -319,6 +320,17 @@ bool grow_segment_motive(const Motive *source, const MotiveSketchFeature *segmen
 
 /* The development of m0 each idea after the basic idea is, as a spec the motive operators read. */
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out);
+/*
+ * The motive the ref makes from source through the variant registry: one chain (no step or an exact step is `exact`; a
+ * liquidation with ref->steps is that many liquidate-features steps; every other kind the registry row of that relation,
+ * its parameters set from the step). Deterministic: a fixed seed of 1 draws any open parameter. False when it does not apply.
+ */
+bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive *out);
+/* Whether every pitch of the motive is within low to high and, with in_scale and a key, in its scale (a minor key also has the raised seventh). */
+bool grow_motive_in_range(const Motive *motive, int low, int high, bool in_scale);
+/* The chain grow_develop_motive applies, and the seed it draws open parameters from. False when the ref has no chain. */
+#define GROW_DEVELOP_SEED 1ul
+bool grow_develop_chain(const PlanMotiveRef *ref, VariantChain *chain);
 /* The specs those refs make, to make the result here with the same Ursatz call the operators use. */
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
 

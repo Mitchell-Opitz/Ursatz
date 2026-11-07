@@ -44,7 +44,7 @@
  * (P16 B4) changed the candidates chosen, and again when the numerals were written in the library grammar (P25 B3), and again when the
  * presentation drew its repetition by weight (P34 B1), and again when the continuation took segments (P34 B2).
  */
-#define MAIN_RECORD_HASH 0x230b96fc1bd90464ULL /* re-recorded at P35 B1 (realized motive notes, R-338) */
+#define MAIN_RECORD_HASH 0xd1c392863b64248dULL /* re-recorded at P36 B1 (developed motives, R-329); P35 B1 before */
 
 static PiecePlan *rounded_binary(void) {
     PiecePlan *plan = NULL;

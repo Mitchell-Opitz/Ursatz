@@ -544,8 +544,8 @@ static void test_library_slots_and_pool(void) {
     grow_outcome_destroy(&outcome);
     plan_destroy(plan);
 
-    /* A pool: an approved form of the basic motive that suits a beginning is the repetition; with the functions of
-       another slot it is not offered. */
+    /* A pool is offered for a contrasting idea only (P36 B1): the repetition of a presentation is the step its ref names, so an
+       approved form of the basic motive that suits a beginning is not the repetition, whatever the functions of the form. */
     Motive form = notes_motive("E4:q G4:e Bb4:e E5:h");
     GrowPoolForm pool;
     memset(&pool, 0, sizeof(pool));
@@ -563,14 +563,7 @@ static void test_library_slots_and_pool(void) {
     config.pool = &pool;
     config.pool_count = 1;
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
-    assert(node_holds(plan, library_find(plan, "m1"), &form));
-    const FillRecord *record = outcome.records[GROW_STAGE_MOTIVES];
-    bool named = false;
-    for (size_t i = 0; record && i < record->step_count; i++) {
-        const FillStep *step = &record->steps[i];
-        named = named || (step->chosen >= 0 && strncmp(step->considered[step->chosen].label, "pool mot-form ", 14) == 0);
-    }
-    assert(named);
+    assert(!node_holds(plan, library_find(plan, "m1"), &form));
     grow_outcome_destroy(&outcome);
     plan_destroy(plan);
 

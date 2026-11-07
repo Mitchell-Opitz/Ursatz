@@ -96,6 +96,36 @@ static bool admit_step(const MotiveRelationStep *relation, const void *context) 
            step_from_relation(relation, source, &step);
 }
 
+/* Searches for a chain from source to search_target, and replays it against target. */
+static VariantResult search_and_replay(const Motive *source, const Motive *search_target, const Motive *target,
+                                       const MotiveRecognizeOptions *options, MotiveRecognition *recognition,
+                                       VariantChain *chain, VariantRecord *record, bool *replayed) {
+    memset(chain, 0, sizeof(*chain));
+    *replayed = false;
+    MotiveRecognizeResult searched = motive_variant_recognize(source, search_target, options, recognition);
+    if (searched == MOTIVE_RECOGNIZE_NO_MEMORY) {
+        return VARIANT_ERR_MEMORY;
+    }
+    if (searched != MOTIVE_RECOGNIZE_OK) {
+        return VARIANT_ERR_PARAM;
+    }
+    if (recognition->found) {
+        /* A chain that does not replay may hold a harmony step that only adds the implied chord to a motive without chords of
+           its own; the registry refuses that step as unchanged, so each such step is tried left out (R-139). */
+        for (size_t skip = 0; skip <= recognition->step_count && !*replayed; skip++) {
+            if (skip < recognition->step_count && recognition->steps[skip].kind != MOTIVE_RELATION_HARMONY_INVERSION &&
+                recognition->steps[skip].kind != MOTIVE_RELATION_HARMONY_SUBSTITUTE) {
+                continue;
+            }
+            *replayed = replay_chain(source, target, recognition, skip, chain, record);
+        }
+        if (!*replayed) {
+            memset(chain, 0, sizeof(*chain));
+        }
+    }
+    return VARIANT_OK;
+}
+
 VariantResult variant_recognize_depth(const Motive *source, const Motive *target, size_t depth, VariantChain *chain,
                                       VariantRecognition *out) {
     if (!source || !target || !chain || !out) {
@@ -113,8 +143,6 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     if (!motive_sketch_validate(source) || !motive_sketch_validate(target)) {
         return VARIANT_ERR_PARAM;
     }
-    const MotiveSketch *from = source;
-    const MotiveSketch *to = target;
     MotiveRecognizeOptions options;
     motive_recognize_options_default(&options);
     options.max_depth = depth;
@@ -127,29 +155,24 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
        (changes_harmony, incl. liquidate-features), so a chain found from an implied-chord start does not replay. */
     options.implied_start = false;
     MotiveRecognition recognition;
-    MotiveRecognizeResult searched = motive_variant_recognize(from, to, &options, &recognition);
-    if (searched == MOTIVE_RECOGNIZE_NO_MEMORY) {
-        return VARIANT_ERR_MEMORY;
-    }
-    if (searched != MOTIVE_RECOGNIZE_OK) {
-        return VARIANT_ERR_PARAM;
-    }
-
     VariantRecord record;
     memset(&record, 0, sizeof(record));
     bool replayed = false;
-    if (recognition.found) {
-        /* A chain that does not replay may hold a harmony step that only adds the implied chord to a motive without chords of
-           its own; the registry refuses that step as unchanged, so each such step is tried left out (R-139). */
-        for (size_t skip = 0; skip <= recognition.step_count && !replayed; skip++) {
-            if (skip < recognition.step_count && recognition.steps[skip].kind != MOTIVE_RELATION_HARMONY_INVERSION &&
-                recognition.steps[skip].kind != MOTIVE_RELATION_HARMONY_SUBSTITUTE) {
-                continue;
-            }
-            replayed = replay_chain(source, target, &recognition, skip, chain, &record);
+    VariantResult status = search_and_replay(source, target, target, &options, &recognition, chain, &record, &replayed);
+    if (status != VARIANT_OK) {
+        return status;
+    }
+    /* A tonal transposition moves the chords with the notes, which the library's transposition does not: when nothing
+       replays, search again for a target whose chords are the source's, and replay against the real target. */
+    if (!replayed && source->chord_count > 0 && target->chord_count == source->chord_count) {
+        Motive stand_in = *target;
+        for (size_t i = 0; i < source->chord_count; i++) {
+            stand_in.chords[i] = source->chords[i];
         }
-        if (!replayed) {
-            memset(chain, 0, sizeof(*chain));
+        memset(&record, 0, sizeof(record));
+        status = search_and_replay(source, &stand_in, target, &options, &recognition, chain, &record, &replayed);
+        if (status != VARIANT_OK) {
+            return status;
         }
     }
 

@@ -898,6 +898,14 @@
                           "kind": "motive_ref",
                           "motive": 9,
                           "step": "exact"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "VI",
+                              "onset": "0/1",
+                              "length": "1/1"
+                            }],
+                          "tones": ["chord", "chord", "chord"]
                         }]
                     }
                   }, {
@@ -921,6 +929,14 @@
                           "kind": "motive_ref",
                           "motive": 9,
                           "step": "fragment position=1 length=2"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "VI",
+                              "onset": "0/1",
+                              "length": "1/2"
+                            }],
+                          "tones": ["chord", "chord"]
                         }]
                     }
                   }, {
@@ -944,6 +960,14 @@
                           "kind": "motive_ref",
                           "motive": 9,
                           "step": "fragment position=1 length=2"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "VI",
+                              "onset": "0/1",
+                              "length": "1/2"
+                            }],
+                          "tones": ["chord", "chord"]
                         }]
                     }
                   }, {
@@ -967,6 +991,14 @@
                           "kind": "motive_ref",
                           "motive": 9,
                           "step": "liquidate drop=1"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "VI",
+                              "onset": "0/1",
+                              "length": "1/2"
+                            }],
+                          "tones": ["chord", "chord"]
                         }]
                     }
                   }, {
@@ -990,6 +1022,14 @@
                           "kind": "motive_ref",
                           "motive": 9,
                           "step": "liquidate drop=1"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "VI",
+                              "onset": "0/1",
+                              "length": "1/2"
+                            }],
+                          "tones": ["chord", "chord"]
                         }]
                     }
                   }, {
@@ -1013,6 +1053,14 @@
                           "kind": "motive_ref",
                           "motive": 9,
                           "step": "liquidate drop=1"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "VI",
+                              "onset": "0/1",
+                              "length": "1/2"
+                            }],
+                          "tones": ["chord", "chord"]
                         }]
                     }
                   }],

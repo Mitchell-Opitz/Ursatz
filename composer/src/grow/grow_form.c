@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_connect.h>
+#include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "grow/grow_internal.h"
@@ -60,7 +61,6 @@ typedef struct {
     size_t taken_count;
     Rational room;   /* the longest a form may be: the motive node's bar, or the idea if it is shorter */
     PlanSpan idea;
-    bool answers_in_dominant; /* the idea's chords start on the dominant: a response to the basic idea */
     bool has_cadence; /* the idea's melody ends in a cadence */
     CadenceType cadence;
     MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
@@ -223,19 +223,6 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
         }
     }
     request.idea = plan_node_span(plan, idea);
-    LaneSpanId lanes[FORM_IDEAS];
-    size_t lane_count = plan_node_lane_spans(plan, idea, lanes, FORM_IDEAS);
-    for (size_t i = 0; i < lane_count && i < FORM_IDEAS; i++) {
-        for (size_t k = 0; plan_lane_span_lane(plan, lanes[i]) == PLAN_LANE_HARMONY &&
-                           k < plan_lane_span_constraint_count(plan, lanes[i]);
-             k++) {
-            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, lanes[i], k);
-            if (constraint->kind == PLAN_CONSTRAINT_HARMONY_SHAPE &&
-                constraint->params.harmony_shape.starts_on == PLAN_HARMONY_ANCHOR_DOMINANT) {
-                request.answers_in_dominant = true;
-            }
-        }
-    }
     request.room = rational_cmp(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
     request.previous = request.basic;
     request.limit = context->remoteness_limit;
@@ -521,42 +508,6 @@ static bool offer_operations(Proposal *proposal, const char *function, bool cont
     return true;
 }
 
-/* The motive's first chord (its own harmony, else its best implied chord) is the unaltered tonic. */
-static bool opens_on_tonic(const Motive *motive) {
-    if (motive->chord_count > 0) {
-        return motive->chords[0].degree == 1 && motive->chords[0].alteration == 0;
-    }
-    MotiveSketchChord implied;
-    return motive_implied_chord(motive, &implied) && implied.degree == 1 && implied.alteration == 0;
-}
-
-/* The basic idea in its dominant form. */
-static bool offer_dominant_form(Proposal *proposal) {
-    VariantChain chain;
-    memset(&chain, 0, sizeof(chain));
-    chain.step_count = 1;
-    return variant_step_init(&chain.steps[0], "dominant-form") ? offer(proposal, &chain, 1, NULL, false) : true;
-}
-
-/*
- * The liquidation of a continuation in units that halve (ch. VIII): the first fragment is the basic idea's characteristic
- * features liquidated and shortened by half, the second is the first liquidated and shortened again. Both are chains
- * from the basic idea, so a fragment does not wait for the one before it.
- */
-static bool offer_liquidation(Proposal *proposal, size_t times) {
-    VariantChain chain;
-    memset(&chain, 0, sizeof(chain));
-    for (size_t t = 0; t < times; t++) {
-        VariantStep *step = &chain.steps[t];
-        if (!variant_step_init(step, "liquidate-features") || !variant_step_set(step, "steps", 1, 0) ||
-            !variant_step_set(step, "shorten", 1, 0)) {
-            return true;
-        }
-    }
-    chain.step_count = times;
-    return offer(proposal, &chain, 1, NULL, false);
-}
-
 static bool offer_exact(Proposal *proposal) {
     VariantChain chain;
     memset(&chain, 0, sizeof(chain));
@@ -564,39 +515,13 @@ static bool offer_exact(Proposal *proposal) {
     return variant_step_init(&chain.steps[0], "exact") ? offer(proposal, &chain, 1, NULL, false) : true;
 }
 
-/* The transpositions of the basic idea by the given steps of its key's scale. */
-static bool offer_steps(Proposal *proposal, const long *steps, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        VariantChain chain;
-        memset(&chain, 0, sizeof(chain));
-        chain.step_count = 1;
-        if (variant_step_init(&chain.steps[0], "transpose") && variant_step_set(&chain.steps[0], "tonal", 1, 0) &&
-            variant_step_set(&chain.steps[0], "by", steps[i], 0) &&
-            !offer(proposal, &chain, 1, NULL, false)) {
-            return false;
-        }
+/* The basic idea developed as the ref says: the one candidate of a slot that is not a contrast. */
+static bool offer_developed(Proposal *proposal, bool contrast) {
+    if (plan_motive_ref_restates(&proposal->request->ref)) {
+        return offer_exact(proposal);
     }
-    return true;
-}
-
-/*
- * Transpositions of the basic idea by steps of its key's scale. A sequence (the ref asks for a tonal step) offers that
- * step alone; when it does not fit, the other steps stand in for it.
- */
-static bool offer_transpositions(Proposal *proposal) {
-    static const long STEPS[] = {1, 2, 3, -1, -2, -3};
-    const MotiveRelationStep *asked = &proposal->request->ref.step;
-    if (proposal->request->ref.has_step && asked->kind == MOTIVE_RELATION_TRANSPOSE && asked->value[0] != 0 &&
-        asked->value[1] != 0) {
-        size_t before = proposal->out->count;
-        if (!offer_steps(proposal, &asked->value[1], 1)) {
-            return false;
-        }
-        if (proposal->out->count > before) {
-            return true;
-        }
-    }
-    return offer_steps(proposal, STEPS, sizeof(STEPS) / sizeof(STEPS[0]));
+    VariantChain chain;
+    return grow_develop_chain(&proposal->request->ref, &chain) ? offer(proposal, &chain, GROW_DEVELOP_SEED, NULL, contrast) : true;
 }
 
 static bool form_applies(const PiecePlan *plan, FillTarget target, void *context) {
@@ -615,46 +540,75 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         return true;
     }
     Proposal proposal = {&request, out};
-    if (shared->pool_count > 0 && !offer_pool(&proposal, shared->pool, shared->pool_count)) {
-        return false;
-    }
     switch (request.slot) {
-    case SLOT_RESTATED:
-        return offer_exact(&proposal);
-    case SLOT_REPETITION:
-        /* A restated repetition (the melody restates the basic idea) stays exact. A response is the dominant form when
-           the basic idea opens on the tonic and the chords answer on the dominant; else a transposition. */
-        if (plan_motive_ref_restates(&request.ref)) {
-            return offer_exact(&proposal);
-        }
-        if (request.answers_in_dominant && opens_on_tonic(&request.basic) && !offer_dominant_form(&proposal)) {
+    case SLOT_CONTRAST: {
+        /* The only slot with other offers: the drawn step first, then the pool and every operation when it does not fit. */
+        if (!offer_developed(&proposal, true)) {
             return false;
         }
-        return out->count > 0 ? true : offer_transpositions(&proposal);
-    case SLOT_CONTRAST:
-        /* The first idea of a slot with its own motive restates it (grow_idea_dev). */
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal)
-                                                                : offer_operations(&proposal, "contrast", true);
-    case SLOT_CADENTIAL:
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal)
-                                                                : offer_operations(&proposal, "cadential", false);
+        if (out->count > 0 || plan_motive_ref_restates(&request.ref)) {
+            return true;
+        }
+        if (shared->pool_count > 0 && !offer_pool(&proposal, shared->pool, shared->pool_count)) {
+            return false;
+        }
+        return offer_operations(&proposal, "contrast", true);
+    }
+    case SLOT_REPETITION:
+    case SLOT_RESTATED:
     case SLOT_FRAGMENT_1:
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : offer_liquidation(&proposal, 1);
     case SLOT_FRAGMENT_2:
-        /* A segment is the fragment as it is, or one step down in sequence (the ref asks for it). */
-        if (plan_motive_ref_restates(&request.ref)) {
-            return offer_exact(&proposal);
-        }
-        if (request.ref.has_step && request.ref.step.kind == MOTIVE_RELATION_TRANSPOSE) {
-            return offer_transpositions(&proposal);
-        }
-        return offer_liquidation(&proposal, 2);
+    case SLOT_CADENTIAL:
     case SLOT_CADENTIAL_ENDING:
-        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : true;
+        /* The idea is the step its ref names, applied to the motive it is made from. */
+        return offer_developed(&proposal, false);
     case SLOT_NONE:
         break;
     }
     return true;
+}
+
+/*
+ * A contrasting idea may be made by another step than the ref names (the drawn step did not fit, so the pool's or another
+ * operation's was written): the node's MOTIVE_REF then names the step that was applied. A pool form of several steps keeps
+ * the ref (its chain is the payload's pool_chain).
+ */
+static PlanResult name_applied_step(PiecePlan *plan, NodeId node, const Payload *payload) {
+    if (payload->pool_bonus > 0 || payload->record.step_count != 1) {
+        return PLAN_OK;
+    }
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+        if (constraint->kind != PLAN_CONSTRAINT_MOTIVE_REF || constraint->params.motive.motive == node) {
+            continue;
+        }
+        PlanConstraint named = *constraint;
+        const VariantStepRecord *applied = &payload->record.steps[0];
+        const VariantOperation *row = variant_registry_find(applied->op);
+        VariantChain own;
+        bool same = grow_develop_chain(&named.params.motive, &own) && own.step_count == 1 &&
+                    strcmp(own.steps[0].op, applied->op) == 0;
+        for (size_t v = 0; same && v < VARIANT_PARAM_MAX; v++) {
+            same = !own.steps[0].values[v].set ||
+                   (applied->values[v].value == own.steps[0].values[v].value &&
+                    applied->values[v].den == own.steps[0].values[v].den);
+        }
+        if (same || !row) {
+            return PLAN_OK;
+        }
+        MotiveRelationStep step;
+        memset(&step, 0, sizeof(step));
+        step.kind = (MotiveRelationKind)row->relation;
+        for (size_t v = 0; v < row->param_count && v < VARIANT_PARAM_MAX && v < MOTIVE_RELATION_MAX_PARAMS; v++) {
+            step.value[v] = applied->values[v].value;
+            step.den[v] = applied->values[v].den;
+        }
+        named.params.motive.has_step = true;
+        named.params.motive.step = step;
+        PlanResult result = plan_node_remove_constraint(plan, node, i);
+        return result == PLAN_OK ? plan_node_add_constraint(plan, node, &named) : result;
+    }
+    return PLAN_OK;
 }
 
 static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
@@ -671,7 +625,13 @@ static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandi
     notes.notes.note_count = payload->result.note_count;
     LaneSpanId id;
     PlanResult result = plan_add_lane_span(plan, target.id, PLAN_LANE_MELODY, 0, span, &notes, &id);
-    return result == PLAN_OK ? plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED) : result;
+    if (result == PLAN_OK) {
+        result = plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED);
+    }
+    if (result == PLAN_OK) {
+        result = motive_node_write_tones(plan, target.id, &payload->result);
+    }
+    return result == PLAN_OK ? name_applied_step(plan, target.id, payload) : result;
 }
 
 FillResult grow_form_register(FillOperatorRegistry *registry, const MotiveDevelopContext *context) {

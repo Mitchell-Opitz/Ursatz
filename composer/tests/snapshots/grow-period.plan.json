@@ -537,7 +537,15 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "interval-change interval=1 amount=-4"
+                          "step": "interval-change interval=2 amount=-4"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "VI",
+                              "onset": "0/1",
+                              "length": "1/1"
+                            }],
+                          "tones": ["chord", "chord", "chord", "chord"]
                         }]
                     }
                   }, {
@@ -561,6 +569,14 @@
                           "kind": "motive_ref",
                           "motive": 6,
                           "step": "exact"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "I",
+                              "onset": "0/1",
+                              "length": "1/1"
+                            }],
+                          "tones": ["chord", "chord", "chord", "chord"]
                         }]
                     }
                   }, {
@@ -583,7 +599,15 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "step": "interval-change interval=2 amount=-4"
+                          "step": "interval-change interval=1 amount=-4"
+                        }, {
+                          "kind": "motive_tones",
+                          "harmony": [{
+                              "numeral": "IV",
+                              "onset": "0/1",
+                              "length": "1/1"
+                            }],
+                          "tones": ["chord", "escape", "unclassified", "chord"]
                         }]
                     }
                   }],
@@ -812,7 +836,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 10,
-            "step": "interval-change interval=1 amount=-4"
+            "step": "interval-change interval=2 amount=-4"
           }, {
             "kind": "cadence",
             "type": "hc"
@@ -829,7 +853,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 73,
+              "midi_pitch": 79,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -879,7 +903,7 @@
                 "den": 8
               }
             }, {
-              "midi_pitch": 77,
+              "midi_pitch": 81,
               "offset": {
                 "num": 11,
                 "den": 8
@@ -1035,7 +1059,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 15,
-            "step": "interval-change interval=2 amount=-4"
+            "step": "interval-change interval=1 amount=-4"
           }, {
             "kind": "cadence",
             "type": "pac"
@@ -1052,7 +1076,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 76,
+              "midi_pitch": 73,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -1158,7 +1182,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 61,
+              "midi_pitch": 65,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -1290,7 +1314,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 65,
+              "midi_pitch": 61,
               "offset": {
                 "num": 1,
                 "den": 4

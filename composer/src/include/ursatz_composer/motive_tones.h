@@ -39,6 +39,11 @@ bool motive_base_harmony(const Motive *motive, MotiveBaseHarmony *out);
  * with no key).
  */
 bool motive_tones_constraint(const Motive *motive, PlanConstraint *out);
+/*
+ * Writes the motive's own chords and tone roles on the motive node as its MOTIVE_TONES (motive_tones_constraint), replacing
+ * one the node has. A motive that has none (no key, no harmony) leaves the node as it is.
+ */
+PlanResult motive_node_write_tones(PiecePlan *plan, NodeId node, const Motive *motive);
 
 /* The most chords the base harmony may put in one bar. */
 #define MOTIVE_MAX_CHORDS_PER_BAR 2

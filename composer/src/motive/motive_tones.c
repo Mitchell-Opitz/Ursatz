@@ -334,3 +334,19 @@ bool motive_tones_constraint(const Motive *motive, PlanConstraint *out) {
     *out = constraint;
     return true;
 }
+
+PlanResult motive_node_write_tones(PiecePlan *plan, NodeId node, const Motive *motive) {
+    PlanConstraint tones;
+    if (!motive_tones_constraint(motive, &tones)) {
+        return PLAN_OK;
+    }
+    for (size_t i = plan_node_constraint_count(plan, node); i > 0; i--) {
+        if (plan_node_constraint_at(plan, node, i - 1)->kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
+            PlanResult removed = plan_node_remove_constraint(plan, node, i - 1);
+            if (removed != PLAN_OK) {
+                return removed;
+            }
+        }
+    }
+    return plan_node_add_constraint(plan, node, &tones);
+}

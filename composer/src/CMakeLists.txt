@@ -101,6 +101,7 @@ add_library(ursatz_composer STATIC
     form/return_hear.c
     grow/grow_request.c
     grow/grow_theme.c
+    grow/grow_develop.c
     grow/grow_segments.c
     grow/grow_beginning.c
     grow/grow_ending.c

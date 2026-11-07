@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P36)
+
+Every development operation of a theme produces the idea's notes and chords from the motive (R-329, R-330, B1). One function, `grow_develop_motive` (`src/grow/grow_develop.c`), develops a source motive by a plan ref through the variant registry; the structure stage's checks and the motives stage both use it, and the motives stage offers exactly that motive for every slot except a contrasting idea, which keeps the pool and the operations as a fallback and has its ref rewritten to the step applied. A tonal transposition now moves the motive's chords with its notes. Each developed motive node carries its own `MOTIVE_TONES` (its chords and the tone role of each note), also when a motive operator wrote it. A contrasting idea is drawn in the key's scale when the motif is. The API version does not change; seeded theme and piece output does, and the snapshots, hashes and baselines changed are named in the phase notes. See [grow-development.md](grow-development.md#what-sounds), [grow-harmony.md](grow-harmony.md#motive-forms) and [variant-registry.md](variant-registry.md).
+
 ## Unreleased (phase P35)
 
 Melody-fill realizes a motive's notes instead of re-deriving them (R-326 to R-328, R-333 to R-339): the melody voice's range is C4 to C6 (84, was 79), each idea says its motive's pitches moved by one octave and bent to its chords only as they ask (a clash the NonChordTone framework labels a figure is kept, escape tones and retardations included), and only the notes after the motive are generated, under the arch. `MelodyFillParams.tolerance` is gone. A motive no strict attempt composes is composed relaxed. The API version does not change; seeded theme and piece output does, and the snapshots, hashes and baselines changed are named in the phase notes. Fixed on the way: the structure stage reserves a bar for every motive it makes, so a section regenerated in a full material no longer fails to apply. See [melody-fill.md](melody-fill.md).
