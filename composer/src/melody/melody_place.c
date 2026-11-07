@@ -68,10 +68,38 @@ static MelodyNote *push(MelodyCandidate *out, Rational onset, Rational duration)
 }
 
 /*
+ * The room after a liquidated residue (R-345): the residue's rhythm again from its first note, as many whole times as fit,
+ * and the last note held to the span's end, so the cadence falls on the residue's own last note (or its repeat). No
+ * even-note filler.
+ */
+static bool layout_residue(const MelodyContext *context, Rational start, MelodyCandidate *out) {
+    Rational first = context->motive_onset[0];
+    Rational cycle = position_sub(context->motive_length, first);
+    Rational at = position_add(start, context->motive_length);
+    while (position_is_positive(cycle) && rational_cmp(position_add(at, cycle), context->length) <= 0) {
+        for (size_t k = 0; k < context->motive_count; k++) {
+            Rational offset = position_sub(context->motive_onset[k], first);
+            if (!push(out, position_add(at, offset), context->motive_duration[k])) {
+                return false;
+            }
+        }
+        at = position_add(at, cycle);
+    }
+    MelodyNote *last = &out->notes[out->count - 1];
+    last->duration = position_sub(context->length, last->onset);
+    for (size_t i = 0; i < out->count; i++) {
+        out->notes[i].strong = melody_on_cell(context, out->notes[i].onset);
+        out->notes[i].chord = melody_chord_at(context, out->notes[i].onset);
+    }
+    return true;
+}
+
+/*
  * The notes of the phrase: the motive's, then notes that fill the rest. A motive as long as the phrase (an idea it fills
- * whole) is all there is: its notes are placed as written and nothing is filled after it. With a density the rest is notes of an
- * even length, that many to a cell; without one it is the motive's rhythm over again, each note as long as the
- * time from one onset of the motive to the next, the last as long as it is.
+ * whole) is all there is: its notes are placed as written and nothing is filled after it. A liquidated residue is
+ * followed by its own rhythm (layout_residue). With a density the rest is notes of an even length, that many to a cell;
+ * without one it is the motive's rhythm over again, each note as long as the time from one onset of the motive to the
+ * next, the last as long as it is.
  */
 static bool layout(const MelodyContext *context, const MelodyFillParams *params, MelodyCandidate *out) {
     Rational start = position_mul(context->cell, (long long)params->start_cell);
@@ -84,6 +112,9 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
             return false;
         }
         note->motive_index = (int)k;
+    }
+    if (context->liquidated) {
+        return layout_residue(context, start, out);
     }
 
     /* A note that ends the phrase starts with the last chord, so the cadence arrives with it. */
