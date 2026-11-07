@@ -46,6 +46,50 @@ static bool cell_at(const PhraseRequest *request, Rational time, size_t *cell) {
     return false;
 }
 
+/* Whether a chord can stand on an anchor of the shape. */
+static bool anchor_keeps(PlanHarmonyAnchor anchor, const PhraseChord *chord) {
+    if (anchor == PLAN_HARMONY_ANCHOR_TONIC) {
+        return !chord->applied && chord->chord.degree == 1;
+    }
+    if (anchor == PLAN_HARMONY_ANCHOR_DOMINANT) {
+        return !chord->applied && chord->chord.degree == 5;
+    }
+    return true;
+}
+
+/*
+ * Frees the cells a motive chord may not hold (R-344): the cadence's, and a shape anchor the chord breaks. The cadence of
+ * a target is its last downbeat's chord and the dominant before it (a half cadence's has no dominant before it), the whole
+ * target for the cadential shape; a prolongation has none. The anchors are the first and the last cell.
+ */
+static void free_cells(PhraseRequest *request) {
+    bool prolongation = request->has_shape && request->shape.kind == PLAN_HARMONY_SHAPE_PROLONGATION;
+    if (!prolongation) {
+        size_t from = harmony_metre_last_cell(&request->metre);
+        if (request->has_shape && request->shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL) {
+            from = 0;
+        } else if (request->cadence != CADENCE_TYPE_HALF && from > 0) {
+            from--;
+        }
+        for (size_t cell = from; cell < request->cells; cell++) {
+            request->motive_fixed[cell] = false;
+        }
+    }
+    if (request->has_shape && request->cells > 0) {
+        size_t last = request->cells - 1;
+        if (request->motive_fixed[0] && !anchor_keeps(request->shape.starts_on, &request->motive_chord[0])) {
+            request->motive_fixed[0] = false;
+        }
+        if (request->motive_fixed[last] && !anchor_keeps(request->shape.ends_on, &request->motive_chord[last])) {
+            request->motive_fixed[last] = false;
+        }
+    }
+    request->has_motive = false;
+    for (size_t cell = 0; cell < request->cells; cell++) {
+        request->has_motive = request->has_motive || request->motive_fixed[cell];
+    }
+}
+
 void harmony_motive_read(const PiecePlan *plan, PhraseRequest *request) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     request->has_motive = false;
@@ -109,5 +153,8 @@ void harmony_motive_read(const PiecePlan *plan, PhraseRequest *request) {
                 request->has_motive = true;
             }
         }
+    }
+    if (request->has_motive) {
+        free_cells(request);
     }
 }
