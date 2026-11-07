@@ -12,20 +12,20 @@
   "slots": [
    {
     "slot": "basic",
-    "item_id": "mot-368aef0a3c8ae4a9",
+    "item_id": "mot-72e88424d33d6e64",
     "version": 1
    },
    {
     "slot": "cadential",
-    "item_id": "mot-e7cb5ba8399bdbc8",
+    "item_id": "mot-4f1bf46e517591b1",
     "version": 1
    }
   ],
   "brief": {
    "scopes": [],
    "piece_ids": [
-    "piece-90d2eb8026e09752",
-    "piece-41ab95cd0e14260a"
+    "piece-df26a2782dc35ca2",
+    "piece-da7be87757088821"
    ],
    "style_ids": []
   },
@@ -125,11 +125,25 @@
         "bass": "C3 C4"
        },
        {
+        "bar": 2,
+        "beat": 3,
+        "chord": "V",
+        "function": "dominant",
+        "bass": "G3"
+       },
+       {
         "bar": 3,
         "beat": 1,
-        "chord": "iio",
-        "function": "predominant",
-        "bass": "D3"
+        "chord": "V",
+        "function": "dominant",
+        "bass": "G3"
+       },
+       {
+        "bar": 4,
+        "beat": 3,
+        "chord": "i",
+        "function": "tonic",
+        "bass": "C4"
        },
        {
         "bar": 5,
@@ -141,32 +155,39 @@
        {
         "bar": 6,
         "beat": 1,
-        "chord": "iv",
-        "function": "predominant",
-        "bass": "F3"
+        "chord": "i",
+        "function": "tonic",
+        "bass": "C3"
        },
        {
         "bar": 7,
         "beat": 1,
+        "chord": "i",
+        "function": "tonic",
+        "bass": "C3"
+       },
+       {
+        "bar": 7,
+        "beat": 3,
         "chord": "V",
         "function": "dominant",
-        "bass": "G3 G2"
+        "bass": "G2"
        },
        {
         "bar": 8,
         "beat": 1,
         "chord": "i",
         "function": "tonic",
-        "bass": "C3"
+        "bass": "C3 C4"
        }
       ],
       "developments": [
        {
         "motive": "m1",
         "idea": "repetition",
-        "development": "sequence, 1 step up (tonal)",
+        "development": "dominant form",
         "segment": null,
-        "summary": "repetition = basic idea, 1 step up (tonal)"
+        "summary": "repetition = basic idea, dominant form"
        },
        {
         "motive": "m2",
@@ -206,8 +227,8 @@
         "motive": "M1",
         "source": "registry",
         "item": null,
-        "chain": "transpose",
-        "connection": 77
+        "chain": "dominant-form",
+        "connection": 83
        },
        {
         "idea": "fragment 1",
@@ -215,17 +236,17 @@
         "motive": "M1",
         "source": "registry",
         "item": null,
-        "chain": "liquidate-features",
-        "connection": 33
+        "chain": "fragment",
+        "connection": 61
        },
        {
         "idea": "fragment 2",
         "slot": "continuation",
         "motive": "M1",
-        "source": "operator",
+        "source": "registry",
         "item": null,
-        "chain": "fragment leading 2 notes",
-        "connection": null
+        "chain": "fragment",
+        "connection": 70
        },
        {
         "idea": "cadential",
@@ -246,18 +267,18 @@
       "heard_as_requested": false,
       "heard_text": "no theme heard",
       "style_distance": {
-       "harmony": 0.889,
-       "rhythm": 0.2639,
-       "melody": 0.7996,
-       "form": 0.5,
-       "overall": 0.6131
+       "harmony": 0.8833,
+       "rhythm": 0.2421,
+       "melody": 0.7521,
+       "form": 0.8333,
+       "overall": 0.6777
       }
      }
     ],
     "files": [
-     "/home/user/ursatz-gui/build/backend/tests/theme_route/materials/items/thm-592c5d41bdf6b030/v2/plan.json",
-     "/home/user/ursatz-gui/build/backend/tests/theme_route/materials/items/thm-592c5d41bdf6b030/v2/theme.mid",
-     "/home/user/ursatz-gui/build/backend/tests/theme_route/materials/items/thm-592c5d41bdf6b030/v2/theme.musicxml"
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/t2/materials/items/thm-e666687b70e7099c/v2/plan.json",
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/t2/materials/items/thm-e666687b70e7099c/v2/theme.mid",
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/t2/materials/items/thm-e666687b70e7099c/v2/theme.musicxml"
     ]
    },
    "brief": {
@@ -275,7 +296,7 @@
  },
  "uses": [
   {
-   "item_id": "mot-368aef0a3c8ae4a9",
+   "item_id": "mot-72e88424d33d6e64",
    "version": 1,
    "copy": {
     "uses": [],
@@ -813,7 +834,7 @@
    }
   },
   {
-   "item_id": "mot-e7cb5ba8399bdbc8",
+   "item_id": "mot-4f1bf46e517591b1",
    "version": 1,
    "copy": {
     "uses": [],

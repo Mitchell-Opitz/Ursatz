@@ -136,7 +136,7 @@
       },
       "analyzer_check": null,
       "style_distance": null,
-      "plan": "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/plan.json"
+      "plan": "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/plan.json"
      },
      "ending": {
       "sections": [
@@ -192,16 +192,16 @@
       "seam": null,
       "analyzer_check": null,
       "style_distance": null,
-      "plan": "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending-plan.json"
+      "plan": "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/ending-plan.json"
      }
     },
     "files": [
-     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/plan.json",
-     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending-plan.json",
-     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/loop.mid",
-     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/loop.musicxml",
-     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending.mid",
-     "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-f6d25de0aea99032/v3/ending.musicxml"
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/plan.json",
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/ending-plan.json",
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/loop.mid",
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/loop.musicxml",
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/ending.mid",
+     "/tmp/claude-0/-home-user-Claude-Master/412915d9-bc58-5009-adff-1073670d5ea1/scratchpad/p2/materials/items/pce-e14a69d4f1bdf9ab/v3/ending.musicxml"
     ]
    },
    "brief": {
