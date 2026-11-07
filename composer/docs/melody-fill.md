@@ -50,6 +50,12 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
   of the range where its motive allows; a target after it keeps its generated notes below the climax note.
 - **End tone.** The end tone rule applies only to a target with a cadence constraint, on the span or its
   owner. A target without one has no end-tone rule, and its last note needs only to be a chord tone.
+- **After a residue.** A target whose motive is a liquidated residue (its motive node's `motive_ref` has `steps`,
+  `MelodyContext.liquidated`, R-345) has no even-note filler: the time after the residue repeats the residue's rhythm
+  from its first note, as many whole times as fit before the last chord (with a cadence) or the span's end, the last
+  note held up to there, and a note from the last chord to the end takes the cadence tone, so the cadence arrives with
+  its chord (`layout_residue` in `src/melody/melody_place.c`). Its strict round keeps the figures the framework labels
+  on every attempt, so the residue's head interval is what sounds.
 - **Exact restatement.** A target whose `motive_ref` is `restated` takes the whole melody of the written span it
   restates for its motive and says it again, choosing the nearest chord tone each time. The span restated is the
   latest written one, before the target and as long, that asks for the motive the target's own motive is a
