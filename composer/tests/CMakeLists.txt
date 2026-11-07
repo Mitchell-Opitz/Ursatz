@@ -892,6 +892,13 @@ target_link_libraries(test_grow_repetitions PRIVATE ursatz_composer)
 target_compile_options(test_grow_repetitions PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_repetitions COMMAND test_grow_repetitions)
 
+add_executable(test_grow_developed_motives test_grow_developed_motives.c)
+target_link_libraries(test_grow_developed_motives PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_developed_motives PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_developed_motives PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_developed_motives PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_developed_motives COMMAND test_grow_developed_motives)
+
 add_executable(test_grow_segment_fragments test_grow_segment_fragments.c)
 target_link_libraries(test_grow_segment_fragments PRIVATE ursatz_composer cjson)
 target_compile_options(test_grow_segment_fragments PRIVATE -Wall -Wextra -Wpedantic)
