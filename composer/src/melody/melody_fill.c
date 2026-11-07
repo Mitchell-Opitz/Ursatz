@@ -103,8 +103,10 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
             bool repeat = false;
             PhraseVerdict verdict;
-            /* The first half of the attempts keeps the figures the framework labels; the second moves every clash to a chord tone. */
-            if (!melody_build(read, params, shifts[attempt % shift_count], attempt < MELODY_ATTEMPTS / 2, round == 1, rng, scratch)) {
+            /* The first half of the attempts keeps the figures the framework labels; the second moves every clash to a chord tone.
+               A liquidated residue keeps its figures in the strict round, so its head interval is what sounds (R-345). */
+            bool keep_figures = attempt < MELODY_ATTEMPTS / 2 || (read->liquidated && round == 0);
+            if (!melody_build(read, params, shifts[attempt % shift_count], keep_figures, round == 1, rng, scratch)) {
                 continue;
             }
             /* Only melodies that pass the hard rules are proposed; none passing leaves the span open. */
