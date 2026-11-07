@@ -334,7 +334,7 @@ static bool same_notes(const Motive *a, const Motive *b) {
 /*
  * The head residue (R-350), for a motive liquidate-features cannot keep a head in: three notes, a segment's first two
  * (whole, then each duration halved) and a close on base's last pitch, moved to the cadence's tone (nearest, then the
- * other side). The close lasts base's last duration, else the head's second, the first that keeps the residue within the
+ * other side), else in the octave nearest the head's second note. The close lasts base's last duration, else the head's second, the first that keeps the residue within the
  * room. Accepted when in range, no wider a leap than `allowed`, it keeps a segment (residue_keeps) and is not base
  * itself; `steps` is base's feature count (at least 1). No draw: the first accepted wins.
  */
@@ -378,9 +378,16 @@ static bool head_residue(const GrowThemeSpec *spec, const Motive *base, int allo
                     residue.chords[residue.chord_count++] = base->chords[k];
                 }
             }
-            for (int other = 0; other < (has_cadence ? 2 : 1); other++) {
+            /* The close on base's last pitch (to the cadence's nearest tone), on the other side, then base's last pitch class
+               in the octave nearest the head's second note (to the cadence's nearest tone). */
+            for (int other = 0; other < 3; other++) {
                 Motive moved = residue;
-                if (!liquid_take_cadence(&moved, has_cadence, cadence, other != 0)) {
+                if (other == 2) {
+                    int from = moved.notes[1].pitch;
+                    int shift = ((moved.notes[2].pitch - from) % 12 + 12) % 12;
+                    moved.notes[2].pitch = from + (shift > 6 ? shift - 12 : shift);
+                }
+                if (!liquid_take_cadence(&moved, has_cadence, cadence, other == 1)) {
                     break;
                 }
                 if (liquid_in_range(&moved) && widest_leap(&moved) <= allowed && residue_keeps(&moved, spec) &&
