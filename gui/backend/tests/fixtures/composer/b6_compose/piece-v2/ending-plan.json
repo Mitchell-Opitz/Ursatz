@@ -1281,7 +1281,7 @@
                 "den": 2
               }
             }, {
-              "midi_pitch": 65,
+              "midi_pitch": 74,
               "offset": {
                 "num": 1,
                 "den": 1
@@ -1291,7 +1291,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 65,
+              "midi_pitch": 74,
               "offset": {
                 "num": 5,
                 "den": 4
@@ -1301,7 +1301,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 65,
+              "midi_pitch": 74,
               "offset": {
                 "num": 3,
                 "den": 2

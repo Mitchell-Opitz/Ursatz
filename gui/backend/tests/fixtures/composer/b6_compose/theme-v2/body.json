@@ -187,28 +187,44 @@
         "idea": "repetition",
         "development": "dominant form",
         "segment": null,
-        "summary": "repetition = basic idea, dominant form"
+        "summary": "repetition = basic idea, dominant form",
+        "fidelity": 1,
+        "minimum": 0.55,
+        "heard": "transposed -1 step of the key's scale, then transposed +9 semitones",
+        "heard_agrees": false
        },
        {
         "motive": "m2",
         "idea": "fragment 1",
         "development": "fragmented, leading, 2 notes",
         "segment": null,
-        "summary": "fragment 1 = basic idea, fragmented, leading, 2 notes"
+        "summary": "fragment 1 = basic idea, fragmented, leading, 2 notes",
+        "fidelity": 0.156,
+        "minimum": 0,
+        "heard": "cut to the leading 2 notes",
+        "heard_agrees": true
        },
        {
         "motive": "m3",
         "idea": "fragment 2",
         "development": "fragmented, leading, 2 notes",
         "segment": null,
-        "summary": "fragment 2 = basic idea, fragmented, leading, 2 notes"
+        "summary": "fragment 2 = basic idea, fragmented, leading, 2 notes",
+        "fidelity": 0.156,
+        "minimum": 0,
+        "heard": "cut to the leading 2 notes",
+        "heard_agrees": true
        },
        {
         "motive": "m4",
         "idea": "cadential",
         "development": "restated, exact",
         "segment": null,
-        "summary": "cadential = cadential motif, exact"
+        "summary": "cadential = cadential motif, exact",
+        "fidelity": 0.482,
+        "minimum": 0.3,
+        "heard": "not recognized",
+        "heard_agrees": false
        }
       ],
       "slots": [
