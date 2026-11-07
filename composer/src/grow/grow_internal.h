@@ -380,6 +380,13 @@ bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out);
 bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
 
 /*
+ * Whether the ref cuts the motive down itself, so its fidelity is measured against the whole source and is low by what it
+ * was asked to be (a fragment by notes, a liquidation, a condensation, with no segment to measure against, R-355). Such an
+ * idea is ranked but never refused.
+ */
+bool grow_ref_shortens(const PlanMotiveRef *ref, bool from_segment);
+
+/*
  * The melody stage's fidelity checker (R-355). Measuring is the costly part (the recognizer, R-307), so a candidate whose
  * realized notes were measured before for the same span, in any octave, is not measured again: the cache holds those
  * results for the length of one stage run (zero it before use; NULL in the context means none).
@@ -389,6 +396,7 @@ typedef struct {
     struct {
         unsigned long long key;
         MotiveFidelity fidelity;
+        bool shortens;
     } entries[GROW_FIDELITY_CACHE];
     size_t count; /* entries made so far; the oldest is replaced once full */
 } GrowFidelityCache;
@@ -409,7 +417,9 @@ typedef struct {
  * under n/d (role)". Otherwise the score becomes
  *   ((agree * 100 + floor(100 * fidelity)) * (total + 1) + held) / (201 * (total + 1))
  * where held/total is the inner score, so agreement ranks first, then fidelity, then the melody rules' share; the style
- * part the inner left is kept. Every other candidate passes through unchanged. A cadential idea's agreement is not
+ * part the inner left is kept. An idea whose ref itself cuts the motive down (a fragment by notes, a liquidation, a
+ * condensation, with no segment to measure against) is ranked but never refused: its score against the whole source is low
+ * by what it was asked to be. Every other candidate passes through unchanged. A cadential idea's agreement is not
  * measured (the search never reaches its residue, R-355) and counts as no agreement.
  */
 bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
