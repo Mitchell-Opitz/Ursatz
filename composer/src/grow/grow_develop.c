@@ -50,9 +50,17 @@ static void set_values(const VariantOperation *row, const MotiveRelationStep *re
             set_value(&step->values[0], relation->value[0], 0);
         }
         set_value(&step->values[1], relation->value[1] != 0 ? 1 : 0, 0);
-        if (relation->value[2] != 0) {
-            set_value(&step->values[2], relation->value[2], 0);
+        /* The plan leaves the shortest result to the operators; a compose run allows one note. */
+        set_value(&step->values[2], relation->value[2] != 0 ? relation->value[2] : 1, 0);
+        return;
+    case MOTIVE_RELATION_FRAGMENT:
+        if (relation->value[0] != 0) {
+            set_value(&step->values[0], relation->value[0], 0);
         }
+        if (relation->value[1] != 0) {
+            set_value(&step->values[1], relation->value[1], 0);
+        }
+        set_value(&step->values[2], relation->value[2] != 0 ? relation->value[2] : 1, 0);
         return;
     default:
         for (size_t i = 0; i < count; i++) {
