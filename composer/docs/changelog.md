@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P37)
+
+An idea's fidelity to its source can be measured (R-331, R-354, B1): `motive_fidelity` scores a realized motive against its source (`motive_recognizability` total), says in words what the recognizer hears (`variant_recognize_depth` at depth 2, octave transpositions dropped, "exact" or "not recognized" when nothing or nothing found) and whether that agrees with the ref that asked for the motive; `grow_idea_fidelity` reads an idea's realized notes and source from the plan. Nothing in composing calls them yet: the API version and every seeded output are unchanged. See [grow-development.md](grow-development.md#fidelity).
+
 ## Unreleased (phase P36)
 
 Regenerating the harmony of a theme section composes again (R-352, B4): a placed theme's melody holds no motive refs, so the continuation's harmony is the phrase model around a Given melody that stands on the tonic at every downbeat, and the only deal, i iv V i, put V under a downbeat of the tonic and every deal was rejected. A dealt V of two cells or more whose first cell the Given melody does not hold now opens on the cadential six-four, and keeps its other cell. No random number is drawn for it, so every deal that fits is unchanged; the API version and the seeded output do not change. See [grow-harmony.md](grow-harmony.md) and [middle-out.md](middle-out.md).

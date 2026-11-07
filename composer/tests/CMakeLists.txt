@@ -936,3 +936,27 @@ add_test(NAME test_grow_compose_rates COMMAND test_grow_compose_rates)
 # Measured 13.7 s of CPU for one setting (three now), over the 10 s fast-set limit; test_grow_compose_rates_fast (5.5 s) runs seed 1 of every case and setting.
 set_tests_properties(test_grow_compose_rates PROPERTIES LABELS slow)
 add_test(NAME test_grow_compose_rates_fast COMMAND test_grow_compose_rates fast)
+
+add_executable(test_motive_fidelity test_motive_fidelity.c)
+target_link_libraries(test_motive_fidelity PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_motive_fidelity PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_motive_fidelity PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_motive_fidelity PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_fidelity COMMAND test_motive_fidelity)
+
+add_executable(test_grow_fidelity test_grow_fidelity.c)
+target_link_libraries(test_grow_fidelity PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_fidelity PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_fidelity PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_fidelity PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_fidelity_sentence COMMAND test_grow_fidelity sentence)
+add_test(NAME test_grow_fidelity_period COMMAND test_grow_fidelity period)
+
+add_executable(test_grow_fidelity_sweep test_grow_fidelity_sweep.c)
+target_link_libraries(test_grow_fidelity_sweep PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_fidelity_sweep PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_fidelity_sweep PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_fidelity_sweep PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_fidelity_sweep COMMAND test_grow_fidelity_sweep)
+# Composes 80 themes for each of the three settings and reads every idea's fidelity: minutes, so slow; the fast set has test_grow_fidelity_sentence and _period.
+set_tests_properties(test_grow_fidelity_sweep PROPERTIES LABELS slow)

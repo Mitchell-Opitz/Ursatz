@@ -29,3 +29,23 @@ idea sounds, notes and chords. The motives stage offers exactly that motive for 
 ## Effect
 
 For the 2-bar two-segment motif of `tests/test_grow_segment_fragments.c` in an 8-bar sentence, seeds 1 to 10: `melody` draws no sequence repetition and its fragments quote the motif most (share of note pairs with the motif's duration and interval 0.94, `balanced` 0.89, `theme` 0.86); every `theme` run has a sequence for fragment 2 and a sequence repetition. `tests/test_grow_development.c` asserts the order; the compose rates hold for the three settings (`test_grow_compose_rates`, `test_grow_compose_rates_fast`).
+
+## Fidelity
+
+How faithful an idea sounds to the motive it was made from (P37, R-331, R-354). Measured only so far: nothing in composing calls it yet, so no output changes. Ranking and refusing by it (R-355) come next, then the API members.
+
+Four terms. The idea's **realized notes** are the notes of its melody span whose onsets, from the span's start, fall before the length of the idea's motive node (the pickup is part of that length, R-319), read as a motive in the key and meter of the lanes over the span (`grow_idea_realized`). Its **source** is the motive the idea was made from (`grow_idea_fidelity_source`): the span's `MOTIVE_REF` names the idea's motive node, and that node's own `MOTIVE_REF` gives the source node and the ref (the basic idea, and an idea with a motive of its own, are their own source with the span's ref). A ref that names a segment makes the source that segment of m0, cut with `grow_segment_motive` from the labelled feature of the basic motive when its notes are m0's, else from the proposed segments; a liquidation by segments is made from m0 whole. The **score** is `motive_recognizability` of the realized notes against the source, the total at the default weights. **Heard** is the chain `variant_recognize_depth` finds from the source to the realized notes, searched to depth 2, written with each step's registry phrase joined by ", then ". A transposition by whole octaves is not heard, because the realized idea sits in the voice's register (R-334), and an `exact` step is the recognizer's name for no change: an empty chain is "exact", and no chain found is "not recognized".
+
+The idea **agrees** when the chain heard is the one its ref asked for, after dropping octave transpositions and exact steps:
+
+| The ref is | The chain heard |
+|---|---|
+| no step, exact, a restatement, a segment fragment from its segment, the basic idea | empty |
+| a transposition (a tonal one by steps, a real one by semitones) | one transposition of the same kind by the same steps (mod 7) or semitones (mod 12); empty when the ref's own amount is whole octaves |
+| a dominant form | empty, or one transposition |
+| a liquidation (`steps` above 0, or a `liquidate` step) | holds `fragment`, `liquidate`, `liquidate-features` or `condense` |
+| any other relation (invert, interval change, the pool forms) | holds a step of that relation |
+
+A motive the recognizer finds no chain for never agrees. `motive_fidelity(source, realized, ref, from_segment, out)` (`src/motive/motive_fidelity.c`) is the pure measure on two motives; `grow_idea_fidelity(plan, melody, basic, out)` (`src/grow/grow_fidelity.c`) reads an idea from the plan and calls it, and `grow_idea_role(name)` gives the role an idea has by its name (presentation, continuation, cadential or contrast). The recognizer is searched, so a chain that is not an exact restatement costs about half a second in a Debug build.
+
+`tests/test_motive_fidelity.c` covers the measure, `test_grow_fidelity_sentence` and `test_grow_fidelity_period` the reading from a plan and print each idea's role, score and heard, and `test_grow_fidelity_sweep` (slow) prints the lowest score per role and development setting over the four sweep motifs.

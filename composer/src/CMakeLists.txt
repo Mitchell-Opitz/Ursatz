@@ -81,6 +81,7 @@ add_library(ursatz_composer STATIC
     motive/motive_develop.c
     motive/motive_develop_operator.c
     motive/motive_recognizability.c
+    motive/motive_fidelity.c
     motive/motive_invent.c
     motive/motive_random.c
     motive/motive_random_common.c
@@ -103,6 +104,7 @@ add_library(ursatz_composer STATIC
     grow/grow_request.c
     grow/grow_theme.c
     grow/grow_develop.c
+    grow/grow_fidelity.c
     grow/grow_segments.c
     grow/grow_beginning.c
     grow/grow_ending.c
