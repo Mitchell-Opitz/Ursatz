@@ -16,11 +16,13 @@ one note, and a segment that is the whole motif, is not a fragment.
 
 Fragment 1 is a segment that fits its idea, drawn by `FRAGMENT_SEGMENT_WEIGHTS` (`src/grow/grow_ending.c`; balanced: a letter
 other than `a` 2, `a` 1; the [development setting](grow-development.md) changes them). Fragment 2 is fragment 1's segment in sequence one step down in the key (`transpose tonal=1 by=-1`, weight 3) or the
-next segment (`exact`, weight 1), the other when one does not fit (`FRAGMENT_2_WEIGHTS`). Each segment is a Given motive node
+next segment (`exact`, weight 1), the other when one does not fit (`FRAGMENT_2_WEIGHTS`). Each segment is a Realized motive node
 `segment <label>` in the material, after the idea motives, laid out by its own bars; the fragment's motive node is made from it,
 and a fragment shorter than its idea is grown as a shorter motif is ([grow.md](grow.md#how-a-motif-fills-its-idea)). The plan
 records the segment on the fragment's motive node: `"segment": "b"`. With a motive of the continuation slot given, or when no
 segment fits, the fragments are the leading notes of `m0`, with no segment.
+
+A presentation in sequence writes I and ii whole when the motif has no harmony of its own, and takes the repetition's chord from its motive when it has (R-348).
 
 The motives stage writes a fragment as the step its ref names, through one function (`grow_develop_motive`, see [grow-development.md](grow-development.md#what-sounds)): a segment is `exact`, fragment 2 in sequence is the tonal `transpose` with its chords moved a step down, and the leading notes are a `fragment`. A fragment is no longer chosen among the liquidations by features the registry offers; the halving of the units is the liquidation below.
 
@@ -31,7 +33,7 @@ The cadential idea of a continuation, and both ideas of a cadential ending, liqu
 motif has segments) until the result has fewer notes than `m0`, fits its idea, stays in range and in the key, has no leap wider
 than a fifth (or `m0`'s) and its last note can take the cadence: the idea that ends the theme has that note moved to the nearest
 tone of the cadence, the rhythm kept (P33 B1). The two ideas of a cadential ending take at least as many steps, the second as
-far as the first. The result is a Given motive node `liquidated <n>` the idea restates exactly, and the plan records the number
+far as the first. The result is a Realized motive node `liquidated <n>` (the run's own: a regenerated section removes it with the rest it made, and the material has room for ten bars per section, `GROW_MADE_NODES`) the idea restates exactly, and the plan records the number
 of steps on the idea's motive node: `"steps": 2`. When no number of steps meets that, the idea is `liquidated` by notes as before
 (`liquidate_drop`, `cadential_drop`), with no steps.
 
