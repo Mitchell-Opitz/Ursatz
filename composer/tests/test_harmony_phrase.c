@@ -400,6 +400,89 @@ static void test_cadential_shape(void) {
     }
 }
 
+/* The same loop for a plan with Given material in it (the operator that reads the Given melody and bass). */
+static FillOutcome run_given(const Fixture *fixture, unsigned long seed) {
+    FillOperatorRegistry *registry = fill_registry_create();
+    FillConfig config;
+    FillOutcome outcome;
+    memset(&config, 0, sizeof(config));
+    config.seed = seed;
+    config.checker = harmony_phrase_checker;
+    assert(harmony_phrase_register_given(registry) == FILL_OK);
+    assert(fill_run(fixture->plan, registry, &config, &outcome, NULL) == FILL_OK);
+    fill_registry_destroy(registry);
+    return outcome;
+}
+
+/* A Given melody over the phrase: the tonic as a half note on beat 1 of every bar, and on beat 3 a tone of the chord
+   the phrase model puts there (the fifth over i, the tonic over iv, the fifth over V and over the last i). */
+static void add_tonic_melody(const Fixture *fixture, const Scenario *scenario) {
+    static const int beat_three[4] = {7, 0, 7, 7};
+    PlanNote notes[8];
+    for (int bar = 0; bar < scenario->bars; bar++) {
+        Rational start = fraction(bar, 1);
+        notes[2 * bar] = plan_note(60 + scenario->tonic, start, fraction(1, 2));
+        notes[2 * bar + 1] = plan_note(60 + scenario->tonic + beat_three[bar], time_plus(start, fraction(1, 2)), fraction(1, 2));
+    }
+    PlanLanePayload payload;
+    LaneSpanId id;
+    memset(&payload, 0, sizeof(payload));
+    payload.notes.notes = notes;
+    payload.notes.note_count = (size_t)(2 * scenario->bars);
+    assert(plan_add_lane_span(fixture->plan, fixture->owner, PLAN_LANE_MELODY, 0, fixture->span, &payload, &id) == PLAN_OK);
+    assert(plan_lane_span_set_state(fixture->plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+}
+
+/* A Given melody that holds the tonic on every downbeat leaves the phrase model's V nowhere to stand on bar 3's downbeat
+   (V has no tonic); the V opens on the cadential six-four, which does, and keeps its second cell. */
+static void test_given_tonic_downbeats(void) {
+    static const int tonics[2] = {0, 2};
+    for (int t = 0; t < 2; t++) {
+        for (unsigned long seed = 0; seed < 8; seed++) {
+            Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MINOR, tonics[t], 4, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
+            Fixture fixture = build(&scenario, CADENCE_ON_SPAN);
+            PlanHarmonyShape shape;
+            memset(&shape, 0, sizeof(shape));
+            shape.kind = PLAN_HARMONY_SHAPE_PHRASE_MODEL;
+            shape.max_cells_per_chord = 2;
+            shape.split_at_bars = true;
+            PlanConstraint constraint = {PLAN_CONSTRAINT_HARMONY_SHAPE, {0}};
+            constraint.params.harmony_shape = shape;
+            assert(plan_lane_span_add_constraint(fixture.plan, fixture.target, &constraint) == PLAN_OK);
+            add_tonic_melody(&fixture, &scenario);
+            FillOutcome outcome = run_given(&fixture, seed);
+            assert(outcome.status == FILL_STATUS_COMPLETE);
+            LaneSpanId ids[MAX_CHORDS];
+            size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
+            /* i, iv, the six-four, V, i. */
+            assert(count == 5);
+            Rational cell = fraction(fixture.bar_length.num, fixture.bar_length.den * 2);
+            for (size_t i = 0; i < count; i++) {
+                const PlanHarmony *chord = &plan_lane_span_payload(fixture.plan, ids[i])->harmony;
+                PlanSpan span = plan_lane_span_span(fixture.plan, ids[i]);
+                long start = span.start.num * (long)cell.den / ((long)span.start.den * cell.num);
+                long length = span.length.num * (long)cell.den / ((long)span.length.den * cell.num);
+                if (i == 2) {
+                    /* The cadential six-four on bar 3's first cell. */
+                    assert(start == 4 && length == 1 && strcmp(chord->roman_numeral, "i64") == 0);
+                } else if (i == 3) {
+                    assert(start == 5 && length == 1 && chord->function == HARMONIC_FUNCTION_DOMINANT &&
+                           (strcmp(chord->roman_numeral, "V") == 0 || strcmp(chord->roman_numeral, "V7") == 0));
+                } else if (i == 4) {
+                    assert(start == 6 && strcmp(chord->roman_numeral, "i") == 0);
+                }
+                /* Every downbeat's chord holds the tonic: i, iv or the six-four, never the V. */
+                if (start % 2 == 0) {
+                    assert(strcmp(chord->roman_numeral, "i") == 0 || strcmp(chord->roman_numeral, "iv") == 0 ||
+                           strcmp(chord->roman_numeral, "i64") == 0);
+                }
+            }
+            fill_outcome_destroy(&outcome);
+            plan_destroy(fixture.plan);
+        }
+    }
+}
+
 int main(void) {
     test_sweep();
     test_phrase_model_shape();
@@ -407,5 +490,6 @@ int main(void) {
     test_seeds_vary();
     test_no_cadence_is_not_applicable();
     test_cadence_on_owner();
+    test_given_tonic_downbeats();
     return 0;
 }
