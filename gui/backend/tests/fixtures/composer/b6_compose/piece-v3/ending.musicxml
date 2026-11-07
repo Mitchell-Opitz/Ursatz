@@ -317,32 +317,41 @@
       </note>
       <note xml:id="composer-span-27-note-2">
         <pitch>
-          <step>G</step>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>1</voice>
+        <type>half</type>
+      </note>
+    </measure>
+    <measure number="10">
+      <note xml:id="composer-span-27-note-3">
+        <pitch>
+          <step>D</step>
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
         <voice>1</voice>
         <type>quarter</type>
       </note>
-      <note xml:id="composer-span-27-note-3">
+      <note xml:id="composer-span-27-note-4">
         <pitch>
-          <step>G</step>
-          <octave>5</octave>
+          <step>E</step>
+          <octave>4</octave>
         </pitch>
         <duration>1</duration>
         <voice>1</voice>
         <type>quarter</type>
       </note>
-    </measure>
-    <measure number="10">
-      <note xml:id="composer-span-27-note-4">
+      <note xml:id="composer-span-27-note-5">
         <pitch>
           <step>F</step>
-          <octave>5</octave>
+          <octave>4</octave>
         </pitch>
-        <duration>4</duration>
+        <duration>2</duration>
         <voice>1</voice>
-        <type>whole</type>
+        <type>half</type>
       </note>
     </measure>
     <measure number="11">
