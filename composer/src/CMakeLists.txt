@@ -104,6 +104,7 @@ add_library(ursatz_composer STATIC
     grow/grow_request.c
     grow/grow_theme.c
     grow/grow_develop.c
+    grow/grow_fidelity.c
     grow/grow_segments.c
     grow/grow_beginning.c
     grow/grow_ending.c

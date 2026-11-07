@@ -5,6 +5,8 @@
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "motive/motive_fidelity.h"
+
 /* The bars the material section holds: room for the motive and every motive made from it. */
 #define GROW_MATERIAL_BARS 8
 #define GROW_THEME_NAME "theme"
@@ -340,6 +342,37 @@ bool grow_motive_in_range(const Motive *motive, int low, int high, bool in_scale
 bool grow_develop_chain(const PlanMotiveRef *ref, VariantChain *chain);
 /* The specs those refs make, to make the result here with the same Ursatz call the operators use. */
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
+
+/*
+ * Fidelity of an idea to its source, read from the plan (R-354, grow_fidelity.c). Nothing in src/ calls these yet.
+ * The role an idea has by its name (R-355): presentation (basic idea, repetition, consequent basic idea), continuation
+ * (fragment 1 and 2), cadential (cadential, cadential 1 and 2) and contrast (contrasting idea, consequent contrasting idea).
+ */
+typedef enum {
+    GROW_ROLE_NONE,
+    GROW_ROLE_PRESENTATION,
+    GROW_ROLE_CONTINUATION,
+    GROW_ROLE_CADENTIAL,
+    GROW_ROLE_CONTRAST
+} GrowIdeaRole;
+/* GROW_ROLE_NONE for a NULL name or one that is no idea's. */
+GrowIdeaRole grow_idea_role(const char *idea_name);
+/*
+ * The motive an idea's melody span asks for is made from, as the ref says: the span's MOTIVE_REF names the idea's motive
+ * node; that node's own MOTIVE_REF gives the source node and the ref (a node with none, m0 or a motive given for the idea,
+ * is its own source, with the span's ref). A ref that names a segment makes the source that segment of m0 (the labelled
+ * feature of basic when its notes are m0's, else the proposal) and sets *from_segment; a liquidation by segments is made
+ * from m0 whole. basic may be NULL. False when the span has no MOTIVE_REF or its nodes cannot be read.
+ */
+bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
+                               PlanMotiveRef *ref, bool *from_segment);
+/*
+ * The notes the idea's melody span holds inside its motive node's length (onsets from the span's start, the pickup part of
+ * the length), as a motive in the key and meter of the lanes over the span. False when no note falls inside.
+ */
+bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out);
+/* The two above and motive_fidelity. */
+bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
 
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
 NodeId grow_find_theme(const PiecePlan *plan, bool open_only);
