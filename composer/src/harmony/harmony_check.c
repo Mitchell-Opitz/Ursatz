@@ -3,6 +3,7 @@
  * inputs are built from the plan, not from a render, so it stays a framework call. What a listener finds in the
  * written music is heard through the Analyzer once per run (check/hearing.h).
  */
+#include <ursatz_composer/harmony_motive.h>
 #include <ursatz_composer/harmony_phrase.h>
 
 #include <stdio.h>
@@ -330,7 +331,8 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
     if (!plan || !operator_ || !candidate || !out) {
         return false;
     }
-    if (strcmp(operator_->generator.name, HARMONY_PHRASE_OPERATOR_NAME) == 0) {
+    if (strcmp(operator_->generator.name, HARMONY_PHRASE_OPERATOR_NAME) == 0 ||
+        strcmp(operator_->generator.name, HARMONY_MOTIVE_OPERATOR_NAME) == 0) {
         const PhraseProgression *progression = candidate->payload;
         if (!progression || progression->count < 1 || progression->count > HARMONY_MAX_CHORDS) {
             return false;

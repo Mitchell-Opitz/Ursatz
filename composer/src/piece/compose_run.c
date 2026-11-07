@@ -13,6 +13,7 @@
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/harmony_bass.h>
+#include <ursatz_composer/harmony_motive.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
 #include <ursatz_composer/motive_connect.h>
@@ -317,7 +318,8 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
         return result == FILL_OK ? motive_develop_register(registry, motives) : result;
     case COMPOSE_STAGE_HARMONY:
         /* The harmony operators write chords that stand on a Given bass, carry a Given melody and join Given chords. */
-        result = harmony_prolong_register_given(registry);
+        result = harmony_motive_register(registry);
+        result = result == FILL_OK ? harmony_prolong_register_given(registry) : result;
         return result == FILL_OK ? harmony_phrase_register_given(registry) : result;
     case COMPOSE_STAGE_BASS:
         return harmony_bass_register(registry, NULL);

@@ -1,3 +1,4 @@
+#include <ursatz_composer/harmony_motive.h>
 #include <ursatz_composer/harmony_prolong.h>
 
 #include <stdio.h>
@@ -322,10 +323,15 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
     if (!plan || !operator_ || !candidate || !out) {
         return false;
     }
-    if (strcmp(operator_->generator.name, HARMONY_PROLONG_OPERATOR_NAME) != 0) {
+    const PhraseProgression *progression = candidate->payload;
+    /* The motive operator's candidate over a prolongation is judged as a prolongation is, except that the cadence its
+       motives' own chords make (a V to I of the motive repeated) is theirs and not asked away. */
+    bool motive_prolongation = strcmp(operator_->generator.name, HARMONY_MOTIVE_OPERATOR_NAME) == 0 && progression &&
+                               progression->request.has_shape &&
+                               progression->request.shape.kind == PLAN_HARMONY_SHAPE_PROLONGATION;
+    if (strcmp(operator_->generator.name, HARMONY_PROLONG_OPERATOR_NAME) != 0 && !motive_prolongation) {
         return harmony_phrase_checker(plan, target, operator_, candidate, context, out);
     }
-    const PhraseProgression *progression = candidate->payload;
     if (!progression || progression->count == 0 || progression->count > HARMONY_MAX_CHORDS) {
         return false;
     }
@@ -333,7 +339,7 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
        heard from the harmony and the beats alone. */
     HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, CADENCE_TYPE_HALF,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
-                          true, NULL, NULL, false, &progression->request.metre};
+                          !motive_prolongation, NULL, NULL, false, &progression->request.metre};
     PhraseVerdict verdict;
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;
