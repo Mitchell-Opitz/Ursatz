@@ -415,8 +415,15 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
         return true;
     }
     unsigned long quantized = measured.score.numerator * 100 / measured.score.denominator;
+    /* The inner share in lowest terms, so the same share ranks the same however a checker wrote it (a style of weight 0 adds
+       nothing and must change nothing). */
     Wide held = out->score_numerator;
     Wide total = out->score_denominator;
+    Wide divisor = wide_gcd(held, total);
+    if (divisor > 1) {
+        held /= divisor;
+        total /= divisor;
+    }
     Wide scale = 201 * (total + 1);
     set_reduced(&out->score_numerator, &out->score_denominator, ((measured.agrees ? 100u : 0u) + (Wide)quantized) * (total + 1) + held,
                 scale);
