@@ -359,6 +359,12 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
         /* A phrase joined to Given chords begins in the middle of what they make: no opening tonic is asked. */
         phrase.no_opening_tonic = short_phrase || (progression->request.has_shape &&
                                   progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL);
+        /* The chords of developed motives are the ideas' own, so the phrase model is not asked of the phrase that holds
+           them (R-344); the operator has made sure the cadence the target asks for arrives at its end. */
+        if (strcmp(operator_->generator.name, HARMONY_MOTIVE_OPERATOR_NAME) == 0) {
+            phrase.open_ended = true;
+            phrase.no_opening_tonic = true;
+        }
         if (progression->request.pivot) {
             /* A phrase that opens a new key starts on a chord both keys have, which need not be a tonic. */
             phrase.no_opening_tonic = true;
