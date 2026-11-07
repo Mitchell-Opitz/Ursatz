@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdint.h>
+
+#include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "grow/grow_internal.h"
@@ -165,15 +168,69 @@ static bool liquid_take_cadence(Motive *motive, bool has_cadence, CadenceType ca
     return true;
 }
 
+/* The first interval of a motive in scale steps (signed), or in semitones when it has no key. */
+static bool head_interval(const Motive *motive, int *steps, int *semitones) {
+    MotiveAnalysis analysis;
+    if (motive->note_count < 2 || !motive_analyze(motive, &analysis)) {
+        return false;
+    }
+    *steps = analysis.intervals[0].has_steps ? analysis.intervals[0].steps : analysis.intervals[0].semitones;
+    *semitones = analysis.intervals[0].semitones;
+    return true;
+}
+
+/* Whether the first `count` notes of a have the durations of b's first, one to one or each half of b's (`shorten`). */
+static bool same_head_rhythm(const Motive *a, const Motive *b, size_t count) {
+    bool equal = true;
+    bool halved = true;
+    for (size_t i = 0; i < count; i++) {
+        equal = equal && rational_cmp(a->notes[i].duration, b->notes[i].duration) == 0;
+        halved = halved && rational_cmp(grow_scaled(a->notes[i].duration, 2), b->notes[i].duration) == 0;
+    }
+    return equal || halved;
+}
+
+/*
+ * The segment of m0 a residue keeps (R-345): the first whose first two notes have the residue's first two durations, one
+ * to one or all halved, and whose first interval is the residue's in scale steps, same direction and generic size.
+ * SIZE_MAX when it keeps none.
+ */
+static size_t residue_segment(const Motive *residue, const GrowThemeSpec *spec) {
+    int steps;
+    int semitones;
+    if (residue->note_count < 2 || !head_interval(residue, &steps, &semitones)) {
+        return SIZE_MAX;
+    }
+    for (size_t s = 0; s < spec->segment_count; s++) {
+        Motive segment;
+        int segment_steps;
+        int segment_semitones;
+        if (!grow_segment_motive(&spec->source, &spec->segments[s], &segment) || segment.note_count < 2 ||
+            !head_interval(&segment, &segment_steps, &segment_semitones)) {
+            continue;
+        }
+        bool same_direction = (semitones > 0) == (segment_semitones > 0) && (semitones < 0) == (segment_semitones < 0);
+        if (same_direction && steps == segment_steps && same_head_rhythm(residue, &segment, 2)) {
+            return s;
+        }
+    }
+    return SIZE_MAX;
+}
+
+/* Whether a residue keeps a segment's rhythm and head interval (R-345). */
+static bool residue_keeps(const Motive *residue, const GrowThemeSpec *spec) {
+    return residue_segment(residue, spec) != SIZE_MAX;
+}
+
 /*
  * Liquidates the segments of m0 (ch. VIII) one step at a time, from `from` steps (at least 1) to as many as m0 has
  * segments: each step is a liquidate-features operation with steps 1 and shorten 1, as grow_form.c offers. Stops at the
  * first count of steps whose result is a form the motive-forms accept: fewer notes than m0, in range, no wider a leap than
- * m0's (a fifth at least), within the room, and, when the idea ends in a cadence, its last note moved to the cadence's tone. False
- * when none is.
+ * m0's (a fifth at least), within the room, and, when the idea ends in a cadence, its last note moved to the cadence's tone;
+ * and whose residue keeps a segment's rhythm and head interval (residue_keeps), `segment` that segment. False when none is.
  */
 static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment development, size_t from, Rational room,
-                               bool has_cadence, CadenceType cadence, size_t *steps, Motive *out) {
+                               bool has_cadence, CadenceType cadence, size_t *steps, size_t *segment, Motive *out) {
     size_t least = LIQUIDATION_STEPS[development].least;
     size_t most = LIQUIDATION_STEPS[development].most;
     from = from < least ? least : from;
@@ -219,8 +276,9 @@ static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment develo
                 break;
             }
             if (moved.form == MOTIVE_SKETCH_FORM_FULL && liquid_in_range(&moved) && widest_leap(&moved) <= allowed &&
-                rational_cmp(moved.length, room) <= 0) {
+                rational_cmp(moved.length, room) <= 0 && residue_keeps(&moved, spec)) {
                 *steps = count;
+                *segment = residue_segment(&moved, spec);
                 *out = moved;
                 return true;
             }
@@ -230,10 +288,11 @@ static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment develo
 }
 
 /* Keeps the liquidation as the idea's motive: the idea restates it exactly (grow_idea_dev). */
-static void keep_liquidation(GrowThemeSpec *spec, GrowPlace idea, size_t steps, const Motive *result) {
+static void keep_liquidation(GrowThemeSpec *spec, GrowPlace idea, size_t steps, size_t segment, const Motive *result) {
     spec->liquidated[idea] = *result;
     spec->has_liquidated[idea] = true;
     spec->liquidation_steps[idea] = steps;
+    spec->liquidation_segment[idea] = segment;
 }
 
 /* The room an idea of `units` eighths has in the material: its own length, or the bars of a derived motive if shorter. */
@@ -286,10 +345,11 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     /* The cadential idea liquidates the segments of m0 until a residue fits and meets the cadence; else it drops notes. */
     if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
         size_t steps;
+        size_t segment;
         Motive result;
         if (liquidate_segments(spec, request->development, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]), true,
-                               request->cadence, &steps, &result)) {
-            keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, &result);
+                               request->cadence, &steps, &segment, &result)) {
+            keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, segment, &result);
         }
     }
     /* Each idea after the presentation is made from m0 and has to fit in the room it has. */
@@ -355,12 +415,15 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
     spec->cadential_drop[1] = second;
     /* Both ideas liquidate the segments of m0, the second at least as far as the first; else they drop notes. */
     size_t steps[2];
+    size_t segments[2];
     Motive made[2];
     if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL_1) && !grow_idea_own(spec, GROW_PLACE_CADENTIAL_2) &&
-        liquidate_segments(spec, request->development, 1, idea_room(spec, unit, 2), false, request->cadence, &steps[0], &made[0]) &&
-        liquidate_segments(spec, request->development, steps[0], idea_room(spec, unit, 2), true, request->cadence, &steps[1], &made[1])) {
-        keep_liquidation(spec, GROW_PLACE_CADENTIAL_1, steps[0], &made[0]);
-        keep_liquidation(spec, GROW_PLACE_CADENTIAL_2, steps[1], &made[1]);
+        liquidate_segments(spec, request->development, 1, idea_room(spec, unit, 2), false, request->cadence, &steps[0],
+                           &segments[0], &made[0]) &&
+        liquidate_segments(spec, request->development, steps[0], idea_room(spec, unit, 2), true, request->cadence,
+                           &steps[1], &segments[1], &made[1])) {
+        keep_liquidation(spec, GROW_PLACE_CADENTIAL_1, steps[0], segments[0], &made[0]);
+        keep_liquidation(spec, GROW_PLACE_CADENTIAL_2, steps[1], segments[1], &made[1]);
     }
     spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);

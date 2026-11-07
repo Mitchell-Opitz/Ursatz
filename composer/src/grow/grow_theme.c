@@ -352,6 +352,9 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
     const MotiveSketchFeature *segment;
     if (grow_idea_segment(spec, idea, &segment)) {
         snprintf(out->segment, sizeof(out->segment), "%s", segment->label);
+    } else if (spec->has_liquidated[idea] && spec->liquidation_segment[idea] < spec->segment_count) {
+        /* A residue names the segment it keeps (R-345). */
+        snprintf(out->segment, sizeof(out->segment), "%s", spec->segments[spec->liquidation_segment[idea]].label);
     }
     if (grow_idea_dev(spec, idea, &dev)) {
         out->has_step = true;
@@ -813,6 +816,9 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
            a->liquidation_steps[GROW_PLACE_FRAGMENT_1] == b->liquidation_steps[GROW_PLACE_FRAGMENT_1] &&
            a->liquidation_steps[GROW_PLACE_FRAGMENT_2] == b->liquidation_steps[GROW_PLACE_FRAGMENT_2] &&
            a->liquidation_steps[GROW_PLACE_CADENTIAL] == b->liquidation_steps[GROW_PLACE_CADENTIAL] &&
+           a->liquidation_segment[GROW_PLACE_FRAGMENT_1] == b->liquidation_segment[GROW_PLACE_FRAGMENT_1] &&
+           a->liquidation_segment[GROW_PLACE_FRAGMENT_2] == b->liquidation_segment[GROW_PLACE_FRAGMENT_2] &&
+           a->liquidation_segment[GROW_PLACE_CADENTIAL] == b->liquidation_segment[GROW_PLACE_CADENTIAL] &&
            a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
            same_kind(&a->consequent_contrast, &b->consequent_contrast) &&
            a->cadential_drop[0] == b->cadential_drop[0] && a->cadential_drop[1] == b->cadential_drop[1];

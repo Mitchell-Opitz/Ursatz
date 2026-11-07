@@ -84,14 +84,16 @@ typedef struct {
      * The ideas that end the theme as liquidations by segments (ch. VIII): m0 as the motive-forms read it (liquid_base,
      * its segments its features), liquidated step by step until the result fits the idea and its last note can take the
      * cadence. liquidated[place] is the result, has_liquidated[place] says the idea is that motive restated, and
-     * liquidation_steps[place] is the steps it took. An idea without one is liquidated by notes (liquidate_drop,
-     * cadential_drop).
+     * liquidation_steps[place] is the steps it took. liquidation_segment[place] is the segment of m0 (an index of
+     * segments) whose rhythm and head interval the residue keeps (R-345). An idea without one is liquidated by notes
+     * (liquidate_drop, cadential_drop).
      */
     Motive liquid_base;
     bool has_liquid_base;
     Motive liquidated[GROW_PLACE_COUNT];
     bool has_liquidated[GROW_PLACE_COUNT];
     size_t liquidation_steps[GROW_PLACE_COUNT];
+    size_t liquidation_segment[GROW_PLACE_COUNT];
     size_t liquidate_drop;                 /* notes the cadential idea's liquidation drops */
     PlanHarmonyShapeKind ending_shape;
     bool ending_split;                     /* no chord of the ending crosses a barline */
