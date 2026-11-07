@@ -68,15 +68,17 @@ static MelodyNote *push(MelodyCandidate *out, Rational onset, Rational duration)
 }
 
 /*
- * The room after a liquidated residue (R-345): the residue's rhythm again from its first note, as many whole times as fit,
- * and the last note held to the span's end, so the cadence falls on the residue's own last note (or its repeat). No
- * even-note filler.
+ * The room after a liquidated residue (R-345): the residue's rhythm again from its first note, as many whole times as fit
+ * before the last chord when the phrase ends in a cadence (else before the span's end), the last note held up to there, and
+ * a note from the last chord to the span's end, so the cadence arrives with its chord. No even-note filler.
  */
 static bool layout_residue(const MelodyContext *context, Rational start, MelodyCandidate *out) {
     Rational first = context->motive_onset[0];
     Rational cycle = position_sub(context->motive_length, first);
     Rational at = position_add(start, context->motive_length);
-    while (position_is_positive(cycle) && rational_cmp(position_add(at, cycle), context->length) <= 0) {
+    Rational last = context->chord_start[context->count - 1];
+    Rational bound = context->has_cadence && rational_cmp(last, at) > 0 ? last : context->length;
+    while (position_is_positive(cycle) && rational_cmp(position_add(at, cycle), bound) <= 0) {
         for (size_t k = 0; k < context->motive_count; k++) {
             Rational offset = position_sub(context->motive_onset[k], first);
             if (!push(out, position_add(at, offset), context->motive_duration[k])) {
@@ -85,8 +87,11 @@ static bool layout_residue(const MelodyContext *context, Rational start, MelodyC
         }
         at = position_add(at, cycle);
     }
-    MelodyNote *last = &out->notes[out->count - 1];
-    last->duration = position_sub(context->length, last->onset);
+    MelodyNote *held = &out->notes[out->count - 1];
+    held->duration = position_sub(bound, held->onset);
+    if (rational_cmp(bound, context->length) < 0 && !push(out, bound, position_sub(context->length, bound))) {
+        return false;
+    }
     for (size_t i = 0; i < out->count; i++) {
         out->notes[i].strong = melody_on_cell(context, out->notes[i].onset);
         out->notes[i].chord = melody_chord_at(context, out->notes[i].onset);
