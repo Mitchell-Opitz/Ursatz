@@ -83,7 +83,14 @@ categories read without, the style distance, the form heard and the Analyzer
 check. A Development list names each composed idea's development in the
 Composer's summary line and, when the idea comes from one of the motif's
 segments, that segment's label; a version composed before the summary line
-shows the development text. Below it are the score of `theme.musicxml` in the score workspace and a
+shows the development text. An idea the Composer measured (Composer API 1.10)
+shows two lines, "intended:" (the summary) and "heard:" (what the Composer's
+recognizer hears in the idea's notes), then the score as a percentage with its
+minimum, "82% (min 75%)". The idea is marked "mismatch" (the item takes
+`theme-development-mismatch`, drawn in the warning colour) when the Composer
+reports `heard_agrees` false or the score is under the minimum. The GUI only
+shows these members; it computes none of them. A version composed before API
+1.10 has no `heard` and keeps the single line, never marked. Below it are the score of `theme.musicxml` in the score workspace and a
 MIDI download. Playback is served by the backend, built by the Analyzer from
 `theme.mid` (`GET .../versions/<n>/playback?file=theme`).
 
