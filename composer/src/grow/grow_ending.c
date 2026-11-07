@@ -223,24 +223,16 @@ static bool residue_keeps(const Motive *residue, const GrowThemeSpec *spec) {
 }
 
 /*
- * Liquidates the segments of m0 (ch. VIII) one step at a time, from `from` steps (at least 1) to as many as m0 has
- * segments: each step is a liquidate-features operation with steps 1 and shorten 1, as grow_form.c offers. Stops at the
- * first count of steps whose result is a form the motive-forms accept: fewer notes than m0, in range, no wider a leap than
- * m0's (a fifth at least), within the room, and, when the idea ends in a cadence, its last note moved to the cadence's tone;
- * and whose residue keeps a segment's rhythm and head interval (residue_keeps), `segment` that segment. False when none is.
+ * The first liquidation of base, from `from` steps to `most` (0 for as many as base has features), that is a form the
+ * motive-forms accept and keeps a segment: fewer notes than base, in range, no wider a leap than `allowed`, within the
+ * room, and, when the idea ends in a cadence, its last note moved to the cadence's tone; and whose residue keeps a
+ * segment's rhythm and head interval (residue_keeps), `segment` that segment. Each step is a liquidate-features
+ * operation with steps 1 and shorten 1, as grow_form.c offers. False when none is.
  */
-static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment development, size_t from, Rational room,
-                               bool has_cadence, CadenceType cadence, size_t *steps, size_t *segment, Motive *out) {
-    size_t least = LIQUIDATION_STEPS[development].least;
-    size_t most = LIQUIDATION_STEPS[development].most;
-    from = from < least ? least : from;
-    const Motive *base = &spec->liquid_base;
-    int allowed = widest_leap(base) > LIQUID_LEAP ? widest_leap(base) : LIQUID_LEAP;
-    if (!spec->has_liquid_base || spec->segment_count < 2) {
-        return false;
-    }
+static bool liquidate_base(const GrowThemeSpec *spec, const Motive *base, size_t from, size_t most, int allowed, Rational room,
+                           bool has_cadence, CadenceType cadence, size_t *steps, size_t *segment, Motive *out) {
     for (size_t count = from > 0 ? from : 1;
-         count <= spec->segment_count && count <= VARIANT_CHAIN_MAX && (most == 0 || count <= most); count++) {
+         count <= base->feature_count && count <= VARIANT_CHAIN_MAX && (most == 0 || count <= most); count++) {
         VariantChain chain;
         Motive result;
         VariantRecord record;
@@ -280,6 +272,76 @@ static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment develo
                 *steps = count;
                 *segment = residue_segment(&moved, spec);
                 *out = moved;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/*
+ * base with notes first..last (a segment's head) left whole: its features are the runs of the other notes, split where a
+ * segment of base begins or ends, so liquidate-features liquidates everything but that head. False when nothing is left
+ * to liquidate.
+ */
+static bool around_head(const Motive *base, size_t first, size_t last, Motive *out) {
+    *out = *base;
+    out->feature_count = 0;
+    size_t previous = base->feature_count + 1; /* the segment the run so far is in; feature_count for none */
+    for (size_t i = 0; i < base->note_count; i++) {
+        if (i >= first && i <= last) {
+            previous = base->feature_count + 1;
+            continue;
+        }
+        size_t holder = base->feature_count;
+        for (size_t f = 0; f < base->feature_count; f++) {
+            holder = base->features[f].first <= i && i <= base->features[f].last ? f : holder;
+        }
+        if (holder == previous && out->feature_count > 0) {
+            out->features[out->feature_count - 1].last = i;
+            continue;
+        }
+        if (out->feature_count == MOTIVE_MAX_FEATURES) {
+            return false;
+        }
+        MotiveSketchFeature *feature = &out->features[out->feature_count++];
+        if (holder < base->feature_count) {
+            snprintf(feature->label, sizeof(feature->label), "%s", base->features[holder].label);
+        } else {
+            snprintf(feature->label, sizeof(feature->label), "x%zu", out->feature_count);
+        }
+        feature->first = i;
+        feature->last = i;
+        previous = holder;
+    }
+    return out->feature_count > 0;
+}
+
+/*
+ * Liquidates the segments of m0 (ch. VIII) one step at a time, from `from` steps (at least the development's least) to as
+ * many as m0 has segments (liquidate_base). When no count keeps a segment, the draw is widened (R-345): each segment of m0
+ * in turn keeps its head (the whole segment, then one note fewer, down to two) and the rest of m0 is liquidated around
+ * it, every step count from `from`. False when none keeps one.
+ */
+static bool liquidate_segments(const GrowThemeSpec *spec, GrowDevelopment development, size_t from, Rational room,
+                               bool has_cadence, CadenceType cadence, size_t *steps, size_t *segment, Motive *out) {
+    size_t least = LIQUIDATION_STEPS[development].least;
+    size_t most = LIQUIDATION_STEPS[development].most;
+    const Motive *base = &spec->liquid_base;
+    int allowed = widest_leap(base) > LIQUID_LEAP ? widest_leap(base) : LIQUID_LEAP;
+    if (!spec->has_liquid_base) {
+        return false;
+    }
+    if (spec->segment_count >= 2 && liquidate_base(spec, base, from < least ? least : from, most, allowed, room, has_cadence,
+                                                   cadence, steps, segment, out)) {
+        return true;
+    }
+    for (size_t kept = 0; kept < base->feature_count; kept++) {
+        const MotiveSketchFeature *keep = &base->features[kept];
+        for (size_t last = keep->last; last > keep->first; last--) {
+            Motive around;
+            if (around_head(base, keep->first, last, &around) &&
+                liquidate_base(spec, &around, from, 0, allowed, room, has_cadence, cadence, steps, segment, out)) {
                 return true;
             }
         }
