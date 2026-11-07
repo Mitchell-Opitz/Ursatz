@@ -649,6 +649,49 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     return true;
 }
 
+/*
+ * A contrasting idea may be made by another step than the ref names (the drawn step did not fit, so the pool's or another
+ * operation's was written): the node's MOTIVE_REF then names the step that was applied. A pool form of several steps keeps
+ * the ref (its chain is the payload's pool_chain).
+ */
+static PlanResult name_applied_step(PiecePlan *plan, NodeId node, const Payload *payload) {
+    if (payload->pool_bonus > 0 || payload->record.step_count != 1) {
+        return PLAN_OK;
+    }
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+        if (constraint->kind != PLAN_CONSTRAINT_MOTIVE_REF || constraint->params.motive.motive == node) {
+            continue;
+        }
+        PlanConstraint named = *constraint;
+        const VariantStepRecord *applied = &payload->record.steps[0];
+        const VariantOperation *row = variant_registry_find(applied->op);
+        VariantChain own;
+        bool same = grow_develop_chain(&named.params.motive, &own) && own.step_count == 1 &&
+                    strcmp(own.steps[0].op, applied->op) == 0;
+        for (size_t v = 0; same && v < VARIANT_PARAM_MAX; v++) {
+            same = !own.steps[0].values[v].set ||
+                   (applied->values[v].value == own.steps[0].values[v].value &&
+                    applied->values[v].den == own.steps[0].values[v].den);
+        }
+        if (same || !row) {
+            return PLAN_OK;
+        }
+        MotiveRelationStep step;
+        memset(&step, 0, sizeof(step));
+        step.kind = (MotiveRelationKind)row->relation;
+        for (size_t v = 0; v < row->param_count && v < VARIANT_PARAM_MAX && v < MOTIVE_RELATION_MAX_PARAMS; v++) {
+            step.value[v] = applied->values[v].value;
+            step.den[v] = applied->values[v].den;
+        }
+        named.params.motive.has_step = true;
+        named.params.motive.step = step;
+        PlanResult result = plan_node_remove_constraint(plan, node, i);
+        return result == PLAN_OK ? plan_node_add_constraint(plan, node, &named) : result;
+    }
+    return PLAN_OK;
+}
+
 static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     const Payload *payload = candidate->payload;
@@ -663,7 +706,10 @@ static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandi
     notes.notes.note_count = payload->result.note_count;
     LaneSpanId id;
     PlanResult result = plan_add_lane_span(plan, target.id, PLAN_LANE_MELODY, 0, span, &notes, &id);
-    return result == PLAN_OK ? plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED) : result;
+    if (result == PLAN_OK) {
+        result = plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED);
+    }
+    return result == PLAN_OK ? name_applied_step(plan, target.id, payload) : result;
 }
 
 FillResult grow_form_register(FillOperatorRegistry *registry, const MotiveDevelopContext *context) {
