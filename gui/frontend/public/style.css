@@ -2321,6 +2321,9 @@ button.button-danger:disabled {
   font-size: 0.85em;
   color: var(--warning, #c77700);
 }
+.theme-development-mismatch {
+  color: var(--warning, #c77700);
+}
 .variant-picker-host {
   margin: 0.5rem 0;
 }

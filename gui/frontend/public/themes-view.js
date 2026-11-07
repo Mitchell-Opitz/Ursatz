@@ -501,7 +501,19 @@ function buildThemeResult(ctx) {
     section.appendChild(materialsElement("h3", "section-title", "Development"));
     const list = materialsElement("ul", "theme-developments");
     for (const entry of view.developments) {
-      const item = materialsElement("li", "", entry.text);
+      const item = materialsElement("li", entry.mismatch ? "theme-development-mismatch" : "");
+      if (entry.heard !== "") {
+        item.append(`intended: ${entry.intended}`, materialsElement("br"), `heard: ${entry.heard}`);
+        if (entry.fidelity !== "") {
+          const minimum = entry.minimum !== "" ? ` (min ${entry.minimum})` : "";
+          item.append(materialsElement("br"), `${entry.fidelity}${minimum}`);
+        }
+      } else {
+        item.append(entry.text);
+      }
+      if (entry.mismatch) {
+        item.append(" ", materialsElement("span", "materials-tag", "mismatch"));
+      }
       if (entry.segment !== "") {
         item.append(" ", materialsElement("span", "materials-tag", entry.segment));
       }
