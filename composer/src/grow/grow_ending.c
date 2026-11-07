@@ -342,15 +342,17 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
          fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0)) {
         return false;
     }
-    /* The cadential idea liquidates the segments of m0 until a residue fits and meets the cadence; else it drops notes. */
+    /* The cadential idea liquidates the segments of m0 until a residue fits, keeps a segment and meets the cadence; a draw
+       with no such residue fails (R-345). */
     if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
         size_t steps;
         size_t segment;
         Motive result;
-        if (liquidate_segments(spec, request->development, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]), true,
-                               request->cadence, &steps, &segment, &result)) {
-            keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, segment, &result);
+        if (!liquidate_segments(spec, request->development, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]),
+                                true, request->cadence, &steps, &segment, &result)) {
+            return false;
         }
+        keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, segment, &result);
     }
     /* Each idea after the presentation is made from m0 and has to fit in the room it has. */
     for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea < GROW_PLACE_COUNT; idea++) {
@@ -413,17 +415,23 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
     size_t second = first + (size_t)fill_rng_below(rng, most - first + 1);
     spec->cadential_drop[0] = first;
     spec->cadential_drop[1] = second;
-    /* Both ideas liquidate the segments of m0, the second at least as far as the first; else they drop notes. */
-    size_t steps[2];
-    size_t segments[2];
-    Motive made[2];
-    if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL_1) && !grow_idea_own(spec, GROW_PLACE_CADENTIAL_2) &&
-        liquidate_segments(spec, request->development, 1, idea_room(spec, unit, 2), false, request->cadence, &steps[0],
-                           &segments[0], &made[0]) &&
-        liquidate_segments(spec, request->development, steps[0], idea_room(spec, unit, 2), true, request->cadence,
-                           &steps[1], &segments[1], &made[1])) {
-        keep_liquidation(spec, GROW_PLACE_CADENTIAL_1, steps[0], segments[0], &made[0]);
-        keep_liquidation(spec, GROW_PLACE_CADENTIAL_2, steps[1], segments[1], &made[1]);
+    /* Each idea without a motive of its own liquidates the segments of m0, the second at least as far as the first; a draw
+       where either has no residue that keeps a segment fails (R-345). */
+    static const GrowPlace IDEAS[2] = {GROW_PLACE_CADENTIAL_1, GROW_PLACE_CADENTIAL_2};
+    size_t from = 1;
+    for (size_t k = 0; k < 2; k++) {
+        size_t steps;
+        size_t segment;
+        Motive made;
+        if (grow_idea_own(spec, IDEAS[k])) {
+            continue;
+        }
+        if (!liquidate_segments(spec, request->development, from, idea_room(spec, unit, 2), k == 1, request->cadence,
+                                &steps, &segment, &made)) {
+            return false;
+        }
+        keep_liquidation(spec, IDEAS[k], steps, segment, &made);
+        from = steps;
     }
     spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
