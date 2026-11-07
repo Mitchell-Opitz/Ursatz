@@ -451,6 +451,7 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
             return false;
         }
     }
+    harmony_motive_read(plan, &request);
     *out = request;
     return true;
 }

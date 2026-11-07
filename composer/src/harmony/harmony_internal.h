@@ -102,6 +102,14 @@ typedef struct {
     /* The target ends where the seam section of a piece structure starts and the first Given chord after it is the
        seam's (R-171): the candidates are also scored by how the last chord leads into it. */
     bool at_seam;
+    /*
+     * The chords development gives the target (R-344): the target's cells lie under ideas whose motive node carries
+     * motive_tones, and motive_chord[cell] is the chord that holds the cell (one cell long) where motive_fixed[cell].
+     * A cell that is not fixed is free: the cadence, a shape anchor the chord breaks, or a cell no motive chord covers.
+     */
+    bool has_motive;
+    PhraseChord motive_chord[HARMONY_GIVEN_CELLS];
+    bool motive_fixed[HARMONY_GIVEN_CELLS];
 } PhraseRequest;
 
 /* A candidate's payload. */
@@ -290,6 +298,12 @@ bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target
 
 /* Reads into the request what the Given bass, the Given melody and the Given chords around the target ask of it. */
 void harmony_given_read(const PiecePlan *plan, PhraseRequest *request);
+/*
+ * Reads into the request the chords of the developed motives that sound under it (has_motive, motive_chord): for each melody
+ * lane span over the target that names a motive node by a motive_ref, the chords of that node's motive_tones, each holding the cells
+ * from the one its onset falls in to the next chord's onset or the motive's end. Called after harmony_given_read.
+ */
+void harmony_motive_read(const PiecePlan *plan, PhraseRequest *request);
 /* Whether chords keep to the given bass (at each chord's start) and the given melody (its notes on strong beats). */
 bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords, size_t count, const char **why);
 /*
