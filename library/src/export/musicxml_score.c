@@ -9,6 +9,7 @@
 #include "events/note_event.h"
 #include "export/musicxml_export.h"
 #include "export/musicxml_score_internal.h"
+#include "export/score_clefs.h"
 #include "export/score_quantize.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_spelling.h"
@@ -264,6 +265,9 @@ typedef struct {
 
     long long **cuts;   /* per part: every barline, ascending, where notes and rests are split */
     size_t *cut_count;
+
+    ScoreQuantized quantized; /* the notated times of every event when score->quantize is set, else zeroed */
+    ScoreClefChanges clefs;   /* the clef of every staff at measure 1 and each change, from score_clefs_infer */
 } Prep;
 
 static void prep_free(Prep *prep) {
@@ -283,6 +287,8 @@ static void prep_free(Prep *prep) {
     }
     free(prep->cuts);
     free(prep->cut_count);
+    score_quantized_destroy(&prep->quantized);
+    score_clef_changes_destroy(&prep->clefs);
     if (prep->own_meter != NULL) {
         meter_map_destroy(prep->own_meter);
     }
@@ -357,12 +363,13 @@ static int compare_notes(const void *left, const void *right) {
     return a->index < b->index ? -1 : (a->index > b->index ? 1 : 0);
 }
 
-/* Replaces the played start and duration of every note with the notated ones from score_quantize. */
+/* Replaces the played start and duration of every note with the notated ones from score_quantize, which stay in
+   prep->quantized for the clefs. */
 static MusicXmlExportResult apply_quantize(Prep *prep) {
     const MusicXmlExportScore *score = prep->score;
-    ScoreQuantized quantized;
+    ScoreQuantized *quantized = &prep->quantized;
     ScoreQuantizeResult status = score_quantize(score->events, score->count, score->part_index, score->staff,
-                                                score->meter_map, score->quantize, &quantized);
+                                                score->meter_map, score->quantize, quantized);
     if (status != SCORE_QUANTIZE_OK) {
         return status == SCORE_QUANTIZE_ERR_ALLOC ? MUSICXML_EXPORT_ERR_ALLOC : MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
@@ -371,10 +378,10 @@ static MusicXmlExportResult apply_quantize(Prep *prep) {
         Rational start;
         Rational end;
         Rational duration;
-        if (quantized.start_num[i] > (unsigned long long)LLONG_MAX || quantized.start_den[i] > (unsigned long long)LLONG_MAX ||
-            quantized.end_num[i] > (unsigned long long)LLONG_MAX || quantized.end_den[i] > (unsigned long long)LLONG_MAX ||
-            rational_make((long long)quantized.start_num[i], (long long)quantized.start_den[i], &start) != RATIONAL_OK ||
-            rational_make((long long)quantized.end_num[i], (long long)quantized.end_den[i], &end) != RATIONAL_OK ||
+        if (quantized->start_num[i] > (unsigned long long)LLONG_MAX || quantized->start_den[i] > (unsigned long long)LLONG_MAX ||
+            quantized->end_num[i] > (unsigned long long)LLONG_MAX || quantized->end_den[i] > (unsigned long long)LLONG_MAX ||
+            rational_make((long long)quantized->start_num[i], (long long)quantized->start_den[i], &start) != RATIONAL_OK ||
+            rational_make((long long)quantized->end_num[i], (long long)quantized->end_den[i], &end) != RATIONAL_OK ||
             rational_cmp(end, start) <= 0 || rational_sub(end, start, &duration) != RATIONAL_OK ||
             start.num > (long long)LONG_MAX || duration.num > (long long)LONG_MAX ||
             (unsigned long long)start.den > ULONG_MAX || (unsigned long long)duration.den > ULONG_MAX) {
@@ -386,7 +393,6 @@ static MusicXmlExportResult apply_quantize(Prep *prep) {
         prep->notes[i].dur_n = (long)duration.num;
         prep->notes[i].dur_d = (unsigned long)duration.den;
     }
-    score_quantized_destroy(&quantized);
     return result;
 }
 
@@ -1043,6 +1049,27 @@ static MusicXmlExportResult split_lanes(Prep *prep) {
     return result;
 }
 
+/* The clef of every staff at measure 1 and each change, from the notes as they are written (the notated times when the
+   score is quantized). */
+static MusicXmlExportResult infer_clefs(Prep *prep) {
+    const MusicXmlExportScore *score = prep->score;
+    int *staff_counts = (int *)calloc(prep->part_count, sizeof(int));
+    if (staff_counts == NULL) {
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    for (size_t p = 0; p < prep->part_count; p++) {
+        staff_counts[p] = prep->parts[p].staff_count;
+    }
+    ScoreClefResult status = score_clefs_infer(score->events, score->pitch_values, score->count, score->part_index,
+                                               score->staff, staff_counts, prep->part_count, prep->meter,
+                                               score->quantize != NULL ? &prep->quantized : NULL, &prep->clefs);
+    free(staff_counts);
+    if (status == SCORE_CLEFS_OK) {
+        return MUSICXML_EXPORT_OK;
+    }
+    return status == SCORE_CLEFS_ERR_ALLOC ? MUSICXML_EXPORT_ERR_ALLOC : MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+}
+
 static MusicXmlExportResult prepare(Prep *prep) {
     MusicXmlExportResult result = validate_arrays(prep->score);
     if (result == MUSICXML_EXPORT_OK) {
@@ -1079,6 +1106,9 @@ static MusicXmlExportResult prepare(Prep *prep) {
         }
         prep->meter_defaulted = meter_map_is_defaulted(prep->meter);
         result = build_measures(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        result = infer_clefs(prep);
     }
     if (result == MUSICXML_EXPORT_OK) {
         result = order_dirs(prep);
@@ -1851,7 +1881,18 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
     }
 }
 
-/* The measure's <attributes>: divisions and staves in the first, a <time> where a region of the MeterMap starts. */
+/* True when the part has a clef entry (the first measure's or a change) at measure m. */
+static bool has_clefs_at(const Prep *prep, size_t part, size_t m) {
+    for (size_t i = 0; i < prep->clefs.count; i++) {
+        if (prep->clefs.part[i] == part && prep->clefs.measure[i] == m + 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The measure's <attributes>: divisions and staves in the first, a <time> where a region of the MeterMap starts, and
+   the <clef> of each staff in the first measure and of each staff that changes clef. */
 static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size_t part, size_t m, size_t dir_pos) {
     const MeterMapRegion *region = NULL;
     MeterMapResult status = meter_map_region_of_measure(prep->meter, prep->first_measure_number + (int)m, &region);
@@ -1867,6 +1908,7 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
     bool has_time = region_start == prep->measure_start[m];
     bool has_divisions = m == 0;
     bool has_staves = m == 0 && prep->parts[part].staff_count > 1;
+    bool has_clefs = has_clefs_at(prep, part, m);
     const MusicXmlExportKeySignature *key = NULL;
     for (size_t d = dir_pos; d < prep->dir_first[part + 1] && prep->dirs[d].tick <= prep->measure_start[m]; d++) {
         if (prep->dirs[d].kind == DIR_KEY && prep->dirs[d].tick == prep->measure_start[m]) {
@@ -1874,7 +1916,7 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
             break;
         }
     }
-    if (!has_time && !has_divisions && !has_staves && key == NULL) {
+    if (!has_time && !has_divisions && !has_staves && key == NULL && !has_clefs) {
         return MUSICXML_EXPORT_OK;
     }
     xmlbuf_append(buf, "      <attributes>\n");
@@ -1893,6 +1935,19 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
     }
     if (has_staves) {
         xmlbuf_append(buf, "        <staves>%d</staves>\n", prep->parts[part].staff_count);
+    }
+    for (size_t entry = 0; entry < prep->clefs.count; entry++) {
+        if (prep->clefs.part[entry] != part || prep->clefs.measure[entry] != m + 1) {
+            continue;
+        }
+        if (prep->parts[part].staff_count > 1) {
+            xmlbuf_append(buf, "        <clef number=\"%d\">\n", prep->clefs.staff[entry]);
+        } else {
+            xmlbuf_append(buf, "        <clef>\n");
+        }
+        bool treble = prep->clefs.clef[entry] == SCORE_CLEF_TREBLE;
+        xmlbuf_append(buf, "          <sign>%s</sign>\n          <line>%d</line>\n        </clef>\n", treble ? "G" : "F",
+                      treble ? 2 : 4);
     }
     xmlbuf_append(buf, "      </attributes>\n");
     return MUSICXML_EXPORT_OK;
