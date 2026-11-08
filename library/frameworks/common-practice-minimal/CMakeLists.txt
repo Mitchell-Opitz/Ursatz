@@ -11,6 +11,7 @@ add_library(common_practice_minimal
     weighted_chord_identification.c
     outer_scale_degrees.c
     key_regions.c
+    harmonic_spans.c
 )
 # Public headers (R-223), staged under common-practice-minimal/ in the build tree; the source directories are private.
 ursatz_public_headers(common_practice_minimal
@@ -21,6 +22,7 @@ ursatz_public_headers(common_practice_minimal
         chord_vocabulary.h
         chord_vocabulary_seventh.h
         framework.h
+        harmonic_spans.h
         key_identification.h
         key_regions.h
         key_vocabulary.h

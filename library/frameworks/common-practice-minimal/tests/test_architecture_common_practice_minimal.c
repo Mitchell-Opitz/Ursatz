@@ -63,7 +63,7 @@ static int check_file(const char *path) {
             strcmp(start, "chord_vocabulary_seventh.h") == 0 || strcmp(start, "seventh_identification.h") == 0 ||
             strcmp(start, "weighted_identification.h") == 0 || strcmp(start, "non_chord_tones.h") == 0 ||
             strcmp(start, "weighted_chord_identification.h") == 0 || strcmp(start, "outer_scale_degrees.h") == 0 ||
-            strcmp(start, "key_regions.h") == 0) {
+            strcmp(start, "key_regions.h") == 0 || strcmp(start, "harmonic_spans.h") == 0) {
             continue;
         }
 
