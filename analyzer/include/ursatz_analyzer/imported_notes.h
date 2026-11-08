@@ -67,11 +67,15 @@ typedef struct {
  * NoteEvent's VoiceReference. All parts are merged into the one
  * texture the pipeline analyzes; none is dropped. A MIDI file has one
  * part per track and channel that has notes, in order of first
- * appearance: its name from the track name and the General MIDI
- * instrument, midi_program its program (0 when the channel never
- * changes it, -1 for the percussion channel). Its staff_count is 2 for
- * the keyboard-like programs (score_program_uses_grand_staff), and
- * staff[i] is then score_staves_assign's result.
+ * appearance, except that two keyboard-like streams the library
+ * judges to be the hands of one piano (score_staves_pair_hands) are
+ * one part: its name from the track name and the General MIDI
+ * instrument (the higher stream's for a pair), midi_program its program
+ * (0 when the channel never changes it, -1 for the percussion
+ * channel). Its staff_count is 2 for a pair and for the keyboard-like
+ * programs (score_program_uses_grand_staff), and staff[i] is then
+ * score_staves_assign_hinted's result, a paired stream's staff as the
+ * hint.
  *
  * tempo_declared is true when the score gives a tempo;
  * initial_quarters_per_minute is then the tempo at the start.
@@ -133,8 +137,9 @@ typedef struct ImportedNotes {
     NoteEvent **events;
     PitchNumericValue **pitch_values;
     size_t count;
-    size_t *streams; /* owned; count entries, parallel to events: the part index the note belongs to (source.part_index):
-                        the MIDI track and channel, the MusicXML part; all 0 for a one-part file */
+    size_t *streams; /* owned; count entries, parallel to events: the stream the note belongs to: the MIDI track and channel
+                        (not the part: source.part_index joins two paired hands), the MusicXML part; all 0 for a
+                        one-part file */
     MidiKeySignature key_signature;
     MidiKeySignatureEvents key_signature_events;
     unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */
