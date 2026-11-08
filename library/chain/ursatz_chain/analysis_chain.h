@@ -80,6 +80,14 @@
 #define ANALYSIS_CHAIN_STAGE_ALL           ((1u << 12) - 1u)
 
 /*
+ * The seventh penalty (CommonPracticeWeightedConfig.seventh_penalty) of the chord identification on harmonic spans (R-376). A span reads
+ * the union of a beat or more, so a passing tone completes a seventh over a triad; with this charge a seventh outranks its own triad only
+ * when its seventh pitch class carries more than 15% of the span's weight. Used only when harmonic_spans is on; grouping, the key segments
+ * and the key regions keep the weighting config as given.
+ */
+#define ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY 0.15
+
+/*
  * One field per stage config; analysis_chain_config_default() fills every one with the library's default. `segmentation` cuts the segments
  * the chords are read in; the outer voices use the same config with merge_unchanged_harmony off (one segment per melody note).
  *

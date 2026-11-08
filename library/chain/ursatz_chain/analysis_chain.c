@@ -368,6 +368,9 @@ static bool identify_chords(AnalysisChain *chain) {
     }
     CommonPracticeWeightedConfig weighting = chain->config.weighting;
     weighting.require_bass_chord_tone = chain->spans_merged; /* the chord holds the span's bass (R-370) */
+    if (chain->spans_merged) {
+        weighting.seventh_penalty = ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY; /* a passing tone does not complete a seventh (R-376) */
+    }
     size_t s = 0;
     while (s < count) {
         size_t region = region_at(&p->regions, chain->segs.starts[s]);
