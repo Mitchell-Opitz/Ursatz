@@ -254,8 +254,7 @@ static void test_clefs_in_the_first_measure(void) {
     bag_free(&bag);
 
     memset(&bag, 0, sizeof(bag));
-    bag_add_note(&bag, "low", 0, 1, 1, 1, PITCH_LETTER_C, NULL);
-    bag.events[0] = tu_note("low", 0, 1, 1, 1, PITCH_LETTER_C, 0, 2, NULL);
+    bag_add(&bag, tu_note("low", 0, 1, 1, 1, PITCH_LETTER_C, 0, 2, NULL), 0, 1);
     xml = write_bag(&bag, NULL, NULL, 0, false);
     assert(TU_HAS(xml, "<clef>\n          <sign>F</sign>\n          <line>4</line>\n        </clef>"));
     assert(!TU_HAS(xml, "<clef number=") && tu_count(xml, "<clef") == 1);
