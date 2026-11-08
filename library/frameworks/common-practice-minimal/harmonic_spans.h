@@ -28,6 +28,13 @@
  * would miss every chord outside it, and so every modulation. A part is matched when its best score reaches the
  * config's min_coverage.
  *
+ * THE SPAN BASS (R-373). A part is read over its first cell's bass. When that reading is not valid (not matched, not
+ * complete, or the bass is no chord tone) and the first later cell of the part with a different bass lies inside the
+ * part's first beat (only INNER cells up to it) and is 1 or 2 semitones from the first, the part is read over that bass
+ * instead, and that reading is the part's when it is valid. An accented passing tone, appoggiatura or suspension in
+ * the bass that resolves by step then does not break the part. The Alberti bass keeps R-370's (the bass follows the
+ * figure). A span's bass is the bass its reading used.
+ *
  * THE SPANS (R-369). One span per measure to start with, then split where the music changes chord. For a span,
  * the boundaries are tried from the strongest level present, HALF_BAR boundaries first and then BEAT ones, in
  * time order, and the span splits at the first boundary that passes every test (a part is the cells on one side,
@@ -87,8 +94,8 @@ typedef enum {
     HARMONIC_SPAN_ERR_ALLOC
 } HarmonicSpanStatus;
 
-/* The spans, in time order: span i covers cells first[i] to last[i] inclusive, and its bass is the bass of its first
-   cell. Together they cover every cell once. Owned (harmonic_spans_destroy). */
+/* The spans, in time order: span i covers cells first[i] to last[i] inclusive, and its bass is the bass its reading
+   used (usually the bass of its first cell; see THE SPAN BASS above). Together they cover every cell once. Owned (harmonic_spans_destroy). */
 typedef struct {
     size_t count;
     size_t *first;

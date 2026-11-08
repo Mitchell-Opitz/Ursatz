@@ -75,6 +75,8 @@ typedef struct {
     bool complete;
     bool bass_in_chord;
     bool bass_is_root;
+    bool valid;     /* matched, complete, and the bass a chord tone */
+    int bass;       /* the bass the reading used (-1: none) */
 } Reading;
 
 static HarmonicSpanStatus map_status(CommonPracticeWeightedStatus status) {
@@ -172,10 +174,11 @@ static size_t merge_members(const Grouper *g, size_t a, size_t b) {
     return n;
 }
 
-/* Reads cells a..b as one segment over the first cell's bass, in no key: the best chord over all 24 keys. */
-static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Reading *out) {
+/* Reads cells a..b as one segment over the given bass (-1: the lowest sounding pitch), in no key: the best chord over
+   all 24 keys. */
+static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int bass_pitch, Reading *out) {
     size_t n = merge_members(g, a, b);
-    const int *bass_override = g->bass[a] >= 0 ? &g->bass[a] : NULL;
+    const int *bass_override = bass_pitch >= 0 ? &bass_pitch : NULL;
 
     CommonPracticeWeights weights;
     HarmonicSpanStatus status =
@@ -183,7 +186,7 @@ static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Readin
     if (status != HARMONIC_SPAN_OK) {
         return status;
     }
-    Reading reading = {false, 0.0, -1, false, false, false};
+    Reading reading = {false, 0.0, -1, false, false, false, false, bass_pitch};
     CommonPracticeRankedChord best;
     int best_tonic = 0;
     bool found = false;
@@ -219,8 +222,45 @@ static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Readin
         }
         reading.complete = sounding >= 3 || (has_root && has_third && reading.bass_in_chord);
     }
+    reading.valid = reading.matched && reading.complete && reading.bass_in_chord;
     *out = reading;
     return HARMONIC_SPAN_OK;
+}
+
+/* Reads cells a..b over their first cell's bass. When that reading is not valid and the part's first later cell with
+   a different bass lies inside the part's first beat (only INNER cells up to it) one or two semitones away, the part is
+   read over that bass instead and that reading is used when it is valid (R-373): an accented passing tone,
+   appoggiatura or suspension in the bass resolves by step and does not make the part invalid. */
+static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Reading *out) {
+    HarmonicSpanStatus status = read_over(g, a, b, g->bass[a], out);
+    if (status != HARMONIC_SPAN_OK || out->valid) {
+        return status;
+    }
+    size_t j = a + 1;
+    while (j <= b && g->bass[j] == g->bass[a]) {
+        j++;
+    }
+    if (j > b || g->bass[a] < 0 || g->bass[j] < 0) {
+        return HARMONIC_SPAN_OK;
+    }
+    int step = g->bass[j] - g->bass[a];
+    if (step < 0) {
+        step = -step;
+    }
+    if (step != 1 && step != 2) {
+        return HARMONIC_SPAN_OK;
+    }
+    for (size_t c = a + 1; c <= j; c++) {
+        if (g->cells[c].level != HARMONIC_SPAN_LEVEL_INNER) {
+            return HARMONIC_SPAN_OK;
+        }
+    }
+    Reading stepped;
+    status = read_over(g, a, b, g->bass[j], &stepped);
+    if (status == HARMONIC_SPAN_OK && stepped.valid) {
+        *out = stepped;
+    }
+    return status;
 }
 
 /* Tests (a) to (d), and for a boundary inside a beat that each part's bass is its chord's root. */
@@ -278,10 +318,15 @@ static bool starts_at_half_beat(const Grouper *g, size_t a, size_t b, size_t k) 
 }
 
 static HarmonicSpanStatus add_span(Grouper *g, size_t a, size_t b) {
+    Reading reading;
+    HarmonicSpanStatus status = read_part(g, a, b, &reading);
+    if (status != HARMONIC_SPAN_OK) {
+        return status;
+    }
     size_t i = g->spans.count++;
     g->spans.first[i] = a;
     g->spans.last[i] = b;
-    g->spans.bass[i] = g->bass[a];
+    g->spans.bass[i] = reading.bass;
     return HARMONIC_SPAN_OK;
 }
 
