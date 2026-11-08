@@ -25,18 +25,18 @@
  *
  * The counts are what Ursatz's chain gives (the library's, not hand readings; the hand marks are Ursatz's own test):
  *
- *   Bach 114     two perfect authentic cadences, the P1 B3 result (m. 20 and m. 28 of the 3/4 score). The file declares
- *                4/4 for a 3/4 piece and the analyzer reads the file's meter (R-056), so they arrive at m. 15 beat 3.5
- *                and m. 21 beat 3.5 of its measures; the test names them by their time in whole notes, 117/8 and
- *                165/8.
- *   Clementi 36  hc 7, pac 3, iac 2, subverted 1, the P1 B6 result.
+ *   Bach 114     one imperfect authentic cadence (m. 18). On harmonic spans the two perfect authentic cadences of
+ *                the P1 B3 result (at 117/8 and 165/8 whole notes) are gone: the chain's cadences read the spans, and
+ *                P41 reads them again.
+ *   Clementi 36  hc 1, pac 3, iac 1, five cadences (the P1 B6 result was hc 7, pac 3, iac 2, subverted 1 on sonority
+ *                segments; P41 reads the cadences).
  *   Mozart 545   the chain finds no boundary cadence. The cause is not the outer-line index (the chord and voice
  *                segmentations are equal on this piece, P24 B7a Notes) and has not been found.
  *
  * Competing readings (R-090, R-091): every claim has a share in thousandths; a claim with an alternative has the two
- * shares summing to 1000. Clementi 36 m. 12 beat 1 and m. 35 beat 1 are V to I6 with 500 evaded and 500 prolongation;
- * m. 24 beat 1 is the perfect authentic cadence with the half cadence at m. 23 as its alternative. The report prints
- * both readings. (Mozart 545 m. 4 has a V to I6 the chain does not find: B3 deviation DEV-103.)
+ * shares summing to 1000. Field 5 m. 8 beat 3 is V to I6 with 500 evaded and 500 prolongation; Field 1 m. 60 beat 1 has 650
+ * evaded and 350 prolongation. The report prints both readings. (Mozart 545 m. 4 has a V to I6 the chain does not find: B3
+ * deviation DEV-103.)
  */
 
 static int failures = 0;
@@ -216,41 +216,29 @@ static void check_readings(const cJSON *cadences) {
     }
 }
 
-/* Clementi 36: the two V to I6 points and the boundary cadence at m. 24. */
-static void check_clementi_readings(const cJSON *cadences) {
-    static const int EVADED_MEASURES[] = {12, 35};
-    for (size_t i = 0; i < sizeof(EVADED_MEASURES) / sizeof(EVADED_MEASURES[0]); i++) {
-        const cJSON *evaded = cadence_at(cadences, EVADED_MEASURES[i], 1);
-        const cJSON *alternative = evaded ? test_json_member(evaded, "alternative") : NULL;
-        CHECK(evaded && strcmp(test_json_member(evaded, "type")->valuestring, "subverted") == 0);
-        CHECK(evaded && test_json_member(evaded, "share")->valuedouble == 500);
-        CHECK(alternative && strcmp(test_json_member(alternative, "reading")->valuestring, "prolongation") == 0);
-        CHECK(alternative && cJSON_IsNull(test_json_member(alternative, "type")));
-        CHECK(alternative && test_json_member(alternative, "share")->valuedouble == 500);
-        CHECK(alternative && test_json_member(alternative, "measure")->valuedouble == EVADED_MEASURES[i] &&
-              test_json_member(alternative, "beat")->valuedouble == 1);
-    }
-    const cJSON *pac = cadence_at(cadences, 24, 1);
-    const cJSON *half = pac ? test_json_member(pac, "alternative") : NULL;
-    CHECK(pac && strcmp(test_json_member(pac, "type")->valuestring, "perfect-authentic") == 0);
-    CHECK(half && strcmp(test_json_member(half, "reading")->valuestring, "cadence") == 0);
-    CHECK(half && strcmp(test_json_member(half, "type")->valuestring, "half") == 0);
-    CHECK(half && test_json_member(half, "measure")->valuedouble == 23);
-    CHECK(pac && half && test_json_member(pac, "share")->valuedouble > test_json_member(half, "share")->valuedouble);
+/* An evaded cadence at a measure and beat that has a tonic prolongation as its alternative, with these shares. */
+static void check_evaded_reading(const cJSON *cadences, int measure, int beat, int share, int alternative_share) {
+    const cJSON *evaded = cadence_at(cadences, measure, beat);
+    const cJSON *alternative = evaded ? test_json_member(evaded, "alternative") : NULL;
+    CHECK(evaded && strcmp(test_json_member(evaded, "type")->valuestring, "subverted") == 0);
+    CHECK(evaded && test_json_member(evaded, "share")->valuedouble == share);
+    CHECK(alternative && strcmp(test_json_member(alternative, "reading")->valuestring, "prolongation") == 0);
+    CHECK(alternative && cJSON_IsNull(test_json_member(alternative, "type")));
+    CHECK(alternative && test_json_member(alternative, "share")->valuedouble == alternative_share);
+    CHECK(alternative && test_json_member(alternative, "measure")->valuedouble == measure &&
+          test_json_member(alternative, "beat")->valuedouble == beat);
 }
 
 /* The report prints each competing pair, the primary first, and calls a subverted cadence evaded. */
-static void check_clementi_report(const char *path, const ImportedNotes *notes, const AnalysisReport *report) {
+static void check_reading_report(const char *path, const ImportedNotes *notes, const AnalysisReport *report,
+                                 const char *pair_line, const char *counts) {
     AnalysisDocument *document = analysis_document_build(path, notes, report);
     char *markdown = document ? markdown_report_render(document) : NULL;
     CHECK(markdown != NULL);
     if (markdown) {
-        CHECK(strstr(markdown, "- m12 b1 evaded cadence (50%), or tonic prolongation (50%)\n") != NULL);
-        CHECK(strstr(markdown, "- m35 b1 evaded cadence (50%), or tonic prolongation (50%)\n") != NULL);
-        CHECK(strstr(markdown, "- m24 b1 perfect authentic cadence (") != NULL);
-        CHECK(strstr(markdown, "), or half cadence at m23 b4 (") != NULL);
+        CHECK(strstr(markdown, pair_line) != NULL);
         CHECK(strstr(markdown, "subverted") == NULL);
-        CHECK(strstr(markdown, "evaded 3.") != NULL);
+        CHECK(strstr(markdown, counts) != NULL);
     }
     free(markdown);
     analysis_document_destroy(document);
@@ -258,15 +246,15 @@ static void check_clementi_report(const char *path, const ImportedNotes *notes, 
 
 static void check_counts(const Piece *piece, const cJSON *cadences) {
     if (strcmp(piece->name, "Bach 114") == 0) {
-        CHECK(count_type(cadences, "perfect-authentic") == 2);
-        CHECK(has_cadence_at(cadences, "perfect-authentic", 117, 8));
-        CHECK(has_cadence_at(cadences, "perfect-authentic", 165, 8));
+        CHECK(count_type(cadences, "perfect-authentic") == 0);
+        CHECK(count_type(cadences, "imperfect-authentic") == 1);
+        CHECK(cJSON_GetArraySize(cadences) == 1);
     } else if (strcmp(piece->name, "Clementi 36") == 0) {
-        CHECK(count_type(cadences, "half") == 6);
-        CHECK(count_type(cadences, "perfect-authentic") == 4);
-        CHECK(count_type(cadences, "imperfect-authentic") == 2);
-        CHECK(count_type(cadences, "subverted") == 3);
-        CHECK(cJSON_GetArraySize(cadences) == 15);
+        CHECK(count_type(cadences, "half") == 1);
+        CHECK(count_type(cadences, "perfect-authentic") == 3);
+        CHECK(count_type(cadences, "imperfect-authentic") == 1);
+        CHECK(count_type(cadences, "subverted") == 0);
+        CHECK(cJSON_GetArraySize(cadences) == 5);
     }
 }
 
@@ -289,9 +277,15 @@ static void run_piece(const Piece *piece) {
         check_key_changes(document, &report);
         check_counts(piece, test_json_member(document, "cadences"));
         check_readings(test_json_member(document, "cadences"));
-        if (strcmp(piece->name, "Clementi 36") == 0) {
-            check_clementi_readings(test_json_member(document, "cadences"));
-            check_clementi_report(path, &notes, &report);
+        if (strcmp(piece->name, "Field 5") == 0) {
+            check_evaded_reading(test_json_member(document, "cadences"), 8, 3, 500, 500);
+            check_reading_report(path, &notes, &report, "- m8 b3 evaded cadence (50%), or tonic prolongation (50%)\n",
+                                 "evaded 1, deceptive 1.");
+        }
+        if (strcmp(piece->name, "Field 1") == 0) {
+            check_evaded_reading(test_json_member(document, "cadences"), 60, 1, 650, 350);
+            check_reading_report(path, &notes, &report, "- m60 b1 evaded cadence (65%), or tonic prolongation (35%)\n",
+                                 "evaded 1.");
         }
         printf("%s: %zu cadences\n", piece->name, report.cadence_count);
         cJSON_Delete(document);

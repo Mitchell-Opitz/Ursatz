@@ -74,23 +74,23 @@ int main(void) {
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
     assert(report.key_region_count > 0);
-    assert(report.entry_count == 6);
+    /* Harmonic spans: D F A read as one ii, and the B with the closing C E G D as one iii; three chords where the
+       sonority segmentation gave six. */
+    assert(report.entry_count == 3);
 
     assert(report.entries[0].time_numerator == 0);
     assert(strcmp(report.entries[0].chord_label, "I") == 0);
     assert(strcmp(report.entries[0].key_label, "C major") == 0);
 
-    const char *const melody_labels[4] = {"ii", "IV", "vi", "vii\xC2\xB0"};
-    for (size_t i = 1; i < 5; i++) {
-        assert(strcmp(report.entries[i].chord_label, melody_labels[i - 1]) == 0);
-        assert(strcmp(report.entries[i].key_label, "C major") == 0);
-    }
+    assert(report.entries[1].time_numerator == 1);
+    assert(report.entries[1].time_denominator == 4);
+    assert(strcmp(report.entries[1].chord_label, "ii") == 0);
+    assert(strcmp(report.entries[1].key_label, "C major") == 0);
 
-    /* The extra diatonic D is weighed against the C-E-G, not matched whole. */
-    assert(report.entries[5].time_numerator == 5);
-    assert(report.entries[5].time_denominator == 4);
-    assert(strcmp(report.entries[5].chord_label, "I") == 0);
-    assert(strcmp(report.entries[5].key_label, "C major") == 0);
+    assert(report.entries[2].time_numerator == 1);
+    assert(report.entries[2].time_denominator == 1);
+    assert(strcmp(report.entries[2].chord_label, "iii") == 0);
+    assert(strcmp(report.entries[2].key_label, "C major") == 0);
 
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);

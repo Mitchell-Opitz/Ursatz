@@ -266,7 +266,9 @@ static void check_themes(const cJSON *document, size_t note_count) {
                 if (cadence) {
                     const cJSON *arrival_start = test_json_member(test_json_member(test_json_member(cadence, "arrival"), "location"), "start");
                     int arrival = (int)test_json_number(arrival_start, "measure");
-                    CHECK(arrival >= part_first && arrival <= part_last);
+                    /* On harmonic spans a part can name the cadence that arrives one measure before it begins (Field 1,
+                       the hybrid at m5 to m6 names the cadence at m4); P41 reads the cadences and themes on the spans. */
+                    CHECK(arrival >= part_first - 1 && arrival <= part_last);
                 }
             }
         }

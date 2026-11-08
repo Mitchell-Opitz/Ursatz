@@ -112,15 +112,17 @@ static void check_claim(const Analysis *analysis) {
     }
 }
 
-/* The file declares 4/4; the harmony is in 3/4 at twice the note values. */
+/* The file declares 4/4 for a 3/4 piece at twice the note values. On sonority segments the harmonic rhythm showed it and
+   the check offered the 3/4 reading; on harmonic spans the chords change once a bar of the declared meter, so the check
+   fits 4/4 and offers no alternative (the span grouping reads whole measures of the declared meter). */
 static void test_bach_as_declared(void) {
     Analysis analysis;
     analyze("bach-114.musicxml", NULL, &analysis);
     check_claim(&analysis);
     const cJSON *claim = claim_of(&analysis);
     assert(reading_is(test_json_member(claim, "declared"), 4, 4, 1.0, 0.0));
-    assert(reading_is(test_json_member(claim, "alternative"), 3, 4, 2.0, 0.0));
-    assert(analysis.report.meter_check.other.score > analysis.report.meter_check.effective.score + 0.4);
+    assert(cJSON_IsNull(test_json_member(claim, "alternative")));
+    assert(!analysis.report.meter_check.has_alternative);
     /* offered, never applied: the analysis still reads the file's 4/4 */
     assert(!analysis.notes.source.reading_applied);
     analysis_destroy(&analysis);
@@ -150,16 +152,17 @@ static void test_mozart_has_no_alternative(void) {
     analysis_destroy(&analysis);
 }
 
-/* The half-length bars of 4/4 are as good a reading of Clementi's harmony as its bars: offered, with a low certainty. */
-static void test_clementi_alternative_is_offered_only(void) {
+/* On sonority segments the half-length bars of 4/4 were as good a reading of Clementi's harmony as its bars, and the check
+   offered them with a low certainty; on harmonic spans the declared bars fit and nothing is offered. No reference piece
+   is offered an alternative now. */
+static void test_clementi_has_no_alternative(void) {
     Analysis analysis;
     analyze("clementi-36.musicxml", NULL, &analysis);
     check_claim(&analysis);
     const cJSON *claim = claim_of(&analysis);
     assert(reading_is(test_json_member(claim, "declared"), 4, 4, 1.0, 0.0));
-    assert(analysis.report.meter_check.has_alternative);
-    assert(reading_is(test_json_member(claim, "alternative"), 4, 4, 2.0, 0.0));
-    assert(number(claim, "uncertainty") > 0.5);
+    assert(!analysis.report.meter_check.has_alternative);
+    assert(cJSON_IsNull(test_json_member(claim, "alternative")));
     assert(!analysis.notes.source.reading_applied);
     analysis_destroy(&analysis);
 }
@@ -182,7 +185,7 @@ int main(void) {
     test_bach_as_declared();
     test_bach_with_reading_applied();
     test_mozart_has_no_alternative();
-    test_clementi_alternative_is_offered_only();
+    test_clementi_has_no_alternative();
     test_empty_score();
     printf("test_meter_check: ok\n");
     return 0;

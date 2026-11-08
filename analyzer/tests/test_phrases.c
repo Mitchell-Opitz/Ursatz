@@ -45,11 +45,12 @@ typedef struct {
     int phrases; /* what the chain gives */
 } Piece;
 
+/* The counts are on harmonic spans (they were 2, 10, 22, 10, 9 on sonority segments); P41 reads the phrases. */
 static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid", 2},
-                               {"Clementi 36", "Clementi 36.mid", 10},
-                               {"Mozart 545", "Mozart 545.mid", 22},
-                               {"Field 1", "Field 1.mid", 10},
-                               {"Field 5", "Field 5.mid", 9}};
+                               {"Clementi 36", "Clementi 36.mid", 7},
+                               {"Mozart 545", "Mozart 545.mid", 21},
+                               {"Field 1", "Field 1.mid", 14},
+                               {"Field 5", "Field 5.mid", 2}};
 
 static bool position_valid(const cJSON *position) {
     return cJSON_IsObject(position) && test_json_number(position, "measure") >= 0 && test_json_number(position, "beat") >= 1;
