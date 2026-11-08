@@ -226,8 +226,8 @@ static void test_motif(void) {
     AnalyzerStatus status = analyzer_text_export_material(&material, &text);
     CHECK(status == ANALYZER_OK && text, "motif export: status %d", (int)status);
     if (text) {
-        CHECK(strncmp(text, "# Ursatz export v1: motif\nname: Rising arch\nid: motif-7\nversion: 3\nrole: head\nmeter: 4/4\n",
-                      strlen("# Ursatz export v1: motif\nname: Rising arch\nid: motif-7\nversion: 3\nrole: head\nmeter: 4/4\n")) == 0,
+        CHECK(strncmp(text, "# Ursatz export v2: motif\nname: Rising arch\nid: motif-7\nversion: 3\nrole: head\nmeter: 4/4\n",
+                      strlen("# Ursatz export v2: motif\nname: Rising arch\nid: motif-7\nversion: 3\nrole: head\nmeter: 4/4\n")) == 0,
               "motif header:\n%s", text);
         CHECK(strstr(text, "\n## motif\nnotes: C E G E | F A G\nbase harmony: I - IV V\n") != NULL, "motif section head");
         CHECK(strstr(text, "\n## variant 1: invert\nkind: rhythm\n") != NULL, "variant 1 head");
@@ -291,7 +291,7 @@ static void test_theme(void) {
     AnalyzerStatus status = analyzer_text_export_material(&material, &text);
     CHECK(status == ANALYZER_OK && text, "theme export: status %d", (int)status);
     if (text) {
-        CHECK(strncmp(text, "# Ursatz export v1: theme\n", 26) == 0, "theme header");
+        CHECK(strncmp(text, "# Ursatz export v2: theme\n", 26) == 0, "theme header");
         CHECK(strstr(text, "\n## theme\n") && strstr(text, "\n## slot 1: Rising arch v1\n") &&
                   strstr(text, "\n## slot 2: Falling arch v2\n"),
               "theme sections");
@@ -337,7 +337,7 @@ static void test_piece(void) {
     AnalyzerStatus status = analyzer_text_export_material(&material, &text);
     CHECK(status == ANALYZER_OK && text, "piece export: status %d", (int)status);
     if (text) {
-        CHECK(strncmp(text, "# Ursatz export v1: piece\n", 26) == 0, "piece header");
+        CHECK(strncmp(text, "# Ursatz export v2: piece\n", 26) == 0, "piece header");
         CHECK(strstr(text, "\n## loop\n") && strstr(text, "\n## ending\n"), "piece sections");
         CHECK(strstr(text, "A loop: 8 beats, fill none, cadence HC\n") != NULL, "piece facts");
         check_snapshot("piece", text);
@@ -355,7 +355,7 @@ static void test_material_refusals(void) {
     AnalyzerTextExportMaterial empty = {"motif", "id", "name", 1, NULL, 0, NULL, 0};
     CHECK(analyzer_text_export_material(&empty, NULL) == ANALYZER_ERR_ARGUMENT, "NULL text");
     CHECK(analyzer_text_export_material(&empty, &text) == ANALYZER_OK && text &&
-              strncmp(text, "# Ursatz export v1: motif\nname: name\nid: id\nversion: 1\n", 53) == 0,
+              strncmp(text, "# Ursatz export v2: motif\nname: name\nid: id\nversion: 1\n", 53) == 0,
           "material with no sections");
     free(text);
     text = NULL;

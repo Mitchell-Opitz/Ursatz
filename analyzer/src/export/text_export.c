@@ -651,11 +651,59 @@ void text_export_write_legend(Text *text) {
                     "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>\n");
 }
 
+static const char *clef_name(const ScoreTextClef *clef) { return clef->bass ? "bass" : "treble"; }
+
+/* The "clefs:" lines, one per part that has a clef: the clef of each staff in force at the start of measure first
+   (those of the first measure, then any change up to and including measure first), for example
+   "clefs: P1 S1 treble, S2 bass". Nothing for a score that writes no clef. */
+static void add_clefs(Text *text, const ScoreTextScore *score, size_t first) {
+    size_t capacity = 0;
+    for (size_t m = 0; m <= first && m < score->measure_count; m++) {
+        capacity += score->measures[m].clef_count;
+    }
+    ScoreTextClef *state = capacity ? malloc(capacity * sizeof *state) : NULL;
+    if (!state) {
+        text->failed = text->failed || capacity > 0;
+        return;
+    }
+    size_t count = 0;
+    for (size_t m = 0; m <= first && m < score->measure_count; m++) {
+        for (size_t c = 0; c < score->measures[m].clef_count; c++) {
+            const ScoreTextClef *clef = &score->measures[m].clefs[c];
+            size_t at = 0;
+            while (at < count && (state[at].part < clef->part ||
+                                  (state[at].part == clef->part && state[at].staff < clef->staff))) {
+                at++;
+            }
+            if (at < count && state[at].part == clef->part && state[at].staff == clef->staff) {
+                state[at] = *clef;
+                continue;
+            }
+            memmove(&state[at + 1], &state[at], (count - at) * sizeof *state);
+            state[at] = *clef;
+            count++;
+        }
+    }
+    for (size_t i = 0; i < count; i++) {
+        if (i == 0 || state[i].part != state[i - 1].part) {
+            export_text_addf(text, "%sclefs: P%d S%d %s", i == 0 ? "" : "\n", state[i].part, state[i].staff,
+                             clef_name(&state[i]));
+        } else {
+            export_text_addf(text, ", S%d %s", state[i].staff, clef_name(&state[i]));
+        }
+    }
+    if (count > 0) {
+        export_text_add(text, "\n");
+    }
+    free(state);
+}
+
 static void add_header(Text *text, const cJSON *document, const ScoreTextScore *score, const char *title,
                        size_t first, size_t last, bool whole) {
     export_text_addf(text, "# Ursatz export v%d: piece\n", URSATZ_ANALYZER_TEXT_EXPORT_VERSION);
     export_text_addf(text, "title: %s\n", title);
     text_export_write_summary(text, document, score, first, last, whole);
+    add_clefs(text, score, first);
     text_export_write_legend(text);
 }
 
@@ -703,6 +751,15 @@ bool text_export_write_measures(Text *out, const cJSON *document, const ScoreTex
         export_text_addf(out, "m%s", measure->number);
         if (measure->time_changed) {
             export_text_addf(out, " %d/%d", measure->beats, measure->beat_type);
+        }
+        /* The clefs of the first measure are the opening ones, in the header; a later <clef> is a change. */
+        for (size_t c = 0; m > 0 && c < measure->clef_count; c++) {
+            if (score->part_count > 1) {
+                export_text_addf(out, " clef P%d S%d %s", measure->clefs[c].part, measure->clefs[c].staff,
+                                 clef_name(&measure->clefs[c]));
+            } else {
+                export_text_addf(out, " clef S%d %s", measure->clefs[c].staff, clef_name(&measure->clefs[c]));
+            }
         }
         export_text_add(out, "\n");
         add_measure_notes(out, measure, marks);

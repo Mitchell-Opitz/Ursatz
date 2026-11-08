@@ -12,9 +12,9 @@
  * (analyzer_score_export_musicxml), so the text shows exactly what the Score tab draws, wrong or not; the claims come
  * from the analysis document, placed in the measure where each starts.
  *
- * Value of the format version, written as "# Ursatz export v1" on the first line. A change to the line layout bumps it.
+ * Value of the format version, written as "# Ursatz export v2" on the first line. A change to the line layout bumps it.
  */
-#define URSATZ_ANALYZER_TEXT_EXPORT_VERSION 1
+#define URSATZ_ANALYZER_TEXT_EXPORT_VERSION 2
 
 typedef struct {
     /* Printed as "title:". NULL or empty: the file name the document records, else "untitled". */
