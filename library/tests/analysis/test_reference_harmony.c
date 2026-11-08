@@ -10,7 +10,7 @@
 #include "ursatz_chain/analysis_chain.h"
 
 /*
- * REPORT ONLY. The chain's harmony against Michelle's hand harmony of the Clementi and Mozart reference pieces
+ * The chain's harmony against Michelle's hand harmony of the Clementi and Mozart reference pieces
  * (tests/fixtures/annotations/clementi36_harmony.txt and mozart545_harmony.txt, the chord syntax of the cadences files).
  *
  * The chain is analysis_chain_run to the form stage with the file's key signature events and the piece's home key as the key of the
@@ -21,8 +21,11 @@
  * change is a matched segment whose root or triad quality differs from the matched segment before it) against the changes the
  * annotation has, so the surplus shows how finely the chain cuts the harmony.
  *
- * Nothing is asserted but that the files parse and the chain runs (architecture conventions: a measure that is not a target is
- * reported). P39 turns this into an assertion. URSATZ_CORPUS_DIR and URSATZ_ANNOTATION_DIR come from CMake.
+ * P39 asserts the target bars of R-371 (the chain reads chords on harmonic spans): in Clementi measures 1 to 5, 8 and 9 and in Mozart
+ * measures 1 to 6, 11 and 12 every annotated chord must match by root and triad quality, and the chain makes no chord change inside
+ * Clementi measure 8 or Mozart measures 1 and 8 (Mozart measure 8 is one chord; which chord is reported, not asserted, R-375). Every
+ * other annotated bar and the extra changes are reported only (applied chords are P40's). URSATZ_CORPUS_DIR and
+ * URSATZ_ANNOTATION_DIR come from CMake.
  */
 
 #define MAX_CHORDS 64
@@ -52,10 +55,31 @@ typedef struct {
     const char *name;
     const char *midi;
     const char *fixture;
+    const int *bars;       /* the target bars: every annotated chord in them must match */
+    size_t bar_count;
+    const int *one_chord;  /* the bars in which the chain makes no chord change */
+    size_t one_chord_count;
 } Piece;
 
-static const Piece PIECES[2] = {{"Clementi 36", "Clementi 36.mid", "clementi36_harmony.txt"},
-                                {"Mozart 545", "Mozart 545.mid", "mozart545_harmony.txt"}};
+static const int CLEMENTI_BARS[] = {1, 2, 3, 4, 5, 8, 9};
+static const int CLEMENTI_ONE_CHORD[] = {8};
+static const int MOZART_BARS[] = {1, 2, 3, 4, 5, 6, 11, 12};
+static const int MOZART_ONE_CHORD[] = {1, 8};
+
+static const Piece PIECES[2] = {
+    {"Clementi 36", "Clementi 36.mid", "clementi36_harmony.txt", CLEMENTI_BARS, sizeof(CLEMENTI_BARS) / sizeof(int), CLEMENTI_ONE_CHORD,
+     sizeof(CLEMENTI_ONE_CHORD) / sizeof(int)},
+    {"Mozart 545", "Mozart 545.mid", "mozart545_harmony.txt", MOZART_BARS, sizeof(MOZART_BARS) / sizeof(int), MOZART_ONE_CHORD,
+     sizeof(MOZART_ONE_CHORD) / sizeof(int)}};
+
+static bool listed(const int *bars, size_t count, int measure) {
+    for (size_t i = 0; i < count; i++) {
+        if (bars[i] == measure) {
+            return true;
+        }
+    }
+    return false;
+}
 
 static const char *const PC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
@@ -186,7 +210,40 @@ static bool chain_chord(const CommonPracticeWeightedResult *result, int *root, Q
     return true;
 }
 
-static void report_piece(const Piece *piece) {
+/* The chord changes between the matched segments that start inside `measure`, and the first such segment's chord (for the report). */
+static size_t changes_in_measure(const Reference *ref, const ChainSegments *segments, const CommonPracticeWeightedResult *chords, size_t count,
+                                 int measure, bool *has_chord, int *first_root, Quality *first_quality) {
+    double from = time_of(ref, measure, 1.0);
+    double to = time_of(ref, measure + 1, 1.0);
+    size_t changes = 0;
+    *has_chord = false;
+    int previous_root = 0;
+    Quality previous_quality = Q_MAJOR;
+    for (size_t s = 0; s < count; s++) {
+        if (segments->starts[s] < from - 1e-9 || segments->starts[s] >= to - 1e-9) {
+            continue;
+        }
+        int root = 0;
+        Quality quality = Q_MAJOR;
+        if (!chain_chord(&chords[s], &root, &quality)) {
+            continue;
+        }
+        if (!*has_chord) {
+            *first_root = root;
+            *first_quality = quality;
+        } else if (root != previous_root || quality != previous_quality) {
+            changes++;
+        }
+        *has_chord = true;
+        previous_root = root;
+        previous_quality = quality;
+    }
+    return changes;
+}
+
+/* The number of asserted expectations that failed. */
+static int report_piece(const Piece *piece) {
+    int failures = 0;
     Reference ref = load_reference(piece->fixture);
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, piece->midi, NULL);
 
@@ -226,12 +283,14 @@ static void report_piece(const Piece *piece) {
         if (found && root == c->root && quality == c->quality) {
             matched++;
         } else {
-            printf("  miss: measure %d beat %g (%s): annotated %s %s, chain %s", c->measure, c->beat, c->text, PC_NAMES[c->root],
-                   quality_name(c->quality), found ? PC_NAMES[root] : "no chord");
+            bool asserted = listed(piece->bars, piece->bar_count, c->measure);
+            printf("  %s: measure %d beat %g (%s): annotated %s %s, chain %s", asserted ? "FAIL (target bar)" : "miss", c->measure, c->beat,
+                   c->text, PC_NAMES[c->root], quality_name(c->quality), found ? PC_NAMES[root] : "no chord");
             if (found) {
                 printf(" %s", quality_name(quality));
             }
             printf("\n");
+            failures += asserted ? 1 : 0;
         }
     }
 
@@ -273,15 +332,34 @@ static void report_piece(const Piece *piece) {
     printf("  matched %zu / %zu annotated chords; chain changes %zu, annotated changes %zu, extra changes %ld\n", matched, ref.count,
            chain_changes, annotated_changes, (long)chain_changes - (long)annotated_changes);
 
+    for (size_t i = 0; i < piece->one_chord_count; i++) {
+        bool has_chord = false;
+        int root = 0;
+        Quality quality = Q_MAJOR;
+        size_t changes = changes_in_measure(&ref, segments, chords, count, piece->one_chord[i], &has_chord, &root, &quality);
+        printf("  measure %d: %zu chord change(s) inside; first chord %s%s%s\n", piece->one_chord[i], changes,
+               has_chord ? PC_NAMES[root] : "none", has_chord ? " " : "", has_chord ? quality_name(quality) : "");
+        if (!has_chord || changes != 0) {
+            printf("  FAIL (one chord): measure %d\n", piece->one_chord[i]);
+            failures++;
+        }
+    }
+
     analysis_chain_destroy(chain);
     free(key_events);
     pipeline_destroy(&p);
+    return failures;
 }
 
 int main(void) {
+    int failures = 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
-        report_piece(&PIECES[i]);
+        failures += report_piece(&PIECES[i]);
     }
-    printf("test_reference_harmony: ok (report only)\n");
+    if (failures > 0) {
+        printf("test_reference_harmony: %d failure(s)\n", failures);
+        return 1;
+    }
+    printf("test_reference_harmony: ok\n");
     return 0;
 }
