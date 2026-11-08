@@ -13,22 +13,14 @@ key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
 
 m1 4/4
  P1 S1 V1: C4 @1 q[a], E4 @2 q, G4 @3 q, E4 @4 q[/a]
- key C major c=0.24 (m1-m2)
+ key C major c=0.27 (m1-m2)
  chord C I @1 c=0.00
- phrase 1 m1 c=0.24 | form A
- form A m1-m2 c=0.24
- chord Em iii @2 c=0.00
- chord G V @3 c=0.00
- cadence HC m1 @3 c=0.24
- chord Em iii @4 c=0.00
+ phrase 1 m1-m2 c=0.50 | form A
+ form A m1-m2 c=0.50
 
 m2
  P1 S1 V1: F4 @1 q[a'], A4 @2 q, G4 @3 h[/a']
- chord F IV @1 c=0.00
- phrase 2 m2 c=0.24 | form A
- chord Am vi @2 c=0.00
- chord G V @3 c=0.00
- cadence HC m2 @3 c=0.24
+ chord G7/F V4/2 @1 c=0.93
 
 ## variant 1: invert
 kind: rhythm
@@ -38,21 +30,12 @@ m1 4/4
  P1 S1 V1: C4 @1 q, E4 @2 q, G4 @3 q, C5 @4 q
  key C major c=0.12 (m1-m2)
  chord C I @1 c=0.00
- phrase 1 m1 c=0.12 | form A
- form A m1 c=0.12
- chord Em iii @2 c=0.00
- chord G V @3 c=0.00
- cadence PAC m1 @4 c=0.12
- chord C I @4 c=0.00
+ phrase 1 m1-m2 c=0.50 | form A
+ form A m1-m2 c=0.50
 
 m2
  P1 S1 V1: B4 @1 q, G4 @2 q, C5 @3 h
- chord Bdim vii° @1 c=0.00
- phrase 2 m2 c=0.12 | form B
- form B m2 c=0.12
- chord G V @2 c=0.00
- cadence PAC m2 @3 c=0.12
- chord C I @3 c=0.00
+ chord Cmaj7/G I4/2 @1 c=0.76
 
 ## variant 2: rhythm
 kind: rhythm
@@ -60,20 +43,11 @@ key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
 
 m1 4/4
  P1 S1 V1: C4 @1 e, D4 @1.5 e, E4 @2 q, G4 @3 q, E4 @4 q
- key C major c=0.09 (m1-m2)
- chord C I @1 c=0.00
- phrase 1 m1 c=0.09 | form A
- form A m1-m2 c=0.09
- chord Dm ii @1.5 c=0.00
- chord Em iii @2 c=0.00
- chord G V @3 c=0.00
- cadence HC m1 @3 c=0.09
- chord Em iii @4 c=0.00
+ key C major c=0.12 (m1-m2)
+ chord C I @1 c=0.09
+ phrase 1 m1-m2 c=0.50 | form A
+ form A m1-m2 c=0.50
 
 m2
  P1 S1 V1: F4 @1 q, A4 @2 q, G4 @3 h
- chord F IV @1 c=0.00
- phrase 2 m2 c=0.09 | form A
- chord Am vi @2 c=0.00
- chord G V @3 c=0.00
- cadence HC m2 @3 c=0.09
+ chord G7/F V4/2 @1 c=0.93

@@ -57,7 +57,7 @@ add_test(NAME test_analysis_document_schema
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v9.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v10.schema.json
                  -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
@@ -382,7 +382,7 @@ add_test(NAME test_cli_notation_reading
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v9.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v10.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_notation_reading
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
 

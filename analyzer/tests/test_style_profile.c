@@ -481,7 +481,7 @@ static size_t category_size(const StyleStatistic *list, size_t count, const char
    passing tone, note 7 an unclassified tone (no figure). */
 static void test_motive_categories(void) {
     const char *document =
-        "{\"schema_version\": 9,"
+        "{\"schema_version\": 10,"
         " \"non_chord_tones\": [{\"note_ids\": [3], \"type\": \"appoggiatura\"}, {\"note_ids\": [7], \"type\": null},"
         " {\"note_ids\": [9], \"type\": \"passing\"}],"
         " \"motives\": ["
@@ -520,7 +520,7 @@ static void test_motive_categories(void) {
 /* The figure of a tone at the ends of its occurrence has a dash for the missing neighbour. */
 static void test_motive_figure_ends(void) {
     const char *document =
-        "{\"schema_version\": 9,"
+        "{\"schema_version\": 10,"
         " \"non_chord_tones\": [{\"note_ids\": [1], \"type\": \"neighbor\"}, {\"note_ids\": [4], \"type\": \"escape-tone\"}],"
         " \"motives\": [{\"features\": {\"degrees\": [\"1\", \"2\", \"3\"], \"intervals\": [2, 2], \"rhythm\": [\"1/4\", \"1/4\", \"1/4\"]},"
         " \"occurrences\": [{\"note_ids\": [1, 2, 3, 4], \"degrees\": [\"6\", \"1\", \"2\", \"3\"]}]}]}";
@@ -595,7 +595,7 @@ static void test_refusals(void) {
     CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 8}") == STYLE_PROFILE_ERR_FORMAT, "version 8 is refused");
     CHECK(style_profile_add_document_json(profile, "{}") == STYLE_PROFILE_ERR_FORMAT, "a document without a version is refused");
     CHECK(style_profile_add_document_json(profile, "not json") == STYLE_PROFILE_ERR_FORMAT, "text is refused");
-    CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 9}") == STYLE_PROFILE_OK &&
+    CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 10}") == STYLE_PROFILE_OK &&
               style_profile_piece_count(profile) == 1,
           "an empty version 9 document counts as a piece with no labels");
     CHECK(style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");

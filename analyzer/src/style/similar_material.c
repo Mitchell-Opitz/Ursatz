@@ -90,8 +90,8 @@ typedef struct {
 } DocNote;
 
 /*
- * The soprano's notes in time order. The document has one soprano entry per chord segment, so a note held across
- * several segments is one note and its end is the end of its last segment. Entries that are not present are skipped.
+ * The soprano's notes in time order. The document has one soprano entry per voice segment (one per melody note), so a
+ * note held across several segments is one note and its end is the end of its last segment. Entries that are not present are skipped.
  * *out is NULL when *count is 0. false on allocation failure or an entry that cannot be read.
  */
 static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {

@@ -63,8 +63,16 @@ Where the Analyzer reads a piece differently from its annotation, and why. Back 
   (modal mixture) chord, Neapolitan or augmented sixth, so the borrowed group of the vocabulary is
   empty. It reads an applied chord only when the chord was identified as a diatonic neighbour and
   resolves as the library requires.
-- The outer voices in the document are per chord: a chord's soprano and bass are the lines' notes at its
-  start, so a melody note attacked later inside a merged chord segment is not listed.
+- Chords are harmonic spans, not sonority segments: the over-cutting of one chord per change of sounding notes is replaced
+  by Ursatz's span rule (whole measures partitioned from the bass, one chord a span), so the reference pieces read
+  Bach 114 48 chords, Clementi 36 47, Field 1 90, Field 5 82 and Mozart 545 224. Applied (secondary) chords are still
+  pending (P40: a span is identified with the grouping vocabulary, triads and dominant and diminished sevenths). Cadences,
+  phrases, themes, form and the schemas still read the chords on the spans, and phrases and themes read the soprano at
+  span starts until P41, so they moved: Bach 114 reads 1 cadence (was 5), Clementi 36 5 (was 15) and 7 phrases (was 10),
+  Field 5 2 cadences and 2 phrases, and the rhythm's hyperdownbeats of Field 5 read 3 of 8 (was 7).
+- The outer voices in the document are per voice segment (one entry per melody note, several to a chord), but a voice
+  segment is cut where the sounding pitch classes change, so melody notes that are all chord tones of one held chord share
+  one entry (the highest, as the library reads it); a chord's own `outer` is the lines' entry at its start.
 - Non-chord tones are classified only where the library can: its passing, neighbor, suspension,
   anticipation, appoggiatura, escape-tone and pedal rules. Many tones come back unclassified.
 - Progressions are the library's base numerals counted as they come: Bach 114's most common progression is

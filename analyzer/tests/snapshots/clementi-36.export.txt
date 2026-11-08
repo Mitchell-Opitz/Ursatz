@@ -7,393 +7,225 @@ notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tup
 m1 4/4
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
- key C major c=0.20 (m1-m7)
+ key C major c=0.18 (m1-m6)
  chord C I @1 c=0.00
- phrase 1 m1-m2 c=0.20 | form A
- form A m1-m2 c=0.20
- chord Em iii @2 c=0.00
- chord C I @2.5 c=0.00
- chord G V @3 c=0.00
- cadence PAC m2 @1 c=0.20
+ phrase 1 m1-m7 c=0.02 | form A
+ theme hybrid m1-m7 c=0.02
+ form A m1-m7 c=0.02
 
 m2
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G5 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
- chord Em iii @2 c=0.00
- chord C I @2.5 c=0.00
- chord G V @3 c=0.00
- cadence HC m2 @3 c=0.20
 
 m3
  P1 S1 V1: F5 @1 e, E5 @1.5 e, D5 @2 e, C5 @2.5 e, B4 @3 e, C5 @3.5 e, B4 @4 e, C5 @4.5 e
  P1 S2 V2: C3 @1 q, r @2 q, C3 @3 q, r @4 q
- chord Fmaj7/C IV4/3 @1 c=0.87
- phrase 2 m3-m4 c=0.04 | form B
- form B m3-m10 c=0.00
- chord Dm ii @2 c=0.00
- chord Cmaj7 I7 @2.5 c=0.12
- chord Cmaj7 I7 @3 c=0.12
- chord Cmaj7/B I4/2 @4 c=0.12
- chord Cmaj7 I7 @4.5 c=0.12
+ chord C I @1 c=0.96
 
 m4
  P1 S1 V1: D5 @1 e, C5 @1.5 e, B4 @2 e, A4 @2.5 e, G4 @3 q, r @4 q
  P1 S2 V2: G2 @1 q, r @2 q, G3 @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
- chord G V @1 c=0.80
- cadence HC m4 @1 c=0.04
- chord G/B V6 @2 c=0.80
- chord Am vi @2.5 c=0.00
- chord G V @3 c=0.00
- chord G7/F V4/2 @3.5 c=0.36
- chord Em iii @4 c=0.00
- chord Dm ii @4.5 c=0.00
+ chord G V @1 c=0.88
+ cadence PAC m5 @1 c=0.02
 
 m5
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
- phrase 3 m5-m10 c=0.00 | form B
- theme hybrid m5-m10 c=0.00
- chord Em iii @2 c=0.00
- chord C I @2.5 c=0.00
- chord C/G I6/4 @3 c=0.31
 
 m6
  P1 S1 V1: E5 @1 q, G5 @2 e, E5 @2.5 e, C5 @3 q, E5 @4 e, C5 @4.5 e
  P1 S2 V2: C4 @1 q, r @2 q, r @3 q, F#3 @4 q
- chord C I @1 c=0.31
- chord C/G I6/4 @2 c=0.31
- chord C/E I6 @2.5 c=0.31
- chord C I @3 c=0.31
+ chord C/F# I @1 c=0.00
 
 m7
  P1 S1 V1: D5 @1 e, B4 @1.5 e, C5 @2 e, A4 @2.5 e, B4 @3 e, G4 @3.5 e, A4 @4 e, F#4 @4.5 e
  P1 S2 V2: G3 @1 q, C3 @2 q, D3 @3 q, D2 @4 q
- chord G V @1 c=0.36
- chord Am/C vi6 @2 c=0.64
- chord G/D V6/4 @3 c=0.86
- chord Dm ii @4 c=0.12
+ key G major c=0.25 (m7-m15)
+ modulation C major to G major (m7-m15)
+ chord G I @1 c=0.00
+ chord Am/C ii6 @2 c=0.64
+ chord G/D I6/4 @3 c=0.86
+ cadence IAC m8 @1 c=0.01
+ chord D V @4 c=0.00
 
 m8
  P1 S1 V1: G4 @1 e, A4 @1.5 e, B4 @2 e, C5 @2.5 e, D5 @3 e, E5 @3.5 e, F#5 @4 e, G5 @4.5 e
  P1 S2 V2: G2 @1 q, r @2 q, r @3 h
- key G major c=0.11 (m8-m14)
- modulation C major to G major (m8-m14)
- chord Am7/G ii4/2 @1 c=0.88
- chord Bm iii @2 c=0.00
- chord C IV @2.5 c=0.00
- chord D V @3 c=0.00
- chord Em vi @3.5 c=0.00
- chord F#dim vii° @4 c=0.00
- chord G I @4.5 c=0.00
+ chord G I @1 c=0.94
+ phrase 2 m8 c=0.01 | form B
+ form B m8 c=0.01
 
 m9
  P1 S1 V1: A4 @1 q, A5 @2 q, A5 @3 q, A5 @4 q
  P1 S2 V2: F#3 @1 e, D4 @1.5 e, A3 @2 e, D4 @2.5 e, F#3 @3 e, D4 @3.5 e, A3 @4 e, D4 @4.5 e
- chord F#dim vii° @1 c=0.33
- chord D V @1.5 c=0.47
- chord D/A V6/4 @2 c=0.47
- chord D V @2.5 c=0.47
- chord F#dim vii° @3 c=0.33
- chord D V @3.5 c=0.47
- chord D/A V6/4 @4 c=0.47
- chord D V @4.5 c=0.47
- cadence IAC m10 @1 c=0.00
+ chord D/F# V6 @1 c=0.84
+ phrase 3 m9-m19 c=0.05 | form A'
+ theme hybrid m9-m19 c=0.05
+ form A' m9-m26 c=0.00
 
 m10
  P1 S1 V1: B4 @1 e, C5 @1.5 e, D5 @2 e, E5 @2.5 e, F#5 @3 e, G5 @3.5 e, A5 @4 e, B5 @4.5 e
  P1 S2 V2: G3 @1 q, r @2 q, r @3 h
- chord G I @1 c=0.96
- chord G/D I6/4 @2 c=0.96
- chord Em vi @2.5 c=0.00
- chord F#dim vii° @3 c=0.00
- chord G I @3.5 c=0.00
- chord Am ii @4 c=0.00
- chord Bm iii @4.5 c=0.00
+ chord G I @1 c=1.00
 
 m11
  P1 S1 V1: C5 @1 q, C6 @2 q, C6 @3 q, C6 @4 q
  P1 S2 V2: A3 @1 e, D4 @1.5 e, C4 @2 e, D4 @2.5 e, A3 @3 e, D4 @3.5 e, C4 @4 e, D4 @4.5 e
- chord Am ii @1 c=0.33
- phrase 4 m11-m14 c=0.11 | form C
- form C m11-m24 c=0.03
- chord D7 V7 @1.5 c=0.47
- chord D7/C V4/2 @2 c=0.47
- chord D7 V7 @2.5 c=0.47
- chord Am ii @3 c=0.33
- chord D7 V7 @3.5 c=0.47
- chord D7/C V4/2 @4 c=0.47
- chord D7 V7 @4.5 c=0.47
- cadence subverted m12 @1 c=0.01
+ chord Am ii @1 c=0.85
 
 m12
  P1 S1 V1: D5 @1 e, G5 @1.5 e, B5 @2 e, D6 @2.5 e, C6 @3 e, B5 @3.5 e, A5 @4 e, G5 @4.5 e
  P1 S2 V2: B3 @1 q, r @2 q, r @3 h
- chord G/B I6 @1 c=0.90
- chord G/B I6 @2 c=0.90
- chord G/D I6/4 @2.5 c=0.90
- chord C IV @3 c=0.00
- chord Bm iii @3.5 c=0.00
- chord Am ii @4 c=0.00
- chord G I @4.5 c=0.00
+ chord G/B I6 @1 c=0.86
 
 m13
  P1 S1 V1: F#5 @1 e, E5 @1.5 e, G5 @2 e, F#5 @2.5 e, A5 @3 e, G5 @3.5 e, F#5 @4 e, E5 @4.5 e
  P1 S2 V2: C4 @1 q, r @2 q, C3 @3 q, r @4 q
- chord F#m7b5/C vii∅4/3 @1 c=0.87
- chord G I @2 c=0.00
- chord F#dim vii° @2.5 c=0.00
- chord Am7/C ii6/5 @3 c=0.61
- chord F#dim vii° @4 c=0.00
- chord Em vi @4.5 c=0.00
+ chord F#dim/C vii°6/4 @1 c=0.87
 
 m14
  P1 S1 V1: E5 @1 e, D5 @1.5 e, C5 @2 e, B4 @2.5 e, D5 @3 e, C5 @3.5 e, B4 @4 e, A4 @4.5 e
  P1 S2 V2: D3 @1 q, r @2 q, D2 @3 q, r @4 q
- chord Em7/D vi4/2 @1 c=0.70
- chord C IV @2 c=0.00
- chord Bm iii @2.5 c=0.00
- chord D7 V7 @3 c=0.00
- cadence HC m14 @3 c=0.11
- chord Bm iii @4 c=0.00
- chord Am ii @4.5 c=0.00
+ chord Bm/D iii6 @1 c=0.89
+ chord Bm/D iii6 @3 c=0.82
 
 m15
  P1 S1 V1: G4 @1 h, r @3 h
  P1 S2 V2: G2 @1 e, B2 @1.5 e, D3 @2 e, G3 @2.5 e, G2 @3 q, r @4 q
- key C minor c=0.08 (m15-m19)
- modulation G major to C minor (m15-m19)
- chord G V @1 c=0.00
- phrase 5 m15-m19 c=0.03 | form C
- theme period m15-m24 c=0.03
- chord G/B V6 @1.5 c=0.29
- chord G/D V6/4 @2 c=0.12
- chord G V @3 c=0.00
+ chord G I @1 c=0.00
 
 m16 clef S2 treble
  P1 S1 V1: B4 @1 q, D5 @2 e, B4 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: F4 @1 w
- chord Bdim/F viio6/4 @1 c=0.83
- chord Bdim/F viio6/4 @2 c=0.83
- chord G7/F V4/2 @3 c=0.50
+ key C minor c=0.17 (m16-m19)
+ modulation G major to C minor (m16-m19)
+ chord G7/F V4/2 @1 c=0.99
 
 m17
  P1 S1 V1: C5 @1 q, D#5 @2 e, C5 @2.5 e, G4 @3 q, G5 @4 q
  P1 S2 V2: D#4 @1 w
- chord Cm/Eb i6 @1 c=0.55
- chord Eb III @3 c=0.28
+ chord Cm/Eb i6 @1 c=0.84
 
 m18 clef S2 bass
  P1 S1 V1: F5 @1 q, D5 @2 q, D#5 @3 q, C5 @4 q
  P1 S2 V2: B3 @1 h, C4 @3 h
- chord Bdim viio @1 c=0.35
- chord Bdim viio @2 c=0.22
- chord Cm i @3 c=0.30
- chord Cm i @4 c=0.30
+ chord Bdim viio @1 c=0.00
+ chord Cm i @3 c=0.00
 
 m19
  P1 S1 V1: B4 @1 e, C5 @1.5 e, D5 @2 e, B4 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: G3 @1 h, r @3 h
- chord G V @1 c=0.67
- cadence HC m19 @1 c=0.03
- chord G V @2 c=0.35
- chord G V @3 c=0.35
+ chord G V @1 c=0.70
+ cadence HC m19 @1 c=0.05
 
 m20
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
  P1 S2 V2: F4 @1 q, G3 @2 q, D4 @3 q, G3 @4 q
- key G major c=0.10 (m20-m23)
- modulation C minor to G major (m20-m23)
- phrase 6 m20-m24 c=0.10 | form C
- chord G I @2 c=0.00
- chord G/D I6/4 @3 c=0.55
- chord G I @4 c=0.00
+ key G major c=0.06 (m20-m22)
+ modulation C minor to G major (m20-m22)
+ chord G V4/2/IV @1 c=0.01
+ phrase 4 m20-m26 c=0.00 | form A'
+ theme hybrid m20-m26 c=0.00
 
 m21
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
  P1 S2 V2: D#4 @1 q, G3 @2 q, C4 @3 q, G3 @4 q
- chord C/G IV6/4 @2 c=0.28
- chord C IV @3 c=0.28
- chord C/G IV6/4 @4 c=0.28
+ chord C/G IV6/4 @1 c=0.75
 
 m22
  P1 S1 V1: D5 @1 e, D#5 @1.5 e, F5 @2 e, D5 @2.5 e, F5 @3 e, D#5 @3.5 e, D5 @4 e, C5 @4.5 e
  P1 S2 V2: B3 @1 q, r @2 q, C4 @3 q, r @4 q
- chord Bm iii @1 c=0.13
- chord D V @2.5 c=0.00
- chord D V @4 c=0.00
- chord C IV @4.5 c=0.00
+ chord Bm iii @1 c=0.00
 
 m23
  P1 S1 V1: B4+G5 @1 q, r @2 q, r @3 h
  P1 S2 V2: G3 @1 q, G2 @2 q, G3 @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
- chord G I @1 c=0.15
- chord G I @2 c=0.15
- chord Em vi @4 c=0.00
- chord D V @4.5 c=0.00
- cadence PAC m24 @1 c=0.10
+ key C major c=0.26 (m23-m38)
+ modulation G major to C major (m23-m38)
+ chord G V @1 c=1.00
+ cadence PAC m24 @1 c=0.00
 
 m24
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G3 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
- key C major c=0.31 (m24-m38)
- modulation G major to C major (m24-m38)
  chord C I @1 c=0.00
- chord Em iii @2 c=0.00
- chord C I @2.5 c=0.00
- chord G V @3 c=0.00
- cadence PAC m25 @1 c=0.31
 
 m25
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G4 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
- phrase 7 m25 c=0.31 | form D
- form D m25 c=0.31
- chord Em iii @2 c=0.00
- chord C I @2.5 c=0.00
- chord G V @3 c=0.00
- cadence HC m25 @3 c=0.31
 
 m26
  P1 S1 V1: F4 @1 e, E4 @1.5 e, D4 @2 e, C4 @2.5 e, B3 @3 e, C4 @3.5 e, B3 @4 e, C4 @4.5 e
  P1 S2 V2: C3 @1 q, r @2 q, C3 @3 q, r @4 q
- chord Fmaj7/C IV4/3 @1 c=0.87
- phrase 8 m26-m27 c=0.06 | form E
- form E m26-m33 c=0.01
- chord Dm ii @2 c=0.00
- chord Cmaj7 I7 @2.5 c=0.12
- chord Cmaj7 I7 @3 c=0.12
- chord Cmaj7/B I4/2 @4 c=0.12
- chord Cmaj7 I7 @4.5 c=0.12
+ chord C I @1 c=0.96
 
 m27
  P1 S1 V1: D4 @1 e, C4 @1.5 e, B3 @2 e, A3 @2.5 e, G3 @3 q, r @4 q
  P1 S2 V2: G2 @1 q, r @2 q, G2 @3 e, F2 @3.5 e, E2 @4 e, D2 @4.5 e
- chord G V @1 c=0.80
- cadence HC m27 @1 c=0.06
- chord G/B V6 @2 c=0.80
- chord Am vi @2.5 c=0.00
- chord G V @3 c=0.00
- chord G7/F V4/2 @3.5 c=0.36
- chord Em iii @4 c=0.00
- chord Dm ii @4.5 c=0.00
+ chord G/D V @1 c=0.88
+ cadence PAC m28 @1 c=0.03
+ phrase 5 m27-m29 c=0.03 | form C
+ form C m27-m29 c=0.03
 
 m28
  P1 S1 V1: C4 @1 q, G3 @2 e, C4 @2.5 e, E4 @3 q, E4 @4 q
  P1 S2 V2: C2 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
- phrase 9 m28-m33 c=0.01 | form E
- theme hybrid m28-m33 c=0.01
- chord G V @2 c=0.00
- chord C I @2.5 c=0.00
- chord C/E I6 @3 c=0.31
 
 m29
  P1 S1 V1: E4 @1 q, C4 @2 e, E4 @2.5 e, G4 @3 q, C5 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
- chord C I @1 c=0.31
- chord C I @2 c=0.31
- chord C/E I6 @2.5 c=0.31
- chord C/G I6/4 @3 c=0.31
- chord C I @4 c=0.31
+ chord C I @1 c=0.00
 
 m30
  P1 S1 V1: E4+G4 @1 q, D4+F4 @2 q, C4+E4 @3 q, B3+D4 @4 q
  P1 S2 V2: G3 @1 q, r @2 q, G2 @3 q, r @4 q
- chord C/G I6/4 @1 c=0.31
- chord Dm ii @2 c=0.31
- chord C/G I6/4 @3 c=0.69
- chord Bdim vii° @4 c=0.31
+ chord C/G I6/4 @1 c=0.00
+ phrase 6 m30-m36 c=0.75 | form D
+ form D m30-m38 c=0.50
+ chord Dm ii @2 c=0.00
+ chord C/G I6/4 @3 c=0.87
 
 m31
  P1 S1 V1: C4 @1 e, D4 @1.5 e, E4 @2 e, F4 @2.5 e, G4 @3 e, A4 @3.5 e, B4 @4 e, C5 @4.5 e
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
- chord Dm7/C ii4/2 @1 c=0.88
- chord Em iii @2 c=0.00
- chord F IV @2.5 c=0.00
- chord G V @3 c=0.00
- chord Am vi @3.5 c=0.00
- chord Bdim vii° @4 c=0.00
- chord C I @4.5 c=0.00
+ chord C I @1 c=0.94
 
 m32
  P1 S1 V1: D4 @1 q, D5 @2 q, D5 @3 q, D5 @4 q
  P1 S2 V2: B2 @1 e, G3 @1.5 e, D3 @2 e, G3 @2.5 e, B2 @3 e, G3 @3.5 e, D3 @4 e, G3 @4.5 e
- chord Bdim vii° @1 c=0.33
- chord G V @1.5 c=0.47
- chord G/D V6/4 @2 c=0.47
- chord G V @2.5 c=0.47
- chord Bdim vii° @3 c=0.33
- chord G V @3.5 c=0.47
- chord G/D V6/4 @4 c=0.47
- chord G V @4.5 c=0.47
- cadence IAC m33 @1 c=0.01
+ chord G/B V6 @1 c=0.84
 
 m33
  P1 S1 V1: E4 @1 e, F4 @1.5 e, G4 @2 e, A4 @2.5 e, B4 @3 e, C5 @3.5 e, D5 @4 e, E5 @4.5 e
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
- chord C I @1 c=0.96
- chord C/G I6/4 @2 c=0.96
- chord Am vi @2.5 c=0.00
- chord Bdim vii° @3 c=0.00
- chord C I @3.5 c=0.00
- chord Dm ii @4 c=0.00
- chord Em iii @4.5 c=0.00
+ chord C I @1 c=1.00
 
 m34
  P1 S1 V1: F4 @1 q, F5 @2 q, F5 @3 q, F5 @4 q
  P1 S2 V2: D3 @1 e, G3 @1.5 e, F3 @2 e, G3 @2.5 e, D3 @3 e, G3 @3.5 e, F3 @4 e, G3 @4.5 e
- chord Dm ii @1 c=0.33
- phrase 10 m34-m38 c=0.31 | form F
- form F m34-m38 c=0.31
- chord G7 V7 @1.5 c=0.47
- chord G7/F V4/2 @2 c=0.47
- chord G7 V7 @2.5 c=0.47
- chord Dm ii @3 c=0.33
- chord G7 V7 @3.5 c=0.47
- chord G7/F V4/2 @4 c=0.47
- chord G7 V7 @4.5 c=0.47
- cadence subverted m35 @1 c=0.03
+ chord Dm ii @1 c=0.85
 
 m35
  P1 S1 V1: G4 @1 e, C5 @1.5 e, E5 @2 e, G5 @2.5 e, F5 @3 e, E5 @3.5 e, D5 @4 e, C5 @4.5 e
  P1 S2 V2: E3 @1 q, r @2 q, r @3 h
- chord C/E I6 @1 c=0.90
- chord C/E I6 @2 c=0.90
- chord C/G I6/4 @2.5 c=0.90
- chord F IV @3 c=0.00
- chord Em iii @3.5 c=0.00
- chord Dm ii @4 c=0.00
- chord F/C IV6/4 @4.5 c=0.67
+ chord C/E I6 @1 c=0.86
 
 m36
  P1 S1 V1: A5 @1 e, G5 @1.5 e, F5 @2 e, E5 @2.5 e, D5 @3 e, C5 @3.5 e, B4 @4 e, A4 @4.5 e
  P1 S2 V2: F3 @1 q, r @2 q, F3 @3 q, r @4 q
- chord F IV @1 c=0.67
- chord F IV @2 c=0.67
- chord Em iii @2.5 c=0.00
- chord Dm7/F ii6/5 @3 c=0.61
- chord Bdim vii° @4 c=0.00
- chord Am vi @4.5 c=0.00
+ chord Dm/F ii6 @1 c=0.96
 
 m37
  P1 S1 V1: G4 @1 e, A4 @1.5 e, F4 @2 e, G4 @2.5 e, E4 @3 e, F4 @3.5 e, D4 @4 e, E4 @4.5 e
  P1 S2 V2: G3 @1 q, r @2 q, G2 @3 q, r @4 q
- chord Am7/G vi4/2 @1 c=0.88
- chord F IV @2 c=0.00
- chord G V @2.5 c=0.00
- cadence subverted m37 @3 c=0.09
- chord Em/G iii6 @3 c=0.71
- chord Dm ii @4 c=0.00
- chord Em iii @4.5 c=0.00
+ chord Em/G iii6 @1 c=0.72
+ phrase 7 m37-m38 c=0.50 | form D
 
 m38
  P1 S1 V1: C4 @1 q, r @2 q, r @3 h
  P1 S2 V2: C2 @1 e, E2 @1.5 e, G2 @2 e, C3 @2.5 e, C2 @3 q
  chord C I @1 c=0.00
- chord C/E I6 @1.5 c=0.31
- chord G V @2 c=0.00
- cadence PAC m38 @2.5 c=0.31
- chord C I @2.5 c=0.00

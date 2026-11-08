@@ -2179,21 +2179,22 @@ static cJSON *outer_pitch_json(const AnalysisOuterNote *voice) {
     return pitch;
 }
 
-/* One entry of an outer line: the claim over the chord segment's span (note_ids is the line's note, or empty
-   when none sounds), then the chord it belongs to, the status, the note, its pitch, its scale degree in that
-   chord's local key, and its timing. The label is the degree; failing that the pitch name (the segment lies in
-   no key region), or the status when no note sounds. */
-static cJSON *outer_voice_note_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, size_t chord_index,
-                                    const AnalysisOuterNote *voice) {
-    const AnalysisReportEntry *entry = &report->entries[chord_index];
+/* One entry of an outer line: the claim over the voice segment's window (note_ids is the line's note, or empty
+   when none sounds), then the chord whose segment holds the voice segment's start, the status, the note, its
+   pitch, its scale degree in that chord's local key, and its timing. The label is the degree; failing that the
+   pitch name (the segment lies in no key region), or the status when no note sounds. held is relative to the
+   voice segment. */
+static cJSON *outer_voice_note_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+                                    const AnalysisOuterLineEntry *line, const AnalysisOuterNote *voice) {
+    const AnalysisReportEntry *entry = &report->entries[line->chord_index];
     bool present = voice->status == ANALYSIS_OUTER_PRESENT;
-    Rational start = doc_rational(build, entry->time_numerator, entry->time_denominator);
-    Rational end = doc_rational(build, entry->end_numerator, entry->end_denominator);
+    Rational start = doc_rational(build, line->time_numerator, line->time_denominator);
+    Rational end = doc_rational(build, line->end_numerator, line->end_denominator);
     const char *label = voice->degree ? voice->degree
                                        : (present ? voice->pitch_name : outer_status_name(voice->status));
     cJSON *claim = claim_json_with(build, library_framework_name(), notes, present ? &voice->note_id : NULL,
                                    present ? 1 : 0, start, end, label, outer_uncertainty_json(report, entry, voice));
-    if (!(claim && json_add(claim, "chord_index", cJSON_CreateNumber((double)chord_index)) &&
+    if (!(claim && json_add(claim, "chord_index", cJSON_CreateNumber((double)line->chord_index)) &&
           json_add(claim, "status", cJSON_CreateString(outer_status_name(voice->status))) &&
           json_add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
           json_add(claim, "note_id", present ? cJSON_CreateNumber((double)voice->note_id) : cJSON_CreateNull()) &&
@@ -2206,16 +2207,16 @@ static cJSON *outer_voice_note_json(DocBuild *build, const ImportedNotes *notes,
     return claim;
 }
 
-/* One line of the outer voices: an entry for every chord segment, in time order, so a line lines up with the
-   chords by chord_index. */
+/* One line of the outer voices: an entry for every voice segment (one per melody note), in time order. Several
+   entries share a chord on a harmonic span, so a line lines up with the chords by chord_index, many to one. */
 static cJSON *outer_line_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, bool soprano) {
     cJSON *line = cJSON_CreateArray();
     if (!line) {
         return NULL;
     }
-    for (size_t i = 0; i < report->entry_count; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
-        if (!json_append(line, outer_voice_note_json(build, notes, report, i, soprano ? &entry->soprano : &entry->bass))) {
+    for (size_t i = 0; i < report->outer_line_count; i++) {
+        const AnalysisOuterLineEntry *entry = &report->outer_lines[i];
+        if (!json_append(line, outer_voice_note_json(build, notes, report, entry, soprano ? &entry->soprano : &entry->bass))) {
             cJSON_Delete(line);
             return NULL;
         }

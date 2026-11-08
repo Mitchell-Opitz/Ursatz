@@ -52,6 +52,11 @@ void analysis_report_destroy(AnalysisReport *report) {
         analysis_roman_numeral_destroy(&report->entries[i].roman);
     }
     free(report->entries);
+    for (size_t i = 0; i < report->outer_line_count; i++) {
+        analysis_outer_note_destroy(&report->outer_lines[i].soprano);
+        analysis_outer_note_destroy(&report->outer_lines[i].bass);
+    }
+    free(report->outer_lines);
     for (size_t i = 0; i < report->non_chord_tone_count; i++) {
         free(report->non_chord_tones[i].type);
     }

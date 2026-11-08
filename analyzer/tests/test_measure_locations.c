@@ -76,16 +76,17 @@ static const ChordExpectation PICKUP_CHORDS[] = {{0, 4, 0, 1}, {1, 1, 0, 1}, {1,
 static const ChordExpectation NO_METER_CHORDS[] = {
     {1, 1, 0, 1}, {1, 2, 0, 1}, {1, 4, 0, 1}, {2, 1, 0, 1}};
 
+/* Chord counts are harmonic spans (one chord a span), not sonority segments. */
 static const Expectation PIECES[] = {
-    {"Bach 114.mid", "file", 4, 4, 24, 24, -1, 155, BACH_CHORDS, 5, NULL, 0},
-    {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 205, CLEMENTI_CHORDS, 5, NULL, 0},
-    {"Field 1.mid", "file", 12, 8, 67, 67, -1, 268, FIELD_1_CHORDS, 4, NULL, 0},
-    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 169, FIELD_5_CHORDS, 5, NULL, 0},
-    {"Mozart 545.mid", "file", 4, 4, 146, 146, -1, 606, MOZART_CHORDS, 4, NULL, 0},
+    {"Bach 114.mid", "file", 4, 4, 24, 24, -1, 48, BACH_CHORDS, 5, NULL, 0},
+    {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 47, CLEMENTI_CHORDS, 5, NULL, 0},
+    {"Field 1.mid", "file", 12, 8, 67, 67, -1, 90, FIELD_1_CHORDS, 4, NULL, 0},
+    {"Field 5.mid", "file", 12, 8, 43, 43, -1, 82, FIELD_5_CHORDS, 5, NULL, 0},
+    {"Mozart 545.mid", "file", 4, 4, 146, 146, -1, 224, MOZART_CHORDS, 4, NULL, 0},
 };
 
-static const Expectation PICKUP = {"pickup", "file", 4, 4, 2, 1, 1, 4, PICKUP_CHORDS, 4, NULL, 0};
-static const Expectation NO_METER = {"no_meter", "inferred", 4, 4, 2, 2, -1, 5,
+static const Expectation PICKUP = {"pickup", "file", 4, 4, 2, 1, 1, 2, PICKUP_CHORDS, 4, NULL, 0};
+static const Expectation NO_METER = {"no_meter", "inferred", 4, 4, 2, 2, -1, 2,
                                      NO_METER_CHORDS, 4, NULL, 0};
 
 /* ---- Constructed files ---- */

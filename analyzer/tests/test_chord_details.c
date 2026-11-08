@@ -280,10 +280,11 @@ static void test_non_chord_tone_types(void) {
     check_single_tone(&analyzed, "escape-tone", "I");
     analyzed_destroy(&analyzed);
 
-    /* Suspension: a C5 held from the C chord into the G chord, then stepped down to B4. */
-    const Note suspension[] = {{0, 2 * BEAT, 36},          {0, 2 * BEAT, 55},          {2 * BEAT, 2 * BEAT, 43},
-                               {2 * BEAT, 2 * BEAT, 50},   {2 * BEAT, 2 * BEAT, 59},   {0, 3 * BEAT, 72},
-                               {3 * BEAT, BEAT, 71}};
+    /* Suspension: a C5 held from the C chord into the G chord, then stepped down to B4. The change of chord is on a
+       barline: this tests the suspension, not harmonic rhythm (a half-bar change inside one bar reads one chord). */
+    const Note suspension[] = {{0, 4 * BEAT, 36},          {0, 4 * BEAT, 55},          {4 * BEAT, 4 * BEAT, 43},
+                               {4 * BEAT, 4 * BEAT, 50},   {4 * BEAT, 4 * BEAT, 59},   {0, 5 * BEAT, 72},
+                               {5 * BEAT, BEAT, 71}};
     analyzed = analyze("suspension", suspension, 7);
     check_single_tone(&analyzed, "suspension", "V");
     analyzed_destroy(&analyzed);

@@ -281,9 +281,9 @@ static void check_bach_piece(void) {
         CHECK(block_has(text, "1", " chord G I @1 c="), "the opening chord");
         CHECK(block_has(text, "1", " motive a m1 @1-@4\n"), "a motive occurrence gives its measure and its onset and end beats");
         CHECK(block_has(text, "1", " motive c m1 @3-m2@2\n"), "an occurrence that ends in a later measure names it");
-        CHECK(block_has(text, "14", " modulation G major to D major (m14-m15)\n"), "the modulation");
-        CHECK(block_has(text, "14", " cadence subverted m14 @3 c="), "a cadence the library calls subverted keeps its name");
-        CHECK(block_has(text, "15", " cadence PAC m15 @3.5 c="), "a perfect authentic cadence at beat 3.5");
+        /* On harmonic spans Bach 114 has no modulation or perfect authentic cadence line: P41 reads the cadences. */
+        CHECK(block_has(text, "13", " key D major c="), "the key region after the change of key");
+        CHECK(block_has(text, "17", " cadence IAC m18 @1 c="), "a cadence the library calls imperfect authentic keeps its name");
         CHECK(block_has(text, "2", "B3 @1.5 e~"), "a note tied to the next ends in ~");
         CHECK(block_has(text, "2", "r @2.5 e"), "a rest is r");
         free(text);
@@ -329,8 +329,8 @@ static void check_refusals(void) {
     char *older = malloc(strlen(piece.document) + 1);
     if (older) {
         strcpy(older, piece.document);
-        char *version = strstr(older, "\"schema_version\": 9");
-        CHECK(version != NULL, "the document states schema_version 9");
+        char *version = strstr(older, "\"schema_version\": 10");
+        CHECK(version != NULL, "the document states schema_version 10");
         if (version) {
             version[strlen("\"schema_version\": ")] = '8';
             CHECK(analyzer_text_export_piece(&piece.notes, older, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,

@@ -23,6 +23,7 @@
  *                 The soprano is the highest sounding note whichever voice plays it; of a repeated note it is the
  *                 one attacked most recently.
  *   monophonic    One line. Where one note sounds, soprano and bass are that note.
+ *   held chord    One measure of a held chord under four soprano quarter notes: one chord, four soprano entries.
  */
 
 static int failures = 0;
@@ -180,34 +181,36 @@ static void report_outer(const char *what, size_t index, const AnalysisOuterNote
             note->pitch_name ? note->pitch_name : "-", note->degree ? note->degree : "-");
 }
 
-/* The outer_voices section: both lines hold one entry per chord, in order, and each entry agrees with the
-   report entry and with the chord's own "outer" summary. */
+/* The outer_voices section: both lines hold one entry per voice segment (one per melody note), in order, each entry
+   agrees with the report's outer line and names the chord holding its start; each chord's own "outer" summary
+   agrees with the report entry. */
 static void check_document_lines(const Analyzed *analyzed) {
     const AnalysisReport *report = &analyzed->report;
     const cJSON *outer = cJSON_GetObjectItemCaseSensitive(analyzed->document, "outer_voices");
     const cJSON *chords = cJSON_GetObjectItemCaseSensitive(analyzed->document, "chords");
     CHECK(cJSON_IsObject(outer));
     CHECK(cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(analyzed->document, "melody")));
+    CHECK(cJSON_GetArraySize(chords) == (int)report->entry_count);
+    CHECK(report->outer_line_count >= report->entry_count);
     for (int voice = 0; voice < 2; voice++) {
         const char *name = voice == 0 ? "soprano" : "bass";
         const cJSON *line = cJSON_GetObjectItemCaseSensitive(outer, name);
-        CHECK(cJSON_GetArraySize(line) == (int)report->entry_count);
-        CHECK(cJSON_GetArraySize(chords) == (int)report->entry_count);
-        for (size_t i = 0; i < report->entry_count && i < (size_t)cJSON_GetArraySize(line); i++) {
-            const AnalysisOuterNote *note = voice == 0 ? &report->entries[i].soprano : &report->entries[i].bass;
+        CHECK(cJSON_GetArraySize(line) == (int)report->outer_line_count);
+        size_t previous_chord = 0;
+        for (size_t i = 0; i < report->outer_line_count && i < (size_t)cJSON_GetArraySize(line); i++) {
+            const AnalysisOuterLineEntry *line_entry = &report->outer_lines[i];
+            const AnalysisOuterNote *note = voice == 0 ? &line_entry->soprano : &line_entry->bass;
             const cJSON *entry = cJSON_GetArrayItem(line, (int)i);
-            const cJSON *summary = cJSON_GetObjectItemCaseSensitive(
-                cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(chords, (int)i), "outer"), name);
-            CHECK((size_t)cJSON_GetObjectItemCaseSensitive(entry, "chord_index")->valuedouble == i);
+            CHECK((size_t)cJSON_GetObjectItemCaseSensitive(entry, "chord_index")->valuedouble == line_entry->chord_index);
+            CHECK(line_entry->chord_index < report->entry_count);
+            CHECK(line_entry->chord_index >= previous_chord);
+            previous_chord = line_entry->chord_index;
             CHECK(cJSON_IsString(cJSON_GetObjectItemCaseSensitive(entry, "framework")));
             CHECK(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(entry, "location")));
             const cJSON *degree = cJSON_GetObjectItemCaseSensitive(entry, "degree");
-            const cJSON *summary_degree = cJSON_GetObjectItemCaseSensitive(summary, "degree");
             CHECK(cJSON_IsNull(degree) == (note->degree == NULL));
-            CHECK(cJSON_IsNull(summary_degree) == (note->degree == NULL));
             if (note->degree) {
                 CHECK(strcmp(degree->valuestring, note->degree) == 0);
-                CHECK(strcmp(summary_degree->valuestring, note->degree) == 0);
             }
             if (note->status == ANALYSIS_OUTER_PRESENT) {
                 const cJSON *note_ids = cJSON_GetObjectItemCaseSensitive(entry, "note_ids");
@@ -222,6 +225,16 @@ static void check_document_lines(const Analyzed *analyzed) {
                 CHECK(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(entry, "note_ids")) == 0);
                 CHECK(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(entry, "note_id")));
                 CHECK(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(entry, "onset")));
+            }
+        }
+        for (size_t i = 0; i < report->entry_count && i < (size_t)cJSON_GetArraySize(chords); i++) {
+            const AnalysisOuterNote *note = voice == 0 ? &report->entries[i].soprano : &report->entries[i].bass;
+            const cJSON *summary = cJSON_GetObjectItemCaseSensitive(
+                cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(chords, (int)i), "outer"), name);
+            const cJSON *summary_degree = cJSON_GetObjectItemCaseSensitive(summary, "degree");
+            CHECK(cJSON_IsNull(summary_degree) == (note->degree == NULL));
+            if (note->degree) {
+                CHECK(strcmp(summary_degree->valuestring, note->degree) == 0);
             }
         }
     }
@@ -367,12 +380,15 @@ static void test_texture(const char *path) {
     analyze(path, &analyzed);
     const AnalysisReport *report = &analyzed.report;
 
+    /* A half bar a voice segment, a whole bar a chord: two lines to each chord. */
     CHECK(report->entry_count >= 2);
-    if (report->entry_count >= 2) {
+    CHECK(report->outer_line_count >= 2);
+    if (report->entry_count >= 2 && report->outer_line_count >= 2) {
         /* Beats 1 and 2: one segment (the same pitch classes over the same bass). */
-        const AnalysisReportEntry *melody = &report->entries[0];
+        const AnalysisOuterLineEntry *melody = &report->outer_lines[0];
         CHECK(outer_is(&melody->soprano, "C5", "1"));
         CHECK(outer_is(&melody->bass, "C3", "1"));
+        CHECK(outer_is(&report->entries[0].soprano, "C5", "1"));
         /* The second C5, attacked on beat 2, is the soprano of the merged segment. */
         const cJSON *soprano_line = cJSON_GetObjectItemCaseSensitive(
             cJSON_GetObjectItemCaseSensitive(analyzed.document, "outer_voices"), "soprano");
@@ -381,11 +397,13 @@ static void test_texture(const char *path) {
         CHECK(cJSON_GetObjectItemCaseSensitive(onset, "num")->valuedouble == 1);
         CHECK(cJSON_GetObjectItemCaseSensitive(onset, "den")->valuedouble == 4);
 
-        /* Beats 3 and 4: the melody is below the inner voice, which is now the highest. */
-        const AnalysisReportEntry *crossed = &report->entries[1];
+        /* Beats 3 and 4: the melody is below the inner voice, which is now the highest. It is the line's second
+           entry, in the same chord as the first. */
+        const AnalysisOuterLineEntry *crossed = &report->outer_lines[1];
+        CHECK(crossed->chord_index == melody->chord_index);
         CHECK(outer_is(&crossed->soprano, "E4", "3"));
         CHECK(outer_is(&crossed->bass, "C3", "1"));
-        CHECK(crossed->soprano.pitch > report->entries[1].bass.pitch);
+        CHECK(crossed->soprano.pitch > crossed->bass.pitch);
     }
     check_document_lines(&analyzed);
     release(&analyzed);
@@ -423,23 +441,81 @@ static void test_monophonic(const char *path) {
     release(&analyzed);
 }
 
+/* One measure of a held C major chord (C3 E3 G3) under four soprano quarter notes (C5 D5 E5 D5): one chord, four soprano
+   entries that all belong to chord 0 with four different note ids, and the chord's own soprano is the first. The
+   melody leaves the chord's pitch classes on beats 2 and 4: the library's voice segments cut where the sounding pitch
+   classes change, so a melody of only chord tones over the same chord would be one voice segment. */
+static void test_held_chord(const char *path) {
+    PieceNote notes[7];
+    size_t count = 0;
+    notes[count++] = (PieceNote){0, 384, 48};
+    notes[count++] = (PieceNote){0, 384, 52};
+    notes[count++] = (PieceNote){0, 384, 55};
+    static const int MELODY[4] = {72, 74, 76, 74};
+    for (uint32_t beat = 0; beat < 4; beat++) {
+        notes[count++] = (PieceNote){beat * 96, 96, MELODY[beat]};
+    }
+    write_piece(path, notes, count);
+    Analyzed analyzed;
+    analyze(path, &analyzed);
+    const AnalysisReport *report = &analyzed.report;
+
+    CHECK(report->entry_count == 1);
+    CHECK(report->outer_line_count == 4);
+    for (size_t i = 0; i < report->outer_line_count && i < 4; i++) {
+        const AnalysisOuterLineEntry *line = &report->outer_lines[i];
+        CHECK(line->chord_index == 0);
+        CHECK(line->soprano.status == ANALYSIS_OUTER_PRESENT);
+        CHECK(line->soprano.pitch == MELODY[i]);
+        for (size_t j = 0; j < i; j++) {
+            CHECK(line->soprano.note_id != report->outer_lines[j].soprano.note_id);
+        }
+    }
+    if (report->outer_line_count > 0 && report->entry_count > 0) {
+        CHECK(report->entries[0].soprano.status == ANALYSIS_OUTER_PRESENT);
+        CHECK(report->entries[0].soprano.note_id == report->outer_lines[0].soprano.note_id);
+    }
+
+    const cJSON *soprano_line = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(analyzed.document, "outer_voices"), "soprano");
+    CHECK(cJSON_GetArraySize(soprano_line) == 4);
+    for (int i = 0; i < cJSON_GetArraySize(soprano_line); i++) {
+        const cJSON *entry = cJSON_GetArrayItem(soprano_line, i);
+        CHECK(cJSON_GetObjectItemCaseSensitive(entry, "chord_index")->valuedouble == 0);
+        for (int j = 0; j < i; j++) {
+            CHECK(cJSON_GetObjectItemCaseSensitive(entry, "note_id")->valuedouble !=
+                  cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(soprano_line, j), "note_id")->valuedouble);
+        }
+    }
+    const cJSON *chord_outer = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(analyzed.document, "chords"), 0), "outer");
+    CHECK(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord_outer, "soprano"), "note_id")->valuedouble ==
+          cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(soprano_line, 0), "note_id")->valuedouble);
+    check_document_lines(&analyzed);
+    release(&analyzed);
+}
+
 int main(void) {
     char progression[512];
     char tonicization[512];
     char texture[512];
     char monophonic[512];
+    char held[512];
     test_temp_path(progression, sizeof(progression), "outer_progression.mid");
     test_temp_path(tonicization, sizeof(tonicization), "outer_tonicization.mid");
     test_temp_path(texture, sizeof(texture), "outer_texture.mid");
     test_temp_path(monophonic, sizeof(monophonic), "outer_monophonic.mid");
+    test_temp_path(held, sizeof(held), "outer_held_chord.mid");
     test_progression(progression);
     test_tonicization(tonicization);
     test_texture(texture);
     test_monophonic(monophonic);
+    test_held_chord(held);
     remove(progression);
     remove(tonicization);
     remove(texture);
     remove(monophonic);
+    remove(held);
     if (failures > 0) {
         fprintf(stderr, "test_outer_voices: %d failure(s)\n", failures);
         return 1;

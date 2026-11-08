@@ -176,7 +176,7 @@ static void check_scope_errors(void) {
     cJSON_free(stripped);
 
     /* a piece without motives is a piece without families */
-    CHECK(motive_link_scope_add_document(scope, "empty", "{\"schema_version\": 9, \"motives\": []}") ==
+    CHECK(motive_link_scope_add_document(scope, "empty", "{\"schema_version\": 10, \"motives\": []}") ==
           MOTIVE_LINKS_OK);
     CHECK(motive_link_scope_piece_count(scope) == 3);
     CHECK(motive_link_scope_family_count(scope) == 2);

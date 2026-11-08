@@ -110,7 +110,7 @@ int main(void) {
 
     char *json = analysis_document_render(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 9,\n", 25) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 10,\n", 26) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = analysis_document_render(path, &notes, &report);
@@ -125,7 +125,7 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 9);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 10);
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(cJSON_IsObject(metadata));
@@ -352,13 +352,13 @@ int main(void) {
     assert(cJSON_GetArraySize(test_json_require(metadata, "key_signatures")) == 0);
     assert(cJSON_GetArraySize(test_json_require(document, "notes")) == 0);
 
-    /* Chords: one claim per report entry, matching test_analysis_pipeline. */
+    /* Chords: one claim per report entry (a harmonic span each), matching test_analysis_pipeline. */
     const cJSON *chords = test_json_require(document, "chords");
     assert(cJSON_IsArray(chords));
-    assert(cJSON_GetArraySize(chords) == 6);
-    static const char *const CHORD_LABELS[] = {"I", "ii", "IV", "vi", "vii\xC2\xB0", "I"};
-    static const int NOTE_COUNTS[] = {3, 1, 1, 1, 1, 4};
-    for (int i = 0; i < 6; i++) {
+    assert(cJSON_GetArraySize(chords) == 3);
+    static const char *const CHORD_LABELS[] = {"I", "ii", "iii"};
+    static const int NOTE_COUNTS[] = {3, 3, 5};
+    for (int i = 0; i < 3; i++) {
         const cJSON *chord = cJSON_GetArrayItem(chords, i);
         int note_id_count = check_claim(chord);
         assert(strcmp(string(chord, "label"), CHORD_LABELS[i]) == 0);
@@ -372,8 +372,8 @@ int main(void) {
     const cJSON *first_span = test_json_require(cJSON_GetArrayItem(chords, 0), "span");
     check_rational(test_json_require(first_span, "start"), 0, 1);
     check_rational(test_json_require(first_span, "end"), 1, 4);
-    const cJSON *last_span = test_json_require(cJSON_GetArrayItem(chords, 5), "span");
-    check_rational(test_json_require(last_span, "start"), 5, 4);
+    const cJSON *last_span = test_json_require(cJSON_GetArrayItem(chords, 2), "span");
+    check_rational(test_json_require(last_span, "start"), 1, 1);
     check_rational(test_json_require(last_span, "end"), 3, 2);
 
     cJSON_Delete(document);

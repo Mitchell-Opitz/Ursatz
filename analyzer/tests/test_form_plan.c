@@ -33,12 +33,14 @@ typedef struct {
     const char *labels; /* the section labels, in order */
 } Piece;
 
+/* The five reference pieces are pinned on harmonic spans (they were 2, 6, 10, 5, 4 sections and 1, 3, 6, 0, 4 returns on
+   sonority segments); the form input reads the span lines until P41. */
 static const Piece PIECES[] = {
-    {"Bach 114", "Bach 114.mid", true, 2, 1, "A A'"},
-    {"Clementi 36", "Clementi 36.mid", true, 6, 3, "A B C D E F"},
-    {"Mozart 545", "Mozart 545.mid", true, 10, 6, "A B C D E F G H I J"},
-    {"Field 1", "Field 1.mid", true, 5, 0, "A B C D E"},
-    {"Field 5", "Field 5.mid", true, 4, 4, "A B A' C"},
+    {"Bach 114", "Bach 114.mid", true, 1, 0, "A"},
+    {"Clementi 36", "Clementi 36.mid", true, 5, 1, "A B A' C D"},
+    {"Mozart 545", "Mozart 545.mid", true, 10, 3, "A B C D E F G H I J"},
+    {"Field 1", "Field 1.mid", true, 10, 0, "A B C D E F G H I J"},
+    {"Field 5", "Field 5.mid", true, 1, 0, "A"},
     {"sentence", "sentence.musicxml", false, 1, 0, "A"},
     {"period", "period.musicxml", false, 2, 0, "A B"},
     {"compound period", "compound-period.musicxml", false, 2, 1, "A A'"},

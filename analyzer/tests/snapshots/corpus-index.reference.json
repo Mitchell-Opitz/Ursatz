@@ -3,7 +3,7 @@
   "schema_version": 1,
   "analyzer_version": "0.7.0",
   "ursatz_commit": "<ursatz_commit>",
-  "document_schema_version": 9,
+  "document_schema_version": 10,
   "input_dir": "<input_dir>",
   "pieces": [
     {
@@ -48,7 +48,7 @@
       "status": "analyzed",
       "error": null,
       "content_hash": "<hash>",
-      "measures": 338,
+      "measures": 146,
       "home_key": "G major"
     }
   ]

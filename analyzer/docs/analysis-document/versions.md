@@ -2,6 +2,11 @@
 
 Every `schema_version` of the analysis document and what changed. Back to the [docs index](../README.md) and the [analysis document](../analysis-document.md).
 
+- **10**: `outer_voices` has one entry per voice segment (one per melody note) instead of one per chord segment, so several
+  entries share a chord on a harmonic span and `chord_index` is many to one; each entry's window is its voice segment's.
+  The shape of an entry is unchanged, but its meaning is not, and a reader that indexed the lines by chord must read
+  `chord_index`. A change of meaning is a breaking change under the rule above. The chord claims' `outer` is unchanged:
+  the lines' entry at the chord's start.
 - **9**: Motive claims gain the optional `features` object and motive occurrences the optional `degrees` array, both
   additive. Adds the required placeholders `progressions` (`[]`), `harmonic_rhythm`, `markings` and
   `counterpoint_check` (`null`) after `schemas`, so the P3 sections fill them without another version. Required

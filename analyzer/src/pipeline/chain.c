@@ -228,7 +228,7 @@ static bool collect_pass(AnalyzerPass *pass) {
     if (!build_entries(pass) || !read_roman_numerals(pass->library, &pass->romans) ||
         !assign_roman_numerals(&pass->romans, pass->chords, report->entries) ||
         !collect_outer_voices(notes, &pass->voice_segmentation, segmentation, pass->chords, report->key_regions,
-                              lines, report->entries) ||
+                              lines, report) ||
         !collect_non_chord_tones(pass)) {
         return false;
     }
@@ -263,6 +263,8 @@ static bool collect_pass(AnalyzerPass *pass) {
     RUN(motive_stage_read(&pass->motives, &pass->input, pass->library));
     RUN(motive_stage_collect(&pass->motives, notes, report));
     RUN(melody_stage_collect(notes, &pass->input, pass->library, segmentation, report));
+    /* The rhythm input reads the voice lines (analysis_chain_outer_voices), one entry per melody note: the lines the
+       library chain's own meter reads (R-377), so the report's meter claims agree with the chain's. */
     RUN_STAGE(ANALYZER_STAGE_RHYTHM, rhythm_stage_collect(notes, &pass->lines, &pass->form, report));
     RUN(texture_stage_collect(notes, pass->library, report));
     RUN_STAGE(ANALYZER_STAGE_MARKINGS, markings_stage_collect(notes, report));
