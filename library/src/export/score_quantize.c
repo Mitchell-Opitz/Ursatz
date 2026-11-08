@@ -33,7 +33,7 @@ void score_quantized_destroy(ScoreQuantized *quantized) {
     memset(quantized, 0, sizeof(*quantized));
 }
 
-/* --- the beat grid --- */
+/* --- the beat grid: one cell per beat, or two when a half beat fits a different grid better --- */
 
 typedef struct {
     Rational start;
@@ -45,7 +45,8 @@ typedef struct {
     Rational start;
     Rational end;
     Span beat;
-    Rational step; /* the grid step chosen for the beat of the onset */
+    Span cell;     /* the cell of the onset: its beat, or the half of it the grid was chosen for */
+    Rational step; /* the grid step chosen for that cell */
     Rational snapped_start;
     Rational snapped_end;
     size_t part;
@@ -54,10 +55,12 @@ typedef struct {
     size_t group;      /* the voice group: part, staff and voice */
 } Item;
 
+/* A stretch of one beat with its own grid: the whole beat, or one half of it. The cells are ascending and never overlap. */
 typedef struct {
     Rational start;
+    Rational length;
     Rational step;
-} BeatGrid;
+} Cell;
 
 typedef struct {
     Rational beat_start;
@@ -74,8 +77,27 @@ static int compare_keys(const void *left, const void *right) {
     return a->item < b->item ? -1 : (a->item > b->item ? 1 : 0);
 }
 
-static int compare_grids(const void *key, const void *entry) {
-    return rational_cmp(*(const Rational *)key, ((const BeatGrid *)entry)->start);
+/* The cell that holds time t (start <= t < start + length), or NULL when no onset made a cell there. */
+static const Cell *find_cell(const Cell *cells, size_t cell_count, Rational t) {
+    size_t low = 0;
+    size_t high = cell_count;
+    while (low < high) {
+        size_t middle = low + (high - low) / 2;
+        if (rational_cmp(cells[middle].start, t) <= 0) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    if (low == 0) {
+        return NULL;
+    }
+    const Cell *cell = &cells[low - 1];
+    Rational end;
+    if (rational_add(cell->start, cell->length, &end) != RATIONAL_OK || rational_cmp(t, end) >= 0) {
+        return NULL;
+    }
+    return cell;
 }
 
 /* |a - b| */
@@ -152,39 +174,108 @@ static int snap(Rational t, const Span *beat, Rational step, Rational *point) {
     return 0;
 }
 
-/* The grid step for the onsets of one beat: the candidate with the lowest total snap error, the straight grid on a tie. */
-static ScoreQuantizeResult choose_step(const Item *items, const BeatKey *keys, size_t from, size_t to,
-                                       const ScoreQuantizeOptions *options, Rational *step) {
+/* The total snap error of the onsets of keys[from..to) that start inside the cell, on a grid of the given step. */
+static int cell_error(const Item *items, const BeatKey *keys, size_t from, size_t to, const Span *cell, Rational step,
+                      Rational *total) {
+    *total = (Rational){0, 1};
+    for (size_t k = from; k < to; k++) {
+        const Item *item = &items[keys[k].item];
+        if (rational_cmp(item->start, cell->start) < 0 || rational_cmp(item->start, cell->end) >= 0) {
+            continue;
+        }
+        Rational point;
+        Rational error;
+        if (snap(item->start, cell, step, &point) != 0 || rational_distance(item->start, point, &error) != 0 ||
+            rational_add(*total, error, total) != RATIONAL_OK) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/* The candidate step with the lowest total snap error in the cell, the first candidate (the straight grid) on a tie. */
+static ScoreQuantizeResult best_step(const Item *items, const BeatKey *keys, size_t from, size_t to, const Span *cell,
+                                     const Rational *candidates, size_t candidate_count, Rational *step, Rational *best_error) {
+    for (size_t c = 0; c < candidate_count; c++) {
+        Rational total;
+        if (cell_error(items, keys, from, to, cell, candidates[c], &total) != 0) {
+            return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+        }
+        if (c == 0 || rational_cmp(total, *best_error) < 0) {
+            *best_error = total;
+            *step = candidates[c];
+        }
+    }
+    return SCORE_QUANTIZE_OK;
+}
+
+/* The cells for the onsets of one beat: the whole beat on its best grid (straight, a third or a sixth of the beat), or,
+   when triplets are allowed, its two halves each on the best of straight or a third of the half, but only when the two
+   halves together snap with a strictly lower error than the whole beat. Writes 1 or 2 cells into out. */
+static ScoreQuantizeResult choose_cells(const Item *items, const BeatKey *keys, size_t from, size_t to,
+                                        const ScoreQuantizeOptions *options, Cell *out, size_t *out_count) {
     const Span *beat = &items[keys[from].item].beat;
     Rational candidates[3];
     size_t candidate_count = 0;
-    candidates[candidate_count++] = rational_ratio(1, options->grid_denominator);
+    Rational straight = rational_ratio(1, options->grid_denominator);
+    candidates[candidate_count++] = straight;
+    Rational sixth = {0, 1};
     if (options->allow_triplets) {
         Rational third;
-        Rational sixth;
         if (rational_mul(beat->len, rational_ratio(1, 3), &third) != RATIONAL_OK || rational_mul(beat->len, rational_ratio(1, 6), &sixth) != RATIONAL_OK) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
         candidates[candidate_count++] = third;
         candidates[candidate_count++] = sixth;
     }
-    Rational best_error = {0, 1};
-    for (size_t c = 0; c < candidate_count; c++) {
-        Rational total = {0, 1};
-        for (size_t k = from; k < to; k++) {
-            const Item *item = &items[keys[k].item];
-            Rational point;
-            Rational error;
-            if (snap(item->start, beat, candidates[c], &point) != 0 || rational_distance(item->start, point, &error) != 0 ||
-                rational_add(total, error, &total) != RATIONAL_OK) {
-                return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
-            }
-        }
-        if (c == 0 || rational_cmp(total, best_error) < 0) {
-            best_error = total;
-            *step = candidates[c];
-        }
+    Rational whole_step;
+    Rational whole_error;
+    ScoreQuantizeResult result = best_step(items, keys, from, to, beat, candidates, candidate_count, &whole_step, &whole_error);
+    if (result != SCORE_QUANTIZE_OK) {
+        return result;
     }
+    *out_count = 1;
+    out[0].start = beat->start;
+    if (rational_sub(beat->end, beat->start, &out[0].length) != RATIONAL_OK) {
+        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+    }
+    out[0].step = whole_step;
+    if (!options->allow_triplets || rational_cmp(whole_error, (Rational){0, 1}) == 0) {
+        return SCORE_QUANTIZE_OK;
+    }
+
+    Rational half;
+    Rational middle;
+    if (rational_mul(beat->len, rational_ratio(1, 2), &half) != RATIONAL_OK || rational_add(beat->start, half, &middle) != RATIONAL_OK) {
+        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+    }
+    if (rational_cmp(middle, beat->end) >= 0) {
+        return SCORE_QUANTIZE_OK; /* a short measure ends before the half */
+    }
+    Span first = {beat->start, middle, half};
+    Span second = {middle, beat->end, half};
+    Rational half_candidates[2] = {straight, sixth};
+    Rational first_step;
+    Rational second_step;
+    Rational first_error;
+    Rational second_error;
+    Rational halves_error;
+    if (best_step(items, keys, from, to, &first, half_candidates, 2, &first_step, &first_error) != SCORE_QUANTIZE_OK ||
+        best_step(items, keys, from, to, &second, half_candidates, 2, &second_step, &second_error) != SCORE_QUANTIZE_OK ||
+        rational_add(first_error, second_error, &halves_error) != RATIONAL_OK) {
+        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+    }
+    if (rational_cmp(halves_error, whole_error) >= 0) {
+        return SCORE_QUANTIZE_OK;
+    }
+    out[0].length = half;
+    out[0].step = first_step;
+    out[1].start = middle;
+    if (rational_sub(beat->end, middle, &out[1].length) != RATIONAL_OK) {
+        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+    }
+    out[1].step = second_step;
+    *out_count = 2;
     return SCORE_QUANTIZE_OK;
 }
 
@@ -216,9 +307,9 @@ static ScoreQuantizeResult fill_items(Item *items, NoteEvent *const *events, siz
     return SCORE_QUANTIZE_OK;
 }
 
-/* Picks the grid of every beat that has an onset: grids[] ascending by beat start, *grid_count of them. */
-static ScoreQuantizeResult choose_grids(Item *items, size_t count, const ScoreQuantizeOptions *options, BeatGrid *grids,
-                                        size_t *grid_count) {
+/* Picks the cells of every beat that has an onset: cells[] ascending by start, *cell_count of them (at most two per beat). */
+static ScoreQuantizeResult choose_grids(Item *items, size_t count, const ScoreQuantizeOptions *options, Cell *cells,
+                                        size_t *cell_count) {
     BeatKey *keys = (BeatKey *)malloc(count * sizeof(BeatKey));
     if (keys == NULL) {
         return SCORE_QUANTIZE_ERR_ALLOC;
@@ -235,14 +326,25 @@ static ScoreQuantizeResult choose_grids(Item *items, size_t count, const ScoreQu
         while (to < count && rational_cmp(keys[to].beat_start, keys[from].beat_start) == 0) {
             to++;
         }
-        Rational step;
-        result = choose_step(items, keys, from, to, options, &step);
+        Cell chosen[2];
+        size_t chosen_count = 0;
+        result = choose_cells(items, keys, from, to, options, chosen, &chosen_count);
         if (result == SCORE_QUANTIZE_OK) {
-            grids[*grid_count].start = keys[from].beat_start;
-            grids[*grid_count].step = step;
-            (*grid_count)++;
-            for (size_t k = from; k < to; k++) {
-                items[keys[k].item].step = step;
+            for (size_t c = 0; c < chosen_count; c++) {
+                cells[(*cell_count)++] = chosen[c];
+            }
+            for (size_t k = from; k < to && result == SCORE_QUANTIZE_OK; k++) {
+                Item *item = &items[keys[k].item];
+                const Cell *cell = find_cell(chosen, chosen_count, item->start);
+                Rational end;
+                if (cell == NULL || rational_add(cell->start, cell->length, &end) != RATIONAL_OK) {
+                    result = SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+                    break;
+                }
+                item->cell.start = cell->start;
+                item->cell.end = end;
+                item->cell.len = cell->length;
+                item->step = cell->step;
             }
         }
         from = to;
@@ -251,13 +353,13 @@ static ScoreQuantizeResult choose_grids(Item *items, size_t count, const ScoreQu
     return result;
 }
 
-/* Snaps every onset and end to its beat's grid. An end in a beat with no onset uses the straight grid. A note is at
+/* Snaps every onset and end to the grid of its cell. An end in a cell with no onset uses the straight grid. A note is at
    least one step long. */
-static ScoreQuantizeResult snap_items(Item *items, size_t count, const MeterMap *meter, const BeatGrid *grids,
-                                      size_t grid_count, const ScoreQuantizeOptions *options) {
+static ScoreQuantizeResult snap_items(Item *items, size_t count, const MeterMap *meter, const Cell *cells,
+                                      size_t cell_count, const ScoreQuantizeOptions *options) {
     for (size_t i = 0; i < count; i++) {
         Item *item = &items[i];
-        if (snap(item->start, &item->beat, item->step, &item->snapped_start) != 0) {
+        if (snap(item->start, &item->cell, item->step, &item->snapped_start) != 0) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
         Span end_beat;
@@ -265,11 +367,19 @@ static ScoreQuantizeResult snap_items(Item *items, size_t count, const MeterMap 
         if (located != SCORE_QUANTIZE_OK) {
             return located;
         }
-        const BeatGrid *grid = (const BeatGrid *)bsearch(&end_beat.start, grids, grid_count, sizeof(BeatGrid),
-                                                         compare_grids);
-        Rational end_step = grid != NULL ? grid->step : rational_ratio(1, options->grid_denominator);
+        const Cell *cell = find_cell(cells, cell_count, item->end);
+        Span end_cell = end_beat;
+        Rational end_step = rational_ratio(1, options->grid_denominator);
+        if (cell != NULL) {
+            end_cell.start = cell->start;
+            end_cell.len = cell->length;
+            end_step = cell->step;
+            if (rational_add(cell->start, cell->length, &end_cell.end) != RATIONAL_OK) {
+                return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+            }
+        }
         Rational shortest;
-        if (snap(item->end, &end_beat, end_step, &item->snapped_end) != 0 ||
+        if (snap(item->end, &end_cell, end_step, &item->snapped_end) != 0 ||
             rational_add(item->snapped_start, item->step, &shortest) != RATIONAL_OK) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
@@ -435,17 +545,17 @@ ScoreQuantizeResult score_quantize(NoteEvent *const *events, size_t count, const
     }
 
     Item *items = (Item *)calloc(count > 0 ? count : 1, sizeof(Item));
-    BeatGrid *grids = (BeatGrid *)calloc(count > 0 ? count : 1, sizeof(BeatGrid));
-    size_t grid_count = 0;
-    ScoreQuantizeResult result = items != NULL && grids != NULL ? SCORE_QUANTIZE_OK : SCORE_QUANTIZE_ERR_ALLOC;
+    Cell *cells = (Cell *)calloc(count > 0 ? 2 * count : 1, sizeof(Cell));
+    size_t cell_count = 0;
+    ScoreQuantizeResult result = items != NULL && cells != NULL ? SCORE_QUANTIZE_OK : SCORE_QUANTIZE_ERR_ALLOC;
     if (result == SCORE_QUANTIZE_OK) {
         result = fill_items(items, events, count, part_index, staff, meter_map);
     }
     if (result == SCORE_QUANTIZE_OK && count > 0) {
-        result = choose_grids(items, count, options, grids, &grid_count);
+        result = choose_grids(items, count, options, cells, &cell_count);
     }
     if (result == SCORE_QUANTIZE_OK) {
-        result = snap_items(items, count, meter_map, grids, grid_count, options);
+        result = snap_items(items, count, meter_map, cells, cell_count, options);
     }
     if (result == SCORE_QUANTIZE_OK) {
         result = absorb_gaps(items, count, options);
@@ -457,7 +567,7 @@ ScoreQuantizeResult score_quantize(NoteEvent *const *events, size_t count, const
         score_quantized_destroy(out);
     }
     free(items);
-    free(grids);
+    free(cells);
     meter_map_destroy(own_meter);
     return result;
 }

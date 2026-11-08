@@ -178,6 +178,29 @@ static void test_triplets_set_the_divisions(void) {
     bag_free(&bag);
 }
 
+static void test_six_sixteenth_triplets_are_two_groups(void) {
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    const char *ids[6] = {"t0", "t1", "t2", "t3", "t4", "t5"};
+    PitchLetter letters[6] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F, PITCH_LETTER_G, PITCH_LETTER_A};
+    for (int i = 0; i < 6; i++) {
+        bag_add_note(&bag, ids[i], i, 24, 1, 24, letters[i], NULL);
+    }
+    bag_add_note(&bag, "q", 1, 4, 1, 4, PITCH_LETTER_B, NULL);
+    char *xml = write_bag(&bag, NULL, NULL, 0, false);
+    assert(tu_count(xml, "<type>16th</type>") == 6 && tu_count(xml, "<time-modification>") == 6);
+    assert(tu_count(xml, "<tuplet type=\"start\"/>") == 2 && tu_count(xml, "<tuplet type=\"stop\"/>") == 2);
+    /* the groups are t0 to t2 and t3 to t5 */
+    const char *t2 = strstr(xml, "<note xml:id=\"t2\">");
+    const char *t3 = strstr(xml, "<note xml:id=\"t3\">");
+    const char *first_stop = strstr(xml, "<tuplet type=\"stop\"/>");
+    const char *second_start = strstr(first_stop, "<tuplet type=\"start\"/>");
+    assert(t2 && t3 && first_stop && second_start);
+    assert(t2 < first_stop && first_stop < t3 && t3 < second_start);
+    free(xml);
+    bag_free(&bag);
+}
+
 static void test_gap_is_a_rest(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
@@ -576,6 +599,7 @@ int main(void) {
     test_short_measure_at_meter_change();
     test_tie_across_barline();
     test_triplets_set_the_divisions();
+    test_six_sixteenth_triplets_are_two_groups();
     test_gap_is_a_rest();
     test_two_voices_back_up();
     test_two_staves();

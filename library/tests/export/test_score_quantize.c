@@ -77,6 +77,50 @@ static void test_compound_beat_is_dotted(void) {
     meter_map_destroy(meter);
 }
 
+static void test_half_beat_triplets(void) {
+    /* A quarter beat of three sixteenth triplets and two straight sixteenths (the shape of Mozart K545 m4 beat 2),
+       played slightly off the grid: the first half takes the triplet grid, the second the straight one. */
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    bag_add_note(&bag, "a", 0, 1, 1, 24, PITCH_LETTER_C, NULL);
+    bag_add_note(&bag, "b", 41, 1000, 1, 24, PITCH_LETTER_D, NULL);
+    bag_add_note(&bag, "c", 83, 1000, 1, 24, PITCH_LETTER_E, NULL);
+    bag_add_note(&bag, "d", 125, 1000, 1, 16, PITCH_LETTER_F, NULL);
+    bag_add_note(&bag, "e", 188, 1000, 1, 16, PITCH_LETTER_G, NULL);
+    ScoreQuantized q = quantize(&bag, NULL);
+    expect_note(&q, 0, 0, 1, 1, 24);
+    expect_note(&q, 1, 1, 24, 1, 12);
+    expect_note(&q, 2, 1, 12, 1, 8);
+    expect_note(&q, 3, 1, 8, 3, 16);
+    expect_note(&q, 4, 3, 16, 1, 4);
+    score_quantized_destroy(&q);
+    bag_free(&bag);
+
+    /* Two straight sixteenths and an eighth in the second half beside a straight first half: no triplets. */
+    memset(&bag, 0, sizeof(bag));
+    bag_add_note(&bag, "a", 0, 1, 1, 16, PITCH_LETTER_C, NULL);
+    bag_add_note(&bag, "b", 1, 16, 1, 16, PITCH_LETTER_D, NULL);
+    bag_add_note(&bag, "c", 1, 8, 1, 16, PITCH_LETTER_E, NULL);
+    bag_add_note(&bag, "d", 3, 16, 1, 16, PITCH_LETTER_F, NULL);
+    q = quantize(&bag, NULL);
+    expect_note(&q, 1, 1, 16, 1, 8);
+    expect_note(&q, 2, 1, 8, 3, 16);
+    expect_note(&q, 3, 3, 16, 1, 4);
+    score_quantized_destroy(&q);
+    bag_free(&bag);
+
+    /* All onsets in the first half and exact on the sixth grid: the beat stays one cell, so a note that ends past the
+       half still ends on a sixth. */
+    memset(&bag, 0, sizeof(bag));
+    bag_add_note(&bag, "a", 0, 1, 1, 24, PITCH_LETTER_C, NULL);
+    bag_add_note(&bag, "b", 1, 24, 1, 24, PITCH_LETTER_D, NULL);
+    bag_add_note(&bag, "c", 1, 12, 1, 8, PITCH_LETTER_E, NULL);
+    q = quantize(&bag, NULL);
+    expect_note(&q, 2, 1, 12, 5, 24);
+    score_quantized_destroy(&q);
+    bag_free(&bag);
+}
+
 static void test_gap_absorbed(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
@@ -220,6 +264,7 @@ int main(void) {
     test_straight_beat();
     test_triplet_beat();
     test_compound_beat_is_dotted();
+    test_half_beat_triplets();
     test_gap_absorbed();
     test_gap_of_a_beat_kept();
     test_gap_looks_only_inside_one_voice();

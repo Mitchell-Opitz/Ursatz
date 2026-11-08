@@ -1447,13 +1447,18 @@ bool musicxml_export_note_xml_id(const char *entity_value, char *out, size_t out
 
 /*
  * Marks the triplet groups of one voice's segments in a measure: a run of two or more triplet-valued notes and rests,
- * back to back inside one beat, opens at its first and closes at its last (chord members follow their first note).
+ * back to back inside one beat, opens at its first and closes at its last (chord members follow their first note). A
+ * group also closes as soon as its notes and rests fill the 3:2 span of their value, three units of the shortest
+ * triplet value in it (three sixteenth-triplet units are an eighth, three eighth-triplet units a beat), so six sixteenth
+ * triplets in one beat are two groups. A run that does not fill a span closes where it stops.
  */
 static void mark_tuplets(const Prep *prep, SegmentList *list) {
     size_t first = 0;
     size_t last = 0;
     size_t length = 0;
     long long run_beat = 0;
+    long long filled = 0; /* ticks of the open run */
+    long long unit = 0;   /* the shortest triplet value in the open run, in ticks */
     for (size_t i = 0; i <= list->count; i++) {
         Segment *item = i < list->count ? &list->items[i] : NULL;
         if (item != NULL && item->chord) {
@@ -1478,12 +1483,24 @@ static void mark_tuplets(const Prep *prep, SegmentList *list) {
             length = 0;
         }
         if (triplet) {
+            long long ticks = item->end - item->start;
             if (length == 0) {
                 first = i;
                 run_beat = beat_start;
+                filled = 0;
+                unit = ticks;
             }
             last = i;
             length++;
+            filled += ticks;
+            unit = ticks < unit ? ticks : unit;
+            if (filled % (3 * unit) == 0) {
+                if (length >= 2) {
+                    list->items[first].tuplet = 1;
+                    list->items[last].tuplet = 2;
+                }
+                length = 0;
+            }
         }
     }
 }
