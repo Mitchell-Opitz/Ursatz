@@ -5,10 +5,10 @@
       "group": "chorale",
       "unsupported_share": 0.000000,
       "metrics": {
-        "chord_root": {"value": 0.928571, "num": 14.625000, "den": 15.750000},
-        "chord_quality": {"value": 0.801587, "num": 12.625000, "den": 15.750000},
-        "roman_numeral": {"value": 0.801587, "num": 12.625000, "den": 15.750000},
-        "roman_numeral_chain_key": {"value": 0.801587, "num": 12.625000, "den": 15.750000},
+        "chord_root": {"value": 0.880952, "num": 13.875000, "den": 15.750000},
+        "chord_quality": {"value": 0.833333, "num": 13.125000, "den": 15.750000},
+        "roman_numeral": {"value": 0.777778, "num": 12.250000, "den": 15.750000},
+        "roman_numeral_chain_key": {"value": 0.785714, "num": 12.375000, "den": 15.750000},
         "key": {"value": 1.000000, "num": 15.750000, "den": 15.750000}
       }
     },
@@ -17,11 +17,11 @@
       "group": "chorale",
       "unsupported_share": 0.009615,
       "metrics": {
-        "chord_root": {"value": 0.825243, "num": 10.625000, "den": 12.875000},
-        "chord_quality": {"value": 0.694175, "num": 8.937500, "den": 12.875000},
-        "roman_numeral": {"value": 0.674757, "num": 8.687500, "den": 12.875000},
-        "roman_numeral_chain_key": {"value": 0.519417, "num": 6.687500, "den": 12.875000},
-        "key": {"value": 0.750000, "num": 9.750000, "den": 13.000000}
+        "chord_root": {"value": 0.864078, "num": 11.125000, "den": 12.875000},
+        "chord_quality": {"value": 0.800971, "num": 10.312500, "den": 12.875000},
+        "roman_numeral": {"value": 0.703883, "num": 9.062500, "den": 12.875000},
+        "roman_numeral_chain_key": {"value": 0.500000, "num": 6.437500, "den": 12.875000},
+        "key": {"value": 0.673077, "num": 8.750000, "den": 13.000000}
       }
     },
     {
@@ -30,10 +30,10 @@
       "unsupported_share": 0.000000,
       "metrics": {
         "chord_root": {"value": 0.725000, "num": 7.250000, "den": 10.000000},
-        "chord_quality": {"value": 0.525000, "num": 5.250000, "den": 10.000000},
+        "chord_quality": {"value": 0.612500, "num": 6.125000, "den": 10.000000},
         "roman_numeral": {"value": 0.550000, "num": 5.500000, "den": 10.000000},
-        "roman_numeral_chain_key": {"value": 0.262500, "num": 2.625000, "den": 10.000000},
-        "key": {"value": 0.362500, "num": 3.625000, "den": 10.000000}
+        "roman_numeral_chain_key": {"value": 0.437500, "num": 4.375000, "den": 10.000000},
+        "key": {"value": 0.562500, "num": 5.625000, "den": 10.000000}
       }
     },
     {
@@ -41,10 +41,10 @@
       "group": "chorale",
       "unsupported_share": 0.022059,
       "metrics": {
-        "chord_root": {"value": 0.812030, "num": 13.500000, "den": 16.625000},
-        "chord_quality": {"value": 0.646617, "num": 10.750000, "den": 16.625000},
-        "roman_numeral": {"value": 0.578947, "num": 9.625000, "den": 16.625000},
-        "roman_numeral_chain_key": {"value": 0.533835, "num": 8.875000, "den": 16.625000},
+        "chord_root": {"value": 0.872180, "num": 14.500000, "den": 16.625000},
+        "chord_quality": {"value": 0.781955, "num": 13.000000, "den": 16.625000},
+        "roman_numeral": {"value": 0.661654, "num": 11.000000, "den": 16.625000},
+        "roman_numeral_chain_key": {"value": 0.593985, "num": 9.875000, "den": 16.625000},
         "key": {"value": 0.742647, "num": 12.625000, "den": 17.000000}
       }
     },
@@ -53,11 +53,11 @@
       "group": "chorale",
       "unsupported_share": 0.031250,
       "metrics": {
-        "chord_root": {"value": 0.870968, "num": 6.750000, "den": 7.750000},
-        "chord_quality": {"value": 0.741935, "num": 5.750000, "den": 7.750000},
-        "roman_numeral": {"value": 0.766129, "num": 5.937500, "den": 7.750000},
-        "roman_numeral_chain_key": {"value": 0.620968, "num": 4.812500, "den": 7.750000},
-        "key": {"value": 0.718750, "num": 5.750000, "den": 8.000000}
+        "chord_root": {"value": 0.951613, "num": 7.375000, "den": 7.750000},
+        "chord_quality": {"value": 0.870968, "num": 6.750000, "den": 7.750000},
+        "roman_numeral": {"value": 0.806452, "num": 6.250000, "den": 7.750000},
+        "roman_numeral_chain_key": {"value": 0.685484, "num": 5.312500, "den": 7.750000},
+        "key": {"value": 0.750000, "num": 6.000000, "den": 8.000000}
       }
     },
     {
@@ -66,10 +66,10 @@
       "unsupported_share": 0.054054,
       "metrics": {
         "chord_root": {"value": 0.876190, "num": 23.000000, "den": 26.250000},
-        "chord_quality": {"value": 0.738095, "num": 19.375000, "den": 26.250000},
-        "roman_numeral": {"value": 0.747619, "num": 19.625000, "den": 26.250000},
-        "roman_numeral_chain_key": {"value": 0.519048, "num": 13.625000, "den": 26.250000},
-        "key": {"value": 0.684685, "num": 19.000000, "den": 27.750000}
+        "chord_quality": {"value": 0.761905, "num": 20.000000, "den": 26.250000},
+        "roman_numeral": {"value": 0.742857, "num": 19.500000, "den": 26.250000},
+        "roman_numeral_chain_key": {"value": 0.509524, "num": 13.375000, "den": 26.250000},
+        "key": {"value": 0.657658, "num": 18.250000, "den": 27.750000}
       }
     },
     {
@@ -77,10 +77,10 @@
       "group": "chorale",
       "unsupported_share": 0.000000,
       "metrics": {
-        "chord_root": {"value": 0.894231, "num": 11.625000, "den": 13.000000},
-        "chord_quality": {"value": 0.692308, "num": 9.000000, "den": 13.000000},
-        "roman_numeral": {"value": 0.682692, "num": 8.875000, "den": 13.000000},
-        "roman_numeral_chain_key": {"value": 0.538462, "num": 7.000000, "den": 13.000000},
+        "chord_root": {"value": 0.884615, "num": 11.500000, "den": 13.000000},
+        "chord_quality": {"value": 0.798077, "num": 10.375000, "den": 13.000000},
+        "roman_numeral": {"value": 0.788462, "num": 10.250000, "den": 13.000000},
+        "roman_numeral_chain_key": {"value": 0.596154, "num": 7.750000, "den": 13.000000},
         "key": {"value": 0.653846, "num": 8.500000, "den": 13.000000}
       }
     },
@@ -89,10 +89,10 @@
       "group": "chorale",
       "unsupported_share": 0.000000,
       "metrics": {
-        "chord_root": {"value": 0.958333, "num": 11.500000, "den": 12.000000},
-        "chord_quality": {"value": 0.750000, "num": 9.000000, "den": 12.000000},
-        "roman_numeral": {"value": 0.854167, "num": 10.250000, "den": 12.000000},
-        "roman_numeral_chain_key": {"value": 0.625000, "num": 7.500000, "den": 12.000000},
+        "chord_root": {"value": 0.875000, "num": 10.500000, "den": 12.000000},
+        "chord_quality": {"value": 0.791667, "num": 9.500000, "den": 12.000000},
+        "roman_numeral": {"value": 0.770833, "num": 9.250000, "den": 12.000000},
+        "roman_numeral_chain_key": {"value": 0.562500, "num": 6.750000, "den": 12.000000},
         "key": {"value": 0.729167, "num": 8.750000, "den": 12.000000}
       }
     },
@@ -101,11 +101,11 @@
       "group": "chorale",
       "unsupported_share": 0.015625,
       "metrics": {
-        "chord_root": {"value": 0.777778, "num": 12.250000, "den": 15.750000},
-        "chord_quality": {"value": 0.654762, "num": 10.312500, "den": 15.750000},
-        "roman_numeral": {"value": 0.623016, "num": 9.812500, "den": 15.750000},
-        "roman_numeral_chain_key": {"value": 0.456349, "num": 7.187500, "den": 15.750000},
-        "key": {"value": 0.734375, "num": 11.750000, "den": 16.000000}
+        "chord_root": {"value": 0.928571, "num": 14.625000, "den": 15.750000},
+        "chord_quality": {"value": 0.845238, "num": 13.312500, "den": 15.750000},
+        "roman_numeral": {"value": 0.757937, "num": 11.937500, "den": 15.750000},
+        "roman_numeral_chain_key": {"value": 0.567460, "num": 8.937500, "den": 15.750000},
+        "key": {"value": 0.750000, "num": 12.000000, "den": 16.000000}
       }
     },
     {
@@ -113,10 +113,10 @@
       "group": "chorale",
       "unsupported_share": 0.007353,
       "metrics": {
-        "chord_root": {"value": 0.770370, "num": 13.000000, "den": 16.875000},
-        "chord_quality": {"value": 0.459259, "num": 7.750000, "den": 16.875000},
-        "roman_numeral": {"value": 0.474074, "num": 8.000000, "den": 16.875000},
-        "roman_numeral_chain_key": {"value": 0.325926, "num": 5.500000, "den": 16.875000},
+        "chord_root": {"value": 0.777778, "num": 13.125000, "den": 16.875000},
+        "chord_quality": {"value": 0.533333, "num": 9.000000, "den": 16.875000},
+        "roman_numeral": {"value": 0.466667, "num": 7.875000, "den": 16.875000},
+        "roman_numeral_chain_key": {"value": 0.303704, "num": 5.125000, "den": 16.875000},
         "key": {"value": 0.455882, "num": 7.750000, "den": 17.000000}
       }
     },
@@ -183,11 +183,11 @@
     }
   ],
   "overall": {
-    "chord_root": 0.845106,
-    "chord_quality": 0.672340,
-    "roman_numeral": 0.673617,
-    "roman_numeral_chain_key": 0.520426,
-    "key": 0.690635,
+    "chord_root": 0.863830,
+    "chord_quality": 0.759149,
+    "roman_numeral": 0.700426,
+    "roman_numeral_chain_key": 0.546809,
+    "key": 0.695652,
     "cadence_recall": 0.111111,
     "cadence_type": 1.000000,
     "cadence_precision": 0.200000,
