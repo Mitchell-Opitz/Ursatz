@@ -30,6 +30,7 @@ static const char *FRAMEWORK_HEADERS[] = {
     "standard-form/analysis/analysis_motive_match.h",
     "standard-form/analysis/analysis_phrase.h",
     "common-practice-minimal/key_regions.h",
+    "common-practice-minimal/harmonic_spans.h",
     "common-practice-minimal/weighted_chord_identification.h",
     "standard-meter/metric_position_rules.h",
     "standard-meter/segmentation_beat_grid.h",
