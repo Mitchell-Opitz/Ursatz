@@ -52,6 +52,13 @@ static bool is_chord_member(const StandardTonalityChordInput *input, int pitch_c
 /* The bass from the lowest sounding chord tone; else the previous segment's bass if still a member; else -1. */
 static int chord_bass_of(const StandardTonalityChordInput *input, const StandardTonalitySegmentInput *segment,
                          int previous_bass) {
+    if (segment->has_bass) {
+        int pitch_class = pitch_class_of_midi(segment->bass_pitch);
+        if (is_chord_member(input, pitch_class)) {
+            return pitch_class;
+        }
+        return previous_bass >= 0 && is_chord_member(input, previous_bass) ? previous_bass : -1;
+    }
     int floor = segment->pitches[0];
     for (size_t i = 1; i < segment->pitch_count; i++) {
         if (segment->pitches[i] < floor) {
@@ -147,7 +154,8 @@ StandardTonalityChordInputStatus standard_tonality_build_chord_inputs(
             input->key_uncertainty = regions[region].uncertainty;
             read_structures(input, segments[i].chord, regions[region].key);
         }
-        if (input->has_numeral && segments[i].pitches != NULL && segments[i].pitch_count > 0) {
+        if (input->has_numeral &&
+            (segments[i].has_bass || (segments[i].pitches != NULL && segments[i].pitch_count > 0))) {
             input->bass_pitch_class = chord_bass_of(input, &segments[i], previous_bass);
         }
         previous_bass = input->has_numeral ? input->bass_pitch_class : -1;
