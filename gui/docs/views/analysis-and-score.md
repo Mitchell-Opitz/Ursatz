@@ -173,9 +173,18 @@ handing the body to OSMD.
 The score is written in notated values: the export quantizes the played times
 to the beat grid (`score_quantize_options_default()`), so notes carry `<type>`,
 dots, triplet brackets and `<beam>`. Each source part is a part with its
-instrument and General MIDI program (`midi_program`), a piano part draws on two
-staves, `<work-title>` is the piece title (the filename without its extension)
-and the composer from `meta.json` is written as the composer credit.
+instrument and General MIDI program (`midi_program`), `<work-title>` is the
+piece title (the filename without its extension) and the composer from
+`meta.json` is written as the composer credit.
+
+A piano piece is one part drawn as a grand staff: the hands are paired into
+`<staves>2</staves>`, the right hand on staff 1 and the left hand on staff 2.
+Each staff has a `<clef>` (treble or bass) in its first measure and a later
+`<clef>` where its notes sit better in the other clef, so a left hand that
+climbs into the treble changes clef and changes back. A beat whose halves fit
+better apart is written as 3:2 triplets (Mozart 545 m4, beat 2). OSMD draws
+all of it as written. Only the notation changed; claims, `note_xml_ids` and
+playback are the same notes as before.
 
 A claim's `note_ids` are mapped to `<note xml:id>` values through the piece's
 `note_xml_ids`. OSMD does not keep `xml:id`, so the score finds each
