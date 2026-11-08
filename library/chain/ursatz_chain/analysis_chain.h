@@ -98,6 +98,11 @@
  *
  * home_key_index: the home key as a key index 0..23 (key_regions.h), or -1 for the key of the first key region. It is the key of the
  * boundary cadences, the motive degrees, the melody degrees and the schema key degrees.
+ *
+ * harmonic_spans (default true): the chords are read on harmonic spans, not on every segment (R-369 to R-375). Before the key regions
+ * exist, the segments are grouped into spans (harmonic_spans_group, read in no key) and replaced by one segment per span, each carrying
+ * the bass its span was read over; the chords then require that bass as a chord tone and the Roman numerals take it as the inversion's
+ * bass. Off: one chord per segment as before. It is the switch for measuring the change.
  */
 typedef struct {
     unsigned stages;
@@ -119,6 +124,7 @@ typedef struct {
     int last_measure;
     int home_key_index;
     bool inject_kernel_owners;
+    bool harmonic_spans;
 } AnalysisChainConfig;
 
 AnalysisChainConfig analysis_chain_config_default(void);
