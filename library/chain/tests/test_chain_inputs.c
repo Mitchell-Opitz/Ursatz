@@ -334,11 +334,11 @@ static void test_stage_inputs(TestPiece *piece) {
     /* the melody line: one note per soprano note, degrees in C major, a chord tone on the downbeat */
     ChainMelodyLine melody;
     memset(&melody, 0, sizeof(melody));
-    assert(chain_build_melody_line(segments, count, lines->soprano, results, 0, COMMON_PRACTICE_KEY_MAJOR, NULL) ==
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, NULL) ==
            CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_build_melody_line(segments, 0, lines->soprano, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) ==
+    assert(chain_build_melody_line(segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) ==
            CHAIN_INPUT_ERR_BAD_NOTES);
-    assert(chain_build_melody_line(segments, count, lines->soprano, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) == CHAIN_INPUT_OK);
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) == CHAIN_INPUT_OK);
     assert(melody.line.count > 0 && melody.line.notes[0].present && melody.line.notes[0].degree == 3 &&
            melody.line.notes[0].alteration == 0 && melody.segment[0] == 0);
     assert(melody.line.notes[0].has_strength && melody.line.notes[0].strength == BEAT_STRENGTH_STRONG);

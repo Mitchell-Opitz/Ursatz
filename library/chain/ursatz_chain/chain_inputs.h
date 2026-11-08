@@ -269,21 +269,24 @@ void chain_voice_grid_destroy(ChainVoiceGrid *grid);
  *     Segments where the line is absent become ONE rest.
  *   - pitch: the line's PitchNumericValue (borrowed from the lines). No spelling.
  *   - degree and alteration: the scale degree label of the pitch class in the key on `tonic_pitch_class` and `mode`.
- *   - strength: the BeatStrength of the note's attack, from the segment members.
- *   - nct: from the chord result of the note's FIRST segment (`results`, one per segment): no chord match gives UNCLASSIFIED; a note listed
+ *   - strength: the BeatStrength of the note's attack, from the members of its chord segment.
+ *   - nct: from the chord result of the note's chord segment (`results`, one per chord segment): no chord match gives UNCLASSIFIED; a note listed
  *     among the chord's leftover tones gives NON_CHORD_TONE with its NonChordTone (UNCLASSIFIED when it was left unclassified); a note not
  *     listed gives CHORD_TONE. nct_ref is "<segment id>/<note id>".
- * `entries` are one outer line on the chord segments (chain_build_segment_lines), `count` entries.
- * `segment[i]` is the first segment of entry i. Destroy with chain_melody_line_destroy.
+ * `entries` are one outer line on its own segmentation `line_segments` (the voice lines in the chain, one entry per melody note:
+ * `analysis_chain_outer_voices`), `line_count` entries. The chord results are on the first `count` chord segments `segments`: the
+ * chord segment of an entry is the last whose start is at or before the start of the entry's line segment (the first when none).
+ * The voice segments carry no members, so strength and nct are read on the chord segment. `segment[i]` is the chord segment of the
+ * first line segment of entry i. Destroy with chain_melody_line_destroy.
  */
 typedef struct {
     StandardCounterpointMelodyLine line; /* owned */
     size_t *segment;                     /* owned; line.count entries */
 } ChainMelodyLine;
 
-ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t count, const OuterVoiceEntry *entries,
-                                         const CommonPracticeWeightedResult *results, int tonic_pitch_class,
-                                         CommonPracticeKeyMode mode, ChainMelodyLine *out);
+ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, size_t line_count, const OuterVoiceEntry *entries,
+                                         const ChainSegments *segments, size_t count, const CommonPracticeWeightedResult *results,
+                                         int tonic_pitch_class, CommonPracticeKeyMode mode, ChainMelodyLine *out);
 void chain_melody_line_destroy(ChainMelodyLine *melody);
 
 /*
