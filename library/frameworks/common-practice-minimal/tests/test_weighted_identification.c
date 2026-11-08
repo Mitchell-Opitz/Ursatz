@@ -41,6 +41,7 @@ static void test_default_config(void) {
     assert(close_to(config.bass_weight, 1.1));
     assert(close_to(config.missing_third_penalty, 0.15));
     assert(close_to(config.bass_chord_tone_bonus, 0.05));
+    assert(config.seventh_penalty == 0.0);
     assert(close_to(config.min_coverage, 0.5));
     assert(!config.require_bass_chord_tone);
 }
@@ -343,6 +344,64 @@ static void test_a_missing_third_is_penalized(void) {
     assert(close_to(full[0].score - bare[0].score, 0.15)); /* ...but cost the 0.15 penalty */
 }
 
+/* The best chord of the default weights of `members` (quarters are 0.25, an eighth 0.125) under a seventh penalty. */
+static CommonPracticeRankedChord best_with_seventh_penalty(const CommonPracticeMember *members, size_t count, double penalty) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    config.seventh_penalty = penalty;
+    CommonPracticeWeights weights;
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+    size_t ranked_count = 0;
+    assert(common_practice_weight_segment(members, count, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, &config, ranked, &ranked_count) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(ranked_count > 0);
+    return ranked[0];
+}
+
+static void test_a_seventh_penalty_keeps_a_passing_tone_from_completing_a_seventh(void) {
+    /* C3 E4 G4 quarters on a strong beat and a passing A4 eighth on a weak beat. */
+    CommonPracticeMember members[4] = {member(48, false, 0.25, BEAT_STRENGTH_STRONG), member(64, false, 0.25, BEAT_STRENGTH_STRONG),
+                                       member(67, false, 0.25, BEAT_STRENGTH_STRONG), member(69, false, 0.125, BEAT_STRENGTH_WEAK)};
+    CommonPracticeRankedChord free_reading = best_with_seventh_penalty(members, 4, 0.0);
+    assert(free_reading.is_seventh && free_reading.root_pitch_class == 9); /* A minor seventh: A C E G */
+    CommonPracticeRankedChord charged = best_with_seventh_penalty(members, 4, 0.15);
+    assert(!charged.is_seventh && charged.root_pitch_class == 0); /* C major */
+}
+
+static void test_a_seventh_with_real_weight_survives_the_penalty(void) {
+    /* G3 B3 D4 F4 quarters: the F carries a full share, so the dominant seventh still outranks its triad. */
+    CommonPracticeMember members[4] = {member(55, false, 0.25, BEAT_STRENGTH_STRONG), member(59, false, 0.25, BEAT_STRENGTH_STRONG),
+                                       member(62, false, 0.25, BEAT_STRENGTH_STRONG), member(65, false, 0.25, BEAT_STRENGTH_STRONG)};
+    CommonPracticeRankedChord charged = best_with_seventh_penalty(members, 4, 0.15);
+    assert(charged.is_seventh && charged.seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7 && charged.root_pitch_class == 7);
+}
+
+static void test_a_zero_seventh_penalty_changes_nothing_and_a_bad_one_is_rejected(void) {
+    CommonPracticeMember members[4] = {member(48, false, 0.25, BEAT_STRENGTH_STRONG), member(64, false, 0.25, BEAT_STRENGTH_STRONG),
+                                       member(67, false, 0.25, BEAT_STRENGTH_STRONG), member(69, false, 0.125, BEAT_STRENGTH_WEAK)};
+    CommonPracticeWeightedConfig defaults = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig zero = defaults;
+    zero.seventh_penalty = 0.0;
+    CommonPracticeWeights weights;
+    CommonPracticeRankedChord a[COMMON_PRACTICE_CANDIDATE_COUNT];
+    CommonPracticeRankedChord b[COMMON_PRACTICE_CANDIDATE_COUNT];
+    size_t count_a = 0;
+    size_t count_b = 0;
+    assert(common_practice_weight_segment(members, 4, &defaults, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, &defaults, a, &count_a) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, &zero, b, &count_b) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(count_a == count_b && memcmp(a, b, count_a * sizeof(a[0])) == 0);
+
+    CommonPracticeWeightedConfig negative = defaults;
+    negative.seventh_penalty = -0.1;
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, &negative, a, &count_a) ==
+           COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG);
+    CommonPracticeWeightedConfig not_finite = defaults;
+    not_finite.seventh_penalty = INFINITY;
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, &not_finite, a, &count_a) ==
+           COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG);
+}
+
 /* The position of a diatonic triad (is_seventh false) of the given degree in a ranking. */
 static int position_of_triad(const CommonPracticeRankedChord *ranked, int degree) {
     for (int i = 0; i < (int)g_ranked_count; i++) {
@@ -510,6 +569,9 @@ int main(void) {
     test_a_dominant_seventh_beats_the_dominant_triad();
     test_the_key_is_transposed();
     test_a_missing_third_is_penalized();
+    test_a_seventh_penalty_keeps_a_passing_tone_from_completing_a_seventh();
+    test_a_seventh_with_real_weight_survives_the_penalty();
+    test_a_zero_seventh_penalty_changes_nothing_and_a_bad_one_is_rejected();
     test_the_bass_bonus_decides_between_i_and_iii();
     test_a_tie_goes_to_root_position();
     test_a_tie_goes_to_the_triad_over_the_seventh();

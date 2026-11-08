@@ -121,7 +121,9 @@ specifically. Enforced by
 
 ## Segment bass (R-370)
 
-`CommonPracticeSegment` carries `has_bass` and `bass_pitch` (semitone number, C4 = 60). Zero-initialized, the bass is the lowest sounding pitch, as before. With `has_bass`, `common_practice_identify_weighted` and `_sequence` pass `bass_pitch` to `common_practice_weight_segment` (its last parameter, `NULL` for the lowest pitch): the bass weight multiplies the members on that pitch class, and when none sounds it the weights are unchanged and only the bass is set. `CommonPracticeWeightedConfig.require_bass_chord_tone` (default false) limits the candidates to chords holding the bass pitch class, unless none does; the tie-break order is unchanged. An arpeggio union takes the first segment's bass when it has one. Nothing in the chain sets either yet.
+`CommonPracticeSegment` carries `has_bass` and `bass_pitch` (semitone number, C4 = 60). Zero-initialized, the bass is the lowest sounding pitch, as before. With `has_bass`, `common_practice_identify_weighted` and `_sequence` pass `bass_pitch` to `common_practice_weight_segment` (its last parameter, `NULL` for the lowest pitch): the bass weight multiplies the members on that pitch class, and when none sounds it the weights are unchanged and only the bass is set. `CommonPracticeWeightedConfig.require_bass_chord_tone` (default false) limits the candidates to chords holding the bass pitch class, unless none does; the tie-break order is unchanged. An arpeggio union takes the first segment's bass when it has one. The chain sets both for harmonic spans.
+
+`CommonPracticeWeightedConfig.seventh_penalty` (default 0) is subtracted from every seventh candidate's score, so a seventh outranks its own triad only when its seventh pitch class carries more than that share of the weight (R-376).
 
 ## Harmonic spans (R-372, R-373)
 

@@ -65,6 +65,10 @@ typedef struct {
     double bass_weight;
     double missing_third_penalty;  /* used by scoring */
     double bass_chord_tone_bonus;  /* used by scoring */
+    /* Subtracted from every seventh candidate's score (after the third penalty and the bass bonus), default 0 (R-376). A seventh then
+       outranks its own triad only when its seventh pitch class carries more than this share of the total weight: a passing tone on a
+       weak beat no longer completes a seventh chord over a triad. Zero, not negative, and finite. */
+    double seventh_penalty;
     double min_coverage;           /* used by scoring: a best score below it is "no match" */
     /* When true and the bass pitch class is known, only candidates holding the bass pitch class are eligible
        (the chord must hold the bass, R-370); when none does, every candidate is eligible as before. The
@@ -146,6 +150,7 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
  *     score = (weight of the chord's pitch classes / total weight)
  *             - missing_third_penalty   if the chord's third has no weight at all
  *             + bass_chord_tone_bonus   if the bass pitch class is a chord tone
+ *             - seventh_penalty         if the chord is a seventh (default 0)
  *
  * A score can therefore run from below 0 to 1.05 with the defaults. A candidate is only eligible if its ROOT
  * sounds (has weight): a chord whose root is absent is not a reading the notes support. Without this, a plain
