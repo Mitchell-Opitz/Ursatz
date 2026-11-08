@@ -158,22 +158,23 @@ static void check_pickup_piece(void) {
     }
 
     /* Header lines. */
-    CHECK(line_is(whole, 1, "# Ursatz export v1: piece"), "line 1 is the title line");
-    CHECK(URSATZ_ANALYZER_TEXT_EXPORT_VERSION == 1, "the format version constant is 1");
+    CHECK(line_is(whole, 1, "# Ursatz export v2: piece"), "line 1 is the title line");
+    CHECK(URSATZ_ANALYZER_TEXT_EXPORT_VERSION == 2, "the format version constant is 2");
     CHECK(line_is(whole, 2, "title: pickup.musicxml"), "the title is the file name the document records");
     CHECK(line_is(whole, 3, "key: C major | meter: 4/4 | tempo: not declared | measures: 0-4"), "the key, meter, tempo, measures line");
+    CHECK(line_is(whole, 4, "clefs: P1 S1 treble"), "the clefs line names each part's opening clefs");
     char commit[13];
     snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_ursatz_commit());
     char analyzer_line[160];
     snprintf(analyzer_line, sizeof(analyzer_line), "analyzer: %s ursatz %s", ursatz_analyzer_version(), commit);
-    CHECK(line_is(whole, 4, analyzer_line), "the analyzer line names the version and a 12 character commit");
-    CHECK(line_is(whole, 5,
+    CHECK(line_is(whole, 5, analyzer_line), "the analyzer line names the version and a 12 character commit");
+    CHECK(line_is(whole, 6,
                   "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>"),
           "the notes legend");
-    CHECK(line_is(whole, 6, ""), "a blank line before the first measure");
+    CHECK(line_is(whole, 7, ""), "a blank line before the first measure");
 
     /* The pickup is measure 0, states the meter, and its note is on beat 4 of the bar. */
-    CHECK(line_starts(whole, 7, "m0 4/4"), "the first measure line is 'm0 4/4'");
+    CHECK(line_starts(whole, 8, "m0 4/4"), "the first measure line is 'm0 4/4'");
     CHECK(block_has(whole, "0", " P1 S1 V1: G4 @4 q\n"), "the pickup note is G4 on beat 4");
     CHECK(strstr(whole, "\nm1\n") != NULL && strstr(whole, "\nm1 4/4") == NULL, "an unchanged meter is not repeated");
     CHECK(block_has(whole, "1", " P1 S1 V2: C4+E4+G4 @1 w\n"), "a chord joins its pitches with +");

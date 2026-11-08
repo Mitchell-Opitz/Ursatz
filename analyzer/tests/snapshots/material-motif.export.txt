@@ -1,4 +1,4 @@
-# Ursatz export v1: motif
+# Ursatz export v2: motif
 name: Rising arch
 id: motif-7
 version: 3

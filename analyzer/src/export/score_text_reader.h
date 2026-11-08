@@ -55,6 +55,12 @@ typedef struct {
 } ScoreTextEvent;
 
 typedef struct {
+    int part;   /* 1-based, in document order */
+    int staff;  /* 1-based; 1 in a part that names no <clef number> */
+    bool bass;  /* an F clef on line 4; false for a G clef on line 2 (treble). Other clefs are not read. */
+} ScoreTextClef;
+
+typedef struct {
     char number[24];  /* <measure number> as written */
     bool pickup;      /* a first measure shorter than its time signature */
     TextRational start;
@@ -62,6 +68,9 @@ typedef struct {
     int beats;        /* time signature in force */
     int beat_type;
     bool time_changed; /* a <time> that differs from the one before sits here (always on the first measure) */
+    ScoreTextClef *clefs; /* the <clef> elements of the measure's <attributes>, by part then document order; on the
+                             first measure these are the opening clefs, on a later one each is a change */
+    size_t clef_count;
     ScoreTextEvent *events; /* ordered by part, staff, voice, onset, file order */
     size_t event_count;
 } ScoreTextMeasure;

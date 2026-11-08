@@ -115,10 +115,13 @@ static void parts_destroy(ImportedPart *parts, size_t count) {
     free(parts);
 }
 
-/* One part per distinct (track, channel) that has a note, in order of first appearance: its id, name and program.
-   Writes the part of each note to streams (import->count entries). false on allocation failure, with source
-   untouched. */
-static bool build_parts(const MidiImport *import, ImportedSource *source, size_t *streams) {
+/* One stream per distinct (track, channel) that has a note, in order of first appearance, then the streams the library
+   joins as the two hands of one piano become one part. Each part has its id, name and program (the higher stream's
+   for a pair) and 2 staves for a pair or a grand staff program, else 1. Writes to each note (import->count entries)
+   its stream (streams), its part (part_index) and its stream's staff, 1, 2 or 0 for "decide per note" (hints).
+   false on allocation or library failure, with source untouched. */
+static bool build_parts(const MidiImport *import, ImportedSource *source, size_t *streams, size_t *part_index,
+                        int *hints) {
     size_t count = import->count;
     PartKey *keys = calloc(count > 0 ? count : 1, sizeof *keys);
     ImportedPart *parts = calloc(count > 0 ? count : 1, sizeof *parts);
@@ -128,79 +131,115 @@ static bool build_parts(const MidiImport *import, ImportedSource *source, size_t
         size_t track = import->note_tracks[i];
         int channel = import->note_channels[i];
         long long tick = onset_tick(import->events[i], import->division);
-        size_t part = 0;
-        while (part < key_count && !(keys[part].track == track && keys[part].channel == channel)) {
-            part++;
+        size_t stream = 0;
+        while (stream < key_count && !(keys[stream].track == track && keys[stream].channel == channel)) {
+            stream++;
         }
-        if (part == key_count) {
+        if (stream == key_count) {
             keys[key_count++] = (PartKey){track, channel, tick, i};
-        } else if (tick < keys[part].first_tick) {
-            keys[part].first_tick = tick;
+        } else if (tick < keys[stream].first_tick) {
+            keys[stream].first_tick = tick;
         }
     }
     if (ok) {
         qsort(keys, key_count, sizeof *keys, part_key_compare);
         for (size_t i = 0; i < count; i++) {
-            size_t part = 0;
-            while (keys[part].track != import->note_tracks[i] || keys[part].channel != import->note_channels[i]) {
-                part++;
+            size_t stream = 0;
+            while (keys[stream].track != import->note_tracks[i] || keys[stream].channel != import->note_channels[i]) {
+                stream++;
             }
-            streams[i] = part;
+            streams[i] = stream;
         }
     }
-    for (size_t part = 0; ok && part < key_count; part++) {
-        int program = part_program(import, &keys[part]);
+    ScoreStream *score_streams = calloc(key_count > 0 ? key_count : 1, sizeof *score_streams);
+    size_t *part_of_stream = calloc(key_count > 0 ? key_count : 1, sizeof *part_of_stream);
+    int *staff_of_stream = calloc(key_count > 0 ? key_count : 1, sizeof *staff_of_stream);
+    size_t part_count = 0;
+    ok = ok && score_streams && part_of_stream && staff_of_stream;
+    for (size_t stream = 0; ok && stream < key_count; stream++) {
+        score_streams[stream].program = part_program(import, &keys[stream]);
+    }
+    for (size_t i = 0; ok && i < count; i++) {
+        score_streams[streams[i]].note_count++;
+    }
+    ok = ok && score_staves_pair_hands((NoteEvent *const *)import->events, import->pitch_values, count, streams,
+                                       score_streams, key_count, part_of_stream, staff_of_stream,
+                                       &part_count) == SCORE_STAVES_OK;
+    for (size_t part = 0; ok && part < part_count; part++) {
+        /* The stream that names the part: the higher stream of a pair (staff 1), else its only stream. */
+        size_t named = key_count;
+        int stream_total = 0;
+        for (size_t stream = 0; stream < key_count; stream++) {
+            if (part_of_stream[stream] == part) {
+                stream_total++;
+                if (named == key_count || staff_of_stream[stream] == 1) {
+                    named = stream;
+                }
+            }
+        }
+        int program = score_streams[named].program;
         char id[32];
         snprintf(id, sizeof id, "P%zu", part + 1);
         parts[part].id = strdup(id);
-        parts[part].name = part_name(import, keys, key_count, part, program);
-        parts[part].staff_count = score_program_uses_grand_staff(program) ? 2 : 1;
+        parts[part].name = part_name(import, keys, key_count, named, program);
+        parts[part].staff_count = stream_total > 1 || score_program_uses_grand_staff(program) ? 2 : 1;
         parts[part].midi_program = program;
         ok = parts[part].id && parts[part].name;
     }
+    for (size_t i = 0; ok && i < count; i++) {
+        part_index[i] = part_of_stream[streams[i]];
+        hints[i] = staff_of_stream[streams[i]];
+    }
     if (ok) {
         source->parts = parts;
-        source->part_count = key_count;
+        source->part_count = part_count;
     } else {
-        parts_destroy(parts, key_count);
+        parts_destroy(parts, part_count);
     }
     free(keys);
+    free(score_streams);
+    free(part_of_stream);
+    free(staff_of_stream);
     return ok;
 }
 
-/* The part (track and channel) each imported note was read from, as ImportedNotes.streams and source.part_index, with
-   source.parts and the staff of each note. NULL on failure. */
+/* The stream (track and channel) each imported note was read from, as ImportedNotes.streams, with source.parts, the
+   part of each note as source.part_index and the staff of each note. NULL on failure. */
 static size_t *note_parts(const MidiImport *import, ImportedSource *source) {
     size_t count = import->count;
     size_t *streams = calloc(count > 0 ? count : 1, sizeof *streams);
-    if (!streams || !build_parts(import, source, streams)) {
+    size_t *part_index = calloc(count > 0 ? count : 1, sizeof *part_index);
+    int *hints = malloc((count > 0 ? count : 1) * sizeof *hints);
+    if (!streams || !part_index || !hints || !build_parts(import, source, streams, part_index, hints)) {
         free(streams);
+        free(part_index);
+        free(hints);
         return NULL;
     }
     if (source->part_count == 0) {
+        free(part_index);
+        free(hints);
         return streams;
     }
-    size_t *part_index = calloc(count > 0 ? count : 1, sizeof *part_index);
     int *part_staff_count = malloc(source->part_count * sizeof *part_staff_count);
     int *staff = malloc((count > 0 ? count : 1) * sizeof *staff);
     for (size_t i = 0; part_staff_count && i < source->part_count; i++) {
         part_staff_count[i] = source->parts[i].staff_count;
     }
-    if (part_index) {
-        memcpy(part_index, streams, count * sizeof *part_index);
-    }
-    if (!part_index || !part_staff_count || !staff ||
-        score_staves_assign((NoteEvent *const *)import->events, import->pitch_values, count, part_index,
-                            part_staff_count, source->part_count, staff) != SCORE_STAVES_OK) {
+    if (!part_staff_count || !staff ||
+        score_staves_assign_hinted((NoteEvent *const *)import->events, import->pitch_values, count, part_index,
+                                   part_staff_count, source->part_count, hints, staff) != SCORE_STAVES_OK) {
         free(part_staff_count);
         free(staff);
         free(part_index);
+        free(hints);
         parts_destroy(source->parts, source->part_count);
         *source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
         free(streams);
         return NULL;
     }
     free(part_staff_count);
+    free(hints);
     source->part_index = part_index;
     source->staff = staff;
     return streams;

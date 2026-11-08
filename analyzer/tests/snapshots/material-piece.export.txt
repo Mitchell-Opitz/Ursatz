@@ -1,4 +1,4 @@
-# Ursatz export v1: piece
+# Ursatz export v2: piece
 name: Night piece
 id: piece-2
 version: 4

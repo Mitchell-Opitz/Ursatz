@@ -21,6 +21,14 @@
           <beat-type>4</beat-type>
         </time>
         <staves>2</staves>
+        <clef number="1">
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
+        <clef number="2">
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
       </attributes>
       <note xml:id="midi-note-0">
         <pitch>
@@ -706,12 +714,27 @@
         <type>eighth</type>
         <staff>2</staff>
       </note>
-      <note>
-        <rest/>
-        <duration>8</duration>
+      <note xml:id="midi-note-40">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
         <voice>2</voice>
-        <type>quarter</type>
+        <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="midi-note-42">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>2</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <beam number="1">end</beam>
       </note>
       <note xml:id="midi-note-45">
         <pitch>
@@ -722,13 +745,18 @@
         <voice>2</voice>
         <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
       </note>
-      <note>
-        <rest/>
+      <note xml:id="midi-note-48">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
         <duration>4</duration>
         <voice>2</voice>
         <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">end</beam>
       </note>
       <note xml:id="midi-note-50">
         <pitch>
@@ -739,14 +767,44 @@
         <voice>2</voice>
         <type>16th</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
+        <beam number="2">begin</beam>
       </note>
-      <note>
-        <rest/>
-        <duration>6</duration>
+      <note xml:id="midi-note-51">
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
         <voice>2</voice>
-        <type>eighth</type>
-        <dot/>
+        <type>16th</type>
         <staff>2</staff>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
+      </note>
+      <note xml:id="midi-note-52">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>2</voice>
+        <type>16th</type>
+        <staff>2</staff>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
+      </note>
+      <note xml:id="midi-note-53">
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>2</voice>
+        <type>16th</type>
+        <staff>2</staff>
+        <beam number="1">end</beam>
+        <beam number="2">end</beam>
       </note>
       <backup>
         <duration>32</duration>
@@ -879,98 +937,6 @@
         <voice>5</voice>
         <type>quarter</type>
         <staff>1</staff>
-      </note>
-      <backup>
-        <duration>32</duration>
-      </backup>
-      <note>
-        <rest/>
-        <duration>8</duration>
-        <voice>6</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-40">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="midi-note-42">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <beam number="1">end</beam>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-48">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-51">
-        <pitch>
-          <step>C</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-        <beam number="1">begin</beam>
-        <beam number="2">begin</beam>
-      </note>
-      <note xml:id="midi-note-52">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-        <beam number="1">continue</beam>
-        <beam number="2">continue</beam>
-      </note>
-      <note xml:id="midi-note-53">
-        <pitch>
-          <step>A</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-        <beam number="1">end</beam>
-        <beam number="2">end</beam>
       </note>
     </measure>
     <measure number="4">
@@ -1965,8 +1931,22 @@
         <type>quarter</type>
         <staff>2</staff>
       </note>
-      <backup>
+      <note>
+        <rest/>
         <duration>8</duration>
+        <voice>3</voice>
+        <type>quarter</type>
+        <staff>2</staff>
+      </note>
+      <note>
+        <rest/>
+        <duration>16</duration>
+        <voice>3</voice>
+        <type>half</type>
+        <staff>2</staff>
+      </note>
+      <backup>
+        <duration>32</duration>
       </backup>
       <note xml:id="midi-note-113">
         <pitch>
@@ -2493,12 +2473,27 @@
         <type>eighth</type>
         <staff>2</staff>
       </note>
-      <note>
-        <rest/>
-        <duration>8</duration>
+      <note xml:id="midi-note-150">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
         <voice>2</voice>
-        <type>quarter</type>
+        <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="midi-note-152">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <voice>2</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <beam number="1">end</beam>
       </note>
       <note xml:id="midi-note-155">
         <pitch>
@@ -2509,13 +2504,18 @@
         <voice>2</voice>
         <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
       </note>
-      <note>
-        <rest/>
+      <note xml:id="midi-note-158">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
         <duration>4</duration>
         <voice>2</voice>
         <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">end</beam>
       </note>
       <note xml:id="midi-note-160">
         <pitch>
@@ -2526,14 +2526,44 @@
         <voice>2</voice>
         <type>16th</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
+        <beam number="2">begin</beam>
       </note>
-      <note>
-        <rest/>
-        <duration>6</duration>
+      <note xml:id="midi-note-161">
+        <pitch>
+          <step>C</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
         <voice>2</voice>
-        <type>eighth</type>
-        <dot/>
+        <type>16th</type>
         <staff>2</staff>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
+      </note>
+      <note xml:id="midi-note-162">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>2</voice>
+        <type>16th</type>
+        <staff>2</staff>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
+      </note>
+      <note xml:id="midi-note-163">
+        <pitch>
+          <step>A</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>2</voice>
+        <type>16th</type>
+        <staff>2</staff>
+        <beam number="1">end</beam>
+        <beam number="2">end</beam>
       </note>
       <backup>
         <duration>32</duration>
@@ -2666,98 +2696,6 @@
         <voice>5</voice>
         <type>quarter</type>
         <staff>1</staff>
-      </note>
-      <backup>
-        <duration>32</duration>
-      </backup>
-      <note>
-        <rest/>
-        <duration>8</duration>
-        <voice>6</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-150">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <beam number="1">begin</beam>
-      </note>
-      <note xml:id="midi-note-152">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <beam number="1">end</beam>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-158">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-161">
-        <pitch>
-          <step>C</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-        <beam number="1">begin</beam>
-        <beam number="2">begin</beam>
-      </note>
-      <note xml:id="midi-note-162">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-        <beam number="1">continue</beam>
-        <beam number="2">continue</beam>
-      </note>
-      <note xml:id="midi-note-163">
-        <pitch>
-          <step>A</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>6</voice>
-        <type>16th</type>
-        <staff>1</staff>
-        <beam number="1">end</beam>
-        <beam number="2">end</beam>
       </note>
     </measure>
     <measure number="10">
@@ -3386,22 +3324,6 @@
         <duration>1</duration>
         <voice>7</voice>
         <type>32nd</type>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>7</duration>
-        <voice>7</voice>
-        <type>eighth</type>
-        <dot/>
-        <dot/>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>8</duration>
-        <voice>7</voice>
-        <type>quarter</type>
         <staff>1</staff>
       </note>
     </measure>
@@ -4519,54 +4441,6 @@
       </note>
     </measure>
     <measure number="17">
-      <note>
-        <rest/>
-        <duration>16</duration>
-        <voice>1</voice>
-        <type>half</type>
-        <staff>2</staff>
-      </note>
-      <note xml:id="midi-note-295">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>16th</type>
-        <staff>2</staff>
-        <beam number="1">begin</beam>
-        <beam number="2">begin</beam>
-      </note>
-      <note xml:id="midi-note-297">
-        <pitch>
-          <step>E</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>16th</type>
-        <staff>2</staff>
-        <beam number="1">end</beam>
-        <beam number="2">end</beam>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <staff>2</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>8</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-        <staff>2</staff>
-      </note>
-      <backup>
-        <duration>32</duration>
-      </backup>
       <note xml:id="midi-note-288">
         <pitch>
           <step>G</step>
@@ -4721,12 +4595,29 @@
         <staff>1</staff>
         <beam number="1">end</beam>
       </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
+      <note xml:id="midi-note-295">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
         <voice>5</voice>
-        <type>eighth</type>
+        <type>16th</type>
         <staff>1</staff>
+        <beam number="1">begin</beam>
+        <beam number="2">begin</beam>
+      </note>
+      <note xml:id="midi-note-297">
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>5</voice>
+        <type>16th</type>
+        <staff>1</staff>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
       </note>
       <note xml:id="midi-note-298">
         <pitch>
@@ -4738,8 +4629,8 @@
         <voice>5</voice>
         <type>16th</type>
         <staff>1</staff>
-        <beam number="1">begin</beam>
-        <beam number="2">begin</beam>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
       </note>
       <note xml:id="midi-note-299">
         <pitch>
@@ -4892,6 +4783,36 @@
         <voice>2</voice>
         <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="midi-note-320_a">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="start"/>
+        <voice>2</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <beam number="1">end</beam>
+        <notations>
+          <tied type="start"/>
+        </notations>
+      </note>
+      <note xml:id="midi-note-320_b">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="stop"/>
+        <voice>2</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <notations>
+          <tied type="stop"/>
+        </notations>
       </note>
       <note>
         <rest/>
@@ -4900,11 +4821,56 @@
         <type>eighth</type>
         <staff>2</staff>
       </note>
+      <backup>
+        <duration>32</duration>
+      </backup>
       <note>
         <rest/>
-        <duration>8</duration>
-        <voice>2</voice>
-        <type>quarter</type>
+        <duration>16</duration>
+        <voice>3</voice>
+        <type>half</type>
+        <staff>2</staff>
+      </note>
+      <note>
+        <rest/>
+        <duration>4</duration>
+        <voice>3</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+      </note>
+      <note xml:id="midi-note-321_a">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="start"/>
+        <voice>3</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <notations>
+          <tied type="start"/>
+        </notations>
+      </note>
+      <note xml:id="midi-note-321_b">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="stop"/>
+        <voice>3</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <notations>
+          <tied type="stop"/>
+        </notations>
+      </note>
+      <note>
+        <rest/>
+        <duration>4</duration>
+        <voice>3</voice>
+        <type>eighth</type>
         <staff>2</staff>
       </note>
       <backup>
@@ -5078,96 +5044,9 @@
       </note>
       <note>
         <rest/>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-320_a">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="start"/>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="start"/>
-        </notations>
-      </note>
-      <note xml:id="midi-note-320_b">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="stop"/>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="stop"/>
-        </notations>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <backup>
-        <duration>32</duration>
-      </backup>
-      <note>
-        <rest/>
         <duration>16</duration>
-        <voice>7</voice>
+        <voice>6</voice>
         <type>half</type>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>7</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-321_a">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="start"/>
-        <voice>7</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="start"/>
-        </notations>
-      </note>
-      <note xml:id="midi-note-321_b">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="stop"/>
-        <voice>7</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="stop"/>
-        </notations>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>7</voice>
-        <type>eighth</type>
         <staff>1</staff>
       </note>
       <backup>
@@ -6108,54 +5987,6 @@
       </note>
     </measure>
     <measure number="23">
-      <note>
-        <rest/>
-        <duration>16</duration>
-        <voice>1</voice>
-        <type>half</type>
-        <staff>2</staff>
-      </note>
-      <note xml:id="midi-note-400">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>16th</type>
-        <staff>2</staff>
-        <beam number="1">begin</beam>
-        <beam number="2">begin</beam>
-      </note>
-      <note xml:id="midi-note-402">
-        <pitch>
-          <step>E</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>16th</type>
-        <staff>2</staff>
-        <beam number="1">end</beam>
-        <beam number="2">end</beam>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>1</voice>
-        <type>eighth</type>
-        <staff>2</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>8</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-        <staff>2</staff>
-      </note>
-      <backup>
-        <duration>32</duration>
-      </backup>
       <note xml:id="midi-note-393">
         <pitch>
           <step>G</step>
@@ -6310,12 +6141,29 @@
         <staff>1</staff>
         <beam number="1">end</beam>
       </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
+      <note xml:id="midi-note-400">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
         <voice>5</voice>
-        <type>eighth</type>
+        <type>16th</type>
         <staff>1</staff>
+        <beam number="1">begin</beam>
+        <beam number="2">begin</beam>
+      </note>
+      <note xml:id="midi-note-402">
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>5</voice>
+        <type>16th</type>
+        <staff>1</staff>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
       </note>
       <note xml:id="midi-note-403">
         <pitch>
@@ -6327,8 +6175,8 @@
         <voice>5</voice>
         <type>16th</type>
         <staff>1</staff>
-        <beam number="1">begin</beam>
-        <beam number="2">begin</beam>
+        <beam number="1">continue</beam>
+        <beam number="2">continue</beam>
       </note>
       <note xml:id="midi-note-404">
         <pitch>
@@ -6481,9 +6329,84 @@
         <voice>2</voice>
         <type>eighth</type>
         <staff>2</staff>
+        <beam number="1">begin</beam>
+      </note>
+      <note xml:id="midi-note-425_a">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="start"/>
+        <voice>2</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <beam number="1">end</beam>
+        <notations>
+          <tied type="start"/>
+        </notations>
+      </note>
+      <note xml:id="midi-note-425_b">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="stop"/>
+        <voice>2</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <notations>
+          <tied type="stop"/>
+        </notations>
       </note>
       <backup>
-        <duration>20</duration>
+        <duration>28</duration>
+      </backup>
+      <note>
+        <rest/>
+        <duration>16</duration>
+        <voice>3</voice>
+        <type>half</type>
+        <staff>2</staff>
+      </note>
+      <note>
+        <rest/>
+        <duration>4</duration>
+        <voice>3</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+      </note>
+      <note xml:id="midi-note-426_a">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="start"/>
+        <voice>3</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <notations>
+          <tied type="start"/>
+        </notations>
+      </note>
+      <note xml:id="midi-note-426_b">
+        <pitch>
+          <step>B</step>
+          <octave>3</octave>
+        </pitch>
+        <duration>4</duration>
+        <tie type="stop"/>
+        <voice>3</voice>
+        <type>eighth</type>
+        <staff>2</staff>
+        <notations>
+          <tied type="stop"/>
+        </notations>
+      </note>
+      <backup>
+        <duration>28</duration>
       </backup>
       <note>
         <rest/>
@@ -6630,102 +6553,8 @@
         <beam number="1">end</beam>
         <beam number="2">end</beam>
       </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>8</duration>
-        <voice>6</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
-        <duration>4</duration>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-425_a">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="start"/>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="start"/>
-        </notations>
-      </note>
-      <note xml:id="midi-note-425_b">
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="stop"/>
-        <voice>6</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="stop"/>
-        </notations>
-      </note>
       <backup>
-        <duration>28</duration>
-      </backup>
-      <note>
-        <rest/>
-        <duration>16</duration>
-        <voice>7</voice>
-        <type>half</type>
-        <staff>1</staff>
-      </note>
-      <note>
-        <rest/>
         <duration>4</duration>
-        <voice>7</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-426_a">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="start"/>
-        <voice>7</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="start"/>
-        </notations>
-      </note>
-      <note xml:id="midi-note-426_b">
-        <pitch>
-          <step>B</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>4</duration>
-        <tie type="stop"/>
-        <voice>7</voice>
-        <type>eighth</type>
-        <staff>1</staff>
-        <notations>
-          <tied type="stop"/>
-        </notations>
-      </note>
-      <backup>
-        <duration>28</duration>
       </backup>
       <note>
         <rest/>

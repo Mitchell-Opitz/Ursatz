@@ -9,7 +9,9 @@
 /*
  * MIDI parts: a generated type-1 file whose tracks cover a track with two channels, a single-channel track with a
  * name, the percussion channel, a channel with no program change (a piano) and an unnamed melodic channel. Each
- * (track, channel) with notes is one part, with its name, program and staves, and every note's stream is its part.
+ * (track, channel) with notes is one stream, a stream is its own part unless it is a piano hand paired with the other,
+ * and every note's part is in source.part_index. The reference piano pieces check the pairing: two hand tracks are one
+ * part with two staves, one track is one part, and the staff of each note is as the hands and the figure play.
  */
 
 typedef struct {
@@ -93,6 +95,130 @@ static void expect_part(const ImportedNotes *notes, size_t part, const char *id,
     assert(strcmp(p->name, name) == 0);
     assert(p->midi_program == program);
     assert(p->staff_count == staff_count);
+}
+
+/* The reference pieces: a piano file is one part with two staves, whether it came as two hand tracks or as one. */
+
+static long note_pitch(const ImportedNotes *notes, size_t i) {
+    return pitch_numeric_value_position_numerator(notes->pitch_values[i]);
+}
+
+/* The measure of a note in a piece in 4/4 that starts on a barline: the whole notes before it, plus one. */
+static long note_measure(const ImportedNotes *notes, size_t i) {
+    const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
+    return (long)(musical_time_numerator(onset) / musical_time_denominator(onset)) + 1;
+}
+
+/* The stream that holds the lower notes: the one with the lower mean pitch. */
+static size_t lower_stream(const ImportedNotes *notes) {
+    double total[2] = {0.0, 0.0};
+    size_t count[2] = {0, 0};
+    for (size_t i = 0; i < notes->count; i++) {
+        assert(notes->streams[i] < 2);
+        total[notes->streams[i]] += (double)note_pitch(notes, i);
+        count[notes->streams[i]]++;
+    }
+    assert(count[0] > 0 && count[1] > 0);
+    return total[0] / (double)count[0] < total[1] / (double)count[1] ? 0 : 1;
+}
+
+static void import_reference(const char *name, ImportedNotes *notes) {
+    char path[1024];
+    snprintf(path, sizeof path, "%s/framework-v1-corpus/%s.mid", URSATZ_ANALYZER_FIXTURE_DIR, name);
+    assert(midi_pipeline_import_file(path, notes) == MIDI_PIPELINE_OK);
+}
+
+static void expect_one_piano_part(const ImportedNotes *notes) {
+    assert(notes->source.part_count == 1);
+    assert(notes->source.parts[0].staff_count == 2);
+    assert(strcmp(notes->source.parts[0].id, "P1") == 0);
+    assert(notes->source.part_index != NULL && notes->source.staff != NULL);
+    for (size_t i = 0; i < notes->count; i++) {
+        assert(notes->source.part_index[i] == 0);
+        assert(notes->source.staff[i] == 1 || notes->source.staff[i] == 2);
+    }
+}
+
+/* Two hand tracks: one part, each note's stream is its track, the left hand's notes are on staff 2 and the right
+   hand's on staff 1 in every measure from first to last, and (when high is true) at least one left hand note there
+   is at middle C or above, so the staff is the track's and not the pitch's. */
+static void expect_hands(const ImportedNotes *notes, long first, long last, bool high) {
+    expect_one_piano_part(notes);
+    size_t left = lower_stream(notes);
+    size_t checked = 0;
+    bool found_high = false;
+    for (size_t i = 0; i < notes->count; i++) {
+        long measure = note_measure(notes, i);
+        if (measure < first || measure > last) {
+            continue;
+        }
+        bool is_left = notes->streams[i] == left;
+        assert(notes->source.staff[i] == (is_left ? 2 : 1));
+        checked += is_left;
+        found_high = found_high || (is_left && note_pitch(notes, i) >= 60);
+    }
+    assert(checked > 0);
+    assert(!high || found_high);
+}
+
+static void check_reference_pieces(void) {
+    ImportedNotes notes;
+
+    /* Clementi: left hand on staff 2 in m11 (a measure the left hand crosses above the right) and m16 to m23. */
+    import_reference("Clementi 36", &notes);
+    expect_hands(&notes, 11, 11, false);
+    expect_hands(&notes, 16, 23, true);
+    imported_notes_destroy(&notes);
+
+    /* Field 1 has two tracks as well. */
+    import_reference("Field 1", &notes);
+    expect_hands(&notes, 1, 1000, false);
+    imported_notes_destroy(&notes);
+
+    /* One track: one part, one stream, the staff decided per note. Bach 114 and Field 5 only join the part. */
+    import_reference("Bach 114", &notes);
+    expect_one_piano_part(&notes);
+    for (size_t i = 0; i < notes.count; i++) {
+        assert(notes.streams[i] == 0);
+    }
+    imported_notes_destroy(&notes);
+
+    import_reference("Field 5", &notes);
+    expect_one_piano_part(&notes);
+    for (size_t i = 0; i < notes.count; i++) {
+        assert(notes.streams[i] == 0);
+    }
+    imported_notes_destroy(&notes);
+
+    /* Mozart: the Alberti figure C4 G4 E4 G4 C4 G4 E4 G4 of m1 is on staff 2, the melody on staff 1. */
+    import_reference("Mozart 545", &notes);
+    expect_one_piano_part(&notes);
+    static const long alberti[] = {60, 67, 64, 67, 60, 67, 64, 67};
+    size_t lower = 0;
+    for (size_t i = 0; i < notes.count; i++) {
+        assert(notes.streams[i] == 0);
+        if (note_measure(&notes, i) == 1 && notes.source.staff[i] == 2) {
+            lower++;
+        }
+    }
+    assert(lower == sizeof alberti / sizeof alberti[0]);
+    size_t seen = 0;
+    long previous_onset_num = -1;
+    long previous_onset_den = 1;
+    for (size_t i = 0; i < notes.count; i++) {
+        if (note_measure(&notes, i) != 1 || notes.source.staff[i] != 2) {
+            continue;
+        }
+        const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes.events[i]));
+        long num = (long)musical_time_numerator(onset);
+        long den = (long)musical_time_denominator(onset);
+        assert(previous_onset_num < 0 || num * previous_onset_den >= previous_onset_num * den);
+        previous_onset_num = num;
+        previous_onset_den = den;
+        assert(note_pitch(&notes, i) == alberti[seen++]);
+    }
+    assert(seen == lower);
+    imported_notes_destroy(&notes);
 }
 
 int main(void) {
@@ -191,6 +317,7 @@ int main(void) {
     remove(path);
     assert(!notes.source.tempo_declared);
     imported_notes_destroy(&notes);
+    check_reference_pieces();
     puts("test_midi_parts: ok");
     return 0;
 }

@@ -503,12 +503,16 @@ static bool read_note(const XmlNode *note, int part, const PartState *state, siz
 
 /* ---- parts and measures ---- */
 
+#define MAX_MEASURE_CLEFS 4
+
 typedef struct {
     char number[24];
     bool implicit;
     bool has_time;
     int beats;
     int beat_type;
+    ScoreTextClef clefs[MAX_MEASURE_CLEFS]; /* part is filled in when the measures are joined */
+    size_t clef_count;
     PartMeasure content;
 } ParsedMeasure;
 
@@ -523,6 +527,36 @@ static void parsed_part_free(ParsedPart *part) {
         free(part->measures[i].content.events);
     }
     free(part->measures);
+}
+
+/* Reads a <clef> (number, sign, line) into the measure: a G clef on line 2 is treble and an F clef on line 4 is bass,
+   any other clef is skipped. A second clef for a staff replaces the first. */
+static void read_clef(const XmlNode *clef, ParsedMeasure *measure) {
+    const XmlNode *sign = child_of(clef, "sign");
+    long line = child_int(clef, "line", 0);
+    bool treble = text_is(sign, "G") && line == 2;
+    bool bass = text_is(sign, "F") && line == 4;
+    if (!treble && !bass) {
+        return;
+    }
+    char number[16];
+    long staff = 1;
+    if (attribute_of(clef, "number", number, sizeof(number))) {
+        char *end = NULL;
+        long parsed = strtol(number, &end, 10);
+        if (end != number && parsed > 0) {
+            staff = parsed;
+        }
+    }
+    for (size_t i = 0; i < measure->clef_count; i++) {
+        if (measure->clefs[i].staff == staff) {
+            measure->clefs[i].bass = bass;
+            return;
+        }
+    }
+    if (measure->clef_count < MAX_MEASURE_CLEFS) {
+        measure->clefs[measure->clef_count++] = (ScoreTextClef){0, (int)staff, bass};
+    }
 }
 
 static bool read_part(const XmlNode *part_node, int part, ParsedPart *out) {
@@ -557,6 +591,11 @@ static bool read_part(const XmlNode *part_node, int part, ParsedPart *out) {
                 long divisions = 0;
                 if (int_of(child_of(item, "divisions"), &divisions) && divisions > 0) {
                     state.divisions = (int)divisions;
+                }
+                for (const XmlNode *clef = item->first_child; clef; clef = clef->next) {
+                    if (name_is(clef, "clef")) {
+                        read_clef(clef, measure);
+                    }
                 }
                 const XmlNode *time = child_of(item, "time");
                 long beats = 0;
@@ -612,6 +651,7 @@ void score_text_destroy(ScoreTextScore *score) {
     }
     for (size_t i = 0; i < score->measure_count; i++) {
         free(score->measures[i].events);
+        free(score->measures[i].clefs);
     }
     free(score->measures);
     free(score);
@@ -691,6 +731,7 @@ ScoreTextScore *score_text_read(const char *musicxml, char **error) {
         bool implicit = false;
         bool has_time = false;
         size_t total = 0;
+        size_t clef_total = 0;
         for (size_t p = 0; p < part_count; p++) {
             if (m >= parts[p].count) {
                 continue;
@@ -710,6 +751,7 @@ ScoreTextScore *score_text_read(const char *musicxml, char **error) {
                 extent = parsed->content.extent;
             }
             total += parsed->content.count;
+            clef_total += parsed->clef_count;
         }
         if (m == 0) {
             measure->time_changed = true;
@@ -726,13 +768,18 @@ ScoreTextScore *score_text_read(const char *musicxml, char **error) {
         }
 
         measure->events = total ? malloc(total * sizeof(ScoreTextEvent)) : NULL;
-        if (total && !measure->events) {
+        measure->clefs = clef_total ? malloc(clef_total * sizeof(ScoreTextClef)) : NULL;
+        if ((total && !measure->events) || (clef_total && !measure->clefs)) {
             set_error(error, "out of memory%s", NULL);
             goto fail;
         }
         for (size_t p = 0; p < part_count; p++) {
             if (m >= parts[p].count) {
                 continue;
+            }
+            for (size_t c = 0; c < parts[p].measures[m].clef_count; c++) {
+                measure->clefs[measure->clef_count] = parts[p].measures[m].clefs[c];
+                measure->clefs[measure->clef_count++].part = (int)p + 1;
             }
             const PartMeasure *content = &parts[p].measures[m].content;
             for (size_t e = 0; e < content->count; e++) {

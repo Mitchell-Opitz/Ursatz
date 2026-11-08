@@ -1,11 +1,11 @@
-# Ursatz export v1: piece
+# Ursatz export v2: piece
 title: Field 1.mid
 key: Eb major | meter: 12/8 | tempo: q=90 | measures: 1-67
+clefs: P1 S1 treble, S2 bass
 notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
 
 m1 12/8
  P1 S1 V1: r @1 h., r @7 q., A#4 @10 q.
- P2 S1 V1: r @1 w.
  key Eb major c=0.28 (m1-m20)
  phrase 1 m1-m3 c=0.03 | form A
  form A m1-m4 c=0.03
@@ -14,9 +14,9 @@ m1 12/8
 m2
  P1 S1 V1: D#5 @1 h.~, D#5 @7 q.~, D#5 @10 t, r @10.25 q, r @12.25 s, D#5 @12.75 t~
  P1 S1 V3: r @1 h., r @7 q., F5 @10 q~, F5 @12 s., r @12.75 t
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q., r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 e, D#4 @3 e, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.07
  chord Eb/Bb I6/4 @4 c=0.46
  chord Eb/G I6 @7 c=0.46
@@ -25,9 +25,9 @@ m2
 m3
  P1 S1 V1: D#5 @1 t, r @1.25 q, r @3.25 s., C5 @4 q., D5 @7 q., A#4 @10 q.~
  P1 S1 V3: D5 @1 q., r @4 h., r @10 q.
- P2 S1 V2: r @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q., G#3 @10 e, r @11 e, A#3 @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, F3 @7 q., G#3 @10 e, D4 @11 e, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 q.
+ P1 S2 V6: r @1 w, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.88
  cadence HC m3 @1 c=0.03
  chord Dm7b5/Ab vii∅4/3 @4 c=0.92
@@ -36,11 +36,11 @@ m3
  chord Bb V @11 c=0.03
  cadence PAC m4 @1 c=0.21
 
-m4
+m4 clef S2 treble
  P1 S1 V1: A#4 @1 t, D#5 @1.25 q~, D#5 @3.25 s.~, D#5 @4 e.., r @5.75 e, r @6.75 t, G5 @7 h.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, G3 @4 q., A#3 @7 q, r @9 e, G3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, G3 @4 q., A#3 @7 q, D#4 @9 e, G3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 q., r @4 q, D#4 @6 e, r @7 h.
  chord Eb I @1 c=0.24
  phrase 2 m4 c=0.21 | form A
  chord Eb/G I6 @4 c=0.24
@@ -49,9 +49,9 @@ m4
 
 m5
  P1 S1 V1: A#5 @1 w.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, G3 @4 q., A#3 @7 q, r @9 e, G3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, G3 @4 q., A#3 @7 q, D#4 @9 e, G3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 q., r @4 q, D#4 @6 e, r @7 h.
  chord Eb I @1 c=0.54
  phrase 3 m5-m7 c=0.17 | form B
  form B m5-m37 c=0.06
@@ -62,31 +62,30 @@ m5
 m6
  P1 S1 V1: D#5 @1 h.~, D#5 @7 q.~, D#5 @10 t, r @10.25 q, r @12.25 s.
  P1 S1 V3: r @1 h., r @7 q., F5 @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q., G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q., G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 q., r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.00
  chord Eb/Bb I6/4 @4 c=0.52
  chord Eb/G I6 @7 c=0.52
  chord Gm7/Bb iii6/5 @10 c=0.75
 
-m7
+m7 clef S2 bass
  P1 S1 V1: D5 @1 q., C6 @4 q., A#5 @7 q., D5 @10 q.~
- P2 S1 V2: r @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q, r @9 e, G#3 @10 e, r @11 e, A#3 @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, F3 @7 q, A#3 @9 e, G#3 @10 e, D4 @11 e, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 q.
  chord Bb V @1 c=0.40
  cadence HC m7 @1 c=0.17
  chord Dm7b5/Ab vii∅4/3 @4 c=0.92
  chord Bb/F V6/4 @7 c=0.54
  chord Bb7/Ab V4/2 @10 c=0.73
 
-m8
+m8 clef S2 treble
  P1 S1 V1: D5 @1 t, r @1.25 q, r @3.25 s., r @4 h., r @10 q.
  P1 S1 V3: D#5 @1 w.~
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Ebmaj7 I7 @1 c=0.09
  phrase 4 m8-m15 c=0.75 | form B
  chord Eb/Bb I6/4 @4 c=0.46
@@ -96,9 +95,9 @@ m8
 m9
  P1 S1 V1: r @1 h., D#5 @7 q.~, D#5 @10 q, D5 @12 t, r @12.25 s.
  P1 S1 V3: D#5 @1 h., r @7 h.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.03
  chord Eb/Bb I6/4 @4 c=0.79
  chord Eb/G I6 @7 c=0.79
@@ -107,18 +106,18 @@ m9
 m10
  P1 S1 V1: r @1 t, D5 @1.25 q~, D5 @3.25 s.~, D5 @4 s, r @4.5 q, r @6.5 s, r @7 q., B4 @10 q.
  P1 S1 V3: r @1 q., C5 @4 h., r @10 q.
- P2 S1 V2: r @1 e, G#4 @2 q, C4 @4 q, D#4 @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 e, G#4 @5 q, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: G#2 @1 e, r @2 q, r @4 q., G#3 @7 q., B3 @10 q, D#4 @12 e
+ P1 S2 V2: G#2 @1 e, G#4 @2 q, C4 @4 q, D#4 @6 e, G#3 @7 q., B3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G#4 @5 q, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Ddim/Ab vii°6/4 @1 c=0.74
  chord Ab/C IV6 @4 c=0.81
  chord Ab IV @7 c=0.39
 
 m11
  P1 S1 V1: A#4 @1 q, C5 @3 t, A#4 @3.25 t, A4 @3.5 s, A#4 @4 t, r @4.25 t, G#5 @4.5 t, r @4.75 q, r @6.75 t, r @7 q., G5 @10 q.~
- P2 S1 V2: r @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, D4 @12 e
- P2 S1 V4: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 q, D4 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q., A#3 @10 q.
+ P1 S2 V2: A#2 @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, F3 @7 q., A#3 @10 q.
+ P1 S2 V5: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, D4 @12 e
+ P1 S2 V6: r @1 w, D4 @9 e, r @10 q.
  chord Bb7 V7 @1 c=0.58
  chord Bb7 V7 @4 c=0.32
  chord Ddim/F vii°6 @7 c=0.89
@@ -127,9 +126,9 @@ m11
 m12
  P1 S1 V1: G5 @1 t, r @1.25 q, r @3.25 s., D#5 @4 h.~, D#5 @10 q.
  P1 S1 V3: F5 @1 q., r @4 h., r @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.91
  chord Eb/Bb I6/4 @4 c=0.56
  chord Eb/G I6 @7 c=0.56
@@ -138,9 +137,9 @@ m12
 m13
  P1 S1 V1: G5 @1 q.~, G5 @4 t, r @4.25 q, r @6.25 s., F5 @7 e~, F5 @8 t, r @8.25 e.., r @10 e.., D5 @11.75 s, r @12.25 s.
  P1 S1 V3: r @1 q., F5 @4 q., r @7 e, D#5 @8 q~, D#5 @10 q, r @12 e
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.38
  chord Gm7/Bb iii6/5 @4 c=0.79
  chord Eb/G I6 @7 c=0.69
@@ -148,19 +147,19 @@ m13
 
 m14
  P1 S1 V1: D5 @1 q., C5 @4 h., B4 @10 q.
- P2 S1 V2: r @1 e, G#4 @2 q, C4 @4 q, D#4 @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 e, G#4 @5 q, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: G#2 @1 e, r @2 q, r @4 q., G#3 @7 q., B3 @10 q, D#4 @12 e
+ P1 S2 V2: G#2 @1 e, G#4 @2 q, C4 @4 q, D#4 @6 e, G#3 @7 q., B3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G#4 @5 q, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Dm7b5/Ab vii∅4/3 @1 c=0.92
  chord Ab/C IV6 @4 c=0.81
  chord Ab IV @7 c=0.31
 
-m15
+m15 clef S2 bass
  P1 S1 V1: A#4 @1 e.., C5 @2.75 s, r @3.25 t, A4 @3.5 t, A#4 @3.75 t, r @4 s, C6 @4.5 q~, C6 @6.5 s~, C6 @7 q.~, C6 @10 t, D5 @10.25 q~, D5 @12.25 s.
  P1 S1 V3: r @1 q, A#4 @3 s, r @3.5 s, r @4 h., r @10 q.
- P2 S1 V2: r @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q., G#3 @10 q, A#3 @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, F3 @7 q., G#3 @10 q, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.72
  chord Dm7b5/Ab vii∅4/3 @4 c=0.94
  chord Dm7b5/F vii∅6/5 @7 c=0.73
@@ -169,8 +168,8 @@ m15
 m16
  P1 S1 V1: D#5 @1 h.~, D#5 @7 q., D#5 @10 e~, D#5 @11 t, r @11.25 s., D#5 @12 e
  P1 S1 V3: r @1 h., r @7 h, F5 @11 e, r @12 e
- P2 S1 V2: r @1 e, D#4 @2 e, r @3 e, r @4 e, D#4 @5 e, G3 @6 e, r @7 e, D#4 @8 e, r @9 e, r @10 e, D#4 @11 e, G3 @12 e
- P2 S2 V1: D#3 @1 q, G3 @3 e, A#2 @4 e, r @5 q, D#3 @7 e, r @8 e, G3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: D#3 @1 q, G3 @3 e, A#2 @4 e, D#4 @5 e, G3 @6 e, D#3 @7 e, D#4 @8 e, G3 @9 e, A#2 @10 e, D#4 @11 e, G3 @12 e
+ P1 S2 V5: r @1 e, D#4 @2 e, r @3 e, r @4 h., r @10 q.
  chord Ebmaj7 I7 @1 c=0.00
  phrase 5 m16-m30 c=0.14 | form B
  theme hybrid m16-m30 c=0.14
@@ -181,9 +180,8 @@ m16
 m17
  P1 S1 V1: D5 @1 q, C6 @3 e~, C6 @4 t, r @4.25 q, r @6.25 s., r @7 q, G5 @9 e~, G5 @10 t, G#5 @10.25 e.., F5 @12 e~
  P1 S1 V3: r @1 q., A#5 @4 q.~, A#5 @7 q, r @9 e, r @10 q.
- P2 S1 V2: r @1 e, D4 @2 e, r @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 e, r @9 e, r @10 e, D4 @11 e, G#3 @12 e
- P2 S1 V4: r @1 q., r @4 q, G#3 @6 e, r @7 h.
- P2 S2 V1: F3 @1 q, G#3 @3 e, A#2 @4 e, r @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: F3 @1 q, G#3 @3 e, A#2 @4 e, D4 @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, D4 @11 e, G#3 @12 e
+ P1 S2 V5: r @1 e, D4 @2 e, r @3 e, r @4 q, G#3 @6 e, r @7 e, D4 @8 e, r @9 e, r @10 q.
  chord Dm7b5/F vii∅6/5 @1 c=0.73
  chord Bb7 V7 @4 c=0.50
  chord Gm7/F iii4/2 @7 c=0.99
@@ -193,8 +191,8 @@ m17
 m18
  P1 S1 V1: F5 @1 t, r @1.25 e., F5 @2.75 s, D#5 @3.25 s, D5 @3.75 t~, D5 @4 t, r @4.25 e.., G5 @6 e, A#4 @7 e., r @8.5 e., G5 @10 e~, G5 @11 t, r @11.25 s., D#5 @12 e
  P1 S1 V3: D#5 @1 e.., r @2.75 e, r @3.75 t, D#5 @4 q, r @6 e, r @7 h, F5 @11 e~, F5 @12 t, r @12.25 s.
- P2 S1 V2: r @1 e, D#4 @2 e, r @3 e, r @4 e, D#4 @5 e, G3 @6 e, r @7 e, D#4 @8 e, r @9 e, r @10 e, D#4 @11 e, G3 @12 e
- P2 S2 V1: D#3 @1 q, G3 @3 e, A#2 @4 e, r @5 q, D#3 @7 q, G3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: D#3 @1 q, G3 @3 e, A#2 @4 e, D#4 @5 e, G3 @6 e, D#3 @7 q, G3 @9 e, A#2 @10 e, D#4 @11 e, G3 @12 e
+ P1 S2 V5: r @1 e, D#4 @2 e, r @3 e, r @4 h, D#4 @8 e, r @9 e, r @10 q.
  chord Ebmaj7 I7 @1 c=0.80
  chord Ebmaj7/Bb I4/3 @4 c=0.57
  chord Eb I @7 c=0.33
@@ -203,8 +201,8 @@ m18
 m19
  P1 S1 V1: D5 @1 q., C6 @4 h, A#5 @8 e, G5 @9 e~, G5 @10 t, r @10.25 s., G#5 @11 e, F5 @12 e~
  P1 S1 V3: r @1 h., r @7 q., A#5 @10 e~, A#5 @11 t, r @11.25 e..
- P2 S1 V2: r @1 e, D4 @2 e, r @3 e, r @4 e, D4 @5 e, G#3 @6 e, r @7 e, D4 @8 e, r @9 e, r @10 e, D4 @11 e, G#3 @12 e
- P2 S2 V1: F3 @1 q, G#3 @3 e, A#2 @4 e, r @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: F3 @1 q, G#3 @3 e, A#2 @4 e, D4 @5 e, G#3 @6 e, F3 @7 q, G#3 @9 e, A#2 @10 e, D4 @11 e, G#3 @12 e
+ P1 S2 V5: r @1 e, D4 @2 e, r @3 e, r @4 h, D4 @8 e, r @9 e, r @10 q.
  chord Ddim/F vii°6 @1 c=0.65
  chord Dm7b5/Bb vii∅4/3 @4 c=0.95
  chord Dm7b5/F vii∅6/5 @7 c=0.93
@@ -212,13 +210,11 @@ m19
  chord Bb7/Ab V4/2 @11 c=0.95
 
 m20
- P1 S1 V1: F5 @1 t, r @1.25 q, r @3.25 s., r @4 h., F5 @10 t, r @10.25 s., D5 @11 e~, D5 @12 t, D#5 @12.25 s.~
+ P1 S1 V1: F5 @1 t, r @1.25 q, r @3.25 s., A#2 @4 t, r @4.25 q, r @6.25 s., D#2 @7 e, r @8 q, F5 @10 t, r @10.25 s., D5 @11 e~, D5 @12 t, D#5 @12.25 s.~
  P1 S1 V3: D#5 @1 e~, D#5 @2 t, r @2.25 e.., r @4 h., D#5 @10 e, r @11 q
- P1 S2 V2: r @1 q., A#2 @4 t, r @4.25 q, r @6.25 s., D#2 @7 e
- P2 S1 V2: r @1 e, D#4 @2 q, r @4 e, D#4 @5 q~, D#4 @7 e, r @8 q, r @10 q.
- P2 S1 V4: r @1 q, G3 @3 e, r @4 h., r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, D#3 @4 e, r @5 e, G3 @6 e~, G3 @7 q., r @10 q.
- P2 S2 V3: r @1 h., D#3 @7 q., r @10 q.
+ P1 S2 V2: D#3 @1 e, D#4 @2 q, D#3 @4 e, D#4 @5 q~, D#4 @7 e, r @8 q, r @10 q.
+ P1 S2 V5: r @1 q, G3 @3 e, r @4 q, G3 @6 e~, G3 @7 q., r @10 q.
+ P1 S2 V6: r @1 h., D#3 @7 q., r @10 q.
  chord Eb I @1 c=0.75
  chord Eb/Bb I6/4 @4 c=0.31
  chord Eb I @7 c=0.55
@@ -228,9 +224,8 @@ m20
 m21
  P1 S1 V1: D#5 @1 t, r @1.25 q, r @3.25 s., r @4 h., F5 @10 q, r @12 e
  P1 S1 V3: F5 @1 h.~, F5 @7 q., r @10 q.
- P2 S1 V2: r @1 e, D4 @2 q, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 q, A#3 @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, F3 @4 q, r @6 e, D3 @7 q, r @9 e, F3 @10 q, r @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, F3 @4 q, A#3 @6 e, D3 @7 q, A#3 @9 e, F3 @10 q, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
  key Bb major c=0.03 (m21-m27)
  tonicization Bb major (m21-m27)
  chord Bb I @1 c=0.56
@@ -241,9 +236,8 @@ m21
 m22
  P1 S1 V1: F5 @1 e.., G5 @2.75 s, F5 @3.25 t, E5 @3.5 t, F5 @3.75 t~, F5 @4 s, r @4.5 q, r @6.5 s, r @7 q., D6 @10 q.
  P1 S1 V3: r @1 q., r @4 t, D#6 @4.25 q~, D#6 @6.25 s.~, D#6 @7 q., r @10 q.
- P2 S1 V2: r @1 e, D#4 @2 q, r @4 e, D#4 @5 e, r @6 e, r @7 e, D#4 @8 q, r @10 e, D#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, A3 @3 e, r @4 q., r @7 q, A3 @9 e, r @10 q.
- P2 S2 V1: F2 @1 e, r @2 q, F3 @4 q, A3 @6 e, F2 @7 e, r @8 q, F3 @10 q, A3 @12 e
+ P1 S2 V2: F2 @1 e, D#4 @2 q, F3 @4 q, A3 @6 e, F2 @7 e, D#4 @8 q, F3 @10 q, A3 @12 e
+ P1 S2 V5: r @1 q, A3 @3 e, r @4 e, D#4 @5 e, r @6 e, r @7 q, A3 @9 e, r @10 e, D#4 @11 e, r @12 e
  chord F7 V7 @1 c=0.55
  chord F7 V7 @4 c=0.44
  chord F7 V7 @7 c=0.61
@@ -252,9 +246,8 @@ m22
 m23
  P1 S1 V1: C6 @1 q., A#5 @4 q.~, A#5 @7 e~, A#5 @8 t, r @8.25 s., C6 @9 e, A5 @10 e~, A5 @11 t, r @11.25 s., G5 @12 e
  P1 S1 V3: r @1 h.., D6 @8 e, r @9 e, r @10 e, A#5 @11 e, r @12 e
- P2 S1 V2: r @1 e, D4 @2 q, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 q, A#3 @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, F3 @4 q, r @6 e, D3 @7 q, r @9 e, F3 @10 q, r @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, F3 @4 q, A#3 @6 e, D3 @7 q, A#3 @9 e, F3 @10 q, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
  chord Cm7/Bb ii4/2 @1 c=0.90
  chord Bb/F I6/4 @4 c=0.47
  chord Bb/D I6 @7 c=0.68
@@ -263,18 +256,16 @@ m23
 m24
  P1 S1 V1: E5 @1 q., F5 @4 h., D5 @10 q~, D5 @12 s, r @12.5 s
  P1 S1 V3: r @1 h., r @7 q., r @10 q, r @12 t, D#5 @12.25 s.
- P2 S1 V2: r @1 e, D4 @2 q, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 q, A#3 @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, F3 @4 q, r @6 e, D3 @7 e, r @8 q, F3 @10 q, r @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, F3 @4 q, A#3 @6 e, D3 @7 e, D4 @8 q, F3 @10 q, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 q, A#3 @9 e, r @10 e, D4 @11 e, r @12 e
  chord Bb/F I6/4 @4 c=0.91
  chord Bb/D I6 @7 c=0.90
  chord Gm7/F vi4/2 @10 c=0.99
 
 m25
  P1 S1 V1: G5 @1 q., F5 @4 h, F5 @8 s., r @8.75 t, F5 @9 s., r @9.75 t, F5 @10 s, r @10.5 s, F5 @11 s, r @11.5 s, F5 @12 t, r @12.25 s.
- P2 S1 V2: r @1 e, D4 @2 q, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 q, A#3 @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, F3 @4 q, r @6 e, D3 @7 q, r @9 e, F3 @10 q, r @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, F3 @4 q, A#3 @6 e, D3 @7 q, A#3 @9 e, F3 @10 q, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
  chord Gm7/Bb vi6/5 @1 c=1.00
  chord Gm7/F vi4/2 @4 c=1.00
  chord Bb/D I6 @7 c=0.90
@@ -283,18 +274,16 @@ m25
 m26
  P1 S1 V1: F#5 @1 q., F5 @4 q.~, F5 @7 s., r @7.75 t, F5 @8 e, G5 @9 s., r @9.75 t, F5 @10 s., r @10.75 t, A5 @11 s., r @11.75 t, F5 @12 e
  P1 S1 V3: r @1 h., F#5 @7 e, r @8 q, r @10 q.
- P2 S1 V2: r @1 e, D#4 @2 q, r @4 e, D#4 @5 e, r @6 e, r @7 e, D#4 @8 q, r @10 e, D#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, A3 @3 e, r @4 q., r @7 q, A3 @9 e, r @10 q.
- P2 S2 V1: F2 @1 e, r @2 q, F3 @4 q, A3 @6 e, C3 @7 e, r @8 q, F3 @10 q, A3 @12 e
+ P1 S2 V2: F2 @1 e, D#4 @2 q, F3 @4 q, A3 @6 e, C3 @7 e, D#4 @8 q, F3 @10 q, A3 @12 e
+ P1 S2 V5: r @1 q, A3 @3 e, r @4 e, D#4 @5 e, r @6 e, r @7 q, A3 @9 e, r @10 e, D#4 @11 e, r @12 e
  chord F7 V7 @1 c=0.16
  chord F7/C V4/3 @7 c=0.85
  chord F7 V7 @10 c=0.39
 
 m27
  P1 S1 V1: C6 @1 q., A#5 @4 h.~, A#5 @10 t, r @10.25 q, r @12.25 s.
- P2 S1 V2: r @1 e, D4 @2 q, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 q, A#3 @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, F3 @4 q, r @6 e, D3 @7 q, r @9 e, F3 @10 q, r @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, F3 @4 q, A#3 @6 e, D3 @7 q, A#3 @9 e, F3 @10 q, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
  chord Cm7/Bb ii4/2 @1 c=0.87
  chord Bb/F I6/4 @4 c=0.55
  chord Bb/D I6 @7 c=0.55
@@ -302,9 +291,8 @@ m27
 
 m28
  P1 S1 V1: r @1 q., F5 @4 e.., r @5.75 e, r @6.75 t, F5 @7 q, r @9 e, G5 @10 e., r @11.5 e.
- P2 S1 V2: r @1 e, D4 @2 q, r @4 e, C#4 @5 e, r @6 e, r @7 e, C4 @8 e, r @9 e, r @10 e, A#3 @11 e, r @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 h., r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, A#2 @4 q, F3 @6 e, G#2 @7 e, r @8 e, F3 @9 e, G2 @10 e, r @11 e, E3 @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, A#2 @4 q, F3 @6 e, G#2 @7 e, C4 @8 e, F3 @9 e, G2 @10 e, A#3 @11 e, E3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, C#4 @5 e, r @6 e, r @7 h.
  key F minor c=0.31 (m28-m33)
  modulation Bb major to F minor (m28-m33)
  chord Bb IV @1 c=0.33
@@ -315,9 +303,8 @@ m28
 
 m29
  P1 S1 V1: G#5 @1 h., G#5 @7 q~, G#5 @9 t, r @9.25 s., G#5 @10 e., r @11.5 e, G#5 @12.5 t, r @12.75 t
- P2 S1 V2: r @1 e, F4 @2 q, G#3 @4 q, C4 @6 e, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
- P2 S1 V4: r @1 q, C4 @3 e, r @4 e, F4 @5 q, r @7 q, C4 @9 e, r @10 q.
- P2 S2 V1: F2 @1 e, r @2 q, r @4 q., F3 @7 q, r @9 e, G#3 @10 q, C4 @12 e
+ P1 S2 V2: F2 @1 e, F4 @2 q, G#3 @4 q, C4 @6 e, F3 @7 q, C4 @9 e, G#3 @10 q, C4 @12 e
+ P1 S2 V5: r @1 q, C4 @3 e, r @4 e, F4 @5 q, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
  chord Fm i @1 c=0.42
  chord Fm/Ab i6 @4 c=0.77
  chord Fm i @7 c=0.32
@@ -326,9 +313,8 @@ m29
 m30
  P1 S1 V1: G5 @1 q., F5 @4 q., G5 @7 q.~, G5 @10 t, r @10.25 q, r @12.25 s.
  P1 S1 V3: r @1 h., r @7 q., G#5 @10 q.
- P2 S1 V2: r @1 e, E4 @2 q, A#3 @4 q, C4 @6 e, r @7 e, E4 @8 q, A#3 @10 q, C4 @12 e
- P2 S1 V4: r @1 q, C4 @3 e, r @4 e, E4 @5 e, r @6 e, r @7 q, C4 @9 e, r @10 e, E4 @11 e, r @12 e
- P2 S2 V1: C3 @1 e, r @2 q, r @4 q., C3 @7 e, r @8 q, r @10 q.
+ P1 S2 V2: C3 @1 e, E4 @2 q, A#3 @4 q, C4 @6 e, C3 @7 e, E4 @8 q, A#3 @10 q, C4 @12 e
+ P1 S2 V5: r @1 q, C4 @3 e, r @4 e, E4 @5 e, r @6 e, r @7 q, C4 @9 e, r @10 e, E4 @11 e, r @12 e
  chord C V @1 c=0.54
  cadence HC m30 @1 c=0.14
  chord Gm7b5/Bb ii/o6/5 @4 c=0.81
@@ -338,9 +324,8 @@ m30
 
 m31
  P1 S1 V1: G5 @1 q., F5 @4 q., r @7 h.
- P2 S1 V2: r @1 e, F4 @2 q, G#3 @4 q, C4 @6 e, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
- P2 S1 V4: r @1 q, C4 @3 e, r @4 e, F4 @5 q, r @7 q, C4 @9 e, r @10 q.
- P2 S2 V1: F2 @1 e, r @2 q, r @4 q., F3 @7 q, r @9 e, G#3 @10 q, C4 @12 e
+ P1 S2 V2: F2 @1 e, F4 @2 q, G#3 @4 q, C4 @6 e, F3 @7 q, C4 @9 e, G#3 @10 q, C4 @12 e
+ P1 S2 V5: r @1 q, C4 @3 e, r @4 e, F4 @5 q, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
  chord Gm7b5/F ii/o4/2 @1 c=0.79
  phrase 6 m31-m37 c=0.06 | form B
  theme hybrid m31-m37 c=0.06
@@ -352,9 +337,8 @@ m31
 
 m32
  P1 S1 V1: r @1 h., G5 @7 q.~, G5 @10 q, F5 @12 e~
- P2 S1 V2: r @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 e, A#3 @9 e, G#3 @10 q, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 h, D4 @11 e, r @12 e
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., A#2 @7 e, r @8 q, r @10 q.
+ P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, A#2 @7 e, D4 @8 e, A#3 @9 e, G#3 @10 q, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 h, D4 @11 e, r @12 e
  chord Bb IV @1 c=0.19
  chord Bb7/Ab IV4/2 @4 c=0.63
  chord Gm/Bb ii6 @7 c=0.59
@@ -362,9 +346,8 @@ m32
 
 m33
  P1 S1 V1: F5 @1 t, D#5 @1.25 q~, D#5 @3.25 s.~, D#5 @4 h., C5 @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, F4 @8 q, r @10 e, F4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G#3 @7 q, r @9 e, C4 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G#3 @7 q, D#4 @9 e, C4 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
  chord Eb VII @1 c=0.67
  chord Eb/Bb VII6/4 @4 c=0.46
  chord Fm7/Ab i6/5 @7 c=0.69
@@ -373,9 +356,8 @@ m33
 m34
  P1 S1 V1: D5 @1 q.~, D5 @4 t, r @4.25 q, r @6.25 s., F5 @7 q.~, F5 @10 t, r @10.25 q, r @12.25 s.
  P1 S1 V3: r @1 q., D#5 @4 q., r @7 q., G5 @10 q.
- P2 S1 V2: r @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 e, A#3 @9 e, G#3 @10 e, D4 @11 e, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 h.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., A#2 @7 e, r @8 q, r @10 q.
+ P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, A#2 @7 e, D4 @8 e, A#3 @9 e, G#3 @10 e, D4 @11 e, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 h.
  key Eb major c=0.25 (m34-m67)
  modulation F minor to Eb major (m34-m67)
  chord Bb V @1 c=0.41
@@ -386,8 +368,8 @@ m34
 m35
  P1 S1 V1: D#5 @1 h.~, D#5 @7 q., D#5 @10 e, D5 @11 e~, D5 @12 t, r @12.25 s.
  P1 S1 V3: r @1 h., r @7 q., r @10 q, C5 @12 e
- P2 S1 V2: r @1 e, D#4 @2 e, r @3 e, r @4 e, D#4 @5 e, G3 @6 e, r @7 e, D#4 @8 e, r @9 e, r @10 e, D#4 @11 e, G3 @12 e
- P2 S2 V1: D#3 @1 q, G3 @3 e, A#2 @4 e, r @5 q, D#3 @7 q, G3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: D#3 @1 q, G3 @3 e, A#2 @4 e, D#4 @5 e, G3 @6 e, D#3 @7 q, G3 @9 e, A#2 @10 e, D#4 @11 e, G3 @12 e
+ P1 S2 V5: r @1 e, D#4 @2 e, r @3 e, r @4 h, D#4 @8 e, r @9 e, r @10 q.
  chord Eb I @1 c=0.00
  chord Eb/Bb I6/4 @4 c=0.31
  chord Eb I @7 c=0.00
@@ -395,9 +377,8 @@ m35
 
 m36
  P1 S1 V1: A#4 @1 e.., r @2.75 e, r @3.75 t, G#5 @4 q.~, G#5 @7 q~, G#5 @9 s., G#5 @9.75 t~, G#5 @10 e, G5 @11 e, F5 @12 s., r @12.75 t
- P2 S1 V2: r @1 e, D4 @2 e, r @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 e, r @9 e, r @10 e, D4 @11 e, G#3 @12 e
- P2 S1 V4: r @1 q., r @4 q, G#3 @6 e, r @7 h.
- P2 S2 V1: F3 @1 q, G#3 @3 e, A#2 @4 e, r @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: F3 @1 q, G#3 @3 e, A#2 @4 e, D4 @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, D4 @11 e, G#3 @12 e
+ P1 S2 V5: r @1 e, D4 @2 e, r @3 e, r @4 q, G#3 @6 e, r @7 e, D4 @8 e, r @9 e, r @10 q.
  chord Bb7/F V4/3 @1 c=0.85
  chord Bb7 V7 @4 c=0.69
  chord Ddim/F vii°6 @7 c=0.90
@@ -406,8 +387,8 @@ m36
 
 m37
  P1 S1 V1: D#5 @1 s., r @1.75 q, r @3.75 t, D#6 @4 h., D#6 @10 e, D6 @11 e, C6 @12 s., r @12.75 t
- P2 S1 V2: r @1 e, D#4 @2 e, r @3 e, r @4 e, D#4 @5 e, G3 @6 e, r @7 e, D#4 @8 e, r @9 e, r @10 e, D#4 @11 e, G3 @12 e
- P2 S2 V1: D#3 @1 q, G3 @3 e, A#2 @4 e, r @5 q, D#3 @7 q, G3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: D#3 @1 q, G3 @3 e, A#2 @4 e, D#4 @5 e, G3 @6 e, D#3 @7 q, G3 @9 e, A#2 @10 e, D#4 @11 e, G3 @12 e
+ P1 S2 V5: r @1 e, D#4 @2 e, r @3 e, r @4 h, D#4 @8 e, r @9 e, r @10 q.
  chord Eb I @1 c=0.00
  chord Eb/Bb I6/4 @4 c=0.31
  chord Eb I @7 c=0.00
@@ -416,9 +397,8 @@ m37
 m38
  P1 S1 V1: A#5 @1 e~, A#5 @2 t, r @2.25 s., G6 @3 e, F6 @4 e~, F6 @5 t, r @5.25 s., D6 @6 e, C6 @7 e, A#5 @8 e, A5 @9 e~, A5 @10 t, r @10.25 s., G5 @11 e, F5 @12 e
  P1 S1 V3: r @1 e, G#6 @2 s., r @2.75 e, r @3.75 t, r @4 e, D#6 @5 e, r @6 e, r @7 q., G#5 @10 e, r @11 q
- P2 S1 V2: r @1 e, D4 @2 e, r @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 e, r @9 e, r @10 e, D4 @11 e, G#3 @12 e
- P2 S1 V4: r @1 q., r @4 q, G#3 @6 e, r @7 h.
- P2 S2 V1: F3 @1 q, G#3 @3 e, A#2 @4 e, r @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: F3 @1 q, G#3 @3 e, A#2 @4 e, D4 @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, D4 @11 e, G#3 @12 e
+ P1 S2 V5: r @1 e, D4 @2 e, r @3 e, r @4 q, G#3 @6 e, r @7 e, D4 @8 e, r @9 e, r @10 q.
  chord Bb7/F V4/3 @1 c=0.93
  phrase 7 m38-m46 c=0.04 | form C
  theme hybrid m38-m46 c=0.04
@@ -430,9 +410,8 @@ m38
 m39
  P1 S1 V1: D#5 @1 e.., F5 @2.75 s, D#5 @3.25 s, D5 @3.75 t~, D5 @4 t, r @4.25 q, G5 @6.25 s.~, G5 @7 s, A#4 @7.5 q~, A#4 @9.5 s~, A#4 @10 t, F5 @10.25 s, r @10.75 s, D5 @11.25 e, r @12.25 s.
  P1 S1 V3: r @1 q., D#5 @4 q~, D#5 @6 t, r @6.25 s., r @7 q.., D#5 @10.5 s., r @11.25 s., D#5 @12 e
- P2 S1 V2: r @1 e, D#4 @2 e, r @3 e, r @4 e, D#4 @5 q, r @7 e, D#4 @8 e, r @9 e, r @10 e, D#4 @11 e, G3 @12 e
- P2 S1 V4: r @1 q., r @4 q, G3 @6 e, r @7 h.
- P2 S2 V1: D#3 @1 q, G3 @3 e, A#2 @4 e, r @5 q, D#3 @7 q, G3 @9 e, A#2 @10 e, r @11 q
+ P1 S2 V2: D#3 @1 q, G3 @3 e, A#2 @4 e, D#4 @5 q, D#3 @7 q, G3 @9 e, A#2 @10 e, D#4 @11 e, G3 @12 e
+ P1 S2 V5: r @1 e, D#4 @2 e, r @3 e, r @4 q, G3 @6 e, r @7 e, D#4 @8 e, r @9 e, r @10 q.
  chord Ebmaj7 I7 @1 c=0.79
  chord Ebmaj7/Bb I4/3 @4 c=0.45
  chord Eb I @7 c=0.43
@@ -441,10 +420,9 @@ m39
 m40
  P1 S1 V1: G5 @1 q., F5 @4 q.~, F5 @7 q, r @9 s., G5 @9.75 t, F5 @10 e, E5 @11 s., F5 @11.75 e~, F5 @12.75 t
  P1 S1 V3: r @1 q., r @4 s., E5 @4.75 s, r @5.25 e.., r @7 h.
- P2 S1 V2: r @1 e, F4 @2 q, A3 @4 q, D#4 @6 e, B3 @7 q., A#3 @10 q, D4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, C4 @4 e, F4 @5 q, G#3 @7 q, D4 @9 e, r @10 e, F4 @11 e, r @12 e
- P2 S1 V5: r @1 h.., F4 @8 e
- P2 S2 V1: A2 @1 e, r @2 q, r @4 h., r @10 q.
+ P1 S2 V2: A2 @1 e, F4 @2 q, A3 @4 q, D#4 @6 e, B3 @7 q., A#3 @10 q, D4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, C4 @4 e, F4 @5 q, G#3 @7 q, D4 @9 e, r @10 e, F4 @11 e, r @12 e
+ P1 S2 V6: r @1 h.., F4 @8 e, r @9 e, r @10 q.
  chord Fm7/A ii4/3 @4 c=0.29
  chord Ddim/Ab vii°6/4 @7 c=0.90
  chord Bb V @10 c=0.64
@@ -452,10 +430,9 @@ m40
 m41
  P1 S1 V1: C6 @1 e~, C6 @2 t, r @2.25 e.., A#5 @4 q.., r @7.5 s, A5 @8 e, G#5 @9 e~, G#5 @10 t, r @10.25 s, G#5 @10.75 s, r @11.25 s., B4+F5 @12 t, r @12.25 s.
  P1 S1 V3: r @1 q., A#4 @4 s., r @4.75 q, r @6.75 t, r @7 t, D#5 @7.25 s., r @8 e, D5 @9 s., G5+D#5 @9.75 t~, G5+D#5 @10 s., r @10.75 t, C5 @11 t, r @11.25 e..
- P2 S1 V2: G3 @1 q, A#3 @3 e, r @4 e, D#4 @5 e, A#3 @6 e, r @7 e, F4 @8 e, r @9 e, D#4 @10 e, F4 @11 e, G4 @12 e
- P2 S1 V4: r @1 e, D#4 @2 q, r @4 h., r @10 q.
- P2 S2 V1: r @1 q., F#3 @4 q., F3 @7 q, B3 @9 e, C4 @10 q, r @12 e
- P2 S2 V3: r @1 h., r @7 h, G#3 @11 q
+ P1 S2 V2: G3 @1 q, A#3 @3 e, F#3 @4 q., F3 @7 q, B3 @9 e, D#4 @10 e, G#3 @11 q
+ P1 S2 V5: r @1 e, D#4 @2 q, r @4 e, D#4 @5 e, A#3 @6 e, r @7 e, F4 @8 e, r @9 e, C4 @10 q, G4 @12 e
+ P1 S2 V6: r @1 h., r @7 h, F4 @11 e, r @12 e
  chord Cm7/G vi4/3 @1 c=0.84
  chord Bb7/F V4/3 @7 c=0.95
  chord Abmaj7/C IV6/5 @10 c=0.93
@@ -465,9 +442,8 @@ m42
  P1 S1 V1: G4 @1 s, r @1.5 s, G5 @2 s, r @2.5 s, A#5 @3 e, D#6 @4 e~, D#6 @5 t, r @5.25 s., C6 @6 e, A#5 @7 s., r @7.75 t, C6 @8 s., r @8.75 t, G5 @9 e, G#5 @10 e, C5 @11 e, D5 @12 e~
  P1 S1 V3: A#4 @1 s., r @1.75 q, r @3.75 t, r @4 e, D6 @5 e, r @6 e, r @7 h.
  P1 S1 V4: r @1 t, D#5 @1.25 s.
- P2 S1 V2: r @1 e, D#4 @2 q, G3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, G#3 @10 e, A#3 @11 e, G#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D#4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., A#2 @7 e, r @8 q, r @10 q.
+ P1 S2 V2: A#2 @1 e, D#4 @2 q, G3 @4 q, A#3 @6 e, A#2 @7 e, D4 @8 q, G#3 @10 e, A#3 @11 e, G#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D#4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
  chord Eb/Bb I6/4 @1 c=0.72
  chord Ebmaj7/G I6/5 @4 c=0.99
  chord Gm/Bb iii6 @7 c=0.87
@@ -476,9 +452,8 @@ m42
 m43
  P1 S1 V1: D5 @1 t, r @1.25 q, r @3.25 s., G6+A#5 @4 t, r @4.25 q, r @6.25 s., D#6+G5 @7 e, r @8 q, r @10 t, A#4 @10.25 q~, A#4 @12.25 s.~
  P1 S1 V3: D#5 @1 s., r @1.75 q, r @3.75 t, r @4 h., r @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 e, D#4 @6 e, r @7 h.
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 h., r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, D#3 @7 e, D#3 @8 e, r @9 e, r @10 q.
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, D#3 @7 e, D#3 @8 e, r @9 e, r @10 q.
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 e, r @6 e, r @7 h.
  chord Ebmaj7 I7 @1 c=0.34
  chord Eb/Bb I6/4 @4 c=0.80
  chord Eb I @7 c=0.10
@@ -487,9 +462,8 @@ m43
 m44
  P1 S1 V1: A#4 @1 s, r @1.5 q, r @3.5 s, r @4 h., F5 @10 q~, F5 @12 s, D#5 @12.5 t, D5 @12.75 t~
  P1 S1 V3: r @1 t, D#5 @1.25 q~, D#5 @3.25 s.~, D#5 @4 h., r @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 e, D#4 @6 e, r @7 e, D#4 @8 q, r @10 e, D#4 @11 e, r @12 e
- P2 S1 V4: r @1 w, A3 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 e, D#4 @3 e, A#3 @4 q, r @6 e, C3 @7 e, r @8 q, F3 @10 q, A3 @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, C3 @7 e, D#4 @8 q, F3 @10 q, A3 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 e, r @6 e, r @7 q, A3 @9 e, r @10 e, D#4 @11 e, r @12 e
  chord Eb I @1 c=0.27
  chord Eb/Bb I6/4 @4 c=0.40
  chord Cm vi @7 c=0.85
@@ -497,9 +471,9 @@ m44
 
 m45
  P1 S1 V1: D5 @1 q~, D5 @3 s., C5 @3.75 t~, C5 @4 q., D5 @7 q., A#4 @10 q.
- P2 S1 V2: r @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q., G#3 @10 e, r @11 e, A#3 @12 e
+ P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, F3 @7 q., G#3 @10 e, D4 @11 e, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 q.
+ P1 S2 V6: r @1 w, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.47
  chord Dm7b5/Ab vii∅4/3 @4 c=0.93
  chord Bb/F V6/4 @7 c=0.93
@@ -507,21 +481,20 @@ m45
  chord Bb V @11 c=0.86
  cadence PAC m46 @1 c=0.04
 
-m46
+m46 clef S2 treble
  P1 S1 V1: D#5 @1 h.~, D#5 @7 s., r @7.75 q, r @9.75 t, r @10 q.
  P1 S1 V3: r @1 h., G5 @7 h.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, A#3 @7 q, r @9 e, G3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, A#3 @7 q, D#4 @9 e, G3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
  chord Eb I @1 c=0.19
  chord Eb/Bb I6/4 @4 c=0.68
  chord Eb/G I6 @10 c=0.89
 
 m47
  P1 S1 V1: A#5 @1 h.., A#5 @8 e, A5 @9 e, G#5 @10 e, G5 @11 s., r @11.75 t, F5 @12 t, r @12.25 s.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.60
  phrase 8 m47-m50 c=0.01 | form D
  form D m47-m50 c=0.01
@@ -532,9 +505,9 @@ m47
 m48
  P1 S1 V1: D#5 @1 q.~, D#5 @4 t, D#6 @4.25 q~, D#6 @6.25 s.~, D#6 @7 e., F6 @8.5 s., r @9.25 t, D6 @9.5 s~, D6 @10 t, r @10.25 t, A#5 @10.5 s, G#5 @11 t, r @11.25 t, G#5 @11.5 s, G5 @12 s, F5 @12.5 s
  P1 S1 V3: r @1 h., r @7 s, D6 @7.5 s, G6 @8 e, D#6 @9 s, r @9.5 s, C6 @10 s, r @10.5 q, r @12.5 s
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.07
  chord Eb/Bb I6/4 @4 c=0.52
  chord Ebmaj7/G I6/5 @7 c=0.64
@@ -543,9 +516,9 @@ m48
 m49
  P1 S1 V1: D#5 @1 q, C#5 @3 s, D5 @3.5 s, D#5 @4 s, E5 @4.5 s, F5 @5 s, G5 @5.5 s, G#5 @6 e, D6 @7 e.., r @8.75 t, A#5 @9 s., r @9.75 t, G5 @10 s., r @10.75 t, A#5 @11 s., r @11.75 t, G5 @12 s, F5 @12.5 s
  P1 S1 V3: r @1 e., D5 @2.5 s, r @3 e, r @4 q, r @6 s, A#5 @6.5 s, r @7 e., C6 @8.5 s, r @9 s, G#5 @9.5 s~, G#5 @10 t, r @10.25 t, G#5 @10.5 s, r @11 s, G#5 @11.5 s, r @12 s., D#5 @12.75 t~
- P2 S1 V2: r @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 q, D4 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q., A#3 @10 q, D4 @12 e
+ P1 S2 V2: A#2 @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, F3 @7 q., A#3 @10 q, D4 @12 e
+ P1 S2 V5: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D4 @9 e, r @10 q.
  chord Ebmaj7/Bb I4/3 @1 c=0.86
  chord Bb7 V7 @4 c=0.77
  chord Bb7/F V4/3 @7 c=0.97
@@ -555,9 +528,9 @@ m49
 m50
  P1 S1 V1: F5 @1 s, F5 @1.5 q~, F5 @3.5 s, D#5 @4 q., r @7 h.
  P1 S1 V3: D#5 @1 t, G5 @1.25 s, r @1.75 q, r @3.75 t, r @4 h., r @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.96
  chord Eb/Bb I6/4 @4 c=0.54
  chord Eb/G I6 @7 c=0.54
@@ -565,11 +538,10 @@ m50
  motive b m50 @7-@12
  chord Eb/Bb I6/4 @10 c=0.78
 
-m51
+m51 clef S2 bass
  P1 S1 V1: r @1 h., r @7 q., D#5 @10 q, D5 @12 t, r @12.25 s.
- P2 S1 V2: r @1 e, F4 @2 q, G3 @4 q, B3 @6 e, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
- P2 S1 V4: r @1 q, B3 @3 e, r @4 e, F4 @5 e, r @6 e, r @7 q, B3 @9 e, r @10 q.
- P2 S2 V1: G2 @1 e, r @2 q, r @4 q., D3 @7 e, r @8 q, G3 @10 q, B3 @12 e
+ P1 S2 V2: G2 @1 e, F4 @2 q, G3 @4 q, B3 @6 e, D3 @7 e, F4 @8 q, G3 @10 q, B3 @12 e
+ P1 S2 V5: r @1 q, B3 @3 e, r @4 e, F4 @5 e, r @6 e, r @7 q, B3 @9 e, r @10 e, F4 @11 e, r @12 e
  chord Gm7 iii7 @1 c=0.22
  phrase 9 m51-m57 c=0.07 | form E
  theme hybrid m51-m57 c=0.06
@@ -579,9 +551,9 @@ m51
 
 m52
  P1 S1 V1: D5 @1 q., C5 @4 h., B4 @10 q~, B4 @12 t, A#4 @12.25 t, r @12.5 s
- P2 S1 V2: r @1 e, D#4 @2 q, G#3 @4 q, C4 @6 e, r @7 e, D#4 @8 q, r @10 e, D#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, C4 @3 e, r @4 e, D#4 @5 e, r @6 e, r @7 q, C4 @9 e, r @10 q.
- P2 S2 V1: G#2 @1 e, r @2 q, r @4 q., D#3 @7 q., G#3 @10 q, B3 @12 e
+ P1 S2 V2: G#2 @1 e, D#4 @2 q, G#3 @4 q, C4 @6 e, D#3 @7 q., G#3 @10 q, B3 @12 e
+ P1 S2 V5: r @1 q, C4 @3 e, r @4 e, D#4 @5 e, r @6 e, r @7 e, D#4 @8 q, r @10 e, D#4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, C4 @9 e, r @10 q.
  chord Ab IV @1 c=0.94
  chord Ab IV @4 c=0.71
  chord Ab/Eb IV6/4 @7 c=0.71
@@ -589,9 +561,8 @@ m52
 m53
  P1 S1 V1: A#4 @1 q, r @3 t, A#4 @3.25 t, A4 @3.5 s, A#4 @4 t, r @4.25 t, G#5 @4.5 q~, G#5 @6.5 s~, G#5 @7 e., r @8.5 e., G5 @10 q.~
  P1 S1 V3: r @1 e.., C5 @2.75 s, r @3.25 s., r @4 h., r @10 q.
- P2 S1 V2: r @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, G#3 @10 e, D4 @11 e, A#3 @12 e
- P2 S1 V4: r @1 q, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., A#2 @7 e, r @8 q, r @10 q.
+ P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, A#2 @7 e, D4 @8 q, G#3 @10 e, D4 @11 e, A#3 @12 e
+ P1 S2 V5: r @1 q, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.69
  chord Bb7/Ab V4/2 @4 c=0.71
  chord Bb7 V7 @7 c=0.41
@@ -600,9 +571,9 @@ m53
 m54
  P1 S1 V1: G5 @1 t, r @1.25 q, r @3.25 s., D#5 @4 q.~, D#5 @7 s., r @7.75 q, r @9.75 t, r @10 q.
  P1 S1 V3: F5 @1 q., r @4 h., r @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.90
  chord Eb/Bb I6/4 @4 c=0.47
  chord Eb/G I6 @7 c=0.47
@@ -610,9 +581,8 @@ m54
 
 m55
  P1 S1 V1: G5 @1 q., F5 @4 q., F5 @7 q., D#5 @10 q, D5 @12 s, r @12.5 s
- P2 S1 V2: r @1 e, F4 @2 q, G3 @4 q, B3 @6 e, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
- P2 S1 V4: r @1 q, B3 @3 e, r @4 e, F4 @5 q, r @7 q, B3 @9 e, r @10 q.
- P2 S2 V1: G2 @1 e, r @2 q, r @4 q., D3 @7 e, r @8 q, G3 @10 q, B3 @12 e
+ P1 S2 V2: G2 @1 e, F4 @2 q, G3 @4 q, B3 @6 e, D3 @7 e, F4 @8 q, G3 @10 q, B3 @12 e
+ P1 S2 V5: r @1 q, B3 @3 e, r @4 e, F4 @5 q, r @7 q, B3 @9 e, r @10 e, F4 @11 e, r @12 e
  chord Gm7 iii7 @1 c=0.31
  chord Ddim vii° @7 c=0.60
  chord Ebmaj7/G I6/5 @10 c=0.50
@@ -620,9 +590,9 @@ m55
 m56
  P1 S1 V1: D5 @1 q, r @3 e, G#5 @4 q.~, G#5 @7 s., r @7.75 t, C6 @8 s., r @8.75 t, G#5 @9 s., r @9.75 t, F5 @10 s., r @10.75 t, D5 @11 s, F5 @11.5 s, D#5 @12 e
  P1 S1 V3: r @1 e.., C5 @2.75 e~, C5 @3.75 t, r @4 q.., G5 @7.5 e, A#5 @8.5 s., r @9.25 t, G5 @9.5 s, r @10 s, D#5 @10.5 s, r @11 e., B4 @12.5 s~
- P2 S1 V2: r @1 e, D#4 @2 q, G#3 @4 q, C4 @6 e, r @7 e, D#4 @8 q, r @10 e, D#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, C4 @3 e, r @4 e, D#4 @5 q, r @7 q, C4 @9 e, r @10 q.
- P2 S2 V1: G#2 @1 e, r @2 q, r @4 q., D#3 @7 q., G#3 @10 q, B3 @12 e
+ P1 S2 V2: G#2 @1 e, D#4 @2 q, G#3 @4 q, C4 @6 e, D#3 @7 q., G#3 @10 q, B3 @12 e
+ P1 S2 V5: r @1 q, C4 @3 e, r @4 e, D#4 @5 q, r @7 e, D#4 @8 q, r @10 e, D#4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, C4 @9 e, r @10 q.
  chord Ab IV @1 c=0.80
  chord Ab IV @4 c=0.34
  chord Abmaj7/Eb IV4/3 @7 c=0.93
@@ -631,9 +601,8 @@ m56
 m57
  P1 S1 V1: A#4 @1 q, r @3 t, A4 @3.25 s, r @3.75 t, C6 @4 h., D5 @10 q.
  P1 S1 V3: B4 @1 t, r @1.25 e, C5 @2.25 s, A#4 @2.75 s, r @3.25 t, A#4 @3.5 t, r @3.75 t, r @4 h., r @10 q.
- P2 S1 V2: r @1 e, D4 @2 e, A#3 @3 e, G#3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, G#3 @10 e, A#3 @11 e, G#3 @12 e
- P2 S1 V4: r @1 h, D4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., A#2 @7 e, r @8 q, r @10 q.
+ P1 S2 V2: A#2 @1 e, D4 @2 e, A#3 @3 e, G#3 @4 q, A#3 @6 e, A#2 @7 e, D4 @8 q, G#3 @10 e, A#3 @11 e, G#3 @12 e
+ P1 S2 V5: r @1 h, D4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.00
  cadence HC m57 @1 c=0.07
  chord Bb V @2 c=0.72
@@ -641,11 +610,11 @@ m57
  chord Cm7/Bb vi4/2 @7 c=0.83
  chord Bb7/Ab V4/2 @10 c=0.72
 
-m58
+m58 clef S2 treble
  P1 S1 V1: D#5 @1 q.~, D#5 @4 e.., r @5.75 e, r @6.75 t, r @7 h.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
+ P1 S2 V6: r @1 w, D#4 @9 e, r @10 q.
  chord Ebmaj7 I7 @1 c=0.08
  phrase 10 m58-m67 c=0.00 | form E
  theme hybrid m58-m65 c=0.00
@@ -658,9 +627,8 @@ m58
 m59
  P1 S1 V1: C6 @1 q~, C6 @3 t, r @3.25 s., B5 @4 e~, B5 @5 t, r @5.25 s., A#5 @6 t, r @6.25 s., A#5 @7 e., r @8.5 s, G#5 @9 t, r @9.25 s., G#5 @10 e, D5 @11 e, F5 @12 e
  P1 S1 V3: r @1 e, D5 @2 e, B5 @3 s, r @3.5 s, r @4 e, D5 @5 s., r @5.75 e, r @6.75 t, r @7 e, D5 @8 e~, D5 @9 t, r @9.25 s., r @10 q.
- P2 S1 V2: r @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
- P2 S1 V4: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 q, D4 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q, r @9 e, A#3 @10 q, D4 @12 e
+ P1 S2 V2: A#2 @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, F3 @7 q, D4 @9 e, A#3 @10 q, D4 @12 e
+ P1 S2 V5: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
  chord Bb7 V7 @1 c=0.66
  chord Bb7 V7 @4 c=0.31
  chord Bb7/F V4/3 @7 c=0.79
@@ -670,9 +638,8 @@ m59
 m60
  P1 S1 V1: D#5 @1 e.., r @2.75 t, G5 @3 s., r @3.75 t, D#5 @4 s., r @4.75 t, A#5 @5 s., r @5.75 t, G5 @6 e~, G5 @7 t, r @7.25 t, A#5 @7.5 s., G6 @8.25 s, D6 @8.75 s, r @9.25 t, D6 @9.5 s, C#6 @10 s, D6 @10.5 s, r @11 t, F6 @11.25 s., r @12 t, D6 @12.25 s, C6 @12.75 t
  P1 S1 V3: r @1 e, A#4 @2 e, r @3 e, r @4 q., D#6 @7 s., r @7.75 e, r @8.75 t, D#6 @9 s, r @9.5 s, r @10 e.., D#6 @11.75 s., r @12.5 s
- P2 S1 V2: r @1 e, G4 @2 e, D#4 @3 e, r @4 e, G4 @5 e, D#4 @6 e, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 w, D#4 @9 e, r @10 q.
- P2 S2 V1: G3 @1 q, r @3 e, A#3 @4 q., G3 @7 q, r @9 e, A#3 @10 q, r @12 e
+ P1 S2 V2: G3 @1 q, D#4 @3 e, A#3 @4 q., G3 @7 q, D#4 @9 e, A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 e, G4 @2 e, r @3 e, r @4 e, G4 @5 e, D#4 @6 e, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
  chord Eb/G I6 @1 c=0.64
  chord Eb/Bb I6/4 @4 c=0.80
  chord Ebmaj7/G I6/5 @7 c=0.78
@@ -681,9 +648,9 @@ m60
 m61
  P1 S1 V1: r @1 s, C6 @1.5 e~, C6 @2.5 t, r @2.75 t, B5 @3 t, r @3.25 s., B5 @4 s., r @4.75 t, D5 @5 e, A#5 @6 t, r @6.25 s., A#5 @7 e.., r @8.75 t, G#5 @9 t, r @9.25 s., G#5 @10 e, D5 @11 e, F5 @12 e
  P1 S1 V3: r @1 e, A#5 @2 t, D5 @2.25 s., r @3 e, r @4 h, D5 @8 e, r @9 e, r @10 q.
- P2 S1 V2: r @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, D4 @12 e
- P2 S1 V4: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 q, D4 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., F3 @7 q., A#3 @10 q.
+ P1 S2 V2: A#2 @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, F3 @7 q., A#3 @10 q.
+ P1 S2 V5: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, D4 @12 e
+ P1 S2 V6: r @1 w, D4 @9 e, r @10 q.
  chord Bb7 V7 @1 c=0.57
  chord Bb7 V7 @4 c=0.34
  chord Bb7/F V4/3 @7 c=0.77
@@ -692,9 +659,9 @@ m61
 m62
  P1 S1 V1: D#5 @1 e.., F5 @2.75 s, D#5 @3.25 s, D5 @3.75 t~, D5 @4 s, r @4.5 e., G5 @6 e~, G5 @7 t, r @7.25 q, r @9.25 s., r @10 q.
  P1 S1 V3: r @1 q., r @4 t, D#5 @4.25 e.., r @6 e, A#4 @7 q~, A#4 @9 s., r @9.75 t, r @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 q
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q, D#4 @6 e, r @7 q, D#4 @9 e, r @10 q, D#4 @12 e
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, G3 @7 q., A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, G3 @7 q., A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 q
+ P1 S2 V6: r @1 w, D#4 @9 e
  chord Ebmaj7 I7 @1 c=0.67
  chord Ebmaj7/Bb I4/3 @4 c=0.72
  chord Eb/G I6 @7 c=0.92
@@ -702,20 +669,18 @@ m62
 
 m63
  P1 S1 V1: E5 @1 e, C5 @2 e, F5 @3 e~, F5 @4 e, C5 @5 e, G5 @6 e~, G5 @7 e, B4 @8 e, G#5 @9 e~, G#5 @10 e, A#4 @11 e, A5 @12 e~
- P2 S1 V2: r @1 e, F4 @2 q, r @4 e, F4 @5 e, D#4 @6 e, r @7 e, F4 @8 q, r @10 e, F4 @11 q
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q., r @7 q, D4 @9 e, r @10 q, D4 @12 e
- P2 S2 V1: A3 @1 q, r @3 e, G#3+C4 @4 e, r @5 q, G#3+B3 @7 e, r @8 q, A#3 @10 e, r @11 q
+ P1 S2 V2: A3 @1 q, D#4 @3 e, G#3+C4 @4 e, F4 @5 e, D#4 @6 e, G#3+B3 @7 e, F4 @8 q, A#3 @10 e, F4 @11 q
+ P1 S2 V5: r @1 e, F4 @2 q, r @4 q., r @7 q, D4 @9 e, r @10 q, D4 @12 e
  chord Fm7/Ab ii6/5 @4 c=0.80
  chord Ddim/Ab vii°6/4 @7 c=0.85
  chord Bb7 V7 @10 c=0.63
  cadence subverted m64 @1 c=0.05
 
-m64
+m64 clef S2 bass
  P1 S1 V1: A5 @1 e, A#4 @2 e, A#5 @3 e~, A#5 @4 e, C#5 @5 e, C#6 @6 e, B5 @7 e, C6 @8 e, G5 @9 e~, G5 @10 t, r @10.25 s., G#5 @11 e, F5 @12 e
  P1 S1 V3: r @1 h., r @7 q., A#5 @10 e, r @11 q
- P2 S1 V2: r @1 e, D#4 @2 q, r @4 e, E4 @5 q, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
- P2 S1 V4: r @1 w, C4 @9 e, r @10 q.
- P2 S2 V1: G3 @1 q, A#3 @3 e, G3 @4 q, A#3 @6 e, G#3 @7 q, r @9 e, G#3 @10 q, B3 @12 e
+ P1 S2 V2: G3 @1 q, A#3 @3 e, G3 @4 q, A#3 @6 e, G#3 @7 q, C4 @9 e, G#3 @10 q, B3 @12 e
+ P1 S2 V5: r @1 e, D#4 @2 q, r @4 e, E4 @5 q, r @7 e, F4 @8 q, r @10 e, F4 @11 e, r @12 e
  chord Eb/G I6 @1 c=0.82
  motive b m64 @1.95-@6+1/60
  chord Gm vii°6/5/ii @4 c=0.22
@@ -725,9 +690,8 @@ m64
 m65
  P1 S1 V1: A#6 @1 q.~, A#6 @4 s., r @4.75 t, G#6 @5 s, G6 @5.5 t, r @5.75 t, F6 @6 s, D#6 @6.5 s, D6 @7 s, C6 @7.5 s, A#5 @8 s, A5 @8.5 s, G#5 @9 s, G5 @9.5 s, A#5 @10 s, G#5 @10.5 s, E5 @11 s, F5 @11.5 s, C5 @12 s, D5 @12.5 s
  P1 S1 V3: r @1 q.., A6 @4.5 s., r @5.25 e.., r @7 h.
- P2 S1 V2: r @1 e, D#4 @2 e, A#3 @3 e, G3 @4 q, A#3 @6 e, r @7 e, D4 @8 q, r @10 e, A#3 @11 e, G#3 @12 e
- P2 S1 V4: r @1 h, D#4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
- P2 S2 V1: A#2 @1 e, r @2 q, r @4 q., A#2 @7 e, r @8 q, F3 @10 e, r @11 q
+ P1 S2 V2: A#2 @1 e, D#4 @2 e, A#3 @3 e, G3 @4 q, A#3 @6 e, A#2 @7 e, D4 @8 q, F3 @10 e, A#3 @11 e, G#3 @12 e
+ P1 S2 V5: r @1 h, D#4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.00
  chord Eb/Bb I6/4 @2 c=0.86
  chord Eb/G I6 @4 c=0.86
@@ -738,9 +702,8 @@ m65
 m66
  P1 S1 V1: D#5 @1 q, r @3 e, G6 @4 q., D#6+G5 @7 e, r @8 q, G6+A#5 @10 q.
  P1 S1 V3: r @1 q., r @4 t, A#5 @4.25 q~, A#5 @6.25 s.~, A#5 @7 t
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 e, D#4 @6 e, r @7 e, G4 @8 q, r @10 e, G4 @11 e, D#4 @12 e
- P2 S1 V4: r @1 q, D#4 @3 e, r @4 q., r @7 q, D#4 @9 e, r @10 q.
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, D#3 @7 e, r @8 q, A#3 @10 q, r @12 e
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, D#3 @7 e, G4 @8 q, A#3 @10 q, D#4 @12 e
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 e, r @6 e, r @7 q, D#4 @9 e, r @10 e, G4 @11 e, r @12 e
  chord Eb I @1 c=0.03
  chord Eb/Bb I6/4 @4 c=0.90
  chord Eb I @7 c=0.44
@@ -748,9 +711,8 @@ m66
 
 m67
  P1 S1 V1: D#6+G5 @1 h.~, D#6+G5 @7 q., r @10 q.
- P2 S1 V2: r @1 e, G4 @2 q, r @4 e, G4 @5 e, D#4 @6 e
- P2 S1 V4: r @1 q, D#4 @3 e
- P2 S2 V1: D#3 @1 e, r @2 q, A#3 @4 q, r @6 e, D#3 @7 q., r @10 q.
+ P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, D#3 @7 q.
+ P1 S2 V5: r @1 q, D#4 @3 e, r @4 e, G4 @5 e
  chord Eb I @1 c=0.26
  chord Eb/Bb I6/4 @4 c=0.60
  chord Eb I @7 c=0.14
