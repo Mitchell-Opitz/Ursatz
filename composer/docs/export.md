@@ -55,7 +55,8 @@ renderer's limit holds is refused (`PLAN_EXPORT_ERR_NOT_REPRESENTABLE`). MusicXM
 The parts are named `melody`, `bass`, `inner_voice_<n>`. With a tempo, part 0 carries `<sound tempo="96"/>` at the start.
 The value is 60,000,000 divided by the whole microseconds written, so a tempo that is not a whole number of microseconds
 reads back as its nearest value (140 bpm as 140.00014). Names and markers are MIDI only: Ursatz's MusicXML export has no
-rehearsal marks.
+rehearsal marks. Each part starts with a clef written by Ursatz's export (export format 2): G on line 2 or F on line 4,
+chosen from the written pitches of that part, and changed where the part's notes move to the other staff's range.
 
 ## Tests
 
