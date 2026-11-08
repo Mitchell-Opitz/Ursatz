@@ -22,6 +22,10 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
       </attributes>
       <note xml:id="musicxml-P1-0">
         <pitch>

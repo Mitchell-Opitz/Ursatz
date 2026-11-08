@@ -33,6 +33,10 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
       </attributes>
       <note xml:id="composer-span-18-note-0">
         <pitch>
@@ -447,6 +451,10 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
       </attributes>
       <note xml:id="composer-span-17-note-0">
         <pitch>

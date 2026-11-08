@@ -940,7 +940,7 @@ static void check_piece_export(const char *id, const char *expected_title) {
   check(response_has_status(whole, 200), "export answers 200");
   check(whole && strstr(whole, "Content-Type: text/plain; charset=utf-8") != NULL, "export is text/plain; charset=utf-8");
   const char *body = response_body(whole);
-  check(strncmp(body, "# Ursatz export v1: piece\n", 26) == 0, "export starts with the header line");
+  check(strncmp(body, "# Ursatz export v2: piece\n", 26) == 0, "export starts with the header line");
   snprintf(what, sizeof(what), "title: %s\n", expected_title);
   check(strstr(body, what) != NULL, "export names the piece by its file name without the extension");
   check(strstr(body, "\nm1 4/4\n") != NULL && strstr(body, "\nm2\n") != NULL, "the whole export has measures 1 and 2");

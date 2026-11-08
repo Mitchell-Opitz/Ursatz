@@ -2464,7 +2464,7 @@ static void test_material_export(void) {
   const char *text = response_body(response);
   check(response_has_status(response, 200) && strstr(response, "Content-Type: text/plain; charset=utf-8") != NULL,
         "the export is served as text/plain");
-  check(strncmp(text, "# Ursatz export v1: motif\nname: Opening\n", 40) == 0, "the export starts with the header lines");
+  check(strncmp(text, "# Ursatz export v2: motif\nname: Opening\n", 40) == 0, "the export starts with the header lines");
   check(strstr(text, "\n## motif\n") != NULL && strstr(text, "role: melodic\n") != NULL &&
             strstr(text, "notes: C4:q Eb4:e G4:e C5:h\n") != NULL && strstr(text, "base harmony: ") != NULL &&
             strstr(text, "tones: 1 ") != NULL,
@@ -2511,7 +2511,7 @@ static void test_material_export(void) {
     check(install_capture(composed, "theme-v2", "theme.musicxml"), "the captured theme.musicxml is put in version 1");
     response = export_response(composed, "");
     text = response_body(response);
-    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v1: theme\n", 26) == 0 &&
+    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v2: theme\n", 26) == 0 &&
               strstr(text, "into: sentence\n") != NULL && strstr(text, "bars: 8\n") != NULL &&
               strstr(text, "bar 0: i\n") != NULL && strstr(text, "slot basic: Opening v1\n") != NULL,
           "a composed theme's header has its form, chords and slots");
@@ -2543,7 +2543,7 @@ static void test_material_export(void) {
           "the captured loop and ending are put in version 1");
     response = export_response(piece, "");
     text = response_body(response);
-    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v1: piece\n", 26) == 0 &&
+    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v2: piece\n", 26) == 0 &&
               strstr(text, "key: D\n") != NULL && strstr(text, "mode: minor\n") != NULL &&
               strstr(text, "A body: 32 beats, fill empty, cadence PAC\n") != NULL &&
               strstr(text, "I intro: 8 beats, fill empty, cadence none\n") != NULL,
