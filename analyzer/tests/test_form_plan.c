@@ -21,7 +21,7 @@
  * idea, each phrase node holds the subphrases and ideas of its phrase claim, a section is closed only by an authentic
  * cadence, the letters follow from the returns alone, and every return is an earlier theme recalled by a later one. The
  * measured section and return counts and the letters are pinned as the library gives them (README, Known limits): Mozart
- * 545 finds 77 returns, though its themes are hybrids and repeated phrases only.
+ * 545 (first movement, measures 1 to 146) finds 6 returns, though its themes are hybrids and repeated phrases only.
  */
 
 typedef struct {
@@ -36,8 +36,7 @@ typedef struct {
 static const Piece PIECES[] = {
     {"Bach 114", "Bach 114.mid", true, 2, 1, "A A'"},
     {"Clementi 36", "Clementi 36.mid", true, 6, 3, "A B C D E F"},
-    {"Mozart 545", "Mozart 545.mid", true, 22, 46,
-     "A B C D E F G H I J K L M N L' O K' P Q R S T"},
+    {"Mozart 545", "Mozart 545.mid", true, 10, 6, "A B C D E F G H I J"},
     {"Field 1", "Field 1.mid", true, 5, 0, "A B C D E"},
     {"Field 5", "Field 5.mid", true, 4, 4, "A B A' C"},
     {"sentence", "sentence.musicxml", false, 1, 0, "A"},

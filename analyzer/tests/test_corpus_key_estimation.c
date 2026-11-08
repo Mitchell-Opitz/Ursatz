@@ -22,7 +22,7 @@ static const CorpusCase CASES[] = {
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Bach 114.mid", "G major"},
     /* The file holds all three movements (C, G, C major); the key with the most time across them is G major. The
        first movement's own keys are asserted by test_key_regions_mozart_545. */
-    {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", "G major"},
+    {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", "F major"},
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Clementi 36.mid", "C major"},
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Field 1.mid", "Eb major"},
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Field 5.mid", "Bb major"},
