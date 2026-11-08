@@ -334,16 +334,64 @@ static void test_stage_inputs(TestPiece *piece) {
     /* the melody line: one note per soprano note, degrees in C major, a chord tone on the downbeat */
     ChainMelodyLine melody;
     memset(&melody, 0, sizeof(melody));
-    assert(chain_build_melody_line(segments, count, lines->soprano, results, 0, COMMON_PRACTICE_KEY_MAJOR, NULL) ==
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, NULL) ==
            CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_build_melody_line(segments, 0, lines->soprano, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) ==
+    assert(chain_build_melody_line(segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) ==
            CHAIN_INPUT_ERR_BAD_NOTES);
-    assert(chain_build_melody_line(segments, count, lines->soprano, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) == CHAIN_INPUT_OK);
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) == CHAIN_INPUT_OK);
     assert(melody.line.count > 0 && melody.line.notes[0].present && melody.line.notes[0].degree == 3 &&
            melody.line.notes[0].alteration == 0 && melody.segment[0] == 0);
     assert(melody.line.notes[0].has_strength && melody.line.notes[0].strength == BEAT_STRENGTH_STRONG);
     chain_melody_line_destroy(&melody);
     chain_melody_line_destroy(NULL);
+
+    /* the melody line on the voice lines (R-377): one note per run of soprano note ids over all voice segments, not one per chord segment,
+       each on the chord segment holding its onset; the chord results are read there */
+    ChainMelodyLine voiced;
+    memset(&voiced, 0, sizeof(voiced));
+    assert(chain_build_melody_line(NULL, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &voiced) ==
+           CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_melody_line(voice_segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &voiced) ==
+           CHAIN_INPUT_ERR_BAD_NOTES);
+    assert(chain_build_melody_line(voice_segments, lines->count + 1, lines->soprano, segments, count, results, 0,
+                                   COMMON_PRACTICE_KEY_MAJOR, &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
+    assert(chain_build_melody_line(voice_segments, lines->count, lines->soprano, segments, 0, results, 0, COMMON_PRACTICE_KEY_MAJOR,
+                                   &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
+    assert(chain_build_melody_line(voice_segments, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR,
+                                   &voiced) == CHAIN_INPUT_OK);
+    size_t runs = 0;
+    const char *previous = NULL;
+    for (size_t v = 0; v < lines->count; v++) {
+        const OuterVoiceEntry *entry = &lines->soprano[v];
+        const char *id = entry->present ? entity_id_value(entry->note_id) : NULL;
+        runs += id != NULL && (previous == NULL || strcmp(previous, id) != 0) ? 1 : 0;
+        previous = id;
+    }
+    size_t notes_present = 0;
+    for (size_t i = 0; i < voiced.line.count; i++) {
+        notes_present += voiced.line.notes[i].present ? 1 : 0;
+        assert(voiced.segment[i] < count && (i == 0 || voiced.segment[i] >= voiced.segment[i - 1]));
+    }
+    assert(notes_present == runs && runs > count);
+    size_t next_note = 0; /* each note's chord segment is the last one starting at or before its first voice segment */
+    previous = NULL;
+    for (size_t v = 0; v < lines->count; v++) {
+        const OuterVoiceEntry *entry = &lines->soprano[v];
+        const char *id = entry->present ? entity_id_value(entry->note_id) : NULL;
+        if (id != NULL && (previous == NULL || strcmp(previous, id) != 0)) {
+            size_t chord = 0;
+            while (chord + 1 < count && segments->starts[chord + 1] <= voice_segments->starts[v] + 1e-12) {
+                chord++;
+            }
+            assert(voiced.line.notes[next_note].present && voiced.segment[next_note] == chord);
+            next_note++;
+        }
+        previous = id;
+    }
+    assert(next_note == runs);
+    assert(voiced.segment[0] == 0 && voiced.line.notes[0].degree == 3 && voiced.line.notes[0].has_strength &&
+           voiced.line.notes[0].strength == BEAT_STRENGTH_STRONG);
+    chain_melody_line_destroy(&voiced);
 
     /* the galant segments */
     ChainGalantSegments galant;

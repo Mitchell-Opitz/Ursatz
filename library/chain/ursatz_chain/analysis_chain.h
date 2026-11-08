@@ -188,10 +188,10 @@ const CommonPracticeWeightedResult *analysis_chain_chords(const AnalysisChain *c
 /* The chord input and the Roman numeral of each segment (analysis_chain_segment_count of each). */
 const StandardTonalityChordInput *analysis_chain_chord_inputs(const AnalysisChain *chain);
 const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *chain);
-/* The segmentation the outer lines are read on (one segment per melody note), and the lines (one entry per such segment). */
+/* The segmentation the outer lines are read on (one segment per melody note), and the lines (one entry per such segment): the melody and meter stages read them (R-377). */
 const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain);
 const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain);
-/* The same lines on the chord segments: one entry per segment of analysis_chain_segments, as the harmony, form, meter, galant and melody builders read them. */
+/* The same lines on the chord segments: one entry per segment of analysis_chain_segments, as the harmony, galant and form builders read them (the form input moves to the voice lines in P41, R-377). */
 const OuterVoiceLines *analysis_chain_segment_outer_voices(const AnalysisChain *chain);
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain);
 /* The stage inputs the chain builds and reads, kept until analysis_chain_destroy. NULL when the chain is NULL or the stage did not run. */

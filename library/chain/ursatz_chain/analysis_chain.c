@@ -569,7 +569,7 @@ static AnalysisChainStatus meter_stage(AnalysisChain *chain) {
         labels[s] = p->chords[s].matched ? chord_label(p->chords[s].best_chord) : NULL;
     }
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->segment_lines, &chain->segs, labels, chain->config.first_measure,
+    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->lines, &chain->segs, labels, chain->config.first_measure,
                                                      last, &p->form_input.input, &p->phrases, &p->expansions, &chain->meter_input);
     free(labels);
     if (built != CHAIN_INPUT_OK) {
@@ -640,8 +640,8 @@ static AnalysisChainStatus voice_leading_stage(AnalysisChain *chain) {
 static AnalysisChainStatus melody_stage(AnalysisChain *chain) {
     int home = chain->home;
     if (home < 0 ||
-        chain_build_melody_line(&chain->segs, chain->count, chain->segment_lines.soprano, chain->pass.chords,
-                                common_practice_key_index_tonic(home), common_practice_key_index_mode(home),
+        chain_build_melody_line(&chain->voice_segs, chain->voice_segs.count, chain->lines.soprano, &chain->segs, chain->count,
+                                chain->pass.chords, common_practice_key_index_tonic(home), common_practice_key_index_mode(home),
                                 &chain->melody.line) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_MELODY;
     }

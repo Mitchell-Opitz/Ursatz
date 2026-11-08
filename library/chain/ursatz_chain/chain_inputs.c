@@ -1396,28 +1396,33 @@ static BeatStrength member_attack_strength(const CommonPracticeSegment *segment,
     return BEAT_STRENGTH_WEAK;
 }
 
-ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t count, const OuterVoiceEntry *entries,
-                                         const CommonPracticeWeightedResult *results, int tonic_pitch_class,
-                                         CommonPracticeKeyMode mode, ChainMelodyLine *out) {
-    if (segments == NULL || entries == NULL || results == NULL || out == NULL) {
+ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, size_t line_count, const OuterVoiceEntry *entries,
+                                         const ChainSegments *segments, size_t count, const CommonPracticeWeightedResult *results,
+                                         int tonic_pitch_class, CommonPracticeKeyMode mode, ChainMelodyLine *out) {
+    if (line_segments == NULL || segments == NULL || entries == NULL || results == NULL || out == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
-    if (segments->segments == NULL || count == 0 || count > segments->count) {
+    if (line_segments->starts == NULL || segments->segments == NULL || segments->starts == NULL || line_count == 0 ||
+        line_count > line_segments->count || count == 0 || count > segments->count) {
         return CHAIN_INPUT_ERR_BAD_NOTES;
     }
     ChainMelodyLine built;
     memset(&built, 0, sizeof(built));
     standard_counterpoint_melody_line_init(&built.line);
-    built.segment = calloc(count + 1, sizeof(size_t));
+    built.segment = calloc(line_count + 1, sizeof(size_t));
     if (built.segment == NULL) {
         return CHAIN_INPUT_ERR_ALLOC;
     }
     const char *previous_id = NULL;
-    for (size_t s = 0; s < count; s++) {
+    size_t chord = 0; /* the chord segment holding the entry's line segment: the last that starts at or before it */
+    for (size_t s = 0; s < line_count; s++) {
         const OuterVoiceEntry *entry = &entries[s];
+        while (chord + 1 < count && segments->starts[chord + 1] <= line_segments->starts[s] + 1e-12) {
+            chord++;
+        }
         if (!entry->present) {
             if (previous_id != NULL || built.line.count == 0) {
-                built.segment[built.line.count] = s;
+                built.segment[built.line.count] = chord;
                 if (standard_counterpoint_melody_line_add_rest(&built.line) != STANDARD_COUNTERPOINT_MELODY_OK) {
                     chain_melody_line_destroy(&built);
                     return CHAIN_INPUT_ERR_BAD_NOTES;
@@ -1444,11 +1449,11 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t c
             return CHAIN_INPUT_ERR_BAD_NOTES;
         }
         bool has_strength = false;
-        note.strength = member_attack_strength(&segments->segments[s], id, &has_strength);
+        note.strength = member_attack_strength(&segments->segments[chord], id, &has_strength);
         note.has_strength = has_strength;
 
         note.nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
-        const CommonPracticeWeightedResult *result = &results[s];
+        const CommonPracticeWeightedResult *result = &results[chord];
         if (result->matched) {
             note.nct = STANDARD_COUNTERPOINT_NCT_CHORD_TONE;
             for (size_t k = 0; k < result->leftover_count; k++) {
@@ -1463,9 +1468,9 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t c
             }
         }
         char ref[160];
-        snprintf(ref, sizeof(ref), "%s/%s", segments->ids[s], id);
+        snprintf(ref, sizeof(ref), "%s/%s", segments->ids[chord], id);
         note.nct_ref = ref;
-        built.segment[built.line.count] = s;
+        built.segment[built.line.count] = chord;
         if (standard_counterpoint_melody_line_add_note(&built.line, &note) != STANDARD_COUNTERPOINT_MELODY_OK) {
             chain_melody_line_destroy(&built);
             return CHAIN_INPUT_ERR_BAD_NOTES;

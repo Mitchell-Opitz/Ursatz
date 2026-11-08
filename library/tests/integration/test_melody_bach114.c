@@ -69,8 +69,8 @@ static void melody_build_from_chain(const WeightedPipeline *p, const OuterVoiceE
         count++;
     }
     ChainMelodyLine line;
-    assert(chain_build_melody_line(analysis_chain_segments(p->chain), count, entries, results->items, tonic_pitch_class, mode, &line) ==
-           CHAIN_INPUT_OK);
+    assert(chain_build_melody_line(analysis_chain_segments(p->chain), count, entries, analysis_chain_segments(p->chain), count,
+                                   results->items, tonic_pitch_class, mode, &line) == CHAIN_INPUT_OK);
     memset(out, 0, sizeof(*out));
     out->line = line.line;
     out->segment = line.segment;

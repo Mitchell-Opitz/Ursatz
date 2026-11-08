@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,26 +60,26 @@ static const Reference REFERENCES[4] = {
     {"Bach 114", "Bach 114.mid", true, 7, 1, 32, 52, 5, 4, 4,
      {0x416b3f18e1019eb5ULL, 0xd85242dd48e0db8eULL, 0xe1c68259d823c4eeULL,
       0x71624d5bdd42ff6fULL, 0x7dcbf37f1948fe14ULL, 0xe06a317e4a1716a5ULL,
-      0x25e054bd0635de94ULL, 0xbf6b5ec9ca0e1519ULL, 0x6ea6a8f59942dd36ULL,
-      0x6e5efa0dc17f5c39ULL, 0xe14473ae2c7aeeb9ULL, 0x131b3fae40ad5e0bULL,
+      0x25e054bd0635de94ULL, 0xbf6b5ec9ca0e1519ULL, 0xb2328d8447b3e1feULL,
+      0x6e5efa0dc17f5c39ULL, 0x5790a5303498d504ULL, 0x131b3fae40ad5e0bULL,
       0xb7c363c1e56cf00bULL}},
     {"Mozart 545", "Mozart 545.mid", false, 0, 1, 146, 224, 25, 13, 21,
      {0x69761056580e36b1ULL, 0x35fb407c898c63c8ULL, 0x7376e484ab66ac3bULL,
       0x53cef783e3e562eaULL, 0x4ada091110983702ULL, 0x7fdf5ac4aea6cf80ULL,
-      0xb388d4895a66c95eULL, 0x080a94ae1ee0c03dULL, 0xd0f9e0cf36c74271ULL,
-      0x031e15b34d36bf99ULL, 0xa7880702d4b6ca76ULL, 0xc50b929baeb6abd3ULL,
+      0xb388d4895a66c95eULL, 0x080a94ae1ee0c03dULL, 0x4e299a1caec04aecULL,
+      0x031e15b34d36bf99ULL, 0x75dd4eb680972cf2ULL, 0xc50b929baeb6abd3ULL,
       0xefbf609bf7b0b958ULL}},
     {"Clementi 36", "Clementi 36.mid", false, 0, 1, 38, 47, 5, 5, 7,
      {0xb5d9fcc8cd306106ULL, 0xaf564f595ab6274cULL, 0xf6cd7742f0442773ULL,
       0x9958e15185957937ULL, 0x4d10887062cc5a59ULL, 0xfd625e6553f9fd12ULL,
-      0x39da996555bb40d0ULL, 0x47fe0d7eaf8e51e3ULL, 0x50739a843985b4e4ULL,
-      0x63f983fedb650d5fULL, 0xdc004de08e7bd956ULL, 0xa31e272015f12c43ULL,
+      0x39da996555bb40d0ULL, 0x47fe0d7eaf8e51e3ULL, 0xa7b1bd912ec6138cULL,
+      0x63f983fedb650d5fULL, 0x80fe2a3e89ece721ULL, 0xa31e272015f12c43ULL,
       0x1ffa7355bd5400a3ULL}},
     {"Field 1", "Field 1.mid", false, 3, 1, 16, 17, 1, 4, 4,
      {0xb9f6bd087c744c91ULL, 0xae97569ebba2d9bfULL, 0xa30c99182995d3b1ULL,
       0xc2fa7068d90ec461ULL, 0xc121b0921a83f0afULL, 0x9f7eb8f7e1907ec3ULL,
-      0x30b381fad3756ac8ULL, 0x47fe0d7eaf8e51e3ULL, 0x32f2fbae6b786e3bULL,
-      0x20c7011fc0a70dc0ULL, 0x5dd961f284530e0dULL, 0xa31e272015f12c43ULL,
+      0x30b381fad3756ac8ULL, 0x47fe0d7eaf8e51e3ULL, 0xfa7eabd332b81941ULL,
+      0x20c7011fc0a70dc0ULL, 0x2de8206940c6576cULL, 0xa31e272015f12c43ULL,
       0xdf2f30c0d9e6b245ULL}},
 };
 
@@ -646,6 +647,50 @@ static void check_stage_inputs(const char *context, const AnalysisChain *c) {
     CHECK(analysis_chain_galant_segments(c)->list.count > 0);
 }
 
+/* The distinct soprano note ids of a line, runs counted once (a present entry on the id before it is the same note). */
+static size_t soprano_runs(const OuterVoiceLines *lines) {
+    size_t runs = 0;
+    const char *previous = NULL;
+    for (size_t i = 0; i < lines->count; i++) {
+        const char *id = lines->soprano[i].present ? entity_id_value(lines->soprano[i].note_id) : NULL;
+        runs += id != NULL && (previous == NULL || strcmp(previous, id) != 0) ? 1 : 0;
+        previous = id;
+    }
+    return runs;
+}
+
+/* The melody line and the meter input read the voice lines (R-377): one melody note per soprano note, not one per chord segment, and every
+   soprano note of the voice lines is the meter input's soprano line. */
+static void check_voice_line_inputs(const char *context, const ChainInput *input, const Reference *ref, const AnalysisChain *c) {
+    const OuterVoiceLines *voice_lines = analysis_chain_outer_voices(c);
+    const OuterVoiceLines *segment_lines = analysis_chain_segment_outer_voices(c);
+    size_t runs = soprano_runs(voice_lines);
+    CHECK(runs > soprano_runs(segment_lines));
+    const StandardCounterpointMelodyLine *melody = &analysis_chain_melody(c)->line.line;
+    size_t present = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        present += melody->notes[i].present ? 1 : 0;
+    }
+    CHECK(present == runs);
+
+    ChainMeterInput meter;
+    memset(&meter, 0, sizeof(meter));
+    int last = ref->last_measure > 0 ? ref->last_measure : INT_MAX;
+    CHECK(chain_build_meter_input(&input->set, voice_lines, analysis_chain_segments(c), NULL, ref->first_measure, last, NULL, NULL, NULL, &meter) ==
+          CHAIN_INPUT_OK);
+    size_t soprano_notes = 0;
+    for (size_t n = 0; n < meter.input.note_count; n++) {
+        bool in_line = false;
+        for (size_t i = 0; i < voice_lines->count && !in_line; i++) {
+            in_line = voice_lines->soprano[i].present && strcmp(entity_id_value(voice_lines->soprano[i].note_id), meter.input.notes[n].id) == 0;
+        }
+        CHECK((meter.input.notes[n].line == 0) == in_line);
+        soprano_notes += in_line ? 1 : 0;
+    }
+    CHECK(soprano_notes > 0 && soprano_notes <= runs);
+    chain_meter_input_destroy(&meter);
+}
+
 static void check_piece(const Reference *ref, bool dump) {
     ChainInput input;
     chain_input_init(&input, ref);
@@ -679,6 +724,7 @@ static void check_piece(const Reference *ref, bool dump) {
         }
         check_segment_lines(context, chain);
         check_stage_inputs(context, chain);
+        check_voice_line_inputs(context, &input, ref, chain);
         check_voice_leading(context, chain);
         check_subsets(context, &input, ref, chain);
         printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases; %d stages as expected\n", context, segments, key_regions,

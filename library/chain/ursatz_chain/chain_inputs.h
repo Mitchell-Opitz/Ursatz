@@ -112,8 +112,9 @@ ChainInputStatus chain_estimate_key_regions(const CommonPracticeKeySegment *key_
                                             const CommonPracticeKeyRegionsConfig *config, CommonPracticeKeyRegions *out);
 
 /*
- * The outer lines on the chord segments. The outer voices are read on the voice segments (one per melody note, not merged), the harmony,
- * form, meter, galant and melody builders index them by chord segment, so this maps them: entry i of both lines is the entry of the voice
+ * The outer lines on the chord segments. The outer voices are read on the voice segments (one per melody note, not merged). The melody and
+ * meter builders read them there; the harmony, galant and form builders index them by chord segment (the form input moves to the voice lines
+ * in P41, R-377), so this maps them: entry i of both lines is the entry of the voice
  * segment that sounds at the start of chord segment i of the first `count` of `segments` (the last voice segment starting at or before it;
  * absent, over the chord segment's window, when none does). `lines` are the lines of `voice_segments`. The entries are copies, with their own
  * note id, pitch and span, and segment_index is the chord segment's; the result is freed with outer_voice_lines_destroy.
@@ -222,7 +223,7 @@ typedef struct {
     size_t time_capacity;
 } ChainMeterInput;
 
-/* The meter input over the measures [first_measure, last_measure]; `lines` are the outer lines on the chord segments (chain_build_segment_lines). */
+/* The meter input over the measures [first_measure, last_measure]; `lines` are the voice lines (analysis_chain_outer_voices): the input reads only their note ids (which notes are the soprano and the bass), so every melody note counts, not only the one sounding at each chord segment's start. */
 ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const OuterVoiceLines *lines, const ChainSegments *segments,
                                          const char *const *chord_labels, int first_measure, int last_measure,
                                          const StandardFormInput *form, const StandardFormPhrases *phrases,
@@ -269,21 +270,24 @@ void chain_voice_grid_destroy(ChainVoiceGrid *grid);
  *     Segments where the line is absent become ONE rest.
  *   - pitch: the line's PitchNumericValue (borrowed from the lines). No spelling.
  *   - degree and alteration: the scale degree label of the pitch class in the key on `tonic_pitch_class` and `mode`.
- *   - strength: the BeatStrength of the note's attack, from the segment members.
- *   - nct: from the chord result of the note's FIRST segment (`results`, one per segment): no chord match gives UNCLASSIFIED; a note listed
+ *   - strength: the BeatStrength of the note's attack, from the members of its chord segment.
+ *   - nct: from the chord result of the note's chord segment (`results`, one per chord segment): no chord match gives UNCLASSIFIED; a note listed
  *     among the chord's leftover tones gives NON_CHORD_TONE with its NonChordTone (UNCLASSIFIED when it was left unclassified); a note not
  *     listed gives CHORD_TONE. nct_ref is "<segment id>/<note id>".
- * `entries` are one outer line on the chord segments (chain_build_segment_lines), `count` entries.
- * `segment[i]` is the first segment of entry i. Destroy with chain_melody_line_destroy.
+ * `entries` are one outer line on its own segmentation `line_segments` (the voice lines in the chain, one entry per melody note:
+ * `analysis_chain_outer_voices`), `line_count` entries. The chord results are on the first `count` chord segments `segments`: the
+ * chord segment of an entry is the last whose start is at or before the start of the entry's line segment (the first when none).
+ * The voice segments carry no members, so strength and nct are read on the chord segment. `segment[i]` is the chord segment of the
+ * first line segment of entry i. Destroy with chain_melody_line_destroy.
  */
 typedef struct {
     StandardCounterpointMelodyLine line; /* owned */
     size_t *segment;                     /* owned; line.count entries */
 } ChainMelodyLine;
 
-ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t count, const OuterVoiceEntry *entries,
-                                         const CommonPracticeWeightedResult *results, int tonic_pitch_class,
-                                         CommonPracticeKeyMode mode, ChainMelodyLine *out);
+ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, size_t line_count, const OuterVoiceEntry *entries,
+                                         const ChainSegments *segments, size_t count, const CommonPracticeWeightedResult *results,
+                                         int tonic_pitch_class, CommonPracticeKeyMode mode, ChainMelodyLine *out);
 void chain_melody_line_destroy(ChainMelodyLine *melody);
 
 /*
