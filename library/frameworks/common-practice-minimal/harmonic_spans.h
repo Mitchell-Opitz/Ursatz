@@ -17,12 +17,28 @@
  *   - the first segment of a measure takes its lowest sounding pitch, or the previous measure's bass when
  *     nothing sounds.
  * The bass is -1 only when nothing has sounded yet.
+ *
+ * THE SPANS (R-369). One span per measure to start with, then split where the music changes chord. For a span,
+ * the boundaries are tried from the strongest level present, HALF_BAR boundaries first and then BEAT ones, in
+ * time order, and the span splits at the first boundary that passes every test (a part is the cells on one side,
+ * read as ONE segment: the union of its cells' members, held as at the part's start, its first cell's bass as the
+ * segment bass, require_bass_chord_tone set, through common_practice_identify_weighted):
+ *   (a) both parts match and their best chords have different roots;
+ *   (b) each part is complete: three of its best chord's pitch classes have weight, or its root and third do and
+ *       its bass pitch class is a chord tone;
+ *   (c) each part's bass pitch class is a tone of its best chord;
+ *   (d) (score_left * dur_left + score_right * dur_right) / dur_span >= score_whole + HARMONIC_SPAN_SPLIT_MARGIN.
+ * Both parts are then split the same way, down to BEAT boundaries. When no HALF_BAR or BEAT boundary passes, a
+ * boundary INSIDE a beat is tried last, only at the exact half of a beat and only when, besides (a) to (d), each
+ * part's bass is its best chord's root. A span with no boundary passing stays whole. The result is deterministic:
+ * doubles are summed in cell order.
  */
 
 #include <stdbool.h>
 #include <stddef.h>
 
 #include "non_chord_tones.h"
+#include "weighted_identification.h"
 
 /* The metric level of a segment's START. */
 typedef enum {
@@ -49,5 +65,37 @@ typedef struct {
  * untouched, for a NULL cells or out_bass with a non-zero count, or a cell without a segment; count 0 is true.
  */
 bool harmonic_span_basses(const HarmonicSpanCell *cells, size_t count, int *out_bass);
+
+/* How much better the two parts of a split must score, duration-weighted, than the whole (test (d)). */
+#define HARMONIC_SPAN_SPLIT_MARGIN 0.10
+
+typedef enum {
+    HARMONIC_SPAN_OK = 0,
+    HARMONIC_SPAN_ERR_NULL_ARGUMENT,
+    HARMONIC_SPAN_ERR_BAD_INPUT, /* a cell without a segment, an empty or non-finite time range, an invalid level, a bass
+                                    below -1, a tonic outside 0..11, an unsupported mode or an invalid config */
+    HARMONIC_SPAN_ERR_ALLOC
+} HarmonicSpanStatus;
+
+/* The spans, in time order: span i covers cells first[i] to last[i] inclusive, and its bass is the bass of its first
+   cell. Together they cover every cell once. Owned (harmonic_spans_destroy). */
+typedef struct {
+    size_t count;
+    size_t *first;
+    size_t *last;
+    int *bass;
+} HarmonicSpans;
+
+/*
+ * Groups the cells into spans by the rule above. bass is harmonic_span_basses of the same cells; the key is the
+ * one the chords are read in (tonic_pitch_class 0..11 and mode). config may be NULL for the defaults; its
+ * require_bass_chord_tone is set for every reading regardless. count 0 gives no spans. On OK, *out owns its arrays;
+ * otherwise *out is untouched.
+ */
+HarmonicSpanStatus harmonic_spans_group(const HarmonicSpanCell *cells, size_t count, const int *bass,
+                                        int tonic_pitch_class, CommonPracticeKeyMode mode,
+                                        const CommonPracticeWeightedConfig *config, HarmonicSpans *out);
+
+void harmonic_spans_destroy(HarmonicSpans *spans);
 
 #endif
