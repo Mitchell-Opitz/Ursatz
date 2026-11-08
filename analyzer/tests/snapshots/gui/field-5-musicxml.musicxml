@@ -18,6 +18,10 @@
           <beats>12</beats>
           <beat-type>8</beat-type>
         </time>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
       </attributes>
       <note xml:id="musicxml-P1-0">
         <pitch>
@@ -4671,6 +4675,12 @@
       </note>
     </measure>
     <measure number="18">
+      <attributes>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
+      </attributes>
       <note xml:id="musicxml-P1-286">
         <pitch>
           <step>A</step>
@@ -7539,6 +7549,12 @@
       </note>
     </measure>
     <measure number="23">
+      <attributes>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
+      </attributes>
       <note>
         <rest/>
         <duration>4</duration>
@@ -11982,6 +11998,12 @@
       </note>
     </measure>
     <measure number="38">
+      <attributes>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
+      </attributes>
       <note xml:id="musicxml-P1-823">
         <pitch>
           <step>A</step>
@@ -13894,6 +13916,12 @@
       </note>
     </measure>
     <measure number="41">
+      <attributes>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
+      </attributes>
       <note xml:id="musicxml-P1-1001">
         <pitch>
           <step>D</step>
@@ -15009,6 +15037,12 @@
       </note>
     </measure>
     <measure number="43">
+      <attributes>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
+      </attributes>
       <note>
         <rest/>
         <duration>4</duration>

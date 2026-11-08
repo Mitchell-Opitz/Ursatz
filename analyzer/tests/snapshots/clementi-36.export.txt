@@ -1,11 +1,12 @@
-# Ursatz export v1: piece
+# Ursatz export v2: piece
 title: Clementi 36.mid
 key: C major | meter: 4/4 | tempo: q=176 | measures: 1-38
+clefs: P1 S1 treble, S2 bass
 notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
 
 m1 4/4
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G4 @4 q
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  key C major c=0.20 (m1-m7)
  chord C I @1 c=0.00
  phrase 1 m1-m2 c=0.20 | form A
@@ -17,7 +18,7 @@ m1 4/4
 
 m2
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G5 @4 q
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
  chord Em iii @2 c=0.00
  chord C I @2.5 c=0.00
@@ -26,7 +27,7 @@ m2
 
 m3
  P1 S1 V1: F5 @1 e, E5 @1.5 e, D5 @2 e, C5 @2.5 e, B4 @3 e, C5 @3.5 e, B4 @4 e, C5 @4.5 e
- P2 S2 V1: C3 @1 q, r @2 q, C3 @3 q, r @4 q
+ P1 S2 V2: C3 @1 q, r @2 q, C3 @3 q, r @4 q
  chord Fmaj7/C IV4/3 @1 c=0.87
  phrase 2 m3-m4 c=0.04 | form B
  form B m3-m10 c=0.00
@@ -38,7 +39,7 @@ m3
 
 m4
  P1 S1 V1: D5 @1 e, C5 @1.5 e, B4 @2 e, A4 @2.5 e, G4 @3 q, r @4 q
- P2 S2 V1: G2 @1 q, r @2 q, G3 @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
+ P1 S2 V2: G2 @1 q, r @2 q, G3 @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
  chord G V @1 c=0.80
  cadence HC m4 @1 c=0.04
  chord G/B V6 @2 c=0.80
@@ -50,7 +51,7 @@ m4
 
 m5
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G4 @4 q
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
  phrase 3 m5-m10 c=0.00 | form B
  theme hybrid m5-m10 c=0.00
@@ -60,7 +61,7 @@ m5
 
 m6
  P1 S1 V1: E5 @1 q, G5 @2 e, E5 @2.5 e, C5 @3 q, E5 @4 e, C5 @4.5 e
- P2 S2 V1: C4 @1 q, r @2 q, r @3 q, F#3 @4 q
+ P1 S2 V2: C4 @1 q, r @2 q, r @3 q, F#3 @4 q
  chord C I @1 c=0.31
  chord C/G I6/4 @2 c=0.31
  chord C/E I6 @2.5 c=0.31
@@ -68,7 +69,7 @@ m6
 
 m7
  P1 S1 V1: D5 @1 e, B4 @1.5 e, C5 @2 e, A4 @2.5 e, B4 @3 e, G4 @3.5 e, A4 @4 e, F#4 @4.5 e
- P2 S2 V1: G3 @1 q, C3 @2 q, D3 @3 q, D2 @4 q
+ P1 S2 V2: G3 @1 q, C3 @2 q, D3 @3 q, D2 @4 q
  chord G V @1 c=0.36
  chord Am/C vi6 @2 c=0.64
  chord G/D V6/4 @3 c=0.86
@@ -76,7 +77,7 @@ m7
 
 m8
  P1 S1 V1: G4 @1 e, A4 @1.5 e, B4 @2 e, C5 @2.5 e, D5 @3 e, E5 @3.5 e, F#5 @4 e, G5 @4.5 e
- P2 S2 V1: G2 @1 q, r @2 q, r @3 h
+ P1 S2 V2: G2 @1 q, r @2 q, r @3 h
  key G major c=0.11 (m8-m14)
  modulation C major to G major (m8-m14)
  chord Am7/G ii4/2 @1 c=0.88
@@ -89,7 +90,7 @@ m8
 
 m9
  P1 S1 V1: A4 @1 q, A5 @2 q, A5 @3 q, A5 @4 q
- P2 S2 V1: F#3 @1 e, D4 @1.5 e, A3 @2 e, D4 @2.5 e, F#3 @3 e, D4 @3.5 e, A3 @4 e, D4 @4.5 e
+ P1 S2 V2: F#3 @1 e, D4 @1.5 e, A3 @2 e, D4 @2.5 e, F#3 @3 e, D4 @3.5 e, A3 @4 e, D4 @4.5 e
  chord F#dim vii° @1 c=0.33
  chord D V @1.5 c=0.47
  chord D/A V6/4 @2 c=0.47
@@ -102,7 +103,7 @@ m9
 
 m10
  P1 S1 V1: B4 @1 e, C5 @1.5 e, D5 @2 e, E5 @2.5 e, F#5 @3 e, G5 @3.5 e, A5 @4 e, B5 @4.5 e
- P2 S2 V1: G3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: G3 @1 q, r @2 q, r @3 h
  chord G I @1 c=0.96
  chord G/D I6/4 @2 c=0.96
  chord Em vi @2.5 c=0.00
@@ -113,7 +114,7 @@ m10
 
 m11
  P1 S1 V1: C5 @1 q, C6 @2 q, C6 @3 q, C6 @4 q
- P2 S2 V1: A3 @1 e, D4 @1.5 e, C4 @2 e, D4 @2.5 e, A3 @3 e, D4 @3.5 e, C4 @4 e, D4 @4.5 e
+ P1 S2 V2: A3 @1 e, D4 @1.5 e, C4 @2 e, D4 @2.5 e, A3 @3 e, D4 @3.5 e, C4 @4 e, D4 @4.5 e
  chord Am ii @1 c=0.33
  phrase 4 m11-m14 c=0.11 | form C
  form C m11-m24 c=0.03
@@ -128,7 +129,7 @@ m11
 
 m12
  P1 S1 V1: D5 @1 e, G5 @1.5 e, B5 @2 e, D6 @2.5 e, C6 @3 e, B5 @3.5 e, A5 @4 e, G5 @4.5 e
- P2 S2 V1: B3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: B3 @1 q, r @2 q, r @3 h
  chord G/B I6 @1 c=0.90
  chord G/B I6 @2 c=0.90
  chord G/D I6/4 @2.5 c=0.90
@@ -139,7 +140,7 @@ m12
 
 m13
  P1 S1 V1: F#5 @1 e, E5 @1.5 e, G5 @2 e, F#5 @2.5 e, A5 @3 e, G5 @3.5 e, F#5 @4 e, E5 @4.5 e
- P2 S2 V1: C4 @1 q, r @2 q, C3 @3 q, r @4 q
+ P1 S2 V2: C4 @1 q, r @2 q, C3 @3 q, r @4 q
  chord F#m7b5/C vii∅4/3 @1 c=0.87
  chord G I @2 c=0.00
  chord F#dim vii° @2.5 c=0.00
@@ -149,7 +150,7 @@ m13
 
 m14
  P1 S1 V1: E5 @1 e, D5 @1.5 e, C5 @2 e, B4 @2.5 e, D5 @3 e, C5 @3.5 e, B4 @4 e, A4 @4.5 e
- P2 S2 V1: D3 @1 q, r @2 q, D2 @3 q, r @4 q
+ P1 S2 V2: D3 @1 q, r @2 q, D2 @3 q, r @4 q
  chord Em7/D vi4/2 @1 c=0.70
  chord C IV @2 c=0.00
  chord Bm iii @2.5 c=0.00
@@ -160,7 +161,7 @@ m14
 
 m15
  P1 S1 V1: G4 @1 h, r @3 h
- P2 S2 V1: G2 @1 e, B2 @1.5 e, D3 @2 e, G3 @2.5 e, G2 @3 q, r @4 q
+ P1 S2 V2: G2 @1 e, B2 @1.5 e, D3 @2 e, G3 @2.5 e, G2 @3 q, r @4 q
  key C minor c=0.08 (m15-m19)
  modulation G major to C minor (m15-m19)
  chord G V @1 c=0.00
@@ -170,22 +171,22 @@ m15
  chord G/D V6/4 @2 c=0.12
  chord G V @3 c=0.00
 
-m16
+m16 clef S2 treble
  P1 S1 V1: B4 @1 q, D5 @2 e, B4 @2.5 e, G4 @3 q, G4 @4 q
- P2 S1 V2: F4 @1 w
+ P1 S2 V2: F4 @1 w
  chord Bdim/F viio6/4 @1 c=0.83
  chord Bdim/F viio6/4 @2 c=0.83
  chord G7/F V4/2 @3 c=0.50
 
 m17
  P1 S1 V1: C5 @1 q, D#5 @2 e, C5 @2.5 e, G4 @3 q, G5 @4 q
- P2 S1 V2: D#4 @1 w
+ P1 S2 V2: D#4 @1 w
  chord Cm/Eb i6 @1 c=0.55
  chord Eb III @3 c=0.28
 
-m18
+m18 clef S2 bass
  P1 S1 V1: F5 @1 q, D5 @2 q, D#5 @3 q, C5 @4 q
- P2 S1 V2: B3 @1 h, C4 @3 h
+ P1 S2 V2: B3 @1 h, C4 @3 h
  chord Bdim viio @1 c=0.35
  chord Bdim viio @2 c=0.22
  chord Cm i @3 c=0.30
@@ -193,7 +194,7 @@ m18
 
 m19
  P1 S1 V1: B4 @1 e, C5 @1.5 e, D5 @2 e, B4 @2.5 e, G4 @3 q, G4 @4 q
- P2 S1 V2: G3 @1 h, r @3 h
+ P1 S2 V2: G3 @1 h, r @3 h
  chord G V @1 c=0.67
  cadence HC m19 @1 c=0.03
  chord G V @2 c=0.35
@@ -201,7 +202,7 @@ m19
 
 m20
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
- P2 S1 V2: F4 @1 q, G3 @2 q, D4 @3 q, G3 @4 q
+ P1 S2 V2: F4 @1 q, G3 @2 q, D4 @3 q, G3 @4 q
  key G major c=0.10 (m20-m23)
  modulation C minor to G major (m20-m23)
  phrase 6 m20-m24 c=0.10 | form C
@@ -211,14 +212,14 @@ m20
 
 m21
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
- P2 S1 V2: D#4 @1 q, G3 @2 q, C4 @3 q, G3 @4 q
+ P1 S2 V2: D#4 @1 q, G3 @2 q, C4 @3 q, G3 @4 q
  chord C/G IV6/4 @2 c=0.28
  chord C IV @3 c=0.28
  chord C/G IV6/4 @4 c=0.28
 
 m22
  P1 S1 V1: D5 @1 e, D#5 @1.5 e, F5 @2 e, D5 @2.5 e, F5 @3 e, D#5 @3.5 e, D5 @4 e, C5 @4.5 e
- P2 S1 V2: B3 @1 q, r @2 q, C4 @3 q, r @4 q
+ P1 S2 V2: B3 @1 q, r @2 q, C4 @3 q, r @4 q
  chord Bm iii @1 c=0.13
  chord D V @2.5 c=0.00
  chord D V @4 c=0.00
@@ -226,8 +227,7 @@ m22
 
 m23
  P1 S1 V1: B4+G5 @1 q, r @2 q, r @3 h
- P2 S1 V2: G3 @1 q, r @2 q, G3 @3 e
- P2 S2 V1: r @1 q, G2 @2 q, r @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
+ P1 S2 V2: G3 @1 q, G2 @2 q, G3 @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
  chord G I @1 c=0.15
  chord G I @2 c=0.15
  chord Em vi @4 c=0.00
@@ -236,7 +236,7 @@ m23
 
 m24
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G3 @4 q
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  key C major c=0.31 (m24-m38)
  modulation G major to C major (m24-m38)
  chord C I @1 c=0.00
@@ -247,7 +247,7 @@ m24
 
 m25
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G4 @4 q
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
  phrase 7 m25 c=0.31 | form D
  form D m25 c=0.31
@@ -258,7 +258,7 @@ m25
 
 m26
  P1 S1 V1: F4 @1 e, E4 @1.5 e, D4 @2 e, C4 @2.5 e, B3 @3 e, C4 @3.5 e, B3 @4 e, C4 @4.5 e
- P2 S2 V1: C3 @1 q, r @2 q, C3 @3 q, r @4 q
+ P1 S2 V2: C3 @1 q, r @2 q, C3 @3 q, r @4 q
  chord Fmaj7/C IV4/3 @1 c=0.87
  phrase 8 m26-m27 c=0.06 | form E
  form E m26-m33 c=0.01
@@ -270,7 +270,7 @@ m26
 
 m27
  P1 S1 V1: D4 @1 e, C4 @1.5 e, B3 @2 e, A3 @2.5 e, G3 @3 q, r @4 q
- P2 S2 V1: G2 @1 q, r @2 q, G2 @3 e, F2 @3.5 e, E2 @4 e, D2 @4.5 e
+ P1 S2 V2: G2 @1 q, r @2 q, G2 @3 e, F2 @3.5 e, E2 @4 e, D2 @4.5 e
  chord G V @1 c=0.80
  cadence HC m27 @1 c=0.06
  chord G/B V6 @2 c=0.80
@@ -282,7 +282,7 @@ m27
 
 m28
  P1 S1 V1: C4 @1 q, G3 @2 e, C4 @2.5 e, E4 @3 q, E4 @4 q
- P2 S2 V1: C2 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C2 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
  phrase 9 m28-m33 c=0.01 | form E
  theme hybrid m28-m33 c=0.01
@@ -292,7 +292,7 @@ m28
 
 m29
  P1 S1 V1: E4 @1 q, C4 @2 e, E4 @2.5 e, G4 @3 q, C5 @4 q
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.31
  chord C I @2 c=0.31
  chord C/E I6 @2.5 c=0.31
@@ -301,7 +301,7 @@ m29
 
 m30
  P1 S1 V1: E4+G4 @1 q, D4+F4 @2 q, C4+E4 @3 q, B3+D4 @4 q
- P2 S2 V1: G3 @1 q, r @2 q, G2 @3 q, r @4 q
+ P1 S2 V2: G3 @1 q, r @2 q, G2 @3 q, r @4 q
  chord C/G I6/4 @1 c=0.31
  chord Dm ii @2 c=0.31
  chord C/G I6/4 @3 c=0.69
@@ -309,7 +309,7 @@ m30
 
 m31
  P1 S1 V1: C4 @1 e, D4 @1.5 e, E4 @2 e, F4 @2.5 e, G4 @3 e, A4 @3.5 e, B4 @4 e, C5 @4.5 e
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord Dm7/C ii4/2 @1 c=0.88
  chord Em iii @2 c=0.00
  chord F IV @2.5 c=0.00
@@ -320,7 +320,7 @@ m31
 
 m32
  P1 S1 V1: D4 @1 q, D5 @2 q, D5 @3 q, D5 @4 q
- P2 S2 V1: B2 @1 e, G3 @1.5 e, D3 @2 e, G3 @2.5 e, B2 @3 e, G3 @3.5 e, D3 @4 e, G3 @4.5 e
+ P1 S2 V2: B2 @1 e, G3 @1.5 e, D3 @2 e, G3 @2.5 e, B2 @3 e, G3 @3.5 e, D3 @4 e, G3 @4.5 e
  chord Bdim vii° @1 c=0.33
  chord G V @1.5 c=0.47
  chord G/D V6/4 @2 c=0.47
@@ -333,7 +333,7 @@ m32
 
 m33
  P1 S1 V1: E4 @1 e, F4 @1.5 e, G4 @2 e, A4 @2.5 e, B4 @3 e, C5 @3.5 e, D5 @4 e, E5 @4.5 e
- P2 S2 V1: C3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.96
  chord C/G I6/4 @2 c=0.96
  chord Am vi @2.5 c=0.00
@@ -344,7 +344,7 @@ m33
 
 m34
  P1 S1 V1: F4 @1 q, F5 @2 q, F5 @3 q, F5 @4 q
- P2 S2 V1: D3 @1 e, G3 @1.5 e, F3 @2 e, G3 @2.5 e, D3 @3 e, G3 @3.5 e, F3 @4 e, G3 @4.5 e
+ P1 S2 V2: D3 @1 e, G3 @1.5 e, F3 @2 e, G3 @2.5 e, D3 @3 e, G3 @3.5 e, F3 @4 e, G3 @4.5 e
  chord Dm ii @1 c=0.33
  phrase 10 m34-m38 c=0.31 | form F
  form F m34-m38 c=0.31
@@ -359,7 +359,7 @@ m34
 
 m35
  P1 S1 V1: G4 @1 e, C5 @1.5 e, E5 @2 e, G5 @2.5 e, F5 @3 e, E5 @3.5 e, D5 @4 e, C5 @4.5 e
- P2 S2 V1: E3 @1 q, r @2 q, r @3 h
+ P1 S2 V2: E3 @1 q, r @2 q, r @3 h
  chord C/E I6 @1 c=0.90
  chord C/E I6 @2 c=0.90
  chord C/G I6/4 @2.5 c=0.90
@@ -370,7 +370,7 @@ m35
 
 m36
  P1 S1 V1: A5 @1 e, G5 @1.5 e, F5 @2 e, E5 @2.5 e, D5 @3 e, C5 @3.5 e, B4 @4 e, A4 @4.5 e
- P2 S2 V1: F3 @1 q, r @2 q, F3 @3 q, r @4 q
+ P1 S2 V2: F3 @1 q, r @2 q, F3 @3 q, r @4 q
  chord F IV @1 c=0.67
  chord F IV @2 c=0.67
  chord Em iii @2.5 c=0.00
@@ -380,7 +380,7 @@ m36
 
 m37
  P1 S1 V1: G4 @1 e, A4 @1.5 e, F4 @2 e, G4 @2.5 e, E4 @3 e, F4 @3.5 e, D4 @4 e, E4 @4.5 e
- P2 S2 V1: G3 @1 q, r @2 q, G2 @3 q, r @4 q
+ P1 S2 V2: G3 @1 q, r @2 q, G2 @3 q, r @4 q
  chord Am7/G vi4/2 @1 c=0.88
  chord F IV @2 c=0.00
  chord G V @2.5 c=0.00
@@ -391,7 +391,7 @@ m37
 
 m38
  P1 S1 V1: C4 @1 q, r @2 q, r @3 h
- P2 S2 V1: C2 @1 e, E2 @1.5 e, G2 @2 e, C3 @2.5 e, C2 @3 q, r @4 q
+ P1 S2 V2: C2 @1 e, E2 @1.5 e, G2 @2 e, C3 @2.5 e, C2 @3 q
  chord C I @1 c=0.00
  chord C/E I6 @1.5 c=0.31
  chord G V @2 c=0.00

@@ -1,4 +1,4 @@
-# Ursatz export v1: theme
+# Ursatz export v2: theme
 name: Opening theme
 id: theme-3
 version: 2
