@@ -120,8 +120,7 @@ static void build(Piece *piece, const Note *notes, size_t note_count, int bars) 
 }
 
 static void group(const Piece *piece, HarmonicSpans *spans) {
-    assert(harmonic_spans_group(piece->cells, piece->count, piece->bass, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, spans) ==
-           HARMONIC_SPAN_OK);
+    assert(harmonic_spans_group(piece->cells, piece->count, piece->bass, NULL, spans) == HARMONIC_SPAN_OK);
 }
 
 /* The first cell of every span starts at these sixteenths (in order); the count must match. */
@@ -310,38 +309,38 @@ static void test_bad_input_is_refused(void) {
     build(&piece, MOZART_M2, COUNT(MOZART_M2), 1);
     HarmonicSpans spans;
     memset(&spans, 0, sizeof(spans));
-    const CommonPracticeWeightedConfig defaults = common_practice_weighted_config_default();
+    CommonPracticeWeightedConfig defaults = common_practice_weighted_config_default();
 
-    assert(harmonic_spans_group(NULL, piece.count, piece.bass, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &spans) ==
+    assert(harmonic_spans_group(NULL, piece.count, piece.bass, NULL, &spans) ==
            HARMONIC_SPAN_ERR_NULL_ARGUMENT);
-    assert(harmonic_spans_group(piece.cells, piece.count, NULL, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &spans) ==
+    assert(harmonic_spans_group(piece.cells, piece.count, NULL, NULL, &spans) ==
            HARMONIC_SPAN_ERR_NULL_ARGUMENT);
-    assert(harmonic_spans_group(piece.cells, piece.count, piece.bass, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, NULL) ==
+    assert(harmonic_spans_group(piece.cells, piece.count, piece.bass, NULL, NULL) ==
            HARMONIC_SPAN_ERR_NULL_ARGUMENT);
-    assert(harmonic_spans_group(piece.cells, piece.count, piece.bass, 12, COMMON_PRACTICE_KEY_MAJOR, NULL, &spans) ==
+    CommonPracticeWeightedConfig broken = defaults;
+    broken.held_factor = -1.0;
+    assert(harmonic_spans_group(piece.cells, piece.count, piece.bass, &broken, &spans) ==
            HARMONIC_SPAN_ERR_BAD_INPUT);
-    assert(harmonic_spans_group(piece.cells, piece.count, piece.bass, 0, (CommonPracticeKeyMode)99, &defaults,
-                                &spans) == HARMONIC_SPAN_ERR_BAD_INPUT);
 
     HarmonicSpanCell bad = piece.cells[0];
     bad.end = bad.start;
-    assert(harmonic_spans_group(&bad, 1, piece.bass, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &spans) ==
+    assert(harmonic_spans_group(&bad, 1, piece.bass, NULL, &spans) ==
            HARMONIC_SPAN_ERR_BAD_INPUT);
     bad = piece.cells[0];
     bad.segment = NULL;
-    assert(harmonic_spans_group(&bad, 1, piece.bass, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &spans) ==
+    assert(harmonic_spans_group(&bad, 1, piece.bass, NULL, &spans) ==
            HARMONIC_SPAN_ERR_BAD_INPUT);
     assert(!harmonic_span_basses(&bad, 1, piece.bass));
     bad = piece.cells[0];
     bad.level = (HarmonicSpanLevel)7;
-    assert(harmonic_spans_group(&bad, 1, piece.bass, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &spans) ==
+    assert(harmonic_spans_group(&bad, 1, piece.bass, NULL, &spans) ==
            HARMONIC_SPAN_ERR_BAD_INPUT);
     assert(!harmonic_span_basses(NULL, 1, piece.bass) && !harmonic_span_basses(piece.cells, 1, NULL));
     assert(spans.first == NULL && spans.count == 0); /* untouched on every error */
 
     /* no cells: no spans */
     assert(harmonic_span_basses(NULL, 0, NULL));
-    assert(harmonic_spans_group(NULL, 0, NULL, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &spans) == HARMONIC_SPAN_OK);
+    assert(harmonic_spans_group(NULL, 0, NULL, NULL, &spans) == HARMONIC_SPAN_OK);
     assert(spans.count == 0 && spans.first == NULL);
     harmonic_spans_destroy(&spans);
     harmonic_spans_destroy(NULL);

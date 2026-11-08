@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "weighted_chord_identification.h"
 
 #define BASS_PERSIST_SEMITONES 12
 #define TIME_TOLERANCE 1e-9
@@ -63,8 +62,6 @@ typedef struct {
     const HarmonicSpanCell *cells;
     size_t count;
     const int *bass;
-    int tonic_pitch_class;
-    CommonPracticeKeyMode mode;
     CommonPracticeWeightedConfig config; /* require_bass_chord_tone set */
     CommonPracticeMember *scratch;       /* room for every member of every cell */
     HarmonicSpans spans;                 /* capacity: count */
@@ -91,6 +88,50 @@ static HarmonicSpanStatus map_status(CommonPracticeWeightedStatus status) {
     default:
         return HARMONIC_SPAN_ERR_BAD_INPUT;
     }
+}
+
+/* The chords grouping reads: major, minor and diminished triads, dominant sevenths and diminished sevenths. The
+   other sevenths are left out: two chords a third apart (I and vi) would read as one seventh chord. */
+static bool allowed_in_grouping(const CommonPracticeRankedChord *chord) {
+    int intervals[4];
+    size_t count = common_practice_ranked_chord_intervals(chord, intervals);
+    if (count == 3) {
+        return intervals[1] == 4 ? intervals[2] == 7 : (intervals[1] == 3 && (intervals[2] == 7 || intervals[2] == 6));
+    }
+    return count == 4 && chord->is_seventh &&
+           (chord->seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7 || chord->seventh == COMMON_PRACTICE_SEVENTH_DIMINISHED7);
+}
+
+/* The best chord of the weights over every key: for tonic 0 to 11 in major, then in minor, the first ranked candidate
+   of an allowed quality; a later key replaces the best only when strictly higher. False when no key has one. */
+static HarmonicSpanStatus best_chord_over_keys(const CommonPracticeWeights *weights,
+                                               const CommonPracticeWeightedConfig *config,
+                                               CommonPracticeRankedChord *best, int *best_tonic, bool *found) {
+    *found = false;
+    for (int m = 0; m < 2; m++) {
+        CommonPracticeKeyMode mode = m == 0 ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR;
+        for (int tonic = 0; tonic < 12; tonic++) {
+            CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+            size_t ranked_count = 0;
+            HarmonicSpanStatus status =
+                map_status(common_practice_rank_candidates(weights, tonic, mode, config, ranked, &ranked_count));
+            if (status != HARMONIC_SPAN_OK) {
+                return status;
+            }
+            for (size_t i = 0; i < ranked_count; i++) {
+                if (!allowed_in_grouping(&ranked[i])) {
+                    continue;
+                }
+                if (!*found || ranked[i].score > best->score + TIME_TOLERANCE) {
+                    *best = ranked[i];
+                    *best_tonic = tonic;
+                    *found = true;
+                }
+                break;
+            }
+        }
+    }
+    return HARMONIC_SPAN_OK;
 }
 
 static bool same_text(const char *a, const char *b) {
@@ -131,11 +172,10 @@ static size_t merge_members(const Grouper *g, size_t a, size_t b) {
     return n;
 }
 
-/* Reads cells a..b as one segment over the first cell's bass. */
+/* Reads cells a..b as one segment over the first cell's bass, in no key: the best chord over all 24 keys. */
 static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Reading *out) {
     size_t n = merge_members(g, a, b);
-    CommonPracticeSegment segment = {g->scratch, n, READING_ID, 0, g->bass[a] >= 0, g->bass[a]};
-    const int *bass_override = segment.has_bass ? &segment.bass_pitch : NULL;
+    const int *bass_override = g->bass[a] >= 0 ? &g->bass[a] : NULL;
 
     CommonPracticeWeights weights;
     HarmonicSpanStatus status =
@@ -143,18 +183,25 @@ static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Readin
     if (status != HARMONIC_SPAN_OK) {
         return status;
     }
-    CommonPracticeWeightedResult result;
-    status = map_status(common_practice_identify_weighted(&segment, g->tonic_pitch_class, g->mode, &g->config, &result));
-    if (status != HARMONIC_SPAN_OK) {
-        return status;
+    Reading reading = {false, 0.0, -1, false, false, false};
+    CommonPracticeRankedChord best;
+    int best_tonic = 0;
+    bool found = false;
+    if (n > 0) {
+        status = best_chord_over_keys(&weights, &g->config, &best, &best_tonic, &found);
+        if (status != HARMONIC_SPAN_OK) {
+            return status;
+        }
     }
-
-    Reading reading = {result.matched, result.best_score, -1, false, false, false};
-    if (result.matched) {
-        unsigned mask = common_practice_ranked_chord_mask(&result.best, g->tonic_pitch_class);
+    if (found) {
+        reading.score = best.score;
+        reading.matched = best.score >= g->config.min_coverage;
+    }
+    if (reading.matched) {
+        unsigned mask = common_practice_ranked_chord_mask(&best, best_tonic);
         int intervals[4];
-        size_t interval_count = common_practice_ranked_chord_intervals(&result.best, intervals);
-        int root = result.best.root_pitch_class;
+        size_t interval_count = common_practice_ranked_chord_intervals(&best, intervals);
+        int root = best.root_pitch_class;
         int bass_pc = weights.bass_pitch_class;
         int sounding = 0;
         for (int pc = 0; pc < 12; pc++) {
@@ -172,7 +219,6 @@ static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Readin
         }
         reading.complete = sounding >= 3 || (has_root && has_third && reading.bass_in_chord);
     }
-    common_practice_weighted_result_destroy(&result);
     *out = reading;
     return HARMONIC_SPAN_OK;
 }
@@ -272,10 +318,7 @@ static HarmonicSpanStatus group_range(Grouper *g, size_t a, size_t b) {
     return add_span(g, a, b);
 }
 
-static HarmonicSpanStatus validate(const HarmonicSpanCell *cells, size_t count, const int *bass, int tonic_pitch_class) {
-    if (tonic_pitch_class < 0 || tonic_pitch_class > 11) {
-        return HARMONIC_SPAN_ERR_BAD_INPUT;
-    }
+static HarmonicSpanStatus validate(const HarmonicSpanCell *cells, size_t count, const int *bass) {
     for (size_t i = 0; i < count; i++) {
         const HarmonicSpanCell *cell = &cells[i];
         if (cell->segment == NULL || (cell->segment->members == NULL && cell->segment->member_count > 0) ||
@@ -288,12 +331,11 @@ static HarmonicSpanStatus validate(const HarmonicSpanCell *cells, size_t count, 
 }
 
 HarmonicSpanStatus harmonic_spans_group(const HarmonicSpanCell *cells, size_t count, const int *bass,
-                                        int tonic_pitch_class, CommonPracticeKeyMode mode,
                                         const CommonPracticeWeightedConfig *config, HarmonicSpans *out) {
     if (out == NULL || (count > 0 && (cells == NULL || bass == NULL))) {
         return HARMONIC_SPAN_ERR_NULL_ARGUMENT;
     }
-    HarmonicSpanStatus status = validate(cells, count, bass, tonic_pitch_class);
+    HarmonicSpanStatus status = validate(cells, count, bass);
     if (status != HARMONIC_SPAN_OK) {
         return status;
     }
@@ -307,8 +349,6 @@ HarmonicSpanStatus harmonic_spans_group(const HarmonicSpanCell *cells, size_t co
     g.cells = cells;
     g.count = count;
     g.bass = bass;
-    g.tonic_pitch_class = tonic_pitch_class;
-    g.mode = mode;
     g.config = config != NULL ? *config : common_practice_weighted_config_default();
     g.config.require_bass_chord_tone = true;
     size_t members = 1;

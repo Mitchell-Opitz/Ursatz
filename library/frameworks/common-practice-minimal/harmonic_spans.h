@@ -18,11 +18,21 @@
  *     nothing sounds.
  * The bass is -1 only when nothing has sounded yet.
  *
+ * THE READING. A part (the cells on one side of a boundary, or a whole measure) is read as ONE segment: the union
+ * of its cells' members, held as at the part's start, over its first cell's bass, with require_bass_chord_tone set.
+ * It is read in no key: the best chord over all 24 keys (tonic 0 to 11 in major, then in minor; in each key the
+ * first ranked candidate of an allowed quality; a later key replaces the best only when strictly higher). The
+ * allowed qualities are the major, minor and diminished triads, the dominant seventh and the diminished seventh.
+ * Two chords a third apart (I and vi) would read as one major or minor seventh at full score, so those sevenths are
+ * left out of grouping only (the chain still identifies chords on spans with the full vocabulary); and a home key
+ * would miss every chord outside it, and so every modulation. A part is matched when its best score reaches the
+ * config's min_coverage.
+ *
  * THE SPANS (R-369). One span per measure to start with, then split where the music changes chord. For a span,
  * the boundaries are tried from the strongest level present, HALF_BAR boundaries first and then BEAT ones, in
  * time order, and the span splits at the first boundary that passes every test (a part is the cells on one side,
  * read as ONE segment: the union of its cells' members, held as at the part's start, its first cell's bass as the
- * segment bass, require_bass_chord_tone set, through common_practice_identify_weighted):
+ * segment bass, require_bass_chord_tone set, over the reading above):
  *   (a) both parts match and their best chords have different roots;
  *   (b) each part is complete: three of its best chord's pitch classes have weight, or its root and third do and
  *       its bass pitch class is a chord tone;
@@ -73,7 +83,7 @@ typedef enum {
     HARMONIC_SPAN_OK = 0,
     HARMONIC_SPAN_ERR_NULL_ARGUMENT,
     HARMONIC_SPAN_ERR_BAD_INPUT, /* a cell without a segment, an empty or non-finite time range, an invalid level, a bass
-                                    below -1, a tonic outside 0..11, an unsupported mode or an invalid config */
+                                    below -1 or an invalid config */
     HARMONIC_SPAN_ERR_ALLOC
 } HarmonicSpanStatus;
 
@@ -87,13 +97,11 @@ typedef struct {
 } HarmonicSpans;
 
 /*
- * Groups the cells into spans by the rule above. bass is harmonic_span_basses of the same cells; the key is the
- * one the chords are read in (tonic_pitch_class 0..11 and mode). config may be NULL for the defaults; its
- * require_bass_chord_tone is set for every reading regardless. count 0 gives no spans. On OK, *out owns its arrays;
- * otherwise *out is untouched.
+ * Groups the cells into spans by the rule above. bass is harmonic_span_basses of the same cells. config may be NULL
+ * for the defaults; its require_bass_chord_tone is set for every reading regardless, and its min_coverage is the
+ * score a reading needs to match. count 0 gives no spans. On OK, *out owns its arrays; otherwise *out is untouched.
  */
 HarmonicSpanStatus harmonic_spans_group(const HarmonicSpanCell *cells, size_t count, const int *bass,
-                                        int tonic_pitch_class, CommonPracticeKeyMode mode,
                                         const CommonPracticeWeightedConfig *config, HarmonicSpans *out);
 
 void harmonic_spans_destroy(HarmonicSpans *spans);
