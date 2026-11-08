@@ -33,6 +33,10 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
+        <clef>
+          <sign>G</sign>
+          <line>2</line>
+        </clef>
       </attributes>
       <sound tempo="170.000085000043"/>
       <note xml:id="composer-span-9-note-0">
@@ -509,6 +513,10 @@
           <beats>4</beats>
           <beat-type>4</beat-type>
         </time>
+        <clef>
+          <sign>F</sign>
+          <line>4</line>
+        </clef>
       </attributes>
       <note xml:id="composer-span-6-note-0">
         <pitch>
