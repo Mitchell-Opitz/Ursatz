@@ -12,6 +12,7 @@
 #include "standard-harmony/analysis/analysis_cadence.h"
 #include "standard-tonality/analysis/chord_input.h"
 #include "galant-schemas/analysis/galant_analysis_input.h"
+#include "common-practice-minimal/harmonic_spans.h"
 #include "common-practice-minimal/key_regions.h"
 #include "standard-meter/analysis/meter_analysis_input.h"
 #include "standard-texture/analysis/texture_analysis_input.h"
@@ -78,6 +79,23 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
 
 /* Destroys the sonorities, ids, windows, members and segments. NULL is a no-op; the struct is zeroed. */
 void chain_segments_destroy(ChainSegments *segments);
+
+/*
+ * The cells of harmonic span grouping (harmonic_spans.h), one per segment of `segments` (members built): the segment's view, its window in
+ * whole notes, the measure its start lies in and the metric level of its start, read in the signature of that measure with standard-meter's
+ * metric level (the downbeat is a BAR, the secondary beat of a quadruple meter a HALF_BAR, another beat a BEAT, anything else INNER). The
+ * cells borrow `segments`. Free with chain_span_cells_destroy.
+ */
+ChainInputStatus chain_build_span_cells(const AnalysisNoteSet *notes, const ChainSegments *segments, HarmonicSpanCell **out);
+void chain_span_cells_destroy(HarmonicSpanCell *cells);
+
+/*
+ * Replaces `segs` with one segment per harmonic span (R-369, R-372): the union of its cells' sounding notes (a note held when it started
+ * before the span), the window from the first cell's start to the last cell's end, ids "seg-<n>" renumbered, the members rebuilt
+ * (chain_build_members; `beat` is 0 for a span longer than one beat) and each segment given the span's bass (has_bass and bass_pitch,
+ * unless the bass is -1). `segs` needs its members and `spans` must cover its segments once, in order. A failed merge leaves `segs` untouched.
+ */
+ChainInputStatus chain_merge_segments(const AnalysisNoteSet *notes, ChainSegments *segs, const HarmonicSpans *spans);
 
 /* The weighted key segment of each of the first `count` segments (window, weights, source members) for key_regions_estimate. weighting
    may be NULL for the defaults. Needs the members. Free with chain_key_segments_destroy. */
