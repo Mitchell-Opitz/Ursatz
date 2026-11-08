@@ -111,6 +111,10 @@ Rules about how pitches relate within a key:
   interval (a perfect fifth above F is C, a diminished fifth is C-flat).
 - **Triads, seventh chords and chord symbols**: see [standard-tonality-chords.md](../../docs/modules/standard-tonality-chords.md).
 - **Roman numerals, the grammar, analysis and key functions**: see [standard-tonality-numerals-and-keys.md](../../docs/modules/standard-tonality-numerals-and-keys.md).
+## Segment bass input
+
+`StandardTonalitySegmentInput` carries `has_bass` and `bass_pitch` (semitone number, C4 = 60). Zero-initialized, the inversion is read from the lowest chord tone of `pitches`, as before. With `has_bass`, the chord member on `bass_pitch`'s pitch class is the bass, whatever lower pitches sound, so a held bass reads as root position under a passing lower note. A bass that is not a chord member falls back to the previous segment's bass, as without one. `pitches` may be empty when a bass is given.
+
 ## Modes on pitch classes and semitones
 
 `standard_tonality_mode_pitch_classes` (`tonal_key.h`) gives a mode's scale on a tonic as a 12-bit pitch class mask; a minor set built from several forms is a union of masks. `standard_tonality_degree_of_semitone` reads a semitone above the tonic as a degree and an alteration, a note outside the scale being the lower degree raised. Owners for the Composer's scale mask and degree tables.

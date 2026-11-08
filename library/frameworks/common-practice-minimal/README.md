@@ -119,6 +119,10 @@ specifically. Enforced by
 
 `common_practice_home_key_region` (`key_regions.h`) gives the home key of a piece from its regions: the key with the longest total duration, the earliest on a tie, summed on checked `Rational`. `common_practice_ranked_chord_quality_name` and `common_practice_ranked_chord_inversion` (`weighted_identification.h`) name a ranked chord's quality and place its bass among its tones. `common_practice_scale_degree_of` (`outer_scale_degrees.h`) gives a pitch class's scale degree (1 to 7) and alteration (-1, 0, 1) as numbers; `common_practice_scale_degree_label` is built over it.
 
+## Segment bass (R-370)
+
+`CommonPracticeSegment` carries `has_bass` and `bass_pitch` (semitone number, C4 = 60). Zero-initialized, the bass is the lowest sounding pitch, as before. With `has_bass`, `common_practice_identify_weighted` and `_sequence` pass `bass_pitch` to `common_practice_weight_segment` (its last parameter, `NULL` for the lowest pitch): the bass weight multiplies the members on that pitch class, and when none sounds it the weights are unchanged and only the bass is set. `CommonPracticeWeightedConfig.require_bass_chord_tone` (default false) limits the candidates to chords holding the bass pitch class, unless none does; the tie-break order is unchanged. An arpeggio union takes the first segment's bass when it has one. Nothing in the chain sets either yet.
+
 ## Neutral analysis input
 
 `common_practice_member_from_analysis_note` (`weighted_identification.h`) makes a `CommonPracticeMember` from an `AnalysisNote` and the segment's span: `held` when the note starts before the segment, `duration` the overlap and `onset` the note start, in whole notes as `double` (`rational_to_double`), `pitch` the note's `midi`. `key_regions.h` maps a region's key to an `AnalysisKey` (`common_practice_key_region_analysis_key`) and an `AnalysisKeyEvent` to a `CommonPracticeKeySignatureEvent` (`common_practice_key_signature_event_from_analysis`).
