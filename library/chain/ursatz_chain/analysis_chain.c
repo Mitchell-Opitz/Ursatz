@@ -569,7 +569,7 @@ static AnalysisChainStatus meter_stage(AnalysisChain *chain) {
         labels[s] = p->chords[s].matched ? chord_label(p->chords[s].best_chord) : NULL;
     }
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->segment_lines, &chain->segs, labels, chain->config.first_measure,
+    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->lines, &chain->segs, labels, chain->config.first_measure,
                                                      last, &p->form_input.input, &p->phrases, &p->expansions, &chain->meter_input);
     free(labels);
     if (built != CHAIN_INPUT_OK) {

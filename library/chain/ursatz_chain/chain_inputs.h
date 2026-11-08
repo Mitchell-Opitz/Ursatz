@@ -112,8 +112,9 @@ ChainInputStatus chain_estimate_key_regions(const CommonPracticeKeySegment *key_
                                             const CommonPracticeKeyRegionsConfig *config, CommonPracticeKeyRegions *out);
 
 /*
- * The outer lines on the chord segments. The outer voices are read on the voice segments (one per melody note, not merged), the harmony,
- * form, meter, galant and melody builders index them by chord segment, so this maps them: entry i of both lines is the entry of the voice
+ * The outer lines on the chord segments. The outer voices are read on the voice segments (one per melody note, not merged). The melody and
+ * meter builders read them there; the harmony, galant and form builders index them by chord segment (the form input moves to the voice lines
+ * in P41, R-377), so this maps them: entry i of both lines is the entry of the voice
  * segment that sounds at the start of chord segment i of the first `count` of `segments` (the last voice segment starting at or before it;
  * absent, over the chord segment's window, when none does). `lines` are the lines of `voice_segments`. The entries are copies, with their own
  * note id, pitch and span, and segment_index is the chord segment's; the result is freed with outer_voice_lines_destroy.
@@ -222,7 +223,7 @@ typedef struct {
     size_t time_capacity;
 } ChainMeterInput;
 
-/* The meter input over the measures [first_measure, last_measure]; `lines` are the outer lines on the chord segments (chain_build_segment_lines). */
+/* The meter input over the measures [first_measure, last_measure]; `lines` are the voice lines (analysis_chain_outer_voices): the input reads only their note ids (which notes are the soprano and the bass), so every melody note counts, not only the one sounding at each chord segment's start. */
 ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const OuterVoiceLines *lines, const ChainSegments *segments,
                                          const char *const *chord_labels, int first_measure, int last_measure,
                                          const StandardFormInput *form, const StandardFormPhrases *phrases,
