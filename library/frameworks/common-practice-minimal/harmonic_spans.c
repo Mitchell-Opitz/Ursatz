@@ -271,6 +271,49 @@ static HarmonicSpanStatus add_span(Grouper *g, size_t a, size_t b, int bass) {
     return HARMONIC_SPAN_OK;
 }
 
+/* Adds the span of cells a..b whose reading is `reading`, cutting it at its half when it lies inside one beat: its
+   first cell is at level BEAT or stronger and every other cell is INNER, a cell starts at the exact half of its time
+   range, both halves are matched, complete and have their bass as a chord tone and read different roots, and they beat
+   the span's score by the margin (R-372 (2)). One cut at most. */
+static HarmonicSpanStatus emit_span(Grouper *g, size_t a, size_t b, const Reading *reading) {
+    size_t half = 0;
+    if (g->cells[a].level != HARMONIC_SPAN_LEVEL_INNER) {
+        bool inside_beat = b > a;
+        for (size_t c = a + 1; c <= b && inside_beat; c++) {
+            inside_beat = g->cells[c].level == HARMONIC_SPAN_LEVEL_INNER;
+        }
+        double middle = 0.5 * (g->cells[a].start + g->cells[b].end);
+        for (size_t c = a + 1; c <= b && inside_beat && half == 0; c++) {
+            if (fabs(g->cells[c].start - middle) <= TIME_TOLERANCE) {
+                half = c;
+            }
+        }
+    }
+    if (half != 0) {
+        Reading left;
+        Reading right;
+        HarmonicSpanStatus status = read_part(g, a, half - 1, &left);
+        if (status != HARMONIC_SPAN_OK) {
+            return status;
+        }
+        status = read_part(g, half, b, &right);
+        if (status != HARMONIC_SPAN_OK) {
+            return status;
+        }
+        if (left.valid && right.valid && left.root_pitch_class != right.root_pitch_class) {
+            double dur_left = g->cells[half - 1].end - g->cells[a].start;
+            double dur_right = g->cells[b].end - g->cells[half].start;
+            double dur_span = g->cells[b].end - g->cells[a].start;
+            double weighted = (left.score * dur_left + right.score * dur_right) / dur_span;
+            if (weighted >= reading->score + HARMONIC_SPAN_SPLIT_MARGIN) {
+                add_span(g, a, half - 1, left.bass);
+                return add_span(g, half, b, right.bass);
+            }
+        }
+    }
+    return add_span(g, a, b, reading->bass);
+}
+
 /* A measure's candidate boundaries: the cells after its first at level HALF_BAR or BEAT (at most
    MAX_BOUNDARIES; no supported meter has more). points[0] is the first cell, points[1..n] the boundaries and
    points[n + 1] one past the last cell: part (i, j) is the cells points[i] to points[j] - 1, read once. */
@@ -396,7 +439,7 @@ static HarmonicSpanStatus group_measure(Grouper *g, size_t a, size_t b) {
         const Reading *reading;
         status = part_reading(g, &m, start, j, &reading);
         if (status == HARMONIC_SPAN_OK) {
-            status = add_span(g, m.points[start], m.points[j] - 1, reading->bass);
+            status = emit_span(g, m.points[start], m.points[j] - 1, reading);
         }
         start = j;
     }

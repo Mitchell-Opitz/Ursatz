@@ -44,7 +44,9 @@
  * measure takes the valid partition with the highest value less HARMONIC_SPAN_PART_COST per part after the first,
  * among those whose value is at least the whole measure's score plus HARMONIC_SPAN_SPLIT_MARGIN; with none it stays
  * whole. Ties (within 1e-9) go to fewer parts, then to the partition whose first differing boundary is earlier. Each
- * part is read once. A greedy split, one boundary at a time against a margin over the whole, could not cut a bar that
+ * part is read once. A resulting span inside one beat (its first cell at level BEAT or stronger, every other INNER)
+ * splits at the cell starting at the exact half of its time range when both halves are valid (matched, complete, bass
+ * a chord tone) and read different roots, and they beat the span's score by the margin; once, and no deeper. A greedy split, one boundary at a time against a margin over the whole, could not cut a bar that
  * changes chord every beat: a part scores at most 1.05, so a whole at 0.95 or more never splits, and each step had to
  * clear the margin alone. The result is deterministic: doubles are summed in cell order.
  */
