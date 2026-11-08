@@ -63,6 +63,37 @@ int main(void) {
     assert(strstr(xml, "<score-partwise version=\"3.1\">") != NULL);
 
     free(xml);
+
+    /* The score export with notated times: measure 4, beat 2 is three sixteenth triplets and two sixteenths, so it
+       carries one 3:2 group. */
+    ScoreQuantizeOptions quantize = score_quantize_options_default();
+    MusicXmlExportScore score;
+    memset(&score, 0, sizeof(score));
+    score.events = events;
+    score.pitch_values = pitch_values;
+    score.count = count;
+    score.quantize = &quantize;
+    char *score_xml = NULL;
+    assert(musicxml_export_write_score(&score, &score_xml) == MUSICXML_EXPORT_OK);
+    const char *measure = strstr(score_xml, "<measure number=\"4\"");
+    assert(measure != NULL);
+    const char *measure_end = strstr(measure, "</measure>");
+    assert(measure_end != NULL);
+    size_t starts = 0;
+    size_t stops = 0;
+    size_t sixteenth_triplets = 0;
+    for (const char *at = measure; at < measure_end; at++) {
+        if (strncmp(at, "<tuplet type=\"start\"/>", 22) == 0) {
+            starts++;
+        } else if (strncmp(at, "<tuplet type=\"stop\"/>", 21) == 0) {
+            stops++;
+        } else if (strncmp(at, "<actual-notes>3</actual-notes>", 30) == 0) {
+            sixteenth_triplets++;
+        }
+    }
+    assert(starts == 1 && stops == 1 && sixteenth_triplets == 3);
+    free(score_xml);
+
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);
         pitch_numeric_value_destroy(pitch_values[i]);
