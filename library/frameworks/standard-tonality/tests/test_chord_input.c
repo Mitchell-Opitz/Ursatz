@@ -149,10 +149,50 @@ static void test_rejects_bad_input(void) {
     musical_time_destroy(zero);
 }
 
+static void test_a_given_bass_gives_root_position_over_a_lower_note(void) {
+    Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
+    MusicalTime *zero = adapter_test_time(0, 1);
+    MusicalTime *one = adapter_test_time(1, 1);
+    MusicalTime *two = adapter_test_time(2, 1);
+    StandardTonalityKeyRegionInput regions[1] = {{c_major, zero, 0.0}};
+    Chord *c_chord = adapter_test_chord("a", 0, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
+    Chord *c_again = adapter_test_chord("b", 0, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
+    int with_lower_g[4] = {43, 48, 52, 55}; /* a G2 sounds under the C3 E3 G3 */
+    int d_pitches[2] = {50, 74};
+    StandardTonalitySegmentInput segments[3] = {
+        {"plain", one, c_chord, NULL, with_lower_g, 4, false, 0},
+        {"given", one, c_chord, NULL, with_lower_g, 4, true, 48},
+        {"not-a-member", two, c_again, NULL, d_pitches, 2, true, 50}};
+
+    StandardTonalityChordInput *inputs = NULL;
+    size_t count = 0;
+    assert(standard_tonality_build_chord_inputs(segments, 3, regions, 1, &inputs, &count) ==
+           STANDARD_TONALITY_CHORD_INPUT_OK);
+    assert(inputs[0].bass_pitch_class == 7);               /* the lowest chord tone, as before: second inversion */
+    assert(inputs[1].bass_pitch_class == 0);               /* the given C3: root position */
+    assert(inputs[2].bass_pitch_class == 0);               /* D is no chord tone: the previous segment's bass stays */
+    standard_tonality_chord_inputs_destroy(inputs);
+
+    /* With no pitches at all, a given bass still reads. */
+    StandardTonalitySegmentInput bare[1] = {{"bare", one, c_chord, NULL, NULL, 0, true, 52}};
+    assert(standard_tonality_build_chord_inputs(bare, 1, regions, 1, &inputs, &count) ==
+           STANDARD_TONALITY_CHORD_INPUT_OK);
+    assert(inputs[0].bass_pitch_class == 4);
+    standard_tonality_chord_inputs_destroy(inputs);
+
+    chord_destroy(c_chord);
+    chord_destroy(c_again);
+    key_destroy(c_major);
+    musical_time_destroy(zero);
+    musical_time_destroy(one);
+    musical_time_destroy(two);
+}
+
 int main(void) {
     test_reads_chord_and_local_key();
     test_segment_without_match_or_key_passes_through();
     test_bass_is_the_lowest_chord_tone();
+    test_a_given_bass_gives_root_position_over_a_lower_note();
     test_rejects_bad_input();
     printf("standard-tonality chord input: all tests passed\n");
     return 0;

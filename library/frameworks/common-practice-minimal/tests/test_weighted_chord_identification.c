@@ -337,7 +337,79 @@ static void test_the_existing_subset_match_functions_are_unchanged(void) {
     assert(triad == COMMON_PRACTICE_TRIAD_I);
 }
 
+static bool same_ranked(const CommonPracticeRankedChord *a, const CommonPracticeRankedChord *b) {
+    return a->degree == b->degree && a->is_seventh == b->is_seventh && a->triad == b->triad &&
+           a->seventh == b->seventh && a->root_pitch_class == b->root_pitch_class && a->score == b->score &&
+           a->tonic_offset == b->tonic_offset && a->form_rank == b->form_rank;
+}
+
+/* G2 held under D5 F#5 A5, in G major: without the bass requirement the upper voices make V (D F# A) the best
+   score; with the bass given as G2 and required in the chord, only chords holding G are eligible and the G chord
+   wins. */
+static void test_a_required_bass_chord_tone_beats_the_upper_voices(void) {
+    CommonPracticeMember members[4] = {note("g2", 43, true, 0.25, S, NULL, 0.0), note("d5", 74, false, 1.0, S, NULL, 0.0),
+                                       note("fs5", 78, false, 1.0, S, NULL, 0.0),
+                                       note("a5", 81, false, 1.0, S, NULL, 0.0)};
+    CommonPracticeSegment seg = segment(members, 4, "sonority-bass");
+    seg.has_bass = true;
+    seg.bass_pitch = 43;
+    CommonPracticeWeightedResult result;
+
+    /* Without the flag: today's result (V, D F# A), also what the same segment gives with no override. */
+    CommonPracticeWeightedResult plain;
+    CommonPracticeSegment unset = segment(members, 4, "sonority-bass");
+    assert(common_practice_identify_weighted(&seg, 7, COMMON_PRACTICE_KEY_MAJOR, NULL, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_identify_weighted(&unset, 7, COMMON_PRACTICE_KEY_MAJOR, NULL, &plain) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(result.matched && result.best.degree == 5 && result.best.root_pitch_class == 2); /* D */
+    assert(same_ranked(&result.best, &plain.best));
+    assert(same_ranked(&result.runner_up, &plain.runner_up));
+    assert(result.best_score == plain.best_score && result.runner_up_score == plain.runner_up_score &&
+           result.uncertainty == plain.uncertainty);
+    common_practice_weighted_result_destroy(&result);
+    common_practice_weighted_result_destroy(&plain);
+
+    /* With it: G, not D. */
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    config.require_bass_chord_tone = true;
+    assert(common_practice_identify_weighted(&seg, 7, COMMON_PRACTICE_KEY_MAJOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(result.matched && result.best.degree == 1 && result.best.root_pitch_class == 7); /* G */
+    common_practice_weighted_result_destroy(&result);
+}
+
+/* A zero-initialized segment (has_bass false) reads exactly as one whose given bass is its lowest pitch, with the
+   flag off; with the flag on, a root-position triad keeps its best chord. */
+static void test_a_segment_without_a_bass_override_reads_as_before(void) {
+    CommonPracticeMember members[3] = {note("c", 48, false, 1.0, S, NULL, 0.0), note("e", 52, false, 1.0, S, NULL, 0.0),
+                                       note("g", 55, false, 1.0, S, NULL, 0.0)};
+    CommonPracticeSegment seg = segment(members, 3, "sonority-1");
+    CommonPracticeSegment given = seg;
+    given.has_bass = true;
+    given.bass_pitch = 48;
+    CommonPracticeWeightedResult a;
+    CommonPracticeWeightedResult b;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &a) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_identify_weighted(&given, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &b) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(same_ranked(&a.best, &b.best) && same_ranked(&a.runner_up, &b.runner_up) && a.best_score == b.best_score &&
+           a.runner_up_score == b.runner_up_score && a.uncertainty == b.uncertainty);
+    common_practice_weighted_result_destroy(&b);
+
+    CommonPracticeWeightedConfig flagged = common_practice_weighted_config_default();
+    flagged.require_bass_chord_tone = true;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, &flagged, &b) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(same_ranked(&a.best, &b.best) && a.best_score == b.best_score);
+    common_practice_weighted_result_destroy(&a);
+    common_practice_weighted_result_destroy(&b);
+}
+
 int main(void) {
+    test_a_required_bass_chord_tone_beats_the_upper_voices();
+    test_a_segment_without_a_bass_override_reads_as_before();
     test_a_pure_triad_resolves_to_its_chord();
     test_the_interpretation_carries_the_confidence();
     test_a_near_tie_reports_the_runner_up_and_a_high_uncertainty();
