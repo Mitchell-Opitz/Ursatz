@@ -353,6 +353,8 @@ add_test(NAME test_musicxml_input COMMAND test_musicxml_input)
 
 add_executable(test_midi_parts test_midi_parts.c)
 target_link_libraries(test_midi_parts PRIVATE ursatz_analyzer)
+target_compile_definitions(test_midi_parts PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_midi_parts COMMAND test_midi_parts)
 find_program(VALGRIND_PROGRAM valgrind)
 
