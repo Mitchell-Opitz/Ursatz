@@ -94,3 +94,14 @@ if(URSATZ_COMMON_PRACTICE_INJECTED_VALGRIND)
   add_test(NAME common_practice_minimal_injected_classifier_valgrind
            COMMAND ${URSATZ_COMMON_PRACTICE_INJECTED_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_common_practice_minimal_injected_classifier>)
 endif()
+
+add_executable(test_common_practice_minimal_harmonic_spans test_harmonic_spans.c)
+target_link_libraries(test_common_practice_minimal_harmonic_spans PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_harmonic_spans COMMAND test_common_practice_minimal_harmonic_spans)
+
+# Memcheck for the harmonic span test (grouping allocates the spans and each reading's chords). Skips silently if valgrind isn't installed.
+find_program(URSATZ_COMMON_PRACTICE_SPANS_VALGRIND valgrind)
+if(URSATZ_COMMON_PRACTICE_SPANS_VALGRIND)
+  add_test(NAME common_practice_minimal_harmonic_spans_valgrind
+           COMMAND ${URSATZ_COMMON_PRACTICE_SPANS_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_common_practice_minimal_harmonic_spans>)
+endif()

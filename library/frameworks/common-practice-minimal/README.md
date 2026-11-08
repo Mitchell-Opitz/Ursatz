@@ -123,6 +123,21 @@ specifically. Enforced by
 
 `CommonPracticeSegment` carries `has_bass` and `bass_pitch` (semitone number, C4 = 60). Zero-initialized, the bass is the lowest sounding pitch, as before. With `has_bass`, `common_practice_identify_weighted` and `_sequence` pass `bass_pitch` to `common_practice_weight_segment` (its last parameter, `NULL` for the lowest pitch): the bass weight multiplies the members on that pitch class, and when none sounds it the weights are unchanged and only the bass is set. `CommonPracticeWeightedConfig.require_bass_chord_tone` (default false) limits the candidates to chords holding the bass pitch class, unless none does; the tie-break order is unchanged. An arpeggio union takes the first segment's bass when it has one. Nothing in the chain sets either yet.
 
+## Harmonic spans (R-372, R-373)
+
+`harmonic_spans.h` groups the chain's segments into spans, one chord each, and reads each segment's bass. It is pure: the caller gives each segment (`HarmonicSpanCell`) its time range, measure and metric level (`HARMONIC_SPAN_LEVEL_BAR`, `_HALF_BAR`, `_BEAT`, `_INNER`, read with standard-meter), and the module includes no other framework. The chain does not call it yet.
+
+`harmonic_span_basses` gives each cell its bass at its start: the lowest sounding pitch (attacked there or held into it); when that is 12 or more semitones above the most recent bass of the same measure, or nothing sounds, the bass persists; the first cell of a measure takes its lowest sounding pitch, or the previous measure's bass when nothing sounds; `-1` only before anything has sounded.
+
+`harmonic_spans_group` starts with one span per measure and cuts it by scoring whole partitions:
+
+- **Reading.** A part (the cells on one side of a boundary, or the whole measure) is read as one segment over its first cell's bass, with `require_bass_chord_tone` set, in no key: the best chord over all 24 keys, with the major, minor and diminished triads, the dominant seventh and the diminished seventh as the vocabulary. The other sevenths are left out because two chords a third apart (I and vi) would read as one seventh chord; a home key would miss modulations. The chain still identifies chords on the spans with the full vocabulary.
+- **Partition.** The boundaries are the measure's cells at level `HALF_BAR` or `BEAT` after its first. Every non-empty subset is a partition. It is valid when every part is matched, complete (three of its chord's pitch classes sound, or its root and third with the bass a chord tone) and has its bass as a chord tone, and adjacent parts read different roots. Its value is the parts' scores weighted by duration, less `HARMONIC_SPAN_PART_COST` (0.01) per part after the first. The measure takes the valid partition of highest value among those whose unpenalized value is at least the whole measure's score plus `HARMONIC_SPAN_SPLIT_MARGIN` (0.03); with none it stays whole. Ties go to fewer parts, then to the earlier first differing boundary.
+- **Half beat.** A resulting span inside one beat splits once at the exact half of its range when both halves are valid, read different roots, and beat the span's score by the margin.
+- **Span bass.** A part is read over its first cell's bass. When that reading is not valid and the first later cell with a different bass lies inside the part's first beat, 1 or 2 semitones away, the part is read over that bass and that reading is used when valid, so an accented passing tone or suspension in the bass does not break the span. `HarmonicSpans.bass` is the bass the span's reading used.
+
+A greedy split against a margin over the whole (R-369) could not cut a bar that changes chord every beat, which is why the partition is scored as a whole.
+
 ## Neutral analysis input
 
 `common_practice_member_from_analysis_note` (`weighted_identification.h`) makes a `CommonPracticeMember` from an `AnalysisNote` and the segment's span: `held` when the note starts before the segment, `duration` the overlap and `onset` the note start, in whole notes as `double` (`rational_to_double`), `pitch` the note's `midi`. `key_regions.h` maps a region's key to an `AnalysisKey` (`common_practice_key_region_analysis_key`) and an `AnalysisKeyEvent` to a `CommonPracticeKeySignatureEvent` (`common_practice_key_signature_event_from_analysis`).

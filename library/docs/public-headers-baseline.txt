@@ -70,6 +70,7 @@ generation/generation_record.h src/generation/generation_record.h
 generation/generator.h src/generation/generator.h 
 harmonic_function.h frameworks/standard-harmony/harmonic_function.h 
 harmonic_rules.h frameworks/standard-counterpoint/harmonic_rules.h 
+harmonic_spans.h frameworks/common-practice-minimal/harmonic_spans.h 
 harmony_applied.h frameworks/standard-harmony/harmony_applied.h 
 harmony_cadence_rules.h frameworks/standard-harmony/harmony_cadence_rules.h 
 harmony_chord.h frameworks/standard-harmony/harmony_chord.h 
