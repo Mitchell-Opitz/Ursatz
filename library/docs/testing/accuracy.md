@@ -61,6 +61,24 @@ Fixture metrics are counts, as the integration tests define them:
 The fixtures are drafts: hand readings, not yet checked against printed scores (see the headers in
 `tests/fixtures/annotations/`). Their numbers measure the chain against those drafts.
 
+## Reference harmony (report only)
+
+Michelle's hand harmony of the Clementi and Mozart reference pieces (`tests/fixtures/annotations/clementi36_harmony.txt`,
+`mozart545_harmony.txt`, verified 2026-11-07) is read by `tests/analysis/test_reference_harmony.c`, which asserts nothing but that the files
+parse and the chain runs. For each annotated chord it checks whether the chain's chord sounding at the chord's onset has the same root and
+triad quality (the seventh is not compared; an applied numeral is compared by the root and quality of the applied chord until P40), and
+it counts the chord changes the chain makes inside the annotated stretches against the changes the annotation has. P39 turns it into an
+assertion. The pieces are not in the harness metrics above.
+
+| Piece | Chords matched | Chain changes | Annotated changes | Extra changes |
+|---|---|---|---|---|
+| Clementi 36 | 5 / 10 | 33 | 9 | 24 |
+| Mozart 545 | 13 / 17 | 32 | 15 | 17 |
+
+Measured 2026-11-08 (P38 B4). The misses: Clementi m6 b4 (viio7/V, no chord), m7 b2 (C major, chain A minor), m7 b4 (V/V, chain D minor), m8 b1
+(G major, chain A minor), m9 b1 (D major, chain F# diminished); Mozart m3 b1 (F major, chain A minor), m8 b1 (A minor, chain C major), m11 b1
+(G major, no chord), m11 b3 (G major, chain G minor).
+
 ## The chain on a chorale
 
 1. The MusicXML score is imported. `score_layout.h` reads where each measure of the first part starts from the

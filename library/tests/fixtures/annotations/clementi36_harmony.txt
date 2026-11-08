@@ -1,0 +1,28 @@
+# Hand-marked harmony in Clementi, Sonatina in C major, Op. 36 No. 1, first movement, in the chord syntax of the cadences files.
+#
+# SOURCE: Michelle's review of 2026-11-07 (analyzer-review, R-357, R-365).
+# STATUS: VERIFIED by Michelle Opitz, 2026-11-07. It covers stretches of the piece, not all of it: chords outside a
+# stretch (a first chord line to its end line) are not read. tests/analysis/test_reference_harmony.c reports the
+# chain's chords against it (report only until P39).
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>
+#   home <tonic>              the piece's key (major): C Db D Eb E F F# G Ab A Bb B
+#   chord <measure> <beat> <tonic> <numeral>   a chord, in the major key on <tonic>, sounding until the next chord line
+#                             (or the end line); beats are 1-based; numerals are ASCII: V7, vi, viio7/V (an applied
+#                             chord is a slash and the degree it tonicizes)
+#   end <measure> <beat>      the end of the stretch of chords
+#
+meter 4 1/4
+home C
+chord 1 1 C I
+chord 4 1 C V
+chord 5 1 C I
+chord 6 4 C viio7/V
+chord 7 1 C V
+chord 7 2 C I
+chord 7 3 C V
+chord 7 4 C V/V
+chord 8 1 G I
+chord 9 1 G V
+end 10 1

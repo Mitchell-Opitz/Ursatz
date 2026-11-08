@@ -125,10 +125,11 @@ static void test_bach_114(void) {
     check_piece("Bach 114.mid", 857142, 1, 1285713, 15625);
 }
 
-/* File values: 24 tempo events from 454545 (132 per minute); one repeats its neighbour's value and is
-   still its own region. */
+/* File values: 13 tempo events from 454545 (132 per minute) in the first movement (the fixture is cut at the start of measure 147);
+   one repeats its neighbour's value and is still its own region. The seconds at the last note-off (tick 139920) are the exact sum over
+   the 13 regions. */
 static void test_mozart_545(void) {
-    check_piece("Mozart 545.mid", 454545, 24, 1652768771L, 2400000);
+    check_piece("Mozart 545.mid", 454545, 13, 4146307L, 15625);
 }
 
 /* File values: one tempo, 340909 microseconds per quarter note (176 per minute). */

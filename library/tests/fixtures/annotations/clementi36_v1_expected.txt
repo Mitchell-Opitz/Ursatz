@@ -45,14 +45,14 @@ piece clementi36
 meter 4 1/4
 home C major
 keys-scope 1 38
-# copied from clementi36_key_regions.txt
-region 1 5 C major
-region 6 15 G major
-region 16 22 C minor
-region 23 38 C major
-change 6 modulation
+# copied from clementi36_key_regions.txt (Michelle's review of 2026-11-07, verified; m16 to m23 is the C minor collection centered on G, R-358)
+region 1 7 C major
+region 8 15 G major
+region 16 23 C minor
+region 24 38 C major
+change 8 modulation
 change 16 modulation
-change 23 modulation
+change 24 modulation
 cadence-scope 1 38
 # the antecedent's half cadence on G (4), the perfect authentic cadence in G that closes the consequent (8) and the second theme (15), the half cadence that closes the
 # development on G (23, a second reading is added with the readings lines), then the recapitulation: the main theme as a period (m24-31) with its half cadence at m27 and

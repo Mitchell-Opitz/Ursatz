@@ -6,7 +6,7 @@ The Framework v1 reference test corpus: five MIDI files.
 - `Clementi 36.mid`: Clementi, a Sonatina from Op. 36
 - `Field 1.mid`: Field, Nocturne No. 1 (12/8)
 - `Field 5.mid`: Field, Nocturne No. 5
-- `Mozart 545.mid`: Mozart, Sonata K. 545
+- `Mozart 545.mid`: Mozart, Sonata K. 545, first movement only (cut at the start of measure 147 by `tests/fixtures/tools/cut_midi.py`: `python3 tests/fixtures/tools/cut_midi.py <uncut.mid> "Mozart 545.mid" 140160`)
 
 `tests/corpus/test_corpus_regression_framework_v1.c` scans this directory at
 test-run time, registers one Corpus piece_ref per `.mid` file found, and
