@@ -34,13 +34,17 @@ read by Ursatz's MusicXMLImporter.
   and bass are the highest and lowest notes sounding in any part. Each note keeps its part, staff and
   voice (`ImportedSource` in `imported_notes.h`), and `metadata.input.parts` lists the parts with their
   note counts. Per-part and per-voice analysis is not done.
-- **MIDI parts.** A MIDI file has one part per track and channel that has notes, in order of first
-  appearance. A part is named from the track name (meta 0x03) and the General MIDI instrument of its
+- **MIDI parts.** A MIDI file has one stream per track and channel that has notes, in order of first
+  appearance (`ImportedNotes.streams`). A stream is one part, except that two keyboard-like streams that sound
+  together and differ in pitch are the two hands of one piano: Ursatz's `score_staves_pair_hands` joins them into
+  one part (the higher stream is staff 1, the lower staff 2, and the part takes the higher stream's program and
+  name), and `source.part_index` is the part of each note. A part is named from the track name (meta 0x03) and the General MIDI instrument of its
   program change (a channel that never sends one is program 0; channel 10 is "Percussion", program -1):
   the track name alone when the track has one part, the track name and the instrument when it has
   several, the instrument when the track has no name. Keyboard-like programs (pianos, harpsichord,
-  celesta, organs, accordion, harp) are on two staves, split at middle C by Ursatz's
-  `score_staves_assign`; every other part has one. The file is parsed once, by the library's
+  celesta, organs, accordion, harp) are on two staves: a joined pair's notes take their stream's staff, and a
+  single stream's notes are placed by Ursatz's `score_staves_assign_hinted` (no fixed split pitch); every other
+  part has one. The file is parsed once, by the library's
   `midi_importer_import_complete`; the parts, their names and programs, the meter, the key signatures and the
   tempo map all come from that one import.
 - **Tempo map.** A MIDI file's set-tempo events are kept as `ImportedNotes.tempo_map` (one region per distinct

@@ -14,15 +14,16 @@ what it finds, so the text shows exactly what the Score tab shows, wrong spellin
 come from the analysis document ([analysis-document.md](analysis-document.md)) and nothing is added to it: the export
 changes neither `analysis.json`, its schema nor the score MusicXML.
 
-## Format v1
+## Format v2
 
-`URSATZ_ANALYZER_TEXT_EXPORT_VERSION` is 1 and is the `v1` of the first line. This is the start of an export of
+`URSATZ_ANALYZER_TEXT_EXPORT_VERSION` is 2 and is the `v2` of the first line. Version 2 adds the `clefs:` header line and the clef changes on a measure line (version 1 had neither). This is the start of an export of
 `tests/musicxml/pickup.musicxml`:
 
 ```
-# Ursatz export v1: piece
+# Ursatz export v2: piece
 title: pickup.musicxml
 key: C major | meter: 4/4 | tempo: not declared | measures: 0-4
+clefs: P1 S1 treble
 analyzer: 0.7.0 ursatz d2b85cedb7bb
 notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
 
@@ -46,6 +47,7 @@ m1
 | 1 | `# Ursatz export v<version>: piece` |
 | `title:` | The `title` option, else the file name the document records (`metadata.source_file`), else `untitled`. |
 | `key:` | The first key region's label (`unknown` with none), the first measure's time signature, the declared tempo as `q=<quarters per minute>` or `not declared` (from the document's `metadata.input.tempo`), and the measures exported. |
+| `clefs:` | One line per part that writes a clef: `clefs: P<part> S<staff> <clef>`, then `, S<staff> <clef>` for each further staff, for example `clefs: P1 S1 treble, S2 bass`. The clef is `treble` (G, line 2) or `bass` (F, line 4), as in force at the start of the first exported measure. A score that writes no clef has no `clefs:` line. |
 | `analyzer:` | `URSATZ_ANALYZER_VERSION`, then `ursatz` and the first 12 characters of the Ursatz commit. |
 | `notes:` | A fixed legend. |
 
@@ -56,7 +58,7 @@ m1
 
 Each exported measure is a blank line, then its line: `m<number>`, where the number is the `<measure number>` of the
 MusicXML as written (a pickup is `m0`), followed by the time signature (`4/4`) on the first measure and wherever it
-changes. Then one line per part, staff and voice that has notes or rests in the measure, in that order:
+changes, and ` clef S<staff> <treble|bass>` for each staff whose clef changes in a measure after the first (a score with more than one part writes ` clef P<part> S<staff> <treble|bass>`). Then one line per part, staff and voice that has notes or rests in the measure, in that order:
 ` P<part> S<staff> V<voice>: <event>, <event>, ...`. Parts are numbered from 1 in score order; the voice is the MusicXML
 voice.
 
@@ -141,7 +143,7 @@ AnalyzerStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *m
 ```
 
 ```
-# Ursatz export v1: motif
+# Ursatz export v2: motif
 name: Rising arch
 id: motif-7
 version: 3
@@ -163,7 +165,7 @@ key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
 ...
 ```
 
-- **Header.** `# Ursatz export v1: <kind>` (`kind` is printed as given: `motif`, `theme`, `piece`), then `name`, `id`
+- **Header.** `# Ursatz export v2: <kind>` (`kind` is printed as given: `motif`, `theme`, `piece`), then `name`, `id`
   and `version` (those the caller gave), the material's facts as `<name>: <value>`, and the `analyzer:` and `notes:`
   lines.
 - **Sections.** Each section is `## <label>`, its facts, then (when it has MusicXML) the `key:` summary line and its
@@ -194,7 +196,8 @@ pieces. The notes are most of it: Field 5, with two staves, 12/8 and four voices
 ## Limits
 
 - The reader reads only what the library's MusicXML writer emits: `<part>` order, `<measure number>` and `implicit`,
-  `<attributes>` (`divisions`, `time`), `<note>` with `<rest/>`, `<chord/>`, `<pitch>`, `<duration>`, `<voice>`,
+  `<attributes>` (`divisions`, `time`, `clef` with its `number`, `sign` and `line`: a G clef on line 2 and an F clef on
+  line 4, any other clef is skipped), `<note>` with `<rest/>`, `<chord/>`, `<pitch>`, `<duration>`, `<voice>`,
   `<staff>`, `<tie type="start">`, `<time-modification>`, `<type>`, `<dot/>` and `xml:id`, and `<backup>` and
   `<forward>`. Every other element is skipped: grace notes, unpitched notes, directions, dynamics, slurs, beams and
   repeats are not in the text.
