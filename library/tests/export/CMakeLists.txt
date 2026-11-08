@@ -13,6 +13,7 @@ add_ursatz_test(musicxml_score_errors)
 add_ursatz_test(musicxml_score_fixtures)
 add_ursatz_test(score_quantize)
 add_ursatz_test(score_staves)
+add_ursatz_test(score_clefs)
 target_compile_definitions(test_musicxml_score_fixtures PRIVATE
     URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
 
@@ -36,7 +37,7 @@ add_ursatz_architecture_test(export)
 # docs/modules/export.md). Skips silently if valgrind isn't installed.
 find_program(URSATZ_EXPORT_VALGRIND valgrind)
 if(URSATZ_EXPORT_VALGRIND)
-  foreach(export_test_name musicxml_export musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_overlaps musicxml_score_reference musicxml_score_values musicxml_score_beams)
+  foreach(export_test_name musicxml_export musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_overlaps musicxml_score_reference musicxml_score_values musicxml_score_beams score_clefs)
     add_test(NAME ${export_test_name}_valgrind
              COMMAND ${URSATZ_EXPORT_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${export_test_name}>
