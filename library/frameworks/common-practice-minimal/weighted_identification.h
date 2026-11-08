@@ -103,10 +103,14 @@ typedef struct {
  * Weights a segment's members. count may be 0 (all zero, no bass). BAD_CONFIG for a negative or
  * non-finite factor; BAD_MEMBER for a duration that is not positive and finite or an invalid
  * BeatStrength on an attacked member. *out is untouched on any error.
+ *
+ * bass_pitch overrides the bass: NULL takes the lowest sounding pitch. With one, bass_pitch and
+ * bass_pitch_class of *out are that pitch (even with no members), and the bass weight multiplies the
+ * members on its pitch class; when no member sounds it, the weights are unchanged and only the bass is set.
  */
 CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPracticeMember *members, size_t count,
                                                              const CommonPracticeWeightedConfig *config,
-                                                             CommonPracticeWeights *out);
+                                                             CommonPracticeWeights *out, const int *bass_pitch);
 
 /*
  * SCORING (step 2). The candidates are the diatonic chords of the key's own mode.

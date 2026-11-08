@@ -50,7 +50,7 @@ static void test_a_pure_triad_weighs_its_three_pitch_classes(void) {
                                        member(52, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(members, 3, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 3, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(close_to(weights.pitch_class[0], 1.5)); /* C3 is the bass: 1.0 * 1.0 * 1.5 */
     assert(close_to(weights.pitch_class[4], 1.0));
     assert(close_to(weights.pitch_class[7], 1.0));
@@ -65,7 +65,7 @@ static void test_duration_and_beat_strength_scale_a_member(void) {
                                        member(64, false, 0.25, BEAT_STRENGTH_WEAK),
                                        member(48, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(members, 3, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 3, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(close_to(weights.pitch_class[0], (0.5 * 0.7 + 1.0 * 1.0) * 1.5)); /* C4 medium and the C3 bass, both on the bass pitch class */
     assert(close_to(weights.pitch_class[4], 0.25 * 0.4));
     assert(weights.bass_pitch == 48);
@@ -78,7 +78,7 @@ static void test_a_held_member_uses_the_held_factor_not_its_attack_strength(void
     CommonPracticeMember attacked = member(64, false, 1.0, BEAT_STRENGTH_WEAK);
     CommonPracticeMember members[2] = {held, attacked};
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(members, 2, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 2, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(close_to(weights.pitch_class[7], 0.6 * 1.5)); /* G3 is the lowest: held factor, then the bass weight */
     assert(close_to(weights.pitch_class[4], 0.4));
 }
@@ -89,7 +89,7 @@ static void test_every_member_on_the_bass_pitch_class_gets_the_bass_weight(void)
                                        member(48, true, 1.0, BEAT_STRENGTH_STRONG),
                                        member(60, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(members, 3, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 3, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     /* Two C3s (one attacked, one held) at the bass, and a C4 above on the bass pitch class: all three take it. */
     assert(close_to(weights.pitch_class[0], 1.0 * 1.5 + 0.6 * 1.5 + 1.0 * 1.5));
 }
@@ -99,7 +99,7 @@ static void test_the_bass_is_the_lowest_pitch_not_the_lowest_pitch_class(void) {
     CommonPracticeMember members[2] = {member(71, false, 1.0, BEAT_STRENGTH_STRONG),
                                        member(60, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(members, 2, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 2, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(weights.bass_pitch == 60 && weights.bass_pitch_class == 0); /* C4, though B (11) is a higher class */
 }
 
@@ -110,7 +110,7 @@ static void test_a_configured_factor_changes_the_weights(void) {
     CommonPracticeMember members[2] = {member(48, true, 1.0, BEAT_STRENGTH_WEAK),
                                        member(52, false, 1.0, BEAT_STRENGTH_STRONG)};
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(members, 2, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 2, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(close_to(weights.pitch_class[0], 2.0));
     assert(close_to(weights.pitch_class[4], 1.0));
 }
@@ -123,15 +123,15 @@ static void test_the_result_is_deterministic(void) {
                                        member(72, false, 0.45, BEAT_STRENGTH_WEAK)};
     CommonPracticeWeights a;
     CommonPracticeWeights b;
-    assert(common_practice_weight_segment(members, 4, &config, &a) == COMMON_PRACTICE_WEIGHTED_OK);
-    assert(common_practice_weight_segment(members, 4, &config, &b) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 4, &config, &a, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, 4, &config, &b, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(memcmp(&a, &b, sizeof(a)) == 0);
 }
 
 static void test_no_members_weigh_nothing(void) {
     CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(NULL, 0, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(NULL, 0, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     assert(weights.total == 0.0 && weights.bass_pitch == -1 && weights.bass_pitch_class == -1);
 }
 
@@ -142,23 +142,23 @@ static void test_rejects_bad_input_and_leaves_the_output_untouched(void) {
     memset(&weights, 0x7f, sizeof(weights));
     CommonPracticeWeights before = weights;
 
-    assert(common_practice_weight_segment(&good, 1, NULL, &weights) == COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
-    assert(common_practice_weight_segment(&good, 1, &config, NULL) == COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
-    assert(common_practice_weight_segment(NULL, 2, &config, &weights) == COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
+    assert(common_practice_weight_segment(&good, 1, NULL, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
+    assert(common_practice_weight_segment(&good, 1, &config, NULL, NULL) == COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
+    assert(common_practice_weight_segment(NULL, 2, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT);
 
     CommonPracticeWeightedConfig negative = config;
     negative.held_factor = -0.1;
-    assert(common_practice_weight_segment(&good, 1, &negative, &weights) == COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG);
+    assert(common_practice_weight_segment(&good, 1, &negative, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG);
     CommonPracticeWeightedConfig not_finite = config;
     not_finite.bass_weight = INFINITY;
-    assert(common_practice_weight_segment(&good, 1, &not_finite, &weights) ==
+    assert(common_practice_weight_segment(&good, 1, &not_finite, &weights, NULL) ==
            COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG);
 
     CommonPracticeMember empty_duration = member(60, false, 0.0, BEAT_STRENGTH_STRONG);
-    assert(common_practice_weight_segment(&empty_duration, 1, &config, &weights) ==
+    assert(common_practice_weight_segment(&empty_duration, 1, &config, &weights, NULL) ==
            COMMON_PRACTICE_WEIGHTED_ERR_BAD_MEMBER);
     CommonPracticeMember bad_strength = member(60, false, 1.0, BEAT_STRENGTH_COUNT);
-    assert(common_practice_weight_segment(&bad_strength, 1, &config, &weights) ==
+    assert(common_practice_weight_segment(&bad_strength, 1, &config, &weights, NULL) ==
            COMMON_PRACTICE_WEIGHTED_ERR_BAD_MEMBER);
 
     assert(memcmp(&weights, &before, sizeof(weights)) == 0);
@@ -169,7 +169,7 @@ static void test_rejects_bad_input_and_leaves_the_output_untouched(void) {
 static CommonPracticeWeights weigh(const CommonPracticeMember *members, size_t count) {
     CommonPracticeWeightedConfig config = bass_heavy();
     CommonPracticeWeights weights;
-    assert(common_practice_weight_segment(members, count, &config, &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(common_practice_weight_segment(members, count, &config, &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     return weights;
 }
 

@@ -292,7 +292,7 @@ static HarmonyCadences chain_cadences(const Piece *piece, const WeightedPipeline
         key_segments[s].end = time_span_end(window);
         key_segments[s].source = &p->segments[s];
         assert(common_practice_weight_segment(p->segments[s].members, p->segments[s].member_count, &weighting,
-                                              &key_segments[s].weights) == COMMON_PRACTICE_WEIGHTED_OK);
+                                              &key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
     CommonPracticeKeyRegions regions = {0};
     assert(key_regions_estimate(key_segments, count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);

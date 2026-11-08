@@ -37,7 +37,7 @@ static bool config_valid(const CommonPracticeWeightedConfig *config) {
 
 CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPracticeMember *members, size_t count,
                                                              const CommonPracticeWeightedConfig *config,
-                                                             CommonPracticeWeights *out) {
+                                                             CommonPracticeWeights *out, const int *bass_override) {
     if (config == NULL || out == NULL || (members == NULL && count > 0)) {
         return COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT;
     }
@@ -56,6 +56,11 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
             bass_pitch = members[i].pitch;
             have_bass = true;
         }
+    }
+
+    if (bass_override != NULL) {
+        bass_pitch = *bass_override;
+        have_bass = true;
     }
 
     CommonPracticeWeights weights = {{0}, 0.0, -1, -1};

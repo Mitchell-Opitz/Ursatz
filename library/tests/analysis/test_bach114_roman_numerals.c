@@ -256,7 +256,7 @@ static void test_adapter_alone_matches_the_hand_analysis(void) {
             inputs[s].segment_id = p.segment_ids[s];
             CommonPracticeWeights weights;
             assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
-                                                  &weights) == COMMON_PRACTICE_WEIGHTED_OK);
+                                                  &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
             inputs[s].has_weights = true;
             memcpy(inputs[s].weights, weights.pitch_class, sizeof(inputs[s].weights));
         }
@@ -333,7 +333,7 @@ static void test_whole_chain_against_the_hand_analysis(void) {
         key_segments[s].end = time_span_end(window);
         key_segments[s].source = &p.segments[s];
         assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
-                                              &key_segments[s].weights) == COMMON_PRACTICE_WEIGHTED_OK);
+                                              &key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
     CommonPracticeKeyRegions regions = {0};
     assert(key_regions_estimate(key_segments, p.segment_count, score_meter, NULL, 0, NULL, &regions) ==
