@@ -13,12 +13,14 @@
  * the events, and only musicxml_export_write_score reads them (MusicXmlExportScore.quantize).
  *
  * All times are whole notes, exact, in lowest terms. For each beat of the meter (the beat of the region the onset is
- * in; a compound meter such as 6/8 uses the dotted beat) the module picks the grid with the lower total snap error of
- * the onsets in that beat, from the straight grid (1/grid_denominator of a whole note) and, when allowed, the triplet
- * grids of the beat (a third and a sixth of it); a tie goes to the straight grid. Onsets and ends snap to the nearest
- * point of that grid and a note is never shorter than one grid step. A small gap after a note, up to gap_absorb times
- * the note's own notated length and always less than a beat, is absorbed so the note runs on to the next onset in its
- * voice. Notes that end up with the same start and end in one voice are a chord, which the export already writes.
+ * in; a compound meter such as 6/8 uses the dotted beat) the module picks the grid of its onsets from the straight grid
+ * (1/grid_denominator of a whole note) and, when allowed, the triplet grids of the beat (a third and a sixth of it); a
+ * tie goes to the straight grid. When triplets are allowed it also tries each half of the beat on its own, the best of
+ * straight or a third of the half, and uses the two halves only when their summed snap error is strictly lower than the
+ * whole beat's, so three sixteenth triplets can sit beside straight sixteenths in one beat. Onsets and ends snap to the
+ * nearest point of the grid of the cell (the beat or the half) they lie in, and a note is never shorter than one grid
+ * step. A small gap after a note, up to gap_absorb times the note's own notated length and always less than a beat, is
+ * absorbed so the note runs on to the next onset in its voice. Notes that end up with the same start and end in one voice are a chord, which the export already writes.
  */
 
 typedef struct {
