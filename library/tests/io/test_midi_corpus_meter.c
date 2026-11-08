@@ -136,30 +136,22 @@ static void test_bach_114(void) {
 }
 
 /*
- * Mozart, Sonata K. 545 (the file holds the whole sonata, three movements).
- *   Score: the first movement is in common time (4/4); the slow movement is 3/4 and the finale 2/4.
- *   Source: the score (K. 545); the per-movement measure counts and repeats are not re-checked here.
- *   File: 240 ticks per quarter, four meter events in track 0: 4/4 at tick 0, 3/4 at 142080, 1/4 at
- *   219120 (one quarter note long) and 2/4 at 219360.
- * DISCREPANCY: the score numbers each movement from 1, but a MIDI file is one timeline, so the file
- * numbers straight through. The 4/4 region is 148 measures, the 3/4 region is
- * 107 (measures 149-255), the one-quarter region is measure 256, and the 2/4 region runs from 257 to
- * 338. The one-quarter region is the finale's upbeat, encoded as its own short signature in the
- * middle of the file; it is not the first region, so the pickup rule does not apply and it takes a
- * measure number. This test asserts what the file encodes: score measure counts are NOT reproduced
- * (file-derived, score unverified).
+ * Mozart, Sonata K. 545, first movement (the fixture is cut at the start of measure 147 by tests/fixtures/tools/cut_midi.py; the
+ * uncut file held the whole sonata, three movements).
+ *   Score: the first movement is in common time (4/4), 73 bars; the fixture writes both repeats out, so it holds 146.
+ *   Source: the score (K. 545); the measure count is not re-checked against an edition here.
+ *   File: 240 ticks per quarter, one meter event in track 0: 4/4 at tick 0. The notes end at tick 139920, which is 145.75 measures of
+ *   960 ticks, so the 146th measure is a partial one: counted, as the final note starts at tick 139680 inside it.
+ * This test asserts what the file encodes: score measure counts are NOT reproduced (file-derived, score unverified).
  */
 static void test_mozart_545(void) {
-    const Signature signatures[] = {{4, 4}, {3, 4}, {1, 4}, {2, 4}};
-    check_piece("Mozart 545.mid", signatures, 4, 338, 338);
+    const Signature signatures[] = {{4, 4}};
+    check_piece("Mozart 545.mid", signatures, 1, 146, 146);
 
     Imported imported = import_corpus_file("Mozart 545.mid");
     const MeterMap *map = imported.meter.meter_map;
     assert(!meter_map_has_pickup(map));
     assert(meter_map_region_first_measure_number(meter_map_region(map, 0)) == 1);
-    assert(meter_map_region_first_measure_number(meter_map_region(map, 1)) == 149);
-    assert(meter_map_region_first_measure_number(meter_map_region(map, 2)) == 256);
-    assert(meter_map_region_first_measure_number(meter_map_region(map, 3)) == 257);
     release(&imported);
 }
 
