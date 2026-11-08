@@ -110,6 +110,20 @@ typedef struct {
                                        of the model) */
 } AnalysisReportEntry;
 
+/* One voice segment of the melody and bass lines (the library chain's voice segments: one per melody note, not
+   merged over unchanged harmony). The window is the voice segment's; chord_index is the chord whose segment holds
+   the voice segment's start (0 when none). Several entries can share one chord: a harmonic span holds many melody
+   notes. */
+typedef struct {
+    size_t chord_index;
+    long time_numerator; /* voice segment start, whole notes */
+    unsigned long time_denominator;
+    long end_numerator; /* voice segment end (exclusive), whole notes */
+    unsigned long end_denominator;
+    AnalysisOuterNote soprano;
+    AnalysisOuterNote bass;
+} AnalysisOuterLineEntry;
+
 /* Frees an outer note's strings and clears it. */
 void analysis_outer_note_destroy(AnalysisOuterNote *note);
 
@@ -1111,6 +1125,9 @@ typedef struct {
 typedef struct {
     AnalysisReportEntry *entries;
     size_t entry_count;
+    AnalysisOuterLineEntry *outer_lines; /* owned; one per voice segment, in time order; empty when the library gave no lines
+                                            for this piece */
+    size_t outer_line_count;
     AnalysisNonChordTone *non_chord_tones; /* owned; in time order, then note order */
     size_t non_chord_tone_count;
     AnalysisKeyRegion *key_regions; /* owned; empty when no key was found */

@@ -271,7 +271,7 @@ static bool count_rhythm(StyleProfile *profile, const cJSON *document) {
     return true;
 }
 
-/* Soprano durations, melodic intervals and contour. A note held across several chord segments is one note. */
+/* Soprano durations, melodic intervals and contour. A note held across several voice segments (one entry per melody note) is one note. */
 static bool count_soprano(StyleProfile *profile, const cJSON *document) {
     bool have_previous = false;
     long previous_id = 0;

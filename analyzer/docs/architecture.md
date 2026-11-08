@@ -69,7 +69,7 @@ The other public headers (analysis result, report, document, corpus, staleness, 
 | `URSATZ_ANALYZER_URSATZ_COMMIT` | `<ursatz_analyzer/version.h>` | the Ursatz commit the build was made against | [building.md](building.md#version-header-and-pin-check) |
 | `URSATZ_ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/text_export.h` | 1 | [text-export.md](text-export.md) |
 | `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analysis_document.h` | 9 | [versions.md](analysis-document/versions.md) |
-| analysis document schema | `schema/analysis-document.v9.schema.json` | v9 | [analysis-document.md](analysis-document.md) |
+| analysis document schema | `schema/analysis-document.v10.schema.json` | v10 | [analysis-document.md](analysis-document.md) |
 | corpus index, motive links, motive link cache, similar material, style model schemas | `schema/*.v1.schema.json` | v1 each | [corpus.md](corpus.md), [motive-links.md](motive-links.md), [similar-material.md](similar-material.md), [style-profile.md](style-profile.md) |
 
 A stored document is current only when its schema version, analyzer version and Ursatz commit all match the build ([corpus.md](corpus.md)).

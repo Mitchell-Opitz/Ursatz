@@ -228,7 +228,7 @@ static bool collect_pass(AnalyzerPass *pass) {
     if (!build_entries(pass) || !read_roman_numerals(pass->library, &pass->romans) ||
         !assign_roman_numerals(&pass->romans, pass->chords, report->entries) ||
         !collect_outer_voices(notes, &pass->voice_segmentation, segmentation, pass->chords, report->key_regions,
-                              lines, report->entries) ||
+                              lines, report) ||
         !collect_non_chord_tones(pass)) {
         return false;
     }
