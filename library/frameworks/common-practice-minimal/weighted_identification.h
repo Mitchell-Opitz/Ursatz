@@ -66,6 +66,10 @@ typedef struct {
     double missing_third_penalty;  /* used by scoring */
     double bass_chord_tone_bonus;  /* used by scoring */
     double min_coverage;           /* used by scoring: a best score below it is "no match" */
+    /* When true and the bass pitch class is known, only candidates holding the bass pitch class are eligible
+       (the chord must hold the bass, R-370); when none does, every candidate is eligible as before. The
+       tie-break order is unchanged. Default false. */
+    bool require_bass_chord_tone;
     /* Labels leftover tones in common_practice_identify_weighted_sequence. NULL (the default) keeps
        common_practice_label_leftover_tones. With one, the leftover members that have a voice_id are labelled per
        voice: the voice's members, segment after segment, form a line, each entry carrying the chord mask of the
@@ -78,7 +82,7 @@ typedef struct {
 } CommonPracticeWeightedConfig;
 
 /* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty
-   0.15, bass chord-tone bonus 0.05, min coverage 0.5. */
+   0.15, bass chord-tone bonus 0.05, min coverage 0.5, require_bass_chord_tone false. */
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void);
 
 typedef enum {
