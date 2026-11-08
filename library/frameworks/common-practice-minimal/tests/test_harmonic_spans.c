@@ -139,8 +139,9 @@ static void assert_span_starts(const Piece *piece, const HarmonicSpans *spans, c
 
 /* Pitches by name. */
 enum {
-    G2 = 43, B2 = 47, C3 = 48, D3 = 50, E3 = 52, F3 = 53, G3 = 55, A3 = 57, B3 = 59, C4 = 60, D4 = 62, E4 = 64,
-    F4 = 65, G4 = 67, A4 = 69, B4 = 71, C5 = 72, D5 = 74, E5 = 76, Fs5 = 78, G5 = 79
+    A2 = 45, G2 = 43, B2 = 47, C3 = 48, D3 = 50, E3 = 52, F3 = 53, G3 = 55, A3 = 57, B3 = 59, C4 = 60, D4 = 62,
+    E4 = 64, F4 = 65, G4 = 67, Gs4 = 68, A4 = 69, B4 = 71, C5 = 72, D5 = 74, E5 = 76, F5 = 77, Fs5 = 78, G5 = 79,
+    A5 = 81, C6 = 84
 };
 
 /* Clementi m1: C5 E5 C5 G4 G4 over a C3 quarter. One chord, the bass resting while the right hand moves. */
@@ -346,6 +347,208 @@ static void test_bad_input_is_refused(void) {
     harmonic_spans_destroy(NULL);
 }
 
+/* A four-voice bar of quarters: voices[v][beat] is the pitch of voice v on that beat. */
+static size_t add_quarters(Note *notes, size_t count, const int *pitches) {
+    for (int beat = 0; beat < 4; beat++) {
+        notes[count].pitch = pitches[beat];
+        notes[count].start = beat * 4;
+        notes[count].end = beat * 4 + 4;
+        count++;
+    }
+    return count;
+}
+
+static size_t chorale(Note *notes, const int *soprano, const int *alto, const int *tenor, const int *bass) {
+    size_t count = add_quarters(notes, 0, soprano);
+    count = add_quarters(notes, count, alto);
+    count = add_quarters(notes, count, tenor);
+    return add_quarters(notes, count, bass);
+}
+
+/* Groups the bar and checks the span starts (sixteenths). */
+static void assert_bar_spans(const Note *notes, size_t count, const int *starts, size_t span_count, HarmonicSpans *spans,
+                             Piece *piece) {
+    build(piece, notes, count, 1);
+    group(piece, spans);
+    assert_span_starts(piece, spans, starts, span_count);
+}
+
+/* Mozart m3: IV then I over an Alberti bass. Two spans, the bass C4 on both. */
+static void test_mozart_m3_iv_then_i(void) {
+    Note notes[] = {{C4, 0, 2},  {A4, 2, 4},  {F4, 4, 6},   {A4, 6, 8},  {C4, 8, 10}, {G4, 10, 12},
+                    {E4, 12, 14}, {G4, 14, 16}, {A5, 0, 8},   {G5, 8, 12}, {C6, 12, 16}};
+    int starts[] = {0, 8};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, COUNT(notes), starts, COUNT(starts), &spans, &piece);
+    assert(spans.bass[0] == C4 && spans.bass[1] == C4);
+    harmonic_spans_destroy(&spans);
+}
+
+/* Mozart m4: V7 then I. Two spans. */
+static void test_mozart_m4_v7_then_i(void) {
+    Note notes[] = {{B3, 0, 2},  {G4, 2, 4},  {D4, 4, 6},   {G4, 6, 8},  {C4, 8, 10}, {G4, 10, 12}, {E4, 12, 14},
+                    {G4, 14, 16}, {G5, 0, 4},  {F5, 4, 6},   {E5, 6, 7},  {F5, 7, 8},  {E5, 8, 12}};
+    int starts[] = {0, 8};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, COUNT(notes), starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* Mozart m5: IV with a scale over an F. One span. */
+static void test_mozart_m5_scale_over_f_is_one_span(void) {
+    Note notes[] = {{F4, 0, 4},  {A4, 0, 2},  {B4, 2, 3},   {C5, 3, 4},   {D5, 4, 5},   {E5, 5, 6},   {F5, 6, 7},
+                    {G5, 7, 8},  {A5, 8, 9},  {G5, 9, 10},  {F5, 10, 11}, {E5, 11, 12}, {D5, 12, 13}, {C5, 13, 14},
+                    {B4, 14, 15}, {A4, 15, 16}, {F3, 12, 16}, {C4, 12, 16}};
+    int starts[] = {0};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, COUNT(notes), starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* Mozart m11 as in the corpus MIDI: V I V I by beat, the left hand an arpeggio in sixteenths over G2 on every beat. */
+static void test_mozart_m11_changes_chord_every_beat(void) {
+    static const int left[16] = {G2, B2, D3, G3, G2, C3, E3, G3, G2, B2, D3, G3, G2, C3, E3, G3};
+    Note notes[24];
+    size_t count = 0;
+    for (int i = 0; i < 16; i++) {
+        notes[count].pitch = left[i];
+        notes[count].start = i;
+        notes[count].end = i + 1;
+        count++;
+    }
+    static const Note right[] = {{B4, 0, 2}, {G5, 2, 4}, {E5, 4, 5}, {C5, 6, 7}, {D5, 8, 10}, {G5, 10, 12}, {E5, 12, 13},
+                                 {C5, 14, 15}};
+    for (size_t i = 0; i < COUNT(right); i++) {
+        notes[count++] = right[i];
+    }
+    int starts[] = {0, 4, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, count, starts, COUNT(starts), &spans, &piece);
+    for (size_t i = 0; i < spans.count; i++) {
+        assert(spans.bass[i] == G2);
+    }
+    harmonic_spans_destroy(&spans);
+}
+
+/* Mozart m12: V, the notes in the right hand on one beat. One span. */
+static void test_mozart_m12_v_is_one_span(void) {
+    Note notes[] = {{G2, 0, 3}, {D5, 0, 3}, {G3, 4, 7}, {B4, 4, 7}, {D5, 4, 7}, {G5, 4, 7}, {G2, 8, 11}, {G4, 8, 11}};
+    int starts[] = {0};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, COUNT(notes), starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* Chorale I IV V I: a new root on every beat. Four spans. */
+static void test_chorale_i_iv_v_i_is_four_spans(void) {
+    static const int s[4] = {C5, C5, B4, C5}, a[4] = {E4, F4, D4, E4}, t[4] = {G3, A3, G3, G3}, b[4] = {C3, F3, G3, C3};
+    Note notes[16];
+    size_t count = chorale(notes, s, a, t, b);
+    int starts[] = {0, 4, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, count, starts, COUNT(starts), &spans, &piece);
+    assert(spans.bass[0] == C3 && spans.bass[1] == F3 && spans.bass[2] == G3 && spans.bass[3] == C3);
+    harmonic_spans_destroy(&spans);
+}
+
+/* Chorale I vi ii V: I and vi stay apart (read together they would be one A minor seventh). Four spans. */
+static void test_chorale_i_vi_ii_v_keeps_i_and_vi_apart(void) {
+    static const int s[4] = {E5, E5, D5, D5}, a[4] = {C5, C5, A4, B4}, t[4] = {G4, A4, F4, G4}, b[4] = {C3, A2, D3, G2};
+    Note notes[16];
+    size_t count = chorale(notes, s, a, t, b);
+    int starts[] = {0, 4, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, count, starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* Chorale I I6 IV V: the first two beats are one chord. Spans at 0, 8 and 12. */
+static void test_chorale_i_i6_iv_v_joins_the_inversion(void) {
+    static const int s[4] = {C5, C5, C5, B4}, a[4] = {G4, G4, A4, G4}, t[4] = {E4, C4, F4, D4}, b[4] = {C3, E3, F3, G3};
+    Note notes[16];
+    size_t count = chorale(notes, s, a, t, b);
+    int starts[] = {0, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, count, starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* V7 I V7 I over a G3 pedal: four spans, the pedal under every one. */
+static void test_a_pedal_does_not_hide_the_changes(void) {
+    static const int s[4] = {F5, E5, F5, E5}, a[4] = {D5, C5, D5, C5}, t[4] = {B4, G4, B4, G4}, b[4] = {G3, G3, G3, G3};
+    Note notes[16];
+    size_t count = chorale(notes, s, a, t, b);
+    int starts[] = {0, 4, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, count, starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* Chorale I IV V I with bass eighths C3 D3 F3 E3 in the first half: the passing eighths do not add spans. */
+static void test_chorale_with_bass_eighths_is_four_spans(void) {
+    static const int s[4] = {C5, C5, B4, C5}, a[4] = {E4, F4, D4, E4}, t[4] = {G3, A3, G3, G3};
+    Note notes[24];
+    size_t count = 0;
+    count = add_quarters(notes, count, s);
+    count = add_quarters(notes, count, a);
+    count = add_quarters(notes, count, t);
+    static const Note bass[] = {{C3, 0, 2}, {D3, 2, 4}, {F3, 4, 6}, {E3, 6, 8}, {G3, 8, 12}, {C3, 12, 16}};
+    for (size_t i = 0; i < COUNT(bass); i++) {
+        notes[count++] = bass[i];
+    }
+    int starts[] = {0, 4, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, count, starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* A chord outside any home key: C, then E major, then A minor. E major is complete only when read key-free. */
+static void test_a_chord_outside_the_key_is_read(void) {
+    Note notes[] = {{C3, 0, 8},  {E4, 0, 8},  {G4, 0, 8},   {C5, 0, 8},   {E3, 8, 12}, {Gs4, 8, 12}, {B4, 8, 12},
+                    {E5, 8, 12}, {A2, 12, 16}, {A4, 12, 16}, {C5, 12, 16}, {E5, 12, 16}};
+    int starts[] = {0, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, COUNT(notes), starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* A beat with a chord change at its half: A minor then D minor on the third beat's two eighths. */
+static void test_a_beat_splits_at_its_half(void) {
+    Note notes[] = {{C3, 0, 4},  {E4, 0, 4},  {G4, 0, 4},   {C5, 0, 4},   {F3, 4, 8},   {F4, 4, 8},  {A4, 4, 8},
+                    {C5, 4, 8},  {A2, 8, 10}, {C4, 8, 10},  {E4, 8, 10},  {A4, 8, 10},  {D3, 10, 12}, {D4, 10, 12},
+                    {F4, 10, 12}, {A4, 10, 12}, {G2, 12, 16}, {D4, 12, 16}, {G4, 12, 16}, {B4, 12, 16}};
+    int starts[] = {0, 4, 8, 10, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, COUNT(notes), starts, COUNT(starts), &spans, &piece);
+    harmonic_spans_destroy(&spans);
+}
+
+/* An accented bass tone that resolves by step (A2 to G2 under a G chord's upper voices) does not break the span: the
+   third span is read over G2. */
+static void test_an_accented_bass_tone_resolves_into_the_span_bass(void) {
+    Note notes[] = {{C3, 0, 4},  {E4, 0, 4},  {G4, 0, 4},  {C5, 0, 4},  {F3, 4, 8},   {F4, 4, 8},  {A4, 4, 8},
+                    {C5, 4, 8},  {A2, 8, 10}, {G2, 10, 12}, {D4, 8, 12}, {G4, 8, 12},  {B4, 8, 12}, {C3, 12, 16},
+                    {E4, 12, 16}, {G4, 12, 16}, {C5, 12, 16}};
+    int starts[] = {0, 4, 8, 12};
+    Piece piece;
+    HarmonicSpans spans;
+    assert_bar_spans(notes, COUNT(notes), starts, COUNT(starts), &spans, &piece);
+    assert(spans.bass[2] == G2);
+    harmonic_spans_destroy(&spans);
+}
+
 int main(void) {
     test_clementi_m1_is_one_span_over_c3();
     test_clementi_m8_scale_is_one_span_over_g2();
@@ -354,6 +557,19 @@ int main(void) {
     test_a_passing_bass_eighth_does_not_split_a_beat();
     test_clementi_m4_descending_bass_line_is_one_span();
     test_the_bass_rule();
+    test_mozart_m3_iv_then_i();
+    test_mozart_m4_v7_then_i();
+    test_mozart_m5_scale_over_f_is_one_span();
+    test_mozart_m11_changes_chord_every_beat();
+    test_mozart_m12_v_is_one_span();
+    test_chorale_i_iv_v_i_is_four_spans();
+    test_chorale_i_vi_ii_v_keeps_i_and_vi_apart();
+    test_chorale_i_i6_iv_v_joins_the_inversion();
+    test_a_pedal_does_not_hide_the_changes();
+    test_chorale_with_bass_eighths_is_four_spans();
+    test_a_chord_outside_the_key_is_read();
+    test_a_beat_splits_at_its_half();
+    test_an_accented_bass_tone_resolves_into_the_span_bass();
     test_two_bars_group_independently();
     test_bad_input_is_refused();
     printf("test_harmonic_spans: ok\n");
