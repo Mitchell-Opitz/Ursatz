@@ -263,104 +263,146 @@ static HarmonicSpanStatus read_part(const Grouper *g, size_t a, size_t b, Readin
     return status;
 }
 
-/* Tests (a) to (d), and for a boundary inside a beat that each part's bass is its chord's root. */
-static HarmonicSpanStatus try_boundary(const Grouper *g, size_t a, size_t b, size_t k, const Reading *whole,
-                                       bool inside_beat, bool *passes) {
-    *passes = false;
-    Reading left;
-    Reading right;
-    HarmonicSpanStatus status = read_part(g, a, k - 1, &left);
-    if (status != HARMONIC_SPAN_OK) {
-        return status;
-    }
-    status = read_part(g, k, b, &right);
-    if (status != HARMONIC_SPAN_OK) {
-        return status;
-    }
-    if (!left.matched || !right.matched || left.root_pitch_class == right.root_pitch_class) {
-        return HARMONIC_SPAN_OK;
-    }
-    if (!left.complete || !right.complete) {
-        return HARMONIC_SPAN_OK;
-    }
-    if (!left.bass_in_chord || !right.bass_in_chord) {
-        return HARMONIC_SPAN_OK;
-    }
-    if (inside_beat && (!left.bass_is_root || !right.bass_is_root)) {
-        return HARMONIC_SPAN_OK;
-    }
-    double dur_left = g->cells[k - 1].end - g->cells[a].start;
-    double dur_right = g->cells[b].end - g->cells[k].start;
-    double dur_span = g->cells[b].end - g->cells[a].start;
-    double weighted = (left.score * dur_left + right.score * dur_right) / dur_span;
-    *passes = weighted >= whole->score + HARMONIC_SPAN_SPLIT_MARGIN;
-    return HARMONIC_SPAN_OK;
-}
-
-/* True when cell k starts at the exact half of the beat it lies in: the beat runs from the last cell before k that
-   starts on a beat to the next one after it (or the end of the span). */
-static bool starts_at_half_beat(const Grouper *g, size_t a, size_t b, size_t k) {
-    size_t before = k;
-    while (before > a && g->cells[before - 1].level == HARMONIC_SPAN_LEVEL_INNER) {
-        before--;
-    }
-    if (before == a && g->cells[a].level == HARMONIC_SPAN_LEVEL_INNER) {
-        return false; /* no beat start in the span */
-    }
-    size_t beat_first = before == a ? a : before - 1;
-    size_t beat_next = k + 1;
-    while (beat_next <= b && g->cells[beat_next].level == HARMONIC_SPAN_LEVEL_INNER) {
-        beat_next++;
-    }
-    double beat_start = g->cells[beat_first].start;
-    double beat_end = beat_next <= b ? g->cells[beat_next].start : g->cells[b].end;
-    return fabs(g->cells[k].start - 0.5 * (beat_start + beat_end)) <= TIME_TOLERANCE;
-}
-
-static HarmonicSpanStatus add_span(Grouper *g, size_t a, size_t b) {
-    Reading reading;
-    HarmonicSpanStatus status = read_part(g, a, b, &reading);
-    if (status != HARMONIC_SPAN_OK) {
-        return status;
-    }
+static HarmonicSpanStatus add_span(Grouper *g, size_t a, size_t b, int bass) {
     size_t i = g->spans.count++;
     g->spans.first[i] = a;
     g->spans.last[i] = b;
-    g->spans.bass[i] = reading.bass;
+    g->spans.bass[i] = bass;
     return HARMONIC_SPAN_OK;
 }
 
-/* Splits cells a..b where the rules say, appending the resulting spans in time order. */
-static HarmonicSpanStatus group_range(Grouper *g, size_t a, size_t b) {
-    if (a == b) {
-        return add_span(g, a, b);
-    }
-    Reading whole;
-    HarmonicSpanStatus status = read_part(g, a, b, &whole);
-    if (status != HARMONIC_SPAN_OK) {
-        return status;
-    }
+/* A measure's candidate boundaries: the cells after its first at level HALF_BAR or BEAT (at most
+   MAX_BOUNDARIES; no supported meter has more). points[0] is the first cell, points[1..n] the boundaries and
+   points[n + 1] one past the last cell: part (i, j) is the cells points[i] to points[j] - 1, read once. */
+#define MAX_BOUNDARIES 12
 
-    static const HarmonicSpanLevel LEVELS[] = {HARMONIC_SPAN_LEVEL_HALF_BAR, HARMONIC_SPAN_LEVEL_BEAT,
-                                               HARMONIC_SPAN_LEVEL_INNER};
-    for (size_t l = 0; l < sizeof(LEVELS) / sizeof(LEVELS[0]); l++) {
-        bool inside_beat = LEVELS[l] == HARMONIC_SPAN_LEVEL_INNER;
-        for (size_t k = a + 1; k <= b; k++) {
-            if (g->cells[k].level != LEVELS[l] || (inside_beat && !starts_at_half_beat(g, a, b, k))) {
-                continue;
-            }
-            bool passes = false;
-            status = try_boundary(g, a, b, k, &whole, inside_beat, &passes);
-            if (status != HARMONIC_SPAN_OK) {
-                return status;
-            }
-            if (passes) {
-                status = group_range(g, a, k - 1);
-                return status != HARMONIC_SPAN_OK ? status : group_range(g, k, b);
-            }
+typedef struct {
+    size_t points[MAX_BOUNDARIES + 2];
+    size_t n;
+    Reading *memo;
+    unsigned char *done;
+} Measure;
+
+static HarmonicSpanStatus part_reading(const Grouper *g, Measure *m, size_t i, size_t j, const Reading **out) {
+    size_t slot = i * (m->n + 2) + j;
+    if (!m->done[slot]) {
+        HarmonicSpanStatus status = read_part(g, m->points[i], m->points[j] - 1, &m->memo[slot]);
+        if (status != HARMONIC_SPAN_OK) {
+            return status;
+        }
+        m->done[slot] = 1;
+    }
+    *out = &m->memo[slot];
+    return HARMONIC_SPAN_OK;
+}
+
+/* The partition of one measure that boundary set `mask` (bit i: boundary i + 1 is a cut) makes. */
+typedef struct {
+    bool valid;
+    size_t parts;
+    double value;     /* the parts' scores weighted by duration */
+    double penalized; /* value less HARMONIC_SPAN_PART_COST per part after the first */
+} Partition;
+
+static HarmonicSpanStatus score_partition(const Grouper *g, Measure *m, unsigned mask, Partition *out) {
+    double measure_duration = g->cells[m->points[m->n + 1] - 1].end - g->cells[m->points[0]].start;
+    Partition result = {true, 0, 0.0, 0.0};
+    size_t start = 0;
+    int previous_root = -1;
+    for (size_t j = 1; j <= m->n + 1; j++) {
+        if (j <= m->n && (mask & (1u << (j - 1))) == 0) {
+            continue;
+        }
+        const Reading *reading;
+        HarmonicSpanStatus status = part_reading(g, m, start, j, &reading);
+        if (status != HARMONIC_SPAN_OK) {
+            return status;
+        }
+        if (!reading->valid || reading->root_pitch_class == previous_root) {
+            result.valid = false;
+            *out = result;
+            return HARMONIC_SPAN_OK;
+        }
+        double duration = g->cells[m->points[j] - 1].end - g->cells[m->points[start]].start;
+        result.value += reading->score * duration / measure_duration;
+        result.parts++;
+        previous_root = reading->root_pitch_class;
+        start = j;
+    }
+    result.penalized = result.value - HARMONIC_SPAN_PART_COST * (double)(result.parts - 1);
+    *out = result;
+    return HARMONIC_SPAN_OK;
+}
+
+/* True when partition (a_mask, a) beats the current best (b_mask, b): higher penalized value, within TIME_TOLERANCE
+   the fewer parts, then the one whose first differing boundary is earlier (the lowest differing bit set). */
+static bool partition_better(const Partition *a, unsigned a_mask, const Partition *b, unsigned b_mask) {
+    if (a->penalized > b->penalized + TIME_TOLERANCE) {
+        return true;
+    }
+    if (a->penalized < b->penalized - TIME_TOLERANCE) {
+        return false;
+    }
+    if (a->parts != b->parts) {
+        return a->parts < b->parts;
+    }
+    unsigned differing = a_mask ^ b_mask;
+    return (a_mask & (differing & (0u - differing))) != 0;
+}
+
+/* Cuts cells a..b (one measure) at the best valid partition, or leaves it whole; appends the spans in time order. */
+static HarmonicSpanStatus group_measure(Grouper *g, size_t a, size_t b) {
+    Measure m;
+    m.n = 0;
+    m.points[0] = a;
+    for (size_t k = a + 1; k <= b && m.n < MAX_BOUNDARIES; k++) {
+        if (g->cells[k].level == HARMONIC_SPAN_LEVEL_HALF_BAR || g->cells[k].level == HARMONIC_SPAN_LEVEL_BEAT) {
+            m.points[++m.n] = k;
         }
     }
-    return add_span(g, a, b);
+    m.points[m.n + 1] = b + 1;
+    size_t stride = m.n + 2;
+    m.memo = malloc(stride * stride * sizeof(*m.memo));
+    m.done = calloc(stride * stride, sizeof(*m.done));
+    if (m.memo == NULL || m.done == NULL) {
+        free(m.memo);
+        free(m.done);
+        return HARMONIC_SPAN_ERR_ALLOC;
+    }
+
+    HarmonicSpanStatus status = HARMONIC_SPAN_OK;
+    const Reading *whole = NULL;
+    status = part_reading(g, &m, 0, m.n + 1, &whole);
+    unsigned best_mask = 0;
+    Partition best = {false, 0, 0.0, 0.0};
+    for (unsigned mask = 1; status == HARMONIC_SPAN_OK && mask < (1u << m.n); mask++) {
+        Partition candidate;
+        status = score_partition(g, &m, mask, &candidate);
+        if (status != HARMONIC_SPAN_OK || !candidate.valid ||
+            candidate.value < whole->score + HARMONIC_SPAN_SPLIT_MARGIN) {
+            continue;
+        }
+        if (!best.valid || partition_better(&candidate, mask, &best, best_mask)) {
+            best = candidate;
+            best_mask = mask;
+        }
+    }
+
+    size_t start = 0;
+    for (size_t j = 1; status == HARMONIC_SPAN_OK && j <= m.n + 1; j++) {
+        if (j <= m.n && (best_mask & (1u << (j - 1))) == 0) {
+            continue;
+        }
+        const Reading *reading;
+        status = part_reading(g, &m, start, j, &reading);
+        if (status == HARMONIC_SPAN_OK) {
+            status = add_span(g, m.points[start], m.points[j] - 1, reading->bass);
+        }
+        start = j;
+    }
+    free(m.memo);
+    free(m.done);
+    return status;
 }
 
 static HarmonicSpanStatus validate(const HarmonicSpanCell *cells, size_t count, const int *bass) {
@@ -415,7 +457,7 @@ HarmonicSpanStatus harmonic_spans_group(const HarmonicSpanCell *cells, size_t co
         while (b + 1 < count && cells[b + 1].measure == cells[a].measure) {
             b++;
         }
-        status = group_range(&g, a, b);
+        status = group_measure(&g, a, b);
         a = b + 1;
     }
     free(g.scratch);

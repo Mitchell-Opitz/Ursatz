@@ -35,20 +35,18 @@
  * the bass that resolves by step then does not break the part. The Alberti bass keeps R-370's (the bass follows the
  * figure). A span's bass is the bass its reading used.
  *
- * THE SPANS (R-369). One span per measure to start with, then split where the music changes chord. For a span,
- * the boundaries are tried from the strongest level present, HALF_BAR boundaries first and then BEAT ones, in
- * time order, and the span splits at the first boundary that passes every test (a part is the cells on one side,
- * read as ONE segment: the union of its cells' members, held as at the part's start, its first cell's bass as the
- * segment bass, require_bass_chord_tone set, over the reading above):
- *   (a) both parts match and their best chords have different roots;
- *   (b) each part is complete: three of its best chord's pitch classes have weight, or its root and third do and
- *       its bass pitch class is a chord tone;
- *   (c) each part's bass pitch class is a tone of its best chord;
- *   (d) (score_left * dur_left + score_right * dur_right) / dur_span >= score_whole + HARMONIC_SPAN_SPLIT_MARGIN.
- * Both parts are then split the same way, down to BEAT boundaries. When no HALF_BAR or BEAT boundary passes, a
- * boundary INSIDE a beat is tried last, only at the exact half of a beat and only when, besides (a) to (d), each
- * part's bass is its best chord's root. A span with no boundary passing stays whole. The result is deterministic:
- * doubles are summed in cell order.
+ * THE SPANS (R-372). One span per measure to start with (a span never crosses a barline), then the measure is cut
+ * where the music changes chord, by scoring whole partitions instead of single splits. The candidate boundaries of a
+ * measure are its cells at level HALF_BAR or BEAT after its first cell, and every non-empty subset of them is a
+ * partition (2^n, n = 3 in 4/4). A partition is valid when every part is matched, complete (three of its best chord's
+ * pitch classes have weight, or its root and third do and its bass pitch class is a chord tone) and has its bass as a
+ * chord tone, and adjacent parts read different roots. Its value is the parts' scores weighted by duration. The
+ * measure takes the valid partition with the highest value less HARMONIC_SPAN_PART_COST per part after the first,
+ * among those whose value is at least the whole measure's score plus HARMONIC_SPAN_SPLIT_MARGIN; with none it stays
+ * whole. Ties (within 1e-9) go to fewer parts, then to the partition whose first differing boundary is earlier. Each
+ * part is read once. A greedy split, one boundary at a time against a margin over the whole, could not cut a bar that
+ * changes chord every beat: a part scores at most 1.05, so a whole at 0.95 or more never splits, and each step had to
+ * clear the margin alone. The result is deterministic: doubles are summed in cell order.
  */
 
 #include <stdbool.h>
@@ -56,6 +54,13 @@
 
 #include "non_chord_tones.h"
 #include "weighted_identification.h"
+
+/* How much better a partition of a measure must score, duration-weighted and before the part cost, than the whole
+   measure read as one chord. */
+#define HARMONIC_SPAN_SPLIT_MARGIN 0.03
+
+/* What each part after the first costs a partition: of two partitions that score alike, the one with fewer parts wins. */
+#define HARMONIC_SPAN_PART_COST 0.01
 
 /* The metric level of a segment's START. */
 typedef enum {
@@ -83,8 +88,6 @@ typedef struct {
  */
 bool harmonic_span_basses(const HarmonicSpanCell *cells, size_t count, int *out_bass);
 
-/* How much better the two parts of a split must score, duration-weighted, than the whole (test (d)). */
-#define HARMONIC_SPAN_SPLIT_MARGIN 0.10
 
 typedef enum {
     HARMONIC_SPAN_OK = 0,
