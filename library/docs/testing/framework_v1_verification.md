@@ -56,13 +56,13 @@ deviation; none fails. As of the commit that wrote this page; `framework_v1_veri
 | Piece | Keys | Cadences | Phrase form | Thematic returns |
 |---|---|---|---|---|
 | Bach 114 | 7 / 3 | 2 / 7 | 3 / 7 | not asserted |
-| Mozart 545 | 1 / 13 | 2 / 2 | 2 / 0 | 0 / 6 |
-| Clementi 36 | 3 / 5 | 4 / 15 | 5 / 4 | 0 / 2 |
+| Mozart 545 | 2 / 16 | 2 / 2 | 2 / 0 | 0 / 6 |
+| Clementi 36 | 6 / 2 | 4 / 15 | 5 / 4 | 0 / 2 |
 | Field 1 | 2 / 0 | 1 / 5 | 3 / 3 | not asserted |
 | Field 5 | 1 / 1 | 1 / 0 | 0 / 0 (nothing annotated) | not asserted |
-| **All five** | **14 / 22** | **10 / 29** | **13 / 14** | **0 / 8** |
+| **All five** | **18 / 22** | **10 / 29** | **13 / 14** | **0 / 8** |
 
-37 of 110 checks give the expected value; 73 are deviations. Of the 29 cadence deviations, 13 are cadences the chain reports that are not annotated.
+41 of 114 checks give the expected value; 73 are deviations. Of the 29 cadence deviations, 13 are cadences the chain reports that are not annotated.
 
 Two `readings` pairs pass (Clementi m12 and m35, V to I6, evaded and prolongation at 500 each). Two are deviations: Mozart m4 (the chain reads the arrival as a
 root-position I over the Alberti bass, so no V to I6 is found; C5) and Clementi m23 (the chain finds the pair, but the half cadence's dominant arrives at b4.5, not b1;
@@ -76,7 +76,7 @@ The tests read that file, so a row is an exact statement of what the chain does 
 | Cause | Deviations | What it is | Roadmap ID |
 |---|---|---|---|
 | C1 | 22 | key region edges set by 4-measure windows | L8.1 |
-| C2 | 11 | closely related key read for a passage | L8.2 |
+| C2 | 14 | closely related key read for a passage | L8.2 |
 | C3 | 1 | `KeyChangeExtent` from region lengths, no cadence consulted | L8.3 |
 | C4 | 6 | cadence arrival on a weak beat is not looked for (all of Bach 114's) | L8.4 |
 | C5 | 48 | chords read from the sounding pitches: sparse, alternating or ornamented segments | L8.5 |
@@ -107,7 +107,7 @@ with the weighted identifier, whose Chord ids come from the segment ids. Nothing
 
 Date: 2026-10-17. The criterion is: all assertions pass, and every deviation is a documented method limit with a roadmap item attached (R-020).
 
-- Passing checks: 37 of 110. The other 73 are asserted deviations; none fails. Met.
+- Passing checks: 41 of 114 (re-counted 2026-11-08 with the Clementi and Mozart key readings of Michelle's review of 2026-11-07, R-357). The other 73 are asserted deviations; none fails. Met.
 - Deviations by cause: C1 22, C2 11, C3 1, C4 6, C5 48, C6 6, C8 14 (a deviation can name several causes). Every one is documented with its exact actual value. Met.
 - Every cause is a method limit with a roadmap ID (L8.1 to L8.7, R-095). Met.
 - The expected values are verified (2026-10-17, R-092). Met. The Mozart recapitulation keys are flagged for a re-check.

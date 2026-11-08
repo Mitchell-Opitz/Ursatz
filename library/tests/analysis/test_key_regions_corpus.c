@@ -370,10 +370,10 @@ int main(void) {
     /* Clementi 36: 38 measures of 4/4, one whole note each. Asserted at the brief's targets. */
     report_piece("Clementi, Sonatina Op. 36 No. 1, first movement", "Clementi 36.mid", "clementi36_key_regions.txt",
                  38.0, 0.80, 3);
-    /* Mozart 545: the first movement is the first 146 measures of 4/4. It misses both targets (52.5% of measures,
-       3 of 5 boundaries: the recapitulation's F major and C major boundaries are not found), so it is asserted at
-       the measured level: 50% and the 3 boundaries of the exposition and its repeat. */
-    report_piece("Mozart, K. 545, first movement", "Mozart 545.mid", "mozart545_key_regions.txt", 146.0, 0.50, 3);
+    /* Mozart 545: the first movement is the first 146 measures of 4/4, with Michelle's G minor development (57-69, 102-114) scored. It
+       misses both targets (45.9% of measures, 4 of 7 boundaries: the development's G minor and the recapitulation's F major and C major
+       boundaries are not found), so it is asserted at the measured level: 45% and 4 boundaries. */
+    report_piece("Mozart, K. 545, first movement", "Mozart 545.mid", "mozart545_key_regions.txt", 146.0, 0.45, 4);
     printf("test_key_regions_corpus: ok\n");
     return 0;
 }

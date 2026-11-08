@@ -48,18 +48,18 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 12-21, A minor 22-24, G major 25-28 | C1,C2 |
 | DEV-025 | mozart545 | keys | region 29-40 | C major 29-40 | C major 29-36, F major 37-39, G major 40-49 | C1,C2 |
 | DEV-026 | mozart545 | keys | region 41-56 | G major 41-56 | G major 40-49, A minor 50-52, G major 53-61 | C1,C2 |
+| DEV-104 | mozart545 | keys | region 57-69 | G minor 57-69 | G major 53-61, D minor 62-65, A minor 66-68, F major 69-84 | C1,C2 |
 | DEV-027 | mozart545 | keys | region 70-78 | F major 70-78 | F major 69-84 | C1 |
 | DEV-028 | mozart545 | keys | region 79-101 | C major 79-101 | F major 69-84, G major 85-86, E minor 87-90, C major 91-94, D minor 95-98, C major 99-102 | C1,C2 |
+| DEV-105 | mozart545 | keys | region 102-114 | G minor 102-114 | C major 99-102, G minor 103-106, D minor 107-110, A minor 111-113, F major 114-129 | C1,C2 |
 | DEV-029 | mozart545 | keys | region 115-123 | F major 115-123 | F major 114-129 | C1 |
 | DEV-030 | mozart545 | keys | region 124-146 | C major 124-146 | F major 114-129, G major 130-131, E minor 132-135, C major 136-139, D minor 140-143, C major 144-146 | C1,C2 |
 | DEV-031 | mozart545 | keys | change 79 | modulation at 79 | none | C1,C2 |
+| DEV-106 | mozart545 | keys | change 57 | modulation at 57 | none | C1,C2 |
 | DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
 | DEV-033 | mozart545 | cadences | m12 b1 | hc | none | C5 |
 | DEV-103 | mozart545 | cadences | readings m4 b1 | subverted m4 or prolongation m4 | none | C5 |
-| DEV-039 | clementi36 | keys | region 1-5 | C major 1-5 | C major 1-7 | C1 |
-| DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-14, C minor 15-19 | C1 |
-| DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 15-19, G major 20-23 | C1,C2 |
-| DEV-042 | clementi36 | keys | change 6 | modulation at 6 | none | C1 |
+| DEV-041 | clementi36 | keys | region 16-23 | C minor 16-23 | C minor 15-19, G major 20-23 | C1,C2 |
 | DEV-043 | clementi36 | keys | change 16 | modulation at 16 | weak-modulation at 15 | C3 |
 | DEV-044 | clementi36 | cadences | m8 b1 | pac | none | C1,C5 |
 | DEV-045 | clementi36 | cadences | m15 b1 | pac | none | C5 |
