@@ -20,6 +20,8 @@ to them). Three consequences:
   spelling. The `spelling-*` fixtures below do.
 - Where notes of one voice overlap in time (Clementi 36, Field 1), which one `<voice>` cannot hold,
   the overlapping notes were put on separate staves of the one part.
+- `mozart-545.musicxml` is the first movement only, measures 1 to 146, matching the cut MIDI file (the full conversion
+  with measures 147 on removed; the cut falls on a bar line and no note is tied across it).
 
 Licence: the compositions are in the public domain (Bach, Mozart, Clementi and Field all died before
 1900). The MIDI files carry no licence statement in the Ursatz repository, and these files are

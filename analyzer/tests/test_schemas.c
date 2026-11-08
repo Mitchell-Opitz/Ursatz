@@ -444,7 +444,7 @@ static void check_piece(const char *dir, const Pinned *pinned) {
 int main(void) {
     check_fixture(URSATZ_ANALYZER_FIXTURE_DIR);
     static const Pinned PIECES[] = {
-        {"Bach 114.mid", 0, 2, 0, 2},   {"Clementi 36.mid", 0, 7, 0, 7}, {"Mozart 545.mid", 1, 5, 4, 1},
+        {"Bach 114.mid", 0, 2, 0, 2},   {"Clementi 36.mid", 0, 7, 0, 7}, {"Mozart 545.mid", 0, 4, 4, 0},
         {"Field 1.mid", 0, 0, 0, 0},    {"Field 5.mid", 0, 0, 0, 0},
     };
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {

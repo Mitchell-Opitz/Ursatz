@@ -47,7 +47,7 @@ typedef struct {
 
 static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid", 2},
                                {"Clementi 36", "Clementi 36.mid", 10},
-                               {"Mozart 545", "Mozart 545.mid", 51},
+                               {"Mozart 545", "Mozart 545.mid", 22},
                                {"Field 1", "Field 1.mid", 10},
                                {"Field 5", "Field 5.mid", 9}};
 

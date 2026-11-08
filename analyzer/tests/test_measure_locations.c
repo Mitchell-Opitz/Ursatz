@@ -71,10 +71,7 @@ static const ChordExpectation FIELD_1_CHORDS[] = {
     {1, 4, 0, 1}, {37, 2, 1, 3}, {52, 4, 1, 3}, {67, 3, 0, 1}};
 static const ChordExpectation FIELD_5_CHORDS[] = {
     {1, 1, 0, 1}, {12, 1, 0, 1}, {23, 2, 0, 1}, {33, 1, 2, 3}, {43, 3, 5, 32}};
-static const ChordExpectation MOZART_CHORDS[] = {
-    {1, 1, 0, 1},     {67, 4, 1, 4},  {134, 3, 1, 4}, {149, 1, 0, 1},
-    {217, 2, 1, 4}, {256, 1, 0, 1}, {257, 1, 0, 1}, {338, 1, 0, 1}};
-static const ChangeExpectation MOZART_CHANGES[] = {{149, 3, 4}, {256, 1, 4}, {257, 2, 4}};
+static const ChordExpectation MOZART_CHORDS[] = {{1, 1, 0, 1}, {67, 4, 1, 4}, {134, 3, 1, 4}, {146, 3, 0, 1}};
 static const ChordExpectation PICKUP_CHORDS[] = {{0, 4, 0, 1}, {1, 1, 0, 1}, {1, 2, 0, 1}, {1, 3, 0, 1}};
 static const ChordExpectation NO_METER_CHORDS[] = {
     {1, 1, 0, 1}, {1, 2, 0, 1}, {1, 4, 0, 1}, {2, 1, 0, 1}};
@@ -84,7 +81,7 @@ static const Expectation PIECES[] = {
     {"Clementi 36.mid", "file", 4, 4, 38, 38, -1, 205, CLEMENTI_CHORDS, 5, NULL, 0},
     {"Field 1.mid", "file", 12, 8, 67, 67, -1, 268, FIELD_1_CHORDS, 4, NULL, 0},
     {"Field 5.mid", "file", 12, 8, 43, 43, -1, 169, FIELD_5_CHORDS, 5, NULL, 0},
-    {"Mozart 545.mid", "file", 4, 4, 338, 338, -1, 1095, MOZART_CHORDS, 8, MOZART_CHANGES, 3},
+    {"Mozart 545.mid", "file", 4, 4, 146, 146, -1, 606, MOZART_CHORDS, 4, NULL, 0},
 };
 
 static const Expectation PICKUP = {"pickup", "file", 4, 4, 2, 1, 1, 4, PICKUP_CHORDS, 4, NULL, 0};
