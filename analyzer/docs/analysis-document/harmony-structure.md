@@ -5,26 +5,28 @@ Claims about outer voices, cadences, prolongations, progressions and harmonic rh
 ## Outer voices
 
 `outer_voices` holds the two outer lines of the piece, from Ursatz's outer-voice extraction:
-`{"soprano": [...], "bass": [...]}`. Each line has one entry for every chord, in time order, so the
-entry at index `i` of either line belongs to the chord at index `i` of `chords` (`chord_index` says so
-too). A line is not a melody: it is the highest (soprano) or lowest (bass) sounding note at the start
-of each chord's span (the library extracts the lines over segments that are not merged over unchanged
-harmony, one per melody note, and each chord takes the entry at its start), theory-neutral pitch height with the scale degree read against the local key. It is the
-shared input for voice-leading (A6.1), melody (A5.1, whose `melody` section is read from these lines) and schema
-(A6.2) analysis, and for the Composer's schema recognition. Nothing in it is a voice-leading, melodic
-or schema claim.
+`{"soprano": [...], "bass": [...]}`. Each line has one entry for every voice segment, in time order. The library
+extracts the lines over segments that are not merged over unchanged harmony, one per melody note (a note that leaves
+the sounding pitch classes unchanged shares a segment with the notes beside it), so a line is the melody and the bass
+as they move, not the chords' view of them. Chords are harmonic spans and hold many voice segments: the entries of a
+line belong to chords many to one, and `chord_index` says which chord holds the start of the entry's voice segment
+(0 when none does). A line is not a melody claim: it is the highest (soprano) or lowest (bass) sounding note of each voice segment,
+theory-neutral pitch height with the scale degree read against the key of that chord. It is the shared input for
+voice-leading (A6.1), melody (A5.1, whose `melody` section is read from these lines) and schema (A6.2) analysis, and for
+the Composer's schema recognition. Nothing in it is a voice-leading, melodic or schema claim. A chord's own `outer`
+field (see Chord claims) is the per-chord view: the lines' entry at the chord's start.
 
-Each entry is a claim (see Claims) over the chord's span, plus:
+Each entry is a claim (see Claims) over the voice segment's window, plus:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `chord_index` | integer | Index into `chords` of the chord this entry belongs to. |
-| `status` | string | `"present"` when a note sounds as the line in the chord's span; otherwise `"absent"` (only other voices sound), `"bridged"` (a short gap inside the line) or `"guarded"` (the library dropped the note rather than adopt an accompaniment note). A line is never filled from another voice. |
-| `key_label` | string | The key of the region the chord lies in, the key the degree is read in, or `"no match"`. |
+| `chord_index` | integer | Index into `chords` of the chord whose segment holds the start of the entry's voice segment, `0` when none does. Many entries share a chord on a harmonic span. |
+| `status` | string | `"present"` when a note sounds as the line in the voice segment; otherwise `"absent"` (only other voices sound), `"bridged"` (a short gap inside the line) or `"guarded"` (the library dropped the note rather than adopt an accompaniment note). A line is never filled from another voice. |
+| `key_label` | string | The key of the region of the entry's chord (`chord_index`), the key the degree is read in, or `"no match"`. |
 | `note_id` | integer or null | The imported note index, as `note_ids` in every claim; `null` unless present. `note_ids` holds the same note, or is empty. |
 | `pitch` | object or null | `{"name", "midi"}`: the pitch name with octave (`"E5"`, spelled with flats in keys that read in flats) and the MIDI note number. `null` unless present. |
 | `degree` | string or null | The library's scale degree label in the local key: `"1"` to `"7"`, with `b` or `#` for a chromatic alteration. `null` unless present and the chord lies in a key region. In a minor region the diatonic degrees are the natural minor's. |
-| `held` | boolean or null | Whether the note was attacked before the chord began. `null` unless present. |
+| `held` | boolean or null | Whether the note was attacked before the voice segment began. `null` unless present. |
 | `onset` | object or null | `{"time", "location"}`: where the note itself is attacked, as a rational in whole notes and as a measure and beat. `null` unless present. |
 | `duration` | object or null | `{"whole_notes", "beats"}`: the note's whole length, not just its part in the chord, in whole notes and in beats of the signature it is attacked in (`null` when that signature has no beat grid). `null` unless present. |
 
@@ -32,7 +34,7 @@ In a claim, `label` is the degree, failing that the pitch name, failing that the
 is the uncertainty of the key region the degree is read in, in [0, 1], higher LESS certain, as for
 `keys` (note this is the other way round from a chord's `uncertainty`); `null` when `degree` is.
 
-One note can appear in consecutive entries: a note held across several chords is the line's note in
+One note can appear in consecutive entries: a note held across several voice segments is the line's note in
 each. Where one note sounds, the soprano and the bass are that note. Where voices cross, the soprano is
 whatever sounds highest and the bass whatever sounds lowest, whichever voice plays them. A chord also
 carries the same summary in its `outer` field (see Chord claims).

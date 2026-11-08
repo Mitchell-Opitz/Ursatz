@@ -48,7 +48,7 @@ Rules the counts follow:
   (see [analysis-document.md](analysis-document.md)). A piece with no declared tempo adds nothing to it. Tempo changes
   within a piece are not counted.
 
-- A note held across several chord segments is one soprano note. A rest bridged inside the line does not break it.
+- A note held across several voice segments (the soprano line has one entry per melody note) is one soprano note. A rest bridged inside the line does not break it.
 - A chord with no numeral, or a change of key region, ends a run of numerals. Within a run a numeral that repeats is
   counted as a chord but not as a progression step.
 - The total of a category is the sum of its counts.
