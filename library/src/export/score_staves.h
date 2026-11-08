@@ -59,12 +59,24 @@ ScoreStavesResult score_staves_pair_hands(NoteEvent *const *events, PitchNumeric
  *   - part_staff_count: one entry per part, 1 or 2. Every note of a part with staff count 1 gets staff 1.
  *   - pitch_values: parallel to events, the MIDI note number of each note as midi_importer writes it (position
  *     numerator over denominator 1, middle C is 60). Only read for parts with staff count 2.
- * For a part with staff count 2 the split point is middle C. Notes that start together and span more than an octave
- * across middle C split at their largest adjacent interval (the lower side is the bass). Any other note at or above
- * 60 is treble and below is bass, except from 55 to 64: there the note takes the staff of the nearer pitch of the
- * last treble note and the last bass note that ended within the last whole note before it; with no such note, or a
- * tie, the rule above applies.
+ *   - staff_hint: optional, parallel to events. 1 or 2 fixes the note's staff (in a part with staff count 2), 0 lets
+ *     the rule decide. NULL means no hints.
+ * For a note without a hint in a part with staff count 2:
+ *   - The notes sounding at its onset (starting then, or started earlier and still held) are sorted by pitch and split
+ *     at their largest adjacent interval, a tie going to the interval nearest middle C; the lower side is bass. A
+ *     hinted note counts on its fixed staff: only a split with every hinted bass note below it and every hinted
+ *     treble note above it is used.
+ *   - A note sounding alone takes the staff of the nearer pitch of the last treble note and the last bass note that
+ *     ended within the last whole note before it. With only one of the two, it takes that staff when within an octave
+ *     of it. With a tie, neither, or a note further than that, 60 and above is treble and below is bass.
+ * Notes starting together get their staffs before later notes look back at them. There is no fixed split pitch: a
+ * bass line above middle C stays on the bass staff while the other hand sounds above it.
  */
+ScoreStavesResult score_staves_assign_hinted(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                             size_t count, const size_t *part_index, const int *part_staff_count,
+                                             size_t part_count, const int *staff_hint, int *out_staff);
+
+/* score_staves_assign_hinted without hints. */
 ScoreStavesResult score_staves_assign(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
                                       const size_t *part_index, const int *part_staff_count, size_t part_count,
                                       int *out_staff);
