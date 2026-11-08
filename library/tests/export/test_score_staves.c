@@ -197,6 +197,170 @@ static void test_bad_input(void) {
     piece_free(&piece);
 }
 
+/* --- pairing the hands of one piano --- */
+
+/* Notes of a stream: a quarter note at each quarter from first to last (inclusive), all at one MIDI pitch. */
+static void stream_add(Piece *piece, size_t stream, int first, int last, long midi) {
+    for (int q = first; q <= last; q++) {
+        piece_add(piece, q, 4, 1, 4, midi, stream);
+    }
+}
+
+static ScoreStavesResult pair(const Piece *piece, const ScoreStream *streams, size_t stream_count, size_t *part_of,
+                              int *staff_of, size_t *part_count) {
+    return score_staves_pair_hands(piece->bag.events, piece->values, piece->bag.count, piece->bag.part, streams,
+                                   stream_count, part_of, staff_of, part_count);
+}
+
+static void test_pair_two_piano_streams(void) {
+    Piece piece;
+    piece_init(&piece);
+    /* The right hand on stream 0 at 72, the left hand on stream 1 at 62 to 67: it lies above C4 for the whole bar and
+       is still the lower hand, so it stays staff 2. */
+    stream_add(&piece, 0, 0, 3, 72);
+    piece_add(&piece, 0, 4, 1, 4, 62, 1);
+    piece_add(&piece, 1, 4, 1, 4, 64, 1);
+    piece_add(&piece, 2, 4, 1, 4, 65, 1);
+    piece_add(&piece, 3, 4, 1, 4, 67, 1);
+    const ScoreStream streams[2] = {{0, 4}, {0, 4}};
+    size_t part_of[2];
+    int staff_of[2];
+    size_t parts = 0;
+    assert(pair(&piece, streams, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 1 && part_of[0] == 0 && part_of[1] == 0);
+    assert(staff_of[0] == 1 && staff_of[1] == 2);
+    piece_free(&piece);
+
+    /* The lower stream first: the staffs follow the median, not the stream order. */
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 48);
+    stream_add(&piece, 1, 0, 3, 76);
+    assert(pair(&piece, streams, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 1 && part_of[0] == 0 && part_of[1] == 0);
+    assert(staff_of[0] == 2 && staff_of[1] == 1);
+    piece_free(&piece);
+}
+
+static void test_pair_needs_two_pianos(void) {
+    Piece piece;
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 72);
+    stream_add(&piece, 1, 0, 3, 48);
+    stream_add(&piece, 2, 0, 3, 55);
+    /* A piano and a flute (program 73) are not one part; the flute pairs with nothing, so the piano and the other
+       piano stream still pair. */
+    const ScoreStream streams[3] = {{0, 4}, {73, 4}, {0, 4}};
+    size_t part_of[3];
+    int staff_of[3];
+    size_t parts = 0;
+    assert(pair(&piece, streams, 3, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 2 && part_of[0] == 0 && part_of[1] == 1 && part_of[2] == 0);
+    assert(staff_of[0] == 1 && staff_of[1] == 0 && staff_of[2] == 2);
+    piece_free(&piece);
+
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 72);
+    stream_add(&piece, 1, 0, 3, 48);
+    const ScoreStream piano_flute[2] = {{0, 4}, {73, 4}};
+    assert(pair(&piece, piano_flute, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 2 && part_of[0] == 0 && part_of[1] == 1 && staff_of[0] == 0 && staff_of[1] == 0);
+    piece_free(&piece);
+}
+
+static void test_pair_three_piano_streams(void) {
+    Piece piece;
+    piece_init(&piece);
+    /* Stream 0 at 76 and stream 1 at 48 sound together for four notes each (eight overlapping notes). Stream 2 at
+       60 shares two notes with stream 1 (four overlapping notes), so streams 0 and 1 are the pair. */
+    stream_add(&piece, 0, 0, 3, 76);
+    stream_add(&piece, 1, 0, 3, 48);
+    stream_add(&piece, 2, 2, 5, 60);
+    const ScoreStream streams[3] = {{0, 4}, {0, 4}, {0, 4}};
+    size_t part_of[3];
+    int staff_of[3];
+    size_t parts = 0;
+    assert(pair(&piece, streams, 3, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 2 && part_of[0] == 0 && part_of[1] == 0 && part_of[2] == 1);
+    assert(staff_of[0] == 1 && staff_of[1] == 2 && staff_of[2] == 0);
+    piece_free(&piece);
+}
+
+static void test_pair_conditions(void) {
+    size_t part_of[2];
+    int staff_of[2];
+    size_t parts = 0;
+    const ScoreStream streams[2] = {{0, 4}, {0, 4}};
+    Piece piece;
+
+    /* One after the other: nothing sounds together. */
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 72);
+    stream_add(&piece, 1, 4, 7, 48);
+    assert(pair(&piece, streams, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 2 && part_of[1] == 1 && staff_of[0] == 0 && staff_of[1] == 0);
+    piece_free(&piece);
+
+    /* Two of four notes sound together: half of the shorter stream, so they pair. */
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 72);
+    stream_add(&piece, 1, 2, 5, 48);
+    assert(pair(&piece, streams, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 1 && staff_of[0] == 1 && staff_of[1] == 2);
+    piece_free(&piece);
+
+    /* One of four notes sounds together: less than half, so they stay apart. */
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 72);
+    stream_add(&piece, 1, 3, 6, 48);
+    assert(pair(&piece, streams, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 2);
+    piece_free(&piece);
+
+    /* The same median pitch: no hand is higher, so they stay apart. */
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 60);
+    stream_add(&piece, 1, 0, 3, 60);
+    assert(pair(&piece, streams, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 2);
+    piece_free(&piece);
+
+    /* A held note counts: a whole note under four quarters sounds together with all of them. */
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 3, 72);
+    piece_add(&piece, 0, 1, 1, 1, 48, 1);
+    const ScoreStream held[2] = {{0, 4}, {0, 1}};
+    assert(pair(&piece, held, 2, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 1 && staff_of[0] == 1 && staff_of[1] == 2);
+    piece_free(&piece);
+}
+
+static void test_pair_bad_input(void) {
+    Piece piece;
+    piece_init(&piece);
+    stream_add(&piece, 0, 0, 1, 72);
+    size_t part_of[1];
+    int staff_of[1];
+    size_t parts = 0;
+    const ScoreStream streams[1] = {{0, 2}};
+    assert(pair(&piece, streams, 1, part_of, staff_of, &parts) == SCORE_STAVES_OK);
+    assert(parts == 1 && part_of[0] == 0 && staff_of[0] == 0);
+    const ScoreStream wrong_count[1] = {{0, 3}};
+    assert(pair(&piece, wrong_count, 1, part_of, staff_of, &parts) == SCORE_STAVES_ERR_INCONSISTENT_INPUT);
+    piece.bag.part[1] = 4;
+    assert(pair(&piece, streams, 1, part_of, staff_of, &parts) == SCORE_STAVES_ERR_INCONSISTENT_INPUT);
+    piece.bag.part[1] = 0;
+    assert(score_staves_pair_hands(piece.bag.events, piece.values, piece.bag.count, piece.bag.part, streams, 1, part_of,
+                                   staff_of, NULL) == SCORE_STAVES_ERR_NULL_ARG);
+    assert(score_staves_pair_hands(piece.bag.events, piece.values, piece.bag.count, piece.bag.part, NULL, 1, part_of,
+                                   staff_of, &parts) == SCORE_STAVES_ERR_NULL_ARG);
+    piece_free(&piece);
+
+    /* No streams, no notes: no parts. */
+    parts = 7;
+    assert(score_staves_pair_hands(NULL, NULL, 0, NULL, NULL, 0, NULL, NULL, &parts) == SCORE_STAVES_OK);
+    assert(parts == 0);
+}
+
 int main(void) {
     test_program_table();
     test_one_staff_part();
@@ -206,5 +370,10 @@ int main(void) {
     test_window_follows_the_hand();
     test_parts_are_independent();
     test_bad_input();
+    test_pair_two_piano_streams();
+    test_pair_needs_two_pianos();
+    test_pair_three_piano_streams();
+    test_pair_conditions();
+    test_pair_bad_input();
     return 0;
 }

@@ -28,6 +28,32 @@ typedef enum {
 } ScoreStavesResult;
 
 /*
+ * One note stream as the caller numbers it: one per MIDI track and channel. program is the General MIDI program
+ * (0-based, -1 for none) and note_count the number of notes of the stream among the events passed alongside.
+ */
+typedef struct {
+    int program;
+    size_t note_count;
+} ScoreStream;
+
+/*
+ * Decides which note streams are the two hands of one piano. Of the streams whose programs both pass
+ * score_program_uses_grand_staff, two are joined into one part when they sound together (the notes of one overlap a
+ * note of the other) for at least half of the shorter stream's notes and their median pitches differ; the stream with
+ * the higher median gets staff 1 and the other staff 2. With three or more such streams only the pair with the most
+ * overlapping notes (both streams counted) is joined; an equal count goes to the pair with the lower stream indexes.
+ * Every other stream is its own part with staff 0, which means "decide per note" (score_staves_assign_hinted).
+ *   - stream_index: parallel to events, the stream (index into streams) of each note.
+ *   - streams: one entry per stream, note_count must equal the notes the events give it.
+ *   - out_part_of_stream and out_staff_of_stream: parallel to streams. Parts are numbered in order of each part's first
+ *     stream index. out_part_count receives the number of parts.
+ */
+ScoreStavesResult score_staves_pair_hands(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                          size_t count, const size_t *stream_index, const ScoreStream *streams,
+                                          size_t stream_count, size_t *out_part_of_stream, int *out_staff_of_stream,
+                                          size_t *out_part_count);
+
+/*
  * Writes the staff (1 treble, 2 bass) of each of count events to out_staff, parallel to events.
  *   - part_index: parallel to events, the part of each note; NULL means every note is in part 0.
  *   - part_staff_count: one entry per part, 1 or 2. Every note of a part with staff count 1 gets staff 1.
