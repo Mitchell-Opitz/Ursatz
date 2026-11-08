@@ -119,24 +119,9 @@ specifically. Enforced by
 
 `common_practice_home_key_region` (`key_regions.h`) gives the home key of a piece from its regions: the key with the longest total duration, the earliest on a tie, summed on checked `Rational`. `common_practice_ranked_chord_quality_name` and `common_practice_ranked_chord_inversion` (`weighted_identification.h`) name a ranked chord's quality and place its bass among its tones. `common_practice_scale_degree_of` (`outer_scale_degrees.h`) gives a pitch class's scale degree (1 to 7) and alteration (-1, 0, 1) as numbers; `common_practice_scale_degree_label` is built over it.
 
-## Segment bass (R-370)
+## Segment bass, harmonic spans (R-370 to R-373, R-376)
 
-`CommonPracticeSegment` carries `has_bass` and `bass_pitch` (semitone number, C4 = 60). Zero-initialized, the bass is the lowest sounding pitch, as before. With `has_bass`, `common_practice_identify_weighted` and `_sequence` pass `bass_pitch` to `common_practice_weight_segment` (its last parameter, `NULL` for the lowest pitch): the bass weight multiplies the members on that pitch class, and when none sounds it the weights are unchanged and only the bass is set. `CommonPracticeWeightedConfig.require_bass_chord_tone` (default false) limits the candidates to chords holding the bass pitch class, unless none does; the tie-break order is unchanged. An arpeggio union takes the first segment's bass when it has one. Nothing in the chain sets either yet.
-
-## Harmonic spans (R-372, R-373)
-
-`harmonic_spans.h` groups the chain's segments into spans, one chord each, and reads each segment's bass. It is pure: the caller gives each segment (`HarmonicSpanCell`) its time range, measure and metric level (`HARMONIC_SPAN_LEVEL_BAR`, `_HALF_BAR`, `_BEAT`, `_INNER`, read with standard-meter), and the module includes no other framework. The chain does not call it yet.
-
-`harmonic_span_basses` gives each cell its bass at its start: the lowest sounding pitch (attacked there or held into it); when that is 12 or more semitones above the most recent bass of the same measure, or nothing sounds, the bass persists; the first cell of a measure takes its lowest sounding pitch, or the previous measure's bass when nothing sounds; `-1` only before anything has sounded.
-
-`harmonic_spans_group` starts with one span per measure and cuts it by scoring whole partitions:
-
-- **Reading.** A part (the cells on one side of a boundary, or the whole measure) is read as one segment over its first cell's bass, with `require_bass_chord_tone` set, in no key: the best chord over all 24 keys, with the major, minor and diminished triads, the dominant seventh and the diminished seventh as the vocabulary. The other sevenths are left out because two chords a third apart (I and vi) would read as one seventh chord; a home key would miss modulations. The chain still identifies chords on the spans with the full vocabulary.
-- **Partition.** The boundaries are the measure's cells at level `HALF_BAR` or `BEAT` after its first. Every non-empty subset is a partition. It is valid when every part is matched, complete (three of its chord's pitch classes sound, or its root and third with the bass a chord tone) and has its bass as a chord tone, and adjacent parts read different roots. Its value is the parts' scores weighted by duration, less `HARMONIC_SPAN_PART_COST` (0.01) per part after the first. The measure takes the valid partition of highest value among those whose unpenalized value is at least the whole measure's score plus `HARMONIC_SPAN_SPLIT_MARGIN` (0.03); with none it stays whole. Ties go to fewer parts, then to the earlier first differing boundary.
-- **Half beat.** A resulting span inside one beat splits once at the exact half of its range when both halves are valid, read different roots, and beat the span's score by the margin.
-- **Span bass.** A part is read over its first cell's bass. When that reading is not valid and the first later cell with a different bass lies inside the part's first beat, 1 or 2 semitones away, the part is read over that bass and that reading is used when valid, so an accented passing tone or suspension in the bass does not break the span. `HarmonicSpans.bass` is the bass the span's reading used.
-
-A greedy split against a margin over the whole (R-369) could not cut a bar that changes chord every beat, which is why the partition is scored as a whole.
+`CommonPracticeSegment` can carry its own bass (`has_bass`, `bass_pitch`), `CommonPracticeWeightedConfig.require_bass_chord_tone` limits the candidates to chords holding it, and `seventh_penalty` (default 0) is subtracted from every seventh candidate's score (R-376). `harmonic_spans.h` reads each segment's bass and groups segments into spans, one chord each. The chain sets all of these for spans. The rules are in [common-practice-minimal-weighted.md](../../docs/modules/common-practice-minimal-weighted.md).
 
 ## Neutral analysis input
 

@@ -80,6 +80,14 @@
 #define ANALYSIS_CHAIN_STAGE_ALL           ((1u << 12) - 1u)
 
 /*
+ * The seventh penalty (CommonPracticeWeightedConfig.seventh_penalty) of the chord identification on harmonic spans (R-376). A span reads
+ * the union of a beat or more, so a passing tone completes a seventh over a triad; with this charge a seventh outranks its own triad only
+ * when its seventh pitch class carries more than 15% of the span's weight. Used only when harmonic_spans is on; grouping, the key segments
+ * and the key regions keep the weighting config as given.
+ */
+#define ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY 0.15
+
+/*
  * One field per stage config; analysis_chain_config_default() fills every one with the library's default. `segmentation` cuts the segments
  * the chords are read in; the outer voices use the same config with merge_unchanged_harmony off (one segment per melody note).
  *
@@ -98,6 +106,11 @@
  *
  * home_key_index: the home key as a key index 0..23 (key_regions.h), or -1 for the key of the first key region. It is the key of the
  * boundary cadences, the motive degrees, the melody degrees and the schema key degrees.
+ *
+ * harmonic_spans (default true): the chords are read on harmonic spans, not on every segment (R-369 to R-375). Before the key regions
+ * exist, the segments are grouped into spans (harmonic_spans_group, read in no key) and replaced by one segment per span, each carrying
+ * the bass its span was read over; the chords then require that bass as a chord tone and the Roman numerals take it as the inversion's
+ * bass. Off: one chord per segment as before. It is the switch for measuring the change.
  */
 typedef struct {
     unsigned stages;
@@ -119,6 +132,7 @@ typedef struct {
     int last_measure;
     int home_key_index;
     bool inject_kernel_owners;
+    bool harmonic_spans;
 } AnalysisChainConfig;
 
 AnalysisChainConfig analysis_chain_config_default(void);

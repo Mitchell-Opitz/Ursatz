@@ -235,6 +235,175 @@ void chain_segments_destroy(ChainSegments *segments) {
     memset(segments, 0, sizeof(*segments));
 }
 
+static bool same_note_id(const char *a, const char *b) {
+    return strcmp(a, b) == 0;
+}
+
+static HarmonicSpanLevel span_level_at(const MeterMap *map, const MusicalTime *start) {
+    HarmonicSpanLevel level = HARMONIC_SPAN_LEVEL_INNER;
+    MetricalPosition *position = NULL;
+    if (metrical_position_from_time(map, start, &position) != METRICAL_POSITION_OK) {
+        return level;
+    }
+    const TimeSignature *reading = NULL;
+    StandardMeterLevel found;
+    if (metrical_position_reading_signature(map, metrical_position_measure(position), &reading) == METRICAL_POSITION_OK &&
+        standard_meter_metric_level(reading, position, &found)) {
+        if (found == STANDARD_METER_LEVEL_DOWNBEAT) {
+            level = HARMONIC_SPAN_LEVEL_BAR;
+        } else if (found == STANDARD_METER_LEVEL_SECONDARY_BEAT) {
+            level = HARMONIC_SPAN_LEVEL_HALF_BAR;
+        } else if (found == STANDARD_METER_LEVEL_BEAT) {
+            level = HARMONIC_SPAN_LEVEL_BEAT;
+        }
+    }
+    metrical_position_destroy(position);
+    return level;
+}
+
+ChainInputStatus chain_build_span_cells(const AnalysisNoteSet *notes, const ChainSegments *segments, HarmonicSpanCell **out) {
+    if (notes == NULL || segments == NULL || out == NULL) {
+        return CHAIN_INPUT_ERR_NULL_ARGUMENT;
+    }
+    if (segments->segments == NULL || segments->count == 0) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    HarmonicSpanCell *cells = calloc(segments->count, sizeof(HarmonicSpanCell));
+    if (cells == NULL) {
+        return CHAIN_INPUT_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < segments->count; i++) {
+        const MusicalTime *start = time_span_start(sonority_time_window(segments->sonorities.items[i].sonority));
+        int measure = 0;
+        if (meter_map_measure_index_at(notes->map, start, &measure) != METER_MAP_OK) {
+            free(cells);
+            return CHAIN_INPUT_ERR_SEGMENTATION;
+        }
+        cells[i].segment = &segments->segments[i];
+        cells[i].start = segments->starts[i];
+        cells[i].end = segments->ends[i];
+        cells[i].measure = measure;
+        cells[i].level = span_level_at(notes->map, start);
+    }
+    *out = cells;
+    return CHAIN_INPUT_OK;
+}
+
+void chain_span_cells_destroy(HarmonicSpanCell *cells) {
+    free(cells);
+}
+
+static bool spans_cover(const HarmonicSpans *spans, size_t count) {
+    if (spans->count == 0 || spans->first == NULL || spans->last == NULL || spans->bass == NULL || spans->first[0] != 0) {
+        return false;
+    }
+    for (size_t k = 0; k < spans->count; k++) {
+        if (spans->last[k] < spans->first[k] || (k + 1 < spans->count && spans->first[k + 1] != spans->last[k] + 1)) {
+            return false;
+        }
+    }
+    return spans->last[spans->count - 1] + 1 == count;
+}
+
+/* One merged sonority: the notes of the cells first..last once each (in the order they first sound), held when the first cell holds them. */
+static bool merged_sonority(const ChainSegments *segs, size_t first, size_t last, AdaptiveSonority *out) {
+    size_t capacity = 0;
+    for (size_t c = first; c <= last; c++) {
+        capacity += sonority_event_id_count(segs->sonorities.items[c].sonority);
+    }
+    EntityID **ids = calloc(capacity > 0 ? capacity : 1, sizeof(EntityID *));
+    bool *held = calloc(capacity > 0 ? capacity : 1, sizeof(bool));
+    const char **values = calloc(capacity > 0 ? capacity : 1, sizeof(char *));
+    size_t n = 0;
+    bool ok = ids != NULL && held != NULL && values != NULL;
+    for (size_t c = first; ok && c <= last; c++) {
+        const AdaptiveSonority *cell = &segs->sonorities.items[c];
+        for (size_t j = 0; ok && j < sonority_event_id_count(cell->sonority); j++) {
+            const char *value = entity_id_value(sonority_event_id_at(cell->sonority, j));
+            bool seen = false;
+            for (size_t k = 0; k < n && !seen; k++) {
+                seen = same_note_id(values[k], value);
+            }
+            if (seen) {
+                continue;
+            }
+            ok = entity_id_create(value, &ids[n]) == ENTITY_ID_OK;
+            if (ok) {
+                values[n] = entity_id_value(ids[n]);
+                held[n] = c == first && cell->held[j];
+                n++;
+            }
+        }
+    }
+    TimeSpan *window = NULL;
+    const TimeSpan *from = sonority_time_window(segs->sonorities.items[first].sonority);
+    const TimeSpan *to = sonority_time_window(segs->sonorities.items[last].sonority);
+    Sonority *sonority = NULL;
+    ok = ok && n > 0 && time_span_create(time_span_start(from), time_span_end(to), TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window) == TIME_SPAN_OK &&
+         sonority_create(window, ids, n, NULL, 0, SONORITY_EVENT_DOMAIN_SOUNDING, &sonority) == SONORITY_OK;
+    if (!ok) {
+        if (ids != NULL) {
+            for (size_t k = 0; k < n; k++) {
+                entity_id_destroy(ids[k]);
+            }
+        }
+        if (sonority == NULL) {
+            time_span_destroy(window);
+        }
+        free(ids);
+        free(held);
+        free(values);
+        return false;
+    }
+    free(ids); /* the sonority took the ids and the window */
+    free(values);
+    out->sonority = sonority;
+    out->held = held;
+    return true;
+}
+
+ChainInputStatus chain_merge_segments(const AnalysisNoteSet *notes, ChainSegments *segs, const HarmonicSpans *spans) {
+    if (notes == NULL || segs == NULL || spans == NULL) {
+        return CHAIN_INPUT_ERR_NULL_ARGUMENT;
+    }
+    if (segs->segments == NULL || segs->count == 0 || !spans_cover(spans, segs->count)) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    ChainSegments built;
+    memset(&built, 0, sizeof(built));
+    built.sonorities.items = calloc(spans->count, sizeof(AdaptiveSonority));
+    built.ids = calloc(spans->count, sizeof(char[32]));
+    built.starts = calloc(spans->count, sizeof(double));
+    built.ends = calloc(spans->count, sizeof(double));
+    if (built.sonorities.items == NULL || built.ids == NULL || built.starts == NULL || built.ends == NULL) {
+        chain_segments_destroy(&built);
+        return CHAIN_INPUT_ERR_ALLOC;
+    }
+    for (size_t k = 0; k < spans->count; k++) {
+        if (!merged_sonority(segs, spans->first[k], spans->last[k], &built.sonorities.items[k])) {
+            chain_segments_destroy(&built);
+            return CHAIN_INPUT_ERR_ALLOC;
+        }
+        built.sonorities.count = k + 1;
+        built.count = k + 1;
+        built.starts[k] = segs->starts[spans->first[k]];
+        built.ends[k] = segs->ends[spans->last[k]];
+        snprintf(built.ids[k], sizeof(built.ids[k]), "seg-%zu", k);
+    }
+    ChainInputStatus status = chain_build_members(notes, &built);
+    if (status != CHAIN_INPUT_OK) {
+        chain_segments_destroy(&built);
+        return status;
+    }
+    for (size_t k = 0; k < spans->count; k++) {
+        built.segments[k].has_bass = spans->bass[k] >= 0;
+        built.segments[k].bass_pitch = spans->bass[k] >= 0 ? spans->bass[k] : 0;
+    }
+    chain_segments_destroy(segs);
+    *segs = built;
+    return CHAIN_INPUT_OK;
+}
+
 ChainInputStatus chain_build_key_segments(const ChainSegments *segments, size_t count, const CommonPracticeWeightedConfig *weighting,
                                           CommonPracticeKeySegment **out) {
     if (segments == NULL || out == NULL) {

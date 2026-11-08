@@ -15,6 +15,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.bass_weight = 1.1;
     config.missing_third_penalty = 0.15;
     config.bass_chord_tone_bonus = 0.05;
+    config.seventh_penalty = 0.0;
     config.min_coverage = 0.5;
     config.require_bass_chord_tone = false;
     config.classifier = NULL;
@@ -33,7 +34,7 @@ static bool config_valid(const CommonPracticeWeightedConfig *config) {
         }
     }
     return usable(config->held_factor) && usable(config->bass_weight) && usable(config->missing_third_penalty) &&
-           usable(config->bass_chord_tone_bonus) && usable(config->min_coverage);
+           usable(config->bass_chord_tone_bonus) && usable(config->seventh_penalty) && usable(config->min_coverage);
 }
 
 CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPracticeMember *members, size_t count,
@@ -276,6 +277,9 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         }
         if (bass_is_chord_tone) {
             score += config->bass_chord_tone_bonus;
+        }
+        if (entry->is_seventh) {
+            score -= config->seventh_penalty;
         }
         chord.score = score;
         ranked[count++] = chord;

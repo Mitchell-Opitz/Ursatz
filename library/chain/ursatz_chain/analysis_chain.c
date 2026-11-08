@@ -51,6 +51,7 @@ struct AnalysisChain {
     bool have_pitches;
     ChainSegments segs;
     bool have_segs;
+    bool spans_merged; /* the segments are harmonic spans, each with its bass */
     size_t count; /* the segments inside the scope */
     ChainSegments voice_segs;
     bool have_voice_segs;
@@ -135,6 +136,7 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.last_measure = 0;
     config.home_key_index = -1;
     config.inject_kernel_owners = true;
+    config.harmonic_spans = true;
     return config;
 }
 
@@ -364,6 +366,11 @@ static bool identify_chords(AnalysisChain *chain) {
     if (p->chords == NULL) {
         return false;
     }
+    CommonPracticeWeightedConfig weighting = chain->config.weighting;
+    weighting.require_bass_chord_tone = chain->spans_merged; /* the chord holds the span's bass (R-370) */
+    if (chain->spans_merged) {
+        weighting.seventh_penalty = ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY; /* a passing tone does not complete a seventh (R-376) */
+    }
     size_t s = 0;
     while (s < count) {
         size_t region = region_at(&p->regions, chain->segs.starts[s]);
@@ -374,7 +381,7 @@ static bool identify_chords(AnalysisChain *chain) {
         int key_index = p->regions.regions[region].key_index;
         CommonPracticeWeightedResults group = {0};
         if (common_practice_identify_weighted_sequence(&chain->segs.segments[s], end - s, common_practice_key_index_tonic(key_index),
-                                                       common_practice_key_index_mode(key_index), &chain->config.weighting,
+                                                       common_practice_key_index_mode(key_index), &weighting,
                                                        &group) != COMMON_PRACTICE_WEIGHTED_OK) {
             return false;
         }
@@ -414,6 +421,8 @@ static bool read_numerals(AnalysisChain *chain) {
         p->segment_inputs[i].weights = chain->key_segments[i].weights.pitch_class;
         p->segment_inputs[i].pitches = &p->segment_pitches[pitch_total];
         p->segment_inputs[i].pitch_count = chain->segs.segments[i].member_count;
+        p->segment_inputs[i].has_bass = chain->segs.segments[i].has_bass; /* the bass the span was read over */
+        p->segment_inputs[i].bass_pitch = chain->segs.segments[i].bass_pitch;
         for (size_t j = 0; j < chain->segs.segments[i].member_count; j++) {
             p->segment_pitches[pitch_total++] = chain->segs.segments[i].members[j].pitch;
         }
@@ -712,6 +721,26 @@ static bool scope_count(AnalysisChain *chain) {
     return count > 0;
 }
 
+/* The segments become harmonic spans (R-369 to R-375): the cells' levels and bass, the grouping (key-free: no key region exists yet), and one
+   segment per span with its bass. The segment lines are built afterwards, on the spans. The scope is read again on the new segments. */
+static bool merge_into_spans(AnalysisChain *chain) {
+    HarmonicSpanCell *cells = NULL;
+    int *bass = calloc(chain->segs.count, sizeof(int));
+    HarmonicSpans spans = {0};
+    bool ok = bass != NULL && chain_build_span_cells(chain->notes, &chain->segs, &cells) == CHAIN_INPUT_OK &&
+              harmonic_span_basses(cells, chain->segs.count, bass) &&
+              harmonic_spans_group(cells, chain->segs.count, bass, &chain->config.weighting, &spans) == HARMONIC_SPAN_OK &&
+              chain_merge_segments(chain->notes, &chain->segs, &spans) == CHAIN_INPUT_OK;
+    harmonic_spans_destroy(&spans);
+    chain_span_cells_destroy(cells);
+    free(bass);
+    if (!ok) {
+        return false;
+    }
+    chain->spans_merged = true;
+    return scope_count(chain);
+}
+
 static AnalysisChainStatus prepare(AnalysisChain *chain) {
     if (wants(chain, ANALYSIS_CHAIN_STAGE_OUTER_VOICES | ANALYSIS_CHAIN_STAGE_TEXTURE | ANALYSIS_CHAIN_STAGE_VOICE_LEADING)) {
         if (chain_build_pitches(chain->notes, &chain->pitches) != CHAIN_INPUT_OK) {
@@ -730,6 +759,9 @@ static AnalysisChainStatus prepare(AnalysisChain *chain) {
         if (!scope_count(chain)) {
             return ANALYSIS_CHAIN_ERR_NOTES;
         }
+    }
+    if (chain->config.harmonic_spans && wants(chain, ANALYSIS_CHAIN_STAGE_CHORDS) && !merge_into_spans(chain)) {
+        return ANALYSIS_CHAIN_ERR_SEGMENTS;
     }
     if (wants(chain, ANALYSIS_CHAIN_STAGE_OUTER_VOICES)) {
         AdaptiveSegmentationConfig voice_config = chain->config.segmentation;

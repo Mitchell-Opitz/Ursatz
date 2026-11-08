@@ -192,8 +192,9 @@ static void check_corpus(CorpusStoreHandle *corpus, PersistenceHandle *persisten
  * KNOWN COUNTS. What the chain finds on each piece, pinned: the cadence types it classifies, one chord progression of length 2 and the top one
  * of length 3, each with its count and the n-gram total of the piece. These are the chain's own results (cross-checked above against a tally
  * taken straight from the chain), not the hand annotations: the chain finds more cadences than the annotated ones in places (Mozart K. 545:
- * 14 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). Field 5, whose
- * minor region is read in the minor vocabulary, has no cadence the chain finds.
+ * 13 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). The chords are read
+ * on harmonic spans (P39), so a held chord is one chord and the repeated tonic ("I > I") is rare. Field 5, whose minor region is read in
+ * the minor vocabulary, has one cadence the chain finds, of type "other".
  */
 typedef struct {
     const char *cadence_labels[4];
@@ -208,11 +209,11 @@ typedef struct {
 } Known;
 
 static const Known KNOWN[5] = {
-    /* Bach 114 */ {{"subverted", "pac"}, {1, 2}, 2, "I > I", 19, 148, "I > I > I", 8, 147},
-    /* Mozart 545 */ {{"pac", "subverted", "other"}, {10, 2, 2}, 3, "I > I", 101, 578, "I > I > I", 61, 577},
-    /* Clementi 36 */ {{"hc", "pac", "iac", "subverted"}, {6, 4, 2, 3}, 4, "I > V", 7, 198, "I > I > I", 13, 197},
-    /* Field 1 */ {{"pac", "hc"}, {1, 2}, 2, "I > I", 24, 59, "I > I > I", 19, 58},
-    /* Field 5 */ {{NULL}, {0}, 0, "I > I", 9, 28, "I > I > I", 7, 27},
+    /* Bach 114 */ {{"iac"}, {4}, 1, "I > V", 4, 50, "I > V > I", 1, 49},
+    /* Mozart 545 */ {{"pac", "other", "hc"}, {10, 2, 1}, 3, "V > I", 14, 211, "V > I > IV", 10, 210},
+    /* Clementi 36 */ {{"pac", "iac", "hc"}, {3, 1, 1}, 3, "I > I", 9, 44, "I > V > I", 5, 43},
+    /* Field 1 */ {{"pac", "hc"}, {3, 1}, 2, "I > I", 5, 16, "I > I > V", 2, 15},
+    /* Field 5 */ {{"other"}, {1}, 1, "I > I", 1, 14, "major > major > major", 2, 13},
 };
 
 static unsigned long count_of(const CorpusStatsCounts *counts, const char *label) {
@@ -270,7 +271,7 @@ int main(void) {
         const char *piece_ref = FORM_PIECES[i].piece.midi;
         persist_piece(persistence, &c, piece_ref, &chords[i], &cadences[i]);
         printf("%s: %zu chords, %zu cadences persisted\n", piece_ref, chords[i].count, cadences[i].count);
-        assert(chords[i].count > 20); /* the check has something to count */
+        assert(chords[i].count > 10); /* the check has something to count */
         fv1_chain_destroy(&c);
 
         /* A Corpus of this piece alone. */

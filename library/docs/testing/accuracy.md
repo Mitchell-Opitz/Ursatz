@@ -61,23 +61,33 @@ Fixture metrics are counts, as the integration tests define them:
 The fixtures are drafts: hand readings, not yet checked against printed scores (see the headers in
 `tests/fixtures/annotations/`). Their numbers measure the chain against those drafts.
 
-## Reference harmony (report only)
+## Reference harmony
 
 Michelle's hand harmony of the Clementi and Mozart reference pieces (`tests/fixtures/annotations/clementi36_harmony.txt`,
-`mozart545_harmony.txt`, verified 2026-11-07) is read by `tests/analysis/test_reference_harmony.c`, which asserts nothing but that the files
-parse and the chain runs. For each annotated chord it checks whether the chain's chord sounding at the chord's onset has the same root and
-triad quality (the seventh is not compared; an applied numeral is compared by the root and quality of the applied chord until P40), and
-it counts the chord changes the chain makes inside the annotated stretches against the changes the annotation has. P39 turns it into an
-assertion. The pieces are not in the harness metrics above.
+`mozart545_harmony.txt`, verified 2026-11-07) is read by `tests/analysis/test_reference_harmony.c`. For each annotated chord it checks whether
+the chain's chord sounding at the chord's onset has the same root and triad quality (the seventh is not compared; an applied numeral is
+compared by the root and quality of the applied chord until P40), and it counts the chord changes the chain makes inside the annotated
+stretches against the changes the annotation has. Since P39 the test asserts the target bars (R-371): in Clementi measures 1 to 5, 8 and 9
+and Mozart measures 1 to 6, 11 and 12 every annotated chord matches, and the chain makes no chord change inside Clementi measure 8 or
+Mozart measures 1 and 8. Mozart measure 8 is one chord; which chord is reported, not asserted (R-375). Every other bar is reported. The
+pieces are not in the harness metrics above.
 
 | Piece | Chords matched | Chain changes | Annotated changes | Extra changes |
 |---|---|---|---|---|
-| Clementi 36 | 5 / 10 | 33 | 9 | 24 |
-| Mozart 545 | 13 / 17 | 32 | 15 | 17 |
+| Clementi 36 | 8 / 10 | 8 | 9 | -1 |
+| Mozart 545 | 15 / 17 | 16 | 15 | 1 |
 
-Measured 2026-11-08 (P38 B4). The misses: Clementi m6 b4 (viio7/V, no chord), m7 b2 (C major, chain A minor), m7 b4 (V/V, chain D minor), m8 b1
-(G major, chain A minor), m9 b1 (D major, chain F# diminished); Mozart m3 b1 (F major, chain A minor), m8 b1 (A minor, chain C major), m11 b1
-(G major, no chord), m11 b3 (G major, chain G minor).
+Measured 2026-11-08 (P39 B3, chords on harmonic spans; P38 B4 before: Clementi 5 / 10 with 24 extra changes, Mozart 13 / 17 with 17). The
+misses, none in a target bar: Clementi m6 b4 (viio7/V, chain C major) and m7 b2 (C major, chain A minor); Mozart m8 b1 (A minor, the chain
+reads the bar as one C major chord) and m10 b1 (F major, no chord).
+
+## Harmonic spans
+
+P39 reads chords on harmonic spans (`AnalysisChainConfig.harmonic_spans`, default on) with a seventh penalty of 0.15
+(`ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY`, R-376). Chorale harness, spans off then on (chord root, chord quality, Roman numeral, numeral in the
+chain's key, key): 84.5%, 67.2%, 67.4%, 52.0%, 69.1% before; 86.4%, 75.9%, 70.0%, 54.7%, 69.6% after. Without the penalty the same spans read
+82.7% root and 60.1% quality (a span reads the union of a beat or more, so a passing tone completes a seventh over a triad), under the guards of
+84.5% and 67.2%. The other gated metrics did not move. The baseline was re-recorded in P39 B3.
 
 ## The chain on a chorale
 
@@ -85,8 +95,8 @@ Measured 2026-11-08 (P38 B4). The misses: Clementi m6 b4 (viio7/V, no chord), m7
    MusicXML, because the importer lays barlines from the time signature alone and a pickup or a measure split across
    a repeat ("7" and "7a") would otherwise misplace every later barline. A measure numbered with a letter continues the
    one before it. The pickup (measure 0) and the signature become the `MeterMap` the chain uses.
-2. Adaptive segments are built on that meter, weighted, and the key regions are estimated (the score's key signature
-   events are passed in, as the importer reads them).
+2. Adaptive segments are built on that meter and grouped into harmonic spans (one segment per span, with its bass, R-369 to R-373),
+   weighted, and the key regions are estimated (the score's key signature events are passed in, as the importer reads them).
 3. Chords are identified per key region, in that region's own key and mode: the major set in a major region and the
    minor vocabulary (natural, harmonic and melodic minor triads and sevenths, with the raised V and vii-dim winning an
    exact tie) in a minor one.
