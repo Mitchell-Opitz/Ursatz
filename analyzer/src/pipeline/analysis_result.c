@@ -53,7 +53,7 @@ _Static_assert(ANALYZER_STAGE_ALL == (ANALYSIS_CHAIN_STAGE_ALL | ((1u << 20) - (
                "ANALYZER_STAGE_ALL covers the chain stages and the Analyzer bits");
 
 AnalyzerOptions analyzer_options_default(void) {
-    AnalyzerOptions options = {ANALYZER_STAGE_ALL, NULL, NULL};
+    AnalyzerOptions options = {ANALYZER_STAGE_ALL, NULL, NULL, true};
     return options;
 }
 
