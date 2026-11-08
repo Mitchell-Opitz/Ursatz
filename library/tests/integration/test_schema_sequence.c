@@ -187,7 +187,7 @@ static void chain_run(Chain *chain, const WeightedPipeline *p, const MeterMap *m
         chain->key_segments[s].end = time_span_end(window);
         chain->key_segments[s].source = &p->segments[s];
         assert(common_practice_weight_segment(p->segments[s].members, p->segments[s].member_count, &weighting,
-                                              &chain->key_segments[s].weights) == COMMON_PRACTICE_WEIGHTED_OK);
+                                              &chain->key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
     assert(key_regions_estimate(chain->key_segments, count, map, NULL, 0, NULL, &chain->regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     chain->region_inputs = (StandardTonalityKeyRegionInput *)calloc(chain->regions.region_count, sizeof(StandardTonalityKeyRegionInput));

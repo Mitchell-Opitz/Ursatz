@@ -34,6 +34,8 @@ static CommonPracticeSegment segment(const CommonPracticeMember *members, size_t
     s.member_count = count;
     s.id = id;
     s.beat = 0;
+    s.has_bass = false;
+    s.bass_pitch = 0;
     return s;
 }
 

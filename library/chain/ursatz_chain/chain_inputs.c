@@ -257,7 +257,7 @@ ChainInputStatus chain_build_key_segments(const ChainSegments *segments, size_t 
         built[s].end = time_span_end(window);
         built[s].source = &segments->segments[s];
         if (common_practice_weight_segment(segments->segments[s].members, segments->segments[s].member_count, weighting,
-                                           &built[s].weights) != COMMON_PRACTICE_WEIGHTED_OK) {
+                                           &built[s].weights, NULL) != COMMON_PRACTICE_WEIGHTED_OK) {
             free(built);
             return CHAIN_INPUT_ERR_WEIGHTS;
         }

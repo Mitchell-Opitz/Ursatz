@@ -40,6 +40,8 @@ static CommonPracticeSegment segment_of(const Members *m) {
     s.member_count = m->count;
     s.id = "segment";
     s.beat = 0;
+    s.has_bass = false;
+    s.bass_pitch = 0;
     return s;
 }
 

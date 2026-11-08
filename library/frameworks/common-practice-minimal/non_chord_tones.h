@@ -47,6 +47,11 @@ typedef struct {
     size_t member_count;
     const char *id; /* the segment's Sonority EntityID value, for the Chords built over it */
     long beat;      /* segments sharing a non-zero beat lie inside that one beat; 0 when unknown or spanning beats */
+    /* An explicit bass. Zero-initialized (has_bass false) means the lowest sounding pitch of the members, as
+       before. With has_bass true the segment's bass is bass_pitch (semitone number, C4 = 60), which need not
+       be a member: the weighting and the inversion then read it instead of the lowest member. */
+    bool has_bass;
+    int bass_pitch;
 } CommonPracticeSegment;
 
 typedef struct {

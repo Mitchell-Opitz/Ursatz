@@ -125,7 +125,8 @@ static CommonPracticeWeightedStatus identify_one(const CommonPracticeSegment *se
 
     CommonPracticeWeights weights;
     CommonPracticeWeightedStatus status =
-        common_practice_weight_segment(segment->members, segment->member_count, config, &weights);
+        common_practice_weight_segment(segment->members, segment->member_count, config, &weights,
+                                       segment->has_bass ? &segment->bass_pitch : NULL);
     if (status != COMMON_PRACTICE_WEIGHTED_OK) {
         return status;
     }
@@ -201,6 +202,10 @@ static unsigned segment_mask(const CommonPracticeSegment *segment, int *bass_pit
         if (i == 0 || segment->members[i].pitch < bass) {
             bass = segment->members[i].pitch;
         }
+    }
+    if (segment->has_bass) {
+        *bass_pitch_class = pitch_class_of_midi(segment->bass_pitch);
+        return mask;
     }
     *bass_pitch_class = segment->member_count > 0 ? pitch_class_of_midi(bass) : -1;
     return mask;
@@ -294,7 +299,8 @@ static CommonPracticeWeightedStatus read_arpeggios(const CommonPracticeSegment *
                 members[next++] = segments[i].members[k];
             }
         }
-        CommonPracticeSegment joined = {members, member_total, segments[first].id, segments[first].beat};
+        CommonPracticeSegment joined = {members, member_total, segments[first].id, segments[first].beat,
+                                        segments[first].has_bass, segments[first].bass_pitch};
         CommonPracticeWeightedResult arpeggio;
         CommonPracticeWeightedStatus status = identify_one(&joined, tonic_pitch_class, mode, config, &arpeggio);
         if (status != COMMON_PRACTICE_WEIGHTED_OK) {

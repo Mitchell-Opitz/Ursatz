@@ -172,7 +172,7 @@ static void report_piece(const char *label, const char *file, const char *annota
         segments[s].end = time_span_end(window);
         segments[s].source = &p.segments[s];
         assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
-                                              &segments[s].weights) == COMMON_PRACTICE_WEIGHTED_OK);
+                                              &segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
 
     /* the file's key signature events, as the importer's scan returns them */

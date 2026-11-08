@@ -16,6 +16,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.missing_third_penalty = 0.15;
     config.bass_chord_tone_bonus = 0.05;
     config.min_coverage = 0.5;
+    config.require_bass_chord_tone = false;
     config.classifier = NULL;
     config.classifier_context = NULL;
     return config;
@@ -37,7 +38,7 @@ static bool config_valid(const CommonPracticeWeightedConfig *config) {
 
 CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPracticeMember *members, size_t count,
                                                              const CommonPracticeWeightedConfig *config,
-                                                             CommonPracticeWeights *out) {
+                                                             CommonPracticeWeights *out, const int *bass_override) {
     if (config == NULL || out == NULL || (members == NULL && count > 0)) {
         return COMMON_PRACTICE_WEIGHTED_ERR_NULL_ARGUMENT;
     }
@@ -56,6 +57,11 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
             bass_pitch = members[i].pitch;
             have_bass = true;
         }
+    }
+
+    if (bass_override != NULL) {
+        bass_pitch = *bass_override;
+        have_bass = true;
     }
 
     CommonPracticeWeights weights = {{0}, 0.0, -1, -1};
@@ -183,6 +189,22 @@ static bool ranks_ahead(const CommonPracticeRankedChord *a, const CommonPractice
     return a->form_rank < b->form_rank;
 }
 
+/* True when the chord of `entry`, rooted at pitch class `root`, has a tone on `pitch_class`. */
+static bool entry_holds(const VocabularyEntry *entry, int root, int pitch_class) {
+    CommonPracticeRankedChord chord;
+    chord.is_seventh = entry->is_seventh;
+    chord.triad = entry->triad;
+    chord.seventh = entry->seventh;
+    int intervals[4];
+    size_t count = common_practice_ranked_chord_intervals(&chord, intervals);
+    for (size_t i = 0; i < count; i++) {
+        if ((root + intervals[i]) % 12 == pitch_class) {
+            return true;
+        }
+    }
+    return false;
+}
+
 CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPracticeWeights *weights,
                                                               int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                               const CommonPracticeWeightedConfig *config,
@@ -205,6 +227,16 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     size_t vocabulary_size = mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT
                                                                 : COMMON_PRACTICE_MINOR_CANDIDATE_COUNT;
 
+    /* Holding the bass is required only when some candidate can: otherwise every candidate stays eligible. */
+    bool bass_required = false;
+    if (config->require_bass_chord_tone && weights->bass_pitch_class >= 0) {
+        for (size_t k = 0; k < vocabulary_size && !bass_required; k++) {
+            const VocabularyEntry *entry = &vocabulary[k];
+            int root = (tonic_pitch_class + entry->offset) % 12;
+            bass_required = weights->pitch_class[root] > 0.0 && entry_holds(entry, root, weights->bass_pitch_class);
+        }
+    }
+
     CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     size_t count = 0;
     for (size_t k = 0; k < vocabulary_size; k++) {
@@ -212,6 +244,9 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         int root = (tonic_pitch_class + entry->offset) % 12;
         if (weights->pitch_class[root] <= 0.0) {
             continue; /* the root does not sound: not a reading the notes support */
+        }
+        if (bass_required && !entry_holds(entry, root, weights->bass_pitch_class)) {
+            continue; /* the chord must hold the bass */
         }
 
         CommonPracticeRankedChord chord;

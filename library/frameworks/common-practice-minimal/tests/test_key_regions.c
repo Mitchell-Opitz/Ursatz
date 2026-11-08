@@ -460,6 +460,8 @@ static void make_chord(CommonPracticeMember members[4], CommonPracticeSegment *s
     segment->member_count = 4;
     segment->id = id;
     segment->beat = 0;
+    segment->has_bass = false;
+    segment->bass_pitch = 0;
 }
 
 /* C x8 (the last measure's segment is a C major chord), then a run in `tonic` x8. */

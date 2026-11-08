@@ -54,6 +54,12 @@ typedef struct {
     const double *weights;     /* borrowed; the 12 pitch-class weights, or NULL when not available */
     const int *pitches;        /* borrowed; the sounding pitches (semitone numbers, any order), or NULL */
     size_t pitch_count;
+    /* An explicit bass (semitone number, C4 = 60). Zero-initialized (has_bass false) reads the bass from the
+       lowest of `pitches`, as before. With one, the inversion is the chord member on bass_pitch's pitch class,
+       whatever lower pitches sound; a bass that is not a chord member falls back to the previous segment's bass
+       as without one. */
+    bool has_bass;
+    int bass_pitch;
 } StandardTonalitySegmentInput;
 
 #define STANDARD_TONALITY_CHORD_INPUT_MAX_INTERVALS CHORD_STRUCTURE_MAX_INTERVALS
