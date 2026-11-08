@@ -49,6 +49,10 @@ static void test_minimal_document_exact(void) {
         "          <beats>4</beats>\n"
         "          <beat-type>4</beat-type>\n"
         "        </time>\n"
+        "        <clef>\n"
+        "          <sign>G</sign>\n"
+        "          <line>2</line>\n"
+        "        </clef>\n"
         "      </attributes>\n"
         "      <note xml:id=\"n0\">\n"
         "        <pitch>\n"
@@ -206,6 +210,110 @@ static void test_two_staves(void) {
     assert(TU_HAS(xml, "<staves>2</staves>"));
     assert(tu_count(xml, "<staff>1</staff>") >= 1 && tu_count(xml, "<staff>2</staff>") >= 1);
     assert(tu_count(xml, "<part id=") == 1 && TU_HAS(xml, "<backup>"));
+    free(xml);
+    bag_free(&bag);
+}
+
+/* The <attributes> of measure number (1-based) of part 1: from its <measure> to the end of its first </attributes>. */
+static char *measure_attributes(const char *xml, int number) {
+    char needle[40];
+    snprintf(needle, sizeof(needle), "<measure number=\"%d\"", number);
+    const char *start = strstr(xml, needle);
+    assert(start != NULL);
+    const char *body = strstr(start, "<attributes>");
+    const char *next_measure = strstr(start + 1, "<measure number=");
+    if (body == NULL || (next_measure != NULL && body > next_measure)) {
+        return NULL;
+    }
+    const char *end = strstr(body, "</attributes>");
+    assert(end != NULL);
+    char *copy = (char *)malloc((size_t)(end - body) + 1);
+    assert(copy != NULL);
+    memcpy(copy, body, (size_t)(end - body));
+    copy[end - body] = '\0';
+    return copy;
+}
+
+static void test_clefs_in_the_first_measure(void) {
+    /* A grand staff part writes a numbered clef per staff, treble for staff 1 and bass for staff 2, after <staves>; a
+       one-staff part of low notes writes one unnumbered bass clef. */
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    bag_add(&bag, tu_note("r", 0, 1, 1, 1, PITCH_LETTER_E, 0, 5, NULL), 0, 1);
+    bag_add(&bag, tu_note("l", 0, 1, 1, 1, PITCH_LETTER_C, 0, 3, NULL), 0, 2);
+    char *xml = write_bag(&bag, NULL, NULL, 0, true);
+    char *attributes = measure_attributes(xml, 1);
+    assert(attributes != NULL);
+    assert(TU_HAS(attributes, "<clef number=\"1\">\n          <sign>G</sign>\n          <line>2</line>\n        </clef>"));
+    assert(TU_HAS(attributes, "<clef number=\"2\">\n          <sign>F</sign>\n          <line>4</line>\n        </clef>"));
+    assert(strstr(attributes, "<staves>2</staves>") < strstr(attributes, "<clef number=\"1\">"));
+    assert(strstr(attributes, "<clef number=\"1\">") < strstr(attributes, "<clef number=\"2\">"));
+    assert(tu_count(xml, "<clef") == 2);
+    free(attributes);
+    free(xml);
+    bag_free(&bag);
+
+    memset(&bag, 0, sizeof(bag));
+    bag_add(&bag, tu_note("low", 0, 1, 1, 1, PITCH_LETTER_C, 0, 2, NULL), 0, 1);
+    xml = write_bag(&bag, NULL, NULL, 0, false);
+    assert(TU_HAS(xml, "<clef>\n          <sign>F</sign>\n          <line>4</line>\n        </clef>"));
+    assert(!TU_HAS(xml, "<clef number=") && tu_count(xml, "<clef") == 1);
+    free(xml);
+    bag_free(&bag);
+}
+
+static void test_clef_change_at_a_measure(void) {
+    /* The left hand is in bass for a bar, then A4 for two bars: the treble clef is written in measure 2, in that
+       measure's own <attributes> and only for staff 2, and measure 3 writes none. */
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    for (long m = 0; m < 3; m++) {
+        char id[16];
+        snprintf(id, sizeof(id), "r%ld", m);
+        bag_add(&bag, tu_note(id, m, 1, 1, 1, PITCH_LETTER_E, 0, 5, NULL), 0, 1);
+    }
+    bag_add(&bag, tu_note("l0", 0, 1, 1, 1, PITCH_LETTER_C, 0, 3, "v2"), 0, 2);
+    bag_add(&bag, tu_note("l1", 1, 1, 1, 1, PITCH_LETTER_A, 0, 4, "v2"), 0, 2);
+    bag_add(&bag, tu_note("l2", 2, 1, 1, 1, PITCH_LETTER_A, 0, 4, "v2"), 0, 2);
+    char *xml = write_bag(&bag, NULL, NULL, 0, true);
+    char *second = measure_attributes(xml, 2);
+    assert(second != NULL);
+    assert(TU_HAS(second, "<clef number=\"2\">\n          <sign>G</sign>\n          <line>2</line>\n        </clef>"));
+    assert(!TU_HAS(second, "<clef number=\"1\">") && !TU_HAS(second, "<divisions>") && !TU_HAS(second, "<time>"));
+    free(second);
+    char *third = measure_attributes(xml, 3);
+    assert(third == NULL);
+    assert(tu_count(xml, "<clef") == 3);
+    free(xml);
+    bag_free(&bag);
+}
+
+static void test_clefs_of_a_quantized_score(void) {
+    /* With quantize set the clefs come from the notated times: an A4 played a hair before measure 2 is written as the
+       whole of measure 2, so the treble clef of staff 2 is written there. */
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    bag_add(&bag, tu_note("r0", 0, 1, 1, 1, PITCH_LETTER_E, 0, 5, NULL), 0, 1);
+    bag_add(&bag, tu_note("r1", 1, 1, 1, 1, PITCH_LETTER_E, 0, 5, NULL), 0, 1);
+    bag_add(&bag, tu_note("l0", 0, 1, 1, 1, PITCH_LETTER_C, 0, 3, NULL), 0, 2);
+    bag_add(&bag, tu_note("l1", 1999, 2000, 1, 1, PITCH_LETTER_A, 0, 4, NULL), 0, 2);
+    MusicXmlExportScore score;
+    memset(&score, 0, sizeof(score));
+    score.events = bag.events;
+    score.count = bag.count;
+    score.part_index = bag.part;
+    score.staff = bag.staff;
+    ScoreQuantizeOptions options = score_quantize_options_default();
+    score.quantize = &options;
+    char *xml = NULL;
+    assert(musicxml_export_write_score(&score, &xml) == MUSICXML_EXPORT_OK);
+    char *second = measure_attributes(xml, 2);
+    assert(second != NULL && !TU_HAS(second, "<clef number=\"1\">"));
+    assert(TU_HAS(second, "<clef number=\"2\">\n          <sign>G</sign>\n          <line>2</line>\n        </clef>"));
+    char *first = measure_attributes(xml, 1);
+    assert(first != NULL && TU_HAS(first, "<clef number=\"1\">") && TU_HAS(first, "<clef number=\"2\">"));
+    free(first);
+    free(second);
     free(xml);
     bag_free(&bag);
 }
@@ -471,6 +579,9 @@ int main(void) {
     test_gap_is_a_rest();
     test_two_voices_back_up();
     test_two_staves();
+    test_clefs_in_the_first_measure();
+    test_clef_change_at_a_measure();
+    test_clefs_of_a_quantized_score();
     test_two_parts();
     test_title_and_composer();
     test_instruments_and_unnamed_part();

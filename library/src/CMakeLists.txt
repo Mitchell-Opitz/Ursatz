@@ -204,6 +204,7 @@ add_library(ursatz
     query/corpus_search.c
     export/musicxml_export.c
     export/musicxml_score.c
+    export/score_clefs.c
     export/score_quantize.c
     export/score_staves.c
 )

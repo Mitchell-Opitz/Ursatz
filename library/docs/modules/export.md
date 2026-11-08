@@ -62,6 +62,17 @@ Every note and rest is written as values a player can read: after the cuts above
 - **Notes sounding alone.** A note with nothing else sounding at its onset takes the staff of the nearer pitch of the last treble note and the last bass note that ended within the last whole note before it. With only one of the two, it takes that staff when within an octave of it. With a tie, no such note, or a note further than an octave from the only one, 60 and above is treble and below is bass. Notes starting together get their staffs before later notes look back at them.
 - **Errors.** `SCORE_STAVES_ERR_INCONSISTENT_INPUT` for a part index out of range, a staff count other than 1 or 2, a missing pitch value in a two-staff part, a negative position, a zero duration or an overflow.
 
+## Clefs
+
+`export/score_clefs.h` decides the clef of every staff, measure by measure, and `musicxml_export_write_score` writes the result. It is not a separate step for the caller: the export calls `score_clefs_infer` itself, with the notated times when `quantize` is set and the played times otherwise.
+
+- **Written.** Every staff gets a `<clef>` in the `<attributes>` of measure 1 (after `<staves>`): `<clef number="N">` with sign G on line 2 for treble or sign F on line 4 for bass, and `<clef>` without a number in a one-staff part. A measure where a staff changes clef writes the new `<clef>` in its own `<attributes>`, at the barline.
+- **Start.** Staff 1 of a part with several staves starts in treble and the other staves in bass, at no cost. The one staff of a one-staff part starts in whichever clef is cheaper for its notes (treble on a tie).
+- **Cost.** A note's cost under a clef is the ledger lines it needs there times its length in quarter notes, exact (a note across a barline counts in each measure for the part inside it). The ledger lines come from the written pitch, the letter and octave of the `PitchSpelling`: treble has lines E4 to F5, bass G2 to A3; below and above them a note needs one ledger line per line it reaches, a note on a ledger line or in the space just beyond it counting that line (treble: C4 and B3 one, A3 and G3 two; bass: C4 and D4 one, E4 and F4 two).
+- **Choice.** A dynamic program over the measures that have notes on the staff picks the clef of each, minimising the total cost plus `SCORE_CLEF_CHANGE_COST` (4, a constant at the top of `score_clefs.c`) for each change. A measure with no notes on the staff keeps the clef before it, a change is only written at a measure with notes, and a tie in cost keeps the current clef.
+- **Result.** `ScoreClefChanges` lists every staff's measure 1 entry first (parts in order, staves in order), then the changes in measure order. `measure` is 1-based among the measures laid out, a pickup being measure 1.
+- **Errors.** `SCORE_CLEFS_ERR_INCONSISTENT_INPUT` for a part or staff out of range, a note without a `PitchSpelling`, a NULL `pitch_values` entry, a negative position, a zero duration, a `ScoreQuantized` that does not match the events, or an overflow.
+
 ## Errors
 
 `MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT` (a count with no array, a NULL entry, parts that do not add up), `_UNKNOWN_PART`, `_BAD_STAFF`, `_UNKNOWN_EVENT` (a Dynamics targets an event the score lacks), `_NOT_REPRESENTABLE` (a negative position, a zero duration, a key outside -7 to 7, a beat unit or per-minute MusicXML cannot write, an overflow) and `_DIVISIONS_OVERFLOW`. They were appended to the enum; the earlier values are unchanged.

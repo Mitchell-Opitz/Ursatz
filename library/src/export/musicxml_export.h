@@ -177,6 +177,12 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
  * begin, continue and end, and a forward or backward hook on a lone short value. A rest or a longer note ends a
  * group, a lone note is not beamed, and a chord is beamed once, on its first note.
  *
+ * Clefs: the first measure of every part writes a <clef> for each of its staves (<clef number="N"> with a G sign on
+ * line 2 for treble or an F sign on line 4 for bass; no number in a one-staff part), and a measure where a staff
+ * changes clef writes the new <clef> in its <attributes>. The clefs are inferred from the notes of each staff by
+ * score_clefs_infer (export/score_clefs.h; the ledger lines they need, the notated times when quantize is set): staff 1
+ * of a part with several staves starts in treble, the others in bass, and a one-staff part in the cheaper clef.
+ *
  * Chords and overlaps are written, never refused (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES is not returned here). Within
  * a voice (part, staff, VoiceReference), notes with the same start and end are a chord: the first is a plain <note>
  * and each other is a <note> that begins with <chord/>. Any other note that starts while an earlier one still sounds
