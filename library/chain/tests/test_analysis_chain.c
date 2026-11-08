@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -646,6 +647,50 @@ static void check_stage_inputs(const char *context, const AnalysisChain *c) {
     CHECK(analysis_chain_galant_segments(c)->list.count > 0);
 }
 
+/* The distinct soprano note ids of a line, runs counted once (a present entry on the id before it is the same note). */
+static size_t soprano_runs(const OuterVoiceLines *lines) {
+    size_t runs = 0;
+    const char *previous = NULL;
+    for (size_t i = 0; i < lines->count; i++) {
+        const char *id = lines->soprano[i].present ? entity_id_value(lines->soprano[i].note_id) : NULL;
+        runs += id != NULL && (previous == NULL || strcmp(previous, id) != 0) ? 1 : 0;
+        previous = id;
+    }
+    return runs;
+}
+
+/* The melody line and the meter input read the voice lines (R-377): one melody note per soprano note, not one per chord segment, and every
+   soprano note of the voice lines is the meter input's soprano line. */
+static void check_voice_line_inputs(const char *context, const ChainInput *input, const Reference *ref, const AnalysisChain *c) {
+    const OuterVoiceLines *voice_lines = analysis_chain_outer_voices(c);
+    const OuterVoiceLines *segment_lines = analysis_chain_segment_outer_voices(c);
+    size_t runs = soprano_runs(voice_lines);
+    CHECK(runs > soprano_runs(segment_lines));
+    const StandardCounterpointMelodyLine *melody = &analysis_chain_melody(c)->line.line;
+    size_t present = 0;
+    for (size_t i = 0; i < melody->count; i++) {
+        present += melody->notes[i].present ? 1 : 0;
+    }
+    CHECK(present == runs);
+
+    ChainMeterInput meter;
+    memset(&meter, 0, sizeof(meter));
+    int last = ref->last_measure > 0 ? ref->last_measure : INT_MAX;
+    CHECK(chain_build_meter_input(&input->set, voice_lines, analysis_chain_segments(c), NULL, ref->first_measure, last, NULL, NULL, NULL, &meter) ==
+          CHAIN_INPUT_OK);
+    size_t soprano_notes = 0;
+    for (size_t n = 0; n < meter.input.note_count; n++) {
+        bool in_line = false;
+        for (size_t i = 0; i < voice_lines->count && !in_line; i++) {
+            in_line = voice_lines->soprano[i].present && strcmp(entity_id_value(voice_lines->soprano[i].note_id), meter.input.notes[n].id) == 0;
+        }
+        CHECK((meter.input.notes[n].line == 0) == in_line);
+        soprano_notes += in_line ? 1 : 0;
+    }
+    CHECK(soprano_notes > 0 && soprano_notes <= runs);
+    chain_meter_input_destroy(&meter);
+}
+
 static void check_piece(const Reference *ref, bool dump) {
     ChainInput input;
     chain_input_init(&input, ref);
@@ -679,6 +724,7 @@ static void check_piece(const Reference *ref, bool dump) {
         }
         check_segment_lines(context, chain);
         check_stage_inputs(context, chain);
+        check_voice_line_inputs(context, &input, ref, chain);
         check_voice_leading(context, chain);
         check_subsets(context, &input, ref, chain);
         printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases; %d stages as expected\n", context, segments, key_regions,
