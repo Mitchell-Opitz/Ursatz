@@ -86,7 +86,7 @@ is then the whole label (`"V6/5/V"`), and `applied` holds its parts:
 | `target_degree` | integer | The degree (1 to 7) of the local key that is tonicized. |
 | `target_tonic` | string or null | The pitch class name of that degree in the local key (the tonic of the key tonicized). |
 | `kind` | string | `"secondary-dominant"` or `"secondary-leading-tone"`, the library's names. |
-| `resolves_to` | integer | Index into `chords` of the chord the library finds it resolving to. |
+| `resolves_to` | integer or null | Index into `chords` of the chord the library finds it resolving to; `null` when it resolves to none. |
 | `deceptive` | boolean | The library finds it resolving to the target's submediant rather than the target. |
 | `tonicization_agreement` | string | The cross-reference to `tonicizations`: `"agrees"`, `"target_differs"` or `"no_tonicization"`. |
 | `tonicization_index` | integer or null | Index into `tonicizations` of the claim cross-referenced; `null` for `"no_tonicization"`. |
