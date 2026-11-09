@@ -132,8 +132,8 @@ check(
   "ignored sections stay out",
 );
 check(
-  ScoreLayers.discoverOtherLayers(doc).map((l) => l.id).join() === "other:pivot_chords",
-  "the fixture's only Other layer is pivot chords",
+  ScoreLayers.discoverOtherLayers(doc).map((l) => l.id).join() === "other:pivot_chords,other:repeats",
+  "the fixture's Other layers are pivot chords and repeats, in document key order",
 );
 
 const empty = ScoreLayers.buildLayerCatalog({});
