@@ -20,9 +20,10 @@ typedef struct {
 static const CorpusCase CASES[] = {
     {URSATZ_ANALYZER_FIXTURE_DIR "/arpeggiation-investigation/Bach_Prelude_C_Major.mid", "C major"},
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Bach 114.mid", "G major"},
-    /* The file is the first movement (the sonata is in C major); on harmonic spans the key with the most time across
-       its regions is G major, the dominant. The movement's own keys are asserted by test_key_regions_mozart_545. */
-    {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", "G major"},
+    /* The file is the first movement (the sonata is in C major); with applied chords read (P40 B5) the key with the most
+       time across its 21 regions is C major, the tonic; on harmonic spans alone it was G major, the dominant. The
+       movement's own keys are asserted by test_key_regions_mozart_545. */
+    {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", "C major"},
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Clementi 36.mid", "C major"},
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Field 1.mid", "Eb major"},
     {URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Field 5.mid", "Bb major"},

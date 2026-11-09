@@ -45,10 +45,11 @@ typedef struct {
     int phrases; /* what the chain gives */
 } Piece;
 
-/* The counts are on harmonic spans (they were 2, 10, 22, 10, 9 on sonority segments); P41 reads the phrases. */
+/* The counts are on harmonic spans (they were 2, 10, 22, 10, 9 on sonority segments; Mozart 545 was 21 before applied chords,
+   P40 B5); P41 reads the phrases. */
 static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid", 2},
                                {"Clementi 36", "Clementi 36.mid", 7},
-                               {"Mozart 545", "Mozart 545.mid", 21},
+                               {"Mozart 545", "Mozart 545.mid", 27},
                                {"Field 1", "Field 1.mid", 14},
                                {"Field 5", "Field 5.mid", 2}};
 

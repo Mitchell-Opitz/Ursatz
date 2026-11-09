@@ -25,12 +25,13 @@
  *
  * The counts are what Ursatz's chain gives (the library's, not hand readings; the hand marks are Ursatz's own test):
  *
- *   Bach 114     one imperfect authentic cadence (m. 18). On harmonic spans the two perfect authentic cadences of
- *                the P1 B3 result (at 117/8 and 165/8 whole notes) are gone: the chain's cadences read the spans, and
- *                P41 reads them again.
+ *   Bach 114     none in the Analyzer's report (P40 B6: the imperfect authentic cadence of m. 18 is gone with the
+ *                bass evidence rules and the held bass fix, and the two perfect authentic cadences of the P1 B3
+ *                result were gone on harmonic spans before): the chain's cadences read the spans, and P41 reads
+ *                them again.
  *   Clementi 36  hc 1, pac 3, iac 1, five cadences (the P1 B6 result was hc 7, pac 3, iac 2, subverted 1 on sonority
  *                segments; P41 reads the cadences).
- *   Mozart 545   the chain finds no boundary cadence. The cause is not the outer-line index (the chord and voice
+ *   Mozart 545   the chain finds no boundary cadence (23 cadences in all after P40 B5, applied chords; 17 before). The cause is not the outer-line index (the chord and voice
  *                segmentations are equal on this piece, P24 B7a Notes) and has not been found.
  *
  * Competing readings (R-090, R-091): every claim has a share in thousandths; a claim with an alternative has the two
@@ -247,8 +248,8 @@ static void check_reading_report(const char *path, const ImportedNotes *notes, c
 static void check_counts(const Piece *piece, const cJSON *cadences) {
     if (strcmp(piece->name, "Bach 114") == 0) {
         CHECK(count_type(cadences, "perfect-authentic") == 0);
-        CHECK(count_type(cadences, "imperfect-authentic") == 1);
-        CHECK(cJSON_GetArraySize(cadences) == 1);
+        CHECK(count_type(cadences, "imperfect-authentic") == 0);
+        CHECK(cJSON_GetArraySize(cadences) == 0);
     } else if (strcmp(piece->name, "Clementi 36") == 0) {
         CHECK(count_type(cadences, "half") == 1);
         CHECK(count_type(cadences, "perfect-authentic") == 3);
@@ -280,12 +281,12 @@ static void run_piece(const Piece *piece) {
         if (strcmp(piece->name, "Field 5") == 0) {
             check_evaded_reading(test_json_member(document, "cadences"), 8, 3, 500, 500);
             check_reading_report(path, &notes, &report, "- m8 b3 evaded cadence (50%), or tonic prolongation (50%)\n",
-                                 "evaded 1, deceptive 1.");
+                                 "evaded 1, authentic-unspecified 1, deceptive 1.");
         }
         if (strcmp(piece->name, "Field 1") == 0) {
             check_evaded_reading(test_json_member(document, "cadences"), 60, 1, 650, 350);
             check_reading_report(path, &notes, &report, "- m60 b1 evaded cadence (65%), or tonic prolongation (35%)\n",
-                                 "evaded 1.");
+                                 "perfect-authentic 3, half 4, evaded 3, imperfect-authentic 6, authentic-unspecified 1.");
         }
         printf("%s: %zu cadences\n", piece->name, report.cadence_count);
         cJSON_Delete(document);
