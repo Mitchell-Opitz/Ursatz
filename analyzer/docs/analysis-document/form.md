@@ -134,3 +134,29 @@ earlier:
 
 The Markdown report renders `## Form plan` from this object: a row per section (letter, measures, key, phrases, closing
 cadence, the return that lettered it), the returns, and the tree as an indented outline.
+
+## Repeats and returns
+
+`repeats` (top level, right after `form`) lists the library's repeats and returns (`analysis_chain_repeats`, from
+`analysis/analysis_repeats.h`, R-400): a later run of at least four measures that restates an earlier run. In a repeat
+every measure has the same notes (onset, pitch and duration) as its earlier measure; in a return the soprano has the same
+onsets and every pitch moves by one constant number of semitones, and the other voices need not match. The library finds
+them from the notes alone and lists them by the later run's first measure, then the earlier's. The
+form plan's thematic returns above are a separate, theme-level reading and stay as they are (R-359); the two lists are
+independent and may name the same music. The analyzer adds only bookkeeping (`src/pipeline/form_pipeline.c`).
+
+Each entry is a claim over the later run, in the library's order (`framework` `"standard-form-v1"`):
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `span`, `location` | | From the start of the later run's first measure to the end of its last. |
+| `note_ids` | array | The soprano notes that start in the later run. |
+| `label`, `kind` | `"repeat"` or `"return"` | Both the same. |
+| `uncertainty` | number | Always `0`: the library finds them by exact match. |
+| `earlier`, `later` | object | `{"first", "last"}`: the library's measure numbers of the two runs; the earlier run ends before the later begins. |
+| `transposition` | integer | Semitones, later minus earlier; `0` for a repeat. A return can also read `0` when only the soprano matches. |
+
+The report holds the same list as `AnalysisReport.repeats` (`AnalysisRepeat`). Measured on the reference pieces:
+Mozart 545 has the repeats m1-m28 to m29-m56 and m57-m101 to m102-m146 and the return of m1-m8 at m70-m77 (+5); Clementi
+36 has the returns of m1-m4 at m24-m27 (-12) and m8-m12 at m31-m35 (-7). The text export shows each at the later run's
+first measure ([text-export.md](../text-export.md)).

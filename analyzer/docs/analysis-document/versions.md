@@ -2,6 +2,9 @@
 
 Every `schema_version` of the analysis document and what changed. Back to the [docs index](../README.md) and the [analysis document](../analysis-document.md).
 
+- **11**: Adds the required top-level `repeats` after `form`: an array of repeat claims, one per repeat or return the
+  library finds (R-400), each with `kind`, `earlier`, `later` and `transposition`. Empty when there are none. Adding a
+  required section is a breaking change under the rule above; no existing field changed.
 - **10**: `outer_voices` has one entry per voice segment (one per melody note) instead of one per chord segment, so several
   entries share a chord on a harmonic span and `chord_index` is many to one; each entry's window is its voice segment's.
   The shape of an entry is unchanged, but its meaning is not, and a reader that indexed the lines by chord must read

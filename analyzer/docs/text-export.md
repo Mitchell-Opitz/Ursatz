@@ -91,6 +91,7 @@ uncertainty.
 | ` phrase 2 m9-m12 c=0.75 \| form A` | `phrases` | Numbered from 1, with the form section that holds it. |
 | ` theme hybrid m1-m15` | `themes` | The theme type and its measures. |
 | ` form A m1-m15` | `form.sections` | The section label and its measures. |
+| ` repeat of m1-m28 (m29-m56)` | `repeats` | At the first measure of the later run: the earlier run, then the later in brackets. A return adds the transposition: ` return of m1-m8 (m70-m77), 5 semitones`, or `, an octave lower` or `, an octave higher` for -12 or 12. No `c=`. |
 | ` motive a m12 @1-@2.5` | `motives[].occurrences` | The motive letter (`a` for the first motive, then `b`, ... `z`, `aa`), the measure and beat where the occurrence starts and the beat where it ends. An occurrence that ends in a later measure names it: `m1 @3-m2@2`. An end on a barline is a beat past the bar (`@5` in 4/4). Occurrences carry no `c=`. |
 
 A measure range such as `(m1-m16)` runs from the measure where the claim starts to the measure that holds its last
