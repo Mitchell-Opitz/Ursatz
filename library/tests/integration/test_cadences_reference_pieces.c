@@ -14,6 +14,9 @@
 #include "standard-tonality/analysis/roman_numeral_adapter.h"
 #include "time/note_value.h"
 #include "time/time_signature.h"
+#include "io/midi_importer.h"
+#include "semantics/analysis_key.h"
+#include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
 
 /*
@@ -29,16 +32,18 @@
  *    the meter, beat strength and soprano are the real ones from the L2 pipeline (outer voices). Chords outside a hand
  *    stretch are not read. Asserted over all five pieces: at least 80% of the annotated cadences are found, and at
  *    least 80% of the found ones have the right type.
- * 2. THE WHOLE CHAIN. Weighted chord identification (the home key, whole piece), local key regions, the
- *    standard-tonality adapter, then the cadence adapter. The earlier stages miss much of the harmony. Reported with the
- *    numbers, asserted only at a floor under the measured level, so a regression shows; it is not a quality target.
+ * 2. THE WHOLE CHAIN. analysis_chain_run (ursatz_chain) to the form stage on the piece's notes and meter map, the file's key
+ *    signature events read as major, the annotation's home key as the home key: the chain the library runs, with its own
+ *    segments (harmonic spans) and its own cadences (R-392). The arrivals are read from the chain's segments. The earlier
+ *    stages miss much of the harmony. Reported with the numbers, asserted only at a floor under the measured level, so a
+ *    regression shows; it is not a quality target.
  *
  * Nothing is tuned to the fixtures: every default is the library's. URSATZ_CORPUS_DIR and URSATZ_ANNOTATION_DIR come
  * from CMake.
  */
 
 #define TARGET 0.80
-#define CHAIN_RECALL_FLOOR 0.05 /* the whole chain found 1 of 10 when this was written */
+#define CHAIN_RECALL_FLOOR 0.05 /* the analysis chain found 2 of 9 when this was written (22.2%) */
 
 typedef struct {
     double at;    /* whole notes */
@@ -318,14 +323,16 @@ static void print_where(const Annotation *a, double t) {
     printf("measure %ld beat %.2f", measure, 1.0 + beats - (double)(measure - 1) * (double)a->beats);
 }
 
-static Score evaluate(const Annotation *a, const WeightedPipeline *p, const HarmonyCadences *cadences, bool print) {
+/* `starts` is each segment's start in whole notes, indexed like the cadences' arrivals: the pipeline's for the hand-chord run, the chain's
+   (analysis_chain_segments) for the chain run. */
+static Score evaluate(const Annotation *a, const double *starts, const HarmonyCadences *cadences, bool print) {
     Score score = {a->cadence_count, 0, 0, 0, 0};
     bool *used = (bool *)calloc(cadences->count > 0 ? cadences->count : 1, sizeof(bool));
     assert(used != NULL);
     for (size_t e = 0; e < a->cadence_count; e++) {
         bool found = false;
         for (size_t c = 0; c < cadences->count; c++) {
-            double arrival = p->starts[cadences->items[c].arrival_first];
+            double arrival = starts[cadences->items[c].arrival_first];
             if (fabs(arrival - a->cadences[e].at) <= a->beat_length + 1e-9) {
                 found = true;
                 used[c] = true;
@@ -347,7 +354,7 @@ static Score evaluate(const Annotation *a, const WeightedPipeline *p, const Harm
         }
     }
     for (size_t c = 0; c < cadences->count; c++) {
-        double arrival = p->starts[cadences->items[c].arrival_first];
+        double arrival = starts[cadences->items[c].arrival_first];
         if (chord_at(a, arrival) == NULL) {
             continue; /* outside the hand stretches: not scored */
         }
@@ -410,7 +417,7 @@ static Score run_adapter_alone(const Piece *piece) {
     assert(harmony_analysis_find_cadences(segments, count, NULL, &found) == HARMONY_CADENCE_ANALYSIS_OK);
 
     printf("%s, the cadence adapter alone on the hand chords (draft hand marks):\n", piece->name);
-    Score score = evaluate(&a, &p, &found, true);
+    Score score = evaluate(&a, p.starts, &found, true);
     report("alone", &score);
 
     harmony_cadences_destroy(&found);
@@ -426,96 +433,40 @@ static Score run_adapter_alone(const Piece *piece) {
 
 /* --- the whole chain --- */
 
+/* The analysis chain over one piece, to the form stage: the piece's notes and map, the file's key signature events read as major, the
+   annotation's home key as a major key index (as framework_v1_chain.h builds its chain). `p` is the pipeline run of the same piece. */
+static AnalysisChain *run_analysis_chain(const WeightedPipeline *p, const MeterMap *map, const Annotation *a) {
+    size_t key_event_count = p->import.key_signatures.count;
+    AnalysisKeyEvent *key_events = (AnalysisKeyEvent *)calloc(key_event_count + 1, sizeof(AnalysisKeyEvent));
+    assert(key_events != NULL);
+    for (size_t i = 0; i < key_event_count; i++) {
+        const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
+        key_events[i].time = event->position;
+        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
+    }
+    AnalysisNoteSet set = {p->notes, p->note_count, map};
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.stages = ANALYSIS_CHAIN_STAGE_FORM;
+    config.first_measure = 1;
+    config.home_key_index = common_practice_key_index_of(a->home, COMMON_PRACTICE_KEY_MAJOR);
+    AnalysisChain *chain = NULL;
+    assert(analysis_chain_run(&set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);
+    free(key_events);
+    return chain;
+}
+
 static Score run_whole_chain(const Piece *piece) {
     Annotation a = load_annotation(piece->fixture);
     MeterMap *own = piece->score_three_four ? three_four_map() : NULL;
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, piece->midi, own);
     const MeterMap *map = own != NULL ? own : p.meter.meter_map;
-    size_t count = scope_count(&p, &a);
+    AnalysisChain *chain = run_analysis_chain(&p, map, &a);
 
-    CommonPracticeWeightedResults chords = {0};
-    assert(common_practice_identify_weighted_sequence(p.segments, count, a.home, COMMON_PRACTICE_KEY_MAJOR, NULL,
-                                                      &chords) == COMMON_PRACTICE_WEIGHTED_OK);
-    CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
-    CommonPracticeKeySegment *key_segments = (CommonPracticeKeySegment *)calloc(count, sizeof(CommonPracticeKeySegment));
-    assert(key_segments != NULL);
-    for (size_t s = 0; s < count; s++) {
-        const TimeSpan *window = sonority_time_window(p.sonorities.items[s].sonority);
-        key_segments[s].start = time_span_start(window);
-        key_segments[s].end = time_span_end(window);
-        key_segments[s].source = &p.segments[s];
-        assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
-                                              &key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
-    }
-    CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(key_segments, count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    StandardTonalityKeyRegionInput *region_inputs =
-        (StandardTonalityKeyRegionInput *)calloc(regions.region_count, sizeof(StandardTonalityKeyRegionInput));
-    StandardTonalitySegmentInput *segment_inputs =
-        (StandardTonalitySegmentInput *)calloc(count, sizeof(StandardTonalitySegmentInput));
-    assert(region_inputs != NULL && segment_inputs != NULL);
-    for (size_t i = 0; i < regions.region_count; i++) {
-        region_inputs[i].key = regions.regions[i].key;
-        region_inputs[i].start = time_span_start(regions.regions[i].span);
-        region_inputs[i].uncertainty = regions.regions[i].uncertainty;
-    }
-    for (size_t s = 0; s < count; s++) {
-        segment_inputs[s].segment_id = p.segment_ids[s];
-        segment_inputs[s].start = key_segments[s].start;
-        segment_inputs[s].chord = chords.items[s].matched ? chords.items[s].best_chord : NULL;
-        segment_inputs[s].weights = key_segments[s].weights.pitch_class;
-    }
-    StandardTonalityChordInput *tonal_inputs = NULL;
-    size_t tonal_count = 0;
-    assert(standard_tonality_build_chord_inputs(segment_inputs, count, region_inputs, regions.region_count,
-                                                &tonal_inputs, &tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
-    StandardTonalityRomanResult *romans = NULL;
-    assert(standard_tonality_build_roman_numerals(tonal_inputs, tonal_count, &romans) == STANDARD_TONALITY_ROMAN_OK);
-    OuterVoiceLines lines = {0};
-    assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,
-                               standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
-
-    Inputs in = make_inputs(&p, map, &a, count);
-    for (size_t s = 0; s < count; s++) {
-        HarmonySegmentInput *input = &in.inputs[s];
-        if (!romans[s].has_numeral) {
-            input->degree = 0;
-            input->interval_count = 3;
-            continue;
-        }
-        const StandardTonalityRomanClaim *claim = &romans[s].claim;
-        int intervals[4];
-        size_t interval_count = 0;
-        claim_intervals(claim, intervals, &interval_count);
-        set_intervals(input, intervals, interval_count);
-        input->degree = claim->degree;
-        input->inversion = claim->inversion;
-        input->applied_to = claim->applied ? claim->applied_target_degree : 0;
-        input->mode = tonal_inputs[s].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-        input->uncertainty = romans[s].uncertainty;
-        input->bass_degree = degree_of(&lines.bass[s], tonal_inputs[s].tonic_pitch_class);
-        input->soprano_degree = degree_of(&lines.soprano[s], tonal_inputs[s].tonic_pitch_class);
-    }
-    HarmonySegment *segments = NULL;
-    assert(harmony_analysis_prepare(in.inputs, count, &segments) == HARMONY_ANALYSIS_OK);
-    HarmonyCadences found = {0};
-    assert(harmony_analysis_find_cadences(segments, count, NULL, &found) == HARMONY_CADENCE_ANALYSIS_OK);
-
-    printf("%s, the whole chain (draft hand marks):\n", piece->name);
-    Score score = evaluate(&a, &p, &found, true);
+    printf("%s, the whole chain, the analysis chain (draft hand marks):\n", piece->name);
+    Score score = evaluate(&a, analysis_chain_segments(chain)->starts, analysis_chain_cadences(chain), true);
     report("chain", &score);
 
-    harmony_cadences_destroy(&found);
-    harmony_analysis_destroy(segments);
-    destroy_inputs(&in);
-    outer_voice_lines_destroy(&lines);
-    standard_tonality_roman_results_destroy(romans, tonal_count);
-    standard_tonality_chord_inputs_destroy(tonal_inputs);
-    free(segment_inputs);
-    free(region_inputs);
-    common_practice_key_regions_destroy(&regions);
-    free(key_segments);
-    common_practice_weighted_results_destroy(&chords);
+    analysis_chain_destroy(chain);
     pipeline_destroy(&p);
     if (own != NULL) {
         meter_map_destroy(own);
