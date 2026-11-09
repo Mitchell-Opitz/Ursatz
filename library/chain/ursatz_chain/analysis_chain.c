@@ -436,6 +436,18 @@ static bool read_numerals(AnalysisChain *chain) {
         p->region_inputs[i].start = time_span_start(p->regions.regions[i].span);
         p->region_inputs[i].uncertainty = p->regions.regions[i].uncertainty;
     }
+    /* Keys from phrases (R-399): after the pivot of an arrival change the chords are read in the key they cadence into, so the new region's
+       numerals start at the segment after the pivot, when that segment starts before the region. */
+    for (size_t c = 0; c < p->regions.change_count; c++) {
+        const CommonPracticeKeyChange *change = &p->regions.changes[c];
+        if (!change->at_arrival || !change->has_pivot || change->pivot_segment + 1 >= count) {
+            continue;
+        }
+        const MusicalTime *after_pivot = chain->key_segments[change->pivot_segment + 1].start;
+        if (time_double(after_pivot) < time_double(p->region_inputs[change->to_region].start) - 1e-12) {
+            p->region_inputs[change->to_region].start = after_pivot;
+        }
+    }
     for (size_t i = 0; i < count; i++) {
         p->segment_inputs[i].segment_id = chain->segs.ids[i];
         p->segment_inputs[i].start = chain->key_segments[i].start;
