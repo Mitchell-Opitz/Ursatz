@@ -283,11 +283,11 @@
       "heard_as_requested": false,
       "heard_text": "no theme heard",
       "style_distance": {
-       "harmony": 0.8075,
+       "harmony": 0.8519,
        "rhythm": 0.2421,
        "melody": 0.7521,
        "form": 1,
-       "overall": 0.7004
+       "overall": 0.7115
       }
      }
     ],
