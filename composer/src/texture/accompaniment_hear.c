@@ -16,6 +16,7 @@
 #include <ursatz_analyzer/result_chain.h>
 #include <ursatz_chain/analysis_chain.h>
 
+#include "check/hearing_result.h"
 #include "render/render_notes.h"
 #include "texture/texture_internal.h"
 #include "util/position.h"
@@ -120,7 +121,7 @@ bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate,
         input.midi = midi;
         input.meter = map;
         input.streams = rendered.part_index;
-        AnalyzerHearingOptions options = analyzer_hearing_options_default();
+        AnalyzerHearingOptions options = hearing_analyzer_options();
         options.analysis.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
         ok = analyzer_hear(&input, &options, &result) == ANALYZER_OK;
     }

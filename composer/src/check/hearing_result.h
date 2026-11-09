@@ -2,6 +2,7 @@
 #define URSATZ_COMPOSER_HEARING_RESULT_H
 
 #include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer/composer_api.h>
 
 #include "check/hearing.h"
 
@@ -13,8 +14,15 @@
  */
 
 /*
- * The Analyzer's result over the notes that start inside span, heard with the options analyzer_hearing_options_default
- * gives. *out is borrowed: valid until hearing_destroy, never released by the caller. The same span gives the same
+ * The options every hearing of the Composer's music uses: analyzer_hearing_options_default with harmonic_spans false. The
+ * Composer hears one chord per segment, the reading its compose rates and baselines were recorded on; on harmonic spans the
+ * Analyzer misreads the two-voice texture the Composer renders at cadences until P40 and P41 (R-378, R-379), and P41 turns
+ * spans on here.
+ */
+AnalyzerHearingOptions hearing_analyzer_options(void);
+
+/*
+ * The Analyzer's result over the notes that start inside span, heard with the options hearing_analyzer_options gives. *out is borrowed: valid until hearing_destroy, never released by the caller. The same span gives the same
  * result without a second analysis.
  */
 HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalyzerResult **out);
