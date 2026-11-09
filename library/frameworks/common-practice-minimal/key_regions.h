@@ -107,6 +107,22 @@ typedef struct {
 /* The chord of a weighted identification result as evidence: present only when the result matched a chord. */
 CommonPracticeKeyChord common_practice_key_chord_of(const CommonPracticeWeightedResult *result);
 
+/* One phrase, as plain data, for keys placed on phrases (KEYS ON PHRASES, below). Keys are bits of key index 0..23 (bit k = key k). */
+typedef struct {
+    int first_measure;                         /* MeterMap measure numbers, inclusive */
+    int last_measure;
+    unsigned cadence_keys;                     /* keys a cadence arriving in the phrase confirms, including at the elided arrival it starts after */
+    unsigned arrival_keys;                     /* keys the cadence at its last measure confirms, when that measure is an elided arrival into the next unit */
+    bool closes;                               /* a perfect authentic cadence at the last measure of a whole grid unit */
+} CommonPracticeKeyPhrase;
+
+/* A written-out repeat: measure_count measures from later_first repeat those from earlier_first. */
+typedef struct {
+    int earlier_first;
+    int later_first;
+    int measure_count;
+} CommonPracticeKeyRepeat;
+
 typedef struct {
     size_t window_measures;                    /* default 4 */
     CommonPracticeKeyProfiles profiles;        /* default Krumhansl-Kessler */
@@ -119,11 +135,27 @@ typedef struct {
     size_t phrase_boundary_count;              /* default 0 */
     size_t snap_reach_measures;                /* default 1: how far an edge may move to a phrase boundary */
     double hold_tolerance;                     /* default 0.05: the weight share outside the old key that allows a switch */
+    const CommonPracticeKeyPhrase *phrases;    /* optional: phrases, in order and not overlapping; borrowed. With them the keys are placed on phrases */
+    size_t phrase_count;                       /* default 0 */
+    const CommonPracticeKeyRepeat *repeats;    /* optional: written-out repeats whose measures share keys; borrowed */
+    size_t repeat_count;                       /* default 0 */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
-   "key-region", pivot_search_measures 2, evidence_weight 0.8, no phrase boundaries, snap_reach_measures 1, hold_tolerance 0.05. */
+   "key-region", pivot_search_measures 2, evidence_weight 0.8, no phrase boundaries, snap_reach_measures 1, hold_tolerance 0.05,
+   no phrases and no repeats. */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
+
+typedef enum {
+    COMMON_PRACTICE_CADENCE_AUTHENTIC = 0,
+    COMMON_PRACTICE_CADENCE_HALF
+} CommonPracticeCadenceKind;
+
+/* The keys a cadence confirms, as a mask over the 24 keys (bit k = key k), from the chord it arrives on. Authentic: the key on the arrival's
+   root, major when the arrival has the major third alone, minor when it has the minor third alone, else 0. Half: when the arrival is a major
+   triad (a seventh may be added), the major and minor keys a fifth below its root; else 0. An arrival with a diminished or augmented fifth
+   and no perfect fifth confirms nothing. 0 for a NULL or absent arrival or an unknown kind. */
+unsigned common_practice_cadence_keys(CommonPracticeCadenceKind kind, const CommonPracticeKeyChord *arrival);
 
 typedef enum {
     COMMON_PRACTICE_KEY_REGIONS_OK = 0,
@@ -241,6 +273,34 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  */
 
 /*
+ * KEYS ON PHRASES (R-397). When config.phrases is given (phrase_count > 0) the keys are placed on the phrases and the window path, the hold
+ * rule and the snap above are not used. A key then changes only when a phrase establishes the new key.
+ *
+ *   - The phrases are clipped to the measures: the first starts at the first measure, each next at the previous last + 1, the last ends at
+ *     the last measure. A phrase that holds the start of a key signature span is split there (the part before keeps no cadence data).
+ *   - A phrase scores key k as the correlation of its pooled pitch-class weights with k's profile plus evidence_weight times its functional
+ *     evidence over its chord count: the window formula over the phrase's measures, the evidence counted with the real previous chord.
+ *   - The path over the phrases is found by dynamic programming over (key, satisfied, changed here). Its cost is minus the score plus
+ *     change_penalty for every change. A region (a run of phrases of one key) must hold a phrase whose cadence_keys has its key: it is then
+ *     satisfied. Exceptions: the first region of the piece is satisfied; a change right after a phrase that `closes` costs no penalty and its
+ *     region is satisfied; a change at a signature span start costs no penalty, its region is satisfied, and it does not need the region
+ *     before satisfied. A change needs the region before satisfied. The first phrase of a restricted span takes only the span's two keys.
+ *     A change into key k at phrase i is refused when i's arrival_keys has k, phrase i + 1 keeps k, and phrase i - 1's arrival_keys does not
+ *     have k: the change belongs at the arrival. The path ends in its cheapest satisfied state, else its cheapest. A tie keeps the earlier
+ *     key, and the lowest key index among new keys.
+ *   - A measure takes its phrase's key; the last measure of a phrase whose arrival_keys has the next phrase's key takes the next key (that
+ *     measure is an elided arrival into the next unit; a change there is marked at_arrival).
+ *   - Repeats: each later measure takes the earlier measure's key, in the order of the list, except an earlier measure in the first region
+ *     of a restricted signature span.
+ *   - The regions, their uncertainty, the extents and the returns are then read as before.
+ *
+ * With no phrases every output is as before.
+ *
+ * BAD_CONFIG for a phrase count with no list, a repeat count with no list, and phrases out of order or overlapping (a phrase whose last
+ * measure comes before its first, or whose first is not after the previous phrase's last).
+ */
+
+/*
  * PIVOT CHORDS. At each change whose extent is a modulation (WEAK_MODULATION or MODULATION: a tonicization
  * has no pivot, and neither does a change with no extent worth a pivot), the pivot is the LAST segment, looking
  * back from the boundary (the start of the new region's first measure), whose chord is diatonic in both the old
@@ -253,6 +313,9 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * seventh of a minor key (the major V, the diminished vii) is not diatonic there in this version. If no segment
  * qualifies the change is DIRECT: has_pivot is false. No Roman numeral is assigned: the pivot is a segment of
  * the caller's list, whose chord the caller can read in either key.
+ *
+ * With keys on phrases the search takes only segments that start strictly before the boundary: at an arrival change the segment that starts
+ * at the boundary is the arrival chord itself, which is in the new key and cannot be the pivot.
  */
 
 /*
@@ -311,6 +374,8 @@ typedef struct {
     bool cadence_confirmed;        /* false as returned; the caller sets it after confirming with cadences */
     bool has_pivot;                /* a pivot chord was found (see below); false for a direct change */
     size_t pivot_segment;          /* its index in the caller's segments; meaningful only when has_pivot */
+    bool at_arrival;               /* the new region starts at an arrival slot: the last measure of a phrase whose cadence arrives in the next
+                                      phrase's key (keys on phrases only; false otherwise) */
 } CommonPracticeKeyChange;
 
 typedef struct {
