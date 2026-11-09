@@ -48,6 +48,11 @@ typedef struct {
     BeatStrength strength;  /* beat strength of the attack; not read when held */
     const char *voice_id;   /* the note's Voice EntityID value, or NULL when it has none */
     double onset;           /* absolute onset in whole notes: orders the notes of one voice */
+    /* True marks an accented tone that resolves by step inside its segment over a held bass (an appoggiatura, a
+       suspension, an accented passing tone, R-382; harmonic_span_mark_resolved_accents sets it): common_practice_weight_segment
+       gives it no weight, nor to the total. It stays a member, so a leftover tone is still labelled when it is not in the
+       chord. Zero-initialized counts as before. */
+    bool resolves_in_segment;
 } CommonPracticeMember;
 
 /*

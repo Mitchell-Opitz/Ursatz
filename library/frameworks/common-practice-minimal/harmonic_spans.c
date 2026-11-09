@@ -1,6 +1,7 @@
 #include "harmonic_spans.h"
 
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -148,6 +149,116 @@ static bool same_note(const CommonPracticeMember *a, const CommonPracticeMember 
            same_text(a->note_id, b->note_id);
 }
 
+/* --- resolved accents (R-382) --- */
+
+static bool sounds_at_start(const CommonPracticeMember *member, double start) {
+    return member->held || fabs(member->onset - start) <= TIME_TOLERANCE;
+}
+
+static int pitch_class_of(int pitch) {
+    return ((pitch % 12) + 12) % 12;
+}
+
+/* The member that resolves member `m`: the first of m's voice attacked after m (by more than TIME_TOLERANCE), when it is attacked
+   inside the window, one or two semitones from m, and a member on the bass pitch sounds at `start` and still sounds when it is
+   attacked. SIZE_MAX when m has no such resolution. */
+static size_t accent_resolution(const CommonPracticeMember *members, size_t count, size_t m, double start, double end,
+                                int bass_pitch) {
+    const CommonPracticeMember *accent = &members[m];
+    if (accent->voice_id == NULL || !sounds_at_start(accent, start) || accent->pitch <= bass_pitch) {
+        return SIZE_MAX;
+    }
+    size_t r = SIZE_MAX;
+    for (size_t j = 0; j < count; j++) {
+        if (j == m || !same_text(members[j].voice_id, accent->voice_id) || !(members[j].onset > accent->onset + TIME_TOLERANCE)) {
+            continue;
+        }
+        if (r == SIZE_MAX || members[j].onset < members[r].onset - TIME_TOLERANCE) {
+            r = j;
+        }
+    }
+    if (r == SIZE_MAX || members[r].held || !(members[r].onset < end - TIME_TOLERANCE)) {
+        return SIZE_MAX;
+    }
+    int step = members[r].pitch - accent->pitch;
+    if (step < 0) {
+        step = -step;
+    }
+    if (step != 1 && step != 2) {
+        return SIZE_MAX;
+    }
+    for (size_t b = 0; b < count; b++) {
+        if (b == m || members[b].pitch != bass_pitch || !sounds_at_start(&members[b], start)) {
+            continue;
+        }
+        double release = (members[b].held ? start : members[b].onset) + members[b].duration;
+        if (release >= members[r].onset - TIME_TOLERANCE) {
+            return r;
+        }
+    }
+    return SIZE_MAX;
+}
+
+HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *members, size_t count, double start, double end,
+                                                       int bass_pitch, const CommonPracticeWeightedConfig *config) {
+    if (count > 0 && members == NULL) {
+        return HARMONIC_SPAN_ERR_NULL_ARGUMENT;
+    }
+    if (!isfinite(start) || !isfinite(end) || !(end > start) || bass_pitch < -1) {
+        return HARMONIC_SPAN_ERR_BAD_INPUT;
+    }
+    for (size_t i = 0; i < count; i++) {
+        members[i].resolves_in_segment = false;
+    }
+    if (count == 0 || bass_pitch < 0) {
+        return HARMONIC_SPAN_OK;
+    }
+
+    size_t *resolution = malloc(count * sizeof(*resolution));
+    if (resolution == NULL) {
+        return HARMONIC_SPAN_ERR_ALLOC;
+    }
+    size_t candidates = 0;
+    for (size_t i = 0; i < count; i++) {
+        resolution[i] = accent_resolution(members, count, i, start, end, bass_pitch);
+        if (resolution[i] != SIZE_MAX) {
+            members[i].resolves_in_segment = true;
+            candidates++;
+        }
+    }
+    HarmonicSpanStatus status = HARMONIC_SPAN_OK;
+    if (candidates > 0) {
+        /* The grouping's reading: every key, the allowed qualities, the chord holds the bass, with every candidate flagged. */
+        CommonPracticeWeightedConfig reading_config = config != NULL ? *config : common_practice_weighted_config_default();
+        reading_config.require_bass_chord_tone = true;
+        reading_config.applied_chords = false;
+        CommonPracticeWeights weights;
+        status = map_status(common_practice_weight_segment(members, count, &reading_config, &weights, &bass_pitch));
+        CommonPracticeRankedChord best;
+        int best_tonic = 0;
+        bool found = false;
+        if (status == HARMONIC_SPAN_OK) {
+            status = best_chord_over_keys(&weights, &reading_config, &best, &best_tonic, &found);
+        }
+        unsigned mask = found && status == HARMONIC_SPAN_OK ? common_practice_ranked_chord_mask(&best, best_tonic) : 0;
+        for (size_t i = 0; i < count; i++) {
+            if (resolution[i] == SIZE_MAX) {
+                continue;
+            }
+            bool resolved_to_chord_tone = (mask & (1u << pitch_class_of(members[resolution[i]].pitch))) != 0;
+            bool accent_is_chord_tone = (mask & (1u << pitch_class_of(members[i].pitch))) != 0;
+            members[i].resolves_in_segment = status == HARMONIC_SPAN_OK && resolved_to_chord_tone && !accent_is_chord_tone;
+        }
+        if (status != HARMONIC_SPAN_OK) {
+            for (size_t i = 0; i < count; i++) {
+                members[i].resolves_in_segment = false;
+            }
+        }
+    }
+    free(resolution);
+    return status;
+}
+
 /* The union of the members of cells a..b in g->scratch: a note sounding in several cells is one member whose duration
    adds up; a note first sounding after the part's first cell was attacked in the part. Returns the member count. */
 static size_t merge_members(const Grouper *g, size_t a, size_t b) {
@@ -165,6 +276,7 @@ static size_t merge_members(const Grouper *g, size_t a, size_t b) {
                 continue;
             }
             g->scratch[n] = *member;
+            g->scratch[n].resolves_in_segment = false;
             if (c != a) {
                 g->scratch[n].held = false;
             }
@@ -180,9 +292,13 @@ static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int ba
     size_t n = merge_members(g, a, b);
     const int *bass_override = bass_pitch >= 0 ? &bass_pitch : NULL;
 
-    CommonPracticeWeights weights;
     HarmonicSpanStatus status =
-        map_status(common_practice_weight_segment(g->scratch, n, &g->config, &weights, bass_override));
+        harmonic_span_mark_resolved_accents(g->scratch, n, g->cells[a].start, g->cells[b].end, bass_pitch, &g->config);
+    if (status != HARMONIC_SPAN_OK) {
+        return status;
+    }
+    CommonPracticeWeights weights;
+    status = map_status(common_practice_weight_segment(g->scratch, n, &g->config, &weights, bass_override));
     if (status != HARMONIC_SPAN_OK) {
         return status;
     }
