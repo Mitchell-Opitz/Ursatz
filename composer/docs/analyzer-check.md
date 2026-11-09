@@ -11,6 +11,10 @@ returns and the style distance read the same render. Cadences, chord entries and
 report (`analyzer_result_report`, the export view), and faults from `analyzer_result_violations`. Times in the report are in
 whole notes from the start of the plan, and the check counts bars from the section's start.
 
+The hearing reads one chord per segment (`harmonic_spans` false in `hearing_analyzer_options`), not the harmonic spans the
+Analyzer's own output reads. The checks, compose rates and baselines were recorded on that reading, and on spans the Analyzer
+misreads the Composer's two-voice texture at cadences until P40 and P41 (R-378, R-379). P41 moves the hearing to spans.
+
 ## What is compared
 
 `analyzer_check_section(plan, section, &check)` gives an `AnalyzerCheck`. Its items, in order:

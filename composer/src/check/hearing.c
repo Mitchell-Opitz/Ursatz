@@ -130,6 +130,12 @@ static HeardSpan *find_heard(ComposerHearing *hearing, PlanSpan span) {
     return NULL;
 }
 
+AnalyzerHearingOptions hearing_analyzer_options(void) {
+    AnalyzerHearingOptions options = analyzer_hearing_options_default();
+    options.analysis.harmonic_spans = false;
+    return options;
+}
+
 HearingResult hearing_piece(ComposerHearing *hearing, const AnalyzerResult **out) {
     if (!hearing) {
         if (out) {
@@ -211,7 +217,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     input.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
     input.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
     input.streams = heard.streams;
-    AnalyzerHearingOptions options = analyzer_hearing_options_default();
+    AnalyzerHearingOptions options = hearing_analyzer_options();
     atomic_fetch_add(&hearing_analyzer_calls_made, 1);
     AnalyzerStatus status = analyzer_hear(&input, &options, &heard.result);
     if (status != ANALYZER_OK) {

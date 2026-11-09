@@ -969,7 +969,9 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
 static const int STYLED[2][2] = {{754, 807}, {715, 774}};
 /* Re-measured at P37 B2 (ideas ranked by fidelity, R-355): the unstyled means are 0.7217 and 0.7975 to chorales, 0.6858 and 0.7575 to
    sonatinas (harmony, melody); the styled means are as before. */
-static const int UNSTYLED[2][2] = {{721, 797}, {685, 757}};
+/* Re-measured at P39 B6 (the melody read from every melody note, R-377): the unstyled melody means 0.7922 and 0.7548 are closer; the
+   unstyled harmony 0.7217 and 0.6858 and the styled means (0.7343, 0.8007, 0.6938, 0.7709) are unchanged, within STYLED. */
+static const int UNSTYLED[2][2] = {{721, 792}, {685, 754}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};
