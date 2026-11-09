@@ -66,20 +66,22 @@ The fixtures are drafts: hand readings, not yet checked against printed scores (
 Michelle's hand harmony of the Clementi and Mozart reference pieces (`tests/fixtures/annotations/clementi36_harmony.txt`,
 `mozart545_harmony.txt`, verified 2026-11-07) is read by `tests/analysis/test_reference_harmony.c`. For each annotated chord it checks whether
 the chain's chord sounding at the chord's onset has the same root and triad quality (the seventh is not compared; an applied numeral is
-compared by the root and quality of the applied chord until P40), and it counts the chord changes the chain makes inside the annotated
+compared by the root and quality of the applied chord, as the chain reads it since P40 B5), and it counts the chord changes the chain makes inside the annotated
 stretches against the changes the annotation has. Since P39 the test asserts the target bars (R-371): in Clementi measures 1 to 5, 8 and 9
 and Mozart measures 1 to 6, 11 and 12 every annotated chord matches, and the chain makes no chord change inside Clementi measure 8 or
-Mozart measures 1 and 8. Mozart measure 8 is one chord; which chord is reported, not asserted (R-375). Every other bar is reported. The
-pieces are not in the harness metrics above.
+Mozart measures 1 and 8. Mozart measure 8 is one chord; which chord is reported, not asserted (R-375). P40 B5 adds Clementi measures 6 and 7
+and Mozart measure 9 to the target bars (Clementi m7 beat 2 is inside the bar but reported, R-384). Every other bar is reported; each report
+line prints the chain's Roman numeral at the chord. The pieces are not in the harness metrics above.
 
 | Piece | Chords matched | Chain changes | Annotated changes | Extra changes |
 |---|---|---|---|---|
-| Clementi 36 | 8 / 10 | 8 | 9 | -1 |
-| Mozart 545 | 15 / 17 | 14 | 15 | -1 |
+| Clementi 36 | 9 / 10 | 9 | 9 | 0 |
+| Mozart 545 | 16 / 17 | 15 | 15 | 0 |
 
-Measured 2026-11-09 (P40 B4, the bass evidence rules; P40 B3 before: Mozart 15 / 17 with 15 chain changes and 0 extra; P39 B3 before that: Mozart 15 / 17 with 16 chain changes and 1 extra; P38 B4 before that: Clementi 5 / 10 with 24 extra changes, Mozart 13 / 17 with 17). The
-misses, none in a target bar: Clementi m6 b4 (viio7/V, chain C major) and m7 b2 (C major, chain A minor); Mozart m8 b1 (A minor, the chain
-reads the bar as one C major chord) and m10 b1 (F major, no chord). Clementi m6 b4 now has a segment of its own (the F#3 cuts the bar, R-381 and R-387) but the chord there reads none, because the key is C major and an F# diminished triad is not diatonic; the applied chord waits for B5. No segment starts at Mozart m10 b4 (the chromatic F#3 under the F chord is no new chord), and that segment is not matched, so the F#3 is reported as not labelled (R-384). Both are asserted in `test_reference_harmony.c`.
+Measured 2026-11-09 (P40 B5, the chain reads applied chords; P40 B4 before: Clementi 8 / 10 and Mozart 15 / 17, both with -1 extra changes; P40 B3 before that: Mozart 15 / 17 with 15 chain changes and 0 extra; P39 B3 before that: Mozart 15 / 17 with 16 chain changes and 1 extra; P38 B4 before that: Clementi 5 / 10 with 24 extra changes, Mozart 13 / 17 with 17). The
+misses: Clementi m7 b2 (C major, the chain reads A minor, numeral ii6 in G; inside a target bar, reported, R-384) and Mozart m8 b1 (A minor, the chain reads the bar as one C major chord; not a target bar). Clementi m6 b4 now reads F# diminished, numeral vii°/V (asserted by root and triad quality; the chain reads the triad, the annotation the seventh); Mozart m10 b1 reads F major IV. No segment starts at Mozart m10 b4 (the chromatic F#3 under the F chord is no new chord), the F#3 of m10 and the C#5 notes of m9 are leftover tones of their chords. All are asserted in `test_reference_harmony.c`.
+
+P40 B5 turns the applied chords on in the chain (`AnalysisChainConfig.applied_chords`, R-380): the identification ranks V/x, V7/x, vii°/x and vii°7/x beside the diatonic chords and the numerals name them, with the diatonic re-check off. Chorale harness after it (chord root, quality, Roman numeral, numeral in the chain's key, key): 89.5%, 83.9%, 76.4%, 55.7%, 70.7% (85.5%, 75.0%, 69.9%, 53.6%, 69.1% before), against the guards of 84.5%, 67.2% and 67.4%; the baseline was re-recorded. The bars of R-371 hold. Of the annotation's time slices, 28 hold an applied chord and the chain's numeral matches 12 of them; it marks 62 slices as applied. Mozart 545 reads 21 key regions, 23 cadences and 27 phrases (25, 17 and 25 before); Clementi 36 reads 6 key regions (a G major m20 to 22 returns).
 
 ## Harmonic spans
 
