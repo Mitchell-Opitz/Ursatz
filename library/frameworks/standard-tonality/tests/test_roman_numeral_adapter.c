@@ -116,6 +116,28 @@ static void test_chords_the_key_does_not_give(void) {
     expect_none(no_numeral);
 }
 
+static void test_identified_applied_chords_read_directly(void) {
+    static const int DOMINANT_SEVENTH[4] = {0, 4, 7, 10};
+    static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
+    static const int DIMINISHED_SEVENTH[4] = {0, 3, 6, 9};
+    /* C major */
+    expect_label(chord_in(2, 2, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR), "V/V");
+    expect_label(chord_in(2, 2, DOMINANT_SEVENTH, 4, 0, C_MAJOR), "V7/V");
+    expect_label(chord_in(2, 6, DOMINANT_SEVENTH, 4, 0, C_MAJOR), "V6/5/V");
+    expect_label(chord_in(2, -1, DOMINANT_SEVENTH, 4, 0, C_MAJOR), "V7/V"); /* an unknown bass reads as root position */
+    expect_label(chord_in(6, 6, DIMINISHED_TRIAD, 3, 0, C_MAJOR), "vii\xC2\xB0/V");
+    expect_label(chord_in(6, 6, DIMINISHED_SEVENTH, 4, 0, C_MAJOR), "vii\xC2\xB0" "7/V");
+    expect_label(chord_in(9, 9, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR), "V/ii");
+    /* C minor, RomanText spelling */
+    expect_label(chord_in(2, 2, DOMINANT_SEVENTH, 4, 0, A_MINOR), "V7/V");
+    expect_label(chord_in(4, 4, DIMINISHED_SEVENTH, 4, 0, A_MINOR), "viio7/iv");
+    /* A diatonic reading is never replaced by an applied one. */
+    expect_label(chord_in(7, 7, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR), "V");
+    expect_label(chord_in(11, 11, DIMINISHED_TRIAD, 3, 0, C_MAJOR), "vii\xC2\xB0");
+    /* Eb major in C: its target (Ab) is not a target of the key. */
+    expect_none(chord_in(3, 3, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR));
+}
+
 static void test_key_boundary_switches_the_numeral_key(void) {
     /* The same G major triad, read in C major then in G major. */
     expect_label(chord_in(7, 7, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR), "V");
@@ -215,6 +237,7 @@ int main(void) {
     test_minor_key();
     test_minor_key_vocabulary_in_romantext_spelling();
     test_chords_the_key_does_not_give();
+    test_identified_applied_chords_read_directly();
     test_key_boundary_switches_the_numeral_key();
     test_no_match_segment_gives_no_numeral();
     test_interpretation_and_uncertainty();
