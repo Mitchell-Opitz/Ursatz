@@ -370,6 +370,7 @@ static bool identify_chords(AnalysisChain *chain) {
     weighting.require_bass_chord_tone = chain->spans_merged; /* the chord holds the span's bass (R-370) */
     if (chain->spans_merged) {
         weighting.seventh_penalty = ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY; /* a passing tone does not complete a seventh (R-376) */
+        weighting.context_next = false; /* a span holds its whole stretch: the next span's chord is no evidence for it (R-379) */
     }
     size_t s = 0;
     while (s < count) {
@@ -727,10 +728,20 @@ static bool merge_into_spans(AnalysisChain *chain) {
     HarmonicSpanCell *cells = NULL;
     int *bass = calloc(chain->segs.count, sizeof(int));
     HarmonicSpans spans = {0};
+    /* Grouping and the resolved accents read a part as one segment, so they take the span seventh penalty (R-379 (1)). */
+    CommonPracticeWeightedConfig grouping = chain->config.weighting;
+    grouping.seventh_penalty = ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY;
     bool ok = bass != NULL && chain_build_span_cells(chain->notes, &chain->segs, &cells) == CHAIN_INPUT_OK &&
               harmonic_span_basses(cells, chain->segs.count, bass) &&
-              harmonic_spans_group(cells, chain->segs.count, bass, &chain->config.weighting, &spans) == HARMONIC_SPAN_OK &&
+              harmonic_spans_group(cells, chain->segs.count, bass, &grouping, &spans) == HARMONIC_SPAN_OK &&
               chain_merge_segments(chain->notes, &chain->segs, &spans) == CHAIN_INPUT_OK;
+    /* The accented tones that resolve by step over a held bass carry no weight in their span's chord (R-382): chords and leftover labels read
+       the flags, key segments count the tones (R-386). The members are owned by chain->segs; the segment views are const. */
+    for (size_t k = 0; ok && k < spans.count; k++) {
+        ok = harmonic_span_mark_resolved_accents((CommonPracticeMember *)chain->segs.segments[k].members,
+                                                 chain->segs.segments[k].member_count, chain->segs.starts[k], chain->segs.ends[k],
+                                                 spans.bass[k], &grouping) == HARMONIC_SPAN_OK;
+    }
     harmonic_spans_destroy(&spans);
     chain_span_cells_destroy(cells);
     free(bass);

@@ -416,6 +416,8 @@ ChainInputStatus chain_build_key_segments(const ChainSegments *segments, size_t 
     if (weighting == NULL) {
         weighting = &defaults;
     }
+    CommonPracticeWeightedConfig evidence = *weighting;
+    evidence.weigh_resolved_accents = true; /* the key reads the accented tones too: only chords skip them (R-386) */
     CommonPracticeKeySegment *built = calloc(count, sizeof(CommonPracticeKeySegment));
     if (built == NULL) {
         return CHAIN_INPUT_ERR_ALLOC;
@@ -425,7 +427,7 @@ ChainInputStatus chain_build_key_segments(const ChainSegments *segments, size_t 
         built[s].start = time_span_start(window);
         built[s].end = time_span_end(window);
         built[s].source = &segments->segments[s];
-        if (common_practice_weight_segment(segments->segments[s].members, segments->segments[s].member_count, weighting,
+        if (common_practice_weight_segment(segments->segments[s].members, segments->segments[s].member_count, &evidence,
                                            &built[s].weights, NULL) != COMMON_PRACTICE_WEIGHTED_OK) {
             free(built);
             return CHAIN_INPUT_ERR_WEIGHTS;

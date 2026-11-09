@@ -37,9 +37,12 @@
  *
  * THE SPANS (R-372). One span per measure to start with (a span never crosses a barline), then the measure is cut
  * where the music changes chord, by scoring whole partitions instead of single splits. The candidate boundaries of a
- * measure are its cells at level HALF_BAR or BEAT after its first cell, and every non-empty subset of them is a
+ * measure are its cells at level HALF_BAR or BEAT after its first cell, except a cell that keeps the bass of the cell
+ * before it with that bass note held over (a held bass note is no new bass, so the measure is not cut inside it, R-379 (4)),
+ * and every non-empty subset of them is a
  * partition (2^n, n = 3 in 4/4). A partition is valid when every part is matched, complete (three of its best chord's
- * pitch classes have weight, or its root and third do and its bass pitch class is a chord tone) and has its bass as a
+ * pitch classes have weight, or its root and third do and its bass pitch class is a chord tone, or its root and fifth
+ * do and the bass is the root: a bare fifth over the root is a complete two-voice reading, R-379) and has its bass as a
  * chord tone, and adjacent parts read different roots. Its value is the parts' scores weighted by duration. The
  * measure takes the valid partition with the highest value less HARMONIC_SPAN_PART_COST per part after the first,
  * among those whose value is at least the whole measure's score plus HARMONIC_SPAN_SPLIT_MARGIN; with none it stays
@@ -117,5 +120,20 @@ HarmonicSpanStatus harmonic_spans_group(const HarmonicSpanCell *cells, size_t co
                                         const CommonPracticeWeightedConfig *config, HarmonicSpans *out);
 
 void harmonic_spans_destroy(HarmonicSpans *spans);
+
+/*
+ * RESOLVED ACCENTS (R-382). Sets CommonPracticeMember.resolves_in_segment on the members of one span or part, which sound in
+ * the window [start, end) (whole notes) over bass_pitch (semitone number; -1: none). Every flag is cleared first. A member m is a
+ * candidate when it has a voice_id, sounds at `start` (held, or its onset within 1e-9 of start), lies above bass_pitch, and its
+ * resolution r (the member of the same voice with the smallest onset after m's, by more than 1e-9) is attacked inside the window
+ * (not held, onset before `end` by more than 1e-9) one or two semitones from m, while another member on bass_pitch sounds at `start`
+ * and still sounds at r's onset: an appoggiatura, suspension or accented passing tone over a held bass. The members are then read
+ * as THE READING above (every key, the allowed qualities, the chord holds bass_pitch) with every candidate flagged, and a candidate
+ * keeps its flag only when r's pitch class is a tone of that reading and m's is not; the others are cleared. One pass, no
+ * iteration. bass_pitch -1 or no candidate: every flag is false. config may be NULL for the defaults. BAD_INPUT for a non-finite
+ * or empty window or a bass_pitch below -1; NULL_ARGUMENT for NULL members with a count. Deterministic.
+ */
+HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *members, size_t count, double start, double end,
+                                                       int bass_pitch, const CommonPracticeWeightedConfig *config);
 
 #endif

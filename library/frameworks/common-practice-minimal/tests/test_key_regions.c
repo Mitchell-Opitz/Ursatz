@@ -455,6 +455,7 @@ static void make_chord(CommonPracticeMember members[4], CommonPracticeSegment *s
         members[i].strength = BEAT_STRENGTH_STRONG;
         members[i].voice_id = NULL;
         members[i].onset = 0.0;
+        members[i].resolves_in_segment = false;
     }
     segment->members = members;
     segment->member_count = 4;

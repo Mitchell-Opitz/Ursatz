@@ -75,9 +75,9 @@ pieces are not in the harness metrics above.
 | Piece | Chords matched | Chain changes | Annotated changes | Extra changes |
 |---|---|---|---|---|
 | Clementi 36 | 8 / 10 | 8 | 9 | -1 |
-| Mozart 545 | 15 / 17 | 16 | 15 | 1 |
+| Mozart 545 | 15 / 17 | 15 | 15 | 0 |
 
-Measured 2026-11-08 (P39 B3, chords on harmonic spans; P38 B4 before: Clementi 5 / 10 with 24 extra changes, Mozart 13 / 17 with 17). The
+Measured 2026-11-09 (P40 B3, the two-voice span rules; P39 B3 before: Mozart 15 / 17 with 16 chain changes and 1 extra; P38 B4 before that: Clementi 5 / 10 with 24 extra changes, Mozart 13 / 17 with 17). The
 misses, none in a target bar: Clementi m6 b4 (viio7/V, chain C major) and m7 b2 (C major, chain A minor); Mozart m8 b1 (A minor, the chain
 reads the bar as one C major chord) and m10 b1 (F major, no chord).
 
@@ -88,6 +88,10 @@ P39 reads chords on harmonic spans (`AnalysisChainConfig.harmonic_spans`, defaul
 chain's key, key): 84.5%, 67.2%, 67.4%, 52.0%, 69.1% before; 86.4%, 75.9%, 70.0%, 54.7%, 69.6% after. Without the penalty the same spans read
 82.7% root and 60.1% quality (a span reads the union of a beat or more, so a passing tone completes a seventh over a triad), under the guards of
 84.5% and 67.2%. The other gated metrics did not move. The baseline was re-recorded in P39 B3.
+
+P40 B3 adds the two-voice span rules (R-379, R-382, R-386): a root and fifth over the root complete a part, a held bass note is not cut, an accented step over a held bass is a non-chord tone in the chord but evidence for the key, a span reads no chord from the next span, and the grouping takes the span seventh penalty. The MIDI importer gives every import voices by track. Chorale harness after it (chord root, quality, Roman numeral, numeral in the chain's key, key): 85.6%, 75.1%, 69.8%, 53.7%, 69.1%, against the guards of 84.5%, 67.2% and 67.4%; the baseline was re-recorded. The bars of R-371 hold.
+
+The two-voice check (R-384, `tests/analysis/test_two_voice_spans.c`, fixtures in `tests/fixtures/two-voice/`) runs the Composer's exports through the chain with and without spans. Without spans: the sentence and the period have one theme and a perfect authentic cadence in measure 8; the fill has one theme (13 measures) and cadences in measures 8 and 16. With spans every cadence and every theme is kept, and the chord before each cadence's arrival has its bass on its root. The sentence needed both fixes: its measure 7 (G under E5 then D5) reads V only once the E5 is flagged, which needs voice ids, and its key stays C major only once the key counts the flagged tone.
 
 ## The chain on a chorale
 

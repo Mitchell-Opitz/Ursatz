@@ -54,7 +54,8 @@ static BeatStrength strength_at(int position) {
     return position == 8 ? BEAT_STRENGTH_MEDIUM : BEAT_STRENGTH_WEAK;
 }
 
-static void build(Piece *piece, const Note *notes, size_t note_count, int bars) {
+/* voices[i] is the voice id of notes[i], or voices is NULL for none. */
+static void build_voiced(Piece *piece, const Note *notes, const char *const *voices, size_t note_count, int bars) {
     memset(piece, 0, sizeof(*piece));
     for (int bar = 0; bar < bars; bar++) {
         int bar_start = bar * BAR;
@@ -98,6 +99,7 @@ static void build(Piece *piece, const Note *notes, size_t note_count, int bars) 
                 member->duration = (double)(t1 - t0) * SIXTEENTH;
                 member->strength = strength_at(position_in_bar(notes[i].start));
                 member->onset = (double)notes[i].start * SIXTEENTH;
+                member->voice_id = voices != NULL ? voices[i] : NULL;
             }
             if (m == 0) {
                 continue;
@@ -117,6 +119,10 @@ static void build(Piece *piece, const Note *notes, size_t note_count, int bars) 
         }
     }
     assert(harmonic_span_basses(piece->cells, piece->count, piece->bass));
+}
+
+static void build(Piece *piece, const Note *notes, size_t note_count, int bars) {
+    build_voiced(piece, notes, NULL, note_count, bars);
 }
 
 static void group(const Piece *piece, HarmonicSpans *spans) {
@@ -549,6 +555,184 @@ static void test_an_accented_bass_tone_resolves_into_the_span_bass(void) {
     harmonic_spans_destroy(&spans);
 }
 
+/* --- the two-voice span rules (R-379, R-382) --- */
+
+/* The members of one span window [from, to) in sixteenths, as the chain builds them: every note sounding in it once, held
+   when it began before the window, its duration the overlap, the strength of its attack. A note may begin before the first
+   bar (a negative start). */
+static size_t window_members(const Note *notes, const char *const *voices, size_t note_count, int from, int to,
+                             CommonPracticeMember *out) {
+    size_t n = 0;
+    for (size_t i = 0; i < note_count; i++) {
+        if (notes[i].start >= to || notes[i].end <= from) {
+            continue;
+        }
+        int begin = notes[i].start > from ? notes[i].start : from;
+        int stop = notes[i].end < to ? notes[i].end : to;
+        memset(&out[n], 0, sizeof(out[n]));
+        out[n].pitch = notes[i].pitch;
+        out[n].held = notes[i].start < from;
+        out[n].duration = (double)(stop - begin) * SIXTEENTH;
+        out[n].strength = strength_at(((notes[i].start % BAR) + BAR) % BAR);
+        out[n].voice_id = voices != NULL ? voices[i] : NULL;
+        out[n].onset = (double)notes[i].start * SIXTEENTH;
+        n++;
+    }
+    return n;
+}
+
+/* The config the chain marks accents with: its span seventh penalty (ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY, R-376), so that a
+   passing tone does not turn a triad into a seventh chord. */
+static CommonPracticeWeightedConfig span_config(void) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    config.seventh_penalty = 0.15;
+    return config;
+}
+
+/* Marks the accents of the window over `bass` and returns the pitches of the flagged members in `flagged`, and their count. */
+static size_t flagged_pitches(const Note *notes, const char *const *voices, size_t note_count, int from, int to, int bass,
+                              int flagged[MAX_MEMBERS]) {
+    CommonPracticeMember members[MAX_MEMBERS];
+    size_t n = window_members(notes, voices, note_count, from, to, members);
+    CommonPracticeWeightedConfig config = span_config();
+    assert(harmonic_span_mark_resolved_accents(members, n, (double)from * SIXTEENTH, (double)to * SIXTEENTH, bass, &config) ==
+           HARMONIC_SPAN_OK);
+    size_t count = 0;
+    for (size_t i = 0; i < n; i++) {
+        if (members[i].resolves_in_segment) {
+            flagged[count++] = members[i].pitch;
+        }
+    }
+    return count;
+}
+
+/* A bass that moves under a melody that moves: C3 under E5, then G2 under D5. The second half is a root G and its fifth, and
+   a bare fifth over the root is a complete reading, so the bar is two spans, the second over G2. */
+static void test_a_root_and_fifth_over_the_root_is_a_span(void) {
+    Note notes[] = {{C3, 0, 8}, {E5, 0, 8}, {G2, 8, 16}, {D5, 8, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0, 8};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    assert(spans.bass[0] == C3 && spans.bass[1] == G2);
+    harmonic_spans_destroy(&spans);
+}
+
+/* An accented step over a held bass: G2 under E5 for a beat, then D5 (one voice). The E5 resolves to D5, a chord tone of the
+   G chord, and E is none: the bar is one span and the E5 is flagged. */
+static void test_an_accented_step_over_a_held_bass_is_flagged(void) {
+    Note notes[] = {{G2, 0, 16}, {E5, 0, 4}, {D5, 4, 16}};
+    const char *voices[] = {"bass", "soprano", "soprano"};
+    Piece piece;
+    build_voiced(&piece, notes, voices, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    harmonic_spans_destroy(&spans);
+    int flagged[MAX_MEMBERS];
+    assert(flagged_pitches(notes, voices, COUNT(notes), 0, 16, G2, flagged) == 1 && flagged[0] == E5);
+}
+
+/* The same step that lands on a note of the chord it sat in is no accent: over C3, E5 D5 C5 is a chord tone then two steps,
+   and the E5 stays. */
+static void test_a_chord_tone_that_steps_away_is_not_flagged(void) {
+    Note notes[] = {{C3, 0, 16}, {E5, 0, 4}, {D5, 4, 8}, {C5, 8, 16}};
+    const char *voices[] = {"bass", "soprano", "soprano", "soprano"};
+    int flagged[MAX_MEMBERS];
+    assert(flagged_pitches(notes, voices, COUNT(notes), 0, 16, C3, flagged) == 0);
+}
+
+/* An accent that began before the window (held into it) over a bass that is held: F5 sounding to the first beat, then E5.
+   C3 and G4 are the chord; the F5 is flagged. */
+static void test_a_held_accent_into_the_window_is_flagged(void) {
+    Note notes[] = {{C3, 0, 16}, {G4, 0, 16}, {F5, -4, 4}, {E5, 4, 16}};
+    const char *voices[] = {"bass", "tenor", "soprano", "soprano"};
+    int flagged[MAX_MEMBERS];
+    assert(flagged_pitches(notes, voices, COUNT(notes), 0, 16, C3, flagged) == 1 && flagged[0] == F5);
+}
+
+/* The bass must still sound when the accent resolves: a bass that stops first leaves no held bass to be accented over. */
+static void test_a_bass_that_stops_before_the_resolution_flags_nothing(void) {
+    Note notes[] = {{G2, 0, 2}, {E5, 0, 4}, {D5, 4, 16}, {B4, 0, 16}};
+    const char *voices[] = {"bass", "soprano", "soprano", "alto"};
+    int flagged[MAX_MEMBERS];
+    assert(flagged_pitches(notes, voices, COUNT(notes), 0, 16, G2, flagged) == 0);
+}
+
+/* Direct cases of harmonic_span_mark_resolved_accents: bad input, no voice ids, no bass; every flag is cleared first. */
+static void test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_without_voices(void) {
+    Note notes[] = {{G2, 0, 16}, {E5, 0, 4}, {D5, 4, 16}};
+    const char *voices[] = {"bass", "soprano", "soprano"};
+    CommonPracticeMember members[MAX_MEMBERS];
+    size_t n = window_members(notes, voices, COUNT(notes), 0, 16, members);
+    assert(n == 3);
+
+    assert(harmonic_span_mark_resolved_accents(NULL, n, 0.0, 1.0, G2, NULL) == HARMONIC_SPAN_ERR_NULL_ARGUMENT);
+    assert(harmonic_span_mark_resolved_accents(members, n, 1.0, 1.0, G2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
+    assert(harmonic_span_mark_resolved_accents(members, n, 1.0, 0.0, G2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
+    assert(harmonic_span_mark_resolved_accents(members, n, 0.0, 1.0, -2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
+    assert(harmonic_span_mark_resolved_accents(NULL, 0, 0.0, 1.0, G2, NULL) == HARMONIC_SPAN_OK);
+
+    /* no bass: nothing is flagged, and a flag that was set is cleared */
+    for (size_t i = 0; i < n; i++) {
+        members[i].resolves_in_segment = true;
+    }
+    assert(harmonic_span_mark_resolved_accents(members, n, 0.0, 1.0, -1, NULL) == HARMONIC_SPAN_OK);
+    for (size_t i = 0; i < n; i++) {
+        assert(!members[i].resolves_in_segment);
+    }
+
+    /* no voice ids: no resolution can be found */
+    n = window_members(notes, NULL, COUNT(notes), 0, 16, members);
+    for (size_t i = 0; i < n; i++) {
+        members[i].resolves_in_segment = true;
+    }
+    assert(harmonic_span_mark_resolved_accents(members, n, 0.0, 1.0, G2, NULL) == HARMONIC_SPAN_OK);
+    for (size_t i = 0; i < n; i++) {
+        assert(!members[i].resolves_in_segment);
+    }
+}
+
+/* A held bass note is no new bass: D3 sounds through the first half of the bar and the right hand moves above it on the second
+   beat. No span starts at the second beat; the bar is cut only where the bass moves. */
+static void test_a_held_bass_note_is_not_cut(void) {
+    Note notes[] = {{D3, 0, 8}, {F4, 0, 8}, {A4, 0, 4}, {G4, 4, 8}, {B4, 4, 8}, {G3, 8, 16}, {B3, 8, 16}, {D4, 8, 16}, {F4, 8, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    bool beat_cell = false;
+    for (size_t i = 1; i < piece.count; i++) {
+        if (piece.cells[i].start == 4.0 * SIXTEENTH) {
+            beat_cell = true;
+            assert(piece.bass[i] == D3 && piece.bass[i - 1] == D3); /* the cell exists and the bass has not moved */
+        }
+    }
+    assert(beat_cell);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    for (size_t i = 0; i < spans.count; i++) {
+        assert(piece.cells[spans.first[i]].start != 4.0 * SIXTEENTH);
+    }
+    harmonic_spans_destroy(&spans);
+}
+
+/* A pedal that is held while the chord above changes: A3 through the bar, A minor over it, then D minor over it on the half bar
+   (A is D minor's fifth). Each half reads as a chord of its own and would beat the bar read as one, but the bass has not
+   moved and the A3 is held, so the bar is one span over A3. */
+static void test_a_held_bass_under_a_changing_chord_is_one_span(void) {
+    Note notes[] = {{A3, 0, 16}, {C5, 0, 8}, {E5, 0, 8}, {D5, 8, 16}, {F5, 8, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    assert(spans.bass[0] == A3);
+    harmonic_spans_destroy(&spans);
+}
+
 int main(void) {
     test_clementi_m1_is_one_span_over_c3();
     test_clementi_m8_scale_is_one_span_over_g2();
@@ -571,6 +755,14 @@ int main(void) {
     test_a_beat_splits_at_its_half();
     test_an_accented_bass_tone_resolves_into_the_span_bass();
     test_two_bars_group_independently();
+    test_a_root_and_fifth_over_the_root_is_a_span();
+    test_an_accented_step_over_a_held_bass_is_flagged();
+    test_a_chord_tone_that_steps_away_is_not_flagged();
+    test_a_held_accent_into_the_window_is_flagged();
+    test_a_bass_that_stops_before_the_resolution_flags_nothing();
+    test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_without_voices();
+    test_a_held_bass_note_is_not_cut();
+    test_a_held_bass_under_a_changing_chord_is_one_span();
     test_bad_input_is_refused();
     printf("test_harmonic_spans: ok\n");
     return 0;

@@ -301,9 +301,15 @@ static void test_type1(void) {
         assert_time(temporal_anchor_position(note_event_temporal_anchor(import.events[i])), expected_starts[i],
                     4 * DIVISION);
     }
-    /* Notes on more than one channel carry no voice. */
+    /* Every note carries a voice (by track, R-386), and notes of different tracks never share one. */
     for (size_t i = 0; i < 3; i++) {
-        assert(note_event_optional_voice(import.events[i]) == NULL);
+        assert(note_event_optional_voice(import.events[i]) != NULL);
+        for (size_t j = i + 1; j < 3; j++) {
+            if (expected_tracks[i] != expected_tracks[j]) {
+                assert(strcmp(entity_id_value(voice_reference_target_id(note_event_optional_voice(import.events[i]))),
+                              entity_id_value(voice_reference_target_id(note_event_optional_voice(import.events[j])))) != 0);
+            }
+        }
     }
 
     assert(tempo_map_region_count(import.tempo.tempo_map) == 2);
