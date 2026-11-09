@@ -735,8 +735,8 @@ static bool merge_into_spans(AnalysisChain *chain) {
               harmonic_span_basses(cells, chain->segs.count, bass) &&
               harmonic_spans_group(cells, chain->segs.count, bass, &grouping, &spans) == HARMONIC_SPAN_OK &&
               chain_merge_segments(chain->notes, &chain->segs, &spans) == CHAIN_INPUT_OK;
-    /* The accented tones that resolve by step over a held bass carry no weight in their span (R-382): chords, key segments and leftover
-       labels all read the flags. The members are owned by chain->segs; the segment views are const. */
+    /* The accented tones that resolve by step over a held bass carry no weight in their span's chord (R-382): chords and leftover labels read
+       the flags, key segments count the tones (R-386). The members are owned by chain->segs; the segment views are const. */
     for (size_t k = 0; ok && k < spans.count; k++) {
         ok = harmonic_span_mark_resolved_accents((CommonPracticeMember *)chain->segs.segments[k].members,
                                                  chain->segs.segments[k].member_count, chain->segs.starts[k], chain->segs.ends[k],

@@ -20,6 +20,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.require_bass_chord_tone = false;
     config.applied_chords = false;
     config.context_next = true;
+    config.weigh_resolved_accents = false;
     config.classifier = NULL;
     config.classifier_context = NULL;
     return config;
@@ -56,8 +57,8 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
             (!members[i].held && !beat_strength_valid(members[i].strength))) {
             return COMMON_PRACTICE_WEIGHTED_ERR_BAD_MEMBER;
         }
-        if (members[i].resolves_in_segment) {
-            continue; /* a resolved accent carries no weight and is no bass (R-382) */
+        if (members[i].resolves_in_segment && !config->weigh_resolved_accents) {
+            continue; /* a resolved accent carries no weight and is no bass (R-382), unless it is key evidence (R-386) */
         }
         if (!have_bass || members[i].pitch < bass_pitch) {
             bass_pitch = members[i].pitch;
@@ -72,7 +73,7 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
 
     CommonPracticeWeights weights = {{0}, 0.0, -1, -1};
     for (size_t i = 0; i < count; i++) {
-        if (members[i].resolves_in_segment) {
+        if (members[i].resolves_in_segment && !config->weigh_resolved_accents) {
             continue;
         }
         double factor = members[i].held ? config->held_factor : config->strength_factor[members[i].strength];
