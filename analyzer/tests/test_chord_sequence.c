@@ -159,7 +159,7 @@ static char *case_document(const CaseEntry *entries, size_t count, int version) 
 }
 
 static void check_case(const char *name, const CaseEntry *entries, size_t count, const size_t (*expected)[2], size_t expected_count) {
-    char *json = case_document(entries, count, 10);
+    char *json = case_document(entries, count, 11);
     AnalyzerChord *chords = NULL;
     size_t found = 0;
     CHECK(analyzer_chord_sequence_from_document(json, &chords, &found) == ANALYZER_OK, "%s: not read", name);

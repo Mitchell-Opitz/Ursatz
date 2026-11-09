@@ -1952,6 +1952,40 @@ static cJSON *form_json(DocBuild *build, const ImportedNotes *notes, const Analy
     return form;
 }
 
+/* ---- Repeats ---- */
+
+/* One claim per repeat or return of the library, in its order: the claim is over the later span (its measures and its
+   soprano notes), kind and label are "repeat" or "return", earlier and later the measures of the two runs, and
+   transposition the semitones from the earlier run to the later (0 for a repeat). The uncertainty is 0: the library
+   finds repeats by exact match. */
+static cJSON *repeat_json(DocBuild *build, const ImportedNotes *notes, const AnalysisRepeat *repeat) {
+    const char *kind = repeat->is_return ? "return" : "repeat";
+    Rational start = doc_rational(build, repeat->start_numerator, repeat->start_denominator);
+    Rational end = doc_rational(build, repeat->end_numerator, repeat->end_denominator);
+    cJSON *claim = claim_json_with(build, framework_name(standard_form_framework()), notes, repeat->note_ids,
+                                   repeat->note_id_count, start, end, kind, cJSON_CreateNumber(0.0));
+    if (!(claim && json_add(claim, "kind", cJSON_CreateString(kind)) &&
+          json_add(claim, "earlier", measures_json(repeat->earlier_first, repeat->earlier_last)) &&
+          json_add(claim, "later", measures_json(repeat->later_first, repeat->later_last)) &&
+          json_add(claim, "transposition", cJSON_CreateNumber((double)repeat->transposition)))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The repeats and returns as "repeats", in the library's order; an empty array when there are none. */
+static cJSON *repeats_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < report->repeat_count; i++) {
+        if (!json_append(list, repeat_json(build, notes, &report->repeats[i]))) {
+            cJSON_Delete(list);
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* ---- Progressions ---- */
 
 /* The pattern as a JSON array of its base numerals. */
@@ -3893,6 +3927,7 @@ static cJSON *document_json(DocBuild *build, const char *input_path, const Impor
           json_add(document, "cadences", cadences_json(build, notes, report)) &&
           json_add(document, "phrases", phrases_json(build, notes, report)) &&
           json_add(document, "themes", themes_json(build, notes, report)) && json_add(document, "form", form_json(build, notes, report)) &&
+          json_add(document, "repeats", repeats_json(build, notes, report)) &&
           json_add(document, "motives", motives_json(build, notes, report)) && json_add(document, "melody", melody_json(build, notes, report)) &&
           json_add(document, "rhythm", rhythm_json(build, notes, report)) && json_add(document, "texture", texture_json(build, notes, report)) &&
           json_add(document, "voice_leading", voice_leading_json(build, notes, report)) && json_add(document, "schemas", schemas_json(build, notes, report)) &&

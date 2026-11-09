@@ -119,7 +119,7 @@ static void test_notated_metadata_and_pickup(void) {
     imported_notes_destroy(&notes);
 
     const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
-    assert(number(document, "schema_version") == 10);
+    assert(number(document, "schema_version") == 11);
     assert(strcmp(string(input, "format"), "musicxml") == 0);
     assert(strcmp(string(input, "source_type"), "score") == 0);
     assert(strcmp(string(input, "meter"), "notated") == 0);

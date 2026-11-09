@@ -117,7 +117,7 @@ int main(void) {
     CHECK(analyzer_document_status("") == ANALYZER_DOCUMENT_UNREADABLE, "empty text");
     CHECK(analyzer_document_status("{") == ANALYZER_DOCUMENT_UNREADABLE, "not JSON");
     CHECK(analyzer_document_status("[]") == ANALYZER_DOCUMENT_UNREADABLE, "not an object");
-    CHECK(analyzer_document_status("{\"schema_version\": 10}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
+    CHECK(analyzer_document_status("{\"schema_version\": 11}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
     CHECK(analyzer_document_status("{\"metadata\": {}}") == ANALYZER_DOCUMENT_UNREADABLE, "no schema_version");
     CHECK(analyzer_document_status("{\"schema_version\": \"9\", \"metadata\": {\"analyzer_version\": \"a\", "
                                    "\"ursatz_commit\": \"b\"}}") == ANALYZER_DOCUMENT_UNREADABLE,

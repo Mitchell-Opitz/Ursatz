@@ -334,8 +334,8 @@ static void check_refusals(void) {
     char *older = malloc(strlen(piece.document) + 1);
     if (older) {
         strcpy(older, piece.document);
-        char *version = strstr(older, "\"schema_version\": 10");
-        CHECK(version != NULL, "the document states schema_version 10");
+        char *version = strstr(older, "\"schema_version\": 11");
+        CHECK(version != NULL, "the document states schema_version 11");
         if (version) {
             version[strlen("\"schema_version\": ")] = '8';
             CHECK(analyzer_text_export_piece(&piece.notes, older, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
