@@ -5,6 +5,7 @@
 #include "phrase_level_form.h"
 #include "time/meter_arithmetic.h"
 #include <math.h>
+#include <stdlib.h>
 
 /* The phrase grid (R-389), phrases on it and themes on it (R-391): units of 4, 8 or 16 measures chosen by the evidence at their
    ends, built from notes, cadences and the MeterMap as test_analysis_phrase.c builds its inputs, 4/4. */
@@ -297,6 +298,74 @@ static void test_a_last_note_held_into_the_next_measure_ends_the_last_phrase(voi
     form_destroy(&f);
 }
 
+static StandardFormGridUnit unit(int first, int last, bool elided, int half) {
+    StandardFormGridUnit u = {first, first, last, last - first + 1, elided, half};
+    return u;
+}
+
+/* The shape of Mozart 545's second development: the units of 57-101 (56-63e, 63-70e, 70-77e, 78-85, 86-101) tile the earlier span
+   and 102-146 is written out again in other units. */
+static StandardFormPhraseGrid mozart_shape(void) {
+    StandardFormGridUnit shape[] = {unit(49, 56, false, 52),   unit(56, 63, true, 59),    unit(63, 70, true, 66),
+                                    unit(70, 77, true, 73),    unit(78, 85, false, 81),   unit(86, 101, false, 93),
+                                    unit(102, 103, false, -1), unit(104, 107, false, -1), unit(108, 115, false, 111),
+                                    unit(115, 122, true, 118), unit(123, 130, false, 126), unit(131, 146, false, 138)};
+    StandardFormPhraseGrid grid;
+    grid.count = sizeof(shape) / sizeof(shape[0]);
+    grid.units = (StandardFormGridUnit *)malloc(sizeof(shape));
+    assert(grid.units != NULL);
+    memcpy(grid.units, shape, sizeof(shape));
+    return grid;
+}
+
+static void test_a_grid_follows_a_written_out_repeat(void) {
+    StandardFormPhraseGrid grid = mozart_shape();
+    StandardFormRepeat repeat = {STANDARD_FORM_REPEAT, 57, 101, 102, 146, 0};
+    StandardFormRepeats repeats = {&repeat, 1};
+    assert(standard_form_phrase_grid_follow_repeats(&grid, &repeats) == STANDARD_FORM_ANALYSIS_OK);
+    /* 102-103, 104-107, 108-115, 115-122e, 123-130, 131-146 become the earlier units moved by 45 */
+    assert(grid.count == 11);
+    assert_unit(&grid, 5, 86, 86, 101, 16, false, 93);
+    const StandardFormGridUnit *u = &grid.units[6];
+    assert(u->first_measure == 101 && u->counted_first == 101 && u->last_measure == 108 && u->length_measures == 8 && u->elided &&
+           u->half_measure == 104);
+    assert_unit(&grid, 7, 108, 108, 115, 8, true, 111);
+    assert_unit(&grid, 8, 115, 115, 122, 8, true, 118);
+    assert_unit(&grid, 9, 123, 123, 130, 8, false, 126);
+    assert_unit(&grid, 10, 131, 131, 146, 16, false, 138);
+    /* a grid already equal is left equal */
+    assert(standard_form_phrase_grid_follow_repeats(&grid, &repeats) == STANDARD_FORM_ANALYSIS_OK);
+    assert(grid.count == 11);
+    assert_unit(&grid, 10, 131, 131, 146, 16, false, 138);
+    standard_form_phrase_grid_destroy(&grid);
+}
+
+static void test_a_repeat_the_grid_cannot_tile_leaves_it_alone(void) {
+    StandardFormRepeat unaligned[] = {
+        {STANDARD_FORM_REPEAT, 58, 101, 103, 146, 0},  /* no unit starts on 58 */
+        {STANDARD_FORM_REPEAT, 57, 100, 102, 145, 0},  /* no unit ends on 100 */
+        {STANDARD_FORM_REPEAT, 57, 101, 103, 146, 0},  /* no unit ends on 102 */
+        {STANDARD_FORM_REPEAT, 57, 101, 102, 140, 0},  /* no unit ends on 140 */
+        {STANDARD_FORM_RETURN, 57, 101, 102, 146, 0},  /* a return is ignored */
+        {STANDARD_FORM_REPEAT, 57, 110, 102, 146, 0},  /* the spans overlap */
+    };
+    for (size_t i = 0; i < sizeof(unaligned) / sizeof(unaligned[0]); i++) {
+        StandardFormPhraseGrid grid = mozart_shape();
+        StandardFormRepeats repeats = {&unaligned[i], 1};
+        assert(standard_form_phrase_grid_follow_repeats(&grid, &repeats) == STANDARD_FORM_ANALYSIS_OK);
+        assert(grid.count == 12);
+        assert_unit(&grid, 6, 102, 102, 103, 2, false, -1);
+        assert_unit(&grid, 11, 131, 131, 146, 16, false, 138);
+        standard_form_phrase_grid_destroy(&grid);
+    }
+    StandardFormPhraseGrid none = {NULL, 0};
+    StandardFormRepeat repeat = {STANDARD_FORM_REPEAT, 57, 101, 102, 146, 0};
+    StandardFormRepeats repeats = {&repeat, 1};
+    assert(standard_form_phrase_grid_follow_repeats(&none, &repeats) == STANDARD_FORM_ANALYSIS_OK && none.count == 0);
+    assert(standard_form_phrase_grid_follow_repeats(NULL, &repeats) == STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
+    assert(standard_form_phrase_grid_follow_repeats(&none, NULL) == STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
+}
+
 static void test_bad_calls_are_refused(void) {
     FormFixture f;
     form_init(&f, 4, 0);
@@ -335,6 +404,8 @@ int main(void) {
     test_a_pickup_measure_counts_in_no_length();
     test_no_notes_give_no_units();
     test_a_last_note_held_into_the_next_measure_ends_the_last_phrase();
+    test_a_grid_follows_a_written_out_repeat();
+    test_a_repeat_the_grid_cannot_tile_leaves_it_alone();
     test_bad_calls_are_refused();
     printf("test_standard_form_analysis_phrase_grid: ok\n");
     return 0;
