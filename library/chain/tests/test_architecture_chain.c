@@ -35,6 +35,7 @@ static const char *FRAMEWORK_HEADERS[] = {
     "standard-meter/metric_position_rules.h",
     "standard-meter/segmentation_beat_grid.h",
     "standard-harmony/analysis/analysis_cadence.h",
+    "standard-tonality/analysis/applied_chords.h",
     "standard-tonality/analysis/chord_input.h",
     "standard-tonality/analysis/roman_numeral_adapter.h",
     "standard-tonality/seventh_rules.h",
