@@ -95,6 +95,19 @@ target_compile_definitions(test_reference_harmony PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME reference_harmony COMMAND test_reference_harmony)
 
+add_executable(test_reference_phrases test_reference_phrases.c)
+target_link_libraries(test_reference_phrases PRIVATE ursatz_chain common_practice_minimal standard_meter)
+target_compile_definitions(test_reference_phrases PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
+add_test(NAME reference_phrases COMMAND test_reference_phrases)
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME reference_phrases_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_reference_phrases>)
+  # 174 s measured (serial); runs in the nightly.
+  set_tests_properties(reference_phrases_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_two_voice_spans test_two_voice_spans.c)
 target_link_libraries(test_two_voice_spans PRIVATE ursatz_chain common_practice_minimal standard_meter)
 target_compile_definitions(test_two_voice_spans PRIVATE
