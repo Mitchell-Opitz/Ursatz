@@ -45,13 +45,17 @@ unsigned common_practice_cadence_keys(CommonPracticeCadenceKind kind, const Comm
     unsigned tones = arrival->pitch_classes;
     bool major_third = (tones & (1u << ((root + 4) % 12))) != 0;
     bool minor_third = (tones & (1u << ((root + 3) % 12))) != 0;
+    bool perfect_fifth = (tones & (1u << ((root + 7) % 12))) != 0;
+    if (!perfect_fifth && (tones & ((1u << ((root + 6) % 12)) | (1u << ((root + 8) % 12)))) != 0) {
+        return 0; /* a diminished or augmented arrival confirms no key */
+    }
     if (kind == COMMON_PRACTICE_CADENCE_AUTHENTIC) {
         if (major_third && !minor_third) {
             return 1u << root;
         }
         return minor_third && !major_third ? 1u << (12 + root) : 0;
     }
-    if (kind == COMMON_PRACTICE_CADENCE_HALF && major_third && !minor_third && (tones & (1u << ((root + 7) % 12))) != 0) {
+    if (kind == COMMON_PRACTICE_CADENCE_HALF && major_third && !minor_third && perfect_fifth) {
         int tonic = (root + 5) % 12; /* the key a fifth below the arrival */
         return (1u << tonic) | (1u << (12 + tonic));
     }

@@ -153,7 +153,8 @@ typedef enum {
 
 /* The keys a cadence confirms, as a mask over the 24 keys (bit k = key k), from the chord it arrives on. Authentic: the key on the arrival's
    root, major when the arrival has the major third alone, minor when it has the minor third alone, else 0. Half: when the arrival is a major
-   triad, the major and minor keys a fifth below its root; else 0. 0 for a NULL or absent arrival or an unknown kind. */
+   triad (a seventh may be added), the major and minor keys a fifth below its root; else 0. An arrival with a diminished or augmented fifth
+   and no perfect fifth confirms nothing. 0 for a NULL or absent arrival or an unknown kind. */
 unsigned common_practice_cadence_keys(CommonPracticeCadenceKind kind, const CommonPracticeKeyChord *arrival);
 
 typedef enum {
