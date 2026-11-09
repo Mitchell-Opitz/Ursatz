@@ -473,7 +473,26 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
     /* the tail after the last boundary */
     if (status == STANDARD_FORM_ANALYSIS_OK && current_first <= last_measure) {
         int tail = last_measure - current_first + 1;
-        if (found.count > 0 && last_by_cadence && tail <= (int)effective->max_absorbed_tail) {
+        bool attacked = false; /* a note starts in the tail */
+        for (size_t i = 0; i < input->note_count && !attacked; i++) {
+            attacked = extents[i].first_measure >= current_first;
+        }
+        if (found.count > 0 && !attacked && !last_by_cadence) {
+            /* only the held end of the last note: the last phrase ends where that note stops sounding */
+            StandardFormPhrase *last = &found.items[found.count - 1];
+            Rational end_time;
+            last->claim.end_measure = last_measure;
+            last->claim.last_measure = last_measure;
+            if (!measure_end_of(input, last_measure, &end_time)) {
+                status = STANDARD_FORM_ANALYSIS_ERR_METER;
+            } else {
+                double uncertainty = last->uncertainty;
+                StandardFormPhraseClaim claim = last->claim;
+                destroy_phrase(last);
+                last->claim = claim;
+                status = build_phrase(input, extents, last, end_time, uncertainty);
+            }
+        } else if (found.count > 0 && last_by_cadence && (tail <= (int)effective->max_absorbed_tail || !attacked)) {
             StandardFormPhrase *last = &found.items[found.count - 1];
             Rational end_time;
             last->claim.last_measure = last_measure;
