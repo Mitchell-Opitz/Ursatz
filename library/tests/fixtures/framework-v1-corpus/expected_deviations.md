@@ -41,23 +41,16 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-017 | bach114 | phrase-form | end m4 | hc at m4 | none | C4 |
 | DEV-021 | bach114 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | none | C4,C5,C8 |
 | DEV-022 | bach114 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C5,C8 |
-| DEV-023 | mozart545 | keys | region 1-12 | C major 1-12 | C major 1-7, F major 8-9, G major 10-21 | C1,C2 |
-| DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 10-21, A minor 22-24, G major 25-28 | C1,C2 |
-| DEV-025 | mozart545 | keys | region 29-40 | C major 29-40 | C major 29-35, F major 36-37, G major 38-49 | C1,C2 |
-| DEV-026 | mozart545 | keys | region 41-56 | G major 41-56 | G major 38-49, A minor 50-52, G major 53-60 | C1,C2 |
-| DEV-104 | mozart545 | keys | region 57-69 | G minor 57-69 | G major 53-60, D minor 61-63, A minor 64-68, F major 69-82 | C1,C2 |
-| DEV-027 | mozart545 | keys | region 70-78 | F major 70-78 | F major 69-82 | C1 |
-| DEV-028 | mozart545 | keys | region 79-101 | C major 79-101 | F major 69-82, G major 83-87, C major 88-94, D minor 95-97, C major 98-103 | C1,C2 |
-| DEV-105 | mozart545 | keys | region 102-114 | G minor 102-114 | C major 98-103, G minor 104-105, D minor 106-108, A minor 109-113, F major 114-127 | C1,C2 |
-| DEV-029 | mozart545 | keys | region 115-123 | F major 115-123 | F major 114-127 | C1 |
-| DEV-030 | mozart545 | keys | region 124-146 | C major 124-146 | F major 114-127, G major 128-132, C major 133-139, D minor 140-142, C major 143-146 | C1,C2 |
-| DEV-031 | mozart545 | keys | change 79 | modulation at 79 | none | C1,C2 |
+| DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 13-21, A minor 22-24, G major 25-28 | C1,C2 |
+| DEV-026 | mozart545 | keys | region 41-56 | G major 41-56 | G major 41-49, A minor 50-52, G major 53-59 | C1,C2 |
+| DEV-104 | mozart545 | keys | region 57-69 | G minor 57-69 | G major 53-59, D minor 60-63, A minor 64-68, F major 69-79 | C1,C2 |
+| DEV-028 | mozart545 | keys | region 79-101 | C major 79-101 | F major 69-79, C major 80-94, D minor 95-97, C major 98-103 | C1,C2 |
+| DEV-105 | mozart545 | keys | region 102-114 | G minor 102-114 | C major 98-103, G minor 104-105, D minor 106-108, A minor 109-113, F major 114-124 | C1,C2 |
+| DEV-030 | mozart545 | keys | region 124-146 | C major 124-146 | F major 114-124, C major 125-139, D minor 140-142, C major 143-146 | C1,C2 |
 | DEV-106 | mozart545 | keys | change 57 | modulation at 57 | none | C1,C2 |
-| DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
 | DEV-033 | mozart545 | cadences | m12 b1 | hc | none | C5 |
 | DEV-103 | mozart545 | cadences | readings m4 b1 | subverted m4 or prolongation m4 | none | C5 |
-| DEV-041 | clementi36 | keys | region 16-23 | C minor 16-23 | C minor 15-19, C major 20-38 | C1,C2 |
-| DEV-043 | clementi36 | keys | change 16 | modulation at 16 | weak-modulation at 15 | C3 |
+| DEV-041 | clementi36 | keys | region 16-23 | C minor 16-23 | C minor 15-19, G major 20-22, C major 23-38 | C1,C2 |
 | DEV-045 | clementi36 | cadences | m15 b1 | pac | none | C5 |
 | DEV-102 | clementi36 | cadences | readings m23 b1 | hc m23 or pac m24 | none | C1,C2 |
 | DEV-047 | clementi36 | cadences | m38 b1 | pac | none | C5 |
@@ -70,18 +63,15 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | hybrid 4-9 parts 4-7 8-9 | C5,C6,C8 |
 | DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | hybrid 4-9 parts 4-7 8-9, hybrid 10-15 parts 10-13 14-15 | C5,C6,C8 |
 | DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-4, D minor 5-8 | C1,C2 |
-| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m64-70, m109-115) | C5,C8 |
-| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m64-70, m109-115) | C5,C8 |
-| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m64-70, m109-115) | C5,C8 |
-| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m64-70, m109-115) | C5,C8 |
-| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m64-70, m109-115) | C5,C8 |
+| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m1-11, m30-39, m64-70, m71-81, m109-115, m116-126) | C5,C8 |
+| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m1-11, m30-39, m64-70, m71-81, m109-115, m116-126) | C5,C8 |
+| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m1-11, m30-39, m64-70, m71-81, m109-115, m116-126) | C5,C8 |
 | DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m1-6, m9-19, m20-25) | C5,C8 |
 | DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m1-6, m9-19, m20-25) | C5,C8 |
-| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m64-70, m109-115) | C5,C8 |
 | DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C5 |
-| DEV-093 | mozart545 | keys | change 13 | modulation at 13 | none | C5 |
-| DEV-094 | mozart545 | keys | change 29 | modulation at 29 | tonicization at 29 | C5 |
-| DEV-095 | mozart545 | keys | change 41 | modulation at 41 | none | C5 |
+| DEV-093 | mozart545 | keys | change 13 | modulation at 13 | tonicization at 13 | C5 |
+| DEV-094 | mozart545 | keys | change 29 | modulation at 29 | weak-modulation at 29 | C5 |
+| DEV-095 | mozart545 | keys | change 41 | modulation at 41 | weak-modulation return at 41 | C5 |
 | DEV-097 | clementi36 | cadences | m31 b1 | pac | none | C5 |
 | DEV-098 | clementi36 | phrase-form | end m31 | pac at m31 | none | C5 |
 | DEV-107 | bach114 | cadences | m20 b2.5 | pac | none | C5 |
@@ -89,7 +79,6 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-112 | bach114 | phrase-form | end m8 | pac at m8 | none | C5 |
 | DEV-113 | mozart545 | keys | change 102 | modulation at 102 | none | C1,C2 |
 | DEV-114 | mozart545 | cadences | m28 b1 | pac | none | C5 |
-| DEV-120 | mozart545 | phrase-form | end m12 | hc at m12 | none | C5 |
 | DEV-121 | clementi36 | cadences | readings m12 b1 | subverted m12 or prolongation m12 | none | C5 |
 | DEV-122 | clementi36 | cadences | readings m35 b1 | subverted m35 or prolongation m35 | none | C5 |
 | DEV-123 | clementi36 | cadences | m4 b1 | hc | none | C5 |
@@ -100,9 +89,7 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-144 | mozart545 | cadences | extra m17 b4 | none | pac | C5 |
 | DEV-145 | mozart545 | cadences | extra m18 b3 | none | pac | C5 |
 | DEV-148 | clementi36 | keys | region 8-15 | G major 8-15 | G major 7-11, C major 12-14, C minor 15-19 | C1,C2 |
-| DEV-149 | clementi36 | keys | region 24-38 | C major 24-38 | C major 20-38 | C1,C2 |
 | DEV-150 | clementi36 | keys | change 8 | modulation at 8 | weak-modulation at 7 | C1,C2 |
-| DEV-151 | clementi36 | keys | change 24 | modulation at 24 | none | C1,C2 |
 | DEV-156 | clementi36 | phrase-form | end m27 | hc at m27 | none | C5 |
 | DEV-157 | field1 | cadences | extra m2 b1 | none | pac | C5 |
 | DEV-158 | field1 | cadences | extra m2 b2 | none | hc | C5 |
@@ -127,3 +114,6 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-179 | clementi36 | cadences | extra m6 b4 | none | pac | C5 |
 | DEV-180 | field1 | cadences | extra m4 b4 | none | subverted | C5 |
 | DEV-181 | field1 | cadences | extra m6 b1 | none | hc | C5 |
+| DEV-182 | mozart545 | cadences | extra m2 b4 | none | hc | C5 |
+| DEV-183 | mozart545 | cadences | extra m10 b3 | none | hc | C5 |
+| DEV-184 | mozart545 | cadences | extra m28 b3 | none | iac | C5 |
