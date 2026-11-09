@@ -55,33 +55,33 @@ deviation; none fails. As of the commit that wrote this page; `framework_v1_veri
 
 | Piece | Keys | Cadences | Phrase form | Thematic returns |
 |---|---|---|---|---|
-| Bach 114 | 7 / 3 | 0 / 12 | 5 / 5 | not asserted |
+| Bach 114 | 2 / 8 | 0 / 9 | 3 / 7 | not asserted |
 | Mozart 545 | 1 / 17 | 0 / 11 | 1 / 1 | 0 / 6 |
-| Clementi 36 | 2 / 6 | 0 / 14 | 3 / 6 | 0 / 2 |
-| Field 1 | 2 / 0 | 0 / 8 | 3 / 3 | not asserted |
+| Clementi 36 | 2 / 6 | 1 / 12 | 3 / 6 | 0 / 2 |
+| Field 1 | 2 / 0 | 1 / 7 | 3 / 3 | not asserted |
 | Field 5 | 1 / 1 | 0 / 2 | 0 / 0 (nothing annotated) | not asserted |
-| **All five** | **13 / 27** | **0 / 47** | **12 / 15** | **0 / 8** |
+| **All five** | **8 / 32** | **2 / 41** | **10 / 17** | **0 / 8** |
 
-25 of 122 checks give the expected value; 97 are deviations. Of the 47 cadence deviations, 22 are cadences the chain reports that are not annotated. The counts are those after P40 B3 (the two-voice span rules and MIDI voices by track, R-386): one chord per span merges the repeated tonics and the passing dominants the cadence stage used to find, and a resolved accent no longer weighs in a span's chord but does in its key, so cadences, key edges and the phrase ends and themes built on them moved (cadences 2 / 40 after P39, 0 / 47 now; Clementi m12 to 15 and m20 to 38 read C major, key placement for P42; P41 reads cadences and phrases again).
+20 of 118 checks give the expected value; 98 are deviations. Of the 41 cadence deviations, 18 are cadences the chain reports that are not annotated. The counts are those after P40 B4 (the bass evidence rules, R-381, R-383 and R-387: a chromatic bass against its chord tone keeps one span, a new bass no chord tone explains cuts a measure, a diminished seventh is rooted on its bass; Bach 114 reads 52 spans, 1 cadence and 3 phrases, against 44, 4 and 5), on top of P40 B3 (the two-voice span rules and MIDI voices by track, R-386): one chord per span merges the repeated tonics and the passing dominants the cadence stage used to find, and a resolved accent no longer weighs in a span's chord but does in its key, so cadences, key edges and the phrase ends and themes built on them moved (cadences 2 / 40 after P39, 0 / 47 now; Clementi m12 to 15 and m20 to 38 read C major, key placement for P42; P41 reads cadences and phrases again).
 
 None of the four `readings` pairs passes now. Clementi m12 and m35 (V to I6, evaded and prolongation) and Mozart m4 are not found on the spans (C5); Clementi m23 (the chain finds the pair, but the half cadence's dominant arrives at b4.5, not b1) is C1, C2.
 
 ## Deviations
 
-`tests/fixtures/framework-v1-corpus/expected_deviations.md` lists each of the 97 deviations (piece, area, location, expected, actual, cause) and the seven causes.
+`tests/fixtures/framework-v1-corpus/expected_deviations.md` lists each of the 98 deviations (piece, area, location, expected, actual, cause) and the seven causes.
 The tests read that file, so a row is an exact statement of what the chain does now: it breaks when the chain changes, either way.
 
 | Cause | Deviations | What it is | Roadmap ID |
 |---|---|---|---|
-| C1 | 25 | key region edges set by 4-measure windows | L8.1 |
-| C2 | 19 | closely related key read for a passage | L8.2 |
+| C1 | 30 | key region edges set by 4-measure windows | L8.1 |
+| C2 | 21 | closely related key read for a passage | L8.2 |
 | C3 | 1 | `KeyChangeExtent` from region lengths, no cadence consulted | L8.3 |
 | C4 | 4 | cadence arrival on a weak beat is not looked for (Bach 114's) | L8.4 |
-| C5 | 69 | chords read from the sounding pitches: sparse, alternating or ornamented segments | L8.5 |
+| C5 | 65 | chords read from the sounding pitches: sparse, alternating or ornamented segments | L8.5 |
 | C6 | 5 | a non-chord bass tone reads the chord as root position | L8.6 |
 | C8 | 14 | L3.6 builds phrases, themes, expansions and returns only from the cadences it is given; re-verified in P1 B8, no L3.6 rule was found wrong, every row also names the upstream cadence cause | L8.7 |
 
-(A deviation can have more than one cause, so the counts add to more than 97.) The chain reports both readings of a V to I6 and of a dominant before a section start,
+(A deviation can have more than one cause, so the counts add to more than 98.) The chain reports both readings of a V to I6 and of a dominant before a section start,
 and the expected files state both. C10 was removed in P1 B7.
 
 ## Bugs found and fixed
@@ -105,8 +105,8 @@ with the weighted identifier, whose Chord ids come from the segment ids. Nothing
 
 Date: 2026-10-17. The criterion is: all assertions pass, and every deviation is a documented method limit with a roadmap item attached (R-020).
 
-- Passing checks: 25 of 122 (re-counted 2026-11-09 after P40 B3; before, 41 of 114 with the Clementi and Mozart key readings of Michelle's review of 2026-11-07, R-357). The other 97 are asserted deviations; none fails. Met.
-- Deviations by cause: C1 25, C2 19, C3 1, C4 4, C5 69, C6 5, C8 14 (a deviation can name several causes). Every one is documented with its exact actual value. Met.
+- Passing checks: 20 of 118 (re-counted 2026-11-09 after P40 B4; 25 of 122 after P40 B3; before, 41 of 114 with the Clementi and Mozart key readings of Michelle's review of 2026-11-07, R-357). The other 98 are asserted deviations; none fails. Met.
+- Deviations by cause: C1 30, C2 21, C3 1, C4 4, C5 65, C6 5, C8 14 (a deviation can name several causes). Every one is documented with its exact actual value. Met.
 - Every cause is a method limit with a roadmap ID (L8.1 to L8.7, R-095). Met.
 - The expected values are verified (2026-10-17, R-092). Met. The Mozart recapitulation keys are flagged for a re-check.
 
