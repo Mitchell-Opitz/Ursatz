@@ -51,12 +51,10 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-103 | mozart545 | cadences | readings m4 b1 | subverted m4 or prolongation m4 | none | C5 |
 | DEV-041 | clementi36 | keys | region 16-23 | C minor 16-23 | C minor 15-19, G major 20-22, C major 23-38 | C1,C2 |
 | DEV-045 | clementi36 | cadences | m15 b1 | pac | none | C5 |
-| DEV-102 | clementi36 | cadences | readings m23 b1 | hc m23 or pac m24 | none | C1,C2 |
+| DEV-102 | clementi36 | cadences | readings m23 b1 | hc m23 or pac m24 | pac at m24 b1 (1000), no alternative | C1,C2 |
 | DEV-047 | clementi36 | cadences | m38 b1 | pac | none | C5 |
-| DEV-048 | clementi36 | cadences | extra m2 b1 | none | pac | C5 |
 | DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | hybrid 1-6 parts 1-4 5-6 | C1,C5,C8 |
 | DEV-064 | clementi36 | phrase-form | theme period 24-31 | period 24-31 parts 24-27 28-31 | hybrid 20-25 parts 20-23 24-25 | C5,C8 |
-| DEV-066 | field1 | cadences | m8 b1 | pac | none | C5,C6 |
 | DEV-067 | field1 | cadences | m12 b1 | iac | none | C5,C6 |
 | DEV-068 | field1 | cadences | m16 b1 | pac | none | C5,C6 |
 | DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | hybrid 4-9 parts 4-7 8-9 | C5,C6,C8 |
@@ -76,7 +74,6 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-108 | bach114 | cadences | m28 b2.5 | pac | none | C5 |
 | DEV-112 | bach114 | phrase-form | end m8 | pac at m8 | none | C5 |
 | DEV-113 | mozart545 | keys | change 102 | modulation at 102 | none | C1,C2 |
-| DEV-114 | mozart545 | cadences | m28 b1 | pac | none | C5 |
 | DEV-121 | clementi36 | cadences | readings m12 b1 | subverted m12 or prolongation m12 | none | C5 |
 | DEV-122 | clementi36 | cadences | readings m35 b1 | subverted m35 or prolongation m35 | none | C5 |
 | DEV-123 | clementi36 | cadences | m4 b1 | hc | none | C5 |
@@ -84,34 +81,28 @@ Every cause names its follow-up in the **Roadmap ID** column (R-095).
 | DEV-128 | clementi36 | phrase-form | end m4 | hc at m4 | none | C5 |
 | DEV-129 | clementi36 | phrase-form | end m15 | pac at m15 | none | C5 |
 | DEV-136 | field5 | cadences | none in scope | no cadence | 1 cadence(s) | C5 |
-| DEV-144 | mozart545 | cadences | extra m17 b4 | none | pac | C5 |
-| DEV-145 | mozart545 | cadences | extra m18 b3 | none | pac | C5 |
 | DEV-148 | clementi36 | keys | region 8-15 | G major 8-15 | G major 7-11, C major 12-14, C minor 15-19 | C1,C2 |
 | DEV-150 | clementi36 | keys | change 8 | modulation at 8 | weak-modulation at 7 | C1,C2 |
 | DEV-156 | clementi36 | phrase-form | end m27 | hc at m27 | none | C5 |
 | DEV-157 | field1 | cadences | extra m2 b1 | none | pac | C5 |
-| DEV-158 | field1 | cadences | extra m2 b2 | none | hc | C5 |
 | DEV-161 | field1 | phrase-form | end m12 | iac at m12 | none | C5 |
-| DEV-162 | field5 | cadences | extra m3 b3 | none | other | C5 |
 | DEV-163 | bach114 | keys | region 18-20 | D major 18-20 | D major 17-23 | C1,C2 |
 | DEV-164 | bach114 | keys | region 21-25 | G major 21-25 | D major 17-23, G major 24-26 | C1,C2 |
 | DEV-165 | bach114 | keys | change 18 | weak-modulation at 18 | tonicization at 17 | C1 |
 | DEV-166 | bach114 | keys | change 21 | weak-modulation return at 21 | none | C1 |
 | DEV-167 | bach114 | keys | change 26 | weak-modulation at 26 | tonicization return at 27 | C1 |
 | DEV-170 | bach114 | phrase-form | end m28 | pac at m28 | none | C5 |
-| DEV-171 | mozart545 | cadences | extra m6 b1 | none | pac | C5 |
-| DEV-172 | mozart545 | cadences | extra m6 b3 | none | pac | C5 |
-| DEV-173 | mozart545 | cadences | extra m7 b1 | none | pac | C5 |
-| DEV-174 | mozart545 | cadences | extra m17 b2 | none | pac | C5 |
-| DEV-175 | mozart545 | cadences | extra m22 b4 | none | other | C5 |
-| DEV-176 | mozart545 | cadences | extra m25 b2 | none | pac | C5 |
-| DEV-177 | clementi36 | cadences | extra m3 b3 | none | iac | C5 |
-| DEV-178 | clementi36 | cadences | extra m5 b2.5 | none | hc | C5 |
-| DEV-179 | clementi36 | cadences | extra m6 b4 | none | pac | C5 |
-| DEV-180 | field1 | cadences | extra m4 b4 | none | subverted | C5 |
-| DEV-181 | field1 | cadences | extra m6 b1 | none | hc | C5 |
-| DEV-182 | mozart545 | cadences | extra m2 b4 | none | hc | C5 |
-| DEV-183 | mozart545 | cadences | extra m10 b3 | none | hc | C5 |
-| DEV-184 | mozart545 | cadences | extra m28 b3 | none | iac | C5 |
 | DEV-185 | bach114 | phrase-form | end m12 | hc at m12 | none | C5 |
 | DEV-186 | bach114 | phrase-form | end m20 | pac at m20 | none | C5 |
+| DEV-187 | mozart545 | cadences | extra m11 b1 | none | hc | C5 |
+| DEV-188 | clementi36 | cadences | m8 b1 | pac | iac at m8 b1 | C5 |
+| DEV-189 | clementi36 | cadences | extra m5 b1 | none | pac | C5 |
+| DEV-190 | clementi36 | cadences | extra m19 b1 | none | hc | C5 |
+| DEV-191 | clementi36 | cadences | extra m28 b1 | none | pac | C5 |
+| DEV-192 | bach114 | cadences | m12 b3 | hc | none | C5 |
+| DEV-193 | bach114 | cadences | extra m31 b1 | none | hc | C5 |
+| DEV-194 | field1 | cadences | m4 b1 | pac | none | C5 |
+| DEV-195 | field1 | cadences | extra m3 b1 | none | hc | C5 |
+| DEV-196 | field1 | cadences | extra m11 b3 | none | subverted | C5 |
+| DEV-197 | field1 | cadences | extra m15 b1 | none | hc | C5 |
+| DEV-198 | field5 | cadences | extra m6 b1 | none | other | C5 |

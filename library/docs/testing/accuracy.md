@@ -85,6 +85,8 @@ P40 B5 turns the applied chords on in the chain (`AnalysisChainConfig.applied_ch
 
 P40 B6a makes a resolved accent need a bass that outlasts the step (R-388): struck block chords, I then IV, are no longer read as accents over the first bass. Chorale harness after it (chord root, quality, Roman numeral, numeral in the chain's key, key): 89.5%, 84.0%, 76.5%, 55.8%, 70.7% (89.5%, 83.9%, 76.4%, 55.7%, 70.7% before), against the guards of 84.5%, 67.2% and 67.4%; the baseline was re-recorded. The bars of R-371 hold. Only Bach 114 moves on the corpus (54 spans, 52 before).
 
+P41 B1 moves the whole-chain runs of `test_cadences_reference_pieces` and `test_form_reference_pieces`, which feed the cadence and phrase metrics, from the pre-P22 pipeline to `analysis_chain_run` (R-392): the chain's own segments (harmonic spans), cadences, phrases and themes. Library output did not change. Overall after it (cadence recall, type, precision, phrase boundaries, theme types): 22.2% (2 of 9), 100.0% (2 of 2), 22.2% (2 of 9), 45.0% (9 of 20), 0.0% (11.1%, 100.0%, 20.0%, 60.0%, 0.0% before). The fall in phrase boundaries is the measurement moving to the real chain, not an analysis change; the baseline was re-recorded. The chorale values (89.5%, 84.0%, 76.5%, 55.8%, 70.7%) did not move.
+
 ## Harmonic spans
 
 P39 reads chords on harmonic spans (`AnalysisChainConfig.harmonic_spans`, default on) with a seventh penalty of 0.15

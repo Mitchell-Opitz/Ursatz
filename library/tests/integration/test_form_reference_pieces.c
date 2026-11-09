@@ -16,10 +16,10 @@
  *      right, every annotated expansion of 2 or more measures found. Because the boundaries here come from the same annotation, the
  *      boundary figure shows the arithmetic of snapping and absorption, not the finding of cadences; the theme and expansion figures
  *      are the adapter's own.
- *   2. THE WHOLE CHAIN. The cadences are the cadence adapter's (standard-harmony), from the weighted chord identification, the key
- *      regions and the Roman numerals, as in test_cadences_reference_pieces.c (whose helpers this file reuses). The earlier stages
- *      miss much of the harmony, so this run is reported with its numbers and misses and asserted only at a floor set at what it
- *      measures, so that a regression shows; it is not a quality target.
+ *   2. THE WHOLE CHAIN. The phrases, ideas, themes and expansions are the analysis chain's own (analysis_chain_run to the form stage,
+ *      run_analysis_chain of test_cadences_reference_pieces.c, whose helpers this file reuses): its segments, its cadences, its key
+ *      regions (R-392). The earlier stages miss much of the harmony, so this run is reported with its numbers and misses and asserted
+ *      only at a floor set at what it measures, so that a regression shows; it is not a quality target.
  *
  * Nothing is tuned to the fixtures: every default is the library's.
  */
@@ -40,8 +40,8 @@
 
 #define FORM_TARGET_BOUNDARIES 0.80
 #define FORM_TARGET_THEMES 0.70
-/* The floors of the whole-chain run, under what it measured when this was written (boundaries 57.9%, themes 0%; see the PR). */
-#define CHAIN_FLOOR_BOUNDARIES 0.50
+/* The floors of the whole-chain run, under what it measured when this was written (boundaries 45.0%, 9 of 20, themes 0%; see the PR). */
+#define CHAIN_FLOOR_BOUNDARIES 0.40
 #define CHAIN_FLOOR_THEMES 0.0
 
 /* --- the annotation --- */
@@ -394,23 +394,18 @@ static void run_piece(const FormPiece *fp, FormScore *alone_total, FormScore *ch
         hand_cadences_destroy(&hand);
     }
     {
-        HarmonySegment *segments = NULL;
-        Inputs inputs;
-        HarmonyCadences found = chain_cadences(&fp->piece, &p, map, &lines, &cadence_annotation, &segments, &inputs);
-        ChainFormInput build;
-        assert(chain_build_form_input(&p.set, analysis_chain_segments(p.chain), &lines, annotation.range_first, annotation.range_last,
-                                      &found, &build) == CHAIN_INPUT_OK);
+        /* The analysis chain's own phrases, ideas, themes and expansions (borrowed views, not destroyed here), on its own segments and cadences. */
+        AnalysisChain *chain = run_analysis_chain(&p, map, &cadence_annotation);
         FormAnalysis analysis;
         memset(&analysis, 0, sizeof(analysis));
-        form_analyze(&build.input, &analysis);
-        printf("  (the cadence adapter reported %zu cadence(s) in the stretches it read)\n", found.count);
-        FormScore s = form_evaluate("the whole chain, on the cadence adapter's cadences", &annotation, &analysis);
+        analysis.phrases = *analysis_chain_phrases(chain);
+        analysis.segmentation = *analysis_chain_ideas(chain);
+        analysis.themes = *analysis_chain_themes(chain);
+        analysis.expansions = *analysis_chain_expansions(chain);
+        printf("  (the analysis chain reported %zu cadence(s))\n", analysis_chain_cadences(chain)->count);
+        FormScore s = form_evaluate("the whole chain, the analysis chain", &annotation, &analysis);
         form_score_add(chain_total, &s);
-        form_analysis_destroy(&analysis);
-        chain_form_input_destroy(&build);
-        harmony_cadences_destroy(&found);
-        harmony_analysis_destroy(segments);
-        destroy_inputs(&inputs);
+        analysis_chain_destroy(chain);
     }
     outer_voice_lines_destroy(&lines);
     pipeline_destroy(&p);

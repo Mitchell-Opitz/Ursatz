@@ -362,9 +362,10 @@ static void fv1_chain_destroy(Chain *c) {
     }
 }
 
-/* The measure and beat (1-based) a segment starts at. */
+/* The measure and beat (1-based) a segment starts at. The cadences index the chain's own segments (analysis_chain_segments, harmonic spans
+   merged), not the pipeline's, which runs without the CHORDS stage and is never merged into spans. */
 static void fv1_where(const Chain *c, size_t segment, int *measure, double *beat) {
-    const TimeSpan *window = sonority_time_window(c->p.sonorities.items[segment].sonority);
+    const TimeSpan *window = sonority_time_window(analysis_chain_segments(c->chain)->sonorities.items[segment].sonority);
     MetricalPosition *position = NULL;
     assert(metrical_position_from_time(c->map, time_span_start(window), &position) == METRICAL_POSITION_OK);
     *measure = metrical_position_measure(position);
