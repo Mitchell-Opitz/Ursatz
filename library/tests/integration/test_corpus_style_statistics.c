@@ -209,11 +209,11 @@ typedef struct {
 } Known;
 
 static const Known KNOWN[5] = {
-    /* Bach 114 */ {{NULL}, {0}, 0, "I > IV", 7, 51, "I > I > IV", 3, 50},
-    /* Mozart 545 */ {{"pac", "other", "hc", "iac"}, {6, 2, 4, 2}, 4, "V > I", 24, 205, "I > V > I", 16, 204},
-    /* Clementi 36 */ {{"hc", "iac"}, {3, 1}, 2, "I > I", 6, 44, "I > V > I", 3, 43},
+    /* Bach 114 */ {{NULL}, {0}, 0, "I > IV", 4, 53, "I > I > IV", 3, 52},
+    /* Mozart 545 */ {{"pac", "other", "hc", "iac"}, {8, 2, 4, 2}, 4, "V > I", 24, 205, "I > V > I", 16, 204},
+    /* Clementi 36 */ {{"hc", "iac"}, {3, 1}, 2, "I > I", 6, 45, "I > V > I", 2, 44},
     /* Field 1 */ {{"pac"}, {1}, 1, "I > I", 4, 21, "V > half-diminished7 > dominant7", 2, 20},
-    /* Field 5 */ {{NULL}, {0}, 0, "I > I", 1, 16, "I > diminished > I", 1, 15},
+    /* Field 5 */ {{NULL}, {0}, 0, "I > I", 2, 15, "I > diminished > I", 1, 14},
 };
 
 static unsigned long count_of(const CorpusStatsCounts *counts, const char *label) {
