@@ -40,7 +40,7 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 | Field 1 | Texture, measures | 90.8% | 65 annotated measures |
 | Field 1 | Texture, change points | 100.0% | 1 annotated change points |
 | Field 5 | Syncopations | 100.0% | 1 annotated syncopations |
-| Field 5 | Hyperdownbeats | 62.5% | 8 annotated hyperdownbeats |
+| Field 5 | Hyperdownbeats | 50.0% | 8 annotated hyperdownbeats |
 | Five reference pieces, pooled | Phrase boundaries | 45.0% | 20 annotated phrase ends |
 | Five reference pieces, pooled | Theme types | 0.0% | 6 annotated themes |
 | Galant fixture | Schemas and sequences | 55.6% | 9 planted items |
@@ -60,7 +60,7 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 | Melody leaps | 36.4% | 11 annotated leaps |
 | Motive occurrences | 95.2% | 21 annotated occurrences |
 | Syncopations | 100.0% | 1 annotated syncopations |
-| Hyperdownbeats | 62.5% | 8 annotated hyperdownbeats |
+| Hyperdownbeats | 50.0% | 8 annotated hyperdownbeats |
 | Texture, measures | 90.8% | 65 annotated measures |
 | Texture, change points | 100.0% | 1 annotated change points |
 | Schemas and sequences | 55.6% | 9 planted items |

@@ -382,8 +382,8 @@ static void run_piece(const FormPiece *fp, FormScore *alone_total, FormScore *ch
         HandCadence ends[32];
         HarmonyCadences hand = hand_cadences_make(analysis_chain_segments(p.chain), map, ends, hand_ends(&annotation, ends));
         ChainFormInput build;
-        assert(chain_build_form_input(&p.set, analysis_chain_segments(p.chain), &lines, annotation.range_first, annotation.range_last,
-                                      &hand, &build) == CHAIN_INPUT_OK);
+        assert(chain_build_form_input(&p.set, analysis_chain_segments(p.chain), analysis_chain_voice_segments(p.chain), &lines,
+                                      annotation.range_first, annotation.range_last, &hand, &build) == CHAIN_INPUT_OK);
         FormAnalysis analysis;
         memset(&analysis, 0, sizeof(analysis));
         form_analyze(&build.input, &analysis);

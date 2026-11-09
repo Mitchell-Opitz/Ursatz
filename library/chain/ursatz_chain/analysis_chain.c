@@ -470,8 +470,8 @@ static AnalysisChainStatus cadence_stage(AnalysisChain *chain) {
 static AnalysisChainStatus form_stage(AnalysisChain *chain) {
     Pass *p = &chain->pass;
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    if (chain_build_form_input(chain->notes, &chain->segs, &chain->segment_lines, chain->config.first_measure, last, &p->cadences,
-                               &p->form_input) != CHAIN_INPUT_OK) {
+    if (chain_build_form_input(chain->notes, &chain->segs, &chain->voice_segs, &chain->lines, chain->config.first_measure, last,
+                               &p->cadences, &p->form_input) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     p->have_form_input = true;

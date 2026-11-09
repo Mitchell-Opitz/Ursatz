@@ -17,7 +17,7 @@
     "melody_leaps": 0.363636,
     "motive_occurrences": 0.952381,
     "rhythm_syncopations": 1.000000,
-    "rhythm_hyperdownbeats": 0.625000,
+    "rhythm_hyperdownbeats": 0.500000,
     "texture_measures": 0.907692,
     "texture_changes": 1.000000,
     "schemas_sequences": 0.555556
@@ -118,7 +118,7 @@
     },
     "Field 5": {
       "rhythm_syncopations": 1.000000,
-      "rhythm_hyperdownbeats": 0.625000
+      "rhythm_hyperdownbeats": 0.500000
     },
     "Five reference pieces, pooled": {
       "phrase_boundaries": 0.450000,
