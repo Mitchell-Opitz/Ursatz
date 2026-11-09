@@ -72,6 +72,17 @@ add_executable(test_standard_form_analysis_phrase test_analysis_phrase.c)
 target_link_libraries(test_standard_form_analysis_phrase PRIVATE standard_form ursatz_chain)
 add_test(NAME standard_form_analysis_phrase COMMAND test_standard_form_analysis_phrase)
 
+add_executable(test_standard_form_analysis_phrase_grid test_analysis_phrase_grid.c)
+target_link_libraries(test_standard_form_analysis_phrase_grid PRIVATE standard_form ursatz_chain)
+add_test(NAME standard_form_analysis_phrase_grid COMMAND test_standard_form_analysis_phrase_grid)
+
+# Memcheck for the phrase grid test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_FORM_GRID_VALGRIND valgrind)
+if(URSATZ_FORM_GRID_VALGRIND)
+  add_test(NAME standard_form_analysis_phrase_grid_valgrind
+           COMMAND ${URSATZ_FORM_GRID_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_form_analysis_phrase_grid>)
+endif()
+
 add_executable(test_standard_form_analysis_similarity test_analysis_similarity.c)
 target_link_libraries(test_standard_form_analysis_similarity PRIVATE standard_form ursatz_chain)
 add_test(NAME standard_form_analysis_similarity COMMAND test_standard_form_analysis_similarity)
