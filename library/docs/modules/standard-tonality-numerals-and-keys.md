@@ -59,6 +59,27 @@ Framework overview: [frameworks/standard-tonality/README.md](../../frameworks/st
   chord, else the chord reads as root position. A caller that passes no
   segment pitches keeps the Chord's own bass.
 
+  **Applied chords** (`analysis/applied_chords.h`) come two ways.
+  *Identified:* when chord identification already read the chord as
+  applied (common-practice-minimal with `applied_chords` on, R-380), its
+  root and quality are outside the key's diatonic vocabulary. The reading
+  falls back to `standard_tonality_read_applied_chord`: the input's root
+  and intervals against V, V7, vii° and vii°7, the tonicized root (the
+  root a fifth below, or a semitone above) being a target of the key (major
+  ii to vi, minor III to VII on the natural scale). It reads no weights
+  and no neighbours, and gives the numeral, the target and the inversion
+  from the bass. *Re-checked:* a diatonic reading (a ii that is a V/V with
+  its F#) is relabelled from the weights and the resolution, as before.
+  `StandardTonalityAppliedConfig.recheck_diatonic` (default true) turns
+  that second pass off for a caller whose identification reads applied
+  chords itself; identified applied chords are never re-checked.
+
+  The link (`resolves_to`, `resolution_index`, `deceptive`) is set only
+  when the applied chord resolves: the next segment with a different root
+  has a numeral and the target's root, or deceptively the target's
+  submediant. An applied chord that does not resolve keeps its applied
+  label and has no link.
+
 - **Key functions** (`tonal_key.h`): degree and alteration of a note in a
   key and mode (`standard_tonality_degree_of`), the note at a degree
   (`standard_tonality_spell_degree`), semitones above the tonic of a degree
