@@ -40,7 +40,7 @@ const cadenceClaim = layer("cadences").items[0].claim;
 check(cadence.header.layerLabel === "Cadences" && cadence.header.color === layer("cadences").color, "the header names the layer and its color");
 check(cadence.header.text === "PAC", "the header title is the item text");
 check(cadence.header.label === "perfect-authentic", "the claim label shows when it differs from the title");
-check(cadence.header.location === "m26 b4 to m27 b2", "the header has the formatted location");
+check(cadence.header.location === "m26 b4 to m27 b4", "the header has the formatted location");
 check(cadence.header.measures === null, "no measure count without a measures field");
 const firstPhrase = layer("phrases").items.find((i) => i.claim.label === "phrase");
 const phraseHeader = InspectorModel.buildInspectorModel(firstPhrase, layer("phrases")).header;
@@ -55,7 +55,12 @@ check(sameLabel.header.label === null, "a label equal to the title is null");
 check(model("keys", 0).readings === null && model("chords", 0).readings === null, "only cadences have readings");
 check(cadence.readings.primary.abbr === "PAC" && cadence.readings.primary.type === "perfect-authentic", "a cadence has its primary reading");
 check(cadence.readings.alternative === null, "a cadence without an alternative has none");
-check(cadence.readings.primary.share === null, "a missing share is null");
+const noShare = JSON.parse(JSON.stringify(cadenceClaim));
+delete noShare.share;
+check(
+  InspectorModel.buildInspectorModel({ key: "cadences/0", text: "PAC", claim: noShare }, layer("cadences")).readings.primary.share === null,
+  "a missing share is null",
+);
 const competing = JSON.parse(JSON.stringify(cadenceClaim));
 competing.type = "half";
 competing.share = 625;
@@ -80,8 +85,8 @@ check(
 );
 check(keys.join() === Object.keys(cadenceClaim).filter((k) => keys.includes(k)).join(), "evidence keeps the claim's field order");
 const arrival = row(cadence, "arrival");
-check(arrival.kind === "span" && arrival.start === 26 && arrival.end === 26.25, "arrival is a span row with numeric bounds");
-check(arrival.location === "m27 b1 to m27 b2", "a span row has its formatted location");
+check(arrival.kind === "span" && arrival.start === 26 && arrival.end === 26.75, "arrival is a span row with numeric bounds");
+check(arrival.location === "m27 b1 to m27 b4", "a span row has its formatted location");
 check(row(cadence, "dominant").kind === "span" && row(cadence, "dominant").location === "-", "dominant is a span row without a location");
 check(row(cadence, "soprano_degree").kind === "value" && row(cadence, "soprano_degree").text === "1", "a plain field is a value row");
 check(row(cadence, "boundary").text === "no", "a boolean field reads yes or no");
@@ -105,7 +110,7 @@ const chordsRow = row(progressionModel, "chords");
 check(chordsRow.kind === "value" && /^\d+, \d+/.test(chordsRow.text), "a list of numbers is a value row");
 
 /* scores */
-check(cadence.scores.length === 1 && cadence.scores[0].name === "uncertainty" && cadence.scores[0].text === "0.895", "uncertainty is a score under its own name");
+check(cadence.scores.length === 1 && cadence.scores[0].name === "uncertainty" && cadence.scores[0].text === "0.65", "uncertainty is a score under its own name");
 const chordModel = model("chords", 0);
 check(chordModel.scores.some((s) => s.name === "score"), "a score field is shown as score");
 const scored = InspectorModel.buildInspectorModel(
@@ -144,6 +149,6 @@ check(InspectorModel.filterItems(spans, "SHORT").length === 1, "filtering ignore
 check(InspectorModel.filterItems(spans, "short one").length === 1, "filtering matches the label");
 check(InspectorModel.filterItems(spans, "  ").length === 3, "a blank query keeps everything");
 check(InspectorModel.filterItems(spans, "zzz").length === 0, "no match gives nothing");
-check(InspectorModel.locationOf(cadenceItems[0]) === "m26 b4 to m27 b2", "locationOf formats an item's location");
+check(InspectorModel.locationOf(cadenceItems[0]) === "m26 b4 to m27 b4", "locationOf formats an item's location");
 
 process.exit(failures === 0 ? 0 : 1);

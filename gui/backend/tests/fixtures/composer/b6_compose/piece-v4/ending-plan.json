@@ -3,7 +3,7 @@
   "format_version": 2,
   "metadata": {
     "composer_version": "0.4.1",
-    "ursatz_commit": "d2b85cedb7bb3788197206dc6d7a18efeef6372a"
+    "ursatz_commit": "3ad440c8298efc01d560311e6a8a3e2fb31be3de"
   },
   "meter": {
     "spans": [{
@@ -507,7 +507,7 @@
         }
       },
       "note_ids": [],
-      "label": "V",
+      "label": "V7",
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
@@ -518,7 +518,7 @@
         "state": "realized",
         "constraints": [],
         "payload": {
-          "roman_numeral": "V",
+          "roman_numeral": "V7",
           "function": "dominant"
         }
       }
