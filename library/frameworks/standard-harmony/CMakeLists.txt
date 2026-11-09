@@ -62,6 +62,7 @@ add_library(standard_harmony
     analysis/analysis_runs.c
     analysis/analysis_cadence.c
     analysis/analysis_cadence_readings.c
+    analysis/analysis_cadence_claims.c
 )
 # Public headers (R-223), staged under standard-harmony/ in the build tree; the source directories are private.
 ursatz_public_headers(standard_harmony
@@ -70,6 +71,7 @@ ursatz_public_headers(standard_harmony
     SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/analysis
     HEADERS
         analysis/analysis_cadence.h
+        analysis/analysis_cadence_claims.h
         analysis/analysis_function.h
         analysis/analysis_input.h
         analysis/analysis_phrase.h

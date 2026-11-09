@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis_cadence_build.h"
 #include "analysis_cadence_readings.h"
 #include "analysis_claim.h"
 #include "analysis_runs.h"
@@ -520,6 +521,49 @@ static void destroy_result(HarmonyCadenceResult *result) {
     cadence_destroy(result->cadence);
     time_span_destroy(result->span);
     memset(result, 0, sizeof(*result));
+}
+
+/* --- results from plain data (analysis_cadence_build.h) --- */
+
+bool harmony_cadence_config_is_valid(const HarmonyCadenceConfig *config) {
+    return config != NULL && config_valid(config);
+}
+
+void harmony_cadence_result_destroy(HarmonyCadenceResult *result) {
+    if (result != NULL) {
+        destroy_result(result);
+    }
+}
+
+HarmonyCadenceAnalysisStatus harmony_cadence_result_build(const HarmonySegment *segments, const HarmonyCadenceSpec *spec,
+                                                          HarmonyCadenceResult *out) {
+    if (segments == NULL || spec == NULL || out == NULL) {
+        return HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    Classified c;
+    memset(&c, 0, sizeof(c));
+    c.type = spec->type;
+    c.dominant_first = spec->dominant_first;
+    c.dominant_last = spec->dominant_last;
+    c.has_six_four = spec->has_six_four;
+    c.six_four_first = spec->six_four_first;
+    c.six_four_last = spec->six_four_last;
+    c.soprano_degree = spec->soprano_degree;
+    c.post_cadential = spec->post_cadential;
+    c.penalty = spec->penalty;
+    c.share = spec->share;
+    c.has_alt = spec->has_alt;
+    c.alt_reading = spec->alt_reading;
+    c.alt_type = spec->alt_type;
+    c.alt_arrival_first = spec->alt_arrival_first;
+    c.alt_arrival_last = spec->alt_arrival_last;
+    c.alt_soprano_degree = spec->alt_soprano_degree;
+    c.alt_penalty = spec->alt_penalty;
+    HarmonyCadencePoint point;
+    memset(&point, 0, sizeof(point));
+    point.arrival_first = spec->arrival_first;
+    point.arrival_last = spec->arrival_last;
+    return build_result(segments, &point, &c, out) ? HARMONY_CADENCE_ANALYSIS_OK : HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
 }
 
 void harmony_cadences_destroy(HarmonyCadences *cadences) {
