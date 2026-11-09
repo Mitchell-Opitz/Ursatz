@@ -134,9 +134,9 @@
       "name": "Mozart 545",
       "group": "fixture",
       "metrics": {
-        "cadence_recall": {"value": 0.500000, "num": 1.000000, "den": 2.000000},
-        "cadence_type": {"value": 1.000000, "num": 1.000000, "den": 1.000000},
-        "cadence_precision": {"value": 0.250000, "num": 1.000000, "den": 4.000000},
+        "cadence_recall": {"value": 1.000000, "num": 2.000000, "den": 2.000000},
+        "cadence_type": {"value": 1.000000, "num": 2.000000, "den": 2.000000},
+        "cadence_precision": {"value": 1.000000, "num": 2.000000, "den": 2.000000},
         "phrase_model_labels": {"value": 0.370968, "num": 23.000000, "den": 62.000000},
         "motive_occurrences": {"value": 0.952381, "num": 20.000000, "den": 21.000000}
       }
@@ -152,9 +152,8 @@
       "name": "Field 1",
       "group": "fixture",
       "metrics": {
-        "cadence_recall": {"value": 0.250000, "num": 1.000000, "den": 4.000000},
-        "cadence_type": {"value": 1.000000, "num": 1.000000, "den": 1.000000},
-        "cadence_precision": {"value": 0.200000, "num": 1.000000, "den": 5.000000},
+        "cadence_recall": {"value": 0.000000, "num": 0.000000, "den": 4.000000},
+        "cadence_precision": {"value": 0.000000, "num": 0.000000, "den": 2.000000},
         "texture_measures": {"value": 0.907692, "num": 59.000000, "den": 65.000000},
         "texture_changes": {"value": 1.000000, "num": 1.000000, "den": 1.000000}
       }
@@ -171,8 +170,8 @@
       "name": "Five reference pieces, pooled",
       "group": "fixture",
       "metrics": {
-        "phrase_boundaries": {"value": 0.450000, "num": 9.000000, "den": 20.000000},
-        "theme_types": {"value": 0.000000, "num": 0.000000, "den": 6.000000}
+        "phrase_boundaries": {"value": 0.550000, "num": 11.000000, "den": 20.000000},
+        "theme_types": {"value": 0.166667, "num": 1.000000, "den": 6.000000}
       }
     },
     {
@@ -191,9 +190,9 @@
     "key": 0.706522,
     "cadence_recall": 0.222222,
     "cadence_type": 1.000000,
-    "cadence_precision": 0.222222,
-    "phrase_boundaries": 0.450000,
-    "theme_types": 0.000000,
+    "cadence_precision": 0.500000,
+    "phrase_boundaries": 0.550000,
+    "theme_types": 0.166667,
     "phrase_model_labels": 0.370968,
     "melody_climaxes": 1.000000,
     "melody_ranges": 0.000000,

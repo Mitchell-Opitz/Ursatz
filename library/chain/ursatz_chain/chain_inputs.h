@@ -209,6 +209,16 @@ ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const Ch
 void chain_form_input_destroy(ChainFormInput *input);
 
 /*
+ * The form input the phrase grid reads (R-389): the note-level soprano of chain_build_motive_input (the highest sounding note at each
+ * attack, no degrees) over the measures [first_measure, last_measure], and the cadences of `found` (the primary of each, and its
+ * alternative as a cadence of its own when it reads as one) and of `readings` (NULL for none of either), each arriving over the window
+ * of its first arrival segment only, not the run, with ids "grid-cadence-<n>". Finished. Destroy with chain_form_input_destroy.
+ */
+ChainInputStatus chain_build_grid_input(const AnalysisNoteSet *notes, const ChainSegments *segments, int first_measure, int last_measure,
+                                        const HarmonyCadences *found, const HarmonyCadences *readings, ChainFormInput *out);
+
+
+/*
  * The input of standard-meter's adapter (meter_analysis_input.h): the notes starting in the measures [first_measure, last_measure] (line 0
  * for a note of the outer soprano, 1 for the bass, 2 for any other), a chord change at the start of every segment whose chord label
  * differs from the one before (both non-NULL; `chord_labels` has one entry per segment, compared as text), and the phrases of the form

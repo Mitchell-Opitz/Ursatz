@@ -9,6 +9,8 @@
 #include "standard-meter/segmentation_beat_grid.h"
 #include "standard-tonality/analysis/applied_chords.h"
 #include "time/time_span.h"
+#include "standard-form/analysis/analysis_phrase_grid.h"
+#include "standard-harmony/analysis/analysis_cadence_claims.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"
 
@@ -28,6 +30,8 @@ typedef struct {
     HarmonySegment *prepared;
     HarmonyCadences cadences;
     bool have_cadences;
+    StandardFormPhraseGrid grid;
+    bool have_grid;
     ChainFormInput form_input;
     bool have_form_input;
     StandardFormPhrases phrases;
@@ -133,6 +137,7 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.schemas = galant_match_config_default();
     config.sequences = scale_detect_config_default();
     config.refine_keys = true;
+    config.phrase_grid = true;
     config.first_measure = 1;
     config.last_measure = 0;
     config.home_key_index = -1;
@@ -198,6 +203,9 @@ static void pass_destroy(AnalysisChain *chain) {
     Pass *p = &chain->pass;
     if (p->have_expansions) {
         standard_form_expansions_destroy(&p->expansions);
+    }
+    if (p->have_grid) {
+        standard_form_phrase_grid_destroy(&p->grid);
     }
     if (p->have_themes) {
         standard_form_themes_destroy(&p->themes);
@@ -467,17 +475,91 @@ static AnalysisChainStatus cadence_stage(AnalysisChain *chain) {
     return ANALYSIS_CHAIN_OK;
 }
 
-static AnalysisChainStatus form_stage(AnalysisChain *chain) {
+/* Phrases first (R-389 to R-391): the grid from the soprano and the cadences found, the cadences claimed at its points. */
+static AnalysisChainStatus claim_cadences_on_grid(AnalysisChain *chain, int last) {
+    Pass *p = &chain->pass;
+    HarmonyCadences readings;
+    memset(&readings, 0, sizeof(readings));
+    ChainFormInput grid_input;
+    memset(&grid_input, 0, sizeof(grid_input));
+    HarmonyPhrasePoint *points = NULL;
+    HarmonyCadences claimed;
+    memset(&claimed, 0, sizeof(claimed));
+    bool have_readings = false;
+    bool have_grid_input = false;
+    bool have_claimed = false;
+    AnalysisChainStatus status = ANALYSIS_CHAIN_ERR_FORM;
+    if (harmony_analysis_half_readings(p->prepared, chain->count, &chain->config.cadences, &p->cadences, &readings) !=
+        HARMONY_CADENCE_ANALYSIS_OK) {
+        goto done;
+    }
+    have_readings = true;
+    if (chain_build_grid_input(chain->notes, &chain->segs, chain->config.first_measure, last, &p->cadences, &readings, &grid_input) !=
+        CHAIN_INPUT_OK) {
+        goto done;
+    }
+    have_grid_input = true;
+    if (standard_form_find_phrase_grid(&grid_input.input, &p->grid) != STANDARD_FORM_ANALYSIS_OK) {
+        goto done;
+    }
+    p->have_grid = true;
+    size_t point_count = 0;
+    points = calloc(p->grid.count * 2 + 1, sizeof(HarmonyPhrasePoint));
+    if (points == NULL) {
+        status = ANALYSIS_CHAIN_ERR_ALLOC;
+        goto done;
+    }
+    for (size_t u = 0; u < p->grid.count; u++) {
+        const StandardFormGridUnit *unit = &p->grid.units[u];
+        if (unit->half_measure >= 0) {
+            points[point_count++] = (HarmonyPhrasePoint){unit->half_measure, false, u, false};
+        }
+        bool follows = u + 1 < p->grid.count && !p->grid.units[u + 1].elided && p->grid.units[u + 1].first_measure == unit->last_measure + 1;
+        points[point_count++] = (HarmonyPhrasePoint){unit->last_measure, true, u, follows};
+    }
+    if (harmony_analysis_claim_cadences(p->prepared, chain->count, &chain->config.cadences, &p->cadences, &readings, points, point_count,
+                                        &claimed) != HARMONY_CADENCE_ANALYSIS_OK) {
+        goto done;
+    }
+    have_claimed = true;
+    harmony_cadences_destroy(&p->cadences);
+    p->cadences = claimed;
+    have_claimed = false;
+    status = ANALYSIS_CHAIN_OK;
+done:
+    if (have_claimed) {
+        harmony_cadences_destroy(&claimed);
+    }
+    free(points);
+    if (have_grid_input) {
+        chain_form_input_destroy(&grid_input);
+    }
+    if (have_readings) {
+        harmony_cadences_destroy(&readings);
+    }
+    return status;
+}
+
+static AnalysisChainStatus form_stage(AnalysisChain *chain, bool final) {
     Pass *p = &chain->pass;
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
+    bool on_grid = chain->config.phrase_grid && final;
+    if (on_grid) {
+        AnalysisChainStatus status = claim_cadences_on_grid(chain, last);
+        if (status != ANALYSIS_CHAIN_OK) {
+            return status;
+        }
+    }
     if (chain_build_form_input(chain->notes, &chain->segs, &chain->voice_segs, &chain->lines, chain->config.first_measure, last,
                                &p->cadences, &p->form_input) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     p->have_form_input = true;
     const StandardFormInput *input = &p->form_input.input;
-    if (standard_form_segment_phrases(input, &chain->config.form, chain_form_boundary_detect, NULL, &p->phrases) !=
-        STANDARD_FORM_ANALYSIS_OK) {
+    StandardFormAnalysisStatus phrase_status =
+        on_grid ? standard_form_segment_phrases_on_grid(input, &chain->config.form, &p->grid, &p->phrases)
+                : standard_form_segment_phrases(input, &chain->config.form, chain_form_boundary_detect, NULL, &p->phrases);
+    if (phrase_status != STANDARD_FORM_ANALYSIS_OK) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     p->have_phrases = true;
@@ -485,7 +567,10 @@ static AnalysisChainStatus form_stage(AnalysisChain *chain) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     p->have_ideas = true;
-    if (standard_form_identify_themes(input, &p->phrases, &p->ideas, &chain->config.form, &p->themes) != STANDARD_FORM_ANALYSIS_OK) {
+    StandardFormAnalysisStatus theme_status =
+        on_grid ? standard_form_identify_themes_on_grid(input, &p->phrases, &p->ideas, &p->grid, &chain->config.form, &p->themes)
+                : standard_form_identify_themes(input, &p->phrases, &p->ideas, &chain->config.form, &p->themes);
+    if (theme_status != STANDARD_FORM_ANALYSIS_OK) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     p->have_themes = true;
@@ -498,7 +583,7 @@ static AnalysisChainStatus form_stage(AnalysisChain *chain) {
 }
 
 /* The stages from the key regions to the form, over the segments. A pass can be run again after pass_destroy. */
-static AnalysisChainStatus run_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count) {
+static AnalysisChainStatus run_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count, bool final) {
     Pass *p = &chain->pass;
     if (wants(chain, ANALYSIS_CHAIN_STAGE_KEYS)) {
         CommonPracticeKeyRegionsConfig key_config = chain->config.key_regions;
@@ -524,7 +609,7 @@ static AnalysisChainStatus run_pass(AnalysisChain *chain, const MusicalTime *con
         }
     }
     if (wants(chain, ANALYSIS_CHAIN_STAGE_FORM)) {
-        return form_stage(chain);
+        return form_stage(chain, final);
     }
     return ANALYSIS_CHAIN_OK;
 }
@@ -869,11 +954,12 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
 
     AnalysisChainStatus status = prepare(chain);
     if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_KEYS)) {
-        status = run_pass(chain, NULL, 0);
+        bool from_phrases = wants(chain, ANALYSIS_CHAIN_STAGE_FORM);
+        bool refining = chain->config.refine_keys && (from_phrases || chain->config.refine_with_given_boundaries);
+        status = run_pass(chain, NULL, 0, !refining);
         /* The keys depend on the phrases, which depend on the cadences, which depend on the keys: the chords of the first pass are
            evidence for the keys and its phrase ends their boundaries, and everything from the keys on runs once more. */
-        bool from_phrases = wants(chain, ANALYSIS_CHAIN_STAGE_FORM);
-        if (status == ANALYSIS_CHAIN_OK && chain->config.refine_keys && (from_phrases || chain->config.refine_with_given_boundaries)) {
+        if (status == ANALYSIS_CHAIN_OK && refining) {
             for (size_t s = 0; s < chain->count; s++) {
                 chain->key_segments[s].chord = common_practice_key_chord_of(&chain->pass.chords[s]);
             }
@@ -885,7 +971,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
                                                                     : chain->config.key_regions.phrase_boundaries;
                 size_t boundary_count = from_phrases ? chain->boundary_count : chain->config.key_regions.phrase_boundary_count;
                 pass_destroy(chain);
-                status = run_pass(chain, boundaries, boundary_count);
+                status = run_pass(chain, boundaries, boundary_count, true);
             }
         }
     }
@@ -987,6 +1073,10 @@ const OuterVoiceLines *analysis_chain_segment_outer_voices(const AnalysisChain *
 
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain) {
     return chain != NULL && chain->pass.have_cadences ? &chain->pass.cadences : NULL;
+}
+
+const StandardFormPhraseGrid *analysis_chain_phrase_grid(const AnalysisChain *chain) {
+    return chain != NULL && chain->pass.have_grid ? &chain->pass.grid : NULL;
 }
 
 const StandardFormPhrases *analysis_chain_phrases(const AnalysisChain *chain) {

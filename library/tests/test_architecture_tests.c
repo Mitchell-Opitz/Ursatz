@@ -50,6 +50,7 @@ static const TestEdge ALLOWED_TEST_EDGES[] = {
     {"tests/analysis/", "standard-tonality/", "analysis tests run the chain and the framework adapters end to end"},
     {"tests/analysis/", "ursatz_chain/", "analysis tests run the chain end to end"},
     {"tests/analysis/", "io/", "analysis tests import the corpus MIDI files"},
+    {"tests/analysis/", "standard-form/phrase_level_form.h", "phrase tests name the theme forms the chain reports"},
     {"tests/persistence/", "common-practice-minimal/", "persistence tests store framework chord and key labels"},
     {"frameworks/common-practice-minimal/tests/", "standard-tonality/", "declared dependency (the scale degree owner)"},
     {"frameworks/common-practice-minimal/tests/", "analysis/outer_voice.h",
