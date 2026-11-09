@@ -94,3 +94,5 @@ here, not worked around.
 | `sentence_c_to_g.json` | 8 bars, 4/4: the C major sentence with its continuation moved a fifth up, in G major from bar 5: presentation in C, then IV (the pivot) ii V I in G | sentence, bars 0 to 7, presentation + continuation, PAC (arriving at bar 8) |
 
 The presentation alone (bars 0 to 3) hears no theme, having no cadence.
+
+The baselines heard on harmonic spans, measured for P41, are in [testing/span-hearing.md](testing/span-hearing.md).
