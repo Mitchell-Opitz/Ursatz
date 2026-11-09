@@ -220,7 +220,12 @@ static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int ba
         if (interval_count >= 2) {
             has_third = weights.pitch_class[(root + intervals[1]) % 12] > 0.0;
         }
-        reading.complete = sounding >= 3 || (has_root && has_third && reading.bass_in_chord);
+        bool has_fifth = false;
+        if (interval_count >= 3) {
+            has_fifth = weights.pitch_class[(root + intervals[2]) % 12] > 0.0;
+        }
+        reading.complete = sounding >= 3 || (has_root && has_third && reading.bass_in_chord) ||
+                           (has_root && has_fifth && reading.bass_is_root);
     }
     reading.valid = reading.matched && reading.complete && reading.bass_in_chord;
     *out = reading;
