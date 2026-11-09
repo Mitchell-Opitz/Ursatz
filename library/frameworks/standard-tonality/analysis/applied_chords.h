@@ -61,6 +61,8 @@ typedef struct {
     double chromatic_min;          /* 0.15 */
     double missing_third_penalty;  /* 0.15 */
     double bass_chord_tone_bonus;  /* 0.05 */
+    bool recheck_diatonic;         /* true: a diatonic reading is re-checked as an applied chord (the RELABEL rules);
+                                      false: it stands (a caller whose identification reads applied chords itself) */
 } StandardTonalityAppliedConfig;
 
 StandardTonalityAppliedConfig standard_tonality_applied_config_default(void);
@@ -100,7 +102,7 @@ typedef struct {
 /*
  * Re-checks inputs[index] given its diatonic reading. True (out filled) when it is relabelled as an applied
  * chord; false when the diatonic label stands, or for a NULL argument, a bad config, an index out of range,
- * an input with no numeral or no weights.
+ * an input with no numeral or no weights, or a config with recheck_diatonic false.
  */
 bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *inputs, size_t count, size_t index,
                                              const StandardTonalityAppliedConfig *config,

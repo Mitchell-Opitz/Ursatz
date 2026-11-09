@@ -43,6 +43,7 @@ StandardTonalityAppliedConfig standard_tonality_applied_config_default(void) {
     config.chromatic_min = 0.15;
     config.missing_third_penalty = 0.15;
     config.bass_chord_tone_bonus = 0.05;
+    config.recheck_diatonic = true;
     return config;
 }
 
@@ -205,7 +206,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
         config = &defaults;
     }
     if (inputs == NULL || out == NULL || index >= count || !standard_tonality_applied_config_valid(config) ||
-        !inputs[index].has_numeral || !inputs[index].has_weights) {
+        !inputs[index].has_numeral || !inputs[index].has_weights || !config->recheck_diatonic) {
         return false;
     }
     const StandardTonalityChordInput *input = &inputs[index];
