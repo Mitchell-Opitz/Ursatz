@@ -35,11 +35,18 @@
  * the bass that resolves by step then does not break the part. The Alberti bass keeps R-370's (the bass follows the
  * figure). A span's bass is the bass its reading used.
  *
+ * TERMS (R-381, R-383). A step is two pitch classes 1 or 2 apart the shorter way round; a semitone is 1. The bass after
+ * cell c is the bass of the first later cell (in any measure) whose bass differs from bass[c]; none at the piece's end. An
+ * altered chord tone of a chord's pitch-class mask is the bass of a cell whose pitch class is not in the mask and lies one
+ * semitone from a tone c of it, while c sounds at the cell's start in a member above the bass note (held, or attacked there),
+ * and the bass after it is a semitone from it: a chromatic bass against the chord tone it alters is no new chord.
+ *
  * THE SPANS (R-372). One span per measure to start with (a span never crosses a barline), then the measure is cut
  * where the music changes chord, by scoring whole partitions instead of single splits. The candidate boundaries of a
  * measure are its cells at level HALF_BAR or BEAT after its first cell, except a cell that keeps the bass of the cell
  * before it with that bass note held over (a held bass note is no new bass, so the measure is not cut inside it, R-379 (4)),
- * and every non-empty subset of them is a
+ * and except, when the whole measure's reading is matched, a cell whose bass is an altered chord tone of that reading
+ * (R-381, see TERMS), and every non-empty subset of them is a
  * partition (2^n, n = 3 in 4/4). A partition is valid when every part is matched, complete (three of its best chord's
  * pitch classes have weight, or its root and third do and its bass pitch class is a chord tone, or its root and fifth
  * do and the bass is the root: a bare fifth over the root is a complete two-voice reading, R-379) and has its bass as a
