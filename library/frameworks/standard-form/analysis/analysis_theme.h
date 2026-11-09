@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "analysis_ideas.h"
+#include "analysis_phrase_grid.h"
 #include "relationship/relationship.h"
 
 /*
@@ -34,6 +35,13 @@
  *                        contrasts), its second subphrase the ending as above. Presentation + continuation is a SENTENCE; the
  *                        other pairings are HYBRIDs
  *   otherwise    no theme is claimed (the phrase is unique or its cadence is no goal)
+ *
+ * ON THE PHRASE GRID (R-391, standard_form_identify_themes_on_grid). Steps 1 to 3, the themes of two phrases (a repeated phrase, a
+ * compound period, a period or hybrid of two phrases), pair phrases i and i + 1 only when phrase i ends on a grid unit's half
+ * measure (StandardFormGridUnit.half_measure, a unit of 8 or 16) and phrase i + 1 on that same unit's last measure: an
+ * antecedent and consequent inside one unit. Two phrases across two units, or two phrases in a unit of 4, are not paired, and
+ * each stays a candidate of step 4 alone. One-phrase themes (step 4) are unchanged. standard_form_identify_themes is this with
+ * no grid.
  *
  * LIMITS. The cadential ending is not identified (no bass is in the input, so standard_form_classify_ending is given "not the
  * cadential pattern"); the only compound form is the compound period; fragmentation is judged on the nominal ideas
@@ -105,6 +113,12 @@ typedef struct {
 StandardFormAnalysisStatus standard_form_identify_themes(const StandardFormInput *input, const StandardFormPhrases *phrases,
                                                          const StandardFormSegmentation *segmentation,
                                                          const StandardFormConfig *config, StandardFormThemes *out);
+/* Identifies the themes with two-phrase themes paired only inside one unit of `grid`, as described above. NULL_ARGUMENT for a NULL
+   grid; otherwise as standard_form_identify_themes. */
+StandardFormAnalysisStatus standard_form_identify_themes_on_grid(const StandardFormInput *input, const StandardFormPhrases *phrases,
+                                                                 const StandardFormSegmentation *segmentation,
+                                                                 const StandardFormPhraseGrid *grid,
+                                                                 const StandardFormConfig *config, StandardFormThemes *out);
 void standard_form_themes_destroy(StandardFormThemes *themes);
 bool standard_form_theme_claim_read(const Interpretation *interpretation, StandardFormThemeClaim *out);
 

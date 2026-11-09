@@ -383,9 +383,24 @@ static StandardFormAnalysisStatus emit_two_phrases(const ThemeContext *ctx, Stan
                       second_ideas[second_count - 1].claim.note_end, phrase_part_id(first), phrase_part_id(second));
 }
 
-StandardFormAnalysisStatus standard_form_identify_themes(const StandardFormInput *input, const StandardFormPhrases *phrases,
-                                                         const StandardFormSegmentation *segmentation,
-                                                         const StandardFormConfig *config, StandardFormThemes *out) {
+/* On a grid, phrase p and p + 1 are one two-phrase theme only when p ends on a unit's half measure and p + 1 on that unit's last. */
+static bool pairs_in_one_unit(const StandardFormPhrases *phrases, const StandardFormPhraseGrid *grid, size_t p) {
+    if (grid == NULL) {
+        return true;
+    }
+    for (size_t u = 0; u < grid->count; u++) {
+        if (grid->units[u].half_measure >= 0 && grid->units[u].half_measure == phrases->items[p].claim.end_measure &&
+            grid->units[u].last_measure == phrases->items[p + 1].claim.end_measure) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static StandardFormAnalysisStatus identify_themes(const StandardFormInput *input, const StandardFormPhrases *phrases,
+                                                  const StandardFormSegmentation *segmentation,
+                                                  const StandardFormPhraseGrid *grid, const StandardFormConfig *config,
+                                                  StandardFormThemes *out) {
     if (input == NULL || phrases == NULL || segmentation == NULL || out == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
@@ -412,7 +427,7 @@ StandardFormAnalysisStatus standard_form_identify_themes(const StandardFormInput
         Candidate second_single;
         Candidate pair;
         bool single = one_phrase(&ctx, p, &first_single);
-        if (has_next && phrase_goal(phrase) && phrase_goal(&phrases->items[p + 1])) {
+        if (has_next && phrase_goal(phrase) && phrase_goal(&phrases->items[p + 1]) && pairs_in_one_unit(phrases, grid, p)) {
             const StandardFormPhrase *next = &phrases->items[p + 1];
             PhraseLevelForm pair_form;
             const StandardFormNote *a = NULL;
@@ -496,4 +511,20 @@ StandardFormAnalysisStatus standard_form_identify_themes(const StandardFormInput
     }
     *out = found;
     return STANDARD_FORM_ANALYSIS_OK;
+}
+
+StandardFormAnalysisStatus standard_form_identify_themes(const StandardFormInput *input, const StandardFormPhrases *phrases,
+                                                         const StandardFormSegmentation *segmentation,
+                                                         const StandardFormConfig *config, StandardFormThemes *out) {
+    return identify_themes(input, phrases, segmentation, NULL, config, out);
+}
+
+StandardFormAnalysisStatus standard_form_identify_themes_on_grid(const StandardFormInput *input, const StandardFormPhrases *phrases,
+                                                                 const StandardFormSegmentation *segmentation,
+                                                                 const StandardFormPhraseGrid *grid,
+                                                                 const StandardFormConfig *config, StandardFormThemes *out) {
+    if (grid == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    return identify_themes(input, phrases, segmentation, grid, config, out);
 }

@@ -91,7 +91,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/theory-owners.md](theory-owners.md): The library owner of each piece of theory the apps used to copy.
 - [docs/modules/analysis-voices.md](modules/analysis-voices.md): Outer voices, soprano at every attack, voice separation.
 - [docs/modules/analysis-cadence.md](modules/analysis-cadence.md): Cadence detection and classification.
-- [docs/modules/analysis-phrase-form.md](modules/analysis-phrase-form.md): Phrase boundaries, period, sentence, form structure, thematic return.
+- [docs/modules/analysis-phrase-form.md](modules/analysis-phrase-form.md): Phrase boundaries, period, sentence, form structure, thematic return, the phrase grid.
 - [docs/modules/common-practice-minimal-analysis.md](modules/common-practice-minimal-analysis.md): Chord identification, outer scale degrees and key regions in the kernel.
 - [docs/modules/standard-harmony-analysis.md](modules/standard-harmony-analysis.md): The standard-harmony analysis adapter.
 - [docs/modules/standard-tonality-analysis.md](modules/standard-tonality-analysis.md): The standard-tonality analysis adapter.

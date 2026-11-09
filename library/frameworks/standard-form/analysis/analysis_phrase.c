@@ -194,9 +194,45 @@ static StandardFormAnalysisStatus build_phrase(const StandardFormInput *input, c
     return phrase->interpretation != NULL ? STANDARD_FORM_ANALYSIS_OK : STANDARD_FORM_ANALYSIS_ERR_ALLOC;
 }
 
-StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput *input, const StandardFormConfig *config,
-                                                         StandardFormBoundaryDetector detector, void *detector_context,
-                                                         StandardFormPhrases *out) {
+/* The boundaries on the grid: a unit's last or half measure with a goal cadence on its point ends a phrase by that cadence; a
+   unit's last measure without one ends it by the 16-measure cap (the discontinuity signal) when the phrase up to the next unit's
+   last measure would pass 16 measures, or when no unit follows. */
+static void grid_boundaries(const StandardFormInput *input, const Point *points, size_t point_count, const StandardFormPhraseGrid *grid,
+                            StandardFormBoundary *out) {
+    int counted = meter_map_first_counted_measure(input->map);
+    int previous = point_count > 0 ? points[0].measure - 1 : 0; /* the last boundary's measure */
+    for (size_t k = 0; k < point_count; k++) {
+        int m = points[k].measure;
+        size_t unit = 0;
+        bool is_last = false;
+        bool is_half = false;
+        for (size_t u = 0; u < grid->count; u++) {
+            if (grid->units[u].last_measure == m && !is_last) {
+                is_last = true;
+                unit = u;
+            }
+            if (grid->units[u].half_measure == m) {
+                is_half = true;
+            }
+        }
+        if (points[k].cadence >= 0 && (is_last || is_half)) {
+            out[k].is_boundary = true;
+            out[k].by_cadence = true;
+            previous = m;
+        } else if (is_last) {
+            int from = previous + 1 < counted ? counted : previous + 1;
+            if (unit + 1 >= grid->count || grid->units[unit + 1].last_measure - from + 1 > STANDARD_FORM_GRID_MAX_PHRASE) {
+                out[k].is_boundary = true;
+                out[k].by_cadence = false;
+                previous = m;
+            }
+        }
+    }
+}
+
+static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input, const StandardFormConfig *config,
+                                                  StandardFormBoundaryDetector detector, void *detector_context,
+                                                  const StandardFormPhraseGrid *grid, StandardFormPhrases *out) {
     if (input == NULL || out == NULL || input->map == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
@@ -205,7 +241,7 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
     if (!standard_form_config_valid(effective) || !input->finished) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG;
     }
-    if (detector == NULL) {
+    if (detector == NULL && grid == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR;
     }
     StandardFormPhrases found = {NULL, 0};
@@ -332,7 +368,11 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
         detector_points[k].cadence_type = points[k].cadence >= 0 ? input->cadences[points[k].cadence].type : CADENCE_TYPE_UNKNOWN;
         detector_points[k].has_discontinuity = points[k].discontinuity;
     }
-    status = detector(detector_points, point_count, max_length, boundaries, detector_context);
+    if (grid != NULL) {
+        grid_boundaries(input, points, point_count, grid, boundaries);
+    } else {
+        status = detector(detector_points, point_count, max_length, boundaries, detector_context);
+    }
     if (status != STANDARD_FORM_ANALYSIS_OK) {
         free(extents);
         free(points);
@@ -366,7 +406,7 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
         if (by_cadence) {
             const StandardFormCadence *cadence = &input->cadences[points[k].cadence];
             int ended = 0;
-            if (!arrival_end(input, cadence, &end_time, &ended)) {
+            if (grid != NULL ? !measure_end_of(input, points[k].measure, &end_time) : !arrival_end(input, cadence, &end_time, &ended)) {
                 status = STANDARD_FORM_ANALYSIS_ERR_METER;
                 break;
             }
@@ -375,7 +415,8 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
             claim->cadence_type = (int)cadence->type;
             claim->strength_rank = cadence->strength_rank;
             claim->cadence_measure = points[k].measure;
-            claim->end_measure = ended > points[k].measure ? ended : points[k].measure;
+            /* on the grid the phrase ends at the point's measure, not at the arrival chord's end */
+            claim->end_measure = grid == NULL && ended > points[k].measure ? ended : points[k].measure;
             if (claim->end_measure < current_first) {
                 claim->end_measure = current_first;
             }
@@ -483,4 +524,18 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
     }
     *out = found;
     return STANDARD_FORM_ANALYSIS_OK;
+}
+
+StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput *input, const StandardFormConfig *config,
+                                                         StandardFormBoundaryDetector detector, void *detector_context,
+                                                         StandardFormPhrases *out) {
+    return segment_phrases(input, config, detector, detector_context, NULL, out);
+}
+
+StandardFormAnalysisStatus standard_form_segment_phrases_on_grid(const StandardFormInput *input, const StandardFormConfig *config,
+                                                                 const StandardFormPhraseGrid *grid, StandardFormPhrases *out) {
+    if (grid == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    return segment_phrases(input, config, NULL, NULL, grid, out);
 }
