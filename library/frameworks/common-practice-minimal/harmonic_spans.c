@@ -79,6 +79,8 @@ typedef struct {
     bool valid;     /* matched, complete, and the bass a chord tone */
     int bass;       /* the bass the reading used (-1: none) */
     unsigned mask;  /* the best chord's pitch-class mask (0 when not matched) */
+    bool bass_explained; /* every new bass of the part is a chord tone, a step between its neighbours or an altered chord tone
+                            (true when not matched: there is no mask to read it against) */
 } Reading;
 
 static HarmonicSpanStatus map_status(CommonPracticeWeightedStatus status) {
@@ -287,6 +289,78 @@ static size_t merge_members(const Grouper *g, size_t a, size_t b) {
     return n;
 }
 
+/* The shorter way round between two pitch classes, 0 to 6. */
+static int pitch_class_distance(int a, int b) {
+    int d = abs(pitch_class_of(a) - pitch_class_of(b));
+    return d > 6 ? 12 - d : d;
+}
+
+/* The bass after cell c: the bass of the first later cell (in any measure) whose bass differs from bass[c]; -1 at the piece's end. */
+static int bass_after(const Grouper *g, size_t c) {
+    size_t j = c + 1;
+    while (j < g->count && g->bass[j] == g->bass[c]) {
+        j++;
+    }
+    return j < g->count ? g->bass[j] : -1;
+}
+
+/* True when the bass of cell c is an altered chord tone of the mask: its pitch class is not in the mask, it lies one semitone from
+   a tone of the mask, that tone sounds at the cell's start in a member above the bass note (held, or attacked there), and the bass
+   after it is a semitone away (R-381): a chromatic bass against the chord tone it alters is no new chord. */
+static bool altered_chord_tone(const Grouper *g, size_t c, unsigned mask) {
+    int bass = g->bass[c];
+    int after = bass_after(g, c);
+    if (bass < 0 || after < 0 || (mask & (1u << pitch_class_of(bass))) != 0 || pitch_class_distance(bass, after) != 1) {
+        return false;
+    }
+    const CommonPracticeSegment *segment = g->cells[c].segment;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        const CommonPracticeMember *member = &segment->members[i];
+        if (member->pitch != bass && (mask & (1u << pitch_class_of(member->pitch))) != 0 &&
+            pitch_class_distance(member->pitch, bass) == 1 && sounds_at_start(member, g->cells[c].start)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* True when cell c holds a new bass (R-383): it is at level BAR, HALF_BAR or BEAT, has a bass that differs from the cell before
+   it, and a member on that bass pitch is attacked in it (not held). */
+static bool is_new_bass(const Grouper *g, size_t c) {
+    if (g->cells[c].level == HARMONIC_SPAN_LEVEL_INNER || g->bass[c] < 0 || g->bass[c] == g->bass[c - 1]) {
+        return false;
+    }
+    const CommonPracticeSegment *segment = g->cells[c].segment;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        const CommonPracticeMember *member = &segment->members[i];
+        if (member->pitch == g->bass[c] && !member->held && member->onset <= g->cells[c].start + TIME_TOLERANCE) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* True when every new bass of cells a + 1..b is explained by the mask: its pitch class is in the mask, or it is a step from the
+   bass before it and a step to the bass after it, or it is an altered chord tone of the mask (R-383). */
+static bool bass_explained_by(const Grouper *g, size_t a, size_t b, unsigned mask) {
+    for (size_t c = a + 1; c <= b; c++) {
+        if (!is_new_bass(g, c) || (mask & (1u << pitch_class_of(g->bass[c]))) != 0) {
+            continue;
+        }
+        int before = g->bass[c - 1];
+        int after = bass_after(g, c);
+        if (before >= 0 && after >= 0 && pitch_class_distance(before, g->bass[c]) >= 1 &&
+            pitch_class_distance(before, g->bass[c]) <= 2 && pitch_class_distance(g->bass[c], after) >= 1 &&
+            pitch_class_distance(g->bass[c], after) <= 2) {
+            continue;
+        }
+        if (!altered_chord_tone(g, c, mask)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /* Reads cells a..b as one segment over the given bass (-1: the lowest sounding pitch), in no key: the best chord over
    all 24 keys. */
 static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int bass_pitch, Reading *out) {
@@ -303,7 +377,7 @@ static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int ba
     if (status != HARMONIC_SPAN_OK) {
         return status;
     }
-    Reading reading = {false, 0.0, -1, false, false, false, false, bass_pitch, 0};
+    Reading reading = {false, 0.0, -1, false, false, false, false, bass_pitch, 0, true};
     CommonPracticeRankedChord best;
     int best_tonic = 0;
     bool found = false;
@@ -330,6 +404,7 @@ static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int ba
             }
         }
         reading.mask = mask;
+        reading.bass_explained = bass_explained_by(g, a, b, mask);
         reading.root_pitch_class = root;
         reading.bass_in_chord = bass_pc >= 0 && (mask & (1u << bass_pc)) != 0;
         reading.bass_is_root = bass_pc == root;
@@ -345,7 +420,7 @@ static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int ba
         reading.complete = sounding >= 3 || (has_root && has_third && reading.bass_in_chord) ||
                            (has_root && has_fifth && reading.bass_is_root);
     }
-    reading.valid = reading.matched && reading.complete && reading.bass_in_chord;
+    reading.valid = reading.matched && reading.complete && reading.bass_in_chord && reading.bass_explained;
     *out = reading;
     return HARMONIC_SPAN_OK;
 }
@@ -531,41 +606,6 @@ static bool holds_bass_note(const Grouper *g, size_t k) {
     return false;
 }
 
-/* The shorter way round between two pitch classes, 0 to 6. */
-static int pitch_class_distance(int a, int b) {
-    int d = abs(pitch_class_of(a) - pitch_class_of(b));
-    return d > 6 ? 12 - d : d;
-}
-
-/* The bass after cell c: the bass of the first later cell (in any measure) whose bass differs from bass[c]; -1 at the piece's end. */
-static int bass_after(const Grouper *g, size_t c) {
-    size_t j = c + 1;
-    while (j < g->count && g->bass[j] == g->bass[c]) {
-        j++;
-    }
-    return j < g->count ? g->bass[j] : -1;
-}
-
-/* True when the bass of cell c is an altered chord tone of the mask: its pitch class is not in the mask, it lies one semitone from
-   a tone of the mask, that tone sounds at the cell's start in a member above the bass note (held, or attacked there), and the bass
-   after it is a semitone away (R-381): a chromatic bass against the chord tone it alters is no new chord. */
-static bool altered_chord_tone(const Grouper *g, size_t c, unsigned mask) {
-    int bass = g->bass[c];
-    int after = bass_after(g, c);
-    if (bass < 0 || after < 0 || (mask & (1u << pitch_class_of(bass))) != 0 || pitch_class_distance(bass, after) != 1) {
-        return false;
-    }
-    const CommonPracticeSegment *segment = g->cells[c].segment;
-    for (size_t i = 0; i < segment->member_count; i++) {
-        const CommonPracticeMember *member = &segment->members[i];
-        if (member->pitch != bass && (mask & (1u << pitch_class_of(member->pitch))) != 0 &&
-            pitch_class_distance(member->pitch, bass) == 1 && sounds_at_start(member, g->cells[c].start)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /* Cuts cells a..b (one measure) at the best valid partition, or leaves it whole; appends the spans in time order. */
 static HarmonicSpanStatus group_measure(Grouper *g, size_t a, size_t b) {
     Reading whole_reading;
@@ -601,8 +641,9 @@ static HarmonicSpanStatus group_measure(Grouper *g, size_t a, size_t b) {
     for (unsigned mask = 1; status == HARMONIC_SPAN_OK && mask < (1u << m.n); mask++) {
         Partition candidate;
         status = score_partition(g, &m, mask, &candidate);
+        bool margin = whole->bass_explained; /* R-383: a whole with an unexplained new bass needs no margin to be cut */
         if (status != HARMONIC_SPAN_OK || !candidate.valid ||
-            candidate.value < whole->score + HARMONIC_SPAN_SPLIT_MARGIN) {
+            (margin && candidate.value < whole->score + HARMONIC_SPAN_SPLIT_MARGIN)) {
             continue;
         }
         if (!best.valid || partition_better(&candidate, mask, &best, best_mask)) {
