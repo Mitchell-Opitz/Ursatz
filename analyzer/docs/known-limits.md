@@ -2,22 +2,20 @@
 
 Where the Analyzer reads a piece differently from its annotation, and why. Back to the [docs index](README.md).
 
-- Key regions use fixed four-measure windows, so a boundary can land a measure or two from where a
-  phrase would put it and a modulation shorter than about half a window is smoothed away. A stretch of
-  four or more measures built on the subdominant, dominant or supertonic can read as its own key.
-  The chord evidence of the first pass lets the library hold the home key through a passage on IV, V or
-  ii when no tone outside the key is heard.
-  Measured here (`test_key_regions`, still `WILL_FAIL`): Clementi Op. 36 No. 1 reads as annotated except
-  measure 20 (the dominant of C minor reads as G major). Mozart K. 545 (the file holds all three
-  movements) comes out as 43 regions, and 38 measures inside the cores of the annotated first-movement
-  regions read in a neighbouring key (F major, G major, A minor, D minor or E minor); no modulation is
-  found near measures 13 (to G), 29 (to C), 41 (to G), 79 or 124 (to C): the first three regions have no cadence
-  arriving in them, so they are tonicizations, and the returns at 79 and 124 are not read. Bach 114 is read as G major, D major from measure 14, G major from measure 16 and D major from
-  measure 20 to the end. Its file declares 4/4 for a 3/4 piece and the analyzer reads the file's meter, so its
-  measures and beat strengths are those of a 4/4 reading: the two perfect authentic cadences of the 3/4 score (m. 20
-  and m. 28) arrive at m. 15 and m. 21, beat 3.5. A region read in a key the music is not in also reads its chords in that key.
-  The profile fits chromatic music less well. A key signature is trusted as a boundary: many exporters
-  write a default C major at tick 0 whatever the key.
+- Key regions are placed on phrases (P42, R-397): a key changes only where a phrase with a cadence in the new key
+  establishes it, so a tonicization inside a phrase stays a tonicization and the same music reads the same. Measured
+  here (`test_key_regions`, no longer `WILL_FAIL`): Clementi Op. 36 No. 1 reads exactly as annotated (C major 1-7, G major
+  8-15, C minor 16-23, C major 24-38; 38 of 38 measures). Mozart K. 545 reads 12 regions and 124 of 146 measures as annotated
+  (84.9%): the first theme, the exposition and its repeat, and the recapitulation from m. 79 (m. 124 on the repeat). The
+  misses are the development after its opening (m. 60 to 69 and 105 to 114 read D minor and F major, annotated G minor: the
+  sequence's D minor phrase ends with the cadence of m. 63) and m. 78 and m. 123, which read C major where the annotation
+  has F major (the phrase 78 to 81 ends with the cadence in C at m. 81). Bach 114 reads G major throughout: it has no cadence
+  until weak-beat cadences are found (L7.4), so no phrase establishes another key. Its file declares 4/4 for a 3/4 piece and the
+  analyzer reads the file's meter, so its measures and beat strengths are those of a 4/4 reading: the two perfect authentic
+  cadences of the 3/4 score (m. 20 and m. 28) arrive at m. 15 and m. 21, beat 3.5. Repeats and melodic returns are recognized
+  (written-out repeats read the same), but a transposed return is not forced to read the same as its source. The profile
+  fits chromatic music less well. A key signature is trusted as a boundary: many exporters write a default C major at tick 0
+  whatever the key.
 - Themes: the reference pieces yield no sentence, period or compound period (17 of Mozart 545's 18 themes and all
   the others are hybrids, one is a repeated phrase), so the sentence, period and compound period cases are tested on
   constructed pieces only. The library's ideas are the nominal two-measure cut, its cadential ending needs the bass
@@ -74,10 +72,9 @@ Where the Analyzer reads a piece differently from its annotation, and why. Back 
   m. 1 to 12 and 13 to 28, end on the half cadence of m. 12 and the perfect authentic cadence of m. 28), Field 1 9 cadences and 12
   phrases, Field 5 1 cadence and 3 phrases. A cadence off a phrase point is not reported, so evaded cadences inside a phrase
   (Field 5 m. 8, Field 1 m. 60) are gone, and the perfect authentic cadences of Clementi 36 at m. 15, 31 and 38 wait for chord
-  readings that are not made yet (m. 14 reads vii°6 in C major, m. 30 beat 4 is merged into the I6/4 span, m. 37 reads iii6). The
-  key regions are still those of the cadence stage, so a key change can be confirmed by a cadence the phrase grid did not claim
-  (Clementi 36, Field 5). Keys wait for P42: Mozart 545 reads 21 key regions and Clementi 36 6, with the key edges where the
-  4-measure windows put them. The grid itself is a library result and is not exported yet; a phrase ended by the 16-measure cap
+  readings that are not made yet (m. 14 reads vii°6 in C major, m. 30 beat 4 is merged into the I6/4 span, m. 37 reads iii6). Since P42 the
+  keys sit on these phrases and the changes are confirmed by the claimed cadences, so Mozart 545 reads 16 cadences and 16 phrases and
+  Field 5 0 cadences (the other pieces are as listed). The grid itself is a library result and is not exported yet; a phrase ended by the 16-measure cap
   has the signal "discontinuity". Field 1's whole-piece grid runs three measures off its annotation (units 1 to 3, 4 to 11, ...).
 - The outer voices in the document are per voice segment (one entry per melody note, several to a chord), but a voice
   segment is cut where the sounding pitch classes change, so melody notes that are all chord tones of one held chord share
