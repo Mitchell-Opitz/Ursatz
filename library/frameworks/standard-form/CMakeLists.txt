@@ -18,6 +18,7 @@ add_library(standard_form
     analysis/analysis_input.c
     analysis/analysis_claim.c
     analysis/analysis_phrase.c
+    analysis/analysis_phrase_grid.c
     analysis/analysis_similarity.c
     analysis/analysis_ideas.c
     analysis/analysis_theme.c
@@ -51,6 +52,7 @@ ursatz_public_headers(standard_form
         analysis/analysis_motive_match.h
         analysis/analysis_motive_shape.h
         analysis/analysis_phrase.h
+        analysis/analysis_phrase_grid.h
         analysis/analysis_similarity.h
         analysis/analysis_theme.h
         continuation_trait.h
