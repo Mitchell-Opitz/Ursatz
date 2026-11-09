@@ -82,8 +82,9 @@
 /*
  * The seventh penalty (CommonPracticeWeightedConfig.seventh_penalty) of the chord identification on harmonic spans (R-376). A span reads
  * the union of a beat or more, so a passing tone completes a seventh over a triad; with this charge a seventh outranks its own triad only
- * when its seventh pitch class carries more than 15% of the span's weight. Used only when harmonic_spans is on; grouping, the key segments
- * and the key regions keep the weighting config as given.
+ * when its seventh pitch class carries more than 15% of the span's weight. Used only when harmonic_spans is on, by the chord identification
+ * and by the grouping (R-379 (1)), which reads a part as one segment and would otherwise let a passing tone complete a seventh there too;
+ * the key segments and the key regions keep the weighting config as given.
  */
 #define ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY 0.15
 
