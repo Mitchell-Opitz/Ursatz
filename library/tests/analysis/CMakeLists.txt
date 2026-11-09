@@ -95,6 +95,12 @@ target_compile_definitions(test_reference_harmony PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME reference_harmony COMMAND test_reference_harmony)
 
+add_executable(test_two_voice_spans test_two_voice_spans.c)
+target_link_libraries(test_two_voice_spans PRIVATE ursatz_chain common_practice_minimal standard_meter)
+target_compile_definitions(test_two_voice_spans PRIVATE
+    URSATZ_TWO_VOICE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/two-voice")
+add_test(NAME two_voice_spans COMMAND test_two_voice_spans)
+
 add_executable(test_weighted_coverage_report test_weighted_coverage_report.c)
 target_link_libraries(test_weighted_coverage_report PRIVATE ursatz_chain common_practice_minimal standard_meter)
 target_compile_definitions(test_weighted_coverage_report PRIVATE
