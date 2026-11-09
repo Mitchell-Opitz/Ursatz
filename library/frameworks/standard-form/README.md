@@ -121,6 +121,8 @@ arrives with the form adapter (L3.6).
 
 `analysis/` also finds motives: recurring short note groups of the outer lines, grouped into families by transposition-invariant interval and rhythm, with inversion, retrograde, augmentation, diminution, fragmentation and variation matched against each family's prototype. See `docs/modules/motive-analysis.md`.
 
+`analysis/` also finds written-out repeats and melodic returns over measures, and lets a phrase grid follow the repeats. See `docs/modules/analysis-repeats.md`.
+
 ## Vocabulary enums
 
 Owned here (moved from `src/semantics/`; type names and values unchanged), each in its own header: `MotiveKind`, `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `ContinuationTrait`, `PhraseLevelForm`, `PhraseLengthChange`, `ExpansionPlacement`, `InternalExpansionTechnique`, `AlternativePathKind`, `ExternalExpansionKind`. `FormLevel` and `SubphraseRole` stay in `src/semantics/` because `src/containers` uses them; `CadenceType` stays because it is shared.

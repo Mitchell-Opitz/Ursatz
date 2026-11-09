@@ -83,6 +83,17 @@ if(URSATZ_FORM_GRID_VALGRIND)
            COMMAND ${URSATZ_FORM_GRID_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_form_analysis_phrase_grid>)
 endif()
 
+add_executable(test_standard_form_analysis_repeats test_analysis_repeats.c)
+target_link_libraries(test_standard_form_analysis_repeats PRIVATE standard_form ursatz_chain)
+add_test(NAME standard_form_analysis_repeats COMMAND test_standard_form_analysis_repeats)
+
+# Memcheck for the repeats test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_FORM_REPEATS_VALGRIND valgrind)
+if(URSATZ_FORM_REPEATS_VALGRIND)
+  add_test(NAME standard_form_analysis_repeats_valgrind
+           COMMAND ${URSATZ_FORM_REPEATS_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_form_analysis_repeats>)
+endif()
+
 add_executable(test_standard_form_analysis_similarity test_analysis_similarity.c)
 target_link_libraries(test_standard_form_analysis_similarity PRIVATE standard_form ursatz_chain)
 add_test(NAME standard_form_analysis_similarity COMMAND test_standard_form_analysis_similarity)
