@@ -229,16 +229,17 @@ stuck more the longer the form: in A minor 3/4 with a given motive none of the s
 | `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
 
 Every completed run passes every check. The share of runs that complete is below 100% for every template but variations
-and rounded binary (rounded binary was 95% until the Analyzer read applied chords, P40 B7; the checks hear the plan
-through the Analyzer: the key check reads the cadences the Analyzer hears, which are not those of the planned chords), so
-the other four tests are `WILL_FAIL`, with the measured shares (the
+(rounded binary was 100% from P40 B7, when the Analyzer read applied chords, until keys from phrases, P42:
+a key change inside a phrase is heard as a tonicization, "the key change at 4/1 is a tonicization, not a modulation";
+the checks hear the plan through the Analyzer: the key check reads the cadences the Analyzer hears, which are not those
+of the planned chords), so the other five tests are `WILL_FAIL`, with the measured shares (at P42; the
 stage is where the last round of a stuck run ended; before the Analyzer: binary 14 of 20, rounded binary 20, ternary 16):
 
 | Template | Runs complete | Of them change key | Stuck at |
 | --- | --- | --- | --- |
-| binary | 11 of 20 (55%) | 9 | melody 5, bass 2, harmony 2 |
-| rounded binary | 20 of 20 (100%, P40 B7; 19 of 20 at P36 B3) | 16 | |
-| ternary | 11 of 20 (55%) | 9 | melody 3, bass 3, harmony 2, structure 1 |
+| binary | 17 of 20 (85%, P42; 18 at its head) | not re-measured | not re-measured |
+| rounded binary | 19 of 20 (95%, P42; 20 of 20 at P40 B7): C major seed 2 | not re-measured | texture 1 |
+| ternary | 18 of 20 (90%, P42) | not re-measured | not re-measured |
 | variations | 20 of 20 (100%) | 16 | |
 | loop | 10 of 20 (50%) | 0 | A minor only, all harmony |
 | layered | 10 of 20 (50%) | 0 | A minor: harmony 10 |
