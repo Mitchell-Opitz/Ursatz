@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
+#include "analysis_phrase_grid.h"
 #include "interpretation/interpretation.h"
 #include "structure/phrase_occurrence.h"
 #include "time/time_span.h"
@@ -47,6 +48,21 @@
  * the last phrase: of 1-2 measures a POST_CADENTIAL_EXTENSION, of 3 or more a CODETTA (the suffix lengths of
  * external_expansion_rules.h). A longer tail, or any tail after a boundary the secondary signal made, is a phrase of its own with
  * no cadence.
+ *
+ * PHRASES ON THE GRID (R-391, standard_form_segment_phrases_on_grid). The points are the same (one per measure with a sounding
+ * soprano note, the goal cadences on them, the stronger when two share a point), and the detector is not used: the boundaries
+ * come from the phrase grid (analysis_phrase_grid.h). A point at measure m is a boundary when
+ *
+ *   (a) m is a unit's last measure or the last measure of the first half of a unit of 8 or 16 (half_measure), and a goal cadence
+ *       is on it: signal CADENCE, the phrase's end_measure is m (not the end of the arrival chord, which the claimed cadences
+ *       of a grid input may hold past it), its span ends with m
+ *   (b) m is a unit's last measure with no goal cadence, and the phrase from the measure after the previous boundary to the
+ *       next unit's last measure would pass 16 measures, or no unit follows: signal DISCONTINUITY. On the grid this signal
+ *       is the 16-measure cap, not a break in the melody (the Analyzer's document schema is unchanged)
+ *
+ * A cadence anywhere else ends nothing. A phrase therefore ends at a claimed cadence on the grid, and a unit end without one is
+ * inside the phrase unless the cap applies. Post-cadential absorption, the tail after the last boundary and the output are as
+ * above.
  *
  * OUTPUT. A kernel PhraseOccurrence per phrase (its region: the ids of its soprano notes; target phrase id
  * "standard-form-phrase-<n>") and an Interpretation targeting the occurrence's id: FrameworkReference standard-form, claim = a
@@ -121,6 +137,14 @@ typedef struct {
 StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput *input, const StandardFormConfig *config,
                                                          StandardFormBoundaryDetector detector, void *detector_context,
                                                          StandardFormPhrases *out);
+/* The longest phrase the grid lets a unit end without a cadence run on to, in measures. */
+#define STANDARD_FORM_GRID_MAX_PHRASE 16
+
+/* Segments the input (finished) into phrases on `grid`, as described above (the detector is not used, so there is none to pass).
+   config may be NULL for the defaults. NULL_ARGUMENT for a NULL grid. On OK, *out is owned by the caller
+   (standard_form_phrases_destroy); otherwise untouched. No notes gives no phrases. */
+StandardFormAnalysisStatus standard_form_segment_phrases_on_grid(const StandardFormInput *input, const StandardFormConfig *config,
+                                                                 const StandardFormPhraseGrid *grid, StandardFormPhrases *out);
 void standard_form_phrases_destroy(StandardFormPhrases *phrases);
 
 /* Reads the claim back out of a phrase Interpretation. False if it is not one. */
