@@ -147,7 +147,7 @@ static void assert_span_starts(const Piece *piece, const HarmonicSpans *spans, c
 enum {
     A2 = 45, G2 = 43, B2 = 47, C3 = 48, D3 = 50, E3 = 52, F3 = 53, G3 = 55, A3 = 57, B3 = 59, C4 = 60, D4 = 62,
     E4 = 64, F4 = 65, G4 = 67, Gs4 = 68, A4 = 69, B4 = 71, C5 = 72, D5 = 74, E5 = 76, F5 = 77, Fs5 = 78, G5 = 79,
-    A5 = 81, C6 = 84
+    A5 = 81, B5 = 83, C6 = 84, Fs3 = 54
 };
 
 /* Clementi m1: C5 E5 C5 G4 G4 over a C3 quarter. One chord, the bass resting while the right hand moves. */
@@ -747,6 +747,21 @@ static void test_a_lone_upper_note_is_no_new_bass(void) {
     harmonic_spans_destroy(&spans);
 }
 
+/* A diminished seventh over its bass is rooted on the bass (R-387): Clementi m6 as in the corpus MIDI. F#3 under E5 and C5 on the
+   last beat scores F# diminished and C diminished seventh alike in every key, and the first key in order read C, whose bass F#
+   is no chord root, so the part was incomplete and the bar stayed one span. Rooted on the bass it is cut at beat 4. */
+static void test_a_diminished_seventh_is_rooted_on_the_bass(void) {
+    Note notes[] = {{C4, 0, 4}, {E5, 0, 4}, {G5, 4, 6}, {E5, 6, 8}, {C5, 8, 12}, {E5, 12, 14}, {C5, 14, 16}, {Fs3, 12, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0, 12};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    assert(spans.bass[1] == Fs3);
+    harmonic_spans_destroy(&spans);
+}
+
 int main(void) {
     test_clementi_m1_is_one_span_over_c3();
     test_clementi_m8_scale_is_one_span_over_g2();
@@ -778,6 +793,7 @@ int main(void) {
     test_a_held_bass_note_is_not_cut();
     test_a_held_bass_under_a_changing_chord_is_one_span();
     test_a_lone_upper_note_is_no_new_bass();
+    test_a_diminished_seventh_is_rooted_on_the_bass();
     test_bad_input_is_refused();
     printf("test_harmonic_spans: ok\n");
     return 0;

@@ -21,7 +21,8 @@
  * THE READING. A part (the cells on one side of a boundary, or a whole measure) is read as ONE segment: the union
  * of its cells' members, held as at the part's start, over its first cell's bass, with require_bass_chord_tone set.
  * It is read in no key: the best chord over all 24 keys (tonic 0 to 11 in major, then in minor; in each key the
- * first ranked candidate of an allowed quality; a later key replaces the best only when strictly higher). The
+ * first ranked candidate of an allowed quality; a later key replaces the best only when strictly higher, or when it ties
+ * the best and is rooted on the bass while the best is not: a diminished seventh over its bass is rooted on the bass, R-387). The
  * allowed qualities are the major, minor and diminished triads, the dominant seventh and the diminished seventh.
  * Two chords a third apart (I and vi) would read as one major or minor seventh at full score, so those sevenths are
  * left out of grouping only (the chain still identifies chords on spans with the full vocabulary); and a home key

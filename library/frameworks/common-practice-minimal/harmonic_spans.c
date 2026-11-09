@@ -109,7 +109,10 @@ static bool allowed_in_grouping(const CommonPracticeRankedChord *chord) {
 }
 
 /* The best chord of the weights over every key: for tonic 0 to 11 in major, then in minor, the first ranked candidate
-   of an allowed quality; a later key replaces the best only when strictly higher. False when no key has one. */
+   of an allowed quality; a later key replaces the best only when strictly higher, or when it ties the best and is rooted on
+   the bass while the best is not (R-387). A diminished seventh has four possible roots and every key scores them alike, so
+   the first key in order picked C over an F# bass, and the bass chord-tone and completeness checks failed. False when no
+   key has one. */
 static HarmonicSpanStatus best_chord_over_keys(const CommonPracticeWeights *weights,
                                                const CommonPracticeWeightedConfig *config,
                                                CommonPracticeRankedChord *best, int *best_tonic, bool *found) {
@@ -128,7 +131,10 @@ static HarmonicSpanStatus best_chord_over_keys(const CommonPracticeWeights *weig
                 if (!allowed_in_grouping(&ranked[i])) {
                     continue;
                 }
-                if (!*found || ranked[i].score > best->score + TIME_TOLERANCE) {
+                bool tie_on_bass = *found && fabs(ranked[i].score - best->score) <= TIME_TOLERANCE &&
+                                   weights->bass_pitch_class >= 0 && ranked[i].root_pitch_class == weights->bass_pitch_class &&
+                                   best->root_pitch_class != weights->bass_pitch_class;
+                if (!*found || ranked[i].score > best->score + TIME_TOLERANCE || tie_on_bass) {
                     *best = ranked[i];
                     *best_tonic = tonic;
                     *found = true;
