@@ -1800,7 +1800,7 @@
                 "target_degree": { "type": "integer", "minimum": 1, "maximum": 7 },
                 "target_tonic": { "type": ["string", "null"] },
                 "kind": { "enum": ["secondary-dominant", "secondary-leading-tone"] },
-                "resolves_to": { "type": "integer", "minimum": 0 },
+                "resolves_to": { "type": ["integer", "null"], "minimum": 0 },
                 "deceptive": { "type": "boolean" },
                 "tonicization_agreement": { "enum": ["agrees", "target_differs", "no_tonicization"] },
                 "tonicization_index": { "type": ["integer", "null"], "minimum": 0 },

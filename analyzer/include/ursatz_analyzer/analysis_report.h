@@ -64,7 +64,8 @@ typedef struct {
     char *target_numeral;       /* owned; the chord tonicized, e.g. "V"; NULL unless applied */
     int target_degree;          /* 1..7: the degree of the local key tonicized; valid only when applied */
     const char *applied_kind;   /* the library's name for the kind: "secondary-dominant" or "secondary-leading-tone" */
-    size_t resolution_entry;    /* index into entries of the segment the chord resolves to; valid only when applied */
+    size_t resolution_entry;    /* index into entries of the segment the chord resolves to, SIZE_MAX when it resolves to none; valid only
+                                   when applied */
     bool deceptive;             /* resolves to the target's submediant, not the target; valid only when applied */
 } AnalysisRomanNumeral;
 

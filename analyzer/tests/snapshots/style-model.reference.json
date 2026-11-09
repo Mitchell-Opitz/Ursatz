@@ -9,1424 +9,1946 @@
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"authentic-unspecified",
-			"count":	3,
-			"total":	36
+			"count":	4,
+			"total":	48
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"deceptive",
 			"count":	1,
-			"total":	36
+			"total":	48
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"half",
-			"count":	5,
-			"total":	36
+			"count":	10,
+			"total":	48
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"imperfect-authentic",
-			"count":	6,
-			"total":	36
+			"count":	9,
+			"total":	48
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"perfect-authentic",
-			"count":	19,
-			"total":	36
+			"count":	20,
+			"total":	48
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"subverted",
-			"count":	2,
-			"total":	36
+			"count":	4,
+			"total":	48
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"I",
 			"count":	170,
-			"total":	463
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"I7",
-			"count":	4,
-			"total":	463
+			"count":	7,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"III+",
 			"count":	2,
-			"total":	463
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"IV",
-			"count":	41,
-			"total":	463
+			"count":	36,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"IV7",
 			"count":	1,
-			"total":	463
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"V",
-			"count":	48,
-			"total":	463
+			"count":	55,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"V/V",
+			"count":	5,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"V/iii",
+			"count":	1,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"V7",
-			"count":	38,
-			"total":	463
+			"count":	50,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"V7/IV",
-			"count":	1,
-			"total":	463
+			"count":	3,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"V7/V",
-			"count":	2,
-			"total":	463
+			"count":	4,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"V7/ii",
-			"count":	2,
-			"total":	463
+			"count":	1,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"V7/vi",
+			"count":	3,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"VI",
-			"count":	2,
-			"total":	463
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-numeral",
-			"label":	"VI7",
-			"count":	2,
-			"total":	463
+			"count":	3,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"VII",
 			"count":	5,
-			"total":	463
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"i",
 			"count":	20,
-			"total":	463
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"ii",
 			"count":	24,
-			"total":	463
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"ii7",
-			"count":	11,
-			"total":	463
+			"count":	10,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"iii",
-			"count":	14,
-			"total":	463
+			"count":	13,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"iii7",
-			"count":	8,
-			"total":	463
+			"count":	1,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"iio",
+			"count":	1,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"iv",
 			"count":	2,
-			"total":	463
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"iv7",
+			"count":	1,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"v",
-			"count":	4,
-			"total":	463
+			"count":	2,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"vi",
-			"count":	27,
-			"total":	463
+			"count":	16,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"vi7",
-			"count":	4,
-			"total":	463
+			"count":	2,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"viio",
-			"count":	27,
-			"total":	463
+			"count":	26,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"viio/IV",
+			"count":	2,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"viio/V",
-			"count":	1,
-			"total":	463
+			"count":	4,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
-			"label":	"viio7/V",
+			"label":	"viio/ii",
 			"count":	1,
-			"total":	463
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"viio/iii",
+			"count":	3,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"viio/vi",
+			"count":	2,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"viio7/VII",
+			"count":	1,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
 			"label":	"viio7/ii",
+			"count":	1,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"viio7/iv",
 			"count":	2,
-			"total":	463
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"viio7/vi",
+			"count":	5,
+			"total":	489
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-numeral",
+			"label":	"viiø7",
+			"count":	4,
+			"total":	489
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-I7",
-			"count":	4,
-			"total":	364
+			"count":	7,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-IV",
-			"count":	29,
-			"total":	364
+			"count":	21,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-V",
-			"count":	22,
-			"total":	364
+			"count":	26,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-V/V",
+			"count":	3,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-V/iii",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-V7",
-			"count":	25,
-			"total":	364
+			"count":	24,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-V7/V",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-V7/vi",
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-ii",
-			"count":	7,
-			"total":	364
+			"count":	11,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-ii7",
 			"count":	6,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-iii",
-			"count":	1,
-			"total":	364
+			"count":	4,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-iii7",
-			"count":	4,
-			"total":	364
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-vi",
-			"count":	9,
-			"total":	364
+			"count":	3,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-vi7",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I-viio",
-			"count":	6,
-			"total":	364
+			"count":	4,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"I-viio7/V",
+			"label":	"I-viio/V",
+			"count":	4,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-viio/iii",
+			"count":	2,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-viio7/ii",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-viio7/vi",
+			"count":	3,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I-viiø7",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"I7-I",
 			"count":	4,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"III+-VI7",
+			"label":	"I7-V",
 			"count":	2,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"I7-vi",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"IV-I",
-			"count":	21,
-			"total":	364
+			"count":	12,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"IV-V",
-			"count":	2,
-			"total":	364
+			"count":	6,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"IV-V7",
+			"count":	2,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"IV-V7/IV",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"IV-i",
 			"count":	1,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"IV-iii",
-			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"IV-vi",
 			"count":	4,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"IV-viio",
 			"count":	4,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"IV7-I",
+			"label":	"IV-viio/IV",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"IV-viio7/vi",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"IV7-ii",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V-I",
-			"count":	33,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"V-III+",
-			"count":	2,
-			"total":	364
+			"count":	35,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V-IV",
-			"count":	1,
-			"total":	364
+			"count":	2,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V-V7",
+			"count":	3,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V-V7/V",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V-i",
+			"count":	3,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V-viiø7",
+			"count":	3,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V/V-V7",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"V-ii7",
+			"label":	"V/V-vi",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"V-vi",
-			"count":	6,
-			"total":	364
+			"label":	"V/V-viio",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"V-vi7",
-			"count":	2,
-			"total":	364
+			"label":	"V/V-viio7/VII",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V7-I",
-			"count":	29,
-			"total":	364
+			"count":	40,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V7-IV",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V7-VI",
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V7-i",
 			"count":	3,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V7-iii",
-			"count":	3,
-			"total":	364
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"V7-viio7/ii",
-			"count":	1,
-			"total":	364
+			"label":	"V7-viio",
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"V7/IV-IV",
+			"label":	"V7-viio/iii",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"V7/ii-V7/V",
+			"label":	"V7/IV-V7/V",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V7/IV-vi",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V7/V-V",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V7/V-V7/IV",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V7/V-viio",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V7/ii-ii",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V7/vi-IV",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"V7/vi-viio/vi",
+			"count":	2,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"VI-V",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"VI-v",
 			"count":	2,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"VII-iio",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"i-V",
 			"count":	2,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"i-V/V",
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"i-V7",
 			"count":	2,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"i-VII",
-			"count":	3,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"i-ii",
-			"count":	1,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"i-v",
 			"count":	2,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"i-iv7",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"i-viio",
 			"count":	2,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"i-viio7/iv",
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii-I",
 			"count":	9,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"ii-IV",
+			"count":	4,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii-V",
 			"count":	6,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii-V7",
-			"count":	4,
-			"total":	364
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii-V7/ii",
 			"count":	1,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"ii-i",
-			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii-iii",
 			"count":	1,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"ii-vi",
-			"count":	2,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii7-I",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii7-V",
-			"count":	3,
-			"total":	364
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"ii7-ii",
+			"label":	"ii7-V7",
 			"count":	2,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"ii7-viio",
-			"count":	4,
-			"total":	364
+			"count":	6,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"iii-I",
-			"count":	5,
-			"total":	364
+			"count":	7,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"iii-IV",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"iii-V7",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"iii-vi",
 			"count":	4,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"iii-viio",
-			"count":	1,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"iii-viio/V",
-			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"iii7-I",
-			"count":	7,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"iii7-IV",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"iv-V",
+			"label":	"iv-III+",
 			"count":	2,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"v-VII",
-			"count":	2,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"v-iv",
 			"count":	2,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"vi-I",
-			"count":	5,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"vi-V",
-			"count":	1,
-			"total":	364
+			"count":	3,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"vi-ii",
-			"count":	8,
-			"total":	364
+			"count":	6,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"vi-viio",
-			"count":	3,
-			"total":	364
+			"label":	"vi-ii7",
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"vi7-V",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"vi7-V7",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"viio-I",
-			"count":	12,
-			"total":	364
+			"count":	10,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"viio-IV7",
+			"label":	"viio-IV",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"viio-V",
-			"count":	1,
-			"total":	364
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"viio-V7",
-			"count":	1,
-			"total":	364
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-2",
-			"label":	"viio-VI",
-			"count":	2,
-			"total":	364
+			"count":	4,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"viio-i",
 			"count":	2,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"viio-iii",
 			"count":	5,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"viio-viio7/ii",
+			"label":	"viio-viio/ii",
 			"count":	1,
-			"total":	364
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"viio/V-vi7",
-			"count":	1,
-			"total":	364
+			"label":	"viio/IV-IV",
+			"count":	2,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
-			"label":	"viio7/V-V7",
+			"label":	"viio/V-I",
+			"count":	2,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio/V-V7/V",
 			"count":	1,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio/ii-ii",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio/iii-I",
+			"count":	2,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio/iii-viio7/vi",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio/vi-I",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio/vi-V7/vi",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio7/VII-VII",
+			"count":	1,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"viio7/ii-ii",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio7/iv-VII",
 			"count":	2,
-			"total":	364
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio7/vi-I",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio7/vi-iii",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viio7/vi-viio",
+			"count":	3,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viiø7-I",
+			"count":	1,
+			"total":	406
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-2",
+			"label":	"viiø7-V7",
+			"count":	3,
+			"total":	406
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-I7-I",
 			"count":	4,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-I7-V",
+			"count":	2,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-I7-vi",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-IV-I",
-			"count":	17,
-			"total":	307
+			"count":	9,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-IV-V",
-			"count":	1,
-			"total":	307
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-IV-V7",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-IV-V7/IV",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-IV-vi",
 			"count":	4,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-IV-viio",
 			"count":	4,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-V-I",
-			"count":	18,
-			"total":	307
+			"count":	17,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-V-IV",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I-V-vi",
+			"label":	"I-V-viiø7",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I-V-vi7",
-			"count":	2,
-			"total":	307
+			"label":	"I-V/V-V7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-V/V-vi",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-V/V-viio",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-V7-I",
-			"count":	22,
-			"total":	307
+			"count":	21,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-V7-IV",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I-V7-iii",
+			"label":	"I-V7-viio",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-V7-viio/iii",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-V7/V-viio",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-V7/vi-viio/vi",
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-ii-I",
 			"count":	5,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I-ii-V",
-			"count":	1,
-			"total":	307
+			"label":	"I-ii-IV",
+			"count":	4,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-ii-iii",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-ii7-I",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-ii7-V",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-ii7-viio",
 			"count":	4,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-iii-I",
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-iii-IV",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-iii-V7",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-iii7-I",
-			"count":	3,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"I-iii7-IV",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-vi-I",
-			"count":	5,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"I-vi-V",
-			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"I-vi-ii",
-			"count":	2,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"I-vi-viio",
-			"count":	1,
-			"total":	307
+			"count":	3,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I-vi7-V",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I-viio-I",
-			"count":	5,
-			"total":	307
+			"label":	"I-viio-V7",
+			"count":	3,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I-viio-iii",
+			"label":	"I-viio/V-I",
+			"count":	2,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-viio/V-V7/V",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I-viio7/V-V7",
+			"label":	"I-viio/iii-I",
+			"count":	2,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-viio7/ii-ii",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-viio7/vi-viio",
+			"count":	3,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"I-viiø7-I",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I7-I-I7",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"I7-I-V",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"I7-I-vi",
+			"label":	"I7-I-viio/iii",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"IV-I-IV",
-			"count":	5,
-			"total":	307
+			"label":	"I7-V-I",
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"IV-I-V",
 			"count":	4,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"IV-I-ii",
+			"label":	"IV-I-V/V",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV-I-V7/V",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"IV-I-ii7",
 			"count":	4,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"IV-I-vi",
-			"count":	2,
-			"total":	307
+			"label":	"IV-I-iii",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV-I-viio/V",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"IV-V-I",
-			"count":	2,
-			"total":	307
+			"count":	4,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"IV-V7-iii",
+			"label":	"IV-V-IV",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV-V-viiø7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV-V7-I",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV-V7-viio",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV-V7/IV-V7/V",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"IV-i-viio",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"IV-vi-ii",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"IV-vi-viio",
+			"label":	"IV-vi-ii7",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"IV-viio-iii",
 			"count":	4,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"IV7-I-iii",
+			"label":	"IV-viio/IV-IV",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV-viio7/vi-iii",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"IV7-ii-V",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V-I-I7",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V-I-IV",
-			"count":	11,
-			"total":	307
+			"count":	9,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V-I-V",
-			"count":	4,
-			"total":	307
+			"count":	10,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V-I-V7",
-			"count":	5,
-			"total":	307
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V-I-ii",
-			"count":	3,
-			"total":	307
+			"count":	4,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V-I-vi",
-			"count":	3,
-			"total":	307
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V-I-viio",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"V-III+-VI7",
-			"count":	2,
-			"total":	307
+			"label":	"V-I-viio/V",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V-IV-I",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V-IV-V7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V-V7-VI",
+			"count":	2,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V-V7-i",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V-i-V7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V-i-iv7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V-viiø7-V7",
+			"count":	3,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V/V-V7-I",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V/V-viio-I",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V/V-viio7/VII-VII",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-I-IV",
-			"count":	7,
-			"total":	307
+			"count":	5,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-I-V",
+			"count":	4,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7-I-V/V",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-I-V7",
-			"count":	9,
-			"total":	307
+			"count":	15,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7-I-V7/vi",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7-I-ii",
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-I-ii7",
 			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"V7-I-vi",
-			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-I-vi7",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-I-viio",
+			"count":	3,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7-I-viio/V",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7-I-viio7/ii",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7-VI-v",
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-i-viio",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7-iii-I",
-			"count":	2,
-			"total":	307
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"V7-iii-viio",
+			"label":	"V7-viio-V7",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"V7-viio7/ii-ii",
+			"label":	"V7-viio-iii",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"V7/IV-IV-iii",
+			"label":	"V7-viio/iii-viio7/vi",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7/IV-V7/V-V7/IV",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7/V-V-viiø7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7/V-V7/IV-vi",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7/V-viio-viio/ii",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"V7/ii-ii-V",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7/vi-IV-viio7/vi",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7/vi-viio/vi-I",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"V7/vi-viio/vi-V7/vi",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"VI-V-i",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"VI-v-iv",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"i-V-i",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"i-V/V-viio7/VII",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"i-V7-i",
 			"count":	2,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"i-ii-i",
-			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"i-v-VII",
-			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"i-viio-i",
 			"count":	2,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"i-viio7/iv-VII",
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-I-V",
 			"count":	3,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-I-V7",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-I-ii",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"ii-I-iii",
+			"count":	3,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-I-iii7",
-			"count":	3,
-			"total":	307
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"ii-I-viio",
-			"count":	1,
-			"total":	307
+			"label":	"ii-IV-V",
+			"count":	4,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-V-I",
 			"count":	6,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-V7-I",
-			"count":	4,
-			"total":	307
+			"count":	2,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-V7/ii-ii",
 			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"ii-i-VII",
-			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii-iii-I",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii7-I-V7",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii7-V-I",
-			"count":	3,
-			"total":	307
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"ii7-ii-V7",
+			"label":	"ii7-V7-I",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"ii7-viio-I",
-			"count":	2,
-			"total":	307
+			"count":	6,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"iii-I-IV",
-			"count":	1,
-			"total":	307
+			"count":	3,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"iii-I-iii7",
+			"label":	"iii-I-V7/vi",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"iii-I-ii7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"iii-I-viio/V",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"iii-IV-I",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"iii-V7-I",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"iii-vi-ii",
 			"count":	4,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"iii-viio-I",
-			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"iii-viio/V-vi7",
-			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"iii7-I-I7",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"iii7-I-IV",
+			"label":	"v-iv-III+",
 			"count":	2,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"iii7-I-V7",
-			"count":	4,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"iii7-IV-V",
-			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"iv-V-III+",
-			"count":	2,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"v-iv-V",
-			"count":	2,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"vi-I-V",
-			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"vi-I-V7",
 			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"vi-I-viio",
-			"count":	3,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"vi-V-I",
-			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"vi-ii-I",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"vi-ii-V",
 			"count":	4,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"vi-ii-vi",
+			"label":	"vi-ii7-viio",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"vi-viio-I",
-			"count":	3,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"vi7-V-ii7",
+			"label":	"vi7-V-V7/V",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"viio-I-I7",
+			"label":	"vi7-V7-I",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"viio-I-IV",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"viio-I-V",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"viio-I-V7",
+			"label":	"viio-I-V/iii",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"viio-I-ii",
-			"count":	1,
-			"total":	307
+			"count":	3,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"viio-I-ii7",
+			"label":	"viio-IV-I",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"viio-IV7-I",
-			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"viio-V-vi",
-			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"viio-V7-viio7/ii",
-			"count":	1,
-			"total":	307
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"viio-VI-v",
+			"label":	"viio-V-V7",
 			"count":	2,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio-V7-I",
+			"count":	4,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"viio-i-V",
 			"count":	2,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"viio-iii-I",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"viio-iii-vi",
 			"count":	4,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"viio-viio7/ii-ii",
+			"label":	"viio-viio/ii-ii",
 			"count":	1,
-			"total":	307
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
-			"label":	"viio7/V-V7-I",
+			"label":	"viio/V-I-vi",
 			"count":	1,
-			"total":	307
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio/V-I-viio7/vi",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio/V-V7/V-V",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio/ii-ii-I",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio/iii-I-viio7/vi",
+			"count":	2,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio/iii-viio7/vi-I",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio/vi-I-IV",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio/vi-V7/vi-IV",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio7/VII-VII-iio",
+			"count":	1,
+			"total":	361
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
 			"label":	"viio7/ii-ii-I",
-			"count":	2,
-			"total":	307
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio7/vi-I-I7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio7/vi-iii-I",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viio7/vi-viio-I",
+			"count":	3,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viiø7-I-I7",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
+			"label":	"viiø7-V7-I",
+			"count":	3,
+			"total":	361
 		}, {
 			"dimension":	"melody",
 			"category":	"contour",
@@ -2241,31 +2763,37 @@
 			"dimension":	"harmony",
 			"category":	"harmonic-rhythm",
 			"label":	"0",
-			"count":	20,
+			"count":	18,
 			"total":	318
 		}, {
 			"dimension":	"harmony",
 			"category":	"harmonic-rhythm",
 			"label":	"1",
-			"count":	189,
+			"count":	184,
 			"total":	318
 		}, {
 			"dimension":	"harmony",
 			"category":	"harmonic-rhythm",
 			"label":	"2",
-			"count":	75,
+			"count":	83,
 			"total":	318
 		}, {
 			"dimension":	"harmony",
 			"category":	"harmonic-rhythm",
 			"label":	"3",
-			"count":	21,
+			"count":	20,
 			"total":	318
 		}, {
 			"dimension":	"harmony",
 			"category":	"harmonic-rhythm",
 			"label":	"4",
-			"count":	13,
+			"count":	11,
+			"total":	318
+		}, {
+			"dimension":	"harmony",
+			"category":	"harmonic-rhythm",
+			"label":	"5",
+			"count":	2,
 			"total":	318
 		}, {
 			"dimension":	"melody",
@@ -2474,12 +3002,6 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"#4 5 6 7 b2 2 #4 6",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"#4 5 7 1 2 1 7 1",
 			"count":	1,
 			"total":	164
@@ -2493,12 +3015,6 @@
 			"dimension":	"melody",
 			"category":	"motive-degrees",
 			"label":	"#4 5 b6 6 b7 7 1 b2",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"#4 b3 2 1 b7 5 2 5",
 			"count":	1,
 			"total":	164
 		}, {
@@ -2558,6 +3074,12 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
+			"label":	"1 2 3 #4 5 7 2 1",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
 			"label":	"1 2 3 1 4 2 3 4",
 			"count":	1,
 			"total":	164
@@ -2606,6 +3128,12 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
+			"label":	"1 7 6 5 3 2 2 3",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
 			"label":	"1 7 6 5 3 2 3 #4",
 			"count":	1,
 			"total":	164
@@ -2642,12 +3170,6 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"2 #4 6 5 #4 b3 2 1",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"2 1 2 1 2 1 2 1",
 			"count":	1,
 			"total":	164
@@ -2666,13 +3188,7 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"2 1 b7 6 b7 1 2 1",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"2 3 #4 b6 6 3 #4 b6",
+			"label":	"2 2 3 4 5 6 7 b2",
 			"count":	1,
 			"total":	164
 		}, {
@@ -2690,12 +3206,6 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"2 3 4 3 2 1 b7 6",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"2 3 4 3 2 3 5 7",
 			"count":	1,
 			"total":	164
@@ -2708,6 +3218,18 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
+			"label":	"2 3 4 5 6 7 1 7",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 4 5 6 7 b2 2",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
 			"label":	"2 4 2 7 5 3 5 7",
 			"count":	1,
 			"total":	164
@@ -2715,6 +3237,24 @@
 			"dimension":	"melody",
 			"category":	"motive-degrees",
 			"label":	"2 5 1 2 3 4 5 1",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 5 3",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 5 3 1 2 5 5",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 6 7 b2 2 3 4 5",
 			"count":	1,
 			"total":	164
 		}, {
@@ -2768,19 +3308,25 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
+			"label":	"3 1 2 5 3 1 2 5",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
 			"label":	"3 1 3 2 5 1 2 3",
 			"count":	1,
 			"total":	164
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"3 1 6 4 5 1 6 4",
+			"label":	"3 2 1 7 1 2 5 6",
 			"count":	1,
 			"total":	164
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"3 2 1 7 1 2 5 6",
+			"label":	"3 2 2 3 4 5 6 7",
 			"count":	1,
 			"total":	164
 		}, {
@@ -2936,6 +3482,12 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
+			"label":	"4 3 2 1 7 5 3 1",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
 			"label":	"4 3 2 b2 2 3 4 3",
 			"count":	1,
 			"total":	164
@@ -2997,7 +3549,7 @@
 			"dimension":	"melody",
 			"category":	"motive-degrees",
 			"label":	"4 5 4 5 5 3 1 2",
-			"count":	1,
+			"count":	2,
 			"total":	164
 		}, {
 			"dimension":	"melody",
@@ -3044,25 +3596,7 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"5 #4 3 2 7 6 6 7",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"5 1 2 3 4 5 1 1",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"5 1 6",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"5 1 6 4 5 1 1",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3110,7 +3644,7 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"5 6 7 b2 2 #4 6 5",
+			"label":	"5 6 7 b2 2 6 7 b2",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3122,25 +3656,19 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
+			"label":	"5 7 2 1 7 b6 5 4",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
 			"label":	"5 b3 1 b3 4 2 7 2",
 			"count":	1,
 			"total":	164
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"6 3 #4 b6 6 7 1 2",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"6 4 5 1 2 3 1 4",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"6 4 5 1 6 4 5 1",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3182,7 +3710,7 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"6 6 7 1 2 3 #4 b6",
+			"label":	"6 5 4 3 4 5 6 5",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3194,19 +3722,13 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"6 7 1 2 3 #4 5 #4",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"6 7 1 2 3 #4 b6 6",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"6 7 1 2 3 4 5 6",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 7 1 7 6 5 4 3",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3231,6 +3753,12 @@
 			"dimension":	"melody",
 			"category":	"motive-degrees",
 			"label":	"7 1 2 1 7 1 b3 1",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 2 3 #4 5 7 2",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3302,7 +3830,13 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"7 6 6 7 1 2 3 #4",
+			"label":	"7 5 3 1 2 5 3 1",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 b6 5 4 b3 1 5 1",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3393,18 +3927,6 @@
 			"dimension":	"melody",
 			"category":	"motive-degrees",
 			"label":	"b6 b6 5 4 b3 2 b7 4",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"b7 1 b7 1 1 6 4 5",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"b7 6 5 4 3 1 6 4",
 			"count":	1,
 			"total":	164
 		}, {
@@ -4370,591 +4892,597 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
-			"label":	"#4 3:appoggiatura 2",
-			"count":	2,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"#4 3:passing 2",
-			"count":	2,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"#4 6:appoggiatura -",
+			"label":	"#4 5:appoggiatura 6",
 			"count":	1,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"#4 b6:passing -",
-			"count":	4,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"#4 b6:passing 6",
-			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"- #4:appoggiatura 5",
 			"count":	2,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"- 1:appoggiatura 2",
-			"count":	2,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"- 2:passing 3",
-			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"- 3:appoggiatura #4",
 			"count":	2,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 3:neighbor 2",
+			"count":	6,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"- 4:appoggiatura 3",
 			"count":	1,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"- 4:appoggiatura 5",
+			"count":	4,
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 5:passing 6",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"- b6:passing 6",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"- b7:appoggiatura 6",
 			"count":	1,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"- b7:passing 1",
-			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 #4:appoggiatura -",
 			"count":	2,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 2:escape-tone -",
+			"count":	1,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 2:escape-tone 3",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 2:escape-tone 5",
 			"count":	1,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 2:neighbor -",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 2:passing -",
-			"count":	7,
-			"total":	479
+			"count":	5,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 2:passing 3",
-			"count":	18,
-			"total":	479
+			"count":	22,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 2:passing b3",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 4:appoggiatura 3",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 4:appoggiatura 5",
 			"count":	1,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"1 4:neighbor 3",
-			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 5:appoggiatura -",
 			"count":	2,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"1 7:neighbor -",
-			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 7:neighbor 1",
-			"count":	7,
-			"total":	479
+			"count":	8,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 7:passing -",
-			"count":	2,
-			"total":	479
+			"count":	6,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 7:passing 6",
-			"count":	10,
-			"total":	479
+			"count":	12,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 b2:passing -",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 b3:appoggiatura -",
 			"count":	1,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"1 b7:appoggiatura 6",
-			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 b7:passing -",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 b7:passing 6",
-			"count":	6,
-			"total":	479
+			"count":	4,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"1 b7:passing b6",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 1:neighbor 2",
 			"count":	16,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 1:passing -",
 			"count":	10,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 1:passing 7",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 1:passing b7",
 			"count":	6,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
-			"label":	"2 3:passing #4",
-			"count":	4,
-			"total":	479
+			"label":	"2 3:neighbor 2",
+			"count":	22,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 3:passing -",
-			"count":	6,
-			"total":	479
+			"count":	9,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 3:passing 4",
-			"count":	10,
-			"total":	479
+			"count":	15,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 b2:neighbor 2",
 			"count":	8,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"2 b3:passing -",
 			"count":	6,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 #4:passing 5",
-			"count":	6,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"3 #4:passing b6",
-			"count":	8,
-			"total":	479
+			"count":	3,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 2:appoggiatura 1",
-			"count":	2,
-			"total":	479
+			"count":	4,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 2:neighbor 3",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 2:passing 1",
-			"count":	15,
-			"total":	479
+			"count":	19,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 2:passing b2",
 			"count":	8,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 4:escape-tone -",
-			"count":	2,
-			"total":	479
+			"count":	1,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 4:neighbor 3",
 			"count":	15,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"3 4:passing 5",
 			"count":	12,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 3:appoggiatura -",
 			"count":	2,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 3:neighbor -",
+			"count":	4,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 3:neighbor 4",
-			"count":	3,
-			"total":	479
+			"count":	2,
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 3:passing -",
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 3:passing 2",
 			"count":	6,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 5:anticipation 6",
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 5:escape-tone -",
-			"count":	4,
-			"total":	479
+			"count":	5,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 5:escape-tone 1",
 			"count":	1,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 5:escape-tone 6",
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 5:neighbor 4",
 			"count":	4,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 5:passing -",
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 5:passing 6",
-			"count":	14,
-			"total":	479
+			"count":	16,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 b3:passing -",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"4 b3:passing 2",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 #4:escape-tone -",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 #4:neighbor 5",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
-			"label":	"5 #4:passing 3",
+			"label":	"5 2:appoggiatura -",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 4:neighbor 5",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 4:passing -",
-			"count":	8,
-			"total":	479
+			"count":	9,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 4:passing 3",
-			"count":	6,
-			"total":	479
+			"count":	8,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 4:passing b3",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 6:passing -",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 6:passing 7",
-			"count":	21,
-			"total":	479
+			"count":	23,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 6:passing b7",
 			"count":	3,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"5 b6:passing 6",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"6 5:passing -",
-			"count":	3,
-			"total":	479
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"6 5:passing 4",
-			"count":	11,
-			"total":	479
+			"count":	17,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"6 7:passing -",
-			"count":	2,
-			"total":	479
+			"count":	1,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"6 7:passing 1",
-			"count":	26,
-			"total":	479
+			"count":	29,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
-			"label":	"6 b7:escape-tone -",
-			"count":	1,
-			"total":	479
+			"label":	"6 7:passing b2",
+			"count":	8,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"6 b7:neighbor 6",
 			"count":	1,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"6 b7:passing 7",
 			"count":	4,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 1:appoggiatura 2",
+			"count":	1,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"7 1:passing -",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"7 1:passing 2",
 			"count":	16,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 6:appoggiatura 5",
+			"count":	2,
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 6:escape-tone -",
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"7 6:neighbor 7",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"7 6:passing 5",
 			"count":	16,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 b2:passing -",
+			"count":	4,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"7 b2:passing 2",
-			"count":	2,
-			"total":	479
+			"count":	5,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b2 2:passing -",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b2 2:passing b3",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b3 2:passing 1",
 			"count":	4,
-			"total":	479
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-nct-figure",
-			"label":	"b6 5:passing -",
-			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b6 5:passing 4",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b6 6:passing b7",
 			"count":	4,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b6 b3:appoggiatura -",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b7 1:passing 2",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b7 4:appoggiatura -",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b7 6:passing -",
-			"count":	4,
-			"total":	479
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b7 6:passing 5",
 			"count":	3,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b7 7:passing 1",
 			"count":	4,
-			"total":	479
+			"total":	534
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b7 b6:passing -",
+			"count":	2,
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-nct-figure",
 			"label":	"b7 b6:passing 5",
 			"count":	2,
-			"total":	479
+			"total":	534
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-rhythm",
@@ -5416,223 +5944,235 @@
 			"category":	"note-density",
 			"label":	"1",
 			"count":	3,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"2",
-			"count":	2,
-			"total":	46
+			"count":	3,
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"3",
 			"count":	8,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"3/2",
 			"count":	6,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"4+",
-			"count":	17,
-			"total":	46
+			"count":	18,
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"7/2",
-			"count":	10,
-			"total":	46
+			"count":	14,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"1",
+			"count":	9,
+			"total":	52
+		}, {
+			"dimension":	"form",
+			"category":	"phrase-length",
+			"label":	"10",
 			"count":	5,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"11",
-			"count":	1,
-			"total":	46
+			"count":	4,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"12",
-			"count":	7,
-			"total":	46
+			"count":	2,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"13",
 			"count":	1,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"15",
 			"count":	1,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"2",
-			"count":	5,
-			"total":	46
+			"count":	7,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"28",
 			"count":	1,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"3",
 			"count":	3,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"4",
-			"count":	2,
-			"total":	46
+			"count":	3,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"5",
-			"count":	4,
-			"total":	46
+			"count":	6,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"6",
-			"count":	6,
-			"total":	46
+			"count":	5,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"7",
-			"count":	7,
-			"total":	46
-		}, {
-			"dimension":	"form",
-			"category":	"phrase-length",
-			"label":	"8",
-			"count":	2,
-			"total":	46
-		}, {
-			"dimension":	"form",
-			"category":	"phrase-length",
-			"label":	"9",
-			"count":	1,
-			"total":	46
+			"count":	5,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"0",
-			"count":	1,
-			"total":	46
+			"count":	2,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"10",
-			"count":	1,
-			"total":	46
+			"count":	2,
+			"total":	52
+		}, {
+			"dimension":	"melody",
+			"category":	"phrase-range",
+			"label":	"11",
+			"count":	2,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"12",
-			"count":	3,
-			"total":	46
+			"count":	1,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"13",
-			"count":	2,
-			"total":	46
+			"count":	1,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"15",
 			"count":	1,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"16",
-			"count":	2,
-			"total":	46
+			"count":	4,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"17",
-			"count":	4,
-			"total":	46
+			"count":	5,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"19",
-			"count":	6,
-			"total":	46
+			"count":	4,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"20",
-			"count":	3,
-			"total":	46
+			"count":	2,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"21",
 			"count":	3,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"24",
-			"count":	8,
-			"total":	46
+			"count":	5,
+			"total":	52
+		}, {
+			"dimension":	"melody",
+			"category":	"phrase-range",
+			"label":	"25",
+			"count":	1,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"26",
 			"count":	4,
-			"total":	46
+			"total":	52
+		}, {
+			"dimension":	"melody",
+			"category":	"phrase-range",
+			"label":	"27",
+			"count":	1,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"29",
 			"count":	3,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"36",
 			"count":	1,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
-			"label":	"5",
-			"count":	1,
-			"total":	46
+			"label":	"7",
+			"count":	2,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"8",
-			"count":	1,
-			"total":	46
+			"count":	4,
+			"total":	52
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"9",
-			"count":	2,
-			"total":	46
+			"count":	4,
+			"total":	52
 		}, {
 			"dimension":	"form",
 			"category":	"section-letters",
@@ -5642,39 +6182,51 @@
 		}, {
 			"dimension":	"form",
 			"category":	"section-letters",
-			"label":	"A B A' C D",
+			"label":	"A B C A' D E F A'' G H I J A''' K L M",
 			"count":	1,
 			"total":	5
 		}, {
 			"dimension":	"form",
 			"category":	"section-letters",
-			"label":	"A B C D E F G H I J",
-			"count":	2,
+			"label":	"A B C D E",
+			"count":	1,
+			"total":	5
+		}, {
+			"dimension":	"form",
+			"category":	"section-letters",
+			"label":	"A B C D E F G H I",
+			"count":	1,
 			"total":	5
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"0",
-			"count":	21,
-			"total":	46
+			"count":	26,
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"1",
 			"count":	2,
-			"total":	46
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"2",
-			"count":	4,
-			"total":	46
+			"count":	5,
+			"total":	52
+		}, {
+			"dimension":	"rhythm",
+			"category":	"syncopation-per-phrase",
+			"label":	"3",
+			"count":	2,
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"4+",
-			"count":	19,
-			"total":	46
+			"count":	17,
+			"total":	52
 		}, {
 			"dimension":	"rhythm",
 			"category":	"tempo",
@@ -5703,13 +6255,7 @@
 			"dimension":	"form",
 			"category":	"theme-form",
 			"label":	"hybrid",
-			"count":	14,
-			"total":	15
-		}, {
-			"dimension":	"form",
-			"category":	"theme-form",
-			"label":	"period",
-			"count":	1,
+			"count":	15,
 			"total":	15
 		}]
 }

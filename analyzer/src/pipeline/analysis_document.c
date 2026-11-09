@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -1116,7 +1117,9 @@ static cJSON *applied_json(DocBuild *build, const AnalysisReport *report, const 
                                           target_tonic, report->key_regions[entry->region].prefer_flats))
                                                          : cJSON_CreateNull()) &&
           json_add(object, "kind", cJSON_CreateString(roman->applied_kind)) &&
-          json_add(object, "resolves_to", cJSON_CreateNumber((double)roman->resolution_entry)) &&
+          json_add(object, "resolves_to", roman->resolution_entry == SIZE_MAX
+                                          ? cJSON_CreateNull()
+                                          : cJSON_CreateNumber((double)roman->resolution_entry)) &&
           json_add(object, "deceptive", cJSON_CreateBool(roman->deceptive)) &&
           json_add(object, "tonicization_agreement", cJSON_CreateString(agreement)) &&
           json_add(object, "tonicization_index", touching ? cJSON_CreateNumber((double)touching_index) : cJSON_CreateNull()) &&

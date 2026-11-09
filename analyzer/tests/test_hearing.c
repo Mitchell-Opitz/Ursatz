@@ -40,8 +40,8 @@ typedef struct {
     size_t entries;
     size_t cadences;
 } Reading;
-static const Reading WITHOUT_SPANS[] = {{155, 5}, {606, 14}, {205, 15}, {268, 13}, {169, 12}};
-static const Reading WITH_SPANS[] = {{48, 1}, {224, 13}, {47, 5}, {90, 15}, {82, 2}};
+static const Reading WITHOUT_SPANS[] = {{155, 5}, {606, 15}, {205, 15}, {268, 13}, {169, 12}};
+static const Reading WITH_SPANS[] = {{54, 0}, {210, 23}, {46, 5}, {107, 17}, {82, 3}};
 
 static int failures = 0;
 

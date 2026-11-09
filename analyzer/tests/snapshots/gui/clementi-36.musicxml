@@ -2436,17 +2436,6 @@
         <type>quarter</type>
         <staff>1</staff>
       </note>
-      <note xml:id="midi-note-195">
-        <chord/>
-        <pitch>
-          <step>G</step>
-          <octave>5</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
       <note>
         <rest/>
         <duration>2</duration>
@@ -2527,6 +2516,33 @@
         <type>eighth</type>
         <staff>2</staff>
         <beam number="1">end</beam>
+      </note>
+      <backup>
+        <duration>8</duration>
+      </backup>
+      <note xml:id="midi-note-195">
+        <pitch>
+          <step>G</step>
+          <octave>5</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>3</voice>
+        <type>quarter</type>
+        <staff>1</staff>
+      </note>
+      <note>
+        <rest/>
+        <duration>2</duration>
+        <voice>3</voice>
+        <type>quarter</type>
+        <staff>1</staff>
+      </note>
+      <note>
+        <rest/>
+        <duration>4</duration>
+        <voice>3</voice>
+        <type>half</type>
+        <staff>1</staff>
       </note>
     </measure>
     <measure number="24">
@@ -3118,31 +3134,9 @@
         <type>quarter</type>
         <staff>1</staff>
       </note>
-      <note xml:id="midi-note-247">
-        <chord/>
-        <pitch>
-          <step>G</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
       <note xml:id="midi-note-249">
         <pitch>
           <step>D</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-250">
-        <chord/>
-        <pitch>
-          <step>F</step>
           <octave>4</octave>
         </pitch>
         <duration>2</duration>
@@ -3160,32 +3154,10 @@
         <type>quarter</type>
         <staff>1</staff>
       </note>
-      <note xml:id="midi-note-252">
-        <chord/>
-        <pitch>
-          <step>E</step>
-          <octave>4</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
       <note xml:id="midi-note-254">
         <pitch>
           <step>B</step>
           <octave>3</octave>
-        </pitch>
-        <duration>2</duration>
-        <voice>1</voice>
-        <type>quarter</type>
-        <staff>1</staff>
-      </note>
-      <note xml:id="midi-note-255">
-        <chord/>
-        <pitch>
-          <step>D</step>
-          <octave>4</octave>
         </pitch>
         <duration>2</duration>
         <voice>1</voice>
@@ -3228,6 +3200,49 @@
         <voice>2</voice>
         <type>quarter</type>
         <staff>2</staff>
+      </note>
+      <backup>
+        <duration>8</duration>
+      </backup>
+      <note xml:id="midi-note-247">
+        <pitch>
+          <step>G</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>3</voice>
+        <type>quarter</type>
+        <staff>1</staff>
+      </note>
+      <note xml:id="midi-note-250">
+        <pitch>
+          <step>F</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>3</voice>
+        <type>quarter</type>
+        <staff>1</staff>
+      </note>
+      <note xml:id="midi-note-252">
+        <pitch>
+          <step>E</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>3</voice>
+        <type>quarter</type>
+        <staff>1</staff>
+      </note>
+      <note xml:id="midi-note-255">
+        <pitch>
+          <step>D</step>
+          <octave>4</octave>
+        </pitch>
+        <duration>2</duration>
+        <voice>3</voice>
+        <type>quarter</type>
+        <staff>1</staff>
       </note>
     </measure>
     <measure number="31">

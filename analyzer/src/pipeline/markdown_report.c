@@ -666,7 +666,9 @@ static bool render_applied_chords(StringBuilder *sb, const cJSON *document, cons
         const char *kind = json_string_member(applied, "kind");
         const char *resolution = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(applied, "deceptive"))
                                      ? "deceptive"
-                                     : "to the target";
+                                     : (cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(applied, "resolves_to"))
+                                            ? "no resolution"
+                                            : "to the target");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
              sb_appendf(sb, " | %s (%s) | %s (%s) | %s | ", json_string_member(applied, "numeral"),
