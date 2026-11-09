@@ -587,6 +587,41 @@ static void test_applied_dominant_sevenths_in_minor(void) {
     common_practice_weighted_result_destroy(&result);
 }
 
+/* context_next false (R-379 (3)): an incomplete segment reads no chord from the segment that follows it, and still reads the one before. */
+static void test_context_next_false_reads_no_chord_from_the_next_segment(void) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    assert(config.context_next);
+    config.context_next = false;
+
+    CommonPracticeMember m0[2] = {note("g0", 55, false, 0.5, S, NULL, 0.0), note("e0", 64, false, 0.5, S, NULL, 0.0)};
+    CommonPracticeMember m1[3] = {note("c", 48, false, 1.0, S, NULL, 0.5), note("e", 52, false, 1.0, S, NULL, 0.5),
+                                  note("g", 55, false, 1.0, S, NULL, 0.5)};
+    CommonPracticeSegment segments[2] = {segment(m0, 2, "s0"), segment(m1, 3, "s1")};
+    CommonPracticeWeightedResults results = {0};
+    assert(common_practice_identify_weighted_sequence(segments, 2, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(results.items[0].context == COMMON_PRACTICE_CONTEXT_NONE && results.items[0].best.degree == 3); /* its own reading: iii */
+    assert(results.items[1].best.degree == 1);
+    common_practice_weighted_results_destroy(&results);
+
+    /* the previous segment's chord is still taken */
+    CommonPracticeMember p0[3] = {note("c", 48, false, 1.0, S, NULL, 0.0), note("e", 52, false, 1.0, S, NULL, 0.0),
+                                  note("g", 55, false, 1.0, S, NULL, 0.0)};
+    CommonPracticeMember p1[2] = {note("g1", 55, false, 0.5, W, NULL, 1.0), note("e1", 64, false, 0.5, W, NULL, 1.0)};
+    CommonPracticeSegment pair[2] = {segment(p0, 3, "p0"), segment(p1, 2, "p1")};
+    assert(common_practice_identify_weighted_sequence(pair, 2, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(results.items[1].context == COMMON_PRACTICE_CONTEXT_PREVIOUS && results.items[1].best.degree == 1);
+    common_practice_weighted_results_destroy(&results);
+
+    /* the default reads the next chord, as before */
+    config.context_next = true;
+    assert(common_practice_identify_weighted_sequence(segments, 2, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &results) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(results.items[0].context == COMMON_PRACTICE_CONTEXT_NEXT && results.items[0].best.degree == 1);
+    common_practice_weighted_results_destroy(&results);
+}
+
 int main(void) {
     test_a_required_bass_chord_tone_beats_the_upper_voices();
     test_a_segment_without_a_bass_override_reads_as_before();
@@ -612,6 +647,7 @@ int main(void) {
     test_a_diminished_seventh_is_rooted_by_where_it_resolves_in_major();
     test_a_diminished_seventh_is_rooted_by_where_it_resolves_in_minor();
     test_applied_dominant_sevenths_in_minor();
+    test_context_next_false_reads_no_chord_from_the_next_segment();
     printf("test_weighted_chord_identification: ok\n");
     return 0;
 }

@@ -717,6 +717,34 @@ static void test_the_ranking_without_the_flag_is_unchanged(void) {
     }
 }
 
+/* A resolved accent (R-382) carries no weight, nor does it count in the total, and it is no bass; unflagged members weigh as before. */
+static void test_a_resolved_accent_carries_no_weight(void) {
+    CommonPracticeMember members[3] = {member(48, false, 1.0, BEAT_STRENGTH_STRONG), member(67, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(77, false, 0.25, BEAT_STRENGTH_STRONG)}; /* C3, G4 and an F5 accent */
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    CommonPracticeWeights with_accent;
+    assert(common_practice_weight_segment(members, 3, &config, &with_accent, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(close_to(with_accent.pitch_class[5], 0.25) && close_to(with_accent.total, 1.1 + 1.0 + 0.25));
+
+    members[2].resolves_in_segment = true;
+    CommonPracticeWeights flagged;
+    assert(common_practice_weight_segment(members, 3, &config, &flagged, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(flagged.pitch_class[5] == 0.0 && close_to(flagged.total, 1.1 + 1.0));
+    assert(close_to(flagged.pitch_class[0], with_accent.pitch_class[0]) && close_to(flagged.pitch_class[7], with_accent.pitch_class[7]));
+    assert(flagged.bass_pitch == 48 && flagged.bass_pitch_class == 0);
+
+    /* the lowest unflagged member is the bass: a flagged lowest note is none */
+    CommonPracticeMember low_accent[2] = {member(36, false, 0.25, BEAT_STRENGTH_STRONG), member(55, false, 1.0, BEAT_STRENGTH_STRONG)};
+    low_accent[0].resolves_in_segment = true;
+    CommonPracticeWeights over_g;
+    assert(common_practice_weight_segment(low_accent, 2, &config, &over_g, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
+    assert(over_g.bass_pitch == 55 && over_g.pitch_class[0] == 0.0 && close_to(over_g.total, 1.1));
+
+    /* nothing flagged (the zero value): as before. A member built from a note is never flagged. */
+    CommonPracticeMember plain = member(60, false, 1.0, BEAT_STRENGTH_STRONG);
+    assert(!plain.resolves_in_segment);
+}
+
 int main(void) {
     test_default_config();
     test_a_pure_triad_weighs_its_three_pitch_classes();
@@ -752,6 +780,7 @@ int main(void) {
     test_an_applied_chord_must_hold_a_required_bass();
     test_a_diatonic_chord_ranks_ahead_of_an_applied_one_on_a_tie();
     test_the_ranking_without_the_flag_is_unchanged();
+    test_a_resolved_accent_carries_no_weight();
     printf("test_weighted_identification: ok\n");
     return 0;
 }
