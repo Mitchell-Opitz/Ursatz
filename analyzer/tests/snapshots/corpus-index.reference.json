@@ -3,7 +3,7 @@
   "schema_version": 1,
   "analyzer_version": "0.7.0",
   "ursatz_commit": "<ursatz_commit>",
-  "document_schema_version": 10,
+  "document_schema_version": 11,
   "input_dir": "<input_dir>",
   "pieces": [
     {

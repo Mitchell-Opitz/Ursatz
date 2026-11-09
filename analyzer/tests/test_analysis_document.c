@@ -110,7 +110,7 @@ int main(void) {
 
     char *json = analysis_document_render(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 10,\n", 26) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 11,\n", 26) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = analysis_document_render(path, &notes, &report);
@@ -125,7 +125,7 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 10);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 11);
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(cJSON_IsObject(metadata));

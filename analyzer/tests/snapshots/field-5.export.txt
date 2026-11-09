@@ -98,6 +98,7 @@ m9
  P1 S2 V6: r @1 q, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 q., r @10 q, A#3 @12 e
  P1 S2 V9: r @1 h., G3 @7 e, r @8 q, r @10 q.
  chord Bb I @1 c=0.00
+ return of m1-m4 (m9-m12), 0 semitones
  chord Edim/G vii°6/V @7 c=0.72
 
 m10
@@ -425,6 +426,7 @@ m38
  P1 S2 V6: D4 @1 e, r @2 q, r @4 q., F3 @7 e, F3 @8 e, F3 @9 e, F3 @10 e, F3 @11 e, F3 @12 e
  P1 S2 V9: r @1 h., A#3 @7 e, A#3 @8 e, A#3 @9 e, A#3 @10 e, A#3 @11 e, A#3 @12 e
  chord Bb I @1 c=0.85
+ return of m18-m21 (m38-m41), 0 semitones
  motive b m38 @2-@10
  motive c m38 @2-@5
  motive d m38 @4-@12

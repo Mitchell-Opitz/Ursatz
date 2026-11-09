@@ -1,5 +1,5 @@
 {
-	"schema_version":	10,
+	"schema_version":	11,
 	"metadata":	{
 		"source_file":	"Field 5.mid",
 		"note_count":	1083,
@@ -44954,6 +44954,93 @@
 			}],
 		"returns":	[]
 	},
+	"repeats":	[{
+			"framework":	"standard-form-v1",
+			"span":	{
+				"start":	{
+					"num":	12,
+					"den":	1
+				},
+				"end":	{
+					"num":	18,
+					"den":	1
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	9,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	13,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				}
+			},
+			"note_ids":	[126, 139, 143, 152, 156, 159, 166, 170, 180, 182, 187],
+			"label":	"return",
+			"uncertainty":	0,
+			"kind":	"return",
+			"earlier":	{
+				"first":	1,
+				"last":	4
+			},
+			"later":	{
+				"first":	9,
+				"last":	12
+			},
+			"transposition":	0
+		}, {
+			"framework":	"standard-form-v1",
+			"span":	{
+				"start":	{
+					"num":	111,
+					"den":	2
+				},
+				"end":	{
+					"num":	123,
+					"den":	2
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	38,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	42,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				}
+			},
+			"note_ids":	[793, 818, 833, 848, 853, 878, 883, 908, 913, 937, 952, 967, 972, 997, 1002, 1027],
+			"label":	"return",
+			"uncertainty":	0,
+			"kind":	"return",
+			"earlier":	{
+				"first":	18,
+				"last":	21
+			},
+			"later":	{
+				"first":	38,
+				"last":	41
+			},
+			"transposition":	0
+		}],
 	"motives":	[{
 			"framework":	"standard-form-v1",
 			"span":	{

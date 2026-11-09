@@ -1,5 +1,5 @@
 {
-	"schema_version":	10,
+	"schema_version":	11,
 	"metadata":	{
 		"source_file":	"Field 1.mid",
 		"note_count":	1191,
@@ -62933,6 +62933,7 @@
 			}],
 		"returns":	[]
 	},
+	"repeats":	[],
 	"motives":	[{
 			"framework":	"standard-form-v1",
 			"span":	{

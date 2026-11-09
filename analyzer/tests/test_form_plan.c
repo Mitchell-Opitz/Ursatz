@@ -24,6 +24,14 @@
  * 545 (first movement, measures 1 to 146) finds 6 returns, though its themes are hybrids and repeated phrases only.
  */
 
+/* A repeat or return of the library (P42, R-400): the later run restates the earlier one, at a pitch level apart for a
+   return. */
+typedef struct {
+    const char *kind; /* "repeat" or "return" */
+    int earlier_first, earlier_last, later_first, later_last;
+    int transposition;
+} RepeatExpected;
+
 typedef struct {
     const char *name;
     const char *file; /* in the corpus directory (MIDI) or the MusicXML directory */
@@ -31,7 +39,22 @@ typedef struct {
     size_t sections;
     size_t returns;
     const char *labels; /* the section labels, in order */
+    const RepeatExpected *repeats; /* pinned when set: the library's repeats and returns, in its order */
+    size_t repeat_count;
 } Piece;
+
+/* Mozart 545: the exposition's two statements (1-28 and 29-56), the return of 1-8 at 70-77 a fifth up, and the
+   development's repeat (57-101 and 102-146). Clementi 36: 1-4 returns at 24-27 an octave lower, 8-12 at 31-35 a fourth
+   lower. The other pieces' claims are checked for structure only. */
+static const RepeatExpected MOZART_REPEATS[] = {
+    {"repeat", 1, 28, 29, 56, 0},
+    {"return", 1, 8, 70, 77, 5},
+    {"repeat", 57, 101, 102, 146, 0},
+};
+static const RepeatExpected CLEMENTI_REPEATS[] = {
+    {"return", 1, 4, 24, 27, -12},
+    {"return", 8, 12, 31, 35, -7},
+};
 
 /* The five reference pieces are pinned on harmonic spans (they were 2, 6, 10, 5, 4 sections and 1, 3, 6, 0, 4 returns on
    sonority segments); the form input reads the span lines until P41. After P40 (applied chords, the held bass fix) Clementi 36
@@ -41,8 +64,8 @@ typedef struct {
    10 sections (the returns stay 45) and Field 1 3 sections. */
 static const Piece PIECES[] = {
     {"Bach 114", "Bach 114.mid", true, 1, 0, "A"},
-    {"Clementi 36", "Clementi 36.mid", true, 2, 1, "A A'"},
-    {"Mozart 545", "Mozart 545.mid", true, 10, 45, "A A' B C A'' D E F A''' G"},
+    {"Clementi 36", "Clementi 36.mid", true, 2, 1, "A A'", CLEMENTI_REPEATS, 2},
+    {"Mozart 545", "Mozart 545.mid", true, 10, 45, "A A' B C A'' D E F A''' G", MOZART_REPEATS, 3},
     {"Field 1", "Field 1.mid", true, 3, 0, "A B C"},
     {"Field 5", "Field 5.mid", true, 1, 0, "A"},
     {"sentence", "sentence.musicxml", false, 1, 0, "A"},
@@ -292,6 +315,44 @@ static void check_returns(const cJSON *document, const cJSON *form, size_t note_
     }
 }
 
+/* The document's "repeats": one claim per repeat or return of the report, in its order, over the later run. Each is
+   labelled by its kind, has no uncertainty, has its earlier run end before the later begins, and for a repeat has no
+   transposition. A pinned piece lists exactly the expected runs. */
+static void check_repeats(const Piece *piece, const cJSON *document, const AnalysisReport *report, size_t note_count) {
+    const cJSON *repeats = test_json_member(document, "repeats");
+    CHECK(cJSON_IsArray(repeats));
+    CHECK((size_t)cJSON_GetArraySize(repeats) == report->repeat_count);
+    if (piece->repeats) {
+        CHECK(report->repeat_count == piece->repeat_count);
+    }
+    size_t index = 0;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, repeats) {
+        check_claim(item, note_count);
+        const char *kind = test_json_string(item, "kind");
+        CHECK(strcmp(kind, "repeat") == 0 || strcmp(kind, "return") == 0);
+        CHECK(strcmp(test_json_string(item, "label"), kind) == 0);
+        CHECK(test_json_number(item, "uncertainty") == 0);
+        const cJSON *earlier = test_json_member(item, "earlier");
+        const cJSON *later = test_json_member(item, "later");
+        CHECK(test_json_number(earlier, "first") <= test_json_number(earlier, "last"));
+        CHECK(test_json_number(later, "first") <= test_json_number(later, "last"));
+        CHECK(test_json_number(earlier, "last") < test_json_number(later, "first"));
+        CHECK(strcmp(kind, "repeat") != 0 || test_json_number(item, "transposition") == 0);
+        CHECK(cJSON_GetArraySize(test_json_member(item, "note_ids")) > 0);
+        if (piece->repeats && index < piece->repeat_count) {
+            const RepeatExpected *expected = &piece->repeats[index];
+            CHECK(strcmp(kind, expected->kind) == 0);
+            CHECK((int)test_json_number(earlier, "first") == expected->earlier_first);
+            CHECK((int)test_json_number(earlier, "last") == expected->earlier_last);
+            CHECK((int)test_json_number(later, "first") == expected->later_first);
+            CHECK((int)test_json_number(later, "last") == expected->later_last);
+            CHECK((int)test_json_number(item, "transposition") == expected->transposition);
+        }
+        index++;
+    }
+}
+
 static void run_piece(const Piece *piece, const char *midi_dir, const char *musicxml_dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", piece->midi ? midi_dir : musicxml_dir, piece->file);
@@ -332,6 +393,7 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
             check_sections(document, form, notes.count);
             check_returns(document, form, notes.count);
         }
+        check_repeats(piece, document, &report, notes.count);
         cJSON_Delete(document);
     }
     analysis_report_destroy(&report);

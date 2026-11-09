@@ -148,6 +148,7 @@ m24
  modulation C minor to C major (m24-m38)
  chord C I @1 c=0.00
  phrase 4 m24-m27 c=0.04 | form A'
+ return of m1-m4 (m24-m27), an octave lower
 
 m25
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G4 @4 q
@@ -188,6 +189,7 @@ m31
  P1 S1 V1: C4 @1 e, D4 @1.5 e, E4 @2 e, F4 @2.5 e, G4 @3 e, A4 @3.5 e, B4 @4 e, C5 @4.5 e
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.94
+ return of m8-m12 (m31-m35), -7 semitones
 
 m32
  P1 S1 V1: D4 @1 q, D5 @2 q, D5 @3 q, D5 @4 q

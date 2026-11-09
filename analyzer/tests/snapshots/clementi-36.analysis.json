@@ -1,5 +1,5 @@
 {
-	"schema_version":	10,
+	"schema_version":	11,
 	"metadata":	{
 		"source_file":	"Clementi 36.mid",
 		"note_count":	333,
@@ -37403,6 +37403,93 @@
 				}
 			}]
 	},
+	"repeats":	[{
+			"framework":	"standard-form-v1",
+			"span":	{
+				"start":	{
+					"num":	23,
+					"den":	1
+				},
+				"end":	{
+					"num":	27,
+					"den":	1
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	24,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	28,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				}
+			},
+			"note_ids":	[202, 204, 205, 207, 208, 210, 211, 213, 214, 217, 218, 221, 222, 223, 224, 227, 228, 229],
+			"label":	"return",
+			"uncertainty":	0,
+			"kind":	"return",
+			"earlier":	{
+				"first":	1,
+				"last":	4
+			},
+			"later":	{
+				"first":	24,
+				"last":	27
+			},
+			"transposition":	-12
+		}, {
+			"framework":	"standard-form-v1",
+			"span":	{
+				"start":	{
+					"num":	30,
+					"den":	1
+				},
+				"end":	{
+					"num":	35,
+					"den":	1
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	31,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	36,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				}
+			},
+			"note_ids":	[258, 259, 260, 261, 262, 263, 264, 265, 268, 271, 274, 279, 280, 281, 282, 283, 284, 285, 286, 289, 292, 295, 300, 301, 302, 303, 304, 305, 306],
+			"label":	"return",
+			"uncertainty":	0,
+			"kind":	"return",
+			"earlier":	{
+				"first":	8,
+				"last":	12
+			},
+			"later":	{
+				"first":	31,
+				"last":	35
+			},
+			"transposition":	-7
+		}],
 	"motives":	[],
 	"melody":	[{
 			"framework":	"standard-counterpoint-v1",

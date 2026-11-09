@@ -303,6 +303,64 @@ static void check_bach_piece(void) {
     piece_release(&piece);
 }
 
+/* Repeats and returns of the library (P42, R-400): one line at the first measure of each later run, naming the earlier run
+   and the later one, and for a return the transposition. */
+static void check_repeat_pieces(void) {
+    static const struct {
+        const char *file;
+        const char *name;
+        struct {
+            const char *measure;
+            const char *line;
+        } lines[3];
+        size_t count;
+    } PIECES[] = {
+        {"Mozart 545.mid", "Mozart 545.mid",
+         {{"29", " repeat of m1-m28 (m29-m56)\n"},
+          {"70", " return of m1-m8 (m70-m77), 5 semitones\n"},
+          {"102", " repeat of m57-m101 (m102-m146)\n"}},
+         3},
+        {"Clementi 36.mid", "Clementi 36.mid",
+         {{"24", " return of m1-m4 (m24-m27), an octave lower\n"},
+          {"31", " return of m8-m12 (m31-m35), -7 semitones\n"}},
+         2},
+    };
+    for (size_t p = 0; p < sizeof(PIECES) / sizeof(PIECES[0]); p++) {
+        char path[512];
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, PIECES[p].file);
+        Piece piece;
+        if (!piece_load(&piece, path, PIECES[p].name)) {
+            CHECK(false, "cannot analyze %s", path);
+            continue;
+        }
+        char *text = export_range(&piece, NULL, 0, 0);
+        if (text) {
+            size_t lines = 0;
+            for (const char *at = strstr(text, "\n repeat of "); at; at = strstr(at + 1, "\n repeat of ")) {
+                lines++;
+            }
+            for (const char *at = strstr(text, "\n return of "); at; at = strstr(at + 1, "\n return of ")) {
+                lines++;
+            }
+            CHECK(lines == PIECES[p].count, "%s: %zu repeat or return lines, expected %zu", PIECES[p].name, lines,
+                  PIECES[p].count);
+            for (size_t i = 0; i < PIECES[p].count; i++) {
+                CHECK(block_has(text, PIECES[p].lines[i].measure, PIECES[p].lines[i].line), "%s m%s: the line %s",
+                      PIECES[p].name, PIECES[p].lines[i].measure, PIECES[p].lines[i].line);
+            }
+            free(text);
+        }
+        /* A range that opens after the later run's first measure leaves its line out. */
+        char *range = export_range(&piece, NULL, 3, 4);
+        if (range) {
+            CHECK(strstr(range, " repeat of ") == NULL && strstr(range, " return of ") == NULL,
+                  "%s: no repeat line in measures 3 and 4", PIECES[p].name);
+            free(range);
+        }
+        piece_release(&piece);
+    }
+}
+
 static void check_refusals(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/pickup.musicxml", URSATZ_MUSICXML_DIR);
@@ -334,8 +392,8 @@ static void check_refusals(void) {
     char *older = malloc(strlen(piece.document) + 1);
     if (older) {
         strcpy(older, piece.document);
-        char *version = strstr(older, "\"schema_version\": 10");
-        CHECK(version != NULL, "the document states schema_version 10");
+        char *version = strstr(older, "\"schema_version\": 11");
+        CHECK(version != NULL, "the document states schema_version 11");
         if (version) {
             version[strlen("\"schema_version\": ")] = '8';
             CHECK(analyzer_text_export_piece(&piece.notes, older, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,
@@ -367,6 +425,7 @@ int main(void) {
     check_pickup_piece();
     check_triplet_piece();
     check_bach_piece();
+    check_repeat_pieces();
     check_refusals();
     return failures == 0 ? 0 : 1;
 }

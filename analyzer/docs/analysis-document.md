@@ -5,7 +5,7 @@ The structure of the analysis JSON document: top level, metadata, meter, sources
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
 `--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v10.schema.json`](../schema/analysis-document.v10.schema.json)
+[`schema/analysis-document.v11.schema.json`](../schema/analysis-document.v11.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render_result` from
 `<ursatz_analyzer/analysis_document.h>`. The document is an export of an `AnalyzerResult`
 (see [analysis-result.md](analysis-result.md)); `analysis_document_render` over a notes and report pair gives the
@@ -16,9 +16,9 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v10 content |
+| Key | Type | v11 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `10`. |
+| `schema_version` | integer | Always `11`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
@@ -34,6 +34,7 @@ newline. The same input and build always give the same bytes.
 | `phrases` | array of phrase claims | Filled: the library's standard-form phrases, with their ideas, subphrases, phrase model and expansions. See below. |
 | `themes` | array of theme claims | Optional, after `phrases`. Filled: the library's themes (sentences, periods, hybrids, compound periods, repeated phrases). See below. |
 | `form` | form object or null | Filled: the tree of sections, phrases, subphrases and ideas, and the thematic returns. See below; `null` when the library found no phrases. |
+| `repeats` | array of repeat claims | Filled, right after `form`: the library's repeats and returns, in its order. See below; empty when it found none. |
 | `motives` | array of motive claims | Filled: the library's motive families with every occurrence and their development. See below. |
 | `melody` | array of melody claims | Filled: the melody of each phrase, read by the library's melody adapter. See below. |
 | `rhythm` | array of rhythm claims | Filled: the meter fit, then the library's density, syncopation, hemiola, hypermeter and tuplet results, one flat list labelled by kind. See below. |
@@ -203,6 +204,7 @@ Each claim section lives in its own file.
 | Phrases | [form.md](analysis-document/form.md#phrases) |
 | Themes | [form.md](analysis-document/form.md#themes) |
 | Form plan | [form.md](analysis-document/form.md#form-plan) |
+| Repeats and returns | [form.md](analysis-document/form.md#repeats-and-returns) |
 | Motives | [motive-and-melody.md](analysis-document/motive-and-melody.md#motives) |
 | Melody | [motive-and-melody.md](analysis-document/motive-and-melody.md#melody) |
 | Rhythm and meter | [rhythm-and-texture.md](analysis-document/rhythm-and-texture.md#rhythm-and-meter) |

@@ -258,6 +258,7 @@ static bool collect_pass(AnalyzerPass *pass) {
     RUN_STAGE(ANALYZER_STAGE_METER_CHECK, meter_check_stage_collect(notes, report));
     RUN(form_stage_read(&pass->form, notes, &pass->input, pass->library));
     RUN(form_stage_collect(&pass->form, report));
+    RUN(form_stage_collect_repeats(&pass->form, report));
     RUN(harmony_stage_collect_phrase_model(&pass->harmony, report));
     RUN_STAGE(ANALYZER_STAGE_FORM_PLAN, form_plan_stage_collect(&pass->form, report));
     RUN(motive_stage_read(&pass->motives, &pass->input, pass->library));
