@@ -35,8 +35,8 @@ check(InspectorModel.formatValue(null) === "none" && InspectorModel.formatValue(
 check(InspectorModel.formatValue([43, 44]) === "43, 44" && InspectorModel.formatValue([]) === "none", "a list joins its values");
 
 /* header */
-const cadence = model("cadences", 0);
-const cadenceClaim = layer("cadences").items[0].claim;
+const cadence = model("cadences", 2);
+const cadenceClaim = layer("cadences").items[2].claim;
 check(cadence.header.layerLabel === "Cadences" && cadence.header.color === layer("cadences").color, "the header names the layer and its color");
 check(cadence.header.text === "PAC", "the header title is the item text");
 check(cadence.header.label === "perfect-authentic", "the claim label shows when it differs from the title");
@@ -101,8 +101,10 @@ check(subphrases.items[0].start === 0 && subphrases.items[0].end === 4, "a sub-c
 check(subphrases.items[0].location === "m1 b1 to m5 b1", "a sub-claim has its formatted location");
 const measures = phraseRows.find((r) => r.key === "measures");
 check(measures.kind === "group" && measures.rows.map((r) => r.key).join() === "first,last", "an object without a span is a group of rows");
-check(phraseRows.find((r) => r.key === "cadence").text === "none", "a null field reads none");
-check(phraseRows.find((r) => r.key === "phrase_model").text === "none", "an empty list reads none");
+const emptyPhraseClaim = layer("phrases").items.find((i) => i.claim.label === "phrase" && i.claim.cadence === null && i.claim.phrase_model.length === 0).claim;
+const emptyPhraseRows = InspectorModel.buildInspectorModel({ key: "phrases/1", text: "Phrase 2", claim: emptyPhraseClaim }, layer("phrases")).evidence;
+check(emptyPhraseRows.find((r) => r.key === "cadence").text === "none", "a null field reads none");
+check(emptyPhraseRows.find((r) => r.key === "phrase_model").text === "none", "an empty list reads none");
 
 const progression = layer("progressions").items[0];
 const progressionModel = InspectorModel.buildInspectorModel(progression, layer("progressions"));
@@ -149,6 +151,6 @@ check(InspectorModel.filterItems(spans, "SHORT").length === 1, "filtering ignore
 check(InspectorModel.filterItems(spans, "short one").length === 1, "filtering matches the label");
 check(InspectorModel.filterItems(spans, "  ").length === 3, "a blank query keeps everything");
 check(InspectorModel.filterItems(spans, "zzz").length === 0, "no match gives nothing");
-check(InspectorModel.locationOf(cadenceItems[0]) === "m26 b4 to m27 b4", "locationOf formats an item's location");
+check(InspectorModel.locationOf(cadenceItems[2]) === "m26 b4 to m27 b4", "locationOf formats an item's location");
 
 process.exit(failures === 0 ? 0 : 1);
