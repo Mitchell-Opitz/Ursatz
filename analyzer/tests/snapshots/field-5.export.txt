@@ -14,7 +14,7 @@ m1 12/8
  P1 S2 V7: r @1 h.., C#4 @8 e, r @9 e, r @10 q.
  key Bb major c=0.08 (m1-m5)
  chord Bb I @1 c=0.00
- phrase 1 m1-m28 c=0.18 | form A
+ phrase 1 m1-m16 c=0.75 | form A
  form A m1-m43 c=0.18
  chord Dbdim/G vii°6/4/iii @7 c=1.00
 
@@ -88,7 +88,6 @@ m8
  P1 S2 V7: r @1 e, F4 @2 e, r @3 e, D#3 @4 e, r @5 q, D3 @7 e, r @8 q, C3 @10 e, r @11 q
  key Bb major c=0.33 (m8-m26)
  chord F/Eb V @1 c=0.53
- cadence subverted m8 @7 c=0.11
  chord Bb/D I6 @7 c=0.67
  chord F7/C V4/3 @10 c=0.95
 
@@ -192,6 +191,7 @@ m17
  P1 S2 V7: r @1 h, C4 @5 e, r @6 e, r @7 h, D#4 @11 e, r @12 e
  P1 S2 V9: r @1 q., D#3 @4 q., r @7 q., r @10 q, A3 @12 e
  chord Bb/D I6 @1 c=0.84
+ phrase 2 m17-m28 c=0.18 | form A
 
 m18
  P1 S1 V1: A#4 @1 e, E4 @2 e, F4 @3 e, F#4 @4 e, G4 @5 e, G#4 @6 e, A4 @7 e, A#4 @8 e, B4 @9 e, C5 @10 e, C#5 @11 e, D5 @12 e
@@ -336,7 +336,7 @@ m29
  key F major c=0.19 (m29-m31)
  tonicization F major (m29-m31)
  chord Dm7/C vi4/2 @1 c=0.99
- phrase 2 m29-m43 c=0.50 | form A
+ phrase 3 m29-m43 c=0.75 | form A
  chord C7/G V4/3 @10 c=0.98
 
 m30
@@ -391,7 +391,6 @@ m34
  P1 S2 V6: r @1 h., F3 @7 e, r @8 q, r @10 q.
  P1 S2 V7: r @1 h.., C4 @8 e, r @9 e, r @10 q.
  chord Bb/F I6/4 @1 c=0.29
- cadence DC m35 @1 c=0.15
  chord F V @7 c=0.62
 
 m35

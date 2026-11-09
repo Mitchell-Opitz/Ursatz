@@ -40,8 +40,10 @@ typedef struct {
     size_t entries;
     size_t cadences;
 } Reading;
-static const Reading WITHOUT_SPANS[] = {{155, 5}, {606, 15}, {205, 15}, {268, 13}, {169, 12}};
-static const Reading WITH_SPANS[] = {{54, 0}, {210, 23}, {46, 5}, {107, 17}, {82, 3}};
+/* The cadences are those claimed at the phrase points since Ursatz P41 (R-390): without spans they were 5, 15, 15, 13, 12 and with
+   spans 0, 23, 5, 17, 3; the entries did not move. */
+static const Reading WITHOUT_SPANS[] = {{155, 2}, {606, 9}, {205, 7}, {268, 8}, {169, 3}};
+static const Reading WITH_SPANS[] = {{54, 0}, {210, 15}, {46, 4}, {107, 9}, {82, 1}};
 
 static int failures = 0;
 
