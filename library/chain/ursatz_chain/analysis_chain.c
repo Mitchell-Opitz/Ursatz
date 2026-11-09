@@ -476,7 +476,8 @@ static int resolved_home(const AnalysisChain *chain) {
     return chain->pass.have_regions && chain->pass.regions.region_count > 0 ? chain->pass.regions.regions[0].key_index : -1;
 }
 
-static AnalysisChainStatus cadence_stage(AnalysisChain *chain) {
+/* On the grid the key changes are confirmed after the claim, by the cadences claimed (R-399), not here. */
+static AnalysisChainStatus cadence_stage(AnalysisChain *chain, bool confirm) {
     Pass *p = &chain->pass;
     size_t count = chain->count;
     if (chain_build_harmony_segments(&chain->segs, count, chain->notes->map, p->tonal_inputs, p->romans, &chain->segment_lines,
@@ -491,7 +492,7 @@ static AnalysisChainStatus cadence_stage(AnalysisChain *chain) {
     p->have_cadences = true;
     chain->home = resolved_home(chain);
     if (chain_add_boundary_cadences(p->prepared, count, &p->regions, chain->home, &p->cadences) != CHAIN_INPUT_OK ||
-        chain_confirm_key_changes(&p->regions, chain->segs.starts, &p->cadences) != CHAIN_INPUT_OK) {
+        (confirm && chain_confirm_key_changes(&p->regions, chain->segs.starts, &p->cadences) != CHAIN_INPUT_OK)) {
         return ANALYSIS_CHAIN_ERR_CADENCES;
     }
     return ANALYSIS_CHAIN_OK;
@@ -574,6 +575,9 @@ static AnalysisChainStatus form_stage(AnalysisChain *chain, bool final) {
         if (status != ANALYSIS_CHAIN_OK) {
             return status;
         }
+        if (chain_confirm_key_changes(&p->regions, chain->segs.starts, &p->cadences) != CHAIN_INPUT_OK) {
+            return ANALYSIS_CHAIN_ERR_CADENCES;
+        }
     }
     if (chain_build_form_input(chain->notes, &chain->segs, &chain->voice_segs, &chain->lines, chain->config.first_measure, last,
                                &p->cadences, &p->form_input) != CHAIN_INPUT_OK) {
@@ -634,7 +638,8 @@ static AnalysisChainStatus run_pass(AnalysisChain *chain, const MusicalTime *con
         return ANALYSIS_CHAIN_ERR_NUMERALS;
     }
     if (wants(chain, ANALYSIS_CHAIN_STAGE_CADENCES)) {
-        AnalysisChainStatus status = cadence_stage(chain);
+        bool on_grid = wants(chain, ANALYSIS_CHAIN_STAGE_FORM) && chain->config.phrase_grid && final;
+        AnalysisChainStatus status = cadence_stage(chain, !on_grid);
         if (status != ANALYSIS_CHAIN_OK) {
             return status;
         }
