@@ -83,6 +83,8 @@ misses: Clementi m7 b2 (C major, the chain reads A minor, numeral ii6 in G; insi
 
 P40 B5 turns the applied chords on in the chain (`AnalysisChainConfig.applied_chords`, R-380): the identification ranks V/x, V7/x, vii°/x and vii°7/x beside the diatonic chords and the numerals name them, with the diatonic re-check off. Chorale harness after it (chord root, quality, Roman numeral, numeral in the chain's key, key): 89.5%, 83.9%, 76.4%, 55.7%, 70.7% (85.5%, 75.0%, 69.9%, 53.6%, 69.1% before), against the guards of 84.5%, 67.2% and 67.4%; the baseline was re-recorded. The bars of R-371 hold. Of the annotation's time slices, 28 hold an applied chord and the chain's numeral matches 12 of them; it marks 62 slices as applied. Mozart 545 reads 21 key regions, 23 cadences and 27 phrases (25, 17 and 25 before); Clementi 36 reads 6 key regions (a G major m20 to 22 returns).
 
+P40 B6a makes a resolved accent need a bass that outlasts the step (R-388): struck block chords, I then IV, are no longer read as accents over the first bass. Chorale harness after it (chord root, quality, Roman numeral, numeral in the chain's key, key): 89.5%, 84.0%, 76.5%, 55.8%, 70.7% (89.5%, 83.9%, 76.4%, 55.7%, 70.7% before), against the guards of 84.5%, 67.2% and 67.4%; the baseline was re-recorded. The bars of R-371 hold. Only Bach 114 moves on the corpus (54 spans, 52 before).
+
 ## Harmonic spans
 
 P39 reads chords on harmonic spans (`AnalysisChainConfig.harmonic_spans`, default on) with a seventh penalty of 0.15

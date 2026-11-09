@@ -169,8 +169,9 @@ static int pitch_class_of(int pitch) {
 }
 
 /* The member that resolves member `m`: the first of m's voice attacked after m (by more than TIME_TOLERANCE), when it is attacked
-   inside the window, one or two semitones from m, and a member on the bass pitch sounds at `start` and still sounds when it is
-   attacked. SIZE_MAX when m has no such resolution. */
+   inside the window, one or two semitones from m, and a member on the bass pitch sounds at `start` and still sounds after it is
+   attacked (its end later than that onset by more than TIME_TOLERANCE): a bass that ends as the step lands holds nothing. SIZE_MAX
+   when m has no such resolution. */
 static size_t accent_resolution(const CommonPracticeMember *members, size_t count, size_t m, double start, double end,
                                 int bass_pitch) {
     const CommonPracticeMember *accent = &members[m];
@@ -201,7 +202,7 @@ static size_t accent_resolution(const CommonPracticeMember *members, size_t coun
             continue;
         }
         double release = (members[b].held ? start : members[b].onset) + members[b].duration;
-        if (release >= members[r].onset - TIME_TOLERANCE) {
+        if (release > members[r].onset + TIME_TOLERANCE) {
             return r;
         }
     }

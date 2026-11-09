@@ -663,6 +663,24 @@ static void test_a_bass_that_stops_before_the_resolution_flags_nothing(void) {
     assert(flagged_pitches(notes, voices, COUNT(notes), 0, 16, G2, flagged) == 0);
 }
 
+/* A bass that ends as the step lands holds nothing: block chords I then IV, each note struck on its beat, are not accents over
+   the first bass. The E4 and G4 of the I are not flagged against the F4 and A4 of the IV, and the bar stays four spans. */
+static void test_a_bass_that_ends_at_the_resolution_flags_nothing(void) {
+    Note notes[] = {{C3, 0, 4},  {E4, 0, 4},  {G4, 0, 4},  {C5, 0, 4},  {F3, 4, 8},   {F4, 4, 8},   {A4, 4, 8},   {C5, 4, 8},
+                    {G2, 8, 12}, {B3, 8, 12}, {D4, 8, 12}, {F4, 8, 12}, {C3, 12, 16}, {E4, 12, 16}, {G4, 12, 16}, {C5, 12, 16}};
+    const char *voices[] = {"b", "t", "a", "s", "b", "t", "a", "s", "b", "t", "a", "s", "b", "t", "a", "s"};
+    int flagged[MAX_MEMBERS];
+    assert(flagged_pitches(notes, voices, COUNT(notes), 0, 8, C3, flagged) == 0);
+    Piece piece;
+    build_voiced(&piece, notes, voices, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0, 4, 8, 12};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    assert(spans.bass[0] == C3 && spans.bass[1] == F3);
+    harmonic_spans_destroy(&spans);
+}
+
 /* Direct cases of harmonic_span_mark_resolved_accents: bad input, no voice ids, no bass; every flag is cleared first. */
 static void test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_without_voices(void) {
     Note notes[] = {{G2, 0, 16}, {E5, 0, 4}, {D5, 4, 16}};
@@ -851,6 +869,7 @@ int main(void) {
     test_a_chord_tone_that_steps_away_is_not_flagged();
     test_a_held_accent_into_the_window_is_flagged();
     test_a_bass_that_stops_before_the_resolution_flags_nothing();
+    test_a_bass_that_ends_at_the_resolution_flags_nothing();
     test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_without_voices();
     test_a_held_bass_note_is_not_cut();
     test_a_held_bass_under_a_changing_chord_is_one_span();
