@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
+#include "analysis_repeats.h"
 
 /*
  * The phrase grid (R-389): a piece is first cut into units of 4, 8 or 16 measures, the phrases in Michelle's sense, and only
@@ -76,5 +77,15 @@ typedef struct {
    finished. On OK, *out is owned by the caller (standard_form_phrase_grid_destroy); otherwise untouched. No notes: no units. */
 StandardFormAnalysisStatus standard_form_find_phrase_grid(const StandardFormInput *input, StandardFormPhraseGrid *out);
 void standard_form_phrase_grid_destroy(StandardFormPhraseGrid *grid);
+
+/* Lets the grid follow written-out repeats (R-400). For each REPEAT of `repeats` (returns are ignored), in order: when the earlier
+   span is tiled by whole units (the first unit starts on earlier_first, or is elided and starts on earlier_first - 1; a unit ends
+   on earlier_last), the unit before the later span ends on later_first - 1 and a unit ends on later_last, the units after that
+   unit up to the one ending on later_last are replaced by copies of the earlier span's units moved by later_first - earlier_first
+   (first, counted first, last and half measures; the elided flag and the lengths kept). Otherwise the grid is unchanged for that
+   repeat. A repeat whose earlier span does not end before its later span starts is skipped. NULL_ARGUMENT for a NULL argument;
+   ALLOC on failure, the grid untouched. */
+StandardFormAnalysisStatus standard_form_phrase_grid_follow_repeats(StandardFormPhraseGrid *grid,
+                                                                    const StandardFormRepeats *repeats);
 
 #endif

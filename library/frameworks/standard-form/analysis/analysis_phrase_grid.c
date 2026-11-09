@@ -382,3 +382,99 @@ StandardFormAnalysisStatus standard_form_find_phrase_grid(const StandardFormInpu
     *out = grid;
     return STANDARD_FORM_ANALYSIS_OK;
 }
+
+/* The index of the unit that ends on `measure`, or -1. Units end on strictly rising measures. */
+static long unit_ending_on(const StandardFormGridUnit *units, size_t count, int measure) {
+    for (size_t i = 0; i < count; i++) {
+        if (units[i].last_measure == measure) {
+            return (long)i;
+        }
+    }
+    return -1;
+}
+
+/* The index of the unit that starts the tiling of a span starting on `first`, or -1. */
+static long unit_starting_span(const StandardFormGridUnit *units, size_t count, int first) {
+    for (size_t i = 0; i < count; i++) {
+        if ((units[i].first_measure == first && !units[i].elided) || (units[i].first_measure == first - 1 && units[i].elided)) {
+            return (long)i;
+        }
+    }
+    return -1;
+}
+
+/* Replaces the units after the unit ending on later_first - 1 up to the unit ending on later_last with the earlier span's units
+   moved to the later span. *units is replaced (and *count set) only on success; false on allocation failure. */
+static bool follow_one(StandardFormGridUnit **units, size_t *count, const StandardFormRepeat *repeat, bool *failed) {
+    if (repeat->earlier_last >= repeat->later_first || repeat->later_last < repeat->later_first ||
+        repeat->earlier_last < repeat->earlier_first) {
+        return false;
+    }
+    long first = unit_starting_span(*units, *count, repeat->earlier_first);
+    long last = unit_ending_on(*units, *count, repeat->earlier_last);
+    long before = unit_ending_on(*units, *count, repeat->later_first - 1);
+    long end = unit_ending_on(*units, *count, repeat->later_last);
+    if (first < 0 || last < first || before < 0 || end <= before) {
+        return false;
+    }
+    int shift = repeat->later_first - repeat->earlier_first;
+    size_t copies = (size_t)(last - first) + 1;
+    size_t kept_after = *count - (size_t)end - 1;
+    size_t total = (size_t)before + 1 + copies + kept_after;
+    StandardFormGridUnit *next = (StandardFormGridUnit *)calloc(total, sizeof(StandardFormGridUnit));
+    if (next == NULL) {
+        *failed = true;
+        return false;
+    }
+    memcpy(next, *units, ((size_t)before + 1) * sizeof(StandardFormGridUnit));
+    for (size_t k = 0; k < copies; k++) {
+        StandardFormGridUnit unit = (*units)[(size_t)first + k];
+        unit.first_measure += shift;
+        unit.counted_first += shift;
+        unit.last_measure += shift;
+        if (unit.half_measure >= 0) {
+            unit.half_measure += shift;
+        }
+        next[(size_t)before + 1 + k] = unit;
+    }
+    memcpy(&next[(size_t)before + 1 + copies], &(*units)[(size_t)end + 1], kept_after * sizeof(StandardFormGridUnit));
+    free(*units);
+    *units = next;
+    *count = total;
+    return true;
+}
+
+StandardFormAnalysisStatus standard_form_phrase_grid_follow_repeats(StandardFormPhraseGrid *grid,
+                                                                    const StandardFormRepeats *repeats) {
+    if (grid == NULL || repeats == NULL || (repeats->items == NULL && repeats->count > 0)) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    if (grid->count == 0 || repeats->count == 0) {
+        return STANDARD_FORM_ANALYSIS_OK;
+    }
+    StandardFormGridUnit *work = (StandardFormGridUnit *)malloc(grid->count * sizeof(StandardFormGridUnit));
+    if (work == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    memcpy(work, grid->units, grid->count * sizeof(StandardFormGridUnit));
+    size_t count = grid->count;
+    bool changed = false;
+    bool failed = false;
+    for (size_t i = 0; i < repeats->count && !failed; i++) {
+        if (repeats->items[i].kind == STANDARD_FORM_REPEAT) {
+            changed = follow_one(&work, &count, &repeats->items[i], &failed) || changed;
+        }
+    }
+    if (failed) {
+        free(work);
+        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    }
+    if (!changed) {
+        free(work);
+        return STANDARD_FORM_ANALYSIS_OK;
+    }
+    free(grid->units);
+    grid->units = work;
+    grid->count = count;
+    return STANDARD_FORM_ANALYSIS_OK;
+}
