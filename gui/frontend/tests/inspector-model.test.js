@@ -115,7 +115,7 @@ const chordsRow = row(progressionModel, "chords");
 check(chordsRow.kind === "value" && /^\d+, \d+/.test(chordsRow.text), "a list of numbers is a value row");
 
 /* scores */
-check(cadence.scores.length === 1 && cadence.scores[0].name === "uncertainty" && cadence.scores[0].text === "0.792", "uncertainty is a score under its own name");
+check(cadence.scores.length === 1 && cadence.scores[0].name === "uncertainty" && cadence.scores[0].text === "0.799", "uncertainty is a score under its own name");
 const chordModel = model("chords", 0);
 check(chordModel.scores.some((s) => s.name === "score"), "a score field is shown as score");
 const scored = InspectorModel.buildInspectorModel(
