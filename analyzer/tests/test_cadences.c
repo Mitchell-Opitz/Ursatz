@@ -32,7 +32,7 @@
  *   Clementi 36  hc 3, iac 1, four cadences (HC m4, IAC m8, HC m23 with the perfect authentic cadence of m24 as its competing
  *                reading, HC m27; the P40 result was hc 1, pac 3, iac 1: P41 claims cadences only at phrase points, R-390, R-393;
  *                the PACs of m15, m31 and m38 wait on chord readings and keys, P42).
- *   Mozart 545   15 cadences in all (23 before P41, which claims cadences only at phrase points; HC m12 and PAC m28 close its first two
+ *   Mozart 545   16 cadences in all (15 before P42, 23 before P41, which claims cadences only at phrase points; HC m12 and PAC m28 close its first two
  *                phrases, R-393); the chain finds no boundary cadence. The cause is not the outer-line index (the chord and voice
  *                segmentations are equal on this piece, P24 B7a Notes) and has not been found.
  *
@@ -43,9 +43,8 @@
  * the evaded cadences with a prolongation reading, are not at a phrase point and are no longer claimed.) Mozart 545 m. 4 has
  * a V to I6 the chain does not find: B3 deviation DEV-103.
  *
- * Key changes: the key regions are those of the cadence stage, so a change is confirmed by the cadences the chain found before
- * the phrase points claimed theirs. For Clementi 36 and Field 5 the claimed cadences no longer arrive where those changes were
- * confirmed, so the modulation-equals-arrival check does not hold for them until keys are placed on phrases (P42).
+ * Key changes: since P42 the chain places keys on phrases and confirms the changes with the cadences it claimed (R-397), so on
+ * every piece a change is a modulation exactly where a claimed cadence arrives in the new region.
  */
 
 static int failures = 0;
@@ -145,12 +144,7 @@ static void check_claims(const Piece *piece, const ImportedNotes *notes, const A
 
 /* A change into a new key is a modulation exactly when a cadence arrives in the new region (R-044); a return takes
    the extent of the excursion before it. */
-/* Whether the key changes were confirmed by the cadences the document lists (not so for these two pieces until P42). */
-static bool key_changes_follow_cadences(const Piece *piece) {
-    return strcmp(piece->name, "Clementi 36") != 0 && strcmp(piece->name, "Field 5") != 0;
-}
-
-static void check_key_changes(const Piece *piece, const cJSON *document, const AnalysisReport *report) {
+static void check_key_changes(const cJSON *document, const AnalysisReport *report) {
     const cJSON *cadences = test_json_member(document, "cadences");
     const cJSON *regions = test_json_member(test_json_member(document, "keys"), "regions");
     for (size_t i = 0; i < report->key_change_count; i++) {
@@ -170,7 +164,7 @@ static void check_key_changes(const Piece *piece, const cJSON *document, const A
             arrives = arrives || (arrival >= test_rational_of(test_json_member(into, "start")) - 1e-12 &&
                                   arrival < test_rational_of(test_json_member(into, "end")) - 1e-12);
         }
-        CHECK(!key_changes_follow_cadences(piece) || modulation == arrives);
+        CHECK(modulation == arrives);
         CHECK(change->cadence_confirmed == modulation);
     }
     /* the document lists what the report has */
@@ -289,7 +283,7 @@ static void run_piece(const Piece *piece) {
     CHECK(document != NULL);
     if (document) {
         check_claims(piece, &notes, &report, document);
-        check_key_changes(piece, document, &report);
+        check_key_changes(document, &report);
         check_counts(piece, test_json_member(document, "cadences"));
         check_readings(test_json_member(document, "cadences"));
         if (strcmp(piece->name, "Clementi 36") == 0) {
@@ -300,10 +294,10 @@ static void run_piece(const Piece *piece) {
         if (strcmp(piece->name, "Field 1") == 0) {
             check_competing_cadence(test_json_member(document, "cadences"), 61, 1, "half", 650, "imperfect-authentic", 62, 1, 350);
             check_reading_report(path, &notes, &report, "- m61 b1 half cadence (65%), or imperfect authentic cadence at m62 b1 (35%)\n",
-                                 "half 5, imperfect-authentic 2, authentic-unspecified 1, perfect-authentic 1.");
+                                 "half 7, imperfect-authentic 1, perfect-authentic 1.");
         }
         if (strcmp(piece->name, "Field 5") == 0) {
-            CHECK(cJSON_GetArraySize(test_json_member(document, "cadences")) == 1);
+            CHECK(cJSON_GetArraySize(test_json_member(document, "cadences")) == 0);
         }
         printf("%s: %zu cadences\n", piece->name, report.cadence_count);
         cJSON_Delete(document);

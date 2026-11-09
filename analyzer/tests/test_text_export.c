@@ -281,8 +281,13 @@ static void check_bach_piece(void) {
         CHECK(block_has(text, "1", " chord G I @1 c="), "the opening chord");
         CHECK(block_has(text, "1", " motive a m1 @1-@4\n"), "a motive occurrence gives its measure and its onset and end beats");
         CHECK(block_has(text, "1", " motive c m1 @3-m2@2\n"), "an occurrence that ends in a later measure names it");
-        /* On harmonic spans Bach 114 has no modulation or perfect authentic cadence line: P41 reads the cadences. */
-        CHECK(block_has(text, "13", " key D major c="), "the key region after the change of key");
+        /* Bach 114 has no cadence, so keys placed on phrases give it no change of key (P42, L7.4): the opening key line is
+           the only one. */
+        size_t key_lines = 0;
+        for (const char *at = strstr(text, "\n key "); at; at = strstr(at + 1, "\n key ")) {
+            key_lines++;
+        }
+        CHECK(key_lines == 1, "no key line follows measure 1 (no change of key)");
         CHECK(strstr(text, " cadence ") == NULL, "no cadence line on Bach 114 (P41 reads the cadences)");
         CHECK(block_has(text, "2", "B3 @1.5 e~"), "a note tied to the next ends in ~");
         CHECK(block_has(text, "2", "r @2.5 e"), "a rest is r");

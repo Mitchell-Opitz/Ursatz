@@ -178,16 +178,13 @@ add_executable(test_key_regions test_key_regions.c)
 target_link_libraries(test_key_regions PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_key_regions PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# Expected to fail: Ursatz's key-region detection does not reach the hand-read regions (see README, Known
-# limits). Measured with cadence-confirmed key changes (R-044): Clementi misses 1 core measure (m. 20), Mozart misses
-# 38 core measures and 5 modulations: to G at m. 13, to C at m. 29, to G at m. 41 (no cadence arrives in them, so they
-# are tonicizations), and the returns to C at m. 79 and m. 124. The assertions stay as the target; remove WILL_FAIL
-# when the library meets it.
+# Both pass since keys are placed on phrases (Ursatz P42, R-397): the regions follow the phrases that arrive in a
+# new key. Before P42 they failed (Clementi missed 1 core measure, Mozart 38 core measures and 5 modulations) and ran
+# under WILL_FAIL.
 add_test(NAME test_key_regions_clementi_36 COMMAND test_key_regions clementi)
 add_test(NAME test_key_regions_mozart_545 COMMAND test_key_regions mozart)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
 set_tests_properties(test_key_regions_mozart_545 PROPERTIES LABELS slow)
-set_tests_properties(test_key_regions_clementi_36 test_key_regions_mozart_545 PROPERTIES WILL_FAIL TRUE)
 add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
 
 add_executable(test_roman_numerals test_roman_numerals.c)
