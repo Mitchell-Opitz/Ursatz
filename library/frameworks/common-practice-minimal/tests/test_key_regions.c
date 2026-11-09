@@ -971,6 +971,383 @@ static void test_the_chord_of_a_result_is_plain_data(void) {
     assert(!common_practice_key_chord_of(NULL).present);
 }
 
+/* --- keys on phrases --- */
+
+#define C_BIT (1u << 0)
+#define G_BIT (1u << 7)
+
+static CommonPracticeKeyPhrase phrase_of(int first, int last, unsigned cadence_keys, unsigned arrival_keys, bool closes) {
+    CommonPracticeKeyPhrase phrase = {first, last, cadence_keys, arrival_keys, closes};
+    return phrase;
+}
+
+static CommonPracticeKeyRegionsConfig phrase_config(const CommonPracticeKeyPhrase *phrases, size_t count) {
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.phrases = phrases;
+    config.phrase_count = count;
+    return config;
+}
+
+static void assert_region(const CommonPracticeKeyRegions *regions, size_t index, int first, int last, int key) {
+    assert(index < regions->region_count);
+    assert(regions->regions[index].first_measure == first && regions->regions[index].last_measure == last);
+    assert(regions->regions[index].key_index == key);
+}
+
+static void test_no_phrases_gives_the_window_regions(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 8);
+    CommonPracticeKeyRegions plain = {0};
+    CommonPracticeKeyRegions same = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &plain) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    /* a phrase list with a count of 0 and a repeat list with a count of 0 change nothing */
+    CommonPracticeKeyPhrase unused = phrase_of(1, 16, G_BIT, 0, false);
+    CommonPracticeKeyRepeat unused_repeat = {1, 9, 8};
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    assert(config.phrases == NULL && config.phrase_count == 0 && config.repeats == NULL && config.repeat_count == 0);
+    config.phrases = &unused;
+    config.repeats = &unused_repeat;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &same) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(plain.region_count == 2 && same.region_count == plain.region_count);
+    for (size_t i = 0; i < plain.region_count; i++) {
+        assert(plain.regions[i].first_measure == same.regions[i].first_measure);
+        assert(plain.regions[i].last_measure == same.regions[i].last_measure);
+        assert(plain.regions[i].key_index == same.regions[i].key_index);
+    }
+    assert(!plain.changes[0].at_arrival && !same.changes[0].at_arrival);
+    common_practice_key_regions_destroy(&plain);
+    common_practice_key_regions_destroy(&same);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_key_changes_only_when_a_phrase_cadences_in_it(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 16);
+    add_run(&piece, &measure, 7, 8);
+    CommonPracticeKeyRegions regions = {0};
+
+    CommonPracticeKeyPhrase confirmed[3] = {phrase_of(1, 8, C_BIT, 0, false), phrase_of(9, 16, C_BIT, 0, false),
+                                            phrase_of(17, 24, G_BIT, 0, false)};
+    CommonPracticeKeyRegionsConfig config = phrase_config(confirmed, 3);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 24);
+    assert(regions.region_count == 2);
+    assert_region(&regions, 0, 1, 16, 0);
+    assert_region(&regions, 1, 17, 24, 7);
+    assert(!regions.changes[0].at_arrival);
+    common_practice_key_regions_destroy(&regions);
+
+    /* the same music without a cadence in G: the G phrase is a tonicization inside C */
+    confirmed[2].cadence_keys = 0;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 1);
+    assert_region(&regions, 0, 1, 24, 0);
+    common_practice_key_regions_destroy(&regions);
+
+    /* a phrase list that leaves gaps and runs past the piece is closed up and clipped */
+    CommonPracticeKeyPhrase loose[3] = {phrase_of(3, 8, C_BIT, 0, false), phrase_of(10, 16, C_BIT, 0, false),
+                                        phrase_of(20, 40, G_BIT, 0, false)};
+    config = phrase_config(loose, 3);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 24);
+    assert(regions.region_count == 2);
+    assert_region(&regions, 0, 1, 16, 0); /* each phrase starts after the one before: 3-8 from 1, 10-16 from 9, 20-40 from 17 to 24 */
+    assert_region(&regions, 1, 17, 24, 7);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_modulation_and_its_return_each_need_a_cadence(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 8);
+    add_run(&piece, &measure, 0, 8);
+    CommonPracticeKeyPhrase phrases[3] = {phrase_of(1, 8, C_BIT, 0, false), phrase_of(9, 16, G_BIT, 0, false),
+                                          phrase_of(17, 24, C_BIT, 0, false)};
+    CommonPracticeKeyRegionsConfig config = phrase_config(phrases, 3);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 24);
+    assert(regions.region_count == 3);
+    assert_region(&regions, 0, 1, 8, 0);
+    assert_region(&regions, 1, 9, 16, 7);
+    assert_region(&regions, 2, 17, 24, 0);
+    assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_WEAK_MODULATION && regions.changes[1].is_return);
+    common_practice_key_regions_destroy(&regions);
+
+    /* without a cadence in G the excursion cannot start, and the return has nothing to return from */
+    phrases[1].cadence_keys = 0;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 1);
+    assert_region(&regions, 0, 1, 24, 0);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_change_belongs_at_the_elided_arrival(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 8);
+    CommonPracticeKeyRegions regions = {0};
+
+    /* the C phrase ends on an arrival in G and the next phrase is G: the change is at the arrival measure */
+    CommonPracticeKeyPhrase arrival[2] = {phrase_of(1, 8, C_BIT, G_BIT, false), phrase_of(9, 16, G_BIT, 0, false)};
+    CommonPracticeKeyRegionsConfig config = phrase_config(arrival, 2);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 16);
+    assert(regions.region_count == 2);
+    assert_region(&regions, 0, 1, 7, 0);
+    assert_region(&regions, 1, 8, 16, 7);
+    assert(regions.changes[0].at_arrival);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+
+    /* the modulating phrase has G music and its cadence arrives in G: it stays C, the next phrase is G */
+    Piece five = {{{0}}, {0}, 0, 0};
+    measure = 0;
+    add_run(&five, &measure, 0, 12);
+    add_run(&five, &measure, 7, 8);
+    for (size_t i = 8; i < 12; i++) { /* the last C phrase moves V to I, which a G reading of it does not have */
+        set_chord(&five, i, i % 2 == 0 ? 7 : 0, i % 2 == 0 ? triad_mask(7, 4, 7) : triad_mask(0, 4, 7));
+    }
+    CommonPracticeKeyPhrase modulating[5] = {phrase_of(1, 4, C_BIT, 0, false), phrase_of(5, 8, C_BIT, 0, false),
+                                             phrase_of(9, 12, C_BIT, 0, false), phrase_of(13, 16, 0, G_BIT, false),
+                                             phrase_of(17, 20, G_BIT, 0, false)};
+    config = phrase_config(modulating, 5);
+    assert(key_regions_estimate(five.items, five.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 20);
+    assert(regions.region_count == 2);
+    assert_region(&regions, 0, 1, 15, 0);
+    assert_region(&regions, 1, 16, 20, 7);
+    assert(regions.changes[0].at_arrival);
+    common_practice_key_regions_destroy(&regions);
+
+    /* the same phrases without the arrival and with the cadence in the modulating phrase: it takes the new key whole */
+    modulating[3].arrival_keys = 0;
+    modulating[3].cadence_keys = G_BIT;
+    assert(key_regions_estimate(five.items, five.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2);
+    assert_region(&regions, 0, 1, 12, 0);
+    assert_region(&regions, 1, 13, 20, 7);
+    assert(!regions.changes[0].at_arrival);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&five);
+    meter_map_destroy(map);
+}
+
+static void test_a_closing_cadence_frees_the_next_phrase(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 16);
+    add_run(&piece, &measure, 7, 8);
+    CommonPracticeKeyRegions regions = {0};
+    CommonPracticeKeyPhrase closing[3] = {phrase_of(1, 8, C_BIT, 0, false), phrase_of(9, 16, C_BIT, 0, true),
+                                          phrase_of(17, 24, 0, 0, false)};
+    CommonPracticeKeyRegionsConfig config = phrase_config(closing, 3);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2);
+    assert_region(&regions, 0, 1, 16, 0);
+    assert_region(&regions, 1, 17, 24, 7);
+    common_practice_key_regions_destroy(&regions);
+
+    closing[1].closes = false; /* the same music and cadences, but no closing cadence: nothing confirms G */
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 1);
+    assert_region(&regions, 0, 1, 24, 0);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_signature_restricts_the_first_phrase(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 16); /* C major notes under an F major signature */
+    CommonPracticeKeySignatureEvent one_flat = make_event(&piece, 0, 1, -1);
+    CommonPracticeKeyPhrase phrases[2] = {phrase_of(1, 3, 0, 0, false), phrase_of(4, 16, C_BIT, 0, false)};
+    CommonPracticeKeyRegionsConfig config = phrase_config(phrases, 2);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, &one_flat, 1, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 16);
+    assert(regions.region_count == 2);
+    assert(regions.regions[0].key_index == 5 || regions.regions[0].key_index == 14); /* F major or D minor, not C */
+    assert(regions.regions[0].last_measure == 3 && regions.regions[0].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
+    assert_region(&regions, 1, 4, 16, 0);
+    common_practice_key_regions_destroy(&regions);
+
+    /* a signature that starts in the middle of a phrase splits it: the part before keeps no cadence data */
+    CommonPracticeKeyPhrase whole[1] = {phrase_of(1, 16, C_BIT, 0, false)};
+    config = phrase_config(whole, 1);
+    CommonPracticeKeySignatureEvent two_sharps = make_event(&piece, 8, 1, 2);
+    assert(key_regions_estimate(piece.items, piece.count, map, &two_sharps, 1, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 16);
+    assert(regions.region_count == 2);
+    assert(regions.regions[1].first_measure == 9 && regions.regions[1].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
+    assert(regions.regions[1].key_index == 2 || regions.regions[1].key_index == 23); /* D major or B minor */
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_repeat_copies_its_keys(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    double flat[12];
+    for (int pc = 0; pc < 12; pc++) {
+        flat[pc] = 1.0;
+    }
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 8);
+    for (int i = 0; i < 8; i++) {
+        add_measure(&piece, measure++, flat); /* music that says nothing about the key */
+    }
+    CommonPracticeKeyPhrase phrases[3] = {phrase_of(1, 8, C_BIT, 0, false), phrase_of(9, 16, G_BIT, 0, false),
+                                          phrase_of(17, 24, 0, 0, false)};
+    CommonPracticeKeyRegionsConfig config = phrase_config(phrases, 3);
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2);
+    assert_region(&regions, 1, 9, 24, 7);
+    common_practice_key_regions_destroy(&regions);
+
+    CommonPracticeKeyRepeat repeat = {1, 17, 8};
+    config.repeats = &repeat;
+    config.repeat_count = 1;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 24);
+    assert(regions.region_count == 3);
+    assert_region(&regions, 0, 1, 8, 0);
+    assert_region(&regions, 1, 9, 16, 7);
+    assert_region(&regions, 2, 17, 24, 0);
+    common_practice_key_regions_destroy(&regions);
+
+    /* a repeat partly outside the piece copies what is inside it */
+    repeat.later_first = 21;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 3);
+    assert_region(&regions, 1, 9, 20, 7);
+    assert_region(&regions, 2, 21, 24, 0);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_a_repeat_does_not_copy_the_first_region_of_a_signature_span(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    double flat[12];
+    for (int pc = 0; pc < 12; pc++) {
+        flat[pc] = 1.0;
+    }
+    add_run(&piece, &measure, 0, 16); /* C major notes under an F major signature */
+    for (int i = 0; i < 8; i++) {
+        add_measure(&piece, measure++, flat);
+    }
+    CommonPracticeKeySignatureEvent one_flat = make_event(&piece, 0, 1, -1);
+    CommonPracticeKeyPhrase phrases[3] = {phrase_of(1, 8, 0, 0, false), phrase_of(9, 16, C_BIT, 0, false),
+                                          phrase_of(17, 24, 0, 0, false)};
+    CommonPracticeKeyRepeat repeat = {1, 17, 8};
+    CommonPracticeKeyRegionsConfig config = phrase_config(phrases, 3);
+    config.repeats = &repeat;
+    config.repeat_count = 1;
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, &one_flat, 1, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 24);
+    assert(regions.region_count == 2);
+    assert(regions.regions[0].last_measure == 8 && regions.regions[0].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
+    assert_region(&regions, 1, 9, 24, 0); /* measures 17 to 24 keep C: the signature's first region is not copied */
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_cadence_keys_read_the_arrival(void) {
+    CommonPracticeKeyChord c_major = {true, 0, triad_mask(0, 4, 7)};
+    CommonPracticeKeyChord a_minor = {true, 9, triad_mask(9, 3, 7)};
+    CommonPracticeKeyChord g_major = {true, 7, triad_mask(7, 4, 7)};
+    CommonPracticeKeyChord g_seventh = {true, 7, triad_mask(7, 4, 7) | (1u << 5)};
+    CommonPracticeKeyChord b_diminished = {true, 11, triad_mask(11, 3, 6)};
+    CommonPracticeKeyChord both_thirds = {true, 0, triad_mask(0, 4, 7) | (1u << 3)};
+    CommonPracticeKeyChord bare_fifth = {true, 0, (1u << 0) | (1u << 7)};
+    CommonPracticeKeyChord absent = {false, 0, 0};
+
+    /* a perfect authentic cadence arrives on the tonic triad: its key, in the mode of its third */
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_AUTHENTIC, &c_major) == 1u << 0);
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_AUTHENTIC, &a_minor) == 1u << 21);
+    /* an arrival that does not settle its third, or has none, confirms nothing */
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_AUTHENTIC, &both_thirds) == 0);
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_AUTHENTIC, &bare_fifth) == 0);
+    /* a half cadence arrives on a major dominant: the major and minor keys a fifth below */
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_HALF, &g_major) == ((1u << 0) | (1u << 12)));
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_HALF, &g_seventh) == ((1u << 0) | (1u << 12)));
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_HALF, &a_minor) == 0);
+    /* a diminished arrival confirms nothing, for either kind */
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_HALF, &b_diminished) == 0);
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_AUTHENTIC, &b_diminished) == 0);
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_AUTHENTIC, &absent) == 0);
+    assert(common_practice_cadence_keys(COMMON_PRACTICE_CADENCE_AUTHENTIC, NULL) == 0);
+    assert(common_practice_cadence_keys((CommonPracticeCadenceKind)7, &c_major) == 0);
+}
+
+static void test_bad_phrase_configs(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    CommonPracticeKeyRegions regions = {0};
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+
+    config.phrase_count = 1; /* a count with no list */
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    config = common_practice_key_regions_config_default();
+    config.repeat_count = 1;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+
+    CommonPracticeKeyPhrase out_of_order[2] = {phrase_of(5, 8, 0, 0, false), phrase_of(1, 4, 0, 0, false)};
+    config = phrase_config(out_of_order, 2);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    CommonPracticeKeyPhrase overlapping[2] = {phrase_of(1, 5, 0, 0, false), phrase_of(5, 8, 0, 0, false)};
+    config = phrase_config(overlapping, 2);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    CommonPracticeKeyPhrase backwards[1] = {phrase_of(6, 2, 0, 0, false)};
+    config = phrase_config(backwards, 1);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    assert(regions.regions == NULL && regions.region_count == 0);
+
+    /* phrases wholly outside the piece leave it as one phrase */
+    CommonPracticeKeyPhrase outside[1] = {phrase_of(20, 30, G_BIT, 0, false)};
+    config = phrase_config(outside, 1);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 1 && regions.regions[0].key_index == 0);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
 int main(void) {
     test_a_scale_scores_its_own_key_highest();
     test_a_minor_distribution_scores_the_minor_key();
@@ -999,6 +1376,16 @@ int main(void) {
     test_an_edge_at_a_key_signature_does_not_snap();
     test_a_passage_of_iv_v_and_ii_keeps_the_home_key();
     test_the_chord_of_a_result_is_plain_data();
+    test_no_phrases_gives_the_window_regions();
+    test_a_key_changes_only_when_a_phrase_cadences_in_it();
+    test_a_modulation_and_its_return_each_need_a_cadence();
+    test_a_change_belongs_at_the_elided_arrival();
+    test_a_closing_cadence_frees_the_next_phrase();
+    test_a_signature_restricts_the_first_phrase();
+    test_a_repeat_copies_its_keys();
+    test_a_repeat_does_not_copy_the_first_region_of_a_signature_span();
+    test_cadence_keys_read_the_arrival();
+    test_bad_phrase_configs();
     printf("test_key_regions: ok\n");
     return 0;
 }
