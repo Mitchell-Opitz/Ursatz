@@ -325,19 +325,25 @@ static bool altered_chord_tone(const Grouper *g, size_t c, unsigned mask) {
 }
 
 /* True when cell c holds a new bass (R-383): it is at level BAR, HALF_BAR or BEAT, has a bass that differs from the cell before
-   it, and a member on that bass pitch is attacked in it (not held). */
+   it, a member on that bass pitch is attacked in it (not held), and another member above it sounds at the cell's start. A note
+   with nothing above it is a melody the bass rule (R-370) took for the bass while the left hand rests, not a new bass (R-387). */
 static bool is_new_bass(const Grouper *g, size_t c) {
     if (g->cells[c].level == HARMONIC_SPAN_LEVEL_INNER || g->bass[c] < 0 || g->bass[c] == g->bass[c - 1]) {
         return false;
     }
     const CommonPracticeSegment *segment = g->cells[c].segment;
+    bool attacked = false;
+    bool above = false;
     for (size_t i = 0; i < segment->member_count; i++) {
         const CommonPracticeMember *member = &segment->members[i];
         if (member->pitch == g->bass[c] && !member->held && member->onset <= g->cells[c].start + TIME_TOLERANCE) {
-            return true;
+            attacked = true;
+        }
+        if (member->pitch > g->bass[c] && sounds_at_start(member, g->cells[c].start)) {
+            above = true;
         }
     }
-    return false;
+    return attacked && above;
 }
 
 /* True when every new bass of cells a + 1..b is explained by the mask: its pitch class is in the mask, or it is a step from the

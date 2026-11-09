@@ -733,6 +733,20 @@ static void test_a_held_bass_under_a_changing_chord_is_one_span(void) {
     harmonic_spans_destroy(&spans);
 }
 
+/* A lone upper note is no new bass (R-387): the left hand rests after the first beat, so the melody (D5, then A5, each under
+   twelve semitones above the bass before it) becomes the bass by the bass rule. Nothing sounds above either note, so neither
+   is a new bass and the bar is one span. */
+static void test_a_lone_upper_note_is_no_new_bass(void) {
+    Note notes[] = {{F4, 0, 4}, {A4, 0, 4}, {C5, 0, 4}, {D5, 4, 8}, {A5, 8, 12}, {F3, 12, 16}, {C5, 12, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    harmonic_spans_destroy(&spans);
+}
+
 int main(void) {
     test_clementi_m1_is_one_span_over_c3();
     test_clementi_m8_scale_is_one_span_over_g2();
@@ -763,6 +777,7 @@ int main(void) {
     test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_without_voices();
     test_a_held_bass_note_is_not_cut();
     test_a_held_bass_under_a_changing_chord_is_one_span();
+    test_a_lone_upper_note_is_no_new_bass();
     test_bad_input_is_refused();
     printf("test_harmonic_spans: ok\n");
     return 0;

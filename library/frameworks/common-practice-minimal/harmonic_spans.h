@@ -35,7 +35,10 @@
  * the bass that resolves by step then does not break the part. The Alberti bass keeps R-370's (the bass follows the
  * figure). A span's bass is the bass its reading used.
  *
- * TERMS (R-381, R-383). A step is two pitch classes 1 or 2 apart the shorter way round; a semitone is 1. The bass after
+ * TERMS (R-381, R-383, R-387). A step is two pitch classes 1 or 2 apart the shorter way round; a semitone is 1. A new bass
+ * is the bass of a cell at level BAR, HALF_BAR or BEAT (not the part's first cell) that differs from the bass of the cell
+ * before it, with a member on that pitch attacked in the cell and another member above it sounding at the cell's start: a
+ * note with nothing above it is a melody the bass rule took for the bass while the left hand rests, not a new bass. The bass after
  * cell c is the bass of the first later cell (in any measure) whose bass differs from bass[c]; none at the piece's end. An
  * altered chord tone of a chord's pitch-class mask is the bass of a cell whose pitch class is not in the mask and lies one
  * semitone from a tone c of it, while c sounds at the cell's start in a member above the bass note (held, or attacked there),
