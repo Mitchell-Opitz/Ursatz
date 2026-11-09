@@ -35,12 +35,12 @@ check(InspectorModel.formatValue(null) === "none" && InspectorModel.formatValue(
 check(InspectorModel.formatValue([43, 44]) === "43, 44" && InspectorModel.formatValue([]) === "none", "a list joins its values");
 
 /* header */
-const cadence = model("cadences", 2);
-const cadenceClaim = layer("cadences").items[2].claim;
+const cadence = model("cadences", 1);
+const cadenceClaim = layer("cadences").items[1].claim;
 check(cadence.header.layerLabel === "Cadences" && cadence.header.color === layer("cadences").color, "the header names the layer and its color");
 check(cadence.header.text === "PAC", "the header title is the item text");
 check(cadence.header.label === "perfect-authentic", "the claim label shows when it differs from the title");
-check(cadence.header.location === "m26 b4 to m27 b4", "the header has the formatted location");
+check(cadence.header.location === "m27 b4 to m30 b1", "the header has the formatted location");
 check(cadence.header.measures === null, "no measure count without a measures field");
 const firstPhrase = layer("phrases").items.find((i) => i.claim.label === "phrase");
 const phraseHeader = InspectorModel.buildInspectorModel(firstPhrase, layer("phrases")).header;
@@ -85,8 +85,8 @@ check(
 );
 check(keys.join() === Object.keys(cadenceClaim).filter((k) => keys.includes(k)).join(), "evidence keeps the claim's field order");
 const arrival = row(cadence, "arrival");
-check(arrival.kind === "span" && arrival.start === 26 && arrival.end === 26.75, "arrival is a span row with numeric bounds");
-check(arrival.location === "m27 b1 to m27 b4", "a span row has its formatted location");
+check(arrival.kind === "span" && arrival.start === 27 && arrival.end === 29, "arrival is a span row with numeric bounds");
+check(arrival.location === "m28 b1 to m30 b1", "a span row has its formatted location");
 check(row(cadence, "dominant").kind === "span" && row(cadence, "dominant").location === "-", "dominant is a span row without a location");
 check(row(cadence, "soprano_degree").kind === "value" && row(cadence, "soprano_degree").text === "1", "a plain field is a value row");
 check(row(cadence, "boundary").text === "no", "a boolean field reads yes or no");
@@ -101,7 +101,10 @@ check(subphrases.items[0].start === 0 && subphrases.items[0].end === 4, "a sub-c
 check(subphrases.items[0].location === "m1 b1 to m5 b1", "a sub-claim has its formatted location");
 const measures = phraseRows.find((r) => r.key === "measures");
 check(measures.kind === "group" && measures.rows.map((r) => r.key).join() === "first,last", "an object without a span is a group of rows");
-const emptyPhraseClaim = layer("phrases").items.find((i) => i.claim.label === "phrase" && i.claim.cadence === null && i.claim.phrase_model.length === 0).claim;
+const emptyPhraseClaim = {
+  ...layer("phrases").items.find((i) => i.claim.label === "phrase" && i.claim.phrase_model.length === 0).claim,
+  cadence: null,
+};
 const emptyPhraseRows = InspectorModel.buildInspectorModel({ key: "phrases/1", text: "Phrase 2", claim: emptyPhraseClaim }, layer("phrases")).evidence;
 check(emptyPhraseRows.find((r) => r.key === "cadence").text === "none", "a null field reads none");
 check(emptyPhraseRows.find((r) => r.key === "phrase_model").text === "none", "an empty list reads none");
@@ -112,7 +115,7 @@ const chordsRow = row(progressionModel, "chords");
 check(chordsRow.kind === "value" && /^\d+, \d+/.test(chordsRow.text), "a list of numbers is a value row");
 
 /* scores */
-check(cadence.scores.length === 1 && cadence.scores[0].name === "uncertainty" && cadence.scores[0].text === "0.65", "uncertainty is a score under its own name");
+check(cadence.scores.length === 1 && cadence.scores[0].name === "uncertainty" && cadence.scores[0].text === "0.792", "uncertainty is a score under its own name");
 const chordModel = model("chords", 0);
 check(chordModel.scores.some((s) => s.name === "score"), "a score field is shown as score");
 const scored = InspectorModel.buildInspectorModel(
@@ -137,7 +140,7 @@ check(InspectorModel.pickItemForNote([spans[0]]).key === "a/0", "one item is pic
 const cadenceItems = layer("cadences").items;
 check(InspectorModel.neighborItem(cadenceItems, cadenceItems[0].key, -1) === null, "the first item has no previous");
 check(InspectorModel.neighborItem(cadenceItems, cadenceItems[0].key, 1) === cadenceItems[1], "the next item follows by start");
-check(InspectorModel.neighborItem(cadenceItems, cadenceItems[2].key, -1) === cadenceItems[1], "the previous item comes before");
+check(InspectorModel.neighborItem(cadenceItems, cadenceItems[1].key, -1) === cadenceItems[0], "the previous item comes before");
 const last = cadenceItems[cadenceItems.length - 1];
 check(InspectorModel.neighborItem(cadenceItems, last.key, 1) === null, "the last item has no next");
 check(InspectorModel.neighborItem(cadenceItems, "missing/0", 1) === null, "an unknown key has no neighbor");
@@ -151,6 +154,6 @@ check(InspectorModel.filterItems(spans, "SHORT").length === 1, "filtering ignore
 check(InspectorModel.filterItems(spans, "short one").length === 1, "filtering matches the label");
 check(InspectorModel.filterItems(spans, "  ").length === 3, "a blank query keeps everything");
 check(InspectorModel.filterItems(spans, "zzz").length === 0, "no match gives nothing");
-check(InspectorModel.locationOf(cadenceItems[2]) === "m26 b4 to m27 b4", "locationOf formats an item's location");
+check(InspectorModel.locationOf(cadenceItems[1]) === "m27 b4 to m30 b1", "locationOf formats an item's location");
 
 process.exit(failures === 0 ? 0 : 1);
