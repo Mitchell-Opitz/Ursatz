@@ -108,6 +108,19 @@ if(URSATZ_ANALYSIS_VALGRIND)
   set_tests_properties(reference_phrases_valgrind PROPERTIES LABELS slow)
 endif()
 
+add_executable(test_reference_keys test_reference_keys.c)
+target_link_libraries(test_reference_keys PRIVATE ursatz_chain common_practice_minimal standard_meter)
+target_compile_definitions(test_reference_keys PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME reference_keys COMMAND test_reference_keys)
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME reference_keys_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_reference_keys>)
+  set_tests_properties(reference_keys_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_reference_repeats test_reference_repeats.c)
 target_link_libraries(test_reference_repeats PRIVATE ursatz_chain common_practice_minimal standard_meter)
 target_compile_definitions(test_reference_repeats PRIVATE

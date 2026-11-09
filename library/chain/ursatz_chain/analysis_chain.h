@@ -103,6 +103,11 @@
  * cadences found, the cadences are claimed at the grid's points (R-390), and phrases and themes are segmented on the grid (R-391). The
  * first pass of the refinement keeps the cadence-ended phrases, so the key regions do not move. Off, every pass runs as before.
  *
+ * KEYS FROM PHRASES (R-397, R-398; keys_from_phrases, default on). After the second pass a third reads the keys again, now placed on the
+ * phrases of the grid the second pass found: a key changes only when a phrase establishes the new key, the cadences the second pass claimed
+ * are the evidence, and exact repeats read the same. Everything from the keys on runs once more on that answer. It runs only with the form
+ * stage, refine_keys and phrase_grid, and only when the second pass found a grid. Off, the chain is as it was before it.
+ *
  * refine_with_given_boundaries: with no form stage there are no phrases to bound the second key pass; when set (and refine_keys is on) the
  * second pass runs anyway, on the first pass's chords as evidence and key_regions.phrase_boundaries as the boundaries (possibly none), as a
  * caller that finds its own phrase ends does (the accuracy harness). The boundaries are borrowed and must outlive the run. Default off.
@@ -142,6 +147,7 @@ typedef struct {
     bool refine_keys;
     bool refine_with_given_boundaries;
     bool phrase_grid;
+    bool keys_from_phrases;
     int first_measure;
     int last_measure;
     int home_key_index;

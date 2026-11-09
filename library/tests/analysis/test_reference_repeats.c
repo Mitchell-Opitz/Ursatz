@@ -170,7 +170,7 @@ static void check_mozart(void) {
         }
     }
     printf("  cadences 57-101: %zu, 102-146: %zu\n", earlier_count, later_count);
-    CHECK(earlier_count == 5 && later_count == 5, "Mozart: %zu cadences in 57-101 and %zu in 102-146, expected 5 and 5", earlier_count,
+    CHECK(earlier_count == 6 && later_count == 6, "Mozart: %zu cadences in 57-101 and %zu in 102-146, expected 6 and 6", earlier_count,
           later_count);
     for (size_t i = 0; i < earlier_count && i < later_count; i++) {
         CHECK(earlier[i][0] == later[i][0] && earlier[i][1] == later[i][1], "Mozart: cadence %zu is m%d type %d, expected m%d type %d", i,
@@ -195,7 +195,7 @@ static void check_mozart(void) {
         }
     }
     printf("  phrases 57-101: %zu, 102-146: %zu\n", pe_count, pl_count);
-    CHECK(pe_count == 5 && pl_count == 5, "Mozart: %zu phrases in 57-101 and %zu in 102-146, expected 5 and 5", pe_count, pl_count);
+    CHECK(pe_count == 6 && pl_count == 6, "Mozart: %zu phrases in 57-101 and %zu in 102-146, expected 6 and 6", pe_count, pl_count);
     for (size_t i = 0; i < pe_count && i < pl_count; i++) {
         CHECK(pe[i][0] == pl[i][0] && pe[i][1] == pl[i][1], "Mozart: phrase %zu is %d-%d, expected %d-%d", i, pl[i][0], pl[i][1], pe[i][0],
               pe[i][1]);
