@@ -4,6 +4,7 @@
 #include "form_test_util.h"
 #include "phrase_level_form.h"
 #include "time/meter_arithmetic.h"
+#include <math.h>
 
 /* The phrase grid (R-389), phrases on it and themes on it (R-391): units of 4, 8 or 16 measures chosen by the evidence at their
    ends, built from notes, cadences and the MeterMap as test_analysis_phrase.c builds its inputs, 4/4. */
@@ -264,6 +265,38 @@ static void test_no_notes_give_no_units(void) {
     form_destroy(&f);
 }
 
+static void test_a_last_note_held_into_the_next_measure_ends_the_last_phrase(void) {
+    FormFixture f;
+    form_init(&f, 4, 0);
+    varied_measures(&f, 1, 15);
+    int pitches[4];
+    varied(16, pitches);
+    double start = form_measure_start(&f, 16);
+    for (int beat = 0; beat < 3; beat++) {
+        form_note(&f, start + (double)beat, 1.0, pitches[beat]);
+    }
+    form_note(&f, start + 3.0, 2.0, pitches[3]); /* held into m17, where nothing starts */
+    form_cadence(&f, "hc12", 12, 0, 4, HC, 1, false, 0.1);
+    form_finish(&f);
+    StandardFormPhraseGrid grid = find(&f);
+    assert(grid.count == 2); /* the grid ends at the last note start, m16 */
+    assert_unit(&grid, 0, 1, 1, 8, 8, false, 4);
+    assert_unit(&grid, 1, 9, 9, 16, 8, false, 12);
+    StandardFormPhrases phrases;
+    assert(standard_form_segment_phrases_on_grid(&f.input, NULL, &grid, &phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(phrases.count == 2);
+    const StandardFormPhraseClaim *a = &phrases.items[0].claim;
+    const StandardFormPhraseClaim *b = &phrases.items[1].claim;
+    assert(a->first_measure == 1 && a->end_measure == 12 && a->signal == (int)STANDARD_FORM_SIGNAL_CADENCE);
+    assert(a->cadence_type == (int)HC);
+    assert(b->first_measure == 13 && b->end_measure == 17 && b->last_measure == 17 && b->length_measures == 5);
+    assert(b->signal == (int)STANDARD_FORM_SIGNAL_DISCONTINUITY && b->note_end > b->note_first);
+    assert(fabs(phrases.items[1].uncertainty - 0.25) < 1e-9);
+    standard_form_phrases_destroy(&phrases);
+    standard_form_phrase_grid_destroy(&grid);
+    form_destroy(&f);
+}
+
 static void test_bad_calls_are_refused(void) {
     FormFixture f;
     form_init(&f, 4, 0);
@@ -301,6 +334,7 @@ int main(void) {
     test_two_phrases_across_two_units_are_not_paired();
     test_a_pickup_measure_counts_in_no_length();
     test_no_notes_give_no_units();
+    test_a_last_note_held_into_the_next_measure_ends_the_last_phrase();
     test_bad_calls_are_refused();
     printf("test_standard_form_analysis_phrase_grid: ok\n");
     return 0;
