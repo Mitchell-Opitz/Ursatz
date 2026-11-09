@@ -297,7 +297,7 @@ static HarmonyCadenceAnalysisStatus move_halves(const HarmonySegment *segments, 
         }
         int next = measure_of(&segments[r->arrival_first]) + 1;
         size_t s = downbeat_segment(segments, count, next);
-        if (point_at(points, point_count, next) == NULL || s >= count || s <= r->arrival_last ||
+        if (point_at(points, point_count, next) == NULL || s >= count || s <= r->arrival_first ||
             !harmony_cadence_is_dominant_root(&segments[s])) {
             continue;
         }
