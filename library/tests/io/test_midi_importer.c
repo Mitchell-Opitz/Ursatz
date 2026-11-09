@@ -324,11 +324,9 @@ static void test_single_track_overlap_gets_interval_graph_colored_voices(void) {
     free(pitch_values);
 }
 
-static void test_multi_channel_import_gets_no_voice(void) {
-    /* PPQN 96, one track, two channels: note 60 on channel 0 and note 64
-       on channel 1 overlap -- multi-channel imports are left with
-       optional_voice == NULL (out of scope: track/channel-mapping is a
-       future pass, not this one). */
+static void test_multi_channel_import_gets_voices_by_track(void) {
+    /* PPQN 96, one track, two channels: note 60 on channel 0 and note 64 on channel 1 overlap. Every import gets voices by track
+       (R-386): the channels inside one track share that track's slots, so the two notes get slots 0 and 1 of track 0. */
     unsigned char track[] = {
         0x00, 0x90, 0x3C, 0x64, /* delta 0,  channel 0 note-on  60 */
         0x00, 0x91, 0x40, 0x64, /* delta 0,  channel 1 note-on  64 */
@@ -346,9 +344,10 @@ static void test_multi_channel_import_gets_no_voice(void) {
     assert(r == MIDI_IMPORT_OK);
     assert(count == 2);
 
-    for (size_t i = 0; i < count; i++) {
-        assert(note_event_optional_voice(events[i]) == NULL);
-    }
+    const char *voice_60 = voice_id_of(find_by_pitch(events, count, 0x3C));
+    const char *voice_64 = voice_id_of(find_by_pitch(events, count, 0x40));
+    assert(strcmp(voice_60, voice_64) != 0);
+    assert(strcmp(voice_60, "midi-voice-0-0") == 0 && strcmp(voice_64, "midi-voice-0-1") == 0);
 
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);
@@ -733,7 +732,7 @@ int main(void) {
     test_spells_chromatic_scale_sharps_only();
     test_single_track_overlap_gets_interval_graph_colored_voices();
     test_multi_track_single_channel_gets_per_track_voices();
-    test_multi_channel_import_gets_no_voice();
+    test_multi_channel_import_gets_voices_by_track();
     test_rejects_truncated_file();
     test_rejects_null_buffer();
     test_import_with_meter_defaults_to_four_four_without_a_time_signature();

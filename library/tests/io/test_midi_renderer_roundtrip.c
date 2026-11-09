@@ -73,33 +73,9 @@ static void round_trip_reference_piece(const char *name) {
 static void test_reference_pieces(void) {
     round_trip_reference_piece("Bach 114.mid");
     round_trip_reference_piece("Clementi 36.mid");
+    round_trip_reference_piece("Field 1.mid");
     round_trip_reference_piece("Field 5.mid");
     round_trip_reference_piece("Mozart 545.mid");
-}
-
-/*
- * Field 1 is a two-channel file: its imported notes carry no voice, so both hands share one track, where the same
- * pitch sounds twice at once. MIDI cannot pair those note-offs, so the renderer refuses it rather than guess.
- */
-static void test_field_1_is_refused(void) {
-    size_t size = 0;
-    unsigned char *data = read_file("Field 1.mid", &size);
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitches = NULL;
-    size_t count = 0;
-    assert(midi_importer_import(data, size, &events, &pitches, &count) == MIDI_IMPORT_OK);
-    unsigned char *out = NULL;
-    size_t out_size = 0;
-    assert(midi_renderer_render(events, pitches, count, NULL, NULL, NULL, 0, 240, &out, &out_size) ==
-           MIDI_RENDER_ERR_NOT_REPRESENTABLE);
-    assert(out == NULL && out_size == 0);
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitches[i]);
-    }
-    free(events);
-    free(pitches);
-    free(data);
 }
 
 /* A line of quarter-note-grid notes in one voice from position 0, count notes of the given duration. */
@@ -180,7 +156,6 @@ static void test_pickup(void) {
 
 int main(void) {
     test_reference_pieces();
-    test_field_1_is_refused();
     test_three_four();
     test_six_eight();
     test_twelve_eight();

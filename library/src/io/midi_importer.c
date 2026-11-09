@@ -52,21 +52,20 @@
  * octave = note / 12 - 1.
  *
  * Voice assignment (MusicXML-export-grouping only, no musical/analytical
- * meaning -- a placeholder pending Deliverable F): a single-channel
- * MIDI import may still contain temporally overlapping notes (e.g. a
+ * meaning -- a placeholder pending Deliverable F): a
+ * MIDI import may contain temporally overlapping notes (e.g. a
  * two-staff piano piece with RH/LH on separate tracks, or two-handed
  * piano recorded onto one track). MusicXML cannot represent simultaneous
- * notes in one voice, so such imports get each NoteEvent's optional_voice
+ * notes in one voice, so every import gets each NoteEvent's optional_voice
  * assigned via greedy interval-graph coloring by timing, scoped per
  * source MTrk chunk: within each track, processing its notes in
  * start-time order, a note is assigned the lowest-numbered voice slot
  * not occupied by a still-sounding note (from that same track) at its
  * start time, opening a new slot only when every existing slot for that
  * track is occupied. Voice slots are numbered independently per track --
- * a single-track file is simply the one-track case of this. Imports
- * whose matched notes span more than one channel are left with
- * optional_voice == NULL -- multi-channel voice separation is a
- * channel-mapping decision for a future pass, not this one.
+ * a single-track file is simply the one-track case of this. Channels
+ * inside one track share that track's slots: there is no channel
+ * mapping (R-386).
  */
 
 #define MIDI_IMPORTER_PROVENANCE_ID "midi-importer-v1"
@@ -78,7 +77,7 @@ typedef struct {
     uint8_t channel;
     size_t order;
     size_t track_index;
-    int voice_slot; /* -1 when no voice assigned (multi-track/multi-channel import) */
+    int voice_slot; /* the voice slot within the note's track (assign_voice_slots_per_track); -1 until assigned */
 } MatchedNote;
 
 static int matched_note_compare(const void *a, const void *b) {
@@ -464,18 +463,10 @@ static MidiImportResult build_notes(uint16_t division, const MidiTrackScan *scan
 
     qsort(all_matched, all_matched_count, sizeof(MatchedNote), matched_note_compare);
 
-    bool single_channel = true;
-    for (size_t i = 1; i < all_matched_count; i++) {
-        if (all_matched[i].channel != all_matched[0].channel) {
-            single_channel = false;
-        }
-    }
-    if (single_channel) {
-        if (assign_voice_slots_per_track(all_matched, all_matched_count) != 0) {
-            free(all_matched);
-            tuning_system_destroy(tuning_system);
-            return MIDI_IMPORT_ERR_ALLOC;
-        }
+    if (assign_voice_slots_per_track(all_matched, all_matched_count) != 0) {
+        free(all_matched);
+        tuning_system_destroy(tuning_system);
+        return MIDI_IMPORT_ERR_ALLOC;
     }
 
     NoteEvent **note_events = NULL;
