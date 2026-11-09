@@ -37,7 +37,9 @@
  *
  * THE SPANS (R-372). One span per measure to start with (a span never crosses a barline), then the measure is cut
  * where the music changes chord, by scoring whole partitions instead of single splits. The candidate boundaries of a
- * measure are its cells at level HALF_BAR or BEAT after its first cell, and every non-empty subset of them is a
+ * measure are its cells at level HALF_BAR or BEAT after its first cell, except a cell that keeps the bass of the cell
+ * before it with that bass note held over (a held bass note is no new bass, so the measure is not cut inside it, R-379 (4)),
+ * and every non-empty subset of them is a
  * partition (2^n, n = 3 in 4/4). A partition is valid when every part is matched, complete (three of its best chord's
  * pitch classes have weight, or its root and third do and its bass pitch class is a chord tone, or its root and fifth
  * do and the bass is the root: a bare fifth over the root is a complete two-voice reading, R-379) and has its bass as a

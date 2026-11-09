@@ -514,13 +514,29 @@ static bool partition_better(const Partition *a, unsigned a_mask, const Partitio
     return (a_mask & (differing & (0u - differing))) != 0;
 }
 
+/* True when cell k keeps the bass of the cell before it and sounds that bass note held over from before: the bass has not moved,
+   so the measure is not cut here (R-379 (4)). */
+static bool holds_bass_note(const Grouper *g, size_t k) {
+    if (g->bass[k] < 0 || g->bass[k] != g->bass[k - 1]) {
+        return false;
+    }
+    const CommonPracticeSegment *segment = g->cells[k].segment;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        if (segment->members[i].held && segment->members[i].pitch == g->bass[k]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* Cuts cells a..b (one measure) at the best valid partition, or leaves it whole; appends the spans in time order. */
 static HarmonicSpanStatus group_measure(Grouper *g, size_t a, size_t b) {
     Measure m;
     m.n = 0;
     m.points[0] = a;
     for (size_t k = a + 1; k <= b && m.n < MAX_BOUNDARIES; k++) {
-        if (g->cells[k].level == HARMONIC_SPAN_LEVEL_HALF_BAR || g->cells[k].level == HARMONIC_SPAN_LEVEL_BEAT) {
+        if ((g->cells[k].level == HARMONIC_SPAN_LEVEL_HALF_BAR || g->cells[k].level == HARMONIC_SPAN_LEVEL_BEAT) &&
+            !holds_bass_note(g, k)) {
             m.points[++m.n] = k;
         }
     }
