@@ -222,6 +222,7 @@ typedef enum {
     RANK_PHRASE,
     RANK_THEME,
     RANK_FORM,
+    RANK_REPEAT,
     RANK_MOTIVE
 } ClaimRank;
 
@@ -509,6 +510,52 @@ static void collect_labelled(Claims *claims, const ScoreTextScore *score, const 
     }
 }
 
+/* "m12", or "m9-m12" for a run of the library's measure numbers. */
+static void add_library_measures(Text *text, int first, int last) {
+    export_text_addf(text, "m%d", first);
+    if (last != first) {
+        export_text_addf(text, "-m%d", last);
+    }
+}
+
+/* A repeat or return of the library: at the first measure of the later run, " repeat of m<a>-m<b> (m<c>-m<d>)" or
+   " return of m<a>-m<b> (m<c>-m<d>), <t> semitones" (an octave lower or higher for -12 or 12), the earlier run first
+   and the later in brackets. */
+static void collect_repeats(Claims *claims, const ScoreTextScore *score, const cJSON *document) {
+    const cJSON *repeat;
+    cJSON_ArrayForEach(repeat, member(document, "repeats")) {
+        TextRational start, end;
+        const char *kind = string_of(repeat, "kind");
+        const cJSON *earlier = member(repeat, "earlier");
+        const cJSON *later = member(repeat, "later");
+        const cJSON *transposition = member(repeat, "transposition");
+        if (!kind || !span_of(repeat, &start, &end) || !cJSON_IsNumber(member(earlier, "first")) ||
+            !cJSON_IsNumber(member(earlier, "last")) || !cJSON_IsNumber(member(later, "first")) ||
+            !cJSON_IsNumber(member(later, "last"))) {
+            continue;
+        }
+        Text line = line_begin(kind);
+        export_text_add(&line, " of ");
+        add_library_measures(&line, (int)member(earlier, "first")->valuedouble,
+                             (int)member(earlier, "last")->valuedouble);
+        export_text_add(&line, " (");
+        add_library_measures(&line, (int)member(later, "first")->valuedouble,
+                             (int)member(later, "last")->valuedouble);
+        export_text_add(&line, ")");
+        if (strcmp(kind, "return") == 0 && cJSON_IsNumber(transposition)) {
+            int semitones = (int)transposition->valuedouble;
+            if (semitones == 12) {
+                export_text_add(&line, ", an octave higher");
+            } else if (semitones == -12) {
+                export_text_add(&line, ", an octave lower");
+            } else {
+                export_text_addf(&line, ", %d semitone%s", semitones, semitones == 1 || semitones == -1 ? "" : "s");
+            }
+        }
+        claims_add(claims, score, start, RANK_REPEAT, &line);
+    }
+}
+
 /* a, b, ... z, aa, ab, ... for motive 0, 1, ... */
 static void add_motive_letter(Text *text, int index) {
     char letters[8];
@@ -735,6 +782,7 @@ bool text_export_write_measures(Text *out, const cJSON *document, const ScoreTex
     collect_phrases(&claims, score, document);
     collect_labelled(&claims, score, member(document, "themes"), "theme", RANK_THEME);
     collect_labelled(&claims, score, member(member(document, "form"), "sections"), "form", RANK_FORM);
+    collect_repeats(&claims, score, document);
     collect_motives(&claims, score, document);
     qsort(claims.items, claims.count, sizeof(Claim), claim_compare);
     if (claims.failed) {
