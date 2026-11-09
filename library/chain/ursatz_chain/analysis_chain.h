@@ -19,6 +19,7 @@
 #include "standard-counterpoint/analysis/analysis_perfects.h"
 #include "standard-form/analysis/analysis_phrase.h"
 #include "standard-form/analysis/analysis_phrase_grid.h"
+#include "standard-form/analysis/analysis_repeats.h"
 #include "standard-harmony/analysis/analysis_resolution.h"
 #include "standard-form/analysis/analysis_theme.h"
 #include "standard-tonality/analysis/chord_input.h"
@@ -227,6 +228,9 @@ const ChainGalantSegments *analysis_chain_galant_segments(const AnalysisChain *c
 const StandardFormPhrases *analysis_chain_phrases(const AnalysisChain *chain);
 /* The phrase grid the final pass found (R-389): NULL without one (phrase_grid off, no form stage, or a pass that ran without it). */
 const StandardFormPhraseGrid *analysis_chain_phrase_grid(const AnalysisChain *chain);
+/* The written-out repeats and returns of the notes in scope (R-400), found once in prepare; the phrase grid follows them. An empty list
+   (no items) when there are none or no segment stage ran; never NULL. */
+const StandardFormRepeats *analysis_chain_repeats(const AnalysisChain *chain);
 const StandardFormSegmentation *analysis_chain_ideas(const AnalysisChain *chain);
 const StandardFormThemes *analysis_chain_themes(const AnalysisChain *chain);
 const StandardFormExpansions *analysis_chain_expansions(const AnalysisChain *chain);
