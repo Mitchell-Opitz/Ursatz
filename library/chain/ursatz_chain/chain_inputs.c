@@ -1058,6 +1058,84 @@ ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const Ch
     return CHAIN_INPUT_OK;
 }
 
+/* One cadence of the grid input: arriving over the window of its first arrival segment only, not the run. */
+static ChainInputStatus add_grid_cadence(ChainFormInput *build, const ChainSegments *segments, size_t *serial, size_t arrival_first,
+                                         CadenceType type, bool post_cadential, double uncertainty) {
+    if (arrival_first >= segments->count) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    const TimeSpan *window = sonority_time_window(segments->sonorities.items[arrival_first].sonority);
+    const TimeSpan *span = form_span(build, time_span_start(window), time_span_end(window));
+    if (span == NULL) {
+        return CHAIN_INPUT_ERR_ALLOC;
+    }
+    char id[32];
+    snprintf(id, sizeof(id), "grid-cadence-%zu", (*serial)++);
+    if (standard_form_input_add_cadence(&build->input, id, span, type, harmony_cadence_strength(type), post_cadential, uncertainty) !=
+        STANDARD_FORM_ANALYSIS_OK) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    return CHAIN_INPUT_OK;
+}
+
+static ChainInputStatus add_grid_cadences(ChainFormInput *build, const ChainSegments *segments, const HarmonyCadences *results,
+                                          size_t *serial) {
+    for (size_t i = 0; results != NULL && i < results->count; i++) {
+        const HarmonyCadenceResult *c = &results->items[i];
+        ChainInputStatus status =
+            add_grid_cadence(build, segments, serial, c->arrival_first, (CadenceType)c->type, c->post_cadential, c->uncertainty);
+        if (status == CHAIN_INPUT_OK && c->alternative.present && c->alternative.reading == HARMONY_CADENCE_READING_CADENCE) {
+            status = add_grid_cadence(build, segments, serial, c->alternative.arrival_first, c->alternative.type, false, c->uncertainty);
+        }
+        if (status != CHAIN_INPUT_OK) {
+            return status;
+        }
+    }
+    return CHAIN_INPUT_OK;
+}
+
+ChainInputStatus chain_build_grid_input(const AnalysisNoteSet *notes, const ChainSegments *segments, int first_measure, int last_measure,
+                                        const HarmonyCadences *found, const HarmonyCadences *readings, ChainFormInput *out) {
+    if (notes == NULL || segments == NULL || out == NULL) {
+        return CHAIN_INPUT_ERR_NULL_ARGUMENT;
+    }
+    if (!analysis_note_set_valid(notes) || notes->count == 0) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    MotiveNote *line = NULL;
+    size_t count = 0;
+    if (!motive_soprano(notes, first_measure, last_measure, &line, &count)) {
+        return CHAIN_INPUT_ERR_ALLOC;
+    }
+    ChainFormInput build;
+    memset(&build, 0, sizeof(build));
+    standard_form_input_init(&build.input, notes->map);
+    ChainInputStatus status = CHAIN_INPUT_OK;
+    for (size_t k = 0; k < count && status == CHAIN_INPUT_OK; k++) {
+        /* the span is the note's own, borrowed from the note set */
+        if (standard_form_input_add_analysis_note(&build.input, &notes->notes[line[k].index], false) != STANDARD_FORM_ANALYSIS_OK) {
+            status = CHAIN_INPUT_ERR_BAD_NOTES;
+        }
+    }
+    free(line);
+    size_t serial = 0;
+    if (status == CHAIN_INPUT_OK) {
+        status = add_grid_cadences(&build, segments, found, &serial);
+    }
+    if (status == CHAIN_INPUT_OK) {
+        status = add_grid_cadences(&build, segments, readings, &serial);
+    }
+    if (status == CHAIN_INPUT_OK && standard_form_input_finish(&build.input) != STANDARD_FORM_ANALYSIS_OK) {
+        status = CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    if (status != CHAIN_INPUT_OK) {
+        chain_form_input_destroy(&build);
+        return status;
+    }
+    *out = build;
+    return CHAIN_INPUT_OK;
+}
+
 /* --- the meter input --- */
 
 static const TimeSpan *meter_span(ChainMeterInput *build, const MusicalTime *start, const MusicalTime *end) {

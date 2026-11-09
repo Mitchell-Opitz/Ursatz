@@ -18,6 +18,7 @@
 #include "standard-form/analysis/analysis_motive.h"
 #include "standard-counterpoint/analysis/analysis_perfects.h"
 #include "standard-form/analysis/analysis_phrase.h"
+#include "standard-form/analysis/analysis_phrase_grid.h"
 #include "standard-harmony/analysis/analysis_resolution.h"
 #include "standard-form/analysis/analysis_theme.h"
 #include "standard-tonality/analysis/chord_input.h"
@@ -96,6 +97,11 @@
  * voice leading, melody and schemas run over the segments that START before the end of last_measure (last_measure 0: all); the form,
  * meter and motive stages read the notes and segments of the measures first_measure to last_measure.
  *
+ * PHRASES FIRST. With phrase_grid (default on; R-389 to R-391) the final pass of the form stage, the second pass of the key refinement
+ * (the only pass when there is none), finds the phrases first: the grid of units of 4, 8 or 16 measures is read from the soprano and the
+ * cadences found, the cadences are claimed at the grid's points (R-390), and phrases and themes are segmented on the grid (R-391). The
+ * first pass of the refinement keeps the cadence-ended phrases, so the key regions do not move. Off, every pass runs as before.
+ *
  * refine_with_given_boundaries: with no form stage there are no phrases to bound the second key pass; when set (and refine_keys is on) the
  * second pass runs anyway, on the first pass's chords as evidence and key_regions.phrase_boundaries as the boundaries (possibly none), as a
  * caller that finds its own phrase ends does (the accuracy harness). The boundaries are borrowed and must outlive the run. Default off.
@@ -134,6 +140,7 @@ typedef struct {
     ScaleDetectConfig sequences;
     bool refine_keys;
     bool refine_with_given_boundaries;
+    bool phrase_grid;
     int first_measure;
     int last_measure;
     int home_key_index;
@@ -218,6 +225,8 @@ const ChainVoiceGrid *analysis_chain_voice_grid(const AnalysisChain *chain);
 const ChainGalantSegments *analysis_chain_galant_segments(const AnalysisChain *chain);
 
 const StandardFormPhrases *analysis_chain_phrases(const AnalysisChain *chain);
+/* The phrase grid the final pass found (R-389): NULL without one (phrase_grid off, no form stage, or a pass that ran without it). */
+const StandardFormPhraseGrid *analysis_chain_phrase_grid(const AnalysisChain *chain);
 const StandardFormSegmentation *analysis_chain_ideas(const AnalysisChain *chain);
 const StandardFormThemes *analysis_chain_themes(const AnalysisChain *chain);
 const StandardFormExpansions *analysis_chain_expansions(const AnalysisChain *chain);
