@@ -201,8 +201,9 @@ static int test_labels(void) {
     assert(composer_style_labels_add_form(labels, "hybrid", bars, 1));
     ComposerRatio closeness;
     assert(composer_style_closeness(chorales, labels, &closeness));
-    /* hybrid is the form chorales has most of: 9 of 10, the largest, so 1; a phrase of 4 bars is 7 of 8 */
-    assert(closeness.numerator * 16 == closeness.denominator * 15);
+    /* hybrid is the form chorales has most of: 8 of 11, the largest, so 1; a phrase of 4 bars is 13 of 36, the largest, so 1 (re-measured at
+       P41 B7 with the re-recorded fixture: it was 9 of 10 and 7 of 8, closeness 15/16) */
+    assert(closeness.numerator == closeness.denominator);
     composer_style_labels_destroy(labels);
     composer_style_destroy(chorales);
     printf("the form labels are the Analyzer's words\n");
@@ -355,7 +356,12 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  * Re-measured at P36 B3 (liquidated residues, R-345): 0.7343, 0.7304, 0.7360 to chorales and 0.6970, 0.6933, 0.6935 to sonatinas;
  * all closer than at B1, and the distance to sonatinas falls with the weight again.
  */
-static const int HARMONY_BASELINE[3][2] = {{7343, 6970}, {7304, 6933}, {7360, 6935}};
+/*
+ * Re-measured at P41 B7 (the style fixtures re-recorded with the Analyzer at Ursatz ceac466 and Analyzer b4b0cc3, phrases first): 0.7454,
+ * 0.7473, 0.7473 to chorales and 0.6797, 0.6816, 0.6816 to sonatinas. The distance to sonatinas no longer falls with the weight (0.6816 at
+ * weight 1 against 0.6797 at 0, within HARMONY_FALL_SLACK), as at P36 B1.
+ */
+static const int HARMONY_BASELINE[3][2] = {{7454, 6797}, {7473, 6816}, {7473, 6816}};
 /* How far the full weight's distance to the second style may be above the zero weight's (a known limit until B2 of P36). */
 #define HARMONY_FALL_SLACK 50
 #define MELODY_ONLY_REACH 200
