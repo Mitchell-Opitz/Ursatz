@@ -7,6 +7,7 @@
 #include "interpretation/chord.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "standard-meter/segmentation_beat_grid.h"
+#include "standard-tonality/analysis/applied_chords.h"
 #include "time/time_span.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"
@@ -137,6 +138,7 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.home_key_index = -1;
     config.inject_kernel_owners = true;
     config.harmonic_spans = true;
+    config.applied_chords = true;
     return config;
 }
 
@@ -368,6 +370,7 @@ static bool identify_chords(AnalysisChain *chain) {
     }
     CommonPracticeWeightedConfig weighting = chain->config.weighting;
     weighting.require_bass_chord_tone = chain->spans_merged; /* the chord holds the span's bass (R-370) */
+    weighting.applied_chords = chain->config.applied_chords; /* this copy only: grouping, key segments and key regions keep diatonic (R-380) */
     if (chain->spans_merged) {
         weighting.seventh_penalty = ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY; /* a passing tone does not complete a seventh (R-376) */
         weighting.context_next = false; /* a span holds its whole stretch: the next span's chord is no evidence for it (R-379) */
@@ -428,9 +431,12 @@ static bool read_numerals(AnalysisChain *chain) {
             p->segment_pitches[pitch_total++] = chain->segs.segments[i].members[j].pitch;
         }
     }
+    StandardTonalityAppliedConfig applied = standard_tonality_applied_config_default();
+    applied.recheck_diatonic = !chain->config.applied_chords; /* identified applied chords are read directly, no re-check (R-380) */
     return standard_tonality_build_chord_inputs(p->segment_inputs, count, p->region_inputs, p->regions.region_count,
                                                 &p->tonal_inputs, &p->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK &&
-           standard_tonality_build_roman_numerals(p->tonal_inputs, p->tonal_count, &p->romans) == STANDARD_TONALITY_ROMAN_OK;
+           standard_tonality_build_roman_numerals_with_config(p->tonal_inputs, p->tonal_count, &applied, &p->romans) ==
+               STANDARD_TONALITY_ROMAN_OK;
 }
 
 static int resolved_home(const AnalysisChain *chain) {

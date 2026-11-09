@@ -32,7 +32,7 @@ Uncertainty = 1 − (1 − chord uncertainty)(1 − key region uncertainty). The
 
 ## Applied chords
 
-Chord identification is diatonic only, so a V/V (D F# A in C) arrives as a ii with F# as a leftover tone. `applied_chords.h` re-checks each segment that has a diatonic reading and weights.
+Chord identification that ranks only diatonic chords reads a V/V (D F# A in C) as a ii with F# as a leftover tone. `applied_chords.h` re-checks each segment that has a diatonic reading and weights. The analysis chain ranks applied chords in the identification instead (P40 B5, R-380), reads them directly and turns this re-check off. Known limits: borrowed chords, the Neapolitan and augmented sixths are not read; a major key's vii°7 of I has the pitch classes of the vii°7 of vi and reads as vii°7/vi.
 
 Candidates for each target x (major: ii, iii, IV, V, vi; minor: III, iv, V, VI, VII): V/x, V7/x, vii-diminished/x, vii-diminished-7/x. Scoring is the L2.5 formula over the passed weights, with the L2.5 defaults:
 
