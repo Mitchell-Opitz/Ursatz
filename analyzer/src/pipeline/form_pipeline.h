@@ -14,6 +14,7 @@
 #include "standard-form/analysis/analysis_theme.h"
 #include "standard-form/analysis/analysis_input.h"
 #include "standard-form/analysis/analysis_phrase.h"
+#include "standard-form/analysis/analysis_repeats.h"
 #include <ursatz_chain/analysis_chain.h>
 #include <ursatz_chain/chain_inputs.h>
 
@@ -39,6 +40,7 @@ typedef struct {
     StandardFormSegmentation segmentation; /* borrowed */
     StandardFormThemes themes;             /* borrowed */
     StandardFormExpansions expansions;     /* borrowed */
+    const StandardFormRepeats *repeats;    /* borrowed; the chain's repeats and returns, NULL when the chain has none */
 } FormStage;
 
 /* Takes the chain's phrases, ideas, themes and expansions, and the input they index. Returns false only on
@@ -52,6 +54,10 @@ long form_stage_phrase_cadence(const FormStage *stage, size_t phrase);
    ones the stage was built from), measures, cadence and signal, and its ideas and subphrases. A stage without phrases leaves the report without.
    Returns false only on allocation failure. */
 bool form_stage_collect(const FormStage *stage, AnalysisReport *report);
+/* Copies the stage's repeats and returns into the report, each with its measures, transposition and the soprano notes
+   that start in the later span. A stage without its form input leaves the report without. Call after
+   form_stage_collect. Returns false only on allocation failure. */
+bool form_stage_collect_repeats(const FormStage *stage, AnalysisReport *report);
 void form_stage_destroy(FormStage *stage);
 
 #endif

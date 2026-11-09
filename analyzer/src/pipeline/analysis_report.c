@@ -106,6 +106,10 @@ void analysis_report_destroy(AnalysisReport *report) {
         free(report->expansions[i].note_ids);
     }
     free(report->expansions);
+    for (size_t i = 0; i < report->repeat_count; i++) {
+        free(report->repeats[i].note_ids);
+    }
+    free(report->repeats);
     free(report->sections);
     free(report->thematic_returns);
     for (size_t i = 0; i < report->motive_count; i++) {
@@ -201,6 +205,8 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->theme_count = 0;
     report->expansions = NULL;
     report->expansion_count = 0;
+    report->repeats = NULL;
+    report->repeat_count = 0;
     report->sections = NULL;
     report->section_count = 0;
     report->thematic_returns = NULL;

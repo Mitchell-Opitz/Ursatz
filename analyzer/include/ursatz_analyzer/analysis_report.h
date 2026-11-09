@@ -342,6 +342,24 @@ typedef struct {
     double uncertainty;
 } AnalysisSubphrase;
 
+/* One repeat or return from the library's standard-form analysis (analysis/analysis_repeats.h), in its order: a later
+   run of measures that restates an earlier run exactly (a repeat) or at another pitch level (a return). Measures are the
+   library's. */
+typedef struct {
+    bool is_return;      /* false for a repeat */
+    int earlier_first;
+    int earlier_last;
+    int later_first;
+    int later_last;
+    int transposition;   /* semitones, later minus earlier; 0 for a repeat */
+    long start_numerator; /* whole notes: the later span, from the start of its first measure to the end of its last */
+    unsigned long start_denominator;
+    long end_numerator;
+    unsigned long end_denominator;
+    size_t *note_ids;    /* owned; ImportedNotes indices of the soprano notes that start in the later span */
+    size_t note_id_count;
+} AnalysisRepeat;
+
 /* One part of a theme: a subphrase of a one-phrase theme (presentation and continuation) or a phrase of a two-phrase
    one (antecedent and consequent). Measures are the library's. */
 typedef struct {
@@ -1159,6 +1177,8 @@ typedef struct {
     size_t theme_count;
     AnalysisExpansion *expansions; /* owned; the library's expansions and contractions, in its order */
     size_t expansion_count;
+    AnalysisRepeat *repeats; /* owned; the library's repeats and returns, in its order; empty when it found none */
+    size_t repeat_count;
     AnalysisSection *sections; /* owned; tile the phrases, in time order; empty when there are no phrases */
     size_t section_count;
     AnalysisThematicReturn *thematic_returns; /* owned; by later theme, then earlier theme; empty when the library

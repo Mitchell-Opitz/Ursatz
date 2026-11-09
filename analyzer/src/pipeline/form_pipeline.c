@@ -31,6 +31,7 @@ bool form_stage_read(FormStage *stage, const ImportedNotes *notes, const ChainIn
     const StandardFormThemes *themes = analysis_chain_themes(library);
     const StandardFormExpansions *expansions = analysis_chain_expansions(library);
     const ChainFormInput *built = analysis_chain_form_input(library);
+    stage->repeats = analysis_chain_repeats(library);
     if (!notes->meter.meter_map || !phrases || !ideas || !themes || !expansions || !built || phrases->count == 0) {
         return true; /* nothing to read phrases from */
     }
@@ -456,6 +457,35 @@ bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
     }
     return collect_ideas(stage, report) && collect_subphrases(stage, report) && collect_themes(stage, report) &&
            collect_expansions(stage, report);
+}
+
+bool form_stage_collect_repeats(const FormStage *stage, AnalysisReport *report) {
+    if (!stage->have_input || !stage->repeats || stage->repeats->count == 0) {
+        return true;
+    }
+    size_t count = stage->repeats->count;
+    report->repeats = calloc(count, sizeof(AnalysisRepeat));
+    if (!report->repeats) {
+        return false;
+    }
+    report->repeat_count = count;
+    for (size_t i = 0; i < count; i++) {
+        const StandardFormRepeat *found = &stage->repeats->items[i];
+        AnalysisRepeat *repeat = &report->repeats[i];
+        repeat->is_return = found->kind == STANDARD_FORM_RETURN;
+        repeat->earlier_first = found->earlier_first;
+        repeat->earlier_last = found->earlier_last;
+        repeat->later_first = found->later_first;
+        repeat->later_last = found->later_last;
+        repeat->transposition = found->transposition;
+        if (!measures_span(stage->built.input.map, found->later_first, found->later_last, &repeat->start_numerator,
+                           &repeat->start_denominator, &repeat->end_numerator, &repeat->end_denominator)) {
+            return false;
+        }
+        repeat->note_ids = note_ids_between(stage, repeat->start_numerator, repeat->start_denominator,
+                                            repeat->end_numerator, repeat->end_denominator, &repeat->note_id_count);
+    }
+    return true;
 }
 
 void form_stage_destroy(FormStage *stage) {
