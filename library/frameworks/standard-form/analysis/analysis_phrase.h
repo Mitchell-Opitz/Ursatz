@@ -47,7 +47,9 @@
  * kind POST_CADENTIAL_EXTENSION). After the last goal cadence, a tail of up to config.max_absorbed_tail measures also extends
  * the last phrase: of 1-2 measures a POST_CADENTIAL_EXTENSION, of 3 or more a CODETTA (the suffix lengths of
  * external_expansion_rules.h). A longer tail, or any tail after a boundary the secondary signal made, is a phrase of its own with
- * no cadence.
+ * no cadence. A tail in which no note starts (a last note held over the barline) is never a phrase: after a cadence it is
+ * absorbed as above whatever its length, after any other boundary the last phrase ends with it (end and last measure the last
+ * measure that sounds).
  *
  * PHRASES ON THE GRID (R-391, standard_form_segment_phrases_on_grid). The points are the same (one per measure with a sounding
  * soprano note, the goal cadences on them, the stronger when two share a point), and the detector is not used: the boundaries

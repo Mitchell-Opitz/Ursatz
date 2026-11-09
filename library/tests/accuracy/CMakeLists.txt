@@ -16,6 +16,21 @@ target_compile_definitions(test_accuracy_corpus_load PRIVATE
     URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus")
 add_test(NAME accuracy_corpus_load COMMAND test_accuracy_corpus_load)
 
+# Every corpus chorale through the whole analysis chain to the form stage (P41 B6, R-396).
+add_executable(test_accuracy_chorale_form test_chorale_form.c)
+target_link_libraries(test_accuracy_chorale_form PRIVATE accuracy_support ursatz_chain standard_form standard_harmony
+    common_practice_minimal standard_meter standard_tonality)
+target_compile_definitions(test_accuracy_chorale_form PRIVATE
+    URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus")
+add_test(NAME accuracy_chorale_form COMMAND test_accuracy_chorale_form)
+find_program(URSATZ_ACCURACY_VALGRIND valgrind)
+if(URSATZ_ACCURACY_VALGRIND)
+  # 34 s measured
+  add_test(NAME accuracy_chorale_form_valgrind
+           COMMAND ${URSATZ_ACCURACY_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_accuracy_chorale_form>)
+  set_tests_properties(accuracy_chorale_form_valgrind PROPERTIES LABELS slow)
+endif()
+
 # The chain over the annotated corpus and the existing fixture tests, read through the harness. Each fixture
 # wrapper compiles one tests/integration test as it is (main renamed) in its own library, linked to what that test
 # links, because frameworks share header names (analysis_phrase.h is in more than one) and a translation unit must
