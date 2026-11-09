@@ -970,7 +970,9 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
 /* Re-measured at P41 B7 (the style fixtures re-recorded with the Analyzer at Ursatz ceac466 and Analyzer b4b0cc3, phrases first): the means
    are 0.7454 and 0.7996 styled to chorales, 0.6663 and 0.7645 to sonatinas (harmony, melody). Before the re-record, with the old fixtures and
    P41's hearing, the chorales read 0.7574 styled harmony and 0.8072 styled melody. */
-static const int STYLED[2][2] = {{745, 799}, {666, 764}};
+/* Re-measured at P42 B7 (keys from phrases; the fixtures not re-recorded): the styled means to chorales are 0.7325 and 0.7995 (harmony,
+   melody); to sonatinas 0.6663 and 0.7645, within the bounds. */
+static const int STYLED[2][2] = {{732, 799}, {666, 764}};
 /* Re-measured at P37 B2 (ideas ranked by fidelity, R-355): the unstyled means are 0.7217 and 0.7975 to chorales, 0.6858 and 0.7575 to
    sonatinas (harmony, melody); the styled means are as before. */
 /* Re-measured at P39 B6 (the melody read from every melody note, R-377): the unstyled melody means 0.7922 and 0.7548 are closer; the
@@ -978,7 +980,9 @@ static const int STYLED[2][2] = {{745, 799}, {666, 764}};
 /* Re-measured at P41 B7 (the style fixtures re-recorded, phrases first): the unstyled means are 0.7164 and 0.8025 to chorales, 0.6696 and
    0.7676 to sonatinas (harmony, melody). Before the re-record, with the old fixtures and P41's hearing, the chorales read 0.7318 and
    0.7922. */
-static const int UNSTYLED[2][2] = {{716, 802}, {669, 767}};
+/* Re-measured at P42 B7 (keys from phrases; the fixtures not re-recorded): the unstyled means to chorales are 0.7137 and 0.8027 (harmony,
+   melody); to sonatinas 0.6691 and 0.7675, as recorded. */
+static const int UNSTYLED[2][2] = {{713, 802}, {669, 767}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};

@@ -229,3 +229,5 @@ done
 ```
 
 Re-recorded at P41 B7 with the Analyzer at Ursatz `ceac466` and Analyzer `b4b0cc3` (model version 0.7.0: the files now also hold the motive, tempo and note-density categories). `chorales-motives.style.json` is the style without tempo and density, so `test_style` brief and same read it.
+
+The fixtures were not re-recorded at P42 (Ursatz `fc7adf2`, Analyzer `2e4a525`); the baselines in `test_style.c` and `test_style_blend.c` were re-measured there.

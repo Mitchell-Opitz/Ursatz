@@ -33,6 +33,7 @@ The Composer hears one chord per segment: `hearing_analyzer_options` (`src/check
 for every `analyzer_hear` call, while the Analyzer's own output reads harmonic spans. Compose rates and baselines were recorded
 on the one-chord-per-segment reading, and on spans the Analyzer misreads the two-voice texture the Composer renders (melody and
 bass, no inner voices) at cadences (R-378, R-379). P41 keeps the hearing off spans (R-394; `testing/span-hearing.md`). Cadences are heard only at phrase points (Ursatz P41).
+Keys change only at phrases with a cadence in the new key (Ursatz P42), so a key change inside a phrase is heard as a tonicization, not a modulation.
 
 ## What the Analyzer hears
 

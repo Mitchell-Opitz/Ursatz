@@ -361,7 +361,12 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  * 0.7473, 0.7473 to chorales and 0.6797, 0.6816, 0.6816 to sonatinas. The distance to sonatinas no longer falls with the weight (0.6816 at
  * weight 1 against 0.6797 at 0, within HARMONY_FALL_SLACK), as at P36 B1.
  */
-static const int HARMONY_BASELINE[3][2] = {{7454, 6797}, {7473, 6816}, {7473, 6816}};
+/*
+ * Re-measured at P42 B7 (keys from phrases; the fixtures not re-recorded): 0.7325, 0.7343, 0.7343 to chorales and 0.6769, 0.6789,
+ * 0.6789 to sonatinas. The distance to sonatinas still does not fall with the weight (0.6789 at weight 1 against 0.6769 at 0, within
+ * HARMONY_FALL_SLACK).
+ */
+static const int HARMONY_BASELINE[3][2] = {{7325, 6769}, {7343, 6789}, {7343, 6789}};
 /* How far the full weight's distance to the second style may be above the zero weight's (a known limit until B2 of P36). */
 #define HARMONY_FALL_SLACK 50
 #define MELODY_ONLY_REACH 200
