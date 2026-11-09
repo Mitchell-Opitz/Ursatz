@@ -297,8 +297,8 @@ int main(void) {
     Inputs inputs;
     HarmonyCadences found_cadences = chain_cadences(&fp->piece, &p, map, &lines, &cadence_annotation, &segments, &inputs);
     ChainFormInput form;
-    assert(chain_build_form_input(&p.set, analysis_chain_segments(p.chain), &lines, ra.range_first, ra.range_last, &found_cadences,
-                                  &form) == CHAIN_INPUT_OK);
+    assert(chain_build_form_input(&p.set, analysis_chain_segments(p.chain), analysis_chain_voice_segments(p.chain), &lines, ra.range_first,
+                                  ra.range_last, &found_cadences, &form) == CHAIN_INPUT_OK);
     FormAnalysis analysis;
     memset(&analysis, 0, sizeof(analysis));
     form_analyze(&form.input, &analysis);

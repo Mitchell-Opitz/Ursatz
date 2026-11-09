@@ -856,12 +856,13 @@ static ChainInputStatus add_cadences(ChainFormInput *build, const ChainSegments 
     return CHAIN_INPUT_OK;
 }
 
-ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const ChainSegments *segments, const OuterVoiceLines *lines,
-                                        int first_measure, int last_measure, const HarmonyCadences *cadences, ChainFormInput *out) {
-    if (notes == NULL || segments == NULL || lines == NULL || out == NULL) {
+ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const ChainSegments *segments,
+                                        const ChainSegments *line_segments, const OuterVoiceLines *lines, int first_measure, int last_measure, const HarmonyCadences *cadences, ChainFormInput *out) {
+    if (notes == NULL || segments == NULL || line_segments == NULL || lines == NULL || out == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
-    if (!analysis_note_set_valid(notes) || segments->count == 0 || lines->count < segments->count) {
+    if (!analysis_note_set_valid(notes) || segments->count == 0 || line_segments->count == 0 ||
+        lines->count < line_segments->count) {
         return CHAIN_INPUT_ERR_BAD_NOTES;
     }
     NoteKey *keys = sorted_keys(notes);
@@ -876,8 +877,8 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
     const MusicalTime *current_start = NULL;
     const MusicalTime *current_end = NULL;
     int current_semitone = 0;
-    for (size_t s = 0; s <= segments->count && status == CHAIN_INPUT_OK; s++) {
-        const TimeSpan *window = s < segments->count ? sonority_time_window(segments->sonorities.items[s].sonority) : NULL;
+    for (size_t s = 0; s <= line_segments->count && status == CHAIN_INPUT_OK; s++) {
+        const TimeSpan *window = s < line_segments->count ? sonority_time_window(line_segments->sonorities.items[s].sonority) : NULL;
         int measure = window != NULL ? measure_of(notes->map, time_span_start(window)) : -1;
         bool in_range = window != NULL && measure >= first_measure && measure <= last_measure;
         const char *id = in_range && lines->soprano[s].present ? entity_id_value(lines->soprano[s].note_id) : NULL;

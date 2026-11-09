@@ -188,11 +188,13 @@ typedef struct {
 /*
  * The form input over the measures [first_measure, last_measure] (MeterMap numbers): the soprano of the outer lines as notes (consecutive
  * segments on one note id are one note), every segment starting in the measures as a segment, and the cadences found (NULL for none),
- * each arriving over the windows of its first to last arrival segment, then finished. `lines` are the outer lines on the chord segments
- * `segments` (chain_build_segment_lines; the notes' events are found in `notes` by id). Destroy with chain_form_input_destroy.
+ * each arriving over the windows of its first to last arrival segment, then finished. `lines` are the outer lines on the voice segments
+ * `line_segments` (outer_voice_extract; the notes' events are found in `notes` by id); the soprano notes are read from them. `segments`
+ * are the chord segments: the segments of the input and the cadences stay on them. `line_segments` NULL is NULL_ARGUMENT. Destroy with
+ * chain_form_input_destroy.
  */
-ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const ChainSegments *segments, const OuterVoiceLines *lines,
-                                        int first_measure, int last_measure, const HarmonyCadences *cadences, ChainFormInput *out);
+ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const ChainSegments *segments,
+                                        const ChainSegments *line_segments, const OuterVoiceLines *lines, int first_measure, int last_measure, const HarmonyCadences *cadences, ChainFormInput *out);
 
 /*
  * The form input for the motive analysis (analysis_motive.h): a NOTE-LEVEL soprano, which the outer-voice line (one note per segment)
