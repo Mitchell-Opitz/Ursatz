@@ -52,24 +52,26 @@ Where the Analyzer reads a piece differently from its annotation, and why. Back 
 - Pivot chords are read in the old key and its mode; a minor old key is read in its minor vocabulary.
 - Chord identification is Ursatz's weighted identification, read in each segment's key region and its
   mode: the diatonic triads and sevenths of a major key, or of natural, harmonic and melodic minor in a
-  minor region. When no key is found, no chord is identified. Chord coverage on the reference pieces:
-  Bach 114 96.2%, Clementi 36 95.2%, Field 1 92.7%, Field 5 87.9%, Mozart 545 92.4%. Chromatic, applied
-  and fully diminished chords outside minor are not candidates, so a segment built on one is matched to
-  the nearest diatonic chord or not at all.
+  minor region, and since P40 the applied chords of the key (V/x, V7/x, vii°/x, vii°7/x). When no key is
+  found, no chord is identified. Chord coverage on the reference pieces: Bach 114 92.6%, Clementi 36 97.8%,
+  Field 1 99.1%, Field 5 100.0%, Mozart 545 98.1%. Borrowed (modal mixture) chords, the Neapolitan and
+  augmented sixths are not candidates, so a segment built on one is matched to the nearest candidate or not at
+  all.
 - Roman numerals follow chord identification, so a chord has a numeral only where the weighted
-  identification found one, and a chromatic chord is matched to the nearest
-  diatonic chord or not at all. The library's adapter reads a chord that is not a degree of its key,
-  or has a quality the key does not give that degree, as having no numeral; it names no borrowed
-  (modal mixture) chord, Neapolitan or augmented sixth, so the borrowed group of the vocabulary is
-  empty. It reads an applied chord only when the chord was identified as a diatonic neighbour and
-  resolves as the library requires.
+  identification found one. The library's adapter reads a chord that is not a degree of its key, or has a
+  quality the key does not give that degree, as an applied chord (`V6/5/V`) when it is one, and otherwise as
+  having no numeral; it names no borrowed (modal mixture) chord, Neapolitan or augmented sixth, so the
+  borrowed group of the vocabulary is empty. An applied chord that resolves to none is named all the same and
+  exports `resolves_to` null ("no resolution" in the report). A major key's vii°7 of I reads as vii°7/vi.
 - Chords are harmonic spans, not sonority segments: the over-cutting of one chord per change of sounding notes is replaced
   by Ursatz's span rule (whole measures partitioned from the bass, one chord a span), so the reference pieces read
-  Bach 114 48 chords, Clementi 36 47, Field 1 90, Field 5 82 and Mozart 545 224. Applied (secondary) chords are still
-  pending (P40: a span is identified with the grouping vocabulary, triads and dominant and diminished sevenths). Cadences,
-  phrases, themes, form and the schemas still read the chords on the spans, and phrases and themes read the soprano at
-  span starts until P41, so they moved: Bach 114 reads 1 cadence (was 5), Clementi 36 5 (was 15) and 7 phrases (was 10),
-  Field 5 2 cadences and 2 phrases, and the rhythm's hyperdownbeats of Field 5 read 3 of 8 (was 7).
+  Bach 114 54 chords, Clementi 36 46, Field 1 107, Field 5 82 and Mozart 545 210. Two-voice textures read on spans
+  (P40: a root and fifth complete a part, a held bass is not cut, an accented step over a held bass is evidence for the
+  key, not a chord tone, and a bass that ends as the step lands holds nothing). Cadences, phrases, themes, form and the
+  schemas still read the chords on the spans, and phrases and themes read the soprano at span starts until P41, so
+  they moved: Bach 114 reads 0 cadences and 2 phrases, Clementi 36 5 cadences and 7 phrases, Mozart 545 23 cadences and
+  27 phrases, Field 1 17 cadences, Field 5 3 cadences and 2 phrases. Phrases and cadences wait for P41, keys for P42:
+  Mozart 545 reads 21 key regions and Clementi 36 6, with the key edges where the 4-measure windows put them.
 - The outer voices in the document are per voice segment (one entry per melody note, several to a chord), but a voice
   segment is cut where the sounding pitch classes change, so melody notes that are all chord tones of one held chord share
   one entry (the highest, as the library reads it); a chord's own `outer` is the lines' entry at its start.
