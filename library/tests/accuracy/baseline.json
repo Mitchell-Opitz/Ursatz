@@ -8,9 +8,9 @@
     "key": 0.706522,
     "cadence_recall": 0.222222,
     "cadence_type": 1.000000,
-    "cadence_precision": 0.222222,
-    "phrase_boundaries": 0.450000,
-    "theme_types": 0.000000,
+    "cadence_precision": 0.500000,
+    "phrase_boundaries": 0.550000,
+    "theme_types": 0.166667,
     "phrase_model_labels": 0.370968,
     "melody_climaxes": 1.000000,
     "melody_ranges": 0.000000,
@@ -100,9 +100,9 @@
       "melody_leaps": 0.363636
     },
     "Mozart 545": {
-      "cadence_recall": 0.500000,
+      "cadence_recall": 1.000000,
       "cadence_type": 1.000000,
-      "cadence_precision": 0.250000,
+      "cadence_precision": 1.000000,
       "phrase_model_labels": 0.370968,
       "motive_occurrences": 0.952381
     },
@@ -110,9 +110,8 @@
       "cadence_recall": 0.000000
     },
     "Field 1": {
-      "cadence_recall": 0.250000,
-      "cadence_type": 1.000000,
-      "cadence_precision": 0.200000,
+      "cadence_recall": 0.000000,
+      "cadence_precision": 0.000000,
       "texture_measures": 0.907692,
       "texture_changes": 1.000000
     },
@@ -121,8 +120,8 @@
       "rhythm_hyperdownbeats": 0.500000
     },
     "Five reference pieces, pooled": {
-      "phrase_boundaries": 0.450000,
-      "theme_types": 0.000000
+      "phrase_boundaries": 0.550000,
+      "theme_types": 0.166667
     },
     "Galant fixture": {
       "schemas_sequences": 0.555556

@@ -87,6 +87,8 @@ P40 B6a makes a resolved accent need a bass that outlasts the step (R-388): stru
 
 P41 B1 moves the whole-chain runs of `test_cadences_reference_pieces` and `test_form_reference_pieces`, which feed the cadence and phrase metrics, from the pre-P22 pipeline to `analysis_chain_run` (R-392): the chain's own segments (harmonic spans), cadences, phrases and themes. Library output did not change. Overall after it (cadence recall, type, precision, phrase boundaries, theme types): 22.2% (2 of 9), 100.0% (2 of 2), 22.2% (2 of 9), 45.0% (9 of 20), 0.0% (11.1%, 100.0%, 20.0%, 60.0%, 0.0% before). The fall in phrase boundaries is the measurement moving to the real chain, not an analysis change; the baseline was re-recorded. The chorale values (89.5%, 84.0%, 76.5%, 55.8%, 70.7%) did not move.
 
+P41 B5 finds the phrases first in the chain (R-389 to R-391): the cadences the harness reads are those claimed at the points of the phrase grid, and the phrases and themes are cut on the grid. Overall after it (cadence recall, type, precision, phrase boundaries, theme types): 22.2% (2 of 9), 100.0% (2 of 2), 50.0% (2 of 4), 55.0% (11 of 20), 16.7% (1 of 6) (22.2%, 100.0%, 22.2%, 45.0%, 0.0% before). Mozart 545 now has both its annotated cadences (recall 100.0%, precision 100.0%); Field 1 finds none of its four in the whole-piece run (recall 0.0%, 25.0% before), because the grid of the whole piece falls three measures from the annotation's. The baseline was re-recorded. The chorale values (89.5%, 84.0%, 76.5%, 55.8%, 70.7%) and the rhythm values did not move.
+
 ## Harmonic spans
 
 P39 reads chords on harmonic spans (`AnalysisChainConfig.harmonic_spans`, default on) with a seventh penalty of 0.15
