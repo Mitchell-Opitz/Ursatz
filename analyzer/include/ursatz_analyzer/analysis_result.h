@@ -52,6 +52,9 @@ typedef struct {
     /* Asked before the chain run and between the Analyzer stages; true stops the run. May be NULL. */
     bool (*cancel)(void *context);
     void *cancel_context;
+    /* true (the default) reads the chords on harmonic spans (Ursatz AnalysisChainConfig.harmonic_spans); false reads one chord
+       per segment, as before Ursatz P39. The Composer's hearing sets it false until P41 (R-378). */
+    bool harmonic_spans;
 } AnalyzerOptions;
 
 /* All stages, no cancel callback. */

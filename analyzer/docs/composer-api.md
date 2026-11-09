@@ -34,7 +34,8 @@ pitch (a pitch identity is opaque), so `midi` is required when `count` is above 
 There is no 128-entry pitch table in this entry. The Composer already holds the number it generated each event from.
 
 `options.analysis` is the `AnalyzerOptions` of `analyzer_analyze`, including `cancel` (asked before the chain run and
-between Analyzer stages; `ANALYZER_ERR_CANCELLED`, nothing written). `options.render_document` renders the analysis
+between Analyzer stages; `ANALYZER_ERR_CANCELLED`, nothing written) and `harmonic_spans` (default true; false reads one chord per
+segment, and the Composer's hearing sets it false until P41, R-378). `options.render_document` renders the analysis
 document (input path `<fragment>`) once into the result; read it with `analyzer_result_document_json`, which is `NULL`
 when it was not asked for. A document needs every stage: `render_document` with fewer gives `ANALYZER_ERR_ARGUMENT`.
 

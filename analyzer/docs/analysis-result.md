@@ -45,6 +45,9 @@ standard-counterpoint, not by the Analyzer.
 `cancel(cancel_context)` is asked before the chain run and before each selected Analyzer-only stage. When it returns
 true the run stops with `ANALYZER_ERR_CANCELLED`.
 
+`AnalyzerOptions.harmonic_spans` (default true) reads the chords on harmonic spans; false reads one chord per segment, as before
+Ursatz P39. The Composer's hearing sets it false until P41 (R-378). Nothing records it in the document, report or schema.
+
 The report view, and so the document and the Markdown report, is built only when every chain stage ran. With fewer,
 the result holds the chain and the claims of the stages that ran; `analyzer_result_report` is an empty report and
 `analysis_document_build_from_result` and `markdown_report_render_result` return NULL.

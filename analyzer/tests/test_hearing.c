@@ -34,6 +34,15 @@
 
 static const char *const PIECES[] = {"Bach 114.mid", "Mozart 545.mid", "Clementi 36.mid", "Field 1.mid", "Field 5.mid"};
 
+/* Report entries and cadences by piece (the order of PIECES): hearing without harmonic spans gives the B4 pin, one chord per
+   segment as before Ursatz P39; the default hearing reads the chords on spans (R-378). */
+typedef struct {
+    size_t entries;
+    size_t cadences;
+} Reading;
+static const Reading WITHOUT_SPANS[] = {{155, 5}, {606, 14}, {205, 15}, {268, 13}, {169, 12}};
+static const Reading WITH_SPANS[] = {{48, 1}, {224, 13}, {47, 5}, {90, 15}, {82, 2}};
+
 static int failures = 0;
 
 #define CHECK(condition, ...)                                          \
@@ -179,7 +188,8 @@ static void check_violations(const char *fixture, const AnalyzerResult *heard, c
           fixture);
 }
 
-static void check_piece(const char *fixture, const StyleModel *reference_model) {
+static void check_piece(size_t piece, const StyleModel *reference_model) {
+    const char *fixture = PIECES[piece];
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
     ImportedNotes notes;
@@ -200,6 +210,23 @@ static void check_piece(const char *fixture, const StyleModel *reference_model) 
     /* No document unless asked for; the events are the caller's. */
     AnalyzerResult *heard = NULL;
     CHECK(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
+    if (heard) {
+        const AnalysisReport *report = analyzer_result_report(heard);
+        CHECK(report->entry_count == WITH_SPANS[piece].entries && report->cadence_count == WITH_SPANS[piece].cadences,
+              "%s: default hearing %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
+              report->cadence_count, WITH_SPANS[piece].entries, WITH_SPANS[piece].cadences);
+    }
+    AnalyzerHearingOptions no_spans = analyzer_hearing_options_default();
+    no_spans.analysis.harmonic_spans = false;
+    AnalyzerResult *unspanned = NULL;
+    CHECK(analyzer_hear(&hearing, &no_spans, &unspanned) == ANALYZER_OK && unspanned, "%s: hear without spans", fixture);
+    if (unspanned) {
+        const AnalysisReport *report = analyzer_result_report(unspanned);
+        CHECK(report->entry_count == WITHOUT_SPANS[piece].entries && report->cadence_count == WITHOUT_SPANS[piece].cadences,
+              "%s: hearing without spans %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
+              report->cadence_count, WITHOUT_SPANS[piece].entries, WITHOUT_SPANS[piece].cadences);
+    }
+    analyzer_result_destroy(unspanned);
     AnalyzerResult *direct = NULL;
     CHECK(analyzer_analyze(&notes, NULL, &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
     if (!heard || !direct) {
@@ -296,7 +323,7 @@ int main(int argc, char **argv) {
     analyzer_result_destroy(result);
     imported_notes_destroy(&notes);
     for (size_t i = 0; model && i < (smoke ? 1 : sizeof PIECES / sizeof PIECES[0]); i++) {
-        check_piece(PIECES[i], model);
+        check_piece(i, model);
     }
     style_model_destroy(model);
     if (failures) {

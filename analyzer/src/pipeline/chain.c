@@ -292,6 +292,7 @@ bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const Ana
     }
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = pass->options.stages & ANALYSIS_CHAIN_STAGE_ALL;
+    config.harmonic_spans = pass->options.harmonic_spans;
     config.refine_keys = true;
     config.inject_kernel_owners = true;
     if (analysis_chain_run(&pass->input.set, pass->input.key_events, pass->input.key_event_count, &config,
