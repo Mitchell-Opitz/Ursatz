@@ -10,6 +10,7 @@
 #include "standard-tonality/analysis/applied_chords.h"
 #include "time/time_span.h"
 #include "standard-form/analysis/analysis_phrase_grid.h"
+#include "standard-form/analysis/analysis_repeats.h"
 #include "standard-harmony/analysis/analysis_cadence_claims.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"
@@ -68,6 +69,7 @@ struct AnalysisChain {
     MusicalTime **boundaries; /* the second pass: the phrase ends of the first, owned copies */
     size_t boundary_count;
     int home;
+    StandardFormRepeats repeats; /* the written-out repeats and returns, found once in prepare (R-400) */
 
     Pass pass;
 
@@ -328,6 +330,7 @@ void analysis_chain_destroy(AnalysisChain *chain) {
         chain_form_input_destroy(&chain->motive_input);
     }
     pass_destroy(chain);
+    standard_form_repeats_destroy(&chain->repeats);
     for (size_t i = 0; i < chain->boundary_count; i++) {
         musical_time_destroy(chain->boundaries[i]);
     }
@@ -503,6 +506,9 @@ static AnalysisChainStatus claim_cadences_on_grid(AnalysisChain *chain, int last
         goto done;
     }
     p->have_grid = true;
+    if (standard_form_phrase_grid_follow_repeats(&p->grid, &chain->repeats) != STANDARD_FORM_ANALYSIS_OK) {
+        goto done;
+    }
     size_t point_count = 0;
     points = calloc(p->grid.count * 2 + 1, sizeof(HarmonyPhrasePoint));
     if (points == NULL) {
@@ -813,6 +819,38 @@ static bool scope_count(AnalysisChain *chain) {
     return count > 0;
 }
 
+/* The repeats and returns of the notes in scope (R-400), found once: every pass's grid follows them. */
+static bool find_chain_repeats(AnalysisChain *chain) {
+    const AnalysisNoteSet *set = chain->notes;
+    double end = 0;
+    bool scoped = chain->config.last_measure > 0;
+    if (scoped) {
+        TimeSpan *last = NULL;
+        if (meter_map_measure_span(set->map, chain->config.last_measure, &last) != METER_MAP_OK) {
+            return false;
+        }
+        end = time_double(time_span_end(last));
+        time_span_destroy(last);
+    }
+    StandardFormRepeatNote *items = calloc(set->count > 0 ? set->count : 1, sizeof(StandardFormRepeatNote));
+    if (items == NULL) {
+        return false;
+    }
+    size_t count = 0;
+    for (size_t i = 0; i < set->count; i++) {
+        const AnalysisNote *note = &set->notes[i];
+        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && time_double(time_span_start(note->span)) >= end - 1e-12)) {
+            continue;
+        }
+        items[count].span = note->span;
+        items[count].semitone = note->midi;
+        count++;
+    }
+    bool ok = standard_form_find_repeats(items, count, set->map, NULL, &chain->repeats) == STANDARD_FORM_ANALYSIS_OK;
+    free(items);
+    return ok;
+}
+
 /* The segments become harmonic spans (R-369 to R-375): the cells' levels and bass, the grouping (key-free: no key region exists yet), and one
    segment per span with its bass. The segment lines are built afterwards, on the spans. The scope is read again on the new segments. */
 static bool merge_into_spans(AnalysisChain *chain) {
@@ -859,6 +897,9 @@ static AnalysisChainStatus prepare(AnalysisChain *chain) {
             return ANALYSIS_CHAIN_ERR_SEGMENTS;
         }
         if (!scope_count(chain)) {
+            return ANALYSIS_CHAIN_ERR_NOTES;
+        }
+        if (!find_chain_repeats(chain)) {
             return ANALYSIS_CHAIN_ERR_NOTES;
         }
     }
@@ -1077,6 +1118,11 @@ const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain) {
 
 const StandardFormPhraseGrid *analysis_chain_phrase_grid(const AnalysisChain *chain) {
     return chain != NULL && chain->pass.have_grid ? &chain->pass.grid : NULL;
+}
+
+const StandardFormRepeats *analysis_chain_repeats(const AnalysisChain *chain) {
+    static const StandardFormRepeats none = {NULL, 0};
+    return chain != NULL ? &chain->repeats : &none;
 }
 
 const StandardFormPhrases *analysis_chain_phrases(const AnalysisChain *chain) {

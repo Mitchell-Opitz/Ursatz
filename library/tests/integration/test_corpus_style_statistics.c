@@ -192,7 +192,7 @@ static void check_corpus(CorpusStoreHandle *corpus, PersistenceHandle *persisten
  * KNOWN COUNTS. What the chain finds on each piece, pinned: the cadence types it classifies, one chord progression of length 2 and the top one
  * of length 3, each with its count and the n-gram total of the piece. These are the chain's own results (cross-checked above against a tally
  * taken straight from the chain), not the hand annotations: the chain finds more cadences than the annotated ones in places (Mozart K. 545:
- * 15 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). The cadences are
+ * 14 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). The cadences are
  * those claimed at the points of the phrase grid (P41, R-390), so Bach 114 and Field 5 have none, and the chords are read on harmonic spans
  * (P39), so a held chord is one chord and the repeated tonic ("I > I") is rare. A piece with no cadence has no cadence entries.
  */
@@ -210,7 +210,7 @@ typedef struct {
 
 static const Known KNOWN[5] = {
     /* Bach 114 */ {{NULL}, {0}, 0, "I > IV", 7, 51, "I > I > IV", 3, 50},
-    /* Mozart 545 */ {{"pac", "other", "hc", "iac"}, {6, 1, 6, 2}, 4, "V > I", 24, 205, "I > V > I", 16, 204},
+    /* Mozart 545 */ {{"pac", "other", "hc", "iac"}, {6, 2, 4, 2}, 4, "V > I", 24, 205, "I > V > I", 16, 204},
     /* Clementi 36 */ {{"hc", "iac"}, {3, 1}, 2, "I > I", 6, 44, "I > V > I", 3, 43},
     /* Field 1 */ {{"pac"}, {1}, 1, "I > I", 4, 21, "V > half-diminished7 > dominant7", 2, 20},
     /* Field 5 */ {{NULL}, {0}, 0, "I > I", 1, 16, "I > diminished > I", 1, 15},
