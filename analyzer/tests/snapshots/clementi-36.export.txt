@@ -9,9 +9,9 @@ m1 4/4
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  key C major c=0.18 (m1-m6)
  chord C I @1 c=0.00
- phrase 1 m1-m6 c=0.02 | form A
- theme hybrid m1-m6 c=0.02
- form A m1-m6 c=0.02
+ phrase 1 m1-m4 c=0.02 | form A
+ theme period m1-m8 c=0.01
+ form A m1-m8 c=0.01
 
 m2
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G5 @4 q
@@ -27,12 +27,13 @@ m4
  P1 S1 V1: D5 @1 e, C5 @1.5 e, B4 @2 e, A4 @2.5 e, G4 @3 q, r @4 q
  P1 S2 V2: G2 @1 q, r @2 q, G3 @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
  chord G V @1 c=0.88
- cadence PAC m5 @1 c=0.02
+ cadence HC m4 @1 c=0.02
 
 m5
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
+ phrase 2 m5-m8 c=0.01 | form A
 
 m6
  P1 S1 V1: E5 @1 q, G5 @2 e, E5 @2.5 e, C5 @3 q, E5 @4 e, C5 @4.5 e
@@ -46,8 +47,6 @@ m7
  key G major c=0.13 (m7-m11)
  modulation C major to G major (m7-m11)
  chord G I @1 c=0.00
- phrase 2 m7-m8 c=0.01 | form B
- form B m7-m8 c=0.01
  chord Am/C ii6 @2 c=0.64
  chord G/D I6/4 @3 c=0.86
  cadence IAC m8 @1 c=0.01
@@ -62,9 +61,9 @@ m9
  P1 S1 V1: A4 @1 q, A5 @2 q, A5 @3 q, A5 @4 q
  P1 S2 V2: F#3 @1 e, D4 @1.5 e, A3 @2 e, D4 @2.5 e, F#3 @3 e, D4 @3.5 e, A3 @4 e, D4 @4.5 e
  chord D/F# V6 @1 c=0.84
- phrase 3 m9-m19 c=0.03 | form C
- theme hybrid m9-m19 c=0.03
- form C m9-m25 c=0.00
+ phrase 3 m9-m23 c=0.00 | form A'
+ theme hybrid m9-m23 c=0.00
+ form A' m9-m38 c=0.00
 
 m10
  P1 S1 V1: B4 @1 e, C5 @1.5 e, D5 @2 e, E5 @2.5 e, F#5 @3 e, G5 @3.5 e, A5 @4 e, B5 @4.5 e
@@ -79,8 +78,8 @@ m11
 m12
  P1 S1 V1: D5 @1 e, G5 @1.5 e, B5 @2 e, D6 @2.5 e, C6 @3 e, B5 @3.5 e, A5 @4 e, G5 @4.5 e
  P1 S2 V2: B3 @1 q, r @2 q, r @3 h
- key C major c=0.00 (m12-m14)
- modulation G major to C major (m12-m14)
+ key C major c=0.00 (m12-m15)
+ modulation G major to C major (m12-m15)
  chord G/B V6 @1 c=0.86
 
 m13
@@ -96,13 +95,13 @@ m14
 m15
  P1 S1 V1: G4 @1 h, r @3 h
  P1 S2 V2: G2 @1 e, B2 @1.5 e, D3 @2 e, G3 @2.5 e, G2 @3 q, r @4 q
- key C minor c=0.10 (m15-m19)
- modulation C major to C minor (m15-m19)
  chord G V @1 c=0.00
 
 m16 clef S2 treble
  P1 S1 V1: B4 @1 q, D5 @2 e, B4 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: F4 @1 w
+ key C minor c=0.17 (m16-m19)
+ modulation C major to C minor (m16-m19)
  chord G7/F V4/2 @1 c=0.99
 
 m17
@@ -120,7 +119,6 @@ m19
  P1 S1 V1: B4 @1 e, C5 @1.5 e, D5 @2 e, B4 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: G3 @1 h, r @3 h
  chord G V @1 c=0.70
- cadence HC m19 @1 c=0.03
 
 m20
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
@@ -128,8 +126,6 @@ m20
  key G major c=0.06 (m20-m22)
  tonicization G major (m20-m22)
  chord G7 V4/2/IV @1 c=0.00
- phrase 4 m20-m25 c=0.00 | form C
- theme hybrid m20-m25 c=0.00
 
 m21
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
@@ -148,12 +144,13 @@ m23
  key C major c=0.26 (m23-m38)
  modulation G major to C major (m23-m38)
  chord G V @1 c=1.00
- cadence PAC m24 @1 c=0.00
+ cadence HC m23 @1 c=0.00
 
 m24
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G3 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
+ phrase 4 m24-m27 c=0.03 | form A'
 
 m25
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G4 @4 q
@@ -164,19 +161,18 @@ m26
  P1 S1 V1: F4 @1 e, E4 @1.5 e, D4 @2 e, C4 @2.5 e, B3 @3 e, C4 @3.5 e, B3 @4 e, C4 @4.5 e
  P1 S2 V2: C3 @1 q, r @2 q, C3 @3 q, r @4 q
  chord Cmaj7 I7 @1 c=0.64
- phrase 5 m26-m29 c=0.03 | form D
- form D m26-m29 c=0.03
 
 m27
  P1 S1 V1: D4 @1 e, C4 @1.5 e, B3 @2 e, A3 @2.5 e, G3 @3 q, r @4 q
  P1 S2 V2: G2 @1 q, r @2 q, G2 @3 e, F2 @3.5 e, E2 @4 e, D2 @4.5 e
  chord G/D V @1 c=0.88
- cadence PAC m28 @1 c=0.03
+ cadence HC m27 @1 c=0.03
 
 m28
  P1 S1 V1: C4 @1 q, G3 @2 e, C4 @2.5 e, E4 @3 q, E4 @4 q
  P1 S2 V2: C2 @1 q, r @2 q, r @3 h
  chord C I @1 c=0.00
+ phrase 5 m28-m38 c=0.75 | form A'
 
 m29
  P1 S1 V1: E4 @1 q, C4 @2 e, E4 @2.5 e, G4 @3 q, C5 @4 q
@@ -188,8 +184,6 @@ m30
  P1 S1 V3: G4 @1 q, F4 @2 q, E4 @3 q, D4 @4 q
  P1 S2 V2: G3 @1 q, r @2 q, G2 @3 q, r @4 q
  chord C/G I6/4 @1 c=0.00
- phrase 6 m30-m36 c=0.75 | form E
- form E m30-m38 c=0.50
  chord Dm ii @2 c=0.00
  chord C/G I6/4 @3 c=0.87
 
@@ -227,7 +221,6 @@ m37
  P1 S1 V1: G4 @1 e, A4 @1.5 e, F4 @2 e, G4 @2.5 e, E4 @3 e, F4 @3.5 e, D4 @4 e, E4 @4.5 e
  P1 S2 V2: G3 @1 q, r @2 q, G2 @3 q, r @4 q
  chord Em/G iii6 @1 c=0.72
- phrase 7 m37-m38 c=0.50 | form E
 
 m38
  P1 S1 V1: C4 @1 q, r @2 q, r @3 h

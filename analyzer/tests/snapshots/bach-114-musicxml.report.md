@@ -462,11 +462,11 @@ The library's standard-form analysis found 2 phrases from the soprano, the meter
 
 | Phrase | Measures | Length | Cadence | Ends | Role | Expansion |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 12 | 12 | none | discontinuity | beginning | - |
-| 2 | mm. 13 to 24 | 12 | none | none | ending | - |
+| 1 | mm. 1 to 8 | 8 | none | discontinuity | beginning | - |
+| 2 | mm. 9 to 24 | 16 | none | discontinuity | ending | - |
 
-- **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8), contrasting-idea (mm. 9 to 10), contrasting-idea (mm. 11 to 12); subphrases mm. 1 to 4, mm. 5 to 12
-- **Phrase 2:** ideas basic-idea (mm. 13 to 14), contrasting-idea (mm. 15 to 16), contrasting-idea (mm. 17 to 18), basic-idea (mm. 19 to 20), contrasting-idea (mm. 21 to 22), contrasting-idea (mm. 23 to 24); subphrases mm. 13 to 16, mm. 17 to 24
+- **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8); subphrases mm. 1 to 4, mm. 5 to 8
+- **Phrase 2:** ideas basic-idea (mm. 9 to 10), contrasting-idea (mm. 11 to 12), contrasting-idea (mm. 13 to 14), contrasting-idea (mm. 15 to 16), contrasting-idea (mm. 17 to 18), contrasting-idea (mm. 19 to 20), contrasting-idea (mm. 21 to 22), contrasting-idea (mm. 23 to 24); subphrases mm. 9 to 12, mm. 13 to 24
 
 ## Form plan
 
@@ -480,22 +480,22 @@ The kernel's form structure detection grouped the phrases into 1 section, closin
 
 - form (mm. 1 to 24)
   - section A (mm. 1 to 24, G major)
-    - phrase 1 (mm. 1 to 12)
+    - phrase 1 (mm. 1 to 8)
       - subphrase 1 (mm. 1 to 4)
         - idea basic-idea (mm. 1 to 2)
         - idea contrasting-idea (mm. 3 to 4)
-      - subphrase 2 (mm. 5 to 12)
+      - subphrase 2 (mm. 5 to 8)
         - idea contrasting-idea (mm. 5 to 6)
         - idea contrasting-idea (mm. 7 to 8)
-        - idea contrasting-idea (mm. 9 to 10)
+    - phrase 2 (mm. 9 to 24)
+      - subphrase 1 (mm. 9 to 12)
+        - idea basic-idea (mm. 9 to 10)
         - idea contrasting-idea (mm. 11 to 12)
-    - phrase 2 (mm. 13 to 24)
-      - subphrase 1 (mm. 13 to 16)
-        - idea basic-idea (mm. 13 to 14)
+      - subphrase 2 (mm. 13 to 24)
+        - idea contrasting-idea (mm. 13 to 14)
         - idea contrasting-idea (mm. 15 to 16)
-      - subphrase 2 (mm. 17 to 24)
         - idea contrasting-idea (mm. 17 to 18)
-        - idea basic-idea (mm. 19 to 20)
+        - idea contrasting-idea (mm. 19 to 20)
         - idea contrasting-idea (mm. 21 to 22)
         - idea contrasting-idea (mm. 23 to 24)
 
@@ -505,21 +505,21 @@ The library's motive analysis found 36 motive families in the soprano, the highe
 
 | Family | Notes | Degrees | Pattern | Occurrences | Measures | Phrases | Transformations |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 8 | 5 1 2 3 4 5 1 1 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
-| 2 | 8 | 3 4 5 1 1 6 4 5 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
-| 3 | 8 | 1 1 6 4 5 6 7 1 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
-| 4 | 8 | 6 4 5 6 7 1 1 1 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
-| 5 | 8 | 6 7 1 1 1 4 3 4 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
-| 6 | 8 | 1 1 4 3 4 5 4 3 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
-| 7 | 8 | 4 5 4 3 2 3 4 3 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
-| 8 | 8 | 3 2 3 4 3 2 1 7 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 2, fragmented 2 |
-| 9 | 8 | 4 3 2 1 7 1 2 3 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 10 | 8 | 7 1 2 3 1 3 2 5 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 11 | 8 | 3 1 3 2 5 1 2 3 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 12 | 8 | 2 5 1 2 3 4 5 1 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 13 | 8 | 3 2 3 4 3 2 1 2 | scale steps | 2 | 5, 11 | 1 | exact 2 |
-| 14 | 8 | 4 3 2 1 2 3 2 1 | scale steps | 2 | 6, 12 | 1 | exact 2 |
-| 15 | 7 | 2 3 2 1 7 1 1 | scale steps | 6 | 6, 2, 5, 8, 11, 12 | 1 | exact 2, varied 4 |
+| 1 | 8 | 5 1 2 3 4 5 1 1 | scale steps | 4 | 1, 4, 7, 10 | 1, 2 | exact 4 |
+| 2 | 8 | 3 4 5 1 1 6 4 5 | scale steps | 4 | 1, 4, 7, 10 | 1, 2 | exact 4 |
+| 3 | 8 | 1 1 6 4 5 6 7 1 | scale steps | 4 | 1, 4, 7, 10 | 1, 2 | exact 4 |
+| 4 | 8 | 6 4 5 6 7 1 1 1 | scale steps | 4 | 1, 4, 7, 10 | 1, 2 | exact 4 |
+| 5 | 8 | 6 7 1 1 1 4 3 4 | scale steps | 4 | 2, 5, 8, 11 | 1, 2 | exact 4 |
+| 6 | 8 | 1 1 4 3 4 5 4 3 | scale steps | 4 | 2, 5, 8, 11 | 1, 2 | exact 4 |
+| 7 | 8 | 4 5 4 3 2 3 4 3 | scale steps | 4 | 2, 5, 8, 11 | 1, 2 | exact 4 |
+| 8 | 8 | 3 2 3 4 3 2 1 7 | scale steps | 4 | 2, 5, 8, 11 | 1, 2 | exact 2, fragmented 2 |
+| 9 | 8 | 4 3 2 1 7 1 2 3 | scale steps | 2 | 3, 9 | 1, 2 | exact 2 |
+| 10 | 8 | 7 1 2 3 1 3 2 5 | scale steps | 2 | 3, 9 | 1, 2 | exact 2 |
+| 11 | 8 | 3 1 3 2 5 1 2 3 | scale steps | 2 | 3, 9 | 1, 2 | exact 2 |
+| 12 | 8 | 2 5 1 2 3 4 5 1 | scale steps | 2 | 3, 9 | 1, 2 | exact 2 |
+| 13 | 8 | 3 2 3 4 3 2 1 2 | scale steps | 2 | 5, 11 | 1, 2 | exact 2 |
+| 14 | 8 | 4 3 2 1 2 3 2 1 | scale steps | 2 | 6, 12 | 1, 2 | exact 2 |
+| 15 | 7 | 2 3 2 1 7 1 1 | scale steps | 6 | 6, 2, 5, 8, 11, 12 | 1, 2 | exact 2, varied 4 |
 | 16 | 8 | 6 4 5 6 4 5 1 2 | scale steps | 2 | 13, 19 | 2 | exact 2 |
 | 17 | 8 | 6 4 5 1 2 3 1 4 | scale steps | 2 | 13, 19 | 2 | exact 2 |
 | 18 | 8 | 1 2 3 1 4 2 3 4 | scale steps | 2 | 13, 19 | 2 | exact 2 |
@@ -548,8 +548,8 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 
 | Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 12 | 71 | F#4 to G5 (13) | G5, m. 2, beat 1.5, 4 notes | 33 | 26 | 11 | 34 | 25 |
-| 2 | mm. 13 to 24 | 78 | F#4 to B5 (17) | B5, m. 13, beat 1, 4 notes | 30 | 34 | 10 | 38 | 26 |
+| 1 | mm. 1 to 8 | 47 | F#4 to G5 (13) | G5, m. 2, beat 1.5, 3 notes | 22 | 17 | 7 | 22 | 17 |
+| 2 | mm. 9 to 24 | 102 | F#4 to B5 (17) | B5, m. 13, beat 1, 4 notes | 41 | 43 | 14 | 49 | 35 |
 
 ### Leaps
 
@@ -557,8 +557,8 @@ A leap is an interval of a third or larger. The library's rule asks a leap of a 
 
 | Phrase | Leaps | Recovered | Unrecovered | Not required | Not judged | Consecutive |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 25 | 7 | 10 | 8 | 0 | 0 |
-| 2 | 26 | 2 | 14 | 10 | 0 | 2 |
+| 1 | 17 | 5 | 7 | 5 | 0 | 0 |
+| 2 | 35 | 4 | 18 | 13 | 0 | 2 |
 
 ### Non-chord tones
 
@@ -566,8 +566,8 @@ Each melody note is set against the chord of the segment it starts in, as the li
 
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 71 | 45 | 24 | 2 | passing 4, neighbor 8, anticipation 2, appoggiatura 2, escape-tone 8 |
-| 2 | 78 | 38 | 14 | 26 | passing 2, neighbor 10, escape-tone 2 |
+| 1 | 47 | 30 | 16 | 1 | passing 3, neighbor 5, anticipation 1, appoggiatura 2, escape-tone 5 |
+| 2 | 102 | 53 | 22 | 27 | passing 3, neighbor 13, anticipation 1, escape-tone 5 |
 
 ### Tendencies
 
@@ -575,8 +575,8 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 
 | Phrase | Pitch proximity | Step declination | Step inertia | Melodic regression | Melodic arch | Seventh degree followed | Seventh degree broken |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | does not hold | does not hold | does not hold | does not hold | does not hold | 4 | 2 (m. 3, beat 2; m. 9, beat 2) |
-| 2 | does not hold | holds | does not hold | does not hold | does not hold | 8 | 4 (m. 15, beat 1; m. 15, beat 2; m. 21, beat 1; m. 21, beat 2) |
+| 1 | does not hold | does not hold | does not hold | does not hold | does not hold | 3 | 1 (m. 3, beat 2) |
+| 2 | does not hold | does not hold | does not hold | does not hold | does not hold | 9 | 5 (m. 9, beat 2; m. 15, beat 1; m. 15, beat 2; m. 21, beat 1; m. 21, beat 2) |
 
 ### Development
 
@@ -660,14 +660,14 @@ The library's density profile of each phrase, for all its notes and for each lin
 
 | Phrase | Measures | Line | Notes | Attacks | Per beat | Max per beat | Mean gap | On the beat | Durations |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 12 | all | 220 | 158 | 3.29 | 3.75 | 0.08 | 29.1% | 1/64 (8), 1/32 (8), 1/16 (96), 1/8 (81), 1/4 (27) |
-| 1 | mm. 1 to 12 | soprano | 71 | 71 | 1.48 | 1.5 | 0.17 | 40.8% | 1/32 (4), 1/16 (30), 1/8 (33), 1/4 (4) |
-| 1 | mm. 1 to 12 | bass | 60 | 60 | 1.25 | 1.5 | 0.2 | 50.0% | 1/16 (6), 1/8 (37), 1/4 (17) |
-| 1 | mm. 1 to 12 | other | 89 | 83 | 1.73 | 2.25 | 0.14 | 22.9% | 1/64 (8), 1/32 (4), 1/16 (60), 1/8 (11), 1/4 (6) |
-| 2 | mm. 13 to 24 | all | 210 | 138 | 2.88 | 3.25 | 0.09 | 34.8% | 1/64 (2), 1/32 (4), 1/16 (74), 5/64 (2), 1/8 (108), 1/4 (14), 3/8 (6) |
-| 2 | mm. 13 to 24 | soprano | 78 | 78 | 1.62 | 2 | 0.15 | 33.3% | 1/32 (2), 1/16 (30), 1/8 (44), 1/4 (2) |
-| 2 | mm. 13 to 24 | bass | 74 | 74 | 1.54 | 2 | 0.16 | 51.4% | 1/8 (60), 1/4 (8), 3/8 (6) |
-| 2 | mm. 13 to 24 | other | 58 | 56 | 1.17 | 1.75 | 0.21 | 32.1% | 1/64 (2), 1/32 (2), 1/16 (44), 5/64 (2), 1/8 (4), 1/4 (4) |
+| 1 | mm. 1 to 8 | all | 145 | 105 | 3.28 | 3.75 | 0.08 | 29.5% | 1/64 (6), 1/32 (6), 1/16 (60), 1/8 (52), 1/4 (21) |
+| 1 | mm. 1 to 8 | soprano | 47 | 47 | 1.47 | 1.5 | 0.17 | 38.3% | 1/32 (3), 1/16 (19), 1/8 (23), 1/4 (2) |
+| 1 | mm. 1 to 8 | bass | 39 | 39 | 1.22 | 1.5 | 0.21 | 48.7% | 1/16 (4), 1/8 (21), 1/4 (14) |
+| 1 | mm. 1 to 8 | other | 59 | 55 | 1.72 | 2.25 | 0.14 | 27.3% | 1/64 (6), 1/32 (3), 1/16 (37), 1/8 (8), 1/4 (5) |
+| 2 | mm. 9 to 24 | all | 285 | 191 | 2.98 | 3.75 | 0.08 | 33.0% | 1/64 (4), 1/32 (6), 1/16 (110), 5/64 (2), 1/8 (137), 1/4 (20), 3/8 (6) |
+| 2 | mm. 9 to 24 | soprano | 102 | 102 | 1.59 | 2 | 0.15 | 36.3% | 1/32 (3), 1/16 (41), 1/8 (54), 1/4 (4) |
+| 2 | mm. 9 to 24 | bass | 95 | 95 | 1.48 | 2 | 0.17 | 51.6% | 1/16 (2), 1/8 (76), 1/4 (11), 3/8 (6) |
+| 2 | mm. 9 to 24 | other | 88 | 84 | 1.31 | 2 | 0.19 | 26.2% | 1/64 (4), 1/32 (3), 1/16 (67), 5/64 (2), 1/8 (7), 1/4 (5) |
 
 ### Syncopation
 
@@ -707,8 +707,8 @@ The library reads each phrase in hypermeasures of two or four measures: the leng
 
 | Phrase | Measures | Length | Hyperdownbeats | Hypermeasures | Cadence arrives | Score |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 12 | 4 | 1, 5, 9 | 3 regular | none | 1 |
-| 2 | mm. 13 to 24 | 4 | 13, 17, 21 | 3 regular | none | 1 |
+| 1 | mm. 1 to 8 | 4 | 1, 5 | 2 regular | none | 1 |
+| 2 | mm. 9 to 24 | 4 | 9, 13, 17, 21 | 4 regular | none | 1 |
 
 ### Tuplets and borrowed divisions
 

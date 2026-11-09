@@ -46,12 +46,12 @@ typedef struct {
 } Piece;
 
 /* The counts are on harmonic spans (they were 2, 10, 22, 10, 9 on sonority segments; Mozart 545 was 21 before applied chords,
-   P40 B5); P41 reads the phrases. */
+   P40 B5), and since P41 on the phrase grid (they were 2, 7, 27, 14, 2 with cadence-ended phrases; R-389, R-391). */
 static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid", 2},
-                               {"Clementi 36", "Clementi 36.mid", 7},
-                               {"Mozart 545", "Mozart 545.mid", 27},
-                               {"Field 1", "Field 1.mid", 14},
-                               {"Field 5", "Field 5.mid", 2}};
+                               {"Clementi 36", "Clementi 36.mid", 5},
+                               {"Mozart 545", "Mozart 545.mid", 15},
+                               {"Field 1", "Field 1.mid", 12},
+                               {"Field 5", "Field 5.mid", 3}};
 
 static bool position_valid(const cJSON *position) {
     return cJSON_IsObject(position) && test_json_number(position, "measure") >= 0 && test_json_number(position, "beat") >= 1;
@@ -219,14 +219,11 @@ static void check_phrases(const Piece *piece, const ImportedNotes *notes, const 
             if (cadence) {
                 const cJSON *arrival = test_json_member(cadence, "arrival");
                 CHECK(test_rational_of(test_json_member(test_json_member(arrival, "span"), "start")) >= start - 1e-12);
-                CHECK(test_rational_of(test_json_member(test_json_member(arrival, "span"), "end")) <= end + 1e-12);
+                /* on the grid the phrase ends with the cadence point's measure, not with the arrival chord, which may run on into
+                   the next measure (R-391); the arrival begins inside the phrase and no later than its last measure */
+                CHECK(test_rational_of(test_json_member(test_json_member(arrival, "span"), "start")) < end - 1e-12);
                 int arrival_measure = (int)test_json_number(test_json_member(test_json_member(arrival, "location"), "start"), "measure");
                 CHECK(arrival_measure >= (int)test_json_number(measures, "first") && arrival_measure <= (int)test_json_number(measures, "last"));
-                /* the phrase proper ends where the arrival chord does, snapped to the next beat: under a measure later;
-                   an extension (a post-cadential extension or a codetta) lies after that */
-                double arrival_end = test_rational_of(test_json_member(test_json_member(arrival, "span"), "end"));
-                CHECK(end >= arrival_end - 1e-12);
-                CHECK(test_json_number(phrase, "extension_measures") > 0 || end - arrival_end < 1.0);
             }
         } else {
             CHECK(cJSON_IsNull(cadence_index));

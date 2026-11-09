@@ -67,11 +67,18 @@ Where the Analyzer reads a piece differently from its annotation, and why. Back 
   by Ursatz's span rule (whole measures partitioned from the bass, one chord a span), so the reference pieces read
   Bach 114 54 chords, Clementi 36 46, Field 1 107, Field 5 82 and Mozart 545 210. Two-voice textures read on spans
   (P40: a root and fifth complete a part, a held bass is not cut, an accented step over a held bass is evidence for the
-  key, not a chord tone, and a bass that ends as the step lands holds nothing). Cadences, phrases, themes, form and the
-  schemas still read the chords on the spans, and phrases and themes read the soprano at span starts until P41, so
-  they moved: Bach 114 reads 0 cadences and 2 phrases, Clementi 36 5 cadences and 7 phrases, Mozart 545 23 cadences and
-  27 phrases, Field 1 17 cadences, Field 5 3 cadences and 2 phrases. Phrases and cadences wait for P41, keys for P42:
-  Mozart 545 reads 21 key regions and Clementi 36 6, with the key edges where the 4-measure windows put them.
+  key, not a chord tone, and a bass that ends as the step lands holds nothing). Since P41 phrases are found on a grid of 4, 8 or 16
+  measures first and cadences are claimed only at the phrase points (the end of a grid unit, or the end of its first half), so they
+  moved: Bach 114 reads 0 cadences and 2 phrases, Clementi 36 4 cadences and 5 phrases (HC m. 4, IAC m. 8, HC m. 23 with the
+  perfect authentic cadence of m. 24 as its competing reading, HC m. 27), Mozart 545 15 cadences and 15 phrases (the first two,
+  m. 1 to 12 and 13 to 28, end on the half cadence of m. 12 and the perfect authentic cadence of m. 28), Field 1 9 cadences and 12
+  phrases, Field 5 1 cadence and 3 phrases. A cadence off a phrase point is not reported, so evaded cadences inside a phrase
+  (Field 5 m. 8, Field 1 m. 60) are gone, and the perfect authentic cadences of Clementi 36 at m. 15, 31 and 38 wait for chord
+  readings that are not made yet (m. 14 reads vii°6 in C major, m. 30 beat 4 is merged into the I6/4 span, m. 37 reads iii6). The
+  key regions are still those of the cadence stage, so a key change can be confirmed by a cadence the phrase grid did not claim
+  (Clementi 36, Field 5). Keys wait for P42: Mozart 545 reads 21 key regions and Clementi 36 6, with the key edges where the
+  4-measure windows put them. The grid itself is a library result and is not exported yet; a phrase ended by the 16-measure cap
+  has the signal "discontinuity". Field 1's whole-piece grid runs three measures off its annotation (units 1 to 3, 4 to 11, ...).
 - The outer voices in the document are per voice segment (one entry per melody note, several to a chord), but a voice
   segment is cut where the sounding pitch classes change, so melody notes that are all chord tones of one held chord share
   one entry (the highest, as the library reads it); a chord's own `outer` is the lines' entry at its start.

@@ -14,9 +14,8 @@ m1 4/4
  P2 S1 V1: D3 @1 h, G2 @3 h
  key D minor c=0.05 (m1-m13)
  chord Gm iv6/4 @1 c=0.78
- phrase 1 m1-m7 c=0.02 | form A
- theme hybrid m1-m7 c=0.02
- form A m1-m7 c=0.02
+ phrase 1 m1-m3 c=0.02 | form A
+ form A m1-m3 c=0.02
 
 m2
  P1 S1 V1: A4 @1 q, A4 @2 q, Db5 @3 q, A4 @4 q
@@ -36,6 +35,8 @@ m4
  P1 S1 V1: F4 @1 q, E4 @2 q, D4 @3 h
  P2 S1 V1: D3 @1 w
  chord Dm i @1 c=0.58
+ phrase 2 m4-m10 c=0.03 | form B
+ form B m4-m13 c=0.03
 
 m5
  P1 S1 V1: A4 @1 q, D4 @2 q, D4 @3 h
@@ -58,8 +59,6 @@ m8
  P1 S1 V1: D5 @1 q, G4 @2 q, Bb4 @3 q, G4 @4 q
  P2 S1 V1: G3 @1 w
  chord Gm iv @1 c=0.00
- phrase 2 m8-m12 c=0.03 | form B
- form B m8-m13 c=0.03
  motive a m8 @2-@5
  motive d m8 @3-m9@2
 
@@ -79,6 +78,7 @@ m11
  P1 S1 V1: D5 @1 q, A4 @2 q, A4 @3 h
  P2 S1 V1: D3 @1 h, A3 @3 h
  chord Dm i @1 c=0.00
+ phrase 3 m11-m13 c=0.05 | form B
 
 m12
  P1 S1 V1: F5 @1 q, F4 @2 q, A4 @3 q, D4 @4 q
@@ -90,7 +90,6 @@ m13
  P2 S1 V1: A2 @1 h, r @3 h
  chord A V @1 c=0.00
  cadence HC m13 @1 c=0.05
- phrase 3 m13 c=0.05 | form B
 
 ## ending
 key: D minor | meter: 4/4 | tempo: not declared | measures: 1-14
@@ -100,9 +99,8 @@ m1 4/4
  P2 S1 V1: D3 @1 h, G2 @3 h
  key D minor c=0.06 (m1-m14)
  chord Gm iv6/4 @1 c=0.78
- phrase 1 m1-m7 c=0.03 | form A
- theme hybrid m1-m7 c=0.03
- form A m1-m7 c=0.03
+ phrase 1 m1-m3 c=0.03 | form A
+ form A m1-m3 c=0.03
  motive a m1 @3-m2@3
 
 m2
@@ -123,6 +121,8 @@ m4
  P1 S1 V1: F4 @1 q, E4 @2 q, D4 @3 h
  P2 S1 V1: D3 @1 w
  chord Dm i @1 c=0.58
+ phrase 2 m4-m10 c=0.04 | form B
+ form B m4-m14 c=0.04
 
 m5
  P1 S1 V1: A4 @1 q, D4 @2 q, D4 @3 h
@@ -146,8 +146,6 @@ m8
  P1 S1 V1: D5 @1 q, G4 @2 q, Bb4 @3 q, G4 @4 q
  P2 S1 V1: G3 @1 w
  chord Gm iv @1 c=0.00
- phrase 2 m8-m14 c=0.04 | form B
- form B m8-m14 c=0.04
  motive b m8 @2-@5
  motive f m8 @3-m9@2
  motive g m8 @4-m9@3
@@ -168,6 +166,7 @@ m11
  P1 S1 V1: D5 @1 q, A4 @2 q, A4 @3 h
  P2 S1 V1: D3 @1 h, A3 @3 h
  chord Dm i @1 c=0.00
+ phrase 3 m11-m14 c=0.75 | form B
 
 m12
  P1 S1 V1: F5 @1 q, F4 @2 q, F5 @3 q, D5 @4 q

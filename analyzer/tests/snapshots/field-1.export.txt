@@ -7,10 +7,9 @@ notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tup
 m1 12/8
  P1 S1 V1: r @1 h., r @7 q., A#4 @10 q.
  key Eb major c=0.28 (m1-m21)
- phrase 1 m1-m2 c=0.19 | form A
- form A m1-m2 c=0.19
+ phrase 1 m1-m3 c=0.07 | form A
+ form A m1-m27 c=0.03
  chord Bb V @10 c=0.00
- cadence PAC m2 @1 c=0.19
 
 m2
  P1 S1 V1: D#5 @1 h.~, D#5 @7 q.~, D#5 @10 t, r @10.25 q, r @12.25 s, D#5 @12.75 t~
@@ -28,8 +27,6 @@ m3
  P1 S2 V4: r @1 w, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.73
  cadence HC m3 @1 c=0.07
- phrase 2 m3 c=0.07 | form B
- form B m3-m9 c=0.07
  chord Dm7b5/F vii∅4/3 @4 c=0.85
  chord Bb7/Ab V4/2 @10 c=0.29
 
@@ -40,8 +37,7 @@ m4 clef S2 treble
  P1 S2 V3: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
  P1 S2 V4: r @1 q., r @4 q, D#4 @6 e, r @7 h.
  chord Eb I @1 c=0.00
- phrase 3 m4-m9 c=0.22 | form B
- theme hybrid m4-m9 c=0.22
+ phrase 2 m4-m7 c=0.22 | form A
 
 m5
  P1 S1 V5: A#5 @1 h.~, A#5 @7 q.~, A#5 @10 e.., r @11.75 e, r @12.75 t
@@ -64,7 +60,7 @@ m7 clef S2 bass
  P1 S2 V2: A#2 @1 e, D4 @2 q, G#3 @4 q, A#3 @6 e, F3 @7 q, A#3 @9 e, G#3 @10 e, D4 @11 e, A#3 @12 e
  P1 S2 V3: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 q.
  chord Bb V @1 c=0.19
- cadence PAC m8 @1 c=0.22
+ cadence HC m7 @1 c=0.22
 
 m8 clef S2 treble
  P1 S1 V1: D#5 @1 w.~
@@ -73,6 +69,8 @@ m8 clef S2 treble
  P1 S2 V3: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
  P1 S2 V4: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.00
+ phrase 3 m8-m19 c=0.05 | form A
+ theme hybrid m8-m19 c=0.05
 
 m9
  P1 S1 V1: D#5 @1 h., D#5 @7 h.~
@@ -89,9 +87,6 @@ m10
  P1 S2 V3: r @1 q, D#4 @3 e, r @4 e, G#4 @5 q, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
  P1 S2 V4: r @1 w, D#4 @9 e, r @10 q.
  chord Ab IV @1 c=0.69
- phrase 4 m10-m15 c=0.12 | form C
- theme hybrid m10-m15 c=0.06
- form C m10-m18 c=0.05
 
 m11
  P1 S1 V1: r @1 q, C5 @3 t, r @3.25 t, A4 @3.5 s, r @4 s, G#5 @4.5 t, r @4.75 q, r @6.75 t, r @7 q., G5 @10 q.~
@@ -100,7 +95,6 @@ m11
  P1 S2 V3: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, D4 @12 e
  P1 S2 V4: r @1 w, D4 @9 e, r @10 q.
  chord Bb7 V7 @1 c=0.43
- cadence subverted m11 @7 c=0.03
  chord Ddim/F vii°6 @7 c=0.89
  chord Gm/Bb iii6 @10 c=0.51
 
@@ -135,7 +129,6 @@ m15 clef S2 bass
  P1 S2 V3: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
  P1 S2 V4: r @1 w, A#3 @9 e, r @10 q.
  chord Bb V @1 c=0.56
- cadence HC m15 @1 c=0.12
  chord Dm7b5/F vii∅4/3 @4 c=0.92
  chord Bb7/Ab V4/2 @10 c=0.84
 
@@ -145,7 +138,6 @@ m16
  P1 S2 V2: D#3 @1 q, G3 @3 e, A#2 @4 e, D#4 @5 e, G3 @6 e, D#3 @7 e, D#4 @8 e, G3 @9 e, A#2 @10 e, D#4 @11 e, G3 @12 e
  P1 S2 V3: r @1 e, D#4 @2 e, r @3 e, r @4 h., r @10 q.
  chord Eb/Bb I @1 c=0.54
- phrase 5 m16-m18 c=0.05 | form C
 
 m17
  P1 S1 V1: D5 @1 q, C6 @3 e~, C6 @4 t, r @4.25 q, r @6.25 s., r @7 q, G5 @9 e~, G5 @10 t, r @10.25 e.., F5 @12 e~
@@ -154,7 +146,6 @@ m17
  P1 S2 V3: r @1 e, D4 @2 e, r @3 e, r @4 q, G#3 @6 e, r @7 e, D4 @8 e, r @9 e, r @10 q.
  chord Ddim/F vii°6 @1 c=0.78
  chord Bb7 V7 @4 c=0.81
- cadence IAC m18 @1 c=0.05
 
 m18
  P1 S1 V1: F5 @1 t, r @1.25 e., F5 @2.75 s, r @3.25 s, D5 @3.75 t~, D5 @4 t, r @4.25 e.., G5 @6 e, r @7 q., G5 @10 e~, G5 @11 t, r @11.25 s., D#5 @12 e
@@ -169,10 +160,8 @@ m19
  P1 S2 V2: F3 @1 q, G#3 @3 e, A#2 @4 e, D4 @5 e, G#3 @6 e, F3 @7 q, G#3 @9 e, A#2 @10 e, D4 @11 e, G#3 @12 e
  P1 S2 V3: r @1 e, D4 @2 e, r @3 e, r @4 h, D4 @8 e, r @9 e, r @10 q.
  chord Ddim/F vii°6 @1 c=0.64
- phrase 6 m19-m20 c=0.05 | form D
- form D m19-m20 c=0.05
  chord Bb7 V7 @4 c=0.80
- cadence IAC m20 @1 c=0.05
+ cadence HC m19 @4 c=0.05
 
 m20
  P1 S1 V1: F5 @1 t, r @1.25 q, r @3.25 s., A#2 @4 t, r @4.25 q, r @6.25 s., D#2 @7 e, r @8 q, F5 @10 t, r @10.25 s., D5 @11 e~, D5 @12 t, r @12.25 s.
@@ -181,6 +170,8 @@ m20
  P1 S2 V3: r @1 q, G3 @3 e, r @4 q, G3 @6 e~, G3 @7 q., r @10 q.
  P1 S2 V4: r @1 h., D#3 @7 q., r @10 q.
  chord Eb I @1 c=0.53
+ phrase 4 m20-m27 c=0.03 | form A
+ theme hybrid m20-m27 c=0.03
 
 m21
  P1 S1 V1: F5 @1 h.~, F5 @7 q., F5 @10 q, r @12 e
@@ -188,9 +179,6 @@ m21
  P1 S2 V2: A#2 @1 e, D4 @2 q, F3 @4 q, A#3 @6 e, D3 @7 q, A#3 @9 e, F3 @10 q, A#3 @12 e
  P1 S2 V3: r @1 q, A#3 @3 e, r @4 e, D4 @5 q, r @7 e, D4 @8 q, r @10 e, D4 @11 e, r @12 e
  chord Bb V @1 c=0.30
- cadence HC m21 @1 c=0.19
- phrase 7 m21 c=0.19 | form E
- form E m21-m27 c=0.03
 
 m22
  P1 S1 V1: F5 @1 e.., G5 @2.75 s, r @3.25 t, E5 @3.5 t, F5 @3.75 t~, F5 @4 s, r @4.5 q, r @6.5 s, r @7 q., D6 @10 q.
@@ -200,8 +188,6 @@ m22
  key Bb major c=0.05 (m22-m27)
  modulation Eb major to Bb major (m22-m27)
  chord F7 V7 @1 c=0.67
- phrase 8 m22-m27 c=0.03 | form E
- theme hybrid m22-m27 c=0.03
  chord Dm/F iii6 @10 c=0.45
 
 m23
@@ -249,8 +235,8 @@ m28
  key F minor c=0.23 (m28-m31)
  modulation Bb major to F minor (m28-m31)
  chord Bb IV @1 c=0.00
- phrase 9 m28-m31 c=0.02 | form F
- form F m28-m35 c=0.00
+ phrase 5 m28-m31 c=0.02 | form B
+ form B m28-m35 c=0.00
  chord Fm/Ab i6 @7 c=0.42
  chord Edim/G viio6 @10 c=0.80
 
@@ -284,8 +270,7 @@ m32
  key Eb major c=0.26 (m32-m67)
  modulation F minor to Eb major (m32-m67)
  chord Gm/Bb iii6 @1 c=0.82
- phrase 10 m32-m35 c=0.00 | form F
- theme hybrid m32-m37 c=0.00
+ phrase 6 m32-m35 c=0.00 | form B
 
 m33
  P1 S1 V1: G5 @1 t, D#5 @1.25 q~, D#5 @3.25 s.~, D#5 @4 h., r @10 q.
@@ -315,8 +300,8 @@ m36
  P1 S2 V2: F3 @1 q, G#3 @3 e, A#2 @4 e, D4 @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, D4 @11 e, G#3 @12 e
  P1 S2 V3: r @1 e, D4 @2 e, r @3 e, r @4 q, G#3 @6 e, r @7 e, D4 @8 e, r @9 e, r @10 q.
  chord Bb7 V4/3 @1 c=0.99
- phrase 11 m36-m37 c=0.01 | form G
- form G m36-m37 c=0.01
+ phrase 7 m36-m37 c=0.01 | form C
+ form C m36-m37 c=0.01
  chord Ddim/F vii°6 @7 c=0.90
  chord Bb7 V7 @10 c=0.71
  cadence PAC m37 @1 c=0.01
@@ -333,9 +318,8 @@ m38
  P1 S2 V2: F3 @1 q, G#3 @3 e, A#2 @4 e, D4 @5 q, F3 @7 q, G#3 @9 e, A#2 @10 e, D4 @11 e, G#3 @12 e
  P1 S2 V3: r @1 e, D4 @2 e, r @3 e, r @4 q, G#3 @6 e, r @7 e, D4 @8 e, r @9 e, r @10 q.
  chord Bb7 V4/3 @1 c=0.97
- phrase 12 m38-m50 c=0.02 | form H
- theme hybrid m38-m50 c=0.02
- form H m38-m50 c=0.02
+ phrase 8 m38-m41 c=0.75 | form D
+ form D m38-m67 c=0.09
 
 m39
  P1 S1 V1: r @1 e.., F5 @2.75 s, r @3.25 s, D5 @3.75 t~, D5 @4 t, r @4.25 q, G5 @6.25 s.~, G5 @7 s, A#4 @7.5 q~, A#4 @9.5 s~, A#4 @10 t, F5 @10.25 s, r @10.75 s, D5 @11.25 e, r @12.25 s.
@@ -370,6 +354,8 @@ m42
  P1 S2 V2: A#2 @1 e, D#4 @2 q, G3 @4 q, A#3 @6 e, A#2 @7 e, D4 @8 q, G#3 @10 e, A#3 @11 e, G#3 @12 e
  P1 S2 V3: r @1 q, A#3 @3 e, r @4 e, D#4 @5 e, r @6 e, r @7 q, A#3 @9 e, r @10 q.
  chord Eb/Bb I6/4 @1 c=0.90
+ phrase 9 m42-m57 c=0.09 | form D
+ theme hybrid m42-m57 c=0.09
  chord Gm/Bb iii6 @7 c=0.86
  chord Ab IV @10 c=0.96
 
@@ -432,7 +418,6 @@ m49
  chord Eb/Bb I6/4 @1 c=0.88
  chord Ddim/F vii°6 @7 c=0.91
  chord Bb7 V7 @10 c=0.92
- cadence IAC m50 @1 c=0.02
 
 m50
  P1 S1 V1: F5 @1 s, F5 @1.5 q~, F5 @3.5 s, D#5 @4 q., r @7 h.
@@ -448,9 +433,6 @@ m51 clef S2 bass
  P1 S2 V2: G2 @1 e, F4 @2 q, G3 @4 q, B3 @6 e, D3 @7 e, F4 @8 q, G3 @10 q, B3 @12 e
  P1 S2 V3: r @1 q, B3 @3 e, r @4 e, F4 @5 e, r @6 e, r @7 q, B3 @9 e, r @10 e, F4 @11 e, r @12 e
  chord G7 V7/vi @1 c=0.00
- phrase 13 m51-m57 c=0.09 | form I
- theme hybrid m51-m57 c=0.09
- form I m51-m67 c=0.09
  chord Bdim/D vii°6/vi @7 c=0.81
  chord G7 V7/vi @10 c=0.00
 
@@ -513,7 +495,7 @@ m58 clef S2 treble
  P1 S2 V3: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 e, r @12 e
  P1 S2 V4: r @1 w, D#4 @9 e, r @10 q.
  chord Eb I @1 c=0.00
- phrase 14 m58-m67 c=0.22 | form I
+ phrase 10 m58-m61 c=0.22 | form D
  motive a m58 @7-@11+59/60
 
 m59
@@ -522,7 +504,6 @@ m59
  P1 S2 V2: A#2 @1 e, G#4 @2 q, A#3 @4 q, D4 @6 e, F3 @7 q, D4 @9 e, A#3 @10 q, D4 @12 e
  P1 S2 V3: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, r @12 e
  chord Bb7 V7 @1 c=0.12
- cadence subverted m60 @1 c=0.04
 
 m60
  P1 S1 V1: r @1 e, A#4 @2 e, r @3 e, D#5 @4 s., r @4.75 t, A#5 @5 s., r @5.75 t, G5 @6 e~, G5 @7 s, A#5 @7.5 s., G6 @8.25 s, r @8.75 t, D#6 @9 s, D6 @9.5 s, r @10 s, D6 @10.5 s, r @11 t, F6 @11.25 s., r @12 t, D6 @12.25 s, C6 @12.75 t
@@ -538,7 +519,7 @@ m61
  P1 S2 V3: r @1 q, D4 @3 e, r @4 e, G#4 @5 e, r @6 e, r @7 e, G#4 @8 q, r @10 e, G#4 @11 e, D4 @12 e
  P1 S2 V4: r @1 w, D4 @9 e, r @10 q.
  chord Bb7 V7 @1 c=0.15
- cadence IAC m62 @1 c=0.22
+ cadence HC m61 @1 c=0.22
 
 m62
  P1 S1 V1: r @1 e.., F5 @2.75 s, r @3.25 s, D5 @3.75 t~, D5 @4 s, r @4.5 e., G5 @6 e~, G5 @7 t, r @7.25 q, r @9.25 s., r @10 q.
@@ -547,6 +528,7 @@ m62
  P1 S2 V3: r @1 q, D#4 @3 e, r @4 e, G4 @5 q, r @7 e, G4 @8 q, r @10 e, G4 @11 q
  P1 S2 V4: r @1 w, D#4 @9 e
  chord Eb I @1 c=0.10
+ phrase 11 m62-m66 c=0.75 | form D
 
 m63
  P1 S1 V1: E5 @1 e, r @2 e, F5 @3 e~, F5 @4 e, C5 @5 e, G5 @6 e~, G5 @7 e, r @8 e, G#5 @9 e~, G#5 @10 e, r @11 e, A5 @12 e~
@@ -555,7 +537,6 @@ m63
  P1 S2 V3: r @1 e, F4 @2 q, C4 @4 e, r @5 q, B3 @7 e, r @8 e, D4 @9 e, r @10 q, D4 @12 e
  chord F/Ab V6/V @1 c=0.71
  chord Bb7 V7 @10 c=0.00
- cadence subverted m64 @1 c=0.05
 
 m64 clef S2 bass
  P1 S1 V1: A5 @1 e, A#4 @2 e, r @3 e, r @4 e, C#5 @5 e, r @6 e, B5 @7 e, r @8 e, G5 @9 e~, G5 @10 t, r @10.25 s., G#5 @11 e, r @12 e
@@ -590,3 +571,4 @@ m67
  P1 S2 V2: D#3 @1 e, G4 @2 q, A#3 @4 q, D#4 @6 e, D#3 @7 q.
  P1 S2 V3: r @1 q, D#4 @3 e, r @4 e, G4 @5 e
  chord Eb I @1 c=0.00
+ phrase 12 m67 c=0.50 | form D

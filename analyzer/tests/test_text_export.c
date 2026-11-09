@@ -184,9 +184,9 @@ static void check_pickup_piece(void) {
     CHECK(block_has(whole, "0", " (m0-m4)\n"), "and spans m0 to m4");
     CHECK(block_has(whole, "0", " chord G V @4 c="), "the pickup chord has a root, a numeral and beat 4");
     CHECK(block_has(whole, "1", " chord C I @1 c="), "a chord starts in measure 1");
-    CHECK(block_has(whole, "1", " phrase 1 m1 c="), "the phrase is numbered from 1 and gives its range");
+    CHECK(block_has(whole, "1", " phrase 1 m1-m4 c="), "the phrase is numbered from 1 and gives its range");
     CHECK(block_has(whole, "1", " | form A\n"), "the phrase names its form section");
-    CHECK(block_has(whole, "1", " form A m1 c="), "the form section starts in measure 1");
+    CHECK(block_has(whole, "1", " form A m1-m4 c="), "the form section starts in measure 1 and spans the phrase");
     CHECK(block_has(whole, "3", " cadence IAC m4 @1 c="), "the cadence is placed where it starts and names where it arrives");
     CHECK(!block_has(whole, "4", " cadence"), "and is not repeated in its arrival measure");
     char *zero = measure_block(whole, "0");

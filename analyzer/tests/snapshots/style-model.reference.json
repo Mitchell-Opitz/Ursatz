@@ -9,38 +9,26 @@
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"authentic-unspecified",
-			"count":	4,
-			"total":	48
-		}, {
-			"dimension":	"harmony",
-			"category":	"cadence-type",
-			"label":	"deceptive",
-			"count":	1,
-			"total":	48
+			"count":	3,
+			"total":	29
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"half",
-			"count":	10,
-			"total":	48
+			"count":	14,
+			"total":	29
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"imperfect-authentic",
-			"count":	9,
-			"total":	48
+			"count":	5,
+			"total":	29
 		}, {
 			"dimension":	"harmony",
 			"category":	"cadence-type",
 			"label":	"perfect-authentic",
-			"count":	20,
-			"total":	48
-		}, {
-			"dimension":	"harmony",
-			"category":	"cadence-type",
-			"label":	"subverted",
-			"count":	4,
-			"total":	48
+			"count":	7,
+			"total":	29
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-numeral",
@@ -477,7 +465,7 @@
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"V-V7",
-			"count":	3,
+			"count":	2,
 			"total":	406
 		}, {
 			"dimension":	"harmony",
@@ -819,7 +807,7 @@
 			"dimension":	"harmony",
 			"category":	"chord-progression-2",
 			"label":	"viio-V",
-			"count":	2,
+			"count":	3,
 			"total":	406
 		}, {
 			"dimension":	"harmony",
@@ -1142,6 +1130,12 @@
 		}, {
 			"dimension":	"harmony",
 			"category":	"chord-progression-3",
+			"label":	"I-viio-V",
+			"count":	1,
+			"total":	361
+		}, {
+			"dimension":	"harmony",
+			"category":	"chord-progression-3",
 			"label":	"I-viio-V7",
 			"count":	3,
 			"total":	361
@@ -1384,12 +1378,6 @@
 			"category":	"chord-progression-3",
 			"label":	"V-V7-VI",
 			"count":	2,
-			"total":	361
-		}, {
-			"dimension":	"harmony",
-			"category":	"chord-progression-3",
-			"label":	"V-V7-i",
-			"count":	1,
 			"total":	361
 		}, {
 			"dimension":	"harmony",
@@ -2978,18 +2966,6 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"#4 5 #4 5 #4 5 #4 5",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
-			"label":	"#4 5 #4 5 4 5 4 5",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"#4 5 #4 5 4 5 6 b7",
 			"count":	1,
 			"total":	164
@@ -3069,6 +3045,18 @@
 			"dimension":	"melody",
 			"category":	"motive-degrees",
 			"label":	"1 1 b7 6 5 #4 6 b7",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 2 1 2 1 2 1 2",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 2 1 2 2 7 5 6",
 			"count":	1,
 			"total":	164
 		}, {
@@ -3542,14 +3530,8 @@
 		}, {
 			"dimension":	"melody",
 			"category":	"motive-degrees",
-			"label":	"4 5 4 5 4 5 4 5",
-			"count":	1,
-			"total":	164
-		}, {
-			"dimension":	"melody",
-			"category":	"motive-degrees",
 			"label":	"4 5 4 5 5 3 1 2",
-			"count":	2,
+			"count":	1,
 			"total":	164
 		}, {
 			"dimension":	"melody",
@@ -3861,6 +3843,18 @@
 			"dimension":	"melody",
 			"category":	"motive-degrees",
 			"label":	"b2 2 5 1 #4 5 b6 6",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b2 2 b2 2 1 2 1 2",
+			"count":	1,
+			"total":	164
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b2 2 b2 2 b2 2 b2 2",
 			"count":	1,
 			"total":	164
 		}, {
@@ -5942,237 +5936,207 @@
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
-			"label":	"1",
-			"count":	3,
-			"total":	52
-		}, {
-			"dimension":	"rhythm",
-			"category":	"note-density",
 			"label":	"2",
-			"count":	3,
-			"total":	52
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"3",
 			"count":	8,
-			"total":	52
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"3/2",
-			"count":	6,
-			"total":	52
+			"count":	5,
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"4+",
-			"count":	18,
-			"total":	52
+			"count":	12,
+			"total":	37
+		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"5/2",
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"note-density",
 			"label":	"7/2",
-			"count":	14,
-			"total":	52
+			"count":	10,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"1",
-			"count":	9,
-			"total":	52
-		}, {
-			"dimension":	"form",
-			"category":	"phrase-length",
-			"label":	"10",
-			"count":	5,
-			"total":	52
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"11",
-			"count":	4,
-			"total":	52
+			"count":	3,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"12",
-			"count":	2,
-			"total":	52
-		}, {
-			"dimension":	"form",
-			"category":	"phrase-length",
-			"label":	"13",
-			"count":	1,
-			"total":	52
+			"count":	4,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"15",
-			"count":	1,
-			"total":	52
+			"count":	2,
+			"total":	37
+		}, {
+			"dimension":	"form",
+			"category":	"phrase-length",
+			"label":	"16",
+			"count":	7,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"2",
-			"count":	7,
-			"total":	52
-		}, {
-			"dimension":	"form",
-			"category":	"phrase-length",
-			"label":	"28",
-			"count":	1,
-			"total":	52
+			"count":	2,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"3",
-			"count":	3,
-			"total":	52
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"4",
-			"count":	3,
-			"total":	52
+			"count":	11,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"5",
-			"count":	6,
-			"total":	52
-		}, {
-			"dimension":	"form",
-			"category":	"phrase-length",
-			"label":	"6",
-			"count":	5,
-			"total":	52
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"7",
-			"count":	5,
-			"total":	52
+			"count":	2,
+			"total":	37
+		}, {
+			"dimension":	"form",
+			"category":	"phrase-length",
+			"label":	"8",
+			"count":	3,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"0",
-			"count":	2,
-			"total":	52
-		}, {
-			"dimension":	"melody",
-			"category":	"phrase-range",
-			"label":	"10",
-			"count":	2,
-			"total":	52
-		}, {
-			"dimension":	"melody",
-			"category":	"phrase-range",
-			"label":	"11",
-			"count":	2,
-			"total":	52
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"12",
-			"count":	1,
-			"total":	52
+			"count":	4,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"13",
-			"count":	1,
-			"total":	52
+			"count":	2,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"15",
-			"count":	1,
-			"total":	52
-		}, {
-			"dimension":	"melody",
-			"category":	"phrase-range",
-			"label":	"16",
-			"count":	4,
-			"total":	52
+			"count":	2,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"17",
-			"count":	5,
-			"total":	52
+			"count":	4,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"19",
-			"count":	4,
-			"total":	52
+			"count":	2,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"20",
 			"count":	2,
-			"total":	52
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
-			"label":	"21",
-			"count":	3,
-			"total":	52
+			"label":	"23",
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"24",
-			"count":	5,
-			"total":	52
-		}, {
-			"dimension":	"melody",
-			"category":	"phrase-range",
-			"label":	"25",
-			"count":	1,
-			"total":	52
+			"count":	4,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"26",
 			"count":	4,
-			"total":	52
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"27",
 			"count":	1,
-			"total":	52
+			"total":	37
+		}, {
+			"dimension":	"melody",
+			"category":	"phrase-range",
+			"label":	"28",
+			"count":	2,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"29",
-			"count":	3,
-			"total":	52
+			"count":	2,
+			"total":	37
+		}, {
+			"dimension":	"melody",
+			"category":	"phrase-range",
+			"label":	"33",
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"36",
-			"count":	1,
-			"total":	52
+			"count":	2,
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"7",
 			"count":	2,
-			"total":	52
-		}, {
-			"dimension":	"melody",
-			"category":	"phrase-range",
-			"label":	"8",
-			"count":	4,
-			"total":	52
+			"total":	37
 		}, {
 			"dimension":	"melody",
 			"category":	"phrase-range",
 			"label":	"9",
-			"count":	4,
-			"total":	52
+			"count":	1,
+			"total":	37
 		}, {
 			"dimension":	"form",
 			"category":	"section-letters",
@@ -6182,51 +6146,45 @@
 		}, {
 			"dimension":	"form",
 			"category":	"section-letters",
-			"label":	"A B C A' D E F A'' G H I J A''' K L M",
+			"label":	"A A'",
 			"count":	1,
 			"total":	5
 		}, {
 			"dimension":	"form",
 			"category":	"section-letters",
-			"label":	"A B C D E",
+			"label":	"A A' B A'' C D A''' E",
 			"count":	1,
 			"total":	5
 		}, {
 			"dimension":	"form",
 			"category":	"section-letters",
-			"label":	"A B C D E F G H I",
+			"label":	"A B C D",
 			"count":	1,
 			"total":	5
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"0",
-			"count":	26,
-			"total":	52
+			"count":	17,
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"1",
-			"count":	2,
-			"total":	52
-		}, {
-			"dimension":	"rhythm",
-			"category":	"syncopation-per-phrase",
-			"label":	"2",
-			"count":	5,
-			"total":	52
+			"count":	3,
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"3",
-			"count":	2,
-			"total":	52
+			"count":	3,
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"syncopation-per-phrase",
 			"label":	"4+",
-			"count":	17,
-			"total":	52
+			"count":	14,
+			"total":	37
 		}, {
 			"dimension":	"rhythm",
 			"category":	"tempo",
@@ -6255,7 +6213,13 @@
 			"dimension":	"form",
 			"category":	"theme-form",
 			"label":	"hybrid",
-			"count":	15,
+			"count":	14,
+			"total":	15
+		}, {
+			"dimension":	"form",
+			"category":	"theme-form",
+			"label":	"period",
+			"count":	1,
 			"total":	15
 		}]
 }

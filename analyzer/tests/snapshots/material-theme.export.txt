@@ -68,8 +68,8 @@ m1 4/4
  P1 S1 V1: C4 @1 q, E4 @2 q, G4 @3 q, E4 @4 q
  key C major c=0.27 (m1-m2)
  chord C I @1 c=0.00
- phrase 1 m1-m2 c=0.50 | form A
- form A m1-m2 c=0.50
+ phrase 1 m1-m2 c=0.75 | form A
+ form A m1-m2 c=0.75
 
 m2
  P1 S1 V1: F4 @1 q, A4 @2 q, G4 @3 h
@@ -82,8 +82,8 @@ m1 4/4
  P1 S1 V1: C4 @1 q, E4 @2 q, G4 @3 q, C5 @4 q
  key C major c=0.12 (m1-m2)
  chord C I @1 c=0.00
- phrase 1 m1-m2 c=0.50 | form A
- form A m1-m2 c=0.50
+ phrase 1 m1-m2 c=0.75 | form A
+ form A m1-m2 c=0.75
 
 m2
  P1 S1 V1: B4 @1 q, G4 @2 q, C5 @3 h
