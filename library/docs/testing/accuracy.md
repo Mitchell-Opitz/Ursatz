@@ -91,6 +91,8 @@ P41 B5 finds the phrases first in the chain (R-389 to R-391): the cadences the h
 
 ## Reference phrases
 
+P42 B4 places the chain's keys on the phrases of its phrase-first pass and reads everything once more in them (R-397 to R-399), and confirms the key changes with the cadences claimed on the grid. Overall after it (cadence recall, type, precision, phrase boundaries, theme types): 22.2% (2 of 9), 100.0% (2 of 2), 40.0% (2 of 5), 60.0% (12 of 20), 16.7% (1 of 6) (22.2%, 100.0%, 50.0%, 55.0%, 16.7% before). Field 1 now reports a half cadence at m15 in its stretch (precision) and gains the phrase boundary m16. The baseline was re-recorded. The chorale values (89.5%, 84.0%, 76.5%, 55.8%, 70.7%) did not move: the chorale runs stop at numerals, so there is no third pass.
+
 `tests/analysis/test_reference_phrases.c` (R-393) runs the chain on Clementi 36 and Mozart 545 and asserts Michelle's phrase readings (`tests/fixtures/annotations/{clementi36,mozart545}_v1_expected.txt`, `*_phrase_form.txt`): Clementi's grid units 1-8, 8-15 (elided), 16-23, 24-31 and 32-38, its claimed cadences (HC m4, IAC m8, HC m23 with the PAC m24 as its alternative, HC m27) and its period 1-8 with parts 1-4 and 5-8; Mozart's phrases 1-12 (HC m12) and 13-28 (PAC m28), no phrase of one measure in m1 to m28, and one cadence arriving in m26 to m28. It reports, with their causes, Clementi's PAC m15 (m14 reads vii6 in C, the key, P42), m31 (the V of m30 beat 4 is merged into the I6/4 span) and m38 (m37 reads iii6, the span seventh penalty, R-376), and m8's type (annotated PAC; the beat-level soprano reads the passing A4, R-395). The test is not in the harness metrics above.
 
 ## Harmonic spans
