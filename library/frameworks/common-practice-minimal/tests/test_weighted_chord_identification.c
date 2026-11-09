@@ -407,6 +407,186 @@ static void test_a_segment_without_a_bass_override_reads_as_before(void) {
     common_practice_weighted_result_destroy(&b);
 }
 
+/* --- applied chords (R-380) --- */
+
+static CommonPracticeWeightedConfig applied_config(void) {
+    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
+    config.applied_chords = true;
+    return config;
+}
+
+static void assert_applied(const CommonPracticeWeightedResult *result, int root_pitch_class, bool is_seventh, int target) {
+    assert(result->matched);
+    assert(result->best.root_pitch_class == root_pitch_class && result->best.is_seventh == is_seventh &&
+           result->best.applied_target_degree == target);
+}
+
+static void test_an_applied_dominant_seventh_is_ranked_when_asked(void) {
+    /* D3 F#4 A4 C5 quarters on a strong beat in C major: V7/V. */
+    CommonPracticeMember members[4] = {note("d", 50, false, 0.25, S, NULL, 0.0), note("f", 66, false, 0.25, S, NULL, 0.0),
+                                       note("a", 69, false, 0.25, S, NULL, 0.0), note("c", 72, false, 0.25, S, NULL, 0.0)};
+    CommonPracticeSegment seg = segment(members, 4, "sonority-1");
+    CommonPracticeWeightedConfig config = applied_config();
+    CommonPracticeWeightedResult result;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert_applied(&result, 2, true, 5);
+    assert(result.best.seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7);
+    common_practice_weighted_result_destroy(&result);
+
+    /* The same with the flag off is today's result: a diatonic chord. */
+    CommonPracticeWeightedResult plain;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &plain) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(plain.best.applied_target_degree == 0);
+    common_practice_weighted_result_destroy(&plain);
+}
+
+static void test_clementi_m6_beat_4_reads_as_vii_dim_of_v(void) {
+    /* F#3 quarter on a weak beat, E5 then C5 eighths, bass F#3 required: F# diminished, target V. */
+    CommonPracticeMember members[3] = {note("f", 54, false, 0.25, W, NULL, 0.0), note("e", 76, false, 0.125, W, NULL, 0.0),
+                                       note("c", 72, false, 0.125, W, NULL, 0.125)};
+    CommonPracticeSegment seg = segment(members, 3, "sonority-1");
+    seg.has_bass = true;
+    seg.bass_pitch = 54;
+    CommonPracticeWeightedConfig config = applied_config();
+    config.require_bass_chord_tone = true;
+    CommonPracticeWeightedResult result;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert_applied(&result, 6, false, 5);
+    assert(result.best.triad == COMMON_PRACTICE_TRIAD_DIMINISHED);
+    common_practice_weighted_result_destroy(&result);
+}
+
+static void test_a_chromatic_neighbour_does_not_make_an_applied_chord(void) {
+    /* C3 half note, E4 quarter, F4 and F#4 eighths on weak positions, G4 quarter: I. */
+    CommonPracticeMember members[5] = {note("c", 48, false, 0.5, S, NULL, 0.0), note("e", 64, false, 0.25, M, NULL, 0.0),
+                                       note("f", 65, false, 0.125, W, NULL, 0.25), note("fs", 66, false, 0.125, W, NULL, 0.375),
+                                       note("g", 67, false, 0.25, M, NULL, 0.5)};
+    CommonPracticeSegment seg = segment(members, 5, "sonority-1");
+    seg.has_bass = true;
+    seg.bass_pitch = 48;
+    CommonPracticeWeightedConfig config = applied_config();
+    config.require_bass_chord_tone = true;
+    CommonPracticeWeightedResult result;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(result.matched && result.best.degree == 1 && !result.best.is_seventh && result.best.applied_target_degree == 0);
+    common_practice_weighted_result_destroy(&result);
+}
+
+static void test_an_applied_dominant_seventh_that_misses_the_bass_is_not_read(void) {
+    /* F3 held, D4 F4 A4, a weak C#5 sixteenth, bass F3 required: D minor (V7/ii, A C# E G, does not hold the bass). */
+    CommonPracticeMember members[5] = {note("f3", 53, true, 0.25, S, NULL, -0.25), note("d", 62, false, 0.25, S, NULL, 0.0),
+                                       note("f", 65, false, 0.25, S, NULL, 0.0), note("a", 69, false, 0.25, S, NULL, 0.0),
+                                       note("cs", 73, false, 0.0625, W, NULL, 0.1875)};
+    CommonPracticeSegment seg = segment(members, 5, "sonority-1");
+    seg.has_bass = true;
+    seg.bass_pitch = 53;
+    CommonPracticeWeightedConfig config = applied_config();
+    config.require_bass_chord_tone = true;
+    CommonPracticeWeightedResult result;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(result.matched && result.best.root_pitch_class == 2 && result.best.degree == 2 && !result.best.is_seventh &&
+           result.best.applied_target_degree == 0);
+    common_practice_weighted_result_destroy(&result);
+}
+
+static void test_a_bare_fifth_is_not_an_applied_chord(void) {
+    /* D3 A3 alone: ii; V/V is not eligible (no tone outside the key sounds). */
+    CommonPracticeMember members[2] = {note("d", 50, false, 0.25, S, NULL, 0.0), note("a", 57, false, 0.25, S, NULL, 0.0)};
+    CommonPracticeSegment seg = segment(members, 2, "sonority-1");
+    CommonPracticeWeightedConfig config = applied_config();
+    CommonPracticeWeightedResult result;
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MAJOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(result.matched && result.best.degree == 2 && result.best.applied_target_degree == 0);
+    assert(result.runner_up.applied_target_degree == 0);
+    common_practice_weighted_result_destroy(&result);
+}
+
+/* Two segments, the second one chord after the first, read as a sequence. */
+static void read_two(CommonPracticeMember *first, size_t first_count, CommonPracticeMember *second, size_t second_count,
+                     int tonic, CommonPracticeKeyMode mode, CommonPracticeWeightedResults *out) {
+    CommonPracticeSegment segments[2] = {segment(first, first_count, "sonority-1"),
+                                         segment(second, second_count, "sonority-2")};
+    CommonPracticeWeightedConfig config = applied_config();
+    assert(common_practice_identify_weighted_sequence(segments, 2, tonic, mode, &config, out) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert(out->count == 2);
+}
+
+static void test_a_diminished_seventh_is_rooted_by_where_it_resolves_in_major(void) {
+    CommonPracticeMember dim[4] = {note("a", 54, false, 0.25, S, NULL, 0.0), note("b", 57, false, 0.25, S, NULL, 0.0),
+                                   note("c", 60, false, 0.25, S, NULL, 0.0), note("d", 63, false, 0.25, S, NULL, 0.0)};
+    CommonPracticeMember to_g[3] = {note("e", 55, false, 0.25, S, NULL, 0.25), note("f", 59, false, 0.25, S, NULL, 0.25),
+                                    note("g", 62, false, 0.25, S, NULL, 0.25)};
+    CommonPracticeMember to_e[3] = {note("h", 52, false, 0.25, S, NULL, 0.25), note("i", 55, false, 0.25, S, NULL, 0.25),
+                                    note("j", 59, false, 0.25, S, NULL, 0.25)};
+    CommonPracticeWeightedResults results;
+
+    /* F# A C Eb then G B D: F#, target V. */
+    read_two(dim, 4, to_g, 3, 0, COMMON_PRACTICE_KEY_MAJOR, &results);
+    assert_applied(&results.items[0], 6, true, 5);
+    assert(results.items[0].best.degree == 4 && results.items[0].best.tonic_offset == 6);
+    assert(results.items[1].best.degree == 5 && results.items[1].best.applied_target_degree == 0);
+    common_practice_weighted_results_destroy(&results);
+
+    /* F# A C Eb then E G B: D# (pitch class 3), target iii. */
+    read_two(dim, 4, to_e, 3, 0, COMMON_PRACTICE_KEY_MAJOR, &results);
+    assert_applied(&results.items[0], 3, true, 3);
+    assert(results.items[0].best.degree == 2 && results.items[0].best.tonic_offset == 3);
+    assert(results.items[0].best.seventh == COMMON_PRACTICE_SEVENTH_DIMINISHED7);
+    assert(results.items[0].best_chord != NULL);
+    common_practice_weighted_results_destroy(&results);
+}
+
+static void test_a_diminished_seventh_is_rooted_by_where_it_resolves_in_minor(void) {
+    /* C minor: E G Bb Db then Ab C Eb: G (pitch class 7), target VI. */
+    CommonPracticeMember dim[4] = {note("a", 52, false, 0.25, S, NULL, 0.0), note("b", 55, false, 0.25, S, NULL, 0.0),
+                                   note("c", 58, false, 0.25, S, NULL, 0.0), note("d", 61, false, 0.25, S, NULL, 0.0)};
+    CommonPracticeMember to_ab[3] = {note("e", 44, false, 0.25, S, NULL, 0.25), note("f", 48, false, 0.25, S, NULL, 0.25),
+                                     note("g", 51, false, 0.25, S, NULL, 0.25)};
+    CommonPracticeWeightedResults results;
+    read_two(dim, 4, to_ab, 3, 0, COMMON_PRACTICE_KEY_MINOR, &results);
+    assert_applied(&results.items[0], 7, true, 6);
+    assert(results.items[0].best.degree == 5 && results.items[0].best.tonic_offset == 7);
+    common_practice_weighted_results_destroy(&results);
+
+    /* The same chord followed by F minor (iv) keeps its own root E, target iv. */
+    CommonPracticeMember to_f[3] = {note("h", 41, false, 0.25, S, NULL, 0.25), note("i", 44, false, 0.25, S, NULL, 0.25),
+                                    note("j", 48, false, 0.25, S, NULL, 0.25)};
+    read_two(dim, 4, to_f, 3, 0, COMMON_PRACTICE_KEY_MINOR, &results);
+    assert_applied(&results.items[0], 4, true, 4);
+    common_practice_weighted_results_destroy(&results);
+}
+
+static void test_applied_dominant_sevenths_in_minor(void) {
+    CommonPracticeWeightedConfig config = applied_config();
+    CommonPracticeWeightedResult result;
+
+    /* C minor D3 F#3 A3 C4: D7, target V. */
+    CommonPracticeMember d7[4] = {note("a", 50, false, 0.25, S, NULL, 0.0), note("b", 54, false, 0.25, S, NULL, 0.0),
+                                  note("c", 57, false, 0.25, S, NULL, 0.0), note("d", 60, false, 0.25, S, NULL, 0.0)};
+    CommonPracticeSegment seg = segment(d7, 4, "sonority-1");
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MINOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert_applied(&result, 2, true, 5);
+    assert(result.best.seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7);
+    common_practice_weighted_result_destroy(&result);
+
+    /* C minor C3 E3 G3 Bb3: C7, target iv. */
+    CommonPracticeMember c7[4] = {note("e", 48, false, 0.25, S, NULL, 0.0), note("f", 52, false, 0.25, S, NULL, 0.0),
+                                  note("g", 55, false, 0.25, S, NULL, 0.0), note("h", 58, false, 0.25, S, NULL, 0.0)};
+    seg = segment(c7, 4, "sonority-1");
+    assert(common_practice_identify_weighted(&seg, 0, COMMON_PRACTICE_KEY_MINOR, &config, &result) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    assert_applied(&result, 0, true, 4);
+    common_practice_weighted_result_destroy(&result);
+}
+
 int main(void) {
     test_a_required_bass_chord_tone_beats_the_upper_voices();
     test_a_segment_without_a_bass_override_reads_as_before();
@@ -424,6 +604,14 @@ int main(void) {
     test_a_root_in_the_bass_keeps_its_own_reading();
     test_an_arpeggio_inside_one_beat_is_one_chord();
     test_the_existing_subset_match_functions_are_unchanged();
+    test_an_applied_dominant_seventh_is_ranked_when_asked();
+    test_clementi_m6_beat_4_reads_as_vii_dim_of_v();
+    test_a_chromatic_neighbour_does_not_make_an_applied_chord();
+    test_an_applied_dominant_seventh_that_misses_the_bass_is_not_read();
+    test_a_bare_fifth_is_not_an_applied_chord();
+    test_a_diminished_seventh_is_rooted_by_where_it_resolves_in_major();
+    test_a_diminished_seventh_is_rooted_by_where_it_resolves_in_minor();
+    test_applied_dominant_sevenths_in_minor();
     printf("test_weighted_chord_identification: ok\n");
     return 0;
 }

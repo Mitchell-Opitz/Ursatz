@@ -18,6 +18,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.seventh_penalty = 0.0;
     config.min_coverage = 0.5;
     config.require_bass_chord_tone = false;
+    config.applied_chords = false;
     config.classifier = NULL;
     config.classifier_context = NULL;
     return config;
@@ -95,6 +96,7 @@ typedef struct {
     CommonPracticeTriad triad;
     CommonPracticeSeventh seventh;
     int form_rank;
+    int applied_target; /* 0 for a diatonic chord; else the degree of the key an applied chord tonicizes */
 } VocabularyEntry;
 
 #define TRI(offset, degree, triad, rank) {offset, degree, false, triad, COMMON_PRACTICE_SEVENTH_DOMINANT7, rank}
@@ -145,6 +147,50 @@ static const VocabularyEntry MINOR_VOCABULARY[COMMON_PRACTICE_MINOR_CANDIDATE_CO
     SEV(11, 7, DIM, HDIM7, 1),
 };
 
+/*
+ * The applied chords (R-380): V/x, V7/x, vii-dim/x and vii-dim-7/x for the targets x of the mode, less those the mode's
+ * diatonic vocabulary already has and the diminished sevenths that repeat a pitch-class set (one entry per set: the
+ * target V first, else the lowest degree). `degree` is the root's letter degree as the function spells it. In major the
+ * targets are ii iii IV V vi; in minor (natural roots) III iv V VI VII.
+ */
+#define APP_TRI(offset, degree, triad, target) {offset, degree, false, triad, DOM7, 0, target}
+#define APP_SEV(offset, degree, triad, seventh, target) {offset, degree, true, triad, seventh, 0, target}
+
+static const VocabularyEntry MAJOR_APPLIED[COMMON_PRACTICE_MAJOR_APPLIED_COUNT] = {
+    APP_TRI(9, 6, MAJ, 2),         /* V/ii  A  */
+    APP_TRI(11, 7, MAJ, 3),        /* V/iii B  */
+    APP_TRI(2, 2, MAJ, 5),         /* V/V   D  */
+    APP_TRI(4, 3, MAJ, 6),         /* V/vi  E  */
+    APP_SEV(9, 6, MAJ, DOM7, 2),   /* V7/ii  A7 */
+    APP_SEV(11, 7, MAJ, DOM7, 3),  /* V7/iii B7 */
+    APP_SEV(0, 1, MAJ, DOM7, 4),   /* V7/IV  C7 */
+    APP_SEV(2, 2, MAJ, DOM7, 5),   /* V7/V   D7 */
+    APP_SEV(4, 3, MAJ, DOM7, 6),   /* V7/vi  E7 */
+    APP_TRI(1, 1, DIM, 2),         /* vii-dim/ii  C# */
+    APP_TRI(3, 2, DIM, 3),         /* vii-dim/iii D# */
+    APP_TRI(4, 3, DIM, 4),         /* vii-dim/IV  E  */
+    APP_TRI(6, 4, DIM, 5),         /* vii-dim/V   F# */
+    APP_TRI(8, 5, DIM, 6),         /* vii-dim/vi  G# */
+    APP_SEV(6, 4, DIM, DIM7, 5),   /* vii-dim-7/V  F# (set shared with /iii D#) */
+    APP_SEV(1, 1, DIM, DIM7, 2),   /* vii-dim-7/ii C# (set shared with /IV E) */
+    APP_SEV(8, 5, DIM, DIM7, 6),   /* vii-dim-7/vi G# */
+};
+
+static const VocabularyEntry MINOR_APPLIED[COMMON_PRACTICE_MINOR_APPLIED_COUNT] = {
+    APP_TRI(0, 1, MAJ, 4),         /* V/iv  C  */
+    APP_TRI(2, 2, MAJ, 5),         /* V/V   D  */
+    APP_SEV(0, 1, MAJ, DOM7, 4),   /* V7/iv C7 */
+    APP_SEV(2, 2, MAJ, DOM7, 5),   /* V7/V  D7 */
+    APP_SEV(3, 3, MAJ, DOM7, 6),   /* V7/VI Eb7 */
+    APP_TRI(4, 3, DIM, 4),         /* vii-dim/iv E  */
+    APP_TRI(6, 4, DIM, 5),         /* vii-dim/V  F# */
+    APP_TRI(7, 5, DIM, 6),         /* vii-dim/VI G  */
+    APP_SEV(6, 4, DIM, DIM7, 5),   /* vii-dim-7/V  F# (set shared with /VII A) */
+    APP_SEV(4, 3, DIM, DIM7, 4),   /* vii-dim-7/iv E  (set shared with /VI G) */
+};
+
+#undef APP_TRI
+#undef APP_SEV
 #undef TRI
 #undef SEV
 #undef MAJ
@@ -172,6 +218,9 @@ static bool ranks_ahead(const CommonPracticeRankedChord *a, const CommonPractice
                         int bass_pitch_class) {
     if (fabs(a->score - b->score) > TOLERANCE) {
         return a->score > b->score;
+    }
+    if ((a->applied_target_degree != 0) != (b->applied_target_degree != 0)) {
+        return a->applied_target_degree == 0; /* a diatonic chord ahead of an applied one */
     }
     bool a_root_position = bass_pitch_class >= 0 && a->root_pitch_class == bass_pitch_class;
     bool b_root_position = bass_pitch_class >= 0 && b->root_pitch_class == bass_pitch_class;
@@ -206,6 +255,37 @@ static bool entry_holds(const VocabularyEntry *entry, int root, int pitch_class)
     return false;
 }
 
+/* The pitch classes above the tonic that belong to the key (applied chords need a tone outside them): the major scale;
+   in minor the natural minor scale and its raised sixth and seventh. */
+#define MAJOR_SCALE_MASK 0xAB5u /* 0 2 4 5 7 9 11 */
+#define MINOR_SCALE_MASK 0xFADu /* 0 2 3 5 7 8 9 10 11 */
+
+/* True when the entry, rooted at pitch class `root`, may be ranked on its own merits (the bass aside): its root sounds
+   and, for an applied chord, a tone outside the key sounds too. */
+static bool entry_eligible(const VocabularyEntry *entry, int root, int tonic_pitch_class, CommonPracticeKeyMode mode,
+                           const CommonPracticeWeights *weights) {
+    if (weights->pitch_class[root] <= 0.0) {
+        return false; /* the root does not sound: not a reading the notes support */
+    }
+    if (entry->applied_target == 0) {
+        return true;
+    }
+    CommonPracticeRankedChord chord;
+    chord.is_seventh = entry->is_seventh;
+    chord.triad = entry->triad;
+    chord.seventh = entry->seventh;
+    int intervals[4];
+    size_t count = common_practice_ranked_chord_intervals(&chord, intervals);
+    unsigned scale = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_SCALE_MASK : MINOR_SCALE_MASK;
+    for (size_t i = 0; i < count; i++) {
+        int pitch_class = (root + intervals[i]) % 12;
+        if ((scale & (1u << ((pitch_class - tonic_pitch_class + 12) % 12))) == 0 && weights->pitch_class[pitch_class] > 0.0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPracticeWeights *weights,
                                                               int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                               const CommonPracticeWeightedConfig *config,
@@ -227,24 +307,30 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     const VocabularyEntry *vocabulary = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_VOCABULARY : MINOR_VOCABULARY;
     size_t vocabulary_size = mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT
                                                                 : COMMON_PRACTICE_MINOR_CANDIDATE_COUNT;
+    const VocabularyEntry *applied = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_APPLIED : MINOR_APPLIED;
+    size_t applied_size = !config->applied_chords ? 0
+                          : mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_APPLIED_COUNT
+                                                              : COMMON_PRACTICE_MINOR_APPLIED_COUNT;
+    size_t entry_count = vocabulary_size + applied_size;
 
-    /* Holding the bass is required only when some candidate can: otherwise every candidate stays eligible. */
+    /* Holding the bass is required only when some candidate the call ranks can: otherwise every candidate stays eligible. */
     bool bass_required = false;
     if (config->require_bass_chord_tone && weights->bass_pitch_class >= 0) {
-        for (size_t k = 0; k < vocabulary_size && !bass_required; k++) {
-            const VocabularyEntry *entry = &vocabulary[k];
+        for (size_t k = 0; k < entry_count && !bass_required; k++) {
+            const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
             int root = (tonic_pitch_class + entry->offset) % 12;
-            bass_required = weights->pitch_class[root] > 0.0 && entry_holds(entry, root, weights->bass_pitch_class);
+            bass_required = entry_eligible(entry, root, tonic_pitch_class, mode, weights) &&
+                            entry_holds(entry, root, weights->bass_pitch_class);
         }
     }
 
     CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
     size_t count = 0;
-    for (size_t k = 0; k < vocabulary_size; k++) {
-        const VocabularyEntry *entry = &vocabulary[k];
+    for (size_t k = 0; k < entry_count; k++) {
+        const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
         int root = (tonic_pitch_class + entry->offset) % 12;
-        if (weights->pitch_class[root] <= 0.0) {
-            continue; /* the root does not sound: not a reading the notes support */
+        if (!entry_eligible(entry, root, tonic_pitch_class, mode, weights)) {
+            continue; /* the root does not sound (or no tone outside the key does, for an applied chord) */
         }
         if (bass_required && !entry_holds(entry, root, weights->bass_pitch_class)) {
             continue; /* the chord must hold the bass */
@@ -259,6 +345,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         chord.score = 0.0;
         chord.tonic_offset = entry->offset;
         chord.form_rank = entry->form_rank;
+        chord.applied_target_degree = entry->applied_target;
 
         int intervals[4];
         size_t interval_count = common_practice_ranked_chord_intervals(&chord, intervals);
@@ -285,7 +372,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         ranked[count++] = chord;
     }
 
-    /* Insertion sort, best first: at most 26 candidates, and it keeps the order stable and total. */
+    /* Insertion sort, best first: at most 36 candidates, and it keeps the order stable and total. */
     for (size_t i = 1; i < count; i++) {
         CommonPracticeRankedChord moving = ranked[i];
         size_t j = i;

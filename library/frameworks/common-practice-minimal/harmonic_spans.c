@@ -481,6 +481,7 @@ HarmonicSpanStatus harmonic_spans_group(const HarmonicSpanCell *cells, size_t co
     g.bass = bass;
     g.config = config != NULL ? *config : common_practice_weighted_config_default();
     g.config.require_bass_chord_tone = true;
+    g.config.applied_chords = false; /* grouping is key-free: it already reads these shapes as diatonic in another key */
     size_t members = 1;
     for (size_t i = 0; i < count; i++) {
         members += cells[i].segment->member_count;

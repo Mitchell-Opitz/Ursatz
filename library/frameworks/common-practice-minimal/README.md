@@ -123,6 +123,8 @@ specifically. Enforced by
 
 `CommonPracticeSegment` can carry its own bass (`has_bass`, `bass_pitch`), `CommonPracticeWeightedConfig.require_bass_chord_tone` limits the candidates to chords holding it, and `seventh_penalty` (default 0) is subtracted from every seventh candidate's score (R-376). `harmonic_spans.h` reads each segment's bass and groups segments into spans, one chord each. The chain sets all of these for spans. The rules are in [common-practice-minimal-weighted.md](../../docs/modules/common-practice-minimal-weighted.md).
 
+`CommonPracticeWeightedConfig.applied_chords` (default false) also ranks the key's applied chords (V/x, V7/x, vii°/x, vii°7/x); see the same document.
+
 ## Neutral analysis input
 
 `common_practice_member_from_analysis_note` (`weighted_identification.h`) makes a `CommonPracticeMember` from an `AnalysisNote` and the segment's span: `held` when the note starts before the segment, `duration` the overlap and `onset` the note start, in whole notes as `double` (`rational_to_double`), `pitch` the note's `midi`. `key_regions.h` maps a region's key to an `AnalysisKey` (`common_practice_key_region_analysis_key`) and an `AnalysisKeyEvent` to a `CommonPracticeKeySignatureEvent` (`common_practice_key_signature_event_from_analysis`).

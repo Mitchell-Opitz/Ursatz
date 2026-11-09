@@ -376,6 +376,87 @@ static CommonPracticeWeightedStatus resolve_from_neighbours(const CommonPractice
     return COMMON_PRACTICE_WEIGHTED_OK;
 }
 
+/* --- applied diminished sevenths --- */
+
+/* A diminished seventh's pitch-class set is shared by two applied chords (R-380); the vocabulary keeps one. When the chord
+   that follows roots on the other one's target, the segment takes the other reading. offsets are semitones above the tonic. */
+typedef struct {
+    int kept_offset;     /* the root the vocabulary keeps */
+    int alt_offset;      /* the other root of the same pitch-class set */
+    int alt_degree;      /* its letter degree, as the function spells it */
+    int alt_target;      /* the degree it tonicizes */
+    int alt_target_root; /* that target's root, semitones above the tonic */
+} DiminishedPair;
+
+static const DiminishedPair MAJOR_PAIRS[] = {{6, 3, 2, 3, 4}, {1, 4, 3, 4, 5}}; /* F# or D# (iii), C# or E (IV) */
+static const DiminishedPair MINOR_PAIRS[] = {{6, 9, 6, 7, 10}, {4, 7, 5, 6, 8}}; /* F# or A (VII), E or G (VI) */
+
+/* Rebuilds the best and runner-up Chords of one result over the root of its (changed) best. */
+static CommonPracticeWeightedStatus rebuild_chords(const CommonPracticeSegment *segment, CommonPracticeWeightedResult *result) {
+    int bass_pitch_class = -1;
+    (void)segment_mask(segment, &bass_pitch_class);
+    Chord *best = NULL;
+    Chord *runner_up = NULL;
+    CommonPracticeWeightedStatus status =
+        build_chord(&result->best, segment->id, bass_pitch_class, 1.0 - result->uncertainty, NULL, &best);
+    if (status == COMMON_PRACTICE_WEIGHTED_OK && result->runner_up_chord != NULL) {
+        status = build_chord(&result->runner_up, segment->id, bass_pitch_class, result->uncertainty, "-runner-up", &runner_up);
+    }
+    if (status != COMMON_PRACTICE_WEIGHTED_OK) {
+        chord_destroy(best);
+        chord_destroy(runner_up);
+        return status;
+    }
+    chord_destroy(result->best_chord);
+    chord_destroy(result->runner_up_chord);
+    result->best_chord = best;
+    result->runner_up_chord = runner_up;
+    return COMMON_PRACTICE_WEIGHTED_OK;
+}
+
+/* Roots each matched segment whose best is an applied diminished seventh by where it resolves: it looks at the first later
+   matched segment whose best root differs from its own, and when that root is the target of the other chord sharing its
+   pitch-class set, best takes that chord's root, degree, target and offset (score unchanged). masks[] is kept in step. */
+static CommonPracticeWeightedStatus root_applied_diminished_sevenths(const CommonPracticeSegment *segments, size_t count,
+                                                                     int tonic_pitch_class, CommonPracticeKeyMode mode,
+                                                                     CommonPracticeWeightedResults *results, unsigned *masks) {
+    const DiminishedPair *pairs = mode == COMMON_PRACTICE_KEY_MAJOR ? MAJOR_PAIRS : MINOR_PAIRS;
+    size_t pair_count = mode == COMMON_PRACTICE_KEY_MAJOR ? sizeof(MAJOR_PAIRS) / sizeof(MAJOR_PAIRS[0])
+                                                          : sizeof(MINOR_PAIRS) / sizeof(MINOR_PAIRS[0]);
+    for (size_t i = 0; i < count; i++) {
+        CommonPracticeWeightedResult *result = &results->items[i];
+        if (!result->matched || result->best.applied_target_degree == 0 || !result->best.is_seventh ||
+            result->best.seventh != COMMON_PRACTICE_SEVENTH_DIMINISHED7) {
+            continue;
+        }
+        size_t next = i + 1;
+        while (next < count &&
+               (!results->items[next].matched || results->items[next].best.root_pitch_class == result->best.root_pitch_class)) {
+            next++;
+        }
+        if (next >= count) {
+            continue;
+        }
+        int next_offset = (results->items[next].best.root_pitch_class - tonic_pitch_class + 12) % 12;
+        for (size_t p = 0; p < pair_count; p++) {
+            if (result->best.tonic_offset != pairs[p].kept_offset || next_offset != pairs[p].alt_target_root) {
+                continue;
+            }
+            result->best.root_pitch_class = (tonic_pitch_class + pairs[p].alt_offset) % 12;
+            result->best.tonic_offset = pairs[p].alt_offset;
+            result->best.degree = pairs[p].alt_degree;
+            result->best.applied_target_degree = pairs[p].alt_target;
+            masks[i] = common_practice_ranked_chord_mask(&result->best, tonic_pitch_class);
+            CommonPracticeWeightedStatus status = rebuild_chords(&segments[i], result);
+            if (status != COMMON_PRACTICE_WEIGHTED_OK) {
+                return status;
+            }
+            break;
+        }
+    }
+    return COMMON_PRACTICE_WEIGHTED_OK;
+}
+
 typedef struct {
     size_t segment;
     size_t member;
@@ -524,6 +605,11 @@ CommonPracticeWeightedStatus common_practice_identify_weighted_sequence(const Co
                 masks[i] = common_practice_ranked_chord_mask(&results.items[i].best, tonic_pitch_class);
             }
         }
+    }
+
+    /* An applied diminished seventh is rooted by where it resolves, before context reads from it. */
+    if (status == COMMON_PRACTICE_WEIGHTED_OK) {
+        status = root_applied_diminished_sevenths(segments, segment_count, tonic_pitch_class, mode, &results, masks);
     }
 
     /* Context: arpeggiated chords across a beat, then incomplete segments take a neighbouring chord. */

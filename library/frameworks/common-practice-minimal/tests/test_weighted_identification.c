@@ -44,6 +44,7 @@ static void test_default_config(void) {
     assert(config.seventh_penalty == 0.0);
     assert(close_to(config.min_coverage, 0.5));
     assert(!config.require_bass_chord_tone);
+    assert(!config.applied_chords);
 }
 
 static void test_a_pure_triad_weighs_its_three_pitch_classes(void) {
@@ -550,6 +551,172 @@ static void test_scoring_rejects_bad_input(void) {
            COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG);
 }
 
+/* --- applied chords (R-380) --- */
+
+static CommonPracticeWeights weigh_all_pitch_classes(void) {
+    CommonPracticeMember members[12];
+    for (int i = 0; i < 12; i++) {
+        members[i] = member(48 + i, false, 1.0, BEAT_STRENGTH_STRONG);
+    }
+    return weigh(members, 12);
+}
+
+static size_t rank_applied(const CommonPracticeWeights *weights, int tonic, CommonPracticeKeyMode mode, bool applied,
+                           bool require_bass, CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]) {
+    CommonPracticeWeightedConfig config = bass_heavy();
+    config.applied_chords = applied;
+    config.require_bass_chord_tone = require_bass;
+    size_t count = 0;
+    assert(common_practice_rank_candidates(weights, tonic, mode, &config, out, &count) == COMMON_PRACTICE_WEIGHTED_OK);
+    return count;
+}
+
+static const CommonPracticeRankedChord *find_applied(const CommonPracticeRankedChord *ranked, size_t count, int root,
+                                                     bool is_seventh, int target) {
+    for (size_t i = 0; i < count; i++) {
+        if (ranked[i].applied_target_degree == target && ranked[i].is_seventh == is_seventh &&
+            ranked[i].root_pitch_class == root) {
+            return &ranked[i];
+        }
+    }
+    return NULL;
+}
+
+static void test_the_applied_vocabulary_has_seventeen_and_ten_chords(void) {
+    CommonPracticeWeights weights = weigh_all_pitch_classes();
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+    assert(COMMON_PRACTICE_MAJOR_APPLIED_COUNT == 17 && COMMON_PRACTICE_MINOR_APPLIED_COUNT == 10);
+    assert(COMMON_PRACTICE_CANDIDATE_COUNT == 36);
+
+    size_t off = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, false, false, ranked);
+    assert(off == 14);
+    for (size_t i = 0; i < off; i++) {
+        assert(ranked[i].applied_target_degree == 0);
+    }
+    size_t major = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, true, false, ranked);
+    assert(major == 14 + 17);
+    size_t applied = 0;
+    for (size_t i = 0; i < major; i++) {
+        applied += ranked[i].applied_target_degree != 0;
+    }
+    assert(applied == 17);
+
+    off = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MINOR, false, false, ranked);
+    assert(off == 26);
+    size_t minor = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MINOR, true, false, ranked);
+    assert(minor == 26 + 10);
+    applied = 0;
+    for (size_t i = 0; i < minor; i++) {
+        applied += ranked[i].applied_target_degree != 0;
+    }
+    assert(applied == 10);
+}
+
+static void test_applied_chords_carry_the_function_spelling(void) {
+    CommonPracticeWeights weights = weigh_all_pitch_classes();
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+    size_t count = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, true, false, ranked);
+
+    const CommonPracticeRankedChord *v_of_v = find_applied(ranked, count, 2, false, 5); /* D F# A */
+    assert(v_of_v != NULL && v_of_v->degree == 2 && v_of_v->triad == COMMON_PRACTICE_TRIAD_MAJOR);
+    assert(v_of_v->tonic_offset == 2 && v_of_v->form_rank == 0);
+    const CommonPracticeRankedChord *v7_of_v = find_applied(ranked, count, 2, true, 5);
+    assert(v7_of_v != NULL && v7_of_v->seventh == COMMON_PRACTICE_SEVENTH_DOMINANT7);
+    const CommonPracticeRankedChord *v_of_ii = find_applied(ranked, count, 9, false, 2); /* A C# E */
+    assert(v_of_ii != NULL && v_of_ii->degree == 6);
+    const CommonPracticeRankedChord *vii_of_v = find_applied(ranked, count, 6, false, 5); /* F# A C */
+    assert(vii_of_v != NULL && vii_of_v->degree == 4 && vii_of_v->triad == COMMON_PRACTICE_TRIAD_DIMINISHED);
+    const CommonPracticeRankedChord *vii7_of_v = find_applied(ranked, count, 6, true, 5); /* F# A C Eb */
+    assert(vii7_of_v != NULL && vii7_of_v->degree == 4 && vii7_of_v->seventh == COMMON_PRACTICE_SEVENTH_DIMINISHED7);
+    assert(find_applied(ranked, count, 3, true, 3) == NULL); /* vii-dim-7/iii shares the set of vii-dim-7/V: one entry */
+    assert(find_applied(ranked, count, 4, true, 4) == NULL); /* so does vii-dim-7/IV with /ii */
+    assert(find_applied(ranked, count, 1, true, 2) != NULL);
+    assert(find_applied(ranked, count, 7, false, 5) == NULL); /* V/IV is I: diatonic, left out */
+
+    count = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MINOR, true, false, ranked);
+    assert(find_applied(ranked, count, 0, true, 4) != NULL);  /* V7/iv C7 */
+    assert(find_applied(ranked, count, 3, true, 6) != NULL);  /* V7/VI Eb7 */
+    assert(find_applied(ranked, count, 2, false, 5) != NULL); /* V/V D */
+    assert(find_applied(ranked, count, 10, true, 3) == NULL); /* V7/III is the diatonic VII7 */
+    assert(find_applied(ranked, count, 2, true, 3) == NULL);  /* vii-dim-7/III is the diatonic vii-dim-7 */
+    assert(find_applied(ranked, count, 9, true, 7) == NULL);  /* vii-dim-7/VII shares the set of /V */
+}
+
+static void test_an_applied_chord_needs_a_tone_outside_the_key(void) {
+    /* D3 A3 alone: V/V (D F# A) has no F# sounding, so it is not eligible; ii is the best. */
+    CommonPracticeMember members[2] = {member(50, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(57, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 2);
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+    size_t count = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, true, false, ranked);
+    assert(count > 0 && ranked[0].degree == 2 && ranked[0].applied_target_degree == 0);
+    for (size_t i = 0; i < count; i++) {
+        assert(ranked[i].applied_target_degree == 0);
+    }
+    assert(count == rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, false, false, ranked));
+}
+
+static void test_an_applied_chord_must_hold_a_required_bass(void) {
+    /* D4 F#4 A4 over an F3 bass: with the bass required, no applied chord holds F (V/V is D F# A), so none is ranked. */
+    CommonPracticeMember members[4] = {member(53, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(62, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(66, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(69, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 4);
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+    size_t free_count = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, true, false, ranked);
+    assert(find_applied(ranked, free_count, 2, false, 5) != NULL);
+    size_t held = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, true, true, ranked);
+    assert(held > 0 && held < free_count);
+    for (size_t i = 0; i < held; i++) {
+        assert(ranked[i].applied_target_degree == 0);
+        assert((common_practice_ranked_chord_mask(&ranked[i], 0) & (1u << 5)) != 0);
+    }
+}
+
+static void test_a_diatonic_chord_ranks_ahead_of_an_applied_one_on_a_tie(void) {
+    /* C E G B Bb in equal weights, no bass weight: I major 7 (C E G B) and V7/IV (C E G Bb) cover the same weight. */
+    CommonPracticeMember members[5] = {member(60, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(64, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(67, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(71, false, 1.0, BEAT_STRENGTH_STRONG),
+                                       member(70, false, 1.0, BEAT_STRENGTH_STRONG)};
+    CommonPracticeWeights weights = weigh(members, 5);
+    CommonPracticeRankedChord ranked[COMMON_PRACTICE_CANDIDATE_COUNT];
+    size_t count = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MAJOR, true, false, ranked);
+    size_t diatonic = count;
+    size_t applied = count;
+    for (size_t i = 0; i < count; i++) {
+        if (ranked[i].root_pitch_class == 0 && ranked[i].is_seventh) {
+            if (ranked[i].applied_target_degree == 0 && diatonic == count) {
+                diatonic = i;
+            }
+            if (ranked[i].applied_target_degree == 4) {
+                applied = i;
+            }
+        }
+    }
+    assert(diatonic < count && applied < count);
+    assert(fabs(ranked[diatonic].score - ranked[applied].score) < 1e-9);
+    assert(diatonic < applied);
+}
+
+static void test_the_ranking_without_the_flag_is_unchanged(void) {
+    CommonPracticeWeights weights = weigh_all_pitch_classes();
+    CommonPracticeRankedChord with_default[COMMON_PRACTICE_CANDIDATE_COUNT];
+    CommonPracticeRankedChord flag_off[COMMON_PRACTICE_CANDIDATE_COUNT];
+    CommonPracticeWeightedConfig config = bass_heavy();
+    size_t a = 0;
+    assert(common_practice_rank_candidates(&weights, 0, COMMON_PRACTICE_KEY_MINOR, &config, with_default, &a) ==
+           COMMON_PRACTICE_WEIGHTED_OK);
+    size_t b = rank_applied(&weights, 0, COMMON_PRACTICE_KEY_MINOR, false, false, flag_off);
+    assert(a == b && a == 26);
+    for (size_t i = 0; i < a; i++) {
+        assert(with_default[i].degree == flag_off[i].degree && with_default[i].root_pitch_class == flag_off[i].root_pitch_class &&
+               with_default[i].score == flag_off[i].score && with_default[i].applied_target_degree == 0);
+    }
+}
+
 int main(void) {
     test_default_config();
     test_a_pure_triad_weighs_its_three_pitch_classes();
@@ -579,6 +746,12 @@ int main(void) {
     test_an_empty_segment_ranks_without_a_bass();
     test_requiring_the_bass_chord_tone_limits_the_candidates();
     test_scoring_rejects_bad_input();
+    test_the_applied_vocabulary_has_seventeen_and_ten_chords();
+    test_applied_chords_carry_the_function_spelling();
+    test_an_applied_chord_needs_a_tone_outside_the_key();
+    test_an_applied_chord_must_hold_a_required_bass();
+    test_a_diatonic_chord_ranks_ahead_of_an_applied_one_on_a_tie();
+    test_the_ranking_without_the_flag_is_unchanged();
     printf("test_weighted_identification: ok\n");
     return 0;
 }

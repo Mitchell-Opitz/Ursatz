@@ -43,6 +43,15 @@
  */
 
 /*
+ * APPLIED DIMINISHED SEVENTHS (the sequence function only, config.applied_chords). A diminished seventh's pitch classes fit
+ * two applied chords (vii-dim-7/V and vii-dim-7/iii share them), and the vocabulary keeps one. After pass 1 and before
+ * CONTEXT, each matched segment whose best is an applied diminished seventh looks at the first later matched segment whose best
+ * root differs from its own. When that root is the target of the other chord sharing the pitch classes (major: F# for V or D# for
+ * iii, C# for ii or E for IV; minor: F# for V or A for VII, E for iv or G for VI), best takes the other chord's root, degree,
+ * applied_target_degree and tonic_offset (the score is unchanged) and both Chords are rebuilt over that root. The runner-up stays.
+ */
+
+/*
  * CONTEXT (the sequence function only). After pass 1, a segment whose own reading is INCOMPLETE (no match, or
  * fewer than three of the best chord's pitch classes sounding) takes the chord of a neighbouring segment when
  * every pitch class it sounds is a tone of that chord: the previous segment's chord first (as resolved, so a run of

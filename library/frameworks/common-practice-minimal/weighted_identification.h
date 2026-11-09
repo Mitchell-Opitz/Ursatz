@@ -74,6 +74,9 @@ typedef struct {
        (the chord must hold the bass, R-370); when none does, every candidate is eligible as before. The
        tie-break order is unchanged. Default false. */
     bool require_bass_chord_tone;
+    /* When true, also ranks the key's applied chords (V/x, V7/x, vii-dim/x, vii-dim-7/x, R-380) beside the diatonic ones.
+       Default false: the ranking is then unchanged. */
+    bool applied_chords;
     /* Labels leftover tones in common_practice_identify_weighted_sequence. NULL (the default) keeps
        common_practice_label_leftover_tones. With one, the leftover members that have a voice_id are labelled per
        voice: the voice's members, segment after segment, form a line, each entry carrying the chord mask of the
@@ -86,7 +89,7 @@ typedef struct {
 } CommonPracticeWeightedConfig;
 
 /* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty
-   0.15, bass chord-tone bonus 0.05, min coverage 0.5, require_bass_chord_tone false. */
+   0.15, bass chord-tone bonus 0.05, min coverage 0.5, require_bass_chord_tone false, applied_chords false. */
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void);
 
 typedef enum {
@@ -144,8 +147,21 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
  * augmented-major sevenths. Minor triads are quality-labeled ("minor", "major", "diminished", "augmented"):
  * a degree numeral depends on the form of the scale, which is standard-tonality's work.
  *
- * Fully-diminished sevenths outside minor, chromatic and applied chords are not candidates. The key comes from
- * the caller (a whole-piece key until local key regions exist).
+ * Fully-diminished sevenths outside minor, and chromatic chords other than the applied ones below, are not
+ * candidates. The key comes from the caller (a whole-piece key until local key regions exist).
+ *
+ * APPLIED CHORDS (R-380), only with config.applied_chords. The key's applied chords join the candidates: for each
+ * target x (major: ii iii IV V vi; minor, natural roots: III iv V VI VII) the shapes V/x (major triad on x's root plus
+ * 7), V7/x (dominant seventh, same root), vii-dim/x (diminished triad on x's root minus 1) and vii-dim-7/x (diminished
+ * seventh, same root). One that the mode's diatonic vocabulary already has (same root and quality, or a diminished
+ * seventh with the same pitch classes) is left out; the diminished sevenths of one pitch-class set keep one entry,
+ * the target V first, else the lowest degree. That is 17 applied chords in major and 10 in minor
+ * (COMMON_PRACTICE_MAJOR_APPLIED_COUNT, COMMON_PRACTICE_MINOR_APPLIED_COUNT). An applied chord is eligible only when
+ * its root sounds, at least one of its tones outside the key sounds (major: not in the major scale; minor: not in
+ * the natural minor scale nor its raised sixth and seventh) and, when the bass is required, it holds the bass. It is
+ * scored like any other chord. On a tie, after the score, a diatonic chord ranks ahead of an applied one. An applied
+ * chord's `degree` is its root's letter degree as the function spells it (V/V is 2, vii-dim-7/V is 4) and
+ * `applied_target_degree` the degree of the key it tonicizes. Without the flag the ranking is byte-identical.
  *
  *     score = (weight of the chord's pitch classes / total weight)
  *             - missing_third_penalty   if the chord's third has no weight at all
@@ -165,10 +181,14 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
 
 #define COMMON_PRACTICE_MAJOR_CANDIDATE_COUNT 14
 #define COMMON_PRACTICE_MINOR_CANDIDATE_COUNT 26
-#define COMMON_PRACTICE_CANDIDATE_COUNT COMMON_PRACTICE_MINOR_CANDIDATE_COUNT /* the most any mode ranks */
+#define COMMON_PRACTICE_MAJOR_APPLIED_COUNT 17
+#define COMMON_PRACTICE_MINOR_APPLIED_COUNT 10
+/* the most any mode ranks: minor's 26 plus its 10 applied chords */
+#define COMMON_PRACTICE_CANDIDATE_COUNT (COMMON_PRACTICE_MINOR_CANDIDATE_COUNT + COMMON_PRACTICE_MINOR_APPLIED_COUNT)
 
 typedef struct {
-    int degree;                 /* 1..7: the chord's root as a scale degree (minor: 6 and 7 also for the raised forms) */
+    int degree;                 /* 1..7: the chord's root as a scale degree (minor: 6 and 7 also for the raised forms).
+                                   An applied chord: the root's letter degree as the function spells it (V/V is 2) */
     bool is_seventh;
     CommonPracticeTriad triad;  /* major: the triad on this degree (for a seventh, the triad it is built on).
                                    minor: the triad's quality (COMMON_PRACTICE_TRIAD_MAJOR, _MINOR, _DIMINISHED,
@@ -178,10 +198,12 @@ typedef struct {
     double score;
     int tonic_offset;           /* the root's semitones above the tonic, 0..11 */
     int form_rank;              /* 0: preferred form on a tie; 1: the other form of the same root (minor only) */
+    int applied_target_degree;  /* 0 for a diatonic chord; else 1..7: the degree of the key an applied chord tonicizes */
 } CommonPracticeRankedChord;
 
 /* Ranks the eligible candidates (root sounding) for weights in a key on tonic_pitch_class (0..11) in the
-   given mode, best first: *out_count of them, at most COMMON_PRACTICE_CANDIDATE_COUNT, may be 0. */
+   given mode, best first: *out_count of them, at most COMMON_PRACTICE_CANDIDATE_COUNT, may be 0. With
+   config->applied_chords the key's applied chords are ranked too (see APPLIED CHORDS). */
 CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPracticeWeights *weights,
                                                               int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                               const CommonPracticeWeightedConfig *config,
