@@ -75,11 +75,11 @@ pieces are not in the harness metrics above.
 | Piece | Chords matched | Chain changes | Annotated changes | Extra changes |
 |---|---|---|---|---|
 | Clementi 36 | 8 / 10 | 8 | 9 | -1 |
-| Mozart 545 | 15 / 17 | 15 | 15 | 0 |
+| Mozart 545 | 15 / 17 | 14 | 15 | -1 |
 
-Measured 2026-11-09 (P40 B3, the two-voice span rules; P39 B3 before: Mozart 15 / 17 with 16 chain changes and 1 extra; P38 B4 before that: Clementi 5 / 10 with 24 extra changes, Mozart 13 / 17 with 17). The
+Measured 2026-11-09 (P40 B4, the bass evidence rules; P40 B3 before: Mozart 15 / 17 with 15 chain changes and 0 extra; P39 B3 before that: Mozart 15 / 17 with 16 chain changes and 1 extra; P38 B4 before that: Clementi 5 / 10 with 24 extra changes, Mozart 13 / 17 with 17). The
 misses, none in a target bar: Clementi m6 b4 (viio7/V, chain C major) and m7 b2 (C major, chain A minor); Mozart m8 b1 (A minor, the chain
-reads the bar as one C major chord) and m10 b1 (F major, no chord).
+reads the bar as one C major chord) and m10 b1 (F major, no chord). Clementi m6 b4 now has a segment of its own (the F#3 cuts the bar, R-381 and R-387) but the chord there reads none, because the key is C major and an F# diminished triad is not diatonic; the applied chord waits for B5. No segment starts at Mozart m10 b4 (the chromatic F#3 under the F chord is no new chord), and that segment is not matched, so the F#3 is reported as not labelled (R-384). Both are asserted in `test_reference_harmony.c`.
 
 ## Harmonic spans
 
@@ -90,6 +90,8 @@ chain's key, key): 84.5%, 67.2%, 67.4%, 52.0%, 69.1% before; 86.4%, 75.9%, 70.0%
 84.5% and 67.2%. The other gated metrics did not move. The baseline was re-recorded in P39 B3.
 
 P40 B3 adds the two-voice span rules (R-379, R-382, R-386): a root and fifth over the root complete a part, a held bass note is not cut, an accented step over a held bass is a non-chord tone in the chord but evidence for the key, a span reads no chord from the next span, and the grouping takes the span seventh penalty. The MIDI importer gives every import voices by track. Chorale harness after it (chord root, quality, Roman numeral, numeral in the chain's key, key): 85.6%, 75.1%, 69.8%, 53.7%, 69.1%, against the guards of 84.5%, 67.2% and 67.4%; the baseline was re-recorded. The bars of R-371 hold.
+
+P40 B4 adds the bass evidence rules (R-381, R-383, R-387): a chromatic bass against the chord tone it alters is no new chord, a new bass that no reading of the measure explains cuts it without the margin, a lone upper note is no new bass, and a diminished seventh is rooted on its bass. Chorale harness after it (chord root, quality, Roman numeral, numeral in the chain's key, key): 85.5%, 75.0%, 69.9%, 53.6%, 69.1% (85.6%, 75.1%, 69.8%, 53.7%, 69.1% before), against the guards of 84.5%, 67.2% and 67.4%; the baseline was re-recorded. The bars of R-371 hold. Bach 114 reads 52 spans, 1 cadence and 3 phrases (44, 4 and 5 before); Clementi 36's first theme is measures 1 to 6 (1 to 7).
 
 The two-voice check (R-384, `tests/analysis/test_two_voice_spans.c`, fixtures in `tests/fixtures/two-voice/`) runs the Composer's exports through the chain with and without spans. Without spans: the sentence and the period have one theme and a perfect authentic cadence in measure 8; the fill has one theme (13 measures) and cadences in measures 8 and 16. With spans every cadence and every theme is kept, and the chord before each cadence's arrival has its bass on its root. The sentence needed both fixes: its measure 7 (G under E5 then D5) reads V only once the E5 is flagged, which needs voice ids, and its key stays C major only once the key counts the flagged tone.
 

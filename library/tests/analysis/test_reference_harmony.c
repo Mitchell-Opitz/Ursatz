@@ -24,8 +24,11 @@
  * P39 asserts the target bars of R-371 (the chain reads chords on harmonic spans): in Clementi measures 1 to 5, 8 and 9 and in Mozart
  * measures 1 to 6, 11 and 12 every annotated chord must match by root and triad quality, and the chain makes no chord change inside
  * Clementi measure 8 or Mozart measures 1 and 8 (Mozart measure 8 is one chord; which chord is reported, not asserted, R-375). Every
- * other annotated bar and the extra changes are reported only (applied chords are P40's). URSATZ_CORPUS_DIR and
- * URSATZ_ANNOTATION_DIR come from CMake.
+ * other annotated bar and the extra changes are reported only (applied chords are P40's). P40 B4 (the bass evidence rules of the
+ * harmonic spans, R-381 and R-383) also asserts that a chain segment starts at Clementi measure 6 beat 4 (the F# bass; its chord is
+ * reported, P40 B5 asserts it), that none starts at Mozart measure 10 beat 4 (the chromatic F#3 under the F chord is no new chord),
+ * and that the F#3 of Mozart measure 10 is a leftover tone of its segment when that segment is matched (reported when it is not,
+ * R-384). URSATZ_CORPUS_DIR and URSATZ_ANNOTATION_DIR come from CMake.
  */
 
 #define MAX_CHORDS 64
@@ -52,6 +55,11 @@ typedef struct {
 } Reference;
 
 typedef struct {
+    int measure;
+    double beat;
+} BeatPoint;
+
+typedef struct {
     const char *name;
     const char *midi;
     const char *fixture;
@@ -59,6 +67,12 @@ typedef struct {
     size_t bar_count;
     const int *one_chord;  /* the bars in which the chain makes no chord change */
     size_t one_chord_count;
+    const BeatPoint *segment_starts;    /* beats at which a chain segment must start (P40 B4) */
+    size_t segment_start_count;
+    const BeatPoint *no_segment_starts; /* beats at which none may start */
+    size_t no_segment_start_count;
+    int leftover_measure;               /* the measure whose lowest-pitch leftover_pitch note must be a leftover tone (0: none) */
+    int leftover_pitch;
 } Piece;
 
 static const int CLEMENTI_BARS[] = {1, 2, 3, 4, 5, 8, 9};
@@ -66,11 +80,15 @@ static const int CLEMENTI_ONE_CHORD[] = {8};
 static const int MOZART_BARS[] = {1, 2, 3, 4, 5, 6, 11, 12};
 static const int MOZART_ONE_CHORD[] = {1, 8};
 
+static const BeatPoint CLEMENTI_SEGMENT_STARTS[] = {{6, 4.0}};
+static const BeatPoint MOZART_NO_SEGMENT_STARTS[] = {{10, 4.0}};
+
 static const Piece PIECES[2] = {
     {"Clementi 36", "Clementi 36.mid", "clementi36_harmony.txt", CLEMENTI_BARS, sizeof(CLEMENTI_BARS) / sizeof(int), CLEMENTI_ONE_CHORD,
-     sizeof(CLEMENTI_ONE_CHORD) / sizeof(int)},
+     sizeof(CLEMENTI_ONE_CHORD) / sizeof(int), CLEMENTI_SEGMENT_STARTS, sizeof(CLEMENTI_SEGMENT_STARTS) / sizeof(BeatPoint), NULL, 0, 0, 0},
     {"Mozart 545", "Mozart 545.mid", "mozart545_harmony.txt", MOZART_BARS, sizeof(MOZART_BARS) / sizeof(int), MOZART_ONE_CHORD,
-     sizeof(MOZART_ONE_CHORD) / sizeof(int)}};
+     sizeof(MOZART_ONE_CHORD) / sizeof(int), NULL, 0, MOZART_NO_SEGMENT_STARTS, sizeof(MOZART_NO_SEGMENT_STARTS) / sizeof(BeatPoint), 10,
+     54}};
 
 static bool listed(const int *bars, size_t count, int measure) {
     for (size_t i = 0; i < count; i++) {
@@ -342,6 +360,65 @@ static int report_piece(const Piece *piece) {
         if (!has_chord || changes != 0) {
             printf("  FAIL (one chord): measure %d\n", piece->one_chord[i]);
             failures++;
+        }
+    }
+
+    for (size_t i = 0; i < piece->segment_start_count; i++) {
+        double at = time_of(&ref, piece->segment_starts[i].measure, piece->segment_starts[i].beat);
+        bool starts = false;
+        for (size_t s = 0; s < count; s++) {
+            starts = starts || fabs(segments->starts[s] - at) < 1e-9;
+        }
+        printf("  a segment %s at measure %d beat %g\n", starts ? "starts" : "does not start", piece->segment_starts[i].measure,
+               piece->segment_starts[i].beat);
+        if (!starts) {
+            printf("  FAIL (segment start): measure %d beat %g\n", piece->segment_starts[i].measure, piece->segment_starts[i].beat);
+            failures++;
+        }
+    }
+    for (size_t i = 0; i < piece->no_segment_start_count; i++) {
+        double at = time_of(&ref, piece->no_segment_starts[i].measure, piece->no_segment_starts[i].beat);
+        bool starts = false;
+        for (size_t s = 0; s < count; s++) {
+            starts = starts || fabs(segments->starts[s] - at) < 1e-9;
+        }
+        printf("  no segment starts at measure %d beat %g: %s\n", piece->no_segment_starts[i].measure, piece->no_segment_starts[i].beat,
+               starts ? "FAIL" : "ok");
+        if (starts) {
+            printf("  FAIL (no segment start): measure %d beat %g\n", piece->no_segment_starts[i].measure,
+                   piece->no_segment_starts[i].beat);
+            failures++;
+        }
+    }
+    if (piece->leftover_measure > 0) {
+        double at = time_of(&ref, piece->leftover_measure, 1.0);
+        for (size_t s = 0; s < count; s++) {
+            if (!(segments->starts[s] <= at + 1e-9 && at < segments->ends[s] - 1e-9)) {
+                continue;
+            }
+            const CommonPracticeSegment *segment = &segments->segments[s];
+            for (size_t m = 0; m < segment->member_count; m++) {
+                const CommonPracticeMember *member = &segment->members[m];
+                if (member->pitch != piece->leftover_pitch) {
+                    continue;
+                }
+                if (!chords[s].matched) {
+                    printf("  measure %d: the segment is not matched; the note %d is not labelled (reported, R-384)\n",
+                           piece->leftover_measure, piece->leftover_pitch);
+                    continue;
+                }
+                bool leftover = false;
+                for (size_t l = 0; l < chords[s].leftover_count; l++) {
+                    leftover = leftover || (chords[s].leftover[l].note_id != NULL && member->note_id != NULL &&
+                                            strcmp(chords[s].leftover[l].note_id, member->note_id) == 0);
+                }
+                printf("  measure %d: the note %d is %s a leftover tone of its segment\n", piece->leftover_measure, piece->leftover_pitch,
+                       leftover ? "" : "NOT");
+                if (!leftover) {
+                    printf("  FAIL (leftover tone): measure %d note %d\n", piece->leftover_measure, piece->leftover_pitch);
+                    failures++;
+                }
+            }
         }
     }
 

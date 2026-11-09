@@ -41,10 +41,10 @@
       "group": "chorale",
       "unsupported_share": 0.022059,
       "metrics": {
-        "chord_root": {"value": 0.857143, "num": 14.250000, "den": 16.625000},
-        "chord_quality": {"value": 0.751880, "num": 12.500000, "den": 16.625000},
-        "roman_numeral": {"value": 0.646617, "num": 10.750000, "den": 16.625000},
-        "roman_numeral_chain_key": {"value": 0.563910, "num": 9.375000, "den": 16.625000},
+        "chord_root": {"value": 0.849624, "num": 14.125000, "den": 16.625000},
+        "chord_quality": {"value": 0.744361, "num": 12.375000, "den": 16.625000},
+        "roman_numeral": {"value": 0.654135, "num": 10.875000, "den": 16.625000},
+        "roman_numeral_chain_key": {"value": 0.571429, "num": 9.500000, "den": 16.625000},
         "key": {"value": 0.742647, "num": 12.625000, "den": 17.000000}
       }
     },
@@ -65,9 +65,9 @@
       "group": "chorale",
       "unsupported_share": 0.054054,
       "metrics": {
-        "chord_root": {"value": 0.866667, "num": 22.750000, "den": 26.250000},
-        "chord_quality": {"value": 0.771429, "num": 20.250000, "den": 26.250000},
-        "roman_numeral": {"value": 0.733333, "num": 19.250000, "den": 26.250000},
+        "chord_root": {"value": 0.876190, "num": 23.000000, "den": 26.250000},
+        "chord_quality": {"value": 0.780952, "num": 20.500000, "den": 26.250000},
+        "roman_numeral": {"value": 0.742857, "num": 19.500000, "den": 26.250000},
         "roman_numeral_chain_key": {"value": 0.495238, "num": 13.000000, "den": 26.250000},
         "key": {"value": 0.630631, "num": 17.500000, "den": 27.750000}
       }
@@ -89,10 +89,10 @@
       "group": "chorale",
       "unsupported_share": 0.000000,
       "metrics": {
-        "chord_root": {"value": 0.895833, "num": 10.750000, "den": 12.000000},
-        "chord_quality": {"value": 0.750000, "num": 9.000000, "den": 12.000000},
-        "roman_numeral": {"value": 0.791667, "num": 9.500000, "den": 12.000000},
-        "roman_numeral_chain_key": {"value": 0.562500, "num": 6.750000, "den": 12.000000},
+        "chord_root": {"value": 0.875000, "num": 10.500000, "den": 12.000000},
+        "chord_quality": {"value": 0.729167, "num": 8.750000, "den": 12.000000},
+        "roman_numeral": {"value": 0.770833, "num": 9.250000, "den": 12.000000},
+        "roman_numeral_chain_key": {"value": 0.541667, "num": 6.500000, "den": 12.000000},
         "key": {"value": 0.729167, "num": 8.750000, "den": 12.000000}
       }
     },
@@ -183,10 +183,10 @@
     }
   ],
   "overall": {
-    "chord_root": 0.856170,
-    "chord_quality": 0.750638,
-    "roman_numeral": 0.698298,
-    "roman_numeral_chain_key": 0.537021,
+    "chord_root": 0.855319,
+    "chord_quality": 0.749787,
+    "roman_numeral": 0.699149,
+    "roman_numeral_chain_key": 0.536170,
     "key": 0.690635,
     "cadence_recall": 0.111111,
     "cadence_type": 1.000000,

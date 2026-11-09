@@ -21,7 +21,8 @@
  * THE READING. A part (the cells on one side of a boundary, or a whole measure) is read as ONE segment: the union
  * of its cells' members, held as at the part's start, over its first cell's bass, with require_bass_chord_tone set.
  * It is read in no key: the best chord over all 24 keys (tonic 0 to 11 in major, then in minor; in each key the
- * first ranked candidate of an allowed quality; a later key replaces the best only when strictly higher). The
+ * first ranked candidate of an allowed quality; a later key replaces the best only when strictly higher, or when it ties
+ * the best and is rooted on the bass while the best is not: a diminished seventh over its bass is rooted on the bass, R-387). The
  * allowed qualities are the major, minor and diminished triads, the dominant seventh and the diminished seventh.
  * Two chords a third apart (I and vi) would read as one major or minor seventh at full score, so those sevenths are
  * left out of grouping only (the chain still identifies chords on spans with the full vocabulary); and a home key
@@ -35,11 +36,21 @@
  * the bass that resolves by step then does not break the part. The Alberti bass keeps R-370's (the bass follows the
  * figure). A span's bass is the bass its reading used.
  *
+ * TERMS (R-381, R-383, R-387). A step is two pitch classes 1 or 2 apart the shorter way round; a semitone is 1. A new bass
+ * is the bass of a cell at level BAR, HALF_BAR or BEAT (not the part's first cell) that differs from the bass of the cell
+ * before it, with a member on that pitch attacked in the cell and another member above it sounding at the cell's start: a
+ * note with nothing above it is a melody the bass rule took for the bass while the left hand rests, not a new bass. The bass after
+ * cell c is the bass of the first later cell (in any measure) whose bass differs from bass[c]; none at the piece's end. An
+ * altered chord tone of a chord's pitch-class mask is the bass of a cell whose pitch class is not in the mask and lies one
+ * semitone from a tone c of it, while c sounds at the cell's start in a member above the bass note (held, or attacked there),
+ * and the bass after it is a semitone from it: a chromatic bass against the chord tone it alters is no new chord.
+ *
  * THE SPANS (R-372). One span per measure to start with (a span never crosses a barline), then the measure is cut
  * where the music changes chord, by scoring whole partitions instead of single splits. The candidate boundaries of a
  * measure are its cells at level HALF_BAR or BEAT after its first cell, except a cell that keeps the bass of the cell
  * before it with that bass note held over (a held bass note is no new bass, so the measure is not cut inside it, R-379 (4)),
- * and every non-empty subset of them is a
+ * and except, when the whole measure's reading is matched, a cell whose bass is an altered chord tone of that reading
+ * (R-381, see TERMS), and every non-empty subset of them is a
  * partition (2^n, n = 3 in 4/4). A partition is valid when every part is matched, complete (three of its best chord's
  * pitch classes have weight, or its root and third do and its bass pitch class is a chord tone, or its root and fifth
  * do and the bass is the root: a bare fifth over the root is a complete two-voice reading, R-379) and has its bass as a

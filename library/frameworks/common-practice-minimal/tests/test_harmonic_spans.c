@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -147,7 +148,7 @@ static void assert_span_starts(const Piece *piece, const HarmonicSpans *spans, c
 enum {
     A2 = 45, G2 = 43, B2 = 47, C3 = 48, D3 = 50, E3 = 52, F3 = 53, G3 = 55, A3 = 57, B3 = 59, C4 = 60, D4 = 62,
     E4 = 64, F4 = 65, G4 = 67, Gs4 = 68, A4 = 69, B4 = 71, C5 = 72, D5 = 74, E5 = 76, F5 = 77, Fs5 = 78, G5 = 79,
-    A5 = 81, C6 = 84
+    A5 = 81, B5 = 83, C6 = 84, Fs3 = 54
 };
 
 /* Clementi m1: C5 E5 C5 G4 G4 over a C3 quarter. One chord, the bass resting while the right hand moves. */
@@ -733,6 +734,96 @@ static void test_a_held_bass_under_a_changing_chord_is_one_span(void) {
     harmonic_spans_destroy(&spans);
 }
 
+/* A lone upper note is no new bass (R-387): the left hand rests after the first beat, so the melody (D5, then A5, each under
+   twelve semitones above the bass before it) becomes the bass by the bass rule. Nothing sounds above either note, so neither
+   is a new bass and the bar is one span. */
+static void test_a_lone_upper_note_is_no_new_bass(void) {
+    Note notes[] = {{F4, 0, 4}, {A4, 0, 4}, {C5, 0, 4}, {D5, 4, 8}, {A5, 8, 12}, {F3, 12, 16}, {C5, 12, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    harmonic_spans_destroy(&spans);
+}
+
+/* A diminished seventh over its bass is rooted on the bass (R-387): Clementi m6 as in the corpus MIDI. F#3 under E5 and C5 on the
+   last beat scores F# diminished and C diminished seventh alike in every key, and the first key in order read C, whose bass F#
+   is no chord root, so the part was incomplete and the bar stayed one span. Rooted on the bass it is cut at beat 4. */
+static void test_a_diminished_seventh_is_rooted_on_the_bass(void) {
+    Note notes[] = {{C4, 0, 4}, {E5, 0, 4}, {G5, 4, 6}, {E5, 6, 8}, {C5, 8, 12}, {E5, 12, 14}, {C5, 14, 16}, {Fs3, 12, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0, 12};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    assert(spans.bass[1] == Fs3);
+    harmonic_spans_destroy(&spans);
+}
+
+/* True when a span starts at the given sixteenth. */
+static bool span_starts_at(const Piece *piece, const HarmonicSpans *spans, int sixteenth) {
+    for (size_t i = 0; i < spans->count; i++) {
+        if (piece->cells[spans->first[i]].start == (double)sixteenth * SIXTEENTH) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Mozart m10 as in the corpus MIDI, then m11's first beat: the left hand F3 G3 A3 in one voice and an F#3 on the last beat in
+   another, under a right hand that plays F5 on that beat (the F the F# alters), and a G2 next. The F#3 is a chromatic bass
+   against its chord tone, no new chord: no span of the measure starts at the last beat (R-381). */
+static void test_a_chromatic_bass_against_its_chord_tone_is_not_cut(void) {
+    Note notes[] = {{F3, 0, 6},  {G3, 6, 8},  {A3, 8, 12}, {Fs3, 12, 16}, {A5, 0, 1},  {B5, 1, 2},  {C6, 2, 3},   {B5, 3, 4},
+                    {A5, 4, 5},  {G5, 5, 6},  {F5, 6, 7},  {E5, 7, 8},    {F5, 8, 9},  {G5, 9, 10}, {A5, 10, 11}, {G5, 11, 12},
+                    {F5, 12, 13}, {E5, 13, 14}, {D5, 14, 15}, {C5, 15, 16}, {G2, 16, 20}, {B4, 16, 18}, {G5, 18, 20}};
+    const char *voices[] = {"left", "left", "left", "left2", "right", "right", "right", "right", "right", "right", "right", "right",
+                            "right", "right", "right", "right", "right", "right", "right", "right", "left", "right", "right"};
+    Piece piece;
+    build_voiced(&piece, notes, voices, COUNT(notes), 2);
+    bool beat_cell = false;
+    for (size_t i = 1; i < piece.count; i++) {
+        if (piece.cells[i].start == 12.0 * SIXTEENTH) {
+            beat_cell = true;
+            assert(piece.bass[i] == Fs3 && piece.bass[i - 1] == A3); /* the cell exists and the bass moved to the F# */
+        }
+    }
+    assert(beat_cell);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    assert(!span_starts_at(&piece, &spans, 12));
+    harmonic_spans_destroy(&spans);
+}
+
+/* A passing bass is explained by its neighbours: C3 D3 E3 under a C major triad. D3 is a step from C3 and a step to E3, so it
+   is not a new chord and the bar is one span. */
+static void test_a_passing_bass_is_explained_by_its_neighbours(void) {
+    Note notes[] = {{C3, 0, 4}, {D3, 4, 8}, {E3, 8, 16}, {E4, 0, 16}, {G4, 0, 16}, {C5, 0, 16}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 1);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    int starts[] = {0};
+    assert_span_starts(&piece, &spans, starts, COUNT(starts));
+    harmonic_spans_destroy(&spans);
+}
+
+/* A chromatic bass without its chord tone is a new chord: C3 under a C major triad, then F#3 on the last beat under A4 C5 with
+   no G sounding (the F# is no tone of the bar's chord and alters nothing that sounds), and a G2 in the next measure. The bar is
+   cut at the last beat. */
+static void test_a_chromatic_bass_without_its_chord_tone_is_cut(void) {
+    Note notes[] = {{C3, 0, 12}, {E4, 0, 12}, {G4, 0, 12}, {C5, 0, 12}, {Fs3, 12, 16}, {A4, 12, 16}, {C5, 12, 16}, {G2, 16, 20}};
+    Piece piece;
+    build(&piece, notes, COUNT(notes), 2);
+    HarmonicSpans spans;
+    group(&piece, &spans);
+    assert(span_starts_at(&piece, &spans, 12));
+    harmonic_spans_destroy(&spans);
+}
+
 int main(void) {
     test_clementi_m1_is_one_span_over_c3();
     test_clementi_m8_scale_is_one_span_over_g2();
@@ -763,6 +854,11 @@ int main(void) {
     test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_without_voices();
     test_a_held_bass_note_is_not_cut();
     test_a_held_bass_under_a_changing_chord_is_one_span();
+    test_a_lone_upper_note_is_no_new_bass();
+    test_a_diminished_seventh_is_rooted_on_the_bass();
+    test_a_chromatic_bass_against_its_chord_tone_is_not_cut();
+    test_a_passing_bass_is_explained_by_its_neighbours();
+    test_a_chromatic_bass_without_its_chord_tone_is_cut();
     test_bad_input_is_refused();
     printf("test_harmonic_spans: ok\n");
     return 0;
