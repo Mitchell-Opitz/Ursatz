@@ -12,10 +12,10 @@ m1 12/8
  P1 S2 V4: r @1 q., F4 @4 e, r @5 e, A#3 @6 e, r @7 q, A#3 @9 e, r @10 q, A#3 @12 e
  P1 S2 V6: r @1 h., G3 @7 e, r @8 q, E4 @10 e, r @11 q
  P1 S2 V7: r @1 h.., C#4 @8 e, r @9 e, r @10 q.
- key Bb major c=0.08 (m1-m5)
+ key Bb major c=0.30 (m1-m43)
  chord Bb I @1 c=0.00
  phrase 1 m1-m16 c=0.75 | form A
- form A m1-m43 c=0.18
+ form A m1-m43 c=0.75
  chord Dbdim/G vii°6/4/iii @7 c=1.00
 
 m2
@@ -61,11 +61,8 @@ m6
  P1 S1 V5: r @1 h., r @7 q., F4 @10 e, r @11 q
  P1 S2 V2: D3 @1 e, D4 @2 e, r @3 e, F4 @4 e, r @5 e, A3 @6 e, B2 @7 e, D4 @8 e, r @9 e, r @10 q, G#3 @12 e
  P1 S2 V4: r @1 q, A3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 q, G#3 @9 e, r @10 e, D4 @11 e, r @12 e
- key D minor c=0.00 (m6-m7)
- tonicization D minor (m6-m7)
- chord Dm i @1 c=0.00
- chord E/B V6/4/V @7 c=0.51
- chord Bdim7/Ab viio4/2/VII @10 c=0.00
+ chord Dm iii @1 c=0.00
+ chord Ddim/Ab vii°6/4/IV @10 c=0.00
 
 m7
  P1 S1 V1: C5 @1 h., r @7 q., E5 @10 q.
@@ -75,8 +72,8 @@ m7
  P1 S2 V4: r @1 e, A#3 @2 e, r @3 e, r @4 q, G3 @6 e, r @7 q, G3 @9 e, r @10 q, G3 @12 e
  P1 S2 V6: r @1 h., C3 @7 e, r @8 q, E4 @10 e, r @11 q
  P1 S2 V7: r @1 h.., A#3 @8 e, r @9 e, r @10 q.
- chord C VII @1 c=0.67
- chord Edim/G iio6 @10 c=0.39
+ chord C V/V @1 c=0.67
+ chord Edim/G vii°6/V @10 c=0.39
 
 m8
  P1 S1 V1: r @1 h, F6 @5 e, r @6 e, r @7 e, A#5 @8 e, r @9 e, r @10 e, D#5 @11 e, r @12 s., A#4 @12.75 t~
@@ -86,7 +83,6 @@ m8
  P1 S2 V4: r @1 q, A3 @3 e, r @4 h., r @10 q.
  P1 S2 V6: F3 @1 e, r @2 q, r @4 q, C4 @6 e, r @7 q, A#3 @9 e, r @10 q, F3 @12 e
  P1 S2 V7: r @1 e, F4 @2 e, r @3 e, D#3 @4 e, r @5 q, D3 @7 e, r @8 q, C3 @10 e, r @11 q
- key Bb major c=0.33 (m8-m26)
  chord F/Eb V @1 c=0.53
  chord Bb/D I6 @7 c=0.67
  chord F7/C V4/3 @10 c=0.95
@@ -191,7 +187,7 @@ m17
  P1 S2 V7: r @1 h, C4 @5 e, r @6 e, r @7 h, D#4 @11 e, r @12 e
  P1 S2 V9: r @1 q., D#3 @4 q., r @7 q., r @10 q, A3 @12 e
  chord Bb/D I6 @1 c=0.84
- phrase 2 m17-m28 c=0.18 | form A
+ phrase 2 m17-m27 c=0.75 | form A
 
 m18
  P1 S1 V1: A#4 @1 e, E4 @2 e, F4 @3 e, F#4 @4 e, G4 @5 e, G#4 @6 e, A4 @7 e, A#4 @8 e, B4 @9 e, C5 @10 e, C#5 @11 e, D5 @12 e
@@ -310,10 +306,8 @@ m27
  P1 S1 V8: r @1 h., r @7 q., G4 @10 e, r @11 q
  P1 S2 V2: A#2 @1 e, r @2 e, A#3 @3 e, r @4 e, D4 @5 e, r @6 e, r @7 h, C#4 @11 e, r @12 e
  P1 S2 V4: r @1 q., F4 @4 e, r @5 e, A#3 @6 e, A2 @7 e, r @8 e, A3 @9 e, r @10 q, A3 @12 e
- key D minor c=0.41 (m27-m28)
- chord Bb VI @1 c=0.00
- chord A V @7 c=0.38
- cadence AC m28 @1 c=0.18
+ chord Bb I @1 c=0.00
+ chord A V/iii @7 c=0.38
 
 m28
  P1 S1 V1: r @1 h., E5 @7 s., r @7.75 t, D4 @8 e~, D4 @9 t, A5 @9.25 s., r @10 s., F5 @10.75 s., r @11.5 e.
@@ -323,8 +317,9 @@ m28
  P1 S2 V4: D3 @1 e, r @2 e, A3 @3 e, r @4 e, D4 @5 e, r @6 e, A#2 @7 e, r @8 q, r @10 q.
  P1 S2 V6: r @1 h., r @7 q., F4 @10 e, r @11 q
  P1 S2 V7: r @1 e, D4 @2 e, r @3 e, F4 @4 e, r @5 e, A3 @6 e, r @7 q., r @10 q, G3 @12 e
- chord Dm i @1 c=0.00
- chord Gm7/Bb iv6/5 @7 c=0.94
+ chord Dm iii @1 c=0.00
+ phrase 3 m28-m43 c=0.75 | form A
+ chord Gm7/Bb vi6/5 @7 c=0.93
 
 m29
  P1 S1 V1: C5 @1 h.., F4 @8 e, r @9 e, E5 @10 q.
@@ -333,20 +328,17 @@ m29
  P1 S2 V2: r @1 e, C4 @2 e, r @3 e, r @4 q, A3 @6 e, r @7 q, B3 @9 e, r @10 e, C4 @11 e, r @12 e
  P1 S2 V4: C3 @1 e, r @2 e, A3 @3 e, r @4 e, C4 @5 e, r @6 e, r @7 q., r @10 q, A#3 @12 e
  P1 S2 V6: r @1 h., G#3 @7 e, r @8 q, G3 @10 e, r @11 q
- key F major c=0.19 (m29-m31)
- tonicization F major (m29-m31)
- chord Dm7/C vi4/2 @1 c=0.99
- phrase 3 m29-m43 c=0.75 | form A
- chord C7/G V4/3 @10 c=0.98
+ chord Dm7/C iii4/2 @1 c=0.99
+ chord C7/G V4/3/V @10 c=0.98
 
 m30
  P1 S1 V1: F5 @1 q., r @4 e, F5 @5 e, A4 @6 e, r @7 e, F5 @8 e, A#4 @9 e, r @10 e, F5 @11 e, G#4 @12 s., G4 @12.75 t~
  P1 S2 V2: F3 @1 e, F4 @2 e, r @3 e, r @4 e, F4 @5 e, r @6 e, r @7 e, F4 @8 e, r @9 e, r @10 e, D#4 @11 e, r @12 e
  P1 S2 V4: r @1 q, A3 @3 e, r @4 q, C4 @6 e, r @7 q, A#3 @9 e, r @10 q, F3 @12 e
  P1 S2 V7: r @1 q., D#3 @4 e, r @5 q, D3 @7 e, r @8 q, C3 @10 e, r @11 q
- chord F/Eb I @1 c=0.00
- chord Bb/D IV6 @7 c=0.67
- chord F7/C V4/3/IV @10 c=0.24
+ chord F/Eb V @1 c=0.00
+ chord Bb/D I6 @7 c=0.67
+ chord F7/C V4/3 @10 c=0.88
 
 m31
  P1 S1 V1: G4 @1 q., r @4 q, r @6 s, F5 @6.5 s, r @7 e, D#4 @8 e, r @9 e, D5 @10 q.
@@ -356,9 +348,9 @@ m31
  P1 S2 V4: r @1 e, D4 @2 e, r @3 e, r @4 q., C3 @7 e, r @8 e, G3 @9 e, r @10 q, G#3 @12 e
  P1 S2 V6: B2 @1 e, r @2 e, G3 @3 e, r @4 q, G3 @6 e, r @7 q., F3 @10 e, r @11 q
  P1 S2 V7: r @1 h, D4 @5 e, r @6 e, r @7 h.
- chord G7/B V6/5/V @1 c=0.85
- chord F7/C V4/3/IV @7 c=0.35
- chord Dm/F vi6 @10 c=0.66
+ chord G7/B V6/5/ii @1 c=0.85
+ chord Cm ii @7 c=0.61
+ chord Ddim/F vii°6/IV @10 c=0.56
 
 m32
  P1 S1 V1: r @1 e, G4 @2 e, r @3 e, D5 @4 q., r @7 q., F5 @10 q.
@@ -367,8 +359,6 @@ m32
  P1 S2 V4: r @1 q, D#4 @3 e, r @4 q, B3 @6 e, C4 @7 e, r @8 e, D#4 @9 e, r @10 e, F4 @11 e, r @12 e
  P1 S2 V6: G3 @1 e, r @2 q, G3 @4 e, r @5 q, r @7 q., C4 @10 e, r @11 q
  P1 S2 V7: r @1 h.., G4 @8 e, r @9 e, r @10 q.
- key Bb major c=0.40 (m32-m43)
- modulation F major to Bb major (m32-m43)
  chord Cm/G ii6/4 @1 c=0.42
  chord G7 V7/ii @4 c=0.65
  chord Cm ii @7 c=0.00
