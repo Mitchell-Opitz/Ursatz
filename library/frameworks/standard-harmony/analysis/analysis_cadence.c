@@ -566,6 +566,39 @@ HarmonyCadenceAnalysisStatus harmony_cadence_result_build(const HarmonySegment *
     return build_result(segments, &point, &c, out) ? HARMONY_CADENCE_ANALYSIS_OK : HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
 }
 
+void harmony_cadence_spec_of(const HarmonyCadenceResult *result, const HarmonyCadenceConfig *config,
+                             HarmonyCadenceSpec *spec) {
+    HarmonyCadenceConfig defaults = harmony_cadence_config_default();
+    if (config == NULL) {
+        config = &defaults;
+    }
+    memset(spec, 0, sizeof(*spec));
+    spec->type = result->type;
+    spec->dominant_first = result->dominant_first;
+    spec->dominant_last = result->dominant_last;
+    spec->has_six_four = result->has_six_four;
+    spec->six_four_first = result->six_four_first;
+    spec->six_four_last = result->six_four_last;
+    spec->arrival_first = result->arrival_first;
+    spec->arrival_last = result->arrival_last;
+    spec->soprano_degree = result->soprano_degree;
+    spec->post_cadential = result->post_cadential;
+    spec->penalty = result->type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED ? config->soprano_absent_penalty : 0.0;
+    spec->share = result->share;
+    const HarmonyCadenceAlternative *alt = &result->alternative;
+    spec->has_alt = alt->present;
+    if (alt->present) {
+        spec->alt_reading = alt->reading;
+        spec->alt_type = alt->type;
+        spec->alt_arrival_first = alt->arrival_first;
+        spec->alt_arrival_last = alt->arrival_last;
+        spec->alt_soprano_degree = alt->soprano_degree;
+        spec->alt_penalty = alt->reading == HARMONY_CADENCE_READING_CADENCE && alt->type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED
+                                ? config->soprano_absent_penalty
+                                : 0.0;
+    }
+}
+
 void harmony_cadences_destroy(HarmonyCadences *cadences) {
     if (cadences == NULL) {
         return;

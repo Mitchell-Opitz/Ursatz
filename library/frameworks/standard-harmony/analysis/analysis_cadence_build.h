@@ -41,6 +41,10 @@ typedef struct {
 HarmonyCadenceAnalysisStatus harmony_cadence_result_build(const HarmonySegment *segments, const HarmonyCadenceSpec *spec,
                                                           HarmonyCadenceResult *out);
 
+/* The data of an existing result, so a copy or a changed one can be built (config NULL for the defaults). */
+void harmony_cadence_spec_of(const HarmonyCadenceResult *result, const HarmonyCadenceConfig *config,
+                             HarmonyCadenceSpec *spec);
+
 /* Frees what one result owns and clears it. */
 void harmony_cadence_result_destroy(HarmonyCadenceResult *result);
 
