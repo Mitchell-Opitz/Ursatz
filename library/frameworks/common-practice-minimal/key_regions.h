@@ -312,6 +312,9 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * seventh of a minor key (the major V, the diminished vii) is not diatonic there in this version. If no segment
  * qualifies the change is DIRECT: has_pivot is false. No Roman numeral is assigned: the pivot is a segment of
  * the caller's list, whose chord the caller can read in either key.
+ *
+ * With keys on phrases the search takes only segments that start strictly before the boundary: at an arrival change the segment that starts
+ * at the boundary is the arrival chord itself, which is in the new key and cannot be the pivot.
  */
 
 /*
@@ -370,6 +373,8 @@ typedef struct {
     bool cadence_confirmed;        /* false as returned; the caller sets it after confirming with cadences */
     bool has_pivot;                /* a pivot chord was found (see below); false for a direct change */
     size_t pivot_segment;          /* its index in the caller's segments; meaningful only when has_pivot */
+    bool at_arrival;               /* the new region starts at an arrival slot: the last measure of a phrase whose cadence arrives in the next
+                                      phrase's key (keys on phrases only; false otherwise) */
 } CommonPracticeKeyChange;
 
 typedef struct {

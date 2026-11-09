@@ -1127,15 +1127,17 @@ static CommonPracticeKeyRegionsStatus place_keys_on_phrases(const CommonPractice
 static CommonPracticeKeyRegionsStatus find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                   const MeasureWeights *measures, int boundary_measure,
                                                   const MusicalTime *boundary_start, int old_key, int new_key,
-                                                  size_t search_measures, bool *found, size_t *pivot) {
+                                                  size_t search_measures, bool strictly_before, bool *found,
+                                                  size_t *pivot) {
     *found = false;
     int old_tonic = common_practice_key_index_tonic(old_key);
     CommonPracticeKeyMode old_mode = common_practice_key_index_mode(old_key);
     unsigned new_collection = natural_collection(new_key);
     for (size_t i = segment_count; i-- > 0;) {
         int measure = measures->segment_measure[i];
-        if (measure > boundary_measure || before(boundary_start, segments[i].start)) {
-            continue; /* after the boundary */
+        if (measure > boundary_measure || before(boundary_start, segments[i].start) ||
+            (strictly_before && !before(segments[i].start, boundary_start))) {
+            continue; /* after the boundary, or in phrase mode at it */
         }
         if ((size_t)(boundary_measure - measure) > search_measures) {
             break; /* too far back, and the segments are in time order */
@@ -1336,6 +1338,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
                 change->extent = KEY_CHANGE_EXTENT_MODULATION;
             }
             change->is_return = false;
+            change->at_arrival = phrase_mode && arrival_slot[into->first_measure - measures.first_measure];
         }
         for (size_t i = 2; i < n; i++) {
             /* the change out of an excursion back to the key before it */
@@ -1357,7 +1360,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
             const CommonPracticeKeyRegion *into = &result.regions[change->to_region];
             status = find_pivot(segments, segment_count, &measures, into->first_measure,
                                 time_span_start(into->span), result.regions[change->from_region].key_index,
-                                into->key_index, effective.pivot_search_measures, &change->has_pivot,
+                                into->key_index, effective.pivot_search_measures, phrase_mode, &change->has_pivot,
                                 &change->pivot_segment);
         }
     }
