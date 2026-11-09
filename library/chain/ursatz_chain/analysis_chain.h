@@ -112,6 +112,11 @@
  * exist, the segments are grouped into spans (harmonic_spans_group, read in no key) and replaced by one segment per span, each carrying
  * the bass its span was read over; the chords then require that bass as a chord tone and the Roman numerals take it as the inversion's
  * bass. Off: one chord per segment as before. It is the switch for measuring the change.
+ *
+ * applied_chords (default true): the chain reads applied chords (R-380). The chord identification also ranks the key's applied chords
+ * (V/x, V7/x, vii°/x, vii°7/x) and the Roman numerals name an identified applied chord directly, with the diatonic re-check as an applied
+ * chord off. The grouping, the key segments and the key regions do not see it. Off: diatonic chords only and the re-check, as before. It
+ * is the switch for measuring the change; it applies with harmonic_spans on or off.
  */
 typedef struct {
     unsigned stages;
@@ -134,6 +139,7 @@ typedef struct {
     int home_key_index;
     bool inject_kernel_owners;
     bool harmonic_spans;
+    bool applied_chords;
 } AnalysisChainConfig;
 
 AnalysisChainConfig analysis_chain_config_default(void);
