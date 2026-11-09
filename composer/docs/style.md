@@ -227,3 +227,5 @@ for c in chorales sonatinas; do
   ursatz-analyzer --style-profile out-$c --name $c --out $c.style.json
 done
 ```
+
+Re-recorded at P41 B7 with the Analyzer at Ursatz `ceac466` and Analyzer `b4b0cc3` (model version 0.7.0: the files now also hold the motive, tempo and note-density categories). `chorales-motives.style.json` is the style without tempo and density, so `test_style` brief and same read it.

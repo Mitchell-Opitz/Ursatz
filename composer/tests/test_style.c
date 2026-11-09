@@ -603,8 +603,9 @@ static const unsigned long long MAIN_HASH[5] = {0x0a947488498a3fe5ULL, 0xd7d1256
                                                 0xd8917a74dfdac22dULL, 0x1739b7abbedb6cf7ULL};
 
 static int test_same(void) {
+    /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */
     ComposerStyle *style = NULL;
-    assert(composer_style_load(CHORALES, &style) == COMPOSER_STYLE_OK);
+    assert(composer_style_load(CHORALES_MOTIVES, &style) == COMPOSER_STYLE_OK);
     ComposerRatio none = {0, 0};
     ComposerRatio zero = {0, 1};
     for (unsigned long seed = 1; seed <= 5; seed++) {
@@ -966,12 +967,18 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
    0.6938 and 0.6832 to sonatinas; the melody means 0.8055 and 0.7982, 0.7740 and 0.7588. The harmony is closer to both than at
    B1; the styled melody to sonatinas is further (0.7740 against the bound 0.767), the residue's own rhythm leaving the style
    fewer melodies after the cadential idea to choose among. */
-static const int STYLED[2][2] = {{754, 807}, {715, 774}};
+/* Re-measured at P41 B7 (the style fixtures re-recorded with the Analyzer at Ursatz ceac466 and Analyzer b4b0cc3, phrases first): the means
+   are 0.7454 and 0.7996 styled to chorales, 0.6663 and 0.7645 to sonatinas (harmony, melody). Before the re-record, with the old fixtures and
+   P41's hearing, the chorales read 0.7574 styled harmony and 0.8072 styled melody. */
+static const int STYLED[2][2] = {{745, 799}, {666, 764}};
 /* Re-measured at P37 B2 (ideas ranked by fidelity, R-355): the unstyled means are 0.7217 and 0.7975 to chorales, 0.6858 and 0.7575 to
    sonatinas (harmony, melody); the styled means are as before. */
 /* Re-measured at P39 B6 (the melody read from every melody note, R-377): the unstyled melody means 0.7922 and 0.7548 are closer; the
    unstyled harmony 0.7217 and 0.6858 and the styled means (0.7343, 0.8007, 0.6938, 0.7709) are unchanged, within STYLED. */
-static const int UNSTYLED[2][2] = {{721, 792}, {685, 754}};
+/* Re-measured at P41 B7 (the style fixtures re-recorded, phrases first): the unstyled means are 0.7164 and 0.8025 to chorales, 0.6696 and
+   0.7676 to sonatinas (harmony, melody). Before the re-record, with the old fixtures and P41's hearing, the chorales read 0.7318 and
+   0.7922. */
+static const int UNSTYLED[2][2] = {{716, 802}, {669, 767}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};
@@ -1109,8 +1116,9 @@ static int test_brief(void) {
     assert(composer_style_mode(style, &minor) && minor);
     assert(composer_style_density(style, &density) && density.numerator == 4 && density.denominator == 2);
     composer_style_destroy(style);
-    /* A style without the categories gives none of them. */
-    assert(composer_style_load(CHORALES, &style) == COMPOSER_STYLE_OK);
+    /* A style without the categories gives none of them (the fixture is chorales plus the motive categories, with no tempo or density: the
+       chorales model re-recorded at P41 B7 holds both, which a style applies as the brief even at weight 0). */
+    assert(composer_style_load(CHORALES_MOTIVES, &style) == COMPOSER_STYLE_OK);
     assert(!composer_style_tempo(style, &tempo) && !composer_style_density(style, &density));
     assert(composer_style_mode(style, &minor));
     composer_style_destroy(style);

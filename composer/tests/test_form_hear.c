@@ -62,24 +62,24 @@ static void test_period(void) {
     PiecePlan *plan = load("period_a_minor.json");
     FormHeard heard;
     /* The Analyzer takes no section starts (form_hear_with_sections is form_hear), and finds the phrases itself, from the
-       chords it identifies in the notes: the V to i6 that opens bar 5 is an evaded (subverted) cadence, as Ursatz reads
-       it with no start given, and no phrase is cut there; the PAC of bar 8 closes the one phrase. One phrase, then, a hybrid: a compound basic idea and a consequent (it was a period
-       when the planned chords were read and the start of the consequent given). */
+       chords it identifies in the notes. Since P41 (Ursatz R-390) the antecedent's half cadence is claimed: the V that
+       opens bar 5 is read as the HALF cadence arriving at bar 4 (R-379), a phrase ends there, and the PAC of bar 8 closes the
+       second. Two phrases, then, a period: antecedent and consequent, first cadence HALF, second PAC. */
     Rational consequent;
     assert(rational_make(4, 1, &consequent) == RATIONAL_OK);
     assert(form_hear_with_sections(plan, bars(0, 8), &consequent, 1, &heard) == FORM_HEAR_OK);
-    assert(heard.phrase_count == 1);
+    assert(heard.phrase_count == 2);
     assert(heard.count == 1);
     const FormHeardTheme *theme = &heard.themes[0];
-    assert(theme->form == PHRASE_LEVEL_FORM_HYBRID);
-    assert(theme->beginning == PHRASE_BEGINNING_COMPOUND_BASIC_IDEA);
+    assert(theme->form == PHRASE_LEVEL_FORM_PERIOD);
+    assert(theme->beginning == PHRASE_BEGINNING_ANTECEDENT);
     assert(theme->ending == PHRASE_ENDING_CONSEQUENT);
     assert(theme->first_bar == 0 && theme->bars == 8);
-    assert(theme->phrase_count == 1);
-    assert(theme->first_cadence == -1);
+    assert(theme->phrase_count == 2);
+    assert(theme->first_cadence == CADENCE_TYPE_HALF);
     assert(theme->second_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     assert(heard.cadence_count == 2);
-    assert(heard.cadences[0].type == CADENCE_TYPE_SUBVERTED && heard.cadences[0].arrival.num == 4 &&
+    assert(heard.cadences[0].type == CADENCE_TYPE_HALF && heard.cadences[0].arrival.num == 3 &&
            heard.cadences[0].arrival.den == 1);
     assert(heard.cadences[1].type == CADENCE_TYPE_PERFECT_AUTHENTIC && heard.cadences[1].arrival.num == 7 &&
            heard.cadences[1].arrival.den == 1);

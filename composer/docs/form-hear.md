@@ -32,7 +32,7 @@ library's form or texture detectors, an `analyzer_analyze_fragment` entry, or `p
 The Composer hears one chord per segment: `hearing_analyzer_options` (`src/check/hearing_result.h`) sets `harmonic_spans` false
 for every `analyzer_hear` call, while the Analyzer's own output reads harmonic spans. Compose rates and baselines were recorded
 on the one-chord-per-segment reading, and on spans the Analyzer misreads the two-voice texture the Composer renders (melody and
-bass, no inner voices) at cadences until P40 and P41 (R-378, R-379). P41 moves the hearing to spans.
+bass, no inner voices) at cadences (R-378, R-379). P41 keeps the hearing off spans (R-394; `testing/span-hearing.md`). Cadences are heard only at phrase points (Ursatz P41).
 
 ## What the Analyzer hears
 
