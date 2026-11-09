@@ -8,8 +8,8 @@
     "key": 0.706522,
     "cadence_recall": 0.222222,
     "cadence_type": 1.000000,
-    "cadence_precision": 0.500000,
-    "phrase_boundaries": 0.550000,
+    "cadence_precision": 0.400000,
+    "phrase_boundaries": 0.600000,
     "theme_types": 0.166667,
     "phrase_model_labels": 0.370968,
     "melody_climaxes": 1.000000,
@@ -120,7 +120,7 @@
       "rhythm_hyperdownbeats": 0.500000
     },
     "Five reference pieces, pooled": {
-      "phrase_boundaries": 0.550000,
+      "phrase_boundaries": 0.600000,
       "theme_types": 0.166667
     },
     "Galant fixture": {
