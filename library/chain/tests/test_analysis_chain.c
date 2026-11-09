@@ -57,11 +57,11 @@ typedef struct {
 } Reference;
 
 static const Reference REFERENCES[4] = {
-    {"Bach 114", "Bach 114.mid", true, 7, 1, 32, 52, 5, 1, 3,
-     {0x97144ddfd0dfbc0bULL, 0x8843c8833cde7a98ULL, 0x531ab953d864b3c6ULL,
-      0x0098c57d90033901ULL, 0x7dcbf37f1948fe14ULL, 0x27426221d2f6cc2cULL,
-      0x17e67ccdba5901c6ULL, 0xbf6b5ec9ca0e1519ULL, 0xd5d4a0ef756ee40bULL,
-      0x6e5efa0dc17f5c39ULL, 0xb969f83b10022b57ULL, 0xa31e272015f12c43ULL,
+    {"Bach 114", "Bach 114.mid", true, 7, 1, 32, 54, 5, 1, 3,
+     {0x7e02c6de24f89a71ULL, 0x4f02a4c2a6cce684ULL, 0x356e459e9c1f3d50ULL,
+      0x6caa4fab0d688a87ULL, 0x7dcbf37f1948fe14ULL, 0xfd85e5ba3b33ebacULL,
+      0xec9015b5436b5c5fULL, 0xbf6b5ec9ca0e1519ULL, 0x76383cfec2e31079ULL,
+      0x6e5efa0dc17f5c39ULL, 0x63058bc11576e41eULL, 0xa31e272015f12c43ULL,
       0xcc3660d216a8801fULL}},
     {"Mozart 545", "Mozart 545.mid", false, 0, 1, 146, 210, 21, 23, 27,
      {0xfe08c6fd837c4002ULL, 0xd5687d738b75d3e0ULL, 0x29a94a4685efd9a9ULL,

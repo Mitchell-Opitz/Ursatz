@@ -54,9 +54,9 @@
       "unsupported_share": 0.031250,
       "metrics": {
         "chord_root": {"value": 0.951613, "num": 7.375000, "den": 7.750000},
-        "chord_quality": {"value": 0.919355, "num": 7.125000, "den": 7.750000},
-        "roman_numeral": {"value": 0.814516, "num": 6.312500, "den": 7.750000},
-        "roman_numeral_chain_key": {"value": 0.661290, "num": 5.125000, "den": 7.750000},
+        "chord_quality": {"value": 0.935484, "num": 7.250000, "den": 7.750000},
+        "roman_numeral": {"value": 0.838710, "num": 6.500000, "den": 7.750000},
+        "roman_numeral_chain_key": {"value": 0.685484, "num": 5.312500, "den": 7.750000},
         "key": {"value": 0.750000, "num": 6.000000, "den": 8.000000}
       }
     },
@@ -184,9 +184,9 @@
   ],
   "overall": {
     "chord_root": 0.895319,
-    "chord_quality": 0.839149,
-    "roman_numeral": 0.763830,
-    "roman_numeral_chain_key": 0.556596,
+    "chord_quality": 0.840000,
+    "roman_numeral": 0.765106,
+    "roman_numeral_chain_key": 0.557872,
     "key": 0.706522,
     "cadence_recall": 0.111111,
     "cadence_type": 1.000000,

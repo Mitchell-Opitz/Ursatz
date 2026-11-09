@@ -209,7 +209,7 @@ typedef struct {
 } Known;
 
 static const Known KNOWN[5] = {
-    /* Bach 114 */ {{"hc"}, {1}, 1, "I > I", 7, 49, "ii > I > I", 4, 48},
+    /* Bach 114 */ {{"hc"}, {1}, 1, "I > IV", 7, 51, "I > I > IV", 3, 50},
     /* Mozart 545 */ {{"pac", "other", "hc", "iac"}, {14, 2, 5, 2}, 4, "V > I", 24, 205, "I > V > I", 16, 204},
     /* Clementi 36 */ {{"pac", "iac", "hc"}, {3, 1, 1}, 3, "I > I", 6, 44, "I > V > I", 3, 43},
     /* Field 1 */ {{"hc", "pac", "subverted"}, {2, 2, 1}, 3, "I > I", 4, 21, "V > half-diminished7 > dominant7", 2, 20},
