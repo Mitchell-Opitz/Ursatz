@@ -82,6 +82,10 @@ typedef struct {
     /* When true, also ranks the key's applied chords (V/x, V7/x, vii-dim/x, vii-dim-7/x, R-380) beside the diatonic ones.
        Default false: the ranking is then unchanged. */
     bool applied_chords;
+    /* When false, an incomplete segment never takes the chord of the NEXT segment in common_practice_identify_weighted_sequence
+       (the PREVIOUS and ARPEGGIO readings stay). A harmonic span already holds the notes of its whole stretch, so the chord
+       that follows it is no evidence for it (R-379 (3)). Default true. */
+    bool context_next;
     /* Labels leftover tones in common_practice_identify_weighted_sequence. NULL (the default) keeps
        common_practice_label_leftover_tones. With one, the leftover members that have a voice_id are labelled per
        voice: the voice's members, segment after segment, form a line, each entry carrying the chord mask of the
@@ -94,7 +98,7 @@ typedef struct {
 } CommonPracticeWeightedConfig;
 
 /* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty
-   0.15, bass chord-tone bonus 0.05, min coverage 0.5, require_bass_chord_tone false, applied_chords false. */
+   0.15, bass chord-tone bonus 0.05, min coverage 0.5, require_bass_chord_tone false, applied_chords false, context_next true. */
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void);
 
 typedef enum {

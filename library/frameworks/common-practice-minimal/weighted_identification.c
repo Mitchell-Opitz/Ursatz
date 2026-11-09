@@ -19,6 +19,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.min_coverage = 0.5;
     config.require_bass_chord_tone = false;
     config.applied_chords = false;
+    config.context_next = true;
     config.classifier = NULL;
     config.classifier_context = NULL;
     return config;

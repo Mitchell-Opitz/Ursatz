@@ -331,10 +331,10 @@ static CommonPracticeWeightedStatus read_arpeggios(const CommonPracticeSegment *
     return COMMON_PRACTICE_WEIGHTED_OK;
 }
 
-/* Gives each incomplete segment the chord of a neighbour that holds all its pitch classes, the previous first.
-   masks[] (the chosen chords' pitch classes) is kept in step. */
+/* Gives each incomplete segment the chord of a neighbour that holds all its pitch classes, the previous first (the next only
+   with context_next). masks[] (the chosen chords' pitch classes) is kept in step. */
 static CommonPracticeWeightedStatus resolve_from_neighbours(const CommonPracticeSegment *segments, size_t count,
-                                                            int tonic_pitch_class,
+                                                            int tonic_pitch_class, bool context_next,
                                                             CommonPracticeWeightedResults *results,
                                                             unsigned *masks) {
     for (size_t i = 0; i < count; i++) {
@@ -355,7 +355,7 @@ static CommonPracticeWeightedStatus resolve_from_neighbours(const CommonPractice
                 context = COMMON_PRACTICE_CONTEXT_PREVIOUS;
             }
         }
-        if (from == NULL && i + 1 < count && results->items[i + 1].matched && (sounding & ~masks[i + 1]) == 0) {
+        if (from == NULL && context_next && i + 1 < count && results->items[i + 1].matched && (sounding & ~masks[i + 1]) == 0) {
             int next_bass = -1;
             unsigned next = segment_mask(&segments[i + 1], &next_bass);
             if (!incomplete(&results->items[i + 1], masks[i + 1], next, next_bass)) {
@@ -617,7 +617,7 @@ CommonPracticeWeightedStatus common_practice_identify_weighted_sequence(const Co
         status = read_arpeggios(segments, segment_count, tonic_pitch_class, mode, effective, &results, masks);
     }
     if (status == COMMON_PRACTICE_WEIGHTED_OK) {
-        status = resolve_from_neighbours(segments, segment_count, tonic_pitch_class, &results, masks);
+        status = resolve_from_neighbours(segments, segment_count, tonic_pitch_class, effective->context_next, &results, masks);
     }
 
     /* Pass 2: label each matched segment's leftover tones with the neighbors and the next chord in view. */

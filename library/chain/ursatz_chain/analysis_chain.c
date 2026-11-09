@@ -370,6 +370,7 @@ static bool identify_chords(AnalysisChain *chain) {
     weighting.require_bass_chord_tone = chain->spans_merged; /* the chord holds the span's bass (R-370) */
     if (chain->spans_merged) {
         weighting.seventh_penalty = ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY; /* a passing tone does not complete a seventh (R-376) */
+        weighting.context_next = false; /* a span holds its whole stretch: the next span's chord is no evidence for it (R-379) */
     }
     size_t s = 0;
     while (s < count) {
