@@ -97,3 +97,41 @@ is a half cadence ending the earlier section, even when the tonic follows (R-038
 not a cadential arrival, so an authentic cadence read into it is replaced. A V with no tonic or predominant before it is left
 alone. Sections are not recomputed from the added half cadences. The Framework v1 chain has no section step yet and takes a
 section start at each key region that returns to the home key.
+
+## Half readings and cadences claimed at phrase points
+
+`analysis_cadence_claims.h` (R-390). Nothing in the analysis chain calls these yet; the chain's phrase-first stage will.
+Measures are those of the segments' `MetricalPosition`s; a downbeat is offset 0.
+
+`harmony_analysis_half_readings` offers the half cadences a phrase may end on, beside the cadences found. Each is built as
+the boundary pass builds its half reading (Cadence shell, Interpretation, uncertainty, share 1000, no alternative), in
+order of arrival. Two kinds:
+
+- End on V: a found PAC, IAC, unspecified authentic or SUBVERTED whose arrival starts a measure and whose dominant (the
+  cadential 6/4's first segment when it has one) is in the measure before gives a HALF from the dominant to the segment
+  before the arrival.
+- Dominant again on a downbeat: a root-position V that starts a measure, where walking back over root-position V and
+  second-inversion triads reaches a valid chord of degree 1, 2, 3, 4 or 6, and the segment that starts the next measure is
+  not a root-position tonic (or none does), gives a HALF on that segment alone.
+
+A reading whose arrival is a found HALF's arrival is left out.
+
+`harmony_analysis_claim_cadences` takes `HarmonyPhrasePoint`s (a measure; `unit_end`: a unit's last measure, else the last
+measure of the first half of a unit of 8 or 16; `unit`; `section_follows`: the next unit starts on the next measure) and
+returns the cadences that end phrases, as copies, in order of arrival:
+
+1. The point of a result is the measure of its arrival's first segment, or, when that is no point, the later measure in
+   which that segment's window ends if that is one (a chord held over the barline).
+2. A HALF with no point moves its arrival to the root-position V that starts the next measure when that is a point and only
+   root-position V or second-inversion triads lie between.
+3. The boundary pass runs on a copy of `found` with a section start after each unit end that has `section_follows` and after
+   each half point. At a half point the result keeps only its HALF reading, since the authentic arrival opens the
+   consequent. A found SUBVERTED that arrives on the downbeat after a point whose dominant is in the point becomes the HALF
+   reading of that dominant.
+4. At each point the goal results (PAC, IAC, unspecified authentic, HALF) are the candidates, unit ends first. A half point
+   keeps no HALF when the end of its unit keeps one.
+5. One result per point: the strongest (PAC, then IAC and unspecified, then HALF), a tie to the later arrival, so repeated
+   closing V to I bars give one closing cadence.
+6. A post-cadential plagal directly after a kept PAC is kept. Nothing else is.
+
+No points give no cadences. Tests: `frameworks/standard-harmony/tests/test_analysis_cadence_claims.c`.

@@ -248,6 +248,17 @@ add_executable(test_standard_harmony_analysis_cadence_readings test_analysis_cad
 target_link_libraries(test_standard_harmony_analysis_cadence_readings PRIVATE standard_harmony)
 add_test(NAME standard_harmony_analysis_cadence_readings COMMAND test_standard_harmony_analysis_cadence_readings)
 
+add_executable(test_standard_harmony_analysis_cadence_claims test_analysis_cadence_claims.c)
+target_link_libraries(test_standard_harmony_analysis_cadence_claims PRIVATE standard_harmony)
+add_test(NAME standard_harmony_analysis_cadence_claims COMMAND test_standard_harmony_analysis_cadence_claims)
+
+# Memcheck for the claims test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_HARMONY_CLAIMS_VALGRIND valgrind)
+if(URSATZ_HARMONY_CLAIMS_VALGRIND)
+  add_test(NAME standard_harmony_analysis_cadence_claims_valgrind
+           COMMAND ${URSATZ_HARMONY_CLAIMS_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_harmony_analysis_cadence_claims>)
+endif()
+
 add_executable(test_standard_harmony_applied_label_grammar test_harmony_applied_label_grammar.c)
 target_link_libraries(test_standard_harmony_applied_label_grammar PRIVATE standard_harmony standard_tonality)
 add_test(NAME standard_harmony_applied_label_grammar COMMAND test_standard_harmony_applied_label_grammar)
