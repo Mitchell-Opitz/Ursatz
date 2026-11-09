@@ -28,19 +28,20 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 | Bach 114 | Melody climaxes | 100.0% | 2 annotated climaxes |
 | Bach 114 | Melody ranges | 0.0% | 2 annotated ranges |
 | Bach 114 | Melody leaps | 36.4% | 11 annotated leaps |
-| Mozart 545 | Cadence recall | 0.0% | 2 annotated cadences |
+| Mozart 545 | Cadence recall | 50.0% | 2 annotated cadences |
+| Mozart 545 | Cadence type | 100.0% | 1 found cadences |
+| Mozart 545 | Cadence precision | 25.0% | 4 reported cadences |
 | Mozart 545 | Phrase model labels | 37.1% | 62 annotated segments |
 | Mozart 545 | Motive occurrences | 95.2% | 21 annotated occurrences |
 | Clementi 36 | Cadence recall | 0.0% | 2 annotated cadences |
-| Clementi 36 | Cadence precision | 0.0% | 2 reported cadences |
 | Field 1 | Cadence recall | 25.0% | 4 annotated cadences |
 | Field 1 | Cadence type | 100.0% | 1 found cadences |
-| Field 1 | Cadence precision | 33.3% | 3 reported cadences |
+| Field 1 | Cadence precision | 20.0% | 5 reported cadences |
 | Field 1 | Texture, measures | 90.8% | 65 annotated measures |
 | Field 1 | Texture, change points | 100.0% | 1 annotated change points |
 | Field 5 | Syncopations | 100.0% | 1 annotated syncopations |
 | Field 5 | Hyperdownbeats | 62.5% | 8 annotated hyperdownbeats |
-| Five reference pieces, pooled | Phrase boundaries | 60.0% | 20 annotated phrase ends |
+| Five reference pieces, pooled | Phrase boundaries | 45.0% | 20 annotated phrase ends |
 | Five reference pieces, pooled | Theme types | 0.0% | 6 annotated themes |
 | Galant fixture | Schemas and sequences | 55.6% | 9 planted items |
 
@@ -48,10 +49,10 @@ Values are percentages; **n/a** means the piece has nothing annotated for that m
 
 | Metric | Overall | Of |
 |---|---:|---:|
-| Cadence recall | 11.1% | 9 annotated cadences |
-| Cadence type | 100.0% | 1 found cadences |
-| Cadence precision | 20.0% | 5 reported cadences |
-| Phrase boundaries | 60.0% | 20 annotated phrase ends |
+| Cadence recall | 22.2% | 9 annotated cadences |
+| Cadence type | 100.0% | 2 found cadences |
+| Cadence precision | 22.2% | 9 reported cadences |
+| Phrase boundaries | 45.0% | 20 annotated phrase ends |
 | Theme types | 0.0% | 6 annotated themes |
 | Phrase model labels | 37.1% | 62 annotated segments |
 | Melody climaxes | 100.0% | 2 annotated climaxes |
