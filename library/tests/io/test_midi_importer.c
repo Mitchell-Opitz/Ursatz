@@ -436,6 +436,56 @@ static void test_multi_track_single_channel_gets_per_track_voices(void) {
     free(pitch_values);
 }
 
+static void test_two_tracks_on_one_channel_each_get_voices_by_track(void) {
+    /* PPQN 96, type 1: a conductor track, then track 1 with C4 then D4 on channel 0 and track 2 with a C3 held through both on
+       channel 1. Voices are by track (R-386): the notes of track 1 share slot 0 (they do not overlap), the C3 is slot 0 of track 2. */
+    unsigned char conductor[] = {0x00, 0xFF, 0x2F, 0x00};
+    unsigned char melody[] = {
+        0x00, 0x90, 0x3C, 0x64, /* delta 0,   channel 0 note-on  60 */
+        0x60, 0x80, 0x3C, 0x40, /* delta 96,  channel 0 note-off 60 */
+        0x00, 0x90, 0x3E, 0x64, /* delta 0,   channel 0 note-on  62 */
+        0x60, 0x80, 0x3E, 0x40, /* delta 96,  channel 0 note-off 62 */
+        0x00, 0xFF, 0x2F, 0x00  /* end of track */
+    };
+    unsigned char bass[] = {
+        0x00, 0x91, 0x30, 0x64, /* delta 0,   channel 1 note-on  48 */
+        0x81, 0x40, 0x81, 0x30, 0x40, /* delta 192, channel 1 note-off 48 */
+        0x00, 0xFF, 0x2F, 0x00  /* end of track */
+    };
+    unsigned char buf[256];
+    size_t pos = 0;
+    append_bytes(buf, &pos, "MThd", 4);
+    append_u32(buf, &pos, 6);
+    append_u16(buf, &pos, 1);
+    append_u16(buf, &pos, 3);
+    append_u16(buf, &pos, 96);
+    append_bytes(buf, &pos, "MTrk", 4);
+    append_u32(buf, &pos, (uint32_t)sizeof(conductor));
+    append_bytes(buf, &pos, conductor, sizeof(conductor));
+    append_bytes(buf, &pos, "MTrk", 4);
+    append_u32(buf, &pos, (uint32_t)sizeof(melody));
+    append_bytes(buf, &pos, melody, sizeof(melody));
+    append_bytes(buf, &pos, "MTrk", 4);
+    append_u32(buf, &pos, (uint32_t)sizeof(bass));
+    append_bytes(buf, &pos, bass, sizeof(bass));
+
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    assert(midi_importer_import(buf, pos, &events, &pitch_values, &count) == MIDI_IMPORT_OK);
+    assert(count == 3);
+    assert(strcmp(voice_id_of(find_by_pitch(events, count, 0x3C)), "midi-voice-1-0") == 0);
+    assert(strcmp(voice_id_of(find_by_pitch(events, count, 0x3E)), "midi-voice-1-0") == 0);
+    assert(strcmp(voice_id_of(find_by_pitch(events, count, 0x30)), "midi-voice-2-0") == 0);
+
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
+}
+
 static void test_rejects_truncated_file(void) {
     unsigned char buf[8];
     memcpy(buf, "MThd", 4);
@@ -733,6 +783,7 @@ int main(void) {
     test_single_track_overlap_gets_interval_graph_colored_voices();
     test_multi_track_single_channel_gets_per_track_voices();
     test_multi_channel_import_gets_voices_by_track();
+    test_two_tracks_on_one_channel_each_get_voices_by_track();
     test_rejects_truncated_file();
     test_rejects_null_buffer();
     test_import_with_meter_defaults_to_four_four_without_a_time_signature();
