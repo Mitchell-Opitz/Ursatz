@@ -96,6 +96,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/standard-harmony-analysis.md](modules/standard-harmony-analysis.md): The standard-harmony analysis adapter.
 - [docs/modules/standard-tonality-analysis.md](modules/standard-tonality-analysis.md): The standard-tonality analysis adapter.
 - [docs/modules/form-analysis.md](modules/form-analysis.md): The standard-form analysis adapter: phrases, ideas, themes, expansion.
+- [docs/modules/analysis-repeats.md](modules/analysis-repeats.md): Written-out repeats and melodic returns over measures; the phrase grid follows repeats.
 - [docs/modules/motive-analysis.md](modules/motive-analysis.md): The standard-form motive adapter.
 - [docs/modules/melody-analysis.md](modules/melody-analysis.md): The standard-counterpoint melody adapter.
 - [docs/modules/voice-leading-analysis.md](modules/voice-leading-analysis.md): The voice-leading adapters over a voice-pitch grid.
