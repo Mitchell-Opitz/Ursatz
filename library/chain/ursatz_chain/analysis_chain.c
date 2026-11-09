@@ -70,6 +70,10 @@ struct AnalysisChain {
     size_t boundary_count;
     int home;
     StandardFormRepeats repeats; /* the written-out repeats and returns, found once in prepare (R-400) */
+    CommonPracticeKeyPhrase *key_phrases; /* the third pass: the phrases of the second, on the grid (R-397); owned */
+    size_t key_phrase_count;
+    CommonPracticeKeyRepeat *key_repeats; /* the exact repeats, as the key regions read them (R-400); owned */
+    size_t key_repeat_count;
 
     Pass pass;
 
@@ -140,6 +144,7 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.sequences = scale_detect_config_default();
     config.refine_keys = true;
     config.phrase_grid = true;
+    config.keys_from_phrases = true;
     config.first_measure = 1;
     config.last_measure = 0;
     config.home_key_index = -1;
@@ -331,6 +336,8 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     }
     pass_destroy(chain);
     standard_form_repeats_destroy(&chain->repeats);
+    free(chain->key_phrases);
+    free(chain->key_repeats);
     for (size_t i = 0; i < chain->boundary_count; i++) {
         musical_time_destroy(chain->boundaries[i]);
     }
@@ -595,6 +602,12 @@ static AnalysisChainStatus run_pass(AnalysisChain *chain, const MusicalTime *con
         CommonPracticeKeyRegionsConfig key_config = chain->config.key_regions;
         key_config.phrase_boundaries = boundaries;
         key_config.phrase_boundary_count = boundary_count;
+        if (chain->key_phrase_count > 0) {
+            key_config.phrases = chain->key_phrases; /* the third pass: keys on phrases (R-397) */
+            key_config.phrase_count = chain->key_phrase_count;
+            key_config.repeats = chain->key_repeats;
+            key_config.repeat_count = chain->key_repeat_count;
+        }
         if (chain_estimate_key_regions(chain->key_segments, chain->count, chain->notes->map, chain->key_events,
                                        chain->key_event_count, &key_config, &p->regions) != CHAIN_INPUT_OK) {
             return ANALYSIS_CHAIN_ERR_KEYS;
@@ -937,6 +950,105 @@ static bool valid_config(const AnalysisChainConfig *config) {
            standard_meter_config_valid(&config->meter);
 }
 
+/* The measure holding segment `index`, or -1. */
+static int segment_measure(const AnalysisChain *chain, size_t index) {
+    const TimeSpan *window = sonority_time_window(chain->segs.sonorities.items[index].sonority);
+    int measure = 0;
+    return window != NULL && meter_map_measure_index_at(chain->notes->map, time_span_start(window), &measure) == METER_MAP_OK ? measure : -1;
+}
+
+/* The keys one claimed reading of a cadence confirms (R-397): authentic for the perfect, imperfect and unspecified authentic types, half for the
+   half cadence, over the chord of its arrival; 0 for any other type. */
+static unsigned reading_keys(const AnalysisChain *chain, CadenceType type, size_t arrival_first) {
+    CommonPracticeCadenceKind kind;
+    switch (type) {
+    case CADENCE_TYPE_PERFECT_AUTHENTIC:
+    case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
+    case CADENCE_TYPE_AUTHENTIC_UNSPECIFIED:
+        kind = COMMON_PRACTICE_CADENCE_AUTHENTIC;
+        break;
+    case CADENCE_TYPE_HALF:
+        kind = COMMON_PRACTICE_CADENCE_HALF;
+        break;
+    default:
+        return 0;
+    }
+    return common_practice_cadence_keys(kind, &chain->key_segments[arrival_first].chord);
+}
+
+/* The keys the claimed cadences confirm that arrive in measures first to last, primary readings and the alternative when it is a cadence. */
+static unsigned keys_arriving(const AnalysisChain *chain, int first, int last, bool only_last) {
+    const HarmonyCadences *cadences = &chain->pass.cadences;
+    unsigned keys = 0;
+    for (size_t k = 0; k < cadences->count; k++) {
+        const HarmonyCadenceResult *c = &cadences->items[k];
+        int measure = segment_measure(chain, c->arrival_first);
+        if (measure >= first && measure <= last && (!only_last || measure == last)) {
+            keys |= reading_keys(chain, (CadenceType)c->type, c->arrival_first);
+        }
+        if (c->alternative.present && c->alternative.reading == HARMONY_CADENCE_READING_CADENCE) {
+            measure = segment_measure(chain, c->alternative.arrival_first);
+            if (measure >= first && measure <= last && (!only_last || measure == last)) {
+                keys |= reading_keys(chain, c->alternative.type, c->alternative.arrival_first);
+            }
+        }
+    }
+    return keys;
+}
+
+/* A perfect authentic cadence, the primary reading, arriving at measure `measure`. */
+static bool pac_arrives_at(const AnalysisChain *chain, int measure) {
+    const HarmonyCadences *cadences = &chain->pass.cadences;
+    for (size_t k = 0; k < cadences->count; k++) {
+        if (cadences->items[k].type == CADENCE_TYPE_PERFECT_AUTHENTIC && segment_measure(chain, cadences->items[k].arrival_first) == measure) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The phrases and repeats of the third pass (R-397, R-400), from the second pass's grid and claimed cadences. The chain owns both arrays. */
+static bool build_key_phrases(AnalysisChain *chain) {
+    const StandardFormPhraseGrid *grid = &chain->pass.grid;
+    if (!chain->pass.have_grid || grid->count == 0) {
+        return true;
+    }
+    chain->key_phrases = calloc(grid->count * 2, sizeof(CommonPracticeKeyPhrase));
+    chain->key_repeats = calloc(chain->repeats.count + 1, sizeof(CommonPracticeKeyRepeat));
+    if (chain->key_phrases == NULL || chain->key_repeats == NULL) {
+        return false;
+    }
+    for (size_t u = 0; u < grid->count; u++) {
+        const StandardFormGridUnit *unit = &grid->units[u];
+        int first = unit->elided ? unit->first_measure + 1 : unit->first_measure;
+        bool split = unit->half_measure >= 0;
+        int part_count = split ? 2 : 1;
+        bool arrival_elided = u + 1 < grid->count && grid->units[u + 1].elided && grid->units[u + 1].first_measure == unit->last_measure;
+        for (int part = 0; part < part_count; part++) {
+            CommonPracticeKeyPhrase *phrase = &chain->key_phrases[chain->key_phrase_count++];
+            phrase->first_measure = part == 0 ? first : unit->half_measure + 1;
+            phrase->last_measure = split && part == 0 ? unit->half_measure : unit->last_measure;
+            /* the first part of an elided unit also takes the elided measure, where the unit before arrived */
+            int from = part == 0 && unit->elided ? unit->first_measure : phrase->first_measure;
+            phrase->cadence_keys = keys_arriving(chain, from, phrase->last_measure, false);
+            if (part == part_count - 1) {
+                if (arrival_elided) {
+                    phrase->arrival_keys = keys_arriving(chain, phrase->last_measure, phrase->last_measure, true);
+                }
+                phrase->closes = pac_arrives_at(chain, phrase->last_measure);
+            }
+        }
+    }
+    for (size_t r = 0; r < chain->repeats.count; r++) {
+        const StandardFormRepeat *repeat = &chain->repeats.items[r];
+        if (repeat->kind == STANDARD_FORM_REPEAT) {
+            chain->key_repeats[chain->key_repeat_count++] = (CommonPracticeKeyRepeat){repeat->earlier_first, repeat->later_first,
+                                                                                    repeat->earlier_last - repeat->earlier_first + 1};
+        }
+    }
+    return true;
+}
+
 /* The phrase ends of the first pass as the boundaries of the second. */
 static bool phrase_boundaries(AnalysisChain *chain) {
     const StandardFormPhrases *phrases = &chain->pass.phrases;
@@ -1013,6 +1125,19 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
                 size_t boundary_count = from_phrases ? chain->boundary_count : chain->config.key_regions.phrase_boundary_count;
                 pass_destroy(chain);
                 status = run_pass(chain, boundaries, boundary_count, true);
+                /* The third pass (R-398): the keys are placed on the phrases of the second, which read everything once more in them. */
+                if (status == ANALYSIS_CHAIN_OK && from_phrases && chain->config.keys_from_phrases && chain->config.phrase_grid &&
+                    chain->pass.have_grid) {
+                    for (size_t s = 0; s < chain->count; s++) {
+                        chain->key_segments[s].chord = common_practice_key_chord_of(&chain->pass.chords[s]);
+                    }
+                    if (!build_key_phrases(chain)) {
+                        status = ANALYSIS_CHAIN_ERR_ALLOC;
+                    } else if (chain->key_phrase_count > 0) {
+                        pass_destroy(chain);
+                        status = run_pass(chain, NULL, 0, true);
+                    }
+                }
             }
         }
     }
