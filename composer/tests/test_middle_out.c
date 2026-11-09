@@ -64,12 +64,14 @@ typedef struct {
 } Baseline;
 
 /* Of 10 runs and, for the melody and the progression, 30 sections (3 a run); the bass has 2 sections a run. */
-static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 22, 22}, {10, 5, 19}, {10, 20, 17}};
+static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 22, 22}, {10, 5, 19}, {10, 19, 17}};
 /* Re-recorded at P36 B1 (every idea is the step its ref names): the melody's sections heard rose from 18 to 26 and its cadences
    stay at 16; the progression's rose from 2 to 8 and 19 to 21; the bass's from 19 to 20 and 17 to 19. */
 /* P36 B2 (the material holds what grow-theme makes, R-349): the progression's sections heard 8 to 7 of 30; completed and cadences hold. */
 /* P37 B2 (ideas ranked by fidelity, R-355): the melody's sections heard 26 to 22 and cadences 18 to 22 of 30; the progression's sections heard 5 to 6
    and cadences 19 to 20; the bass's hold. Only the melody's baseline is re-recorded (22 and 22); the others stay. */
+/* P41 B7 (phrase first, Ursatz R-390): the bass's sections heard 20 to 19 of 20 (cadences hold at 17). Seed 8's first section ends on a half
+   cadence arriving in bar 7 of 8, which phrase first does not claim. The melody and the progression hold at or above their baselines. */
 /* P36 B3 (liquidated residues, R-345): the melody's cadences 16 to 18; the progression's sections heard 7 to 5 and cadences 21 to
    19; the bass's cadences 19 to 17. */
 
