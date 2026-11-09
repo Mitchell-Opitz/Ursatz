@@ -22,8 +22,9 @@
  * major-minor {0,4,7,10} minor-minor {0,3,7,10} half-diminished {0,3,6,10} fully diminished {0,3,6,9}).
  * The degree and quality must be ones the key gives (standard_tonality_roman_numeral_fits_key): in minor
  * that is the existing minor convention, V and vii-diminished from the raised seventh, a minor v from the
- * natural scale. A chord the key does not give has no numeral here (chromatic chords other than the applied
- * chords of a later step are out of scope).
+ * natural scale. A chord the key does not give is tried as an applied chord (V, V7, vii-diminished,
+ * vii-diminished-7 of a target of the key) that identification already read (standard_tonality_read_applied_chord,
+ * applied_chords.h); otherwise it has no numeral here (modal mixture, the Neapolitan and augmented sixths are out of scope).
  *
  * INVERSION comes from the bass, the lowest sounding chord tone (chord_input.h): a lower non-chord tone
  * does not make the chord root position. When no chord tone sounds, the previous segment's bass is kept
@@ -92,12 +93,13 @@ typedef struct {
     StandardTonalityRomanClaim claim;
     double uncertainty;         /* [0, 1] */
     Interpretation *interpretation; /* owned */
-    /* An applied chord is linked to the segment it resolves to by a Relationship, predicate
+    /* An applied chord that resolves is linked to the segment it resolves to by a Relationship, predicate
        STANDARD_TONALITY_RESOLVES_TO (source: this segment's Sonority id, target: the resolution segment's),
-       the durable claim pattern: the link is its own object, not a field of either claim. */
-    Relationship *resolves_to;  /* owned; NULL unless applied */
-    size_t resolution_index;    /* the resolution segment, an index into the inputs; meaningful when applied */
-    bool deceptive;             /* resolves to the target's submediant, not the target; meaningful when applied */
+       the durable claim pattern: the link is its own object, not a field of either claim. An applied chord that
+       does not resolve keeps its applied label and has no link. */
+    Relationship *resolves_to;  /* owned; NULL unless applied and resolved */
+    size_t resolution_index;    /* the resolution segment, an index into the inputs; meaningful when resolves_to is set */
+    bool deceptive;             /* resolves to the target's submediant, not the target; meaningful when resolves_to is set */
 } StandardTonalityRomanResult;
 
 #define STANDARD_TONALITY_RESOLVES_TO "resolves-to"

@@ -107,7 +107,7 @@ static void test_minor_key_vocabulary_in_romantext_spelling(void) {
 }
 
 static void test_chords_the_key_does_not_give(void) {
-    expect_none(chord_in(2, 2, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR));  /* D major in C: an applied chord */
+    expect_label(chord_in(2, 2, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR), "V/V"); /* D major in C: an applied chord (R-380) */
     expect_none(chord_in(0, 0, ADAPTER_MINOR_TRIAD, 3, 0, C_MAJOR));  /* C minor in C major: mixture */
     expect_none(chord_in(1, 1, ADAPTER_MAJOR_TRIAD, 3, 0, C_MAJOR));  /* a chromatic root */
     expect_none(chord_in(8, 8, ADAPTER_MAJOR_TRIAD, 3, 9, A_MINOR));  /* G# major in A minor */

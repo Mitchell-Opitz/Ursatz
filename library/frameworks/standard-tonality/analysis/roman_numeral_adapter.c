@@ -20,6 +20,7 @@
 #include "pitch/midi_pitch.h"
 
 #define CONFIDENCE_DENOMINATOR 1000000UL
+#define NO_RESOLUTION ((size_t)-1)
 
 static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
 static const int NATURAL_MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
@@ -125,11 +126,8 @@ static int inversion_of(const StandardTonalityChordInput *input) {
     return 0;
 }
 
-bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *input,
-                                          StandardTonalityRomanReading *out) {
-    if (input == NULL || out == NULL || !input->has_numeral) {
-        return false;
-    }
+/* The diatonic reading: the degree and quality the key gives. */
+static bool read_diatonic(const StandardTonalityChordInput *input, StandardTonalityRomanReading *out) {
     int offset = pitch_class_of_midi(input->root_pitch_class - input->tonic_pitch_class);
     bool raised = false;
     bool raised_sixth = false;
@@ -160,6 +158,15 @@ bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *inpu
     out->romantext_spelling = minor;
     out->inversion = inversion_of(input);
     return true;
+}
+
+bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *input,
+                                          StandardTonalityRomanReading *out) {
+    if (input == NULL || out == NULL || !input->has_numeral) {
+        return false;
+    }
+    /* A chord the key does not give may be an applied chord that identification already read (R-380). */
+    return read_diatonic(input, out) || standard_tonality_read_applied_chord(input, out);
 }
 
 bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *reading, char *buffer, size_t size) {
@@ -315,8 +322,20 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
     }
     StandardTonalityAppliedResult applied[1];
     for (size_t i = 0; i < count; i++) {
-        if (results[i].has_numeral &&
-            standard_tonality_recheck_applied_chord(inputs, count, i, config, &applied[0])) {
+        if (!results[i].has_numeral) {
+            continue;
+        }
+        if (results[i].reading.applied) {
+            /* Identification read it as applied: it is linked only when it resolves. */
+            size_t resolution = 0;
+            bool deceptive = false;
+            if (standard_tonality_applied_resolution(inputs, count, i, &results[i].reading, &resolution, &deceptive)) {
+                results[i].resolution_index = resolution;
+                results[i].deceptive = deceptive;
+            } else {
+                results[i].resolution_index = NO_RESOLUTION;
+            }
+        } else if (standard_tonality_recheck_applied_chord(inputs, count, i, config, &applied[0])) {
             results[i].reading = applied[0].reading;
             results[i].resolution_index = applied[0].resolution_index;
             results[i].deceptive = applied[0].deceptive;
@@ -340,7 +359,7 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
             standard_tonality_roman_results_destroy(results, count);
             return STANDARD_TONALITY_ROMAN_ERR_ALLOC;
         }
-        if (result->reading.applied) {
+        if (result->reading.applied && result->resolution_index != NO_RESOLUTION) {
             result->resolves_to = build_resolves_to(inputs[i].segment_id, inputs[result->resolution_index].segment_id);
             if (result->resolves_to == NULL) {
                 standard_tonality_roman_results_destroy(results, count);

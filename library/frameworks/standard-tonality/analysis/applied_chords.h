@@ -50,6 +50,13 @@
  * as it reads in the tonicized key, a slash and the target's numeral: V7/V, V6/5/V, vii-dim-6/V.
  */
 
+/*
+ * IDENTIFIED APPLIED CHORDS. Chord identification may itself read an applied chord (common-practice-minimal
+ * with applied_chords on, R-380): its root and quality are then outside the key's diatonic vocabulary, and
+ * standard_tonality_read_roman_numeral names it directly (standard_tonality_read_applied_chord below) when the
+ * diatonic reading fails. The re-check above is only for diatonic readings.
+ */
+
 typedef struct {
     double chromatic_min;          /* 0.15 */
     double missing_third_penalty;  /* 0.15 */
@@ -60,6 +67,29 @@ StandardTonalityAppliedConfig standard_tonality_applied_config_default(void);
 
 /* True for a config whose three numbers are finite and non-negative. */
 bool standard_tonality_applied_config_valid(const StandardTonalityAppliedConfig *config);
+
+/*
+ * Reads the input's own root and intervals as an applied chord: a major triad (V), a dominant seventh (V7), a
+ * diminished triad (vii-diminished) or a fully diminished seventh (vii-diminished-7) whose tonicized root (the
+ * root minus a fifth for the V shapes, plus a semitone for the others) is a target of the key (see CANDIDATES;
+ * minor on the natural scale). Fills numeral, applied, applied_kind, applied_target, romantext_spelling (minor)
+ * and the inversion from input->bass_pitch_class (-1 reads as root position). No weights, resolution or
+ * neighbours are looked at. False (out untouched) for a NULL argument, an input with no numeral, or a chord no
+ * shape and target give.
+ */
+bool standard_tonality_read_applied_chord(const StandardTonalityChordInput *input,
+                                          StandardTonalityRomanReading *out);
+
+/*
+ * The resolution of an applied reading of inputs[index] that is the input's own chord (standard_tonality_read_applied_chord):
+ * the first later segment whose chord is not a repeat of this one (same root), when it has a numeral and its root
+ * is the tonicized root, or, *deceptive true, that root's submediant (as the re-check reads it). On true,
+ * *resolution is its index in the inputs. False when there is no such segment, the next one is not a resolution,
+ * or for a NULL argument, an index out of range or a reading that is not applied.
+ */
+bool standard_tonality_applied_resolution(const StandardTonalityChordInput *inputs, size_t count, size_t index,
+                                          const StandardTonalityRomanReading *reading, size_t *resolution,
+                                          bool *deceptive);
 
 typedef struct {
     StandardTonalityRomanReading reading; /* the applied reading: applied, kind and target set */
