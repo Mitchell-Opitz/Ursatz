@@ -65,9 +65,11 @@ typedef struct {
     size_t modulation_count;
 } ReferencePiece;
 
+/* Keys placed on phrases (Ursatz P42, R-365): a key changes where a phrase arrives in it, so the regions follow the
+   phrase boundaries, 1-7, 8-15, 16-23 and 24-38. */
 static const ExpectedRegion CLEMENTI_REGIONS[] = {
-    {1, 5, "C major"}, {6, 15, "G major"}, {16, 22, "C minor"}, {23, 38, "C major"}};
-static const ExpectedModulation CLEMENTI_MODULATIONS[] = {{6, "G major"}, {16, "C minor"}, {23, "C major"}};
+    {1, 7, "C major"}, {8, 15, "G major"}, {16, 23, "C minor"}, {24, 38, "C major"}};
+static const ExpectedModulation CLEMENTI_MODULATIONS[] = {{8, "G major"}, {16, "C minor"}, {24, "C major"}};
 
 /* The development (57-69 and 102-114) is not scored: its keys are too uncertain to assert. */
 static const ExpectedRegion MOZART_REGIONS[] = {{1, 12, "C major"},   {13, 28, "G major"},  {29, 40, "C major"},
@@ -351,12 +353,13 @@ static void test_no_modulation(const char *path) {
     release(&analyzed);
 }
 
-/* A brief excursion that returns: C major, two measures of G major (the library smooths them into a three-measure region), C major again. Every
-   measure of the excursion ends on V to I in G, so a cadence arrives in the new key (R-044): the length rule's
-   tonicization is confirmed a weak modulation, the return takes its extent, and the document lists two modulations
-   and no tonicization. */
+/* A brief excursion that returns: C major, eight measures of G major, C major again. A two-measure excursion is now a
+   tonicization inside a phrase (Ursatz P42, R-397): a key changes only where a phrase establishes it, so the
+   excursion is eight measures. Every measure of it ends on V to I in G, so a cadence arrives in the new key (R-044): the length
+   rule's tonicization is confirmed a weak modulation, the return takes its extent, and the document lists two
+   modulations and no tonicization. */
 static void test_excursion_with_cadence(const char *path) {
-    Stretch stretches[] = {{0, 8}, {7, 2}, {0, 8}};
+    Stretch stretches[] = {{0, 8}, {7, 8}, {0, 8}};
     write_piece(path, stretches, 3, false, 0);
     Analyzed analyzed;
     analyze(path, &analyzed);

@@ -41,9 +41,10 @@ typedef struct {
     size_t cadences;
 } Reading;
 /* The cadences are those claimed at the phrase points since Ursatz P41 (R-390): without spans they were 5, 15, 15, 13, 12 and with
-   spans 0, 23, 5, 17, 3; the entries did not move. */
-static const Reading WITHOUT_SPANS[] = {{155, 2}, {606, 9}, {205, 7}, {268, 8}, {169, 3}};
-static const Reading WITH_SPANS[] = {{54, 0}, {210, 15}, {46, 4}, {107, 9}, {82, 1}};
+   spans 0, 23, 5, 17, 3; the entries did not move. Since Ursatz P42 (keys placed on phrases, R-397) they are, without spans,
+   0, 8, 8, 8, 2 (were 2, 9, 7, 8, 3) and with spans 0, 16, 4, 9, 0 (were 0, 15, 4, 9, 1); the entries did not move. */
+static const Reading WITHOUT_SPANS[] = {{155, 0}, {606, 8}, {205, 8}, {268, 8}, {169, 2}};
+static const Reading WITH_SPANS[] = {{54, 0}, {210, 16}, {46, 4}, {107, 9}, {82, 0}};
 
 static int failures = 0;
 

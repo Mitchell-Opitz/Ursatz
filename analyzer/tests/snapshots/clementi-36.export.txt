@@ -7,7 +7,7 @@ notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tup
 m1 4/4
  P1 S1 V1: C5 @1 q, E5 @2 e, C5 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
- key C major c=0.18 (m1-m6)
+ key C major c=0.20 (m1-m7)
  chord C I @1 c=0.00
  phrase 1 m1-m4 c=0.02 | form A
  theme period m1-m8 c=0.01
@@ -44,17 +44,17 @@ m6
 m7
  P1 S1 V1: D5 @1 e, B4 @1.5 e, C5 @2 e, A4 @2.5 e, B4 @3 e, G4 @3.5 e, A4 @4 e, F#4 @4.5 e
  P1 S2 V2: G3 @1 q, C3 @2 q, D3 @3 q, D2 @4 q
- key G major c=0.13 (m7-m11)
- modulation C major to G major (m7-m11)
- chord G I @1 c=0.00
- chord Am/C ii6 @2 c=0.64
- chord G/D I6/4 @3 c=0.86
- cadence IAC m8 @1 c=0.01
+ chord G V @1 c=0.00
+ chord Am/C vi6 @2 c=0.64
+ chord G/D V6/4 @3 c=0.86
  chord D V @4 c=0.00
+ cadence IAC m8 @1 c=0.01
 
 m8
  P1 S1 V1: G4 @1 e, A4 @1.5 e, B4 @2 e, C5 @2.5 e, D5 @3 e, E5 @3.5 e, F#5 @4 e, G5 @4.5 e
  P1 S2 V2: G2 @1 q, r @2 q, r @3 h
+ key G major c=0.21 (m8-m15)
+ modulation C major to G major (m8-m15)
  chord G I @1 c=0.94
 
 m9
@@ -78,30 +78,28 @@ m11
 m12
  P1 S1 V1: D5 @1 e, G5 @1.5 e, B5 @2 e, D6 @2.5 e, C6 @3 e, B5 @3.5 e, A5 @4 e, G5 @4.5 e
  P1 S2 V2: B3 @1 q, r @2 q, r @3 h
- key C major c=0.00 (m12-m15)
- modulation G major to C major (m12-m15)
- chord G/B V6 @1 c=0.86
+ chord G/B I6 @1 c=0.86
 
 m13
  P1 S1 V1: F#5 @1 e, E5 @1.5 e, G5 @2 e, F#5 @2.5 e, A5 @3 e, G5 @3.5 e, F#5 @4 e, E5 @4.5 e
  P1 S2 V2: C4 @1 q, r @2 q, C3 @3 q, r @4 q
- chord C I @1 c=0.98
+ chord C IV @1 c=0.98
 
 m14
  P1 S1 V1: E5 @1 e, D5 @1.5 e, C5 @2 e, B4 @2.5 e, D5 @3 e, C5 @3.5 e, B4 @4 e, A4 @4.5 e
  P1 S2 V2: D3 @1 q, r @2 q, D2 @3 q, r @4 q
- chord Bdim/D vii°6 @1 c=0.77
+ chord Bm/D iii6 @1 c=0.77
 
 m15
  P1 S1 V1: G4 @1 h, r @3 h
  P1 S2 V2: G2 @1 e, B2 @1.5 e, D3 @2 e, G3 @2.5 e, G2 @3 q, r @4 q
- chord G V @1 c=0.00
+ chord G I @1 c=0.00
 
 m16 clef S2 treble
  P1 S1 V1: B4 @1 q, D5 @2 e, B4 @2.5 e, G4 @3 q, G4 @4 q
  P1 S2 V2: F4 @1 w
- key C minor c=0.17 (m16-m19)
- modulation C major to C minor (m16-m19)
+ key C minor c=0.00 (m16-m23)
+ modulation G major to C minor (m16-m23)
  chord G7/F V4/2 @1 c=0.99
 
 m17
@@ -123,34 +121,33 @@ m19
 m20
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
  P1 S2 V2: F4 @1 q, G3 @2 q, D4 @3 q, G3 @4 q
- key G major c=0.06 (m20-m22)
- tonicization G major (m20-m22)
- chord G7 V4/2/IV @1 c=0.00
+ chord G7 V4/2 @1 c=0.59
 
 m21
  P1 S1 V1: G5 @1 e, G4 @1.5 e, G5 @2 e, G4 @2.5 e, G5 @3 e, G4 @3.5 e, G5 @4 e, G4 @4.5 e
  P1 S2 V2: D#4 @1 q, G3 @2 q, C4 @3 q, G3 @4 q
+ chord Cm/G i6 @1 c=0.85
 
 m22
  P1 S1 V1: D5 @1 e, D#5 @1.5 e, F5 @2 e, D5 @2.5 e, F5 @3 e, D#5 @3.5 e, D5 @4 e, C5 @4.5 e
  P1 S2 V2: B3 @1 q, r @2 q, C4 @3 q, r @4 q
- chord Bdim vii°/IV @1 c=0.00
- chord C IV @3 c=0.98
+ chord Bdim viio @1 c=0.52
+ chord Cm i @3 c=0.67
 
 m23
  P1 S1 V1: B4 @1 q, r @2 q, r @3 h
  P1 S1 V3: G5 @1 q, r @2 q, r @3 h
  P1 S2 V2: G3 @1 q, G2 @2 q, G3 @3 e, F3 @3.5 e, E3 @4 e, D3 @4.5 e
- key C major c=0.26 (m23-m38)
- modulation G major to C major (m23-m38)
- chord G V @1 c=1.00
+ chord G V @1 c=0.77
  cadence HC m23 @1 c=0.00
 
 m24
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G3 @4 q
  P1 S2 V2: C3 @1 q, r @2 q, r @3 h
+ key C major c=0.33 (m24-m38)
+ modulation C minor to C major (m24-m38)
  chord C I @1 c=0.00
- phrase 4 m24-m27 c=0.03 | form A'
+ phrase 4 m24-m27 c=0.04 | form A'
 
 m25
  P1 S1 V1: C4 @1 q, E4 @2 e, C4 @2.5 e, G3 @3 q, G4 @4 q
@@ -166,7 +163,7 @@ m27
  P1 S1 V1: D4 @1 e, C4 @1.5 e, B3 @2 e, A3 @2.5 e, G3 @3 q, r @4 q
  P1 S2 V2: G2 @1 q, r @2 q, G2 @3 e, F2 @3.5 e, E2 @4 e, D2 @4.5 e
  chord G/D V @1 c=0.88
- cadence HC m27 @1 c=0.03
+ cadence HC m27 @1 c=0.04
 
 m28
  P1 S1 V1: C4 @1 q, G3 @2 e, C4 @2.5 e, E4 @3 q, E4 @4 q

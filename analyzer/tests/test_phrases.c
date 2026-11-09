@@ -46,10 +46,11 @@ typedef struct {
 } Piece;
 
 /* The counts are on harmonic spans (they were 2, 10, 22, 10, 9 on sonority segments; Mozart 545 was 21 before applied chords,
-   P40 B5), and since P41 on the phrase grid (they were 2, 7, 27, 14, 2 with cadence-ended phrases; R-389, R-391). */
+   P40 B5), and since P41 on the phrase grid (they were 2, 7, 27, 14, 2 with cadence-ended phrases; R-389, R-391); Mozart 545 reads 16 with keys placed on phrases (15 before
+   Ursatz P42, R-397: the PAC of m59 closes a phrase). */
 static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid", 2},
                                {"Clementi 36", "Clementi 36.mid", 5},
-                               {"Mozart 545", "Mozart 545.mid", 15},
+                               {"Mozart 545", "Mozart 545.mid", 16},
                                {"Field 1", "Field 1.mid", 12},
                                {"Field 5", "Field 5.mid", 3}};
 

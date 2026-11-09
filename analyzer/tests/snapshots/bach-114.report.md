@@ -4,9 +4,9 @@
 
 - **File:** Bach 114.mid, 430 notes.
 - **Input:** MIDI file. Meter: embedded in the file. Key signature: inferred. Pitch spelling: by rule.
-- **Key:** G major, the key with the most time across 4 key regions.
-- **Chords:** 54 chord events; 50 matched a chord (93%), 4 did not.
-- **Most frequent chords:** I (20), vi (9), IV (6).
+- **Key:** G major, the only key region.
+- **Chords:** 54 chord events; 54 matched a chord (100%), 0 did not.
+- **Most frequent chords:** I (18), IV (6), iii (6).
 
 ## Meter
 
@@ -20,22 +20,11 @@ Positions are measure and beat. Uncertainty is the library's, from 0 (clearly th
 
 - **Home key:** G major.
 - **Opening key:** G major.
-- **Closing key:** D major.
+- **Closing key:** G major.
 
 | Position | Key | Uncertainty | Set by |
 | --- | --- | --- | --- |
-| m. 1, beat 1 to m. 13, beat 1 | G major | 0.64 | profile |
-| m. 13, beat 1 to m. 17, beat 1 | D major | 0.90 | profile |
-| m. 17, beat 1 to m. 20, beat 1 | G major | 0.74 | profile |
-| m. 20, beat 1 to m. 25, beat 1 | D major | 0.91 | profile |
-
-## Tonicizations
-
-1 brief excursion of another key that returns to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts, whether it returns, and whether a cadence arrives in it; without a cadence it is a tonicization however long.
-
-| Span | In | Target |
-| --- | --- | --- |
-| m. 13, beat 1 to m. 17, beat 1 | G major | D major |
+| m. 1, beat 1 to m. 25, beat 1 | G major | 0.77 | profile |
 
 ## Chords
 
@@ -73,30 +62,30 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 11, beat 4 to m. 11, beat 4.5 | vii° | vii° | dominant | - | F# | diminished | F# | root position | 0.5 | 1.00 | - |
 | m. 11, beat 4.5 to m. 12, beat 1 | I | I | tonic | - | G | major | G | root position | 0.5 | 1.00 | - |
 | m. 12, beat 1 to m. 13, beat 1 | I | I6 | tonic | - | G | major | G | root position | 4 | 0.44 | - |
-| m. 13, beat 1 to m. 13, beat 4 | major7 | IV7 (in D major) | predominant (strong) | - | G | major7 | F# | third | 3 | 0.10 | ii (E minor, score 0.72) |
-| m. 13, beat 4 to m. 14, beat 1 | ii | ii | predominant (strong) | - | E | minor | E | root position | 1 | 0.71 | - |
-| m. 14, beat 1 to m. 15, beat 1 | V | V6/4 | dominant | - | A | major | A | root position | 4 | 0.16 | - |
-| m. 15, beat 1 to m. 16, beat 1 | I | I | tonic | - | D | major | D | root position | 4 | 0.78 | - |
-| m. 16, beat 1 to m. 16, beat 1.5 | vi | vi | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
-| m. 16, beat 1.5 to m. 16, beat 2 | I | I | tonic | - | D | major | D | root position | 0.5 | 1.00 | - |
-| m. 16, beat 2 to m. 16, beat 4 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 16, beat 4 to m. 16, beat 4.5 | vi | vi | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
-| m. 16, beat 4.5 to m. 17, beat 1 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 17, beat 1 to m. 17, beat 4 | I | I (in G major) | tonic | - | G | major | D | second | 3 | 0.14 | - |
+| m. 13, beat 1 to m. 13, beat 4 | major7 | I7 | tonic | - | G | major7 | F# | third | 3 | 0.10 | vi (E minor, score 0.72) |
+| m. 13, beat 4 to m. 14, beat 1 | vi | vi | predominant (weak) | - | E | minor | E | root position | 1 | 0.71 | - |
+| m. 14, beat 1 to m. 15, beat 1 | major | V6/4/V | dominant of 5 | - | A | major | A | root position | 4 | 0.28 | - |
+| m. 15, beat 1 to m. 16, beat 1 | V | V | dominant | - | D | major | D | root position | 4 | 0.78 | - |
+| m. 16, beat 1 to m. 16, beat 1.5 | iii | iii | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
+| m. 16, beat 1.5 to m. 16, beat 2 | V | V | dominant | - | D | major | D | root position | 0.5 | 1.00 | - |
+| m. 16, beat 2 to m. 16, beat 4 | IV | IV | predominant (strong) | - | C | major | B | - | 2 | 0.62 | - |
+| m. 16, beat 4 to m. 16, beat 4.5 | iii | iii | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
+| m. 16, beat 4.5 to m. 17, beat 1 | ii | ii | predominant (strong) | - | A | minor | A | root position | 0.5 | 1.00 | - |
+| m. 17, beat 1 to m. 17, beat 4 | I | I | tonic | - | G | major | D | second | 3 | 0.14 | - |
 | m. 17, beat 4 to m. 18, beat 1 | half-diminished7 | vii∅7 | dominant | - | F# | half-diminished7 | E | third | 1 | 0.55 | - |
 | m. 18, beat 1 to m. 19, beat 1 | I | I | tonic | - | G | major | G | root position | 4 | 0.56 | - |
 | m. 19, beat 1 to m. 19, beat 4 | major7 | I7 | tonic | - | G | major7 | F# | third | 3 | 0.10 | vi (E minor, score 0.72) |
 | m. 19, beat 4 to m. 20, beat 1 | vi | vi | predominant (weak) | - | E | minor | E | root position | 1 | 0.71 | - |
-| m. 20, beat 1 to m. 21, beat 1 | V | V6/4 (in D major) | dominant | - | A | major | A | root position | 4 | 0.16 | - |
-| m. 21, beat 1 to m. 22, beat 1 | I | I | tonic | - | D | major | D | root position | 4 | 0.78 | - |
-| m. 22, beat 1 to m. 22, beat 1.5 | vi | vi | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
-| m. 22, beat 1.5 to m. 22, beat 2 | I | I | tonic | - | D | major | D | root position | 0.5 | 1.00 | - |
-| m. 22, beat 2 to m. 22, beat 4 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 22, beat 4 to m. 22, beat 4.5 | vi | vi | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
-| m. 22, beat 4.5 to m. 23, beat 1 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 23, beat 1 to m. 23, beat 4 | IV | IV | predominant (strong) | - | G | major | D | second | 3 | 0.14 | - |
-| m. 23, beat 4 to m. 24, beat 1 | diminished | vii°/IV | dominant of 4 | - | F# | diminished | E | - | 1 | 0.46 | - |
-| m. 24, beat 1 to m. 25, beat 1 | IV | IV | predominant (strong) | - | G | major | G | root position | 4 | 0.74 | - |
+| m. 20, beat 1 to m. 21, beat 1 | major | V6/4/V | dominant of 5 | - | A | major | A | root position | 4 | 0.28 | - |
+| m. 21, beat 1 to m. 22, beat 1 | V | V | dominant | - | D | major | D | root position | 4 | 0.78 | - |
+| m. 22, beat 1 to m. 22, beat 1.5 | iii | iii | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
+| m. 22, beat 1.5 to m. 22, beat 2 | V | V | dominant | - | D | major | D | root position | 0.5 | 1.00 | - |
+| m. 22, beat 2 to m. 22, beat 4 | IV | IV | predominant (strong) | - | C | major | B | - | 2 | 0.62 | - |
+| m. 22, beat 4 to m. 22, beat 4.5 | iii | iii | predominant (weak) | - | B | minor | B | root position | 0.5 | 1.00 | - |
+| m. 22, beat 4.5 to m. 23, beat 1 | ii | ii | predominant (strong) | - | A | minor | A | root position | 0.5 | 1.00 | - |
+| m. 23, beat 1 to m. 23, beat 4 | I | I | tonic | - | G | major | D | second | 3 | 0.14 | - |
+| m. 23, beat 4 to m. 24, beat 1 | half-diminished7 | vii∅7 | dominant | - | F# | half-diminished7 | E | third | 1 | 0.55 | - |
+| m. 24, beat 1 to m. 25, beat 1 | I | I | tonic | - | G | major | G | root position | 4 | 0.56 | - |
 
 ## Applied chords
 
@@ -104,7 +93,8 @@ Chords the library reads as applied (secondary) chords: the chord as it reads in
 
 | Position | Applied chord | Target | Resolution | Tonicization |
 | --- | --- | --- | --- | --- |
-| m. 23, beat 4 to m. 24, beat 1 | vii° (secondary-leading-tone) | IV (G) | to the target | DISAGREES: no tonicization is reported here |
+| m. 14, beat 1 to m. 15, beat 1 | V6/4 (secondary-dominant) | V (D) | to the target | DISAGREES: no tonicization is reported here |
+| m. 20, beat 1 to m. 21, beat 1 | V6/4 (secondary-dominant) | V (D) | to the target | DISAGREES: no tonicization is reported here |
 ## Outer voices
 
 The highest (soprano) and lowest (bass) sounding note of each chord's span, with its scale degree in that chord's local key. A flat or sharp sign marks a chromatic alteration. A degree is "-" where the span lies in no key region. A rest means the library found no note for that line in the span, a bridged one a short gap inside the line, and a register guard a note the library dropped rather than adopt an accompaniment note. Degrees carry the key region's uncertainty in the analysis document.
@@ -141,30 +131,30 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 11, beat 4 to m. 11, beat 4.5 | G major | B4 | 3 | F#3 | 7 |
 | m. 11, beat 4.5 to m. 12, beat 1 | G major | B4 | 3 | G3 | 1 |
 | m. 12, beat 1 to m. 13, beat 1 | G major | C5 | 4 | rest (bridged) | - |
-| m. 13, beat 1 to m. 13, beat 4 | D major | B5 | 6 | G3 | 4 |
-| m. 13, beat 4 to m. 14, beat 1 | D major | G5 | 4 | E3 | 2 |
-| m. 14, beat 1 to m. 15, beat 1 | D major | G5 | 4 | E3 | 2 |
-| m. 15, beat 1 to m. 16, beat 1 | D major | F#5 | 3 | D4 | 1 |
-| m. 16, beat 1 to m. 16, beat 1.5 | D major | D5 | 1 | B3 | 6 |
-| m. 16, beat 1.5 to m. 16, beat 2 | D major | G4 | 4 | D4 | 1 |
-| m. 16, beat 2 to m. 16, beat 4 | D major | G4 | 4 | B3 | 6 |
-| m. 16, beat 4 to m. 16, beat 4.5 | D major | D5 | 1 | B3 | 6 |
-| m. 16, beat 4.5 to m. 17, beat 1 | D major | C5 | b7 | A3 | 5 |
+| m. 13, beat 1 to m. 13, beat 4 | G major | B5 | 3 | G3 | 1 |
+| m. 13, beat 4 to m. 14, beat 1 | G major | G5 | 1 | E3 | 6 |
+| m. 14, beat 1 to m. 15, beat 1 | G major | G5 | 1 | E3 | 6 |
+| m. 15, beat 1 to m. 16, beat 1 | G major | F#5 | 7 | D4 | 5 |
+| m. 16, beat 1 to m. 16, beat 1.5 | G major | D5 | 5 | B3 | 3 |
+| m. 16, beat 1.5 to m. 16, beat 2 | G major | G4 | 1 | D4 | 5 |
+| m. 16, beat 2 to m. 16, beat 4 | G major | G4 | 1 | B3 | 3 |
+| m. 16, beat 4 to m. 16, beat 4.5 | G major | D5 | 5 | B3 | 3 |
+| m. 16, beat 4.5 to m. 17, beat 1 | G major | C5 | 4 | A3 | 2 |
 | m. 17, beat 1 to m. 17, beat 4 | G major | B4 | 3 | G3 | 1 |
 | m. 17, beat 4 to m. 18, beat 1 | G major | B4 | 3 | F#3 | 7 |
 | m. 18, beat 1 to m. 19, beat 1 | G major | C5 | 4 | G3 | 1 |
 | m. 19, beat 1 to m. 19, beat 4 | G major | B5 | 3 | G3 | 1 |
 | m. 19, beat 4 to m. 20, beat 1 | G major | G5 | 1 | E3 | 6 |
-| m. 20, beat 1 to m. 21, beat 1 | D major | G5 | 4 | E3 | 2 |
-| m. 21, beat 1 to m. 22, beat 1 | D major | F#5 | 3 | D4 | 1 |
-| m. 22, beat 1 to m. 22, beat 1.5 | D major | D5 | 1 | B3 | 6 |
-| m. 22, beat 1.5 to m. 22, beat 2 | D major | G4 | 4 | D4 | 1 |
-| m. 22, beat 2 to m. 22, beat 4 | D major | G4 | 4 | B3 | 6 |
-| m. 22, beat 4 to m. 22, beat 4.5 | D major | D5 | 1 | B3 | 6 |
-| m. 22, beat 4.5 to m. 23, beat 1 | D major | C5 | b7 | A3 | 5 |
-| m. 23, beat 1 to m. 23, beat 4 | D major | B4 | 6 | G3 | 4 |
-| m. 23, beat 4 to m. 24, beat 1 | D major | B4 | 6 | F#3 | 3 |
-| m. 24, beat 1 to m. 25, beat 1 | D major | C5 | b7 | G3 | 4 |
+| m. 20, beat 1 to m. 21, beat 1 | G major | G5 | 1 | E3 | 6 |
+| m. 21, beat 1 to m. 22, beat 1 | G major | F#5 | 7 | D4 | 5 |
+| m. 22, beat 1 to m. 22, beat 1.5 | G major | D5 | 5 | B3 | 3 |
+| m. 22, beat 1.5 to m. 22, beat 2 | G major | G4 | 1 | D4 | 5 |
+| m. 22, beat 2 to m. 22, beat 4 | G major | G4 | 1 | B3 | 3 |
+| m. 22, beat 4 to m. 22, beat 4.5 | G major | D5 | 5 | B3 | 3 |
+| m. 22, beat 4.5 to m. 23, beat 1 | G major | C5 | 4 | A3 | 2 |
+| m. 23, beat 1 to m. 23, beat 4 | G major | B4 | 3 | G3 | 1 |
+| m. 23, beat 4 to m. 24, beat 1 | G major | B4 | 3 | F#3 | 7 |
+| m. 24, beat 1 to m. 25, beat 1 | G major | C5 | 4 | G3 | 1 |
 
 ## Chord vocabulary
 
@@ -176,161 +166,59 @@ Each distinct Roman numeral of the chords the library numbered, for the whole pi
 
 | Numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| I | 16 | 14 | 30 | 33.0% | m. 1, beat 1 |
-| vi | 9 | 9 | 9 | 9.9% | m. 2, beat 1 |
-| IV | 5 | 5 | 10 | 11.0% | m. 1, beat 4 |
-| I6 | 4 | 4 | 14 | 15.4% | m. 4, beat 1 |
-| ii | 3 | 3 | 3 | 3.3% | m. 2, beat 3 |
-| V6/4 | 2 | 2 | 8 | 8.8% | m. 14, beat 1 |
-| ii6/5 | 2 | 2 | 4 | 4.4% | m. 5, beat 2 |
-| iii6 | 2 | 2 | 2 | 2.2% | m. 3, beat 2 |
-| vii° | 2 | 2 | 1 | 1.1% | m. 5, beat 4 |
-| IV7 | 1 | 1 | 3 | 3.3% | m. 13, beat 1 |
-| I7 | 1 | 1 | 3 | 3.3% | m. 19, beat 1 |
-| IV6/4 | 1 | 1 | 2 | 2.2% | m. 7, beat 3 |
-| vii∅7 | 1 | 1 | 1 | 1.1% | m. 17, beat 4 |
+| I | 14 | 12 | 28 | 29.2% | m. 1, beat 1 |
+| vi | 6 | 6 | 8 | 8.3% | m. 2, beat 1 |
+| IV | 5 | 5 | 7 | 7.3% | m. 1, beat 4 |
+| I6 | 4 | 4 | 14 | 14.6% | m. 4, beat 1 |
+| V | 4 | 4 | 9 | 9.4% | m. 15, beat 1 |
+| ii | 4 | 4 | 3 | 3.1% | m. 2, beat 3 |
+| iii | 4 | 4 | 2 | 2.1% | m. 16, beat 1 |
+| I7 | 2 | 2 | 6 | 6.2% | m. 13, beat 1 |
+| ii6/5 | 2 | 2 | 4 | 4.2% | m. 5, beat 2 |
+| iii6 | 2 | 2 | 2 | 2.1% | m. 3, beat 2 |
+| vii∅7 | 2 | 2 | 2 | 2.1% | m. 17, beat 4 |
+| vii° | 2 | 2 | 1 | 1.0% | m. 5, beat 4 |
+| IV6/4 | 1 | 1 | 2 | 2.1% | m. 7, beat 3 |
 
 By base numeral (inversions together):
 
 | Base numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| I | 20 | 18 | 44 | 48.4% | m. 1, beat 1 |
-| vi | 9 | 9 | 9 | 9.9% | m. 2, beat 1 |
-| IV | 6 | 6 | 12 | 13.2% | m. 1, beat 4 |
-| ii | 3 | 3 | 3 | 3.3% | m. 2, beat 3 |
-| V | 2 | 2 | 8 | 8.8% | m. 14, beat 1 |
-| ii7 | 2 | 2 | 4 | 4.4% | m. 5, beat 2 |
-| iii | 2 | 2 | 2 | 2.2% | m. 3, beat 2 |
-| vii° | 2 | 2 | 1 | 1.1% | m. 5, beat 4 |
-| IV7 | 1 | 1 | 3 | 3.3% | m. 13, beat 1 |
-| I7 | 1 | 1 | 3 | 3.3% | m. 19, beat 1 |
-| vii∅7 | 1 | 1 | 1 | 1.1% | m. 17, beat 4 |
+| I | 18 | 16 | 42 | 43.8% | m. 1, beat 1 |
+| IV | 6 | 6 | 9 | 9.4% | m. 1, beat 4 |
+| vi | 6 | 6 | 8 | 8.3% | m. 2, beat 1 |
+| iii | 6 | 6 | 4 | 4.2% | m. 3, beat 2 |
+| V | 4 | 4 | 9 | 9.4% | m. 15, beat 1 |
+| ii | 4 | 4 | 3 | 3.1% | m. 2, beat 3 |
+| I7 | 2 | 2 | 6 | 6.2% | m. 13, beat 1 |
+| ii7 | 2 | 2 | 4 | 4.2% | m. 5, beat 2 |
+| vii∅7 | 2 | 2 | 2 | 2.1% | m. 17, beat 4 |
+| vii° | 2 | 2 | 1 | 1.0% | m. 5, beat 4 |
 
 **Applied chords**
 
 | Numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| vii°/IV | 1 | 1 | 1 | 1.1% | m. 23, beat 4 |
+| V6/4/V | 2 | 2 | 8 | 8.3% | m. 14, beat 1 |
 
 By base numeral (inversions together):
 
 | Base numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| vii°/IV | 1 | 1 | 1 | 1.1% | m. 23, beat 4 |
-
-### G major (region 0)
-
-**Diatonic chords**
-
-| Numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| I | 10 | 8 | 14 | 29.2% | m. 1, beat 1 |
-| I6 | 4 | 4 | 14 | 29.2% | m. 4, beat 1 |
-| vi | 4 | 4 | 6 | 12.5% | m. 2, beat 1 |
-| IV | 3 | 3 | 3 | 6.2% | m. 1, beat 4 |
-| ii6/5 | 2 | 2 | 4 | 8.3% | m. 5, beat 2 |
-| ii | 2 | 2 | 2 | 4.2% | m. 2, beat 3 |
-| iii6 | 2 | 2 | 2 | 4.2% | m. 3, beat 2 |
-| vii° | 2 | 2 | 1 | 2.1% | m. 5, beat 4 |
-| IV6/4 | 1 | 1 | 2 | 4.2% | m. 7, beat 3 |
-
-By base numeral (inversions together):
-
-| Base numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| I | 14 | 12 | 28 | 58.3% | m. 1, beat 1 |
-| vi | 4 | 4 | 6 | 12.5% | m. 2, beat 1 |
-| IV | 4 | 4 | 5 | 10.4% | m. 1, beat 4 |
-| ii7 | 2 | 2 | 4 | 8.3% | m. 5, beat 2 |
-| ii | 2 | 2 | 2 | 4.2% | m. 2, beat 3 |
-| iii | 2 | 2 | 2 | 4.2% | m. 3, beat 2 |
-| vii° | 2 | 2 | 1 | 2.1% | m. 5, beat 4 |
-
-### D major (region 1)
-
-**Diatonic chords**
-
-| Numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| I | 2 | 2 | 4.5 | 33.3% | m. 15, beat 1 |
-| vi | 2 | 2 | 1 | 7.4% | m. 16, beat 1 |
-| V6/4 | 1 | 1 | 4 | 29.6% | m. 14, beat 1 |
-| IV7 | 1 | 1 | 3 | 22.2% | m. 13, beat 1 |
-| ii | 1 | 1 | 1 | 7.4% | m. 13, beat 4 |
-
-By base numeral (inversions together):
-
-| Base numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| I | 2 | 2 | 4.5 | 33.3% | m. 15, beat 1 |
-| vi | 2 | 2 | 1 | 7.4% | m. 16, beat 1 |
-| V | 1 | 1 | 4 | 29.6% | m. 14, beat 1 |
-| IV7 | 1 | 1 | 3 | 22.2% | m. 13, beat 1 |
-| ii | 1 | 1 | 1 | 7.4% | m. 13, beat 4 |
-
-### G major (region 2)
-
-**Diatonic chords**
-
-| Numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| I | 2 | 2 | 7 | 58.3% | m. 17, beat 1 |
-| I7 | 1 | 1 | 3 | 25.0% | m. 19, beat 1 |
-| vii∅7 | 1 | 1 | 1 | 8.3% | m. 17, beat 4 |
-| vi | 1 | 1 | 1 | 8.3% | m. 19, beat 4 |
-
-By base numeral (inversions together):
-
-| Base numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| I | 2 | 2 | 7 | 58.3% | m. 17, beat 1 |
-| I7 | 1 | 1 | 3 | 25.0% | m. 19, beat 1 |
-| vii∅7 | 1 | 1 | 1 | 8.3% | m. 17, beat 4 |
-| vi | 1 | 1 | 1 | 8.3% | m. 19, beat 4 |
-
-### D major (region 3)
-
-**Diatonic chords**
-
-| Numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| IV | 2 | 2 | 7 | 40.0% | m. 23, beat 1 |
-| I | 2 | 2 | 4.5 | 25.7% | m. 21, beat 1 |
-| vi | 2 | 2 | 1 | 5.7% | m. 22, beat 1 |
-| V6/4 | 1 | 1 | 4 | 22.9% | m. 20, beat 1 |
-
-By base numeral (inversions together):
-
-| Base numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| IV | 2 | 2 | 7 | 40.0% | m. 23, beat 1 |
-| I | 2 | 2 | 4.5 | 25.7% | m. 21, beat 1 |
-| vi | 2 | 2 | 1 | 5.7% | m. 22, beat 1 |
-| V | 1 | 1 | 4 | 22.9% | m. 20, beat 1 |
-
-**Applied chords**
-
-| Numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| vii°/IV | 1 | 1 | 1 | 5.7% | m. 23, beat 4 |
-
-By base numeral (inversions together):
-
-| Base numeral | Count | Runs | Beats | Share | First |
-| --- | --- | --- | --- | --- | --- |
-| vii°/IV | 1 | 1 | 1 | 5.7% | m. 23, beat 4 |
+| V/V | 2 | 2 | 8 | 8.3% | m. 14, beat 1 |
 
 ## Prolongations
 
-The library's standard-harmony analysis found 1 prolongation: a tonic or dominant that lasts through the chords between it and the harmony that closes it. Measures run from the prolonged chord to the closing chord. Numeral is the prolonged chord. Reason is why the library reads the chords between as a prolongation.
+The library's standard-harmony analysis found 2 prolongations: a tonic or dominant that lasts through the chords between it and the harmony that closes it. Measures run from the prolonged chord to the closing chord. Numeral is the prolonged chord. Reason is why the library reads the chords between as a prolongation.
 
 | Measures | Function | Numeral | Key | Reason |
 | --- | --- | --- | --- | --- |
 | mm. 17 to 19 | tonic | I | G major | tonic-line |
+| mm. 23 to 25 | tonic | I | G major | tonic-line |
 
 ## Non-chord tones
 
-121 notes sound against a chord without being one of its tones; 22 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+124 notes sound against a chord without being one of its tones; 19 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
 
 | Position | Note | Type | Against |
 | --- | --- | --- | --- |
@@ -366,7 +254,7 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 6, beat 1 to m. 7, beat 1 | 99 | passing | I |
 | m. 6, beat 1 to m. 7, beat 1 | 103 | passing | I |
 | m. 6, beat 1 to m. 7, beat 1 | 106 | neighbor | I |
-| m. 7, beat 1 to m. 7, beat 3 | 115 | unclassified | I |
+| m. 7, beat 1 to m. 7, beat 3 | 115 | escape-tone | I |
 | m. 7, beat 1 to m. 7, beat 3 | 117 | neighbor | I |
 | m. 7, beat 1 to m. 7, beat 3 | 118 | passing | I |
 | m. 7, beat 3 to m. 8, beat 1 | 126 | neighbor | IV |
@@ -401,20 +289,22 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 13, beat 1 to m. 13, beat 4 | 223 | passing | major7 |
 | m. 13, beat 1 to m. 13, beat 4 | 226 | escape-tone | major7 |
 | m. 13, beat 1 to m. 13, beat 4 | 229 | passing | major7 |
-| m. 13, beat 4 to m. 14, beat 1 | 236 | passing | ii |
-| m. 14, beat 1 to m. 15, beat 1 | 237 | escape-tone | V |
-| m. 14, beat 1 to m. 15, beat 1 | 239 | unclassified | V |
-| m. 14, beat 1 to m. 15, beat 1 | 242 | neighbor | V |
-| m. 14, beat 1 to m. 15, beat 1 | 248 | passing | V |
-| m. 14, beat 1 to m. 15, beat 1 | 250 | passing | V |
-| m. 14, beat 1 to m. 15, beat 1 | 252 | passing | V |
-| m. 14, beat 1 to m. 15, beat 1 | 254 | unclassified | V |
-| m. 14, beat 1 to m. 15, beat 1 | 253 | neighbor | V |
-| m. 15, beat 1 to m. 16, beat 1 | 258 | neighbor | I |
-| m. 15, beat 1 to m. 16, beat 1 | 257 | neighbor | I |
-| m. 15, beat 1 to m. 16, beat 1 | 263 | unclassified | I |
-| m. 15, beat 1 to m. 16, beat 1 | 268 | unclassified | I |
-| m. 16, beat 1.5 to m. 16, beat 2 | 271 | unclassified | I |
+| m. 13, beat 4 to m. 14, beat 1 | 236 | passing | vi |
+| m. 14, beat 1 to m. 15, beat 1 | 237 | escape-tone | major |
+| m. 14, beat 1 to m. 15, beat 1 | 239 | unclassified | major |
+| m. 14, beat 1 to m. 15, beat 1 | 242 | neighbor | major |
+| m. 14, beat 1 to m. 15, beat 1 | 248 | passing | major |
+| m. 14, beat 1 to m. 15, beat 1 | 250 | passing | major |
+| m. 14, beat 1 to m. 15, beat 1 | 252 | passing | major |
+| m. 14, beat 1 to m. 15, beat 1 | 254 | unclassified | major |
+| m. 14, beat 1 to m. 15, beat 1 | 253 | neighbor | major |
+| m. 15, beat 1 to m. 16, beat 1 | 258 | neighbor | V |
+| m. 15, beat 1 to m. 16, beat 1 | 257 | neighbor | V |
+| m. 15, beat 1 to m. 16, beat 1 | 263 | unclassified | V |
+| m. 15, beat 1 to m. 16, beat 1 | 268 | unclassified | V |
+| m. 16, beat 1.5 to m. 16, beat 2 | 271 | unclassified | V |
+| m. 16, beat 2 to m. 16, beat 4 | 275 | appoggiatura | IV |
+| m. 16, beat 2 to m. 16, beat 4 | 280 | neighbor | IV |
 | m. 17, beat 1 to m. 17, beat 4 | 289 | passing | I |
 | m. 17, beat 1 to m. 17, beat 4 | 292 | neighbor | I |
 | m. 17, beat 1 to m. 17, beat 4 | 294 | escape-tone | I |
@@ -429,32 +319,33 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 19, beat 1 to m. 19, beat 4 | 328 | passing | major7 |
 | m. 19, beat 1 to m. 19, beat 4 | 331 | escape-tone | major7 |
 | m. 19, beat 1 to m. 19, beat 4 | 334 | passing | major7 |
-| m. 19, beat 4 to m. 20, beat 1 | 341 | unclassified | vi |
-| m. 20, beat 1 to m. 21, beat 1 | 342 | unclassified | V |
-| m. 20, beat 1 to m. 21, beat 1 | 344 | unclassified | V |
-| m. 20, beat 1 to m. 21, beat 1 | 347 | neighbor | V |
-| m. 20, beat 1 to m. 21, beat 1 | 353 | passing | V |
-| m. 20, beat 1 to m. 21, beat 1 | 355 | passing | V |
-| m. 20, beat 1 to m. 21, beat 1 | 357 | passing | V |
-| m. 20, beat 1 to m. 21, beat 1 | 359 | unclassified | V |
-| m. 20, beat 1 to m. 21, beat 1 | 358 | neighbor | V |
-| m. 21, beat 1 to m. 22, beat 1 | 363 | neighbor | I |
-| m. 21, beat 1 to m. 22, beat 1 | 362 | neighbor | I |
-| m. 21, beat 1 to m. 22, beat 1 | 368 | unclassified | I |
-| m. 21, beat 1 to m. 22, beat 1 | 373 | unclassified | I |
-| m. 22, beat 1.5 to m. 22, beat 2 | 376 | unclassified | I |
-| m. 23, beat 1 to m. 23, beat 4 | 394 | passing | IV |
-| m. 23, beat 1 to m. 23, beat 4 | 397 | neighbor | IV |
-| m. 23, beat 1 to m. 23, beat 4 | 399 | escape-tone | IV |
-| m. 23, beat 1 to m. 23, beat 4 | 402 | passing | IV |
-| m. 23, beat 1 to m. 23, beat 4 | 403 | passing | IV |
-| m. 23, beat 4 to m. 24, beat 1 | 407 | passing | diminished |
-| m. 23, beat 4 to m. 24, beat 1 | 409 | escape-tone | diminished |
-| m. 24, beat 1 to m. 25, beat 1 | 411 | appoggiatura | IV |
-| m. 24, beat 1 to m. 25, beat 1 | 413 | neighbor | IV |
-| m. 24, beat 1 to m. 25, beat 1 | 416 | appoggiatura | IV |
-| m. 24, beat 1 to m. 25, beat 1 | 415 | unclassified | IV |
-| m. 24, beat 1 to m. 25, beat 1 | 422 | neighbor | IV |
+| m. 19, beat 4 to m. 20, beat 1 | 341 | passing | vi |
+| m. 20, beat 1 to m. 21, beat 1 | 342 | escape-tone | major |
+| m. 20, beat 1 to m. 21, beat 1 | 344 | unclassified | major |
+| m. 20, beat 1 to m. 21, beat 1 | 347 | neighbor | major |
+| m. 20, beat 1 to m. 21, beat 1 | 353 | passing | major |
+| m. 20, beat 1 to m. 21, beat 1 | 355 | passing | major |
+| m. 20, beat 1 to m. 21, beat 1 | 357 | passing | major |
+| m. 20, beat 1 to m. 21, beat 1 | 359 | unclassified | major |
+| m. 20, beat 1 to m. 21, beat 1 | 358 | neighbor | major |
+| m. 21, beat 1 to m. 22, beat 1 | 363 | neighbor | V |
+| m. 21, beat 1 to m. 22, beat 1 | 362 | neighbor | V |
+| m. 21, beat 1 to m. 22, beat 1 | 368 | unclassified | V |
+| m. 21, beat 1 to m. 22, beat 1 | 373 | unclassified | V |
+| m. 22, beat 1.5 to m. 22, beat 2 | 376 | unclassified | V |
+| m. 22, beat 2 to m. 22, beat 4 | 380 | appoggiatura | IV |
+| m. 22, beat 2 to m. 22, beat 4 | 385 | neighbor | IV |
+| m. 23, beat 1 to m. 23, beat 4 | 394 | passing | I |
+| m. 23, beat 1 to m. 23, beat 4 | 397 | neighbor | I |
+| m. 23, beat 1 to m. 23, beat 4 | 399 | escape-tone | I |
+| m. 23, beat 1 to m. 23, beat 4 | 402 | passing | I |
+| m. 23, beat 1 to m. 23, beat 4 | 403 | passing | I |
+| m. 23, beat 4 to m. 24, beat 1 | 407 | passing | half-diminished7 |
+| m. 24, beat 1 to m. 25, beat 1 | 411 | appoggiatura | I |
+| m. 24, beat 1 to m. 25, beat 1 | 413 | neighbor | I |
+| m. 24, beat 1 to m. 25, beat 1 | 416 | appoggiatura | I |
+| m. 24, beat 1 to m. 25, beat 1 | 415 | unclassified | I |
+| m. 24, beat 1 to m. 25, beat 1 | 422 | neighbor | I |
 
 ## Phrases
 
@@ -520,23 +411,23 @@ The library's motive analysis found 36 motive families in the soprano, the highe
 | 13 | 8 | 3 2 3 4 3 2 1 2 | scale steps | 2 | 5, 11 | 1, 2 | exact 2 |
 | 14 | 8 | 4 3 2 1 2 3 2 1 | scale steps | 2 | 6, 12 | 1, 2 | exact 2 |
 | 15 | 7 | 2 3 2 1 7 1 1 | scale steps | 6 | 6, 2, 5, 8, 11, 12 | 1, 2 | exact 2, varied 4 |
-| 16 | 8 | 6 4 5 6 4 5 1 2 | scale steps | 2 | 13, 19 | 2 | exact 2 |
-| 17 | 8 | 6 4 5 1 2 3 1 4 | scale steps | 2 | 13, 19 | 2 | exact 2 |
-| 18 | 8 | 1 2 3 1 4 2 3 4 | scale steps | 2 | 13, 19 | 2 | exact 2 |
-| 19 | 8 | 4 2 3 4 1 7 6 7 | scale steps | 2 | 13, 19 | 2 | exact 2 |
-| 20 | 8 | 4 1 7 6 7 5 5 6 | scale steps | 2 | 14, 20 | 2 | exact 2 |
-| 21 | 8 | 6 7 5 5 6 7 1 2 | scale steps | 2 | 14, 20 | 2 | exact 2 |
-| 22 | 8 | 5 6 7 1 2 3 4 3 | scale steps | 2 | 14, 20 | 2 | exact 2 |
-| 23 | 7 | 5 6 7 1 2 3 4 | scale steps | 4 | 14, 17, 20, 23 | 2 | exact 2, real-transposed 2 |
-| 24 | 8 | 2 3 4 3 2 3 5 7 | scale steps | 2 | 14, 20 | 2 | exact 2 |
-| 25 | 8 | 3 2 3 5 7 1 1 b7 | scale steps | 2 | 15, 21 | 2 | exact 2 |
-| 26 | 8 | 3 5 7 1 1 b7 1 4 | scale steps | 2 | 15, 21 | 2 | exact 2 |
-| 27 | 8 | 7 1 1 b7 1 4 3 4 | scale steps | 2 | 15, 21 | 2 | exact 2 |
-| 28 | 8 | 1 b7 1 4 3 4 2 4 | scale steps | 2 | 15, 21 | 2 | exact 2 |
-| 29 | 8 | 1 4 3 4 2 4 3 4 | scale steps | 2 | 16, 22 | 2 | exact 2 |
-| 30 | 8 | 4 2 4 3 4 1 b7 6 | scale steps | 2 | 16, 22 | 2 | exact 2 |
-| 31 | 8 | 4 3 4 1 b7 6 5 4 | scale steps | 2 | 16, 22 | 2 | exact 2 |
-| 32 | 8 | 1 b7 6 5 4 3 4 5 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 16 | 8 | 3 1 2 3 1 2 5 6 | scale steps | 2 | 13, 19 | 2 | exact 2 |
+| 17 | 8 | 3 1 2 5 6 7 5 1 | scale steps | 2 | 13, 19 | 2 | exact 2 |
+| 18 | 8 | 5 6 7 5 1 6 7 1 | scale steps | 2 | 13, 19 | 2 | exact 2 |
+| 19 | 8 | 1 6 7 1 5 #4 3 #4 | scale steps | 2 | 13, 19 | 2 | exact 2 |
+| 20 | 8 | 1 5 #4 3 #4 2 2 3 | scale steps | 2 | 14, 20 | 2 | exact 2 |
+| 21 | 8 | 3 #4 2 2 3 #4 5 6 | scale steps | 2 | 14, 20 | 2 | exact 2 |
+| 22 | 8 | 2 3 #4 5 6 7 1 7 | scale steps | 2 | 14, 20 | 2 | exact 2 |
+| 23 | 7 | 2 3 #4 5 6 7 1 | scale steps | 4 | 14, 17, 20, 23 | 2 | exact 2, real-transposed 2 |
+| 24 | 8 | 6 7 1 7 6 7 2 #4 | scale steps | 2 | 14, 20 | 2 | exact 2 |
+| 25 | 8 | 7 6 7 2 #4 5 5 4 | scale steps | 2 | 15, 21 | 2 | exact 2 |
+| 26 | 8 | 7 2 #4 5 5 4 5 1 | scale steps | 2 | 15, 21 | 2 | exact 2 |
+| 27 | 8 | #4 5 5 4 5 1 7 1 | scale steps | 2 | 15, 21 | 2 | exact 2 |
+| 28 | 8 | 5 4 5 1 7 1 6 1 | scale steps | 2 | 15, 21 | 2 | exact 2 |
+| 29 | 8 | 5 1 7 1 6 1 7 1 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 30 | 8 | 1 6 1 7 1 5 4 3 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 31 | 8 | 1 7 1 5 4 3 2 1 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 32 | 8 | 5 4 3 2 1 7 1 2 | scale steps | 2 | 16, 22 | 2 | exact 2 |
 | 33 | 8 | 3 2 1 7 1 2 5 6 | scale steps | 2 | 17, 23 | 2 | exact 2 |
 | 34 | 8 | 7 1 2 5 6 7 1 2 | scale steps | 2 | 17, 23 | 2 | exact 2 |
 | 35 | 4 | 4 3 4 3 | scale steps | 2 | 18, 24 | 2 | exact 2 |
@@ -567,7 +458,7 @@ Each melody note is set against the chord of the segment it starts in, as the li
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 47 | 30 | 16 | 1 | passing 3, neighbor 5, anticipation 1, appoggiatura 2, escape-tone 5 |
-| 2 | 102 | 53 | 22 | 27 | passing 3, neighbor 13, anticipation 1, escape-tone 5 |
+| 2 | 102 | 63 | 24 | 15 | passing 3, neighbor 13, anticipation 3, escape-tone 5 |
 
 ### Tendencies
 
@@ -621,19 +512,20 @@ Each family's occurrences in time order, as the measure they start in and the ki
 
 ## Progression patterns
 
-9 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence. Measures are where each occurrence begins and ends.
+17 recurring progressions of two to six chords, counted over the library's Roman numerals: a held chord counts once, and a progression does not cross an unlabelled chord or a change of key. Ranked by count, then length, then first occurrence; the top 10 are shown. Measures are where each occurrence begins and ends.
 
 | Rank | Progression | Count | Measures |
 | --- | --- | --- | --- |
 | 1 | I > IV > vi | 4 | mm. 1 to 2, mm. 3 to 5, mm. 5 to 8, mm. 9 to 11 |
-| 2 | I > IV > vi > ii > I > iii | 2 | mm. 1 to 3, mm. 5 to 9 |
-| 3 | IV > vi > ii > I > iii > I | 2 | mm. 1 to 4, mm. 7 to 10 |
-| 4 | vi > ii > I > iii > I > IV | 2 | mm. 2 to 4, mm. 8 to 10 |
-| 5 | ii > I > iii > I > IV > vi | 2 | mm. 2 to 5, mm. 8 to 11 |
-| 6 | I > iii > I > IV > vi > ii7 | 2 | mm. 2 to 5, mm. 8 to 11 |
-| 7 | iii > I > IV > vi > ii7 > vii° | 2 | mm. 3 to 5, mm. 9 to 11 |
-| 8 | I > IV > vi > ii7 > vii° > I | 2 | mm. 3 to 7, mm. 9 to 12 |
-| 9 | V > I > vi > I | 2 | mm. 14 to 16, mm. 20 to 22 |
+| 2 | ii > I | 4 | mm. 2 to 3, mm. 8 to 9, mm. 16 to 17, mm. 22 to 23 |
+| 3 | I > IV > vi > ii > I > iii | 2 | mm. 1 to 3, mm. 5 to 9 |
+| 4 | IV > vi > ii > I > iii > I | 2 | mm. 1 to 4, mm. 7 to 10 |
+| 5 | vi > ii > I > iii > I > IV | 2 | mm. 2 to 4, mm. 8 to 10 |
+| 6 | ii > I > iii > I > IV > vi | 2 | mm. 2 to 5, mm. 8 to 11 |
+| 7 | I > iii > I > IV > vi > ii7 | 2 | mm. 2 to 5, mm. 8 to 11 |
+| 8 | iii > I > IV > vi > ii7 > vii° | 2 | mm. 3 to 5, mm. 9 to 11 |
+| 9 | I > IV > vi > ii7 > vii° > I | 2 | mm. 3 to 7, mm. 9 to 12 |
+| 10 | I > I7 > vi > V/V > V > iii | 2 | mm. 11 to 16, mm. 18 to 22 |
 
 ## Harmonic rhythm
 
@@ -772,8 +664,8 @@ The library's scale-harmonization adapter found a model of one or more chords re
 
 | Measures | Kind | Rule-backed | Direction | Units (chords each) | Steps | Stages (soprano/bass) | Confidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| mm. 16 to 17 | parallel-chords | yes | descending | 3 (1) | -1 | m. 16 5/3, m. 16 4/2, m. 17 3/1 | 0.31 |
-| mm. 22 to 23 | parallel-chords | yes | descending | 3 (1) | -1 | m. 22 5/3, m. 22 4/2, m. 23 3/1 | 0.3 |
+| mm. 16 to 17 | parallel-chords | yes | descending | 3 (1) | -1 | m. 16 5/3, m. 16 4/2, m. 17 3/1 | 0.27 |
+| mm. 22 to 23 | parallel-chords | yes | descending | 3 (1) | -1 | m. 22 5/3, m. 22 4/2, m. 23 3/1 | 0.27 |
 
 ## Markings
 

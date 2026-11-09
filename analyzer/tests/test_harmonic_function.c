@@ -18,7 +18,9 @@
  * predominants, iii and vi weak ones (diatonic chords only: an applied chord is a dominant toward its target); an
  * applied chord names its target degree. A predominant strength is given exactly to a diatonic predominant. A
  * six-four has one of the library's types. Prolongations name an entry range that exists, in order, with a function
- * the library prolongs and the library's reasons. The first movement of Mozart 545 (measures 1 to 146) has no cadential six-four.
+ * the library prolongs and the library's reasons. The first movement of Mozart 545 (measures 1 to 146) has 4 cadential
+ * six-fours (m24, m52, m97, m142): the I6/4 before the V7 in the G and the C closing sections. Since keys are placed on
+ * phrases (Ursatz P42) m22 to 24 are read in G, not A minor, and the six-four there is read.
  */
 
 static int failures = 0;
@@ -147,7 +149,7 @@ static void run_piece(const Piece *piece) {
         check_chords(document, &cadential);
         check_prolongations(document, &report);
         if (strcmp(piece->name, "Mozart 545") == 0) {
-            CHECK(cadential == 0);
+            CHECK(cadential == 4);
         }
         printf("%s: %zu cadential six-fours, %zu prolongations\n", piece->name, cadential, report.prolongation_count);
         cJSON_Delete(document);

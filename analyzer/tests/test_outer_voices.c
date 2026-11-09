@@ -295,15 +295,16 @@ static void test_progression(const char *path) {
     release(&analyzed);
 }
 
-/* C major, two measures of G major, C major. Inside the G major region the degrees are read in G major: the
+/* C major, eight measures of G major (a two-measure excursion is a tonicization inside a phrase since Ursatz P42,
+   R-397, so the G region is a phrase long), C major. Inside the G major region the degrees are read in G major: the
    soprano D5 of its first chord is 5 (it is 2 in C major) and the G4 bass is 1 (5 in C major). Each of the four
    chords of the region's first measure is checked against the pitch and the region's own key. */
 static void test_tonicization(const char *path) {
-    PieceNote notes[18 * 12];
+    PieceNote notes[24 * 12];
     size_t count = 0;
     uint32_t tick = 0;
-    for (int m = 0; m < 18; m++, tick += 384) {
-        add_measure(notes, &count, tick, (m >= 8 && m < 10) ? 7 : 0);
+    for (int m = 0; m < 24; m++, tick += 384) {
+        add_measure(notes, &count, tick, (m >= 8 && m < 16) ? 7 : 0);
     }
     write_piece(path, notes, count);
     Analyzed analyzed;

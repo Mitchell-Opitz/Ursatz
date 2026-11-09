@@ -6,7 +6,7 @@
 - **Input:** MusicXML score, 1 part merged into one texture. Meter: notated. Key signature: inferred. Pitch spelling: notated.
 - **Key:** Eb major, the key with the most time across 4 key regions.
 - **Chords:** 107 chord events; 106 matched a chord (99%), 1 did not.
-- **Most frequent chords:** I (36), dominant7 (21), IV (8).
+- **Most frequent chords:** I (36), dominant7 (21), IV (9).
 
 ## Meter
 
@@ -24,10 +24,18 @@ Positions are measure and beat. Uncertainty is the library's, from 0 (clearly th
 
 | Position | Key | Uncertainty | Set by |
 | --- | --- | --- | --- |
-| m. 1, beat 1 to m. 22, beat 1 | Eb major | 0.72 | profile |
-| m. 22, beat 1 to m. 28, beat 1 | Bb major | 0.95 | profile |
+| m. 1, beat 1 to m. 20, beat 1 | Eb major | 0.73 | profile |
+| m. 20, beat 1 to m. 28, beat 1 | Bb major | 0.88 | profile |
 | m. 28, beat 1 to m. 32, beat 1 | F minor | 0.77 | profile |
 | m. 32, beat 1 to m. 68, beat 1 | Eb major | 0.74 | profile |
+
+## Tonicizations
+
+1 brief excursion of another key that returns to the key before. Span is the stretch in the target key. The library tells a tonicization from a modulation by how long the new key lasts, whether it returns, and whether a cadence arrives in it; without a cadence it is a tonicization however long.
+
+| Span | In | Target |
+| --- | --- | --- |
+| m. 28, beat 1 to m. 32, beat 1 | Bb major | F minor |
 
 ## Modulations
 
@@ -35,8 +43,7 @@ A modulation is a lasting new key. Position is where the new key arrives. Type i
 
 | Position | From | To | Extent | Type | Return |
 | --- | --- | --- | --- | --- | --- |
-| m. 22, beat 1 | Eb major | Bb major | modulation | pivot | no |
-| m. 28, beat 1 | Bb major | F minor | modulation | direct | no |
+| m. 20, beat 1 | Eb major | Bb major | modulation | pivot | no |
 | m. 32, beat 1 | F minor | Eb major | modulation | pivot | no |
 
 ## Pivot chords
@@ -45,8 +52,8 @@ The chord at a modulation that is diatonic in both the old and the new key, name
 
 | Position | Chord | Bass | Inversion | From | To | Modulation |
 | --- | --- | --- | --- | --- | --- | --- |
-| m. 21, beat 1 to m. 22, beat 1 | A# major | A# | root position | Eb major | Bb major | 1 |
-| m. 32, beat 1 to m. 33, beat 1 | G minor7 | A# | first | F minor | Eb major | 3 |
+| m. 18, beat 1 to m. 19, beat 1 | D# major7 | A# | second | Eb major | Bb major | 1 |
+| m. 31, beat 1 to m. 32, beat 1 | F minor | F | root position | F minor | Eb major | 2 |
 
 ## Chords
 
@@ -81,9 +88,9 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 18, beat 1 to m. 19, beat 1 | I | I | tonic | - | D# | major | A# | second | 4 | 0.56 | - |
 | m. 19, beat 1 to m. 19, beat 2 | vii° | vii°6 | dominant | - | D | diminished | F | first | 1 | 0.36 | - |
 | m. 19, beat 2 to m. 20, beat 1 | dominant7 | V7 | dominant | - | A# | dominant7 | A# | root position | 3 | 0.20 | - |
-| m. 20, beat 1 to m. 21, beat 1 | I | I | tonic | - | D# | major | D# | root position | 4 | 0.47 | - |
-| m. 21, beat 1 to m. 22, beat 1 | V | V | dominant | - | A# | major | A# | root position | 4 | 0.70 | - |
-| m. 22, beat 1 to m. 22, beat 4 | dominant7 | V7 (in Bb major) | dominant | - | F | dominant7 | F | root position | 3 | 0.33 | - |
+| m. 20, beat 1 to m. 21, beat 1 | IV | IV (in Bb major) | predominant (strong) | - | D# | major | D# | root position | 4 | 0.47 | - |
+| m. 21, beat 1 to m. 22, beat 1 | I | I | tonic | - | A# | major | A# | root position | 4 | 0.70 | - |
+| m. 22, beat 1 to m. 22, beat 4 | dominant7 | V7 | dominant | - | F | dominant7 | F | root position | 3 | 0.33 | - |
 | m. 22, beat 4 to m. 23, beat 1 | iii | iii6 | predominant (weak) | - | D | minor | F | first | 1 | 0.55 | - |
 | m. 23, beat 1 to m. 24, beat 1 | I | I | tonic | - | A# | major | A# | root position | 4 | 0.10 | vi (G minor, score 0.75) |
 | m. 24, beat 1 to m. 24, beat 2 | diminished | vii°6/4/V | dominant of 5 | - | E | diminished | A# | second | 1 | 0.45 | - |
@@ -213,8 +220,8 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 18, beat 1 to m. 19, beat 1 | Eb major | F5 | 2 | D#3 | 1 |
 | m. 19, beat 1 to m. 19, beat 2 | Eb major | D#5 | 1 | F3 | 2 |
 | m. 19, beat 2 to m. 20, beat 1 | Eb major | C6 | 6 | A#2 | 5 |
-| m. 20, beat 1 to m. 21, beat 1 | Eb major | F5 | 2 | D#3 | 1 |
-| m. 21, beat 1 to m. 22, beat 1 | Eb major | F5 | 2 | A#2 | 5 |
+| m. 20, beat 1 to m. 21, beat 1 | Bb major | F5 | 5 | D#3 | 4 |
+| m. 21, beat 1 to m. 22, beat 1 | Bb major | F5 | 5 | A#2 | 1 |
 | m. 22, beat 1 to m. 22, beat 4 | Bb major | G5 | 6 | F2 | 5 |
 | m. 22, beat 4 to m. 23, beat 1 | Bb major | D6 | 3 | F3 | 5 |
 | m. 23, beat 1 to m. 24, beat 1 | Bb major | D6 | 3 | A#2 | 1 |
@@ -306,8 +313,8 @@ Each distinct Roman numeral of the chords the library numbered, for the whole pi
 | --- | --- | --- | --- | --- | --- |
 | I | 28 | 20 | 107 | 40.7% | m. 2, beat 1 |
 | V7 | 10 | 10 | 26 | 9.9% | m. 11, beat 1 |
-| V | 9 | 9 | 21 | 8.0% | m. 1, beat 4 |
-| IV | 7 | 7 | 19 | 7.2% | m. 10, beat 1 |
+| IV | 8 | 8 | 23 | 8.7% | m. 10, beat 1 |
+| V | 8 | 8 | 17 | 6.5% | m. 1, beat 4 |
 | iii6 | 6 | 6 | 12 | 4.6% | m. 11, beat 4 |
 | vii°6 | 6 | 6 | 6 | 2.3% | m. 11, beat 3 |
 | I6/4 | 5 | 5 | 12 | 4.6% | m. 24, beat 2 |
@@ -331,8 +338,8 @@ By base numeral (inversions together):
 | --- | --- | --- | --- | --- | --- |
 | I | 36 | 28 | 125 | 47.5% | m. 2, beat 1 |
 | V7 | 17 | 17 | 37 | 14.1% | m. 3, beat 4 |
-| V | 9 | 9 | 21 | 8.0% | m. 1, beat 4 |
-| IV | 9 | 9 | 21 | 8.0% | m. 10, beat 1 |
+| IV | 10 | 10 | 25 | 9.5% | m. 10, beat 1 |
+| V | 8 | 8 | 17 | 6.5% | m. 1, beat 4 |
 | iii | 6 | 6 | 12 | 4.6% | m. 11, beat 4 |
 | vii° | 6 | 6 | 6 | 2.3% | m. 11, beat 3 |
 | i | 3 | 3 | 9 | 3.4% | m. 28, beat 3 |
@@ -373,26 +380,26 @@ By base numeral (inversions together):
 
 | Numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| I | 11 | 7 | 44 | 54.3% | m. 2, beat 1 |
-| V | 5 | 5 | 11 | 13.6% | m. 1, beat 4 |
-| V7 | 3 | 3 | 8 | 9.9% | m. 11, beat 1 |
-| vii°6 | 3 | 3 | 3 | 3.7% | m. 11, beat 3 |
-| IV | 2 | 2 | 8 | 9.9% | m. 10, beat 1 |
-| vii∅4/3 | 2 | 2 | 4 | 4.9% | m. 3, beat 2 |
-| V4/2 | 2 | 2 | 2 | 2.5% | m. 3, beat 4 |
-| iii6 | 1 | 1 | 1 | 1.2% | m. 11, beat 4 |
+| I | 10 | 6 | 40 | 54.8% | m. 2, beat 1 |
+| V | 4 | 4 | 7 | 9.6% | m. 1, beat 4 |
+| V7 | 3 | 3 | 8 | 11.0% | m. 11, beat 1 |
+| vii°6 | 3 | 3 | 3 | 4.1% | m. 11, beat 3 |
+| IV | 2 | 2 | 8 | 11.0% | m. 10, beat 1 |
+| vii∅4/3 | 2 | 2 | 4 | 5.5% | m. 3, beat 2 |
+| V4/2 | 2 | 2 | 2 | 2.7% | m. 3, beat 4 |
+| iii6 | 1 | 1 | 1 | 1.4% | m. 11, beat 4 |
 
 By base numeral (inversions together):
 
 | Base numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| I | 11 | 7 | 44 | 54.3% | m. 2, beat 1 |
-| V | 5 | 5 | 11 | 13.6% | m. 1, beat 4 |
-| V7 | 5 | 5 | 10 | 12.3% | m. 3, beat 4 |
-| vii° | 3 | 3 | 3 | 3.7% | m. 11, beat 3 |
-| IV | 2 | 2 | 8 | 9.9% | m. 10, beat 1 |
-| vii∅7 | 2 | 2 | 4 | 4.9% | m. 3, beat 2 |
-| iii | 1 | 1 | 1 | 1.2% | m. 11, beat 4 |
+| I | 10 | 6 | 40 | 54.8% | m. 2, beat 1 |
+| V7 | 5 | 5 | 10 | 13.7% | m. 3, beat 4 |
+| V | 4 | 4 | 7 | 9.6% | m. 1, beat 4 |
+| vii° | 3 | 3 | 3 | 4.1% | m. 11, beat 3 |
+| IV | 2 | 2 | 8 | 11.0% | m. 10, beat 1 |
+| vii∅7 | 2 | 2 | 4 | 5.5% | m. 3, beat 2 |
+| iii | 1 | 1 | 1 | 1.4% | m. 11, beat 4 |
 
 ### Bb major (region 1)
 
@@ -400,32 +407,34 @@ By base numeral (inversions together):
 
 | Numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| I | 2 | 2 | 8 | 33.3% | m. 23, beat 1 |
-| V7 | 2 | 2 | 7 | 29.2% | m. 22, beat 1 |
-| I6/4 | 2 | 2 | 6 | 25.0% | m. 24, beat 2 |
-| iii6 | 1 | 1 | 1 | 4.2% | m. 22, beat 4 |
-| vi6 | 1 | 1 | 1 | 4.2% | m. 25, beat 1 |
+| I | 3 | 3 | 12 | 37.5% | m. 21, beat 1 |
+| V7 | 2 | 2 | 7 | 21.9% | m. 22, beat 1 |
+| I6/4 | 2 | 2 | 6 | 18.8% | m. 24, beat 2 |
+| IV | 1 | 1 | 4 | 12.5% | m. 20, beat 1 |
+| iii6 | 1 | 1 | 1 | 3.1% | m. 22, beat 4 |
+| vi6 | 1 | 1 | 1 | 3.1% | m. 25, beat 1 |
 
 By base numeral (inversions together):
 
 | Base numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| I | 4 | 4 | 14 | 58.3% | m. 23, beat 1 |
-| V7 | 2 | 2 | 7 | 29.2% | m. 22, beat 1 |
-| iii | 1 | 1 | 1 | 4.2% | m. 22, beat 4 |
-| vi | 1 | 1 | 1 | 4.2% | m. 25, beat 1 |
+| I | 5 | 5 | 18 | 56.2% | m. 21, beat 1 |
+| V7 | 2 | 2 | 7 | 21.9% | m. 22, beat 1 |
+| IV | 1 | 1 | 4 | 12.5% | m. 20, beat 1 |
+| iii | 1 | 1 | 1 | 3.1% | m. 22, beat 4 |
+| vi | 1 | 1 | 1 | 3.1% | m. 25, beat 1 |
 
 **Applied chords**
 
 | Numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| vii°6/4/V | 1 | 1 | 1 | 4.2% | m. 24, beat 1 |
+| vii°6/4/V | 1 | 1 | 1 | 3.1% | m. 24, beat 1 |
 
 By base numeral (inversions together):
 
 | Base numeral | Count | Runs | Beats | Share | First |
 | --- | --- | --- | --- | --- | --- |
-| vii°/V | 1 | 1 | 1 | 4.2% | m. 24, beat 1 |
+| vii°/V | 1 | 1 | 1 | 3.1% | m. 24, beat 1 |
 
 ### F minor (region 2)
 
@@ -570,10 +579,10 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 19, beat 1 to m. 19, beat 2 | 270 | suspension | vii° |
 | m. 19, beat 2 to m. 20, beat 1 | 276 | appoggiatura | dominant7 |
 | m. 19, beat 2 to m. 20, beat 1 | 282 | appoggiatura | dominant7 |
-| m. 20, beat 1 to m. 21, beat 1 | 288 | unclassified | I |
-| m. 20, beat 1 to m. 21, beat 1 | 300 | unclassified | I |
-| m. 20, beat 1 to m. 21, beat 1 | 302 | unclassified | I |
-| m. 21, beat 1 to m. 22, beat 1 | 303 | unclassified | V |
+| m. 20, beat 1 to m. 21, beat 1 | 288 | unclassified | IV |
+| m. 20, beat 1 to m. 21, beat 1 | 300 | unclassified | IV |
+| m. 20, beat 1 to m. 21, beat 1 | 302 | unclassified | IV |
+| m. 21, beat 1 to m. 22, beat 1 | 303 | unclassified | I |
 | m. 22, beat 1 to m. 22, beat 4 | 321 | changing-tone | dominant7 |
 | m. 22, beat 1 to m. 22, beat 4 | 324 | changing-tone | dominant7 |
 | m. 22, beat 1 to m. 22, beat 4 | 333 | anticipation | dominant7 |
@@ -783,11 +792,11 @@ The library's standard-harmony analysis found 9 cadences from the chords, the me
 | Position | Type | Key | Soprano | Beat strength | Boundary |
 | --- | --- | --- | --- | --- | --- |
 | m. 3, beat 1 | half | Eb major | 1 | strong | no |
-| m. 7, beat 1 | half | Eb major | 6 | strong | no |
-| m. 19, beat 2 | half | Eb major | 6 | weak | no |
-| m. 27, beat 1 | imperfect-authentic | Bb major | 2 | strong | no |
-| m. 31, beat 1 | authentic-unspecified | F minor | 3 | strong | no |
-| m. 35, beat 1 | imperfect-authentic | Eb major | 3 | strong | no |
+| m. 7, beat 1 | half | Eb major | 6 | strong | yes |
+| m. 15, beat 1 | half | Eb major | 6 | strong | no |
+| m. 18, beat 1 | imperfect-authentic | Eb major | 2 | strong | no |
+| m. 26, beat 1 | half | Bb major | b6 | strong | no |
+| m. 34, beat 1 | half | Eb major | 7 | strong | yes |
 | m. 37, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
 | m. 57, beat 1 | half | Eb major | b6 | strong | no |
 | m. 61, beat 1 | half | Eb major | 6 | strong | yes |
@@ -796,21 +805,23 @@ The library's standard-harmony analysis found 9 cadences from the chords, the me
 
 A cadence the evidence does not settle has two readings, the likelier first, each with its share of the evidence.
 
+- m7 b1 half cadence (50%), or perfect authentic cadence at m8 b1 (50%)
+- m34 b1 half cadence (65%), or imperfect authentic cadence at m35 b1 (35%)
 - m61 b1 half cadence (65%), or imperfect authentic cadence at m62 b1 (35%)
 
 ### Cadence plan
 
 1. m. 3, beat 1: half in Eb major
 2. m. 7, beat 1: half in Eb major
-3. m. 19, beat 2: half in Eb major
-4. m. 27, beat 1: imperfect-authentic in Bb major
-5. m. 31, beat 1: authentic-unspecified in F minor
-6. m. 35, beat 1: imperfect-authentic in Eb major
+3. m. 15, beat 1: half in Eb major
+4. m. 18, beat 1: imperfect-authentic in Eb major
+5. m. 26, beat 1: half in Bb major
+6. m. 34, beat 1: half in Eb major
 7. m. 37, beat 1: perfect-authentic in Eb major
 8. m. 57, beat 1: half in Eb major
 9. m. 61, beat 1: half in Eb major
 
-**Counts:** half 5, imperfect-authentic 2, authentic-unspecified 1, perfect-authentic 1.
+**Counts:** half 7, imperfect-authentic 1, perfect-authentic 1.
 
 ## Phrases
 
@@ -820,11 +831,11 @@ The library's standard-form analysis found 12 phrases from the soprano, the mete
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | mm. 1 to 3 | 3 | half (m. 3, beat 1) | cadence | beginning | - |
 | 2 | mm. 4 to 7 | 4 | half (m. 7, beat 1) | cadence | middle | - |
-| 3 | mm. 8 to 19 | 12 | half (m. 19, beat 2) | cadence | middle | internal +4 (mm. 12 to 19) |
-| 4 | mm. 20 to 27 | 8 | imperfect-authentic (m. 27, beat 1) | cadence | middle | - |
-| 5 | mm. 28 to 31 | 4 | authentic-unspecified (m. 31, beat 1) | cadence | middle | - |
-| 6 | mm. 32 to 35 | 4 | imperfect-authentic (m. 35, beat 1) | cadence | middle | - |
-| 7 | mm. 36 to 37 | 2 | perfect-authentic (m. 37, beat 1) | cadence | middle | - |
+| 3 | mm. 8 to 15 | 8 | half (m. 15, beat 1) | cadence | middle | - |
+| 4 | mm. 16 to 18 | 3 | imperfect-authentic (m. 18, beat 1) | cadence | middle | - |
+| 5 | mm. 19 to 26 | 8 | half (m. 26, beat 1) | cadence | middle | - |
+| 6 | mm. 27 to 34 | 8 | half (m. 34, beat 1) | cadence | middle | - |
+| 7 | mm. 35 to 37 | 3 | perfect-authentic (m. 37, beat 1) | cadence | middle | - |
 | 8 | mm. 38 to 41 | 4 | none | discontinuity | middle | - |
 | 9 | mm. 42 to 57 | 16 | half (m. 57, beat 1) | cadence | middle | internal +8 (mm. 46 to 57) |
 | 10 | mm. 58 to 61 | 4 | half (m. 61, beat 1) | cadence | middle | - |
@@ -833,11 +844,11 @@ The library's standard-form analysis found 12 phrases from the soprano, the mete
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 3); phrase model D (m. 3, beat 1)
 - **Phrase 2:** ideas basic-idea (mm. 4 to 5), contrasting-idea (mm. 6 to 7); phrase model Tb (m. 4, beat 1), Tb (m. 5, beat 1), Tb (m. 6, beat 1), D (m. 7, beat 1)
-- **Phrase 3:** ideas basic-idea (mm. 8 to 9), contrasting-idea (mm. 10 to 11), contrasting-idea (mm. 12 to 13), contrasting-idea (mm. 14 to 15), contrasting-idea (mm. 16 to 17), contrasting-idea (mm. 18 to 19); subphrases mm. 8 to 11, mm. 12 to 19; phrase model Tb (m. 8, beat 1), Tb (m. 9, beat 1), D (m. 19, beat 2)
-- **Phrase 4:** ideas basic-idea (mm. 20 to 21), contrasting-idea (mm. 22 to 23), contrasting-idea (mm. 24 to 25), contrasting-idea (mm. 26 to 27); subphrases mm. 20 to 23, mm. 24 to 27; phrase model Tb (m. 20, beat 1), D (m. 26, beat 1), Te (m. 27, beat 1)
-- **Phrase 5:** ideas basic-idea (mm. 28 to 29), contrasting-idea (mm. 30 to 31)
-- **Phrase 6:** ideas basic-idea (mm. 32 to 33), contrasting-idea (mm. 34 to 35); phrase model PD (m. 33, beat 3), D (m. 34, beat 1), Te (m. 35, beat 1)
-- **Phrase 7:** ideas basic-idea (mm. 36 to 37); phrase model D (m. 36, beat 4), Te (m. 37, beat 1)
+- **Phrase 3:** ideas basic-idea (mm. 8 to 9), contrasting-idea (mm. 10 to 11), contrasting-idea (mm. 12 to 13), contrasting-idea (mm. 14 to 15); subphrases mm. 8 to 11, mm. 12 to 15; phrase model Tb (m. 8, beat 1), Tb (m. 9, beat 1), PD (m. 14, beat 1), D (m. 15, beat 1)
+- **Phrase 4:** ideas basic-idea (mm. 16 to 18); phrase model Tb (m. 16, beat 1), D (m. 17, beat 2), Te (m. 18, beat 1)
+- **Phrase 5:** ideas basic-idea (mm. 19 to 20), contrasting-idea (mm. 21 to 22), contrasting-idea (mm. 23 to 24), contrasting-idea (mm. 25 to 26); subphrases mm. 19 to 22, mm. 23 to 26; phrase model D (m. 26, beat 1)
+- **Phrase 6:** ideas basic-idea (mm. 27 to 28), contrasting-idea (mm. 29 to 30), contrasting-idea (mm. 31 to 32), contrasting-idea (mm. 33 to 34); subphrases mm. 27 to 30, mm. 31 to 34; phrase model Tb (m. 27, beat 1), PD (m. 33, beat 3), D (m. 34, beat 1)
+- **Phrase 7:** ideas basic-idea (mm. 35 to 37); phrase model Tb (m. 35, beat 1), D (m. 36, beat 4), Te (m. 37, beat 1)
 - **Phrase 8:** ideas basic-idea (mm. 38 to 39), contrasting-idea (mm. 40 to 41)
 - **Phrase 9:** ideas basic-idea (mm. 42 to 43), contrasting-idea (mm. 44 to 45), contrasting-idea (mm. 46 to 47), contrasting-idea (mm. 48 to 49), contrasting-idea (mm. 50 to 51), contrasting-idea (mm. 52 to 53), contrasting-idea (mm. 54 to 55), contrasting-idea (mm. 56 to 57); subphrases mm. 42 to 45, mm. 46 to 57; phrase model Tb (m. 42, beat 1), PD (m. 56, beat 1), D (m. 57, beat 1)
 - **Phrase 10:** ideas basic-idea (mm. 58 to 59), contrasting-idea (mm. 60 to 61); phrase model Tb (m. 58, beat 1), D (m. 61, beat 1)
@@ -846,61 +857,61 @@ The library's standard-form analysis found 12 phrases from the soprano, the mete
 
 ## Themes
 
-The library's standard-form analysis found 3 themes from the phrases, their ideas and the cadences. Form is the library's name for the pairing of the two parts; Commonality is how common that pairing is; Traits are what the library finds in the continuation.
+The library's standard-form analysis found 4 themes from the phrases, their ideas and the cadences. Form is the library's name for the pairing of the two parts; Commonality is how common that pairing is; Traits are what the library finds in the continuation.
 
 | Theme | Form | Commonality | Measures | Length | Parts | Traits |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | hybrid | slightly-less-common | mm. 8 to 19 | 12 | compound-basic-idea (mm. 8 to 11), continuation (mm. 12 to 19, half (m. 19, beat 2)) | - |
-| 2 | hybrid | slightly-less-common | mm. 20 to 27 | 8 | compound-basic-idea (mm. 20 to 23), continuation (mm. 24 to 27, imperfect-authentic (m. 27, beat 1)) | - |
-| 3 | hybrid | slightly-less-common | mm. 42 to 57 | 16 | compound-basic-idea (mm. 42 to 45), continuation (mm. 46 to 57, half (m. 57, beat 1)) | - |
+| 1 | hybrid | slightly-less-common | mm. 8 to 15 | 8 | compound-basic-idea (mm. 8 to 11), continuation (mm. 12 to 15, half (m. 15, beat 1)) | - |
+| 2 | hybrid | slightly-less-common | mm. 19 to 26 | 8 | compound-basic-idea (mm. 19 to 22), continuation (mm. 23 to 26, half (m. 26, beat 1)) | - |
+| 3 | hybrid | slightly-less-common | mm. 27 to 34 | 8 | compound-basic-idea (mm. 27 to 30), continuation (mm. 31 to 34, half (m. 34, beat 1)) | - |
+| 4 | hybrid | slightly-less-common | mm. 42 to 57 | 16 | compound-basic-idea (mm. 42 to 45), continuation (mm. 46 to 57, half (m. 57, beat 1)) | - |
 
 ## Form plan
 
-The kernel's form structure detection grouped the phrases into 4 sections, closing a section at each phrase that ends on a perfect or imperfect authentic cadence; the phrases after the last such cadence form the last section. Sections are lettered by first appearance, and a section whose opening theme returns an earlier section's material takes that letter with a prime. Key is the key the section opens in.
+The kernel's form structure detection grouped the phrases into 3 sections, closing a section at each phrase that ends on a perfect or imperfect authentic cadence; the phrases after the last such cadence form the last section. Sections are lettered by first appearance, and a section whose opening theme returns an earlier section's material takes that letter with a prime. Key is the key the section opens in.
 
 | Section | Measures | Key | Phrases | Closing cadence | Returns |
 | --- | --- | --- | --- | --- | --- |
-| A | mm. 1 to 27 | Eb major | 1 to 4 | imperfect-authentic (m. 27, beat 1) | - |
-| B | mm. 28 to 35 | F minor | 5 to 6 | imperfect-authentic (m. 35, beat 1) | - |
-| C | mm. 36 to 37 | Eb major | 7 | perfect-authentic (m. 37, beat 1) | - |
-| D | mm. 38 to 67 | Eb major | 8 to 12 | none | - |
+| A | mm. 1 to 18 | Eb major | 1 to 4 | imperfect-authentic (m. 18, beat 1) | - |
+| B | mm. 19 to 37 | Eb major | 5 to 7 | perfect-authentic (m. 37, beat 1) | - |
+| C | mm. 38 to 67 | Eb major | 8 to 12 | none | - |
 
 ### Outline
 
 - form (mm. 1 to 67)
-  - section A (mm. 1 to 27, Eb major)
+  - section A (mm. 1 to 18, Eb major)
     - phrase 1 (mm. 1 to 3)
       - idea basic-idea (mm. 1 to 3)
     - phrase 2 (mm. 4 to 7)
       - idea basic-idea (mm. 4 to 5)
       - idea contrasting-idea (mm. 6 to 7)
-    - phrase 3 (mm. 8 to 19)
+    - phrase 3 (mm. 8 to 15)
       - subphrase 1 (mm. 8 to 11)
         - idea basic-idea (mm. 8 to 9)
         - idea contrasting-idea (mm. 10 to 11)
-      - subphrase 2 (mm. 12 to 19)
+      - subphrase 2 (mm. 12 to 15)
         - idea contrasting-idea (mm. 12 to 13)
         - idea contrasting-idea (mm. 14 to 15)
-        - idea contrasting-idea (mm. 16 to 17)
-        - idea contrasting-idea (mm. 18 to 19)
-    - phrase 4 (mm. 20 to 27)
-      - subphrase 1 (mm. 20 to 23)
-        - idea basic-idea (mm. 20 to 21)
-        - idea contrasting-idea (mm. 22 to 23)
-      - subphrase 2 (mm. 24 to 27)
-        - idea contrasting-idea (mm. 24 to 25)
-        - idea contrasting-idea (mm. 26 to 27)
-  - section B (mm. 28 to 35, F minor)
-    - phrase 5 (mm. 28 to 31)
-      - idea basic-idea (mm. 28 to 29)
-      - idea contrasting-idea (mm. 30 to 31)
-    - phrase 6 (mm. 32 to 35)
-      - idea basic-idea (mm. 32 to 33)
-      - idea contrasting-idea (mm. 34 to 35)
-  - section C (mm. 36 to 37, Eb major)
-    - phrase 7 (mm. 36 to 37)
-      - idea basic-idea (mm. 36 to 37)
-  - section D (mm. 38 to 67, Eb major)
+    - phrase 4 (mm. 16 to 18)
+      - idea basic-idea (mm. 16 to 18)
+  - section B (mm. 19 to 37, Eb major)
+    - phrase 5 (mm. 19 to 26)
+      - subphrase 1 (mm. 19 to 22)
+        - idea basic-idea (mm. 19 to 20)
+        - idea contrasting-idea (mm. 21 to 22)
+      - subphrase 2 (mm. 23 to 26)
+        - idea contrasting-idea (mm. 23 to 24)
+        - idea contrasting-idea (mm. 25 to 26)
+    - phrase 6 (mm. 27 to 34)
+      - subphrase 1 (mm. 27 to 30)
+        - idea basic-idea (mm. 27 to 28)
+        - idea contrasting-idea (mm. 29 to 30)
+      - subphrase 2 (mm. 31 to 34)
+        - idea contrasting-idea (mm. 31 to 32)
+        - idea contrasting-idea (mm. 33 to 34)
+    - phrase 7 (mm. 35 to 37)
+      - idea basic-idea (mm. 35 to 37)
+  - section C (mm. 38 to 67, Eb major)
     - phrase 8 (mm. 38 to 41)
       - idea basic-idea (mm. 38 to 39)
       - idea contrasting-idea (mm. 40 to 41)
@@ -930,7 +941,7 @@ The library's motive analysis found 1 motive family in the soprano, the highest 
 
 | Family | Notes | Degrees | Pattern | Occurrences | Measures | Phrases | Transformations |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 4 | 1 1 b3 1 | scale steps | 3 | 31, 50, 58 | 5, 9, 10 | exact 1, real-transposed 2 |
+| 1 | 4 | 1 1 b3 1 | scale steps | 3 | 31, 50, 58 | 6, 9, 10 | exact 1, real-transposed 2 |
 
 ## Melody
 
@@ -940,11 +951,11 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | mm. 1 to 3 | 6 | A#4 to F5 (7) | F5, m. 2, beat 4.02 | 2 | 3 | 0 | 3 | 2 |
 | 2 | mm. 4 to 7 | 7 | D#5 to C6 (9) | C6, m. 7, beat 1.97 | 4 | 2 | 0 | 2 | 4 |
-| 3 | mm. 8 to 19 | 28 | B4 to C6 (13) | C6, m. 15, beat 2.15, 3 notes | 8 | 16 | 3 | 14 | 8 |
-| 4 | mm. 20 to 27 | 19 | D#5 to D#6 (12) | D#6, m. 22, beat 2.09 | 8 | 8 | 1 | 12 | 3 |
-| 5 | mm. 28 to 31 | 11 | F4 to G#5 (15) | G#5, m. 29, beat 1.02, 4 notes | 3 | 2 | 4 | 5 | 0 |
-| 6 | mm. 32 to 35 | 11 | D4 to G5 (17) | G5, m. 32, beat 3.02, 2 notes | 4 | 4 | 2 | 6 | 2 |
-| 7 | mm. 36 to 37 | 4 | G#5 to D#6 (7) | D#6, m. 37, beat 1.99, 2 notes | 1 | 0 | 2 | 0 | 1 |
+| 3 | mm. 8 to 15 | 17 | B4 to C6 (13) | C6, m. 15, beat 2.15 | 4 | 10 | 2 | 9 | 3 |
+| 4 | mm. 16 to 18 | 8 | D#5 to C6 (9) | C6, m. 17, beat 1.71 | 3 | 3 | 1 | 4 | 2 |
+| 5 | mm. 19 to 26 | 21 | D#5 to D#6 (12) | D#6, m. 22, beat 2.09 | 9 | 9 | 1 | 12 | 5 |
+| 6 | mm. 27 to 34 | 21 | D4 to A#5 (20) | A#5, m. 27, beat 2.01 | 7 | 7 | 5 | 11 | 3 |
+| 7 | mm. 35 to 37 | 6 | D#5 to D#6 (12) | D#6, m. 37, beat 1.99, 2 notes | 2 | 0 | 3 | 0 | 2 |
 | 8 | mm. 38 to 41 | 13 | F5 to G#6 (15) | G#6, m. 38, beat 1.34 | 4 | 8 | 0 | 7 | 5 |
 | 9 | mm. 42 to 57 | 47 | F4 to G6 (26) | G6, m. 43, beat 1.97, 2 notes | 18 | 25 | 2 | 12 | 28 |
 | 10 | mm. 58 to 61 | 15 | G4 to G6 (24) | G6, m. 60, beat 3.39 | 3 | 10 | 1 | 6 | 5 |
@@ -959,11 +970,11 @@ A leap is an interval of a third or larger. The library's rule asks a leap of a 
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | 2 | 0 | 1 | 1 | 0 | 0 |
 | 2 | 4 | 2 | 0 | 2 | 0 | 1 |
-| 3 | 8 | 4 | 1 | 3 | 0 | 0 |
-| 4 | 3 | 2 | 1 | 0 | 0 | 0 |
-| 5 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 6 | 2 | 1 | 0 | 1 | 0 | 0 |
-| 7 | 1 | 0 | 1 | 0 | 0 | 0 |
+| 3 | 3 | 1 | 0 | 1 | 1 | 0 |
+| 4 | 2 | 1 | 0 | 1 | 0 | 0 |
+| 5 | 5 | 2 | 1 | 0 | 2 | 0 |
+| 6 | 3 | 1 | 1 | 1 | 0 | 0 |
+| 7 | 2 | 0 | 2 | 0 | 0 | 0 |
 | 8 | 5 | 1 | 1 | 3 | 0 | 2 |
 | 9 | 28 | 3 | 11 | 13 | 1 | 16 |
 | 10 | 5 | 0 | 4 | 1 | 0 | 1 |
@@ -978,11 +989,11 @@ Each melody note is set against the chord of the segment it starts in, as the li
 | --- | --- | --- | --- | --- | --- |
 | 1 | 6 | 4 | 2 | 0 | passing 1, neighbor 1 |
 | 2 | 7 | 5 | 1 | 1 | appoggiatura 1 |
-| 3 | 28 | 15 | 9 | 4 | passing 5, neighbor 1, appoggiatura 3 |
-| 4 | 19 | 11 | 3 | 5 | passing 1, neighbor 2 |
-| 5 | 11 | 9 | 1 | 1 | neighbor 1 |
-| 6 | 11 | 8 | 3 | 0 | passing 2, escape-tone 1 |
-| 7 | 4 | 4 | 0 | 0 | - |
+| 3 | 17 | 9 | 6 | 2 | passing 5, neighbor 1 |
+| 4 | 8 | 5 | 2 | 1 | appoggiatura 2 |
+| 5 | 21 | 11 | 4 | 6 | passing 1, neighbor 2, appoggiatura 1 |
+| 6 | 21 | 16 | 4 | 1 | passing 2, neighbor 1, escape-tone 1 |
+| 7 | 6 | 6 | 0 | 0 | - |
 | 8 | 13 | 6 | 3 | 4 | neighbor 2, appoggiatura 1 |
 | 9 | 47 | 33 | 6 | 8 | passing 2, appoggiatura 3, escape-tone 1 |
 | 10 | 15 | 10 | 3 | 2 | passing 2, appoggiatura 1 |
@@ -997,10 +1008,10 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | does not hold | holds | holds | holds | holds | 0 | 1 (m. 3, beat 2.98) |
 | 2 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
-| 3 | does not hold | holds | holds | does not hold | holds | 0 | 2 (m. 10, beat 1.08; m. 14, beat 1.03) |
-| 4 | holds | holds | does not hold | does not hold | holds | 0 | 2 (m. 22, beat 3.97; m. 23, beat 3.37) |
-| 5 | does not hold | does not hold | holds | does not hold | holds | 0 | 0 |
-| 6 | does not hold | holds | holds | does not hold | does not hold | 0 | 3 (m. 32, beat 1.33; m. 32, beat 2.33; m. 34, beat 1.04) |
+| 3 | holds | holds | holds | does not hold | does not hold | 0 | 2 (m. 10, beat 1.08; m. 14, beat 1.03) |
+| 4 | holds | holds | holds | holds | holds | 0 | 0 |
+| 5 | holds | holds | does not hold | does not hold | holds | 0 | 2 (m. 22, beat 3.97; m. 23, beat 3.37) |
+| 6 | does not hold | does not hold | holds | does not hold | does not hold | 0 | 3 (m. 32, beat 1.33; m. 32, beat 2.33; m. 34, beat 1.04) |
 | 7 | does not hold | holds | holds | holds | does not hold | 0 | 0 |
 | 8 | holds | holds | does not hold | does not hold | does not hold | 0 | 0 |
 | 9 | does not hold | holds | holds | does not hold | does not hold | 0 | 6 (m. 44, beat 4.93; m. 45, beat 3.01; m. 48, beat 3.83; m. 49, beat 3; m. 52, beat 1.02; m. 56, beat 1.01) |
@@ -1020,16 +1031,16 @@ Each family's occurrences in time order, as the measure they start in and the ki
 
 | Rank | Progression | Count | Measures |
 | --- | --- | --- | --- |
-| 1 | V7 > I | 14 | mm. 3 to 6, mm. 15 to 16, mm. 17 to 18, mm. 19 to 20, mm. 26 to 27, mm. 36 to 37, mm. 38 to 39, mm. 45 to 49, mm. 49 to 50, mm. 57 to 58, mm. 59 to 60, mm. 61 to 62, mm. 63 to 64, mm. 65 to 67 |
-| 2 | I > V7 | 5 | mm. 25 to 26, mm. 35 to 36, mm. 37 to 38, mm. 58 to 59, mm. 60 to 61 |
-| 3 | vii° > V7 > I | 4 | mm. 17 to 18, mm. 19 to 20, mm. 36 to 37, mm. 49 to 50 |
-| 4 | I > V7 > I | 4 | mm. 25 to 27, mm. 37 to 39, mm. 58 to 60, mm. 60 to 62 |
-| 5 | iii > I | 4 | mm. 11 to 13, mm. 22 to 23, mm. 32 to 33, mm. 53 to 54 |
-| 6 | V7 > I > vii° > V7 > I | 3 | mm. 15 to 18, mm. 17 to 20, mm. 45 to 50 |
-| 7 | V > vii∅7 > V7 > I | 3 | mm. 3 to 6, mm. 15 to 16, mm. 45 to 49 |
+| 1 | V7 > I | 13 | mm. 3 to 6, mm. 15 to 16, mm. 17 to 18, mm. 26 to 27, mm. 36 to 37, mm. 38 to 39, mm. 45 to 49, mm. 49 to 50, mm. 57 to 58, mm. 59 to 60, mm. 61 to 62, mm. 63 to 64, mm. 65 to 67 |
+| 2 | I > V7 | 6 | mm. 21 to 22, mm. 25 to 26, mm. 35 to 36, mm. 37 to 38, mm. 58 to 59, mm. 60 to 61 |
+| 3 | I > V7 > I | 4 | mm. 25 to 27, mm. 37 to 39, mm. 58 to 60, mm. 60 to 62 |
+| 4 | iii > I | 4 | mm. 11 to 13, mm. 22 to 23, mm. 32 to 33, mm. 53 to 54 |
+| 5 | vii° > V7 | 4 | m. 17, m. 19, m. 36, m. 49 |
+| 6 | V > vii∅7 > V7 > I | 3 | mm. 3 to 6, mm. 15 to 16, mm. 45 to 49 |
+| 7 | V7 > I > vii° > V7 | 3 | mm. 15 to 17, mm. 17 to 19, mm. 45 to 49 |
 | 8 | V7 > I > V7 > I | 3 | mm. 36 to 39, mm. 57 to 60, mm. 59 to 62 |
-| 9 | V > I | 3 | mm. 1 to 2, mm. 7 to 9, mm. 34 to 35 |
-| 10 | I > V | 3 | mm. 2 to 3, mm. 4 to 7, mm. 20 to 21 |
+| 9 | vii° > V7 > I | 3 | mm. 17 to 18, mm. 36 to 37, mm. 49 to 50 |
+| 10 | V > I | 3 | mm. 1 to 2, mm. 7 to 9, mm. 34 to 35 |
 
 ## Harmonic rhythm
 
@@ -1065,17 +1076,17 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 | --- | --- | --- | --- | --- |
 | 1 | m. 3 | none | 1 | no |
 | 2 | m. 7 | 2 | 0 | no |
-| 3 | m. 19 | 2 | 1.5 | no |
-| 4 | m. 27 | 1.5 | 1.5 | no |
-| 5 | m. 31 | 2 | 1 | no |
-| 6 | m. 35 | 1 | 1.5 | yes |
+| 3 | m. 15 | 2 | 0.5 | no |
+| 4 | m. 18 | 2 | 1.5 | no |
+| 5 | m. 26 | 1.5 | 2 | yes |
+| 6 | m. 34 | 1 | 1.5 | yes |
 | 7 | m. 37 | 1.5 | 2 | yes |
 | 8 | m. 57 | 1 | 2 | yes |
 | 9 | m. 61 | 2 | 1 | no |
 
 ## Rhythm and meter
 
-**Meter fit:** 12/8, scale 1, no pickup (fit 0.86); no better reading found
+**Meter fit:** 12/8, scale 1, no pickup (fit 0.91); no better reading found
 
 ### Density
 
@@ -1091,26 +1102,26 @@ The library's density profile of each phrase, for all its notes and for each lin
 | 2 | mm. 4 to 7 | soprano | 7 | 7 | 0.44 | 0.5 | 0.87 | 28.6% | 89/240 (1), 31/80 (1), 187/480 (1), 23/40 (1), 3/4 (1), 37/32 (1), 643/480 (1) |
 | 2 | mm. 4 to 7 | bass | 16 | 16 | 1 | 1 | 0.38 | 100.0% | 1/8 (5), 1/4 (7), 3/8 (4) |
 | 2 | mm. 4 to 7 | other | 34 | 34 | 2.12 | 2.5 | 0.17 | 2.9% | 1/8 (20), 1/4 (12), 35/96 (1), 13/32 (1) |
-| 3 | mm. 8 to 19 | all | 201 | 192 | 4 | 5.5 | 0.09 | 25.0% | 11/480 (1), 1/32 (3), 17/480 (2), 11/240 (1), 23/480 (2), 1/20 (2), 1/16 (1), 11/160 (1), 3/40 (1), 19/160 (1), 1/8 (92), 13/96 (2), 17/120 (1), 23/160 (1), 73/480 (4), 5/32 (1), ... |
-| 3 | mm. 8 to 19 | soprano | 29 | 29 | 0.6 | 1 | 0.64 | 6.9% | 17/480 (1), 11/240 (1), 1/20 (1), 1/16 (1), 19/160 (1), 1/8 (1), 13/96 (1), 17/120 (1), 23/160 (1), 73/480 (2), 5/32 (1), 7/30 (1), 29/80 (1), 89/240 (1), 3/8 (1), 19/48 (1), ... |
-| 3 | mm. 8 to 19 | bass | 47 | 47 | 0.98 | 1.25 | 0.39 | 97.9% | 1/8 (18), 1/4 (20), 3/8 (9) |
-| 3 | mm. 8 to 19 | other | 125 | 122 | 2.54 | 3.5 | 0.15 | 3.3% | 11/480 (1), 1/32 (3), 17/480 (1), 23/480 (2), 1/20 (1), 11/160 (1), 3/40 (1), 1/8 (73), 13/96 (1), 73/480 (2), 13/80 (3), 43/240 (1), 101/480 (1), 7/32 (1), 23/96 (1), 39/160 (1), ... |
-| 4 | mm. 20 to 27 | all | 134 | 121 | 3.78 | 4.75 | 0.1 | 25.6% | 1/32 (1), 3/80 (1), 19/480 (1), 7/160 (1), 13/240 (1), 7/120 (2), 19/240 (1), 3/32 (4), 47/480 (1), 49/480 (1), 53/480 (1), 9/80 (1), 19/160 (1), 29/240 (1), 1/8 (53), 13/96 (1), ... |
-| 4 | mm. 20 to 27 | soprano | 18 | 18 | 0.56 | 1 | 0.57 | 16.7% | 19/480 (1), 7/120 (1), 3/32 (1), 49/480 (1), 9/80 (1), 1/8 (1), 13/96 (1), 67/480 (1), 1/4 (1), 3/8 (1), 91/240 (1), 23/60 (1), 37/96 (1), 187/480 (1), 343/480 (1), 73/96 (1), ... |
-| 4 | mm. 20 to 27 | bass | 30 | 30 | 0.94 | 1 | 0.4 | 96.7% | 1/8 (12), 17/120 (1), 1/4 (17) |
-| 4 | mm. 20 to 27 | other | 86 | 82 | 2.56 | 3.25 | 0.15 | 7.3% | 1/32 (1), 3/80 (1), 7/160 (1), 13/240 (1), 7/120 (1), 19/240 (1), 3/32 (3), 47/480 (1), 53/480 (1), 19/160 (1), 29/240 (1), 1/8 (40), 11/80 (1), 3/20 (1), 5/32 (1), 17/80 (1), ... |
-| 5 | mm. 28 to 31 | all | 61 | 58 | 3.62 | 4 | 0.1 | 27.6% | 1/32 (1), 1/8 (30), 3/16 (1), 23/120 (1), 9/40 (1), 1/4 (19), 133/480 (1), 29/80 (1), 89/240 (1), 3/8 (1), 91/240 (1), 61/160 (1), 199/480 (1), 99/160 (1) |
-| 5 | mm. 28 to 31 | soprano | 11 | 11 | 0.69 | 0.75 | 0.54 | 27.3% | 1/32 (1), 1/8 (1), 3/16 (1), 23/120 (1), 9/40 (1), 1/4 (1), 29/80 (1), 89/240 (1), 3/8 (1), 199/480 (1), 99/160 (1) |
-| 5 | mm. 28 to 31 | bass | 15 | 15 | 0.94 | 1.25 | 0.4 | 93.3% | 1/8 (8), 1/4 (7) |
-| 5 | mm. 28 to 31 | other | 35 | 35 | 2.19 | 2.5 | 0.17 | 5.7% | 1/8 (21), 1/4 (11), 133/480 (1), 91/240 (1), 61/160 (1) |
-| 6 | mm. 32 to 35 | all | 60 | 57 | 3.56 | 3.75 | 0.11 | 28.1% | 9/80 (1), 11/96 (1), 1/8 (35), 73/480 (1), 5/32 (1), 1/4 (13), 173/480 (1), 89/240 (2), 47/120 (1), 13/32 (1), 99/160 (1), 15/16 (1), 177/160 (1) |
-| 6 | mm. 32 to 35 | soprano | 11 | 11 | 0.69 | 1 | 0.55 | 18.2% | 11/96 (1), 1/8 (1), 5/32 (1), 1/4 (1), 173/480 (1), 89/240 (1), 47/120 (1), 13/32 (1), 99/160 (1), 15/16 (1), 177/160 (1) |
-| 6 | mm. 32 to 35 | bass | 16 | 16 | 1 | 1 | 0.38 | 100.0% | 1/8 (8), 1/4 (8) |
-| 6 | mm. 32 to 35 | other | 33 | 33 | 2.06 | 2.5 | 0.18 | 0.0% | 9/80 (1), 1/8 (26), 73/480 (1), 1/4 (4), 89/240 (1) |
-| 7 | mm. 36 to 37 | all | 34 | 31 | 3.88 | 4 | 0.1 | 25.8% | 3/32 (1), 17/160 (1), 13/120 (1), 53/480 (1), 9/80 (1), 1/8 (19), 21/160 (1), 71/480 (1), 7/32 (1), 1/4 (5), 5/8 (1), 151/240 (1) |
-| 7 | mm. 36 to 37 | soprano | 4 | 4 | 0.5 | 0.5 | 0.75 | 25.0% | 53/480 (1), 71/480 (1), 5/8 (1), 151/240 (1) |
-| 7 | mm. 36 to 37 | bass | 8 | 8 | 1 | 1 | 0.38 | 100.0% | 1/8 (4), 1/4 (4) |
-| 7 | mm. 36 to 37 | other | 22 | 21 | 2.62 | 3 | 0.14 | 4.8% | 3/32 (1), 17/160 (1), 13/120 (1), 9/80 (1), 1/8 (15), 21/160 (1), 7/32 (1), 1/4 (1) |
+| 3 | mm. 8 to 15 | all | 126 | 121 | 3.78 | 4.5 | 0.1 | 26.4% | 11/480 (1), 1/32 (3), 17/480 (2), 11/240 (1), 23/480 (2), 1/20 (1), 1/16 (1), 1/8 (49), 23/160 (1), 7/32 (1), 1/4 (38), 41/160 (1), 5/16 (1), 43/120 (1), 29/80 (1), 59/160 (1), ... |
+| 3 | mm. 8 to 15 | soprano | 17 | 17 | 0.53 | 0.75 | 0.68 | 11.8% | 17/480 (1), 11/240 (1), 1/16 (1), 23/160 (1), 29/80 (1), 89/240 (1), 3/8 (1), 19/48 (1), 13/32 (1), 33/80 (1), 47/96 (1), 151/240 (1), 101/160 (1), 111/160 (1), 89/120 (1), 9/8 (1), ... |
+| 3 | mm. 8 to 15 | bass | 30 | 30 | 0.94 | 1 | 0.4 | 100.0% | 1/8 (8), 1/4 (13), 3/8 (9) |
+| 3 | mm. 8 to 15 | other | 79 | 78 | 2.44 | 3.25 | 0.15 | 5.1% | 11/480 (1), 1/32 (3), 17/480 (1), 23/480 (2), 1/20 (1), 1/8 (41), 7/32 (1), 1/4 (25), 41/160 (1), 5/16 (1), 43/120 (1), 59/160 (1) |
+| 4 | mm. 16 to 18 | all | 56 | 55 | 4.58 | 5.5 | 0.08 | 21.8% | 1/20 (1), 11/160 (1), 3/40 (1), 19/160 (1), 1/8 (31), 13/96 (2), 17/120 (1), 73/480 (3), 13/80 (2), 43/240 (1), 101/480 (1), 7/30 (1), 23/96 (1), 39/160 (1), 1/4 (6), 49/80 (1), ... |
+| 4 | mm. 16 to 18 | soprano | 9 | 9 | 0.75 | 1 | 0.55 | 0.0% | 1/20 (1), 19/160 (1), 1/8 (1), 13/96 (1), 17/120 (1), 73/480 (1), 7/30 (1), 49/80 (1), 9/10 (1) |
+| 4 | mm. 16 to 18 | bass | 12 | 12 | 1 | 1 | 0.38 | 100.0% | 1/8 (7), 1/4 (5) |
+| 4 | mm. 16 to 18 | other | 35 | 35 | 2.92 | 3.5 | 0.12 | 0.0% | 11/160 (1), 3/40 (1), 1/8 (23), 13/96 (1), 73/480 (2), 13/80 (2), 43/240 (1), 101/480 (1), 23/96 (1), 39/160 (1), 1/4 (1) |
+| 5 | mm. 19 to 26 | all | 140 | 125 | 3.91 | 4.75 | 0.1 | 24.8% | 1/32 (1), 3/80 (1), 19/480 (1), 7/160 (1), 13/240 (1), 7/120 (2), 19/240 (1), 3/32 (4), 47/480 (1), 49/480 (1), 53/480 (1), 9/80 (1), 19/160 (1), 29/240 (1), 1/8 (59), 13/96 (1), ... |
+| 5 | mm. 19 to 26 | soprano | 20 | 20 | 0.62 | 1 | 0.61 | 10.0% | 19/480 (1), 7/120 (1), 3/32 (1), 49/480 (1), 9/80 (1), 1/8 (1), 13/96 (1), 67/480 (1), 73/480 (1), 5/32 (1), 1/4 (1), 3/8 (1), 91/240 (1), 23/60 (1), 37/96 (1), 187/480 (1), ... |
+| 5 | mm. 19 to 26 | bass | 31 | 31 | 0.97 | 1.25 | 0.39 | 93.5% | 1/8 (14), 17/120 (1), 1/4 (16) |
+| 5 | mm. 19 to 26 | other | 89 | 83 | 2.59 | 3.25 | 0.14 | 7.2% | 1/32 (1), 3/80 (1), 7/160 (1), 13/240 (1), 7/120 (1), 19/240 (1), 3/32 (3), 47/480 (1), 53/480 (1), 19/160 (1), 29/240 (1), 1/8 (44), 11/80 (1), 3/20 (1), 5/32 (1), 13/80 (1), ... |
+| 6 | mm. 27 to 34 | all | 118 | 112 | 3.5 | 4 | 0.11 | 28.6% | 1/32 (1), 1/8 (61), 5/32 (1), 3/16 (1), 23/120 (1), 9/40 (1), 1/4 (36), 133/480 (1), 173/480 (1), 29/80 (1), 89/240 (3), 3/8 (1), 91/240 (1), 61/160 (1), 47/120 (1), 13/32 (1), ... |
+| 6 | mm. 27 to 34 | soprano | 21 | 21 | 0.66 | 1 | 0.56 | 23.8% | 1/32 (1), 1/8 (2), 5/32 (1), 3/16 (1), 23/120 (1), 9/40 (1), 1/4 (2), 173/480 (1), 29/80 (1), 89/240 (2), 3/8 (1), 47/120 (1), 13/32 (1), 199/480 (1), 99/160 (2), 25/32 (1), ... |
+| 6 | mm. 27 to 34 | bass | 31 | 31 | 0.97 | 1.25 | 0.39 | 96.8% | 1/8 (15), 1/4 (16) |
+| 6 | mm. 27 to 34 | other | 66 | 66 | 2.06 | 2.5 | 0.18 | 3.0% | 1/8 (44), 1/4 (18), 133/480 (1), 89/240 (1), 91/240 (1), 61/160 (1) |
+| 7 | mm. 35 to 37 | all | 50 | 46 | 3.83 | 4 | 0.1 | 26.1% | 3/32 (1), 17/160 (1), 13/120 (1), 53/480 (1), 9/80 (2), 11/96 (1), 1/8 (29), 21/160 (1), 71/480 (1), 73/480 (1), 7/32 (1), 1/4 (7), 5/8 (1), 151/240 (1), 15/16 (1) |
+| 7 | mm. 35 to 37 | soprano | 6 | 6 | 0.5 | 0.5 | 0.83 | 33.3% | 53/480 (1), 11/96 (1), 71/480 (1), 5/8 (1), 151/240 (1), 15/16 (1) |
+| 7 | mm. 35 to 37 | bass | 12 | 12 | 1 | 1 | 0.38 | 100.0% | 1/8 (6), 1/4 (6) |
+| 7 | mm. 35 to 37 | other | 32 | 31 | 2.58 | 3 | 0.14 | 3.2% | 3/32 (1), 17/160 (1), 13/120 (1), 9/80 (2), 1/8 (23), 21/160 (1), 73/480 (1), 7/32 (1), 1/4 (1) |
 | 8 | mm. 38 to 41 | all | 96 | 78 | 4.88 | 5.25 | 0.08 | 20.5% | 1/240 (1), 7/480 (1), 1/32 (1), 1/24 (1), 23/480 (1), 5/96 (1), 9/160 (1), 1/16 (1), 1/15 (1), 11/160 (1), 37/480 (1), 43/480 (1), 3/32 (4), 47/480 (1), 53/480 (2), 9/80 (1), ... |
 | 8 | mm. 38 to 41 | soprano | 13 | 13 | 0.81 | 1 | 0.47 | 15.4% | 1/24 (1), 5/96 (1), 9/160 (1), 1/16 (1), 43/480 (1), 1/8 (1), 11/80 (1), 5/32 (2), 13/80 (1), 11/30 (1), 7/16 (1), 19/30 (1) |
 | 8 | mm. 38 to 41 | bass | 17 | 17 | 1.06 | 1.25 | 0.36 | 94.1% | 1/8 (5), 1/4 (11), 3/8 (1) |
@@ -1297,11 +1308,11 @@ The library reads each phrase in hypermeasures of two or four measures: the leng
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | mm. 1 to 3 | 2 | 1, 3 | 1 regular, 1 short | m. 3 | 0.83 |
 | 2 | mm. 4 to 7 | 4 | 4 | 1 regular | m. 7 | 1 |
-| 3 | mm. 8 to 19 | 4 | 8, 12 | 1 regular, 1 expanded | m. 15 | 1 |
-| 4 | mm. 20 to 27 | 4 | 20, 24 | 2 regular | m. 27 | 1 |
-| 5 | mm. 28 to 31 | 4 | 28 | 1 regular | m. 31 | 1 |
-| 6 | mm. 32 to 35 | 4 | 32 | 1 regular | m. 35 | 1 |
-| 7 | mm. 36 to 37 | 2 | 36 | 1 regular | m. 37 | 1 |
+| 3 | mm. 8 to 15 | 4 | 8, 12 | 2 regular | m. 15 | 1 |
+| 4 | mm. 16 to 18 | 2 | 16, 18 | 1 regular, 1 short | m. 18 | 0.83 |
+| 5 | mm. 19 to 26 | 4 | 19, 23 | 2 regular | m. 26 | 1 |
+| 6 | mm. 27 to 34 | 4 | 27, 31 | 2 regular | m. 34 | 1 |
+| 7 | mm. 35 to 37 | 2 | 35, 37 | 1 regular, 1 short | m. 37 | 0.83 |
 | 8 | mm. 38 to 41 | 4 | 38 | 1 regular | none | 1 |
 | 9 | mm. 42 to 57 | 4 | 42, 46 | 1 regular, 1 expanded | m. 49 | 1 |
 | 10 | mm. 58 to 61 | 4 | 58 | 1 regular | m. 61 | 1 |
@@ -1520,12 +1531,11 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | 1 and 3 | 0 | 3 | 0 | 2 | 0 |
 | 2 and 3 | 2 | 2 | 0 | 3 | 0 |
 
-0 parallel fifths, 0 parallel octaves, 0 direct fifths or octaves in the outer voices, 3 unresolved sevenths, 1 unresolved leading tone.
+0 parallel fifths, 0 parallel octaves, 0 direct fifths or octaves in the outer voices, 3 unresolved sevenths, 0 unresolved leading tones.
 
 | Location | Fault | Voices |
 | --- | --- | --- |
 | m. 3, beat 4 to m. 5, beat 1 | seventh-resolves-down | 3 |
-| m. 19, beat 2 to m. 21, beat 1 | leading-tone-resolves | 1 |
 | m. 36, beat 4 to m. 38, beat 1 | seventh-resolves-down | 2 |
 | m. 63, beat 4 to m. 64, beat 2 | seventh-resolves-down | 1 |
 
