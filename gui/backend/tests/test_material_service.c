@@ -387,6 +387,61 @@ static void test_body_validation(void) {
         CHECK(validate("piece", piece_body) == pieces[i].result, pieces[i].label);
         cJSON_Delete(piece_body);
     }
+    /* a piece names its form (R-430): absent is the game loop, a sized form has sizes and no sections */
+    static const char *const kLoopSection =
+        "\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]";
+    static const struct {
+        const char *structure;
+        UrsatzGuiMaterialResult result;
+        const char *label;
+    } forms[] = {
+        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "the game loop by name"},
+        {"\"form\":null,\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", OK, "a null form is the game loop"},
+        {"\"form\":\"waltz\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", INVALID, "a form the Composer does not build"},
+        {"\"form\":7,\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", INVALID, "a form that is not text"},
+        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":true,SECTION", INVALID, "modulate on the game loop"},
+        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":16,SECTION", INVALID, "bars on the game loop"},
+        {"\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":0,\"count\":0,\"modulate\":false,SECTION", OK, "no size and no modulation on the game loop"},
+        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"intro\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", INVALID, "a game loop with no body section"},
+        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":4096,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", OK, "4096 beats, the vocabulary's limit"},
+        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":4097,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]", INVALID, "4097 beats"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a form with sizes and its default size"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":null,\"bars\":24,\"count\":0,\"modulate\":true", OK, "a size of the form, modulating"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":20", INVALID, "a size the form does not have"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":16.5", INVALID, "bars that are not a whole number"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":\"yes\"", INVALID, "modulate that is not a boolean"},
+        {"\"form\":\"rounded-binary\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",SECTION", INVALID, "sections on a form with sizes"},
+        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"count\":3", OK, "a size picked by its count"},
+        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"count\":9", INVALID, "a count the form has no size of"},
+        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":48,\"count\":5", OK, "a size picked by bars and count"},
+        {"\"form\":\"variations\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"bars\":48,\"count\":4", INVALID, "bars and count of two different sizes"},
+        {"\"form\":\"loop\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":true", INVALID, "modulate on a form that does not modulate"},
+        {"\"form\":\"loop\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\",\"modulate\":false", OK, "no modulation on a form that does not modulate"},
+    };
+    for (size_t i = 0; i < sizeof(forms) / sizeof(forms[0]); i++) {
+        char structure[1024];
+        const char *marker = strstr(forms[i].structure, "SECTION");
+        if (marker) {
+            snprintf(structure, sizeof(structure), "%.*s%s", (int)(marker - forms[i].structure), forms[i].structure, kLoopSection);
+        } else {
+            snprintf(structure, sizeof(structure), "%s", forms[i].structure);
+        }
+        char text[1400];
+        snprintf(text, sizeof(text), "{\"uses\":[],\"piece\":{\"structure\":{%s}}}", structure);
+        cJSON *form_body = cJSON_Parse(text);
+        CHECK(form_body != NULL, "the form test body parses");
+        CHECK(validate("piece", form_body) == forms[i].result, forms[i].label);
+        cJSON_Delete(form_body);
+    }
+    char order_error[200];
+    cJSON *order_body = cJSON_Parse(
+        "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":["
+        "{\"id\":\"s0\",\"part\":\"turnaround\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null},"
+        "{\"id\":\"s1\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}");
+    CHECK(ursatz_gui_material_body_validate("piece", order_body, order_error, sizeof(order_error)) == INVALID &&
+              strstr(order_error, "Intro, Loop body, Turnaround, Ending") != NULL,
+          "the order refusal names the roles by label");
+    cJSON_Delete(order_body);
     static const struct {
         const char *section;
         UrsatzGuiMaterialResult result;
