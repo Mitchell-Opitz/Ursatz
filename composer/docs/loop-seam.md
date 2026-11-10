@@ -6,7 +6,7 @@ against a Given copy of that first bar, and four soft rules say how well it lead
 
 ## The hold
 
-`piece_structure_build_plan` marks the loop's end `hold` (`PLAN_CONSTRAINT_HOLD`, no fields): the last section of the
+`form_build_plan` marks the loop's end `hold` (`PLAN_CONSTRAINT_HOLD`, no fields): the last section of the
 turnaround, or the last body section when there is no turnaround. The stages from structure to texture leave a held
 section alone, as they leave a section that returns an earlier one alone, so it has no nodes and no lane spans until the
 seam stage.
@@ -77,7 +77,7 @@ ask it about the seam.
 
 ## Measured
 
-`tests/test_loop_seam.c` composes the structure of `piece-structure` (intro 2 bars, body 8 bars and 6 beats, turnaround
+`tests/test_loop_seam.c` composes the game loop of [piece-structure.md](piece-structure.md) (intro 2 bars, body 8 bars and 6 beats, turnaround
 1 bar, 4/4, C major), seeds 1 to 20. All 20 completed. The seam section was the body's first bar, nothing sounded past
 the loop's end, and the held end was written. The seam rules held:
 
@@ -96,6 +96,6 @@ The test records 10 as a baseline and fails below it.
 - The copy is made once. Regenerating the body's first bar does not update the seam, and the loop's end stays filled
   against the old copy.
 - A body pickup is not copied: a pickup is a constraint on the section (see [piece-structure.md](piece-structure.md#the-plan)),
-  and no melody span of a piece structure starts before its section.
+  and no melody span of a game loop starts before its section.
 - The melody rules read the seam through the idea that ends at it. A melody target that is a whole phrase ending at the
   seam is not scored.

@@ -123,7 +123,7 @@ add_library(ursatz_composer STATIC
     piece/seam_hear.c
     piece/form_vary.c
     piece/form_build.c
-    piece/piece_structure.c
+    piece/form_build_request.c
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c
@@ -145,7 +145,7 @@ add_library(ursatz_composer STATIC
 )
 # The forms built in (R-416): forms/<name>.json, embedded as C byte arrays at build time. Adding a form is a file in
 # forms/ and a line here, in registry order.
-set(COMPOSER_FORMS binary rounded-binary ternary variations loop layered)
+set(COMPOSER_FORMS binary rounded-binary ternary variations loop layered game-loop)
 set(COMPOSER_FORM_FILES)
 foreach(form ${COMPOSER_FORMS})
     list(APPEND COMPOSER_FORM_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../forms/${form}.json)

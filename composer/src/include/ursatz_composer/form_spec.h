@@ -31,6 +31,11 @@
 #define FORM_SPEC_HOME (-1)
 /* The size of a cadence vocabulary name. */
 #define FORM_SPEC_CADENCE_NAME_MAX 32
+/* The most roles a form whose sections the request gives lists (intro, body, turnaround, ending), and the most cadence rules. */
+#define FORM_SPEC_MAX_PARTS 4
+#define FORM_SPEC_MAX_CADENCE_RULES 4
+/* The size of a section id, with its terminator: the id the request gives a section (piece.h PIECE_SECTION_ID_MAX). */
+#define FORM_SPEC_ID_MAX 16
 
 /*
  * What a section is in the form. The theme-like roles (theme, contrast, return, variation, layer) are the sections
@@ -110,6 +115,24 @@ typedef struct {
     size_t section_count;
 } FormSpecSize;
 
+/* A cadence rule of a form whose sections the request gives: the last section whose role is one of `roles` ends in `cadence`. */
+typedef struct {
+    FormRole roles[FORM_SPEC_MAX_PARTS];
+    size_t role_count;
+    CadenceType cadence;                           /* the core type: PAC, IAC or HC */
+    char cadence_name[FORM_SPEC_CADENCE_NAME_MAX]; /* its name in the standard-harmony vocabulary */
+} FormCadenceRule;
+
+/* The section a request that has no ending gets (R-169 defaults it to two empty bars closing in a PAC). */
+typedef struct {
+    char id[FORM_SPEC_ID_MAX];
+    char letter[PLAN_SECTION_LETTER_MAX];
+    FormRole role;
+    size_t bars;
+    CadenceType cadence;
+    char cadence_name[FORM_SPEC_CADENCE_NAME_MAX];
+} FormDefaultEnding;
+
 typedef struct {
     char name[FORM_SPEC_NAME_MAX];
     char label[FORM_SPEC_LABEL_MAX];
@@ -120,6 +143,24 @@ typedef struct {
     size_t region_count;
     unsigned checks;                    /* FormCheck bits; FORM_CHECK_ALL when the document names none */
     bool request_sections;              /* the piece request gives the sections (no sizes) */
+    /*
+     * The members of a form whose sections the request gives (the game loop, R-419); all empty for any other. The roles a
+     * section may have, in order (until P45: intro, body, turnaround and ending); the roles that are the loop (the body
+     * and the turnaround: the loop's end is held for the seam stage and a seam bar follows it; the ending version
+     * replaces the turnaround with the ending); the cadence a section gets when the request names none: default_cadence,
+     * else the first rule of last_cadences whose roles hold the last section of that role; the section a request with no
+     * ending gets.
+     */
+    FormRole roles[FORM_SPEC_MAX_PARTS];
+    size_t role_count;
+    FormRole loop_roles[FORM_SPEC_MAX_PARTS];
+    size_t loop_role_count;
+    CadenceType default_cadence;
+    char default_cadence_name[FORM_SPEC_CADENCE_NAME_MAX];
+    FormCadenceRule last_cadences[FORM_SPEC_MAX_CADENCE_RULES];
+    size_t last_cadence_count;
+    bool has_default_ending;
+    FormDefaultEnding default_ending;
     FormSpecSize sizes[FORM_SPEC_MAX_SIZES];
     size_t size_count;
 } FormSpec;
@@ -153,12 +194,17 @@ const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t cou
 /* The default size; NULL for a form with no sizes. */
 const FormSpecSize *form_spec_default_size(const FormSpec *form);
 
+/* Whether the role is one of the form's `roles` (a form whose sections the request gives). */
+bool form_spec_has_role(const FormSpec *form, FormRole role);
+/* Whether the role is one of the form's loop roles. */
+bool form_spec_role_in_loop(const FormSpec *form, FormRole role);
+
 /* The index of the region with that name, or -1. */
 int form_spec_region_find(const FormSpec *form, const char *name);
 
 /*
  * The forms built into the library, one per file in forms/ in the order COMPOSER_FORMS in src/CMakeLists.txt lists
- * them (binary, rounded-binary, ternary, variations, loop, layered). The documents are embedded at build time
+ * them (binary, rounded-binary, ternary, variations, loop, layered, game-loop). The documents are embedded at build time
  * (cmake/EmbedForms.cmake); adding a form is a file in forms/ and a line in COMPOSER_FORMS.
  */
 size_t form_spec_builtin_count(void);

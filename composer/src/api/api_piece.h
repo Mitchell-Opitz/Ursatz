@@ -13,7 +13,7 @@
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece.h>
 #include <ursatz_composer/style.h>
 
 /*
@@ -36,9 +36,12 @@
 /* As many seeds are tried as it takes to find the variations asked for, at most this many for each. */
 #define PIECE_SEEDS_PER_VARIATION 4
 
-/* The piece request, read: the structure, the brief, every motive and theme plan. */
+/* The form every piece is: the game loop, whose sections the piece request gives (forms/game-loop.json). */
+#define API_PIECE_FORM "game-loop"
+
+/* The piece request, read: the request of the form, the brief, every motive and theme plan. */
 typedef struct {
-    PieceStructure structure;
+    PieceRequest request; /* form API_PIECE_FORM, its sections in `sections` */
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS + 1];
     const cJSON *motive_json[PIECE_STRUCTURE_MAX_SECTIONS + 1]; /* a motif fill's own motive */
     const cJSON *forms_json[PIECE_STRUCTURE_MAX_SECTIONS + 1];  /* a motif fill's saved forms */
@@ -79,8 +82,8 @@ void api_piece_request_destroy(PieceSpec *request);
 
 /*
  * Reads the piece request root without composing and writes the defaults into filled (a copy of root): the cadence of every
- * section that has none (piece_structure_default_cadences) and the default ending section when there is none
- * (piece_structure_default_ending).
+ * section that has none (piece_default_cadences) and the default ending section when there is none
+ * (piece_default_ending).
  */
 ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerError *error);
 
@@ -126,7 +129,7 @@ void api_piece_lanes_name(const PieceEdit *edit, char *out, size_t size);
 ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
                                          PieceVersion *loop, PieceResult *result, ComposerError *error);
 
-/* The ending version built from the loop plan with seed + 20 (compose_run on the plan piece_ending_plan makes). */
+/* The ending version built from the loop plan with seed + 20 (compose_run on the plan piece_build_ending makes). */
 PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsigned long seed, PieceMade *piece);
 
 /* The version as the document has it: {"plan": null, "sections": [...], "score", "seam", "analyzer_check", "style_distance"}. */

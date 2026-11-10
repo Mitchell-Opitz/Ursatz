@@ -390,6 +390,30 @@ static bool read_choice(Reader *reader, const cJSON *section, const char *path, 
     return fail(reader, at, "unknown %s \"%s\"", key, item->valuestring);
 }
 
+/* A cadence member: a name of the standard-harmony vocabulary whose core is PAC, IAC or HC. */
+static bool read_cadence(Reader *reader, const cJSON *object, const char *path, const char *key, bool required,
+                         CadenceType *core, char *name, size_t cap) {
+    char at[64];
+    bool present = false;
+    if (!read_text(reader, object, path, key, required, name, cap, &present)) {
+        return false;
+    }
+    if (!present) {
+        return true;
+    }
+    join(at, sizeof(at), path, key);
+    const HarmonyCadenceKind *kind = harmony_cadence_kind_find(name);
+    if (!kind) {
+        return fail(reader, at, "unknown cadence \"%s\"", name);
+    }
+    if (kind->core != CADENCE_TYPE_PERFECT_AUTHENTIC && kind->core != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
+        kind->core != CADENCE_TYPE_HALF) {
+        return fail(reader, at, "a section ends in a perfect authentic, imperfect authentic or half cadence");
+    }
+    *core = kind->core;
+    return true;
+}
+
 static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSize *size, const cJSON *json,
                          const char *path, FormSectionSpec *out) {
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
@@ -462,19 +486,9 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
     out->pairing.beginning = (PlanThemeBeginning)beginning->value;
     out->pairing.ending = (PlanThemeEnding)ending->value;
     /* cadence: a name of the standard-harmony vocabulary whose core is PAC, IAC or HC */
-    if (!read_text(reader, json, path, "cadence", true, out->cadence_name, sizeof(out->cadence_name), NULL)) {
+    if (!read_cadence(reader, json, path, "cadence", true, &out->cadence, out->cadence_name, sizeof(out->cadence_name))) {
         return false;
     }
-    const HarmonyCadenceKind *kind = harmony_cadence_kind_find(out->cadence_name);
-    join(at, sizeof(at), path, "cadence");
-    if (!kind) {
-        return fail(reader, at, "unknown cadence \"%s\"", out->cadence_name);
-    }
-    if (kind->core != CADENCE_TYPE_PERFECT_AUTHENTIC && kind->core != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
-        kind->core != CADENCE_TYPE_HALF) {
-        return fail(reader, at, "a section ends in a perfect authentic, imperfect authentic or half cadence");
-    }
-    out->cadence = kind->core;
     if (!read_bool(reader, json, path, "closed", &out->closed)) {
         return false;
     }
@@ -536,6 +550,171 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         out->variation = (PlanReturnVariation)variation;
     }
     return read_layers(reader, json, path, &out->layers);
+}
+
+/* ------------------------------------------------------------- a form whose sections the request gives */
+
+bool form_spec_has_role(const FormSpec *form, FormRole role) {
+    for (size_t i = 0; form && i < form->role_count; i++) {
+        if (form->roles[i] == role) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool form_spec_role_in_loop(const FormSpec *form, FormRole role) {
+    for (size_t i = 0; form && i < form->loop_role_count; i++) {
+        if (form->loop_roles[i] == role) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool is_part_role(FormRole role) {
+    return role >= FORM_ROLE_INTRO && role <= FORM_ROLE_ENDING;
+}
+
+/*
+ * A list of roles. With form NULL it is the form's own `roles`: each a part role (until P45), in the order intro, body,
+ * turnaround, ending, none twice. With a form it is a list of roles the form has (the loop's, a cadence rule's).
+ */
+static bool read_role_list(Reader *reader, const cJSON *parent, const char *path, const char *key, const FormSpec *form,
+                           FormRole *out, size_t *count) {
+    char at[64];
+    const cJSON *list = array_member(reader, parent, path, key, true, at, sizeof(at));
+    if (!list) {
+        return false;
+    }
+    size_t n = (size_t)cJSON_GetArraySize(list);
+    if (n < 1 || n > FORM_SPEC_MAX_PARTS) {
+        return fail(reader, at, "must hold 1 to %d roles", FORM_SPEC_MAX_PARTS);
+    }
+    for (size_t i = 0; i < n; i++) {
+        char item[64];
+        const cJSON *entry = cJSON_GetArrayItem(list, (int)i);
+        FormRole role;
+        join_index(item, sizeof(item), at, i);
+        if (!cJSON_IsString(entry) || !entry->valuestring) {
+            return fail(reader, item, "must be a role name");
+        }
+        if (!form_role_find(entry->valuestring, &role)) {
+            return fail(reader, item, "unknown role \"%s\"", entry->valuestring);
+        }
+        if (form && !form_spec_has_role(form, role)) {
+            return fail(reader, item, "\"%s\" is not one of the form's roles", entry->valuestring);
+        }
+        if (!form && !is_part_role(role)) {
+            return fail(reader, item, "a form whose sections the request gives has the roles intro, body, turnaround and ending");
+        }
+        if (!form && i > 0 && role <= out[i - 1]) {
+            return fail(reader, item, "the roles are in the order intro, body, turnaround, ending, each once");
+        }
+        out[i] = role;
+    }
+    *count = n;
+    return true;
+}
+
+static bool read_cadence_rules(Reader *reader, const cJSON *cadences, FormSpec *form) {
+    static const char *const RULE_MEMBERS[] = {"roles", "cadence"};
+    char at[64];
+    const cJSON *list = array_member(reader, cadences, "/cadences", "last", false, at, sizeof(at));
+    if (reader->failed || !list) {
+        return !reader->failed;
+    }
+    size_t n = (size_t)cJSON_GetArraySize(list);
+    if (n > FORM_SPEC_MAX_CADENCE_RULES) {
+        return fail(reader, at, "at most %d rules", FORM_SPEC_MAX_CADENCE_RULES);
+    }
+    for (size_t i = 0; i < n; i++) {
+        char item[64];
+        const cJSON *rule = cJSON_GetArrayItem(list, (int)i);
+        FormCadenceRule *out = &form->last_cadences[i];
+        join_index(item, sizeof(item), at, i);
+        if (!cJSON_IsObject(rule)) {
+            return fail(reader, item, "must be an object");
+        }
+        if (!members(reader, rule, item, RULE_MEMBERS, 2) ||
+            !read_role_list(reader, rule, item, "roles", form, out->roles, &out->role_count) ||
+            !read_cadence(reader, rule, item, "cadence", true, &out->cadence, out->cadence_name, sizeof(out->cadence_name))) {
+            return false;
+        }
+        form->last_cadence_count = i + 1;
+    }
+    return true;
+}
+
+static bool read_default_ending(Reader *reader, const cJSON *root, FormSpec *form) {
+    static const char *const ALLOWED[] = {"id", "letter", "role", "bars", "cadence"};
+    const cJSON *ending = member_of(reader, root, "", "default_ending", false);
+    FormDefaultEnding *out = &form->default_ending;
+    char text[FORM_SPEC_NAME_MAX];
+    if (!ending) {
+        return true;
+    }
+    if (!cJSON_IsObject(ending)) {
+        return fail(reader, "/default_ending", "must be an object");
+    }
+    if (!members(reader, ending, "/default_ending", ALLOWED, 5) ||
+        !read_text(reader, ending, "/default_ending", "id", true, out->id, sizeof(out->id), NULL) ||
+        !read_text(reader, ending, "/default_ending", "letter", true, out->letter, sizeof(out->letter), NULL) ||
+        !read_text(reader, ending, "/default_ending", "role", true, text, sizeof(text), NULL)) {
+        return false;
+    }
+    if (!form_role_find(text, &out->role) || out->role != FORM_ROLE_ENDING || !form_spec_has_role(form, out->role)) {
+        return fail(reader, "/default_ending/role", "must be the form's ending role");
+    }
+    const cJSON *bars = member_of(reader, ending, "/default_ending", "bars", true);
+    long length;
+    if (!bars || !whole(reader, bars, "/default_ending/bars", 1, 64, &length)) {
+        return false;
+    }
+    out->bars = (size_t)length;
+    if (!read_cadence(reader, ending, "/default_ending", "cadence", true, &out->cadence, out->cadence_name,
+                      sizeof(out->cadence_name))) {
+        return false;
+    }
+    form->has_default_ending = true;
+    return true;
+}
+
+/* roles, loop, cadences and default_ending: the members a form whose sections the request gives needs. */
+static bool read_request_members(Reader *reader, const cJSON *root, FormSpec *form) {
+    static const char *const LOOP_MEMBERS[] = {"roles"};
+    static const char *const CADENCE_MEMBERS[] = {"default", "last"};
+    if (!read_role_list(reader, root, "", "roles", NULL, form->roles, &form->role_count)) {
+        return false;
+    }
+    if (!form_spec_has_role(form, FORM_ROLE_BODY)) {
+        return fail(reader, "/roles", "a form whose sections the request gives has a body role");
+    }
+    const cJSON *loop = member_of(reader, root, "", "loop", true);
+    if (!loop) {
+        return false;
+    }
+    if (!cJSON_IsObject(loop)) {
+        return fail(reader, "/loop", "must be an object");
+    }
+    if (!members(reader, loop, "/loop", LOOP_MEMBERS, 1) ||
+        !read_role_list(reader, loop, "/loop", "roles", form, form->loop_roles, &form->loop_role_count)) {
+        return false;
+    }
+    const cJSON *cadences = member_of(reader, root, "", "cadences", true);
+    if (!cadences) {
+        return false;
+    }
+    if (!cJSON_IsObject(cadences)) {
+        return fail(reader, "/cadences", "must be an object");
+    }
+    if (!members(reader, cadences, "/cadences", CADENCE_MEMBERS, 2) ||
+        !read_cadence(reader, cadences, "/cadences", "default", true, &form->default_cadence, form->default_cadence_name,
+                      sizeof(form->default_cadence_name)) ||
+        !read_cadence_rules(reader, cadences, form)) {
+        return false;
+    }
+    return read_default_ending(reader, root, form);
 }
 
 /* ------------------------------------------------------------- sizes */
@@ -672,8 +851,10 @@ static bool read_checks(Reader *reader, const cJSON *root, FormSpec *form) {
 }
 
 static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
-    static const char *const ALLOWED[] = {"schema",   "version", "name",    "label",  "plan_name", "closing",
-                                          "accompaniment", "regions", "checks", "sizes", "sections"};
+    static const char *const ALLOWED[] = {"schema", "version", "name",    "label",  "plan_name", "closing", "accompaniment",
+                                          "regions", "checks", "sizes", "sections", "roles",   "loop",    "cadences",
+                                          "default_ending"};
+    static const char *const REQUEST_ONLY[] = {"roles", "loop", "cadences", "default_ending"};
     char text[FORM_SPEC_NAME_MAX];
     bool present;
     if (!cJSON_IsObject(root)) {
@@ -730,7 +911,20 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
         }
         form->request_sections = true;
     }
-    return read_sizes(reader, root, form);
+    if (!read_sizes(reader, root, form)) {
+        return false;
+    }
+    if (form->request_sections) {
+        return read_request_members(reader, root, form);
+    }
+    for (size_t i = 0; i < sizeof(REQUEST_ONLY) / sizeof(REQUEST_ONLY[0]); i++) {
+        if (cJSON_GetObjectItemCaseSensitive(root, REQUEST_ONLY[i])) {
+            char at[64];
+            join(at, sizeof(at), "", REQUEST_ONLY[i]);
+            return fail(reader, at, "only a form whose sections the request gives has this member");
+        }
+    }
+    return true;
 }
 
 FormSpecResult form_spec_parse(const char *json, FormSpec **out, FormSpecError *error) {

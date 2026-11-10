@@ -11,7 +11,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -337,11 +337,11 @@ static int test_candidates(void) {
 
 typedef struct {
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS];
-    PieceStructure structure;
+    PieceRequest request;
 } PieceFixture;
 
 static void piece_section(PieceFixture *fixture, const char *id, PiecePart part, size_t beats, PieceFillKind fill) {
-    PieceSection *section = &fixture->sections[fixture->structure.section_count++];
+    PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
     snprintf(section->id, sizeof(section->id), "%s", id);
     snprintf(section->letter, sizeof(section->letter), "%c", id[0] - 32);
@@ -354,10 +354,11 @@ static void piece_section(PieceFixture *fixture, const char *id, PiecePart part,
 /* The intro 2 bars, a sentence of 8 bars, a free phrase of 4 and a turnaround of 2, D minor 4/4, and the ending a run adds. */
 static void piece_fixture(PieceFixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
-    fixture->structure.meter.beats_per_bar = 4;
-    fixture->structure.meter.beat_unit = 4;
-    fixture->structure.sections = fixture->sections;
+    fixture->request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    fixture->request.meter.beats_per_bar = 4;
+    fixture->request.meter.beat_unit = 4;
+    fixture->request.form = "game-loop";
+    fixture->request.sections = fixture->sections;
     piece_section(fixture, "intro", PIECE_PART_INTRO, 8, PIECE_FILL_EMPTY);
     piece_section(fixture, "a", PIECE_PART_BODY, 32, PIECE_FILL_MOTIF);
     fixture->sections[1].has_into = true;
@@ -372,7 +373,7 @@ static int test_piece(void) {
     PieceFixture fixture;
     piece_fixture(&fixture);
     PiecePlan *plan = NULL;
-    assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     assert(analyzer_check_piece(plan, &check) == ANALYZER_CHECK_ERR_NOT_WRITTEN && check.item_count == 0);
     plan_destroy(plan);
     size_t checked = 0;
@@ -381,7 +382,7 @@ static int test_piece(void) {
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
-        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) != PIECE_OK) {
             compose_outcome_destroy(&outcome);
             plan_destroy(plan);
@@ -411,7 +412,7 @@ static int test_piece(void) {
         memset(&config, 0, sizeof(config));
         config.seed = seed;
         config.analyzer_check = true;
-        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
             assert(outcome.analyzer_check_count == 1 && outcome.analyzer_planned == 5 && outcome.analyzer_agreed == 5);
             assert(!outcome.analyzer_checks[0].contradicts);

@@ -124,7 +124,7 @@ typedef struct {
     NodeId section;
     /* false: the section was kept (outside ComposeConfig.scope): not heard, not checked, no heard form. */
     bool in_scope;
-    /* A section of a piece structure (piece_structure.h) names its id and its part; has_part is false for any other. */
+    /* A section of a game loop (piece.h) names its id and its part; has_part is false for any other. */
     bool has_part;
     int part;                    /* a PiecePart */
     char id[PLAN_PIECE_ID_MAX];

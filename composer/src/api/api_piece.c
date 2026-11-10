@@ -9,7 +9,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece_reopen.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/regenerate.h>
@@ -82,7 +82,7 @@ static PieceResult compose_version(const PieceSpec *request, bool check, unsigne
 }
 
 PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsigned long seed, PieceMade *piece) {
-    PieceResult result = piece_ending_plan(piece->loop.plan, &request->structure, &piece->ending.plan);
+    PieceResult result = piece_build_ending(piece->loop.plan, &request->request, &piece->ending.plan);
     if (result == PIECE_OK) {
         result = compose_version(request, check, seed + PIECE_ENDING_SEED_OFFSET, &piece->ending);
     }
@@ -93,7 +93,7 @@ PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsig
 static PieceResult compose_piece(const PieceSpec *request, bool check, unsigned long seed, PieceMade *piece) {
     memset(piece, 0, sizeof(*piece));
     piece->seed = seed;
-    PieceResult result = piece_structure_build_plan(&request->structure, &piece->loop.plan);
+    PieceResult result = piece_build_plan(&request->request, &piece->loop.plan);
     if (result == PIECE_OK) {
         result = compose_version(request, check, seed, &piece->loop);
     }
@@ -164,7 +164,7 @@ void api_piece_lanes_name(const PieceEdit *edit, char *out, size_t size) {
 
 /* A section's fill in the request, or PIECE_FILL_EMPTY for an id the request does not have. */
 static PieceFillKind request_fill(const PieceSpec *request, const char *id) {
-    for (size_t s = 0; s < request->structure.section_count; s++) {
+    for (size_t s = 0; s < request->request.section_count; s++) {
         if (strcmp(request->sections[s].id, id) == 0) {
             return request->sections[s].fill;
         }
@@ -444,7 +444,7 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
         }
         Row *row = &rows[count];
         memset(row, 0, sizeof(*row));
-        for (size_t s = 0; s < request->structure.section_count; s++) {
+        for (size_t s = 0; s < request->request.section_count; s++) {
             if (strcmp(request->sections[s].id, part->params.piece_part.id) == 0) {
                 row->section = &request->sections[s];
                 row->source = request->source[s];
@@ -576,7 +576,7 @@ static GrowBrief make_brief(const PieceSpec *request) {
     memset(&brief, 0, sizeof(brief));
     brief.tempo = request->tempo;
     brief.tempo_from = request->tempo_from;
-    brief.minor = request->structure.key.mode == KEY_STRUCTURE_MODE_MINOR;
+    brief.minor = request->request.key.mode == KEY_STRUCTURE_MODE_MINOR;
     brief.mode_from = request->mode_from;
     brief.has_density = composer_style_density(request->style, &brief.density);
     brief.without = request->without;
@@ -630,9 +630,9 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
     char lanes[64];
     char meter[24];
     GrowBrief brief = make_brief(request);
-    util_key_name(analysis_key_tonic_pitch_class(&request->structure.key), request->structure.key.mode == KEY_STRUCTURE_MODE_MINOR,
+    util_key_name(analysis_key_tonic_pitch_class(&request->request.key), request->request.key.mode == KEY_STRUCTURE_MODE_MINOR,
                   key, sizeof key);
-    snprintf(meter, sizeof meter, "%d/%d", request->structure.meter.beats_per_bar, request->structure.meter.beat_unit);
+    snprintf(meter, sizeof meter, "%d/%d", request->request.meter.beats_per_bar, request->request.meter.beat_unit);
     cJSON *document = cJSON_CreateObject();
     cJSON *loop_region = api_piece_loop_json(piece->loop.plan);
     bool ok = document && cJSON_AddStringToObject(document, "schema", "ursatz-piece") &&
@@ -819,10 +819,10 @@ static ComposerStatus read_edit(const cJSON *request, char **text, PieceEdit *ed
 ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
                                       unsigned long first_seed, unsigned long last_seed, ComposerError *error) {
     if (result == PIECE_ERR_MOTIVE_TOO_LONG) {
-        size_t theme_bars;
-        size_t idea_bars;
-        piece_structure_basic_idea(&request->structure, &theme_bars, &idea_bars);
-        return api_fail_motif_long(error, "/motive", request->structure.motive, &request->structure.meter, theme_bars, idea_bars);
+        size_t theme_bars = 8;
+        size_t idea_bars = 2;
+        (void)piece_basic_idea(&request->request, &theme_bars, &idea_bars);
+        return api_fail_motif_long(error, "/motive", request->request.motive, &request->request.meter, theme_bars, idea_bars);
     }
     if (result == PIECE_ERR_BAD_REQUEST) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/request",

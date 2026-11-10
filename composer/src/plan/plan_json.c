@@ -36,7 +36,7 @@ static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
                                                   "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
-/* The parts of a piece structure, in PiecePart order (piece_structure.h). */
+/* The parts of a game loop, in PiecePart order (piece.h). */
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
 static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "cadential"};
 static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant", "pivot"};

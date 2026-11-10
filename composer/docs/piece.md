@@ -50,8 +50,9 @@ other than the table's are planned only with `modulate`.
 The return defaults: A' of the rounded binary and the second A of the ternary are `exact`, Var k is `ornament` for odd k
 and `reharmonize` for even k, a layer is `exact`.
 
-Pieces of other shapes, laid out in beats and not from these templates, are [piece structures](piece-structure.md):
-sections of any length with a pickup and a cadence each, the loop of a game track. The forms here are unchanged.
+Pieces of other shapes, laid out in beats and not from these templates, are [the game loop](piece-structure.md), a form whose
+sections the piece request gives: sections of any length with a pickup and a cadence each, the loop of a game track. It
+is built by the same builder, from its form document, and the forms here are unchanged.
 
 ## Returns
 

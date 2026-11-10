@@ -146,7 +146,7 @@ between them.
 ## Free phrases
 
 A section with a `free_phrase` constraint and no `archetype` or `theme_pairing` is a free phrase (R-170): a phrase of any
-length in beats, the sections of a [piece structure](piece-structure.md) that are not themes of 4 or 8 whole bars.
+length in beats, the sections of a [game loop](piece-structure.md) that are not themes of 4 or 8 whole bars.
 `grow-theme` builds it in the same structure stage, with the cadence, the key and the accompaniment the section asks for
 (a PAC, IAC or HC, in one key).
 

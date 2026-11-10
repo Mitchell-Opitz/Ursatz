@@ -99,8 +99,8 @@ with seed 3, for each config seed 1 to 20. All 80 were kept; the test fails only
 
 ## Pieces
 
-A piece structure (`piece`, [cli-piece.md](cli-piece.md)) is regenerated section by section with `piece --from ... --regenerate`
-and `--variations`. The command adds three things to `plan_regenerate_all`, from `<ursatz_composer/piece_structure.h>`:
+A game loop (`piece`, [cli-piece.md](cli-piece.md)) is regenerated section by section with `piece --from ... --regenerate`
+and `--variations`. The command adds three things to `plan_regenerate_all`, from `<ursatz_composer/piece_reopen.h>`:
 
 - `piece_section_find` finds a section by the id of the request (its PIECE_PART constraint).
 - The seam. The loop's end is held back and written last against a Given copy of the body's first bar. When the section
@@ -114,7 +114,7 @@ and `--variations`. The command adds three things to `plan_regenerate_all`, from
   with a harmony shape). The melody of a theme fill cannot be regenerated: its motive references were dropped when it was
   given.
 
-The ending version is built again from the new loop plan every time (`piece_ending_plan`), with seed + 20.
+The ending version is built again from the new loop plan every time (`piece_build_ending`), with seed + 20.
 
 ## Results
 

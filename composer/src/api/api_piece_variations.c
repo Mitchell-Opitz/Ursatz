@@ -55,7 +55,7 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
     memset(&brief, 0, sizeof(brief));
     brief.tempo = request->tempo;
     brief.tempo_from = request->tempo_from;
-    brief.minor = request->structure.key.mode == KEY_STRUCTURE_MODE_MINOR;
+    brief.minor = request->request.key.mode == KEY_STRUCTURE_MODE_MINOR;
     brief.mode_from = request->mode_from;
     brief.has_density = composer_style_density(request->style, &brief.density);
     brief.without = request->without;

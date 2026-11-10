@@ -292,7 +292,7 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         !api_request_string(root, base, "voicing", false, &voicing, error)) {
         return COMPOSER_ERR_REQUEST;
     }
-    PieceStructure *structure = &request->structure;
+    PieceRequest *piece = &request->request;
     const char *mode = request->mode_text;
     snprintf(path, sizeof path, "%s/mode", base);
     if (api_choice_find_ignore_case(API_PIECE_MODES, mode) < 0) {
@@ -310,17 +310,17 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         snprintf(tonic_key, sizeof(tonic_key), "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!request_parse_key(key_text, &structure->key)) {
+    if (!request_parse_key(key_text, &piece->key)) {
         snprintf(path, sizeof path, "%s/key", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\"", request->key_text);
     }
     if (request_equals_ignore_case(mode, "major")) {
-        structure->key.mode = KEY_STRUCTURE_MODE_MAJOR;
+        piece->key.mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (request_equals_ignore_case(mode, "minor")) {
-        structure->key.mode = KEY_STRUCTURE_MODE_MINOR;
+        piece->key.mode = KEY_STRUCTURE_MODE_MINOR;
     }
-    if (!request_parse_meter(request->meter_text, &structure->meter) || !harmony_meter_supported(&structure->meter)) {
+    if (!request_parse_meter(request->meter_text, &piece->meter) || !harmony_meter_supported(&piece->meter)) {
         snprintf(path, sizeof path, "%s/meter", base);
         return api_fail_meter(error, path, request->meter_text);
     }
@@ -371,16 +371,16 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "an accompaniment of pattern \"motive\" is not available in a piece");
         }
         ComposerStatus status =
-            api_read_accompaniment(pattern, NULL, request->meter_text, &structure->meter, &structure->accompaniment, error);
+            api_read_accompaniment(pattern, NULL, request->meter_text, &piece->meter, &piece->accompaniment, error);
         if (status != COMPOSER_OK) {
             snprintf(error->path, sizeof error->path, "%s", path);
             return status;
         }
-        structure->has_accompaniment = true;
+        piece->has_accompaniment = true;
     }
     if (voicing) {
         snprintf(path, sizeof path, "%s/voicing", base);
-        if (structure->has_accompaniment) {
+        if (piece->has_accompaniment) {
             return api_fail(error, COMPOSER_ERR_REQUEST, path,
                             "\"voicing\" writes the inner voices itself; it cannot be combined with an \"accompaniment\"");
         }
@@ -388,8 +388,8 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"voicing\" in the request must be satb or chorale, not '%s'",
                             voicing);
         }
-        structure->has_voicing = true;
-        structure->voicing.write_soprano = strcmp(voicing, "chorale") == 0;
+        piece->has_voicing = true;
+        piece->voicing.write_soprano = strcmp(voicing, "chorale") == 0;
     }
     return COMPOSER_OK;
 }
@@ -436,11 +436,11 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
             snprintf(path, sizeof path, "%s/mode", base);
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\": \"style\" needs a style with a mode category");
         }
-        request->structure.key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+        request->request.key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
         request->mode_from = "style";
     }
     if (request->style) {
-        PlanStyle *plan_style = &request->structure.style;
+        PlanStyle *plan_style = &request->request.style;
         memset(plan_style, 0, sizeof(*plan_style));
         snprintf(plan_style->path, sizeof(plan_style->path), "%s", request->style_path);
         plan_style->weight_numerator = request->weight.numerator;
@@ -448,7 +448,7 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
         for (size_t i = 0; i < request->without_count && i < PLAN_STYLE_WITHOUT_MAX; i++) {
             snprintf(plan_style->without[plan_style->without_count++], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", request->without[i]);
         }
-        request->structure.has_style = true;
+        request->request.has_style = true;
     }
     return COMPOSER_OK;
 }
@@ -469,22 +469,22 @@ static ComposerStatus read_melodic(const char *what, const char *path, const cJS
 
 /* The motives, and the saved forms the motives stage may use; the key and the meter are known now. */
 static ComposerStatus load_motives(PieceSpec *request, const char *base, ComposerError *error) {
-    PieceStructure *structure = &request->structure;
+    PieceRequest *piece = &request->request;
     char what[96];
     char path[128];
     ComposerStatus status = COMPOSER_OK;
     if (request->piece_motive_json) {
         snprintf(path, sizeof path, "%s/motive", base);
-        status = read_melodic("the motive of the piece", path, request->piece_motive_json, &structure->meter, &structure->key,
+        status = read_melodic("the motive of the piece", path, request->piece_motive_json, &piece->meter, &piece->key,
                               &request->piece_motive, error);
-        structure->motive = request->piece_motive;
+        piece->motive = request->piece_motive;
     }
     size_t forms = 0;
-    for (size_t i = 0; status == COMPOSER_OK && i < structure->section_count; i++) {
+    for (size_t i = 0; status == COMPOSER_OK && i < piece->section_count; i++) {
         if (request->motive_json[i]) {
             snprintf(what, sizeof(what), "the motive of section '%s'", request->sections[i].id);
             snprintf(path, sizeof path, "%s/sections/%zu/fill/motive", base, i);
-            status = read_melodic(what, path, request->motive_json[i], &structure->meter, &structure->key,
+            status = read_melodic(what, path, request->motive_json[i], &piece->meter, &piece->key,
                                   &request->section_motive[i], error);
             request->sections[i].motive = request->section_motive[i];
         }
@@ -505,7 +505,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
     if (!request->pool || !request->pool_motives) {
         return fail_alloc(error);
     }
-    for (size_t i = 0; i < structure->section_count; i++) {
+    for (size_t i = 0; i < piece->section_count; i++) {
         const cJSON *form = NULL;
         size_t at = 0;
         cJSON_ArrayForEach(form, request->forms_json[i]) {
@@ -527,7 +527,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
                                 item_id, flag);
             }
             snprintf(what, sizeof(what), "form '%s'", item_id);
-            status = api_read_degrees_motive(what, path, form, NULL, &structure->meter, &structure->key,
+            status = api_read_degrees_motive(what, path, form, NULL, &piece->meter, &piece->key,
                                              &request->pool_motives[request->pool_count], error);
             if (status != COMPOSER_OK) {
                 return status;
@@ -553,6 +553,7 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
                                       bool plain_midi, const ComposerJob *job, ComposerError *error) {
     char path[128];
     memset(request, 0, sizeof(*request));
+    request->request.form = API_PIECE_FORM;
     request->job = job;
     request->style_path = style_path;
     if (!cJSON_IsObject(root)) {
@@ -580,17 +581,17 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
     if (cJSON_GetArraySize(sections) > PIECE_STRUCTURE_MAX_SECTIONS) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "a piece has at most %d sections", PIECE_STRUCTURE_MAX_SECTIONS);
     }
-    PieceStructure *structure = &request->structure;
-    structure->sections = request->sections;
+    PieceRequest *piece = &request->request;
+    piece->sections = request->sections;
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, sections) {
         char item_path[160];
-        snprintf(item_path, sizeof item_path, "%s/%zu", path, structure->section_count);
-        status = read_section(request, structure->section_count, item, item_path, &structure->meter, error);
+        snprintf(item_path, sizeof item_path, "%s/%zu", path, piece->section_count);
+        status = read_section(request, piece->section_count, item, item_path, &piece->meter, error);
         if (status != COMPOSER_OK) {
             return status;
         }
-        structure->section_count++;
+        piece->section_count++;
     }
     const cJSON *motive = cJSON_GetObjectItemCaseSensitive(root, "motive");
     if (motive && !cJSON_IsNull(motive)) {
@@ -607,21 +608,26 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
     if (status != COMPOSER_OK) {
         return status;
     }
-    request->basic = structure->motive;
-    for (size_t i = 0; !request->basic && i < structure->section_count; i++) {
+    request->basic = piece->motive;
+    for (size_t i = 0; !request->basic && i < piece->section_count; i++) {
         request->basic = request->sections[i].motive;
     }
-    /* The structure checks before the default ending joins it: a request without a body is a bad one. */
-    if (piece_structure_check(structure) != PIECE_OK) {
+    /* The request checks before the default ending joins it: a request without a body is a bad one. */
+    if (piece_request_check(piece) != PIECE_OK) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
                         "the sections are not a piece: they need a body, in the order intro, body, turnaround, ending, with "
                         "different ids, whole beats and a pickup shorter than a bar");
     }
-    size_t given = structure->section_count;
-    if (piece_structure_default_ending(structure, PIECE_STRUCTURE_MAX_SECTIONS + 1) && structure->section_count > given) {
+    FormSpec *form = NULL;
+    if (form_spec_builtin(API_PIECE_FORM, &form) != FORM_SPEC_OK) {
+        return fail_alloc(error);
+    }
+    size_t given = piece->section_count;
+    if (piece_default_ending(form, piece, PIECE_STRUCTURE_MAX_SECTIONS + 1) && piece->section_count > given) {
         /* The default ending is made from the basic motive, like an empty section. */
         snprintf(request->source[given], sizeof(request->source[0]), "basic motive");
     }
+    form_spec_destroy(form);
     return COMPOSER_OK;
 }
 
@@ -633,11 +639,16 @@ ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerErro
     ComposerStatus status = api_piece_read_request(request, root, "", NULL, false, NULL, error);
     cJSON *sections = cJSON_GetObjectItemCaseSensitive(filled, "sections");
     size_t given = (size_t)cJSON_GetArraySize(sections);
-    if (status == COMPOSER_OK) {
-        piece_structure_default_cadences(&request->structure);
+    FormSpec *form = NULL;
+    if (status == COMPOSER_OK && form_spec_builtin(API_PIECE_FORM, &form) != FORM_SPEC_OK) {
+        status = fail_alloc(error);
     }
-    for (size_t i = 0; status == COMPOSER_OK && i < request->structure.section_count; i++) {
-        const PieceSection *section = &request->structure.sections[i];
+    if (status == COMPOSER_OK) {
+        piece_default_cadences(form, &request->request);
+    }
+    form_spec_destroy(form);
+    for (size_t i = 0; status == COMPOSER_OK && i < request->request.section_count; i++) {
+        const PieceSection *section = &request->request.sections[i];
         cJSON *item = i < given ? cJSON_GetArrayItem(sections, (int)i) : NULL;
         if (!item) {
             item = cJSON_CreateObject();

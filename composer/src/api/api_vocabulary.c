@@ -9,7 +9,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_random.h>
 #include <ursatz_composer/motive_tones.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece.h>
 #include <ursatz_composer/preferences.h>
 #include <ursatz_composer/variant_registry.h>
 

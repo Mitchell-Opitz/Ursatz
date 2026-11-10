@@ -1,8 +1,9 @@
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece.h>
 
 #include <stdio.h>
 #include <string.h>
 
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
@@ -13,11 +14,18 @@
 #include "motive/motive_internal.h"
 #include "util/plan_util.h"
 
+/*
+ * The plans of a form whose sections the request gives (the game loop, R-419): the loop version and the ending version
+ * (R-172), the request's checks, and the cadences and the ending its form document defaults. The parts are the form's
+ * roles counted from the intro; the loop, and the role the ending version leaves out, come from the document.
+ */
+
+_Static_assert(FORM_ROLE_BODY - FORM_ROLE_INTRO == PIECE_PART_BODY && FORM_ROLE_TURNAROUND - FORM_ROLE_INTRO == PIECE_PART_TURNAROUND &&
+                   FORM_ROLE_ENDING - FORM_ROLE_INTRO == PIECE_PART_ENDING,
+               "a part is its role counted from the intro");
+
 static const char *const PART_NAMES[PIECE_PART_COUNT] = {"intro", "body", "turnaround", "ending"};
 static const char *const FILL_NAMES[] = {"empty", "motif", "theme", "progression"};
-
-/* The bars of the ending section piece_structure_default_ending adds. */
-#define DEFAULT_ENDING_BARS 2
 
 const char *piece_part_name(PiecePart part) {
     return part >= 0 && part < PIECE_PART_COUNT ? PART_NAMES[part] : "unknown";
@@ -51,6 +59,44 @@ bool piece_fill_from_name(const char *name, PieceFillKind *out) {
     return false;
 }
 
+/* ------------------------------------------------------------- the form's roles */
+
+static FormRole role_of(PiecePart part) {
+    return (FormRole)(FORM_ROLE_INTRO + (int)part);
+}
+
+/* Whether the part is in the loop: the body and the turnaround. */
+static bool in_loop(const FormSpec *form, PiecePart part) {
+    return form_spec_role_in_loop(form, role_of(part));
+}
+
+/* The part the loop starts with (the body), and the one it closes with (the turnaround) when it has more than one. */
+static PiecePart first_loop_part(const FormSpec *form) {
+    return (PiecePart)(form->loop_roles[0] - FORM_ROLE_INTRO);
+}
+
+/* Whether the ending version leaves the part out: the loop's closing part, replaced by the ending. */
+static bool is_dropped(const FormSpec *form, PiecePart part) {
+    return form->loop_role_count > 1 && role_of(part) == form->loop_roles[form->loop_role_count - 1];
+}
+
+/* The form of the request: a built-in whose sections the request gives. */
+static PieceResult request_form(const PieceRequest *request, FormSpec **form) {
+    *form = NULL;
+    FormSpecResult found = request->form ? form_spec_builtin(request->form, form) : FORM_SPEC_ERR_UNKNOWN;
+    if (found != FORM_SPEC_OK) {
+        return found == FORM_SPEC_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST;
+    }
+    if (!(*form)->request_sections) {
+        form_spec_destroy(*form);
+        *form = NULL;
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    return PIECE_OK;
+}
+
+/* ------------------------------------------------------------- the checks and the defaults */
+
 /* Whether the pickup is a multiple of 1/32 of a whole note, not negative and shorter than a bar. */
 static bool pickup_valid(Rational pickup, Rational bar) {
     if (pickup.den == 0 || pickup.num < 0 || rational_cmp(pickup, bar) >= 0) {
@@ -59,33 +105,32 @@ static bool pickup_valid(Rational pickup, Rational bar) {
     return (pickup.num * (long)PIECE_PICKUP_GRID) % (long)pickup.den == 0;
 }
 
-PieceResult piece_structure_check(const PieceStructure *structure) {
-    if (!structure || (structure->section_count > 0 && !structure->sections)) {
+static PieceResult check(const FormSpec *form, const PieceRequest *request) {
+    if (!request || (request->section_count > 0 && !request->sections)) {
         return PIECE_ERR_NULL;
     }
     size_t cells;
-    if (!grow_cells_per_bar(&structure->meter, &cells) || analysis_key_tonic_pitch_class(&structure->key) < 0 ||
-        analysis_key_tonic_pitch_class(&structure->key) > 11 ||
-        (structure->key.mode != KEY_STRUCTURE_MODE_MAJOR && structure->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
-        structure->meter.beats_per_bar <= 0 || structure->meter.beat_unit <= 0 ||
-        structure->section_count > PIECE_STRUCTURE_MAX_SECTIONS ||
-        (structure->has_accompaniment && structure->has_voicing)) {
+    if (!grow_cells_per_bar(&request->meter, &cells) || analysis_key_tonic_pitch_class(&request->key) < 0 ||
+        analysis_key_tonic_pitch_class(&request->key) > 11 ||
+        (request->key.mode != KEY_STRUCTURE_MODE_MAJOR && request->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
+        request->meter.beats_per_bar <= 0 || request->meter.beat_unit <= 0 ||
+        request->section_count > PIECE_STRUCTURE_MAX_SECTIONS || (request->has_accompaniment && request->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    Rational bar = grow_bar_length(&structure->meter);
+    Rational bar = grow_bar_length(&request->meter);
     size_t beats = 0;
     bool body = false;
     int last_part = PIECE_PART_INTRO;
-    for (size_t i = 0; i < structure->section_count; i++) {
-        const PieceSection *section = &structure->sections[i];
+    for (size_t i = 0; i < request->section_count; i++) {
+        const PieceSection *section = &request->sections[i];
         if (section->id[0] == '\0' || strnlen(section->id, PIECE_SECTION_ID_MAX) == PIECE_SECTION_ID_MAX ||
             section->part < PIECE_PART_INTRO || section->part > PIECE_PART_ENDING || (int)section->part < last_part ||
-            section->beats < 1 || !pickup_valid(section->pickup, bar) ||
+            !form_spec_has_role(form, role_of(section->part)) || section->beats < 1 || !pickup_valid(section->pickup, bar) ||
             section->fill < PIECE_FILL_EMPTY || section->fill > PIECE_FILL_PROGRESSION) {
             return PIECE_ERR_BAD_REQUEST;
         }
         for (size_t other = 0; other < i; other++) {
-            if (strcmp(structure->sections[other].id, section->id) == 0) {
+            if (strcmp(request->sections[other].id, section->id) == 0) {
                 return PIECE_ERR_BAD_REQUEST;
             }
         }
@@ -93,80 +138,85 @@ PieceResult piece_structure_check(const PieceStructure *structure) {
         body = body || section->part == PIECE_PART_BODY;
         beats += section->beats;
     }
-    size_t per_bar = (size_t)structure->meter.beats_per_bar;
+    size_t per_bar = (size_t)request->meter.beats_per_bar;
     if (!body || (beats + per_bar - 1) / per_bar > PIECE_STRUCTURE_MAX_BARS) {
         return PIECE_ERR_BAD_REQUEST;
     }
     return PIECE_OK;
 }
 
-void piece_structure_default_cadences(PieceStructure *structure) {
-    if (!structure || !structure->sections) {
+PieceResult piece_request_check(const PieceRequest *request) {
+    if (!request) {
+        return PIECE_ERR_NULL;
+    }
+    FormSpec *form;
+    PieceResult result = request_form(request, &form);
+    if (result != PIECE_OK) {
+        return result;
+    }
+    result = check(form, request);
+    form_spec_destroy(form);
+    return result;
+}
+
+void piece_default_cadences(const FormSpec *form, PieceRequest *request) {
+    if (!form || !request || !request->sections) {
         return;
     }
-    size_t count = structure->section_count;
-    /* The last section of each part that leads on: the intro into the body, the loop back to its start. */
-    size_t last_intro = count;
-    size_t last_loop = count;
-    size_t last_ending = count;
+    size_t count = request->section_count;
     for (size_t i = 0; i < count; i++) {
-        PiecePart part = structure->sections[i].part;
-        if (part == PIECE_PART_INTRO) {
-            last_intro = i;
-        } else if (part == PIECE_PART_BODY || part == PIECE_PART_TURNAROUND) {
-            last_loop = i;
-        } else {
-            last_ending = i;
-        }
-    }
-    for (size_t i = 0; i < count; i++) {
-        PieceSection *section = &structure->sections[i];
+        PieceSection *section = &request->sections[i];
         if (section->has_cadence) {
             continue;
         }
         section->has_cadence = true;
-        if (i == last_ending) {
-            section->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-        } else if (i == last_loop || i == last_intro) {
-            section->cadence = CADENCE_TYPE_HALF;
-        } else {
-            section->cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
+        section->cadence = form->default_cadence;
+        /* The first rule whose roles hold the last section of one of them. */
+        for (size_t r = 0; r < form->last_cadence_count; r++) {
+            const FormCadenceRule *rule = &form->last_cadences[r];
+            size_t last = count;
+            for (size_t k = 0; k < count; k++) {
+                for (size_t role = 0; role < rule->role_count; role++) {
+                    if (role_of(request->sections[k].part) == rule->roles[role]) {
+                        last = k;
+                    }
+                }
+            }
+            if (last == i) {
+                section->cadence = rule->cadence;
+                break;
+            }
         }
     }
 }
 
-bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) {
-    if (!structure || !structure->sections) {
+bool piece_default_ending(const FormSpec *form, PieceRequest *request, size_t capacity) {
+    if (!form || !request || !request->sections) {
         return false;
     }
-    for (size_t i = 0; i < structure->section_count; i++) {
-        if (structure->sections[i].part == PIECE_PART_ENDING) {
+    for (size_t i = 0; i < request->section_count; i++) {
+        if (request->sections[i].part == PIECE_PART_ENDING) {
             return true;
         }
     }
-    if (structure->section_count >= capacity || structure->meter.beats_per_bar <= 0) {
+    if (!form->has_default_ending || request->section_count >= capacity || request->meter.beats_per_bar <= 0) {
         return false;
     }
-    PieceSection *section = &structure->sections[structure->section_count++];
+    const FormDefaultEnding *ending = &form->default_ending;
+    PieceSection *section = &request->sections[request->section_count++];
     memset(section, 0, sizeof(*section));
-    strcpy(section->id, "end");
-    strcpy(section->letter, "E");
-    section->part = PIECE_PART_ENDING;
-    section->beats = DEFAULT_ENDING_BARS * (size_t)structure->meter.beats_per_bar;
+    snprintf(section->id, sizeof(section->id), "%s", ending->id);
+    snprintf(section->letter, sizeof(section->letter), "%s", ending->letter);
+    section->part = (PiecePart)(ending->role - FORM_ROLE_INTRO);
+    section->beats = ending->bars * (size_t)request->meter.beats_per_bar;
     section->pickup = (Rational){0, 1};
     section->has_cadence = true;
-    section->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    section->cadence = ending->cadence;
     section->fill = PIECE_FILL_EMPTY;
     return true;
 }
 
 /* ------------------------------------------------------------- the plan */
-
-/* The weak cadence an antecedent ends in. */
-#define ANTECEDENT_CADENCE CADENCE_TYPE_HALF
-/* The bars of material a section holds beside the bars of its own: its motive, the four its ideas are made from and the ones
-   grow-theme makes beside them (GROW_MADE_NODES). */
-#define MATERIAL_BARS_PER_SECTION (5 + GROW_MADE_NODES)
 
 /* A length of `count` beats of the meter. */
 static Rational beats_of(const PlanMeter *meter, size_t count) {
@@ -201,15 +251,15 @@ static bool theme_pairing(const PieceSection *section, PlanThemePairing *out) {
  * Whether a motif or empty section is a theme section: 4 or 8 whole bars on a barline with no pickup, and a theme
  * grow-theme can build in the meter with the cadence asked for.
  */
-static bool is_theme_section(const PieceStructure *structure, const PieceSection *section, size_t start_beats,
+static bool is_theme_section(const PieceRequest *request, const PieceSection *section, size_t start_beats,
                              PlanThemePairing *pairing) {
-    size_t per_bar = (size_t)structure->meter.beats_per_bar;
+    size_t per_bar = (size_t)request->meter.beats_per_bar;
     if (section->pickup.num != 0 || start_beats % per_bar != 0 || section->beats % per_bar != 0) {
         return false;
     }
     size_t bars = section->beats / per_bar;
     return (bars == 4 || bars == 8) && theme_pairing(section, pairing) &&
-           grow_theme_buildable(&structure->meter, bars, pairing, section->cadence, ANTECEDENT_CADENCE);
+           grow_theme_buildable(&request->meter, bars, pairing, section->cadence, ANTECEDENT_CADENCE);
 }
 
 /* The key over the start of a span, when one key span holds it. */
@@ -224,10 +274,10 @@ static bool key_over(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
 }
 
 /*
- * The m0 of the theme plan of a theme fill, in the structure's key: the pitches move by the key difference, as the
+ * The m0 of the theme plan of a theme fill, in the request's key: the pitches move by the key difference, as the
  * theme's lanes do (plan_give_section). False when the plan has no theme section, no m0, or is in another mode.
  */
-static bool theme_motive(const PieceStructure *structure, const PieceSection *section, Motive *out) {
+static bool theme_motive(const PieceRequest *request, const PieceSection *section, Motive *out) {
     const PiecePlan *theme_plan = section->theme_plan;
     NodeId theme = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
     NodeId source = theme_plan ? grow_find_source(theme_plan) : PLAN_NODE_NONE;
@@ -239,10 +289,10 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
     }
     span = plan_node_span(theme_plan, theme);
     if (!return_meter_over(theme_plan, span, &meter) || !key_over(theme_plan, span, &key) ||
-        key.mode != structure->key.mode || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
+        key.mode != request->key.mode || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
-    int shift = ((analysis_key_tonic_pitch_class(&structure->key) - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
+    int shift = ((analysis_key_tonic_pitch_class(&request->key) - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
     shift = shift > 6 ? shift - 12 : shift;
     for (size_t i = 0; i < out->note_count; i++) {
         if (out->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
@@ -253,21 +303,21 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
             return false;
         }
     }
-    motive_set_key(out, &structure->key, out->key_source);
+    motive_set_key(out, &request->key, out->key_source);
     return true;
 }
 
-/* The basic motive (R-170): the structure's, else the first motif section's or theme fill's, else NULL to have one invented. */
-static const Motive *basic_motive(const PieceStructure *structure, Motive *storage) {
-    if (structure->motive) {
-        return structure->motive;
+/* The basic motive (R-170): the request's, else the first motif section's or theme fill's, else NULL to have one invented. */
+static const Motive *basic_motive(const PieceRequest *request, Motive *storage) {
+    if (request->motive) {
+        return request->motive;
     }
-    for (size_t i = 0; i < structure->section_count; i++) {
-        const PieceSection *section = &structure->sections[i];
+    for (size_t i = 0; i < request->section_count; i++) {
+        const PieceSection *section = &request->sections[i];
         if (section->fill == PIECE_FILL_MOTIF && section->motive) {
             return section->motive;
         }
-        if (section->fill == PIECE_FILL_THEME && theme_motive(structure, section, storage)) {
+        if (section->fill == PIECE_FILL_THEME && theme_motive(request, section, storage)) {
             return storage;
         }
     }
@@ -304,8 +354,8 @@ static NodeId find_part_section(const PiecePlan *plan, const PieceSection *secti
     return PLAN_NODE_NONE;
 }
 
-/* The piece's basic motive as the realized loop plan holds it (m0, in the structure's key). */
-static bool loop_motive(const PieceStructure *structure, const PiecePlan *loop_plan, Motive *out) {
+/* The piece's basic motive as the realized loop plan holds it (m0, in the request's key). */
+static bool loop_motive(const PieceRequest *request, const PiecePlan *loop_plan, Motive *out) {
     NodeId source = grow_find_source(loop_plan);
     PlanMeter meter;
     AnalysisKey key;
@@ -314,7 +364,7 @@ static bool loop_motive(const PieceStructure *structure, const PiecePlan *loop_p
     }
     PlanSpan span = plan_node_span(loop_plan, source);
     return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
-           key.mode == structure->key.mode && analysis_key_tonic_pitch_class(&key) == analysis_key_tonic_pitch_class(&structure->key) &&
+           key.mode == request->key.mode && analysis_key_tonic_pitch_class(&key) == analysis_key_tonic_pitch_class(&request->key) &&
            grow_read_motive(loop_plan, source, &meter, &key, out);
 }
 
@@ -322,15 +372,15 @@ static bool loop_motive(const PieceStructure *structure, const PiecePlan *loop_p
  * Whether the section is held for the seam stage (R-171): the loop's end, unless it is Given (a theme fill, or a
  * progression that covers it) or holds the body's first bar, which the seam copies before anything can be filled.
  */
-static bool is_held(const PieceStructure *structure, size_t index, size_t cells) {
-    const PieceSection *section = &structure->sections[index];
-    size_t loop_end = structure->section_count;
-    size_t first_body = structure->section_count;
-    for (size_t i = 0; i < structure->section_count; i++) {
-        if (structure->sections[i].part == PIECE_PART_BODY && first_body == structure->section_count) {
+static bool is_held(const FormSpec *form, const PieceRequest *request, size_t index, size_t cells) {
+    const PieceSection *section = &request->sections[index];
+    size_t loop_end = request->section_count;
+    size_t first_body = request->section_count;
+    for (size_t i = 0; i < request->section_count; i++) {
+        if (request->sections[i].part == first_loop_part(form) && first_body == request->section_count) {
             first_body = i;
         }
-        if (structure->sections[i].part == PIECE_PART_BODY || structure->sections[i].part == PIECE_PART_TURNAROUND) {
+        if (in_loop(form, request->sections[i].part)) {
             loop_end = i;
         }
     }
@@ -339,22 +389,22 @@ static bool is_held(const PieceStructure *structure, size_t index, size_t cells)
     }
     if (section->fill == PIECE_FILL_PROGRESSION) {
         size_t per_chord = section->cells_per_chord ? section->cells_per_chord : cells;
-        return section->numeral_count * per_chord * (size_t)structure->meter.beats_per_bar < section->beats * cells;
+        return section->numeral_count * per_chord * (size_t)request->meter.beats_per_bar < section->beats * cells;
     }
     return true;
 }
 
-static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure, const PieceSection *section,
-                               size_t start_beats, NodeId form, PlanSpan span, NodeId *out) {
+static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *request, const PieceSection *section,
+                                       size_t start_beats, NodeId form, PlanSpan span, NodeId *out) {
     PlanConstraint constraint;
     PlanThemePairing pairing;
-    /* A theme fill is the theme it was composed as: its archetype, pairing and cadences, not the structure's. */
+    /* A theme fill is the theme it was composed as: its archetype, pairing and cadences, not the request's. */
     const PiecePlan *theme_plan = section->fill == PIECE_FILL_THEME ? section->theme_plan : NULL;
     NodeId given = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
     if (section->fill == PIECE_FILL_THEME && given == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    bool theme = given == PLAN_NODE_NONE && is_theme_section(structure, section, start_beats, &pairing);
+    bool theme = given == PLAN_NODE_NONE && is_theme_section(request, section, start_beats, &pairing);
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
     if (result == PIECE_OK && given != PLAN_NODE_NONE) {
         result = add_theme_constraints(plan, *out, theme_plan, given);
@@ -390,19 +440,19 @@ static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure,
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = structure->key;
+        constraint.params.key = request->key;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && structure->has_accompaniment) {
+    if (result == PIECE_OK && request->has_accompaniment) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
-        constraint.params.accompaniment = structure->accompaniment;
+        constraint.params.accompaniment = request->accompaniment;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && structure->has_voicing) {
+    if (result == PIECE_OK && request->has_voicing) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_VOICING;
-        constraint.params.voicing = structure->voicing;
+        constraint.params.voicing = request->voicing;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
@@ -436,36 +486,37 @@ static PieceResult add_flag(PiecePlan *plan, NodeId id, PlanConstraintKind kind)
 }
 
 /*
- * The plan of a structure. With a loop plan it is the ending version (R-172): the intro and the body Given from the
+ * The plan of the request. With a loop plan it is the ending version (R-172): the intro and the body Given from the
  * realized loop, the turnaround and the seam left out, the ending laid out open after the body.
  */
-static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_plan, PiecePlan **out) {
-    if (!structure || !out) {
+PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *request, const PiecePlan *loop_plan,
+                                    PiecePlan **out) {
+    if (!form || !request || !out) {
         return PIECE_ERR_NULL;
     }
     *out = NULL;
-    PieceResult result = piece_structure_check(structure);
+    PieceResult result = check(form, request);
     if (result != PIECE_OK) {
         return result;
     }
     size_t cells;
-    Rational bar = grow_bar_length(&structure->meter);
+    Rational bar = grow_bar_length(&request->meter);
     Motive theme_storage;
-    const Motive *motive = basic_motive(structure, &theme_storage);
+    const Motive *motive = basic_motive(request, &theme_storage);
     if (loop_plan) {
-        if (!loop_motive(structure, loop_plan, &theme_storage)) {
+        if (!loop_motive(request, loop_plan, &theme_storage)) {
             return PIECE_ERR_BAD_REQUEST;
         }
         motive = &theme_storage;
     }
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS];
-    PieceStructure copy = *structure;
-    memcpy(sections, structure->sections, structure->section_count * sizeof(PieceSection));
+    PieceRequest copy = *request;
+    memcpy(sections, request->sections, request->section_count * sizeof(PieceSection));
     copy.sections = sections;
-    piece_structure_default_cadences(&copy);
+    piece_default_cadences(form, &copy);
     if ((motive && motive->note_count < 2) ||
-        (structure->has_accompaniment && !grow_accompaniment_valid(&structure->meter, &structure->accompaniment)) ||
-        !grow_cells_per_bar(&structure->meter, &cells)) {
+        (request->has_accompaniment && !grow_accompaniment_valid(&request->meter, &request->accompaniment)) ||
+        !grow_cells_per_bar(&request->meter, &cells)) {
         return PIECE_ERR_BAD_REQUEST;
     }
     size_t motive_bars = motive ? grow_motive_layout_bars(motive, bar) : 1;
@@ -473,13 +524,13 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     size_t laid = 0;
     size_t beats = 0;
     size_t material_bars = motive_bars;
-    size_t per_bar = (size_t)structure->meter.beats_per_bar;
+    size_t per_bar = (size_t)request->meter.beats_per_bar;
     bool has_ending = false;
     /* The motive fills the basic idea of every section laid out: 2 bars of an 8-bar theme, 1 of a 4-bar one or a free phrase. */
     size_t basic_bars = 2;
     for (size_t i = 0; i < copy.section_count; i++) {
         has_ending = has_ending || copy.sections[i].part == PIECE_PART_ENDING;
-        if (loop_plan ? copy.sections[i].part != PIECE_PART_TURNAROUND : copy.sections[i].part != PIECE_PART_ENDING) {
+        if (loop_plan ? !is_dropped(form, copy.sections[i].part) : copy.sections[i].part != PIECE_PART_ENDING) {
             basic_bars = copy.sections[i].beats == 8 * per_bar ? basic_bars : 1;
             laid = i + 1;
             beats += copy.sections[i].beats;
@@ -501,9 +552,10 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     beats += loop_plan ? 0 : per_bar;
     PlanSpan material = {{0, 1}, {0, 1}};
     if (rational_mul_int(bar, (long long)((beats + per_bar - 1) / per_bar), &material.start) != RATIONAL_OK) {
+        plan_destroy(plan);
         return PIECE_ERR_BAD_REQUEST;
     }
-    PlanSpan form = {{0, 1}, {0, 1}};
+    PlanSpan span_form = {{0, 1}, {0, 1}};
     NodeId form_id = PLAN_NODE_NONE;
     NodeId source = PLAN_NODE_NONE;
     PlanLanePayload payload;
@@ -514,36 +566,36 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         return PIECE_ERR_BAD_REQUEST;
     }
     material.length = bars_length;
-    result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, material.length, &form.length)));
+    result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, material.length, &span_form.length)));
     if (result == PIECE_OK) {
-        result = piece_result_of_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
+        result = piece_result_of_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, span_form, form->plan_name, &form_id));
     }
     /* The meter and the key are Given over the sections and the material: the piece is in its home key throughout. */
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
-        payload.meter = structure->meter;
-        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
+        payload.meter = request->meter;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, span_form, &payload, &lane));
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = structure->key;
-        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
+        payload.key = request->key;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, span_form, &payload, &lane));
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     /* The sections in time order, each from the end of the one before. */
     Rational start = {0, 1};
     size_t start_beats = 0;
     for (size_t i = 0; result == PIECE_OK && i < laid; i++) {
-        if (loop_plan && copy.sections[i].part == PIECE_PART_TURNAROUND) {
+        if (loop_plan && is_dropped(form, copy.sections[i].part)) {
             continue;
         }
         NodeId id;
         /* The ending version takes the intro and the body as the loop realized them. */
         bool from_loop = loop_plan && copy.sections[i].part != PIECE_PART_ENDING;
         NodeId loop_section = from_loop ? find_part_section(loop_plan, &copy.sections[i]) : PLAN_NODE_NONE;
-        PlanSpan span = {start, beats_of(&structure->meter, copy.sections[i].beats)};
-        result = add_section(plan, &copy, &copy.sections[i], start_beats, form_id, span, &id);
+        PlanSpan span = {start, beats_of(&request->meter, copy.sections[i].beats)};
+        result = add_request_section(plan, &copy, &copy.sections[i], start_beats, form_id, span, &id);
         if (result == PIECE_OK && from_loop) {
             if (loop_section == PLAN_NODE_NONE || plan_give_section(plan, id, loop_plan, loop_section) != GIVEN_OK) {
                 result = PIECE_ERR_BAD_REQUEST;
@@ -562,7 +614,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
                 result = PIECE_ERR_BAD_REQUEST;
             }
         }
-        if (result == PIECE_OK && !loop_plan && is_held(&copy, i, cells)) {
+        if (result == PIECE_OK && !loop_plan && is_held(form, &copy, i, cells)) {
             result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
         }
         if (result == PIECE_OK) {
@@ -580,18 +632,18 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
             PlanConstraint key;
             memset(&key, 0, sizeof(key));
             key.kind = PLAN_CONSTRAINT_KEY;
-            key.params.key = structure->key;
+            key.params.key = request->key;
             result = piece_add_constraint(plan, seam, &key);
         }
     }
     if (result == PIECE_OK) {
         result = piece_add_material(plan, motive, NULL, form_id, material, bar, &source);
     }
-    if (result == PIECE_OK && structure->has_style) {
+    if (result == PIECE_OK && request->has_style) {
         PlanConstraint style;
         memset(&style, 0, sizeof(style));
         style.kind = PLAN_CONSTRAINT_STYLE;
-        style.params.style = structure->style;
+        style.params.style = request->style;
         result = piece_add_constraint(plan, form_id, &style);
     }
     if (result == PIECE_OK) {
@@ -605,26 +657,20 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     return PIECE_OK;
 }
 
-void piece_structure_basic_idea(const PieceStructure *structure, size_t *theme_bars, size_t *idea_bars) {
-    size_t per_bar = structure->meter.beats_per_bar > 0 ? (size_t)structure->meter.beats_per_bar : 1;
-    size_t shortest = 8;
-    for (size_t i = 0; i < structure->section_count; i++) {
-        shortest = structure->sections[i].beats == 8 * per_bar ? shortest : 4;
-    }
-    *theme_bars = shortest;
-    *idea_bars = shortest == 8 ? 2 : 1;
-}
-
-PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out) {
-    return build(structure, NULL, out);
-}
-
-PieceResult piece_ending_plan(const PiecePlan *loop_plan, const PieceStructure *structure, PiecePlan **out) {
-    if (!loop_plan) {
+PieceResult piece_build_ending(const PiecePlan *loop_plan, const PieceRequest *request, PiecePlan **out) {
+    if (!loop_plan || !request || !out) {
         if (out) {
             *out = NULL;
         }
         return PIECE_ERR_NULL;
     }
-    return build(structure, loop_plan, out);
+    *out = NULL;
+    FormSpec *form;
+    PieceResult result = request_form(request, &form);
+    if (result != PIECE_OK) {
+        return result;
+    }
+    result = form_build_request_plan(form, request, loop_plan, out);
+    form_spec_destroy(form);
+    return result;
 }
