@@ -217,6 +217,11 @@ add_test(NAME test_grow_sentence_heard COMMAND test_grow_sentence_heard)
 # The share of grown sentences standard-form hears as a sentence is below 100% (measured, with the cause, in docs/grow.md):
 # the test asserts all of them are, so it fails, and the failure is expected. Not tuned away, not skipped.
 set_tests_properties(test_grow_sentence_heard PROPERTIES WILL_FAIL TRUE)
+add_executable(test_theme_shape test_theme_shape.c)
+target_link_libraries(test_theme_shape PRIVATE ursatz_composer)
+target_include_directories(test_theme_shape PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_theme_shape PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_theme_shape COMMAND test_theme_shape)
 add_executable(test_grow_period test_grow_period.c)
 target_link_libraries(test_grow_period PRIVATE ursatz_composer)
 target_compile_options(test_grow_period PRIVATE -Wall -Wextra -Wpedantic)
