@@ -2,7 +2,8 @@
 
 The JSON file `ursatz-composer piece` reads ([cli-piece.md](cli-piece.md), R-173). It holds the structure of a looping game
 track (an intro, a body, a turnaround and an ending, [the game loop](piece-structure.md)) and the brief. Schema
-`ursatz-piece-request`, version 1. Back to the [docs index](README.md).
+`ursatz-piece-request`, version 1 (the game loop) or 2 (any built-in form, [below](#a-piece-of-another-form-schema-version-2)).
+Back to the [docs index](README.md).
 
 ```json
 {"schema": "ursatz-piece-request", "schema_version": 1,
@@ -59,6 +60,24 @@ of any length that composes; a sentence at the loop's end (nothing after it but 
 | `motif` | `motive`, `forms`, `into`, `hybrid` | A motive of its own (`null`: the basic motive), saved forms of it for the motives stage (as in the theme request, at most 64 in the request), and for a section of 4 or 8 whole bars the theme it is built into: `into` `sentence` (default), `period` or `hybrid` (with `hybrid` as `--hybrid` writes it). Any other length is a free phrase. |
 | `theme` | `plan` | A plan the `theme` or `grow` command wrote: its realized lanes are Given to the section, moved and transposed to it. The theme must be as long as the section, in the same meter and mode. In the request file of the `piece` command `plan` is the path of the plan file; in a request to the [API](api/theme-and-piece.md#composer_api_piecerequest_json-job-out) it is the plan object itself, with an optional `source` (the name shown as the section's source), and a path is refused. The command reads the file into the request. |
 | `progression` | `numerals`, `cells` | Roman numerals separated by spaces (`"i iv V i"`), `cells` harmony cells each (a bar when left out; a cell is half a bar in 4/4). The harmony stage fills the rest of the section. |
+
+## A piece of another form (schema version 2)
+
+`"schema_version": 2` names a built-in form in `form` (`binary`, `rounded-binary`, `ternary`, `variations`, `loop`,
+`layered` or `game-loop`; [the API serves them](api/vocabulary-and-validation.md#forms-composer_api_formsout)). Version 1 is
+the game loop and refuses a `form` at `/request/form`; a version 2 request without `form`, or with another name, is refused
+there too, with the built-in names. The brief (`key`, `mode`, `meter`, `motive`, `accompaniment`, `style`, `style_weight`,
+`without`, `tempo`) is as above. The rest depends on the form:
+
+| Form | Members |
+| --- | --- |
+| `game-loop` | `sections` and `voicing` as above. `bars`, `count` and `modulate` are refused at their paths. A version 2 game loop request answers as the version 1 request does. |
+| a form with sizes | `bars` (0 to 512) and `count` (0 to 64) pick the size (none: the form's default; a size the form has no such of is refused at `/request/bars`, or `/request/count` when only `count` was given, with the sizes it has); `modulate` plans the keys of the sections from the seed. `sections` and `voicing` are refused at their paths: the sections are the size's. |
+
+A form with sizes has the one version `piece`, no loop and no ending (`loop` is `null`, and `ending_musicxml` is refused). Its
+sections are those of its size, with the roles, returns and motives the [form document](forms.md) gives, and no fill of their
+own yet. The motive of the piece, when given, is the basic motive. Each seed that gets stuck is passed over and the next is
+tried (up to 16), with the plan built again for each, so a modulating piece plans its keys again.
 
 ## Errors
 

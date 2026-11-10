@@ -128,14 +128,16 @@ request gives.
 
 1. Write `forms/<name>.json` (the file's name is the form's `name`).
 2. Add `<name>` to `COMPOSER_FORMS` in `src/CMakeLists.txt`.
-3. A piece of the form is `piece_build_plan` with `PieceRequest.form` set to the name (a form that comes in sizes). A form that is not built in is
+3. A piece of the form is `piece_build_plan` with `PieceRequest.form` set to the name (a form that comes in sizes), and through the API a
+   piece request of `"schema_version": 2` with `"form": "<name>"` composes, regenerates and varies it with no further code
+   ([piece-request.md](piece-request.md#a-piece-of-another-form-schema-version-2)). A form that is not built in is
    built with `form_build_plan(form, request, &plan)` from a parsed document and composed with `ComposeConfig.form` set:
    `tests/fixtures/forms/bar-form.json` (A, A' returning A, B in 24 bars) is composed that way by `test_form_spec custom`,
    and no C code names it.
 
 The API serves the forms (`composer_api_forms`, API 1.13, [api/vocabulary-and-validation.md](api/vocabulary-and-validation.md#forms-composer_api_formsout)):
-their sizes, sections, cadences, keys and theme slots. Composing a form other than the game loop through the piece entry
-comes with the piece request version 2 (P45 B2); the plan format and the piece request schema do not change here.
+their sizes, sections, cadences, keys and theme slots. The piece entries compose any of them from a piece request of version 2
+(API 1.14); a form with sizes has the one version `piece`, and the game loop keeps its loop and ending versions.
 
 ## The game loop
 
