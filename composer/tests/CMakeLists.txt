@@ -172,6 +172,11 @@ target_link_libraries(test_melody_fill PRIVATE ursatz_composer)
 target_compile_options(test_melody_fill PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_melody_fill COMMAND test_melody_fill)
 
+add_executable(test_preferences test_preferences.c)
+target_link_libraries(test_preferences PRIVATE ursatz_composer cjson)
+target_compile_options(test_preferences PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_preferences COMMAND test_preferences)
+
 add_executable(test_form_hear test_form_hear.c)
 target_link_libraries(test_form_hear PRIVATE ursatz_composer)
 target_compile_options(test_form_hear PRIVATE -Wall -Wextra -Wpedantic)
