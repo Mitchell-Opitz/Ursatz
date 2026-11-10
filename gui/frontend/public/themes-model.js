@@ -14,6 +14,10 @@
   const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
   const slotNames = () => Vocab.values("theme_slots");
   const slotLabels = () => Object.fromEntries(Vocab.list("theme_slots").map((entry) => [entry.value, entry.label]));
+  /* The slot every theme needs (its required is true) and the idea of that slot a theme has no motif of its own for (R-430,
+   * R-431). */
+  const requiredSlot = () => (Vocab.list("theme_slots").find((entry) => entry.required) || {}).value || "";
+  const requiredIdea = () => (Vocab.list("theme_ideas").find((entry) => entry.slot === requiredSlot()) || {}).value || "";
   const intos = () => Vocab.list("piece_intos");
   const beginnings = () => Vocab.values("theme_beginnings");
   const endings = () => Vocab.values("theme_endings");
@@ -56,7 +60,7 @@
     { id: "other", label: "Other" },
   ];
   const THEME_TAB_KEY = "ursatz.theme.tab";
-  const MAX_SLOTS = 4;
+  const maxSlots = () => Vocab.list("theme_slots").length;
 
   function text(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -407,7 +411,7 @@
         state.chords[entry.bar] = entry.text;
       }
     }
-    state.modeChosen = state.slots.some((entry) => entry.slot === "basic");
+    state.modeChosen = state.slots.some((entry) => entry.slot === requiredSlot());
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
       state.accompaniment =
@@ -446,14 +450,13 @@
     return true;
   }
 
-  /* The [beginning, ending] pair of the form: a sentence is presentation+continuation, a period antecedent+consequent. */
+  /* The [beginning, ending] pair of the form: the one its archetype is made of (the piece_intos entry's beginning and
+   * ending), else the hybrid's two halves. */
   function pairing(state) {
     const s = state || emptyState();
-    if (s.into === "sentence") {
-      return ["presentation", "continuation"];
-    }
-    if (s.into === "period") {
-      return ["antecedent", "consequent"];
+    const into = Vocab.entry("piece_intos", s.into) || {};
+    if (into.beginning && into.ending) {
+      return [into.beginning, into.ending];
     }
     return text(s.hybrid).split("+");
   }
@@ -470,9 +473,9 @@
     return slotNames().filter((name) => used.has(name));
   }
 
-  /* The ideas that can have a motif of their own: those of the form but the basic idea (the basic slot). */
+  /* The ideas that can have a motif of their own: those of the form but the required slot's idea. */
   function ownIdeaNames(state) {
-    return formIdeas(state).map((entry) => entry.idea).filter((name) => name !== "basic idea");
+    return formIdeas(state).map((entry) => entry.idea).filter((name) => name !== requiredIdea());
   }
 
   /* The motif a slot's item belongs to: the item itself, or the end of its variant_of chain in items (at most 32 hops). */
@@ -508,10 +511,10 @@
     const s = state || emptyState();
     const problems = [];
     const slots = Array.isArray(s.slots) ? s.slots : [];
-    if (slots.length > MAX_SLOTS) {
-      problems.push("A theme has at most 4 slot motifs.");
+    if (slots.length > maxSlots()) {
+      problems.push(`A theme has at most ${maxSlots()} slot motifs.`);
     }
-    if (!slots.some((entry) => entry && entry.slot === "basic" && text(entry.item_id))) {
+    if (!slots.some((entry) => entry && entry.slot === requiredSlot() && text(entry.item_id))) {
       problems.push("The basic idea needs a motif.");
     }
     if (s.mode === "style" && briefFromPicks(s.picks) === null) {
@@ -851,6 +854,12 @@
   }
 
   const api = {
+    get REQUIRED_SLOT() {
+      return requiredSlot();
+    },
+    get REQUIRED_IDEA() {
+      return requiredIdea();
+    },
     get SLOT_NAMES() {
       return slotNames();
     },

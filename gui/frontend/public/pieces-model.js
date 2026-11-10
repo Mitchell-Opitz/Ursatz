@@ -297,7 +297,7 @@
           return emptyFill();
         }
         const out = { kind: "motif", item_id: f.item_id, version: Number(f.version) };
-        if (!free && (f.into === "sentence" || f.into === "period" || f.into === "hybrid")) {
+        if (!free && Vocab.values("piece_intos").includes(f.into)) {
           out.into = f.into;
           out.hybrid = f.into === "hybrid" ? text(f.hybrid) : null;
         }
