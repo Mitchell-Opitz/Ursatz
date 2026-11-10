@@ -210,6 +210,12 @@ add_test(NAME test_grow_sentence COMMAND test_grow_sentence)
 # Measured 12.0 s of CPU, over the 10 s fast-set limit.
 set_tests_properties(test_grow_sentence PROPERTIES LABELS slow)
 
+add_executable(test_grow_half_cadence test_grow_half_cadence.c)
+target_link_libraries(test_grow_half_cadence PRIVATE ursatz_composer)
+target_compile_options(test_grow_half_cadence PRIVATE -Wall -Wextra -Wpedantic)
+# A sentence ending in a half cadence in a minor key grows (P44 B6, R-418): 12 runs.
+add_test(NAME test_grow_half_cadence COMMAND test_grow_half_cadence)
+
 add_executable(test_grow_sentence_heard test_grow_sentence_heard.c)
 target_link_libraries(test_grow_sentence_heard PRIVATE ursatz_composer)
 target_compile_options(test_grow_sentence_heard PRIVATE -Wall -Wextra -Wpedantic)
@@ -388,7 +394,7 @@ add_executable(test_piece_structure test_piece_structure.c)
 target_link_libraries(test_piece_structure PRIVATE ursatz_composer)
 target_compile_options(test_piece_structure PRIVATE -Wall -Wextra -Wpedantic)
 # The checks and the plans, then the composed runs (seeds 1 to 10 each): a structure, a pickup, free phrases.
-foreach(mode checks plan compose pickup free)
+foreach(mode checks plan compose pickup free minor_half_free)
     add_test(NAME test_piece_structure_${mode} COMMAND test_piece_structure ${mode})
 endforeach()
 

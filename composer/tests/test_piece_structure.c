@@ -21,6 +21,8 @@
  *             written and the cadences are heard as planned in at least 8 of the 10 seeds
  *   pickup    a body section with a quarter-note pickup composes and keeps its pickup
  *   free      a free phrase of 3 bars and one of 10 beats: their ideas and their cadences
+ *   minor_half_free  a game loop in D minor in 4/4 whose body ends in a free phrase of 20 beats ending in a half cadence
+ *             builds and composes, every section written (P44 B6, R-418); the same loop was stuck at the seam stage
  */
 
 #define SEEDS 10
@@ -422,6 +424,43 @@ static void test_free(void) {
     free_phrase(10, 2, TEN_BEATS);
 }
 
+/* A body A of 32 beats and B of 20 beats, a free phrase that ends in the loop's half cadence, in D minor in 4/4. */
+static void test_minor_half_free(void) {
+    Fixture fixture;
+    fixture_init(&fixture);
+    fixture.request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    PieceSection *a = add_section(&fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_MOTIF);
+    a->has_into = true;
+    a->into = PLAN_ARCHETYPE_SENTENCE;
+    PieceSection *b = add_section(&fixture, "b", "B", PIECE_PART_BODY, 20, PIECE_FILL_MOTIF);
+    b->has_into = true;
+    b->into = PLAN_ARCHETYPE_PERIOD; /* a free phrase has no archetype: this is read only for a theme */
+    default_cadences(&fixture.request);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+
+    PiecePlan *plan = NULL;
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
+    NodeId sections[PIECE_STRUCTURE_MAX_SECTIONS];
+    size_t count = piece_sections(plan, sections, PIECE_STRUCTURE_MAX_SECTIONS);
+    assert(count == 2);
+    assert(node_constraint(plan, sections[1], PLAN_CONSTRAINT_FREE_PHRASE));
+    const PlanConstraint *cadence = node_constraint(plan, sections[1], PLAN_CONSTRAINT_CADENCE);
+    assert(cadence && cadence->params.cadence == CADENCE_TYPE_HALF);
+
+    ComposeConfig config;
+    ComposeOutcome outcome;
+    memset(&config, 0, sizeof(config));
+    config.seed = 1;
+    PieceResult ran = compose_run(plan, &config, &outcome);
+    assert(ran == PIECE_OK);
+    for (size_t i = 0; i < count; i++) {
+        assert(section_written(plan, sections[i]));
+    }
+    compose_outcome_destroy(&outcome);
+    plan_destroy(plan);
+    printf("D minor 4/4 loop, B a free phrase of 20 beats ending HC: composed, every section written\n");
+}
+
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "checks") == 0) {
         test_checks();
@@ -444,6 +483,10 @@ int main(int argc, char **argv) {
         test_free();
         return 0;
     }
-    fprintf(stderr, "usage: test_piece_structure checks|plan|compose|pickup|free\n");
+    if (argc == 2 && strcmp(argv[1], "minor_half_free") == 0) {
+        test_minor_half_free();
+        return 0;
+    }
+    fprintf(stderr, "usage: test_piece_structure checks|plan|compose|pickup|free|minor_half_free\n");
     return 2;
 }
