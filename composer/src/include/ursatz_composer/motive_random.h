@@ -71,6 +71,17 @@ typedef enum {
  *   rung_moves        a walk on the chord tones moves one rung (step) or two (skip)
  *   decorations       a note between frame notes: chord tone, passing, neighbor, appoggiatura, escape
  *   durations         half beat, beat, two beats
+ *   accented_one_in   an accented non-chord tone (on a beat, resolving to the next note) in one eligible note of this many; 0 never
+ *   accented_types    which one: appoggiatura, passing, suspension (a suspension only where the chord changes)
+ *   avoid_repeats     no repeated note: a decoration that finds no figure tries the other kinds before a chord tone, and no
+ *                     two adjacent notes share a pitch unless the second is a suspension or the repeat feature's pair
+ *   leaps_per_motif   the most intervals of 5 semitones or more in a motive (11 never rejects)
+ *   leap_recovery     a leap is followed by a move of 1 or 2 semitones the other way
+ *   pickup_from_accent a pickup is one chord tone below segment a's first note and no longer than it, and a motive with
+ *                     no pickup does not open with the upbeat that implies one
+ *   contrast_fidelity_min  the least recognizability of a contrasting segment against segment a (a ratio; 0 never rejects)
+ *   long_on_weak      the two-beat note is this much more likely on a weak beat (weight times 1 plus this)
+ *   final_long        the last note of the last segment is longer than every other note in it
  */
 typedef struct {
     unsigned long bars[2];
@@ -84,6 +95,15 @@ typedef struct {
     unsigned long rung_moves[2];
     unsigned long decorations[5];
     unsigned long durations[3];
+    unsigned accented_one_in;
+    unsigned long accented_types[3];
+    bool avoid_repeats;
+    unsigned leaps_per_motif;
+    bool leap_recovery;
+    bool pickup_from_accent;
+    ComposerRatio contrast_fidelity_min;
+    unsigned long long_on_weak;
+    bool final_long;
 } MotiveRandomPreferences;
 
 /* The defaults. */
