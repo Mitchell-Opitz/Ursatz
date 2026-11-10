@@ -118,6 +118,7 @@ typedef struct {
     unsigned long suggest;
     bool suggested;                          /* "suggest" was given: the text output numbers the themes */
     const GrowFidelityTable *fidelity;       /* NULL for the defaults; not owned */
+    const MelodyFillParams *melody;          /* NULL for the defaults; not owned */
     const ComposerJob *job;
 } GrowSetup;
 
