@@ -243,23 +243,48 @@ static bool related_to_home(AnalysisKey home, AnalysisKey key) {
     return false;
 }
 
-/* The arrival of every authentic cadence heard in the sections, in whole notes. False when a section is not readable. */
-static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *sections, size_t count, double *arrivals,
-                               size_t *arrival_count) {
+/* Adds the authentic arrivals heard in `span`. False when the span is not readable. */
+static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanSpan span, double *arrivals,
+                          size_t *arrival_count) {
+    FormHeard heard;
+    if (form_hear_in(hearing, plan, span, &heard) != FORM_HEAR_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < heard.cadence_count && *arrival_count < MAX_ARRIVALS; i++) {
+        int type = heard.cadences[i].type;
+        if (type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
+            type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) {
+            arrivals[(*arrival_count)++] = rational_to_double(heard.cadences[i].arrival);
+        }
+    }
+    form_heard_destroy(&heard);
+    return true;
+}
+
+/*
+ * The arrival of every authentic cadence heard in the sections, in whole notes. Each section is heard whole; the hearing
+ * gives the Analyzer the key at the span's start, so the part of a section after a key change inside it is heard again
+ * from the change, in its new key. False when a section is not readable.
+ */
+static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, const KeyLane *lane, const NodeId *sections,
+                               size_t count, double *arrivals, size_t *arrival_count) {
     *arrival_count = 0;
     for (size_t s = 0; s < count; s++) {
-        FormHeard heard;
-        if (form_hear_in(hearing, plan, plan_node_span(plan, sections[s]), &heard) != FORM_HEAR_OK) {
+        PlanSpan whole = plan_node_span(plan, sections[s]);
+        Rational end;
+        if (!hear_arrivals(hearing, plan, whole, arrivals, arrival_count) || plan_span_end(whole, &end) != PLAN_OK) {
             return false;
         }
-        for (size_t i = 0; i < heard.cadence_count && *arrival_count < MAX_ARRIVALS; i++) {
-            int type = heard.cadences[i].type;
-            if (type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
-                type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) {
-                arrivals[(*arrival_count)++] = rational_to_double(heard.cadences[i].arrival);
+        for (size_t k = 0; k < lane->count; k++) {
+            Rational at = lane->span[k].start;
+            Rational negative = {-at.num, at.den};
+            PlanSpan part = {at, {0, 1}};
+            if (rational_cmp(at, whole.start) > 0 && rational_cmp(at, end) < 0 &&
+                rational_add(end, negative, &part.length) == RATIONAL_OK &&
+                !hear_arrivals(hearing, plan, part, arrivals, arrival_count)) {
+                return false;
             }
         }
-        form_heard_destroy(&heard);
     }
     return true;
 }
@@ -315,7 +340,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
     double arrivals[MAX_ARRIVALS + 1];
     size_t arrival_count;
     if (section_count == 0 || piece_end.num == 0 || !read_key_lane(plan, &lane) ||
-        !authentic_arrivals(hearing, plan, sections, section_count, arrivals, &arrival_count)) {
+        !authentic_arrivals(hearing, plan, &lane, sections, section_count, arrivals, &arrival_count)) {
         return false;
     }
     AnalysisKey home = lane.key[0];
