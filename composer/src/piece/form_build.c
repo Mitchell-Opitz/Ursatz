@@ -373,8 +373,8 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         PieceKeyPlan keys;
         FillRng rng;
         fill_rng_seed(&rng, request->seed);
-        result = piece_plan_keys(plan, request->modulate ? &rng : NULL, &keys);
-        result = result == PIECE_OK && request->modulate ? piece_plan_cadences(plan, &keys) : result;
+        result = piece_plan_keys(plan, form, size, request->modulate ? &rng : NULL, &keys);
+        result = result == PIECE_OK && request->modulate ? piece_plan_cadences(plan, form, size, &keys) : result;
     }
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));

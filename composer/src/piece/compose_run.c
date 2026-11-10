@@ -974,7 +974,7 @@ static bool has_key_changes(const PiecePlan *plan) {
 
 /* The checks of a plan with several keys; PIECE_ERR_STUCK, marked in the outcome, when it fails them. */
 static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, ComposeOutcome *outcome) {
-    bool read = piece_check_keys_in(hearing, plan, &outcome->key_check) && piece_check_cadences(plan, &outcome->cadence_check);
+    bool read = piece_check_keys_in(hearing, plan, &outcome->key_check) && piece_check_cadences(plan, NULL, &outcome->cadence_check);
     if (read && outcome->key_check.ok && outcome->cadence_check.ok) {
         return PIECE_OK;
     }
