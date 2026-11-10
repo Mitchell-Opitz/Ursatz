@@ -380,16 +380,9 @@ foreach(template ${FORM_TEMPLATES})
     # The sweeps are slow: CI leaves them out (ctest -LE slow).
     set_tests_properties(test_piece_keys_${template} PROPERTIES LABELS slow)
 endforeach()
-# Every completed run passes every check; the share of runs that complete is below 100% for all but variations
-# (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed. Rounded binary was at
-# 100% until the motive-forms (P14 B8) left one run stuck, was at 100% again since the tritone is refused (P25 B5), and is
-# at 13 of 20 since the checks hear the plan through the Analyzer (P25 B7b): it rejects more key plans (docs/piece.md), and
-# at 20 of 20 again since P36 B1 (a contrasting idea stays in the key), and at 19 of 20 since P36 B3 (liquidated residues):
-# C major seed 9's key change is heard as a tonicization, and at 20 of 20 again since the Analyzer reads applied chords
-# (P40 B7: Ursatz c06f802, Analyzer 7525814), so it no longer fails, and at 19 of 20 again since keys from phrases (P42:
-# C major seed 2 is stuck at texture, a key change inside a phrase is heard as a tonicization, R-397).
-set_tests_properties(test_piece_keys_binary test_piece_keys_rounded-binary test_piece_keys_ternary test_piece_keys_loop
-                     test_piece_keys_layered PROPERTIES WILL_FAIL TRUE)
+# Every completed run passes every check, and every template completes all 20 runs since P44 B6 (a half-cadence
+# continuation or free phrase in a minor key gets chords, and a key change inside a section is heard in its new key,
+# R-418; docs/piece.md has the measured shares).
 
 add_executable(test_piece_structure test_piece_structure.c)
 target_link_libraries(test_piece_structure PRIVATE ursatz_composer)

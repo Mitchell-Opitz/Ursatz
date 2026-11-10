@@ -245,24 +245,49 @@ static double as_double(Rational time) {
     return (double)time.num / (double)time.den;
 }
 
-/* Whether an authentic cadence arrives in [start, end), heard section by section. */
-static bool authentic_inside(const PiecePlan *plan, const NodeId *sections, size_t count, Rational start, Rational end) {
+/* Whether an authentic cadence heard in `span` arrives in [start, end). */
+static bool authentic_in_part(const PiecePlan *plan, PlanSpan span, Rational start, Rational end) {
+    FormHeard heard;
+    assert(form_hear(plan, span, &heard) == FORM_HEAR_OK);
+    for (size_t i = 0; i < heard.cadence_count; i++) {
+        Rational at = heard.cadences[i].arrival;
+        int type = heard.cadences[i].type;
+        /* The Analyzer hears an authentic cadence it cannot call perfect or imperfect (no soprano under it, the
+           piece's last) as authentic-unspecified; piece_check_keys counts it too. */
+        if ((type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
+             type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) &&
+            rational_cmp(at, start) >= 0 && rational_cmp(at, end) < 0) {
+            form_heard_destroy(&heard);
+            return true;
+        }
+    }
+    form_heard_destroy(&heard);
+    return false;
+}
+
+/*
+ * Whether an authentic cadence arrives in [start, end), heard as piece_check_keys hears it: each section whole, and the
+ * part of a section after a key change inside it, from the change, in its new key.
+ */
+static bool authentic_inside(const PiecePlan *plan, const KeyLane *lane, const NodeId *sections, size_t count, Rational start,
+                             Rational end) {
     for (size_t s = 0; s < count; s++) {
-        FormHeard heard;
-        assert(form_hear(plan, plan_node_span(plan, sections[s]), &heard) == FORM_HEAR_OK);
-        for (size_t i = 0; i < heard.cadence_count; i++) {
-            Rational at = heard.cadences[i].arrival;
-            int type = heard.cadences[i].type;
-            /* The Analyzer hears an authentic cadence it cannot call perfect or imperfect (no soprano under it, the
-               piece's last) as authentic-unspecified; piece_check_keys counts it too. */
-            if ((type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
-                 type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) &&
-                rational_cmp(at, start) >= 0 && rational_cmp(at, end) < 0) {
-                form_heard_destroy(&heard);
+        PlanSpan whole = plan_node_span(plan, sections[s]);
+        Rational whole_end;
+        assert(plan_span_end(whole, &whole_end) == PLAN_OK);
+        if (authentic_in_part(plan, whole, start, end)) {
+            return true;
+        }
+        for (size_t k = 0; k < lane->count; k++) {
+            Rational at = lane->span[k].start;
+            Rational negative = {-at.num, at.den};
+            PlanSpan part = {at, {0, 1}};
+            if (rational_cmp(at, whole.start) > 0 && rational_cmp(at, whole_end) < 0 &&
+                rational_add(whole_end, negative, &part.length) == RATIONAL_OK &&
+                authentic_in_part(plan, part, start, end)) {
                 return true;
             }
         }
-        form_heard_destroy(&heard);
     }
     return false;
 }
@@ -284,7 +309,7 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
         if (rational_cmp(end, piece_end) > 0) {
             end = piece_end;
         }
-        assert(authentic_inside(plan, sections, count, lane.span[k].start, end));
+        assert(authentic_inside(plan, &lane, sections, count, lane.span[k].start, end));
         assert(as_double(end) > as_double(lane.span[k].start));
     }
     PieceKeyCheck keys;
