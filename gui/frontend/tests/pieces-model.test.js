@@ -176,7 +176,7 @@ check(P.variationsRequest("pce-1", 2, { section_id: "s1", lane: "harmony", count
 check(P.regenerateRequest("pce-1", 2, { section_id: "s1" }).request.job === true && P.variationsRequest("pce-1", 2, { section_id: "s1", lane: "harmony", count: "3" }).request.job === true && P.chooseRequest("pce-1", 2, 4, 1).job === true, "regenerate, variations and choose are jobs");
 check(same(JSON.parse(P.chooseRequest("pce-1", 2, 4, 1).body), { index: 1 }) && P.chooseRequest("pce-1", 2, 4, 1).url.endsWith("/versions/2/variations/4/choose"), "choose request");
 check(P.variationFileUrl("pce-1", 2, 4, "variation-1.musicxml").endsWith("/versions/2/variations/4/variation-1.musicxml"), "variation file url");
-check(same(P.lanesFor(section("s", "body", "A", 8)), ["harmony", "bass", "melody", "inner"]) && same(P.lanesFor(section("s", "body", "A", 8, { kind: "theme" })), ["harmony", "bass"]) && P.lanesFor(section("e", "ending", "E", 8)).length === 0, "lanes by section");
+check(same(P.lanesFor(section("s", "body", "A", 8)), ["harmony", "bass", "melody", "inner"]) && same(P.lanesFor(section("s", "body", "A", 8, { kind: "theme" })), ["harmony", "bass"]) && P.lanesFor(section("e", "ending", "E", 8), [{ id: "s" }]).length === 0, "lanes by section");
 const cards = P.variationCards({ set: 1, variations: [{ index: 2, seed: 5, score: { numerator: 8, denominator: 12 }, seam: { held: 3 }, heard: "half" }] });
 check(cards[0].title === "#2 · seed 5" && cards[0].score === "8 of 12" && cards[0].seam === "3 of 4 seam rules" && cards[0].heard === "half", "variation cards");
 
@@ -186,26 +186,26 @@ const view = P.resultView({ seed: 7, summary, files: ["loop.mid"], brief: { piec
 check(view.seed === 7 && view.key === "D minor" && view.loop === "bar 3 to bar 17" && view.loopLength === "14 bars", "result facts and the loop region");
 check(view.brief.tempo === "170 (from the brief)" && view.brief.mode === "minor (set here)" && view.brief.density === "2 attacks per beat" && view.brief.without === "none", "result brief");
 check(view.pieces === "2 pieces in the brief, 1 skipped", "result brief pieces");
-const loop = view.versions.loop;
+const loop = view.versions[0].view;
 check(same(loop.rows.map((row) => row.id), ["intro", "a", "b", "t"]) && loop.rows[1].start === "bar 3" && loop.rows[1].length === "8 bars", "loop rows");
 check(loop.rows[1].cadence === "IAC" && loop.rows[1].heard === "imperfect-authentic" && loop.rows[1].fill === "motif" && loop.rows[1].source === "own motive", "loop row cadence, fill and source");
 check(loop.rows[3].part === "turnaround" && loop.rows[3].cadence === "HC" && loop.rows[3].heard === "half", "turnaround row");
 check(loop.seam.held === 3 && loop.seam.label === "3 of 4 seam rules held" && loop.seam.rules.filter((rule) => !rule.held).length === 1, "seam rules");
 check(loop.score.label === "16 of 21" && loop.check.label === "5 of 5 planned items heard", "score and Analyzer check");
 check(loop.distance.length === 5 && loop.distance[4].label === "overall" && loop.distance[4].value === "0.5454", "style distance");
-const ending = view.versions.ending;
+const ending = view.versions[1].view;
 check(ending.rows[3].part === "ending" && ending.rows[3].heard === "none (the piece ends)" && ending.seam === null && ending.score.label === "6 of 6", "ending version");
 check(ending.rows[3].start === "bar 15", "ending starts after the body");
 const withTheme = JSON.parse(JSON.stringify(summary));
 withTheme.versions.loop.sections[1].fill = "theme";
 withTheme.versions.loop.sections[1].source = "/data/materials/items/pce-1/v2/theme-a.plan.json";
-check(P.resultView({ summary: withTheme }, { sourceNames: { a: "Theme One v2" } }).versions.loop.rows[1].source === "Theme One v2", "a theme source is named by its section");
+check(P.resultView({ summary: withTheme }, { sourceNames: { a: "Theme One v2" } }).versions[0].view.rows[1].source === "Theme One v2", "a theme source is named by its section");
 check(
   JSON.stringify(view.playLoop) === JSON.stringify({ start: 2, end: 16, bodyEnd: 14 }) && P.resultView({ summary: { versions: {} } }).playLoop === null,
   "the playback loop is the loop region and the end of the last body section, in whole notes",
 );
 const empty = P.resultView(null);
-check(empty.seed === null && empty.versions.loop === null && empty.loop === "" && empty.files.length === 0, "no result gives no rows");
+check(empty.seed === null && empty.versions.length === 0 && empty.loop === "" && empty.files.length === 0, "no result gives no rows");
 
 /* sources and themes */
 const updates = P.updatedUses({ uses_status: [{ item_id: "mot-1", name: "Motif A", version: 1, current_version: 2 }, { item_id: "thm-1", version: 2, current_version: 2 }, { item_id: "x", version: 1, current_version: 4, missing: true }] });

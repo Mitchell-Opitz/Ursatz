@@ -223,7 +223,7 @@ function pieceVersionTables(view, heading, check) {
   box.appendChild(
     pieceTable(
       ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source"],
-      view.rows.map((row) => [row.id, row.part, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source]),
+      view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source]),
     ),
   );
   box.appendChild(
@@ -242,7 +242,7 @@ function pieceVersionTables(view, heading, check) {
  * Regenerate and variations of the sections of a composed version. ctx: {id, version, statusEl, saved(answer)}; state
  * is the form state of the version's body. A regenerate or a chosen variation becomes the next version (ctx.saved).
  */
-function buildPieceActions(ctx, state) {
+function buildPieceActions(ctx, state, rows) {
   const box = materialsElement("div", "piece-actions");
   box.appendChild(materialsElement("h3", "section-title", "Regenerate and variations"));
   const results = materialsElement("div", "composer-variation-grid");
@@ -301,14 +301,11 @@ function buildPieceActions(ctx, state) {
     }
   }
 
-  for (const section of state.sections) {
-    const lanes = PiecesModel.lanesFor(section);
-    if (lanes.length === 0) {
-      continue;
-    }
+  for (const section of PiecesModel.actionSections(state, rows)) {
+    const lanes = section.lanes;
     const whole = lanes.length === PiecesModel.LANES.length;
     const row = materialsElement("div", "upload-controls piece-action-row");
-    row.appendChild(materialsElement("strong", "", `${section.letter || section.id} (${PiecesModel.beatsLabel(section.beats, state.meter)})`));
+    row.appendChild(materialsElement("strong", "", `${section.letter} (${section.length})`));
     const regenLane = themeSelect([...(whole ? [{ value: "", label: "All lanes" }] : []), ...lanes], whole ? "" : lanes[0]);
     const regenSeed = themeInput("seed", "");
     const regenerate = themeButton("Regenerate", () =>
@@ -339,7 +336,7 @@ function buildPieceActions(ctx, state) {
 }
 
 /*
- * The result of a piece version: the Composer's summary as tables for the loop and the ending version, the scores
+ * The result of a piece version: the Composer's summary as a table for each version of its form, the scores
  * with playback and the MIDI downloads. ctx: {id, version, piece (the version body's piece), nameOf, title}, and
  * statusEl and saved(answer) on the current version, which adds regenerate and variations. Returns null when the
  * version has no result.
@@ -356,7 +353,7 @@ function buildPieceResult(ctx) {
       sourceNames[section.id] = `${ctx.nameOf(section.fill.item_id)} v${section.fill.version}`;
     }
   }
-  const view = PiecesModel.resultView(result, { sourceNames });
+  const view = PiecesModel.resultView(result, { sourceNames, form: state.form });
   const section = materialsElement("section", "panel materials-analysis piece-result");
   section.appendChild(materialsElement("h2", "section-title", "Result"));
   section.appendChild(
@@ -371,52 +368,52 @@ function buildPieceResult(ctx) {
       ["Brief", view.pieces],
     ]),
   );
-  if (view.versions.loop) {
-    section.appendChild(pieceVersionTables(view.versions.loop, "Loop version", ctx.piece.check === true));
-  }
-  if (view.versions.ending) {
-    section.appendChild(pieceVersionTables(view.versions.ending, "Ending version", ctx.piece.check === true));
+  for (const version of view.versions) {
+    section.appendChild(pieceVersionTables(version.view, version.label, ctx.piece.check === true));
   }
   const downloads = materialsElement("div", "upload-controls");
-  for (const [label, name] of [
-    ["Download loop MIDI", "loop.mid"],
-    ["Download ending MIDI", "ending.mid"],
-  ]) {
-    const link = materialsElement("a", "back-link clickable", label);
-    link.href = PiecesModel.versionFileUrl(ctx.id, ctx.version, name);
-    link.download = name;
-    downloads.appendChild(link);
+  for (const version of view.versions) {
+    for (const [label, name] of [
+      [`Download ${version.name} MIDI`, `${version.name}.mid`],
+      [`Download ${version.name} MusicXML`, `${version.name}.musicxml`],
+    ]) {
+      const link = materialsElement("a", "back-link clickable", label);
+      link.href = PiecesModel.versionFileUrl(ctx.id, ctx.version, name);
+      link.download = name;
+      downloads.appendChild(link);
+    }
   }
   section.appendChild(downloads);
 
-  /* The scores: the loop version, a tab for the ending version */
+  /* The scores: a tab for each version, the first shown. A version that loops repeats its loop and plays the version
+   * that comes after it (its `after`) as its ending. */
   const tabs = materialsElement("div", "upload-controls");
   const scoreHost = materialsElement("div", "materials-score-mount");
-  function showScore(which) {
-    const looping = which === "loop" && view.playLoop;
+  function showScore(version) {
+    const looping = version.loop && view.playLoop;
+    const ending = looping ? view.versions.find((other) => other.after === version.name) : null;
     themeMountScore(scoreHost, ctx.id, ctx.version, ctx.title, {
-      playback: which,
-      musicxml: `${which}.musicxml`,
-      subtitle: `piece · v${ctx.version} · ${which} version`,
+      playback: version.name,
+      musicxml: `${version.name}.musicxml`,
+      subtitle: `piece · v${ctx.version} · ${version.name} version`,
       loop: looping ? { start: view.playLoop.start, end: view.playLoop.end } : null,
-      ending: looping ? { playback: "ending", musicxml: "ending.musicxml", bodyEnd: view.playLoop.bodyEnd } : null,
+      ending: ending ? { playback: ending.name, musicxml: `${ending.name}.musicxml`, bodyEnd: view.playLoop.bodyEnd } : null,
     });
     for (const button of tabs.children) {
-      button.classList.toggle("selected", button.dataset.which === which);
+      button.classList.toggle("selected", button.dataset.which === version.name);
     }
   }
-  for (const [which, label] of [
-    ["loop", "Loop score"],
-    ["ending", "Ending score"],
-  ]) {
-    const button = themeButton(label, () => showScore(which));
-    button.dataset.which = which;
+  for (const version of view.versions) {
+    const button = themeButton(`${version.name.charAt(0).toUpperCase()}${version.name.slice(1)} score`, () => showScore(version));
+    button.dataset.which = version.name;
     tabs.appendChild(button);
   }
   section.append(tabs, scoreHost);
-  showScore("loop");
+  if (view.versions.length > 0) {
+    showScore(view.versions[0]);
+  }
   if (ctx.statusEl && ctx.saved) {
-    section.appendChild(buildPieceActions(ctx, state));
+    section.appendChild(buildPieceActions(ctx, state, view.versions.length > 0 ? view.versions[0].view.rows : []));
   }
   return section;
 }
@@ -428,15 +425,30 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.appendChild(buildMaterialExport(id, number, title));
   const piece = body && body.piece ? body.piece : {};
   const state = PiecesModel.stateFromBody(body, id);
+  const form = PiecesModel.formOf(state.form);
+  /* A sized form has no sections of its own: its size, whether it modulates and the sections the Composer plans. */
+  const sizedFacts = () => {
+    const size = PiecesModel.sizeOf(form, state.bars, state.count);
+    return [
+      ["Size", size ? PiecesModel.sizeLabel(size) : "not found"],
+      ...(form.settings && form.settings.modulate === true ? [["Modulate", state.modulate ? "yes" : "no"]] : []),
+      ...PiecesModel.sectionsOf(form, state.bars, state.count).map((section) => [
+        `${section.role ? section.role.label : ""} ${section.letter}`,
+        `${Number.isFinite(section.bars) ? `${section.bars} bars` : `${section.beats} beats`}${section.cadence ? `, cadence ${section.cadence.core}` : ""}`,
+      ]),
+    ];
+  };
   /* The cadences a section leaves unchosen come from the Composer (the validate route); the facts are drawn again when
    * they arrive. */
   const facts = (served) =>
     themeFacts([
+      ["Form", form ? form.label : state.form],
       ["Key", `${state.key} ${state.mode}, ${state.meter}`],
+      ...(PiecesModel.isSized(form) ? sizedFacts() : []),
       ...state.sections.map((section, index) => {
         const cadence = PiecesModel.cadenceOf(state, index, served);
         return [
-          `${PiecesModel.roleLabel(PiecesModel.formOf(state.form), section.part)} ${section.letter || section.id}`,
+          `${PiecesModel.roleLabel(form, section.part)} ${section.letter || section.id}`,
           `${PiecesModel.beatsLabel(section.beats, state.meter)}, ${cadence ? `cadence ${cadence}, ` : ""}${section.fill.kind}${
             section.fill.item_id ? ` ${nameOf(section.fill.item_id)} v${section.fill.version}` : ""
           }`,

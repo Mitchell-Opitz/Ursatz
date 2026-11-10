@@ -667,13 +667,27 @@
   const LANES = ["harmony", "bass", "melody", "inner"];
   const MAX_VARIATIONS = 8;
 
-  /* The lanes of a section that can be written again (R-173): a section filled with a theme takes harmony and bass
-   * only, an ending section none (the backend refuses both others). */
-  function lanesFor(section) {
-    if (!section || section.part === "ending") {
+  /* The lanes of a section that can be written again (R-173): only a section of the first version (rows, as versionView
+   * gives them) can be; a section filled with a theme takes harmony and bass only (the backend refuses the others). With no
+   * rows every section is asked. */
+  function lanesFor(section, rows) {
+    if (!section || (Array.isArray(rows) && !rows.some((row) => row.id === section.id))) {
       return [];
     }
     return section.fill && section.fill.kind === "theme" ? ["harmony", "bass"] : LANES.slice();
+  }
+
+  /* The sections that offer regenerate and variations, from the first version's rows (resultView `versions[0].view.rows`):
+   * [{id, letter, length, lanes}]. A form whose request lists its sections takes them from the state (their fills limit the
+   * lanes); a sized form has none in the state and takes the rows. */
+  function actionSections(state, rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (isSized(formOf(state.form))) {
+      return list.map((row) => ({ id: row.id, letter: row.letter || row.id, length: row.length, lanes: lanesFor({ id: row.id }, list) }));
+    }
+    return (state.sections || [])
+      .map((section) => ({ id: section.id, letter: section.letter || section.id, length: beatsLabel(section.beats, state.meter), lanes: lanesFor(section, list) }))
+      .filter((entry) => entry.lanes.length > 0);
   }
 
   /* The seed typed, blank for none: {value} (undefined for none) or {error}. */
@@ -816,9 +830,11 @@
     }
     const rows = (Array.isArray(v.sections) ? v.sections : []).map((section) => {
       const beats = beatsOfTime(section.start, meter);
+      const part = section.part || section.role || "";
       return {
         id: section.id,
-        part: section.part,
+        part,
+        partLabel: roleLabel(options && options.form, part),
         letter: section.letter || "",
         start: positionLabel(beats, meter),
         startBeats: beats,
@@ -865,32 +881,68 @@
     return m && Number(m[2]) !== 0 ? Number(m[1]) / Number(m[2]) : null;
   }
 
+  /* The version of a form that loops (the form's versions say which), or null. */
+  function loopVersion(form) {
+    const found = form && Array.isArray(form.versions) ? form.versions.find((version) => version.loop === true) : null;
+    return found ? found.value : null;
+  }
+
   /* What loop playback needs, in whole notes: the loop region and where the last body section ends (the ending takes
-   * over there), or null when the summary has no loop or no body section. */
-  function playbackLoop(summary) {
+   * over there: the last section whose role is a loop role other than the last), or null when the form has no loop, the
+   * summary has none or no body section. */
+  function playbackLoop(summary, form) {
     const s = summary && typeof summary === "object" ? summary : {};
+    const f = form === undefined ? formOf(DEFAULT_FORM) : form;
+    const name = loopVersion(f);
     const loop = s.loop && typeof s.loop === "object" ? s.loop : null;
     const start = loop ? wholeNotes(loop.start) : null;
     const end = loop ? wholeNotes(loop.end) : null;
-    const version = s.versions && s.versions.loop && Array.isArray(s.versions.loop.sections) ? s.versions.loop : null;
+    const version = name && s.versions && s.versions[name] && Array.isArray(s.versions[name].sections) ? s.versions[name] : null;
     if (start === null || end === null || !(end > start) || !version) {
       return null;
     }
+    const bodyRoles = (Array.isArray(f.loop_roles) ? f.loop_roles : []).slice(0, -1);
     const unit = beatUnit(s.meter);
     let bodyEnd = null;
     for (const section of version.sections) {
       const at = wholeNotes(section.start);
-      if (section.part === "body" && at !== null && Number.isFinite(section.beats)) {
+      if (bodyRoles.includes(section.part) && at !== null && Number.isFinite(section.beats)) {
         bodyEnd = Math.max(bodyEnd === null ? 0 : bodyEnd, at + section.beats / unit);
       }
     }
     return bodyEnd === null ? null : { start, end, bodyEnd };
   }
 
+  /* The versions of a summary in the form's order, then any other: [{name, label, loop, after, view}]. */
+  function versionViews(versions, form, meter, options) {
+    const listed = form && Array.isArray(form.versions) ? form.versions : [];
+    const names = listed.map((version) => version.value).filter((name) => versions[name]);
+    for (const name of Object.keys(versions)) {
+      if (!names.includes(name)) {
+        names.push(name);
+      }
+    }
+    return names
+      .map((name) => {
+        const entry = listed.find((version) => version.value === name) || {};
+        return {
+          name,
+          label: entry.label || name,
+          loop: entry.loop === true,
+          after: typeof entry.after === "string" ? entry.after : null,
+          view: versionView(versions[name], meter, options),
+        };
+      })
+      .filter((entry) => entry.view !== null);
+  }
+
   /* The Composer's summary of a piece version's result as rows to show. result is piece.result ({seed, summary, brief,
-   * loop, files}); options carries sourceNames ({<section id>: "Theme One v2"}) for the sections filled with a theme. */
+   * loop, files}); options carries sourceNames ({<section id>: "Theme One v2"}) for the sections filled with a theme and
+   * form (the form's name, the game loop when absent) for the labels and the loop. */
   function resultView(result, options) {
     const r = result && typeof result === "object" ? result : {};
+    const form = formOf(options && options.form);
+    const rowOptions = Object.assign({}, options, { form });
     const summary = r.summary && typeof r.summary === "object" ? r.summary : {};
     const meter = typeof summary.meter === "string" ? summary.meter : "4/4";
     const versions = summary.versions && typeof summary.versions === "object" ? summary.versions : {};
@@ -907,9 +959,9 @@
       key: typeof summary.key === "string" ? summary.key : "",
       meter,
       loop: loop && startBeats !== null && endBeats !== null ? `${positionLabel(startBeats, meter)} to ${positionLabel(endBeats, meter)}` : "",
-      playLoop: playbackLoop(summary),
+      playLoop: playbackLoop(summary, form),
       loopLength: startBeats !== null && endBeats !== null ? beatsLabel(endBeats - startBeats, meter) : "",
-      versions: { loop: versionView(versions.loop, meter, options), ending: versionView(versions.ending, meter, options) },
+      versions: versionViews(versions, form, meter, rowOptions),
       brief: {
         tempo: Number.isFinite(tempo.qpm) ? `${tempo.qpm} (${FROM_TEXT[tempo.from] || tempo.from})` : "not set",
         mode: mode.mode ? `${mode.mode} (${FROM_TEXT[mode.from] || mode.from})` : "",
@@ -940,6 +992,7 @@
     roleLabel,
     defaultRole,
     sizeOptions,
+    sizeLabel,
     sizeOf,
     sectionsOf,
     withForm,
@@ -998,6 +1051,7 @@
     LANES,
     MAX_VARIATIONS,
     lanesFor,
+    actionSections,
     optionalSeed,
     regenerateRequest,
     variationsRequest,

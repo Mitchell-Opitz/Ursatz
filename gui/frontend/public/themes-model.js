@@ -659,7 +659,7 @@
   }
 
   /* The playback the backend builds from one of a version's MIDI files (R-275): file is "theme" (a theme version) or
-   * "loop" or "ending" (a piece version). The answer is the playback shape the score workspace reads. */
+   * the name of a version of a piece's form ("loop", "ending", "piece"...). The answer is the playback shape the score workspace reads. */
   function versionPlaybackUrl(id, number, file) {
     return `${itemUrl(id, "")}/versions/${Number(number)}/playback?file=${encodeURIComponent(file)}`;
   }
