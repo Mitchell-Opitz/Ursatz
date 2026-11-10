@@ -28,24 +28,29 @@
  * MusicXML of the loop version are made in memory.
  */
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 static ComposerStatus fail_cancelled(ComposerError *error) {
     return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
 }
 
-/* Adds item to object under name and returns true; the item is deleted when it is NULL or cannot be added. */
-static bool add(cJSON *object, const char *name, cJSON *item) {
-    if (!object || !item || !cJSON_AddItemToObject(object, name, item)) {
-        cJSON_Delete(item);
-        return false;
-    }
-    return true;
-}
-
 /* ------------------------------------------------------------- composing */
+
+size_t api_piece_version_names(const FormSpec *form, const char **names, const char **labels, size_t capacity) {
+    size_t count = 0;
+    if (form->request_sections && form->loop_role_count > 0) {
+        if (count < capacity) {
+            names[count] = "loop";
+            labels[count++] = "Loop version";
+        }
+        if (count < capacity) {
+            names[count] = "ending";
+            labels[count++] = "Ending version";
+        }
+    } else if (count < capacity) {
+        names[count] = "piece";
+        labels[count++] = "Piece";
+    }
+    return count;
+}
 
 void api_piece_version_destroy(PieceVersion *version) {
     if (version->composed) {
@@ -258,7 +263,7 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
             free(lane_targets);
             free(found);
             plan_destroy(plan);
-            return status != COMPOSER_OK ? status : fail_alloc(error);
+            return status != COMPOSER_OK ? status : api_fail_alloc(error);
         }
         found = grown;
         memcpy(found + found_count, lane_targets, lane_count * sizeof(FillTarget));
@@ -498,7 +503,7 @@ static cJSON *analyzer_check_json(const ComposeOutcome *outcome) {
     cJSON *items = cJSON_CreateArray();
     bool ok = object && cJSON_AddNumberToObject(object, "planned", (double)check->planned) &&
               cJSON_AddNumberToObject(object, "agreed", (double)check->agreed) &&
-              cJSON_AddBoolToObject(object, "contradicts", check->contradicts) && add(object, "items", items);
+              cJSON_AddBoolToObject(object, "contradicts", check->contradicts) && api_add(object, "items", items);
     for (size_t i = 0; ok && i < check->item_count; i++) {
         const AnalyzerCheckItem *item = &check->items[i];
         cJSON *entry = cJSON_CreateObject();
@@ -543,15 +548,15 @@ cJSON *api_piece_version_json(const PieceSpec *request, const PieceVersion *vers
     const ComposeOutcome *outcome = &version->outcome;
     cJSON *object = cJSON_CreateObject();
     cJSON *sections = cJSON_CreateArray();
-    bool ok = add(object, "plan", cJSON_CreateNull()) && add(object, "sections", sections);
+    bool ok = api_add(object, "plan", cJSON_CreateNull()) && api_add(object, "sections", sections);
     for (size_t i = 0; ok && i < count; i++) {
         cJSON *entry = cJSON_CreateObject();
         ok = entry && cJSON_AddStringToObject(entry, "id", rows[i].section->id) &&
              cJSON_AddStringToObject(entry, "part", piece_part_name(rows[i].section->part)) &&
-             cJSON_AddStringToObject(entry, "letter", rows[i].section->letter) && add(entry, "start", time_json(rows[i].start)) &&
+             cJSON_AddStringToObject(entry, "letter", rows[i].section->letter) && api_add(entry, "start", time_json(rows[i].start)) &&
              cJSON_AddNumberToObject(entry, "beats", (double)rows[i].section->beats) &&
-             add(entry, "cadence", string_or_null(rows[i].has_cadence ? plan_cadence_name(rows[i].cadence) : NULL)) &&
-             add(entry, "heard", string_or_null(rows[i].heard)) && (!rows[i].kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
+             api_add(entry, "cadence", string_or_null(rows[i].has_cadence ? plan_cadence_name(rows[i].cadence) : NULL)) &&
+             api_add(entry, "heard", string_or_null(rows[i].heard)) && (!rows[i].kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
              cJSON_AddStringToObject(entry, "fill", piece_fill_name(rows[i].section->fill)) &&
              cJSON_AddStringToObject(entry, "source", rows[i].source);
         if (!ok || !cJSON_AddItemToArray(sections, entry)) {
@@ -559,9 +564,9 @@ cJSON *api_piece_version_json(const PieceSpec *request, const PieceVersion *vers
             ok = false;
         }
     }
-    ok = ok && add(object, "score", ratio_object(outcome->score.numerator, outcome->score.denominator)) &&
-         add(object, "seam", seam_json(outcome)) && add(object, "analyzer_check", analyzer_check_json(outcome)) &&
-         add(object, "style_distance", outcome->style_measured ? api_style_distance_json(&outcome->style_distance) : cJSON_CreateNull());
+    ok = ok && api_add(object, "score", ratio_object(outcome->score.numerator, outcome->score.denominator)) &&
+         api_add(object, "seam", seam_json(outcome)) && api_add(object, "analyzer_check", analyzer_check_json(outcome)) &&
+         api_add(object, "style_distance", outcome->style_measured ? api_style_distance_json(&outcome->style_distance) : cJSON_CreateNull());
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -637,8 +642,8 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
     cJSON *loop_region = api_piece_loop_json(piece->loop.plan);
     bool ok = document && cJSON_AddStringToObject(document, "schema", "ursatz-piece") &&
               cJSON_AddNumberToObject(document, "seed", (double)piece->seed) && cJSON_AddStringToObject(document, "key", key) &&
-              cJSON_AddStringToObject(document, "meter", meter) && add(document, "brief", api_brief_json(&brief)) &&
-              add(document, "loop", loop_region ? loop_region : cJSON_CreateNull());
+              cJSON_AddStringToObject(document, "meter", meter) && api_add(document, "brief", api_brief_json(&brief)) &&
+              api_add(document, "loop", loop_region ? loop_region : cJSON_CreateNull());
     if (ok && from) {
         cJSON *regenerated = cJSON_CreateNull();
         if (regenerate_section) {
@@ -651,11 +656,11 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
                 regenerated = NULL;
             }
         }
-        ok = add(document, "regenerated", regenerated);
+        ok = api_add(document, "regenerated", regenerated);
     }
     cJSON *versions = cJSON_CreateObject();
-    ok = ok && add(versions, "loop", api_piece_version_json(request, &piece->loop)) &&
-         add(versions, "ending", api_piece_version_json(request, &piece->ending)) && add(document, "versions", versions);
+    ok = ok && api_add(versions, "loop", api_piece_version_json(request, &piece->loop)) &&
+         api_add(versions, "ending", api_piece_version_json(request, &piece->ending)) && api_add(document, "versions", versions);
     if (!ok) {
         cJSON_Delete(versions);
         cJSON_Delete(document);
@@ -718,10 +723,10 @@ ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *pla
 static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, const PieceMade *piece, const PieceOutputs *outputs,
                                   ComposerResponse *out) {
     cJSON *plans = cJSON_CreateObject();
-    if (!add(plans, "loop", api_piece_plan_object(piece->loop.plan)) ||
-        !add(plans, "ending", api_piece_plan_object(piece->ending.plan)) || !add(document, "plans", plans)) {
+    if (!api_add(plans, "loop", api_piece_plan_object(piece->loop.plan)) ||
+        !api_add(plans, "ending", api_piece_plan_object(piece->ending.plan)) || !api_add(document, "plans", plans)) {
         cJSON_Delete(plans);
-        return fail_alloc(&out->error);
+        return api_fail_alloc(&out->error);
     }
     if (outputs->explain) {
         char *text = explanation_text(piece, outputs->explain == 2);
@@ -740,7 +745,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
         bool added = cJSON_AddStringToObject(document, "ending_musicxml", text) != NULL;
         free(text);
         if (!added) {
-            return fail_alloc(&out->error);
+            return api_fail_alloc(&out->error);
         }
     }
     PlanJsonError detail;
@@ -796,7 +801,7 @@ static ComposerStatus read_edit(const cJSON *request, char **text, PieceEdit *ed
     }
     *text = cJSON_PrintUnformatted(from);
     if (!*text) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     edit->text = *text;
     if (!has_regenerate) {
@@ -865,7 +870,7 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
     const char *style = NULL;
     memset(&piece, 0, sizeof(piece));
     memset(&edit, 0, sizeof(edit));
-    ComposerStatus status = request ? api_parse_request(request_json, &root, &out->error) : fail_alloc(&out->error);
+    ComposerStatus status = request ? api_parse_request(request_json, &root, &out->error) : api_fail_alloc(&out->error);
     if (status == COMPOSER_OK) {
         const cJSON *corpus = cJSON_GetObjectItemCaseSensitive(root, "corpus");
         if (corpus && !cJSON_IsNull(corpus)) {
@@ -918,7 +923,7 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
     }
     if (status == COMPOSER_OK) {
         cJSON *document = piece_document(request, &piece, &edit, section, edit.text != NULL);
-        status = document ? add_outputs(document, request, &piece, &outputs, out) : fail_alloc(&out->error);
+        status = document ? add_outputs(document, request, &piece, &outputs, out) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
             status = render_loop(request, &piece, &outputs, out);
         }

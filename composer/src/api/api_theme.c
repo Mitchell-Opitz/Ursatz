@@ -538,10 +538,6 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
 
 /* --- the outputs --------------------------------------------------------------------------------------- */
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* Adds, for each theme of the document, its plan (with "plans") and its explanation (with "explain"). */
 static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, GrowDevelopment setup_development,
                                         const ApiOutputOptions *outputs, ComposerError *error) {
@@ -556,7 +552,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, Gro
             free(text);
             if (!plan || !cJSON_AddItemToObject(item, "plan", plan)) {
                 cJSON_Delete(plan);
-                return fail_alloc(error);
+                return api_fail_alloc(error);
             }
         }
         if (outputs->explain) {
@@ -573,7 +569,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, Gro
             }
             if (!text || !cJSON_AddStringToObject(item, "explanation", text)) {
                 free(text);
-                return fail_alloc(error);
+                return api_fail_alloc(error);
             }
             free(text);
         }
@@ -724,7 +720,7 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
 
     state->material = calloc(1, sizeof(*state->material));
     if (!state->material) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     status = load_material(state->material, &state->theme, request, setup, error);
     if (status != COMPOSER_OK) {
@@ -761,10 +757,10 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
         const cJSON *chords = cJSON_GetObjectItemCaseSensitive(state.request, "chords");
         info.chords = cJSON_IsArray(chords) ? chords : NULL;
         cJSON *document = api_grow_result_json(&state.setup, &state.run, &info);
-        status = document ? add_theme_members(document, &state.run, state.setup.development, &outputs, &out->error) : fail_alloc(&out->error);
+        status = document ? add_theme_members(document, &state.run, state.setup.development, &outputs, &out->error) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK && state.has_preferences &&
             !cJSON_AddItemToObject(document, "preferences", composer_preferences_write(&state.preferences))) {
-            status = fail_alloc(&out->error);
+            status = api_fail_alloc(&out->error);
         }
         if (status == COMPOSER_OK) {
             status = render_first(&state.run.themes[0], &outputs, out);
@@ -795,7 +791,7 @@ ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
     ApiOutputOptions outputs;
     memset(&outputs, 0, sizeof(outputs));
     state.request = cJSON_Duplicate(request, true);
-    ComposerStatus status = state.request ? theme_prepare(&state, NULL, &outputs, error) : fail_alloc(error);
+    ComposerStatus status = state.request ? theme_prepare(&state, NULL, &outputs, error) : api_fail_alloc(error);
     if (status == COMPOSER_OK) {
         /* Build the plan as Compose would, without seeding: the first refusal is the answer. */
         GrowRequest grow;
@@ -806,7 +802,7 @@ ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
         if (built == GROW_OK) {
             plan_destroy(plan);
         } else if (built == GROW_ERR_ALLOC) {
-            status = fail_alloc(error);
+            status = api_fail_alloc(error);
         } else {
             status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, refusal.path, "%s", refusal.message);
         }

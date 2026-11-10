@@ -20,6 +20,12 @@ ComposerStatus api_parse_request(const char *text, cJSON **out, ComposerError *e
 /* Sets error and returns status. path may be NULL or "". */
 ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...);
 
+/* Sets error to "out of memory" (COMPOSER_ERR_ALLOC, no path) and returns the status. */
+ComposerStatus api_fail_alloc(ComposerError *error);
+
+/* Adds item to object under name and returns true; the item is deleted when object or item is NULL or it cannot be added. */
+bool api_add(cJSON *object, const char *name, cJSON *item);
+
 /* Prints the value unformatted into out->json and deletes it. Returns COMPOSER_OK or COMPOSER_ERR_ALLOC (with error set). */
 ComposerStatus api_respond_json(ComposerResponse *out, cJSON *value);
 

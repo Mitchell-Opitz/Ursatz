@@ -25,23 +25,10 @@ typedef struct {
     uint64_t signature;
 } Variation;
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 static void variations_destroy(Variation *items, size_t count) {
     for (size_t i = 0; i < count; i++) {
         api_piece_version_destroy(&items[i].version);
     }
-}
-
-/* Adds item to object under name and returns true; the item is deleted when it is NULL or cannot be added. */
-static bool add(cJSON *object, const char *name, cJSON *item) {
-    if (!object || !item || !cJSON_AddItemToObject(object, name, item)) {
-        cJSON_Delete(item);
-        return false;
-    }
-    return true;
 }
 
 /*
@@ -65,7 +52,7 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
     cJSON *list = cJSON_CreateArray();
     bool ok = document && cJSON_AddStringToObject(document, "schema", "ursatz-piece-variations") &&
               cJSON_AddStringToObject(document, "section", edit->section) && cJSON_AddStringToObject(document, "lane", lanes) &&
-              add(document, "brief", api_brief_json(&brief)) && add(document, "variations", list);
+              api_add(document, "brief", api_brief_json(&brief)) && api_add(document, "variations", list);
     for (size_t i = 0; ok && i < kept; i++) {
         const Variation *variation = &items[i];
         cJSON *entry = cJSON_CreateObject();
@@ -76,10 +63,10 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
             cJSON_Delete(loop && plan ? NULL : plan);
         }
         ok = ok && cJSON_AddNumberToObject(entry, "index", (double)(i + 1)) &&
-             cJSON_AddNumberToObject(entry, "seed", (double)variation->seed) && add(entry, "loop", loop);
+             cJSON_AddNumberToObject(entry, "seed", (double)variation->seed) && api_add(entry, "loop", loop);
         if (ok) {
             cJSON *markers = api_piece_loop_json(variation->version.plan);
-            ok = !markers || add(entry, "loop_markers", markers);
+            ok = !markers || api_add(entry, "loop_markers", markers);
         }
         if (ok && musicxml) {
             char *text = NULL;
@@ -102,7 +89,7 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
          cJSON_AddNumberToObject(document, "seeds_tried", (double)tried);
     if (!ok) {
         cJSON_Delete(document);
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     *result = document;
     return COMPOSER_OK;
@@ -151,7 +138,7 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
     memset(&edit, 0, sizeof(edit));
     edit.path = "/variations";
     memset(items, 0, sizeof(items));
-    ComposerStatus status = request ? api_parse_request(request_json, &root, &out->error) : fail_alloc(&out->error);
+    ComposerStatus status = request ? api_parse_request(request_json, &root, &out->error) : api_fail_alloc(&out->error);
     if (status == COMPOSER_OK) {
         if (!api_member_bool(root, "check", &check, &present, &out->error) ||
             !api_member_bool(root, "plain_midi", &plain_midi, &present, &out->error) ||
@@ -178,7 +165,7 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
         PiecePlan *original = NULL;
         PlanJsonError plan_error;
         if (!plan_text) {
-            status = fail_alloc(&out->error);
+            status = api_fail_alloc(&out->error);
         } else if (plan_from_json(plan_text, &original, &plan_error) != PLAN_OK) {
             status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
         } else {

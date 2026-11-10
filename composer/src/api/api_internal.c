@@ -21,6 +21,18 @@ ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char 
     return status;
 }
 
+ComposerStatus api_fail_alloc(ComposerError *error) {
+    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+}
+
+bool api_add(cJSON *object, const char *name, cJSON *item) {
+    if (!object || !item || !cJSON_AddItemToObject(object, name, item)) {
+        cJSON_Delete(item);
+        return false;
+    }
+    return true;
+}
+
 ComposerStatus api_parse_request(const char *text, cJSON **out, ComposerError *error) {
     *out = NULL;
     if (!text) {

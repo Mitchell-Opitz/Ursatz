@@ -8,8 +8,8 @@
 /* Links the Composer as a subproject and asks it for its versions and its vocabulary, nothing more. */
 
 int main(void) {
-    if (strcmp(composer_api_version(), "1.12") != 0) {
-        fprintf(stderr, "consumer: API version %s, expected 1.12\n", composer_api_version());
+    if (strcmp(composer_api_version(), "1.13") != 0) {
+        fprintf(stderr, "consumer: API version %s, expected 1.13\n", composer_api_version());
         return 1;
     }
     ComposerResponse response;

@@ -11,10 +11,6 @@
 
 /* `variations` and `harmonize` as composer API entries (docs/cli-variations.md): several distinct versions of a node. */
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* The MusicXML of a version as it is in memory (its ids are the ones a plan file renumbers). */
 static ComposerStatus variation_musicxml(const PiecePlan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
     RenderedPlan rendered;
@@ -71,7 +67,7 @@ static ComposerStatus variations_document(const PlanVariations *variations, cons
          cJSON_AddNumberToObject(document, "seeds_tried", (double)variations->seeds_tried);
     if (!ok) {
         cJSON_Delete(document);
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     *result = document;
     return COMPOSER_OK;

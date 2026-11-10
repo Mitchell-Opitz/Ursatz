@@ -44,10 +44,6 @@ typedef struct {
     char signature[SIGNATURE_MAX];
 } Result;
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* A member's value as text for a message: a string as it is, a number with %g. */
 static const char *value_text(const cJSON *item, char *buffer, size_t size) {
     if (cJSON_IsString(item)) {
@@ -136,11 +132,11 @@ static ComposerStatus read_request(const cJSON *request, Options *options, ApiOu
     /* The line is read as a motive of any length in the key and meter above. */
     *line = cJSON_Duplicate(request, true);
     if (!*line) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     cJSON_DeleteItemFromObjectCaseSensitive(*line, "key");
     if (!cJSON_AddStringToObject(*line, "key", combined)) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     return COMPOSER_OK;
 }
@@ -294,14 +290,14 @@ static ComposerStatus result_json(const Options *options, const Result *result, 
         cJSON_Delete(counter);
         cJSON_Delete(groups);
         cJSON_Delete(entry);
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     ok = cJSON_AddItemToObject(entry, "counter_melody", counter) && cJSON_AddItemToObject(entry, "groups", groups);
     if (!ok) {
         cJSON_Delete(counter);
         cJSON_Delete(groups);
         cJSON_Delete(entry);
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     for (size_t g = 0; g < result->report.count; g++) {
         cJSON *group = cJSON_CreateObject();
@@ -311,7 +307,7 @@ static ComposerStatus result_json(const Options *options, const Result *result, 
         if (!ok) {
             cJSON_Delete(group);
             cJSON_Delete(entry);
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
     }
     if (options->plans) {
@@ -319,7 +315,7 @@ static ComposerStatus result_json(const Options *options, const Result *result, 
         if (!plan || !cJSON_AddItemToObject(entry, "plan", plan)) {
             cJSON_Delete(plan);
             cJSON_Delete(entry);
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
     }
     if (outputs->musicxml) {
@@ -340,7 +336,7 @@ static ComposerStatus result_json(const Options *options, const Result *result, 
         free(text);
         if (!ok) {
             cJSON_Delete(entry);
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
     }
     *out = entry;
@@ -428,14 +424,14 @@ ComposerStatus composer_api_counterpoint(const char *request_json, const Compose
                   cJSON_AddItemToObject(document, "results", list);
         if (!ok) {
             cJSON_Delete(list);
-            status = fail_alloc(&out->error);
+            status = api_fail_alloc(&out->error);
         }
         for (size_t k = 0; status == COMPOSER_OK && k < made; k++) {
             cJSON *entry = NULL;
             status = result_json(&options, &results[k], span, &outputs, &entry, &out->error);
             if (status == COMPOSER_OK && !cJSON_AddItemToArray(list, entry)) {
                 cJSON_Delete(entry);
-                status = fail_alloc(&out->error);
+                status = api_fail_alloc(&out->error);
             }
         }
         if (status == COMPOSER_OK && made < options.suggest && options.suggested) {
@@ -444,7 +440,7 @@ ComposerStatus composer_api_counterpoint(const char *request_json, const Compose
             snprintf(notice, sizeof(notice), "only %zu different counter-melod%s found for this request", made,
                      made == 1 ? "y" : "ies");
             if (!notices || !cJSON_AddItemToArray(notices, cJSON_CreateString(notice))) {
-                status = fail_alloc(&out->error);
+                status = api_fail_alloc(&out->error);
             }
         }
         if (status == COMPOSER_OK) {

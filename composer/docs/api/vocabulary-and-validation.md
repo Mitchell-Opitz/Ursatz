@@ -21,11 +21,11 @@ The words an application offers and the requests accept, in the order an applica
 | `cadences`, `theme_cadences` | `PAC IAC HC DC PC` with their names; a theme ends in `PAC`, `IAC` or `HC`. |
 | `pickups` | `{"<meter>": ["0", "1/4", "1/2", "1", "3/2", "2", "3"]}`: the pickups offered in beats, each a number a reader accepts in that meter (shorter than a bar). Any other multiple of 1/32 of a whole note shorter than a bar is accepted too. |
 | `motive_forms`, `roles`, `functions`, `distances` | `full rhythm contour`; `melodic accompaniment`; `beginning continuation contrast cadential`; `close medium far`. |
-| `theme_slots`, `theme_ideas`, `theme_motive_categories`, `theme_pools` | the four slots; the ten ideas, each with its `slot`; the style categories a theme can read without (`motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`); the pools `approved-and-unflagged`, `approved`, `none` (the Composer reads no pool: they are the application's rule for which saved motives it offers, listed so the application keeps no table). |
+| `theme_slots`, `theme_ideas`, `theme_motive_categories`, `theme_pools` | the four slots, each with `required` (API 1.13: true for `basic` alone, the slot every theme needs; an application reads it instead of naming the slot); the ten ideas, each with its `slot`; the style categories a theme can read without (`motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`); the pools `approved-and-unflagged`, `approved`, `none` (the Composer reads no pool: they are the application's rule for which saved motives it offers, listed so the application keeps no table). |
 | `theme_bars`, `theme_first_cadences`, `style_weights` | the bars a theme has (`4`, `8`); the cadences a period's first phrase ends in (`IAC`, `HC`, in the order of `cadences`); the style weights offered (`1/4` Light, `1/2` Normal, `1` Strong; any fraction the reader accepts is still accepted). Theme modes are the existing `piece_modes`. |
 | `theme_beginnings`, `theme_endings` | `{"value", "label", "ideas": [<theme_ideas value>, ...]}`: `presentation antecedent cbi` and `continuation consequent cadential`, each with its ideas in order. A hybrid is written `<beginning>+<ending>`; these are the words its reader takes. |
 | `accompaniment_patterns` | `any block arpeggiated alberti oom-pah motive`. |
-| `piece_parts`, `piece_intos`, `fill_kinds` | `intro body turnaround ending`; `sentence period hybrid`; `empty motif theme progression`. |
+| `piece_parts`, `piece_intos`, `fill_kinds` | `intro body turnaround ending`; `sentence period hybrid`, where an archetype made of exactly one pairing has `beginning` and `ending`, the values of `theme_beginnings` and `theme_endings` (API 1.13: `sentence` is `presentation` and `continuation`, `period` is `antecedent` and `consequent`, `hybrid` has neither); `empty motif theme progression`. |
 | `tone_labels` | `chord` and the ten non-chord tone types the analysis writes, each with an `abbreviation` (`CT`, `PT`, `NT`, ...). |
 | `variant_operations` | what `composer_api_variant_operations` gives. |
 | `preferences` | the default settings document, `composer_preferences_write` of the defaults (API 1.11; 1.12 adds the nine listening settings of the `motif` group, [preferences.md](../preferences.md)): the starting point of a listening session's settings. |
@@ -41,6 +41,22 @@ Differences from the GUI tables it replaces (Ursatz-GUI `049adaf`; the Composer'
 - `tone_labels`: the GUI has an "Automatic" choice first (no override); the Composer lists none, a note without an override is one the request leaves out. The abbreviations are the GUI's, now served.
 - `motive_forms`: no `enabled` flag; the three forms are all read.
 - `cadences`, `meters`, `roles`, `piece_parts`, `piece_intos`, `fill_kinds`, `theme_slots`, `theme_pools`, `theme_motive_categories`: the same values as the GUI. Labels are the GUI's where it has one.
+
+## Forms: `composer_api_forms(out)`
+
+The built-in forms, in registry order (API 1.13, R-428): what the Pieces view needs to offer a form and show its sections without a table of its own. No request; quick, no job, never cancelled; `COMPOSER_ERR_INTERNAL` if a built-in does not parse. `json` is `{"forms": [...]}`, each form:
+
+| Member | Entries |
+|---|---|
+| `name`, `label`, `closing` | the form's name, its label, and whether the piece ends with a cadence. |
+| `sections` | `"sizes"` when the sizes list the sections, `"request"` when the piece request gives them (the game loop). |
+| `versions` | `{"value", "label", "loop", "after"}`: a piece of a form with a loop has `loop` ("Loop version") then `ending` ("Ending version", `after: "loop"`); any other form has `piece` ("Piece"). |
+| `settings` | `modulate` (the form has regions), `accompaniment` (`"required"` or `"optional"`), `voicing` and `section_fills` (true for a form whose sections the request gives). |
+| `regions` | the names of the keys a piece may move to. |
+| `sizes` | `{"bars", "count", "default", "sections"}`; a section is `name`, `letter`, `role` and `beginning` and `ending` (each `{"value", "label"}`, the plan's words and the labels of `theme_beginnings` and `theme_endings`), `bars` or `beats` (the other is null), `cadence` (`{"value", "label", "core"}`), `closed`, `keys` (`start` and `end`: `"home"` or a region), `motive` (the relation from the first motive, or null), `returns` and `variation` (null when the section returns nothing), `layers` (`"all"` or lane names) and `slots`: `{"slot", "ideas": [...]}` for each slot its theme has, with the ideas the pairing gives it. |
+| `roles`, `loop_roles`, `cadences`, `default_ending` | for a form whose sections the request gives: the roles a section may have (`{"value", "label", "required"}`, only `body` required), the roles that are the loop, the cadence a section gets when the request names none (`{"default", "last": [{"roles", "cadence"}]}`) and the section a request with no ending gets (`{"id", "letter", "role", "bars", "cadence"}`); `[]`, `[]`, null and null for a form with sizes. |
+
+Schema: `schema/api/forms.schema.json`. A piece of any form but the game loop is not composed yet: the forms are listed here, the piece entries take them in P45 B2.
 
 ## Validation: `composer_api_validate(kind, request_json, out)`
 

@@ -79,3 +79,4 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 ## Limits and changes
 
 - [changelog.md](changelog.md): the Composer versions and what each changed.
+- [changelog-archive.md](changelog-archive.md): the older changelog entries.

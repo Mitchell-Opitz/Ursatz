@@ -1,0 +1,80 @@
+# Changelog archive
+
+The older Composer changelog entries. Back to the [changelog](changelog.md).
+
+## Unreleased (phase P37)
+
+Each development item of the theme result says how faithful the idea is to its source (R-332, B3): `fidelity` (0 to 1), the `minimum` its role asks under the development setting (0 for an idea whose operation makes it differ from its source), `heard` (what the recognizer hears between the idea and its source, in words) and `heard_agrees` (whether that is the relation the plan intended), each `null` for an idea with no melody to measure. The API is 1.10; the text output is unchanged. The grow command's JSON items carry the same members, and the snapshots of `theme` and `grow` JSON output are re-recorded. See [explain.md](explain.md#intended-against-heard) and [api/theme-and-piece.md](api/theme-and-piece.md).
+
+The melody stage ranks and refuses ideas by fidelity (R-355, B2): `grow_fidelity_checker` wraps the melody stage's checker in every compose run, so a candidate for an idea made from a motive is refused when its fidelity (R-354) is under its role's minimum for the development setting (`grow_fidelity_minimum`: presentation 11/20 and continuation 7/20 in every setting, cadential 3/10, 7/20 for `melody` and 1/5 for `theme`, contrast never refused), and is ranked by whether the motive is heard as the plan intended, then by its fidelity, then by the melody rules. An idea whose ref makes it differ from its source (a liquidation, a fragment by notes, an inversion) is ranked but never refused, and a cadential idea is ranked by the melody rules alone. The search is one step, so ranking costs a few hundredths of a second a candidate. `melody_candidate_realized` gives the notes of a melody candidate that carry the motive. The API version does not change; seeded theme and piece output does, and the snapshots, hashes and baselines that recorded it are re-recorded. See [grow-development.md](grow-development.md#ranking-and-refusing-by-fidelity).
+
+An idea's fidelity to its source can be measured (R-331, R-354, B1): `motive_fidelity` scores a realized motive against its source (`motive_recognizability` total), says in words what the recognizer hears (`variant_recognize_depth` at depth 2, octave transpositions dropped, "exact" or "not recognized" when nothing or nothing found) and whether that agrees with the ref that asked for the motive; `grow_idea_fidelity` reads an idea's realized notes and source from the plan. Nothing in composing calls them yet: the API version and every seeded output are unchanged. See [grow-development.md](grow-development.md#fidelity).
+
+## Unreleased (phase P36)
+
+Regenerating the harmony of a theme section composes again (R-352, B4): a placed theme's melody holds no motive refs, so the continuation's harmony is the phrase model around a Given melody that stands on the tonic at every downbeat, and the only deal, i iv V i, put V under a downbeat of the tonic and every deal was rejected. A dealt V of two cells or more whose first cell the Given melody does not hold now opens on the cadential six-four, and keeps its other cell. No random number is drawn for it, so every deal that fits is unchanged; the API version and the seeded output do not change. See [grow-harmony.md](grow-harmony.md) and [middle-out.md](middle-out.md).
+
+A liquidated cadential idea keeps a segment's rhythm and head interval and leads into the cadence (R-330, R-345, R-350, B3): a residue's first two notes have a segment's first durations (or both halved) and its first interval in scale steps; when no step count of `liquidate-features` keeps one, each segment's head is kept and the rest liquidated around it, and a motive too short for that gets a head residue, the segment's first two notes and a close on the cadence tone. A draw with no such residue fails and the next seed is tried; no idea is liquidated by notes any more (`liquidate_drop`, `cadential_drop` are gone). The melody after a residue repeats its own rhythm up to the cadence chord and holds the cadence tone from it, with no even-note filler, and keeps the residue's figures. A motif whose segments are each one note no longer ends a continuation or a cadential ending. Fixed on the way: regenerating the harmony of a section whose presentation is in sequence keeps the sequence's whole chords instead of refusing. The plan's `motive_ref` of a cadential idea names the segment its residue keeps. The API version does not change; seeded theme and piece output does, and the snapshots, hashes and baselines changed are named in the phase notes. See [grow-segments.md](grow-segments.md#liquidation) and [melody-fill.md](melody-fill.md#idea-targets).
+
+The harmony stage keeps the chords development gave each idea's motive (R-344, R-348, B2) when the motif has harmony of its own, and fills only the cells they leave open: a new operator `harmony-motive` reads each idea's `MOTIVE_TONES` chords, frees the cadence and the shape anchors a chord breaks, fills the rest with the phrase model or a seeded choice of chords, and the checker rejects a candidate that changes a held chord. A motif with no harmony keeps the stage as before and writes a sequence's I and ii whole. The motives grow-theme makes (segments, liquidations) are Realized and leave with a regenerated section, and the material holds ten bars per section (R-346, R-349). The API version does not change; seeded theme and piece output does, and the snapshots, baselines and the one test assertion changed are named in the phase notes. See [grow-harmony.md](grow-harmony.md#chords-from-developed-motives), [grow.md](grow.md#given-chords) and [grow-segments.md](grow-segments.md).
+
+Every development operation of a theme produces the idea's notes and chords from the motive (R-329, R-330, B1). One function, `grow_develop_motive` (`src/grow/grow_develop.c`), develops a source motive by a plan ref through the variant registry; the structure stage's checks and the motives stage both use it, and the motives stage offers exactly that motive for every slot except a contrasting idea, which keeps the pool and the operations as a fallback and has its ref rewritten to the step applied. A tonal transposition now moves the motive's chords with its notes. Each developed motive node carries its own `MOTIVE_TONES` (its chords and the tone role of each note), also when a motive operator wrote it. A contrasting idea is drawn in the key's scale when the motif is. The API version does not change; seeded theme and piece output does, and the snapshots, hashes and baselines changed are named in the phase notes. See [grow-development.md](grow-development.md#what-sounds), [grow-harmony.md](grow-harmony.md#motive-forms) and [variant-registry.md](variant-registry.md).
+
+## Unreleased (phase P35)
+
+Melody-fill realizes a motive's notes instead of re-deriving them (R-326 to R-328, R-333 to R-339): the melody voice's range is C4 to C6 (84, was 79), each idea says its motive's pitches moved by one octave and bent to its chords only as they ask (a clash the NonChordTone framework labels a figure is kept, escape tones and retardations included), and only the notes after the motive are generated, under the arch. `MelodyFillParams.tolerance` is gone. A motive no strict attempt composes is composed relaxed. The API version does not change; seeded theme and piece output does, and the snapshots, hashes and baselines changed are named in the phase notes. Fixed on the way: the structure stage reserves a bar for every motive it makes, so a section regenerated in a full material no longer fails to apply. See [melody-fill.md](melody-fill.md).
+
+## Unreleased (phase P34)
+
+A theme request takes `"development": "melody" | "balanced" | "theme"` (ch. XI, default `balanced`): how far the presentation and the continuation stray from the motif. It sets the weights of the repetition (exact, dominant form, sequence), of fragment 1's segment, of fragment 2 (sequence or next segment) and the steps of a liquidation; `balanced` is the weights of before. `melody` brings the exact repetition back and keeps a liquidation to one step; `theme` favours the sequence and segment `b` and liquidates in two steps or more. The API is 1.9: the brief of the result gains `"development"` and the explanation names it. A wrong value is a request error at `/development`. See [grow-development.md](grow-development.md).
+
+A continuation develops the motif through its segments (ch. VIII). Fragment 1 is a segment of the motif (its `features`, or the proposed segments when it has none), fragment 2 is that segment one step down in sequence or the next segment, and the cadential idea, or the two ideas of a cadential ending, liquidate the segments step by step until a residue fits and can take the cadence; the segments are Given motive nodes in the material, and the plan's `motive_ref` records them (`"segment"`, `"steps"`, both optional). The API is 1.8: each item of the theme result's `developments` gains `"segment"` (the label or `null`) and `"summary"` (one line naming the idea, its source and its operation), the text output prints the summary, and the plan JSON gains the two members. Seeded theme output changes (new draws, two more bars of material for a continuation or a cadential ending); the snapshots and expectations changed are named in the phase notes. See [grow.md](grow.md#choices).
+
+A presentation repeats its basic idea in one of three ways, drawn per seed (ch. V): exact, in its dominant form, or in sequence one step up with its chord a step up (I to ii, i to iio). `GrowThemeSpec.repetition` (`GrowRepetition`) replaces `statement_response`, the weights are `REPEAT_WEIGHTS` in `grow_beginning.c` (2, 1, 1), and `describe_ref` names them `restated, exact`, `dominant form` and `sequence, 1 step up (tonal)`. The API is 1.7 (a new value of the theme result's `development` text only). Seeded theme output changes for presentations (new draws); the snapshots and expectations changed are named in the phase notes. A sequence is the transposition by one step and writes its chords whole, so it is not drawn over Given material in the first half; the share of 8-bar sentences heard as a sentence fell from 75% to 50% ([grow-hearing.md](grow-hearing.md)). See [grow.md](grow.md#choices).
+
+## Unreleased (phase P33)
+
+The compose rates are measured and held by a test: every buildable pairing at 4 and 8 bars composes on at least 8 of 10 start seeds for a 2-bar 3/4 and a 1-bar 4/4 reference motif, and none needed a fix. The API stays 1.6. See [grow.md](grow-hearing.md#compose-rates).
+
+The API is 1.6: `composer_api_validate("theme", ...)` builds the plan of the request without seeding and refuses exactly what Compose refuses before it seeds, each refusal with the path of its field (`/bars`, `/hybrid`, `/cadence`, `/first_cadence`, `/slots/<slot>`, `/ideas/<name>`, `/accompaniment`, `/voicing`, `/slots/basic` for a motif that is too long). A given chord in the last bar of the theme (or of an antecedent) that cannot arrive the cadence is refused at `/chords/<n>` with `chords bar 7: V cannot end a PAC; the cadence needs a tonic chord in root position`; Compose gives the same message and path instead of the generic text, and the "given chords in bar" message after seeding has the path `/chords`. In C, `grow_build_plan_checked` gives a `GrowRefusal` (result, path, message). See [theme-request.md](theme-request.md#refusals-before-composing).
+
+The API was 1.5 before: a basic motif as long as the presentation or the antecedent of a theme (4 bars of an 8-bar theme, 2 of a 4-bar one) fills that part whole, placed as written, with no repetition or contrasting idea of its own; the rest of the theme is made from the motif's first idea-length bars. A contrasting slot or the motive of the repetition or contrasting idea beside it is refused at `/slots/contrasting` or `/ideas/<name>`: "the basic motif fills the whole presentation; leave the contrasting idea out". Any other motif longer than the basic idea is refused at `/slots/basic` with "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent" (this replaces the theme message of 1.4). See [grow.md](grow.md#how-a-motif-fills-its-idea).
+
+The API was 1.4 before: a motif as long as the idea it fills is that idea, placed as written, so a 2-bar motif is the basic idea of an 8-bar theme or of a piece of 8-bar sections (a shorter one is grown to the idea as before). The basic, slot and idea motives and the motive of a piece or plan may be as long as their idea; a longer one is refused with "the motif is 3 bars; the basic idea of a 8-bar theme is 2", at `/slots/basic` for a theme request and `/motive` for a piece or plan request. A section's drawn motive may be as long as its idea. The snapshot `piece-loop-and-ending` (stdout, plan and MIDI) changes because a drawn section motive of 2 bars is no longer refused. See [grow.md](grow.md#how-a-motif-fills-its-idea).
+
+## Unreleased (phase P32)
+
+The API is 1.3: `composer_api_random_motive` takes `strategy`, `"segments"` (the default: motives built from a harmony plan and repeated segments, returned with their harmony and segments as their own) or `"drawn"` (the earlier strategy, unchanged); `composer_api_vocabulary` serves `random_motive_strategies`. The CLI takes `random-motive --strategy`. See [api/motives.md](api/motives.md) and [cli-random-motive.md](cli-random-motive.md).
+
+The API was 1.2 before: every motive analysis document (`composer_api_motive`, `composer_api_motive_from_midi`, `composer_api_motive_render`, `composer_api_random_motive` and the variants) has `analysis.segments`, `{"given", "items"}`: the motive's own features when it has any, otherwise a proposal from its bars and rhythmic groups. See [motive-format.md](motive-format.md#segments).
+
+## Version 0.4.1 (phase P28)
+
+`composer_api.h` is the only public header; every other header is private to the Composer (`src/include/`) and its dependencies are linked PRIVATE. The API is unchanged (1.1).
+
+## Version 0.4.0 (phase P27)
+
+The Composer builds as a subproject of an application that already defines `cjson`, `ursatz` and `ursatz_analyzer`, and
+`URSATZ_COMPOSER_BUILD_CLI` turns the command off. The API is 1.1: `composer_api_vocabulary` also serves `theme_bars`,
+`theme_first_cadences`, `theme_beginnings`, `theme_endings`, `style_weights` and, in `limits`, `tempo_min`, `tempo_max`,
+`seed_max`, `piece_sections` and `piece_beats`. See [api.md](api.md).
+
+## Version 0.3.0 (phase P26)
+
+Everything an application asks of the Composer is the composer API, 1.0 (R-219); the CLI is a client of it and nothing else:
+`cli/` includes only `composer_api.h`, checked by `scripts/check-cli-api.sh`. The API gained the `limits` of
+`composer_api_vocabulary` and the `plan_file` member of `composer_api_export`. See [api.md](api.md).
+
+## Version 0.2.0 (phase P25)
+
+The Composer holds plan structure and composing decisions only, on library values, and hears only through the Analyzer.
+The public types and the plan format changed:
+
+- Plans use the library's meter, key, harmony, motive and time values; motives are `MotiveSketch` values with relation steps
+  (`step` in plan files; old `transform` names still read). Plan format version 2 is the Composer's own, with its own schema.
+- Chord numerals, key names and note spelling follow the library (`viio`, `D#` minor).
+- Melodic and harmonic rules, harmonic rhythm cells and the seam rules come from the library's framework checks.
+- What a listener finds in the written music is the Analyzer's: one `analyzer_hear` per section span over one render per run.
+- The corpus seed reads chords through the Analyzer's chord sequence reader.
+- `plan_regenerate_all` hears and checks only the sections it reopened (`ComposeConfig.scope`, `ComposeHeard.in_scope`);
+  a section outside the scope prints as `kept` in the output of `regenerate` and `piece --regenerate`.

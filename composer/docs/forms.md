@@ -133,8 +133,9 @@ request gives.
    `tests/fixtures/forms/bar-form.json` (A, A' returning A, B in 24 bars) is composed that way by `test_form_spec custom`,
    and no C code names it.
 
-The API, the plan format, the piece request schema and the vocabulary do not serve forms yet (P45): the API takes the
-built-in forms by name, with the sizes above.
+The API serves the forms (`composer_api_forms`, API 1.13, [api/vocabulary-and-validation.md](api/vocabulary-and-validation.md#forms-composer_api_formsout)):
+their sizes, sections, cadences, keys and theme slots. Composing a form other than the game loop through the piece entry
+comes with the piece request version 2 (P45 B2); the plan format and the piece request schema do not change here.
 
 ## The game loop
 

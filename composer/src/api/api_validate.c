@@ -10,10 +10,6 @@
 #include "api_internal.h"
 #include "api_piece.h"
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* The onset in beats of the meter as a request writes it: "3" or "3/2". */
 static bool onset_text(Rational onset, int beat_unit, char *out, size_t size) {
     Rational beats;
@@ -66,7 +62,7 @@ static ComposerStatus validate_motive(const cJSON *request, cJSON *filled, Compo
             }
         }
     }
-    return ok ? COMPOSER_OK : fail_alloc(error);
+    return ok ? COMPOSER_OK : api_fail_alloc(error);
 }
 
 ComposerStatus composer_api_validate(const char *kind, const char *request_json, ComposerResponse *out) {
@@ -88,7 +84,7 @@ ComposerStatus composer_api_validate(const char *kind, const char *request_json,
         filled = cJSON_Duplicate(request, true);
         root = cJSON_CreateObject();
         if (!filled || !root) {
-            status = fail_alloc(error);
+            status = api_fail_alloc(error);
         }
     }
     if (status == COMPOSER_OK) {
@@ -103,7 +99,7 @@ ComposerStatus composer_api_validate(const char *kind, const char *request_json,
         }
     }
     if (status == COMPOSER_OK && !cJSON_AddItemToObject(root, "request", filled)) {
-        status = fail_alloc(error);
+        status = api_fail_alloc(error);
     } else if (status == COMPOSER_OK) {
         filled = NULL;
     }

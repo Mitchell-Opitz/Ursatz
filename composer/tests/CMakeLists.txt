@@ -843,6 +843,12 @@ target_compile_definitions(test_api_vocabulary PRIVATE COMPOSER_FIXTURE_DIR="${C
 add_test(NAME test_api_vocabulary COMMAND test_api_vocabulary WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(test_api_vocabulary PROPERTIES FIXTURES_SETUP api_responses_written)
 
+add_executable(test_api_forms test_api_forms.c)
+target_link_libraries(test_api_forms PRIVATE ursatz_composer composer_test_support cjson)
+target_compile_options(test_api_forms PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_api_forms COMMAND test_api_forms WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+set_tests_properties(test_api_forms PROPERTIES FIXTURES_SETUP api_responses_written)
+
 add_executable(test_job_cancel test_job_cancel.c)
 target_link_libraries(test_job_cancel PRIVATE ursatz_composer)
 target_compile_options(test_job_cancel PRIVATE -Wall -Wextra -Wpedantic)
@@ -852,7 +858,7 @@ add_test(NAME test_job_cancel COMMAND test_job_cancel)
 add_test(NAME test_api_schema
          COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DHAVE_JSONSCHEMA=${HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,validate
+                 -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
                  -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake)
 set_tests_properties(test_api_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED" FIXTURES_REQUIRED api_responses_written)

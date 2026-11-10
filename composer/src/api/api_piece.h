@@ -9,6 +9,7 @@
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/export.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/lanes.h>
@@ -35,6 +36,13 @@
 #define PIECE_VARIATIONS_MAX 8
 /* As many seeds are tried as it takes to find the variations asked for, at most this many for each. */
 #define PIECE_SEEDS_PER_VARIATION 4
+
+/*
+ * The versions a piece of the form has, as names and labels, into names and labels (at most capacity); the count. A form whose
+ * sections the request gives and that has a loop gives "loop" ("Loop version") then "ending" ("Ending version"); every other
+ * form gives "piece" ("Piece").
+ */
+size_t api_piece_version_names(const FormSpec *form, const char **names, const char **labels, size_t capacity);
 
 /* The form every piece is: the game loop, whose sections the piece request gives (forms/game-loop.json). */
 #define API_PIECE_FORM "game-loop"

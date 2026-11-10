@@ -52,10 +52,6 @@ typedef struct {
     const ComposerJob *job;
 } Options;
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* --- reading the request --------------------------------------------------------------------------------- */
 
 /*
@@ -589,7 +585,7 @@ static ComposerStatus add_progression(cJSON *object, const Options *options, con
               cJSON_AddItemToObject(object, "chords", chords);
     if (!ok) {
         cJSON_Delete(chords);
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     for (size_t i = 0; i < count; i++) {
         cJSON *row = cJSON_CreateObject();
@@ -598,14 +594,14 @@ static ComposerStatus add_progression(cJSON *object, const Options *options, con
              cJSON_AddStringToObject(row, "bass", rows[i].bass) && cJSON_AddItemToArray(chords, row);
         if (!ok) {
             cJSON_Delete(row);
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
     }
     if (options->plans) {
         cJSON *plan = api_piece_plan_object(built->plan);
         if (!plan || !cJSON_AddItemToObject(object, "plan", plan)) {
             cJSON_Delete(plan);
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
     }
     if (outputs->musicxml) {
@@ -623,7 +619,7 @@ static ComposerStatus add_progression(cJSON *object, const Options *options, con
         ok = cJSON_AddStringToObject(object, "musicxml", text) != NULL;
         free(text);
         if (!ok) {
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
     }
     return COMPOSER_OK;
@@ -640,27 +636,27 @@ static ComposerStatus build_document(const Options *options, const Built *built,
               cJSON_AddNumberToObject(document, "bars", (double)options->bars) &&
               cJSON_AddStringToObject(document, "cadence", plan_cadence_name(options->cadence)) &&
               cJSON_AddNumberToObject(document, "seed", (double)seed);
-    ComposerStatus status = ok ? COMPOSER_OK : fail_alloc(error);
+    ComposerStatus status = ok ? COMPOSER_OK : api_fail_alloc(error);
     if (status == COMPOSER_OK && options->suggest > 0) {
         cJSON *list = cJSON_AddArrayToObject(document, "alternatives");
         for (size_t k = 0; list && k < made && status == COMPOSER_OK; k++) {
             cJSON *entry = cJSON_CreateObject();
             if (!entry || !cJSON_AddItemToArray(list, entry)) {
                 cJSON_Delete(entry);
-                status = fail_alloc(error);
+                status = api_fail_alloc(error);
                 break;
             }
             status = add_progression(entry, options, &built[k], outputs, error);
         }
         if (!list) {
-            status = fail_alloc(error);
+            status = api_fail_alloc(error);
         }
         if (status == COMPOSER_OK && made < options->suggest) {
             char notice[96];
             cJSON *notices = cJSON_AddArrayToObject(document, "notices");
             snprintf(notice, sizeof(notice), "only %zu alternative%s found for this request", made, made == 1 ? "" : "s");
             if (!notices || !cJSON_AddItemToArray(notices, cJSON_CreateString(notice))) {
-                status = fail_alloc(error);
+                status = api_fail_alloc(error);
             }
         }
     } else if (status == COMPOSER_OK) {
@@ -705,7 +701,7 @@ static ComposerStatus list_names(ComposerResponse *out) {
     }
     if (!ok) {
         cJSON_Delete(document);
-        return fail_alloc(&out->error);
+        return api_fail_alloc(&out->error);
     }
     return api_respond_json(out, document);
 }
