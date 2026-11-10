@@ -8,7 +8,20 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 
+#include "grow/grow_internal.h"
 #include "util/plan_util.h"
+
+/* Each section's own motive, the four motives grow-theme makes for its ideas and the ones it makes beside them (GROW_MADE_NODES). */
+#define MATERIAL_BARS_PER_SECTION (5 + GROW_MADE_NODES)
+/* The weak cadence an antecedent ends in. */
+#define ANTECEDENT_CADENCE CADENCE_TYPE_HALF
+
+/*
+ * The plan of a form whose sections the request gives (form_build_plan): the loop version, or with a loop plan the ending
+ * version (piece_build_ending). The request was not checked.
+ */
+PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *request, const PiecePlan *loop_plan,
+                                    PiecePlan **out);
 
 /*
  * The material section, its phrase and its idea, Realized, with m0 in it: the motive as a Given melody lane span, or,

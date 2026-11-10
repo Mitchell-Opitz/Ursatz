@@ -123,6 +123,7 @@ add_library(ursatz_composer STATIC
     piece/seam_hear.c
     piece/form_vary.c
     piece/form_build.c
+    piece/form_build_request.c
     piece/piece_structure.c
     piece/piece_keys.c
     piece/piece_cadences.c

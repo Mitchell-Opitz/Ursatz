@@ -10,61 +10,10 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 
-struct GrowPoolForm;
-
 /*
- * A piece structure (R-169): the parts of a game track as data. An intro, a body, a turnaround and an ending, each a
- * list of sections with a length in beats (any whole number of beats, not only whole bars), a pickup, a cadence and a
- * fill. The body and the turnaround are the loop; the intro is played once before it and the ending once after it.
- * docs/piece-structure.md has the full account.
+ * A piece structure (R-169): the parts of a game track as data, the request of the form "game-loop" before P44 B5 moved
+ * the sections to PieceRequest (piece.h, which has PiecePart, PieceFillKind and PieceSection). Retired by B5.
  */
-
-typedef enum { PIECE_PART_INTRO, PIECE_PART_BODY, PIECE_PART_TURNAROUND, PIECE_PART_ENDING } PiecePart;
-
-#define PIECE_PART_COUNT 4
-
-/* "intro", "body", "turnaround", "ending"; "unknown" for a value that is none of them. */
-const char *piece_part_name(PiecePart part);
-/* False for a name that is none of these. */
-bool piece_part_from_name(const char *name, PiecePart *out);
-
-/*
- * What fills a section (R-170): nothing of its own (empty, made from the piece's basic motive), a motive (a theme
- * section at 4 or 8 bars, else a free phrase), a composed theme's realized lanes (Given), or a progression.
- */
-typedef enum { PIECE_FILL_EMPTY, PIECE_FILL_MOTIF, PIECE_FILL_THEME, PIECE_FILL_PROGRESSION } PieceFillKind;
-
-/* "empty", "motif", "theme", "progression"; "unknown" for a value that is none of them. */
-const char *piece_fill_name(PieceFillKind fill);
-/* False for a name that is none of these. */
-bool piece_fill_from_name(const char *name, PieceFillKind *out);
-
-#define PIECE_SECTION_ID_MAX 16
-#define PIECE_STRUCTURE_MAX_SECTIONS 32
-#define PIECE_STRUCTURE_MAX_BARS 512
-/* The pickup is a multiple of this fraction of a whole note and shorter than a bar. */
-#define PIECE_PICKUP_GRID 32
-
-typedef struct {
-    char id[PIECE_SECTION_ID_MAX];
-    char letter[PLAN_SECTION_LETTER_MAX];
-    PiecePart part;
-    size_t beats;                /* the length, in beats of the meter; at least 1 */
-    Rational pickup;             /* the anacrusis before the section; 0 for none */
-    bool has_cadence;            /* false: piece_structure_default_cadences decides */
-    CadenceType cadence;
-    PieceFillKind fill;
-    const Motive *motive;        /* motif: the section's own motive, else the piece's basic motive */
-    bool has_into;               /* motif: a theme section's archetype */
-    PlanArchetype into;          /* sentence by default; PLAN_ARCHETYPE_HYBRID reads `hybrid` */
-    PlanThemePairing hybrid;
-    const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B6) */
-    size_t pool_count;
-    const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */
-    const char *const *numerals; /* progression: the numerals, one per chord; must outlive the build */
-    size_t numeral_count;
-    size_t cells_per_chord;      /* progression: harmony cells each chord lasts; 0 for a bar */
-} PieceSection;
 
 typedef struct {
     AnalysisKey key;

@@ -12,12 +12,8 @@
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"
 
-/* Each section's own motive, the four motives grow-theme makes for its ideas and the ones it makes beside them (GROW_MADE_NODES). */
-#define MATERIAL_BARS_PER_SECTION (5 + GROW_MADE_NODES)
 /* The placeholder note an open melody span holds until motive-invent writes it. */
 #define INVENT_PLACEHOLDER 60
-/* The weak cadence an antecedent ends in. */
-#define ANTECEDENT_CADENCE CADENCE_TYPE_HALF
 
 const char *piece_result_name(PieceResult result) {
     switch (result) {
@@ -273,10 +269,18 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     }
     const FormSpecSize *size = form_spec_size(form, request->bars, request->count);
     size_t shortest = 8;
+    bool found = size != NULL;
     for (size_t i = 0; size && i < size->section_count; i++) {
         shortest = size->sections[i].bars == 8 ? shortest : 4;
     }
-    bool found = size != NULL;
+    /* A form whose sections the request gives: the shortest of them, 8 bars or else 4. */
+    if (form->request_sections) {
+        size_t per_bar = request->meter.beats_per_bar > 0 ? (size_t)request->meter.beats_per_bar : 1;
+        found = true;
+        for (size_t i = 0; i < request->section_count; i++) {
+            shortest = request->sections[i].beats == 8 * per_bar ? shortest : 4;
+        }
+    }
     form_spec_destroy(form);
     if (!found) {
         return false;
@@ -292,7 +296,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     }
     *out = NULL;
     if (form->request_sections) {
-        return PIECE_ERR_BAD_REQUEST;
+        return form_build_request_plan(form, request, NULL, out);
     }
     const FormSpecSize *size = form_spec_size(form, request->bars, request->count);
     if (!size) {
