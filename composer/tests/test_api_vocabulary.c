@@ -8,6 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_random.h>
+#include <ursatz_composer/preferences.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "support/test_support.h"
@@ -150,6 +151,30 @@ static void test_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(limits, "variant_chain")->valuedouble == VARIANT_CHAIN_MAX);
     assert(cJSON_GetObjectItemCaseSensitive(limits, "variant_functions")->valuedouble == VARIANT_FUNCTIONS);
     assert(cJSON_GetObjectItemCaseSensitive(limits, "random_motive_count")->valuedouble == MOTIVE_RANDOM_MAX_COUNT);
+
+    /* The preferences (R-411): the member is the defaults document, a request made of it validates, and the limits are the reader's. */
+    ComposerPreferences defaults;
+    composer_preferences_default(&defaults);
+    cJSON *written = composer_preferences_write(&defaults);
+    assert(written);
+    const cJSON *preferences = cJSON_GetObjectItemCaseSensitive(vocabulary, "preferences");
+    assert(cJSON_IsObject(preferences) && cJSON_Compare(preferences, written, true));
+    cJSON *round_trip = cJSON_CreateObject();
+    assert(round_trip && cJSON_AddStringToObject(round_trip, "mode", "major") && cJSON_AddStringToObject(round_trip, "meter", "4/4") &&
+           cJSON_AddItemToObject(round_trip, "preferences", written));
+    char *round_trip_text = print(round_trip);
+    ComposerResponse round_trip_response;
+    cJSON *round_trip_document = validated("random_motive", round_trip_text, COMPOSER_OK, &round_trip_response);
+    cJSON_Delete(round_trip_document);
+    composer_response_destroy(&round_trip_response);
+    free(round_trip_text);
+    cJSON_Delete(round_trip);
+    const cJSON *preference_limits = cJSON_GetObjectItemCaseSensitive(limits, "preferences");
+    assert(cJSON_IsObject(preference_limits));
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "weight_max")->valuedouble == 20);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "keep_max")->valuedouble == MELODY_KEEP_MAX);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "attempts_max")->valuedouble == 256);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "pickup_one_in_max")->valuedouble == 64);
 
     /* The orders and the notes of the GUI tables it replaces. */
     const cJSON *meters = list("meters");
@@ -650,7 +675,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.10") == 0);
+    assert(strcmp(composer_api_version(), "1.11") == 0);
     test_lists();
     test_round_trip();
     test_theme_form_lists();

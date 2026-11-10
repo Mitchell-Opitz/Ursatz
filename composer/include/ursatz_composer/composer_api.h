@@ -16,7 +16,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 10
+#define COMPOSER_API_VERSION_MINOR 11
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -140,11 +140,14 @@ ComposerStatus composer_api_recognize(const char *request_json, const ComposerJo
  * and range are drawn from defaults in the Composer. Request: {"mode": "major"|"minor", "meter": "4/4", "key": "D minor"
  * (its mode must be "mode"; default C major or A minor), "form": "full"|"rhythm"|"contour", "role": "melodic"|
  * "accompaniment", "style": <a style model file path>, "style_without": [<style categories read without>, at most 8;
- * needs "style"], "count": 1 to 16 (default 1), "seed": 0 to 4294967295 (default from the clock)}. "mode" and "meter" are
+ * needs "style"], "count": 1 to 16 (default 1), "seed": 0 to 4294967295 (default from the clock), "preferences": <the
+ * settings document, docs/preferences.md: its motif group steers the segments strategy; a bad member is refused with its
+ * path under /preferences>}. "mode" and "meter" are
  * required; either may be "random", drawn from the seed by the rule the GUI used (R-269): with m = ((seed + 1) * 2654435761)
  * mod 2^32, the mode is major when (m >> 8) is even and minor when it is odd, and the meter is "4/4", "3/4", "2/4" or
  * "6/8" by (m >> 16) mod 4. The same request and seed give the same motives. json: {"seed", "motives": [<the motive entry's document>]},
- * and "drawn": {"mode", "meter"} (only the members that were drawn) when something was.
+ * and "drawn": {"mode", "meter"} (only the members that were drawn) when something was, and "preferences" (the full document
+ * the settings made) when the request had the member.
  * A style that cannot be read is COMPOSER_ERR_UNSATISFIABLE with path /style.
  */
 ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
@@ -153,9 +156,12 @@ ComposerStatus composer_api_random_motive(const char *request_json, const Compos
  * Grows a theme from the theme request (docs/theme-request.md, schema "ursatz-theme-request" version 2) with its motives
  * inline ("degrees" text; a motive with a "path" or "file" is refused with its path) and the options the command takes:
  * "seed", "suggest" (1 to 16 themes), "check", "style" (a style model path), "blend", "blend_weight", "blend_weights",
- * "tempo", "plain_midi", and what to make besides the document: "midi", "musicxml" (the first theme's files), "plans"
+ * "tempo", "plain_midi", "preferences" (the settings document, docs/preferences.md: the melody group and the development
+ * group's fidelity minimums apply, the motif group is accepted and has no effect, since the motives come from the
+ * request), and what to make besides the document: "midi", "musicxml" (the first theme's files), "plans"
  * (each theme's plan in the document), "explain" ("text" or "json": each theme's explanation in the document).
- * json: what `theme --format json` prints (without the files it wrote). plan_json: the first theme's plan. midi and
+ * json: what `theme --format json` prints (without the files it wrote), and "preferences" (the full document the settings
+ * made) when the request had the member. plan_json: the first theme's plan. midi and
  * musicxml: the first theme's files, when asked. Progress per compose stage and per seed tried ("grow"); a cancel is
  * COMPOSER_ERR_CANCELLED with no partial plan.
  */
@@ -317,7 +323,8 @@ ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *jo
  * ["0", "1/2", ...]} in beats), "motive_forms", "roles", "functions", "distances", "theme_slots", "theme_ideas" (each with
  * its "slot"), "theme_motive_categories", "theme_pools", "accompaniment_patterns", "piece_parts", "piece_intos",
  * "fill_kinds", "tone_labels" (each with an "abbreviation"), "variant_operations" (what composer_api_variant_operations
- * gives)}. Every list but those noted is [{"value", "label"}]; a request accepts every value.
+ * gives), "preferences" (the default settings document, docs/preferences.md), "limits" (with "preferences": the limits of
+ * the settings as numbers)}. Every list but those noted is [{"value", "label"}]; a request accepts every value.
  */
 ComposerStatus composer_api_vocabulary(ComposerResponse *out);
 

@@ -617,6 +617,8 @@ typedef struct {
     ThemeBrief brief;
     GrowMaterial *material;
     GrowSetup setup;
+    ComposerPreferences preferences; /* what the request's "preferences" member gave; the setup points into it */
+    bool has_preferences;
     ComposerStyle *style;
     GrowRun run;
     bool ran;
@@ -665,6 +667,18 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     setup->check = check;
     setup->explain = outputs->explain != 0;
     setup->job = job;
+
+    /*
+     * The settings of the melody and of the development's fidelity minimums. The motif group is accepted, echoed and has
+     * no effect: a theme's motives come from the request (docs/theme-request.md).
+     */
+    if (!api_read_preferences(request, &state->preferences, &state->has_preferences, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (state->has_preferences) {
+        setup->melody = &state->preferences.melody;
+        setup->fidelity = &state->preferences.development;
+    }
 
     status = api_grow_read_brief(&state->brief.text, setup, error);
     if (status != COMPOSER_OK) {
@@ -748,6 +762,10 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
         info.chords = cJSON_IsArray(chords) ? chords : NULL;
         cJSON *document = api_grow_result_json(&state.setup, &state.run, &info);
         status = document ? add_theme_members(document, &state.run, state.setup.development, &outputs, &out->error) : fail_alloc(&out->error);
+        if (status == COMPOSER_OK && state.has_preferences &&
+            !cJSON_AddItemToObject(document, "preferences", composer_preferences_write(&state.preferences))) {
+            status = fail_alloc(&out->error);
+        }
         if (status == COMPOSER_OK) {
             status = render_first(&state.run.themes[0], &outputs, out);
         }

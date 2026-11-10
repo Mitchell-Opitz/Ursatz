@@ -28,6 +28,30 @@ typedef struct {
     GrowFidelityTable development;
 } ComposerPreferences;
 
+/*
+ * The limits of the settings (docs/preferences.md), which the reader enforces and the API's vocabulary shows a client:
+ * weights and weighted-list entries 0 to WEIGHT_MAX; climax_position and climax_slack 0 to SCALE_MAX; ratios n/d with
+ * d up to RATIO_DENOMINATOR_MAX (the fidelity minimums up to FIDELITY_DENOMINATOR_MAX); attempts 1 to ATTEMPTS_MAX (keep
+ * is 1 to MELODY_KEEP_MAX and at most attempts); range.low RANGE_LOW_MIN to RANGE_LOW_MAX, range.high at least
+ * range.low + RANGE_SPAN_MIN and at most RANGE_HIGH_MAX; density 0 to DENSITY_MAX; climax_rise CLIMAX_RISE_MIN to
+ * CLIMAX_RISE_MAX; pickup_one_in 0 to PICKUP_ONE_IN_MAX; leap.low and leap.high LEAP_MIN to LEAP_MAX.
+ */
+#define COMPOSER_PREFERENCES_WEIGHT_MAX 20
+#define COMPOSER_PREFERENCES_SCALE_MAX 1000
+#define COMPOSER_PREFERENCES_RATIO_DENOMINATOR_MAX 16
+#define COMPOSER_PREFERENCES_ATTEMPTS_MAX 256
+#define COMPOSER_PREFERENCES_RANGE_LOW_MIN 36
+#define COMPOSER_PREFERENCES_RANGE_LOW_MAX 96
+#define COMPOSER_PREFERENCES_RANGE_HIGH_MAX 108
+#define COMPOSER_PREFERENCES_RANGE_SPAN_MIN 12
+#define COMPOSER_PREFERENCES_DENSITY_MAX 4
+#define COMPOSER_PREFERENCES_CLIMAX_RISE_MIN 1
+#define COMPOSER_PREFERENCES_CLIMAX_RISE_MAX 12
+#define COMPOSER_PREFERENCES_PICKUP_ONE_IN_MAX 64
+#define COMPOSER_PREFERENCES_LEAP_MIN 3
+#define COMPOSER_PREFERENCES_LEAP_MAX 12
+#define COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX 1000
+
 #define COMPOSER_PREFERENCES_PATH_MAX 128
 #define COMPOSER_PREFERENCES_MESSAGE_MAX 160
 

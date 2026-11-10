@@ -142,6 +142,7 @@ range are drawn from defaults in the Composer.
 | `style_without` | up to 8 style categories read without; needs `style` |
 | `count` | 1 to 16, default 1 |
 | `seed` | 0 to 4294967295, default from the clock |
+| `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.11). Its `motif` group steers the `"segments"` strategy; a bad member is refused with its path under `/preferences` |
 
 **Strategy.** `"segments"` builds each motive the way a motive is made, from segments (Schoenberg's motives): one to three
 segments, `a`, its repeat `a'` on the next chord and a new `b`, with one chord on each segment from a harmony plan (`I V`,
@@ -158,5 +159,5 @@ minor 6/8, seed 1 and seed 2 minor 2/4, and seed 4294967295 (where `seed + 1` wr
 was drawn.
 
 `json`: `{"seed", "motives": [<the motive entry's document>]}` and `"drawn": {"mode", "meter"}`, with only the members that
-were drawn, when something was. The same request and seed give the same motives. Schemas:
+were drawn, when something was, and `"preferences"` (the full document the settings made) when the request had the member. The same request and seed give the same motives. Schemas:
 `random_motive.request.schema.json`, `random_motive.response.schema.json`.

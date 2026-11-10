@@ -67,7 +67,6 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     compose.seed = config->seed;
     compose.context = config->context;
     compose.melody = config->melody;
-    compose.max_iterations = config->max_iterations;
     compose.style = config->style;
     compose.style_weight = config->style_weight;
     compose.basic = config->basic;

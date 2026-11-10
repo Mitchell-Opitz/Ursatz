@@ -312,6 +312,70 @@ static void test_random_strategy(void) {
     }
 }
 
+/*
+ * The preferences member (B3 of P43). A request without it has no "preferences" in its response; empty preferences change
+ * only the echo; the motif group reaches the segments generator ("bars" {"one": 0, "two": 1} gives only two-bar motives,
+ * the motives differ from the defaults at the seed) and is echoed in full with the defaults filled in; the drawn strategy
+ * keeps its constants whatever the preferences say.
+ */
+static void test_random_preferences(void) {
+    ComposerResponse plain;
+    ComposerResponse empty;
+    ComposerResponse set;
+    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3}", NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3,\"preferences\":{}}", NULL,
+                                      &empty) == COMPOSER_OK);
+    cJSON *plain_document = cJSON_Parse(plain.json);
+    cJSON *empty_document = cJSON_Parse(empty.json);
+    assert(plain_document && empty_document);
+    assert(!cJSON_GetObjectItemCaseSensitive(plain_document, "preferences"));
+    assert(cJSON_GetObjectItemCaseSensitive(empty_document, "preferences"));
+    cJSON_DeleteItemFromObjectCaseSensitive(empty_document, "preferences");
+    assert(cJSON_Compare(plain_document, empty_document, true));
+    cJSON_Delete(empty_document);
+    composer_response_destroy(&empty);
+
+    const char *request = "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3,"
+                          "\"preferences\":{\"motif\":{\"bars\":{\"one\":0,\"two\":1}},\"melody\":{\"keep\":2}}}";
+    assert(composer_api_random_motive(request, NULL, &set) == COMPOSER_OK);
+    write_pair("random_motive", "preferences", request, &set);
+    cJSON *document = cJSON_Parse(set.json);
+    assert(document);
+    const cJSON *echoed = cJSON_GetObjectItemCaseSensitive(document, "preferences");
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(echoed, "melody"), "keep")->valueint == 2);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(echoed, "melody"), "attempts")->valueint == 48);
+    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(echoed, "motif"), "bars");
+    assert(cJSON_GetObjectItemCaseSensitive(bars, "one")->valueint == 0 && cJSON_GetObjectItemCaseSensitive(bars, "two")->valueint == 1);
+    assert(strcmp(set.json, plain.json) != 0);
+    /* The motives of the document equal a request without the member except where the motif group moves them. */
+    cJSON *without = cJSON_Duplicate(document, true);
+    cJSON_DeleteItemFromObjectCaseSensitive(without, "preferences");
+    assert(!cJSON_Compare(plain_document, without, true));
+    cJSON_Delete(without);
+    cJSON_Delete(document);
+    composer_response_destroy(&set);
+
+    /* The drawn strategy does not read the motif group. */
+    ComposerResponse drawn;
+    ComposerResponse drawn_set;
+    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"drawn\",\"count\":4,\"seed\":3}", NULL,
+                                      &drawn) == COMPOSER_OK);
+    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"drawn\",\"count\":4,\"seed\":3,"
+                                      "\"preferences\":{\"motif\":{\"bars\":{\"one\":0,\"two\":1}}}}",
+                                      NULL, &drawn_set) == COMPOSER_OK);
+    cJSON *drawn_document = cJSON_Parse(drawn.json);
+    cJSON *drawn_set_document = cJSON_Parse(drawn_set.json);
+    assert(drawn_document && drawn_set_document);
+    cJSON_DeleteItemFromObjectCaseSensitive(drawn_set_document, "preferences");
+    assert(cJSON_Compare(drawn_document, drawn_set_document, true));
+    cJSON_Delete(drawn_document);
+    cJSON_Delete(drawn_set_document);
+    composer_response_destroy(&drawn);
+    composer_response_destroy(&drawn_set);
+    cJSON_Delete(plain_document);
+    composer_response_destroy(&plain);
+}
+
 static void test_refusals(void) {
     expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"style\":\"no-such-style.json\"}",
                    COMPOSER_ERR_UNSATISFIABLE, "/style");
@@ -328,6 +392,12 @@ static void test_refusals(void) {
                    "/api_version");
     expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"dice\"}", COMPOSER_ERR_REQUEST,
                    "/strategy");
+    expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"preferences\":{\"melody\":{\"keep\":17}}}",
+                   COMPOSER_ERR_REQUEST, "/preferences/melody/keep");
+    expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"preferences\":{\"bogus\":1}}",
+                   COMPOSER_ERR_REQUEST, "/preferences/bogus");
+    expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"preferences\":[]}", COMPOSER_ERR_REQUEST,
+                   "/preferences");
 
     const char *const input = "\"input\":{\"text\":\"1:q 3:e 5:e 1':h\",\"format\":\"degrees\"},\"meter\":\"4/4\",\"key\":\"C major\"";
     char request[512];
@@ -411,12 +481,13 @@ static void test_cancel(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.10") == 0);
+    assert(strcmp(composer_api_version(), "1.11") == 0);
     test_operations();
     test_variants();
     test_recognize();
     test_random();
     test_random_strategy();
+    test_random_preferences();
     test_refusals();
     test_cancel();
     printf("test_api_variants: ok\n");

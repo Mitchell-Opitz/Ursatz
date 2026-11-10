@@ -5,6 +5,8 @@
 #include <time.h>
 #include <string.h>
 
+#include <ursatz_composer/preferences.h>
+
 #include "api_vocabulary.h"
 #include "util/request_parse.h"
 
@@ -212,4 +214,24 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
         out->export_options.section_markers = false;
     }
     return COMPOSER_OK;
+}
+
+bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *present, ComposerError *error) {
+    composer_preferences_default(out);
+    const cJSON *item = member(request, "preferences", present);
+    if (!item) {
+        return true;
+    }
+    if (!cJSON_IsObject(item)) {
+        return member_fail(error, "preferences", "an object");
+    }
+    char path[COMPOSER_PREFERENCES_PATH_MAX / 2]; /* the reader's paths are short; "/preferences" + path fits error->path */
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    if (!composer_preferences_read(item, out, path, sizeof path, message, sizeof message)) {
+        char full[sizeof error->path];
+        snprintf(full, sizeof full, "/preferences%s", path);
+        api_fail(error, COMPOSER_ERR_REQUEST, full, "%s", message);
+        return false;
+    }
+    return true;
 }

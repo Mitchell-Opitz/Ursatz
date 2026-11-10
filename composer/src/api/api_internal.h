@@ -8,6 +8,7 @@
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/preferences.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/style.h>
@@ -44,6 +45,14 @@ bool api_member_whole(const cJSON *object, const char *name, unsigned long minim
  */
 ComposerStatus api_load_style(const char *path, const char *const *without, size_t without_count, const char *path_file,
                               const char *path_without, ComposerStyle **out, ComposerError *error);
+
+/*
+ * The optional "preferences" member (docs/preferences.md): *out gets the defaults with the members present applied, and
+ * *present (when not NULL) whether the request had the member. A member that is not valid sets error to
+ * COMPOSER_ERR_REQUEST with the path "/preferences" followed by the reader's path (for example "/preferences/melody/keep")
+ * and returns false.
+ */
+bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *present, ComposerError *error);
 
 /* A seed from the clock, for a request that gives none. */
 unsigned long api_default_seed(void);

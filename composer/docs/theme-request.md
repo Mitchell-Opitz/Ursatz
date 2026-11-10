@@ -143,3 +143,5 @@ request file is the request text of the API. The options of the command (`--seed
 `--musicxml`, `--plain-midi`, `--explain`) are members of the API request (`seed`, `suggest`, `check`, `midi`, `musicxml`,
 `plain_midi`, `explain`), and the command writes the files from the response. `blend`, `blend_weight` and `blend_weights`
 take the second style model of `grow`'s `--blend`.
+
+`preferences` (API 1.11) is an optional member: the settings document of [preferences.md](preferences.md). The `melody` group and the `development` fidelity minimums apply to the theme. The `motif` group is accepted, echoed in the response and has no effect, because a theme's motives come from the request, not from the motif generator. A bad member is refused before composing with its path under `/preferences` (`composer_api_validate` too). The `theme` command reads it from the request file; no option sets it.

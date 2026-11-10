@@ -30,7 +30,8 @@ static unsigned long mix_seed(unsigned long seed) {
 
 /* Reads the members that make the options, without the style. drawn_mode and drawn_meter are set to what was drawn. */
 static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *out, bool *accompaniment, bool *has_role,
-                                   const char **drawn_mode, const char **drawn_meter, ComposerError *error) {
+                                   const char **drawn_mode, const char **drawn_meter, ComposerPreferences *preferences,
+                                   bool *has_preferences, ComposerError *error) {
     memset(out, 0, sizeof *out);
     *drawn_mode = NULL;
     *drawn_meter = NULL;
@@ -118,6 +119,11 @@ static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *ou
     if (*has_role && !motive_role_parse(role_text, accompaniment)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/role", "role must be melodic or accompaniment, not '%s'", role_text);
     }
+    /* The motif group steers the segments strategy; the drawn strategy keeps its constants (R-304). */
+    if (!api_read_preferences(request, preferences, has_preferences, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    out->preferences = *has_preferences ? &preferences->motif : NULL;
     return COMPOSER_OK;
 }
 
@@ -157,7 +163,7 @@ static ComposerStatus read_style(const cJSON *request, ComposerStyle **style, Co
 
 /* {"seed", "motives": [<motive document>]}. NULL on failure. */
 static cJSON *random_document(unsigned long seed, const Motive *motives, size_t count, const char *drawn_mode,
-                              const char *drawn_meter) {
+                              const char *drawn_meter, const ComposerPreferences *preferences) {
     cJSON *document = cJSON_CreateObject();
     cJSON *array = document && cJSON_AddNumberToObject(document, "seed", (double)seed)
                        ? cJSON_AddArrayToObject(document, "motives")
@@ -185,6 +191,11 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
         cJSON_Delete(document);
         return NULL;
     }
+    /* "preferences" echoes what the request gave, in full, and is there only when the request had it. */
+    if (preferences && !cJSON_AddItemToObject(document, "preferences", composer_preferences_write(preferences))) {
+        cJSON_Delete(document);
+        return NULL;
+    }
     return document;
 }
 
@@ -195,7 +206,10 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     bool has_role = false;
     const char *drawn_mode = NULL;
     const char *drawn_meter = NULL;
-    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter, error);
+    ComposerPreferences preferences;
+    bool has_preferences = false;
+    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+                                         &preferences, &has_preferences, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -220,7 +234,7 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     for (size_t i = 0; has_role && i < made; i++) {
         motives[i].accompaniment = accompaniment;
     }
-    cJSON *document = random_document(options.seed, motives, made, drawn_mode, drawn_meter);
+    cJSON *document = random_document(options.seed, motives, made, drawn_mode, drawn_meter, has_preferences ? &preferences : NULL);
     if (!document) {
         return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
@@ -233,7 +247,10 @@ ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, Composer
     bool has_role = false;
     const char *drawn_mode = NULL;
     const char *drawn_meter = NULL;
-    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter, error);
+    ComposerPreferences preferences;
+    bool has_preferences = false;
+    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+                                         &preferences, &has_preferences, error);
     ComposerStyle *style = NULL;
     if (status == COMPOSER_OK) {
         status = read_style(request, &style, error);

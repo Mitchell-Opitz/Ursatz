@@ -144,6 +144,93 @@ static void test_snapshots(void) {
     }
 }
 
+/* --- preferences (B3 of P43) --------------------------------------------------------------------- */
+
+/* The one-motive request with seed `seed` and, when not NULL, the member "preferences" set to the JSON text. */
+static char *preferences_request(unsigned seed, const char *preferences) {
+    char *text = test_read_file(THEME("one-motive.json"), NULL);
+    cJSON *request = cJSON_Parse(text);
+    free(text);
+    assert(request);
+    cJSON_DeleteItemFromObjectCaseSensitive(request, "seed");
+    assert(cJSON_AddNumberToObject(request, "seed", seed));
+    if (preferences) {
+        cJSON *item = cJSON_Parse(preferences);
+        assert(item && cJSON_AddItemToObject(request, "preferences", item));
+    }
+    char *printed = cJSON_PrintUnformatted(request);
+    cJSON_Delete(request);
+    assert(printed);
+    return printed;
+}
+
+static const cJSON *first_theme(const cJSON *document) {
+    return cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
+}
+
+/*
+ * A request without "preferences" has no member of that name in its response, and empty preferences change nothing but the
+ * echo: the document without it equals the one without the member. Preferences are echoed in full (the defaults filled in),
+ * the motif group is accepted and does nothing, and the melody and development groups reach the grow: at seed 2 the
+ * attempts, keep and against_bass weight of the request make another theme (measured: the heard text differs), and the
+ * minimum the development list shows for the repetition idea is the 1/1 asked for, 0.55 by default.
+ */
+static void test_preferences(void) {
+    ComposerResponse plain;
+    char *request = preferences_request(2, NULL);
+    assert(composer_api_theme(request, NULL, &plain) == COMPOSER_OK);
+    free(request);
+    cJSON *plain_document = cJSON_Parse(plain.json);
+    assert(plain_document && !cJSON_GetObjectItemCaseSensitive(plain_document, "preferences"));
+
+    ComposerResponse empty;
+    request = preferences_request(2, "{}");
+    assert(composer_api_theme(request, NULL, &empty) == COMPOSER_OK);
+    free(request);
+    cJSON *empty_document = cJSON_Parse(empty.json);
+    assert(empty_document && cJSON_GetObjectItemCaseSensitive(empty_document, "preferences"));
+    cJSON_DeleteItemFromObjectCaseSensitive(empty_document, "preferences");
+    assert(cJSON_Compare(plain_document, empty_document, true));
+    assert(empty.midi_size == plain.midi_size && memcmp(empty.midi, plain.midi, plain.midi_size) == 0);
+    cJSON_Delete(empty_document);
+    composer_response_destroy(&empty);
+
+    const char *given =
+        "{\"melody\": {\"attempts\": 1, \"keep\": 1, \"weights\": {\"against_bass\": 20}}, "
+        "\"motif\": {\"bars\": {\"one\": 0, \"two\": 1}}, "
+        "\"development\": {\"fidelity_minimum\": {\"balanced\": {\"presentation\": \"1/1\"}}}}";
+    ComposerResponse set;
+    request = preferences_request(2, given);
+    assert(composer_api_theme(request, NULL, &set) == COMPOSER_OK);
+    write_pair("preferences", request, &set);
+    free(request);
+    cJSON *document = cJSON_Parse(set.json);
+    assert(document);
+    const cJSON *echoed = cJSON_GetObjectItemCaseSensitive(document, "preferences");
+    const cJSON *melody = cJSON_GetObjectItemCaseSensitive(echoed, "melody");
+    assert(cJSON_GetObjectItemCaseSensitive(melody, "attempts")->valueint == 1);
+    assert(cJSON_GetObjectItemCaseSensitive(melody, "keep")->valueint == 1);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(melody, "weights"), "against_bass")->valueint == 20);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(melody, "weights"), "seam")->valueint == 1);
+    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(echoed, "motif"), "bars");
+    assert(cJSON_GetObjectItemCaseSensitive(bars, "one")->valueint == 0 && cJSON_GetObjectItemCaseSensitive(bars, "two")->valueint == 1);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(echoed, "development"), "fidelity_minimum"));
+
+    const cJSON *theme = first_theme(document);
+    const cJSON *plain_theme = first_theme(plain_document);
+    const cJSON *heard = cJSON_GetObjectItemCaseSensitive(theme, "heard_text");
+    const cJSON *plain_heard = cJSON_GetObjectItemCaseSensitive(plain_theme, "heard_text");
+    assert(cJSON_IsString(heard) && cJSON_IsString(plain_heard) && strcmp(heard->valuestring, plain_heard->valuestring) != 0);
+    const cJSON *repetition = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(theme, "developments"), 0);
+    const cJSON *plain_repetition = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(plain_theme, "developments"), 0);
+    assert(cJSON_GetObjectItemCaseSensitive(repetition, "minimum")->valuedouble == 1.0);
+    assert(cJSON_GetObjectItemCaseSensitive(plain_repetition, "minimum")->valuedouble == 0.55);
+    cJSON_Delete(document);
+    cJSON_Delete(plain_document);
+    composer_response_destroy(&set);
+    composer_response_destroy(&plain);
+}
+
 /* --- suggest, plans and explanations ------------------------------------------------------------- */
 
 static void test_suggest_plans_explain(void) {
@@ -515,6 +602,12 @@ static void test_refused(void) {
     expect_refused("development", "3", COMPOSER_ERR_REQUEST, "/development", "development");
     expect_refused("tempo", "500", COMPOSER_ERR_REQUEST, "/tempo", "tempo must be from 20 to 400");
     expect_refused("explain", "\"xml\"", COMPOSER_ERR_REQUEST, "/explain", "explain must be");
+    /* A setting out of its limit, one that is unknown, and one of the wrong type, each at its path under /preferences. */
+    expect_refused("preferences", "{\"melody\": {\"keep\": 17}}", COMPOSER_ERR_REQUEST, "/preferences/melody/keep", "1 to 16");
+    expect_refused("preferences", "{\"motif\": {\"bars\": {\"one\": 0, \"two\": 0}}}", COMPOSER_ERR_REQUEST, "/preferences/motif/bars",
+                   "");
+    expect_refused("preferences", "{\"bogus\": 1}", COMPOSER_ERR_REQUEST, "/preferences/bogus", "");
+    expect_refused("preferences", "3", COMPOSER_ERR_REQUEST, "/preferences", "preferences must be an object");
     /* A theme no seed can write: a last bar V under a perfect cadence. */
     expect_refused("chords", "[{\"bar\": 7, \"text\": \"V\"}]", COMPOSER_ERR_UNSATISFIABLE, "/chords/0", "chords bar 7: V cannot end a PAC");
     expect_refused("chords", "[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 7, \"text\": \"I6\"}]", COMPOSER_ERR_UNSATISFIABLE,
@@ -555,6 +648,7 @@ int main(int argc, char **argv) {
     if (responses) {
         test_two_bar_motif();
         test_snapshots();
+        test_preferences();
         test_suggest_plans_explain();
         test_developments();
     }

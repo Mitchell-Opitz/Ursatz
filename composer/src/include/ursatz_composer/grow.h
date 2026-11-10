@@ -277,7 +277,6 @@ typedef struct {
     unsigned long seed;
     GrowContext context;
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive grow_run */
-    size_t max_iterations;          /* per stage; 0 means FILL_DEFAULT_MAX_ITERATIONS */
     const ComposerStyle *style;     /* NULL for none; must outlive grow_run (compose.h) */
     ComposerRatio style_weight;     /* a denominator of 0 is 1/1 */
     /*
