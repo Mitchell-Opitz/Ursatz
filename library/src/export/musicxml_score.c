@@ -1276,6 +1276,9 @@ static size_t measure_at(const Prep *prep, long long tick) {
 /*
  * The end of the next written value of a note or rest that starts at pos and runs to at most to (inside one measure
  * and between two cuts). The rules, with the beat of the measure as the unit:
+ *   - a quarter-note triplet (2 * beat / 3, in a simple meter with a quarter beat) that starts two thirds into a
+ *     beat and is that long (a longer or cut note keeps the next rule) crosses the next beat whole, so three of
+ *     them from a beat are one group;
  *   - a value that starts off the beat stops at the next beat;
  *   - one that starts on a beat may cover several beats when its whole length is writable, but in a full 4/4 measure
  *     one that starts on beat 2 stops at beat 3 (one that starts on beat 1 may go through it);
@@ -1291,6 +1294,11 @@ static long long next_value_end(const Prep *prep, long long pos, long long to) {
     long long offset = pos - start;
     long long next_beat = start + (offset / beat + 1) * beat;
     long long cap = to;
+    NotatedValue crossing;
+    if ((offset % beat) * 3 == 2 * beat && to - pos == 2 * beat / 3 &&
+        classify_value(2 * beat / 3, prep->divisions, true, &crossing) && crossing.triplet) {
+        return pos + 2 * beat / 3;
+    }
     if (offset % beat != 0) {
         cap = cap < next_beat ? cap : next_beat;
     } else if (prep->measure_four_four[m] && offset / beat == 1 && cap > start + 2 * beat) {
@@ -1450,7 +1458,9 @@ bool musicxml_export_note_xml_id(const char *entity_value, char *out, size_t out
  * back to back inside one beat, opens at its first and closes at its last (chord members follow their first note). A
  * group also closes as soon as its notes and rests fill the 3:2 span of their value, three units of the shortest
  * triplet value in it (three sixteenth-triplet units are an eighth, three eighth-triplet units a beat), so six sixteenth
- * triplets in one beat are two groups. A run that does not fill a span closes where it stops.
+ * triplets in one beat are two groups. A run that does not fill a span closes where it stops. A run whose shortest
+ * triplet value is two thirds of a beat (a quarter-note triplet) may continue into the next beat while it has not
+ * filled its three units; every other run stays inside the beat it started in.
  */
 static void mark_tuplets(const Prep *prep, SegmentList *list) {
     size_t first = 0;
@@ -1466,15 +1476,19 @@ static void mark_tuplets(const Prep *prep, SegmentList *list) {
         }
         bool triplet = false;
         long long beat_start = 0;
+        long long beat_ticks = 0;
         NotatedValue value;
         if (item != NULL && !item->measure_rest &&
             classify_value(item->end - item->start, prep->divisions, true, &value) && value.triplet) {
             size_t m = measure_at(prep, item->start);
             triplet = true;
+            beat_ticks = prep->measure_beat[m];
             beat_start = prep->measure_start[m] +
-                         (item->start - prep->measure_start[m]) / prep->measure_beat[m] * prep->measure_beat[m];
+                         (item->start - prep->measure_start[m]) / beat_ticks * beat_ticks;
         }
-        bool continues = triplet && length > 0 && list->items[last].end == item->start && beat_start == run_beat;
+        bool next_beat_ok =
+            beat_start == run_beat || (unit * 3 == 2 * beat_ticks && beat_start == run_beat + beat_ticks);
+        bool continues = triplet && length > 0 && list->items[last].end == item->start && next_beat_ok;
         if (!continues) {
             if (length >= 2) {
                 list->items[first].tuplet = 1;
