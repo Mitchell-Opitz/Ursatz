@@ -30,6 +30,47 @@ function pieceLane(part, entries, total, state, selected, onSelect, onAdd) {
   return lane;
 }
 
+/* The read-only strip of a sized form at its size: a block per section wide by its bars, then a table of what the Composer
+ * plans for each section (role, length, beginning and ending, cadence, keys, what it returns to, the slots and their ideas). */
+function pieceSizedStrip(form, bars, count) {
+  const box = materialsElement("div");
+  const sections = PiecesModel.sectionsOf(form, bars, count);
+  if (sections.length === 0) {
+    box.appendChild(materialsElement("div", "piece-list-status", "The Composer has no sections for this size."));
+    return box;
+  }
+  const lengthOf = (section) => (Number.isFinite(section.bars) ? `${section.bars} bars` : Number.isFinite(section.beats) ? `${section.beats} beats` : "");
+  const total = Math.max(1, sections.reduce((sum, section) => sum + (Number.isFinite(section.bars) ? section.bars : 0), 0));
+  const track = materialsElement("div", "piece-lane-track");
+  for (const section of sections) {
+    const label = `${section.letter} · ${lengthOf(section)}`;
+    const block = materialsElement("div", "piece-block", label);
+    block.title = `${section.role ? section.role.label : ""} ${label}`.trim();
+    block.style.flex = `0 0 ${((Number.isFinite(section.bars) ? section.bars : 0) / total) * 100}%`;
+    track.appendChild(block);
+  }
+  const lane = materialsElement("div", "piece-lane");
+  lane.appendChild(track);
+  box.appendChild(lane);
+  box.appendChild(
+    pieceTable(
+      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Returns", "Slots"],
+      sections.map((section) => [
+        section.letter,
+        section.role ? section.role.label : "",
+        lengthOf(section),
+        section.beginning ? section.beginning.label : "",
+        section.ending ? section.ending.label : "",
+        section.cadence ? section.cadence.label : "",
+        section.keys ? `${section.keys.start} to ${section.keys.end}` : "",
+        section.returns || "",
+        (Array.isArray(section.slots) ? section.slots : []).map((slot) => `${slot.slot}: ${slot.ideas.join(", ")}`).join("; "),
+      ]),
+    ),
+  );
+  return box;
+}
+
 /*
  * A picker of one composed theme version: a name search, the theme, its composed versions and a line with its form.
  * options: {items(), onChange({item_id, version, beats} | null) for a pick the user made, onInfo({item_id, version,
@@ -395,7 +436,7 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
       ...state.sections.map((section, index) => {
         const cadence = PiecesModel.cadenceOf(state, index, served);
         return [
-          `${PiecesModel.PARTS.find((entry) => entry.value === section.part).label} ${section.letter || section.id}`,
+          `${PiecesModel.roleLabel(PiecesModel.formOf(state.form), section.part)} ${section.letter || section.id}`,
           `${PiecesModel.beatsLabel(section.beats, state.meter)}, ${cadence ? `cadence ${cadence}, ` : ""}${section.fill.kind}${
             section.fill.item_id ? ` ${nameOf(section.fill.item_id)} v${section.fill.version}` : ""
           }`,
@@ -424,8 +465,8 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
  */
 function buildPieceEditor(ctx) {
   const state = PiecesModel.stateFromBody(ctx.body, ctx.id);
-  if (state.sections.length === 0) {
-    state.sections = [PiecesModel.newSection(state, "body")];
+  if (state.sections.length === 0 && !PiecesModel.isSized(PiecesModel.formOf(state.form))) {
+    state.sections = [PiecesModel.newSection(state, PiecesModel.defaultRole(PiecesModel.formOf(state.form)))];
   }
   const el = materialsElement("section", "panel materials-editor piece-editor");
   const nameOf = (itemId) => {
@@ -433,7 +474,7 @@ function buildPieceEditor(ctx) {
     return found ? found.name : itemId;
   };
   const problemsEl = materialsElement("div", "materials-field-error");
-  let selected = state.sections[0].id;
+  let selected = state.sections.length > 0 ? state.sections[0].id : "";
   let served = [];
   let showDefaultCadence = () => {};
   let poolRefresh = () => {};
@@ -460,6 +501,14 @@ function buildPieceEditor(ctx) {
     el.appendChild(buildMaterialExport(ctx.id, ctx.version, ctx.title));
   }
   const header = materialsElement("div", "upload-controls");
+  const formSelect = themeField(
+    header,
+    "Form",
+    themeSelect(
+      Vocabulary.forms().map((form) => ({ value: form.name, label: form.label })),
+      state.form,
+    ),
+  );
   const key = themeField(header, "Key", themeInput("D or Bb", state.key));
   const mode = themeField(header, "Mode", themeSelect(PiecesModel.MODES, state.mode));
   const meter = themeField(header, "Meter", themeSelect(PiecesModel.METERS, state.meter));
@@ -478,17 +527,67 @@ function buildPieceEditor(ctx) {
   }
   el.appendChild(header);
 
-  /* The strip */
+  /* The strip: the lanes of a form whose request lists its sections, the Composer's sections of a sized form */
   el.appendChild(materialsElement("h2", "section-title", "Structure"));
+  const sizeRow = materialsElement("div", "upload-controls");
+  const sizeSelect = themeSelect([], "");
+  themeField(sizeRow, "Size", sizeSelect);
+  const modulateBox = materialsElement("input");
+  modulateBox.type = "checkbox";
+  themeField(sizeRow, "Modulate", modulateBox);
   const stripEl = materialsElement("div", "piece-strip");
   const editorEl = materialsElement("div", "piece-section-editor");
-  el.append(stripEl, editorEl);
+  el.append(sizeRow, stripEl, editorEl);
+
+  /* The size and modulate controls of a sized form (hidden for any other); a size is its bars and count. */
+  function drawSizeControls() {
+    const form = PiecesModel.formOf(state.form);
+    sizeRow.hidden = !PiecesModel.isSized(form);
+    if (sizeRow.hidden) {
+      return;
+    }
+    const options = PiecesModel.sizeOptions(form);
+    sizeSelect.innerHTML = "";
+    for (const option of options) {
+      const el = materialsElement("option", "", option.label);
+      el.value = option.value;
+      sizeSelect.appendChild(el);
+    }
+    const chosen = PiecesModel.sizeOf(form, state.bars, state.count);
+    sizeSelect.value = chosen ? `${chosen.bars}:${chosen.count}` : "";
+    const canModulate = form.settings && form.settings.modulate === true;
+    modulateBox.parentElement.hidden = !canModulate;
+    modulateBox.checked = canModulate && state.modulate;
+  }
+  sizeSelect.addEventListener("input", () => {
+    const [bars, count] = sizeSelect.value.split(":").map(Number);
+    state.bars = bars;
+    state.count = count;
+    drawStrip();
+    problems();
+  });
+  modulateBox.addEventListener("input", () => {
+    state.modulate = modulateBox.checked;
+    problems();
+  });
+  formSelect.addEventListener("input", () => {
+    Object.assign(state, PiecesModel.withForm(state, formSelect.value));
+    selected = state.sections.length > 0 ? state.sections[0].id : "";
+    poolRefresh();
+    redraw();
+  });
 
   function drawStrip() {
     stripEl.innerHTML = "";
+    const form = PiecesModel.formOf(state.form);
+    drawSizeControls();
+    if (PiecesModel.isSized(form)) {
+      stripEl.appendChild(pieceSizedStrip(form, state.bars, state.count));
+      return;
+    }
     const timeline = PiecesModel.sectionTimeline(state);
     const total = Math.max(1, timeline.reduce((sum, entry) => sum + entry.beats, 0));
-    for (const part of PiecesModel.PARTS) {
+    for (const part of PiecesModel.rolesOf(form)) {
       stripEl.appendChild(
         pieceLane(
           part,
@@ -521,13 +620,17 @@ function buildPieceEditor(ctx) {
   function drawSectionEditor() {
     editorEl.innerHTML = "";
     const index = state.sections.findIndex((section) => section.id === selected);
+    if (PiecesModel.isSized(PiecesModel.formOf(state.form))) {
+      return;
+    }
     if (index < 0) {
       editorEl.appendChild(materialsElement("div", "piece-list-status", "Select a section to edit it."));
       return;
     }
     const section = state.sections[index];
-    const part = PiecesModel.PARTS.find((entry) => entry.value === section.part);
-    editorEl.appendChild(materialsElement("h3", "section-title", `Section ${section.letter || section.id} (${part.label})`));
+    editorEl.appendChild(
+      materialsElement("h3", "section-title", `Section ${section.letter || section.id} (${PiecesModel.roleLabel(PiecesModel.formOf(state.form), section.part)})`),
+    );
     const controls = materialsElement("div", "upload-controls");
     const letter = themeField(controls, "Letter", themeInput("A", section.letter));
     const per = PiecesModel.barBeats(state.meter);
@@ -736,7 +839,7 @@ function buildPieceEditor(ctx) {
     roots: [el],
     build: () => PiecesModel.validateRequest(state),
     field: PiecesModel.fieldForPath,
-    fields: () => ({ key, mode, meter, tempo, sections: stripEl }),
+    fields: () => ({ form: formSelect, key, mode, meter, tempo, sections: stripEl, size: sizeSelect, modulate: modulateBox }),
     onResult: (result) => {
       served = result.ok && result.complete ? PiecesModel.servedCadences(result.request, state) : [];
       showDefaultCadence();
@@ -798,7 +901,7 @@ function buildPieceEditor(ctx) {
       JSON.stringify(PiecesModel.bodyFromState(state)) !== savedJson ||
       !structure ||
       typeof structure !== "object" ||
-      !Array.isArray(structure.sections);
+      (typeof structure.form !== "string" && !Array.isArray(structure.sections));
     if (changed) {
       const saved = await save("Edited before composing");
       if (!saved || !saved.ok) {

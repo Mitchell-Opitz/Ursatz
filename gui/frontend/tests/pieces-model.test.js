@@ -6,7 +6,7 @@
  * Plain Node script: `node frontend/tests/pieces-model.test.js`. */
 const fs = require("fs");
 const path = require("path");
-require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
+require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"), require("./fixtures/forms.json"));
 const P = require("../public/pieces-model.js");
 
 let failures = 0;
@@ -91,7 +91,7 @@ const ok = filled();
 check(P.structureProblems(ok).length === 0 && P.formProblems(ok).length === 0, "a filled piece has no problems");
 const noBody = filled();
 noBody.sections = noBody.sections.filter((entry) => entry.part !== "body");
-check(P.structureProblems(noBody).some((text) => /loop body/.test(text)), "no body section is a problem");
+check(P.structureProblems(noBody).some((text) => /Loop body/.test(text)), "no body section is a problem");
 const unordered = filled();
 unordered.sections = [unordered.sections[1], unordered.sections[0]];
 check(P.structureProblems(unordered).some((text) => /order/.test(text)), "parts out of order are a problem");

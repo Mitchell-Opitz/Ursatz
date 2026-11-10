@@ -1,10 +1,12 @@
 /* Pieces view (P17): the piece form state, the version body it makes, its structure problems, the strip timeline,
  * the compose request and the rows of a result. No DOM; pieces-view.js renders from these. Needs themes-model.js for
  * the brief, the switches and the shared lists. The form state is
- *   {id, uses, key, mode, meter, tempo, sections: [{id, part, letter, beats, pickup, cadence, fill}],
+ *   {id, uses, form, key, mode, meter, tempo, bars, count, modulate, sections: [{id, part, letter, beats, pickup, cadence, fill}],
  *    motive: {item_id, version} | null, pool, accompaniment: {kind, pattern}, picks: [...], switches: {...},
  *    weight, check, seed}
- * with tempo and seed as the text typed (blank for none), beats a whole number, pickup a string of beats ("0", "1/2"),
+ * with form the name of a Composer form (game-loop when a body names none), bars and count the size of a sized form (0 and 0
+ * for its default size; such a form has no sections here), modulate a boolean, tempo and seed as the text typed (blank for
+ * none), beats a whole number, pickup a string of beats ("0", "1/2"),
  * cadence null for the default and fill one of
  *   {kind: "empty"} | {kind: "motif", item_id, version, into, hybrid} | {kind: "theme", item_id, version}
  *   | {kind: "progression", numerals, cells}. */
@@ -14,8 +16,7 @@
 
   /* The Composer's words (R-270, R-276), read when asked: the vocabulary is loaded after the scripts. */
   const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
-  const parts = () => Vocab.list("piece_parts");
-  const partNames = () => Vocab.values("piece_parts");
+  const DEFAULT_FORM = "game-loop";
   const cadences = () => Vocab.values("cadences");
   const fillKinds = () => Vocab.list("fill_kinds");
   const modes = () => Themes.MODES;
@@ -49,10 +50,14 @@
     return {
       id: id || "",
       uses: [],
+      form: DEFAULT_FORM,
       key: "C",
       mode: "major",
       meter: "4/4",
       tempo: "",
+      bars: 0,
+      count: 0,
+      modulate: false,
       sections: [],
       motive: null,
       pool: "approved-and-unflagged",
@@ -65,8 +70,109 @@
     };
   }
 
-  function partIndex(part) {
-    return partNames().indexOf(part);
+  /* --- forms ------------------------------------------------------------ */
+
+  /* The Composer's entry of a form (its sections, sizes, slots, versions), or null. */
+  function formOf(name) {
+    return Vocab.form(name || DEFAULT_FORM);
+  }
+
+  /* True for a form whose sections the Composer gives by size; false for one whose request lists its sections. */
+  function isSized(form) {
+    return Boolean(form) && form.sections === "sizes";
+  }
+
+  /* The roles a request-listed form allows, in order: [{value, label, required}]. */
+  function rolesOf(form) {
+    return form && Array.isArray(form.roles) ? form.roles : [];
+  }
+
+  function roleValues(form) {
+    return rolesOf(form).map((role) => role.value);
+  }
+
+  function partIndex(part, form) {
+    return roleValues(form === undefined ? formOf(DEFAULT_FORM) : form).indexOf(part);
+  }
+
+  /* The label of a role value in a form: a listed role, else a role of one of its sizes, else the value. */
+  function roleLabel(form, value) {
+    const listed = rolesOf(form).find((role) => role.value === value);
+    if (listed) {
+      return listed.label;
+    }
+    for (const size of form && Array.isArray(form.sizes) ? form.sizes : []) {
+      const found = size.sections.find((section) => section.role && section.role.value === value);
+      if (found) {
+        return found.role.label;
+      }
+    }
+    return value;
+  }
+
+  /* "3 variations, 32 bars" for a size with a count (the noun is the role of its last section), else "16 bars". */
+  function sizeLabel(size) {
+    const last = size.sections.length > 0 ? size.sections[size.sections.length - 1].role : null;
+    const noun = last && last.label ? last.label.toLowerCase() : "section";
+    return size.count > 0 ? `${size.count} ${noun}${size.count === 1 ? "" : "s"}, ${size.bars} bars` : `${size.bars} bars`;
+  }
+
+  /* The sizes of a sized form: [{value, bars, count, default, label}] (value "<bars>:<count>"). */
+  function sizeOptions(form) {
+    if (!isSized(form)) {
+      return [];
+    }
+    return form.sizes.map((size) => ({
+      value: `${size.bars}:${size.count}`,
+      bars: size.bars,
+      count: size.count,
+      default: size.default === true,
+      label: sizeLabel(size),
+    }));
+  }
+
+  /* The size bars and count name (0 and 0, or nothing a size has, is the default size), or null for a form with none. */
+  function sizeOf(form, bars, count) {
+    if (!isSized(form)) {
+      return null;
+    }
+    const b = Number(bars) || 0;
+    const c = Number(count) || 0;
+    if (b === 0 && c === 0) {
+      return form.sizes.find((size) => size.default === true) || form.sizes[0] || null;
+    }
+    return form.sizes.find((size) => (c > 0 ? size.count === c : size.bars === b && size.count === 0)) || null;
+  }
+
+  /* The sections of a sized form at a size, as the Composer plans them (for display); [] for a form with none. */
+  function sectionsOf(form, bars, count) {
+    const size = sizeOf(form, bars, count);
+    return size ? size.sections : [];
+  }
+
+  /* A state on another form: a request-listed form starts with one section of its first required role, a sized form
+   * with its default size and no sections. */
+  function withForm(state, name) {
+    const next = JSON.parse(JSON.stringify(state));
+    const form = formOf(name);
+    next.form = form ? form.name : DEFAULT_FORM;
+    next.bars = 0;
+    next.count = 0;
+    if (!form || !form.settings || form.settings.modulate !== true) {
+      next.modulate = false;
+    }
+    next.sections = [];
+    if (form && !isSized(form)) {
+      next.sections = [newSection(next, defaultRole(form))];
+    }
+    return next;
+  }
+
+  /* The role a new section of a form starts as: its first required role, else its first. */
+  function defaultRole(form) {
+    const roles = rolesOf(form);
+    const required = roles.find((role) => role.required === true) || roles[0];
+    return required ? required.value : "";
   }
 
   /* The beats in a bar of a meter, as the Composer lists it: 2/4 is 2, 6/8 is 6 (the eighth is the beat). A meter the
@@ -138,11 +244,11 @@
   }
 
   /* The index to insert a section of part at: after the last section of that part or an earlier one. */
-  function insertIndex(sections, part) {
-    const at = partIndex(part);
+  function insertIndex(sections, part, form) {
+    const at = partIndex(part, form);
     let index = 0;
     sections.forEach((section, i) => {
-      if (partIndex(section.part) <= at) {
+      if (partIndex(section.part, form) <= at) {
         index = i + 1;
       }
     });
@@ -152,7 +258,7 @@
   function addSection(state, part) {
     const next = JSON.parse(JSON.stringify(state));
     const section = newSection(next, part);
-    next.sections.splice(insertIndex(next.sections, part), 0, section);
+    next.sections.splice(insertIndex(next.sections, part, formOf(next.form)), 0, section);
     return next;
   }
 
@@ -258,13 +364,17 @@
   function bodyFromState(state) {
     const s = state || emptyState();
     const acc = s.accompaniment || { kind: "none" };
+    const form = formOf(s.form);
+    const structure = { form: form ? form.name : DEFAULT_FORM, key: text(s.key), mode: s.mode, meter: s.meter };
+    if (isSized(form)) {
+      structure.bars = Number(s.bars) || 0;
+      structure.count = Number(s.count) || 0;
+      structure.modulate = form.settings && form.settings.modulate === true && s.modulate === true;
+    } else {
+      structure.sections = (Array.isArray(s.sections) ? s.sections : []).map((section) => sectionFromState(section, s.meter));
+    }
     const piece = {
-      structure: {
-        key: text(s.key),
-        mode: s.mode,
-        meter: s.meter,
-        sections: (Array.isArray(s.sections) ? s.sections : []).map((section) => sectionFromState(section, s.meter)),
-      },
+      structure,
       motive: s.motive && text(s.motive.item_id) ? { item_id: s.motive.item_id, version: Number(s.motive.version) } : null,
       pool: s.pool,
       accompaniment: acc.kind === "pattern" ? { pattern: acc.pattern || "any" } : null,
@@ -285,6 +395,8 @@
     const piece = body && body.piece && typeof body.piece === "object" ? body.piece : {};
     state.uses = body && Array.isArray(body.uses) ? body.uses.slice() : [];
     const structure = piece.structure && typeof piece.structure === "object" && !Array.isArray(piece.structure) ? piece.structure : {};
+    const form = typeof structure.form === "string" ? formOf(structure.form) : null;
+    state.form = form ? form.name : DEFAULT_FORM;
     if (typeof structure.key === "string" && structure.key !== "") {
       state.key = structure.key;
     }
@@ -294,8 +406,14 @@
     if (meters().includes(structure.meter)) {
       state.meter = structure.meter;
     }
-    state.sections = (Array.isArray(structure.sections) ? structure.sections : [])
-      .filter((section) => section && typeof section === "object" && partNames().includes(section.part))
+    const kept = formOf(state.form);
+    if (isSized(kept)) {
+      state.bars = Number.isInteger(structure.bars) ? structure.bars : 0;
+      state.count = Number.isInteger(structure.count) ? structure.count : 0;
+      state.modulate = structure.modulate === true;
+    }
+    state.sections = (isSized(kept) || !Array.isArray(structure.sections) ? [] : structure.sections)
+      .filter((section) => section && typeof section === "object" && roleValues(kept).includes(section.part))
       .map((section) => ({
         id: String(section.id),
         part: section.part,
@@ -426,21 +544,30 @@
     const s = state || emptyState();
     const o = options || {};
     const problems = [];
+    const form = formOf(s.form);
+    if (!form) {
+      return [`The Composer has no form called ${s.form}.`];
+    }
+    if (isSized(form)) {
+      return problems;
+    }
     const sections = Array.isArray(s.sections) ? s.sections : [];
-    if (!sections.some((section) => section.part === "body")) {
-      problems.push("The piece needs a section in the loop body.");
+    for (const role of rolesOf(form)) {
+      if (role.required === true && !sections.some((section) => section.part === role.value)) {
+        problems.push(`The piece needs a section in the ${role.label}.`);
+      }
     }
     let last = -1;
     let ordered = true;
     for (const section of sections) {
-      const at = partIndex(section.part);
+      const at = partIndex(section.part, form);
       if (at < last) {
         ordered = false;
       }
       last = Math.max(last, at);
     }
     if (!ordered) {
-      problems.push("The parts must come in the order intro, loop body, turnaround, ending.");
+      problems.push(`The parts must come in the order ${rolesOf(form).map((role) => role.label).join(", ")}.`);
     }
     for (const section of sections) {
       const name = section.letter ? `Section ${section.letter}` : `Section ${section.id}`;
@@ -479,6 +606,9 @@
     ["/tempo", "tempo"],
     ["/seed", "seed"],
     ["/sections", "sections"],
+    ["/bars", "size"],
+    ["/count", "size"],
+    ["/modulate", "modulate"],
     ["/motive", "motive"],
     ["/accompaniment", "accompaniment"],
     ["/style_weight", "weight"],
@@ -803,12 +933,16 @@
   }
 
   const api = {
-    get PARTS() {
-      return parts();
-    },
-    get PART_NAMES() {
-      return partNames();
-    },
+    DEFAULT_FORM,
+    formOf,
+    isSized,
+    rolesOf,
+    roleLabel,
+    defaultRole,
+    sizeOptions,
+    sizeOf,
+    sectionsOf,
+    withForm,
     get CADENCES() {
       return cadences();
     },
