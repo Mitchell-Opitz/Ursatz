@@ -15,7 +15,7 @@ Every member is optional and its default is the value the Composer used before t
 | `composer_preferences_write(preferences)` | The full document, every member, as a `cJSON` object the caller deletes. Ratios are `"n/d"` text and `nct_types` is in the order passing, neighbor, appoggiatura, suspension, anticipation. |
 | `composer_preferences_is_default(preferences)` | True when every setting is the default. |
 
-`ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif` and `GrowFidelityTable development`. The API member that carries the document is added after them.
+`ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif` and `GrowFidelityTable development`. The API carries the document as the `preferences` member of the random motive and theme requests (below).
 
 ## The melody group
 
@@ -135,3 +135,14 @@ A contrasting idea and an idea with no role are not settings: their minimum is 0
   }
 }
 ```
+
+## In the API (1.11)
+
+The random motive and theme requests take the document as an optional `preferences` member: a JSON object of the shape above, every member optional, read with `composer_preferences_read`. A member that is unknown, of the wrong type or outside its limit is refused with `COMPOSER_ERR_REQUEST` and the reader's path under `/preferences`, for example `/preferences/melody/keep`. A request that has the member gets `"preferences"` in its response: the full document with the defaults filled in, so the response says what was used. A request without it has no such member and its response is what it was before.
+
+| Request | Groups that apply |
+|---|---|
+| `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants). `melody` and `development` are accepted and echoed. |
+| `composer_api_theme` | `melody` and `development` (the fidelity minimums, also shown in the `minimum` of each development item). `motif` is accepted, echoed and has no effect: a theme's motives come from the request. |
+
+`composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.

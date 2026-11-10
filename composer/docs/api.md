@@ -16,7 +16,7 @@ A minimal client in C is in [Using the API from C](#using-the-api-from-c).
 ## Versioning
 
 `COMPOSER_API_VERSION_MAJOR` and `COMPOSER_API_VERSION_MINOR`; `composer_api_version()` gives `"<major>.<minor>"`. This
-is API 1.10 (1.0 was the first stable API, R-268).
+is API 1.11 (1.0 was the first stable API, R-268). 1.11 adds the optional `preferences` member to the random motive and theme requests and responses, and the default `preferences` document and its limits to the vocabulary ([preferences.md](preferences.md)).
 
 **Compatibility rule.** The MAJOR version changes on any removed or changed member or entry: an entry that goes, a request
 or response member that goes, changes meaning or type, or a value a member took that is refused now. The MINOR version
