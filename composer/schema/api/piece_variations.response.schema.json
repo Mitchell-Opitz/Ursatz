@@ -100,8 +100,7 @@
         "type": "object",
         "required": [
           "index",
-          "seed",
-          "loop"
+          "seed"
         ],
         "additionalProperties": false,
         "properties": {
@@ -114,6 +113,10 @@
           },
           "loop": {
             "$ref": "#/$defs/version"
+          },
+          "piece": {
+            "$ref": "#/$defs/version",
+            "description": "The version of a form with sizes."
           },
           "loop_markers": {
             "type": "object",
@@ -136,7 +139,19 @@
           "musicxml": {
             "type": "string"
           }
-        }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "loop"
+            ]
+          },
+          {
+            "required": [
+              "piece"
+            ]
+          }
+        ]
       }
     },
     "kept": {
@@ -172,70 +187,14 @@
         "sections": {
           "type": "array",
           "items": {
-            "type": "object",
-            "required": [
-              "id",
-              "part",
-              "letter",
-              "start",
-              "beats",
-              "cadence",
-              "heard",
-              "fill",
-              "source"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "id": {
-                "type": "string"
+            "oneOf": [
+              {
+                "$ref": "#/$defs/loop_row"
               },
-              "part": {
-                "enum": [
-                  "intro",
-                  "body",
-                  "turnaround",
-                  "ending"
-                ]
-              },
-              "letter": {
-                "type": "string"
-              },
-              "start": {
-                "type": "string",
-                "pattern": "^[0-9]+/[0-9]+$"
-              },
-              "beats": {
-                "type": "integer",
-                "minimum": 1
-              },
-              "cadence": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "heard": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "in_scope": {
-                "const": false,
-                "description": "Present when a regenerate left the section as it was."
-              },
-              "fill": {
-                "enum": [
-                  "empty",
-                  "motif",
-                  "theme",
-                  "progression"
-                ]
-              },
-              "source": {
-                "type": "string"
+              {
+                "$ref": "#/$defs/size_row"
               }
-            }
+            ]
           }
         },
         "score": {
@@ -369,6 +328,148 @@
           ]
         }
       }
+    },
+    "loop_row": {
+      "type": "object",
+      "required": [
+        "id",
+        "part",
+        "letter",
+        "start",
+        "beats",
+        "cadence",
+        "heard",
+        "fill",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "part": {
+          "enum": [
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        "letter": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "pattern": "^[0-9]+/[0-9]+$"
+        },
+        "beats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cadence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "heard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "in_scope": {
+          "const": false,
+          "description": "Present when a regenerate left the section as it was."
+        },
+        "fill": {
+          "enum": [
+            "empty",
+            "motif",
+            "theme",
+            "progression"
+          ]
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "description": "A section of a form whose sections the request gives (the game loop)."
+    },
+    "size_row": {
+      "type": "object",
+      "required": [
+        "id",
+        "role",
+        "letter",
+        "start",
+        "beats",
+        "cadence",
+        "heard",
+        "returns",
+        "motive"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "theme",
+            "contrast",
+            "return",
+            "variation",
+            "layer",
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        "letter": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "pattern": "^[0-9]+/[0-9]+$"
+        },
+        "beats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cadence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "heard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "in_scope": {
+          "const": false,
+          "description": "Present when a regenerate left the section as it was."
+        },
+        "returns": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The name of the section it returns."
+        },
+        "motive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "How its motive is made from the first, as the form's document writes it."
+        }
+      },
+      "description": "A section of the size of a form with sizes."
     }
   }
 }
