@@ -39,18 +39,18 @@ const char *grow_stage_name(GrowStage stage) {
 }
 
 const char *grow_slot_name(GrowSlot slot) {
-    static const char *const NAMES[GROW_SLOT_COUNT] = {"basic", "contrasting", "continuation", "cadential"};
-    return slot >= 0 && slot < GROW_SLOT_COUNT ? NAMES[slot] : "unknown";
+    const ThemeShapeSlot *row = theme_shape_slot(slot);
+    return row ? row->name : "unknown";
 }
 
 const char *grow_slot_function(GrowSlot slot) {
-    static const char *const FUNCTIONS[GROW_SLOT_COUNT] = {"beginning", "contrast", "continuation", "cadential"};
-    return slot >= 0 && slot < GROW_SLOT_COUNT ? FUNCTIONS[slot] : "unknown";
+    const ThemeShapeSlot *row = theme_shape_slot(slot);
+    return row ? row->function : "unknown";
 }
 
 const char *grow_slot_node_name(GrowSlot slot) {
-    static const char *const NAMES[GROW_SLOT_COUNT] = {NULL, "s1", "s2", "s3"};
-    return slot >= 0 && slot < GROW_SLOT_COUNT ? NAMES[slot] : NULL;
+    const ThemeShapeSlot *row = theme_shape_slot(slot);
+    return row ? row->node_name : NULL;
 }
 
 NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot) {
@@ -65,75 +65,24 @@ NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot) {
 }
 
 const char *grow_idea_name(GrowIdea idea) {
-    static const char *const NAMES[GROW_IDEA_COUNT] = {
-        "basic idea", "repetition", "contrasting idea", "consequent basic idea", "consequent contrasting idea",
-        "fragment 1", "fragment 2", "cadential", "cadential 1", "cadential 2"};
-    return idea >= 0 && idea < GROW_IDEA_COUNT ? NAMES[idea] : "unknown";
+    return theme_shape_idea_name(idea);
 }
 
 bool grow_idea_place(const PlanThemePairing *pairing, GrowIdea idea, GrowPlace *place) {
-    bool presentation = pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION;
-    bool continuation = pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
-    bool consequent = pairing->ending == PLAN_THEME_ENDING_CONSEQUENT;
-    bool cadential = pairing->ending == PLAN_THEME_ENDING_CADENTIAL;
-    GrowPlace found = GROW_PLACE_BASIC;
-    bool has = false;
-    switch (idea) {
-    case GROW_IDEA_BASIC:
-        has = true;
-        break;
-    case GROW_IDEA_REPETITION:
-        found = GROW_PLACE_REPETITION;
-        has = presentation;
-        break;
-    case GROW_IDEA_CONTRASTING:
-        found = GROW_PLACE_CONTRAST;
-        has = !presentation;
-        break;
-    case GROW_IDEA_CONSEQUENT_BASIC:
-        found = GROW_PLACE_RESTATED;
-        has = consequent;
-        break;
-    case GROW_IDEA_CONSEQUENT_CONTRASTING:
-        found = GROW_PLACE_CONSEQUENT_CONTRAST;
-        has = consequent;
-        break;
-    case GROW_IDEA_FRAGMENT_1:
-        found = GROW_PLACE_FRAGMENT_1;
-        has = continuation;
-        break;
-    case GROW_IDEA_FRAGMENT_2:
-        found = GROW_PLACE_FRAGMENT_2;
-        has = continuation;
-        break;
-    case GROW_IDEA_CADENTIAL:
-        found = GROW_PLACE_CADENTIAL;
-        has = continuation;
-        break;
-    case GROW_IDEA_CADENTIAL_1:
-        found = GROW_PLACE_CADENTIAL_1;
-        has = cadential;
-        break;
-    case GROW_IDEA_CADENTIAL_2:
-        found = GROW_PLACE_CADENTIAL_2;
-        has = cadential;
-        break;
-    case GROW_IDEA_COUNT:
-        break;
+    const ThemeShapeIdea *row = theme_shape_idea_in(pairing, idea);
+    if (row && place) {
+        *place = (GrowPlace)row->place;
     }
-    if (has && place) {
-        *place = found;
-    }
-    return has;
+    return row != NULL;
 }
 
 bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea) {
-    return grow_idea_place(pairing, idea, NULL);
+    return theme_shape_idea_in(pairing, idea) != NULL;
 }
 
 size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place) {
-    bool continuation = pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
-    return (place == GROW_PLACE_FRAGMENT_1 || place == GROW_PLACE_FRAGMENT_2) && continuation ? 1 : 2;
+    const ThemeShapeIdea *row = theme_shape_place_in(pairing, (unsigned)place);
+    return row ? row->units : 2;
 }
 
 const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size) {
@@ -161,62 +110,27 @@ bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea) {
 }
 
 GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowPlace idea, bool *first) {
-    bool presentation = pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION;
-    GrowSlot slot = GROW_SLOT_BASIC;
-    bool is_first = false;
-    switch (idea) {
-    case GROW_PLACE_BASIC:
-        is_first = true;
-        break;
-    case GROW_PLACE_REPETITION: /* also the contrasting idea of the other beginnings */
-        slot = presentation ? GROW_SLOT_BASIC : GROW_SLOT_CONTRASTING;
-        is_first = !presentation;
-        break;
-    case GROW_PLACE_FRAGMENT_1: /* also the consequent basic idea and cadential 1 */
-        slot = pairing->ending == PLAN_THEME_ENDING_CONTINUATION ? GROW_SLOT_CONTINUATION
-               : pairing->ending == PLAN_THEME_ENDING_CADENTIAL  ? GROW_SLOT_CADENTIAL
-                                                                 : GROW_SLOT_BASIC;
-        is_first = slot != GROW_SLOT_BASIC;
-        break;
-    case GROW_PLACE_FRAGMENT_2: /* also the consequent contrasting idea and cadential 2 */
-        slot = pairing->ending == PLAN_THEME_ENDING_CONTINUATION ? GROW_SLOT_CONTINUATION
-               : pairing->ending == PLAN_THEME_ENDING_CADENTIAL  ? GROW_SLOT_CADENTIAL
-                                                                 : GROW_SLOT_CONTRASTING;
-        break;
-    case GROW_PLACE_CADENTIAL:
-        slot = GROW_SLOT_CADENTIAL;
-        is_first = true;
-        break;
-    default:
-        break;
-    }
+    const ThemeShapeIdea *row = theme_shape_place_in(pairing, (unsigned)idea);
+    /* The cadential place has a row only under a continuation; the other endings never ask for it, and it was a cadential slot's first. */
+    GrowSlot slot = row ? row->slot : idea == GROW_PLACE_CADENTIAL ? GROW_SLOT_CADENTIAL : GROW_SLOT_BASIC;
     if (first) {
-        *first = is_first;
+        *first = row ? row->first : idea == GROW_PLACE_CADENTIAL;
     }
     return slot;
 }
 
 bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *units) {
-    size_t room = 2;
+    size_t room = 0;
     bool used = false;
-    switch (slot) {
-    case GROW_SLOT_BASIC:
+    for (size_t i = 0; i < theme_shape_idea_count(); i++) {
+        const ThemeShapeIdea *row = theme_shape_idea_at(i);
+        if (row->slot != slot || row->half != (row->in_beginning ? (int)pairing->beginning : (int)pairing->ending)) {
+            continue;
+        }
         used = true;
-        break;
-    case GROW_SLOT_CONTRASTING:
-        used = pairing->beginning != PLAN_THEME_BEGINNING_PRESENTATION ||
-               pairing->ending == PLAN_THEME_ENDING_CONSEQUENT;
-        room = pairing->beginning != PLAN_THEME_BEGINNING_PRESENTATION ? 2 : 0;
-        break;
-    case GROW_SLOT_CONTINUATION:
-        used = pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
-        room = 1;
-        break;
-    case GROW_SLOT_CADENTIAL:
-        used = pairing->ending != PLAN_THEME_ENDING_CONSEQUENT;
-        break;
-    default:
-        break;
+        if (row->first && room == 0) {
+            room = row->units;
+        }
     }
     if (units) {
         *units = room;

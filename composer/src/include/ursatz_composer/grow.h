@@ -17,6 +17,7 @@
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
+#include <ursatz_composer/theme_shape.h>
 
 struct GrowPoolForm;
 
@@ -63,49 +64,13 @@ struct GrowPoolForm;
 
 #define GROW_THEME_OPERATOR_NAME "grow-theme"
 
-/*
- * The motives a theme is built from, by the function of the ideas they give (R-143, R-166): the basic motive begins
- * the theme; the others are optional and give the ideas that contrast, continue and end it. A slot with no motive of
- * its own is made from the basic motive, as every idea is without slots.
- *
- *   slot          ideas
- *   basic         basic idea, repetition, consequent basic idea
- *   contrasting   contrasting idea, consequent contrasting idea
- *   continuation  fragment 1, fragment 2
- *   cadential     cadential (after a continuation), cadential 1, cadential 2
- */
-typedef enum {
-    GROW_SLOT_BASIC,
-    GROW_SLOT_CONTRASTING,
-    GROW_SLOT_CONTINUATION,
-    GROW_SLOT_CADENTIAL,
-    GROW_SLOT_COUNT
-} GrowSlot;
+/* The slots a theme's motives fill, GrowSlot, are in theme_shape.h with the ideas and their roles. */
 
 /* "basic", "contrasting", "continuation" or "cadential". */
 const char *grow_slot_name(GrowSlot slot);
 /* The function of the slot's ideas (R-143): "beginning", "contrast", "continuation" or "cadential". */
 const char *grow_slot_function(GrowSlot slot);
 
-/*
- * The ideas of a theme by name, as the plan names them (R-206). Which ones a theme has depends on its pairing: the
- * basic idea always; the repetition for a presentation, the contrasting idea for an antecedent or a compound basic
- * idea; fragment 1, fragment 2 and the cadential idea for a continuation, the consequent basic idea and the
- * consequent contrasting idea for a consequent, cadential 1 and cadential 2 for a cadential ending.
- */
-typedef enum {
-    GROW_IDEA_BASIC,
-    GROW_IDEA_REPETITION,
-    GROW_IDEA_CONTRASTING,
-    GROW_IDEA_CONSEQUENT_BASIC,
-    GROW_IDEA_CONSEQUENT_CONTRASTING,
-    GROW_IDEA_FRAGMENT_1,
-    GROW_IDEA_FRAGMENT_2,
-    GROW_IDEA_CADENTIAL,
-    GROW_IDEA_CADENTIAL_1,
-    GROW_IDEA_CADENTIAL_2,
-    GROW_IDEA_COUNT
-} GrowIdea;
 
 /* "basic idea", "repetition", "contrasting idea", ... as the plan's idea nodes are named. */
 const char *grow_idea_name(GrowIdea idea);
@@ -212,14 +177,6 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
 /* How far a theme's presentation and continuation stray from its motif (ch. XI). All-zero is balanced. */
 typedef enum { GROW_DEVELOP_BALANCED = 0, GROW_DEVELOP_MELODY, GROW_DEVELOP_THEME, GROW_DEVELOP_COUNT } GrowDevelopment;
 
-/* The role an idea has in a theme by its name (R-355, grow_idea_role). */
-typedef enum {
-    GROW_ROLE_NONE,
-    GROW_ROLE_PRESENTATION,
-    GROW_ROLE_CONTINUATION,
-    GROW_ROLE_CADENTIAL,
-    GROW_ROLE_CONTRAST
-} GrowIdeaRole;
 
 /*
  * The least fidelity an idea of a role may have under each development setting before the melody stage refuses it (R-355),

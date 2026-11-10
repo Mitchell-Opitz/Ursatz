@@ -79,19 +79,19 @@ static Slot slot_of(const char *name, GrowSlot *function_slot) {
     static const struct {
         const char *name;
         Slot slot;
-        GrowSlot function_slot;
-    } SLOTS[] = {{"repetition", SLOT_REPETITION, GROW_SLOT_BASIC},
-                 {"consequent basic idea", SLOT_RESTATED, GROW_SLOT_BASIC},
-                 {"contrasting idea", SLOT_CONTRAST, GROW_SLOT_CONTRASTING},
-                 {"consequent contrasting idea", SLOT_CONTRAST, GROW_SLOT_CONTRASTING},
-                 {"fragment 1", SLOT_FRAGMENT_1, GROW_SLOT_CONTINUATION},
-                 {"fragment 2", SLOT_FRAGMENT_2, GROW_SLOT_CONTINUATION},
-                 {"cadential", SLOT_CADENTIAL, GROW_SLOT_CADENTIAL},
-                 {"cadential 1", SLOT_CADENTIAL_ENDING, GROW_SLOT_CADENTIAL},
-                 {"cadential 2", SLOT_CADENTIAL_ENDING, GROW_SLOT_CADENTIAL}};
-    for (size_t i = 0; name && i < sizeof(SLOTS) / sizeof(SLOTS[0]); i++) {
+    } SLOTS[] = {{"repetition", SLOT_REPETITION},
+                 {"consequent basic idea", SLOT_RESTATED},
+                 {"contrasting idea", SLOT_CONTRAST},
+                 {"consequent contrasting idea", SLOT_CONTRAST},
+                 {"fragment 1", SLOT_FRAGMENT_1},
+                 {"fragment 2", SLOT_FRAGMENT_2},
+                 {"cadential", SLOT_CADENTIAL},
+                 {"cadential 1", SLOT_CADENTIAL_ENDING},
+                 {"cadential 2", SLOT_CADENTIAL_ENDING}};
+    const ThemeShapeIdea *row = theme_shape_idea_find(name);
+    for (size_t i = 0; row && i < sizeof(SLOTS) / sizeof(SLOTS[0]); i++) {
         if (strcmp(name, SLOTS[i].name) == 0) {
-            *function_slot = SLOTS[i].function_slot;
+            *function_slot = row->slot;
             return SLOTS[i].slot;
         }
     }

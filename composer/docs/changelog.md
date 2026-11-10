@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P44)
+
+What a theme of each beginning and ending is made of is one table (R-416, B3): `theme_shape.h` and `src/grow/theme_shape.c` hold the beginnings and endings with their plan and standard-form names, the thirteen idea rows (idea, slot, first, role, place, length) and the four slots. `grow_request.c`, `grow_fidelity.c`, `grow_form.c`, the API vocabulary and the theme pairing reader of the plan JSON read it, and `grow_phrase_beginning` and `grow_phrase_ending` map by name through standard-form's `phrase_beginning_from_name` and `phrase_ending_from_name`. `GrowSlot`, `GrowIdea` and `GrowIdeaRole` moved from `grow.h` to `theme_shape.h`, which `grow.h` includes. `API_THEME_SLOTS` and `API_THEME_IDEA_SLOTS` are gone; the vocabulary JSON is byte-identical. The submodules are pinned at the cadence and form vocabulary (R-415). The API version, every seeded output, snapshot and baseline are unchanged. See [grow.md](grow.md).
+
 ## Unreleased (phase P43)
 
 The `listen` command (R-403, R-404, B4): a batch of motifs or themes from fixed seeds, `--seed` + the sample's index, and a settings file, written as `<i>.mid`, `<i>.musicxml` and `<i>.json` in `--out-dir` with one line per sample in `listen.jsonl`. Themes come from a generated motif, a `--motif` file or a `--theme-request`; a sample that cannot be composed is a manifest line with its reason and the command goes on. `--print-settings` prints the default preferences document. The command is a client of the API: `composer_api_random_motive`, `composer_api_motive`, `composer_api_motive_render` and `composer_api_theme`, and the API version does not change. See [cli-listen.md](cli-listen.md).

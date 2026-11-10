@@ -36,7 +36,6 @@ extern const ApiChoice API_PIECE_MODES[];      /* major, minor, style */
 extern const ApiChoice API_METERS[];           /* 2/4, 3/4, 4/4, 6/8 */
 extern const ApiChoice API_FUNCTIONS[];        /* beginning, continuation, contrast, cadential */
 extern const ApiChoice API_DISTANCES[];        /* close, medium, far */
-extern const ApiChoice API_THEME_SLOTS[];      /* basic, contrasting, continuation, cadential */
 extern const ApiChoice API_THEME_POOLS[];      /* approved-and-unflagged, approved, none */
 extern const ApiChoice API_ACCOMPANIMENT_PATTERNS[];
 extern const ApiChoice API_PIECE_INTOS[];      /* sentence, period, hybrid */
@@ -62,9 +61,6 @@ extern const ApiThemePart API_THEME_ENDINGS[];    /* continuation, consequent, c
 #define API_VARIANTS_COUNT_MAX 16
 #define API_VARIANTS_DRAWS_PER_COUNT 4 /* with "functions" or "distance", up to this many chains for each variant asked for */
 #define API_VARIANTS_SEED_MAX (4294967295UL - API_VARIANTS_COUNT_MAX * API_VARIANTS_DRAWS_PER_COUNT)
-
-/* The slot of API_THEME_SLOTS whose motive an idea (grow_idea_name, in GrowIdea order) is made from. */
-extern const int API_THEME_IDEA_SLOTS[GROW_IDEA_COUNT];
 
 /* COMPOSER_ERR_REQUEST at path: the meter is not one of API_METERS ("meter '3/8' is not supported; use 2/4, 3/4, 4/4 or 6/8"). */
 ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char *text);

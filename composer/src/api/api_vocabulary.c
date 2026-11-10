@@ -33,11 +33,6 @@ const ApiChoice API_FUNCTIONS[] = {{"beginning", "Beginning"},
                                    {"cadential", "Cadential"},
                                    {NULL, NULL}};
 const ApiChoice API_DISTANCES[] = {{"close", "Close"}, {"medium", "Medium"}, {"far", "Far"}, {NULL, NULL}};
-const ApiChoice API_THEME_SLOTS[] = {{"basic", "Basic idea"},
-                                     {"contrasting", "Contrasting idea"},
-                                     {"continuation", "Continuation"},
-                                     {"cadential", "Cadential"},
-                                     {NULL, NULL}};
 const ApiChoice API_THEME_POOLS[] = {{"approved-and-unflagged", "Approved and unflagged"},
                                      {"approved", "Approved only"},
                                      {"none", "None"},
@@ -65,10 +60,6 @@ const ApiThemePart API_THEME_ENDINGS[] = {
     {"consequent", "Consequent", {GROW_IDEA_CONSEQUENT_BASIC, GROW_IDEA_CONSEQUENT_CONTRASTING}, 2},
     {"cadential", "Cadential", {GROW_IDEA_CADENTIAL_1, GROW_IDEA_CADENTIAL_2}, 2},
     {NULL, NULL, {0}, 0}};
-
-/* basic idea, repetition, contrasting idea, consequent basic idea, consequent contrasting idea, fragment 1, fragment 2,
-   cadential, cadential 1, cadential 2: the slots basic, contrasting, continuation and cadential are 0 to 3. */
-const int API_THEME_IDEA_SLOTS[GROW_IDEA_COUNT] = {0, 0, 1, 0, 1, 2, 2, 3, 3, 3};
 
 bool api_theme_cadence_ok(int cadence_type) {
     return cadence_type == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence_type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
@@ -330,13 +321,25 @@ static bool add_tone_labels(cJSON *root) {
     return true;
 }
 
+/* The labels of the slots, in GrowSlot order; the slot names are the theme shape table's. */
+static bool add_theme_slots(cJSON *root) {
+    static const char *const LABELS[GROW_SLOT_COUNT] = {"Basic idea", "Contrasting idea", "Continuation", "Cadential"};
+    cJSON *list = add_list(root, "theme_slots");
+    for (int slot = 0; list && slot < GROW_SLOT_COUNT; slot++) {
+        if (!add_choice(list, grow_slot_name((GrowSlot)slot), LABELS[slot])) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 static bool add_theme_lists(cJSON *root) {
     cJSON *ideas = add_list(root, "theme_ideas");
     cJSON *categories = add_list(root, "theme_motive_categories");
     for (int idea = 0; ideas && idea < GROW_IDEA_COUNT; idea++) {
         const char *name = grow_idea_name((GrowIdea)idea);
         cJSON *entry = add_choice(ideas, name, name);
-        if (!entry || !cJSON_AddStringToObject(entry, "slot", API_THEME_SLOTS[API_THEME_IDEA_SLOTS[idea]].value)) {
+        if (!entry || !cJSON_AddStringToObject(entry, "slot", grow_slot_name(theme_shape_idea_slot((GrowIdea)idea)))) {
             return false;
         }
     }
@@ -450,7 +453,7 @@ bool api_vocabulary_build(cJSON *root) {
     return add_meters(root) && add_choices(root, "modes", API_MODES) && add_choices(root, "piece_modes", API_PIECE_MODES) &&
            add_keys(root) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
-           add_choices(root, "theme_slots", API_THEME_SLOTS) && add_theme_lists(root) &&
+           add_theme_slots(root) && add_theme_lists(root) &&
            add_choices(root, "theme_pools", API_THEME_POOLS) && add_choices(root, "theme_bars", API_THEME_BARS) &&
            add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&

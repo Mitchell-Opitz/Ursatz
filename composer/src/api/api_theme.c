@@ -63,7 +63,7 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
     for (const cJSON *entry = slots->child; entry; entry = entry->next) {
         bool known = false;
         for (int s = 0; s < GROW_SLOT_COUNT; s++) {
-            known = known || strcmp(entry->string, API_THEME_SLOTS[s].value) == 0;
+            known = known || strcmp(entry->string, grow_slot_name((GrowSlot)s)) == 0;
         }
         if (!known) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/slots",
@@ -71,9 +71,9 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
         }
     }
     for (int s = 0; s < GROW_SLOT_COUNT; s++) {
-        const cJSON *named = cJSON_GetObjectItemCaseSensitive(slots, API_THEME_SLOTS[s].value);
+        const cJSON *named = cJSON_GetObjectItemCaseSensitive(slots, grow_slot_name((GrowSlot)s));
         char path[64];
-        snprintf(path, sizeof path, "/slots/%s", API_THEME_SLOTS[s].value);
+        snprintf(path, sizeof path, "/slots/%s", grow_slot_name((GrowSlot)s));
         if (!named || cJSON_IsNull(named)) {
             if (s == GROW_SLOT_BASIC) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, "/slots/basic", "the request needs a basic slot");
@@ -81,7 +81,7 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
             continue;
         }
         if (!cJSON_IsString(named)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "slot '%s' must name a motive by its id", API_THEME_SLOTS[s].value);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "slot '%s' must name a motive by its id", grow_slot_name((GrowSlot)s));
         }
         const RequestMotive *found = NULL;
         for (size_t m = 0; m < theme->motive_count; m++) {
@@ -91,7 +91,7 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
         }
         if (!found) {
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "slot '%s' names the motive '%s', which the request does not have",
-                            API_THEME_SLOTS[s].value, named->valuestring);
+                            grow_slot_name((GrowSlot)s), named->valuestring);
         }
         theme->slot_motive[s] = found->json;
         theme->slot_motive_id[s] = found->id;

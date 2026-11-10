@@ -1097,7 +1097,7 @@ static void heard_text(const GrowOutcome *outcome, char *heard_form, size_t form
 static GrowSlot idea_slot(const char *name) {
     for (int idea = 0; name && idea < GROW_IDEA_COUNT; idea++) {
         if (strcmp(name, grow_idea_name((GrowIdea)idea)) == 0) {
-            return (GrowSlot)API_THEME_IDEA_SLOTS[idea];
+            return theme_shape_idea_slot((GrowIdea)idea);
         }
     }
     return GROW_SLOT_BASIC;
