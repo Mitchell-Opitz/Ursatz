@@ -16,6 +16,21 @@ static const char *DEFAULT_MELODY =
     "\"plain_shaping\":false,\"weights\":{\"melodic\":1,\"against_bass\":1,\"tendency\":1,\"climax\":1,\"contour\":1,"
     "\"ending_reduction\":1,\"waves\":1,\"central_range\":1,\"monotony\":1,\"seam\":1}}";
 
+static const char *DEFAULT_MOTIF =
+    "{\"bars\":{\"one\":1,\"two\":1},\"pickup_one_in\":4,\"shapes_one_bar\":{\"repeat\":3,\"contrast\":2},"
+    "\"shapes_two_bars\":{\"repeat\":3,\"contrast\":2,\"repeat_contrast\":2},"
+    "\"plans_two\":{\"I-V\":3,\"I-IV\":1,\"I-I\":1},\"plans_three\":{\"I-V-I\":2,\"I-IV-I\":1},"
+    "\"features\":{\"dotted\":1,\"leap\":1,\"repeat\":1},\"leap\":{\"low\":5,\"high\":9},"
+    "\"rung_moves\":{\"step\":6,\"skip\":2},"
+    "\"decorations\":{\"chord_tone\":1,\"passing\":1,\"neighbor\":1,\"appoggiatura\":1,\"escape\":1},"
+    "\"durations\":{\"half_beat\":2,\"beat\":4,\"two_beats\":1}}";
+
+static const char *DEFAULT_DEVELOPMENT =
+    "{\"fidelity_minimum\":{"
+    "\"melody\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"7/20\"},"
+    "\"balanced\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"3/10\"},"
+    "\"theme\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"1/5\"}}}";
+
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
     assert(object);
@@ -51,6 +66,19 @@ static void defaults_round_trip(void) {
     char *text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "melody"));
     assert(text && strcmp(text, DEFAULT_MELODY) == 0);
     cJSON_free(text);
+    text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "motif"));
+    assert(text && strcmp(text, DEFAULT_MOTIF) == 0);
+    cJSON_free(text);
+    text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "development"));
+    assert(text && strcmp(text, DEFAULT_DEVELOPMENT) == 0);
+    cJSON_free(text);
+    /* The whole document is the three groups, in this order. */
+    text = cJSON_PrintUnformatted(document);
+    char whole[2048];
+    snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s}", DEFAULT_MELODY, DEFAULT_MOTIF,
+             DEFAULT_DEVELOPMENT);
+    assert(text && strcmp(text, whole) == 0);
+    cJSON_free(text);
 
     assert(composer_preferences_read(document, &read, path, sizeof(path), message, sizeof(message)));
     assert(composer_preferences_is_default(&read));
@@ -70,6 +98,11 @@ static void defaults_round_trip(void) {
     assert(defaults.melody.climax_rise == 4 && defaults.melody.climax_slack == 150);
     assert(defaults.melody.second_nearest.numerator == 1 && defaults.melody.second_nearest.denominator == 3);
     assert(defaults.melody.attempts == 48 && defaults.melody.keep == 6 && defaults.melody.weights.seam == 1);
+    assert(defaults.motif.pickup_one_in == 4 && defaults.motif.leap_low == 5 && defaults.motif.leap_high == 9);
+    assert(defaults.motif.durations[0] == 2 && defaults.motif.durations[1] == 4 && defaults.motif.durations[2] == 1);
+    assert(defaults.development.minimum[GROW_DEVELOP_BALANCED][GROW_ROLE_PRESENTATION].numerator == 11 &&
+           defaults.development.minimum[GROW_DEVELOP_BALANCED][GROW_ROLE_PRESENTATION].denominator == 20);
+    assert(defaults.development.minimum[GROW_DEVELOP_THEME][GROW_ROLE_CONTRAST].numerator == 0);
 }
 
 static void members_read_over_defaults(void) {
@@ -96,6 +129,25 @@ static void members_read_over_defaults(void) {
     assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
     assert(again.melody.nct_types == preferences.melody.nct_types && again.melody.keep == 3 &&
            again.melody.weights.waves == 0 && again.melody.range_high == 90);
+    cJSON_Delete(document);
+
+    assert(read_text("{\"motif\":{\"pickup_one_in\":0,\"bars\":{\"two\":0},\"features\":{\"leap\":0,\"repeat\":0},"
+                     "\"leap\":{\"low\":4,\"high\":4},\"plans_two\":{\"I-IV\":7}},"
+                     "\"development\":{\"fidelity_minimum\":{\"theme\":{\"presentation\":\"1/1\"}}}}",
+                     &preferences, path, message));
+    assert(!composer_preferences_is_default(&preferences));
+    assert(preferences.motif.pickup_one_in == 0 && preferences.motif.bars[0] == 1 && preferences.motif.bars[1] == 0);
+    assert(preferences.motif.features[0] == 1 && preferences.motif.features[1] == 0 && preferences.motif.features[2] == 0);
+    assert(preferences.motif.leap_low == 4 && preferences.motif.leap_high == 4 && preferences.motif.plans_two[1] == 7 &&
+           preferences.motif.plans_two[0] == 3);
+    assert(preferences.development.minimum[GROW_DEVELOP_THEME][GROW_ROLE_PRESENTATION].numerator == 1 &&
+           preferences.development.minimum[GROW_DEVELOP_THEME][GROW_ROLE_PRESENTATION].denominator == 1 &&
+           preferences.development.minimum[GROW_DEVELOP_THEME][GROW_ROLE_CONTINUATION].numerator == 7 &&
+           preferences.development.minimum[GROW_DEVELOP_BALANCED][GROW_ROLE_PRESENTATION].numerator == 11);
+    document = composer_preferences_write(&preferences);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(again.motif.pickup_one_in == 0 && again.motif.leap_low == 4 && again.motif.plans_two[1] == 7 &&
+           again.development.minimum[GROW_DEVELOP_THEME][GROW_ROLE_PRESENTATION].numerator == 1);
     cJSON_Delete(document);
 
     /* A single setting equal to its default is still the defaults. */
@@ -134,6 +186,39 @@ static void limits_are_refused(void) {
     refused("{\"melody\":{\"weights\":{\"bogus\":1}}}", "/melody/weights/bogus");
     refused("{\"melody\":{\"bogus\":1}}", "/melody/bogus");
     refused("{\"melody\":5}", "/melody");
+    refused("{\"motif\":5}", "/motif");
+    refused("{\"motif\":{\"bars\":{\"one\":0,\"two\":0}}}", "/motif/bars");
+    refused("{\"motif\":{\"bars\":{\"one\":21}}}", "/motif/bars/one");
+    refused("{\"motif\":{\"bars\":{\"three\":1}}}", "/motif/bars/three");
+    refused("{\"motif\":{\"bars\":1}}", "/motif/bars");
+    refused("{\"motif\":{\"shapes_one_bar\":{\"repeat\":0,\"contrast\":0}}}", "/motif/shapes_one_bar");
+    refused("{\"motif\":{\"shapes_two_bars\":{\"repeat_contrast\":-1}}}", "/motif/shapes_two_bars/repeat_contrast");
+    refused("{\"motif\":{\"plans_two\":{\"I-V\":0,\"I-IV\":0,\"I-I\":0}}}", "/motif/plans_two");
+    refused("{\"motif\":{\"plans_three\":{\"V-I-V\":1}}}", "/motif/plans_three/V-I-V");
+    refused("{\"motif\":{\"features\":{\"dotted\":0,\"leap\":0,\"repeat\":0}}}", "/motif/features");
+    refused("{\"motif\":{\"decorations\":{\"suspension\":1}}}", "/motif/decorations/suspension");
+    refused("{\"motif\":{\"durations\":{\"half_beat\":0,\"beat\":0,\"two_beats\":0}}}", "/motif/durations");
+    refused("{\"motif\":{\"rung_moves\":{\"step\":0,\"skip\":0}}}", "/motif/rung_moves");
+    refused("{\"motif\":{\"pickup_one_in\":65}}", "/motif/pickup_one_in");
+    refused("{\"motif\":{\"pickup_one_in\":-1}}", "/motif/pickup_one_in");
+    refused("{\"motif\":{\"leap\":{\"low\":8,\"high\":6}}}", "/motif/leap/high");
+    refused("{\"motif\":{\"leap\":{\"high\":4}}}", "/motif/leap/high");
+    refused("{\"motif\":{\"leap\":{\"low\":2}}}", "/motif/leap/low");
+    refused("{\"motif\":{\"leap\":{\"high\":13}}}", "/motif/leap/high");
+    refused("{\"motif\":{\"leap\":{\"mid\":6}}}", "/motif/leap/mid");
+    refused("{\"motif\":{\"bogus\":1}}", "/motif/bogus");
+    refused("{\"development\":5}", "/development");
+    refused("{\"development\":{\"bogus\":{}}}", "/development/bogus");
+    refused("{\"development\":{\"fidelity_minimum\":{\"theme\":{\"cadential\":\"3/2\"}}}}",
+            "/development/fidelity_minimum/theme/cadential");
+    refused("{\"development\":{\"fidelity_minimum\":{\"theme\":{\"cadential\":\"1/1001\"}}}}",
+            "/development/fidelity_minimum/theme/cadential");
+    refused("{\"development\":{\"fidelity_minimum\":{\"theme\":{\"cadential\":0.5}}}}",
+            "/development/fidelity_minimum/theme/cadential");
+    refused("{\"development\":{\"fidelity_minimum\":{\"theme\":{\"contrast\":\"0/1\"}}}}",
+            "/development/fidelity_minimum/theme/contrast");
+    refused("{\"development\":{\"fidelity_minimum\":{\"contrast\":{}}}}", "/development/fidelity_minimum/contrast");
+    refused("{\"development\":{\"fidelity_minimum\":{\"theme\":5}}}", "/development/fidelity_minimum/theme");
     refused("{\"bogus\":{}}", "/bogus");
 
     ComposerPreferences preferences;
