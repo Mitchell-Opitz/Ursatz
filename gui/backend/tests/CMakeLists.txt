@@ -92,8 +92,6 @@ set_tests_properties(theme_route PROPERTIES LABELS slow)
 # there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
 target_compile_definitions(test_theme_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
-  URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
-  URSATZ_GUI_TEST_PLAYBACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/playback"
 )
 
 ursatz_gui_add_test(piece_route test_piece_route.c ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
@@ -103,8 +101,6 @@ set_tests_properties(piece_route PROPERTIES LABELS slow)
 # there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
 target_compile_definitions(test_piece_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
-  URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
-  URSATZ_GUI_TEST_PLAYBACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/playback"
 )
 
 ursatz_gui_add_test(piece_snapshot test_piece_snapshot.c ${CMAKE_CURRENT_BINARY_DIR}/piece_snapshot)
