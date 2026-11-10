@@ -57,25 +57,8 @@ MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role
 }
 
 GrowIdeaRole grow_idea_role(const char *idea_name) {
-    static const struct {
-        const char *name;
-        GrowIdeaRole role;
-    } ROLES[] = {{"basic idea", GROW_ROLE_PRESENTATION},
-                 {"repetition", GROW_ROLE_PRESENTATION},
-                 {"consequent basic idea", GROW_ROLE_PRESENTATION},
-                 {"fragment 1", GROW_ROLE_CONTINUATION},
-                 {"fragment 2", GROW_ROLE_CONTINUATION},
-                 {"cadential", GROW_ROLE_CADENTIAL},
-                 {"cadential 1", GROW_ROLE_CADENTIAL},
-                 {"cadential 2", GROW_ROLE_CADENTIAL},
-                 {"contrasting idea", GROW_ROLE_CONTRAST},
-                 {"consequent contrasting idea", GROW_ROLE_CONTRAST}};
-    for (size_t i = 0; idea_name && i < sizeof(ROLES) / sizeof(ROLES[0]); i++) {
-        if (strcmp(idea_name, ROLES[i].name) == 0) {
-            return ROLES[i].role;
-        }
-    }
-    return GROW_ROLE_NONE;
+    const ThemeShapeIdea *row = theme_shape_idea_find(idea_name);
+    return row ? row->role : GROW_ROLE_NONE;
 }
 
 /* The meter and key of the lanes over the span. */
