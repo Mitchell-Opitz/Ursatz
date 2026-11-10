@@ -87,6 +87,15 @@ The settings of the segments motive generator ([cli-random-motive.md](cli-random
 | `rung_moves` | `step` 6, `skip` 2 | weighted list | A walk on the chord tones moves one rung or two. | the `moves` table of `next_rung` |
 | `decorations` | `chord_tone` 1, `passing` 1, `neighbor` 1, `appoggiatura` 1, `escape` 1 | weighted list | What a note between two frame notes is: another chord tone or a non-chord tone of the type. | `DECORATION_KINDS` (equal) |
 | `durations` | `half_beat` 2, `beat` 4, `two_beats` 1 | weighted list | The note lengths a cell is tiled with; a length that does not fit its place is left out. | `MOTIVE_RANDOM_DURATION_WEIGHTS` (the drawn strategy still reads it) |
+| `accented_one_in` | 0 | 0 to 64 | One eligible note in this many becomes an accented non-chord tone: a beat note whose neighbors are frame notes and which resolves to the next note. 0 never and draws no random number. Off by default; R-422. | new (R-425) |
+| `accented_types` | `appoggiatura` 1, `passing` 1, `suspension` 1 | weighted list | Which accented figure is placed; a suspension only where the chord changes. Off by default (it matters only with `accented_one_in`); R-422. | new |
+| `avoid_repeats` | `false` | true or false | No repeated note: a decoration that finds no figure tries the other kinds before a chord tone, and an adjacent repeat is refused unless the feature or a suspension makes it. Off by default; R-422. | new |
+| `leaps_per_motif` | 11 | 0 to 11 | The most intervals of 5 semitones or more in a motive; 11 never rejects. Off by default; R-422. | new |
+| `leap_recovery` | `false` | true or false | A leap is followed by a move of 1 or 2 semitones the other way. Off by default; R-422. | new |
+| `pickup_from_accent` | `false` | true or false | A pickup is one chord tone below segment a's first note and no longer than it, and a motive that opens with an implied upbeat but has no pickup is refused. Off by default; R-422. | new |
+| `contrast_fidelity_min` | `"0/1"` | a ratio `n/d` as text, 0 <= n <= d, 1 <= d <= 1000 | The least recognizability of a contrasting segment against segment a; 0 never rejects. Off by default; R-422. | new |
+| `long_on_weak` | 0 | 0 to 20 | The two-beat note is this much more likely on a weak beat (its weight times 1 plus this); 0 changes nothing. Off by default; R-422. | new |
+| `final_long` | `false` | true or false | The last note of the last segment is longer than every other note in it. Off by default; R-422. | new |
 
 With every default each draw makes the random-number calls it always made, so a seed gives the motives it always gave (the `random-motive*` snapshots are unchanged). The plan degrees (I-V, I-IV, I-I, I-V-I, I-IV-I) stay in `motive_random_segments.c`; the preferences set only how often each is drawn.
 
@@ -103,7 +112,16 @@ With every default each draw makes the random-number calls it always made, so a 
     "leap": {"low": 5, "high": 9},
     "rung_moves": {"step": 6, "skip": 2},
     "decorations": {"chord_tone": 1, "passing": 1, "neighbor": 1, "appoggiatura": 1, "escape": 1},
-    "durations": {"half_beat": 2, "beat": 4, "two_beats": 1}
+    "durations": {"half_beat": 2, "beat": 4, "two_beats": 1},
+    "accented_one_in": 0,
+    "accented_types": {"appoggiatura": 1, "passing": 1, "suspension": 1},
+    "avoid_repeats": false,
+    "leaps_per_motif": 11,
+    "leap_recovery": false,
+    "pickup_from_accent": false,
+    "contrast_fidelity_min": "0/1",
+    "long_on_weak": 0,
+    "final_long": false
   }
 }
 ```
@@ -136,7 +154,7 @@ A contrasting idea and an idea with no role are not settings: their minimum is 0
 }
 ```
 
-## In the API (1.11)
+## In the API (1.12)
 
 The random motive and theme requests take the document as an optional `preferences` member: a JSON object of the shape above, every member optional, read with `composer_preferences_read`. A member that is unknown, of the wrong type or outside its limit is refused with `COMPOSER_ERR_REQUEST` and the reader's path under `/preferences`, for example `/preferences/melody/keep`. A request that has the member gets `"preferences"` in its response: the full document with the defaults filled in, so the response says what was used. A request without it has no such member and its response is what it was before.
 
@@ -145,4 +163,4 @@ The random motive and theme requests take the document as an optional `preferenc
 | `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants). `melody` and `development` are accepted and echoed. |
 | `composer_api_theme` | `melody` and `development` (the fidelity minimums, also shown in the `minimum` of each development item). `motif` is accepted, echoed and has no effect: a theme's motives come from the request. |
 
-`composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.
+`composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `accented_one_in_max`, `leaps_per_motif_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.

@@ -142,7 +142,7 @@ range are drawn from defaults in the Composer.
 | `style_without` | up to 8 style categories read without; needs `style` |
 | `count` | 1 to 16, default 1 |
 | `seed` | 0 to 4294967295, default from the clock |
-| `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.11). Its `motif` group steers the `"segments"` strategy; a bad member is refused with its path under `/preferences` |
+| `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.12). Its `motif` group steers the `"segments"` strategy; a bad member is refused with its path under `/preferences` |
 
 **Strategy.** `"segments"` builds each motive the way a motive is made, from segments (Schoenberg's motives): one to three
 segments, `a`, its repeat `a'` on the next chord and a new `b`, with one chord on each segment from a harmony plan (`I V`,

@@ -18,7 +18,7 @@ The options the `theme` command takes are members of the same object:
 | `style`, `without`, `style_weight` | as in the request; `style` is a style model file path (R-267) |
 | `blend`, `blend_weight`, `blend_weights` | a second style model file path blended with `style` (`"1/2"`, `"harmony=1/2,form=0"`) |
 | `tempo` | quarter notes per minute, a whole number or `"195/2"`, 20 to 400; wins over the style's |
-| `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.11): its `melody` group and the `development` fidelity minimums reach the grow; its `motif` group is accepted, echoed and has no effect, because the motives come from the request. A bad member is refused with its path under `/preferences` |
+| `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.12): its `melody` group and the `development` fidelity minimums reach the grow; its `motif` group is accepted, echoed and has no effect, because the motives come from the request. A bad member is refused with its path under `/preferences` |
 | `midi`, `musicxml` | `true`: the first theme's MIDI file (`midi`, `midi_size`) and MusicXML (`musicxml`), rendered once from the same `RenderedPlan` |
 | `plain_midi` | `true`: no track names and no section markers in the MIDI file |
 | `plans` | `true`: each theme's plan as an object, `themes[k].plan` (the CLI writes the plans, MIDI files and MusicXML of the themes after the first from it, through `composer_api_export`) |
