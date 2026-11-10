@@ -201,6 +201,54 @@ static void test_six_sixteenth_triplets_are_two_groups(void) {
     bag_free(&bag);
 }
 
+/* Three notes of one value back to back from onset start, in 4/4 (bag times are fractions of a whole note). */
+static char *triplet_group_xml(unsigned long long start_num, unsigned long long start_den, unsigned long long value_den,
+                               TestBag *bag) {
+    memset(bag, 0, sizeof(*bag));
+    const char *ids[3] = {"t0", "t1", "t2"};
+    PitchLetter letters[3] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_E};
+    for (unsigned long long i = 0; i < 3; i++) {
+        /* onset = start + i / value_den */
+        unsigned long long num = start_num * value_den + i * start_den;
+        bag_add_note(bag, ids[i], num, start_den * value_den, 1, value_den, letters[i], NULL);
+    }
+    return write_bag(bag, NULL, NULL, 0, false);
+}
+
+static void test_quarter_note_triplets_are_one_group(void) {
+    /* from beat 1 and from beat 2 of 4/4: three quarter-note triplets (1/6 of a whole each) across two beats */
+    for (unsigned long long start = 0; start < 2; start++) {
+        TestBag bag;
+        char *xml = triplet_group_xml(start, 4, 6, &bag);
+        /* the type of each note is the first <type> after its tag (a leading rest may also be a quarter) */
+        const char *tags[3] = {"<note xml:id=\"t0\">", "<note xml:id=\"t1\">", "<note xml:id=\"t2\">"};
+        for (int i = 0; i < 3; i++) {
+            const char *note = strstr(xml, tags[i]);
+            assert(note && strncmp(strstr(note, "<type>"), "<type>quarter</type>", 20) == 0);
+        }
+        assert(tu_count(xml, "<time-modification>") == 3);
+        assert(!TU_HAS(xml, "<tie"));
+        assert(tu_count(xml, "<tuplet type=\"start\"/>") == 1 && tu_count(xml, "<tuplet type=\"stop\"/>") == 1);
+        const char *t0 = strstr(xml, "<note xml:id=\"t0\">");
+        const char *t2 = strstr(xml, "<note xml:id=\"t2\">");
+        const char *begin = strstr(xml, "<tuplet type=\"start\"/>");
+        const char *end = strstr(xml, "<tuplet type=\"stop\"/>");
+        assert(t0 && t2 && begin && end);
+        assert(t0 < begin && begin < t2 && t2 < end);
+        free(xml);
+        bag_free(&bag);
+    }
+
+    /* three eighth triplets on a beat are written as before: one group of three eighths */
+    TestBag bag;
+    char *xml = triplet_group_xml(1, 4, 12, &bag);
+    assert(tu_count(xml, "<type>eighth</type>") == 3 && tu_count(xml, "<time-modification>") == 3);
+    assert(!TU_HAS(xml, "<tie"));
+    assert(tu_count(xml, "<tuplet type=\"start\"/>") == 1 && tu_count(xml, "<tuplet type=\"stop\"/>") == 1);
+    free(xml);
+    bag_free(&bag);
+}
+
 static void test_gap_is_a_rest(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
@@ -600,6 +648,7 @@ int main(void) {
     test_tie_across_barline();
     test_triplets_set_the_divisions();
     test_six_sixteenth_triplets_are_two_groups();
+    test_quarter_note_triplets_are_one_group();
     test_gap_is_a_rest();
     test_two_voices_back_up();
     test_two_staves();

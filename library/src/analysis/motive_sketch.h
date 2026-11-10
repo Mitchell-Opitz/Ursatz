@@ -240,11 +240,26 @@ int motive_sketch_degree_of_step(const MotiveSketch *sketch, long step);
  */
 size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[4]);
 
-/* A duration a note list can write: w h q e s t, plain or with up to two dots. */
+/* A duration a note list can write: w h q e s t, plain or with up to two dots (binary values; see
+ * motive_sketch_time_writable for triplets). */
 bool motive_sketch_expressible(Rational duration);
 
-/* An onset on the grid: a multiple of a thirty-second. */
+/* An onset on the grid: a multiple of a thirty-second (binary values; see motive_sketch_time_on_grid for triplets). */
 bool motive_sketch_on_grid(Rational onset);
+
+/* Whether the sketch holds a triplet: a note onset or duration, the pickup or the length has a denominator
+ * divisible by 3. */
+bool motive_sketch_has_triplets(const MotiveSketch *sketch);
+
+/*
+ * A duration a relation may write into a sketch derived from source: motive_sketch_expressible, or, when source
+ * has triplets, a triplet value 2 / (3 * 2^k) for k 0 to 5 (two thirds of a whole note down to a thirty-second
+ * triplet, no dots).
+ */
+bool motive_sketch_time_writable(const MotiveSketch *source, Rational duration);
+
+/* An onset a relation may write: motive_sketch_on_grid, or, when source has triplets, a multiple of a 96th. */
+bool motive_sketch_time_on_grid(const MotiveSketch *source, Rational onset);
 
 /* How firmly an onset sits in the bar: 2 on the downbeat, 1 on another beat, 0 off the beat. */
 int motive_sketch_strength(const MotiveSketch *sketch, Rational onset);
