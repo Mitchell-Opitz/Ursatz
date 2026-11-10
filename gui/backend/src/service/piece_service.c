@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "compose_common.h"
+#include "composer_client.h"
 #include "material_service.h"
 
 #define PATH_BYTES 800
@@ -136,14 +137,30 @@ static cJSON *section_json(const cJSON *section, cJSON *fill) {
     return object;
 }
 
-/* What the request needs from the piece, checked before anything is made. */
+/* The name of the form of a piece structure: structure.form, or game-loop for a piece saved before the forms. */
+static const char *structure_form(const cJSON *structure) {
+    const cJSON *form = cJSON_GetObjectItemCaseSensitive(structure, "form");
+    return cJSON_IsString(form) ? form->valuestring : "game-loop";
+}
+
+/* True when the form of the structure has sizes in place of the request's own sections. */
+static bool structure_sized(const cJSON *structure) {
+    const cJSON *form = ursatz_gui_composer_form(structure_form(structure));
+    const char *sections = ursatz_gui_json_string(form, "sections");
+    return form && sections && strcmp(sections, "request") != 0;
+}
+
+/* What the request needs from the piece, checked before anything is made. A form with sizes asks only key, mode and
+ * meter. */
 static bool composable(const cJSON *piece, bool has_brief, char *message, size_t message_size) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (!cJSON_IsObject(structure) || !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections")) ||
+    bool sized = cJSON_IsObject(structure) && structure_sized(structure);
+    if (!cJSON_IsObject(structure) || (!sized && !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections"))) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "key")) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "mode")) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "meter"))) {
-        ursatz_gui_copy_message(message, message_size, "the piece structure needs key, mode, meter and sections");
+        ursatz_gui_copy_message(message, message_size, sized ? "the piece structure needs key, mode and meter"
+                                                             : "the piece structure needs key, mode, meter and sections");
         return false;
     }
     if (strcmp(ursatz_gui_json_string(structure, "mode"), "style") == 0 && !has_brief) {
@@ -151,7 +168,8 @@ static bool composable(const cJSON *piece, bool has_brief, char *message, size_t
         return false;
     }
     const cJSON *section = NULL;
-    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(structure, "sections")) {
+    const cJSON *own_sections = sized ? NULL : cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    cJSON_ArrayForEach(section, own_sections) {
         const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
         if (cJSON_IsObject(fill) && strcmp(ursatz_gui_json_string(fill, "kind"), "motif") == 0 &&
             strcmp(ursatz_gui_json_string(fill, "into"), "hybrid") == 0 && !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(fill, "hybrid"))) {
@@ -172,6 +190,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
     const char *pool = cJSON_IsString(cJSON_GetObjectItemCaseSensitive(piece, "pool")) ? ursatz_gui_json_string(piece, "pool")
                                                                                        : "approved-and-unflagged";
+    bool sized = structure_sized(structure);
     cJSON *request = cJSON_CreateObject();
     cJSON *sections = cJSON_CreateArray();
     cJSON *derived_list = NULL;
@@ -184,7 +203,8 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
         result = URSATZ_GUI_THEME_ERR_FAILED;
     }
     const cJSON *section = NULL;
-    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(structure, "sections")) {
+    const cJSON *own_sections = sized ? NULL : cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    cJSON_ArrayForEach(section, own_sections) {
         if (result != URSATZ_GUI_THEME_OK) {
             break;
         }
@@ -198,7 +218,8 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
     }
 
     bool ok = result == URSATZ_GUI_THEME_OK && cJSON_AddStringToObject(request, "schema", "ursatz-piece-request") &&
-              cJSON_AddNumberToObject(request, "schema_version", 1) && ursatz_gui_json_add_copy_if(request, structure, "key") &&
+              cJSON_AddNumberToObject(request, "schema_version", 2) &&
+              cJSON_AddStringToObject(request, "form", structure_form(structure)) && ursatz_gui_json_add_copy_if(request, structure, "key") &&
               ursatz_gui_json_add_copy_if(request, structure, "mode") && ursatz_gui_json_add_copy_if(request, structure, "meter");
     const cJSON *motive_ref = cJSON_GetObjectItemCaseSensitive(piece, "motive");
     if (ok && cJSON_IsObject(motive_ref)) {
@@ -212,7 +233,13 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
     } else if (ok) {
         ok = cJSON_AddNullToObject(request, "motive") != NULL;
     }
-    if (ok) {
+    if (ok && sized) {
+        const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
+        const cJSON *count = cJSON_GetObjectItemCaseSensitive(structure, "count");
+        ok = cJSON_AddNumberToObject(request, "bars", cJSON_IsNumber(bars) ? bars->valuedouble : 0) &&
+             cJSON_AddNumberToObject(request, "count", cJSON_IsNumber(count) ? count->valuedouble : 0) &&
+             cJSON_AddBoolToObject(request, "modulate", cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(structure, "modulate")));
+    } else if (ok) {
         ok = ursatz_gui_json_attach(request, "sections", sections);
         sections = NULL;
     }
@@ -230,7 +257,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
             cJSON_Delete(pattern);
         }
     }
-    ok = ok && cJSON_AddNullToObject(request, "voicing") != NULL;
+    ok = ok && (sized || cJSON_AddNullToObject(request, "voicing") != NULL);
     if (ok && style_path) {
         cJSON *without = cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(piece, "without"), 1);
         ok = cJSON_AddStringToObject(request, "style", style_path) && ursatz_gui_json_add_copy_if(request, piece, "style_weight");
@@ -254,9 +281,10 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
 
 /* --- composing ----------------------------------------------------------- */
 
-static const char *const kFileNames[] = {"request.json",    "brief.style.json", "plan.json",         "ending-plan.json",
-                                         "loop.mid",        "loop.musicxml",    "ending.mid",        "ending.musicxml"};
-#define FILE_NAME_COUNT 8
+/* The files every version has besides those of the versions of its form (<name>.mid and the rest, R-430). */
+static const char *const kFileNames[] = {"request.json", "brief.style.json"};
+#define FILE_NAME_COUNT 2
+#define VERSIONS_MAX 4
 
 static cJSON *read_json(const char *path);
 static bool set_string(cJSON *object, const char *name, const char *text);
@@ -345,7 +373,7 @@ static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, cons
     }
     ok = ok && (!use_seed || cJSON_AddStringToObject(api, "seed", seed_text)) && cJSON_AddBoolToObject(api, "check", check) &&
          cJSON_AddBoolToObject(api, "plain_midi", 0) && cJSON_AddBoolToObject(api, "midi", 1) &&
-         cJSON_AddBoolToObject(api, "musicxml", 1) && cJSON_AddBoolToObject(api, "ending_musicxml", 1);
+         cJSON_AddBoolToObject(api, "musicxml", 1) && cJSON_AddBoolToObject(api, "musicxml_versions", 1);
     char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
     cJSON_Delete(api);
     if (!text) {
@@ -356,8 +384,8 @@ static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, cons
     ComposerStatus status = composer_api_piece(text, job, &response);
     free(text);
     cJSON *document = NULL;
-    ComposerResponse ending;
-    memset(&ending, 0, sizeof(ending));
+    ComposerResponse extra;
+    memset(&extra, 0, sizeof(extra));
     if (status != COMPOSER_OK) {
         result = ursatz_gui_compose_failure(status, &response, message, message_size);
     } else if (!(document = cJSON_Parse(response.json)) || !response.midi || !response.musicxml) {
@@ -365,48 +393,87 @@ static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, cons
         result = URSATZ_GUI_THEME_ERR_FAILED;
     }
     const cJSON *plans = cJSON_GetObjectItemCaseSensitive(document, "plans");
-    const cJSON *ending_xml = cJSON_GetObjectItemCaseSensitive(document, "ending_musicxml");
-    if (result == URSATZ_GUI_THEME_OK && (!cJSON_IsObject(plans) || !cJSON_IsString(ending_xml))) {
+    const cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
+    const cJSON *xmls = cJSON_GetObjectItemCaseSensitive(document, "musicxml_versions");
+    int version_count = cJSON_GetArraySize(versions);
+    if (result == URSATZ_GUI_THEME_OK && (!cJSON_IsObject(plans) || !cJSON_IsObject(versions) || !cJSON_IsObject(xmls) ||
+                                          version_count < 1 || version_count > VERSIONS_MAX)) {
         ursatz_gui_copy_message(message, message_size, "composer output unreadable");
         result = URSATZ_GUI_THEME_ERR_FAILED;
     }
+    /* One plan, MIDI and MusicXML file for each version of the form, in the order the Composer lists them: the first
+       is the response itself, a later one is exported from its plan and its MusicXML is in musicxml_versions. */
     char path[PATH_BYTES + 128];
-    for (int i = 2; result == URSATZ_GUI_THEME_OK && i <= 3; i++) {
-        snprintf(path, sizeof(path), "%s/%s", stage, kFileNames[i]);
-        result = ursatz_gui_compose_write_plan(cJSON_GetObjectItemCaseSensitive(plans, i == 2 ? "loop" : "ending"), path, message,
-                                               message_size);
-    }
-    if (result == URSATZ_GUI_THEME_OK &&
-        (!write_bytes(stage, kFileNames[4], response.midi, response.midi_size, message, message_size) ||
-         !write_bytes(stage, kFileNames[5], response.musicxml, strlen(response.musicxml), message, message_size) ||
-         !write_bytes(stage, kFileNames[7], ending_xml->valuestring, strlen(ending_xml->valuestring), message, message_size))) {
-        result = URSATZ_GUI_THEME_ERR_FAILED;
-    }
-    if (result == URSATZ_GUI_THEME_OK) {
-        result = ursatz_gui_compose_export(cJSON_GetObjectItemCaseSensitive(plans, "ending"), document_tempo(document), false, true,
-                                           false, NULL, job, &ending, message, message_size);
-        if (result == URSATZ_GUI_THEME_OK && !write_bytes(stage, kFileNames[6], ending.midi, ending.midi_size, message, message_size)) {
-            result = URSATZ_GUI_THEME_ERR_FAILED;
+    char names[VERSIONS_MAX][96];
+    int written = 0;
+    const cJSON *version = NULL;
+    cJSON_ArrayForEach(version, versions) {
+        if (result != URSATZ_GUI_THEME_OK) {
+            break;
         }
+        const char *name = version->string;
+        const cJSON *plan = cJSON_GetObjectItemCaseSensitive(plans, name);
+        const cJSON *xml = written == 0 ? NULL : cJSON_GetObjectItemCaseSensitive(xmls, name);
+        if (!ursatz_gui_material_version_name_ok(name) || !plan || (written > 0 && !cJSON_IsString(xml))) {
+            ursatz_gui_copy_message(message, message_size, "composer output unreadable");
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+            break;
+        }
+        char file[96];
+        snprintf(file, sizeof(file), written == 0 ? "plan.json" : "%s-plan.json", name);
+        snprintf(path, sizeof(path), "%s/%s", stage, file);
+        result = ursatz_gui_compose_write_plan(plan, path, message, message_size);
+        snprintf(names[written], sizeof(names[written]), "%s", file);
+        if (result == URSATZ_GUI_THEME_OK) {
+            composer_response_destroy(&extra);
+            memset(&extra, 0, sizeof(extra));
+            const uint8_t *midi = response.midi;
+            size_t midi_size = response.midi_size;
+            if (written > 0) {
+                result = ursatz_gui_compose_export(plan, document_tempo(document), false, true, false, NULL, job, &extra, message,
+                                                   message_size);
+                midi = extra.midi;
+                midi_size = extra.midi_size;
+            }
+            snprintf(file, sizeof(file), "%s.mid", name);
+            bool wrote = result == URSATZ_GUI_THEME_OK && write_bytes(stage, file, midi, midi_size, message, message_size);
+            const char *text = written == 0 ? response.musicxml : xml->valuestring;
+            snprintf(file, sizeof(file), "%s.musicxml", name);
+            wrote = wrote && write_bytes(stage, file, text, strlen(text), message, message_size);
+            if (result == URSATZ_GUI_THEME_OK && !wrote) {
+                result = URSATZ_GUI_THEME_ERR_FAILED;
+            }
+        }
+        written++;
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
-        for (int v = 0; v < 2; v++) {
-            snprintf(path, sizeof(path), "%s/%s", named, kFileNames[2 + v]);
-            cJSON *version = cJSON_GetObjectItemCaseSensitive(versions, v == 0 ? "loop" : "ending");
-            if (version) {
-                set_string(version, "plan", path);
-            }
+        /* Each version names its plan file; the summary lists every file of the versions. */
+        const cJSON *entry = NULL;
+        int index = 0;
+        cJSON_ArrayForEach(entry, versions) {
+            snprintf(path, sizeof(path), "%s/%s", named, names[index++]);
+            set_string((cJSON *)entry, "plan", path);
         }
         cJSON_DeleteItemFromObjectCaseSensitive(document, "plans");
         cJSON_DeleteItemFromObjectCaseSensitive(document, "explanation");
-        cJSON_DeleteItemFromObjectCaseSensitive(document, "ending_musicxml");
-        static const char *const files[] = {"plan.json", "ending-plan.json", "loop.mid", "loop.musicxml", "ending.mid", "ending.musicxml"};
-        if (!ursatz_gui_compose_add_files(document, named, files, 6)) {
-            result = URSATZ_GUI_THEME_ERR_ALLOC;
+        cJSON_DeleteItemFromObjectCaseSensitive(document, "musicxml_versions");
+        cJSON *files = cJSON_AddArrayToObject(document, "files");
+        index = 0;
+        cJSON_ArrayForEach(entry, versions) {
+            char file[PATH_BYTES + 128];
+            snprintf(file, sizeof(file), "%s/%s", named, names[index++]);
+            bool added = files && cJSON_AddItemToArray(files, cJSON_CreateString(file));
+            snprintf(file, sizeof(file), "%s/%s.mid", named, entry->string);
+            added = added && cJSON_AddItemToArray(files, cJSON_CreateString(file));
+            snprintf(file, sizeof(file), "%s/%s.musicxml", named, entry->string);
+            added = added && cJSON_AddItemToArray(files, cJSON_CreateString(file));
+            if (!added) {
+                result = URSATZ_GUI_THEME_ERR_ALLOC;
+                break;
+            }
         }
     }
-    composer_response_destroy(&ending);
+    composer_response_destroy(&extra);
     composer_response_destroy(&response);
     if (result != URSATZ_GUI_THEME_OK) {
         cJSON_Delete(document);
@@ -436,6 +503,14 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
     for (int i = 0; ok && i < FILE_NAME_COUNT; i++) {
         if (i != 1 || has_brief) {
             ok = cJSON_AddItemToArray(files, cJSON_CreateString(kFileNames[i]));
+        }
+    }
+    /* The files of the versions, as run_piece listed them under the folder named. */
+    const cJSON *path = NULL;
+    cJSON_ArrayForEach(path, cJSON_GetObjectItemCaseSensitive(summary, "files")) {
+        const char *slash = cJSON_IsString(path) ? strrchr(path->valuestring, '/') : NULL;
+        if (ok && cJSON_IsString(path)) {
+            ok = cJSON_AddItemToArray(files, cJSON_CreateString(slash ? slash + 1 : path->valuestring));
         }
     }
     const cJSON *section = NULL;
@@ -567,6 +642,14 @@ static bool lane_ok(const char *lane) {
     return false;
 }
 
+/* The name of the first version of a composed piece's result (loop for a game loop, piece for a form with sizes); loop
+ * for a result that lists none, as one saved before the forms. */
+static const char *first_version_name(const cJSON *piece) {
+    const cJSON *versions = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "result"), "summary"), "versions");
+    return cJSON_IsObject(versions) && versions->child && versions->child->string ? versions->child->string : "loop";
+}
+
 /* A version of a piece to work from: its item.json, its body and its folder (absolute). */
 typedef struct {
     cJSON *meta;
@@ -584,7 +667,8 @@ static void source_clear(Source *source) {
 
 /*
  * Opens version of piece item id: it must be composed (a result, a plan and a request). section_id (not NULL) must name a
- * section of the loop, and lane (not NULL) a lane that section can be written again in.
+ * section of the loop (the game loop) or of the first version of the result's summary (a form with sizes), and lane
+ * (not NULL) a lane that section can be written again in.
  */
 static UrsatzGuiThemeResult open_source(const char *id, int version, const char *section_id, const char *lane, Source *source,
                                         char *message, size_t message_size) {
@@ -631,8 +715,18 @@ static UrsatzGuiThemeResult open_source(const char *id, int version, const char 
     if (!section_id) {
         return URSATZ_GUI_THEME_OK;
     }
+    /* A form with sizes has no sections in its structure: its sections are the rows of its first version. */
+    const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
+    const cJSON *rows =
+        structure_sized(structure)
+            ? cJSON_GetObjectItemCaseSensitive(
+                  cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(
+                                                       cJSON_GetObjectItemCaseSensitive(piece, "result"), "summary"), "versions"),
+                                                   first_version_name(piece)),
+                  "sections")
+            : cJSON_GetObjectItemCaseSensitive(structure, "sections");
     const cJSON *section = NULL;
-    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "structure"), "sections")) {
+    cJSON_ArrayForEach(section, rows) {
         if (strcmp(ursatz_gui_json_string(section, "id"), section_id) == 0) {
             source->section = section;
             break;
@@ -881,6 +975,7 @@ static int next_set(const char *id, int current) {
     return highest + 1;
 }
 
+/* The row of section_id in the sections of a version of the result (the loop of a game loop, the piece of a form). */
 static const cJSON *loop_section(const cJSON *loop, const char *section_id) {
     const cJSON *section = NULL;
     cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(loop, "sections")) {
@@ -896,14 +991,15 @@ static cJSON *copy_or_null(const cJSON *member) {
     return member ? cJSON_Duplicate(member, 1) : cJSON_CreateNull();
 }
 
-/* {set, variations: [{index, seed, score, seam, heard}]} from the Composer's result.json. NULL on allocation failure. */
-static cJSON *variations_answer(const cJSON *result, const char *section_id, int set) {
+/* {set, variations: [{index, seed, score, seam, heard}]} from the Composer's result.json, each variation's version read
+ * under name (the first version of the piece's form). NULL on allocation failure. */
+static cJSON *variations_answer(const cJSON *result, const char *name, const char *section_id, int set) {
     cJSON *answer = cJSON_CreateObject();
     cJSON *list = cJSON_CreateArray();
     bool ok = answer && list && cJSON_AddNumberToObject(answer, "set", set);
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(result, "variations")) {
-        const cJSON *loop = cJSON_GetObjectItemCaseSensitive(entry, "loop");
+        const cJSON *loop = cJSON_GetObjectItemCaseSensitive(entry, name);
         const cJSON *heard = cJSON_GetObjectItemCaseSensitive(loop_section(loop, section_id), "heard");
         cJSON *object = ok ? cJSON_CreateObject() : NULL;
         ok = object && ursatz_gui_json_add_copy_or_null(object, entry, "index") && ursatz_gui_json_add_copy_or_null(object, entry, "seed") &&
@@ -942,7 +1038,7 @@ static int make_set_dir(const char *source_dir, const char *id, int current, cha
  * Makes the variations with the Composer API and writes variation-<i>.json, .mid and .musicxml of the loop version and
  * result.json into out_dir (cli/piece.c write_variations). *out_document is the result.json document.
  */
-static UrsatzGuiThemeResult run_variations(const Source *source, const cJSON *request, const cJSON *from, const char *section_id,
+static UrsatzGuiThemeResult run_variations(const Source *source, const char *name, const cJSON *request, const cJSON *from, const char *section_id,
                                            const char *lane, int count, bool check, bool has_seed, long long seed,
                                            const ComposerJob *job, const char *out_dir, cJSON **out_document, char *message,
                                            size_t message_size) {
@@ -995,7 +1091,7 @@ static UrsatzGuiThemeResult run_variations(const Source *source, const cJSON *re
     int kept = cJSON_GetArraySize(list);
     for (int i = 0; result == URSATZ_GUI_THEME_OK && i < kept && i < 8; i++) {
         cJSON *entry = cJSON_GetArrayItem(list, i);
-        cJSON *loop = cJSON_GetObjectItemCaseSensitive(entry, "loop");
+        cJSON *loop = cJSON_GetObjectItemCaseSensitive(entry, name);
         const cJSON *plan = cJSON_GetObjectItemCaseSensitive(loop, "plan");
         const cJSON *musicxml = cJSON_GetObjectItemCaseSensitive(entry, "musicxml");
         char names[3][64];
@@ -1082,7 +1178,7 @@ static UrsatzGuiThemeResult variations_locked(const char *id, int version, const
         }
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        result = run_variations(&source, request, from, section_id, lane, count,
+        result = run_variations(&source, first_version_name(piece), request, from, section_id, lane, count,
                                 cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")), has_seed, seed, job, out_dir,
                                 &written, message, message_size);
         if (result != URSATZ_GUI_THEME_OK) {
@@ -1090,7 +1186,7 @@ static UrsatzGuiThemeResult variations_locked(const char *id, int version, const
         }
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        *out_result = variations_answer(written, section_id, set);
+        *out_result = variations_answer(written, first_version_name(piece), section_id, set);
         if (!*out_result) {
             ursatz_gui_copy_message(message, message_size, "the variations could not be read");
             ursatz_gui_theme_remove_folder(out_dir);
@@ -1173,15 +1269,22 @@ static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, 
         result = rebase_request(&stage, summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        /* The Composer's run only built the ending version; the loop version is the variation's, with its seed. */
+        /* The Composer's run only built the versions after the first; the first (the loop of a game loop, the piece of a
+           form with sizes) is the variation's, with its seed. */
+        const char *name = first_version_name(piece);
         const cJSON *seed = cJSON_GetObjectItemCaseSensitive(chosen, "seed");
         cJSON *versions = cJSON_GetObjectItemCaseSensitive(summary, "versions");
-        const cJSON *loop = cJSON_GetObjectItemCaseSensitive(chosen, "loop");
+        const cJSON *loop = cJSON_GetObjectItemCaseSensitive(chosen, name);
         bool ok = cJSON_IsNumber(seed) && cJSON_IsObject(versions) && cJSON_IsObject(loop);
         if (ok) {
-            cJSON_DeleteItemFromObjectCaseSensitive(versions, "loop");
+            cJSON *replacement = cJSON_Duplicate(loop, 1);
+            /* In place: the first member of the versions names the first version (first_version_name). */
+            ok = replacement && cJSON_ReplaceItemInObjectCaseSensitive(versions, name, replacement);
+            if (!ok) {
+                cJSON_Delete(replacement);
+            }
             cJSON_DeleteItemFromObjectCaseSensitive(summary, "seed");
-            ok = ursatz_gui_json_attach(versions, "loop", cJSON_Duplicate(loop, 1)) && ursatz_gui_json_attach(summary, "seed", cJSON_CreateNumber(seed->valuedouble));
+            ok = ok && ursatz_gui_json_attach(summary, "seed", cJSON_CreateNumber(seed->valuedouble));
         }
         cJSON *brief_summary = ok ? kept_brief_summary(&source) : NULL;
         char note[96];

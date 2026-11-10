@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <cJSON.h>
+
 #include "ursatz_composer/composer_api.h"
 
 /* What a Composer API call (R-219) answers, owned by the route that made the call. The members are moved out of the
@@ -40,6 +42,14 @@ void ursatz_gui_composer_reply_destroy(UrsatzGuiComposerReply *reply);
  * Composer could not give it. */
 const char *ursatz_gui_composer_vocabulary(void);
 
+/* The Composer's forms (composer_api_forms), built on the first call and kept for the process. NULL when the Composer
+ * could not give them. */
+const char *ursatz_gui_composer_forms(void);
+
+/* The entry of the form called name in the forms, or NULL when there is none. Owned by the client; valid for the
+ * process. */
+const cJSON *ursatz_gui_composer_form(const char *name);
+
 /* The linked Composer's build as composer_api_versions gives it, read on the first call and kept for the process. Each
  * pointer is a string owned by the client; all are "" when the Composer could not give its versions. */
 typedef struct {
@@ -53,6 +63,10 @@ UrsatzGuiComposerBuild ursatz_gui_composer_build(void);
 /* The largest seed a request of kind ("variants", "random_motive", "theme" or "piece") reads, from the vocabulary's
  * limits.seed_max; -1 when the Composer does not give it. */
 double ursatz_gui_composer_seed_max(const char *kind);
+
+/* The number the vocabulary's limits give under name ("piece_beats", "piece_sections"...); -1 when the Composer does not
+ * give it. */
+double ursatz_gui_composer_limit(const char *name);
 
 /* The position of value in the vocabulary list called list ("theme_slots", "theme_ideas", "functions"...), from 0; -1 when
  * the list has no such value or the Composer gave no vocabulary. */

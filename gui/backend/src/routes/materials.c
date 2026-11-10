@@ -1272,17 +1272,17 @@ static int send_bytes(struct mg_connection *conn, const char *type, const void *
   return 200;
 }
 
-/* GET /api/materials/items/<id>/versions/<n>/playback?file=theme|loop|ending: the playback of a theme or piece
-   version's MIDI file, built by the Analyzer (R-275). */
+/* GET /api/materials/items/<id>/versions/<n>/playback?file=theme|<name>: the playback of a theme version's MIDI file or
+   of the MIDI file of a version of a piece's form (loop, ending, piece...), built by the Analyzer (R-275, R-430). */
 static int handle_version_file_playback(struct mg_connection *conn, const char *id, int number, const char *file) {
-  const char *name = strcmp(file, "theme") == 0 ? "theme.mid" : strcmp(file, "loop") == 0 ? "loop.mid"
-                     : strcmp(file, "ending") == 0 ? "ending.mid" : NULL;
+  char name[48];
   char dir[512];
   char path[640];
   cJSON *version_body = NULL;
-  if (!name) {
-    return send_failure(conn, 400, "file must be theme, loop or ending");
+  if (strcmp(file, "theme") != 0 && !ursatz_gui_material_version_name_ok(file)) {
+    return send_failure(conn, 400, "file must be theme or a version name of a lowercase letter, then up to 30 lowercase letters, digits or hyphens");
   }
+  snprintf(name, sizeof(name), "%s.mid", file);
   UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, number, &version_body);
   if (result != URSATZ_GUI_MATERIAL_OK) {
     return send_material_failure(conn, result);

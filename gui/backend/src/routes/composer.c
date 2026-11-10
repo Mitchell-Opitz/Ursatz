@@ -73,6 +73,16 @@ static int handle_vocabulary(struct mg_connection *conn) {
   return ursatz_gui_send_json_status(conn, 200, "OK", vocabulary);
 }
 
+/* GET /api/composer/forms: the forms the Composer builds and their sections, sizes and slots, as composer_api_forms
+ * gives them (built once and kept). */
+static int handle_forms(struct mg_connection *conn) {
+  const char *forms = ursatz_gui_composer_forms();
+  if (!forms) {
+    return send_error(conn, 500, "composer failed");
+  }
+  return ursatz_gui_send_json_status(conn, 200, "OK", forms);
+}
+
 static size_t split_path(char *rest, char *segments[MAX_SEGMENTS]) {
   size_t count = 0;
   char *start = rest;
@@ -128,6 +138,13 @@ static int composer_handler(struct mg_connection *conn, void *cbdata) {
       return send_error(conn, 405, "method not allowed");
     }
     return handle_vocabulary(conn);
+  }
+
+  if (count == 1 && strcmp(segments[0], "forms") == 0) {
+    if (strcmp(method, "GET") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    return handle_forms(conn);
   }
 
   return send_error(conn, 404, "not found");

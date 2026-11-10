@@ -159,11 +159,17 @@ placeholder, `structure` null, a string, an array or an object without a list of
 versions still read. A body whose `structure` has a `sections` list, or that has any of the members below, is a
 composable piece. A structure alone is valid: every fill may be left out.
 
-- `structure`: `{key, mode, meter, sections}`: `key`, `mode` and `meter` null or text, in the Composer's words (a
-  value it does not read is saved and marked by validate, R-276). `sections` is 1 to 32 of
-  `{id, part, letter, beats, pickup, cadence, fill}`: `id` is `s<n>` or `end`, each once; `part` is `intro`, `body`,
-  `turnaround` or `ending`, in that order, with at least one `body`; `letter` 1 to 8 characters; `beats` a whole
-  number from 1 to 2048; `pickup` `n` or `n/d` beats; `cadence` null or text.
+- `structure`: `{form?, key, mode, meter, ...}`: `key`, `mode` and `meter` null or text, in the Composer's words (a
+  value it does not read is saved and marked by validate, R-276). `form` names a form of the Composer's forms entry
+  (`GET /api/composer/forms`); absent or null is `game-loop`, so a piece saved before the forms is a game loop (R-430).
+  The form says what else the structure has. A form whose `sections` is `request` (the game loop) has `sections`, 1 to
+  32 of `{id, part, letter, beats, pickup, cadence, fill}`: `id` is `s<n>` or `end`, each once; `part` is one of the
+  form's roles (the game loop's: `intro`, `body`, `turnaround`, `ending`), in their order, with every required role
+  present (a `body`); `letter` 1 to 8 characters; `beats` a whole number from 1 to the vocabulary's
+  `limits.piece_beats`; `pickup` `n` or `n/d` beats; `cadence` null or text. It has no `bars`, `count` or `modulate`.
+  A form with sizes has no `sections` (absent or null; its sections are its size's), `bars` and `count` (whole
+  numbers, absent is 0: the default size) that pick one of the form's sizes by bars, by count or by both, and `modulate`
+  (a boolean) only where the form's settings allow it.
 - `fill`: null or `{kind: "empty"}`; `{kind: "motif", item_id, version, into?, hybrid?}`, a melodic motif of form
   `full`; `{kind: "theme", item_id, version}`, a theme version that was composed (it has a `result` and a `plan.json`);
   `{kind: "progression", numerals, cells?}`, the numerals as text (the Composer reads them) and 1 to 8 cells for each chord.
@@ -175,13 +181,17 @@ composable piece. A structure alone is valid: every fill may be left out.
   with it (a theme can only move to a version that was composed).
 
 A composed piece version keeps its files beside its body in `items/<id>/v<n>/`: `request.json`, `brief.style.json`
-(when the piece has a brief), `plan.json` (the loop version), `ending-plan.json`, `loop.mid`, `loop.musicxml`,
-`ending.mid`, `ending.musicxml`, and `theme-<section id>.plan.json`, a copy of the plan of each theme version a
-section uses, so the version keeps its own. The folder is written before the version exists. A regenerated or chosen
-version keeps the same files (its `request.json` names the copies of the theme plans and the style file beside it).
-A variations set is a folder `variations-<k>/` in the version it was made from, numbered over the whole item:
-`variation-<i>.json` (the loop plan), `variation-<i>.mid`, `variation-<i>.musicxml` and the Composer's `result.json`.
-It is not a version; deleting the item removes it.
+(when the piece has a brief), for each version of its form named `<name>` in `result.summary.versions` (the form's
+`versions`: `loop` and `ending` for the game loop, `piece` for a form with sizes) its `<name>.mid` and `<name>.musicxml`
+and its plan (`plan.json` for the first version, `<name>-plan.json` for each later one), and
+`theme-<section id>.plan.json`, a copy of the plan of each theme version a section uses, so the version keeps its own.
+A game loop keeps `plan.json`, `ending-plan.json`, `loop.mid`, `loop.musicxml`, `ending.mid` and `ending.musicxml`, as
+it always did; a rounded binary keeps `plan.json`, `piece.mid` and `piece.musicxml` and no loop or ending file. The
+folder is written before the version exists. A regenerated or chosen version keeps the same files (its `request.json`
+names the copies of the theme plans and the style file beside it). A variations set is a folder `variations-<k>/` in
+the version it was made from, numbered over the whole item: `variation-<i>.json` (the plan of the first version),
+`variation-<i>.mid`, `variation-<i>.musicxml` and the Composer's `result.json`. It is not a version; deleting the item
+removes it.
 
 ### Item references
 

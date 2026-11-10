@@ -582,7 +582,7 @@ static void test_bodies(const Items *m) {
       {"an unknown part", "[{\"id\":\"s0\",\"part\":\"coda\",\"beats\":8}]"},
       {"no beats", "[{\"id\":\"s0\",\"part\":\"body\"}]"},
       {"zero beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":0}]"},
-      {"too many beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":2049}]"},
+      {"too many beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":4097}]"},
       {"half a beat", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":2.5}]"},
       {"a pickup that is no number", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"x\"}]"},
       {"an unknown fill kind", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"bogus\"}}]"},
@@ -772,7 +772,8 @@ static void test_compose(const Items *m) {
 
   /* The request. */
   cJSON *request = last_request();
-  check(strcmp(string_of(request, "schema"), "ursatz-piece-request") == 0 && number_of(request, "schema_version") == 1,
+  check(strcmp(string_of(request, "schema"), "ursatz-piece-request") == 0 && number_of(request, "schema_version") == 2 &&
+            strcmp(string_of(request, "form"), "game-loop") == 0,
         "the request has the piece request schema");
   check(strcmp(string_of(request, "key"), "D") == 0 && strcmp(string_of(request, "mode"), "minor") == 0 &&
             strcmp(string_of(request, "meter"), "4/4") == 0 && number_of(request, "tempo") == 96,
@@ -1461,6 +1462,249 @@ static void check_piece_version(const char *id, int number, bool with_ending) {
   cJSON_Delete(body);
 }
 
+/* The status of creating a piece of a form with sizes: structure is the members after the form (JSON members, may be ""). */
+static int create_sized(const char *name, const char *form, const char *structure, const char *more, char **id) {
+  char body[2000];
+  int status = 0;
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"%s\",\"key\":\"C\",\"mode\":\"major\",\"meter\":\"4/4\"%s}%s}}", form,
+           structure, more);
+  char *made = create_item("piece", name, body, &status);
+  if (id) {
+    *id = made;
+  } else {
+    free(made);
+  }
+  return status;
+}
+
+/* True when every named file is in the version folder; those listed absent are not. */
+static bool folder_holds(const char *id, int version, const char *const *present, const char *const *absent) {
+  char dir[200];
+  char path[400];
+  bool ok = true;
+  version_dir(id, version, dir, sizeof(dir));
+  for (size_t i = 0; present[i]; i++) {
+    snprintf(path, sizeof(path), "%s/%s", dir, present[i]);
+    ok = ok && file_exists(path);
+  }
+  for (size_t i = 0; absent && absent[i]; i++) {
+    snprintf(path, sizeof(path), "%s/%s", dir, absent[i]);
+    ok = ok && !file_exists(path);
+  }
+  return ok;
+}
+
+/* The files of a version of a form with the one version `piece`: its plan, MIDI and MusicXML are what they claim to be. */
+static void check_sized_version(const char *id, int number) {
+  char dir[200];
+  char path[400];
+  char what[200];
+  version_dir(id, number, dir, sizeof(dir));
+  snprintf(path, sizeof(path), "%s/plan.json", dir);
+  snprintf(what, sizeof(what), "plan.json of version %d is a Composer plan", number);
+  check(check_plan_file(path), what);
+  snprintf(path, sizeof(path), "%s/piece.mid", dir);
+  snprintf(what, sizeof(what), "piece.mid of version %d is a MIDI file", number);
+  check(check_midi_file(path), what);
+  snprintf(path, sizeof(path), "%s/piece.musicxml", dir);
+  snprintf(what, sizeof(what), "piece.musicxml of version %d is a MusicXML score", number);
+  check(check_musicxml_file(path), what);
+  static const char *const present[] = {"request.json", "plan.json", "piece.mid", "piece.musicxml", NULL};
+  static const char *const absent[] = {"ending-plan.json", "loop.mid", "loop.musicxml", "ending.mid", "ending.musicxml", NULL};
+  snprintf(what, sizeof(what), "version %d holds the files of the piece version and none of the game loop's", number);
+  check(folder_holds(id, number, present, absent), what);
+}
+
+/* A piece of any form (R-430): compose, play, regenerate, vary and choose a rounded binary, compose a theme with
+   variations, and the refusals of a structure the form does not have. */
+static void test_any_form(const Items *m) {
+  int status = 0;
+  char more[200];
+  char path[400];
+  char dir[200];
+  snprintf(more, sizeof(more), ",\"motive\":{\"item_id\":\"%s\",\"version\":1}", m->a);
+  char *piece = NULL;
+  check(create_sized("Binary", "rounded-binary", "", more, &piece) == 200 && piece, "a rounded binary piece is saved");
+  if (!piece) {
+    return;
+  }
+  cJSON *answer = compose(piece, "{\"seed\":1}", &status);
+  check(status == 200 && ok_true(answer) && number_of(member(answer, "item"), "current_version") == 2, "a rounded binary is composed (version 2)");
+  cJSON_Delete(answer);
+  check_sized_version(piece, 2);
+
+  cJSON *request = last_request();
+  check(number_of(request, "schema_version") == 2 && strcmp(string_of(request, "form"), "rounded-binary") == 0 &&
+            !member(request, "sections") && !member(request, "voicing") && number_of(request, "bars") == 0 &&
+            number_of(request, "count") == 0 && cJSON_IsFalse(member(request, "modulate")) &&
+            strcmp(string_of(member(request, "motive"), "degrees"), kDegreesA) == 0,
+        "the request is the version 2 piece request of the form, with the motive and no sections");
+  cJSON_Delete(request);
+
+  answer = get_item(piece, &status);
+  const cJSON *result = member(piece_of_answer(answer), "result");
+  const cJSON *names = member(result, "files");
+  check(cJSON_IsNull(member(result, "loop")) && cJSON_IsArray(names) && cJSON_GetArraySize(names) == 4 &&
+            strcmp(cJSON_GetArrayItem(names, 0)->valuestring, "request.json") == 0 &&
+            strcmp(cJSON_GetArrayItem(names, 1)->valuestring, "plan.json") == 0 &&
+            strcmp(cJSON_GetArrayItem(names, 3)->valuestring, "piece.musicxml") == 0,
+        "the result has no loop region and names request.json, plan.json, piece.mid and piece.musicxml");
+  const cJSON *versions = member(member(result, "summary"), "versions");
+  check(cJSON_IsObject(member(versions, "piece")) && cJSON_GetArraySize(versions) == 1 && cJSON_IsString(member(member(versions, "piece"), "plan")),
+        "the summary holds the one version piece and its stored plan");
+  bool has_b = false;
+  const cJSON *row = NULL;
+  cJSON_ArrayForEach(row, member(member(versions, "piece"), "sections")) {
+    has_b = has_b || strcmp(string_of(row, "id"), "B") == 0;
+  }
+  check(has_b, "the sections of the piece version have a section B");
+  cJSON_Delete(answer);
+
+  /* The playback of the piece version; the game loop's versions are not there. */
+  version_dir(piece, 2, dir, sizeof(dir));
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=piece", piece);
+  char midi[400];
+  snprintf(midi, sizeof(midi), "%s/piece.mid", dir);
+  check_playback_of(path, midi, "the piece version's playback is built from its stored MIDI file");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=loop", piece);
+  cJSON *missing = exchange("GET", path, NULL, &status);
+  check(status == 404, "a rounded binary has no loop playback");
+  cJSON_Delete(missing);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/piece.musicxml", piece);
+  char *response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 200 && strstr(response_body(response), "<score-partwise") != NULL, "piece.musicxml is served");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/loop.mid", piece);
+  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 404, "loop.mid is not a file of the version");
+  free(response);
+
+  /* Regenerate the B section, vary it and choose a variation. */
+  answer = post_json(piece, "versions/2/regenerate", "{\"section_id\":\"B\",\"lane\":\"melody\",\"seed\":1}", &status);
+  check(status == 200 && number_of(member(answer, "item"), "current_version") == 3, "section B of a rounded binary is written again (version 3)");
+  cJSON_Delete(answer);
+  check_sized_version(piece, 3);
+  check(post_status(piece, "versions/2/regenerate", "{\"section_id\":\"Z\",\"lane\":\"melody\"}") == 400, "a section the piece does not have is refused");
+  answer = post_json(piece, "versions/3/variations", "{\"section_id\":\"B\",\"lane\":\"melody\",\"count\":2,\"seed\":1}", &status);
+  int made = cJSON_GetArraySize(member(answer, "variations"));
+  check(status == 200 && number_of(answer, "set") == 1 && made >= 1 && cJSON_IsObject(member(cJSON_GetArrayItem(member(answer, "variations"), 0), "score")),
+        "variations of section B are made with their scores");
+  cJSON_Delete(answer);
+  version_dir(piece, 3, dir, sizeof(dir));
+  snprintf(path, sizeof(path), "%s/variations-1/variation-1.json", dir);
+  check(check_plan_file(path), "a variation's plan is a Composer plan");
+  answer = post_json(piece, "versions/3/variations/1/choose", "{\"index\":1}", &status);
+  check(status == 200 && number_of(member(answer, "item"), "current_version") == 4, "a variation is chosen (version 4)");
+  cJSON_Delete(answer);
+  check_sized_version(piece, 4);
+  answer = get_item(piece, &status);
+  versions = member(member(member(piece_of_answer(answer), "result"), "summary"), "versions");
+  check(cJSON_GetArraySize(versions) == 1 && cJSON_IsObject(member(versions, "piece")), "the chosen version holds the one version piece");
+  cJSON_Delete(answer);
+
+  /* The export has a section for the piece version. */
+  snprintf(path, sizeof(path), "/api/materials/items/%s/export?version=4", piece);
+  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 200 && strstr(response_body(response), "## piece") != NULL &&
+            strstr(response_body(response), "## loop") == NULL && strstr(response_body(response), "## ending") == NULL,
+        "the export of a rounded binary has one section, piece");
+  free(response);
+
+  /* A form with sizes by count: a theme with three variations composes (with a motive the Composer invents). */
+  char *variations = NULL;
+  check(create_sized("Variations", "variations", ",\"count\":3", "", &variations) == 200 && variations, "a piece with three variations is saved");
+  if (variations) {
+    answer = compose(variations, "{\"seed\":1}", &status);
+    check(status == 200 && ok_true(answer), "a theme with three variations is composed");
+    cJSON_Delete(answer);
+    check_sized_version(variations, 2);
+    request = last_request();
+    check(number_of(request, "count") == 3 && number_of(request, "bars") == 0, "the request asks for three variations");
+    cJSON_Delete(request);
+  }
+  free(variations);
+
+  /* What a form does not have is refused. */
+  check(create_sized("Bad", "waltz", "", more, NULL) == 400, "a form the Composer does not build is refused");
+  check(create_sized("Bad", "rounded-binary", ",\"sections\":[]", more, NULL) == 400, "sections on a rounded binary are refused");
+  check(create_sized("Bad", "rounded-binary", ",\"bars\":20", more, NULL) == 400, "a rounded binary of 20 bars is refused");
+  char *loop_piece = NULL;
+  char sections[5000];
+  full_sections(m, sections, sizeof(sections));
+  char body[9000];
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\",\"modulate\":true,\"sections\":%s}}}",
+           sections);
+  loop_piece = create_item("piece", "Modulating loop", body, &status);
+  check(status == 400 && !loop_piece, "modulate on the game loop is refused");
+  free(loop_piece);
+  free(piece);
+}
+
+/* A piece saved before the forms (a body without structure.form and a folder of the game loop's files) opens, plays,
+   regenerates and exports as before (R-430). */
+static void test_old_game_loop_piece(const Items *m) {
+  int status = 0;
+  char path[400];
+  char dir[200];
+  char *piece = NULL;
+  char body[9000];
+  char sections[5000];
+  full_sections(m, sections, sizeof(sections));
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"game-loop\",\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\",\"sections\":%s},\"check\":true}}",
+           sections);
+  piece = create_item("piece", "Old loop", body, &status);
+  check(status == 200 && piece, "a game loop piece is saved");
+  if (!piece) {
+    return;
+  }
+  cJSON *answer = compose(piece, "{\"seed\":3}", &status);
+  check(status == 200 && ok_true(answer) && version_files_exist(piece, 2, true), "the game loop composes the eight files as before");
+  cJSON_Delete(answer);
+
+  /* Take form out of the stored body, as a piece saved before the forms has it. */
+  snprintf(path, sizeof(path), "materials/items/%s/v2.json", piece);
+  cJSON *stored = read_json_file(path);
+  cJSON *structure = (cJSON *)member(member(stored, "piece"), "structure");
+  cJSON_DeleteItemFromObjectCaseSensitive(structure, "form");
+  char *text = cJSON_Print(stored);
+  FILE *file = text ? fopen(path, "wb") : NULL;
+  if (file) {
+    fputs(text, file);
+    fclose(file);
+  }
+  free(text);
+  cJSON_Delete(stored);
+  check(file != NULL, "the stored body of version 2 has no form");
+
+  answer = get_item(piece, &status);
+  check(status == 200 && ok_true(answer), "the old piece is read");
+  cJSON_Delete(answer);
+  version_dir(piece, 2, dir, sizeof(dir));
+  char midi[400];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=loop", piece);
+  snprintf(midi, sizeof(midi), "%s/loop.mid", dir);
+  check_playback_of(path, midi, "the old piece's loop playback is served");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=ending", piece);
+  snprintf(midi, sizeof(midi), "%s/ending.mid", dir);
+  check_playback_of(path, midi, "the old piece's ending playback is served");
+  answer = post_json(piece, "versions/2/regenerate", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"seed\":9}", &status);
+  check(status == 200 && number_of(member(answer, "item"), "current_version") == 3 && version_files_exist(piece, 3, true),
+        "the old piece regenerates a section as before");
+  cJSON_Delete(answer);
+  check(post_status(piece, "versions/2/regenerate", "{\"section_id\":\"end\",\"lane\":\"melody\"}") == 400,
+        "a section of the ending is still refused");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/export?version=2", piece);
+  char *response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 200 && strstr(response_body(response), "## loop") != NULL &&
+            strstr(response_body(response), "## ending") != NULL,
+        "the old piece's export has its loop and its ending");
+  free(response);
+  free(piece);
+}
+
 /* The real Composer: a structure of empty fills (the Composer's own structure-only example). */
 static void test_real_composer(void) {
   int status = 0;
@@ -1560,6 +1804,8 @@ int main(void) {
     test_brief(&items);
     test_update_uses(&items);
     test_regenerate(&items);
+    test_any_form(&items);
+    test_old_game_loop_piece(&items);
     test_failures(&items);
     test_real_composer();
   }

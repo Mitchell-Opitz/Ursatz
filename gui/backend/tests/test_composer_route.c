@@ -168,6 +168,25 @@ int main(void) {
   check(status == 405, "the vocabulary accepts only GET");
   cJSON_Delete(json);
 
+  /* The forms: the Composer's built-in forms, kept for the process (R-430). */
+  json = exchange_json("GET", "/api/composer/forms", NULL, &status);
+  bool has_game_loop = false;
+  bool has_rounded_binary = false;
+  const cJSON *form = NULL;
+  cJSON_ArrayForEach(form, cJSON_GetObjectItemCaseSensitive(json, "forms")) {
+    const cJSON *form_name = cJSON_GetObjectItemCaseSensitive(form, "name");
+    has_game_loop = has_game_loop || (cJSON_IsString(form_name) && strcmp(form_name->valuestring, "game-loop") == 0);
+    has_rounded_binary = has_rounded_binary || (cJSON_IsString(form_name) && strcmp(form_name->valuestring, "rounded-binary") == 0);
+  }
+  check(status == 200 && has_game_loop && has_rounded_binary, "the forms route lists the game loop and the rounded binary");
+  again = exchange_json("GET", "/api/composer/forms", NULL, &status);
+  check(status == 200 && cJSON_Compare(json, again, 1), "the forms are the same on every call");
+  cJSON_Delete(again);
+  cJSON_Delete(json);
+  json = exchange_json("POST", "/api/composer/forms", "{}", &status);
+  check(status == 405, "the forms accept only GET");
+  cJSON_Delete(json);
+
   json = exchange_json("GET", "/api/composer/compositions", NULL, &status);
   check(status == 404, "the compositions route is gone");
   cJSON_Delete(json);

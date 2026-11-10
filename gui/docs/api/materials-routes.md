@@ -45,9 +45,10 @@ Items:
   meter, key, pickup, notes, base harmony and tones) and one `variant <n>: <operations>` section for each of its variants
   (facts kind, kept, changed, functions, flag). A theme's header carries its form, chords (`bar <n>`) and slots; its
   `theme` section is the version's `theme.musicxml`, and each filled slot is a `slot <slot>: <motif name> v<n>`
-  section. A piece's header carries the structure's key, mode and meter and one fact for each section (`<letter>
-  <part>: <beats> beats, fill <kind>, cadence <cadence>`); its `loop` and `ending` sections are the version's
-  `loop.musicxml` and `ending.musicxml`. A section whose file the version lacks (not composed) prints `not composed`.
+  section. A piece's header carries the structure's key, mode and meter (and its form when it is not the game loop) and one
+  fact for each section of a game loop (`<letter> <part>: <beats> beats, fill <kind>, cadence <cadence>`); it has one
+  section for each version of its form in the result's summary, headed with the version's name (`loop` and `ending`
+  for a game loop, `piece` for a form with sizes), from `<name>.musicxml`. A section whose file the version lacks (not composed) prints `not composed`.
   `404` for an unknown item or version, `400` for a `version` that is not a whole number from 1, `422` when the Composer
   refuses to render a motif (its message), `500` when the Analyzer or the store fails.
 - `POST /api/materials/items/<id>/uses/<source>/update`: writes a new version
@@ -56,9 +57,13 @@ Items:
 - `GET /api/materials/items/<id>/versions/<n>/files/<name>`: one of the files of a composed theme or piece version.
   A theme version's: `request.json`, `brief.style.json` and `plan.json` as `application/json`, `theme.mid` as
   `audio/midi`, `theme.musicxml` as `application/xml`. A piece version's: `request.json`, `brief.style.json`,
-  `plan.json`, `ending-plan.json` and `theme-<section id>.plan.json` as `application/json`, `loop.mid` and `ending.mid`
-  as `audio/midi`, `loop.musicxml` and `ending.musicxml` as `application/xml`. Any other name, a version without the
+  `plan.json`, `<name>-plan.json` and `theme-<section id>.plan.json` as `application/json`, `<name>.mid` as
+  `audio/midi`, `<name>.musicxml` as `application/xml`, where `<name>` is a version name of the piece's form
+  (`[a-z][a-z0-9-]{0,30}`: `loop` and `ending`, `piece`). Any other name, a version without the
   file or an unknown item is `404`.
+- `GET /api/materials/items/<id>/versions/<n>/playback?file=theme|<name>`: the playback of the version's `theme.mid`
+  or of `<name>.mid` for a version name of the piece's form (`loop`, `ending`, `piece`), built by the Analyzer. `400`
+  for a `file` outside the version name pattern, `404` when the version has no such file.
 - `POST /api/materials/items/<thm-id>/compose`: `{"seed"?,"update_uses"?}` composes the theme into a new version
   (R-166, R-167) and answers `{"item"}`. With `update_uses`, every updated use first moves to its source's current
   version (a version of its own each; they stay if the run then fails). The request is built from the current
@@ -80,15 +85,20 @@ Items:
   version: the motive and each motif fill from their uses' copies (degrees, pickup, harmony, features, role), each
   motif fill with the pool of its saved forms as for a theme (the piece's `pool`), a theme fill as the absolute path
   of that theme version's `plan.json` copied into the new version's folder as `theme-<section id>.plan.json`,
-  progressions as given, and the brief built into `brief.style.json`. It runs `composer_api_piece` on a job (the plan
-  of a theme fill is read into the request, its path kept as the source) and writes `plan.json`, `ending-plan.json`,
-  `loop.mid`, `loop.musicxml`, `ending.mid` and `ending.musicxml` from the response. The new version is the body as it was plus
+  progressions as given, and the brief built into `brief.style.json`. The request is schema version 2 with the piece's
+  `form` (`game-loop` for a structure without one); a form with sizes sends `bars`, `count`, `modulate`, the motive,
+  the brief and the accompaniment, and no `sections` or `voicing`. It runs `composer_api_piece` on a job (the plan
+  of a theme fill is read into the request, its path kept as the source, and `musicxml_versions` is asked) and writes,
+  for each version of the form in order, its plan, `<name>.mid` and `<name>.musicxml` (a game loop: `plan.json`,
+  `loop.mid`, `loop.musicxml`, `ending-plan.json`, `ending.mid`, `ending.musicxml`; a rounded binary: `plan.json`,
+  `piece.mid`, `piece.musicxml`, with `result.loop` null). The new version is the body as it was plus
   `result: {seed, summary (the command's JSON), brief: {piece_count, skipped}, loop: {start, end}, files}` with the
   note `composed seed <n>`. Errors are those of a theme compose.
 - `POST /api/materials/items/<pce-id>/versions/<n>/regenerate`: `{"section_id","lane"?,"seed"?}` writes one section
   of a composed version (one with a `result`) again as the next version and answers `{"item"}`. `lane` is `harmony`,
   `bass`, `melody`, `inner` or `all` (default: the whole section); a section filled with a theme takes `harmony` or
-  `bass` only, and an ending section is refused. It runs `composer_api_piece` on a job with `from` the plan of version
+  `bass` only, and an ending section is refused. For a form with sizes `section_id` is the `id` of a row of
+  `result.summary.versions.piece.sections` (the plan's section name: `B`, `variation 2`). It runs `composer_api_piece` on a job with `from` the plan of version
   `n` and `regenerate: {section, lanes}`, and the same eight outputs; without `seed` the Composer picks one. The new version is the source's body with `result` replaced and the note `regenerated <section id> <lane>
   seed <n>`; its folder holds its own `request.json` and copies of the theme plans and the style file. Errors: `400`
   for an item that is not a piece, a version that was never composed, an unknown section or lane, a lane a theme
@@ -103,9 +113,10 @@ Items:
   `.mid`, `.musicxml` of a set (`application/json`, `audio/midi`, `application/xml`); any other name, or a set the
   version does not hold, is `404`.
 - `POST /api/materials/items/<pce-id>/versions/<n>/variations/<k>/choose`: `{"index"}` makes variation `index` of set
-  `k` the next version and answers `{"item"}`: the variation's plan is the version's loop plan, and the ending version is
+  `k` the next version and answers `{"item"}`: the variation's plan is the version's first plan (`plan.json`), and the later versions are
   built from it (`piece --from variation-<i>.json --request <new>/request.json --regenerate none`, the eight outputs).
-  The result is the source's with the Composer's summary, the variation's loop version and its seed; the note is `chose
+  The result is the source's with the Composer's summary, the variation's first version (`loop`, or `piece` for a form
+  with sizes) and its seed; the note is `chose
   variation <i> seed <n>`. `404` for a set or variation that is not there, `400` for a bad index.
 - `GET /api/materials/variant-operations`: `{"operations"}` from
   `composer_api_variant_operations`.

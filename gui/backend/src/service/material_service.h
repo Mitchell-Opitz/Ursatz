@@ -255,14 +255,20 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_put(const char *id, const 
 
 /*
  * A theme version keeps its Composer files beside its body, in items/<id>/v<n>/ (R-167): request.json,
- * brief.style.json, plan.json, theme.mid and theme.musicxml. A piece version keeps request.json, brief.style.json,
- * plan.json, ending-plan.json, loop.mid, loop.musicxml, ending.mid and ending.musicxml, and
- * theme-<section id>.plan.json for each theme a section uses (R-174). The folder is written before the version is, so
+ * brief.style.json, plan.json, theme.mid and theme.musicxml. A piece version keeps request.json, brief.style.json
+ * and, for each version of its form named <name> (the game loop's loop and ending, a sized form's piece), <name>.mid and
+ * <name>.musicxml with the plan: plan.json for the first version, <name>-plan.json for each later one (so a game loop
+ * has plan.json, ending-plan.json, loop.mid, loop.musicxml, ending.mid and ending.musicxml), and
+ * theme-<section id>.plan.json for each theme a section uses (R-174, R-430). The folder is written before the version is, so
  * a version that exists has its files whole; deleting the item removes them with its directory.
  */
 
 /* The content type of one of those names ("application/json", "audio/midi", "application/xml"), else NULL. */
 const char *ursatz_gui_material_version_file_type(const char *name);
+
+/* Whether name is a version name of a piece's form: a lowercase letter, then up to 30 lowercase letters, digits or
+ * hyphens. The names of the files of a version are made from it. */
+bool ursatz_gui_material_version_name_ok(const char *name);
 
 /* The folder of version number of item id, as a path under the store (it need not exist). false if it does not fit. */
 bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size_t out_size);

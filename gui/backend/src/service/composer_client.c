@@ -64,6 +64,43 @@ const char *ursatz_gui_composer_vocabulary(void) {
   return g_vocabulary;
 }
 
+static pthread_once_t g_forms_once = PTHREAD_ONCE_INIT;
+static char *g_forms = NULL;
+static cJSON *g_forms_tree = NULL;
+
+static void forms_build(void) {
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  ComposerStatus status = composer_api_forms(&response);
+  UrsatzGuiComposerReply reply;
+  ursatz_gui_composer_reply_take(status, &response, &reply);
+  if (reply.status == COMPOSER_OK && reply.json) {
+    g_forms = reply.json;
+    reply.json = NULL;
+    g_forms_tree = cJSON_Parse(g_forms);
+  }
+  ursatz_gui_composer_reply_destroy(&reply);
+}
+
+const char *ursatz_gui_composer_forms(void) {
+  pthread_once(&g_forms_once, forms_build);
+  return g_forms;
+}
+
+const cJSON *ursatz_gui_composer_form(const char *name) {
+  if (!name || !ursatz_gui_composer_forms() || !g_forms_tree) {
+    return NULL;
+  }
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_forms_tree, "forms")) {
+    const cJSON *entry_name = cJSON_GetObjectItemCaseSensitive(entry, "name");
+    if (cJSON_IsString(entry_name) && strcmp(entry_name->valuestring, name) == 0) {
+      return entry;
+    }
+  }
+  return NULL;
+}
+
 static pthread_once_t g_build_once = PTHREAD_ONCE_INIT;
 static char g_build_api[32];
 static char g_build_composer[64];
@@ -104,6 +141,15 @@ double ursatz_gui_composer_seed_max(const char *kind) {
   const cJSON *limits = cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "limits");
   const cJSON *table = cJSON_GetObjectItemCaseSensitive(limits, "seed_max");
   const cJSON *value = cJSON_GetObjectItemCaseSensitive(table, kind);
+  return cJSON_IsNumber(value) ? value->valuedouble : -1;
+}
+
+double ursatz_gui_composer_limit(const char *name) {
+  if (!name || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
+    return -1;
+  }
+  const cJSON *limits = cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "limits");
+  const cJSON *value = cJSON_GetObjectItemCaseSensitive(limits, name);
   return cJSON_IsNumber(value) ? value->valuedouble : -1;
 }
 

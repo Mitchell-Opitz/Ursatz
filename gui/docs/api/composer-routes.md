@@ -52,6 +52,13 @@ Routes (bodies are JSON; success bodies have `"ok":true`):
   parts, intos and fill kinds, tone labels with their abbreviations, and `limits`. The frontend loads it once before
   its views mount (`vocabulary.js`) and keeps no table of music of its own; the GUI keeps only its own limits (cells of a
   chord, tabs, the number of chord bars) and its rules (themes and motifs are in C, the pool rule, storage length caps).
+- `GET /api/composer/forms`: the Composer's built-in forms (`composer_api_forms`, R-428), built once and kept:
+  `{"forms": [{name, label, closing, sections, versions, settings, regions, sizes, roles, loop_roles, cadences,
+  default_ending}]}`. A form with `sections` `sizes` lists its sizes (`bars`, `count`, `default`) with the sections of
+  each (name, letter, role, bars, beginning, ending, cadence, keys, slots); the game loop's `sections` is `request`,
+  with its `roles`. `versions` names the versions a piece of the form has (`loop` and `ending`, `piece`), and
+  `settings` says what the form takes (`modulate`, `accompaniment`, `voicing`, `section_fills`). The backend reads a
+  piece's structure against it (`ursatz_gui_composer_form`) and the Pieces view shows it (B6). Only `GET` (`405`).
 - `POST /api/materials/items/validate`: `{"type": "motif"|"theme"|"piece", "body"}` builds the Composer request the
   body would compose (or, for a motif, analyze) with and has the Composer read it without composing
   (`composer_api_validate`; nothing is written). `{"ok":true,"complete":true,"request"}` gives the request with the
