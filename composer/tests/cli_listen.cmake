@@ -148,6 +148,19 @@ if(NOT motif STREQUAL "${FIXTURES}/motifs/test-motif-6-8.json")
     message(FATAL_ERROR "the manifest does not name the motif file: ${first}")
 endif()
 
+# A motif file of eighth triplets (R-442): its notes text writes with triplet values, the theme request is built from it, and
+# both samples are composed.
+file(WRITE "${WORK}/triplet-motif.txt" "C4:e3 D4:e3 E4:e3 G4:q E4:e3 D4:e3 C4:e3 E4:q G4:h C5:h\n")
+expect_status(0 listen --what themes --count 2 --seed 1 --meter 4/4 --motif triplet-motif.txt --out-dir themes-triplets)
+expect_samples(themes-triplets 2)
+file(STRINGS "${WORK}/themes-triplets/listen.jsonl" lines)
+foreach(line IN LISTS lines)
+    string(JSON status GET "${line}" status)
+    if(NOT status STREQUAL "ok")
+        message(FATAL_ERROR "a theme from the eighth-triplet motif is not ok: ${line}")
+    endif()
+endforeach()
+
 # A theme request: the same MIDI as the theme command writes for the seed.
 expect_status(0 listen --what themes --count 1 --seed 2 --theme-request "${FIXTURES}/theme/one-motive.json" --out-dir themes-request)
 expect_samples(themes-request 1)
