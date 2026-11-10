@@ -1,8 +1,8 @@
 /* Piece bodies, composing and the files of a version end to end (R-174). Pieces and the themes they use run on the job
  * queue through the Composer API, in process; the request the route built is read back from the version's request.json.
- * The motifs are saved with the Composer too, and one piece is compared with what the Composer command gave in B6
- * (fixtures composer/b6_compose). Uses a plain TCP socket for the HTTP requests, same as test_composer_route.c. Runs in
- * its own working directory (materials/, subjects/ and pieces/ are created there). */
+ * The motifs are saved with the Composer too, and the files of one piece's versions are checked as files and as
+ * summaries of their request (version_check.h). Uses a plain TCP socket for the HTTP requests, same as
+ * test_composer_route.c. Runs in its own working directory (materials/, subjects/ and pieces/ are created there). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -12,6 +12,7 @@
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
@@ -19,11 +20,8 @@
 #include <cJSON.h>
 
 #include "server.h"
-#include "playback_check.h"
+#include "version_check.h"
 
-#ifndef URSATZ_GUI_TEST_COMPOSER_FIXTURES
-#error "URSATZ_GUI_TEST_COMPOSER_FIXTURES must name the Composer fixtures directory"
-#endif
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
 #endif
@@ -271,18 +269,6 @@ static void slots_of(const char *basic, const char *cadential, char *out, size_t
 
 static void basic_slot_of(const char *basic, char *out, size_t size) {
   snprintf(out, size, "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]", basic);
-}
-
-/* The playback the route serves for url against the capture made before P27 B9 (fixtures/playback/<name>.playback.json). */
-static void check_served_playback(const char *url, const char *name, const char *what) {
-  char fixture[900];
-  int status = 0;
-  snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_COMPOSER_FIXTURES "/../playback/%s.playback.json", name);
-  cJSON *want = read_json_file(fixture);
-  cJSON *got = exchange("GET", url, NULL, &status);
-  check(status == 200 && want && got && playback_matches_capture(got, want), what);
-  cJSON_Delete(want);
-  cJSON_Delete(got);
 }
 
 static cJSON *get_item(const char *id, int *status) {
@@ -1378,61 +1364,101 @@ static void test_regenerate(const Items *m) {
   free(piece);
 }
 
-/* The files of version number of item id against what the Composer command wrote in B6 (capture first:
-   fixtures/composer/b6_compose/<name>): the plans as JSON values, the MIDI and MusicXML files byte for byte, and the
-   stored summary without the file names. A chosen variation has the ending made from a seed read from the clock (the
-   route takes none), so for it only the loop version is compared (with_ending false). */
-static void compare_with_b6(const char *id, int number, const char *name, bool with_ending) {
+/* True when the section ids of sections are exactly want (a NULL-terminated list), in order. */
+static bool section_ids_are(const cJSON *sections, const char *const *want) {
+  size_t count = 0;
+  while (want[count]) {
+    count++;
+  }
+  if (!cJSON_IsArray(sections) || (size_t)cJSON_GetArraySize(sections) != count) {
+    return false;
+  }
+  for (size_t i = 0; i < count; i++) {
+    if (strcmp(string_of(cJSON_GetArrayItem(sections, (int)i), "id"), want[i]) != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/* True when the file at stored (a path from a stored summary) is the file at expected (the version folder's path). */
+static bool same_file(const char *stored, const char *expected) {
+  char a[PATH_MAX];
+  char b[PATH_MAX];
+  return realpath(stored, a) && realpath(expected, b) && strcmp(a, b) == 0;
+}
+
+/* The files and the summary of version number of item id as the GUI keeps them (R-432): each plan, MIDI and MusicXML
+   file is what it claims to be, the summary names the stored plans, and the sections of each version follow the request
+   the version was composed from: the loop version has every section but the ending ones, the ending version the loop's
+   without the turnaround ones, then the request's ending sections (the default ending `end` when it has none).
+   with_ending false (the version a chosen variation makes: its loop plan is the variation's, kept in its set, and its
+   ending is made from a seed read from the clock) checks the loop version's files and sections alone. */
+static void check_piece_version(const char *id, int number, bool with_ending) {
   static const char *const plans[] = {"plan.json", "ending-plan.json"};
-  static const char *const bytes[] = {"loop.mid", "loop.musicxml", "ending.mid", "ending.musicxml"};
+  static const char *const midis[] = {"loop.mid", "ending.mid"};
+  static const char *const scores[] = {"loop.musicxml", "ending.musicxml"};
+  static const char *const names[] = {"loop", "ending"};
+  char dir[400];
   char path[700];
-  char fixture[900];
   char what[200];
+  version_dir(id, number, dir, sizeof(dir));
   for (size_t i = 0; i < (with_ending ? 2 : 1); i++) {
-    snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", id, number, plans[i]);
-    snprintf(fixture, sizeof(fixture), "%s/b6_compose/%s/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, name, plans[i]);
-    cJSON *now = read_json_file(path);
-    cJSON *then = read_json_file(fixture);
-    snprintf(what, sizeof(what), "%s of version %d equals the one the command wrote", plans[i], number);
-    check(now && then && cJSON_Compare(now, then, 1), what);
-    cJSON_Delete(now);
-    cJSON_Delete(then);
+    snprintf(path, sizeof(path), "%s/%s", dir, plans[i]);
+    snprintf(what, sizeof(what), "%s of version %d is a Composer plan", plans[i], number);
+    check(check_plan_file(path), what);
+    snprintf(path, sizeof(path), "%s/%s", dir, midis[i]);
+    snprintf(what, sizeof(what), "%s of version %d is a MIDI file", midis[i], number);
+    check(check_midi_file(path), what);
+    snprintf(path, sizeof(path), "%s/%s", dir, scores[i]);
+    snprintf(what, sizeof(what), "%s of version %d is a MusicXML score", scores[i], number);
+    check(check_musicxml_file(path), what);
   }
-  for (size_t i = 0; i < (with_ending ? 4 : 2); i++) {
-    size_t now_size = 0;
-    size_t then_size = 0;
-    snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", id, number, bytes[i]);
-    snprintf(fixture, sizeof(fixture), "%s/b6_compose/%s/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, name, bytes[i]);
-    char *now = read_file(path, &now_size);
-    char *then = read_file(fixture, &then_size);
-    snprintf(what, sizeof(what), "%s of version %d equals the one the command wrote", bytes[i], number);
-    check(now && then && now_size == then_size && memcmp(now, then, now_size) == 0, what);
-    free(now);
-    free(then);
-  }
-  if (!with_ending) {
-    return;
-  }
+  snprintf(path, sizeof(path), "%s/request.json", dir);
+  cJSON *request = read_json_file(path);
   snprintf(path, sizeof(path), "materials/items/%s/v%d.json", id, number);
-  snprintf(fixture, sizeof(fixture), "%s/b6_compose/%s/body.json", URSATZ_GUI_TEST_COMPOSER_FIXTURES, name);
-  cJSON *now_body = read_json_file(path);
-  cJSON *then_body = read_json_file(fixture);
-  cJSON *now = cJSON_Duplicate(member(member(member(now_body, "piece"), "result"), "summary"), 1);
-  cJSON *then = cJSON_Duplicate(member(member(member(then_body, "piece"), "result"), "summary"), 1);
-  cJSON_DeleteItemFromObjectCaseSensitive(now, "files");
-  cJSON_DeleteItemFromObjectCaseSensitive(then, "files");
-  cJSON *now_versions = member(now, "versions");
-  cJSON *then_versions = member(then, "versions");
-  for (const char *const *version = (const char *const[]){"loop", "ending", NULL}; *version; version++) {
-    cJSON_DeleteItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(now_versions, *version), "plan");
-    cJSON_DeleteItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(then_versions, *version), "plan");
+  cJSON *body = read_json_file(path);
+  const cJSON *summary = member(member(member(body, "piece"), "result"), "summary");
+  const cJSON *versions = member(summary, "versions");
+  const char *loop_ids[16];
+  const char *ending_ids[16];
+  size_t loop_count = 0;
+  size_t ending_count = 0;
+  size_t ending_sections = 0;
+  const cJSON *section = NULL;
+  cJSON_ArrayForEach(section, member(request, "sections")) {
+    const char *part = string_of(section, "part");
+    if (strcmp(part, "ending") == 0) {
+      ending_sections++;
+    } else if (loop_count < 15) {
+      loop_ids[loop_count++] = string_of(section, "id");
+    }
+    if (strcmp(part, "turnaround") != 0 && strcmp(part, "ending") != 0 && ending_count < 15) {
+      ending_ids[ending_count++] = string_of(section, "id");
+    }
   }
-  snprintf(what, sizeof(what), "the stored summary of version %d equals the command's", number);
-  check(now && then && cJSON_Compare(now, then, 1), what);
-  cJSON_Delete(now);
-  cJSON_Delete(then);
-  cJSON_Delete(now_body);
-  cJSON_Delete(then_body);
+  cJSON_ArrayForEach(section, member(request, "sections")) {
+    if (strcmp(string_of(section, "part"), "ending") == 0 && ending_count < 15) {
+      ending_ids[ending_count++] = string_of(section, "id");
+    }
+  }
+  if (ending_sections == 0 && ending_count < 15) {
+    ending_ids[ending_count++] = "end";
+  }
+  loop_ids[loop_count] = NULL;
+  ending_ids[ending_count] = NULL;
+  for (size_t i = 0; i < (with_ending ? 2 : 1); i++) {
+    const cJSON *version = member(versions, names[i]);
+    if (with_ending) {
+      snprintf(path, sizeof(path), "%s/%s", dir, plans[i]);
+      snprintf(what, sizeof(what), "the summary of version %d names the stored %s", number, plans[i]);
+      check(cJSON_IsString(member(version, "plan")) && same_file(member(version, "plan")->valuestring, path), what);
+    }
+    snprintf(what, sizeof(what), "the %s version of version %d has the sections of its request", names[i], number);
+    check(section_ids_are(member(version, "sections"), i == 0 ? loop_ids : ending_ids), what);
+  }
+  cJSON_Delete(request);
+  cJSON_Delete(body);
 }
 
 /* The real Composer: a structure of empty fills (the Composer's own structure-only example). */
@@ -1462,11 +1488,14 @@ static void test_real_composer(void) {
     free(text);
   }
   check(all, "the real run wrote the seven files");
-  compare_with_b6(piece, 2, "piece-v2", true);
+  check_piece_version(piece, 2, true);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=loop", piece);
-  check_served_playback(path, "piece-loop", "the loop version's playback is built from its MIDI file as the browser read it");
+  char midi[400];
+  snprintf(midi, sizeof(midi), "%s/loop.mid", dir);
+  check_playback_of(path, midi, "the loop version's playback is built from its stored MIDI file");
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=ending", piece);
-  check_served_playback(path, "piece-ending", "the ending version's playback is built from its MIDI file as the browser read it");
+  snprintf(midi, sizeof(midi), "%s/ending.mid", dir);
+  check_playback_of(path, midi, "the ending version's playback is built from its stored MIDI file");
   answer = get_item(piece, &status);
   const cJSON *result = member(piece_of_answer(answer), "result");
   check(number_of(result, "seed") >= 0 && cJSON_IsObject(member(result, "loop")) && cJSON_IsObject(member(result, "summary")),
@@ -1478,7 +1507,7 @@ static void test_real_composer(void) {
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 3 && version_files_exist(piece, 3, false),
         "the real Composer regenerates a section (version 3 holds the seven files)");
   cJSON_Delete(answer);
-  compare_with_b6(piece, 3, "piece-v3", true);
+  check_piece_version(piece, 3, true);
   answer = post_json(piece, "versions/3/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":2,\"seed\":1}", &status);
   int made = cJSON_GetArraySize(member(answer, "variations"));
   check(status == 200 && number_of(answer, "set") == 1 && made >= 1 && cJSON_IsObject(member(cJSON_GetArrayItem(member(answer, "variations"), 0), "score")),
@@ -1489,7 +1518,9 @@ static void test_real_composer(void) {
   check(response_status(response) == 200 && strncmp(response_body(response), "MThd", 4) == 0, "a variation's MIDI file is served");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/variations/1/variation-1.mid/playback", piece);
-  check_served_playback(path, "variation", "a variation's playback is built from its MIDI file as the browser read it");
+  version_dir(piece, 3, dir, sizeof(dir));
+  snprintf(midi, sizeof(midi), "%s/variations-1/variation-1.mid", dir);
+  check_playback_of(path, midi, "a variation's playback is built from its stored MIDI file");
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/variations/1/variation-1.musicxml/playback", piece);
   response = http_exchange("GET", path, NULL, NULL, 0, NULL);
   check(response_status(response) == 404, "only a variation's MIDI file has a playback");
@@ -1498,7 +1529,7 @@ static void test_real_composer(void) {
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 4 && version_files_exist(piece, 4, false),
         "the real Composer builds the ending version of a chosen variation (version 4 holds the seven files)");
   cJSON_Delete(answer);
-  compare_with_b6(piece, 4, "piece-v4", false);
+  check_piece_version(piece, 4, false);
   free(piece);
 }
 

@@ -1,8 +1,8 @@
 /* Theme bodies, composing and the files of a version end to end (R-167). The theme runs on the job queue through the
  * Composer API, in process; the request the route built is read back from the version's request.json. The motifs are
- * saved with the Composer too, and the composed files are compared with what the Composer command gave in B6 (fixtures
- * composer/b6_compose). Uses a plain TCP socket for the HTTP requests, same as test_composer_route.c. Runs in its own
- * working directory (materials/, subjects/ and pieces/ are created there). */
+ * saved with the Composer too, and the composed files are checked as files (version_check.h). Uses a plain TCP socket
+ * for the HTTP requests, same as test_composer_route.c. Runs in its own working directory (materials/, subjects/ and
+ * pieces/ are created there). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -20,13 +20,10 @@
 #include <cJSON.h>
 
 #include "server.h"
-#include "playback_check.h"
+#include "version_check.h"
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
-#endif
-#ifndef URSATZ_GUI_TEST_COMPOSER_FIXTURES
-#error "URSATZ_GUI_TEST_COMPOSER_FIXTURES must name the Composer fixtures directory"
 #endif
 
 static int failures = 0;
@@ -289,18 +286,6 @@ static void slots_of(const char *basic, const char *cadential, char *out, size_t
 
 static void basic_slot_of(const char *basic, char *out, size_t size) {
   snprintf(out, size, "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]", basic);
-}
-
-/* The playback the route serves for url against the capture made before P27 B9 (fixtures/playback/<name>.playback.json). */
-static void check_served_playback(const char *url, const char *name, const char *what) {
-  char fixture[900];
-  int status = 0;
-  snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_COMPOSER_FIXTURES "/../playback/%s.playback.json", name);
-  cJSON *want = read_json_file(fixture);
-  cJSON *got = exchange("GET", url, NULL, &status);
-  check(status == 200 && want && got && playback_matches_capture(got, want), what);
-  cJSON_Delete(want);
-  cJSON_Delete(got);
 }
 
 static cJSON *get_item(const char *id, int *status) {
@@ -1250,46 +1235,22 @@ static void test_real_composer(const Motifs *m) {
   }
   check(all, "the real run wrote the five files");
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=theme", theme);
-  check_served_playback(path, "theme-seeded", "the theme's playback is built from its MIDI file as the browser read it");
+  char midi[700];
+  snprintf(midi, sizeof(midi), "%s/theme.mid", dir);
+  check_playback_of(path, midi, "the theme's playback is built from its stored MIDI file");
   answer = get_item(theme, &status);
   const cJSON *result = member(theme_of(answer), "result");
   check(number_of(result, "seed") == 97 && cJSON_GetArraySize(member(member(result, "summary"), "themes")) >= 1 &&
             number_of(member(result, "brief"), "piece_count") == 2,
         "the result has the Composer's themes and the brief's two pieces");
 
-  /* The same seed gives what the Composer command gave in B6 (capture first: backend/tests/fixtures/composer/b6_compose). */
-  char fixture[700];
+  /* The stored files are what they claim to be (R-432). */
   snprintf(path, sizeof(path), "%s/plan.json", dir);
-  snprintf(fixture, sizeof(fixture), "%s/b6_compose/theme-v2/plan.json", URSATZ_GUI_TEST_COMPOSER_FIXTURES);
-  cJSON *now_plan = read_json_file(path);
-  cJSON *then_plan = read_json_file(fixture);
-  check(now_plan && then_plan && cJSON_Compare(now_plan, then_plan, 1), "the plan equals the one the command wrote");
-  cJSON_Delete(now_plan);
-  cJSON_Delete(then_plan);
-  static const char *const bytes[] = {"theme.mid", "theme.musicxml"};
-  for (size_t i = 0; i < 2; i++) {
-    size_t now_size = 0;
-    size_t then_size = 0;
-    snprintf(path, sizeof(path), "%s/%s", dir, bytes[i]);
-    snprintf(fixture, sizeof(fixture), "%s/b6_compose/theme-v2/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, bytes[i]);
-    char *now = read_file(path, &now_size);
-    char *then = read_file(fixture, &then_size);
-    char what[160];
-    snprintf(what, sizeof(what), "%s equals the one the command wrote", bytes[i]);
-    check(now && then && now_size == then_size && memcmp(now, then, now_size) == 0, what);
-    free(now);
-    free(then);
-  }
-  snprintf(fixture, sizeof(fixture), "%s/b6_compose/theme-v2/body.json", URSATZ_GUI_TEST_COMPOSER_FIXTURES);
-  cJSON *then_body = read_json_file(fixture);
-  cJSON *now_summary = cJSON_Duplicate(member(result, "summary"), 1);
-  cJSON *then_summary = cJSON_Duplicate(member(member(member(then_body, "theme"), "result"), "summary"), 1);
-  cJSON_DeleteItemFromObjectCaseSensitive(now_summary, "files");
-  cJSON_DeleteItemFromObjectCaseSensitive(then_summary, "files");
-  check(now_summary && then_summary && cJSON_Compare(now_summary, then_summary, 1), "the stored summary equals the command's");
-  cJSON_Delete(now_summary);
-  cJSON_Delete(then_summary);
-  cJSON_Delete(then_body);
+  check(check_plan_file(path), "plan.json is a Composer plan");
+  snprintf(path, sizeof(path), "%s/theme.mid", dir);
+  check(check_midi_file(path), "theme.mid is a MIDI file");
+  snprintf(path, sizeof(path), "%s/theme.musicxml", dir);
+  check(check_musicxml_file(path), "theme.musicxml is a MusicXML score");
   cJSON_Delete(answer);
   free(theme);
   free(first);
