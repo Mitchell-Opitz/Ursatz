@@ -102,9 +102,13 @@ typedef struct {
     bool composed;
 } PieceVersion;
 
+/* The most versions a piece has: the loop and the ending of a game loop (api_piece_version_names). */
+#define API_PIECE_VERSIONS_MAX 2
+
+/* The versions of a piece, in the order of api_piece_version_names: index 0 is the first (the loop of a game loop). */
 typedef struct {
-    PieceVersion loop;
-    PieceVersion ending;
+    PieceVersion versions[API_PIECE_VERSIONS_MAX];
+    size_t version_count;
     unsigned long seed;
 } PieceMade;
 

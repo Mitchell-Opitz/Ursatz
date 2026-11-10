@@ -61,8 +61,15 @@ void api_piece_version_destroy(PieceVersion *version) {
 }
 
 void api_piece_made_destroy(PieceMade *piece) {
-    api_piece_version_destroy(&piece->loop);
-    api_piece_version_destroy(&piece->ending);
+    for (size_t i = 0; i < API_PIECE_VERSIONS_MAX; i++) {
+        api_piece_version_destroy(&piece->versions[i]);
+    }
+}
+
+/* The name of version index of the piece in the document: "loop" and "ending" of a game loop. */
+static const char *version_name(const PieceMade *piece, size_t index) {
+    (void)piece;
+    return index == 0 ? "loop" : "ending";
 }
 
 static void make_config(const PieceSpec *request, bool check, unsigned long seed, ComposeConfig *config) {
@@ -87,9 +94,9 @@ static PieceResult compose_version(const PieceSpec *request, bool check, unsigne
 }
 
 PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsigned long seed, PieceMade *piece) {
-    PieceResult result = piece_build_ending(piece->loop.plan, &request->request, &piece->ending.plan);
+    PieceResult result = piece_build_ending(piece->versions[0].plan, &request->request, &piece->versions[1].plan);
     if (result == PIECE_OK) {
-        result = compose_version(request, check, seed + PIECE_ENDING_SEED_OFFSET, &piece->ending);
+        result = compose_version(request, check, seed + PIECE_ENDING_SEED_OFFSET, &piece->versions[1]);
     }
     return result;
 }
@@ -98,9 +105,10 @@ PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsig
 static PieceResult compose_piece(const PieceSpec *request, bool check, unsigned long seed, PieceMade *piece) {
     memset(piece, 0, sizeof(*piece));
     piece->seed = seed;
-    PieceResult result = piece_build_plan(&request->request, &piece->loop.plan);
+    piece->version_count = 2;
+    PieceResult result = piece_build_plan(&request->request, &piece->versions[0].plan);
     if (result == PIECE_OK) {
-        result = compose_version(request, check, seed, &piece->loop);
+        result = compose_version(request, check, seed, &piece->versions[0]);
     }
     if (result == PIECE_OK) {
         result = api_piece_compose_ending(request, check, seed, piece);
@@ -109,7 +117,12 @@ static PieceResult compose_piece(const PieceSpec *request, bool check, unsigned 
 }
 
 static bool piece_cancelled(const PieceMade *piece) {
-    return (piece->loop.composed && piece->loop.outcome.cancelled) || (piece->ending.composed && piece->ending.outcome.cancelled);
+    for (size_t i = 0; i < piece->version_count; i++) {
+        if (piece->versions[i].composed && piece->versions[i].outcome.cancelled) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /* ------------------------------------------------------------- regenerating a section */
@@ -348,7 +361,8 @@ static ComposerStatus regenerate_piece(const PieceSpec *request, const PieceEdit
                                        PieceMade *piece, PieceResult *result, ComposerError *error) {
     memset(piece, 0, sizeof(*piece));
     piece->seed = seed;
-    ComposerStatus status = api_piece_regenerate_loop(request, edit, check, seed, &piece->loop, result, error);
+    piece->version_count = 2;
+    ComposerStatus status = api_piece_regenerate_loop(request, edit, check, seed, &piece->versions[0], result, error);
     if (status == COMPOSER_OK && *result == PIECE_OK) {
         *result = api_piece_compose_ending(request, check, seed, piece);
     }
@@ -596,32 +610,44 @@ typedef struct {
     int explain; /* 0 none, 1 text, 2 json */
 } PieceOutputs;
 
-/* The explanation of both versions as the command writes it: text with a heading for each, or JSON {"loop", "ending"}. */
+/* The explanation of the versions as the command writes it: text with a heading for each, or JSON {"<version>": ...}. */
 static char *explanation_text(const PieceMade *piece, bool json) {
-    Explanation loop;
-    Explanation ending;
-    if (explain_build(piece->loop.plan, &piece->loop.outcome, &loop) != EXPLAIN_OK) {
-        return NULL;
-    }
-    if (explain_build(piece->ending.plan, &piece->ending.outcome, &ending) != EXPLAIN_OK) {
-        explain_destroy(&loop);
-        return NULL;
-    }
-    char *loop_text = json ? explain_to_json(&loop) : explain_to_text(&loop);
-    char *ending_text = json ? explain_to_json(&ending) : explain_to_text(&ending);
+    Explanation explanations[API_PIECE_VERSIONS_MAX];
+    char *texts[API_PIECE_VERSIONS_MAX] = {NULL};
+    size_t built = 0;
+    size_t size = json ? 3 : 1;
     char *joined = NULL;
-    if (loop_text && ending_text) {
-        const char *format = json ? "{\"loop\":%s,\"ending\":%s}\n" : "== loop version ==\n%s\n== ending version ==\n%s\n";
-        int size = snprintf(NULL, 0, format, loop_text, ending_text);
-        joined = size > 0 ? malloc((size_t)size + 1) : NULL;
-        if (joined) {
-            snprintf(joined, (size_t)size + 1, format, loop_text, ending_text);
+    bool ok = true;
+    for (size_t i = 0; ok && i < piece->version_count; i++) {
+        ok = explain_build(piece->versions[i].plan, &piece->versions[i].outcome, &explanations[i]) == EXPLAIN_OK;
+        if (ok) {
+            built++;
+            texts[i] = json ? explain_to_json(&explanations[i]) : explain_to_text(&explanations[i]);
+            ok = texts[i] != NULL;
+        }
+        if (ok) {
+            size += strlen(version_name(piece, i)) + strlen(texts[i]) + 24;
         }
     }
-    free(loop_text);
-    free(ending_text);
-    explain_destroy(&loop);
-    explain_destroy(&ending);
+    joined = ok ? malloc(size) : NULL;
+    if (joined) {
+        size_t used = 0;
+        if (json) {
+            joined[used++] = '{';
+        }
+        for (size_t i = 0; i < piece->version_count; i++) {
+            const char *name = version_name(piece, i);
+            used += (size_t)(json ? snprintf(joined + used, size - used, "%s\"%s\":%s", i > 0 ? "," : "", name, texts[i])
+                                  : snprintf(joined + used, size - used, "== %s version ==\n%s\n", name, texts[i]));
+        }
+        snprintf(joined + used, size - used, "%s", json ? "}\n" : "");
+    }
+    for (size_t i = 0; i < piece->version_count; i++) {
+        free(texts[i]);
+    }
+    for (size_t i = 0; i < built; i++) {
+        explain_destroy(&explanations[i]);
+    }
     return joined;
 }
 
@@ -639,7 +665,7 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
                   key, sizeof key);
     snprintf(meter, sizeof meter, "%d/%d", request->request.meter.beats_per_bar, request->request.meter.beat_unit);
     cJSON *document = cJSON_CreateObject();
-    cJSON *loop_region = api_piece_loop_json(piece->loop.plan);
+    cJSON *loop_region = api_piece_loop_json(piece->versions[0].plan);
     bool ok = document && cJSON_AddStringToObject(document, "schema", "ursatz-piece") &&
               cJSON_AddNumberToObject(document, "seed", (double)piece->seed) && cJSON_AddStringToObject(document, "key", key) &&
               cJSON_AddStringToObject(document, "meter", meter) && api_add(document, "brief", api_brief_json(&brief)) &&
@@ -659,8 +685,10 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
         ok = api_add(document, "regenerated", regenerated);
     }
     cJSON *versions = cJSON_CreateObject();
-    ok = ok && api_add(versions, "loop", api_piece_version_json(request, &piece->loop)) &&
-         api_add(versions, "ending", api_piece_version_json(request, &piece->ending)) && api_add(document, "versions", versions);
+    for (size_t i = 0; ok && i < piece->version_count; i++) {
+        ok = api_add(versions, version_name(piece, i), api_piece_version_json(request, &piece->versions[i]));
+    }
+    ok = ok && api_add(document, "versions", versions);
     if (!ok) {
         cJSON_Delete(versions);
         cJSON_Delete(document);
@@ -678,14 +706,14 @@ static ComposerStatus render_loop(const PieceSpec *request, const PieceMade *pie
     PlanExportOptions loop_options = request->export_options;
     Rational start;
     Rational end;
-    if (api_piece_loop_region(piece->loop.plan, &start, &end)) {
+    if (api_piece_loop_region(piece->versions[0].plan, &start, &end)) {
         loop_options.loop_markers = true;
         loop_options.loop_start = start;
         loop_options.loop_end = end;
     }
     RenderedPlan rendered;
     PlanExportError detail;
-    if (plan_export_render(piece->loop.plan, &rendered, &detail) != PLAN_EXPORT_OK) {
+    if (plan_export_render(piece->versions[0].plan, &rendered, &detail) != PLAN_EXPORT_OK) {
         return api_fail(&out->error, COMPOSER_ERR_REQUEST, outputs->midi ? "/midi" : "/musicxml", "cannot render the plan");
     }
     ComposerStatus status = COMPOSER_OK;
@@ -723,8 +751,11 @@ ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *pla
 static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, const PieceMade *piece, const PieceOutputs *outputs,
                                   ComposerResponse *out) {
     cJSON *plans = cJSON_CreateObject();
-    if (!api_add(plans, "loop", api_piece_plan_object(piece->loop.plan)) ||
-        !api_add(plans, "ending", api_piece_plan_object(piece->ending.plan)) || !api_add(document, "plans", plans)) {
+    bool plans_ok = plans != NULL;
+    for (size_t i = 0; plans_ok && i < piece->version_count; i++) {
+        plans_ok = api_add(plans, version_name(piece, i), api_piece_plan_object(piece->versions[i].plan));
+    }
+    if (!plans_ok || !api_add(document, "plans", plans)) {
         cJSON_Delete(plans);
         return api_fail_alloc(&out->error);
     }
@@ -738,7 +769,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
     }
     if (outputs->ending_musicxml) {
         char *text = NULL;
-        ComposerStatus status = api_piece_musicxml(request, piece->ending.plan, &text, &out->error);
+        ComposerStatus status = api_piece_musicxml(request, piece->versions[1].plan, &text, &out->error);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -749,7 +780,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
         }
     }
     PlanJsonError detail;
-    out->plan_json = plan_to_json(piece->loop.plan, &detail);
+    out->plan_json = plan_to_json(piece->versions[0].plan, &detail);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the plan: %s", detail.message);
     }
@@ -835,12 +866,18 @@ ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult resu
                         "mode; a progression must be readable and fit its section");
     }
     if (result == PIECE_ERR_STUCK) {
-        const PieceVersion *stuck = last->ending.composed && last->ending.outcome.stuck ? &last->ending : &last->loop;
+        const PieceVersion *stuck = &last->versions[0];
+        for (size_t i = last->version_count; i > 1; i--) {
+            if (last->versions[i - 1].composed && last->versions[i - 1].outcome.stuck) {
+                stuck = &last->versions[i - 1];
+                break;
+            }
+        }
         const ComposeRejection *rejection =
             stuck->outcome.rejection_count > 0 ? &stuck->outcome.rejections[stuck->outcome.rejection_count - 1] : NULL;
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
                         "no piece could be composed from seeds %lu to %lu (the last was stuck in the %s version, %s stage%s%s)%s",
-                        first_seed, last_seed, stuck == &last->ending ? "ending" : "loop",
+                        first_seed, last_seed, version_name(last, (size_t)(stuck - last->versions)),
                         rejection && rejection->stage[0] ? rejection->stage : "?", rejection ? ", " : "",
                         rejection ? rejection->reason : "",
                         rejection && (strcmp(rejection->stage, "seam") == 0 || strcmp(rejection->stage, "structure") == 0 ||
