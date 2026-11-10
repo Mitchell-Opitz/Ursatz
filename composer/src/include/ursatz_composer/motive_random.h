@@ -55,6 +55,40 @@ typedef enum {
     MOTIVE_RANDOM_ERR_ALLOC
 } MotiveRandomResult;
 
+/*
+ * What shapes a SEGMENTS motive (R-411). Every weighted list is whole numbers; a list whose entries sum to 0 draws its
+ * first entry, with no random number. The defaults are the values the generator was tuned to; with them (or with no
+ * preferences) a seed gives the motives it always gave. The DRAWN strategy does not read these.
+ *
+ *   bars              a motive of one bar, of two bars (one bar only in a meter of an even number of beats, four or more)
+ *   pickup_one_in     a pickup (half a beat or a beat) in one motive of this many; 0 never draws one
+ *   shapes_one_bar    a a' (repeat), a b (contrast), for a one-bar motive
+ *   shapes_two_bars   a a', a b, a a' b (repeat_contrast), for a two-bar motive (the third only with an even meter)
+ *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I
+ *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I
+ *   features          the distinctive feature of segment a: dotted figure, leap, repeated note
+ *   leap_low/high     the size of a leap, in semitones (a fourth to a sixth)
+ *   rung_moves        a walk on the chord tones moves one rung (step) or two (skip)
+ *   decorations       a note between frame notes: chord tone, passing, neighbor, appoggiatura, escape
+ *   durations         half beat, beat, two beats
+ */
+typedef struct {
+    unsigned long bars[2];
+    unsigned pickup_one_in;
+    unsigned long shapes_one_bar[2];
+    unsigned long shapes_two_bars[3];
+    unsigned long plans_two[3];
+    unsigned long plans_three[2];
+    unsigned long features[3];
+    int leap_low, leap_high;
+    unsigned long rung_moves[2];
+    unsigned long decorations[5];
+    unsigned long durations[3];
+} MotiveRandomPreferences;
+
+/* The defaults. */
+void motive_random_preferences_default(MotiveRandomPreferences *out);
+
 typedef struct {
     KeyStructureMode mode;
     PlanMeter meter;
@@ -68,6 +102,8 @@ typedef struct {
     /* How many motives, 1 to MOTIVE_RANDOM_MAX_COUNT. */
     size_t count;
     unsigned long seed;
+    /* The SEGMENTS strategy's settings. NULL for the defaults; not owned. */
+    const MotiveRandomPreferences *preferences;
 } MotiveRandomOptions;
 
 /* "ok", "meter" and so on. */
