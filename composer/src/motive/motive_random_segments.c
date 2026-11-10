@@ -102,6 +102,11 @@ static long step_of(long position) {
     return ((position % 7) + 7) % 7;
 }
 
+/* The alteration of a position on the chord of a degree: in minor, the third of V is raised. */
+static int chord_alteration(const AnalysisKey *key, int degree, long position) {
+    return key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && step_of(position - chord_shift(degree)) == 2 ? 1 : 0;
+}
+
 typedef struct {
     long ticks[MAX_NOTES];
     size_t count;
@@ -423,8 +428,8 @@ static bool draw_frame_a(const MotiveRandomPreferences *preferences, const Analy
  * by a number of rungs (an octave is three) so that it starts near the note before it; on the same chord it is moved at
  * least one rung, so it is not a copy.
  */
-static bool draw_frame_repeat(const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment, Place *place,
-                              Melody *melody) {
+static bool draw_frame_repeat(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment,
+                              Place *place, Melody *melody) {
     size_t first = layout->first[segment];
     size_t previous = first - 1;
     while (!place->frame[previous]) {
@@ -439,7 +444,7 @@ static bool draw_frame_repeat(const AnalysisKey *key, const Layout *layout, Fill
             continue;
         }
         if (set_frame(key, layout, place, melody, first, place->rung[layout->cell_start] + offset) &&
-            abs(melody->pitches[first] - before) <= SEGMENT_START_DISTANCE) {
+            abs(melody->pitches[first] - before) <= SEGMENT_START_DISTANCE && !(preferences->avoid_repeats && melody->pitches[first] == before)) {
             offsets[offset_count++] = offset;
         }
     }
@@ -476,6 +481,9 @@ static bool draw_frame_new(const MotiveRandomPreferences *preferences, const Ana
             continue;
         }
         int distance = abs(melody->pitches[first] - before);
+        if (preferences->avoid_repeats && distance == 0) {
+            continue;
+        }
         if (distance <= SEGMENT_START_DISTANCE) {
             near_rung[near_count++] = rung;
         }
@@ -503,6 +511,19 @@ static bool draw_frame_new(const MotiveRandomPreferences *preferences, const Ana
     return true;
 }
 
+/* The positions near the note before where a non-chord tone of a kind (1 to 4 of the decorations list) makes its figure. */
+static size_t find_figures(const AnalysisKey *key, const Melody *melody, size_t i, long before, long shift, size_t kind, long *options) {
+    size_t option_count = 0;
+    for (long p = before - OFF_FRAME_REACH; p <= before + OFF_FRAME_REACH; p++) {
+        int pitch = motive_position_pitch(key, p, 0);
+        if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+            motive_random_forms(MOTIVE_RANDOM_DECORATIONS[kind - 1], melody->pitches[i - 1], pitch, melody->pitches[i + 1])) {
+            options[option_count++] = p;
+        }
+    }
+    return option_count;
+}
+
 /*
  * The notes between frame notes: a type is drawn for each (or none), and a note takes a non-chord pitch near the note
  * before it that makes the figure with the notes either side, else a chord tone of its segment's chord near it.
@@ -520,14 +541,13 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
         long before = place->position[i - 1];
         size_t kind = pick_weighted(rng, preferences->decorations, DECORATION_KINDS + 1);
         long options[2 * OFF_FRAME_REACH + 1];
-        size_t option_count = 0;
-        if (kind > 0) {
-            for (long p = before - OFF_FRAME_REACH; p <= before + OFF_FRAME_REACH; p++) {
-                int pitch = motive_position_pitch(key, p, 0);
-                if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
-                    motive_random_forms(MOTIVE_RANDOM_DECORATIONS[kind - 1], melody->pitches[i - 1], pitch,
-                                        melody->pitches[i + 1])) {
-                    options[option_count++] = p;
+        size_t option_count = kind > 0 ? find_figures(key, melody, i, before, shift, kind, options) : 0;
+        if (option_count == 0 && preferences->avoid_repeats && kind > 0) {
+            /* the other kinds, in list order after the one drawn, before a chord tone */
+            for (size_t step = 1; step < DECORATION_KINDS && option_count == 0; step++) {
+                size_t other = 1 + (kind - 1 + step) % DECORATION_KINDS;
+                if (preferences->decorations[other] > 0 && (option_count = find_figures(key, melody, i, before, shift, other, options)) > 0) {
+                    kind = other;
                 }
             }
         }
@@ -538,8 +558,10 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
             melody->types[i] = MOTIVE_RANDOM_DECORATIONS[kind - 1];
         } else {
             for (long p = before - 4; p <= before + 4; p++) {
-                int alteration = key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && step_of(p - shift) == 2 ? 1 : 0;
-                if (motive_random_is_chord_step(p - shift) && motive_random_in_range(motive_position_pitch(key, p, alteration))) {
+                int alteration = chord_alteration(key, degree, p);
+                int pitch = motive_position_pitch(key, p, alteration);
+                if (motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+                    !(preferences->avoid_repeats && (pitch == melody->pitches[i - 1] || pitch == melody->pitches[i + 1]))) {
                     options[option_count++] = p;
                 }
             }
@@ -547,19 +569,11 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
                 return false;
             }
             place->position[i] = options[fill_rng_below(rng, option_count)];
-            place->alteration[i] = key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 &&
-                                           step_of(place->position[i] - shift) == 2
-                                       ? 1
-                                       : 0;
+            place->alteration[i] = chord_alteration(key, degree, place->position[i]);
         }
         melody->pitches[i] = pitch_of(key, place, i);
     }
     return true;
-}
-
-/* The alteration of a position on the chord of a degree: in minor, the third of V is raised. */
-static int chord_alteration(const AnalysisKey *key, int degree, long position) {
-    return key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && step_of(position - chord_shift(degree)) == 2 ? 1 : 0;
 }
 
 /* Note i keeps a non-chord tone `type` at position p, and the note after it takes the chord tone (a position and alteration). */
@@ -661,7 +675,7 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
         return false;
     }
     for (size_t s = 1; s < layout->segment_count; s++) {
-        if (!(layout->repeats[s] ? draw_frame_repeat(key, layout, rng, s, &place, melody)
+        if (!(layout->repeats[s] ? draw_frame_repeat(preferences, key, layout, rng, s, &place, melody)
                                  : draw_frame_new(preferences, key, layout, rng, s, &place, melody))) {
             return false;
         }
@@ -671,6 +685,14 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
     }
     if (!draw_decorations(preferences, key, layout, rng, &place, melody)) {
         return false;
+    }
+    if (preferences->avoid_repeats) {
+        for (size_t k = 0; k + 1 < layout->rhythm.count; k++) {
+            bool suspension = melody->decorated[k + 1] && melody->types[k + 1] == NON_CHORD_TONE_SUSPENSION;
+            if (melody->pitches[k] == melody->pitches[k + 1] && !suspension && !place.repeat_pair[k + 1]) {
+                return false;
+            }
+        }
     }
     int low = 127;
     int high = 0;
