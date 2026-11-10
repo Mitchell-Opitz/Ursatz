@@ -40,10 +40,10 @@ and answers.
 |---|---|---|
 | Motifs | `service/motif_service.c` | `composer_api_motive`, `_motive_from_midi`, `_motive_render`, `_random_motive`, `_recognize`, `_validate`, `_variants`, `_variant_operations`; it also builds the motive request of a motif and analyzes a motif body on save |
 | Themes | `service/theme_service.c` | `composer_api_theme` |
-| Pieces | `service/piece_service.c` | `composer_api_piece`, `_piece_variations` |
+| Pieces | `service/piece_service.c` | `composer_api_piece`, `_piece_variations`; a piece of any form: one plan, MIDI and MusicXML file for each version of its form (R-430) |
 | Export | `service/compose_common.c` | `composer_api_export` |
 | Material export | `service/material_export_service.c` | `composer_api_motive_render` (through `motif_service.c`); it gathers the MusicXML and the store values and the Analyzer's `analyzer_text_export_material` writes the text (`GET /api/materials/items/<id>/export`) |
-| Build and vocabulary | `service/composer_client.c` | `composer_api_versions`, `_vocabulary`; the reply type, `ursatz_gui_composer_reply_refused` and `_failure_status` |
+| Build, vocabulary and forms | `service/composer_client.c` | `composer_api_versions`, `_vocabulary`, `_forms`; the reply type, `ursatz_gui_composer_reply_refused` and `_failure_status` |
 
 `routes/composer.c` answers the status route with `composer_api_versions` itself and the vocabulary route from
 `composer_client.c`; `routes/materials.c`, `routes/links.c` and the other routes call no `composer_api_*` entry. The material store's one-time migrations (`ursatz_gui_material_migrate_tones`,

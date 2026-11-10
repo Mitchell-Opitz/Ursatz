@@ -121,10 +121,10 @@ in the motif's stored key (C major or C minor). Nothing is saved.
   versions from `composer_api_versions`). A request with the same key, tempo
   and Composer build and Ursatz commit reads these files, an older cache missing once, so the Composer runs at most once
   per version and key.
-- `GET /api/materials/items/<id>/versions/<n>/playback?file=theme|loop|ending`
-  answers the playback of a theme or piece version's `theme.mid`, `loop.mid`
-  or `ending.mid` (400 for another `file`, 404 when the version has no such
-  file).
+- `GET /api/materials/items/<id>/versions/<n>/playback?file=theme|<name>` (`loop`, `ending`, `piece`: a version name of the piece's form)
+  answers the playback of a theme or piece version's `theme.mid` or `<name>.mid`
+  (400 for a `file` outside the version name pattern, 404 when the version has no
+  such file).
 - `GET /api/materials/items/<pce-id>/versions/<n>/variations/<k>/<file>/playback`
   answers the playback of a variation's MIDI file (`variation-<i>.mid`; 404 for
   any other file).
