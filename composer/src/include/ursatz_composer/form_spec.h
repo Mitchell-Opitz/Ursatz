@@ -143,6 +143,16 @@ typedef struct {
 FormSpecResult form_spec_parse(const char *json, FormSpec **out, FormSpecError *error);
 void form_spec_destroy(FormSpec *form);
 
+/*
+ * The size of the form a request asks for. bars 0 and count 0 give the default size; a count only for a form whose
+ * sizes have counts, and it picks the size with that count (bars, when given, must match); bars alone pick the size
+ * with those bars (the first, when two have them). NULL when the form has no such size, and for a form whose sections
+ * the request gives.
+ */
+const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t count);
+/* The default size; NULL for a form with no sizes. */
+const FormSpecSize *form_spec_default_size(const FormSpec *form);
+
 /* The index of the region with that name, or -1. */
 int form_spec_region_find(const FormSpec *form, const char *name);
 

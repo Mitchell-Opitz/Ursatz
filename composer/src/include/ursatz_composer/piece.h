@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/form_template.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
@@ -83,7 +84,13 @@ size_t piece_material_bars_of(size_t section_count, size_t motive_bars);
  */
 bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *idea_bars);
 
-/* Builds the plan of the request into *out, which the caller destroys with plan_destroy. */
+/*
+ * Builds the plan of the request into *out, which the caller destroys with plan_destroy, from the form document: the one
+ * builder of every form (R-416). A form whose sections the request gives is built by piece_structure.h until P44 B5.
+ */
+PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out);
+
+/* Builds the plan of the request into *out: form_build_plan with the built-in form named request->form (BAD_REQUEST for none). */
 PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out);
 
 #endif
