@@ -13,6 +13,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "cli_options.h"
+#include "motive_input.h"
 
 /* The most samples one run makes, and the largest seed a run starts from (seed + index stays a valid seed). */
 #define LISTEN_COUNT_MAX 64
@@ -33,6 +34,17 @@ typedef struct {
     const char *style_path;
     const char *tempo_text;
     const char *strategy_text;
+    const char *into_text;
+    const char *development_text;
+    const char *bars_text;
+    const char *motif_path;
+    const char *theme_request_path;
+    const char *blend_path;
+    const char *blend_weight_text;
+    const char *blend_weights_text;
+    bool check;
+    bool themes;
+    bool meter_given;
     unsigned long count;
     unsigned long seed;
 } Options;
@@ -47,11 +59,11 @@ typedef struct {
 
 static void print_help(FILE *out) {
     fprintf(out, "Usage:\n%s\n\n", LISTEN_USAGE_LINE + 7);
-    fprintf(out, "Makes a batch of motifs from fixed seeds, with a settings file, and writes them as files a listening\n");
+    fprintf(out, "Makes a batch of motifs or themes from fixed seeds, with a settings file, and writes them as files a listening\n");
     fprintf(out, "session plays and reads. Sample i (from 0) uses the seed --seed + i, so the same options, settings and seed\n");
     fprintf(out, "give the same files. See docs/cli-listen.md.\n\n");
     fprintf(out, "Options:\n");
-    fprintf(out, "  --what <what>        motifs (required)\n");
+    fprintf(out, "  --what <what>        motifs or themes (required)\n");
     fprintf(out, "  --out-dir <dir>      where the files are written; created if missing (required)\n");
     fprintf(out, "  --count <n>          how many samples, 1 to %d (default %d)\n", LISTEN_COUNT_MAX, LISTEN_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0 for the first sample (default 1)\n");
@@ -59,11 +71,23 @@ static void print_help(FILE *out) {
     fprintf(out, "  --print-settings     print the default preferences document and exit\n");
     fprintf(out, "  --mode <mode>        major (default) or minor\n");
     fprintf(out, "  --meter <n/m>        beats over a beat unit (default 4/4)\n");
-    fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motif and keep the closest\n");
+    fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motif and keep the closest; themes prefer it too\n");
+    fprintf(out, "  --blend <file>       themes: a second style model file, blended with --style (needs --style)\n");
+    fprintf(out, "  --blend-weight <n/d> themes: the second style's share in every dimension, 0 to 1\n");
+    fprintf(out, "  --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d>\n");
+    fprintf(out, "                       themes: the share per dimension\n");
     fprintf(out, "  --tempo <bpm>        MIDI and MusicXML: quarter notes per minute from 20 to 400\n");
-    fprintf(out, "  --strategy <name>    segments (default) or drawn\n");
+    fprintf(out, "  --strategy <name>    motifs, and the generated motif of a theme: segments (default) or drawn\n");
+    fprintf(out, "Themes:\n");
+    fprintf(out, "  --into <pairing>     sentence (default) or period\n");
+    fprintf(out, "  --development <d>    melody, balanced (default) or theme\n");
+    fprintf(out, "  --bars <n>           4 or 8 (default 8)\n");
+    fprintf(out, "  --check              pass over a seed whose analysis contradicts the plan\n");
+    fprintf(out, "  --motif <file>       the motif of every theme: anything the motive command reads. Default: a generated motif\n");
+    fprintf(out, "                       for each sample\n");
+    fprintf(out, "  --theme-request <file> a theme request (docs/theme-request.md) with the sample's seed, instead of a motif\n");
     fprintf(out, "  --help               this text\n\n");
-    fprintf(out, "Files, i from 01: <i>.mid, <i>.musicxml, <i>.json (the API response) and one line per sample in listen.jsonl.\n");
+    fprintf(out, "\nFiles, i from 01: <i>.mid, <i>.musicxml, <i>.json (the API response) and one line per sample in listen.jsonl.\n");
     fprintf(out, "Exit status: 0 at least one sample was written; 1 usage, an invalid option or an unreadable file; 2 none could\n");
     fprintf(out, "be composed; 3 an output file could not be written.\n\n");
     fprintf(out, "Example:\n");
@@ -79,6 +103,8 @@ static int read_options(int argc, char **argv, Options *options) {
             options->help = true;
         } else if (strcmp(arg, "--print-settings") == 0) {
             options->print_settings = true;
+        } else if (strcmp(arg, "--check") == 0) {
+            options->check = true;
         } else if (strcmp(arg, "--what") == 0) {
             target = &options->what_text;
         } else if (strcmp(arg, "--count") == 0) {
@@ -99,6 +125,22 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->tempo_text;
         } else if (strcmp(arg, "--strategy") == 0) {
             target = &options->strategy_text;
+        } else if (strcmp(arg, "--into") == 0) {
+            target = &options->into_text;
+        } else if (strcmp(arg, "--development") == 0) {
+            target = &options->development_text;
+        } else if (strcmp(arg, "--bars") == 0) {
+            target = &options->bars_text;
+        } else if (strcmp(arg, "--motif") == 0) {
+            target = &options->motif_path;
+        } else if (strcmp(arg, "--theme-request") == 0) {
+            target = &options->theme_request_path;
+        } else if (strcmp(arg, "--blend") == 0) {
+            target = &options->blend_path;
+        } else if (strcmp(arg, "--blend-weight") == 0) {
+            target = &options->blend_weight_text;
+        } else if (strcmp(arg, "--blend-weights") == 0) {
+            target = &options->blend_weights_text;
         } else {
             return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz-composer listen --help)", arg);
         }
@@ -116,8 +158,42 @@ static int read_options(int argc, char **argv, Options *options) {
 }
 
 static int check_options(Options *options) {
-    if (!options->what_text || strcmp(options->what_text, "motifs") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--what must be motifs\n%s", LISTEN_USAGE_LINE);
+    if (!options->what_text || (strcmp(options->what_text, "motifs") != 0 && strcmp(options->what_text, "themes") != 0)) {
+        return cli_fail(CLI_EXIT_USAGE, "--what must be motifs or themes\n%s", LISTEN_USAGE_LINE);
+    }
+    options->themes = strcmp(options->what_text, "themes") == 0;
+    if (!options->themes && (options->into_text || options->development_text || options->bars_text || options->motif_path ||
+                             options->theme_request_path || options->blend_path || options->blend_weight_text ||
+                             options->blend_weights_text || options->check)) {
+        return cli_fail(CLI_EXIT_USAGE, "--into, --development, --bars, --check, --motif, --theme-request and the --blend options need --what themes");
+    }
+    if (options->motif_path && options->theme_request_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--motif and --theme-request cannot be given together");
+    }
+    if ((options->blend_weight_text || options->blend_weights_text) && !options->blend_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--blend-weight and --blend-weights need --blend");
+    }
+    if (options->blend_path && !options->style_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--blend needs --style");
+    }
+    if (options->into_text && strcmp(options->into_text, "sentence") != 0 && strcmp(options->into_text, "period") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--into must be sentence or period, not '%s'", options->into_text);
+    }
+    if (options->development_text && strcmp(options->development_text, "melody") != 0 &&
+        strcmp(options->development_text, "balanced") != 0 && strcmp(options->development_text, "theme") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--development must be melody, balanced or theme, not '%s'", options->development_text);
+    }
+    if (options->bars_text && strcmp(options->bars_text, "4") != 0 && strcmp(options->bars_text, "8") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--bars must be 4 or 8, not '%s'", options->bars_text);
+    }
+    if (!options->into_text) {
+        options->into_text = "sentence";
+    }
+    if (!options->development_text) {
+        options->development_text = "balanced";
+    }
+    if (!options->bars_text) {
+        options->bars_text = "8";
     }
     if (!options->out_dir) {
         return cli_fail(CLI_EXIT_USAGE, "listen needs --out-dir <dir>\n%s", LISTEN_USAGE_LINE);
@@ -139,6 +215,7 @@ static int check_options(Options *options) {
     if (strcmp(options->mode_text, "major") != 0 && strcmp(options->mode_text, "minor") != 0) {
         return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
     }
+    options->meter_given = options->meter_text != NULL;
     if (!options->meter_text) {
         options->meter_text = "4/4";
     }
@@ -249,11 +326,13 @@ static int manifest_add(const Manifest *manifest, unsigned long index, unsigned 
         ok = cJSON_AddItemToArray(files, cJSON_CreateString(sample->files[i]));
     }
     ok = ok && cJSON_AddNumberToObject(line, "index", (double)index) && cJSON_AddNumberToObject(line, "seed", (double)seed) &&
-         cJSON_AddStringToObject(line, "what", manifest->options->what_text) && cJSON_AddStringToObject(line, "motif", "generated") &&
-         cJSON_AddNullToObject(line, "theme_request");
+         cJSON_AddStringToObject(line, "what", manifest->options->what_text) && cJSON_AddStringToObject(line, "motif", manifest->options->motif_path ? manifest->options->motif_path : "generated") &&
+         (manifest->options->theme_request_path ? cJSON_AddStringToObject(line, "theme_request", manifest->options->theme_request_path) != NULL
+                                                : cJSON_AddNullToObject(line, "theme_request") != NULL);
     ok = ok && (manifest->options->style_path ? cJSON_AddStringToObject(line, "style", manifest->options->style_path)
                                               : cJSON_AddNullToObject(line, "style"));
-    ok = ok && cJSON_AddNullToObject(line, "blend");
+    ok = ok && (manifest->options->blend_path ? cJSON_AddStringToObject(line, "blend", manifest->options->blend_path) != NULL
+                                              : cJSON_AddNullToObject(line, "blend") != NULL);
     ok = ok && (manifest->options->settings_path ? cJSON_AddStringToObject(line, "settings", manifest->options->settings_path)
                                                  : cJSON_AddNullToObject(line, "settings"));
     ok = ok && (manifest->preferences ? cJSON_AddItemToObject(line, "preferences", cJSON_Duplicate(manifest->preferences, true))
@@ -373,6 +452,200 @@ static int make_motif(const Options *options, unsigned long index, unsigned long
     return result;
 }
 
+/* --- themes ---------------------------------------------------------------------------------- */
+
+/* Sets a member of an object, replacing one of the same name (item is consumed). */
+static bool set_member(cJSON *object, const char *name, cJSON *item) {
+    if (!item) {
+        return false;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(object, name);
+    return cJSON_AddItemToObject(object, name, item);
+}
+
+/* The style, blend and tempo members of the options, and check, on a theme request. */
+static bool add_brief(cJSON *request, const Options *options) {
+    bool ok = true;
+    const struct {
+        const char *name;
+        const char *text;
+    } texts[] = {{"style", options->style_path},
+                 {"blend", options->blend_path},
+                 {"blend_weight", options->blend_weight_text},
+                 {"blend_weights", options->blend_weights_text},
+                 {"tempo", options->tempo_text}};
+    for (size_t i = 0; ok && i < sizeof texts / sizeof texts[0]; i++) {
+        ok = !texts[i].text || set_member(request, texts[i].name, cJSON_CreateString(texts[i].text));
+    }
+    return ok && (!options->check || set_member(request, "check", cJSON_CreateTrue()));
+}
+
+/* The members every theme request takes from the sample: the seed, one theme, both files, the settings. */
+static bool add_sample(cJSON *request, unsigned long seed, const cJSON *preferences) {
+    char number[32];
+    return set_member(request, "seed", cJSON_CreateString(seed_text(seed, number, sizeof number))) &&
+           set_member(request, "suggest", cJSON_CreateString("1")) && set_member(request, "midi", cJSON_CreateTrue()) &&
+           set_member(request, "musicxml", cJSON_CreateTrue()) &&
+           (!preferences || set_member(request, "preferences", cJSON_Duplicate(preferences, true)));
+}
+
+/* The motif as the `motive` command reads it: the motive document {"motive", "analysis"} the API answers with, in key C. */
+static int read_motif_file(const Options *options, cJSON **document) {
+    char key[16];
+    snprintf(key, sizeof key, "C %s", options->mode_text);
+    MotiveInput input;
+    memset(&input, 0, sizeof input);
+    input.path = options->motif_path;
+    input.meter_text = options->meter_given ? options->meter_text : NULL;
+    input.key_text = key;
+    cJSON *request = NULL;
+    MotiveFile file;
+    memset(&file, 0, sizeof file);
+    int status = motive_input_text_request(&input, &request, &file);
+    if (status != 0) {
+        return status;
+    }
+    /* A MIDI file was read already; its motive is the text input of the request. */
+    ComposerResponse response;
+    ComposerStatus called = call(composer_api_motive, request, &response);
+    if (called != COMPOSER_OK) {
+        MotiveInputNames names = {options->motif_path, NULL, NULL, NULL};
+        status = motive_input_fail(&file, called, &response.error, &names);
+    } else {
+        *document = cJSON_Parse(response.json);
+        status = *document ? 0 : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    composer_response_destroy(&response);
+    return status;
+}
+
+/* The same analysis for a generated motive of a random motive response. */
+static ComposerStatus analyze_motive(const cJSON *motive, ComposerResponse *response) {
+    cJSON *request = cJSON_CreateObject();
+    cJSON *input = request ? cJSON_AddObjectToObject(request, "input") : NULL;
+    char *text = motive ? cJSON_PrintUnformatted(motive) : NULL;
+    bool ok = input && text && cJSON_AddStringToObject(input, "format", "json") && cJSON_AddStringToObject(input, "text", text);
+    cJSON_free(text);
+    if (!ok) {
+        cJSON_Delete(request);
+        request = NULL;
+    }
+    return call(composer_api_motive, request, response);
+}
+
+/* The theme request of a motive document: key C, the options as the brief, the motive as M1 in the basic slot. */
+static cJSON *theme_request_from_motive(const Options *options, const cJSON *document, unsigned long seed,
+                                        const cJSON *preferences) {
+    const cJSON *motive = cJSON_GetObjectItemCaseSensitive(document, "motive");
+    const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
+    const cJSON *degrees = cJSON_GetObjectItemCaseSensitive(analysis, "degrees_text");
+    const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(analysis, "pickup");
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(motive, "harmony");
+    const cJSON *features = cJSON_GetObjectItemCaseSensitive(motive, "features");
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motive, "meter");
+    if (!cJSON_IsString(degrees)) {
+        return NULL;
+    }
+    char meter_text[32];
+    const cJSON *beats = cJSON_GetObjectItemCaseSensitive(meter, "beats_per_bar");
+    const cJSON *unit = cJSON_GetObjectItemCaseSensitive(meter, "beat_unit");
+    if (options->meter_given || !cJSON_IsNumber(beats) || !cJSON_IsNumber(unit)) {
+        snprintf(meter_text, sizeof meter_text, "%s", options->meter_text);
+    } else {
+        snprintf(meter_text, sizeof meter_text, "%.0f/%.0f", beats->valuedouble, unit->valuedouble);
+    }
+    cJSON *request = cJSON_CreateObject();
+    cJSON *list = request ? cJSON_AddArrayToObject(request, "motives") : NULL;
+    cJSON *entry = list ? cJSON_CreateObject() : NULL;
+    cJSON *slots = request ? cJSON_CreateObject() : NULL;
+    bool ok = entry && slots && cJSON_AddItemToArray(list, entry) && cJSON_AddItemToObject(request, "slots", slots);
+    if (!ok) {
+        cJSON_Delete(slots);
+        cJSON_Delete(request);
+        return NULL;
+    }
+    ok = cJSON_AddStringToObject(request, "schema", "ursatz-theme-request") && cJSON_AddNumberToObject(request, "schema_version", 2) &&
+         cJSON_AddStringToObject(request, "into", options->into_text) && cJSON_AddStringToObject(request, "key", "C") &&
+         cJSON_AddStringToObject(request, "mode", options->mode_text) && cJSON_AddStringToObject(request, "meter", meter_text) &&
+         cJSON_AddNumberToObject(request, "bars", options->bars_text[0] - '0') &&
+         cJSON_AddStringToObject(request, "development", options->development_text) &&
+         cJSON_AddStringToObject(entry, "id", "M1") && cJSON_AddStringToObject(entry, "form", "full") &&
+         cJSON_AddStringToObject(entry, "degrees", degrees->valuestring) &&
+         cJSON_AddStringToObject(entry, "pickup", cJSON_IsString(pickup) ? pickup->valuestring : "0") &&
+         (cJSON_IsString(harmony) && harmony->valuestring[0] ? cJSON_AddStringToObject(entry, "harmony", harmony->valuestring) != NULL
+                                                              : cJSON_AddNullToObject(entry, "harmony") != NULL) &&
+         cJSON_AddItemToObject(entry, "features", cJSON_IsArray(features) ? cJSON_Duplicate(features, true) : cJSON_CreateArray()) &&
+         cJSON_AddStringToObject(entry, "role", "melodic") && cJSON_AddStringToObject(slots, "basic", "M1") &&
+         add_brief(request, options) && add_sample(request, seed, preferences);
+    if (!ok) {
+        cJSON_Delete(request);
+        return NULL;
+    }
+    return request;
+}
+
+/* One theme: the request composed, with its MIDI, MusicXML and API response written. */
+static int make_theme(const Options *options, unsigned long index, unsigned long seed, const cJSON *preferences,
+                      const cJSON *motif_document, const cJSON *theme_request, Sample *sample) {
+    cJSON *request = NULL;
+    if (theme_request) {
+        request = cJSON_Duplicate(theme_request, true);
+        if (request && !(add_brief(request, options) && add_sample(request, seed, preferences))) {
+            cJSON_Delete(request);
+            request = NULL;
+        }
+    } else if (motif_document) {
+        request = theme_request_from_motive(options, motif_document, seed, preferences);
+    } else {
+        ComposerResponse drawn;
+        ComposerStatus status = call(composer_api_random_motive, random_motive_request(options, seed, preferences), &drawn);
+        if (status != COMPOSER_OK) {
+            refuse(sample, status, &drawn.error);
+            composer_response_destroy(&drawn);
+            return 0;
+        }
+        cJSON *document = cJSON_Parse(drawn.json);
+        composer_response_destroy(&drawn);
+        const cJSON *first = document ? cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "motives"), 0) : NULL;
+        ComposerResponse analyzed;
+        status = analyze_motive(cJSON_GetObjectItemCaseSensitive(first, "motive"), &analyzed);
+        cJSON_Delete(document);
+        if (status != COMPOSER_OK) {
+            refuse(sample, status, &analyzed.error);
+            composer_response_destroy(&analyzed);
+            return 0;
+        }
+        cJSON *analysis = cJSON_Parse(analyzed.json);
+        composer_response_destroy(&analyzed);
+        request = analysis ? theme_request_from_motive(options, analysis, seed, preferences) : NULL;
+        cJSON_Delete(analysis);
+    }
+    if (!request) {
+        snprintf(sample->status, sizeof sample->status, "refused: the theme request could not be built");
+        return 0;
+    }
+    ComposerResponse response;
+    ComposerStatus status = call(composer_api_theme, request, &response);
+    if (status != COMPOSER_OK) {
+        refuse(sample, status, &response.error);
+        composer_response_destroy(&response);
+        return 0;
+    }
+    int result = write_sample_file(options, index, ".mid", response.midi, response.midi_size, sample);
+    if (result == 0) {
+        result = write_sample_file(options, index, ".musicxml", response.musicxml, strlen(response.musicxml), sample);
+    }
+    if (result == 0) {
+        result = write_sample_file(options, index, ".json", response.json, strlen(response.json), sample);
+    }
+    composer_response_destroy(&response);
+    if (result == 0) {
+        sample->ok = true;
+        snprintf(sample->status, sizeof sample->status, "ok");
+    }
+    return result;
+}
+
 /* A request the API would refuse (the mode, meter, strategy, style or settings) is a usage error, not a refused sample. */
 static int validate_options(const Options *options, const cJSON *preferences) {
     ComposerResponse response;
@@ -425,6 +698,22 @@ int run_listen(int argc, char **argv) {
     if (options.style_path) {
         status = check_readable(options.style_path, "style file");
     }
+    if (status == 0 && options.blend_path) {
+        status = check_readable(options.blend_path, "blend file");
+    }
+    cJSON *theme_request = NULL;
+    if (status == 0 && options.theme_request_path) {
+        status = read_json_file(options.theme_request_path, "theme request", &theme_request);
+        if (status == 0 && !cJSON_IsObject(theme_request)) {
+            status = cli_fail(CLI_EXIT_USAGE, "theme request '%s' is not a JSON object", options.theme_request_path);
+        }
+    }
+    /* What is sent: the settings file, else the preferences the theme request carries. */
+    const cJSON *sent = preferences ? preferences : cJSON_GetObjectItemCaseSensitive(theme_request, "preferences");
+    cJSON *motif_document = NULL;
+    if (status == 0 && options.motif_path) {
+        status = read_motif_file(&options, &motif_document);
+    }
     if (status == 0) {
         status = validate_options(&options, preferences);
     }
@@ -440,12 +729,13 @@ int run_listen(int argc, char **argv) {
             status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", manifest_path);
         }
     }
-    Manifest manifest = {file, &options, preferences};
+    Manifest manifest = {file, &options, sent};
     unsigned long written = 0;
     for (unsigned long i = 0; status == 0 && i < options.count; i++) {
         Sample sample;
         memset(&sample, 0, sizeof sample);
-        status = make_motif(&options, i + 1, options.seed + i, preferences, &sample);
+        status = options.themes ? make_theme(&options, i + 1, options.seed + i, preferences, motif_document, theme_request, &sample)
+                                : make_motif(&options, i + 1, options.seed + i, preferences, &sample);
         if (status == 0) {
             status = manifest_add(&manifest, i + 1, options.seed + i, &sample);
         }
@@ -458,6 +748,8 @@ int run_listen(int argc, char **argv) {
         fclose(file);
     }
     cJSON_Delete(preferences);
+    cJSON_Delete(theme_request);
+    cJSON_Delete(motif_document);
     if (status != 0) {
         return status;
     }
