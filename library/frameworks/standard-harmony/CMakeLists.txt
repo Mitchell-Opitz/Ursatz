@@ -13,6 +13,7 @@ add_library(standard_harmony
     harmony_phrase_labels.c
     harmony_phrase_label_rules.c
     harmony_cadence_rules.c
+    harmony_cadence_kinds.c
     harmony_hearing_rules.c
     harmony_writing_rules.c
     harmony_seventh_rules.c
@@ -81,6 +82,7 @@ ursatz_public_headers(standard_harmony
         analysis/analysis_voices.h
         harmonic_function.h
         harmony_applied.h
+        harmony_cadence_kinds.h
         harmony_cadence_rules.h
         harmony_chord.h
         harmony_deceptive.h
