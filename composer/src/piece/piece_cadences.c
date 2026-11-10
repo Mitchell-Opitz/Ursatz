@@ -22,30 +22,36 @@ static size_t sections_of(const PiecePlan *plan, NodeId *sections) {
             PlanConstraintKind kind = plan_node_constraint_at(plan, child, c)->kind;
             material = material || kind == PLAN_CONSTRAINT_MATERIAL || kind == PLAN_CONSTRAINT_SEAM;
         }
-        if (!material && count < FORM_TEMPLATE_MAX_SECTIONS) {
+        if (!material && count < FORM_SPEC_MAX_SECTIONS) {
             sections[count++] = child;
         }
     }
     return count;
 }
 
-/* Whether the template ends the piece with a cadence (the forms the plan sets cadences for). */
-static bool closing_form(FormTemplateKind kind) {
-    return kind == FORM_TEMPLATE_BINARY || kind == FORM_TEMPLATE_ROUNDED_BINARY || kind == FORM_TEMPLATE_TERNARY ||
-           kind == FORM_TEMPLATE_VARIATIONS;
-}
-
-/* Whether the template lets the section close in the home key with a PAC before the piece ends. */
-static bool closed_section(FormTemplateKind kind, size_t index) {
-    switch (kind) {
-    case FORM_TEMPLATE_TERNARY:
-    case FORM_TEMPLATE_ROUNDED_BINARY:
-        return index == 0;
-    case FORM_TEMPLATE_VARIATIONS:
-        return true;
-    default:
-        return false;
+/*
+ * The size of the form whose sections the plan has: as many, in the same proportions (a size of the form at another
+ * scale has the same sections in the same places). The first such size; NULL for none.
+ */
+static const FormSpecSize *size_of_plan(const FormSpec *form, const PiecePlan *plan, const NodeId *sections, size_t count) {
+    for (size_t z = 0; z < form->size_count; z++) {
+        const FormSpecSize *size = &form->sizes[z];
+        bool match = size->section_count == count && size->sections[0].bars > 0;
+        Rational first = plan_node_span(plan, sections[0]).length;
+        for (size_t i = 1; match && i < count; i++) {
+            Rational left;
+            Rational right;
+            match = size->sections[i].bars > 0 &&
+                    rational_mul_int(plan_node_span(plan, sections[i]).length, (long long)size->sections[0].bars, &left) ==
+                        RATIONAL_OK &&
+                    rational_mul_int(first, (long long)size->sections[i].bars, &right) == RATIONAL_OK &&
+                    rational_cmp(left, right) == 0;
+        }
+        if (match) {
+            return size;
+        }
     }
+    return NULL;
 }
 
 /* The cadences of the section in order: the one it ends in, then an antecedent's weak one. Returns how many. */
@@ -95,18 +101,16 @@ static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const C
     return PIECE_OK;
 }
 
-PieceResult piece_plan_cadences(PiecePlan *plan, const PieceKeyPlan *keys) {
-    if (!plan || !keys) {
+PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const FormSpecSize *size, const PieceKeyPlan *keys) {
+    if (!plan || !form || !size || !keys) {
         return PIECE_ERR_NULL;
     }
-    FormTemplateKind kind;
-    const char *name = plan_node_name(plan, plan_root(plan));
-    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
-    if (!name || !form_template_from_name(name, &kind) || count != keys->count || count == 0) {
+    if (count != keys->count || count != size->section_count || count == 0) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    if (!closing_form(kind)) {
+    if (!form->closing) {
         return PIECE_OK;
     }
     AnalysisKey home = keys->sections[0].start;
@@ -119,7 +123,7 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const PieceKeyPlan *keys) {
         CadenceType wanted = cadences[0];
         if (i + 1 == count || !analysis_key_equals(&keys->sections[i].end, &home)) {
             wanted = CADENCE_TYPE_PERFECT_AUTHENTIC;
-        } else if (wanted == CADENCE_TYPE_PERFECT_AUTHENTIC && !closed_section(kind, i)) {
+        } else if (wanted == CADENCE_TYPE_PERFECT_AUTHENTIC && !size->sections[i].closed) {
             wanted = CADENCE_TYPE_HALF;
         }
         if (wanted != cadences[0]) {
@@ -133,26 +137,43 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const PieceKeyPlan *keys) {
     return PIECE_OK;
 }
 
+static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out);
+
 static void fail(PieceCadenceCheck *out, const char *what, size_t section) {
     out->ok = false;
     snprintf(out->reason, sizeof(out->reason), "%s (section %zu)", what, section);
 }
 
-bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
+bool piece_check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out) {
     if (!plan || !out) {
         return false;
     }
     memset(out, 0, sizeof(*out));
     out->ok = true;
-    FormTemplateKind kind;
-    const char *name = plan_node_name(plan, plan_root(plan));
-    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+    FormSpec *owned = NULL;
+    if (!form) {
+        if (form_spec_builtin_for_plan(plan, &owned) != FORM_SPEC_OK) {
+            return false;
+        }
+        form = owned;
+    }
+    bool read = check_cadences(plan, form, out);
+    form_spec_destroy(owned);
+    return read;
+}
+
+static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out) {
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
-    if (!name || !form_template_from_name(name, &kind) || count == 0) {
+    if (count == 0) {
         return false;
     }
-    if (!closing_form(kind)) {
+    if (!form->closing) {
         return true;
+    }
+    const FormSpecSize *size = size_of_plan(form, plan, sections, count);
+    if (!size) {
+        return false;
     }
     LaneSpanId first_key;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, sections[0]), &first_key, 1) == 0) {
@@ -169,7 +190,7 @@ bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
         bool away = !analysis_key_equals(&ends_in, &home);
         if (away && cadences[0] != CADENCE_TYPE_PERFECT_AUTHENTIC && cadences[0] != CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
             fail(out, "a section ends in another key without an authentic cadence", i);
-        } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !closed_section(kind, i)) {
+        } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !size->sections[i].closed) {
             fail(out, "a section closes in the home key before the piece ends", i);
         }
         if (i + 1 == count) {

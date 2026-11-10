@@ -499,10 +499,12 @@ static bool section_in_scope(const ComposeConfig *config, NodeId section) {
     return false;
 }
 
-static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
+/* Hears what the form's checks ask for: each theme section as its shape (FORM_CHECK_SECTIONS), the returns (FORM_CHECK_RETURNS). */
+static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *themes, size_t theme_count, unsigned checks,
+                 ComposeOutcome *outcome) {
     unsigned long numerator = 0;
     unsigned long denominator = 0;
-    for (size_t t = 0; t < theme_count; t++) {
+    for (size_t t = 0; (checks & FORM_CHECK_SECTIONS) && t < theme_count; t++) {
         ComposeHeard *heard = &outcome->sections[t];
         if (!heard->in_scope) {
             continue;
@@ -513,7 +515,9 @@ static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *
         /* A free phrase asks for no form to be heard as: only its structure's score counts. */
         denominator += heard->structure.denominator + (heard->requested_form >= 0 ? 1 : 0);
     }
-    hear_returns(hearing, plan, themes, theme_count, outcome);
+    if (checks & FORM_CHECK_RETURNS) {
+        hear_returns(hearing, plan, themes, theme_count, outcome);
+    }
     numerator += outcome->returns_heard;
     denominator += outcome->returns_planned;
     outcome->score.numerator = numerator;
@@ -882,7 +886,7 @@ static PieceResult run_seam(Run *run) {
 
 /* One run of the stages. offset is added to every seed. A run that ends OK leaves *hearing, the one hearing of the
    finished plan that every check of the run reads; the caller destroys it. */
-static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsigned long offset,
+static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsigned checks, unsigned long offset,
                             ComposeOutcome *outcome, ComposerHearing **hearing) {
     NodeId *themes;
     size_t theme_count;
@@ -958,8 +962,10 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
         HearingResult made = hearing_create(plan, hearing);
         result = made == HEARING_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_OK;
         if (result == PIECE_OK) {
-            hear(*hearing, plan, themes, theme_count, outcome);
-            hear_seam(plan, outcome);
+            hear(*hearing, plan, themes, theme_count, checks, outcome);
+            if (checks & FORM_CHECK_SEAM) {
+                hear_seam(plan, outcome);
+            }
         }
     }
     free(themes);
@@ -973,8 +979,13 @@ static bool has_key_changes(const PiecePlan *plan) {
 }
 
 /* The checks of a plan with several keys; PIECE_ERR_STUCK, marked in the outcome, when it fails them. */
-static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, ComposeOutcome *outcome) {
-    bool read = piece_check_keys_in(hearing, plan, &outcome->key_check) && piece_check_cadences(plan, &outcome->cadence_check);
+static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, const FormSpec *form, unsigned checks,
+                              ComposeOutcome *outcome) {
+    /* A check the form does not name is not run: its result stays as the outcome was cleared, ok. */
+    outcome->key_check.ok = true;
+    outcome->cadence_check.ok = true;
+    bool read = (!(checks & FORM_CHECK_KEYS) || piece_check_keys_in(hearing, plan, &outcome->key_check)) &&
+                (!(checks & FORM_CHECK_CADENCES) || piece_check_cadences(plan, form, &outcome->cadence_check));
     if (read && outcome->key_check.ok && outcome->cadence_check.ok) {
         return PIECE_OK;
     }
@@ -1132,6 +1143,14 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
      * it lets fit. The plan as it was given is kept, and a run that is stuck starts again from it with other seeds,
      * a few times; the first run is always the one with the seeds the configuration names.
      */
+    /* The checks the plan's form names (form_spec.h): the config's form, else the built-in the plan is named for; a plan
+       of no known form runs every check it has the parts for. */
+    FormSpec *owned = NULL;
+    const FormSpec *form = config->form;
+    if (!form && form_spec_builtin_for_plan(plan, &owned) == FORM_SPEC_OK) {
+        form = owned;
+    }
+    unsigned checks = form ? form->checks : FORM_CHECK_ALL;
     char *snapshot = plan_to_json(plan, NULL);
     PieceResult result = PIECE_ERR_ALLOC;
     ComposeRejection *rejections = NULL;
@@ -1146,9 +1165,9 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
             plan_replace_contents(plan, fresh);
         }
         ComposerHearing *hearing = NULL;
-        result = run_once(plan, config, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome, &hearing);
+        result = run_once(plan, config, checks, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome, &hearing);
         if (result == PIECE_OK && has_key_changes(plan)) {
-            result = check_keys(hearing, plan, outcome);
+            result = check_keys(hearing, plan, form, checks, outcome);
         }
         if (result == PIECE_OK && config->analyzer_check) {
             result = check_analyzer(hearing, plan, outcome);
@@ -1164,6 +1183,7 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
                       config->seed + COMPOSE_ROUND_STRIDE * (unsigned long)round);
     }
     free(snapshot);
+    form_spec_destroy(owned);
     /* Kept apart until now: each run starts by clearing the outcome. */
     outcome->rejections = rejections;
     outcome->rejection_count = rejection_count;

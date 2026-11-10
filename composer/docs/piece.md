@@ -1,12 +1,12 @@
-# Pieces from form templates
+# Pieces from forms
 
-`piece_build_plan` (`<ursatz_composer/piece.h>`) plans a short piece from a named form template, and `compose_run`
+`piece_build_plan` (`<ursatz_composer/piece.h>`) plans a short piece from a named built-in form, and `compose_run`
 (`<ursatz_composer/compose.h>`) fills every section of the plan with the grow stages. A piece is a row of theme sections
 as [grow](grow.md) builds them (4 or 8 bars each), so every section can be heard with `form_hear`. Large forms (sonata,
 rondo) are not offered: standard-form and the kernel do not analyze them. Back to the [docs index](README.md).
 
 ```c
-PieceRequest request = {.form = FORM_TEMPLATE_TERNARY, .key = key, .meter = meter, .bars = 24, .motive = NULL};
+PieceRequest request = {.form = "ternary", .key = key, .meter = meter, .bars = 24, .motive = NULL};
 PiecePlan *plan;
 ComposeConfig config = {.seed = 7};
 ComposeOutcome outcome;
@@ -19,7 +19,7 @@ if (piece_build_plan(&request, &plan) == PIECE_OK && compose_run(plan, &config, 
 
 | Field | Meaning |
 | --- | --- |
-| `form` | `FORM_TEMPLATE_BINARY`, `_ROUNDED_BINARY`, `_TERNARY`, `_VARIATIONS`, `_LOOP` or `_LAYERED`. `form_template_from_name` reads `binary`, `rounded-binary`, `ternary`, `variations`, `loop`, `layered`. |
+| `form` | The name of a built-in form: `binary`, `rounded-binary`, `ternary`, `variations`, `loop` or `layered` ([forms.md](forms.md)). Any other name is `PIECE_ERR_BAD_REQUEST`. `piece_build_plan` reads the form's document and calls `form_build_plan`, the one builder of every form. |
 | `key`, `meter` | The key and meter, as in grow. |
 | `bars` | The total bars, one of the sizes below. 0 for the default. Any other size is `PIECE_ERR_BAD_SIZE`. |
 | `count` | The variations or the layers, instead of `bars`. 0 for the default. |
@@ -28,11 +28,11 @@ if (piece_build_plan(&request, &plan) == PIECE_OK && compose_run(plan, &config, 
 | `modulate`, `seed` | With `modulate`, the sections' keys and the cadences across them are planned from `seed` (see Keys and cadences). Without it every section is in the home key with the template's cadences, as before. |
 | `given_melodies` | The given melodies ([middle-out.md](middle-out.md)) the plan is to take: the material holds a bar more for each. 0 for none. |
 
-## The templates
+## The forms
 
-Each section is a theme section: an `archetype`, a `theme_pairing`, a `cadence`, a `key` (home), the antecedent's second
+The forms are documents, one for each file in `forms/` ([forms.md](forms.md)); this table is what they hold. Each section is a theme section: an `archetype`, a `theme_pairing`, a `cadence`, a `key` (home), the antecedent's second
 `cadence`, a `section_letter`, and, for a returning section, a `return`. Section keys other than home and cadences
-other than the table's are not planned yet.
+other than the table's are planned only with `modulate`.
 
 | Template | Bars | Sections |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ The return defaults: A' of the rounded binary and the second A of the ternary ar
 and `reharmonize` for even k, a layer is `exact`.
 
 Pieces of other shapes, laid out in beats and not from these templates, are [piece structures](piece-structure.md):
-sections of any length with a pickup and a cadence each, the loop of a game track. The templates here are unchanged.
+sections of any length with a pickup and a cadence each, the loop of a game track. The forms here are unchanged.
 
 ## Returns
 
@@ -101,11 +101,11 @@ returned in what is heard, whatever the plan copied.
 
 ## Keys and cadences
 
-With `modulate`, `piece_build_plan` runs `piece_plan_keys` and `piece_plan_cadences` (`<ursatz_composer/piece_plan_keys.h>`)
-with `seed`. A key is the home key or one of its closely related keys (`harmony_related_key_at`, kept only when
+With `modulate`, `form_build_plan` runs `piece_plan_keys` and `piece_plan_cadences` (`<ursatz_composer/piece_plan_keys.h>`)
+with `seed`, from the form's regions and its sections' `keys` and `closed` ([forms.md](forms.md#keys-and-cadences)). A key is the home key or one of its closely related keys (`harmony_related_key_at`, kept only when
 `harmony_key_is_closely_related`). A fixed share of seeds, one in three, stays home. Otherwise:
 
-| Template | Keys |
+| Form | Keys |
 | --- | --- |
 | binary | A ends in V (major) or III (minor), B starts there and returns home. |
 | rounded binary | The same for A and B; A' is home. |
@@ -129,8 +129,8 @@ or a compound basic idea never opens a key, and the planner never asks them to.
 
 `piece_plan_cadences` sets each section's cadence in a closing form (binary, rounded binary, ternary, variations): the
 last section PAC; a section that ends in another key PAC; a binary A that stays home HC, since it would otherwise close
-in the home key before the piece does; every other section the template's. Loop and layered forms end open by design and
-keep the template's cadences. `piece_check_cadences` checks the plan against `harmony_cadence_strength`: the last
+in the home key before the piece does; every other section the form's. A form that does not close (`closing` false: loop
+and layered) ends open by design and keeps its document's cadences. `piece_check_cadences` checks the plan against `harmony_cadence_strength`: the last
 cadence is a PAC, so the strongest; a section ending in another key ends in a PAC or IAC; no section before the last
 closes in the home key with a PAC unless it is `closed` (ternary A, rounded binary A, the theme and every variation).
 
@@ -148,7 +148,7 @@ The plan has a material section (marked `material`, so it is not part of the pie
 motive as a Given melody span, or, when none is given, a Constrained one-bar span with an `invent_motive` constraint.
 A section's basic idea takes its motive from `m0`. A section may carry a `motive_ref` to `m0` with a transform, and
 `grow-theme` then adds the section's own motive node ("<section> motive") to the material and builds the basic idea
-from it. The templates give B sections an inverted `m0`, and Var k the diminished (k odd) or interval-changed (k even)
+from it. The forms give B sections an inverted `m0`, and Var k the diminished (k odd) or interval-changed (k even)
 `m0`, so contrasting sections sound different; returning sections use their source's. The material holds `m0` and ten
 bars for each section (its motive, the four its ideas are made from and up to five made motives) (`piece_material_bars`); each section's motives go after the ones already there.
 
@@ -189,11 +189,11 @@ layer 3 adds the melody, layer 4 everything.
 
 ## Tests and measured results
 
-Four tests for each template (`tests/test_form_templates.c`):
+Four tests for each built-in form (`tests/test_form_templates.c`; the plans themselves are pinned by `test_form_plans_templates` and the documents checked by `test_form_spec`, [forms.md](forms.md#tests)):
 
 | Test | What it checks | Label |
 | --- | --- | --- |
-| `structure` | The sections tile the form with the table's letters, bars, pairings and cadences. | |
+| `structure` | The sections tile the form with the letters, bars, pairings and cadences of a table written in the test. | |
 | `smoke` | The smallest size in C major 4/4 with an invented motive composes with one of seeds 1 to 5, and every section is heard. Under a second. | |
 | `compose` | Seeds 1 to 5, C major 4/4 and A minor 3/4, with and without a given motive, every size (variations: 1, 2 and 5 variations, 16, 24 and 48 bars): the runs that complete and the sections heard are not below the baseline. | `slow` |
 | `heard` | The same sweep: the sections heard as the form they ask for are not below the baseline. | `slow` |

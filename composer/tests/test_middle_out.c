@@ -6,7 +6,7 @@
 #include <standard-harmony/harmony_cadence_rules.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/lanes.h>
@@ -113,7 +113,7 @@ static NodeId section_with_letter(const PiecePlan *plan, const char *letter) {
     return PLAN_NODE_NONE;
 }
 
-static PieceRequest request_of(FormTemplateKind form, unsigned long seed) {
+static PieceRequest request_of(const char *form, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form;
@@ -126,9 +126,9 @@ static PieceRequest request_of(FormTemplateKind form, unsigned long seed) {
 
 /* The plan of a scenario with its material placed. */
 static PiecePlan *plan_of(ScenarioKind kind, unsigned long seed) {
-    FormTemplateKind form = kind == SCENARIO_MELODY ? FORM_TEMPLATE_TERNARY
-                            : kind == SCENARIO_PROGRESSION ? FORM_TEMPLATE_ROUNDED_BINARY
-                                                           : FORM_TEMPLATE_BINARY;
+    const char *form = kind == SCENARIO_MELODY ? "ternary"
+                            : kind == SCENARIO_PROGRESSION ? "rounded-binary"
+                                                           : "binary";
     PieceRequest request = request_of(form, seed);
     request.given_melodies = kind == SCENARIO_MELODY;
     PiecePlan *plan = NULL;
@@ -165,7 +165,7 @@ static size_t given_count(const PiecePlan *plan, PlanLaneKind lane) {
 }
 
 static void test_refusals(void) {
-    PieceRequest request = request_of(FORM_TEMPLATE_TERNARY, 1);
+    PieceRequest request = request_of("ternary", 1);
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
@@ -226,7 +226,7 @@ static void test_refusals(void) {
 }
 
 static void test_placing(void) {
-    PieceRequest request = request_of(FORM_TEMPLATE_TERNARY, 1);
+    PieceRequest request = request_of("ternary", 1);
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
@@ -304,7 +304,7 @@ static void test_placing(void) {
 static void test_key_change(void) {
     bool found = false;
     for (unsigned long seed = 1; seed <= 20 && !found; seed++) {
-        PieceRequest request = request_of(FORM_TEMPLATE_TERNARY, seed);
+        PieceRequest request = request_of("ternary", seed);
         PiecePlan *plan = NULL;
         request.modulate = true;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
@@ -467,7 +467,7 @@ static void test_smoke(void) {
 static void test_partial(void) {
     bool composed = false;
     for (unsigned long seed = 1; seed <= 10 && !composed; seed++) {
-        PieceRequest request = request_of(FORM_TEMPLATE_TERNARY, seed);
+        PieceRequest request = request_of("ternary", seed);
         request.given_melodies = 1;
         PiecePlan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);

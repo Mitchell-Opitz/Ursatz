@@ -1,0 +1,13 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "bar-form",
+  "label": "Bar form",
+  "sizes": [
+    {"bars": 24, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "A'", "letter": "A'", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "exact"},
+      {"name": "B", "letter": "B", "role": "contrast", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "motive": "invert tonal=1"}
+    ]}
+  ]
+}

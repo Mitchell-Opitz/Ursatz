@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
@@ -38,11 +38,11 @@
 #define SWEEP_BASELINE 80
 #define SWEEP_SMOKE_BASELINE 8
 
-static PieceRequest request(FormTemplateKind form) {
+static PieceRequest request(const char * form) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form;
-    request.bars = form == FORM_TEMPLATE_ROUNDED_BINARY ? 24 : 0;
+    request.bars = strcmp(form, "rounded-binary") == 0 ? 24 : 0;
     request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -74,7 +74,7 @@ static NodeId section(const PiecePlan *plan, size_t index) {
 /* A filled rounded binary. */
 static PiecePlan *filled(unsigned long seed) {
     PiecePlan *plan = NULL;
-    PieceRequest asked = request(FORM_TEMPLATE_ROUNDED_BINARY);
+    PieceRequest asked = request("rounded-binary");
     ComposeConfig config = config_of(seed);
     ComposeOutcome outcome;
     assert(piece_build_plan(&asked, &plan) == PIECE_OK);
@@ -222,7 +222,7 @@ static void refused(void) {
 /* --- harmonize ----------------------------------------------------------------------- */
 
 static PiecePlan *with_given_melody(unsigned long seed) {
-    PieceRequest asked = request(FORM_TEMPLATE_TERNARY);
+    PieceRequest asked = request("ternary");
     asked.given_melodies = 1;
     asked.seed = seed;
     PiecePlan *plan = NULL;

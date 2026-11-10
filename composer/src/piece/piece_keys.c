@@ -22,7 +22,7 @@ typedef struct {
     AnalysisKey key;
 } KeySegment;
 
-#define MAX_SEGMENTS (2 * FORM_TEMPLATE_MAX_SECTIONS + 1)
+#define MAX_SEGMENTS (2 * FORM_SPEC_MAX_SECTIONS + 1)
 
 static HarmonyMode mode_of(KeyStructureMode mode) {
     return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
@@ -48,69 +48,39 @@ static bool pick_away(AnalysisKey home, const int *degrees, size_t count, FillRn
     return true;
 }
 
-/* The key a binary or rounded binary A ends in: V in major, III in minor. */
-static bool pick_dominant_side(AnalysisKey home, FillRng *rng, AnalysisKey *out) {
-    static const int MAJOR[] = {5};
-    static const int MINOR[] = {3};
-    return home.mode == KEY_STRUCTURE_MODE_MINOR ? pick_away(home, MINOR, 1, rng, out) : pick_away(home, MAJOR, 1, rng, out);
-}
-
-/* The key a ternary B ends in: IV, vi or V in major; III, iv or VI in minor. */
-static bool pick_contrast(AnalysisKey home, FillRng *rng, AnalysisKey *out) {
-    static const int MAJOR[] = {4, 6, 5};
-    static const int MINOR[] = {3, 4, 6};
-    return home.mode == KEY_STRUCTURE_MODE_MINOR ? pick_away(home, MINOR, 3, rng, out) : pick_away(home, MAJOR, 3, rng, out);
-}
-
-/* The key of a variation in another key: the relative key, vi in major and III in minor. */
-static bool pick_relative(AnalysisKey home, FillRng *rng, AnalysisKey *out) {
-    static const int MAJOR[] = {6};
-    static const int MINOR[] = {3};
-    return home.mode == KEY_STRUCTURE_MODE_MINOR ? pick_away(home, MINOR, 1, rng, out) : pick_away(home, MAJOR, 1, rng, out);
-}
-
-/* Draws the keys each section starts and ends in; every section is home when keys is left as set. */
-static bool draw_keys(FormTemplateKind kind, size_t count, AnalysisKey home, FillRng *rng, PieceSectionKeys *keys,
+/*
+ * Draws the keys each section starts and ends in; every section is home when keys is left as set. A form that can leave
+ * home (a section of the size starts or ends in a region) modulates in two pieces of three, as the templates always did:
+ * the draw is fill_rng_below(rng, 3), 0 staying home, then one pick per region in the order the form lists them.
+ */
+static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKey home, FillRng *rng, PieceSectionKeys *keys,
                       bool *modulates) {
-    AnalysisKey away = home;
+    AnalysisKey away[FORM_SPEC_MAX_REGIONS];
+    bool can = false;
     *modulates = false;
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < size->section_count; i++) {
         keys[i].start = home;
         keys[i].end = home;
+        can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
     }
-    /* Two of three pieces modulate where the template can. */
-    bool can = (kind == FORM_TEMPLATE_BINARY && count == 2) || (kind == FORM_TEMPLATE_ROUNDED_BINARY && count == 3) ||
-               (kind == FORM_TEMPLATE_TERNARY && count == 3) || (kind == FORM_TEMPLATE_VARIATIONS && count >= 4);
     if (!rng || !can || fill_rng_below(rng, 3) == 0) {
         return true;
     }
-    switch (kind) {
-    case FORM_TEMPLATE_BINARY:
-    case FORM_TEMPLATE_ROUNDED_BINARY:
-        if (!pick_dominant_side(home, rng, &away)) {
+    for (size_t r = 0; r < form->region_count; r++) {
+        const FormRegion *region = &form->regions[r];
+        bool minor = home.mode == KEY_STRUCTURE_MODE_MINOR;
+        if (!pick_away(home, minor ? region->minor : region->major, minor ? region->minor_count : region->major_count, rng,
+                       &away[r])) {
             return false;
         }
-        keys[0].end = away;
-        keys[1].start = away;
-        break;
-    case FORM_TEMPLATE_TERNARY:
-        if (!pick_contrast(home, rng, &away)) {
-            return false;
-        }
-        keys[1].end = away;
-        break;
-    case FORM_TEMPLATE_VARIATIONS: {
-        /* The middle variation: with n variations, number (n + 1) / 2, section index the same (the theme is 0). */
-        size_t middle = count / 2;
-        if (!pick_relative(home, rng, &away)) {
-            return false;
-        }
-        keys[middle].start = away;
-        keys[middle].end = away;
-        break;
     }
-    default:
-        return true;
+    for (size_t i = 0; i < size->section_count; i++) {
+        if (size->sections[i].key_start != FORM_SPEC_HOME) {
+            keys[i].start = away[size->sections[i].key_start];
+        }
+        if (size->sections[i].key_end != FORM_SPEC_HOME) {
+            keys[i].end = away[size->sections[i].key_end];
+        }
     }
     *modulates = true;
     return true;
@@ -171,18 +141,16 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, AnalysisKey 
     return PIECE_ERR_BAD_REQUEST;
 }
 
-PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
-    if (!plan || !out) {
+PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *spec, const FormSpecSize *size, FillRng *rng, PieceKeyPlan *out) {
+    if (!plan || !spec || !size || !out) {
         return PIECE_ERR_NULL;
     }
     memset(out, 0, sizeof(*out));
     NodeId form = plan_root(plan);
-    FormTemplateKind kind;
-    const char *name = form == PLAN_NODE_NONE ? NULL : plan_node_name(plan, form);
-    if (!name || !form_template_from_name(name, &kind)) {
+    if (form == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
     NodeId material = PLAN_NODE_NONE;
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
@@ -191,19 +159,19 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
             material = child;
         } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
             continue; /* the seam is not a section of the piece */
-        } else if (count < FORM_TEMPLATE_MAX_SECTIONS) {
+        } else if (count < FORM_SPEC_MAX_SECTIONS) {
             sections[count++] = child;
         } else {
             return PIECE_ERR_BAD_REQUEST;
         }
     }
     const PlanConstraint *home_key = count > 0 ? plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_KEY) : NULL;
-    if (!home_key || material == PLAN_NODE_NONE) {
+    if (!home_key || material == PLAN_NODE_NONE || count != size->section_count) {
         return PIECE_ERR_BAD_REQUEST;
     }
     AnalysisKey home = home_key->params.key;
     out->count = count;
-    if (!draw_keys(kind, count, home, rng, out->sections, &out->modulates)) {
+    if (!draw_keys(spec, size, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
     }
 
@@ -330,7 +298,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
     memset(out, 0, sizeof(*out));
     out->ok = true;
     NodeId form = plan_root(plan);
-    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t section_count = 0;
     Rational piece_end = {0, 1};
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
@@ -339,7 +307,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
             piece_end = plan_node_span(plan, child).start;
         } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
             continue;
-        } else if (section_count < FORM_TEMPLATE_MAX_SECTIONS) {
+        } else if (section_count < FORM_SPEC_MAX_SECTIONS) {
             sections[section_count++] = child;
         }
     }

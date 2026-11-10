@@ -6,7 +6,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
@@ -57,7 +57,7 @@ static PiecePlan *theme_fill_plan(void) {
     PiecePlan *plan = NULL;
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = FORM_TEMPLATE_ROUNDED_BINARY;
+    request.form = "rounded-binary";
     request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;

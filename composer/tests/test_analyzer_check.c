@@ -7,7 +7,7 @@
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
@@ -77,7 +77,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     if (shape == ROUNDED_BINARY) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
-        request.form = FORM_TEMPLATE_ROUNDED_BINARY;
+        request.form = "rounded-binary";
         request.key = key;
         request.meter = meter;
         request.bars = 24;

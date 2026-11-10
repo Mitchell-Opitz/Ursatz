@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>
@@ -30,10 +30,10 @@
  */
 
 typedef struct {
-    FormTemplateKind form;
+    const char *form;      /* the name of a built-in form: "binary", "rounded-binary", ... (form_spec.h) */
     AnalysisKey key;
     PlanMeter meter;
-    size_t bars;           /* the template's size; 0 for the size count gives, or the default */
+    size_t bars;           /* the form's size; 0 for the size count gives, or the default */
     size_t count;          /* variations or layers; 0 for the size bars gives, or the default */
     const Motive *motive;  /* NULL to have one invented */
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
@@ -83,7 +83,13 @@ size_t piece_material_bars_of(size_t section_count, size_t motive_bars);
  */
 bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *idea_bars);
 
-/* Builds the plan of the request into *out, which the caller destroys with plan_destroy. */
+/*
+ * Builds the plan of the request into *out, which the caller destroys with plan_destroy, from the form document: the one
+ * builder of every form (R-416). A form whose sections the request gives is built by piece_structure.h until P44 B5.
+ */
+PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out);
+
+/* Builds the plan of the request into *out: form_build_plan with the built-in form named request->form (BAD_REQUEST for none). */
 PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out);
 
 #endif

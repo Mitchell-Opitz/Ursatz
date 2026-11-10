@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
@@ -41,7 +41,7 @@ static PiecePlan *new_plan(NodeId *section) {
     PieceRequest request;
     PiecePlan *plan = NULL;
     memset(&request, 0, sizeof(request));
-    request.form = FORM_TEMPLATE_ROUNDED_BINARY;
+    request.form = "rounded-binary";
     request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;

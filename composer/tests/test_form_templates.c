@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
@@ -53,7 +53,7 @@ typedef struct {
 #define CBI PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA
 #define CONT PLAN_THEME_ENDING_CONTINUATION
 #define CONS PLAN_THEME_ENDING_CONSEQUENT
-#define NONE FORM_TEMPLATE_NO_RETURN
+#define NONE FORM_SPEC_NO_RETURN
 
 /* What a section of the table must be. */
 typedef struct {
@@ -66,7 +66,7 @@ typedef struct {
     unsigned layers;
 } Expected;
 
-#define MAX_EXPECTED FORM_TEMPLATE_MAX_SECTIONS
+#define MAX_EXPECTED FORM_SPEC_MAX_SECTIONS
 
 static const unsigned BASS = PLAN_LAYER_BIT(PLAN_LANE_BASS);
 static const unsigned ACCOMPANIED = PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE);
@@ -84,32 +84,27 @@ static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning
     e->layers = layers;
 }
 
+#define IS(name) (strcmp(kind, name) == 0)
+
 /* The table, written out here so the test does not read it from the code it checks. */
-static size_t expected_sections(FormTemplateKind kind, Size size, Expected *out) {
+static size_t expected_sections(const char *kind, Size size, Expected *out) {
     static char letters[MAX_EXPECTED][PLAN_SECTION_LETTER_MAX];
     size_t n = 0;
-    switch (kind) {
-    case FORM_TEMPLATE_BINARY: {
+    if (IS("binary")) {
         size_t half = size.bars / 2;
         set(&out[n++], "A", half, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "B", half, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
-        break;
-    }
-    case FORM_TEMPLATE_ROUNDED_BINARY: {
+    } else if (IS("rounded-binary")) {
         size_t second = size.bars == 16 ? 4 : 8;
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "B", second, CBI, CONT, CADENCE_TYPE_HALF, NONE, 0);
         set(&out[n++], "A'", second, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
-        break;
-    }
-    case FORM_TEMPLATE_TERNARY: {
+    } else if (IS("ternary")) {
         size_t third = size.bars / 3;
         set(&out[n++], "A", third, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "B", third, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "A", third, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
-        break;
-    }
-    case FORM_TEMPLATE_VARIATIONS:
+    } else if (IS("variations")) {
         set(&out[n++], "T", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         for (size_t k = 1; k <= size.count; k++) {
             letters[n][0] = 'V';
@@ -118,16 +113,14 @@ static size_t expected_sections(FormTemplateKind kind, Size size, Expected *out)
             set(&out[n], letters[n], 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
             n++;
         }
-        break;
-    case FORM_TEMPLATE_LOOP:
+    } else if (IS("loop")) {
         if (size.bars == 8) {
             set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         } else {
             set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, NONE, 0);
             set(&out[n++], "B", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         }
-        break;
-    case FORM_TEMPLATE_LAYERED: {
+    } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
             letters[n][0] = 'L';
@@ -137,42 +130,33 @@ static size_t expected_sections(FormTemplateKind kind, Size size, Expected *out)
             set(&out[n], letters[n], 8, P, CONT, CADENCE_TYPE_HALF, k == 1 ? NONE : 0, layers);
             n++;
         }
-        break;
-    }
     }
     return n;
 }
 
 /* Every size of each template: bars for the fixed ones, the count for variations and layered. */
-static size_t sizes_of(FormTemplateKind kind, Size *out) {
+static size_t sizes_of(const char *kind, Size *out) {
     size_t n = 0;
-    switch (kind) {
-    case FORM_TEMPLATE_BINARY:
+    if (IS("binary")) {
         out[n++] = (Size){16, 0};
         out[n++] = (Size){8, 0};
-        break;
-    case FORM_TEMPLATE_ROUNDED_BINARY:
+    } else if (IS("rounded-binary")) {
         out[n++] = (Size){16, 0};
         out[n++] = (Size){24, 0};
-        break;
-    case FORM_TEMPLATE_TERNARY:
+    } else if (IS("ternary")) {
         out[n++] = (Size){24, 0};
         out[n++] = (Size){12, 0};
-        break;
-    case FORM_TEMPLATE_VARIATIONS:
+    } else if (IS("variations")) {
         for (size_t count = 1; count <= 8; count++) {
             out[n++] = (Size){8 * (1 + count), count};
         }
-        break;
-    case FORM_TEMPLATE_LOOP:
+    } else if (IS("loop")) {
         out[n++] = (Size){8, 0};
         out[n++] = (Size){16, 0};
-        break;
-    case FORM_TEMPLATE_LAYERED:
+    } else if (IS("layered")) {
         for (size_t count = 2; count <= 4; count++) {
             out[n++] = (Size){8 * count, count};
         }
-        break;
     }
     return n;
 }
@@ -181,8 +165,8 @@ static size_t sizes_of(FormTemplateKind kind, Size *out) {
  * The sizes the compose and heard sweeps run: every size, except that variations run 1, 2 and 5 variations (16, 24 and
  * 48 bars). Past that a run only repeats what the shortest ones show, and its stuck runs make the sweep take minutes.
  */
-static size_t sweep_sizes_of(FormTemplateKind kind, Size *out) {
-    if (kind != FORM_TEMPLATE_VARIATIONS) {
+static size_t sweep_sizes_of(const char *kind, Size *out) {
+    if (!IS("variations")) {
         return sizes_of(kind, out);
     }
     static const size_t COUNTS[] = {1, 2, 5};
@@ -216,7 +200,7 @@ static Motive scenario_motive(const Scenario *scenario) {
     return motive;
 }
 
-static PieceRequest scenario_request(const Scenario *scenario, FormTemplateKind kind, Size size,
+static PieceRequest scenario_request(const Scenario *scenario, const char *kind, Size size,
                                      const Motive *motive) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
@@ -249,7 +233,7 @@ static long bars_of(Rational time, int beats) {
     return quarters / beats;
 }
 
-static void check_structure(const PiecePlan *plan, const Scenario *scenario, FormTemplateKind kind, Size size) {
+static void check_structure(const PiecePlan *plan, const Scenario *scenario, const char *kind, Size size) {
     Expected expected[MAX_EXPECTED];
     size_t count = expected_sections(kind, size, expected);
     NodeId form = plan_root(plan);
@@ -289,10 +273,10 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, For
         }
         assert(expected[i].layers == 0 ? layers == NULL : (layers && layers->params.layers.lanes == expected[i].layers));
         /* A layered form carries an accompaniment in every layer. */
-        assert((kind == FORM_TEMPLATE_LAYERED) == (find(plan, section, PLAN_CONSTRAINT_ACCOMPANIMENT, 0) != NULL));
+        assert(IS("layered") == (find(plan, section, PLAN_CONSTRAINT_ACCOMPANIMENT, 0) != NULL));
         /* A section made from m0 other than as m0 itself names m0; a returning one takes its source's motive. */
         const PlanConstraint *motive = find(plan, section, PLAN_CONSTRAINT_MOTIVE_REF, 0);
-        if (expected[i].returns != NONE && kind != FORM_TEMPLATE_VARIATIONS) {
+        if (expected[i].returns != NONE && !IS("variations")) {
             const PlanConstraint *source = find(plan, sections[expected[i].returns], PLAN_CONSTRAINT_MOTIVE_REF, 0);
             assert((motive == NULL) == (source == NULL));
         }
@@ -334,16 +318,14 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, For
 }
 
 /* Sizes not in the table, and counts for the templates that take none, are refused. */
-static void check_refused(FormTemplateKind kind, const Scenario *scenario, const Motive *motive) {
+static void check_refused(const char *kind, const Scenario *scenario, const Motive *motive) {
     static const Size FIXED_BAD[] = {{4, 0}, {12, 0}, {20, 0}, {32, 0}, {16, 2}};
     static const Size VARIATIONS_BAD[] = {{8, 0}, {12, 0}, {80, 0}, {0, 9}, {24, 3}, {20, 0}};
     static const Size LAYERED_BAD[] = {{8, 0}, {40, 0}, {0, 1}, {0, 5}, {24, 2}, {12, 0}};
-    const Size *bad = kind == FORM_TEMPLATE_VARIATIONS ? VARIATIONS_BAD
-                      : kind == FORM_TEMPLATE_LAYERED  ? LAYERED_BAD
-                                                       : FIXED_BAD;
-    size_t count = kind == FORM_TEMPLATE_VARIATIONS ? sizeof(VARIATIONS_BAD) / sizeof(Size)
-                   : kind == FORM_TEMPLATE_LAYERED  ? sizeof(LAYERED_BAD) / sizeof(Size)
-                                                    : sizeof(FIXED_BAD) / sizeof(Size);
+    const Size *bad = IS("variations") ? VARIATIONS_BAD : IS("layered") ? LAYERED_BAD : FIXED_BAD;
+    size_t count = IS("variations") ? sizeof(VARIATIONS_BAD) / sizeof(Size)
+                   : IS("layered")  ? sizeof(LAYERED_BAD) / sizeof(Size)
+                                    : sizeof(FIXED_BAD) / sizeof(Size);
     for (size_t i = 0; i < count; i++) {
         Size size = bad[i];
         bool in_table = false;
@@ -360,7 +342,7 @@ static void check_refused(FormTemplateKind kind, const Scenario *scenario, const
     }
 }
 
-static void test_structure(FormTemplateKind kind) {
+static void test_structure(const char *kind) {
     Size sizes[16];
     size_t size_count = sizes_of(kind, sizes);
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
@@ -370,7 +352,7 @@ static void test_structure(FormTemplateKind kind) {
             PiecePlan *plan = NULL;
             PieceResult built = piece_build_plan(&request, &plan);
             if (built != PIECE_OK) {
-                fprintf(stderr, "%s %zu bars, %s: %s\n", form_template_name(kind), sizes[z].bars, SCENARIOS[s].name,
+                fprintf(stderr, "%s %zu bars, %s: %s\n", kind, sizes[z].bars, SCENARIOS[s].name,
                         piece_result_name(built));
             }
             assert(built == PIECE_OK);
@@ -384,7 +366,7 @@ static void test_structure(FormTemplateKind kind) {
         }
         check_refused(kind, &SCENARIOS[s], &motive);
     }
-    printf("%s: structure of %zu sizes in %zu scenarios as the table says\n", form_template_name(kind), size_count,
+    printf("%s: structure of %zu sizes in %zu scenarios as the table says\n", kind, size_count,
            SCENARIO_COUNT);
 }
 
@@ -416,7 +398,7 @@ typedef struct {
     unsigned long expected;  /* sum over the sections of grow's measured share, in fortieths */
 } Tally;
 
-static void compose_all(FormTemplateKind kind, Tally *total) {
+static void compose_all(const char *kind, Tally *total) {
     Size sizes[16];
     size_t size_count = sweep_sizes_of(kind, sizes);
     memset(total, 0, sizeof(*total));
@@ -450,14 +432,14 @@ static void compose_all(FormTemplateKind kind, Tally *total) {
                     }
                 } else {
                     assert(ran == PIECE_ERR_STUCK);
-                    printf("  %s %zu bars, %s, seed %lu: stuck at %s\n", form_template_name(kind), sizes[z].bars,
+                    printf("  %s %zu bars, %s, seed %lu: stuck at %s\n", kind, sizes[z].bars,
                            SCENARIOS[s].name, seed, compose_stage_name(outcome.stuck_stage));
                 }
                 compose_outcome_destroy(&outcome);
                 plan_destroy(plan);
             }
             printf("%s %zu bars, %s: %zu of %zu runs complete, %zu of %zu sections heard as requested\n",
-                   form_template_name(kind), sizes[z].bars, SCENARIOS[s].name, tally.completed, tally.runs,
+                   kind, sizes[z].bars, SCENARIOS[s].name, tally.completed, tally.runs,
                    tally.as_requested, tally.sections);
             total->runs += tally.runs;
             total->completed += tally.completed;
@@ -477,21 +459,21 @@ static void compose_all(FormTemplateKind kind, Tally *total) {
  * weight and a sequence wrote its chords whole (P34 B1); it is 25, 75, 19.
  */
 typedef struct {
-    FormTemplateKind kind;
+    const char *kind;
     size_t completed;    /* runs that complete */
     size_t heard;        /* sections form_hear ran on */
     size_t as_requested; /* sections heard as the form they ask for */
 } Baseline;
 
 static const Baseline BASELINES[] = {
-    {FORM_TEMPLATE_BINARY, 20, 40, 12},     {FORM_TEMPLATE_ROUNDED_BINARY, 25, 75, 19},
-    {FORM_TEMPLATE_TERNARY, 27, 81, 7},     {FORM_TEMPLATE_VARIATIONS, 45, 165, 0},
-    {FORM_TEMPLATE_LOOP, 14, 18, 12},       {FORM_TEMPLATE_LAYERED, 30, 90, 12},
+    {"binary", 20, 40, 12},     {"rounded-binary", 25, 75, 19},
+    {"ternary", 27, 81, 7},     {"variations", 45, 165, 0},
+    {"loop", 14, 18, 12},       {"layered", 30, 90, 12},
 };
 
-static const Baseline *baseline_of(FormTemplateKind kind) {
+static const Baseline *baseline_of(const char *kind) {
     for (size_t i = 0; i < sizeof(BASELINES) / sizeof(BASELINES[0]); i++) {
-        if (BASELINES[i].kind == kind) {
+        if (strcmp(BASELINES[i].kind, kind) == 0) {
             return &BASELINES[i];
         }
     }
@@ -499,23 +481,23 @@ static const Baseline *baseline_of(FormTemplateKind kind) {
     return NULL;
 }
 
-static int test_compose(FormTemplateKind kind) {
+static int test_compose(const char *kind) {
     Tally total;
     compose_all(kind, &total);
     const Baseline *baseline = baseline_of(kind);
-    printf("%s: %zu of %zu runs complete (baseline %zu); %zu sections heard (baseline %zu)\n", form_template_name(kind),
+    printf("%s: %zu of %zu runs complete (baseline %zu); %zu sections heard (baseline %zu)\n", kind,
            total.completed, total.runs, baseline->completed, total.heard, baseline->heard);
     return total.completed >= baseline->completed && total.heard >= baseline->heard ? 0 : 1;
 }
 
-static int test_heard(FormTemplateKind kind) {
+static int test_heard(const char *kind) {
     Tally total;
     compose_all(kind, &total);
     const Baseline *baseline = baseline_of(kind);
     /* As many as grow's shares give for the same themes: expected / 40, rounded down. For comparison only. */
     size_t grow_floor = (size_t)(total.expected / 40);
     printf("%s: %zu of %zu sections heard as requested (%.0f%%; baseline %zu); grow's measured shares give %zu\n",
-           form_template_name(kind), total.as_requested, total.sections,
+           kind, total.as_requested, total.sections,
            total.sections ? 100.0 * (double)total.as_requested / (double)total.sections : 0.0, baseline->as_requested,
            grow_floor);
     return total.as_requested >= baseline->as_requested ? 0 : 1;
@@ -525,7 +507,7 @@ static int test_heard(FormTemplateKind kind) {
  * A quick check that the compose run works for the template: the smallest size in C major 4/4 with an invented motive,
  * the first of seeds 1 to SEEDS that completes (some seeds get stuck, see docs/piece.md), every section heard.
  */
-static int test_smoke(FormTemplateKind kind) {
+static int test_smoke(const char *kind) {
     Size sizes[16];
     size_t size_count = sizes_of(kind, sizes);
     Size smallest = sizes[0];
@@ -556,18 +538,23 @@ static int test_smoke(FormTemplateKind kind) {
         compose_outcome_destroy(&outcome);
         plan_destroy(plan);
         if (ran == PIECE_OK && heard == count) {
-            printf("%s: %zu bars composed with seed %lu, %zu sections heard\n", form_template_name(kind),
+            printf("%s: %zu bars composed with seed %lu, %zu sections heard\n", kind,
                    smallest.bars, seed, heard);
             return 0;
         }
     }
-    printf("%s: no seed of 1 to %d composed %zu bars\n", form_template_name(kind), SEEDS, smallest.bars);
+    printf("%s: no seed of 1 to %d composed %zu bars\n", kind, SEEDS, smallest.bars);
     return 1;
 }
 
 int main(int argc, char **argv) {
-    FormTemplateKind kind;
-    if (argc != 3 || !form_template_from_name(argv[2], &kind)) {
+    const char *kind = NULL;
+    for (size_t form = 0; argc == 3 && form < form_spec_builtin_count(); form++) {
+        if (strcmp(argv[2], form_spec_builtin_name(form)) == 0) {
+            kind = form_spec_builtin_name(form);
+        }
+    }
+    if (!kind) {
         fprintf(stderr, "usage: test_form_templates structure|compose|heard|smoke <template>\n");
         return 2;
     }

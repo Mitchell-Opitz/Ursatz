@@ -11,7 +11,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/render.h>
@@ -101,7 +101,7 @@ static size_t scan_tracks(const unsigned char *data, size_t size, TrackMeta *tra
 static PiecePlan *filled_rounded_binary(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = FORM_TEMPLATE_ROUNDED_BINARY;
+    request.form = "rounded-binary";
     request.bars = 24;
     request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;

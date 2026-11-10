@@ -67,7 +67,8 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-segments.md](grow-segments.md): segments of the motif as fragments and liquidation in a theme (P34).
 - [grow-development.md](grow-development.md): the theme `development` setting and its weight tables (P34).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
-- [piece.md](piece.md): pieces from form templates and the compose run.
+- [piece.md](piece.md): pieces from forms and the compose run.
+- [forms.md](forms.md): forms as JSON documents (P44): the members, the six built-in forms, how to add one.
 - [loop-seam.md](loop-seam.md): how the end of a loop leads back into its start.
 - [regenerate.md](regenerate.md): locking and regenerating nodes of a plan.
 - [form-hear.md](form-hear.md): hearing the phrase form of a plan.

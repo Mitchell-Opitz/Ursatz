@@ -101,6 +101,8 @@ add_library(ursatz_composer STATIC
     melody/melody_fill.c
     preferences/preferences.c
     form/form_hear.c
+    form/form_spec.c
+    form/form_builtin.c
     form/return_hear.c
     grow/grow_request.c
     grow/grow_theme.c
@@ -114,14 +116,13 @@ add_library(ursatz_composer STATIC
     grow/grow_check.c
     grow/grow_form.c
     grow/grow_run.c
-    piece/form_template.c
     piece/form_return.c
     piece/given.c
     piece/seam.c
     piece/piece_reopen.c
     piece/seam_hear.c
     piece/form_vary.c
-    piece/piece_request.c
+    piece/form_build.c
     piece/piece_structure.c
     piece/piece_keys.c
     piece/piece_cadences.c
@@ -142,6 +143,22 @@ add_library(ursatz_composer STATIC
     counterpoint/counterpoint_species.c
     counterpoint/counterpoint_check.c
 )
+# The forms built in (R-416): forms/<name>.json, embedded as C byte arrays at build time. Adding a form is a file in
+# forms/ and a line here, in registry order.
+set(COMPOSER_FORMS binary rounded-binary ternary variations loop layered)
+set(COMPOSER_FORM_FILES)
+foreach(form ${COMPOSER_FORMS})
+    list(APPEND COMPOSER_FORM_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../forms/${form}.json)
+endforeach()
+set(COMPOSER_FORM_DATA ${CMAKE_CURRENT_BINARY_DIR}/form/form_builtin_data.c)
+add_custom_command(
+    OUTPUT ${COMPOSER_FORM_DATA}
+    COMMAND ${CMAKE_COMMAND} -DOUTPUT=${COMPOSER_FORM_DATA} "-DFILES=${COMPOSER_FORM_FILES}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/EmbedForms.cmake
+    DEPENDS ${COMPOSER_FORM_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/EmbedForms.cmake
+    COMMENT "Embedding the form documents"
+    VERBATIM)
+target_sources(ursatz_composer PRIVATE ${COMPOSER_FORM_DATA})
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include
