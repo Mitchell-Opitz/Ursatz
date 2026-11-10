@@ -392,6 +392,46 @@ static void test_round_trip(void) {
 }
 
 /* The theme form, style weight and seed vocabularies (API 1.1): each offered value is read, and the limits are the readers'. */
+/* theme_slots say which slot every theme needs, piece_intos which beginning and ending a one-pairing archetype is (R-430). */
+static void test_slot_rules(void) {
+    const char *const slots[] = {"basic", "contrasting", "continuation", "cadential"};
+    const cJSON *list_slots = list("theme_slots");
+    assert(cJSON_GetArraySize(list_slots) == 4);
+    for (int i = 0; i < 4; i++) {
+        const cJSON *entry = cJSON_GetArrayItem(list_slots, i);
+        const cJSON *required = cJSON_GetObjectItemCaseSensitive(entry, "required");
+        assert(strcmp(value_of(entry), slots[i]) == 0);
+        assert(cJSON_IsBool(required));
+        assert(cJSON_IsTrue(required) == (i == 0));
+    }
+    const cJSON *intos = list("piece_intos");
+    assert(cJSON_GetArraySize(intos) == 3);
+    const char *const beginnings[] = {"presentation", "antecedent", NULL};
+    const char *const endings[] = {"continuation", "consequent", NULL};
+    for (int i = 0; i < 3; i++) {
+        const cJSON *entry = cJSON_GetArrayItem(intos, i);
+        const cJSON *beginning = cJSON_GetObjectItemCaseSensitive(entry, "beginning");
+        const cJSON *ending = cJSON_GetObjectItemCaseSensitive(entry, "ending");
+        if (!beginnings[i]) {
+            assert(strcmp(value_of(entry), "hybrid") == 0 && !beginning && !ending);
+            continue;
+        }
+        assert(cJSON_IsString(beginning) && strcmp(beginning->valuestring, beginnings[i]) == 0);
+        assert(cJSON_IsString(ending) && strcmp(ending->valuestring, endings[i]) == 0);
+        /* The words are the vocabulary's own. */
+        bool beginning_listed = false;
+        bool ending_listed = false;
+        const cJSON *part = NULL;
+        cJSON_ArrayForEach(part, list("theme_beginnings")) {
+            beginning_listed = beginning_listed || strcmp(value_of(part), beginning->valuestring) == 0;
+        }
+        cJSON_ArrayForEach(part, list("theme_endings")) {
+            ending_listed = ending_listed || strcmp(value_of(part), ending->valuestring) == 0;
+        }
+        assert(beginning_listed && ending_listed);
+    }
+}
+
 static void test_theme_form_lists(void) {
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, list("theme_bars")) {
@@ -680,6 +720,7 @@ int main(void) {
     assert(strcmp(composer_api_version(), "1.13") == 0);
     test_lists();
     test_round_trip();
+    test_slot_rules();
     test_theme_form_lists();
     test_variants_words();
     test_tone_labels();
