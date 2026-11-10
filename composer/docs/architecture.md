@@ -33,10 +33,11 @@ The pins are checked by `scripts/check-pins.sh` (see [building.md](building.md#s
 | `src/melody/` | The melody operator | [melody-fill.md](melody-fill.md) |
 | `src/preferences/` | The preferences document and the settings it holds | [preferences.md](preferences.md) |
 | `src/motive/` | Motives, their analysis, development and the variant registry | [motive-format.md](motive-format.md), [variant-registry.md](variant-registry.md) |
-| `src/form/` | Hearing the phrase form through standard-form | [form-hear.md](form-hear.md) |
+| `src/form/` | Hearing the phrase form through standard-form; the form documents: `form_spec.c` reads them, `form_builtin.c` serves the built-in ones | [form-hear.md](form-hear.md), [forms.md](forms.md) |
+| `forms/` | The built-in forms, one JSON document each, embedded at build time by `cmake/EmbedForms.cmake` | [forms.md](forms.md) |
 | `src/counterpoint/` | The counter-melody operator, species 1 to 4 | [counterpoint.md](counterpoint.md) |
 | `src/texture/` | The accompaniment and four-part voicing operators | [accompaniment.md](accompaniment.md), [voicing.md](voicing.md) |
-| `src/piece/` | Form templates, the piece plan and the compose run | [piece.md](piece.md) |
+| `src/piece/` | The one piece builder (`form_build.c`), keys and cadences from a form, the piece plan and the compose run | [piece.md](piece.md) |
 | `src/grow/` | Growing a theme from a motive; `theme_shape.c` is the table of what a theme of each beginning and ending is made of (ideas, slots, roles, places, lengths) | [grow.md](grow.md) |
 | `src/check/` | Hearing a render through the Analyzer, the check loop, the explanation | [analyzer-check.md](analyzer-check.md), [explain.md](explain.md) |
 | `src/style/` | Style models, blending, style checks, seeding from a corpus | [style.md](style.md) |

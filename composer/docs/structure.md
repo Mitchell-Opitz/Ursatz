@@ -13,10 +13,11 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | `src/motive/` | Motives, their analysis and development. |
 | `src/melody/` | The melody operator. |
 | `src/preferences/` | The preferences document: its settings, reading with paths, writing and the default check. |
-| `src/form/` | Hearing the phrase form through standard-form. |
+| `src/form/` | Hearing the phrase form through standard-form, and the form documents (`form_spec.c`, `form_builtin.c`). |
+| `forms/` | The built-in forms as JSON documents, embedded at build time (`cmake/EmbedForms.cmake`); [forms.md](forms.md). |
 | `src/counterpoint/` | The counter-melody operator: species 1 to 4 against a given line, its search and its check. |
 | `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
-| `src/piece/` | Form templates, the piece plan and the compose run over its sections. |
+| `src/piece/` | The one piece builder `form_build_plan`, keys and cadences from a form, the piece plan and the compose run over its sections. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
 | `src/check/` | Hearing a render through the Analyzer, the Analyzer check loop and the explanation report. |
 | `src/style/` | Style models, blending, style checks and seeding from a corpus. |
