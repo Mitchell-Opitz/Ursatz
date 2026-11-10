@@ -22,9 +22,22 @@ static void test_names(void) {
     assert(phrase_level_form_name(PHRASE_LEVEL_FORM_COUNT) == NULL);
 }
 
+static void test_from_name(void) {
+    for (int i = 0; i < PHRASE_LEVEL_FORM_COUNT; i++) {
+        PhraseLevelForm value = (PhraseLevelForm)-1;
+        assert(phrase_level_form_from_name(phrase_level_form_name((PhraseLevelForm)i), &value));
+        assert(value == (PhraseLevelForm)i);
+    }
+    PhraseLevelForm untouched = (PhraseLevelForm)-1;
+    assert(!phrase_level_form_from_name("no-such-name", &untouched));
+    assert(!phrase_level_form_from_name(NULL, &untouched));
+    assert(untouched == (PhraseLevelForm)-1);
+}
+
 int main(void) {
     test_validity();
     test_names();
+    test_from_name();
     printf("test_phrase_level_form: ok\n");
     return 0;
 }
