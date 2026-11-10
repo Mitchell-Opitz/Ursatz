@@ -10,6 +10,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/rejection.h>
 #include <ursatz_composer/return_hear.h>
@@ -108,6 +109,14 @@ typedef struct {
        loop (FillConfig.job). A cancel ends the run with PIECE_ERR_STUCK and outcome->cancelled; the plan is then partly
        filled and no further round or candidate is tried. */
     const ComposerJob *job;
+    /*
+     * The form whose checks the run makes (form_spec.h: its `checks` name which of hearing each theme section as its
+     * shape, hearing the returns, checking the keys, checking the cadences and hearing the seam run; a check not named
+     * is not made, and no check changes what is written: the key check only rejects a finished run). NULL is the
+     * built-in form the plan's root is named for; a plan of no built-in form, such as a theme or a fill plan, runs every
+     * check it has the parts for. Must outlive compose_run.
+     */
+    const FormSpec *form;
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */
