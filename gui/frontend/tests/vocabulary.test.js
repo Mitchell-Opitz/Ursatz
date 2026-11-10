@@ -30,9 +30,9 @@ async function main() {
   const calls = [];
   const loaded = await V.load(async (url) => {
     calls.push(url);
-    return { status: 200, json: async () => fixture };
+    return { status: 200, json: async () => (url === "/api/composer/forms" ? { forms: [] } : fixture) };
   });
-  check(loaded === fixture && V.loaded() && same(calls, ["/api/composer/vocabulary"]), "load fetches the route once and keeps the answer");
+  check(loaded === fixture && V.loaded() && same(calls, ["/api/composer/vocabulary", "/api/composer/forms"]), "load fetches the routes once and keeps the answers");
   let failed = false;
   try {
     await V.load(async () => ({ status: 500, json: async () => ({}) }));
