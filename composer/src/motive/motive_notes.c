@@ -138,7 +138,8 @@ static bool parse_rhythm_pitch(const char *text, const AnalysisKey *key, int *mi
     return true;
 }
 
-/* Parses "q", "e.", "h.." into a length in whole notes. On failure writes the reason to message. */
+/* Parses "q", "e.", "h.." or "q3" (a triplet value, two thirds of the plain one) into a length in whole notes. On
+ * failure writes the reason to message. */
 static bool parse_duration(const char *text, Rational *out, char *message, size_t message_size) {
     Rational base;
     switch (text[0]) {
@@ -161,10 +162,18 @@ static bool parse_duration(const char *text, Rational *out, char *message, size_
         base = motive_time(1, 32);
         break;
     default:
-        snprintf(message, message_size, "'%s' is not a duration; use w, h, q, e, s or t, then up to two dots", text);
+        snprintf(message, message_size, "'%s' is not a duration; use w, h, q, e, s or t, then up to two dots or a 3", text);
         return false;
     }
     size_t dots = strlen(text + 1);
+    if (dots == 1 && text[1] == '3') {
+        *out = motive_time(base.num * 2, base.den * 3);
+        return true;
+    }
+    if (dots >= 2 && text[dots] == '3' && strspn(text + 1, ".") == dots - 1) {
+        snprintf(message, message_size, "'%s' is not a duration; a triplet value takes no dots", text);
+        return false;
+    }
     for (size_t i = 1; i <= dots; i++) {
         if (text[i] != '.') {
             snprintf(message, message_size, "'%s' is not a duration; only dots may follow the letter", text);

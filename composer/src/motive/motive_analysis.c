@@ -38,6 +38,15 @@ void motive_duration_name(Rational duration, char *out, size_t size) {
             }
         }
     }
+    /* A triplet value is two thirds of a plain one: w3 to t3. */
+    if (duration.den % 3 == 0) {
+        for (unsigned k = 0; k < sizeof(LETTERS); k++) {
+            if (rational_cmp(motive_time(2, 3UL * (1UL << k)), duration) == 0) {
+                snprintf(out, size, "%c3", LETTERS[k]);
+                return;
+            }
+        }
+    }
     snprintf(out, size, "%lld/%lld", duration.num, duration.den);
 }
 
