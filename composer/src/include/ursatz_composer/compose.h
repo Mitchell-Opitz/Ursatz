@@ -90,7 +90,6 @@ typedef struct {
     unsigned long seed;
     GrowContext context;
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive compose_run */
-    size_t max_iterations;          /* per stage; 0 means FILL_DEFAULT_MAX_ITERATIONS */
     bool analyzer_check;            /* reject a complete run the Analyzer's analysis contradicts (false: no check) */
     const ComposerStyle *style;     /* NULL for none; must outlive compose_run */
     ComposerRatio style_weight;     /* a denominator of 0 (all-zero) is 1/1; unused without a style */

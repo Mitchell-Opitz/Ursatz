@@ -639,7 +639,6 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         memset(&fill, 0, sizeof(fill));
         fill.seed = config->seed + run->offset + stage_seed(stage, again, run->seam) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt +
                     COMPOSE_RETURN_STRIDE * (unsigned long)run->attempt;
-        fill.max_iterations = config->max_iterations;
         fill.job = config->job;
         fill.checker = checker_of(stage);
         fill.checker_context =
