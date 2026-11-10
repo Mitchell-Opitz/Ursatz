@@ -193,10 +193,25 @@ static void test_chord_refusals(void) {
     }
 }
 
+/* A bad "preferences" member is refused by validate, and by compose, with its path under /preferences (B3 of P43). */
+static void test_preferences(void) {
+    const char *const keep[][2] = {{"preferences", "{\"melody\": {\"keep\": 17}}"}};
+    expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), keep, 1, "/preferences/melody/keep", "1 to 16");
+    const char *const range[][2] = {{"preferences", "{\"melody\": {\"range\": {\"low\": 60, \"high\": 65}}}"}};
+    expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), range, 1, "/preferences/melody/range/high", "");
+    const char *const unknown[][2] = {{"preferences", "{\"bogus\": 1}"}};
+    expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), unknown, 1, "/preferences/bogus", "");
+    const char *const wrong[][2] = {{"preferences", "[]"}};
+    expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), wrong, 1, "/preferences", "preferences must be an object");
+    const char *const fine[][2] = {{"preferences", "{\"melody\": {\"keep\": 2}, \"motif\": {\"pickup_one_in\": 0}}"}};
+    expect_valid(THEME("one-motive.json"), fine, 1);
+}
+
 int main(void) {
     test_valid();
     test_plan_refusals();
     test_chord_refusals();
+    test_preferences();
     printf("test_api_validate: ok\n");
     return 0;
 }
