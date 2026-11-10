@@ -677,6 +677,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             fidelity_context.inner_context = fill.checker_context;
             fidelity_context.cache = fidelity_cache;
             fidelity_context.minimum = NULL;
+            fidelity_context.table = config->fidelity;
             fill.checker = grow_fidelity_checker;
             fill.checker_context = &fidelity_context;
         }

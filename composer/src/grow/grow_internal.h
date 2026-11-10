@@ -348,13 +348,6 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
  * The role an idea has by its name (R-355): presentation (basic idea, repetition, consequent basic idea), continuation
  * (fragment 1 and 2), cadential (cadential, cadential 1 and 2) and contrast (contrasting idea, consequent contrasting idea).
  */
-typedef enum {
-    GROW_ROLE_NONE,
-    GROW_ROLE_PRESENTATION,
-    GROW_ROLE_CONTINUATION,
-    GROW_ROLE_CADENTIAL,
-    GROW_ROLE_CONTRAST
-} GrowIdeaRole;
 /* GROW_ROLE_NONE for a NULL name or one that is no idea's. */
 GrowIdeaRole grow_idea_role(const char *idea_name);
 /*
@@ -362,6 +355,10 @@ GrowIdeaRole grow_idea_role(const char *idea_name);
  * refuses it (R-355); 0 for GROW_ROLE_NONE, GROW_ROLE_CONTRAST and values out of range.
  */
 MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role);
+/* The default table: the minimums grow_fidelity_minimum reads. */
+void grow_fidelity_table_default(GrowFidelityTable *out);
+/* grow_fidelity_minimum over a table (R-411); a NULL table is the default one. */
+MotiveScore grow_fidelity_minimum_in(const GrowFidelityTable *table, GrowDevelopment development, GrowIdeaRole role);
 /*
  * The motive an idea's melody span asks for is made from, as the ref says: the span's MOTIVE_REF names the idea's motive
  * node; that node's own MOTIVE_REF gives the source node and the ref (a node with none, m0 or a motive given for the idea,
@@ -407,7 +404,8 @@ typedef struct {
     FillCheckerFn inner;      /* the melody stage's own checker, run first */
     void *inner_context;
     GrowFidelityCache *cache; /* NULL for none */
-    const MotiveScore *minimum; /* NULL for the table's (grow_fidelity_minimum); else the minimum of every role, for tests */
+    const MotiveScore *minimum; /* NULL for the table's (grow_fidelity_minimum_in); else the minimum of every role, for tests */
+    const GrowFidelityTable *table; /* NULL for the default table */
 } GrowFidelityContext;
 
 /*

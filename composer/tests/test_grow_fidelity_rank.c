@@ -149,7 +149,7 @@ static size_t check_refusal(PiecePlan *plan, const Motive *basic, LaneSpanId spa
     assert(list.count > 0);
 
     MotiveScore one = {1, 1};
-    GrowFidelityContext table = {GROW_DEVELOP_BALANCED, basic, melody_fill_checker, NULL, NULL, NULL};
+    GrowFidelityContext table = {GROW_DEVELOP_BALANCED, basic, melody_fill_checker, NULL, NULL, NULL, NULL};
     GrowFidelityContext raised = table;
     raised.minimum = &one;
     size_t refused = 0;

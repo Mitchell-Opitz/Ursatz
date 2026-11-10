@@ -98,6 +98,7 @@ typedef struct {
     ComposerRatio tempo;            /* GrowConfig.tempo; a denominator of 0 (all-zero) is none */
     const struct GrowPoolForm *pool; /* GrowConfig.pool; NULL for none; must outlive compose_run */
     size_t pool_count;
+    const GrowFidelityTable *fidelity; /* GrowConfig.fidelity; NULL for the defaults; must outlive compose_run */
     /* The theme sections heard and checked after the run (R-261); NULL is every section. A section out of scope is
        reported with ComposeHeard.in_scope false, adds nothing to the heard score and is not checked by the Analyzer. The
        returns, seam and key checks read the whole piece either way. plan_regenerate_all sets it to the sections that

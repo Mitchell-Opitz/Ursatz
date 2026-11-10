@@ -14,6 +14,7 @@
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/rejection.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
 
@@ -211,6 +212,24 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
 /* How far a theme's presentation and continuation stray from its motif (ch. XI). All-zero is balanced. */
 typedef enum { GROW_DEVELOP_BALANCED = 0, GROW_DEVELOP_MELODY, GROW_DEVELOP_THEME, GROW_DEVELOP_COUNT } GrowDevelopment;
 
+/* The role an idea has in a theme by its name (R-355, grow_idea_role). */
+typedef enum {
+    GROW_ROLE_NONE,
+    GROW_ROLE_PRESENTATION,
+    GROW_ROLE_CONTINUATION,
+    GROW_ROLE_CADENTIAL,
+    GROW_ROLE_CONTRAST
+} GrowIdeaRole;
+
+/*
+ * The least fidelity an idea of a role may have under each development setting before the melody stage refuses it (R-355),
+ * a setting of the preferences (R-411). The default is the table in grow_fidelity.c. GROW_ROLE_NONE and GROW_ROLE_CONTRAST
+ * stay 0 and are not settings.
+ */
+typedef struct {
+    MotiveScore minimum[GROW_DEVELOP_COUNT][GROW_ROLE_CONTRAST + 1];
+} GrowFidelityTable;
+
 typedef struct {
     size_t candidates; /* the structures grow-theme proposes; 0 means 4 */
     GrowDevelopment development; /* the weights of the repetition, the fragments and the liquidation (grow_beginning.c, grow_ending.c) */
@@ -277,6 +296,8 @@ typedef struct {
      */
     const struct GrowPoolForm *pool;
     size_t pool_count;
+    /* The fidelity minimums (R-355, R-411). NULL for the defaults; must outlive grow_run. */
+    const GrowFidelityTable *fidelity;
     /* NULL for none. Reported once at the start of the run ("grow", 0, 1: one candidate), then as ComposeConfig.job. A cancel
        ends the run with GROW_ERR_STUCK and outcome->cancelled. */
     const ComposerJob *job;

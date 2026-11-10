@@ -40,12 +40,20 @@ static const MotiveScore FIDELITY_MINIMUM[GROW_DEVELOP_COUNT][GROW_ROLE_CONTRAST
                             [GROW_ROLE_CONTRAST] = {0, 1}},
 };
 
-MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role) {
+void grow_fidelity_table_default(GrowFidelityTable *out) {
+    memcpy(out->minimum, FIDELITY_MINIMUM, sizeof(out->minimum));
+}
+
+MotiveScore grow_fidelity_minimum_in(const GrowFidelityTable *table, GrowDevelopment development, GrowIdeaRole role) {
     MotiveScore none = {0, 1};
     if ((int)development < 0 || development >= GROW_DEVELOP_COUNT || (int)role < GROW_ROLE_NONE || role > GROW_ROLE_CONTRAST) {
         return none;
     }
-    return FIDELITY_MINIMUM[development][role];
+    return table ? table->minimum[development][role] : FIDELITY_MINIMUM[development][role];
+}
+
+MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role) {
+    return grow_fidelity_minimum_in(NULL, development, role);
 }
 
 GrowIdeaRole grow_idea_role(const char *idea_name) {
@@ -402,7 +410,7 @@ bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillO
         return true;
     }
     MotiveScore minimum = fidelity_context->minimum ? *fidelity_context->minimum
-                                                    : grow_fidelity_minimum(fidelity_context->development, role);
+                                                    : grow_fidelity_minimum_in(fidelity_context->table, fidelity_context->development, role);
     if (!departs && measured.score.numerator * minimum.denominator < minimum.numerator * measured.score.denominator) {
         out->hard_violation = true;
         snprintf(out->reason, sizeof(out->reason), "motive fidelity %lu/%lu under %lu/%lu (%s)", measured.score.numerator,
