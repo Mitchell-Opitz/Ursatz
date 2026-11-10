@@ -47,7 +47,8 @@ reads "Loading piano..." until the samples are decoded.
   claim's span (a cadence plays from the dominant to the end of the arrival)
   and, at the end, the cursor returns to the claim's start. A span with no
   length plays a quarter note.
-- Loop (pieces): the loop version of a piece in the Pieces view plays its
+- Loop (pieces): a version the form says loops (its `versions` entry with `loop` true: the loop version of a game loop;
+  the other forms have none, so no Loop control) of a piece in the Pieces view plays its
   intro once, then repeats the loop region from the result (`result.loop`)
   without a gap. The transport schedules each pass ahead of the clock
   (`createTransport` option `loop: {start, end}`, whole notes), so notes after
@@ -55,8 +56,10 @@ reads "Loading piano..." until the samples are decoded.
   end is cut there. The readout and the cursor show the position inside the
   piece. The Loop button turns the repeat on or off while playing (on by
   default); a claim or range play ignores it.
-- Play ending (pieces): the pass goes on to the end of the last body section,
-  then the notes of the ending version (`ending.mid`) play from there to its
+- Play ending (pieces): a version that loops and has a version after it (its `after`: the ending version of a game
+  loop) gets Play ending. The pass goes on to the end of the last body section (the last section whose role is a loop
+  role of the form but the last one),
+  then the notes of that version (`ending.mid`) play from there to its
   end and playback stops. Pressed before the body's end of the current pass it
   switches there; pressed in the turnaround it waits for the next pass's body
   end (`transport.playEnding(endingTimeline, bodyEnd)`). Stopped, it starts

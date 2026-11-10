@@ -101,13 +101,22 @@ A piece's detail holds the piece editor (`pieces-view.js`; the helpers are in
 composes (see [Piece bodies and version files](../storage.md#piece-bodies-and-version-files)) and reuses the Themes view's
 builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
 
-- Header: key, mode (major, minor, From the brief), meter and tempo (blank
+- Header: form (the Composer's forms by label: Binary, Rounded binary, Ternary, Theme and variations, Loop, Layered, Game
+  loop; `GET /api/composer/forms`, loaded with the vocabulary, so the GUI keeps no form or part table; a body that names no
+  form is the game loop), key, mode (major, minor, From the brief), meter and tempo (blank
   takes the brief's). The Composer reads the piece while it is edited (400 ms after the last change,
   `POST /api/materials/items/validate`): the key, meter, tempo, seed, pickups, numerals and sizes it refuses show its
   message, as given, and mark the header or the strip its request path names. Nothing of that blocks Save as new
   version; only a missing brief for the mode From the brief, the loop body, the order of the parts and a theme of
   another length do.
-- Structure strip: four lanes, Intro, Loop body, Turnaround and Ending, each a
+- Structure of a sized form (every form but the game loop): a Size select (each size of the form, such as "16 bars", or
+  "3 variations, 32 bars" for one with a count) and, for a form that can modulate, a Modulate checkbox. The sections are
+  the Composer's and cannot be edited: a strip of blocks as wide as their bars and a table of each section's letter, role,
+  length, beginning and ending, cadence, keys, the section it returns to and its slots with their ideas. The body is
+  `{form, key, mode, meter, bars, count, modulate}` with no sections; the piece's motive, pool, accompaniment and brief are
+  as below. Per-section fills are not offered (the Composer does not take them for these forms yet). A refusal of the size
+  or of Modulate marks that control. Changing the form starts it at its default size.
+- Structure strip of the game loop: four lanes, the form's roles (Intro, Loop body, Turnaround and Ending), each a
   row of section blocks as wide as their beats. Add section puts a section at
   the end of its lane. Selecting a block opens its editor: letter, length (a
   bars and a beats input, giving beats), pickup (beats of anacrusis, `0` for
@@ -137,18 +146,22 @@ Update and compose and Keep.
 
 The Result panel of the current version, and of any version opened from the
 versions list (read-only), shows the seed, key, loop region, brief and, for
-the loop version and the ending version, a row for each section (section,
-part, letter, start, length, cadence planned and heard, fill, source), the
-score, the seam rules that held (loop only), the Analyzer check and the style
-distance. Below are the MIDI downloads and the scores in the score workspace,
-`loop.musicxml` with a tab for `ending.musicxml`, with playback served by the
-backend from `loop.mid` or `ending.mid` (`GET .../versions/<n>/playback?file=loop|ending`).
+each version of the form (the game loop has a loop version and an ending
+version, any other form one version, `piece`), a row for each section (section,
+part by its role label, letter, start, length, cadence planned and heard, fill, source), the
+score, the seam rules that held, the Analyzer check and the style
+distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
+per version (`<name>.musicxml`), with playback served by the
+backend from `<name>.mid` (`GET .../versions/<n>/playback?file=<name>`). A read-only version of a sized form
+names its form, size and the sections the Composer plans.
 
-On the current version each section of the loop has Regenerate (lane: all
+On the current version each section of the first version (the loop version of a game loop, `piece` of any other form)
+has Regenerate (lane: all
 lanes, harmony, bass, melody or inner; seed) and Variations (lane, count 1 to
 8, seed). A regenerate becomes the next version. Variations show side by side
 as small scores with Choose, which makes one the next version. A section
-filled with a theme offers harmony and bass only; an ending section offers
+filled with a theme offers harmony and bass only; a section that is not in the first version (a game loop's ending
+sections) offers
 neither. Harmonize is Variations on harmony.
 
 ## Export

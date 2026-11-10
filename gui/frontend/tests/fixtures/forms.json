@@ -1,0 +1,4023 @@
+{
+ "forms": [
+  {
+   "name": "binary",
+   "label": "Binary",
+   "closing": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": true,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "away"
+   ],
+   "sizes": [
+    {
+     "bars": 8,
+     "count": 0,
+     "default": false,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "away"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "away",
+        "end": "home"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 16,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "away"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "away",
+        "end": "home"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "rounded-binary",
+   "label": "Rounded binary",
+   "closing": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": true,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "away"
+   ],
+   "sizes": [
+    {
+     "bars": 16,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "away"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "compound_basic_idea",
+        "label": "Compound basic idea"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "away",
+        "end": "home"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "A'",
+       "letter": "A'",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "exact",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 24,
+     "count": 0,
+     "default": false,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "away"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "compound_basic_idea",
+        "label": "Compound basic idea"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "away",
+        "end": "home"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "A'",
+       "letter": "A'",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "exact",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "ternary",
+   "label": "Ternary",
+   "closing": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": true,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "away"
+   ],
+   "sizes": [
+    {
+     "bars": 12,
+     "count": 0,
+     "default": false,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "away"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "A return",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "exact",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 24,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "away"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "A return",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "exact",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "variations",
+   "label": "Theme and variations",
+   "closing": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": true,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "away"
+   ],
+   "sizes": [
+    {
+     "bars": 16,
+     "count": 1,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 24,
+     "count": 2,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 32,
+     "count": 3,
+     "default": true,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "away",
+        "end": "away"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 40,
+     "count": 4,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "away",
+        "end": "away"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 4",
+       "letter": "V4",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 48,
+     "count": 5,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "away",
+        "end": "away"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 4",
+       "letter": "V4",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 5",
+       "letter": "V5",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 56,
+     "count": 6,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "away",
+        "end": "away"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 4",
+       "letter": "V4",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 5",
+       "letter": "V5",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 6",
+       "letter": "V6",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 64,
+     "count": 7,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 4",
+       "letter": "V4",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "away",
+        "end": "away"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 5",
+       "letter": "V5",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 6",
+       "letter": "V6",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 7",
+       "letter": "V7",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 72,
+     "count": 8,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 4",
+       "letter": "V4",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "away",
+        "end": "away"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 5",
+       "letter": "V5",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 6",
+       "letter": "V6",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 7",
+       "letter": "V7",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "diminish",
+       "returns": "theme",
+       "variation": "ornament",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "variation 8",
+       "letter": "V8",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "interval-change",
+       "returns": "theme",
+       "variation": "reharmonize",
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "loop",
+   "label": "Loop",
+   "closing": false,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [],
+   "sizes": [
+    {
+     "bars": 8,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "loop",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 16,
+     "count": 0,
+     "default": false,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "imperfect-authentic",
+        "label": "imperfect authentic",
+        "core": "IAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "layered",
+   "label": "Layered",
+   "closing": false,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "required",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [],
+   "sizes": [
+    {
+     "bars": 16,
+     "count": 2,
+     "default": false,
+     "sections": [
+      {
+       "name": "layer 1",
+       "letter": "L1",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": [
+        "bass"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "layer 2",
+       "letter": "L2",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "layer 1",
+       "variation": "exact",
+       "layers": [
+        "bass",
+        "inner_voice",
+        "melody"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 24,
+     "count": 3,
+     "default": false,
+     "sections": [
+      {
+       "name": "layer 1",
+       "letter": "L1",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": [
+        "bass"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "layer 2",
+       "letter": "L2",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "layer 1",
+       "variation": "exact",
+       "layers": [
+        "bass",
+        "inner_voice"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "layer 3",
+       "letter": "L3",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "layer 1",
+       "variation": "exact",
+       "layers": [
+        "bass",
+        "inner_voice",
+        "melody"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bars": 32,
+     "count": 4,
+     "default": true,
+     "sections": [
+      {
+       "name": "layer 1",
+       "letter": "L1",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": [
+        "bass"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "layer 2",
+       "letter": "L2",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "layer 1",
+       "variation": "exact",
+       "layers": [
+        "bass",
+        "inner_voice"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "layer 3",
+       "letter": "L3",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "layer 1",
+       "variation": "exact",
+       "layers": [
+        "bass",
+        "inner_voice",
+        "melody"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "layer 4",
+       "letter": "L4",
+       "role": {
+        "value": "layer",
+        "label": "Layer"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "layer 1",
+       "variation": "exact",
+       "layers": [
+        "bass",
+        "inner_voice",
+        "melody"
+       ],
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "game-loop",
+   "label": "Game loop",
+   "closing": false,
+   "sections": "request",
+   "versions": [
+    {
+     "value": "loop",
+     "label": "Loop version",
+     "loop": true
+    },
+    {
+     "value": "ending",
+     "label": "Ending version",
+     "loop": false,
+     "after": "loop"
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": true,
+    "section_fills": true
+   },
+   "regions": [],
+   "sizes": [],
+   "roles": [
+    {
+     "value": "intro",
+     "label": "Intro",
+     "required": false
+    },
+    {
+     "value": "body",
+     "label": "Loop body",
+     "required": true
+    },
+    {
+     "value": "turnaround",
+     "label": "Turnaround",
+     "required": false
+    },
+    {
+     "value": "ending",
+     "label": "Ending",
+     "required": false
+    }
+   ],
+   "loop_roles": [
+    "body",
+    "turnaround"
+   ],
+   "cadences": {
+    "default": "IAC",
+    "last": [
+     {
+      "roles": [
+       "ending"
+      ],
+      "cadence": "PAC"
+     },
+     {
+      "roles": [
+       "body",
+       "turnaround"
+      ],
+      "cadence": "HC"
+     },
+     {
+      "roles": [
+       "intro"
+      ],
+      "cadence": "HC"
+     }
+    ]
+   },
+   "default_ending": {
+    "id": "end",
+    "letter": "E",
+    "role": "ending",
+    "bars": 2,
+    "cadence": "PAC"
+   }
+  }
+ ]
+}

@@ -1,23 +1,50 @@
 /* Vocabulary (P27 B10): the words the Composer reads (meters, modes, keys, cadences, pickups, ideas, patterns,
  * limits...) come from GET /api/composer/vocabulary (composer_api_vocabulary), loaded once before the views mount.
+ * The forms (P45 B6: their sections, sizes, slots and versions) come from GET /api/composer/forms (composer_api_forms).
  * The models read their lists from here and keep none of their own (R-270, R-276). No DOM. */
 (function (root) {
   let current = null;
+  let currentForms = null;
 
-  /* Fetches the vocabulary once and keeps it. fetchFn defaults to fetch. Rejects when the backend cannot give it. */
+  /* Fetches the vocabulary and the forms once and keeps them. fetchFn defaults to fetch. Rejects when the backend cannot
+   * give either. */
   async function load(fetchFn) {
     const doFetch = fetchFn || ((url) => root.fetch(url));
     const res = await doFetch("/api/composer/vocabulary");
     if (res.status !== 200) {
       throw new Error(`The Composer vocabulary is unavailable (${res.status}).`);
     }
-    current = await res.json();
+    const vocabulary = await res.json();
+    const formsRes = await doFetch("/api/composer/forms");
+    if (formsRes.status !== 200) {
+      throw new Error(`The Composer forms are unavailable (${formsRes.status}).`);
+    }
+    const forms = await formsRes.json();
+    current = vocabulary;
+    currentForms = forms && Array.isArray(forms.forms) ? forms.forms : [];
     return current;
   }
 
-  /* Sets the vocabulary directly (tests, a captured fixture). */
-  function set(vocabulary) {
+  /* Sets the vocabulary directly (tests, a captured fixture); forms, when given, is the forms route's answer
+   * ({forms: [...]}) or its list. */
+  function set(vocabulary, forms) {
     current = vocabulary;
+    if (forms !== undefined) {
+      currentForms = Array.isArray(forms) ? forms : forms && Array.isArray(forms.forms) ? forms.forms : [];
+    }
+  }
+
+  /* The forms the Composer composes, in its order ([{name, label, sections, versions, roles, sizes, ...}]). */
+  function forms() {
+    if (!currentForms) {
+      throw new Error("The Composer forms are not loaded.");
+    }
+    return currentForms;
+  }
+
+  /* The form called name, or null. */
+  function form(name) {
+    return forms().find((item) => item.name === name) || null;
   }
 
   function loaded() {
@@ -131,7 +158,7 @@
     return { check, now, cancel };
   }
 
-  const api = { load, set, loaded, get, list, values, labelOf, entry, limit, seedMax, createValidator };
+  const api = { load, set, loaded, get, forms, form, list, values, labelOf, entry, limit, seedMax, createValidator };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {
