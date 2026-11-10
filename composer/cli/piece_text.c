@@ -34,7 +34,9 @@ static void print_version_text(const char *label, const cJSON *version) {
     printf("\n%s version\n", label);
     const cJSON *row = NULL;
     cJSON_ArrayForEach(row, cJSON_GetObjectItemCaseSensitive(version, "sections")) {
-        printf("  %-10s %-2s %-3s start ", string_of(row, "id"), string_of(row, "part"), string_of(row, "letter"));
+        /* A form whose sections the request gives names the part of a row, a form with sizes its role. */
+        const char *part = cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "part")) ? string_of(row, "part") : string_of(row, "role");
+        printf("  %-10s %-2s %-3s start ", string_of(row, "id"), part, string_of(row, "letter"));
         print_time(string_of(row, "start"));
         printf(", %.0f beats", number_of(row, "beats"));
         if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "cadence"))) {
@@ -45,7 +47,13 @@ static void print_version_text(const char *label, const cJSON *version) {
         } else if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "heard"))) {
             printf(" (heard %s)", string_of(row, "heard"));
         }
-        printf(", %s fill (%s)\n", string_of(row, "fill"), string_of(row, "source"));
+        if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "fill"))) {
+            printf(", %s fill (%s)", string_of(row, "fill"), string_of(row, "source"));
+        }
+        if (cJSON_IsString(cJSON_GetObjectItemCaseSensitive(row, "returns"))) {
+            printf(", returns %s", string_of(row, "returns"));
+        }
+        printf("\n");
     }
     const cJSON *score = cJSON_GetObjectItemCaseSensitive(version, "score");
     printf("  score %.0f/%.0f\n", number_of(score, "numerator"), number_of(score, "denominator"));
@@ -79,7 +87,9 @@ void cli_print_piece_text(const cJSON *document, const char *const *files, size_
         const char *lane = string_of(regenerated, "lane");
         printf("regenerated %s of section %s\n", strcmp(lane, "all") == 0 ? "all lanes" : lane, string_of(regenerated, "section"));
     } else if (regenerated) {
-        printf("regenerated nothing; the ending version is built again\n");
+        printf(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "ending")
+                   ? "regenerated nothing; the ending version is built again\n"
+                   : "regenerated nothing; the plan is as it was\n");
     }
     const cJSON *loop = cJSON_GetObjectItemCaseSensitive(document, "loop");
     if (cJSON_IsObject(loop)) {
@@ -90,11 +100,18 @@ void cli_print_piece_text(const cJSON *document, const char *const *files, size_
         printf(" (whole notes)\n");
     }
     const cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
-    print_version_text("loop", cJSON_GetObjectItemCaseSensitive(versions, "loop"));
-    print_version_text("ending", cJSON_GetObjectItemCaseSensitive(versions, "ending"));
+    const cJSON *version = NULL;
+    cJSON_ArrayForEach(version, versions) {
+        print_version_text(version->string, version);
+    }
     for (size_t i = 0; i < file_count; i++) {
         printf("wrote %s\n", files[i]);
     }
+}
+
+const cJSON *cli_piece_variation_version(const cJSON *item) {
+    const cJSON *loop = cJSON_GetObjectItemCaseSensitive(item, "loop");
+    return loop ? loop : cJSON_GetObjectItemCaseSensitive(item, "piece");
 }
 
 void cli_print_piece_variations_text(const cJSON *document, const char *const *plans, const char *const *midis,
@@ -104,7 +121,7 @@ void cli_print_piece_variations_text(const cJSON *document, const char *const *p
     const cJSON *item = NULL;
     size_t at = 0;
     cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(document, "variations")) {
-        const cJSON *loop = cJSON_GetObjectItemCaseSensitive(item, "loop");
+        const cJSON *loop = cli_piece_variation_version(item);
         const cJSON *score = cJSON_GetObjectItemCaseSensitive(loop, "score");
         printf("variation %zu  seed %.0f  score %.0f/%.0f", ++at, number_of(item, "seed"), number_of(score, "numerator"),
                number_of(score, "denominator"));
