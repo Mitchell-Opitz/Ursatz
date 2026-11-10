@@ -116,6 +116,21 @@ if(NOT settings STREQUAL "settings.json" OR NOT bars_one EQUAL 0)
     message(FATAL_ERROR "the manifest does not record the settings: ${first}")
 endif()
 
+# All nine listening settings on (R-422): the command runs and the manifest records the document.
+file(WRITE "${WORK}/listening.json"
+     "{\"motif\": {\"accented_one_in\": 2, \"avoid_repeats\": true, \"leaps_per_motif\": 2, \"leap_recovery\": true, "
+     "\"pickup_from_accent\": true, \"contrast_fidelity_min\": \"1/3\", \"long_on_weak\": 4, \"final_long\": true}}")
+expect_status(0 listen --what motifs --count 3 --seed 5 --settings listening.json --out-dir motifs-l)
+expect_samples(motifs-l 3)
+file(STRINGS "${WORK}/motifs-l/listen.jsonl" lines)
+list(GET lines 0 first)
+string(JSON listening_one_in GET "${first}" preferences motif accented_one_in)
+string(JSON listening_final GET "${first}" preferences motif final_long)
+string(JSON listening_ratio GET "${first}" preferences motif contrast_fidelity_min)
+if(NOT listening_one_in EQUAL 2 OR NOT listening_final STREQUAL "ON" OR NOT listening_ratio STREQUAL "1/3")
+    message(FATAL_ERROR "the manifest does not record the listening settings: ${first}")
+endif()
+
 # --- themes ------------------------------------------------------------------------------
 
 # A generated motif for each sample.
