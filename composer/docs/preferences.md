@@ -15,7 +15,7 @@ Every member is optional and its default is the value the Composer used before t
 | `composer_preferences_write(preferences)` | The full document, every member, as a `cJSON` object the caller deletes. Ratios are `"n/d"` text and `nct_types` is in the order passing, neighbor, appoggiatura, suspension, anticipation. |
 | `composer_preferences_is_default(preferences)` | True when every setting is the default. |
 
-`ComposerPreferences` holds `MelodyFillParams melody`. The motif and development groups are added with the stages that read them.
+`ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif` and `GrowFidelityTable development`. The API member that carries the document is added after them.
 
 ## The melody group
 
@@ -68,3 +68,70 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
 ```
 
 `start_cell` stays a parameter of the stage and is not a preference. The first melody attempt of a compose run uses `climax_position` and a retry uses its own position (`CLIMAX_RETRIES`, `compose_run.c`); the other melody settings apply to every attempt.
+
+## The motif group
+
+The settings of the segments motive generator ([cli-random-motive.md](cli-random-motive.md#the-segments-strategy)), stored in `MotiveRandomPreferences` and read through `MotiveRandomOptions.preferences` (NULL for the defaults). The drawn strategy keeps its constants as the comparison baseline and reads none of them (R-304). A weighted list is an object of whole numbers 0 to 20 under the names below, with a sum above 0; a name left out keeps its default. A list whose weights sum to 0 where the meter leaves an entry out (a three-way shape list in a meter with no halves) draws its first entry.
+
+| Key | Default | Limit | What it shapes | Replaces |
+| --- | --- | --- | --- | --- |
+| `bars` | `one` 1, `two` 1 | weighted list | A motive of one bar or of two. One bar only in a meter of an even number of beats, four or more. | `SEGMENT_BAR_ONE_BAR_WEIGHT`, `SEGMENT_BAR_TWO_BARS_WEIGHT` |
+| `pickup_one_in` | 4 | 0 to 64 | A pickup (half a beat or a beat) in one motive of this many; 0 never draws one and draws no random number for it. | `SEGMENT_PICKUP_ONE_IN` |
+| `shapes_one_bar` | `repeat` 3, `contrast` 2 | weighted list | The shape of a one-bar motive: a a' or a b. | `SHAPE_WEIGHTS_ONE_BAR` |
+| `shapes_two_bars` | `repeat` 3, `contrast` 2, `repeat_contrast` 2 | weighted list | The shape of a two-bar motive; `repeat_contrast` (a a' b) only with an even meter. | `SHAPE_WEIGHTS_TWO_BARS` |
+| `plans_two` | `I-V` 3, `I-IV` 1, `I-I` 1 | weighted list | The chords of a two-segment motive. | the weights of `PLANS_TWO` |
+| `plans_three` | `I-V-I` 2, `I-IV-I` 1 | weighted list | The chords of a three-segment motive. | the weights of `PLANS_THREE` |
+| `features` | `dotted` 1, `leap` 1, `repeat` 1 | weighted list | The distinctive feature of segment a. A feature that cannot fit its cell gives way to the next one with a weight. | `FEATURE_KINDS` (equal) |
+| `leap.low` | 5 | 3 to 12 | The smallest leap, in semitones, a leap feature may be. | `SEGMENT_LEAP_LOW` |
+| `leap.high` | 9 | `leap.low` to 12 | The largest. | `SEGMENT_LEAP_HIGH` |
+| `rung_moves` | `step` 6, `skip` 2 | weighted list | A walk on the chord tones moves one rung or two. | the `moves` table of `next_rung` |
+| `decorations` | `chord_tone` 1, `passing` 1, `neighbor` 1, `appoggiatura` 1, `escape` 1 | weighted list | What a note between two frame notes is: another chord tone or a non-chord tone of the type. | `DECORATION_KINDS` (equal) |
+| `durations` | `half_beat` 2, `beat` 4, `two_beats` 1 | weighted list | The note lengths a cell is tiled with; a length that does not fit its place is left out. | `MOTIVE_RANDOM_DURATION_WEIGHTS` (the drawn strategy still reads it) |
+
+With every default each draw makes the random-number calls it always made, so a seed gives the motives it always gave (the `random-motive*` snapshots are unchanged). The plan degrees (I-V, I-IV, I-I, I-V-I, I-IV-I) stay in `motive_random_segments.c`; the preferences set only how often each is drawn.
+
+```json
+{
+  "motif": {
+    "bars": {"one": 1, "two": 1},
+    "pickup_one_in": 4,
+    "shapes_one_bar": {"repeat": 3, "contrast": 2},
+    "shapes_two_bars": {"repeat": 3, "contrast": 2, "repeat_contrast": 2},
+    "plans_two": {"I-V": 3, "I-IV": 1, "I-I": 1},
+    "plans_three": {"I-V-I": 2, "I-IV-I": 1},
+    "features": {"dotted": 1, "leap": 1, "repeat": 1},
+    "leap": {"low": 5, "high": 9},
+    "rung_moves": {"step": 6, "skip": 2},
+    "decorations": {"chord_tone": 1, "passing": 1, "neighbor": 1, "appoggiatura": 1, "escape": 1},
+    "durations": {"half_beat": 2, "beat": 4, "two_beats": 1}
+  }
+}
+```
+
+## The development group
+
+The least fidelity an idea of a role may have under each development setting before the melody stage refuses it ([grow-development.md](grow-development.md#ranking-and-refusing-by-fidelity)), stored in `GrowFidelityTable` and read through `GrowConfig.fidelity` and `ComposeConfig.fidelity` (NULL for the defaults; it must outlive the run).
+
+| Key | Default | Limit | What it shapes | Replaces |
+| --- | --- | --- | --- | --- |
+| `fidelity_minimum.<setting>.<role>` | the table below | a ratio `n/d` as text, 0 <= n <= d, 1 <= d <= 1000 | The score an idea of the role may not fall under. `<setting>` is `melody`, `balanced` or `theme`; `<role>` is `presentation`, `continuation` or `cadential`. | `FIDELITY_MINIMUM` |
+
+| Role | `melody` | `balanced` | `theme` |
+| --- | --- | --- | --- |
+| `presentation` | `"11/20"` | `"11/20"` | `"11/20"` |
+| `continuation` | `"7/20"` | `"7/20"` | `"7/20"` |
+| `cadential` | `"7/20"` | `"3/10"` | `"1/5"` |
+
+A contrasting idea and an idea with no role are not settings: their minimum is 0. A setting or role not named here is refused (`/development/fidelity_minimum/contrast`). The theme's Development list shows the minimum of the table in use.
+
+```json
+{
+  "development": {
+    "fidelity_minimum": {
+      "melody": {"presentation": "11/20", "continuation": "7/20", "cadential": "7/20"},
+      "balanced": {"presentation": "11/20", "continuation": "7/20", "cadential": "3/10"},
+      "theme": {"presentation": "11/20", "continuation": "7/20", "cadential": "1/5"}
+    }
+  }
+}
+```
