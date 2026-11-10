@@ -45,7 +45,7 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 
 | Name | Where reported | Current value | Doc |
 |---|---|---|---|
-| `version`, `api_version`, `analyzer_version`, `ursatz_commit` | `GET /api/composer/status`, from `composer_api_versions` | the pinned Composer (0.4.1, API 1.11, `af094f1`) and the builds it links | [Composer routes](api/composer-routes.md#composer-routes) |
+| `version`, `api_version`, `analyzer_version`, `ursatz_commit` | `GET /api/composer/status`, from `composer_api_versions` | the pinned Composer (0.4.1, API 1.12, `12243b0`) and the builds it links | [Composer routes](api/composer-routes.md#composer-routes) |
 | `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `ursatz_analyzer_version`, `ursatz_analyzer_ursatz_commit` and `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | the pinned Analyzer (0.6.0) | [Piece store](storage.md#piece-store) |
 | `api_version`, `composer_version`, `ursatz_commit`, `render_key`, `tempo` | `render.json` beside a cached motif render | the pinned Composer | [Motif score and playback](views/playback.md#motif-score-and-playback) |
 | `schema_version` of a Composer request | `theme_service.c`, `piece_service.c` | 2 for a theme, 1 for a piece | [Storage](storage.md#theme-bodies-and-version-files) |

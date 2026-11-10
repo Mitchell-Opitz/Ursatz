@@ -1627,7 +1627,20 @@
     "half_beat": 2,
     "beat": 4,
     "two_beats": 1
-   }
+   },
+   "accented_one_in": 0,
+   "accented_types": {
+    "appoggiatura": 1,
+    "passing": 1,
+    "suspension": 1
+   },
+   "avoid_repeats": false,
+   "leaps_per_motif": 11,
+   "leap_recovery": false,
+   "pickup_from_accent": false,
+   "contrast_fidelity_min": "0/1",
+   "long_on_weak": 0,
+   "final_long": false
   },
   "development": {
    "fidelity_minimum": {
@@ -1669,6 +1682,8 @@
   "preferences": {
    "weight_max": 20,
    "pickup_one_in_max": 64,
+   "accented_one_in_max": 64,
+   "leaps_per_motif_max": 11,
    "leap_min": 3,
    "leap_max": 12,
    "range_low_min": 36,
