@@ -177,6 +177,13 @@ target_link_libraries(test_preferences PRIVATE ursatz_composer cjson)
 target_compile_options(test_preferences PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_preferences COMMAND test_preferences)
 
+add_executable(test_melody_preferences test_melody_preferences.c)
+target_link_libraries(test_melody_preferences PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_melody_preferences PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_melody_preferences PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_melody_preferences PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_melody_preferences COMMAND test_melody_preferences)
+
 add_executable(test_form_hear test_form_hear.c)
 target_link_libraries(test_form_hear PRIVATE ursatz_composer)
 target_compile_options(test_form_hear PRIVATE -Wall -Wextra -Wpedantic)
