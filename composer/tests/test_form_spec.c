@@ -409,6 +409,175 @@ static void test_refusals(void) {
     free(list);
 }
 
+/* ------------------------------------------------------------- the game loop */
+
+/* A form whose sections the request gives, with the members the test varies (roles, loop roles, cadences). */
+static void loop_document(char *out, size_t cap, const char *roles, const char *loop, const char *cadences, const char *rest) {
+    snprintf(out, cap,
+             "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sections\": \"request\", "
+             "\"roles\": %s, \"loop\": {\"roles\": %s}, \"cadences\": %s%s}",
+             roles, loop, cadences, rest);
+}
+
+#define ALL_ROLES "[\"intro\", \"body\", \"turnaround\", \"ending\"]"
+#define LOOP_ROLES "[\"body\", \"turnaround\"]"
+#define CADENCES "{\"default\": \"imperfect-authentic\", \"last\": [{\"roles\": [\"ending\"], \"cadence\": \"perfect-authentic\"}]}"
+
+/* forms/game-loop.json (R-419): what docs/forms.md says of it, then the refusals of its own members. */
+static void test_game_loop(void) {
+    FormSpec *form = builtin("game-loop");
+    assert(strcmp(form->name, "game-loop") == 0 && strcmp(form->plan_name, "structure") == 0 && form->label[0] != '\0');
+    assert(form->request_sections && form->size_count == 0 && !form->closing && form->region_count == 0 &&
+           form->checks == FORM_CHECK_ALL && !form->accompaniment_required);
+    assert(form->role_count == 4 && form->roles[0] == FORM_ROLE_INTRO && form->roles[1] == FORM_ROLE_BODY &&
+           form->roles[2] == FORM_ROLE_TURNAROUND && form->roles[3] == FORM_ROLE_ENDING);
+    assert(form->loop_role_count == 2 && form->loop_roles[0] == FORM_ROLE_BODY && form->loop_roles[1] == FORM_ROLE_TURNAROUND);
+    assert(form_spec_role_in_loop(form, FORM_ROLE_BODY) && !form_spec_role_in_loop(form, FORM_ROLE_INTRO) &&
+           form_spec_has_role(form, FORM_ROLE_ENDING) && !form_spec_has_role(form, FORM_ROLE_THEME));
+    assert(form->default_cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
+           strcmp(form->default_cadence_name, "imperfect-authentic") == 0 && form->last_cadence_count == 3);
+    assert(form->last_cadences[0].role_count == 1 && form->last_cadences[0].roles[0] == FORM_ROLE_ENDING &&
+           form->last_cadences[0].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    assert(form->last_cadences[1].role_count == 2 && form->last_cadences[1].roles[0] == FORM_ROLE_BODY &&
+           form->last_cadences[1].roles[1] == FORM_ROLE_TURNAROUND && form->last_cadences[1].cadence == CADENCE_TYPE_HALF);
+    assert(form->last_cadences[2].role_count == 1 && form->last_cadences[2].roles[0] == FORM_ROLE_INTRO &&
+           form->last_cadences[2].cadence == CADENCE_TYPE_HALF);
+    assert(form->has_default_ending && strcmp(form->default_ending.id, "end") == 0 &&
+           strcmp(form->default_ending.letter, "E") == 0 && form->default_ending.role == FORM_ROLE_ENDING &&
+           form->default_ending.bars == 2 && form->default_ending.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    form_spec_destroy(form);
+
+    char text[1024];
+    FormSpec *parsed = NULL;
+    FormSpecError error;
+    /* A valid document of the members. */
+    loop_document(text, sizeof(text), ALL_ROLES, LOOP_ROLES, CADENCES, "");
+    assert(form_spec_parse(text, &parsed, &error) == FORM_SPEC_OK && parsed->request_sections && !parsed->has_default_ending);
+    form_spec_destroy(parsed);
+
+    /* roles: an unknown role, a role of the sized forms, roles out of order or twice, no body. */
+    loop_document(text, sizeof(text), "[\"intro\", \"chorus\"]", LOOP_ROLES, CADENCES, "");
+    refused(text, "/roles/1");
+    loop_document(text, sizeof(text), "[\"body\", \"theme\"]", "[\"body\"]", CADENCES, "");
+    refused(text, "/roles/1");
+    loop_document(text, sizeof(text), "[\"body\", \"intro\"]", "[\"body\"]", CADENCES, "");
+    refused(text, "/roles/1");
+    loop_document(text, sizeof(text), "[\"intro\", \"body\", \"body\"]", "[\"body\"]", CADENCES, "");
+    refused(text, "/roles/2");
+    loop_document(text, sizeof(text), "[\"intro\", \"ending\"]", "[\"ending\"]", CADENCES, "");
+    refused(text, "/roles");
+    loop_document(text, sizeof(text), "[]", LOOP_ROLES, CADENCES, "");
+    refused(text, "/roles");
+    loop_document(text, sizeof(text), "\"body\"", LOOP_ROLES, CADENCES, "");
+    refused(text, "/roles");
+    /* loop: a role the form does not have. */
+    loop_document(text, sizeof(text), "[\"intro\", \"body\"]", LOOP_ROLES, CADENCES, "");
+    refused(text, "/loop/roles/1");
+    loop_document(text, sizeof(text), ALL_ROLES, "[\"body\", \"coda\"]", CADENCES, "");
+    refused(text, "/loop/roles/1");
+    /* cadences: a rule for a role the form does not have, a cadence that is not PAC, IAC or HC, an unknown one. */
+    loop_document(text, sizeof(text), "[\"body\"]", "[\"body\"]",
+                  "{\"default\": \"half\", \"last\": [{\"roles\": [\"ending\"], \"cadence\": \"half\"}]}", "");
+    refused(text, "/cadences/last/0/roles/0");
+    loop_document(text, sizeof(text), ALL_ROLES, LOOP_ROLES, "{\"default\": \"plagal\"}", "");
+    refused(text, "/cadences/default");
+    loop_document(text, sizeof(text), ALL_ROLES, LOOP_ROLES,
+                  "{\"default\": \"half\", \"last\": [{\"roles\": [\"body\"], \"cadence\": \"sonata\"}]}", "");
+    refused(text, "/cadences/last/0/cadence");
+    loop_document(text, sizeof(text), ALL_ROLES, LOOP_ROLES, "{\"default\": \"half\", \"order\": 1}", "");
+    refused(text, "/cadences/order");
+    /* default_ending: only the ending role. */
+    loop_document(text, sizeof(text), ALL_ROLES, LOOP_ROLES, CADENCES,
+                  ", \"default_ending\": {\"id\": \"end\", \"letter\": \"E\", \"role\": \"body\", \"bars\": 2, \"cadence\": \"half\"}");
+    refused(text, "/default_ending/role");
+    loop_document(text, sizeof(text), ALL_ROLES, LOOP_ROLES, CADENCES,
+                  ", \"default_ending\": {\"id\": \"end\", \"letter\": \"E\", \"role\": \"ending\", \"cadence\": \"half\"}");
+    refused(text, "/default_ending/bars");
+    /* The members of a request-section form are missing, or given to a form that has sizes. */
+    snprintf(text, sizeof(text), "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sections\": \"request\", "
+             "\"roles\": " ALL_ROLES ", \"cadences\": " CADENCES "}");
+    refused(text, "/loop");
+    snprintf(text, sizeof(text), "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sections\": \"request\", "
+             "\"roles\": " ALL_ROLES ", \"loop\": {\"roles\": " LOOP_ROLES "}}");
+    refused(text, "/cadences");
+    char sizes[512];
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 8, \"default\": true, \"sections\": [" SECTION_A "]}");
+    document(text, sizeof(text), ", \"roles\": [\"body\"]", sizes);
+    refused(text, "/roles");
+    document(text, sizeof(text), ", \"loop\": {\"roles\": [\"body\"]}", sizes);
+    refused(text, "/loop");
+}
+
+/*
+ * The cadences the game loop's document gives a section that names none, for layouts of parts: what the cadences of
+ * R-169 were, written out here so the test does not read them from the document it checks.
+ */
+typedef struct {
+    const char *layout;
+    PiecePart parts[6];
+    CadenceType cadences[6];
+    size_t count;
+} CadenceRow;
+
+#define PAC CADENCE_TYPE_PERFECT_AUTHENTIC
+#define IAC CADENCE_TYPE_IMPERFECT_AUTHENTIC
+#define HC CADENCE_TYPE_HALF
+
+static const CadenceRow CADENCE_ROWS[] = {
+    {"intro, body, body, turnaround, ending",
+     {PIECE_PART_INTRO, PIECE_PART_BODY, PIECE_PART_BODY, PIECE_PART_TURNAROUND, PIECE_PART_ENDING},
+     {HC, IAC, IAC, HC, PAC}, 5},
+    {"body", {PIECE_PART_BODY}, {HC}, 1},
+    {"intro, body", {PIECE_PART_INTRO, PIECE_PART_BODY}, {HC, HC}, 2},
+    {"body, body, ending", {PIECE_PART_BODY, PIECE_PART_BODY, PIECE_PART_ENDING}, {IAC, HC, PAC}, 3},
+    {"body, turnaround, turnaround",
+     {PIECE_PART_BODY, PIECE_PART_TURNAROUND, PIECE_PART_TURNAROUND},
+     {IAC, IAC, HC}, 3},
+    {"intro, intro, body, ending, ending",
+     {PIECE_PART_INTRO, PIECE_PART_INTRO, PIECE_PART_BODY, PIECE_PART_ENDING, PIECE_PART_ENDING},
+     {IAC, HC, HC, IAC, PAC}, 5},
+};
+
+static void test_default_cadences(void) {
+    FormSpec *form = builtin("game-loop");
+    for (size_t r = 0; r < sizeof(CADENCE_ROWS) / sizeof(CADENCE_ROWS[0]); r++) {
+        const CadenceRow *row = &CADENCE_ROWS[r];
+        PieceSection sections[6];
+        PieceRequest request;
+        memset(sections, 0, sizeof(sections));
+        memset(&request, 0, sizeof(request));
+        request.form = "game-loop";
+        request.sections = sections;
+        request.section_count = row->count;
+        for (size_t i = 0; i < row->count; i++) {
+            sections[i].part = row->parts[i];
+        }
+        piece_default_cadences(form, &request);
+        for (size_t i = 0; i < row->count; i++) {
+            if (!sections[i].has_cadence || sections[i].cadence != row->cadences[i]) {
+                fprintf(stderr, "layout %s: section %zu has cadence %d, expected %d\n", row->layout, i, (int)sections[i].cadence,
+                        (int)row->cadences[i]);
+                exit(1);
+            }
+        }
+    }
+    /* A section with a cadence of its own keeps it, and the rest are still defaulted around it. */
+    PieceSection sections[3];
+    PieceRequest request;
+    memset(sections, 0, sizeof(sections));
+    memset(&request, 0, sizeof(request));
+    request.sections = sections;
+    request.section_count = 3;
+    sections[0].part = PIECE_PART_BODY;
+    sections[1].part = PIECE_PART_BODY;
+    sections[1].has_cadence = true;
+    sections[1].cadence = CADENCE_TYPE_PLAGAL;
+    sections[2].part = PIECE_PART_ENDING;
+    piece_default_cadences(form, &request);
+    assert(sections[0].cadence == IAC && sections[1].cadence == CADENCE_TYPE_PLAGAL && sections[2].cadence == PAC);
+    form_spec_destroy(form);
+}
+
 /* ------------------------------------------------------------- form_spec_size */
 
 static void test_sizes(void) {
@@ -581,7 +750,9 @@ int main(int argc, char **argv) {
     test_builtin_details();
     test_for_plan();
     test_refusals();
+    test_game_loop();
+    test_default_cadences();
     test_sizes();
-    printf("form documents: %zu built-in forms, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
+    printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }
