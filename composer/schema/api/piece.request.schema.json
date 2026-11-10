@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece.request.schema.json",
   "title": "composer_api_piece request",
-  "description": "The piece request of docs/piece-request.md with a theme fill carrying its plan object, an earlier loop plan to regenerate a section of, and the options of the piece command as members.",
+  "description": "The piece request of docs/piece-request.md with a theme fill carrying its plan object, an earlier plan to regenerate a section of, and the options of the piece command as members. Schema version 2 names a built-in form.",
   "type": "object",
   "required": [
     "request"
@@ -69,6 +69,10 @@
     "ending_musicxml": {
       "type": "boolean"
     },
+    "musicxml_versions": {
+      "type": "boolean",
+      "description": "The MusicXML of every version after the first, as \"musicxml_versions\" in the document."
+    },
     "explain": {
       "enum": [
         "text",
@@ -96,15 +100,25 @@
         "schema_version",
         "key",
         "mode",
-        "meter",
-        "sections"
+        "meter"
       ],
       "properties": {
         "schema": {
           "const": "ursatz-piece-request"
         },
         "schema_version": {
-          "const": 1
+          "enum": [
+            1,
+            2
+          ],
+          "description": "1 is the game loop; 2 names a form in \"form\"."
+        },
+        "form": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Schema version 2: the name of a built-in form (composer_api_forms). Absent for version 1, the game loop."
         },
         "key": {
           "type": "string"
@@ -248,8 +262,74 @@
             "string",
             "null"
           ]
+        },
+        "bars": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 512,
+          "description": "A form with sizes: the size in bars; 0 or absent for the default."
+        },
+        "count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 64,
+          "description": "A form with sizes: the variations or layers; 0 or absent for the size bars gives."
+        },
+        "modulate": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "A form with regions: plan the keys of the sections from the seed."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": 1
+              }
+            },
+            "required": [
+              "schema_version"
+            ]
+          },
+          "then": {
+            "required": [
+              "sections"
+            ],
+            "properties": {
+              "form": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": 2
+              }
+            },
+            "required": [
+              "schema_version"
+            ]
+          },
+          "then": {
+            "required": [
+              "form"
+            ]
+          }
+        }
+      ]
     }
   }
 }

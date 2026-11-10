@@ -32,8 +32,9 @@ static void variations_destroy(Variation *items, size_t count) {
 }
 
 /*
- * {"schema": "ursatz-piece-variations", "section", "lane", "brief", "variations": [{"index", "seed", "loop": <version, its
- * "plan" the plan object>, "loop_markers": {"start", "end"}}], "kept", "requested", "seeds_tried"}.
+ * {"schema": "ursatz-piece-variations", "section", "lane", "brief", "variations": [{"index", "seed", "<first version>":
+ * <version, its "plan" the plan object>, "loop_markers": {"start", "end"}}], "kept", "requested", "seeds_tried"}. The first
+ * version is "loop" for the game loop and "piece" for a form with sizes, which has no loop markers.
  */
 static ComposerStatus variations_document(const PieceSpec *request, const PieceEdit *edit, const Variation *items, size_t kept,
                                   size_t tried, unsigned long requested, bool musicxml, cJSON **result, ComposerError *error) {
@@ -63,7 +64,8 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
             cJSON_Delete(loop && plan ? NULL : plan);
         }
         ok = ok && cJSON_AddNumberToObject(entry, "index", (double)(i + 1)) &&
-             cJSON_AddNumberToObject(entry, "seed", (double)variation->seed) && api_add(entry, "loop", loop);
+             cJSON_AddNumberToObject(entry, "seed", (double)variation->seed) &&
+             api_add(entry, api_piece_first_version_name(request), loop);
         if (ok) {
             cJSON *markers = api_piece_loop_json(variation->version.plan);
             ok = !markers || api_add(entry, "loop_markers", markers);

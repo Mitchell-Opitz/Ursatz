@@ -25,6 +25,7 @@ typedef struct {
     bool check;
     bool plain_midi;
     const char *input;
+    char form[64];          /* the form of the request: "game-loop" for schema version 1 */
     const char *from;       /* the loop plan to work on (regenerate) */
     const char *request;    /* the request that plan was made from */
     const char *regenerate; /* a section id, or "none" */
@@ -51,15 +52,17 @@ static void print_help(FILE *out) {
     fprintf(out, "ending, each a list of sections of any length in beats with a pickup, a cadence and a fill (nothing, a motive,\n");
     fprintf(out, "a composed theme or a progression), in a key and a meter, with an accompaniment or a voicing and a style. Two\n");
     fprintf(out, "versions are made: the loop (intro once, then the body and the turnaround, which lead back to the body's start)\n");
-    fprintf(out, "and the ending (the intro and the body as the loop has them, then the ending). See docs/piece-request.md.\n\n");
+    fprintf(out, "and the ending (the intro and the body as the loop has them, then the ending). See docs/piece-request.md.\n");
+    fprintf(out, "A request of schema_version 2 names another built-in form in \"form\" (rounded-binary, ternary, variations, ...)\n");
+    fprintf(out, "and takes its sections from the form's size (\"bars\", \"count\", \"modulate\"); it has the one version.\n\n");
     fprintf(out, "Options:\n");
     fprintf(out, "  --seed <n>               whole number from 0; the same seed gives the same output (default: from the clock)\n");
     fprintf(out, "  --check                  analyze both versions with the Ursatz Analyzer and pass over a seed whose analysis\n");
     fprintf(out, "                           contradicts the plan\n");
-    fprintf(out, "  --out <loop-plan.json>   write the loop version's plan as JSON\n");
-    fprintf(out, "  --ending-out <file>      write the ending version's plan as JSON\n");
-    fprintf(out, "  --midi <file>            write the loop version as a MIDI file, with loopStart and loopEnd markers\n");
-    fprintf(out, "  --musicxml <file>        write the loop version as MusicXML\n");
+    fprintf(out, "  --out <loop-plan.json>   write the first version's plan (the loop's) as JSON\n");
+    fprintf(out, "  --ending-out <file>      write the ending version's plan as JSON (a form with an ending version only)\n");
+    fprintf(out, "  --midi <file>            write the first version as a MIDI file, with loopStart and loopEnd markers for a loop\n");
+    fprintf(out, "  --musicxml <file>        write the first version as MusicXML\n");
     fprintf(out, "  --ending-midi <file>     write the ending version as a MIDI file\n");
     fprintf(out, "  --ending-musicxml <file> write the ending version as MusicXML\n");
     fprintf(out, "  --plain-midi             MIDI: no track names and no section markers (the loop markers stay)\n");
@@ -365,6 +368,10 @@ static int write_files(const Options *options, const ComposerResponse *response,
                   {OUT_EXPLAIN, options->explain}};
     int status = 0;
     *pending_count = 0;
+    if ((options->ending_out || options->ending_midi || options->ending_musicxml) &&
+        !cJSON_GetObjectItemCaseSensitive(plans, "ending")) {
+        return cli_fail(CLI_EXIT_USAGE, "the %s form has no ending version", options->form);
+    }
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]) && status == 0; i++) {
         if (!wanted[i].path) {
             continue;
@@ -377,7 +384,7 @@ static int write_files(const Options *options, const ComposerResponse *response,
         (*pending_count)++;
         OutputKind kind = wanted[i].kind;
         if (kind == OUT_LOOP_PLAN || kind == OUT_ENDING_PLAN) {
-            status = cli_write_plan_object(cJSON_GetObjectItemCaseSensitive(plans, kind == OUT_LOOP_PLAN ? "loop" : "ending"),
+            status = cli_write_plan_object(kind == OUT_LOOP_PLAN ? plans->child : cJSON_GetObjectItemCaseSensitive(plans, "ending"),
                                            entry->temporary, entry->final_path);
             continue;
         }
@@ -416,10 +423,10 @@ static int write_files(const Options *options, const ComposerResponse *response,
 static void print_json(cJSON *document, const Options *options, const CliPendingFile *pending, size_t pending_count) {
     cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
     const char *paths[2] = {options->out, options->ending_out};
-    static const char *const NAMES[2] = {"loop", "ending"};
-    for (int v = 0; v < 2; v++) {
+    const cJSON *plan = cJSON_GetObjectItemCaseSensitive(document, "plans")->child;
+    for (int v = 0; v < 2 && plan; v++, plan = plan->next) {
         if (paths[v]) {
-            set_string(cJSON_GetObjectItemCaseSensitive(versions, NAMES[v]), "plan", paths[v]);
+            set_string(cJSON_GetObjectItemCaseSensitive(versions, plan->string), "plan", paths[v]);
         }
     }
     cJSON_DeleteItemFromObjectCaseSensitive(document, "plans");
@@ -496,7 +503,7 @@ static int write_variations(const Options *options, cJSON *document, bool json) 
     memset(files, 0, sizeof(files));
     for (size_t i = 0; status == 0 && i < kept && i < VARIATIONS_MAX; i++) {
         cJSON *item = cJSON_GetArrayItem(list, (int)i);
-        cJSON *loop = cJSON_GetObjectItemCaseSensitive(item, "loop");
+        cJSON *loop = (cJSON *)cli_piece_variation_version(item);
         VariationFiles *named = &files[i];
         if (snprintf(named->plan, PATH_SIZE, "%s/variation-%zu.json", options->out_dir, i + 1) >= PATH_SIZE ||
             snprintf(named->midi, PATH_SIZE, "%s/variation-%zu.mid", options->out_dir, i + 1) >= PATH_SIZE ||
@@ -589,6 +596,8 @@ int run_piece(int argc, char **argv) {
     if (status != 0) {
         return status;
     }
+    const cJSON *form = cJSON_GetObjectItemCaseSensitive(piece, "form");
+    snprintf(options.form, sizeof options.form, "%s", cJSON_IsString(form) ? form->valuestring : "game-loop");
     char *text = NULL;
     status = build_request(&options, piece, &text);
     if (status != 0) {

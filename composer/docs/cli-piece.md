@@ -28,9 +28,14 @@ Analyzer) is passed over. `--check` runs `analyzer_check_piece` on each version 
 
 | Option | Effect |
 | --- | --- |
-| `--out`, `--ending-out` | The plan of each version as JSON. |
-| `--midi`, `--ending-midi` | Each version as a MIDI file with the tempo of the brief. The loop's file has the markers `loopStart` and `loopEnd` in the conductor track ([export.md](export.md#loop-markers)); the ending's has none. |
+| `--out`, `--ending-out` | The plan of the first version (the loop's) and of the ending version as JSON. |
+| `--midi`, `--ending-midi` | The first version and the ending version as a MIDI file with the tempo of the brief. The loop's file has the markers `loopStart` and `loopEnd` in the conductor track ([export.md](export.md#loop-markers)); the ending's has none. |
 | `--musicxml`, `--ending-musicxml` | Each version as MusicXML. |
+
+A request of `"schema_version": 2` names another form ([piece-request.md](piece-request.md#a-piece-of-another-form-schema-version-2)).
+A form with sizes has the one version `piece`: `--out`, `--midi` and `--musicxml` write it, and `--ending-out`, `--ending-midi`
+and `--ending-musicxml` exit 1 with `the <form> form has no ending version`. The text and the JSON list each version of the
+document in order; a row of a form with sizes shows its role and the section it returns instead of the fill.
 | `--plain-midi` | No track names and no section markers. The loop markers stay. |
 | `--explain <file>` | Why each candidate was chosen or rejected, in both versions: text with a heading for each, or with a `.json` name `{"loop": ..., "ending": ...}` ([explain.md](explain.md)). |
 

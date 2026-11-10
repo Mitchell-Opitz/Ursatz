@@ -44,12 +44,13 @@
  */
 size_t api_piece_version_names(const FormSpec *form, const char **names, const char **labels, size_t capacity);
 
-/* The form every piece is: the game loop, whose sections the piece request gives (forms/game-loop.json). */
+/* The form of a version 1 piece request: the game loop, whose sections the request gives (forms/game-loop.json). */
 #define API_PIECE_FORM "game-loop"
 
 /* The piece request, read: the request of the form, the brief, every motive and theme plan. */
 typedef struct {
-    PieceRequest request; /* form API_PIECE_FORM, its sections in `sections` */
+    PieceRequest request; /* its form is form->name; the sections of a form that takes them from the request are in `sections` */
+    FormSpec *form;       /* owned: the form the request names (API_PIECE_FORM for schema version 1) */
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS + 1];
     const cJSON *motive_json[PIECE_STRUCTURE_MAX_SECTIONS + 1]; /* a motif fill's own motive */
     const cJSON *forms_json[PIECE_STRUCTURE_MAX_SECTIONS + 1];  /* a motif fill's saved forms */
@@ -88,6 +89,9 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
                                       bool plain_midi, const ComposerJob *job, ComposerError *error);
 void api_piece_request_destroy(PieceSpec *request);
 
+/* The name of the first version of the request's form: "loop" for the game loop, "piece" for a form with sizes. */
+const char *api_piece_first_version_name(const PieceSpec *request);
+
 /*
  * Reads the piece request root without composing and writes the defaults into filled (a copy of root): the cadence of every
  * section that has none (piece_default_cadences) and the default ending section when there is none
@@ -102,9 +106,13 @@ typedef struct {
     bool composed;
 } PieceVersion;
 
+/* The most versions a piece has: the loop and the ending of a game loop (api_piece_version_names). */
+#define API_PIECE_VERSIONS_MAX 2
+
+/* The versions of a piece, in the order of api_piece_version_names: index 0 is the first (the loop of a game loop). */
 typedef struct {
-    PieceVersion loop;
-    PieceVersion ending;
+    PieceVersion versions[API_PIECE_VERSIONS_MAX];
+    size_t version_count;
     unsigned long seed;
 } PieceMade;
 

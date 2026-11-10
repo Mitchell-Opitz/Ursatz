@@ -39,32 +39,34 @@ same theme on any thread; the entry keeps no state, so requests may run at the s
 ## `composer_api_piece(request_json, job, out)`
 
 Composes a looping game track from the piece request of [piece-request.md](../piece-request.md) (`"schema":
-"ursatz-piece-request"`, `"schema_version": 1`), or writes one section of the loop plan of an earlier piece again, and builds
-the ending version from the loop. The request is an object around the piece request, which carries no path but the style
+"ursatz-piece-request"`, `"schema_version": 1`, the game loop, or `2` with a `form`: any built-in form, API 1.14), or writes
+one section of the plan of an earlier piece again, and builds the ending version from the loop (a form with sizes has the one
+version `piece`). The request is an object around the piece request, which carries no path but the style
 model (R-267):
 
 | Member | Value |
 |---|---|
 | `request` | the piece request object, as the file holds it, except that a section filled with a theme carries `"plan": <plan object>` (a path is refused with `COMPOSER_ERR_REQUEST` and the path `/request/sections/<i>/fill/plan`; the caller reads the file) and may carry `"source": "<name>"`, the name shown as the section's source in the result (default `theme plan`) |
-| `from` | the loop plan object of an earlier piece (its `plans.loop`, or `plan_json`); absent to compose a piece |
-| `regenerate` | with `from`: `{"section": "<section id>", "lanes": ["bass", ...]}`. `lanes` holds `harmony`, `bass`, `melody`, `inner`; none, or `all`, is the whole section. A section filled with a theme needs `harmony` or `bass`. A `null` or absent `section` (or no `regenerate`) reopens nothing: the loop plan is kept and the ending version is built again |
+| `from` | the plan object of an earlier piece (its first member of `plans`, or `plan_json`); absent to compose a piece |
+| `regenerate` | with `from`: `{"section": "<section id>", "lanes": ["bass", ...]}`; the section of a form with sizes is the name of a section of the plan (`B`, `variation 2`), else refused at `/regenerate/section`. `lanes` holds `harmony`, `bass`, `melody`, `inner`; none, or `all`, is the whole section. A section filled with a theme needs `harmony` or `bass`. A `null` or absent `section` (or no `regenerate`) reopens nothing: the loop plan is kept and the ending version is built again |
 | `seed` | 0 to 4294967295 (a number or a string of digits), default from the clock; the seeds after it are tried (up to 16) when one gets stuck |
 | `check` | `true`: the Analyzer analyzes both versions, and a seed whose analysis contradicts the plan is passed over |
 | `style` | a style model file path; replaces the request's `style` |
 | `midi`, `musicxml` | `true`: the loop version's MIDI file (`midi`, `midi_size`, with the `loopStart` and `loopEnd` markers) and MusicXML (`musicxml`) |
-| `ending_musicxml` | `true`: the ending version's MusicXML as the string `ending_musicxml` of the result |
+| `ending_musicxml` | `true`: the ending version's MusicXML as the string `ending_musicxml` of the result (refused at `/ending_musicxml` for a form with no ending version) |
+| `musicxml_versions` | `true`: the MusicXML of every version after the first as `musicxml_versions: {"<name>": "<MusicXML>"}` (`{}` for a form with one version) |
 | `plain_midi` | `true`: no track names and no section markers in the MIDI file |
 | `explain` | `"text"` or `"json"`: why each candidate was chosen or rejected in both versions, as the string `explanation` |
 
 The request has no `corpus` member: a piece reads no corpus, and `corpus` is refused with the path `/corpus`.
 
 `json`: what `piece --format json` prints, without the `files` it wrote: `{"schema": "ursatz-piece", "seed", "key", "meter",
-"brief", "loop": {"start", "end"}, "regenerated", "versions": {"loop": V, "ending": V}}` (`regenerated` only with `from`: `null`,
+"brief", "loop": {"start", "end"}, "regenerated", "versions": {"loop": V, "ending": V}}` (the versions are `piece` alone for a form with sizes, and `loop` is `null` when the first has no loop region; `regenerated` only with `from`: `null`,
 or `{"section", "lane"}` with `all`, a lane, or the lanes joined with `+`), each version V `{"plan", "sections", "score",
 "seam", "analyzer_check", "style_distance"}` as in [cli-piece.md](../cli-piece.md#output). `V.plan` is `null`: the plans are in
-`"plans": {"loop": <plan object>, "ending": <plan object>}`, and `plan_json` is the loop plan. A section a regenerate left
+`"plans": {"loop": <plan object>, "ending": <plan object>}` (by the version names), and `plan_json` is the first version's plan. A section a regenerate left
 as it was (a theme section out of the scope of the hearing, [regenerate.md](../regenerate.md)) has `"in_scope": false`; a
-complete loop plan has no open theme section, so only a plan with open sections reports one. The MIDI file of the ending
+complete loop plan has no open theme section, so only a plan with open sections reports one; a regenerate of a form with sizes marks every section it did not write. A row of a game loop is `{"id", "part", "letter", "start", "beats", "cadence", "heard", "fill", "source"}`; a row of a form with sizes is `{"id", "role", "letter", "start", "beats", "cadence", "heard", "returns", "motive"}` (the section's name, role, letter, start, length in beats, planned and heard cadence, the section it returns and how its motive is made, or `null`). The MIDI file of the ending
 version is `composer_api_export` of `plans.ending`; its MusicXML comes with `ending_musicxml` because the `xml:id` of
 its notes carry the span ids of the plan in memory, which a plan file renumbers.
 
@@ -91,7 +93,7 @@ is kept when its notes differ from the plan's and from every version kept before
 
 `json`: what `piece --variations` prints, with each version's plan inline: `{"schema": "ursatz-piece-variations",
 "section", "lane", "brief", "variations": [{"index", "seed", "loop": V, "loop_markers": {"start", "end"}, "musicxml"}],
-"kept", "requested", "seeds_tried"}`. `V.plan` is the plan object of the variation. The MIDI file of a variation is
+"kept", "requested", "seeds_tried"}` (the version of a form with sizes is under `piece` and has no `loop_markers`). `V.plan` is the plan object of the variation. The MIDI file of a variation is
 `composer_api_export` of its plan with its `loop_markers` as `loop`. Progress is reported once for each seed tried
 (`"variations"`) and for each compose stage; a cancel is `COMPOSER_ERR_CANCELLED`. No version that differs from the plan is
 `COMPOSER_ERR_UNSATISFIABLE`. Refusals name `/from`, `/variations/section`, `/variations/lanes`, `/variations/count`.

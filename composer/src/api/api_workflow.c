@@ -601,3 +601,53 @@ ComposerStatus api_compose_stuck(const PiecePlan *plan, const ComposeOutcome *ou
     out->error = error;
     return status == COMPOSER_OK ? COMPOSER_ERR_UNSATISFIABLE : status;
 }
+
+static void append_number(char *out, size_t size, unsigned long value, bool first) {
+    size_t used = strlen(out);
+    snprintf(out + used, size - used, first ? "%lu" : ", %lu", value);
+}
+
+/* The sizes the form has, for the message about one it has not: the bars its sizes come in, then their counts. */
+void api_form_sizes_text(const FormSpec *form, char *out, size_t size) {
+    unsigned long bars[FORM_SPEC_MAX_SIZES];
+    unsigned long counts[FORM_SPEC_MAX_SIZES];
+    size_t bars_count = 0;
+    size_t count_count = 0;
+    out[0] = '\0';
+    /* Ascending, each once. */
+    for (size_t i = 0; i < form->size_count; i++) {
+        unsigned long b = (unsigned long)form->sizes[i].bars;
+        unsigned long c = (unsigned long)form->sizes[i].count;
+        size_t at = 0;
+        while (at < bars_count && bars[at] < b) {
+            at++;
+        }
+        if (at == bars_count || bars[at] != b) {
+            memmove(bars + at + 1, bars + at, (bars_count - at) * sizeof(bars[0]));
+            bars[at] = b;
+            bars_count++;
+        }
+        at = 0;
+        while (c != 0 && at < count_count && counts[at] < c) {
+            at++;
+        }
+        if (c != 0 && (at == count_count || counts[at] != c)) {
+            memmove(counts + at + 1, counts + at, (count_count - at) * sizeof(counts[0]));
+            counts[at] = c;
+            count_count++;
+        }
+    }
+    for (size_t i = 0; i < bars_count; i++) {
+        append_number(out, size, bars[i], i == 0);
+    }
+    size_t used = strlen(out);
+    snprintf(out + used, size - used, " bars");
+    for (size_t i = 0; i < count_count; i++) {
+        used = strlen(out);
+        snprintf(out + used, size - used, i ? ", %lu" : " (or count %lu", counts[i]);
+    }
+    if (count_count > 0) {
+        used = strlen(out);
+        snprintf(out + used, size - used, ")");
+    }
+}

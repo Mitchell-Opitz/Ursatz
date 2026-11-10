@@ -12,6 +12,7 @@
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "api_piece.h"
+#include "api_workflow.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
 
@@ -33,6 +34,8 @@ void api_piece_request_destroy(PieceSpec *request) {
     free(request->pool);
     free(request->pool_motives);
     composer_style_destroy(request->style);
+    form_spec_destroy(request->form);
+    request->form = NULL;
 }
 
 /* "antecedent+continuation": a beginning, a plus sign and an ending (as grow --hybrid), the words of the vocabulary. */
@@ -545,11 +548,122 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
     return COMPOSER_OK;
 }
 
+/* A whole-number member of the piece request: the error path of api_member_whole starts with base. */
+static bool read_whole(const cJSON *root, const char *base, const char *name, unsigned long maximum, unsigned long *out,
+                       bool *present, ComposerError *error) {
+    if (api_member_whole(root, name, 0, maximum, out, present, error)) {
+        return true;
+    }
+    char path[sizeof error->path];
+    snprintf(path, sizeof path, "%s%s", base, error->path);
+    snprintf(error->path, sizeof error->path, "%s", path);
+    return false;
+}
+
+/* A boolean member of the piece request: the error path of api_member_bool starts with base. */
+static bool read_bool(const cJSON *root, const char *base, const char *name, bool *out, bool *present, ComposerError *error) {
+    if (api_member_bool(root, name, out, present, error)) {
+        return true;
+    }
+    char path[sizeof error->path];
+    snprintf(path, sizeof path, "%s%s", base, error->path);
+    snprintf(error->path, sizeof error->path, "%s", path);
+    return false;
+}
+
+/* True when the request has the member and it is not null. */
+static bool given_member(const cJSON *root, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, name);
+    return item && !cJSON_IsNull(item);
+}
+
+/* The names of the built-in forms, joined by commas. */
+static void builtin_form_names(char *out, size_t size) {
+    size_t used = 0;
+    out[0] = '\0';
+    for (size_t i = 0; i < form_spec_builtin_count() && used < size; i++) {
+        used += (size_t)snprintf(out + used, size - used, i ? ", %s" : "%s", form_spec_builtin_name(i));
+    }
+}
+
+/* The form the request names: schema version 1 is the game loop, version 2 names a built-in form. */
+static ComposerStatus read_form(PieceSpec *request, const cJSON *root, const char *base, bool named, ComposerError *error) {
+    char path[128];
+    const char *name = API_PIECE_FORM;
+    snprintf(path, sizeof path, "%s/form", base);
+    if (!named && given_member(root, "form")) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "schema_version 1 is the game loop; name a form with schema_version 2");
+    }
+    char names[256];
+    builtin_form_names(names, sizeof names);
+    if (named) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, "form");
+        if (!cJSON_IsString(item)) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "the request needs \"form\": a built-in form (%s)", names);
+        }
+        name = item->valuestring;
+    }
+    FormSpecResult found = form_spec_builtin(name, &request->form);
+    if (found == FORM_SPEC_ERR_ALLOC) {
+        return api_fail_alloc(error);
+    }
+    if (found != FORM_SPEC_OK) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "unknown form '%s'; the built-in forms are %s", name, names);
+    }
+    request->request.form = request->form->name;
+    return COMPOSER_OK;
+}
+
+/*
+ * The members of a form that takes its sections from its size: bars, count and modulate; sections and voicing are refused.
+ * A size the form does not have is refused with the ones it has.
+ */
+static ComposerStatus read_sized(PieceSpec *request, const cJSON *root, const char *base, ComposerError *error) {
+    char path[128];
+    PieceRequest *piece = &request->request;
+    const FormSpec *form = request->form;
+    unsigned long bars = 0;
+    unsigned long count = 0;
+    bool has_bars = false;
+    bool has_count = false;
+    bool modulate = false;
+    bool present = false;
+    if (given_member(root, "sections")) {
+        snprintf(path, sizeof path, "%s/sections", base);
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s takes its sections from its form; leave out sections", form->label);
+    }
+    if (given_member(root, "voicing")) {
+        snprintf(path, sizeof path, "%s/voicing", base);
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s has no voicing to give; leave out voicing", form->label);
+    }
+    if (!read_whole(root, base, "bars", 512, &bars, &has_bars, error) || !read_whole(root, base, "count", 64, &count, &has_count, error) ||
+        !read_bool(root, base, "modulate", &modulate, &present, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (!form_spec_size(form, (size_t)bars, (size_t)count)) {
+        char sizes[160];
+        char asked[64] = "";
+        api_form_sizes_text(form, sizes, sizeof sizes);
+        if (has_bars) {
+            snprintf(asked, sizeof asked, "%lu bars%s", bars, has_count ? " with " : "");
+        }
+        if (has_count) {
+            size_t used = strlen(asked);
+            snprintf(asked + used, sizeof asked - used, "count %lu", count);
+        }
+        snprintf(path, sizeof path, "%s/%s", base, has_bars ? "bars" : "count");
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s has no size of %s; it has %s", form->label, asked, sizes);
+    }
+    piece->bars = (size_t)bars;
+    piece->count = (size_t)count;
+    piece->modulate = modulate;
+    return COMPOSER_OK;
+}
+
 ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, const char *base, const char *style_path,
                                       bool plain_midi, const ComposerJob *job, ComposerError *error) {
     char path[128];
     memset(request, 0, sizeof(*request));
-    request->request.form = API_PIECE_FORM;
     request->job = job;
     request->style_path = style_path;
     if (!cJSON_IsObject(root)) {
@@ -560,27 +674,48 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
     if (!api_request_string(root, base, "schema", true, &schema, error)) {
         return COMPOSER_ERR_REQUEST;
     }
-    if (strcmp(schema, SCHEMA_NAME) != 0 || !cJSON_IsNumber(version) || version->valuedouble != 1) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, base, "the request must have \"schema\": \"%s\" and \"schema_version\": 1",
-                        SCHEMA_NAME);
+    if (strcmp(schema, SCHEMA_NAME) != 0 || !cJSON_IsNumber(version) || (version->valuedouble != 1 && version->valuedouble != 2)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, base,
+                        "the request must have \"schema\": \"%s\" and \"schema_version\": 1 or 2", SCHEMA_NAME);
     }
-    ComposerStatus status = read_brief(request, root, base, error);
+    ComposerStatus status = read_form(request, root, base, version->valuedouble == 2, error);
+    if (status != COMPOSER_OK) {
+        return status;
+    }
+    PieceRequest *piece = &request->request;
+    piece->sections = request->sections;
+    bool given_sections = request->form->request_sections;
+    if (!given_sections) {
+        status = read_sized(request, root, base, error);
+    } else {
+        static const char *const SIZED[] = {"bars", "count", "modulate"};
+        for (size_t i = 0; i < sizeof(SIZED) / sizeof(SIZED[0]); i++) {
+            if (given_member(root, SIZED[i])) {
+                snprintf(path, sizeof path, "%s/%s", base, SIZED[i]);
+                return api_fail(error, COMPOSER_ERR_REQUEST, path,
+                                "%s takes its sections from the request and has no %s; leave out %s", request->form->label,
+                                SIZED[i], SIZED[i]);
+            }
+        }
+    }
+    if (status == COMPOSER_OK) {
+        status = read_brief(request, root, base, error);
+    }
     if (status != COMPOSER_OK) {
         return status;
     }
     snprintf(path, sizeof path, "%s/sections", base);
     const cJSON *sections = cJSON_GetObjectItemCaseSensitive(root, "sections");
-    if (!cJSON_IsArray(sections) || cJSON_GetArraySize(sections) < 1) {
+    if (given_sections && (!cJSON_IsArray(sections) || cJSON_GetArraySize(sections) < 1)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "the request needs \"sections\": a list with a body");
     }
     /* One more than the most, room for the default ending. */
-    if (cJSON_GetArraySize(sections) > PIECE_STRUCTURE_MAX_SECTIONS) {
+    if (given_sections && cJSON_GetArraySize(sections) > PIECE_STRUCTURE_MAX_SECTIONS) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "a piece has at most %d sections", PIECE_STRUCTURE_MAX_SECTIONS);
     }
-    PieceRequest *piece = &request->request;
-    piece->sections = request->sections;
     const cJSON *item = NULL;
-    cJSON_ArrayForEach(item, sections) {
+    const cJSON *section_list = given_sections ? sections : NULL;
+    cJSON_ArrayForEach(item, section_list) {
         char item_path[160];
         snprintf(item_path, sizeof item_path, "%s/%zu", path, piece->section_count);
         status = read_section(request, piece->section_count, item, item_path, &piece->meter, error);
@@ -608,22 +743,20 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
     for (size_t i = 0; !request->basic && i < piece->section_count; i++) {
         request->basic = request->sections[i].motive;
     }
+    if (!given_sections) {
+        return COMPOSER_OK;
+    }
     /* The request checks before the default ending joins it: a request without a body is a bad one. */
     if (piece_request_check(piece) != PIECE_OK) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
                         "the sections are not a piece: they need a body, in the order intro, body, turnaround, ending, with "
                         "different ids, whole beats and a pickup shorter than a bar");
     }
-    FormSpec *form = NULL;
-    if (form_spec_builtin(API_PIECE_FORM, &form) != FORM_SPEC_OK) {
-        return api_fail_alloc(error);
-    }
     size_t given = piece->section_count;
-    if (piece_default_ending(form, piece, PIECE_STRUCTURE_MAX_SECTIONS + 1) && piece->section_count > given) {
+    if (piece_default_ending(request->form, piece, PIECE_STRUCTURE_MAX_SECTIONS + 1) && piece->section_count > given) {
         /* The default ending is made from the basic motive, like an empty section. */
         snprintf(request->source[given], sizeof(request->source[0]), "basic motive");
     }
-    form_spec_destroy(form);
     return COMPOSER_OK;
 }
 
@@ -635,14 +768,24 @@ ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerErro
     ComposerStatus status = api_piece_read_request(request, root, "", NULL, false, NULL, error);
     cJSON *sections = cJSON_GetObjectItemCaseSensitive(filled, "sections");
     size_t given = (size_t)cJSON_GetArraySize(sections);
-    FormSpec *form = NULL;
-    if (status == COMPOSER_OK && form_spec_builtin(API_PIECE_FORM, &form) != FORM_SPEC_OK) {
-        status = api_fail_alloc(error);
+    if (status == COMPOSER_OK && request->form->request_sections) {
+        piece_default_cadences(request->form, &request->request);
+    } else if (status == COMPOSER_OK) {
+        /* A sized form has no sections to fill in: the size the request chose, as bars and count. */
+        const FormSpecSize *size = form_spec_size(request->form, request->request.bars, request->request.count);
+        const char *const names[] = {"bars", "count"};
+        const size_t values[] = {size ? size->bars : 0, size ? size->count : 0};
+        for (size_t i = 0; status == COMPOSER_OK && i < 2; i++) {
+            const cJSON *item = cJSON_GetObjectItemCaseSensitive(filled, names[i]);
+            if (item && !cJSON_IsNull(item)) {
+                continue;
+            }
+            cJSON_DeleteItemFromObjectCaseSensitive(filled, names[i]);
+            if (!cJSON_AddNumberToObject(filled, names[i], (double)values[i])) {
+                status = api_fail_alloc(error);
+            }
+        }
     }
-    if (status == COMPOSER_OK) {
-        piece_default_cadences(form, &request->request);
-    }
-    form_spec_destroy(form);
     for (size_t i = 0; status == COMPOSER_OK && i < request->request.section_count; i++) {
         const PieceSection *section = &request->request.sections[i];
         cJSON *item = i < given ? cJSON_GetArrayItem(sections, (int)i) : NULL;
