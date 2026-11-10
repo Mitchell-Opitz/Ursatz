@@ -1,5 +1,6 @@
 #include "harmony_cadence_rules.h"
 
+#include "harmony_cadence_kinds.h"
 #include "harmony_rule_table.h"
 
 static const char *const NAMES[HARMONY_CADENCE_RULE_COUNT] = {"cadential-progression", "half-without-seventh"};
@@ -93,24 +94,8 @@ bool harmony_cadence_classify(const HarmonyCadence *cadence, CadenceType *out) {
 }
 
 int harmony_cadence_strength(CadenceType type) {
-    switch (type) {
-        case CADENCE_TYPE_SUBVERTED:
-            return 0;
-        case CADENCE_TYPE_HALF:
-            return 1;
-        case CADENCE_TYPE_DECEPTIVE:
-            return 2;
-        case CADENCE_TYPE_PLAGAL:
-            return 3;
-        case CADENCE_TYPE_AUTHENTIC_UNSPECIFIED:
-            return 4;
-        case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
-            return 5;
-        case CADENCE_TYPE_PERFECT_AUTHENTIC:
-            return 6;
-        default:
-            return -1;
-    }
+    const HarmonyCadenceKind *kind = harmony_cadence_kind_of(type);
+    return kind != NULL ? kind->strength : -1;
 }
 
 int harmony_cadence_compare(CadenceType a, CadenceType b) {
