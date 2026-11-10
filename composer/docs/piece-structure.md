@@ -129,6 +129,10 @@ in `<ursatz_composer/piece_reopen.h>`.
 - A free phrase that ends on an odd beat of a 4/4 bar (5, 7, 9 beats long after a section that ends on a barline) can be
   planned and its chords written, but the melody leaves it open: the melody stage is stuck. Free phrases of 6 beats and
   longer that end on an even beat composed for all of seeds 1 to 10.
+- A free phrase that ends in a half cadence in a minor key composes (P44 B6): its chords are capped so the two before
+  the cadence's dominant fill the room (`test_piece_structure minor_half_free`, a game loop in D minor 4/4 with a body of
+  32 beats and a free phrase of 20 beats). A game loop in A minor 3/4 whose ending version is stuck at the structure
+  stage (the default two-bar ending) is unchanged.
 - A free phrase of whole bars needs the room the cadence's chords need: a bar alone is too short for any cadence; the
   structure stays open at the structure stage.
 - A one-bar turnaround, or any section of one bar on a barline, does not compose either (the structure stage leaves it open);

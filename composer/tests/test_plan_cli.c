@@ -264,14 +264,16 @@ static void test_fill_errors(void) {
 }
 
 /*
- * A plan no seed completes: a loop in D minor in 4/4 is stuck at the harmony stage from every one of the 16 seeds the
- * command tries (measured, as B5 records in docs/piece.md). The targets left open are named with the reason, and no file
+ * A plan no seed completes: a binary form in A minor in 3/4 from the motive D4:q F4:e A4:e D5:q is stuck at the structure
+ * stage from every one of the 16 seeds the command tries (measured): B's inversion of the motive gets no structure, which
+ * is theme development and a known limit (docs/piece.md). The targets left open are named with the reason, and no file
  * is written.
  */
 static void test_stuck(void) {
-    free(output_of("plan", "--form loop --key D --mode minor --meter 4/4 --seed 1 --out plan_cli_stuck.json"));
+    write_text("plan_cli_stuck_motive.txt", "D4:q F4:e A4:e D5:q\n");
+    free(output_of("plan", "--form binary --key A --mode minor --meter 3/4 --motive plan_cli_stuck_motive.txt --seed 1 --out plan_cli_stuck.json"));
     expect_failure("fill", "plan_cli_stuck.json --seed 1 --midi plan_cli_stuck.mid --out plan_cli_stuck_done.json", 2,
-                   "could not be completed from seeds 1 to 16: stuck at the harmony stage");
+                   "could not be completed from seeds 1 to 16: stuck at the structure stage");
     char *err = test_read_file(ERR, NULL);
     assert(strstr(err, "  open: ") != NULL);
     assert(strstr(err, "no operator applies") != NULL);

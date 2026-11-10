@@ -214,6 +214,11 @@ const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *
 /* The ARCHETYPE (PlanArchetype) a pairing is, or -1 for a pairing standard-form does not know. */
 int grow_pairing_archetype(const PlanThemePairing *pairing);
 /*
+ * The chords a phrase model of this shape and cadence has before its last: a tonic unless the shape is cadential, the
+ * predominants the key's mode has, a dominant unless the cadence is half.
+ */
+size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
+/*
  * Whether the chords of half of the theme can be kept from crossing a barline: a phrase model of this cadence has
  * only so many chords, and each may be no longer than a bar. False when they cannot cover the half's cells.
  */

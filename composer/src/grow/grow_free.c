@@ -190,7 +190,11 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
     if (cells > 2 * theme->cells_per_bar) {
         size_t room = cells - theme->cells_per_bar;
         size_t cap = (room * 3 / 2 + PHRASE_MODEL_SLOTS - 1) / PHRASE_MODEL_SLOTS;
-        request.cap = (int)(cap > theme->cells_per_bar ? cap : theme->cells_per_bar);
+        cap = cap > theme->cells_per_bar ? cap : theme->cells_per_bar;
+        /* Never fewer cells than the chords its cadence has can fill the room: a minor half cadence has two. */
+        size_t chords = grow_chords_before_last(theme, request.shape, theme->cadence);
+        size_t fill = (room + chords - 1) / chords;
+        request.cap = (int)(cap > fill ? cap : fill);
     }
     *out = request;
     return true;

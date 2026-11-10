@@ -456,7 +456,8 @@ static void compose_all(const char *kind, Tally *total) {
  * runs are deterministic, so the numbers repeat). The tests fail when a number falls below its baseline and pass when
  * it holds or rises; raise a baseline when a change lifts it. The causes of the stuck runs and of the shares being
  * below grow's are in docs/piece.md. The rounded binary one was 28, 84, 20 until the presentation drew its repetition by
- * weight and a sequence wrote its chords whole (P34 B1); it is 25, 75, 19.
+ * weight and a sequence wrote its chords whole (P34 B1); it was 25, 75, 19 until P44 B6 gave minor half cadences chords
+ * and heard key changes inside a section in their new key (R-418), and is 40, 120, 58.
  */
 typedef struct {
     const char *kind;
@@ -466,9 +467,9 @@ typedef struct {
 } Baseline;
 
 static const Baseline BASELINES[] = {
-    {"binary", 20, 40, 12},     {"rounded-binary", 25, 75, 19},
-    {"ternary", 27, 81, 7},     {"variations", 45, 165, 0},
-    {"loop", 14, 18, 12},       {"layered", 30, 90, 12},
+    {"binary", 30, 60, 20},     {"rounded-binary", 40, 120, 58},
+    {"ternary", 30, 90, 35},    {"variations", 60, 220, 184},
+    {"loop", 40, 60, 32},       {"layered", 60, 180, 74},
 };
 
 static const Baseline *baseline_of(const char *kind) {

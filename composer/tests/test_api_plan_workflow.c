@@ -480,9 +480,15 @@ static void test_variations(void) {
 static void test_stuck(void) {
     ComposerResponse response;
     char *printed;
+    /* A binary form in A minor in 3/4 from a motive whose inversion gets no structure (a known limit of theme development). */
     cJSON *request = cJSON_CreateObject();
-    assert(request && cJSON_AddStringToObject(request, "form", "loop") && cJSON_AddStringToObject(request, "key", "D minor") &&
-           cJSON_AddStringToObject(request, "meter", "4/4") && cJSON_AddNumberToObject(request, "seed", 1));
+    cJSON *motive = cJSON_CreateObject();
+    cJSON *input = cJSON_CreateObject();
+    assert(request && motive && input && cJSON_AddStringToObject(input, "format", "notes") &&
+           cJSON_AddStringToObject(input, "text", "D4:q F4:e A4:e D5:q") && cJSON_AddItemToObject(motive, "input", input) &&
+           cJSON_AddStringToObject(request, "form", "binary") && cJSON_AddStringToObject(request, "key", "A minor") &&
+           cJSON_AddStringToObject(request, "meter", "3/4") && cJSON_AddItemToObject(request, "motive", motive) &&
+           cJSON_AddNumberToObject(request, "seed", 1));
     assert(call(composer_api_plan, request, NULL, &response, &printed) == COMPOSER_OK);
     request = cJSON_CreateObject();
     assert(request && cJSON_AddItemToObject(request, "plan", cJSON_Parse(response.plan_json)) && cJSON_AddNumberToObject(request, "seed", 1));

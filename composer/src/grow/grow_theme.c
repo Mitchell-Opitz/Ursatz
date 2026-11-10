@@ -397,10 +397,14 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
     return ref.has_step && grow_develop_motive(grow_idea_source(spec, idea), &ref, out);
 }
 
-bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
+size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
     /* A tonic, the predominants the mode has (two in a major key, one in a minor), a dominant unless the cadence is half. */
-    size_t chords = (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (request->key.mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 2) +
-                    (cadence == CADENCE_TYPE_HALF ? 0 : 1);
+    return (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (request->key.mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 2) +
+           (cadence == CADENCE_TYPE_HALF ? 0 : 1);
+}
+
+bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
+    size_t chords = grow_chords_before_last(request, shape, cadence);
     size_t cells = request->bars / 2 * request->cells_per_bar;
     /* The last chord is the whole last bar. */
     return cells <= request->cells_per_bar || cells - request->cells_per_bar <= chords * request->cells_per_bar;

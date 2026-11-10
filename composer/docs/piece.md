@@ -201,23 +201,24 @@ Four tests for each built-in form (`tests/test_form_templates.c`; the plans them
 
 CI runs `ctest -LE slow`. The slow sweeps run in the full `ctest` before a push. The sweeps are deterministic, so a
 baseline is an exact measurement; a test fails when a count falls below it, passes when it holds or rises, and the
-baseline is raised in `BASELINES` when a change lifts it. Returns that copy their source moved the baselines of B6: layered
-and variations rose (their returns no longer get stuck on their own), and rounded binary's heard-as-requested and
-ternary's completions fell by one (a return is heard as its source is, and the seeds the stages draw from changed).
+baseline is raised in `BASELINES` when a change lifts it. P44 B6 raised them for runs that no longer stick (R-418): a
+half-cadence continuation or free phrase in a minor key gets chords that fill it, and a key change inside a section is
+heard in its new key.
 
 Baselines, with grow's measured shares for the same sections for comparison:
 
 | Template | Runs complete | Heard as requested | Share | Expected from grow's shares |
 | --- | --- | --- | --- | --- |
-| binary | 21 of 40 | 15 of 80 | 19% | 26 |
-| rounded binary | 29 of 40 | 23 of 120 | 19% | 58 |
-| ternary | 27 of 40 | 7 of 120 | 6% | 13 |
-| loop | 15 of 40 | 12 of 60 | 20% | 39 |
-| layered | 30 of 60 | 20 of 180 | 11% | 117 |
-| variations | 45 of 60 | 0 of 220 | 0% | 0 |
+| binary | 30 of 40 | 20 of 80 | 25% | 26 |
+| rounded binary | 40 of 40 | 58 of 120 | 48% | 58 |
+| ternary | 30 of 40 | 35 of 120 | 29% | 13 |
+| loop | 40 of 40 | 32 of 60 | 53% | 39 |
+| layered | 60 of 60 | 74 of 180 | 41% | 117 |
+| variations | 60 of 60 | 184 of 220 | 84% | 0 |
 
-Variations hear none, as grow does, since every section is a period and grow never hears one (0 of 40). Its runs get
-stuck more the longer the form: in A minor 3/4 with a given motive none of the sizes completes.
+Binary 8 and 16 and ternary 12 and 24 in A minor 3/4 with a given motive stay 0 of 5 (stuck at the structure stage:
+B's inverted motive gets no structure, because the cadential liquidation fails in 36 of its draws, R-345; theme
+development, left alone by R-405).
 
 ### Keys
 
@@ -229,33 +230,22 @@ stuck more the longer the form: in A minor 3/4 with a given motive none of the s
 | `smoke` | Binary in C major: the first of seeds 1 to 5 composes, changes key and passes the checks. | |
 | `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
 
-Every completed run passes every check. The share of runs that complete is below 100% for every template but variations
-(rounded binary was 100% from P40 B7, when the Analyzer read applied chords, until keys from phrases, P42:
-a key change inside a phrase is heard as a tonicization, "the key change at 4/1 is a tonicization, not a modulation";
-the checks hear the plan through the Analyzer: the key check reads the cadences the Analyzer hears, which are not those
-of the planned chords), so the other five tests are `WILL_FAIL`, with the measured shares (at P42; the
-stage is where the last round of a stuck run ended; before the Analyzer: binary 14 of 20, rounded binary 20, ternary 16):
+Every completed run passes every check, and every template completes 20 of 20 runs, with 16 that change key for the four
+that can (binary, rounded binary, ternary, variations). Until P44 B6 five of the six tests were `WILL_FAIL`: a minor
+half-cadence continuation got no chords (its cap was fewer than its cells needed), and a section that turns to a new key
+halfway was heard whole in the old key, so no authentic cadence fell in the new one and the change was a tonicization
+(R-418). The key check now also hears the part of a section after a key change from the change. Loop and layered have one
+key.
 
-| Template | Runs complete | Of them change key | Stuck at |
-| --- | --- | --- | --- |
-| binary | 17 of 20 (85%, P42; 18 at its head) | not re-measured | not re-measured |
-| rounded binary | 19 of 20 (95%, P42; 20 of 20 at P40 B7): C major seed 2 | not re-measured | texture 1 |
-| ternary | 18 of 20 (90%, P42) | not re-measured | not re-measured |
-| variations | 20 of 20 (100%) | 16 | |
-| loop | 10 of 20 (50%) | 0 | A minor only, all harmony |
-| layered | 10 of 20 (50%) | 0 | A minor: harmony 10 |
-
-Loop and layered have one key; they are stuck in A minor 4/4 without `modulate` too (B4's sweeps ran A minor in 3/4),
-and are in the table because the test runs every template. For binary, 5 of the 7 stuck runs complete with the same seeds
-without `modulate` (C major 4, 5, 8, 10; A minor 7), so a key change or a pivot chord is what leaves them stuck, at the
-melody, bass or harmony stage; the other two (A minor 3 and 6) are stuck without it. The causes of the stuck runs of
-ternary and variations were not investigated. None is a run the key check rejected.
+Still open: rounded binary 16 with `modulate` rejects the return home at B's half (10/1) in 10 rounds over 20 runs (no run
+ends stuck), and the 4-bar A' is heard with no cadence; recorded, not investigated.
 
 ## Test notes
 
 Causes:
 
-- Runs that get stuck are mostly half-cadence sentences (loop, layered, rounded binary 24 bars in A minor 3/4) and some
-  4-bar minor themes. Grow cannot grow the same theme alone: `grow ... --cadence HC` fails for seeds 1 to 16.
+- Half-cadence sentences in a minor key no longer stick (P44 B6; `grow ... --cadence HC` grows for seeds 1 to 16 in A
+  minor 3/4, A minor 4/4 and D minor 4/4, `test_grow_half_cadence`). What still sticks is theme development: a motive
+  whose inversion gets no structure, and some 4-bar minor themes.
 - Low shares come from what grow does not hear: 4-bar themes are never heard, and periods are never heard
   (see [grow.md](grow.md)).

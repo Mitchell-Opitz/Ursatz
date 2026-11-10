@@ -119,7 +119,10 @@ arrives on a downbeat; `split_at_bars` keeps every
 chord off the barlines; `cadential` drops the opening tonic (a predominant, a dominant and the arrival). Without a
 shape it behaves as it always did. The continuation of a grown theme has the `phrase_model` shape with
 `split_at_bars`, and the cadence; its cap is half the cells of the basic idea (at least 1, and at least what lets
-the chords add up to the cells), since the presentation is not yet written when the structure is. A half with too
+the chords add up to the cells: the room divided by the chords before the last, `grow_chords_before_last`, which is two
+in a minor half cadence, a tonic and a predominant), since the presentation is not yet written when the structure is,
+and it keeps its chords off the barlines when they can (`grow_split_possible`). A free phrase's cap is at least that
+too. A half with too
 few cells for a phrase model (2 bars of 2/4 or 3/4) gets the `cadential` shape.
 
 The antecedent and the consequent have the same: one `phrase_model` span over the phrase, no cap, and the cadence
