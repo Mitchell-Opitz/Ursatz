@@ -350,6 +350,13 @@ foreach(template ${FORM_TEMPLATES})
                          PROPERTIES LABELS slow)
 endforeach()
 
+add_executable(test_form_plans test_form_plans.c)
+target_link_libraries(test_form_plans PRIVATE ursatz_composer)
+target_compile_options(test_form_plans PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_form_plans PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+# Every template at every size: its plan's hash against tests/fixtures/forms/template-plans.txt (R-417).
+add_test(NAME test_form_plans_templates COMMAND test_form_plans)
+
 add_executable(test_piece_keys test_piece_keys.c)
 target_link_libraries(test_piece_keys PRIVATE ursatz_composer)
 target_compile_options(test_piece_keys PRIVATE -Wall -Wextra -Wpedantic)
