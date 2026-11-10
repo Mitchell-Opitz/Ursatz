@@ -2756,6 +2756,40 @@ static bool is_theme_copy_name(const char *name) {
     return piece_section_id_ok(id);
 }
 
+bool ursatz_gui_material_version_name_ok(const char *name) {
+    size_t length = name ? strlen(name) : 0;
+    if (length < 1 || length > 31 || name[0] < 'a' || name[0] > 'z') {
+        return false;
+    }
+    for (size_t i = 1; i < length; i++) {
+        if (!((name[i] >= 'a' && name[i] <= 'z') || (name[i] >= '0' && name[i] <= '9') || name[i] == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The type of <name>-plan.json, <name>.mid or <name>.musicxml for a version name of a piece's form. */
+static const char *named_version_file_type(const char *file) {
+    static const struct {
+        const char *suffix;
+        const char *type;
+    } suffixes[] = {{"-plan.json", "application/json"}, {".mid", "audio/midi"}, {".musicxml", "application/xml"}};
+    size_t length = strlen(file);
+    for (size_t i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); i++) {
+        size_t suffix = strlen(suffixes[i].suffix);
+        if (length > suffix && length - suffix <= 31 && strcmp(file + length - suffix, suffixes[i].suffix) == 0) {
+            char name[32];
+            memcpy(name, file, length - suffix);
+            name[length - suffix] = '\0';
+            if (ursatz_gui_material_version_name_ok(name)) {
+                return suffixes[i].type;
+            }
+        }
+    }
+    return NULL;
+}
+
 const char *ursatz_gui_material_version_file_type(const char *name) {
     static const struct {
         const char *name;
@@ -2775,7 +2809,10 @@ const char *ursatz_gui_material_version_file_type(const char *name) {
             return files[i].type;
         }
     }
-    return name && is_theme_copy_name(name) ? "application/json" : NULL;
+    if (name && is_theme_copy_name(name)) {
+        return "application/json";
+    }
+    return name ? named_version_file_type(name) : NULL;
 }
 
 bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size_t out_size) {

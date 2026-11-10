@@ -990,9 +990,9 @@ static void test_served_playback(void) {
   cJSON *answer = json_exchange("GET", path, NULL, &status);
   check(status == 404, "a motif version has no loop file to play");
   cJSON_Delete(answer);
-  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?file=other", id);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?file=Not.a.name", id);
   answer = json_exchange("GET", path, NULL, &status);
-  check(status == 400, "a file other than theme, loop or ending is 400");
+  check(status == 400, "a file outside the version name pattern is 400");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/9/playback?file=theme", id);
   answer = json_exchange("GET", path, NULL, &status);

@@ -506,6 +506,10 @@ static void build_piece(Build *build, const char *id, int version, const cJSON *
   }
   const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
   if (cJSON_IsObject(structure)) {
+    const char *form = ursatz_gui_json_string(structure, "form");
+    if (form && strcmp(form, "game-loop") != 0) {
+      add_text_member(build, &build->material_facts, "form", structure, "form");
+    }
     add_text_member(build, &build->material_facts, "key", structure, "key");
     add_text_member(build, &build->material_facts, "mode", structure, "mode");
     add_text_member(build, &build->material_facts, "meter", structure, "meter");
@@ -526,12 +530,24 @@ static void build_piece(Build *build, const char *id, int version, const cJSON *
                       cJSON_IsString(cadence) && cadence->valuestring[0] != '\0' ? cadence->valuestring : "none"));
     }
   }
-  static const char *const files[] = {"loop.musicxml", "ending.musicxml"};
-  static const char *const labels[] = {"loop", "ending"};
-  for (size_t i = 0; i < 2 && !failed(build); i++) {
+  /* One section for each version of the piece's form, in the order the result's summary lists them, from <name>.musicxml.
+     A piece saved without a summary of versions is a game loop: its loop and its ending. */
+  const cJSON *versions = cJSON_GetObjectItemCaseSensitive(
+      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "result"), "summary"), "versions");
+  static const char *const game_loop[] = {"loop", "ending"};
+  size_t count = cJSON_IsObject(versions) ? (size_t)cJSON_GetArraySize(versions) : 2;
+  const cJSON *entry = cJSON_IsObject(versions) ? versions->child : NULL;
+  for (size_t i = 0; i < count && !failed(build); i++) {
+    const char *name = entry ? entry->string : game_loop[i];
+    char file[64];
+    if (!ursatz_gui_material_version_name_ok(name) || snprintf(file, sizeof(file), "%s.musicxml", name) >= (int)sizeof(file)) {
+      fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "the piece names a version that has no file");
+      return;
+    }
     const char *xml = NULL;
-    read_version_xml(build, id, version, files[i], &xml);
-    add_draft(build, labels[i], xml);
+    read_version_xml(build, id, version, file, &xml);
+    add_draft(build, name, xml);
+    entry = entry ? entry->next : NULL;
   }
 }
 
