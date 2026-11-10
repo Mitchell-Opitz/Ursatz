@@ -33,7 +33,7 @@ Helpers:
 
 - `motive_sketch_step` / `motive_sketch_pitch_at_step`: the scale step of a pitch (seven to an octave, counted from MIDI 0, so middle C is step 35 in C). A pitch outside the scale is on the step below it, raised. Without a scale the step is the pitch itself.
 - `motive_sketch_chord_tones`: the pitch classes of a chord stacked in thirds from its root in the scale. An altered chord is a major triad (a dominant seventh) on the altered root. In minor, degree 5 has its third raised.
-- `motive_sketch_expressible`: a duration a note list can write, w h q e s t with up to two dots. `motive_sketch_on_grid`: an onset on the 1/32 grid.
+- `motive_sketch_expressible`: a duration a note list can write, w h q e s t with up to two dots. `motive_sketch_on_grid`: an onset on the 1/32 grid. `motive_sketch_has_triplets` is true when a note time, the pickup or the length has a denominator divisible by 3; `motive_sketch_time_writable` and `motive_sketch_time_on_grid` are the two checks above plus, only when the source sketch has triplets, an undotted triplet value (two thirds of w to t) and an onset on the 1/96 grid. Every relation checks its result with these `_time_` forms against its input, so a binary motive gives the same results as before.
 - `motive_sketch_strength`: 2 on the downbeat, 1 on another beat, 0 off the beat, from the pickup and the bar.
 - `motive_sketch_bar_of(sketch, time)`, `motive_sketch_offset_in_bar(sketch, bar, time)`, `motive_sketch_on_beat(sketch, time)` (ports of Composer `motive_tones.c`): bar 0 starts at the first downbeat (time `pickup`, or 0 without one) and a time before it is in bar -1, the pickup bar; `bar_of` is -1 for a bad time. The offset is the distance from the start of the bar (bad before it, or for bar -1 without a pickup); a time is on the beat when its offset is a whole number of beats.
 - `motive_tone_roles_of(sketch, out)` labels the notes with the sketch's own overrides (`motive-tone-roles.md`).
@@ -59,7 +59,7 @@ They match the Composer's `motive_develop` at `466b38c`. A fragment or liquidati
 | `interval-change` | interval (0 every one), amount, keep-contour | the interval widened or narrowed, later notes carried along; a repeated note is left alone; keep-contour refuses a changed direction | ch. III, Ex. 21 | 2 |
 | `fragment` | position (1 leading, 2 trailing, 3 middle), length, min | a run of notes, moved to start at 0 | ch. III, Ex. 21; ch. VIII, Ex. 52 | 2 |
 | `liquidate` | drop, keep-rhythm, min | the weakest notes go first (off the beat, then beats, then downbeats; the later of equals); kept notes keep their onsets, or follow one another from 0. With keep-rhythm a dropped note's time goes to the kept note before it (each kept note runs to the next kept note's onset, the last to the end of the last original note), so no rest is left; a dropped first note's time goes to the first kept note, which starts at the first note's onset; a duration that is not a written value is `NOT_EXPRESSIBLE` | ch. VIII, Ex. 52 | 2 |
-| `augment`, `diminish` | ratio (0:0 for 2:1 and 1:2) | onsets and durations scaled; every duration must be writable and every onset on the grid, and a source of whole beats stays whole beats | ch. III, Exs. 14, 17 | 1 |
+| `augment`, `diminish` | ratio (0:0 for 2:1 and 1:2) | onsets and durations scaled; every duration must be writable and every onset on the grid, a source of whole beats stays whole beats, and a motive with triplets keeps them (augment 2:1 of eighth triplets gives quarter triplets) | ch. III, Exs. 14, 17 | 1 |
 
 ### Rhythm (ch. III)
 
