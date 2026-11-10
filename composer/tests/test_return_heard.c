@@ -36,7 +36,7 @@ typedef struct {
 static PieceRequest request_of(const Scenario *scenario) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = scenario->kind;
+    request.form = form_template_name(scenario->kind);
     request.bars = scenario->bars;
     request.count = scenario->count;
     request.meter.beats_per_bar = 4;

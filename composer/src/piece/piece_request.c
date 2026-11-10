@@ -55,13 +55,19 @@ static Rational bars_of(Rational bar, size_t count) {
     return out;
 }
 
+/* The template the request names; false for no name or a name that is none (until the forms are read as documents). */
+static bool request_template(const PieceRequest *request, FormTemplateKind *kind) {
+    return request && form_template_from_name(request->form, kind);
+}
+
 /* The accompaniment the sections ask for: the request's, or for a layered form, any pattern when it has none. */
 static bool piece_accompaniment(const PieceRequest *request, PlanAccompaniment *out) {
     if (request->has_accompaniment) {
         *out = request->accompaniment;
         return true;
     }
-    if (request->form == FORM_TEMPLATE_LAYERED) {
+    FormTemplateKind kind;
+    if (request_template(request, &kind) && kind == FORM_TEMPLATE_LAYERED) {
         memset(out, 0, sizeof(*out));
         out->pattern = PLAN_ACCOMPANIMENT_ANY;
         out->texture = -1;
@@ -226,7 +232,8 @@ static bool template_buildable(const FormTemplate *layout, const PlanMeter *mete
 
 bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *idea_bars) {
     FormTemplate layout;
-    if (!request || !form_template_layout(request->form, request->bars, request->count, &layout)) {
+    FormTemplateKind kind;
+    if (!request_template(request, &kind) || !form_template_layout(kind, request->bars, request->count, &layout)) {
         return false;
     }
     size_t shortest = 8;
@@ -244,7 +251,11 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     }
     *out = NULL;
     FormTemplate layout;
-    if (!form_template_layout(request->form, request->bars, request->count, &layout)) {
+    FormTemplateKind kind;
+    if (!request_template(request, &kind)) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    if (!form_template_layout(kind, request->bars, request->count, &layout)) {
         return PIECE_ERR_BAD_SIZE;
     }
     PlanAccompaniment accompaniment;

@@ -220,7 +220,7 @@ static PieceRequest scenario_request(const Scenario *scenario, FormTemplateKind 
                                      const Motive *motive) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = kind;
+    request.form = form_template_name(kind);
     request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = 4;

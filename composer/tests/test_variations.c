@@ -41,7 +41,7 @@
 static PieceRequest request(FormTemplateKind form) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = form;
+    request.form = form_template_name(form);
     request.bars = form == FORM_TEMPLATE_ROUNDED_BINARY ? 24 : 0;
     request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;

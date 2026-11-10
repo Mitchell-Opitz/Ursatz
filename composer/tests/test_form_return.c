@@ -147,7 +147,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
 static PieceRequest request_of(FormTemplateKind kind, size_t bars, size_t count, bool accompanied) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = kind;
+    request.form = form_template_name(kind);
     request.bars = bars;
     request.count = count;
     request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);

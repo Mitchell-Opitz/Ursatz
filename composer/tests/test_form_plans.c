@@ -83,7 +83,7 @@ static uint64_t fnv1a(const char *text) {
 static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modulate, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = size->kind;
+    request.form = form_template_name(size->kind);
     request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = 4;

@@ -43,7 +43,7 @@ static const Scenario SCENARIOS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {
 static PieceRequest request_of(const Scenario *scenario, FormTemplateKind kind, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = kind;
+    request.form = form_template_name(kind);
     request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;

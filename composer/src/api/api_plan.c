@@ -800,7 +800,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
 
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = state->form;
+    request.form = form_template_name(state->form);
     request.key = state->key;
     request.meter = state->meter;
     request.bars = state->bars;

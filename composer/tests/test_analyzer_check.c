@@ -77,7 +77,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     if (shape == ROUNDED_BINARY) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
-        request.form = FORM_TEMPLATE_ROUNDED_BINARY;
+        request.form = "rounded-binary";
         request.key = key;
         request.meter = meter;
         request.bars = 24;
