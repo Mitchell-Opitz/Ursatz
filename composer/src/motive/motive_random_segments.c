@@ -19,6 +19,7 @@
 #define SEGMENT_CELL_TRIES 32 /* a cell that does not fit is drawn again, so a failed cell does not change the shape's odds */
 #define SEGMENT_START_REACH 4 /* rungs either side of the note before, searched for where a new segment starts */
 #define SEGMENT_START_DISTANCE 5 /* the most semitones from the note before to where a new segment starts */
+#define LEAP_SEMITONES 5 /* an interval this large or larger is a leap (leaps_per_motif, leap_recovery) */
 
 /* Shapes: a a' (a cell and its repeat), a b (a cell and a new one), a a' b (two half-bar cells, then a bar). */
 typedef enum { SHAPE_REPEAT = 0, SHAPE_CONTRAST, SHAPE_REPEAT_CONTRAST, SHAPE_KINDS } Shape;
@@ -699,6 +700,24 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
     for (size_t i = 0; i < layout->rhythm.count; i++) {
         low = melody->pitches[i] < low ? melody->pitches[i] : low;
         high = melody->pitches[i] > high ? melody->pitches[i] : high;
+    }
+    /* Leaps (an interval of a fourth or more): at most leaps_per_motif, and each one followed by a step back when asked. */
+    unsigned leaps = 0;
+    for (size_t k = 0; k + 1 < layout->rhythm.count; k++) {
+        int move = melody->pitches[k + 1] - melody->pitches[k];
+        if (abs(move) < LEAP_SEMITONES) {
+            continue;
+        }
+        leaps++;
+        if (preferences->leap_recovery && k + 2 < layout->rhythm.count) {
+            int back = melody->pitches[k + 2] - melody->pitches[k + 1];
+            if (abs(back) < 1 || abs(back) > 2 || (back > 0) == (move > 0)) {
+                return false;
+            }
+        }
+    }
+    if (leaps > preferences->leaps_per_motif) {
+        return false;
     }
     return high - low <= MAX_RANGE_SEMITONES;
 }
