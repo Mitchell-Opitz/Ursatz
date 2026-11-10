@@ -18,6 +18,8 @@ authentic, half, subverted), `NonChordTone` (the embellishing tones), with
 `BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
 
+The cadence vocabulary (`harmony_cadence_kinds.h`, R-415) gives each cadence kind a name, a label, an abbreviation, a core `CadenceType`, a strength and whether it is conclusive. It holds the seven core types and three kinds the core has no value for: evaded (a subverted cadence), abandoned (no cadence, so core unknown and never ranked) and medial caesura (a half cadence that ends a transition). `harmony_cadence_strength` reads its strength from the table, which is the one owner of cadence strength. New kinds are entries here, never new `CadenceType` values.
+
 `ModulationKind` (modulation_kind.h, how a new key is introduced) is single-framework, so it lives in this module, not in `src/semantics/`.
 
 `SixFourType` (six_four_type.h, cadential, passing, neighbor, arpeggiating) is single-framework, so it lives in this module, not in `src/semantics/`.

@@ -5,3 +5,5 @@ The plain enums in `src/semantics/` that name shared theory concepts, and when a
 ## Vocabulary enums
 
 `src/semantics/` holds plain enums that name theory concepts frameworks share (`CadenceType`, `VoicePart`, `NonChordTone`, and others). Each carries no `EntityID`, no data, and no framework claim, only a name and small name-level predicates. What a name means, and which music it applies to, is always the framework's convention. New enums of this kind are admitted to the kernel only when at least two frameworks need them; a name only one framework uses belongs in that framework. Existing single-framework enums stay until their framework is next changed, then move into it.
+
+`CadenceType` is the frozen shared core: its eight values are never added to. A cadence kind a framework needs that the core has no value for (Caplin's evaded and abandoned cadences, the medial caesura) is a vocabulary entry in that framework, keyed by name and reduced to a core type (`frameworks/standard-harmony/harmony_cadence_kinds.h`, R-415).

@@ -1,5 +1,5 @@
-#ifndef MUSIC_SEMANTICS_PHRASE_LEVEL_FORM_H
-#define MUSIC_SEMANTICS_PHRASE_LEVEL_FORM_H
+#ifndef STANDARD_FORM_PHRASE_LEVEL_FORM_H
+#define STANDARD_FORM_PHRASE_LEVEL_FORM_H
 
 #include <stdbool.h>
 
@@ -29,10 +29,10 @@ typedef enum {
     PHRASE_LEVEL_FORM_COUNT
 } PhraseLevelForm;
 
-/* True for the 5 values above; false for any other value. */
+/* True for the 6 values above; false for any other value. */
 bool phrase_level_form_valid(PhraseLevelForm value);
 
-/* "sentence" "period" "repeated-phrase" "compound-period" "unique"; NULL for an invalid
+/* "sentence" "period" "repeated-phrase" "compound-period" "hybrid" "unique"; NULL for an invalid
    value. */
 const char *phrase_level_form_name(PhraseLevelForm value);
 
