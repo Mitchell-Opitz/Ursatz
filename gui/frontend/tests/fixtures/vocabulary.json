@@ -1548,6 +1548,107 @@
    }
   ]
  },
+ "preferences": {
+  "melody": {
+   "range": {
+    "low": 60,
+    "high": 84
+   },
+   "nct_types": [
+    "passing",
+    "neighbor"
+   ],
+   "density": 0,
+   "climax_position": 667,
+   "climax_rise": 4,
+   "climax_slack": 150,
+   "second_nearest_chord_tone": "1/3",
+   "attempts": 48,
+   "keep": 6,
+   "plain_shaping": false,
+   "weights": {
+    "melodic": 1,
+    "against_bass": 1,
+    "tendency": 1,
+    "climax": 1,
+    "contour": 1,
+    "ending_reduction": 1,
+    "waves": 1,
+    "central_range": 1,
+    "monotony": 1,
+    "seam": 1
+   }
+  },
+  "motif": {
+   "bars": {
+    "one": 1,
+    "two": 1
+   },
+   "pickup_one_in": 4,
+   "shapes_one_bar": {
+    "repeat": 3,
+    "contrast": 2
+   },
+   "shapes_two_bars": {
+    "repeat": 3,
+    "contrast": 2,
+    "repeat_contrast": 2
+   },
+   "plans_two": {
+    "I-V": 3,
+    "I-IV": 1,
+    "I-I": 1
+   },
+   "plans_three": {
+    "I-V-I": 2,
+    "I-IV-I": 1
+   },
+   "features": {
+    "dotted": 1,
+    "leap": 1,
+    "repeat": 1
+   },
+   "leap": {
+    "low": 5,
+    "high": 9
+   },
+   "rung_moves": {
+    "step": 6,
+    "skip": 2
+   },
+   "decorations": {
+    "chord_tone": 1,
+    "passing": 1,
+    "neighbor": 1,
+    "appoggiatura": 1,
+    "escape": 1
+   },
+   "durations": {
+    "half_beat": 2,
+    "beat": 4,
+    "two_beats": 1
+   }
+  },
+  "development": {
+   "fidelity_minimum": {
+    "melody": {
+     "presentation": "11/20",
+     "continuation": "7/20",
+     "cadential": "7/20"
+    },
+    "balanced": {
+     "presentation": "11/20",
+     "continuation": "7/20",
+     "cadential": "3/10"
+    },
+    "theme": {
+     "presentation": "11/20",
+     "continuation": "7/20",
+     "cadential": "1/5"
+    }
+   }
+  }
+ },
  "limits": {
   "motive_notes": 64,
   "motive_chords": 8,
@@ -1564,6 +1665,24 @@
    "random_motive": 4294967295,
    "theme": 4294967295,
    "piece": 4294967295
+  },
+  "preferences": {
+   "weight_max": 20,
+   "pickup_one_in_max": 64,
+   "leap_min": 3,
+   "leap_max": 12,
+   "range_low_min": 36,
+   "range_low_max": 96,
+   "range_high_max": 108,
+   "range_span_min": 12,
+   "density_max": 4,
+   "scale_max": 1000,
+   "climax_rise_min": 1,
+   "climax_rise_max": 12,
+   "ratio_denominator_max": 16,
+   "fidelity_denominator_max": 1000,
+   "attempts_max": 256,
+   "keep_max": 16
   }
  }
 }
