@@ -75,6 +75,14 @@ int ursatz_gui_composer_vocabulary_index(const char *list, const char *value);
 /* Whether value is in the vocabulary list called list. */
 bool ursatz_gui_composer_vocabulary_has(const char *list, const char *value);
 
+/* The vocabulary list called name ("theme_slots", "theme_ideas"...) as the Composer gave it, owned by the client and kept for
+ * the process; NULL when the list is missing or the Composer gave no vocabulary. */
+const cJSON *ursatz_gui_composer_vocabulary_list(const char *name);
+
+/* The position, from 0, of the entry of the vocabulary list called list whose required is true (the theme_slots entry every
+ * theme needs); -1 when there is none. */
+int ursatz_gui_composer_vocabulary_required_index(const char *list);
+
 /* The spelling of the tonic of pitch_class (0 to 11) in mode ("major" or "minor") in the vocabulary's pitch_class_names;
  * false when it has none. */
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size);

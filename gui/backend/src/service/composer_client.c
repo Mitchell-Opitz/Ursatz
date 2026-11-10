@@ -173,6 +173,26 @@ bool ursatz_gui_composer_vocabulary_has(const char *list, const char *value) {
   return ursatz_gui_composer_vocabulary_index(list, value) >= 0;
 }
 
+const cJSON *ursatz_gui_composer_vocabulary_list(const char *name) {
+  if (!name || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
+    return NULL;
+  }
+  const cJSON *list = cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, name);
+  return cJSON_IsArray(list) ? list : NULL;
+}
+
+int ursatz_gui_composer_vocabulary_required_index(const char *list) {
+  int index = 0;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, ursatz_gui_composer_vocabulary_list(list)) {
+    if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(entry, "required"))) {
+      return index;
+    }
+    index++;
+  }
+  return -1;
+}
+
 bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size) {
   if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !mode) {
     return false;

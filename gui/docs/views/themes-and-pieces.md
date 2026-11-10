@@ -26,7 +26,8 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   Compose the page opens again on the tab that was open.
 - Used by tab: the items that use the theme. Other tab: the versions with their
   notes (View opens one read only) and Derived from.
-- Slots: only the slots the form has are shown. Basic idea (required) is always
+- Slots: the slots, the required one and the largest number a theme may have come from the Composer vocabulary
+  (`theme_slots`), and an archetype's beginning and ending from `piece_intos`. Only the slots the form has are shown. Basic idea (required) is always
   there; Contrasting idea comes with an antecedent or cbi beginning or a
   consequent ending, Continuation with a continuation ending, Cadential with a
   continuation or cadential ending. Each is a motif picker: a project select, a

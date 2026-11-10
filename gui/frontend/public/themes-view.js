@@ -687,10 +687,10 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
   const ideaRows = {};
   for (const slot of ThemesModel.SLOT_NAMES) {
     const row = materialsElement("div", "theme-slot");
-    row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
+    row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === ThemesModel.REQUIRED_SLOT ? " (required)" : ""}`));
     let hadBasic = false;
     const set = (value) => {
-      hadBasic = state.slots.some((entry) => entry.slot === "basic");
+      hadBasic = state.slots.some((entry) => entry.slot === ThemesModel.REQUIRED_SLOT);
       state.slots = state.slots.filter((entry) => entry.slot !== slot);
       if (value) {
         state.slots.push({ slot, item_id: value.item_id, version: value.version });
@@ -698,7 +698,7 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
     };
     row.appendChild(
       buildThemeMotifUse(itemsOf, state.slots.find((entry) => entry.slot === slot), set, (value, motifBody) => {
-        if (slot === "basic" && value) {
+        if (slot === ThemesModel.REQUIRED_SLOT && value) {
           basicSet(motifBody, hadBasic);
         }
       }),
@@ -725,7 +725,7 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
       delete ideaRows[name];
     }
     for (const { idea, slot } of ThemesModel.formIdeas(state)) {
-      if (idea === "basic idea") {
+      if (idea === ThemesModel.REQUIRED_IDEA) {
         continue;
       }
       const row = materialsElement("div", "theme-slot");

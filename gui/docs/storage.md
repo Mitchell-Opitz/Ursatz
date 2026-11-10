@@ -124,8 +124,10 @@ body with a `form` object, a slot written as `{slot, item_id, version}` or any o
   of a word and not the word: a value the Composer does not read is saved, `POST /api/materials/items/validate` marks
   it and compose refuses it with its path (R-276). Compose needs `into`, `mode` and `meter`. A theme is in C: a body
   with a `key` is refused (`themes are in C; remove key`).
-- `slots`: `[{slot: "basic" | "contrasting" | "continuation" | "cadential", item_id, version}]`, `basic` once and each
-  slot at most once; the same item may be in several slots. Each item is a melodic motif of form `full` at an existing
+- `slots`: `[{slot, item_id, version}]`, `slot` one of the vocabulary's `theme_slots` (today `basic`, `contrasting`,
+  `continuation`, `cadential`), the one marked `required` (`basic`) present and each slot at most once; the same item may be
+  in several slots. The slot names, the required one and how many a theme may have are read from the Composer vocabulary, not
+  kept in the GUI (R-431). Each item is a melodic motif of form `full` at an existing
   version.
 - `ideas`: `[{idea, item_id, version}]`, a motif for a single idea in place of its slot's. `idea` is `basic idea`,
   `repetition`, `contrasting idea`, `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`,

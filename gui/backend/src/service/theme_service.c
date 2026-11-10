@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "compose_common.h"
+#include "composer_client.h"
 #include "material_service.h"
 #include "style_service.h"
 #include "util/fs_util.h"
@@ -20,11 +21,8 @@
 #define POOL_MAX 64
 #define CHAIN_MAX_STEPS 32
 #define CHAIN_TEXT_MAX 400
-#define SLOT_COUNT 4
 #define MOTIVE_MAX 16
 #define MOTIVE_ID_BYTES 16
-
-static const char *const kSlotNames[SLOT_COUNT] = {"basic", "contrasting", "continuation", "cadential"};
 
 void ursatz_gui_theme_remove_folder(const char *path) {
     DIR *dir = opendir(path);
@@ -260,13 +258,18 @@ static bool composable(const cJSON *theme, bool has_brief, char *message, size_t
         ursatz_gui_copy_message(message, message_size, "the mode style needs a brief");
         return false;
     }
-    bool has_basic = false;
+    const cJSON *required = cJSON_GetArrayItem(ursatz_gui_composer_vocabulary_list("theme_slots"),
+                                               ursatz_gui_composer_vocabulary_required_index("theme_slots"));
+    const char *required_slot = ursatz_gui_json_string(required, "value");
+    bool has_required = false;
     const cJSON *slot = NULL;
     cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
-        has_basic = has_basic || strcmp(ursatz_gui_json_string(slot, "slot"), "basic") == 0;
+        has_required = has_required || strcmp(ursatz_gui_json_string(slot, "slot"), required_slot) == 0;
     }
-    if (!has_basic) {
-        ursatz_gui_copy_message(message, message_size, "the theme needs a basic slot");
+    if (!has_required) {
+        char text[96];
+        snprintf(text, sizeof(text), "the theme needs a %s slot", required_slot);
+        ursatz_gui_copy_message(message, message_size, text);
         return false;
     }
     return true;
@@ -401,9 +404,11 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
     for (size_t i = 0; ok && i < sizeof(form_members) / sizeof(form_members[0]); i++) {
         ok = ursatz_gui_json_add_copy_if(request, form, form_members[i]);
     }
-    for (int s = 0; ok && s < SLOT_COUNT; s++) {
-        if (!cJSON_GetObjectItemCaseSensitive(slots, kSlotNames[s])) {
-            ok = cJSON_AddNullToObject(slots, kSlotNames[s]) != NULL;
+    const cJSON *slot_entry = NULL;
+    cJSON_ArrayForEach(slot_entry, ursatz_gui_composer_vocabulary_list("theme_slots")) {
+        const char *slot_name = ursatz_gui_json_string(slot_entry, "value");
+        if (ok && !cJSON_GetObjectItemCaseSensitive(slots, slot_name)) {
+            ok = cJSON_AddNullToObject(slots, slot_name) != NULL;
         }
     }
     if (ok) {

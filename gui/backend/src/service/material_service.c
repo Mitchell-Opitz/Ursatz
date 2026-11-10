@@ -886,7 +886,14 @@ static UrsatzGuiMaterialResult validate_theme_slots(const cJSON *slots, char *er
         }
         seen[index] = true;
     }
-    return seen[0] ? URSATZ_GUI_MATERIAL_OK : invalid_body(error, error_size, "a theme needs a basic slot");
+    int required = ursatz_gui_composer_vocabulary_required_index("theme_slots");
+    if (required >= 0 && required < THEME_IDEAS_MAX && seen[required]) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    const cJSON *required_entry = cJSON_GetArrayItem(ursatz_gui_composer_vocabulary_list("theme_slots"), required);
+    char text[96];
+    snprintf(text, sizeof(text), "a theme needs a %s slot", ursatz_gui_json_string(required_entry, "value"));
+    return invalid_body(error, error_size, text);
 }
 
 /* [{idea, item_id, version}]: a motif version for a single idea, each idea named once. */
@@ -1616,8 +1623,9 @@ static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENC
     const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
     if (cJSON_IsObject(theme) && !theme_is_placeholder(theme)) {
         const cJSON *slot = NULL;
+        int slot_cap = cJSON_GetArraySize(ursatz_gui_composer_vocabulary_list("theme_slots"));
         cJSON_ArrayForEach(slot, cJSON_GetObjectItemCaseSensitive(theme, "slots")) {
-            if (count < 4) {
+            if (count < (size_t)slot_cap) {
                 kinds[count] = REF_MELODIC_MOTIF;
                 refs[count++] = slot;
             }
