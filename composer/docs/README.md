@@ -57,6 +57,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 
 - [fill-loop.md](fill-loop.md): the engine that fills a plan with seeded, recorded operators.
 - [melody-fill.md](melody-fill.md): the melody operator.
+- [preferences.md](preferences.md): the settings document (R-411): the melody group, and how it is read and written.
 - [accompaniment.md](accompaniment.md): the accompaniment operator.
 - [voicing.md](voicing.md): the four-part voicing operator.
 - [counterpoint.md](counterpoint.md): the counter-melody operator.
