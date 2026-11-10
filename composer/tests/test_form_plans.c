@@ -4,10 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
+#include <cJSON.h>
+
+#include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
+
+#include "api/api_piece.h"
+#include "support/test_support.h"
 
 /*
  * The plans every form template makes (R-417): each template at each size in C major 4/4 and A minor 3/4, with an
@@ -15,10 +23,14 @@
  * metadata is empty here, so the text is stable) and compared by a 64-bit FNV-1a hash with
  * tests/fixtures/forms/template-plans.txt, one line each: form, bars, count, key, meter, modulate, seed, hash.
  *
- *   test_form_plans          compares every plan with the file
- *   test_form_plans record   writes the file
+ *   test_form_plans                 compares every plan with the file
+ *   test_form_plans record          writes the file
+ *   test_form_plans pieces          the same for the loop plans of the piece requests in tests/fixtures/piece
+ *   test_form_plans record-pieces   writes tests/fixtures/forms/piece-plans.txt
  *
- * Refactors of the form code keep this passing; only a change meant to move a plan records it again.
+ * The pieces mode reads each request with api_piece_read_request and hashes the loop plan it builds, one line each:
+ * the fixture's name and the hash. The ending plan needs a composed loop, so the snapshots (piece-loop-and-ending.*)
+ * pin it. Refactors of the form code keep this passing; only a change meant to move a plan records it again.
  */
 
 #define SEEDS 5
@@ -168,26 +180,130 @@ static int compare_line(const char *text, void *state) {
     return 0;
 }
 
-int main(int argc, char **argv) {
+/* --- the loop plans of the piece requests --------------------------------------------------------- */
+
+static const char *const PIECE_FIXTURES[] = {"loop-and-ending.json", "progression-fill.json", "structure-only.json",
+                                              "theme-fill.json"};
+#define PIECE_FIXTURE_COUNT (sizeof(PIECE_FIXTURES) / sizeof(PIECE_FIXTURES[0]))
+/* The style is read from the fixtures directory (the test changes to it), so the plan holds a path that is the same on
+   every machine. */
+#define STYLE_FILE "style-fast-minor.json"
+
+static char *replace(char *text, const char *placeholder, const char *value) {
+    char *at = strstr(text, placeholder);
+    if (!at) {
+        return text;
+    }
+    size_t length = strlen(text) - strlen(placeholder) + strlen(value) + 1;
+    char *out = malloc(length);
+    assert(out);
+    snprintf(out, length, "%.*s%s%s", (int)(at - text), text, value, at + strlen(placeholder));
+    free(text);
+    return out;
+}
+
+/* The plan of the one-motive theme at seed 1: what a theme fill is given. */
+static char *theme_plan(void) {
+    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/theme/one-motive.json", NULL);
+    cJSON *request = cJSON_Parse(text);
+    free(text);
+    assert(request && cJSON_AddNumberToObject(request, "seed", 1));
+    char *printed = cJSON_PrintUnformatted(request);
+    cJSON_Delete(request);
+    ComposerResponse response;
+    assert(composer_api_theme(printed, NULL, &response) == COMPOSER_OK);
+    free(printed);
+    char *plan = strdup(response.plan_json);
+    composer_response_destroy(&response);
+    assert(plan);
+    return plan;
+}
+
+/* The hash of the loop plan one piece request fixture makes. */
+static uint64_t piece_hash(const char *name, const char *theme) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/piece/%s", COMPOSER_FIXTURE_DIR, name);
+    char *text = replace(test_read_file(path, NULL), "@STYLE@", STYLE_FILE);
+    cJSON *root = cJSON_Parse(text);
+    free(text);
+    assert(root);
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(root, "sections")) {
+        cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
+        const cJSON *kind = cJSON_GetObjectItemCaseSensitive(fill, "kind");
+        if (cJSON_IsString(kind) && strcmp(kind->valuestring, "theme") == 0) {
+            cJSON *inline_plan = cJSON_Parse(theme);
+            assert(inline_plan && cJSON_ReplaceItemInObject(fill, "plan", inline_plan));
+            assert(cJSON_AddStringToObject(fill, "source", "theme.plan.json"));
+        }
+    }
+    PieceSpec *spec = calloc(1, sizeof(*spec));
+    assert(spec);
+    ComposerError error;
+    memset(&error, 0, sizeof(error));
+    if (api_piece_read_request(spec, root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
+        fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
+        exit(1);
+    }
+    PiecePlan *plan = NULL;
+    PieceResult built = piece_structure_build_plan(&spec->structure, &plan);
+    if (built != PIECE_OK || !plan) {
+        fprintf(stderr, "%s: %s\n", name, piece_result_name(built));
+        exit(1);
+    }
+    PlanJsonError json_error;
+    char *json = plan_to_json(plan, &json_error);
+    if (!json) {
+        fprintf(stderr, "plan_to_json: %s\n", json_error.message);
+        exit(1);
+    }
+    uint64_t hash = fnv1a(json);
+    free(json);
+    plan_destroy(plan);
+    api_piece_request_destroy(spec);
+    free(spec);
+    cJSON_Delete(root);
+    return hash;
+}
+
+/* Calls each(line) for every piece request fixture in order; stops at the first nonzero. */
+static int every_piece(Each each, void *state) {
+    if (chdir(COMPOSER_FIXTURE_DIR) != 0) {
+        fprintf(stderr, "cannot enter %s\n", COMPOSER_FIXTURE_DIR);
+        exit(2);
+    }
+    char *theme = theme_plan();
+    int stop = 0;
+    for (size_t i = 0; !stop && i < PIECE_FIXTURE_COUNT; i++) {
+        char text[256];
+        snprintf(text, sizeof(text), "%s %016llx", PIECE_FIXTURES[i], (unsigned long long)piece_hash(PIECE_FIXTURES[i], theme));
+        stop = each(text, state);
+    }
+    free(theme);
+    return stop;
+}
+
+/* Records or compares one file of lines made by `every`. */
+static int run_file(const char *file, int (*every)(Each, void *), bool record, const char *what) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/forms/template-plans.txt", COMPOSER_FIXTURE_DIR);
-    if (argc > 1 && strcmp(argv[1], "record") == 0) {
-        FILE *file = fopen(path, "w");
-        if (!file) {
+    snprintf(path, sizeof(path), "%s/forms/%s", COMPOSER_FIXTURE_DIR, file);
+    if (record) {
+        FILE *out = fopen(path, "w");
+        if (!out) {
             fprintf(stderr, "cannot write %s\n", path);
             return 2;
         }
-        every_plan(write_line, file);
-        fclose(file);
+        every(write_line, out);
+        fclose(out);
         printf("recorded %s\n", path);
         return 0;
     }
     Compare compare = {fopen(path, "r"), 0, 0};
     if (!compare.file) {
-        fprintf(stderr, "cannot read %s (run test_form_plans record)\n", path);
+        fprintf(stderr, "cannot read %s (record it first)\n", path);
         return 2;
     }
-    every_plan(compare_line, &compare);
+    every(compare_line, &compare);
     char extra[256];
     if (fgets(extra, sizeof(extra), compare.file)) {
         fprintf(stderr, "the file has lines beyond the %zu plans\n", compare.index);
@@ -198,6 +314,14 @@ int main(int argc, char **argv) {
         fprintf(stderr, "%zu of %zu plans differ from %s\n", compare.mismatches, compare.index, path);
         return 1;
     }
-    printf("%zu plans match\n", compare.index);
+    printf("%zu %s match\n", compare.index, what);
     return 0;
+}
+
+int main(int argc, char **argv) {
+    const char *mode = argc > 1 ? argv[1] : "";
+    if (strcmp(mode, "pieces") == 0 || strcmp(mode, "record-pieces") == 0) {
+        return run_file("piece-plans.txt", every_piece, mode[0] == 'r', "piece plans");
+    }
+    return run_file("template-plans.txt", every_plan, strcmp(mode, "record") == 0, "plans");
 }
