@@ -24,6 +24,15 @@ A motive is made of segments, as a theme starts: a first cell, its repeat on the
 8. **Ending.** Rhythmic reduction in the last segment: its last note is at least a beat long, on a chord tone of the last chord, made by joining the cell's last notes (when the last segment is `a'`, `a`'s own last note is already at least a beat).
 9. **Checks.** The motive keeps the melodic rules and the range and pitch limits of the drawn strategy, and its tone labels must read as drawn, with the plan as its given base harmony. Up to 256 candidates are drawn for each motive; a candidate draws its bars, shape and plan once and tries its notes up to 8 times within them, so a shape's weight is not changed by how often it fails the rules.
 
+**Listening settings.** Nine members of the segments strategy's `MotiveRandomPreferences` (R-420 to R-422), set from C only for now (the preferences document and the API take them with phase L1's second branch). Each is off by default: with none set, every motive, plan and file is byte-identical to before.
+
+- `accented_one_in` and `accented_types` (step 7): in one eligible on-beat note of this many (0 never), a chord tone becomes an accented non-chord tone that resolves to the next note: an appoggiatura or a passing tone (a step beside the chord tone, which comes one note later), or a suspension where the chord changes (the note before is held over and falls by a step). One per segment, never the pickup or the last note of a segment; `accented_types` weights the three.
+- `avoid_repeats` (step 7): a decoration that finds no figure tries the other kinds before a chord tone, a chord tone never repeats the note beside it, a new segment does not start on the note before it, and a motive with two adjacent notes of one pitch is drawn again, except a suspension and the pair of the repeated-note feature.
+- `leaps_per_motif` and `leap_recovery` (step 9): a motive with more intervals of a fourth or more than `leaps_per_motif` (0 to 11; 11 never rejects) is drawn again; with `leap_recovery` each leap is followed by a step of 1 or 2 semitones the other way.
+- `pickup_from_accent` (steps 1 and 9): a pickup is one chord tone below segment a's first note and no longer than it, and a motive with no pickup is drawn again when it opens as one that has: a short note, then a longer one on the root, higher.
+- `contrast_fidelity_min` (step 9): the recognizability of segment b against segment a, from the motive-development score, is at least this ratio (0/1 never rejects).
+- `long_on_weak` and `final_long` (steps 2 and 8): the two-beat note is `1 + long_on_weak` times as likely on a weak beat; with `final_long` the last note of the last segment is longer than every other note in it.
+
 The segments are the motive's `features`, lettered `a` to `h` in order of first appearance, a later segment with an earlier one's rhythm taking that letter with a `'` for each earlier occurrence. `form` and `style` work as for `drawn`: a rhythm or contour motive keeps the segments and the harmony of the full one.
 
 ## The drawn strategy

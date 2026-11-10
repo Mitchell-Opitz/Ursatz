@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase L1)
+
+The segments motive generator gets nine listening settings (R-420 to R-422, B1): `MotiveRandomPreferences` gains `accented_one_in`, `accented_types` (appoggiatura, passing, suspension on the beat, resolving to the next note), `avoid_repeats`, `leaps_per_motif`, `leap_recovery`, `pickup_from_accent`, `contrast_fidelity_min`, `long_on_weak` and `final_long`, all off by default, so with none set every motive, file and snapshot is byte-identical. `motive_random_forms` knows the suspension. They are set from C only; the preferences document, the vocabulary, the schemas and the API version come in B2. See [cli-random-motive.md](cli-random-motive.md).
+
 ## Unreleased (phase P44)
 
 Stuck form runs are fixed at their two causes (R-418, B6). A minor half-cadence continuation or free phrase gets chords that fill it: `grow_chords_before_last` (`grow_theme.c`) counts the chords before the last, `draw_continuation` takes its cap and its split from it, and a free phrase's cap is at least what it needs. The key check hears the part of a section after a key change inside it from the change, in its new key (`piece_keys.c`), so a modulation inside a section is no longer downgraded to a tonicization. Every template completes 20 of 20 runs in `test_piece_keys` and the five `WILL_FAIL` are removed; the form baselines rise to binary 30, 60, 20, rounded binary 40, 120, 58, ternary 30, 90, 35, variations 60, 220, 184, loop 40, 60, 32 and layered 60, 180, 74. A game loop in D minor 4/4 with a free phrase ending HC composes. Runs that completed before give the same output and no snapshot moved. New: `test_grow_half_cadence`, `test_piece_structure minor_half_free`. Known limits are in [piece.md](piece.md).
