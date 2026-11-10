@@ -91,7 +91,7 @@ ursatz_gui_add_test(theme_route test_theme_route.c ${CMAKE_CURRENT_BINARY_DIR}/t
 # took the test to about 30 s (R-307).
 set_tests_properties(theme_route PROPERTIES LABELS slow)
 # The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
-# there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
+# there), uploads the link fixtures for the brief and checks the stored files and the served playback (version_check.h).
 target_compile_definitions(test_theme_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
 )
@@ -100,7 +100,7 @@ ursatz_gui_add_test(piece_route test_piece_route.c ${CMAKE_CURRENT_BINARY_DIR}/p
 # Slow: about 279 s in a -j4 run (R-307).
 set_tests_properties(piece_route PROPERTIES LABELS slow)
 # The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
-# there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
+# there), uploads the link fixtures for the brief and checks the stored files and the served playback (version_check.h).
 target_compile_definitions(test_piece_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
 )
