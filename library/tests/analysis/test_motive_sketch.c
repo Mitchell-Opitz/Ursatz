@@ -6,8 +6,8 @@
 
 /*
  * Analysis-regression tests for MotiveSketch: validation (ordering, overlap, pickup, chords, features), equality,
- * scale steps in major, minor and without a scale, chord tones, expressible durations and the metric strength of an
- * onset.
+ * scale steps in major, minor and without a scale, chord tones, expressible durations, triplet times and the metric
+ * strength of an onset.
  */
 
 static Rational q(unsigned long long n, unsigned long long d) {
@@ -317,6 +317,55 @@ static void test_expressible_durations(void) {
     assert(!motive_sketch_on_grid(q(1, 64)));
 }
 
+/* Three eighth triplets then a quarter, in 4/4: a motive that holds triplets. */
+static MotiveSketch eighth_triplets(void) {
+    MotiveSketch sketch = four_quarters();
+    for (unsigned i = 0; i < 3; i++) {
+        sketch.notes[i].onset = q(i, 12);
+        sketch.notes[i].duration = q(1, 12);
+    }
+    sketch.notes[3].onset = q(1, 4);
+    sketch.notes[3].duration = q(1, 4);
+    sketch.length = q(1, 2);
+    return sketch;
+}
+
+static void test_triplet_times(void) {
+    MotiveSketch binary = four_quarters();
+    MotiveSketch triplets = eighth_triplets();
+    assert(!motive_sketch_has_triplets(&binary));
+    assert(motive_sketch_has_triplets(&triplets));
+    assert(!motive_sketch_has_triplets(NULL));
+
+    /* A triplet in the pickup or the length alone also counts. */
+    MotiveSketch pickup = four_quarters();
+    pickup.pickup = q(1, 12);
+    assert(motive_sketch_has_triplets(&pickup));
+    MotiveSketch length = four_quarters();
+    length.length = q(5, 6);
+    assert(motive_sketch_has_triplets(&length));
+
+    assert(motive_sketch_time_writable(&triplets, q(1, 12)));
+    assert(motive_sketch_time_writable(&triplets, q(1, 6)));
+    assert(motive_sketch_time_writable(&triplets, q(1, 24)));
+    assert(motive_sketch_time_writable(&triplets, q(1, 4))); /* binary values stay writable */
+    assert(!motive_sketch_time_writable(&binary, q(1, 12)));
+    assert(!motive_sketch_time_writable(&binary, q(1, 6)));
+    assert(!motive_sketch_time_writable(&binary, q(1, 24)));
+    assert(motive_sketch_time_writable(&binary, q(1, 4)));
+    assert(!motive_sketch_time_writable(&triplets, q(1, 36)));
+    assert(!motive_sketch_time_writable(&binary, q(1, 36)));
+    assert(!motive_sketch_time_writable(&triplets, q(0, 1)));
+    assert(!motive_sketch_time_writable(&triplets, msk_bad()));
+
+    assert(motive_sketch_time_on_grid(&triplets, q(1, 12)));
+    assert(!motive_sketch_time_on_grid(&binary, q(1, 12)));
+    assert(motive_sketch_time_on_grid(&binary, q(3, 32)));
+    assert(motive_sketch_time_on_grid(&triplets, q(3, 32)));
+    assert(!motive_sketch_time_on_grid(&triplets, q(1, 36)));
+    assert(!motive_sketch_time_on_grid(&triplets, msk_bad()));
+}
+
 static void test_strength(void) {
     MotiveSketch sketch = four_quarters();
     assert(motive_sketch_strength(&sketch, q(0, 1)) == 2);
@@ -354,6 +403,7 @@ int main(void) {
     test_steps_without_a_scale();
     test_chord_tones();
     test_expressible_durations();
+    test_triplet_times();
     test_strength();
     test_rational_helpers();
     printf("motive_sketch: ok\n");

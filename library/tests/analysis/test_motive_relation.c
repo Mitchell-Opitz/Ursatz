@@ -1650,6 +1650,58 @@ static void test_liquidate_labelled_features(void) {
     assert(apply(&fine, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 1, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
 }
 
+/* --- triplet motives ------------------------------------------------------------------------- */
+
+/* Three eighth triplets, then a quarter, in 4/4 in C major. */
+static MotiveSketch triplet_motive(void) {
+    static const int pitches[3] = {60, 64, 67};
+    MotiveSketch sketch = line(pitches, 3, q(1, 12));
+    sketch.notes[3].pitch = 72;
+    sketch.notes[3].onset = q(1, 4);
+    sketch.notes[3].duration = q(1, 4);
+    sketch.note_count = 4;
+    sketch.length = q(1, 2);
+    return sketch;
+}
+
+static void test_triplet_motive_relations(void) {
+    MotiveSketch sketch = triplet_motive();
+    MotiveSketch out;
+
+    /* Augment 2:1 doubles every value: three 1/6 notes, then a half note. */
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_AUGMENT, 2, 1), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 0, 60, q(0, 1), q(1, 6));
+    assert_note(&out, 1, 64, q(1, 6), q(1, 6));
+    assert_note(&out, 2, 67, q(1, 3), q(1, 6));
+    assert_note(&out, 3, 72, q(1, 2), q(1, 2));
+
+    /* Diminish 1:2 halves them: a 1/12 note, then a 1/24 and so on down to a triplet sixteenth. */
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_DIMINISH, 1, 2), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 0, 60, q(0, 1), q(1, 24));
+    assert_note(&out, 1, 64, q(1, 24), q(1, 24));
+    assert_note(&out, 3, 72, q(1, 8), q(1, 8));
+
+    /* A binary motive is as before: note repeat of a quarter in three needs a triplet, which it does not hold. */
+    MotiveSketch quarters = cdeg();
+    assert(apply(&quarters, step(MOTIVE_RELATION_NOTE_REPEAT, 1, 3, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    assert(apply(&quarters, ratio_step(MOTIVE_RELATION_AUGMENT, 5, 4), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+
+    /* A triplet motive may repeat its quarter in three. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_NOTE_REPEAT, 3, 3, 0), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 3, 72, q(1, 4), q(1, 12));
+    assert_note(&out, 5, 72, q(5, 12), q(1, 12));
+
+    /* Liquidating features keeps the triplets it does not touch and replaces each beat by one note. */
+    static const int six[6] = {60, 64, 67, 72, 71, 67};
+    MotiveSketch two_beats = line(six, 6, q(1, 12));
+    two_beats.notes[3].onset = q(1, 4);
+    two_beats.notes[4].onset = q(1, 3);
+    two_beats.notes[5].onset = q(5, 12);
+    two_beats.length = q(1, 2);
+    assert(apply(&two_beats, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == 4);
+}
+
 int main(void) {
     test_catalog();
     test_invalid_input();
@@ -1691,6 +1743,7 @@ int main(void) {
     test_dominant_form();
     test_liquidate_features();
     test_liquidate_labelled_features();
+    test_triplet_motive_relations();
     printf("motive_relation: ok\n");
     return 0;
 }
