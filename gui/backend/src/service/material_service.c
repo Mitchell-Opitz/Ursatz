@@ -1183,6 +1183,24 @@ static UrsatzGuiMaterialResult validate_piece_words(const cJSON *structure, char
     return URSATZ_GUI_MATERIAL_OK;
 }
 
+/* modulate is a boolean, and true only for a form whose settings allow it. */
+static UrsatzGuiMaterialResult validate_piece_modulate(const cJSON *structure, const cJSON *form, char *error, size_t error_size) {
+    const char *label = ursatz_gui_json_string(form, "label");
+    const cJSON *modulate = cJSON_GetObjectItemCaseSensitive(structure, "modulate");
+    if (!is_absent_or_null(structure, "modulate")) {
+        const cJSON *allowed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(form, "settings"), "modulate");
+        if (!cJSON_IsBool(modulate)) {
+            return invalid_body(error, error_size, "piece modulate must be true or false");
+        }
+        if (cJSON_IsTrue(modulate) && !cJSON_IsTrue(allowed)) {
+            char message[128];
+            snprintf(message, sizeof(message), "a %s piece does not modulate", label);
+            return invalid_body(error, error_size, message);
+        }
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
 /* A form whose sections are the request's own (the game loop): each part is one of the form's roles, in their order,
  * with every required role present. */
 static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, const cJSON *form, char *error,
@@ -1195,6 +1213,19 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
     }
     if (role_count < 1 || role_count > PIECE_ROLES_MAX) {
         return invalid_body(error, error_size, "the Composer gave no roles for this form");
+    }
+    const char *form_label = ursatz_gui_json_string(form, "label");
+    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
+    const cJSON *count_member = cJSON_GetObjectItemCaseSensitive(structure, "count");
+    if ((!is_absent_or_null(structure, "bars") && !(cJSON_IsNumber(bars) && bars->valuedouble == 0)) ||
+        (!is_absent_or_null(structure, "count") && !(cJSON_IsNumber(count_member) && count_member->valuedouble == 0))) {
+        char message[128];
+        snprintf(message, sizeof(message), "a %s piece has no size: bars and count are for a form with sizes", form_label);
+        return invalid_body(error, error_size, message);
+    }
+    UrsatzGuiMaterialResult modulate = validate_piece_modulate(structure, form, error, error_size);
+    if (modulate != URSATZ_GUI_MATERIAL_OK) {
+        return modulate;
     }
     char values[160];
     char labels[160];
@@ -1311,18 +1342,7 @@ static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const
             return invalid_body(error, error_size, message);
         }
     }
-    const cJSON *modulate = cJSON_GetObjectItemCaseSensitive(structure, "modulate");
-    if (!is_absent_or_null(structure, "modulate")) {
-        const cJSON *allowed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(form, "settings"), "modulate");
-        if (!cJSON_IsBool(modulate)) {
-            return invalid_body(error, error_size, "piece modulate must be true or false");
-        }
-        if (cJSON_IsTrue(modulate) && !cJSON_IsTrue(allowed)) {
-            snprintf(message, sizeof(message), "a %s piece does not modulate", label ? label : "sized");
-            return invalid_body(error, error_size, message);
-        }
-    }
-    return URSATZ_GUI_MATERIAL_OK;
+    return validate_piece_modulate(structure, form, error, error_size);
 }
 
 /* structure.form names a form of the Composer (absent is game-loop); the form says whether the structure lists its
