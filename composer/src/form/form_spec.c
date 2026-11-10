@@ -13,16 +13,22 @@
 
 typedef struct {
     const char *name;
+    const char *label;
     bool theme;
 } RoleRow;
 
 /* The role table: P46 to P53 add rows. */
 static const RoleRow ROLES[FORM_ROLE_COUNT] = {
-    {"theme", true},  {"contrast", true}, {"return", true}, {"variation", true}, {"layer", true},
-    {"intro", false}, {"body", false},    {"turnaround", false}, {"ending", false}};
+    {"theme", "Theme", true},        {"contrast", "Contrast", true}, {"return", "Return", true},
+    {"variation", "Variation", true}, {"layer", "Layer", true},       {"intro", "Intro", false},
+    {"body", "Loop body", false},    {"turnaround", "Turnaround", false}, {"ending", "Ending", false}};
 
 const char *form_role_name(FormRole role) {
     return role >= 0 && role < FORM_ROLE_COUNT ? ROLES[role].name : NULL;
+}
+
+const char *form_role_label(FormRole role) {
+    return role >= 0 && role < FORM_ROLE_COUNT ? ROLES[role].label : NULL;
 }
 
 bool form_role_find(const char *name, FormRole *out) {

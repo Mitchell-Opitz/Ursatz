@@ -58,6 +58,9 @@ typedef enum {
 
 /* "theme", "contrast", "return", "variation", "layer", "intro", "body", "turnaround", "ending"; NULL for an invalid role. */
 const char *form_role_name(FormRole role);
+/* The label of a role: "Theme", "Contrast", "Return", "Variation", "Layer", "Intro", "Loop body", "Turnaround", "Ending"
+ * (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
+const char *form_role_label(FormRole role);
 /* False for a name that is none of these. */
 bool form_role_find(const char *name, FormRole *out);
 /* True for the roles of a section grow-theme builds (the first five). */
