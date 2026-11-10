@@ -11,10 +11,6 @@
 
 /* `regenerate` as a composer API entry (docs/cli-regenerate.md): one node of a filled plan written again. */
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 static ComposerStatus fail_cancelled(ComposerError *error) {
     return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
 }
@@ -176,7 +172,7 @@ ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJ
         cJSON *document = extra ? api_compose_document(plan, used, false, &outcome, given, extra) : NULL;
         free(given);
         if (!document) {
-            status = fail_alloc(&out->error);
+            status = api_fail_alloc(&out->error);
         } else {
             status = api_render_outputs(plan, &outputs, out);
             if (status == COMPOSER_OK) {

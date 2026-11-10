@@ -101,19 +101,6 @@ typedef struct {
     size_t notice_count;
 } PlanBuild;
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
-/* Adds item to object under name and returns true; the item is deleted when it is NULL or cannot be added. */
-static bool add(cJSON *object, const char *name, cJSON *item) {
-    if (!object || !item || !cJSON_AddItemToObject(object, name, item)) {
-        cJSON_Delete(item);
-        return false;
-    }
-    return true;
-}
-
 /* --- reading the request --------------------------------------------------------------------------- */
 
 /* A whole number from 0 to maximum, a JSON number or digits; "<name> must be a whole number, not '<value>'". */
@@ -401,7 +388,7 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     }
     FormSpecResult found = form_spec_builtin(state->form_text, &state->form);
     if (found == FORM_SPEC_ERR_ALLOC) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     if (found != FORM_SPEC_OK) {
         /* The built-in forms that come in sizes, in registry order. */
@@ -580,7 +567,7 @@ static ComposerStatus read_motive(const PlanBuild *state, const cJSON *motive, c
         !cJSON_AddStringToObject(request, "key", state->key_request) ||
         (input && !cJSON_AddItemReferenceToObject(request, "input", (cJSON *)input))) {
         cJSON_Delete(request);
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     ComposerStatus status = api_read_motive(request, base, out, NULL, error);
     cJSON_Delete(request);
@@ -634,7 +621,7 @@ static ComposerStatus place_given(PlanBuild *state, PiecePlan *plan, ComposerErr
         } else {
             Motive *line = malloc(sizeof(*line));
             if (!line) {
-                return fail_alloc(error);
+                return api_fail_alloc(error);
             }
             char base[96];
             snprintf(base, sizeof base, "%s/motive", path);
@@ -674,7 +661,7 @@ static cJSON *given_document(const PlanBuild *state) {
                   cJSON_AddStringToObject(item, "source", given->source) && cJSON_AddStringToObject(item, "section", given->letter) &&
                   cJSON_AddNumberToObject(item, "bar", (double)given->bar);
         ok = ok && (given->kind != GIVEN_PROGRESSION || cJSON_AddNumberToObject(item, "cells", (double)given->cells));
-        ok = ok && (!given->from_corpus || add(item, "from", api_seed_json(&given->found)));
+        ok = ok && (!given->from_corpus || api_add(item, "from", api_seed_json(&given->found)));
         if (!ok || !cJSON_AddItemToArray(list, item)) {
             cJSON_Delete(item);
             cJSON_Delete(list);
@@ -701,23 +688,23 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
               cJSON_AddNumberToObject(document, "bars", (double)bars) && cJSON_AddStringToObject(document, "key", state->key_name) &&
               cJSON_AddStringToObject(document, "meter", meter) && cJSON_AddNumberToObject(document, "seed", (double)state->seed) &&
               cJSON_AddBoolToObject(document, "modulate", state->modulate);
-    ok = ok && add(document, "motive", state->motive_source ? cJSON_CreateString(state->motive_source) : cJSON_CreateNull());
-    ok = ok && (!state->seeded || add(document, "motive_source", api_seed_json(&state->seed_found)));
-    ok = ok && add(document, "accompaniment",
+    ok = ok && api_add(document, "motive", state->motive_source ? cJSON_CreateString(state->motive_source) : cJSON_CreateNull());
+    ok = ok && (!state->seeded || api_add(document, "motive_source", api_seed_json(&state->seed_found)));
+    ok = ok && api_add(document, "accompaniment",
                    state->has_accompaniment ? cJSON_CreateString(api_accompaniment_name(state->accompaniment.pattern)) : cJSON_CreateNull());
     cJSON *list = ok ? cJSON_CreateArray() : NULL;
     for (size_t i = 0; list && i < count; i++) {
         ok = cJSON_AddItemToArray(list, api_section_json(&sections[i]));
     }
-    ok = ok && add(document, "sections", list);
-    ok = ok && (state->given_count == 0 || add(document, "given", given_document(state)));
+    ok = ok && api_add(document, "sections", list);
+    ok = ok && (state->given_count == 0 || api_add(document, "given", given_document(state)));
     if (ok && state->style_path) {
         char weight[48];
         snprintf(weight, sizeof weight, "%lu/%lu", state->style_weight.denominator ? state->style_weight.numerator : 1UL,
                  state->style_weight.denominator ? state->style_weight.denominator : 1UL);
         cJSON *style = cJSON_CreateObject();
         ok = style && cJSON_AddStringToObject(style, "file", state->style_path) && cJSON_AddStringToObject(style, "weight", weight) &&
-             add(document, "style", style);
+             api_add(document, "style", style);
         if (!ok) {
             cJSON_Delete(style);
         }
@@ -729,12 +716,12 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
                 snprintf(weight, sizeof weight, "%lu/%lu", state->blend_weights.numerator[d], state->blend_weights.denominator[d]);
                 ok = cJSON_AddStringToObject(weights, style_dimension_name((StyleDimension)d), weight) != NULL;
             }
-            ok = ok && add(blend, "weights", weights);
+            ok = ok && api_add(blend, "weights", weights);
             if (ok) {
                 weights = NULL;
             }
             cJSON_Delete(weights);
-            ok = ok && add(document, "blend", blend);
+            ok = ok && api_add(document, "blend", blend);
             if (!ok) {
                 cJSON_Delete(blend);
             }
@@ -742,7 +729,7 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
     }
     /* What the text output needs and the command's JSON does not carry. */
     if (ok && state->has_accompaniment) {
-        ok = add(document, "accompaniment_texture",
+        ok = api_add(document, "accompaniment_texture",
                  state->accompaniment.texture >= 0 ? cJSON_CreateString(standard_texture_name((StandardTexture)state->accompaniment.texture))
                                                    : cJSON_CreateNull());
     }
@@ -752,7 +739,7 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
         for (size_t i = 0; notices && i < state->notice_count; i++) {
             ok = cJSON_AddItemToArray(notices, cJSON_CreateString(state->notices[i]));
         }
-        ok = ok && add(document, "notices", notices);
+        ok = ok && api_add(document, "notices", notices);
     }
     if (!ok) {
         cJSON_Delete(document);
@@ -766,7 +753,7 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
 static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerError *error) {
     Motive *motive = calloc(1, sizeof(*motive));
     bool has_motive = false;
-    ComposerStatus status = motive ? COMPOSER_OK : fail_alloc(error);
+    ComposerStatus status = motive ? COMPOSER_OK : api_fail_alloc(error);
     if (status == COMPOSER_OK && state->like_path) {
         CorpusSeedResult result =
             corpus_seed_motive(state->from_corpus, state->like_path, &state->meter, &state->key, state->seed, &state->seed_found);
@@ -894,7 +881,7 @@ ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *jo
     memset(out, 0, sizeof *out);
     PlanBuild *state = calloc(1, sizeof(*state));
     PiecePlan *plan = NULL;
-    ComposerStatus status = state ? api_parse_request(request_json, (cJSON **)&state->root, &out->error) : fail_alloc(&out->error);
+    ComposerStatus status = state ? api_parse_request(request_json, (cJSON **)&state->root, &out->error) : api_fail_alloc(&out->error);
     if (status == COMPOSER_OK) {
         status = read_request(state, &out->error);
     }
@@ -908,7 +895,7 @@ ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *jo
         cJSON *document = plan_document(state, plan);
         ApiOutputs outputs;
         memset(&outputs, 0, sizeof outputs);
-        status = document ? api_render_outputs(plan, &outputs, out) : fail_alloc(&out->error);
+        status = document ? api_render_outputs(plan, &outputs, out) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
         } else {

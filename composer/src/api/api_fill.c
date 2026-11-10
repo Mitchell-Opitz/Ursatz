@@ -14,10 +14,6 @@
 
 #define MAX_CANDIDATES 32
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 typedef struct {
     const char *style_path;
     const char *style_weight_text;
@@ -284,7 +280,7 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
     }
     ApiGivenRuns *given = calloc(1, sizeof(*given));
     if (!given) {
-        status = status == COMPOSER_OK ? fail_alloc(&out->error) : status;
+        status = status == COMPOSER_OK ? api_fail_alloc(&out->error) : status;
     } else {
         given->unchanged = true;
     }
@@ -307,12 +303,12 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
                 !cJSON_AddNumberToObject(extra, "candidates_tried", (double)candidates.tried)) {
                 cJSON_Delete(extra);
                 extra = NULL;
-                status = fail_alloc(&out->error);
+                status = api_fail_alloc(&out->error);
             }
         }
         cJSON *document = status == COMPOSER_OK ? api_compose_document(plan, used, realized, &outcome, given, extra) : NULL;
         if (status == COMPOSER_OK && !document) {
-            status = fail_alloc(&out->error);
+            status = api_fail_alloc(&out->error);
         }
         if (status == COMPOSER_OK) {
             status = api_record_outputs(plan, &outcome, &outputs, document, out);

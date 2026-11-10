@@ -61,10 +61,6 @@ static const unsigned OP_FLAGS[] = {
 static const char *const FLAG_NAMES[] = {"by",     "degree", "tonal", "axis",         "interval",     "amount", "keep_contour",
                                          "position", "length", "min",   "drop", "keep_rhythm", "ratio"};
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* --- the numbers a request gives ------------------------------------------------------------------------- */
 
 static bool parse_number(const char *text, long minimum, long maximum, long *out) {
@@ -580,9 +576,9 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
     if (status == COMPOSER_OK) {
         registry = fill_registry_create();
         if (!registry || motive_develop_register(registry, &context) != FILL_OK) {
-            status = fail_alloc(&out->error);
+            status = api_fail_alloc(&out->error);
         } else if (!build_scene(&source, &ref, &scene)) {
-            status = fail_alloc(&out->error);
+            status = api_fail_alloc(&out->error);
         } else {
             have_scene = true;
         }
@@ -618,7 +614,7 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
                       cJSON_AddNumberToObject(document, "seed", (double)seed) && cJSON_AddItemToObject(document, "candidates", list);
             if (!ok) {
                 cJSON_Delete(list);
-                status = fail_alloc(&out->error);
+                status = api_fail_alloc(&out->error);
             }
             const CandidateSet *set = status == COMPOSER_OK ? fill_suggestions_set(suggestions) : NULL;
             for (size_t i = 0; status == COMPOSER_OK && i < count; i++) {
@@ -637,7 +633,7 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
                      cJSON_AddStringToObject(entry, "text", text) && cJSON_AddItemToArray(list, entry);
                 if (!ok) {
                     cJSON_Delete(entry);
-                    status = fail_alloc(&out->error);
+                    status = api_fail_alloc(&out->error);
                 }
             }
             if (status == COMPOSER_OK && (outputs.midi || outputs.musicxml)) {

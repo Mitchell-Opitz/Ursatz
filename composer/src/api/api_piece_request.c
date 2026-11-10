@@ -23,10 +23,6 @@
 
 #define SCHEMA_NAME "ursatz-piece-request"
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 void api_piece_request_destroy(PieceSpec *request) {
     for (size_t i = 0; i <= PIECE_STRUCTURE_MAX_SECTIONS; i++) {
         free(request->section_motive[i]);
@@ -68,7 +64,7 @@ static ComposerStatus read_numerals(PieceSpec *request, size_t index, const char
                                     ComposerError *error) {
     request->numeral_text[index] = strdup(text);
     if (!request->numeral_text[index]) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     size_t count = 0;
     char *save = NULL;
@@ -188,7 +184,7 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         PlanResult read = text ? plan_from_json(text, &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
         cJSON_free(text);
         if (read == PLAN_ERR_ALLOC) {
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
         if (read != PLAN_OK) {
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': cannot read the theme plan '%s': %s", id,
@@ -458,7 +454,7 @@ static ComposerStatus read_melodic(const char *what, const char *path, const cJS
                                    const AnalysisKey *key, Motive **out, ComposerError *error) {
     *out = calloc(1, sizeof(Motive));
     if (!*out) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     ComposerStatus status = api_read_degrees_motive(what, path, json, NULL, meter, key, *out, error);
     if (status == COMPOSER_OK && (*out)->accompaniment) {
@@ -503,7 +499,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
     request->pool = calloc(forms, sizeof(*request->pool));
     request->pool_motives = calloc(forms, sizeof(*request->pool_motives));
     if (!request->pool || !request->pool_motives) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     for (size_t i = 0; i < piece->section_count; i++) {
         const cJSON *form = NULL;
@@ -620,7 +616,7 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
     }
     FormSpec *form = NULL;
     if (form_spec_builtin(API_PIECE_FORM, &form) != FORM_SPEC_OK) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     size_t given = piece->section_count;
     if (piece_default_ending(form, piece, PIECE_STRUCTURE_MAX_SECTIONS + 1) && piece->section_count > given) {
@@ -634,14 +630,14 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
 ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerError *error) {
     PieceSpec *request = calloc(1, sizeof(*request));
     if (!request) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     ComposerStatus status = api_piece_read_request(request, root, "", NULL, false, NULL, error);
     cJSON *sections = cJSON_GetObjectItemCaseSensitive(filled, "sections");
     size_t given = (size_t)cJSON_GetArraySize(sections);
     FormSpec *form = NULL;
     if (status == COMPOSER_OK && form_spec_builtin(API_PIECE_FORM, &form) != FORM_SPEC_OK) {
-        status = fail_alloc(error);
+        status = api_fail_alloc(error);
     }
     if (status == COMPOSER_OK) {
         piece_default_cadences(form, &request->request);
@@ -657,12 +653,12 @@ ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerErro
                 !cJSON_AddStringToObject(item, "letter", section->letter) ||
                 !cJSON_AddNumberToObject(item, "beats", (double)section->beats) || !cJSON_AddItemToArray(sections, item)) {
                 cJSON_Delete(item);
-                status = fail_alloc(error);
+                status = api_fail_alloc(error);
                 break;
             }
             cJSON *fill = cJSON_AddObjectToObject(item, "fill");
             if (!fill || !cJSON_AddStringToObject(fill, "kind", piece_fill_name(section->fill))) {
-                status = fail_alloc(error);
+                status = api_fail_alloc(error);
                 break;
             }
         }
@@ -670,7 +666,7 @@ ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerErro
         if (!cadence || cJSON_IsNull(cadence)) {
             cJSON_DeleteItemFromObjectCaseSensitive(item, "cadence");
             if (!cJSON_AddStringToObject(item, "cadence", plan_cadence_name(section->cadence))) {
-                status = fail_alloc(error);
+                status = api_fail_alloc(error);
             }
         }
     }

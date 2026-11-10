@@ -18,19 +18,6 @@
 #include "util/plan_util.h"
 #include "util/util.h"
 
-/* Adds item to object under name and returns true; the item is deleted when it is NULL or cannot be added. */
-static bool add(cJSON *object, const char *name, cJSON *item) {
-    if (!object || !item || !cJSON_AddItemToObject(object, name, item)) {
-        cJSON_Delete(item);
-        return false;
-    }
-    return true;
-}
-
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* --- the sections of a plan ------------------------------------------------------------------------ */
 
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
@@ -120,12 +107,12 @@ cJSON *api_section_json(const ApiSection *section) {
     cJSON *cadences = cJSON_CreateArray();
     bool ok = object && cadences && cJSON_AddStringToObject(object, "letter", section->letter) &&
               cJSON_AddNumberToObject(object, "bars", (double)section->bars);
-    ok = ok && add(object, "key", section->has_key ? cJSON_CreateString(api_key_name(&section->key, key, sizeof key)) : cJSON_CreateNull());
+    ok = ok && api_add(object, "key", section->has_key ? cJSON_CreateString(api_key_name(&section->key, key, sizeof key)) : cJSON_CreateNull());
     for (size_t c = 0; ok && c < section->cadence_count; c++) {
         ok = cJSON_AddItemToArray(cadences, cJSON_CreateString(plan_cadence_name(section->cadences[c])));
     }
     if (ok) {
-        ok = add(object, "cadences", cadences);
+        ok = api_add(object, "cadences", cadences);
         cadences = NULL;
     }
     if (ok && section->has_pairing) {
@@ -140,7 +127,7 @@ cJSON *api_section_json(const ApiSection *section) {
         cJSON *returns = cJSON_CreateObject();
         ok = returns && cJSON_AddStringToObject(returns, "section", section->returns_letter) &&
              cJSON_AddStringToObject(returns, "variation", VARIATION_NAMES[section->variation]) &&
-             add(object, "returns", returns);
+             api_add(object, "returns", returns);
     } else {
         ok = ok && cJSON_AddNullToObject(object, "returns");
     }
@@ -164,7 +151,7 @@ ComposerStatus api_read_plan_text(const cJSON *request, const char *name, char *
     }
     char *printed = cJSON_PrintUnformatted(member);
     if (!printed) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     PiecePlan *plan = NULL;
     PlanJsonError detail;
@@ -178,7 +165,7 @@ ComposerStatus api_read_plan_text(const cJSON *request, const char *name, char *
         }
         cJSON_free(printed);
         if (read == PLAN_ERR_ALLOC) {
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s%s%s", detail.message,
                         detail.path[0] ? " at " : "", detail.path);
@@ -305,12 +292,12 @@ ComposerStatus api_record_outputs(const PiecePlan *plan, const ComposeOutcome *o
     if (outputs->record && outcome) {
         char *text = record_text(outcome);
         if (!text) {
-            return fail_alloc(&out->error);
+            return api_fail_alloc(&out->error);
         }
-        bool added = add(document, "record", cJSON_CreateString(text));
+        bool added = api_add(document, "record", cJSON_CreateString(text));
         free(text);
         if (!added) {
-            return fail_alloc(&out->error);
+            return api_fail_alloc(&out->error);
         }
     }
     if (outputs->explain && outcome) {
@@ -321,12 +308,12 @@ ComposerStatus api_record_outputs(const PiecePlan *plan, const ComposeOutcome *o
         char *text = outputs->explain == 2 ? explain_to_json(&explanation) : explain_to_text(&explanation);
         explain_destroy(&explanation);
         if (!text) {
-            return fail_alloc(&out->error);
+            return api_fail_alloc(&out->error);
         }
-        bool added = add(document, "explanation", cJSON_CreateString(text));
+        bool added = api_add(document, "explanation", cJSON_CreateString(text));
         free(text);
         if (!added) {
-            return fail_alloc(&out->error);
+            return api_fail_alloc(&out->error);
         }
     }
     return COMPOSER_OK;
@@ -389,7 +376,7 @@ cJSON *api_heard_json(const PiecePlan *plan, const ComposeOutcome *outcome) {
         for (size_t c = 0; ok && heard->heard_result == FORM_HEAR_OK && c < heard->heard.cadence_count; c++) {
             ok = cJSON_AddItemToArray(cadences, cJSON_CreateString(cadence_type_name((CadenceType)heard->heard.cadences[c].type)));
         }
-        ok = ok && add(item, "cadences", cadences);
+        ok = ok && api_add(item, "cadences", cadences);
         if (ok) {
             cadences = NULL;
         }
@@ -443,7 +430,7 @@ static cJSON *given_json(const PiecePlan *plan, const ApiSection *sections, size
             cJSON_Delete(item);
         }
     }
-    if (!ok || !add(object, "runs", runs)) {
+    if (!ok || !api_add(object, "runs", runs)) {
         cJSON_Delete(object);
         if (!object) {
             cJSON_Delete(runs);
@@ -464,21 +451,21 @@ cJSON *api_compose_document(const PiecePlan *plan, unsigned long seed, bool real
     for (cJSON *member = extra ? extra->child : NULL; ok && member;) {
         cJSON *next = member->next;
         cJSON *detached = cJSON_DetachItemViaPointer(extra, member);
-        ok = add(document, detached->string, detached);
+        ok = api_add(document, detached->string, detached);
         member = next;
     }
     cJSON_Delete(extra);
-    ok = ok && add(document, "sections", api_heard_json(plan, outcome));
+    ok = ok && api_add(document, "sections", api_heard_json(plan, outcome));
     if (ok && outcome->analyzer_check_count > 0) {
         cJSON *analyzer = cJSON_CreateObject();
         ok = analyzer && cJSON_AddNumberToObject(analyzer, "planned", (double)outcome->analyzer_planned) &&
-             cJSON_AddNumberToObject(analyzer, "agreed", (double)outcome->analyzer_agreed) && add(document, "analyzer", analyzer);
+             cJSON_AddNumberToObject(analyzer, "agreed", (double)outcome->analyzer_agreed) && api_add(document, "analyzer", analyzer);
         if (!ok) {
             cJSON_Delete(analyzer);
         }
     }
     if (ok && outcome->style_measured) {
-        ok = add(document, "style_distance", api_style_distance_json(&outcome->style_distance));
+        ok = api_add(document, "style_distance", api_style_distance_json(&outcome->style_distance));
     }
     cJSON *returns = ok ? cJSON_CreateObject() : NULL;
     cJSON *pairs = returns ? cJSON_CreateArray() : NULL;
@@ -496,15 +483,15 @@ cJSON *api_compose_document(const PiecePlan *plan, unsigned long seed, bool real
         }
     }
     if (ok) {
-        ok = add(returns, "pairs", pairs);
+        ok = api_add(returns, "pairs", pairs);
         pairs = NULL;
-        ok = ok && add(document, "returns", returns);
+        ok = ok && api_add(document, "returns", returns);
         returns = NULL;
     }
     cJSON_Delete(pairs);
     cJSON_Delete(returns);
     if (ok && given->count > 0) {
-        ok = add(document, "given", given_json(plan, sections, count, given));
+        ok = api_add(document, "given", given_json(plan, sections, count, given));
     }
     if (!ok) {
         cJSON_Delete(document);
@@ -594,9 +581,9 @@ ComposerStatus api_compose_stuck(const PiecePlan *plan, const ComposeOutcome *ou
             shown++;
         }
     }
-    ok = ok && add(stuck, "open", list);
+    ok = ok && api_add(stuck, "open", list);
     list = NULL;
-    ok = ok && cJSON_AddNumberToObject(stuck, "more", (double)(open > shown ? open - shown : 0)) && add(document, "stuck", stuck);
+    ok = ok && cJSON_AddNumberToObject(stuck, "more", (double)(open > shown ? open - shown : 0)) && api_add(document, "stuck", stuck);
     if (ok) {
         stuck = NULL;
     }
@@ -604,7 +591,7 @@ ComposerStatus api_compose_stuck(const PiecePlan *plan, const ComposeOutcome *ou
     cJSON_Delete(stuck);
     if (!ok) {
         cJSON_Delete(document);
-        return fail_alloc(&out->error);
+        return api_fail_alloc(&out->error);
     }
     ComposerError error;
     api_fail(&error, COMPOSER_ERR_UNSATISFIABLE, "", "the plan could not be completed from seeds %lu to %lu: stuck at the %s stage%s",

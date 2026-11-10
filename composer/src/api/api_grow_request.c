@@ -19,10 +19,6 @@
 
 #define WITHOUT_MAX 8
 
-static ComposerStatus fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
-}
-
 /* --- the style categories --------------------------------------------------------------------------------- */
 
 static const char *const STYLE_CATEGORIES[] = {
@@ -219,23 +215,23 @@ static ComposerStatus make_lines(State *state, ComposerError *error) {
                   sizeof key);
     state->line = cJSON_Duplicate(state->request, true);
     if (!state->line) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     cJSON_DeleteItemFromObjectCaseSensitive(state->line, "key");
     if (!cJSON_AddStringToObject(state->line, "key", key)) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(state->request, "accompaniment_motive");
     if (cJSON_IsObject(accompaniment)) {
         state->accompaniment_line = cJSON_Duplicate(accompaniment, true);
         if (!state->accompaniment_line) {
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
         cJSON_DeleteItemFromObjectCaseSensitive(state->accompaniment_line, "meter");
         cJSON_DeleteItemFromObjectCaseSensitive(state->accompaniment_line, "role");
         if (!cJSON_AddStringToObject(state->accompaniment_line, "meter", state->brief.text.meter) ||
             !cJSON_AddStringToObject(state->accompaniment_line, "role", "accompaniment")) {
-            return fail_alloc(error);
+            return api_fail_alloc(error);
         }
     }
     return COMPOSER_OK;
@@ -383,7 +379,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
             cJSON *plan = api_piece_plan_object(theme->plan);
             if (!plan || !cJSON_AddItemToObject(item, "plan", plan)) {
                 cJSON_Delete(plan);
-                return fail_alloc(error);
+                return api_fail_alloc(error);
             }
         }
         if (outputs->explain) {
@@ -398,7 +394,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
             }
             if (!text || !cJSON_AddStringToObject(item, "explanation", text)) {
                 free(text);
-                return fail_alloc(error);
+                return api_fail_alloc(error);
             }
             free(text);
         }
@@ -417,7 +413,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
             bool ok = cJSON_AddStringToObject(item, "musicxml", text) != NULL;
             free(text);
             if (!ok) {
-                return fail_alloc(error);
+                return api_fail_alloc(error);
             }
         }
     }
@@ -447,7 +443,7 @@ static ComposerStatus add_notices(cJSON *document, const State *state, const Api
     cJSON *notices = cJSON_AddArrayToObject(document, "notices");
     if (!notices || (state->stale[0] && !cJSON_AddItemToArray(notices, cJSON_CreateString(state->stale))) ||
         (only[0] && !cJSON_AddItemToArray(notices, cJSON_CreateString(only)))) {
-        return fail_alloc(error);
+        return api_fail_alloc(error);
     }
     return COMPOSER_OK;
 }
@@ -470,7 +466,7 @@ ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *jo
     }
     if (status == COMPOSER_OK) {
         cJSON *document = api_grow_result_json(&state.setup, &state.run, NULL);
-        status = document ? add_theme_members(document, &state.run, &outputs, &out->error) : fail_alloc(&out->error);
+        status = document ? add_theme_members(document, &state.run, &outputs, &out->error) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
             status = add_notices(document, &state, &outputs, &out->error);
         }
