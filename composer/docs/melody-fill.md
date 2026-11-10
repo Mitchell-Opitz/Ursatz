@@ -149,6 +149,12 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 | `density` | 0 | Notes to a cell after the motive; 0 repeats the motive's rhythm. |
 | `climax_position` | 667 | Where the climax falls, in thousandths of the phrase. |
 | `plain_shaping` | false | True leaves out the four shaping rules below, for tests and comparisons; there is no CLI option. |
+| `climax_rise`, `climax_slack` | 4, 150 | How far above the motive the climax may be drawn, and how far from `climax_position` it still scores as in place. |
+| `second_nearest` | 1/3 | The share of draws that take the second-nearest chord tone. |
+| `attempts`, `keep` | 48, 6 | Melodies tried for each target, and kept (at most `MELODY_KEEP_MAX`, 16). |
+| `weights` | all 1 | `MelodyWeights`: how many times each group of soft rules counts in the score. |
+
+Each field is a setting of the [preferences](preferences.md) document, with its limits.
 
 Appoggiaturas, suspensions and anticipations are off unless asked for. Appoggiaturas and anticipations
 are written on weak beats; a suspension is a chord tone held into a chord it is not a tone of.
@@ -171,7 +177,7 @@ repeated notes also score.
 
 ### The fidelity checker
 
-The compose run's melody stage does not pass `melody_fill_checker` alone: `grow_fidelity_checker` wraps it (and the style checker, when a style is set). A candidate for an idea that is made from a motive, and has a role, is refused when its motive notes sound too little like the motive and is otherwise ranked by whether the motive is heard as the plan intended it, then by how close it is, then by the rules above. `melody_candidate_realized` gives the notes of a candidate that carry the motive. See [grow-development.md](grow-development.md#ranking-and-refusing-by-fidelity). `melody_fill_checker` on its own is unchanged, and so are `MELODY_ATTEMPTS` and `MELODY_KEEP`.
+The compose run's melody stage does not pass `melody_fill_checker` alone: `grow_fidelity_checker` wraps it (and the style checker, when a style is set). A candidate for an idea that is made from a motive, and has a role, is refused when its motive notes sound too little like the motive and is otherwise ranked by whether the motive is heard as the plan intended it, then by how close it is, then by the rules above. `melody_candidate_realized` gives the notes of a candidate that carry the motive. See [grow-development.md](grow-development.md#ranking-and-refusing-by-fidelity). `melody_fill_checker` on its own is unchanged.
 
 ### The shaping rules
 

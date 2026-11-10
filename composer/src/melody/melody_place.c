@@ -9,9 +9,6 @@
 #include <standard-counterpoint/melodic_rules.h>
 
 #define MAX_OPTIONS 128
-/* The notes after the motive pick the nearest pitch this often in three; else the next. */
-#define NEAREST_IN 2
-#define NEAREST_OF 3
 /* The widest a note after the motive moves from the one before it, in semitones. */
 #define MAX_MOVE 12
 
@@ -42,17 +39,19 @@ static size_t options_for(unsigned mask, int low, int high, int ideal, Option *o
     return count;
 }
 
-/* Of the first options within max_distance, the nearest most often, else the next. */
-static bool pick(const Option *options, size_t count, int max_distance, FillRng *rng, int *pitch) {
+/* Of the first options within max_distance, the nearest most often, else the next (params->second_nearest of the draws). */
+static bool pick(const Option *options, size_t count, int max_distance, const MelodyFillParams *params, FillRng *rng,
+                 int *pitch) {
     size_t usable = 0;
     while (usable < count && options[usable].distance <= max_distance) {
         usable++;
     }
-    uint64_t draw = fill_rng_below(rng, NEAREST_OF);
+    unsigned long denominator = params->second_nearest.denominator;
+    uint64_t draw = fill_rng_below(rng, denominator);
     if (usable == 0) {
         return false;
     }
-    *pitch = options[usable > 1 && draw >= NEAREST_IN ? 1 : 0].pitch;
+    *pitch = options[usable > 1 && draw >= denominator - params->second_nearest.numerator ? 1 : 0].pitch;
     return true;
 }
 
@@ -284,7 +283,7 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                 }
             }
             kept = clean > 0 ? clean : kept;
-            if (!pick(options, kept, 127, rng, &note->pitch)) {
+            if (!pick(options, kept, 127, params, rng, &note->pitch)) {
                 return false;
             }
         } else if (climax) {
@@ -292,7 +291,7 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
                 return false;
             }
-        } else if (!pick(options, kept, MAX_MOVE, rng, &note->pitch)) {
+        } else if (!pick(options, kept, MAX_MOVE, params, rng, &note->pitch)) {
             return false;
         }
         if (i > 0 && before + 1 < i) {

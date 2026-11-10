@@ -31,6 +31,7 @@ The pins are checked by `scripts/check-pins.sh` (see [building.md](building.md#s
 | `src/fill/` | The fill loop, its operators, seeds and records | [fill-loop.md](fill-loop.md) |
 | `src/harmony/` | The harmony operators and hearing cadences | [grow-harmony.md](grow-harmony.md) |
 | `src/melody/` | The melody operator | [melody-fill.md](melody-fill.md) |
+| `src/preferences/` | The preferences document and the settings it holds | [preferences.md](preferences.md) |
 | `src/motive/` | Motives, their analysis, development and the variant registry | [motive-format.md](motive-format.md), [variant-registry.md](variant-registry.md) |
 | `src/form/` | Hearing the phrase form through standard-form | [form-hear.md](form-hear.md) |
 | `src/counterpoint/` | The counter-melody operator, species 1 to 4 | [counterpoint.md](counterpoint.md) |

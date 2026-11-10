@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md).
 
+## Unreleased (phase P43)
+
+The melody stage reads its settings from `MelodyFillParams` (R-411, B1): the climax rise and slack, the share of draws that take the second-nearest chord tone, the attempts and the melodies kept (`MELODY_KEEP_MAX` 16), and a weight for each group of the checker's soft rules (`MelodyWeights`). A new `ComposerPreferences` (`preferences.h`) holds the melody group and reads it from and writes it to JSON with a path for every refusal. The defaults are the constants they replace, so with no preferences every output is byte-identical to before; nothing calls the document from the API yet, and the API version does not change. See [preferences.md](preferences.md).
+
 ## Unreleased (phase P37)
 
 Each development item of the theme result says how faithful the idea is to its source (R-332, B3): `fidelity` (0 to 1), the `minimum` its role asks under the development setting (0 for an idea whose operation makes it differ from its source), `heard` (what the recognizer hears between the idea and its source, in words) and `heard_agrees` (whether that is the relation the plan intended), each `null` for an idea with no melody to measure. The API is 1.10; the text output is unchanged. The grow command's JSON items carry the same members, and the snapshots of `theme` and `grow` JSON output are re-recorded. See [explain.md](explain.md#intended-against-heard) and [api/theme-and-piece.md](api/theme-and-piece.md).

@@ -696,6 +696,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             unsigned long notes = (density.numerator + density.denominator / 2) / density.denominator;
             melody.density = notes < 1 ? 1 : notes > 4 ? 4 : (unsigned)notes;
         }
+        /* The first attempt uses the climax_position of the params (the preferences' melody group); the retries use CLIMAX_RETRIES. */
         if (attempt > 0 && !run->sentences) {
             melody.climax_position = CLIMAX_RETRIES[attempt];
         }

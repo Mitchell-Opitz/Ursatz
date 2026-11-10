@@ -12,6 +12,7 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | `src/harmony/` | The harmony operators and hearing cadences. |
 | `src/motive/` | Motives, their analysis and development. |
 | `src/melody/` | The melody operator. |
+| `src/preferences/` | The preferences document: its settings, reading with paths, writing and the default check. |
 | `src/form/` | Hearing the phrase form through standard-form. |
 | `src/counterpoint/` | The counter-melody operator: species 1 to 4 against a given line, its search and its check. |
 | `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |

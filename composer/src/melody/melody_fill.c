@@ -15,19 +15,23 @@
 #define DEFAULT_DENSITY 0
 #define DEFAULT_CLIMAX 667
 
-/* Melodies tried per call, and kept; ones that repeat an earlier one are dropped. */
-#define MELODY_ATTEMPTS 48
-#define MELODY_KEEP 6
+#define DEFAULT_CLIMAX_RISE 4
+#define DEFAULT_CLIMAX_SLACK 150
+#define DEFAULT_ATTEMPTS 48 /* melodies tried per call */
+#define DEFAULT_KEEP 6      /* melodies kept; ones that repeat an earlier one are dropped */
+
+#define MELODY_FILL_PARAMS_INIT                                                                                      \
+    {DEFAULT_RANGE_LOW,   DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY,               \
+     DEFAULT_CLIMAX,      false,              DEFAULT_CLIMAX_RISE, DEFAULT_CLIMAX_SLACK, {1, 3},                    \
+     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}
 
 MelodyFillParams melody_fill_params_default(void) {
-    MelodyFillParams params = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
-                               DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
+    MelodyFillParams params = MELODY_FILL_PARAMS_INIT;
     return params;
 }
 
 static const MelodyFillParams *params_of(void *context) {
-    static const MelodyFillParams defaults = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
-                                              DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
+    static const MelodyFillParams defaults = MELODY_FILL_PARAMS_INIT;
     return context ? context : &defaults;
 }
 
@@ -81,7 +85,8 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
                             FillCandidateList *out) {
     const MelodyFillParams *params = params_of(context);
     MelodyContext *read = malloc(sizeof(*read));
-    MelodyCandidate *kept[MELODY_KEEP];
+    MelodyCandidate *kept[MELODY_KEEP_MAX];
+    size_t keep = params->keep < MELODY_KEEP_MAX ? params->keep : MELODY_KEEP_MAX;
     size_t kept_count = 0;
     MelodyCandidate *scratch = malloc(sizeof(*scratch));
     bool ok = read && scratch;
@@ -100,12 +105,12 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         if (round == 1 && kept_count > 0) {
             break;
         }
-        for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
+        for (size_t attempt = 0; ok && attempt < params->attempts && kept_count < keep; attempt++) {
             bool repeat = false;
             PhraseVerdict verdict;
             /* The first half of the attempts keeps the figures the framework labels; the second moves every clash to a chord tone.
                A liquidated residue keeps its figures in the strict round, so its head interval is what sounds (R-345). */
-            bool keep_figures = attempt < MELODY_ATTEMPTS / 2 || (read->liquidated && round == 0);
+            bool keep_figures = attempt < params->attempts / 2 || (read->liquidated && round == 0);
             if (!melody_build(read, params, shifts[attempt % shift_count], keep_figures, round == 1, rng, scratch)) {
                 continue;
             }

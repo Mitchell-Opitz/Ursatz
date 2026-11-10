@@ -99,6 +99,7 @@ add_library(ursatz_composer STATIC
     melody/melody_place.c
     melody/melody_realize.c
     melody/melody_fill.c
+    preferences/preferences.c
     form/form_hear.c
     form/return_hear.c
     grow/grow_request.c
