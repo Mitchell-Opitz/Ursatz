@@ -8,6 +8,7 @@
 #include "develop.h"
 #include "fill.h"
 #include "grow.h"
+#include "listen.h"
 #include "motive.h"
 #include "plan.h"
 #include "progression.h"
@@ -37,6 +38,7 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", LOCK_USAGE_LINE);
     fprintf(out, "%s\n", REGENERATE_USAGE_LINE);
     fprintf(out, "%s\n", VARIATIONS_USAGE_LINE);
+    fprintf(out, "%s\n", LISTEN_USAGE_LINE);
     fprintf(out, "%s\n", VARIANTS_USAGE_LINE);
     fprintf(out, "%s\n", RECOGNIZE_USAGE_LINE);
     fprintf(out, "%s\n", RANDOM_MOTIVE_USAGE_LINE);
@@ -259,6 +261,9 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && strcmp(argv[1], "variations") == 0) {
         return run_variations(argc, argv);
+    }
+    if (argc >= 2 && strcmp(argv[1], "listen") == 0) {
+        return run_listen(argc, argv);
     }
     if (argc >= 2 && strcmp(argv[1], "variants") == 0) {
         return run_variants(argc, argv);
