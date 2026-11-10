@@ -14,6 +14,7 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "api_grow.h"
+#include "grow/grow_internal.h"
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_workflow.h"
@@ -321,12 +322,42 @@ static bool add_tone_labels(cJSON *root) {
     return true;
 }
 
-/* The labels of the slots, in GrowSlot order; the slot names are the theme shape table's. */
+/* The labels of the slots, in GrowSlot order; the slot names are the theme shape table's. The basic idea is the one slot every
+   theme needs (R-430): the frontend reads it from here instead of naming it. */
 static bool add_theme_slots(cJSON *root) {
     static const char *const LABELS[GROW_SLOT_COUNT] = {"Basic idea", "Contrasting idea", "Continuation", "Cadential"};
     cJSON *list = add_list(root, "theme_slots");
     for (int slot = 0; list && slot < GROW_SLOT_COUNT; slot++) {
-        if (!add_choice(list, grow_slot_name((GrowSlot)slot), LABELS[slot])) {
+        cJSON *entry = add_choice(list, grow_slot_name((GrowSlot)slot), LABELS[slot]);
+        if (!entry || !cJSON_AddBoolToObject(entry, "required", slot == GROW_SLOT_BASIC)) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
+/*
+ * The piece_intos: each archetype with the beginning and ending it is made of when it is made of exactly one pairing, found by
+ * trying every pairing (R-430). A sentence is a presentation and a continuation, a period an antecedent and a consequent; a
+ * hybrid is several pairings and gets neither.
+ */
+static bool add_piece_intos(cJSON *root) {
+    cJSON *list = add_list(root, "piece_intos");
+    for (int into = 0; list && API_PIECE_INTOS[into].value; into++) {
+        cJSON *entry = add_choice(list, API_PIECE_INTOS[into].value, API_PIECE_INTOS[into].label);
+        int found = 0;
+        PlanThemePairing pairing = {0};
+        for (int b = 0; b < 3; b++) {
+            for (int e = 0; e < 3; e++) {
+                PlanThemePairing candidate = {(PlanThemeBeginning)b, (PlanThemeEnding)e};
+                if (grow_pairing_archetype(&candidate) == into) {
+                    pairing = candidate;
+                    found++;
+                }
+            }
+        }
+        if (!entry || (found == 1 && (!cJSON_AddStringToObject(entry, "beginning", API_THEME_BEGINNINGS[pairing.beginning].value) ||
+                                      !cJSON_AddStringToObject(entry, "ending", API_THEME_ENDINGS[pairing.ending].value)))) {
             return false;
         }
     }
@@ -460,7 +491,7 @@ bool api_vocabulary_build(cJSON *root) {
            add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
-           add_choices(root, "piece_intos", API_PIECE_INTOS) && add_tone_labels(root) && add_operations(root) &&
+           add_piece_intos(root) && add_tone_labels(root) && add_operations(root) &&
            add_preferences(root) && add_limits(root);
 }
 
