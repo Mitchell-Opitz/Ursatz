@@ -19,7 +19,7 @@
 #include "grow/grow_internal.h"
 #include "motive/motive_internal.h"
 
-#define TICKS_PER_WHOLE 128L
+#define TICKS_PER_WHOLE 384L
 
 /* A length as a whole number of ticks, the unit the rules below are asked in; 0 when it is not a whole number. */
 static size_t ticks_of(Rational time) {
