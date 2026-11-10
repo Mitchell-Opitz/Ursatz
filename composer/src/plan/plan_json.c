@@ -17,6 +17,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/theme_shape.h>
 
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
@@ -39,8 +40,6 @@ static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
 static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "cadential"};
 static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant", "pivot"};
-static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound_basic_idea"};
-static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
 
@@ -164,8 +163,9 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     }
     case PLAN_CONSTRAINT_THEME_PAIRING:
         ok = ok && plan_json_add(object, "beginning",
-                            cJSON_CreateString(BEGINNING_NAMES[constraint->params.theme_pairing.beginning])) &&
-             plan_json_add(object, "ending", cJSON_CreateString(ENDING_NAMES[constraint->params.theme_pairing.ending]));
+                            cJSON_CreateString(theme_shape_beginning(constraint->params.theme_pairing.beginning)->plan_name)) &&
+             plan_json_add(object, "ending",
+                           cJSON_CreateString(theme_shape_ending(constraint->params.theme_pairing.ending)->plan_name));
         break;
     case PLAN_CONSTRAINT_ACCOMPANIMENT: {
         const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
@@ -728,6 +728,26 @@ static bool read_enum_member(JsonReader *reader, const cJSON *object, const char
     return read_enum(reader, item, at, names, count, out);
 }
 
+/* A theme pairing's beginning or ending by its plan name (the theme shape table's). */
+static bool read_theme_half(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool beginning,
+                            int *out) {
+    const cJSON *item = plan_json_member(reader, object, path, key, true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, key);
+    if (!cJSON_IsString(item)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    const ThemeShapeHalf *half = theme_shape_half_find(beginning, item->valuestring);
+    if (!half) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
+    }
+    *out = half->value;
+    return true;
+}
+
 #define TIME_LIMIT 1000000000L
 
 static bool json_read_rational(JsonReader *reader, const cJSON *item, const char *path, Rational *out) {
@@ -1226,8 +1246,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     }
     case PLAN_CONSTRAINT_THEME_PAIRING: {
         int ending;
-        if (!read_enum_member(reader, item, path, "beginning", BEGINNING_NAMES, COUNT_OF(BEGINNING_NAMES), &value) ||
-            !read_enum_member(reader, item, path, "ending", ENDING_NAMES, COUNT_OF(ENDING_NAMES), &ending)) {
+        if (!read_theme_half(reader, item, path, "beginning", true, &value) ||
+            !read_theme_half(reader, item, path, "ending", false, &ending)) {
             return false;
         }
         out->params.theme_pairing.beginning = (PlanThemeBeginning)value;

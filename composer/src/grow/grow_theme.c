@@ -238,27 +238,15 @@ bool grow_same_contour(const Motive *a, const Motive *b) {
 }
 
 int grow_phrase_beginning(PlanThemeBeginning beginning) {
-    switch (beginning) {
-    case PLAN_THEME_BEGINNING_ANTECEDENT:
-        return PHRASE_BEGINNING_ANTECEDENT;
-    case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
-        return PHRASE_BEGINNING_COMPOUND_BASIC_IDEA;
-    case PLAN_THEME_BEGINNING_PRESENTATION:
-        return PHRASE_BEGINNING_PRESENTATION;
-    }
-    return PHRASE_BEGINNING_COUNT;
+    const ThemeShapeHalf *half = theme_shape_beginning(beginning);
+    PhraseBeginning found;
+    return half && phrase_beginning_from_name(half->library_name, &found) ? (int)found : PHRASE_BEGINNING_COUNT;
 }
 
 int grow_phrase_ending(PlanThemeEnding ending) {
-    switch (ending) {
-    case PLAN_THEME_ENDING_CONTINUATION:
-        return PHRASE_ENDING_CONTINUATION;
-    case PLAN_THEME_ENDING_CONSEQUENT:
-        return PHRASE_ENDING_CONSEQUENT;
-    case PLAN_THEME_ENDING_CADENTIAL:
-        return PHRASE_ENDING_CADENTIAL;
-    }
-    return PHRASE_ENDING_COUNT;
+    const ThemeShapeHalf *half = theme_shape_ending(ending);
+    PhraseEnding found;
+    return half && phrase_ending_from_name(half->library_name, &found) ? (int)found : PHRASE_ENDING_COUNT;
 }
 
 int grow_pairing_archetype(const PlanThemePairing *pairing) {
