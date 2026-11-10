@@ -28,6 +28,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [cli-fill.md](cli-fill.md): the `fill` command.
 - [cli-regenerate.md](cli-regenerate.md): the `lock` and `regenerate` commands.
 - [cli-variations.md](cli-variations.md): the `variations` and `harmonize` commands.
+- [cli-listen.md](cli-listen.md): the `listen` command and a listening round.
 - [export.md](export.md): writing a plan as MIDI or MusicXML.
 - [theme-request.md](theme-request.md): the JSON request of the `theme` command and API entry.
 - [piece-request.md](piece-request.md): the JSON request of the `piece` command and API entry.

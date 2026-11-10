@@ -488,6 +488,23 @@ if(TARGET ursatz-composer)
                      -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
 endif()
 
+# The listen command (docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
+# from the sonatina folder with the Analyzer (about 30 s in a Debug build).
+if(TARGET ursatz-composer AND TARGET ursatz-analyzer)
+    foreach(case smoke style_folder)
+        set(folder OFF)
+        if(case STREQUAL "style_folder")
+            set(folder ON)
+        endif()
+        add_test(NAME test_listen_cli_${case}
+                 COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DANALYZER=$<TARGET_FILE:ursatz-analyzer>
+                         -DWORK=${CMAKE_CURRENT_BINARY_DIR}/listen_cli_${case} -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+                         -DSTYLE_FOLDER=${folder} -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_listen.cmake)
+        set_tests_properties(test_listen_cli_${case} PROPERTIES TIMEOUT 300)
+    endforeach()
+    set_tests_properties(test_listen_cli_style_folder PROPERTIES LABELS slow)
+endif()
+
 # The DAW-friendly export (docs/export.md): names, markers and tempo in the MIDI file, tempo in the MusicXML.
 add_executable(test_export_daw test_export_daw.c)
 target_link_libraries(test_export_daw PRIVATE ursatz_composer)
