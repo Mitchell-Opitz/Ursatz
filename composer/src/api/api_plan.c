@@ -6,7 +6,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/corpus_seed.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
@@ -82,7 +82,7 @@ typedef struct {
     /* Read from the members above. */
     bool form_defaulted;
     size_t given_melodies;
-    FormTemplateKind form;
+    FormSpec *form; /* the built-in form named, owned */
     AnalysisKey key;
     char key_name[24];
     char key_request[64];
@@ -287,28 +287,46 @@ static void append_number(char *out, size_t size, unsigned long value, bool firs
     snprintf(out + used, size - used, first ? "%lu" : ", %lu", value);
 }
 
-/* The sizes the form has, for the message about one it has not. */
-static void describe_sizes(FormTemplateKind kind, char *out, size_t size) {
-    FormTemplate layout;
+/* The sizes the form has, for the message about one it has not: the bars its sizes come in, then their counts. */
+static void describe_sizes(const FormSpec *form, char *out, size_t size) {
+    unsigned long bars[FORM_SPEC_MAX_SIZES];
+    unsigned long counts[FORM_SPEC_MAX_SIZES];
+    size_t bars_count = 0;
+    size_t count_count = 0;
     out[0] = '\0';
-    bool first = true;
-    for (unsigned long bars = 1; bars <= SIZE_SEARCH_MAX; bars++) {
-        if (form_template_layout(kind, bars, 0, &layout)) {
-            append_number(out, size, bars, first);
-            first = false;
+    /* Ascending, each once. */
+    for (size_t i = 0; i < form->size_count; i++) {
+        unsigned long b = (unsigned long)form->sizes[i].bars;
+        unsigned long c = (unsigned long)form->sizes[i].count;
+        size_t at = 0;
+        while (at < bars_count && bars[at] < b) {
+            at++;
         }
+        if (at == bars_count || bars[at] != b) {
+            memmove(bars + at + 1, bars + at, (bars_count - at) * sizeof(bars[0]));
+            bars[at] = b;
+            bars_count++;
+        }
+        at = 0;
+        while (c != 0 && at < count_count && counts[at] < c) {
+            at++;
+        }
+        if (c != 0 && (at == count_count || counts[at] != c)) {
+            memmove(counts + at + 1, counts + at, (count_count - at) * sizeof(counts[0]));
+            counts[at] = c;
+            count_count++;
+        }
+    }
+    for (size_t i = 0; i < bars_count; i++) {
+        append_number(out, size, bars[i], i == 0);
     }
     size_t used = strlen(out);
     snprintf(out + used, size - used, " bars");
-    bool counted = false;
-    for (unsigned long count = 1; count <= FORM_TEMPLATE_MAX_SECTIONS; count++) {
-        if (form_template_layout(kind, 0, count, &layout)) {
-            used = strlen(out);
-            snprintf(out + used, size - used, counted ? ", %lu" : " (or count %lu", count);
-            counted = true;
-        }
+    for (size_t i = 0; i < count_count; i++) {
+        used = strlen(out);
+        snprintf(out + used, size - used, i ? ", %lu" : " (or count %lu", counts[i]);
     }
-    if (counted) {
+    if (count_count > 0) {
         used = strlen(out);
         snprintf(out + used, size - used, ")");
     }
@@ -381,11 +399,24 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     if (!state->form_text || !state->key_text || !state->meter_text) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "", "the request needs a form, a key and a meter");
     }
-    if (!form_template_from_name(state->form_text, &state->form)) {
+    FormSpecResult found = form_spec_builtin(state->form_text, &state->form);
+    if (found == FORM_SPEC_ERR_ALLOC) {
+        return fail_alloc(error);
+    }
+    if (found != FORM_SPEC_OK) {
+        /* The built-in forms that come in sizes, in registry order. */
         char names[160] = "";
-        for (int kind = 0; kind < FORM_TEMPLATE_KIND_COUNT; kind++) {
-            size_t used = strlen(names);
-            snprintf(names + used, sizeof(names) - used, kind ? ", %s" : "%s", form_template_name((FormTemplateKind)kind));
+        bool first = true;
+        for (size_t i = 0; i < form_spec_builtin_count(); i++) {
+            FormSpec *listed = NULL;
+            if (form_spec_builtin(form_spec_builtin_name(i), &listed) == FORM_SPEC_OK) {
+                if (!listed->request_sections) {
+                    size_t used = strlen(names);
+                    snprintf(names + used, sizeof(names) - used, first ? "%s" : ", %s", listed->name);
+                    first = false;
+                }
+                form_spec_destroy(listed);
+            }
         }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/form", "unknown form '%s'; the forms are %s", state->form_text, names);
     }
@@ -419,12 +450,11 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     char count_text[48];
     bool has_bars = member_text(state->root, "bars", bars_text, sizeof bars_text);
     bool has_count = member_text(state->root, "count", count_text, sizeof count_text);
-    FormTemplate layout;
-    if (!form_template_layout(state->form, state->bars, state->count, &layout)) {
+    if (!form_spec_size(state->form, state->bars, state->count)) {
         char sizes[160];
         describe_sizes(state->form, sizes, sizeof(sizes));
         return api_fail(error, COMPOSER_ERR_REQUEST, has_bars ? "/bars" : "/count", "%s has no size of %s%s%s%s%s; it has %s",
-                        form_template_name(state->form), has_bars ? bars_text : "", has_bars ? " bars" : "",
+                        state->form->name, has_bars ? bars_text : "", has_bars ? " bars" : "",
                         has_bars && has_count ? " with " : "", has_count ? "count " : "", has_count ? count_text : "", sizes);
     }
     ComposerStatus status = check_given(state, error);
@@ -667,7 +697,7 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
     char meter[16];
     snprintf(meter, sizeof meter, "%d/%d", state->meter.beats_per_bar, state->meter.beat_unit);
     cJSON *document = cJSON_CreateObject();
-    bool ok = document && cJSON_AddStringToObject(document, "form", form_template_name(state->form)) &&
+    bool ok = document && cJSON_AddStringToObject(document, "form", state->form->name) &&
               cJSON_AddNumberToObject(document, "bars", (double)bars) && cJSON_AddStringToObject(document, "key", state->key_name) &&
               cJSON_AddStringToObject(document, "meter", meter) && cJSON_AddNumberToObject(document, "seed", (double)state->seed) &&
               cJSON_AddBoolToObject(document, "modulate", state->modulate);
@@ -800,7 +830,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
 
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = form_template_name(state->form);
+    request.form = state->form->name;
     request.key = state->key;
     request.meter = state->meter;
     request.bars = state->bars;
@@ -839,7 +869,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
                built == PIECE_ERR_MOTIVE_TOO_LONG
                    ? api_fail_motif_long(error, "/motive", request.motive, &state->meter, theme_bars, idea_bars)
                : built == PIECE_ERR_BAD_SIZE
-                   ? api_fail(error, COMPOSER_ERR_REQUEST, "/form", "%s has no such size", form_template_name(state->form))
+                   ? api_fail(error, COMPOSER_ERR_REQUEST, "/form", "%s has no such size", state->form->name)
                : built == PIECE_ERR_BAD_REQUEST
                    ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
                               "this piece cannot be planned as asked: the motive needs at least two notes, and each "
@@ -891,6 +921,7 @@ ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *jo
             free(state->notices[i]);
         }
         cJSON_Delete((cJSON *)state->root);
+        form_spec_destroy(state->form);
         free(state);
     }
     if (status != COMPOSER_OK) {
