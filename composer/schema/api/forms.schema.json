@@ -1,0 +1,486 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/forms.schema.json",
+  "title": "composer_api_forms response",
+  "description": "The built-in forms: their sizes, sections, cadences, keys and theme slots, and the roles of a form whose sections the request gives (docs/api/vocabulary-and-validation.md, \"Forms\").",
+  "type": "object",
+  "required": [
+    "forms"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "forms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/form"
+      }
+    }
+  },
+  "$defs": {
+    "choice": {
+      "type": "object",
+      "required": [
+        "value",
+        "label"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "version": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "loop"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "after": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "settings": {
+      "type": "object",
+      "required": [
+        "modulate",
+        "accompaniment",
+        "voicing",
+        "section_fills"
+      ],
+      "properties": {
+        "modulate": {
+          "type": "boolean"
+        },
+        "accompaniment": {
+          "enum": [
+            "required",
+            "optional"
+          ]
+        },
+        "voicing": {
+          "type": "boolean"
+        },
+        "section_fills": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cadence": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "core"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "core": {
+          "enum": [
+            "PAC",
+            "IAC",
+            "HC",
+            "DC",
+            "PC"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "keys": {
+      "type": "object",
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "string",
+          "minLength": 1
+        },
+        "end": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "slot": {
+      "type": "object",
+      "required": [
+        "slot",
+        "ideas"
+      ],
+      "properties": {
+        "slot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ideas": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "section": {
+      "type": "object",
+      "required": [
+        "name",
+        "letter",
+        "role",
+        "bars",
+        "beats",
+        "beginning",
+        "ending",
+        "cadence",
+        "closed",
+        "keys",
+        "motive",
+        "returns",
+        "variation",
+        "layers",
+        "slots"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "letter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "$ref": "#/$defs/choice"
+        },
+        "bars": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "beats": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "beginning": {
+          "$ref": "#/$defs/choice"
+        },
+        "ending": {
+          "$ref": "#/$defs/choice"
+        },
+        "cadence": {
+          "$ref": "#/$defs/cadence"
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "keys": {
+          "$ref": "#/$defs/keys"
+        },
+        "motive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "returns": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "variation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "layers": {
+          "oneOf": [
+            {
+              "const": "all"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/slot"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "size": {
+      "type": "object",
+      "required": [
+        "bars",
+        "count",
+        "default",
+        "sections"
+      ],
+      "properties": {
+        "bars": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "default": {
+          "type": "boolean"
+        },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "role": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "required"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "lastCadence": {
+      "type": "object",
+      "required": [
+        "roles",
+        "cadence"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cadence": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "cadences": {
+      "type": "object",
+      "required": [
+        "default",
+        "last"
+      ],
+      "properties": {
+        "default": {
+          "type": "string",
+          "minLength": 1
+        },
+        "last": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lastCadence"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "defaultEnding": {
+      "type": "object",
+      "required": [
+        "id",
+        "letter",
+        "role",
+        "bars",
+        "cadence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "letter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bars": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cadence": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "form": {
+      "type": "object",
+      "required": [
+        "name",
+        "label",
+        "closing",
+        "sections",
+        "versions",
+        "settings",
+        "regions",
+        "sizes",
+        "roles",
+        "loop_roles",
+        "cadences",
+        "default_ending"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "closing": {
+          "type": "boolean"
+        },
+        "sections": {
+          "enum": [
+            "request",
+            "sizes"
+          ]
+        },
+        "versions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/version"
+          }
+        },
+        "settings": {
+          "$ref": "#/$defs/settings"
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sizes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/size"
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/role"
+          }
+        },
+        "loop_roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cadences": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/cadences"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "default_ending": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/defaultEnding"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
