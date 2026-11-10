@@ -557,6 +557,95 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
     return true;
 }
 
+/* The alteration of a position on the chord of a degree: in minor, the third of V is raised. */
+static int chord_alteration(const AnalysisKey *key, int degree, long position) {
+    return key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && step_of(position - chord_shift(degree)) == 2 ? 1 : 0;
+}
+
+/* Note i keeps a non-chord tone `type` at position p, and the note after it takes the chord tone (a position and alteration). */
+static void put_accent(const AnalysisKey *key, Place *place, Melody *melody, size_t i, long position, int alteration, NonChordTone type,
+                       long target_position, int target_alteration) {
+    place->position[i] = position;
+    place->alteration[i] = alteration;
+    melody->pitches[i] = pitch_of(key, place, i);
+    melody->decorated[i] = true;
+    melody->types[i] = type;
+    place->position[i + 1] = target_position;
+    place->alteration[i + 1] = target_alteration;
+    place->rung[i + 1] = place->rung[i];
+    place->frame[i + 1] = true;
+    melody->pitches[i + 1] = pitch_of(key, place, i + 1);
+}
+
+/* An appoggiatura or passing tone on the beat: the chord tone moves one note later, and a step beside it comes first. */
+static bool place_step_accent(const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t i, NonChordTone type, Place *place, Melody *melody) {
+    int degree = layout->plan.degrees[place->segment[i]];
+    long shift = chord_shift(degree);
+    long target = place->position[i];
+    int target_pitch = melody->pitches[i];
+    long options[2];
+    size_t option_count = 0;
+    for (long p = target - 1; p <= target + 1; p += 2) {
+        int pitch = motive_position_pitch(key, p, 0);
+        if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+            motive_random_forms(type, melody->pitches[i - 1], pitch, target_pitch)) {
+            options[option_count++] = p;
+        }
+    }
+    if (option_count == 0) {
+        return false;
+    }
+    long chosen = options[fill_rng_below(rng, option_count)];
+    put_accent(key, place, melody, i, chosen, 0, type, target, place->alteration[i]);
+    return true;
+}
+
+/* A suspension where the chord changes: the note before is held over as a non-chord tone and falls to a chord tone. */
+static bool place_suspension(const AnalysisKey *key, const Layout *layout, size_t i, Place *place, Melody *melody) {
+    size_t s = (size_t)place->segment[i];
+    if (s == 0 || i != layout->first[s] || layout->plan.degrees[s] == layout->plan.degrees[s - 1]) {
+        return false;
+    }
+    int degree = layout->plan.degrees[s];
+    long held = place->position[i - 1];
+    long resolution = held - 1;
+    int resolution_alteration = chord_alteration(key, degree, resolution);
+    int resolution_pitch = motive_position_pitch(key, resolution, resolution_alteration);
+    if (motive_random_is_chord_step(held - chord_shift(degree)) || !motive_random_is_chord_step(resolution - chord_shift(degree)) ||
+        !motive_random_in_range(resolution_pitch) ||
+        !motive_random_forms(NON_CHORD_TONE_SUSPENSION, melody->pitches[i - 1], melody->pitches[i - 1], resolution_pitch)) {
+        return false;
+    }
+    put_accent(key, place, melody, i, held, place->alteration[i - 1], NON_CHORD_TONE_SUSPENSION, resolution, resolution_alteration);
+    return true;
+}
+
+/*
+ * Accented non-chord tones (R-425): a note that starts on a beat becomes an appoggiatura, a passing tone or a suspension
+ * that resolves to the next note, which takes the chord tone the accented note displaced. One per segment, and never the
+ * pickup, the first note, or the last note of a segment. Each eligible note is chosen in one of `accented_one_in`.
+ */
+static bool place_accents(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place,
+                          Melody *melody) {
+    bool accented[SEGMENT_MAX] = {false, false, false};
+    for (size_t i = 1; i + 1 < layout->rhythm.count; i++) {
+        size_t s = (size_t)place->segment[i];
+        if (!layout->rhythm.on_beat[i] || !place->frame[i] || i < layout->cell_start || !place->frame[i - 1] ||
+            place->segment[i + 1] != place->segment[i] || accented[s]) {
+            continue;
+        }
+        if (fill_rng_below(rng, preferences->accented_one_in) != 0) {
+            continue;
+        }
+        size_t kind = pick_weighted(rng, preferences->accented_types, 3);
+        bool placed = kind == 2 ? place_suspension(key, layout, i, place, melody)
+                                : place_step_accent(key, layout, rng, i, kind == 0 ? NON_CHORD_TONE_APPOGGIATURA : NON_CHORD_TONE_PASSING, place,
+                                                    melody);
+        accented[s] = accented[s] || placed;
+    }
+    return true;
+}
+
 /* The frames of every segment, the notes between, and a range of no more than a twelfth. */
 static bool draw_melody(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody) {
     Place place;
@@ -576,6 +665,9 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
                                  : draw_frame_new(preferences, key, layout, rng, s, &place, melody))) {
             return false;
         }
+    }
+    if (preferences->accented_one_in > 0 && !place_accents(preferences, key, layout, rng, &place, melody)) {
+        return false;
     }
     if (!draw_decorations(preferences, key, layout, rng, &place, melody)) {
         return false;
