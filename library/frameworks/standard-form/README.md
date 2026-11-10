@@ -127,6 +127,8 @@ arrives with the form adapter (L3.6).
 
 Owned here (moved from `src/semantics/`; type names and values unchanged), each in its own header: `MotiveKind`, `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `ContinuationTrait`, `PhraseLevelForm`, `PhraseLengthChange`, `ExpansionPlacement`, `InternalExpansionTechnique`, `AlternativePathKind`, `ExternalExpansionKind`. `FormLevel` and `SubphraseRole` stay in `src/semantics/` because `src/containers` uses them; `CadenceType` stays because it is shared.
 
+Three of them look a value up by name, false with the output untouched for an unknown name or NULL: `phrase_level_form_from_name`, `phrase_beginning_from_name` and `phrase_ending_from_name`.
+
 ## Neutral analysis input
 
 `standard_form_input_add_analysis_note` (`analysis/analysis_input.h`) adds an `AnalysisNote` to the soprano or the bass line (`semitone` is `midi`, no metrical position; the interval and contour to the next note are still set by `standard_form_input_finish`). `standard_form_input_add_analysis_segment` adds an `AnalysisSegment` with its function and phrase model label. A note with an unknown pitch is rejected.

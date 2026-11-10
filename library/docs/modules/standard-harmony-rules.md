@@ -33,7 +33,13 @@ and 0/1 when it does not.
   `harmony_cadence_classify` gives the type: V to I is a PAC when both chords are
   in root position and do is in the soprano, otherwise an IAC; x to V is a HC; a
   cadential progression the caller says is subverted is subverted.
-  `harmony_cadence_strength` is the one strength order for every `CadenceType`: half,
+  The cadence vocabulary (`harmony_cadence_kinds.h`, R-415) names each kind: the seven core types
+  and evaded (a subverted cadence), abandoned (no cadence, core unknown) and medial caesura (a half
+  cadence that ends a transition), each with a label, an abbreviation, its core type, its strength
+  and whether it is conclusive; `harmony_cadence_kind_find` looks one up by name and
+  `harmony_cadence_kind_of` finds the entry of a core type.
+  `harmony_cadence_strength` is the one strength order for every `CadenceType` and reads the
+  vocabulary: half,
   deceptive, plagal, authentic (unspecified), imperfect authentic, perfect authentic
   (a subverted cadence ranks 0, an unknown type -1). Kernel analysis receives it from
   its caller as a ranking function, and `harmony_cadence_compare` compares two types. A V7 to I in root position with do in the soprano is still a PAC.

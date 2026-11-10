@@ -19,9 +19,22 @@ static void test_names(void) {
     assert(phrase_beginning_name(PHRASE_BEGINNING_COUNT) == NULL);
 }
 
+static void test_from_name(void) {
+    for (int i = 0; i < PHRASE_BEGINNING_COUNT; i++) {
+        PhraseBeginning value = (PhraseBeginning)-1;
+        assert(phrase_beginning_from_name(phrase_beginning_name((PhraseBeginning)i), &value));
+        assert(value == (PhraseBeginning)i);
+    }
+    PhraseBeginning untouched = (PhraseBeginning)-1;
+    assert(!phrase_beginning_from_name("no-such-name", &untouched));
+    assert(!phrase_beginning_from_name(NULL, &untouched));
+    assert(untouched == (PhraseBeginning)-1);
+}
+
 int main(void) {
     test_validity();
     test_names();
+    test_from_name();
     printf("test_phrase_beginning: ok\n");
     return 0;
 }
