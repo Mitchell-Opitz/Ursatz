@@ -73,7 +73,7 @@ Progress is reported once for each seed tried (`"seed"`) and for each compose st
 `/request/sections/<i>/beats`, `/regenerate/section`, `/regenerate/lanes`, `/from`, `/seed`). A piece no seed can compose,
 a motive that does not fit its bar, a request that no seed can satisfy is `COMPOSER_ERR_UNSATISFIABLE` (`no piece could be
 composed from seeds <a> to <b> (the last was stuck in the loop version, seam stage ...)`). The cadence of a section without
-one is the library's `piece_structure` default (an HC at the end of the intro and of the loop, a PAC at the end of the
+one is the game loop document's default (an HC at the end of the intro and of the loop, a PAC at the end of the
 ending, an IAC elsewhere), and a request without an ending gets the default ending. The same request and seed give the same
 piece on any thread; the entry keeps no state. Schemas: `piece.request.schema.json`, `piece.response.schema.json`.
 

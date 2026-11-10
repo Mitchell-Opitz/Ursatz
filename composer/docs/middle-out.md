@@ -46,7 +46,7 @@ with the same payload byte for byte. `fill` takes a snapshot before the run and 
 ## A section from another plan
 
 `plan_give_section` gives a whole realized section of another plan (a theme the `theme` command composed) to a section of
-this one, the way a piece structure fills a section with a theme ([piece-structure.md](piece-structure.md#fills)):
+this one, the way the game loop fills a section with a theme ([piece-structure.md](piece-structure.md#fills)):
 
 - its harmony, bass, melody and inner voice spans become Given spans owned by the section, moved to its start and
   transposed by the key difference between the two sections (the key lanes must have the same shape and mode, else

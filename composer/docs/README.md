@@ -52,7 +52,6 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [motive-format.md](motive-format.md): the motive document and its analysis.
 - [variant-registry.md](variant-registry.md): the registry of variant operations, chains and records.
 - [variant-parameters.md](variant-parameters.md): the parameters of the variant operations.
-- [piece-structure.md](piece-structure.md): a game track as data: intro, body, turnaround and ending.
 
 ## How it works inside
 
@@ -68,7 +67,8 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-development.md](grow-development.md): the theme `development` setting and its weight tables (P34).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.
-- [forms.md](forms.md): forms as JSON documents (P44): the members, the six built-in forms, how to add one.
+- [forms.md](forms.md): forms as JSON documents (P44): the members, the six built-in forms and the game loop, how to add one.
+- [piece-structure.md](piece-structure.md): the game loop, a game track as data: intro, body, turnaround and ending.
 - [loop-seam.md](loop-seam.md): how the end of a loop leads back into its start.
 - [regenerate.md](regenerate.md): locking and regenerating nodes of a plan.
 - [form-hear.md](form-hear.md): hearing the phrase form of a plan.
