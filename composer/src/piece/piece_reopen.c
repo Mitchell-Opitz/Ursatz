@@ -3,7 +3,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece_reopen.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "piece/piece_internal.h"

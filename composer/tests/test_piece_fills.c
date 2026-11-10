@@ -7,7 +7,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece.h>
 
 /*
  * Theme and progression fills (R-170): a piece structure whose sections are given a composed theme or a progression.
@@ -76,20 +76,21 @@ static void test_fixture(void) {
 
 typedef struct {
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS];
-    PieceStructure structure;
+    PieceRequest request;
 } Fixture;
 
 static void fixture_init(Fixture *fixture, int tonic, KeyStructureMode mode) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key = plan_key_of_pitch_class(tonic, mode);
-    fixture->structure.meter.beats_per_bar = 4;
-    fixture->structure.meter.beat_unit = 4;
-    fixture->structure.sections = fixture->sections;
+    fixture->request.key = plan_key_of_pitch_class(tonic, mode);
+    fixture->request.meter.beats_per_bar = 4;
+    fixture->request.meter.beat_unit = 4;
+    fixture->request.form = "game-loop";
+    fixture->request.sections = fixture->sections;
 }
 
 static PieceSection *add_section(Fixture *fixture, const char *id, const char *letter, PiecePart part, size_t beats,
                                  PieceFillKind fill) {
-    PieceSection *section = &fixture->sections[fixture->structure.section_count++];
+    PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
     snprintf(section->id, sizeof(section->id), "%s", id);
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
@@ -210,7 +211,7 @@ static void test_theme(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         theme_structure(&fixture, theme);
-        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         NodeId sections[4];
         assert(piece_sections(plan, sections, 4) == 2);
         /* The theme is in place before any stage runs: Realized, with the nodes it had. */
@@ -270,7 +271,7 @@ static PiecePlan *empty_body(Fixture *fixture, int tonic, KeyStructureMode mode,
     PiecePlan *plan;
     fixture_init(fixture, tonic, mode);
     add_section(fixture, "a", "A", PIECE_PART_BODY, beats, PIECE_FILL_EMPTY);
-    assert(piece_structure_build_plan(&fixture->structure, &plan) == PIECE_OK);
+    assert(piece_build_plan(&fixture->request, &plan) == PIECE_OK);
     return plan;
 }
 
@@ -290,7 +291,7 @@ static void test_refused(void) {
     plan_destroy(plan);
     theme_structure(&fixture, theme);
     fixture.sections[0].beats = 16;
-    assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST);
 
     /* A plan whose section is not realized yet. */
     PiecePlan *open = empty_body(&fixture, 2, KEY_STRUCTURE_MODE_MINOR, 32);
@@ -350,7 +351,7 @@ static void test_progression(void) {
         body->has_cadence = true;
         body->cadence = CADENCE_TYPE_HALF;
         add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 16, PIECE_FILL_EMPTY);
-        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         NodeId sections[4];
         assert(piece_sections(plan, sections, 4) == 2);
         GivenSnapshot *snapshot = given_snapshot(plan);
@@ -422,7 +423,7 @@ static void test_partial(void) {
         body->numerals = CHORDS;
         body->numeral_count = 4;
         body->cells_per_chord = 2;
-        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         NodeId section;
         assert(piece_sections(plan, &section, 1) == 1);
         GivenSnapshot *snapshot = given_snapshot(plan);

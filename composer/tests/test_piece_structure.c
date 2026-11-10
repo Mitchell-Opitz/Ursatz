@@ -7,7 +7,8 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/form_spec.h>
+#include <ursatz_composer/piece.h>
 
 /*
  * Piece structures (R-169, R-170): the checks, the default cadences, and the plans and composed runs of structures
@@ -26,20 +27,21 @@
 
 typedef struct {
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS + 2];
-    PieceStructure structure;
+    PieceRequest request;
 } Fixture;
 
 static void fixture_init(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
-    fixture->structure.meter.beats_per_bar = 4;
-    fixture->structure.meter.beat_unit = 4;
-    fixture->structure.sections = fixture->sections;
+    fixture->request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    fixture->request.meter.beats_per_bar = 4;
+    fixture->request.meter.beat_unit = 4;
+    fixture->request.form = "game-loop";
+    fixture->request.sections = fixture->sections;
 }
 
 static PieceSection *add_section(Fixture *fixture, const char *id, const char *letter, PiecePart part, size_t beats,
                                  PieceFillKind fill) {
-    PieceSection *section = &fixture->sections[fixture->structure.section_count++];
+    PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
     snprintf(section->id, sizeof(section->id), "%s", id);
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
@@ -60,6 +62,22 @@ static void standard_structure(Fixture *fixture) {
     a->into = PLAN_ARCHETYPE_SENTENCE;
     add_section(fixture, "b", "B", PIECE_PART_BODY, 6, PIECE_FILL_EMPTY);
     add_section(fixture, "t", "T", PIECE_PART_TURNAROUND, 4, PIECE_FILL_EMPTY);
+}
+
+/* The default ending and the default cadences of the game loop's document (forms/game-loop.json). */
+static bool default_ending(PieceRequest *request, size_t capacity) {
+    FormSpec *form = NULL;
+    assert(form_spec_builtin("game-loop", &form) == FORM_SPEC_OK);
+    bool added = piece_default_ending(form, request, capacity);
+    form_spec_destroy(form);
+    return added;
+}
+
+static void default_cadences(PieceRequest *request) {
+    FormSpec *form = NULL;
+    assert(form_spec_builtin("game-loop", &form) == FORM_SPEC_OK);
+    piece_default_cadences(form, request);
+    form_spec_destroy(form);
 }
 
 static const PlanConstraint *node_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
@@ -87,39 +105,39 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
 static void test_checks(void) {
     Fixture fixture;
     standard_structure(&fixture);
-    assert(piece_structure_check(&fixture.structure) == PIECE_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
 
     /* No body. */
     fixture_init(&fixture);
     add_section(&fixture, "intro", "I", PIECE_PART_INTRO, 8, PIECE_FILL_EMPTY);
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* Parts out of order: the turnaround before the body. */
     fixture_init(&fixture);
     add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 4, PIECE_FILL_EMPTY);
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* A duplicate id. */
     fixture_init(&fixture);
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
     add_section(&fixture, "a", "B", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* A length under one beat. */
     fixture_init(&fixture);
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 0, PIECE_FILL_EMPTY);
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* Pickups: a quarter is fine, a bar is not, a triplet sixteenth is not a multiple of 1/32. */
     fixture_init(&fixture);
     PieceSection *section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
     assert(rational_make(1, 4, &section->pickup) == RATIONAL_OK);
-    assert(piece_structure_check(&fixture.structure) == PIECE_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
     assert(rational_make(1, 1, &section->pickup) == RATIONAL_OK);
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* Too many sections, and too many bars. */
     fixture_init(&fixture);
@@ -128,10 +146,10 @@ static void test_checks(void) {
         snprintf(id, sizeof(id), "s%zu", i);
         add_section(&fixture, id, "A", PIECE_PART_BODY, 4, PIECE_FILL_EMPTY);
     }
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     fixture_init(&fixture);
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 4 * (PIECE_STRUCTURE_MAX_BARS + 1), PIECE_FILL_EMPTY);
-    assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 }
 
 static void test_default_cadences(void) {
@@ -140,9 +158,9 @@ static void test_default_cadences(void) {
     PieceSection *explicit_cadence = &fixture.sections[2];
     explicit_cadence->has_cadence = true;
     explicit_cadence->cadence = CADENCE_TYPE_DECEPTIVE;
-    assert(piece_structure_default_ending(&fixture.structure, PIECE_STRUCTURE_MAX_SECTIONS + 2));
-    assert(fixture.structure.section_count == 5);
-    piece_structure_default_cadences(&fixture.structure);
+    assert(default_ending(&fixture.request, PIECE_STRUCTURE_MAX_SECTIONS + 2));
+    assert(fixture.request.section_count == 5);
+    default_cadences(&fixture.request);
     /* The intro leads into the body (HC), the middle of the body is open (IAC), the loop leads back (HC). */
     assert(fixture.sections[0].cadence == CADENCE_TYPE_HALF);
     assert(fixture.sections[1].cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
@@ -155,8 +173,8 @@ static void test_default_cadences(void) {
     assert(strcmp(fixture.sections[4].id, "end") == 0);
     assert(strcmp(fixture.sections[4].letter, "E") == 0);
     /* A structure with an ending is left alone. */
-    assert(piece_structure_default_ending(&fixture.structure, PIECE_STRUCTURE_MAX_SECTIONS + 2));
-    assert(fixture.structure.section_count == 5);
+    assert(default_ending(&fixture.request, PIECE_STRUCTURE_MAX_SECTIONS + 2));
+    assert(fixture.request.section_count == 5);
 }
 
 static void test_plan(void) {
@@ -165,7 +183,7 @@ static void test_plan(void) {
     PieceSection *pickup = &fixture.sections[2];
     assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
     PiecePlan *plan;
-    assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     NodeId sections[8];
     size_t count = piece_sections(plan, sections, 8);
     assert(count == 4);
@@ -218,8 +236,8 @@ static void test_plan(void) {
     plan_destroy(plan);
 
     /* The ending is not laid out. */
-    assert(piece_structure_default_ending(&fixture.structure, PIECE_STRUCTURE_MAX_SECTIONS + 2));
-    assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+    assert(default_ending(&fixture.request, PIECE_STRUCTURE_MAX_SECTIONS + 2));
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     assert(piece_sections(plan, sections, 8) == 4);
     plan_destroy(plan);
 }
@@ -271,7 +289,7 @@ static Sweep compose_seeds(Fixture *fixture) {
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
-        assert(piece_structure_build_plan(&fixture->structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture->request, &plan) == PIECE_OK);
         PieceResult ran = compose_run(plan, &config, &outcome);
         if (ran == PIECE_OK) {
             NodeId sections[PIECE_STRUCTURE_MAX_SECTIONS];
@@ -319,7 +337,7 @@ static void test_pickup(void) {
     assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
     add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 6, PIECE_FILL_EMPTY);
     PiecePlan *plan;
-    assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     NodeId sections[4];
     assert(piece_sections(plan, sections, 4) == 3);
     const PlanConstraint *constraint = node_constraint(plan, sections[1], PLAN_CONSTRAINT_PICKUP);
@@ -358,7 +376,7 @@ static void free_phrase(size_t beats, size_t expected_ideas, const size_t *idea_
     phrase->has_into = true;
     phrase->into = PLAN_ARCHETYPE_PERIOD; /* a free phrase has no archetype: this is read only for a theme */
     PiecePlan *plan;
-    assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     NodeId sections[2];
     assert(piece_sections(plan, sections, 2) == 2);
     assert(node_constraint(plan, sections[1], PLAN_CONSTRAINT_FREE_PHRASE));
@@ -371,7 +389,7 @@ static void free_phrase(size_t beats, size_t expected_ideas, const size_t *idea_
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
-        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
             piece_sections(plan, sections, 2);
             PlanSpan spans[8];

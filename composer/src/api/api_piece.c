@@ -9,7 +9,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece_reopen.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/regenerate.h>

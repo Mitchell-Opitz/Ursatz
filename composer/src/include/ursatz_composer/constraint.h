@@ -262,7 +262,7 @@ typedef struct {
 } PlanSource;
 
 /*
- * The part of a piece structure (piece_structure.h) a section is, and the id the structure gave it. part is a PiecePart:
+ * The part of a game loop section (piece.h) a section is, and the id the request gave it. part is a PiecePart:
  * 0 intro, 1 body, 2 turnaround, 3 ending.
  */
 #define PLAN_PIECE_ID_MAX 16

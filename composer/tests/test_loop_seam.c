@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/seam_hear.h>
@@ -214,12 +214,12 @@ static void test_rules(void) {
 
 typedef struct {
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS + 2];
-    PieceStructure structure;
+    PieceRequest request;
 } Fixture;
 
 static PieceSection *add_section(Fixture *fixture, const char *id, const char *letter, PiecePart part, size_t beats,
                                  PieceFillKind fill) {
-    PieceSection *section = &fixture->sections[fixture->structure.section_count++];
+    PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
     snprintf(section->id, sizeof(section->id), "%s", id);
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
@@ -233,10 +233,11 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
 /* The intro 2 bars, the body 8 bars motif sentence plus 6 beats empty, the turnaround 1 bar (all 4/4). */
 static void standard_structure(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
-    fixture->structure.meter.beats_per_bar = 4;
-    fixture->structure.meter.beat_unit = 4;
-    fixture->structure.sections = fixture->sections;
+    fixture->request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    fixture->request.meter.beats_per_bar = 4;
+    fixture->request.meter.beat_unit = 4;
+    fixture->request.form = "game-loop";
+    fixture->request.sections = fixture->sections;
     add_section(fixture, "intro", "I", PIECE_PART_INTRO, 8, PIECE_FILL_EMPTY);
     PieceSection *a = add_section(fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_MOTIF);
     a->has_into = true;
@@ -388,7 +389,7 @@ static void test_sweep(void) {
         standard_structure(&fixture);
         memset(&config, 0, sizeof(config));
         config.seed = seed;
-        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) != PIECE_OK) {
             compose_outcome_destroy(&outcome);
             plan_destroy(plan);
