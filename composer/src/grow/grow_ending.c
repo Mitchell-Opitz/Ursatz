@@ -12,8 +12,6 @@
 #include "util/position.h"
 #include "motive/motive_internal.h"
 
-/* Chords a phrase-model progression has before its last: a tonic, up to two predominants, a dominant. */
-#define PHRASE_MODEL_SLOTS 4
 /* The second half starts four eighths into the theme. */
 #define ENDING_START 4
 #define ENDING_UNITS 4
@@ -526,9 +524,10 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     /* Its chords change at least twice as fast as the presentation's longest could, and still deal the cells out. */
     size_t cap = spec->basic_cells / 2 > 1 ? spec->basic_cells / 2 : 1;
     size_t room = cells > request->cells_per_bar ? cells - request->cells_per_bar : 1;
-    size_t least = (room + PHRASE_MODEL_SLOTS - 1) / PHRASE_MODEL_SLOTS;
+    size_t chords = grow_chords_before_last(request, spec->ending_shape, request->cadence);
+    size_t least = (room + chords - 1) / chords;
     spec->ending_cap = (int)(cap > least ? cap : least);
-    spec->ending_split = true;
+    spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
     /* A key opens on a phrase model's pivot chord. */
     return !request->has_end_change || spec->ending_shape == PLAN_HARMONY_SHAPE_PHRASE_MODEL;
 }
