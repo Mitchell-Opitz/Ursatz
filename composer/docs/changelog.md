@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P45)
+
+The API serves the forms (R-428, R-430, R-433, B1): `composer_api_forms` gives the seven built-in forms in registry order, each with its label, versions, settings, regions and, for every size, its sections (role, length, beginning and ending, cadence, keys, motive, return, layers and the slots of its theme with their ideas), and, for the game loop, its roles, loop roles, cadences and default ending. The vocabulary's `theme_slots` entries gain `required` (the basic slot) and its `piece_intos` entries gain `beginning` and `ending` where the archetype is one pairing, and the API is 1.13. `form_role_label` labels the roles, `api_piece_version_names` names the versions of a piece, and the API's allocation failure and JSON add helpers are shared (`api_fail_alloc`, `api_add`). A piece still composes only as the game loop and no output, snapshot or baseline moved. The changelog from P37 back is in [changelog-archive.md](changelog-archive.md) and the compose rates are in [grow-hearing.md](grow-hearing.md#compose-rates), so the docs are under their size limit again. See [api/vocabulary-and-validation.md](api/vocabulary-and-validation.md).
+
 ## Unreleased (phase L1)
 
 The segments motive generator gets nine listening settings (R-420 to R-422, B1): `MotiveRandomPreferences` gains `accented_one_in`, `accented_types` (appoggiatura, passing, suspension on the beat, resolving to the next note), `avoid_repeats`, `leaps_per_motif`, `leap_recovery`, `pickup_from_accent`, `contrast_fidelity_min`, `long_on_weak` and `final_long`, all off by default, so with none set every motive, file and snapshot is byte-identical. `motive_random_forms` knows the suspension. They are set from C only; the preferences document, the vocabulary, the schemas and the API version come in B2. See [cli-random-motive.md](cli-random-motive.md).

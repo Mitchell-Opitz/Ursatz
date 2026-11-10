@@ -97,7 +97,7 @@ Every entry has its request and response in the file named here and its JSON Sch
 | `composer_api_piece`, `composer_api_piece_variations` | [theme-and-piece.md](api/theme-and-piece.md) |
 | `composer_api_plan`, `composer_api_fill`, `composer_api_lock`, `composer_api_regenerate`, `composer_api_variations`, `composer_api_harmonize` | [plan-workflow.md](api/plan-workflow.md) |
 | `composer_api_progression`, `composer_api_counterpoint`, `composer_api_develop`, `composer_api_grow` | [material-commands.md](api/material-commands.md) |
-| `composer_api_vocabulary`, `composer_api_validate` (for a theme, it builds the plan and refuses what Compose refuses before seeding) | [vocabulary-and-validation.md](api/vocabulary-and-validation.md) |
+| `composer_api_vocabulary`, `composer_api_forms`, `composer_api_validate` (for a theme, it builds the plan and refuses what Compose refuses before seeding) | [vocabulary-and-validation.md](api/vocabulary-and-validation.md) |
 | Examples of every entry | [examples.md](api/examples.md) |
 
 ## Error paths
@@ -138,7 +138,7 @@ The stage each entry reports at the start (`done` of `total`), besides the compo
 | `composer_api_counterpoint` | `counterpoint` |
 | `composer_api_develop` | `develop` |
 
-`composer_api_versions`, `composer_api_variant_operations`, `composer_api_vocabulary`, `composer_api_validate`,
+`composer_api_versions`, `composer_api_variant_operations`, `composer_api_vocabulary`, `composer_api_forms`, `composer_api_validate`,
 `composer_api_plan` and `composer_api_lock` are quick: they report nothing and never return `COMPOSER_ERR_CANCELLED`. A
 cancel is honored at the next report; the entry frees what it built and returns `COMPOSER_ERR_CANCELLED` with no document
 and no plan. Progress and cancel run on the thread that called the entry: a client that shows progress from another thread
@@ -207,6 +207,6 @@ snapshots, the random draws for seeds 0, 1, 2 and 4294967295, refusals with thei
 `tests/test_api_piece.c` (every `piece-*` snapshot case from its request, with the document, the plans, the MIDI file and the MusicXML equal to the snapshots, the variations with their MIDI files through the export entry, the lanes of a regenerate, cancel, refusals with their paths) and
 `tests/test_api_plan_workflow.c` (the plan, fill, lock, regenerate, variations and harmonize cases of the CLI snapshots from their requests, the candidates, record and explanation, the report of a stuck plan, refusals with their paths, cancel),
 `tests/test_api_material.c` (the progression, counterpoint and grow cases of the CLI snapshots from their requests, with the documents, the plans and the MIDI files equal to the snapshots; develop; the corpus seed; refusals with their paths; progress and cancel) and
-`tests/test_api_vocabulary.c` (every vocabulary list non-empty and each value accepted by its reader, the default cadences of three piece structures, the parsed harmony, refusals with their paths) and
+`tests/test_api_forms.c` (the seven forms in registry order, the sizes, sections and slots of rounded binary, variations, layered and the game loop's roles) and `tests/test_api_vocabulary.c` (every vocabulary list non-empty and each value accepted by its reader, the default cadences of three piece structures, the parsed harmony, refusals with their paths) and
 `tests/test_job_cancel.c`; `tests/validate_api_schema.cmake` validates every response the
 tests write against its schema when python3 with `jsonschema` is present.
