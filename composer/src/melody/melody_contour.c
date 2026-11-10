@@ -5,13 +5,9 @@
 
 #include <standard-counterpoint/melodic_rules.h>
 
-/* The most the climax is placed above the top of the motive, past the pitch above it, in semitones. */
-#define CLIMAX_RISE 4
 #define CLIMAX_SCALE 1000
 /* The most a climax of a span on beats rises above the last anchor of its motive, in semitones: a fifth. */
 #define CLIMB_REACH 7
-/* A climax within this many thousandths of the place asked for is at that place. */
-#define POSITION_SLACK 150
 #define SOFT_RULES 4
 
 Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params) {
@@ -66,7 +62,7 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
      */
     /* An idea that is not the phrase's climax peaks only a little over its motive, so the climax has room above it. */
     bool low_peak = context->idea && melody_role(context, params) != MELODY_ROLE_CLIMAX;
-    int peak = low_peak ? top + 1 + (int)fill_rng_below(rng, 2) : top + 2 + (int)fill_rng_below(rng, CLIMAX_RISE);
+    int peak = low_peak ? top + 1 + (int)fill_rng_below(rng, 2) : top + 2 + (int)fill_rng_below(rng, params->climax_rise);
     size_t order[MELODY_MAX_NOTES];
     size_t candidates = 0;
     bool idea_last = context->idea && !context->has_cadence;
@@ -195,7 +191,7 @@ void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigne
     } else if (melody->count > 0 && position_is_positive(melody->context.length)) {
         long position = (long)position_scale(CLIMAX_SCALE, melody->notes[top].onset, melody->context.length);
         long asked = melody->params.climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : melody->params.climax_position;
-        score += (position > asked ? position - asked : asked - position) <= POSITION_SLACK;
+        score += (position > asked ? position - asked : asked - position) <= melody->params.climax_slack; /* within the slack, in thousandths, is at that place */
     }
 
     /* A leap of a fourth or more is followed by a step the other way. */
