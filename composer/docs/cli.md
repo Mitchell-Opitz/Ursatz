@@ -94,6 +94,12 @@ ursatz-composer harmonize piece.json --section B --count 4 --seed 1 --out-dir ha
 
 `variations` writes a node again with other seeds and keeps several versions that sound different; `harmonize` does the same for the harmony of a section whose melody is given ([cli-variations.md](cli-variations.md)).
 
+```sh
+ursatz-composer listen --what themes --count 10 --seed 1 --settings settings.json --out-dir round-1
+```
+
+`listen` makes a batch of motifs or themes from fixed seeds and a settings file and writes MIDI, MusicXML and JSON files for a listening session ([cli-listen.md](cli-listen.md)).
+
 ## MIDI files
 
 A MIDI file opens in a DAW with named tracks (`melody`, `bass`, `inner_voice_<n>`, the form on the conductor track), a
