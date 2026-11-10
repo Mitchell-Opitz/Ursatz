@@ -10,6 +10,7 @@
 #include <ursatz_composer/motive_random.h>
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/piece_structure.h>
+#include <ursatz_composer/preferences.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "api_grow.h"
@@ -401,6 +402,34 @@ static bool add_seed_max(cJSON *limits) {
            cJSON_AddNumberToObject(seed, "piece", (double)PIECE_SEED_MAX);
 }
 
+/* The limits of the preferences document, as numbers (docs/preferences.md). */
+static bool add_preference_limits(cJSON *limits) {
+    cJSON *item = cJSON_AddObjectToObject(limits, "preferences");
+    return item && cJSON_AddNumberToObject(item, "weight_max", COMPOSER_PREFERENCES_WEIGHT_MAX) &&
+           cJSON_AddNumberToObject(item, "pickup_one_in_max", COMPOSER_PREFERENCES_PICKUP_ONE_IN_MAX) &&
+           cJSON_AddNumberToObject(item, "leap_min", COMPOSER_PREFERENCES_LEAP_MIN) &&
+           cJSON_AddNumberToObject(item, "leap_max", COMPOSER_PREFERENCES_LEAP_MAX) &&
+           cJSON_AddNumberToObject(item, "range_low_min", COMPOSER_PREFERENCES_RANGE_LOW_MIN) &&
+           cJSON_AddNumberToObject(item, "range_low_max", COMPOSER_PREFERENCES_RANGE_LOW_MAX) &&
+           cJSON_AddNumberToObject(item, "range_high_max", COMPOSER_PREFERENCES_RANGE_HIGH_MAX) &&
+           cJSON_AddNumberToObject(item, "range_span_min", COMPOSER_PREFERENCES_RANGE_SPAN_MIN) &&
+           cJSON_AddNumberToObject(item, "density_max", COMPOSER_PREFERENCES_DENSITY_MAX) &&
+           cJSON_AddNumberToObject(item, "scale_max", COMPOSER_PREFERENCES_SCALE_MAX) &&
+           cJSON_AddNumberToObject(item, "climax_rise_min", COMPOSER_PREFERENCES_CLIMAX_RISE_MIN) &&
+           cJSON_AddNumberToObject(item, "climax_rise_max", COMPOSER_PREFERENCES_CLIMAX_RISE_MAX) &&
+           cJSON_AddNumberToObject(item, "ratio_denominator_max", COMPOSER_PREFERENCES_RATIO_DENOMINATOR_MAX) &&
+           cJSON_AddNumberToObject(item, "fidelity_denominator_max", COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX) &&
+           cJSON_AddNumberToObject(item, "attempts_max", COMPOSER_PREFERENCES_ATTEMPTS_MAX) &&
+           cJSON_AddNumberToObject(item, "keep_max", MELODY_KEEP_MAX);
+}
+
+/* The default preferences, the document a listening session edits. */
+static bool add_preferences(cJSON *root) {
+    ComposerPreferences defaults;
+    composer_preferences_default(&defaults);
+    return cJSON_AddItemToObject(root, "preferences", composer_preferences_write(&defaults));
+}
+
 /* The sizes the requests are limited to, for the help of a client that shows them. */
 static bool add_limits(cJSON *root) {
     cJSON *limits = cJSON_AddObjectToObject(root, "limits");
@@ -413,7 +442,8 @@ static bool add_limits(cJSON *root) {
            cJSON_AddNumberToObject(limits, "tempo_min", (double)API_TEMPO_MIN) &&
            cJSON_AddNumberToObject(limits, "tempo_max", (double)API_TEMPO_MAX) &&
            cJSON_AddNumberToObject(limits, "piece_sections", PIECE_STRUCTURE_MAX_SECTIONS) &&
-           cJSON_AddNumberToObject(limits, "piece_beats", (double)API_PIECE_BEATS_MAX) && add_seed_max(limits);
+           cJSON_AddNumberToObject(limits, "piece_beats", (double)API_PIECE_BEATS_MAX) && add_seed_max(limits) &&
+           add_preference_limits(limits);
 }
 
 bool api_vocabulary_build(cJSON *root) {
@@ -426,7 +456,7 @@ bool api_vocabulary_build(cJSON *root) {
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
            add_choices(root, "piece_intos", API_PIECE_INTOS) && add_tone_labels(root) && add_operations(root) &&
-           add_limits(root);
+           add_preferences(root) && add_limits(root);
 }
 
 ComposerStatus composer_api_vocabulary(ComposerResponse *out) {
