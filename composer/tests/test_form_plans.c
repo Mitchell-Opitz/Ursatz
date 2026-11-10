@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
 
@@ -38,7 +38,7 @@ static const Scenario SCENARIOS[] = {
 
 /* A size of a template as the request gives it: bars, or the count of variations or layers. */
 typedef struct {
-    FormTemplateKind kind;
+    const char *kind;
     size_t bars;
     size_t count;
 } Size;
@@ -50,22 +50,22 @@ static size_t sizes_of(Size *out) {
     static const size_t TERNARY[] = {12, 24};
     static const size_t LOOP[] = {8, 16};
     for (size_t i = 0; i < 2; i++) {
-        out[n++] = (Size){FORM_TEMPLATE_BINARY, BINARY[i], 0};
+        out[n++] = (Size){"binary", BINARY[i], 0};
     }
     for (size_t i = 0; i < 2; i++) {
-        out[n++] = (Size){FORM_TEMPLATE_ROUNDED_BINARY, ROUNDED[i], 0};
+        out[n++] = (Size){"rounded-binary", ROUNDED[i], 0};
     }
     for (size_t i = 0; i < 2; i++) {
-        out[n++] = (Size){FORM_TEMPLATE_TERNARY, TERNARY[i], 0};
+        out[n++] = (Size){"ternary", TERNARY[i], 0};
     }
     for (size_t count = 1; count <= 8; count++) {
-        out[n++] = (Size){FORM_TEMPLATE_VARIATIONS, 0, count};
+        out[n++] = (Size){"variations", 0, count};
     }
     for (size_t i = 0; i < 2; i++) {
-        out[n++] = (Size){FORM_TEMPLATE_LOOP, LOOP[i], 0};
+        out[n++] = (Size){"loop", LOOP[i], 0};
     }
     for (size_t count = 2; count <= 4; count++) {
-        out[n++] = (Size){FORM_TEMPLATE_LAYERED, 0, count};
+        out[n++] = (Size){"layered", 0, count};
     }
     return n;
 }
@@ -83,7 +83,7 @@ static uint64_t fnv1a(const char *text) {
 static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modulate, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = form_template_name(size->kind);
+    request.form = size->kind;
     request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = 4;
@@ -94,7 +94,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modul
     PiecePlan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);
     if (built != PIECE_OK || !plan) {
-        fprintf(stderr, "%s %zu %zu %s modulate %d seed %lu: %s\n", form_template_name(size->kind), size->bars,
+        fprintf(stderr, "%s %zu %zu %s modulate %d seed %lu: %s\n", size->kind, size->bars,
                 size->count, scenario->name, modulate, seed, piece_result_name(built));
         exit(1);
     }
@@ -112,7 +112,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modul
 
 static void line(char *out, size_t cap, const Size *size, const Scenario *scenario, bool modulate, unsigned long seed,
                  uint64_t hash) {
-    snprintf(out, cap, "%s %zu %zu %s %d/4 %d %lu %016llx", form_template_name(size->kind), size->bars, size->count,
+    snprintf(out, cap, "%s %zu %zu %s %d/4 %d %lu %016llx", size->kind, size->bars, size->count,
              scenario->name, scenario->beats, modulate ? 1 : 0, seed, (unsigned long long)hash);
 }
 

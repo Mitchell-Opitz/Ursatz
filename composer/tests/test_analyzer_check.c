@@ -7,7 +7,7 @@
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>

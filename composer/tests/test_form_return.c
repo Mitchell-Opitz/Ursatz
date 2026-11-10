@@ -7,7 +7,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_return.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/piece.h>
@@ -144,10 +144,10 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
     return count;
 }
 
-static PieceRequest request_of(FormTemplateKind kind, size_t bars, size_t count, bool accompanied) {
+static PieceRequest request_of(const char *kind, size_t bars, size_t count, bool accompanied) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = form_template_name(kind);
+    request.form = kind;
     request.bars = bars;
     request.count = count;
     request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
@@ -187,7 +187,7 @@ static bool lane_same(const PiecePlan *plan, NodeId source, NodeId section, Plan
 
 typedef struct {
     const char *name;
-    FormTemplateKind kind;
+    const char *kind;
     size_t bars;
     size_t count;
     bool accompanied;
@@ -206,10 +206,10 @@ static void check_exact(const PiecePlan *plan, NodeId source, NodeId section) {
 
 static int test_exact(bool smoke) {
     static const Scenario SCENARIOS[] = {
-        {"rounded binary 24 bars", FORM_TEMPLATE_ROUNDED_BINARY, 24, 0, false},
-        {"rounded binary 24 bars, accompanied", FORM_TEMPLATE_ROUNDED_BINARY, 24, 0, true},
-        {"ternary 24 bars", FORM_TEMPLATE_TERNARY, 24, 0, false},
-        {"layered, 3 layers", FORM_TEMPLATE_LAYERED, 0, 3, false},
+        {"rounded binary 24 bars", "rounded-binary", 24, 0, false},
+        {"rounded binary 24 bars, accompanied", "rounded-binary", 24, 0, true},
+        {"ternary 24 bars", "ternary", 24, 0, false},
+        {"layered, 3 layers", "layered", 0, 3, false},
     };
     size_t scenario_count = smoke ? 1 : sizeof(SCENARIOS) / sizeof(SCENARIOS[0]);
     for (size_t s = 0; s < scenario_count; s++) {
@@ -220,7 +220,7 @@ static int test_exact(bool smoke) {
             PiecePlan *plan;
             ComposeOutcome outcome;
             if (compose(&request, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
-                NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+                NodeId sections[FORM_SPEC_MAX_SECTIONS];
                 size_t count = sections_of(plan, sections);
                 completed++;
                 for (size_t i = 0; i < count; i++) {
@@ -298,14 +298,14 @@ static size_t check_ornament(const PiecePlan *plan, NodeId source, NodeId sectio
 }
 
 static int test_ornament(void) {
-    PieceRequest request = request_of(FORM_TEMPLATE_VARIATIONS, 0, 3, false);
+    PieceRequest request = request_of("variations", 0, 3, false);
     size_t completed = 0;
     size_t added = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         PiecePlan *plan;
         ComposeOutcome outcome;
         if (compose(&request, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
-            NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
             size_t count = sections_of(plan, sections);
             assert(count == 4);
             completed++;
@@ -331,7 +331,7 @@ static int test_ornament(void) {
 #define REHARMONIZE_CHANGED_BASELINE 5
 
 static int test_reharmonize(void) {
-    PieceRequest request = request_of(FORM_TEMPLATE_VARIATIONS, 0, 3, false);
+    PieceRequest request = request_of("variations", 0, 3, false);
     size_t completed = 0;
     size_t changed_total = 0;
     size_t chords_total = 0;
@@ -339,7 +339,7 @@ static int test_reharmonize(void) {
         PiecePlan *plan;
         ComposeOutcome outcome;
         if (compose(&request, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
-            NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
             size_t count = sections_of(plan, sections);
             const PlanConstraint *back = return_of(plan, sections[2]);
             assert(count == 4 && back && back->params.section_return.variation == PLAN_RETURN_REHARMONIZE);
@@ -422,7 +422,7 @@ static int test_reregister(void) {
     size_t moved_wide = 0;
     for (size_t r = 0; r < 2; r++) {
         for (int accompanied = 0; accompanied < 2; accompanied++) {
-            PieceRequest request = request_of(FORM_TEMPLATE_ROUNDED_BINARY, 24, 0, accompanied);
+            PieceRequest request = request_of("rounded-binary", 24, 0, accompanied);
             size_t completed = 0;
             size_t stuck_at_returns = 0;
             for (unsigned long seed = 1; seed <= SEEDS; seed++) {
@@ -430,7 +430,7 @@ static int test_reregister(void) {
                 ComposeOutcome outcome;
                 PieceResult ran = compose(&request, seed, ranges[r], make_reregister, &plan, &outcome);
                 if (ran == PIECE_OK) {
-                    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+                    NodeId sections[FORM_SPEC_MAX_SECTIONS];
                     sections_of(plan, sections);
                     check_octave(plan, sections[0], sections[2], ranges[r], accompanied);
                     completed++;

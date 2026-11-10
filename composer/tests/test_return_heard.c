@@ -6,7 +6,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/return_hear.h>
 
@@ -27,7 +27,7 @@
 
 typedef struct {
     const char *name;
-    FormTemplateKind kind;
+    const char *kind;
     size_t bars;
     size_t count;
     size_t baseline; /* returns heard, of those planned over the completed runs */
@@ -36,7 +36,7 @@ typedef struct {
 static PieceRequest request_of(const Scenario *scenario) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = form_template_name(scenario->kind);
+    request.form = scenario->kind;
     request.bars = scenario->bars;
     request.count = scenario->count;
     request.meter.beats_per_bar = 4;
@@ -83,7 +83,7 @@ static bool run(const Scenario *scenario, unsigned long seed, size_t *planned, s
         }
         /* The outcome reports what the call finds (it hears only a piece that plans a return), and every pair is a later
            section resembling an earlier one. */
-        assert((outcome.returns_planned == 0) == (scenario->kind == FORM_TEMPLATE_BINARY));
+        assert((outcome.returns_planned == 0) == (strcmp(scenario->kind, "binary") == 0));
         assert(outcome.returns_heard == found && (outcome.returns_planned == 0 || outcome.returns.count == direct.count));
         assert(outcome.returns_heard_as_planned == (outcome.returns_heard == outcome.returns_planned));
         for (size_t i = 0; i < direct.count; i++) {
@@ -98,8 +98,8 @@ static bool run(const Scenario *scenario, unsigned long seed, size_t *planned, s
 }
 
 static int test_smoke(void) {
-    Scenario rounded = {"rounded binary 24 bars", FORM_TEMPLATE_ROUNDED_BINARY, 24, 0, 0};
-    Scenario binary = {"binary 16 bars", FORM_TEMPLATE_BINARY, 16, 0, 0};
+    Scenario rounded = {"rounded binary 24 bars", "rounded-binary", 24, 0, 0};
+    Scenario binary = {"binary 16 bars", "binary", 16, 0, 0};
     size_t planned = 0;
     size_t heard = 0;
     assert(run(&rounded, 1, &planned, &heard));
@@ -114,9 +114,9 @@ static int test_smoke(void) {
 
 static int test_heard(void) {
     static const Scenario SCENARIOS[] = {
-        {"rounded binary 24 bars", FORM_TEMPLATE_ROUNDED_BINARY, 24, 0, 9},
-        {"ternary 24 bars", FORM_TEMPLATE_TERNARY, 24, 0, 3},
-        {"variations (3)", FORM_TEMPLATE_VARIATIONS, 0, 3, 7},
+        {"rounded binary 24 bars", "rounded-binary", 24, 0, 9},
+        {"ternary 24 bars", "ternary", 24, 0, 3},
+        {"variations (3)", "variations", 0, 3, 7},
     };
     int status = 0;
     size_t all_planned = 0;

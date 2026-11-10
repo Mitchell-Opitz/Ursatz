@@ -11,7 +11,7 @@
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/export.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/render.h>

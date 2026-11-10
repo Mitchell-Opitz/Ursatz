@@ -6,7 +6,6 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/form_template.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>

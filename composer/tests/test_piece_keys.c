@@ -9,7 +9,7 @@
 #include <standard-harmony/harmony_related_key.h>
 
 #include <ursatz_composer/compose.h>
-#include <ursatz_composer/form_template.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
@@ -40,10 +40,10 @@ typedef struct {
 static const Scenario SCENARIOS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
-static PieceRequest request_of(const Scenario *scenario, FormTemplateKind kind, unsigned long seed) {
+static PieceRequest request_of(const Scenario *scenario, const char *kind, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.form = form_template_name(kind);
+    request.form = kind;
     request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -144,7 +144,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
 
 /* ------------------------------------------------------------- the plans */
 
-static void check_plan(const PiecePlan *plan, const Scenario *scenario, FormTemplateKind kind) {
+static void check_plan(const PiecePlan *plan, const Scenario *scenario, const char *kind) {
     KeyLane lane = read_lane(plan);
     check_lane_tiles(plan, &lane);
     AnalysisKey home = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
@@ -153,7 +153,7 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, FormTemp
         HarmonyRelatedKey unused;
         assert(same_key(lane.key[i], home) || related(home, lane.key[i], &unused));
     }
-    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
     for (size_t s = 0; s < count; s++) {
         /* The KEY constraint is the key the section ends in: the key under its last bar. */
@@ -168,7 +168,7 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, FormTemp
     }
     PieceCadenceCheck cadences;
     assert(piece_check_cadences(plan, NULL, &cadences) && cadences.ok);
-    if (kind == FORM_TEMPLATE_LOOP || kind == FORM_TEMPLATE_LAYERED) {
+    if (strcmp(kind, "loop") == 0 || strcmp(kind, "layered") == 0) {
         assert(lane.count == 1);
     }
 }
@@ -176,14 +176,15 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, FormTemp
 static int test_plans(void) {
     size_t plans = 0;
     size_t modulating = 0;
-    for (int k = 0; k < FORM_TEMPLATE_KIND_COUNT; k++) {
+    for (size_t form = 0; form < form_spec_builtin_count(); form++) {
+        const char *k = form_spec_builtin_name(form);
         for (size_t s = 0; s < SCENARIO_COUNT; s++) {
             size_t modulated = 0;
             for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-                PieceRequest request = request_of(&SCENARIOS[s], (FormTemplateKind)k, seed);
+                PieceRequest request = request_of(&SCENARIOS[s], k, seed);
                 PiecePlan *plan = NULL;
                 assert(piece_build_plan(&request, &plan) == PIECE_OK);
-                check_plan(plan, &SCENARIOS[s], (FormTemplateKind)k);
+                check_plan(plan, &SCENARIOS[s], k);
                 modulated += read_lane(plan).count > 1;
                 plan_destroy(plan);
                 /* Without the request to modulate there is one key and the template's cadences. */
@@ -193,9 +194,9 @@ static int test_plans(void) {
                 plan_destroy(plan);
                 plans++;
             }
-            printf("%s, %s: %zu of %d plans change key\n", form_template_name((FormTemplateKind)k), SCENARIOS[s].name,
+            printf("%s, %s: %zu of %d plans change key\n", k, SCENARIOS[s].name,
                    modulated, SEEDS);
-            bool can = k != FORM_TEMPLATE_LOOP && k != FORM_TEMPLATE_LAYERED;
+            bool can = strcmp(k, "loop") != 0 && strcmp(k, "layered") != 0;
             assert(can ? modulated > 0 : modulated == 0);
             modulating += modulated;
         }
@@ -254,9 +255,9 @@ static bool authentic_inside(const PiecePlan *plan, const NodeId *sections, size
     return false;
 }
 
-static void check_piece(const PiecePlan *plan, FormTemplateKind kind) {
+static void check_piece(const PiecePlan *plan, const char *kind) {
     KeyLane lane = read_lane(plan);
-    NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
     Rational piece_end;
     assert(plan_span_end(plan_node_span(plan, sections[count - 1]), &piece_end) == PLAN_OK);
@@ -278,7 +279,7 @@ static void check_piece(const PiecePlan *plan, FormTemplateKind kind) {
     assert(piece_check_keys(plan, &keys) && keys.ok);
     assert(keys.changes == changes && keys.modulations == changes);
     /* The last cadence is the strongest of the piece's, by standard-harmony's order. */
-    if (kind != FORM_TEMPLATE_LOOP && kind != FORM_TEMPLATE_LAYERED) {
+    if (strcmp(kind, "loop") != 0 && strcmp(kind, "layered") != 0) {
         int last = -1;
         int strongest = -1;
         for (size_t s = 0; s < count; s++) {
@@ -299,7 +300,7 @@ typedef struct {
     size_t changing; /* completed runs that change key */
 } Tally;
 
-static bool compose_one(const Scenario *scenario, FormTemplateKind kind, unsigned long seed, Tally *tally) {
+static bool compose_one(const Scenario *scenario, const char *kind, unsigned long seed, Tally *tally) {
     PieceRequest request = request_of(scenario, kind, seed);
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
@@ -316,7 +317,7 @@ static bool compose_one(const Scenario *scenario, FormTemplateKind kind, unsigne
         check_piece(plan, kind);
     } else {
         assert(ran == PIECE_ERR_STUCK);
-        printf("  %s, %s, seed %lu: stuck at %s%s%s\n", form_template_name(kind), scenario->name, seed,
+        printf("  %s, %s, seed %lu: stuck at %s%s%s\n", kind, scenario->name, seed,
                compose_stage_name(outcome.stuck_stage), outcome.key_rejected ? ": " : "",
                outcome.key_rejected ? (outcome.key_check.ok ? outcome.cadence_check.reason : outcome.key_check.reason)
                                     : "");
@@ -326,7 +327,7 @@ static bool compose_one(const Scenario *scenario, FormTemplateKind kind, unsigne
     return done;
 }
 
-static int test_compose(FormTemplateKind kind) {
+static int test_compose(const char *kind) {
     Tally tally;
     memset(&tally, 0, sizeof(tally));
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
@@ -334,7 +335,7 @@ static int test_compose(FormTemplateKind kind) {
             compose_one(&SCENARIOS[s], kind, seed, &tally);
         }
     }
-    printf("%s: %zu of %zu runs complete (%.0f%%), %zu of them change key\n", form_template_name(kind),
+    printf("%s: %zu of %zu runs complete (%.0f%%), %zu of them change key\n", kind,
            tally.completed, tally.runs, 100.0 * (double)tally.completed / (double)tally.runs, tally.changing);
     return tally.completed == tally.runs ? 0 : 1;
 }
@@ -343,7 +344,7 @@ static int test_smoke(void) {
     Tally tally;
     memset(&tally, 0, sizeof(tally));
     for (unsigned long seed = 1; seed <= 5; seed++) {
-        if (compose_one(&SCENARIOS[0], FORM_TEMPLATE_BINARY, seed, &tally) && tally.changing > 0) {
+        if (compose_one(&SCENARIOS[0], "binary", seed, &tally) && tally.changing > 0) {
             printf("binary: seed %lu composes, changes key, and passes the checks\n", seed);
             return 0;
         }
@@ -353,15 +354,16 @@ static int test_smoke(void) {
 }
 
 int main(int argc, char **argv) {
-    FormTemplateKind kind;
     if (argc == 2 && strcmp(argv[1], "plan") == 0) {
         return test_plans();
     }
     if (argc == 2 && strcmp(argv[1], "smoke") == 0) {
         return test_smoke();
     }
-    if (argc == 3 && strcmp(argv[1], "compose") == 0 && form_template_from_name(argv[2], &kind)) {
-        return test_compose(kind);
+    for (size_t form = 0; argc == 3 && strcmp(argv[1], "compose") == 0 && form < form_spec_builtin_count(); form++) {
+        if (strcmp(argv[2], form_spec_builtin_name(form)) == 0) {
+            return test_compose(form_spec_builtin_name(form));
+        }
     }
     fprintf(stderr, "usage: test_piece_keys plan|smoke|compose <template>\n");
     return 2;

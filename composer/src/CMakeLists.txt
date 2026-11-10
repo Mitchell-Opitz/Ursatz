@@ -116,7 +116,6 @@ add_library(ursatz_composer STATIC
     grow/grow_check.c
     grow/grow_form.c
     grow/grow_run.c
-    piece/form_template.c
     piece/form_return.c
     piece/given.c
     piece/seam.c
