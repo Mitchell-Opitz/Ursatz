@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_develop.h>
 
 #include "motive/motive_random_internal.h"
 
@@ -799,6 +800,53 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
     return true;
 }
 
+/* A motive of the notes first to last of a layout (no pickup), to be scored against another. */
+static bool segment_motive(const MotiveRandomOptions *options, const AnalysisKey *key, const Layout *layout, const Melody *melody, size_t first,
+                           size_t last, Motive *out) {
+    Rhythm rhythm;
+    Melody notes;
+    memset(&rhythm, 0, sizeof(rhythm));
+    memset(&notes, 0, sizeof(notes));
+    for (size_t i = first; i <= last; i++) {
+        size_t k = i - first;
+        rhythm.ticks[k] = layout->rhythm.ticks[i];
+        rhythm.on_beat[k] = layout->rhythm.on_beat[i];
+        rhythm.total += layout->rhythm.ticks[i];
+        notes.pitches[k] = melody->pitches[i];
+        notes.decorated[k] = melody->decorated[i];
+        notes.types[k] = melody->types[i];
+    }
+    rhythm.count = last - first + 1;
+    return motive_random_build(options, key, &rhythm, &notes, out);
+}
+
+/*
+ * The contrast distance (contrast_fidelity_min): the recognizability of the segment that is not a repeat against segment a
+ * is at least the minimum. A layout with no such segment passes. Both motives are made and scored here; false when
+ * the score is below the minimum or cannot be made.
+ */
+static bool contrast_is_close(const MotiveRandomOptions *options, const AnalysisKey *key, const MotiveRandomPreferences *preferences, const Layout *layout,
+                              const Melody *melody) {
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        if (layout->repeats[s]) {
+            continue;
+        }
+        Motive a;
+        Motive b;
+        MotiveRecognizability score;
+        if (!segment_motive(options, key, layout, melody, layout->cell_start, layout->last[0], &a) ||
+            !segment_motive(options, key, layout, melody, layout->first[s], layout->last[s], &b) ||
+            !motive_recognizability(&a, &b, NULL, &score)) {
+            return false;
+        }
+        const ComposerRatio *least = &preferences->contrast_fidelity_min;
+        if ((unsigned long long)score.total.numerator * least->denominator < (unsigned long long)least->numerator * score.total.denominator) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
                                       bool *found) {
     Setup setup;
@@ -818,6 +866,9 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
         if (!draw_layout(preferences, &setup, rng, &layout, &feature) || !draw_melody(preferences, key, &layout, rng, feature, &melody) ||
             !motive_random_build(options, key, &layout.rhythm, &melody, out) ||
             !set_plan_and_segments(options, &layout, out) || !tones_as_drawn(out, &layout, &melody)) {
+            continue;
+        }
+        if (preferences->contrast_fidelity_min.numerator > 0 && !contrast_is_close(options, key, preferences, &layout, &melody)) {
             continue;
         }
         if (!motive_melodic_fault(out, &fault)) {
