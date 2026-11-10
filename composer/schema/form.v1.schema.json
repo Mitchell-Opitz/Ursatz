@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/form.v1.schema.json",
+  "title": "Ursatz Composer form, version 1",
+  "description": "A form as a document (R-416): its sections at each size it comes in, the keys a piece may move to, the cadences, the returns and the checks that apply. See docs/forms.md.",
+  "type": "object",
+  "required": ["schema", "version", "name", "label"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "ursatz-form" },
+    "version": { "const": 1 },
+    "name": { "$ref": "#/$defs/name" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 63 },
+    "plan_name": { "$ref": "#/$defs/name" },
+    "closing": { "type": "boolean", "default": false },
+    "accompaniment": { "enum": ["optional", "required"], "default": "optional" },
+    "regions": {
+      "type": "array",
+      "maxItems": 4,
+      "default": [],
+      "items": {
+        "type": "object",
+        "required": ["name", "major", "minor"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "$ref": "#/$defs/name", "not": { "const": "home" } },
+          "major": { "$ref": "#/$defs/degrees" },
+          "minor": { "$ref": "#/$defs/degrees" }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": { "enum": ["sections", "returns", "keys", "cadences", "seam"] },
+      "uniqueItems": true
+    },
+    "sizes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/size" }
+    },
+    "sections": { "const": "request" }
+  },
+  "oneOf": [
+    { "required": ["sizes"], "not": { "required": ["sections"] } },
+    { "required": ["sections"], "not": { "required": ["sizes"] } }
+  ],
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z0-9-]{1,31}$" },
+    "degrees": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "type": "integer", "minimum": 1, "maximum": 7 }
+    },
+    "size": {
+      "type": "object",
+      "required": ["bars", "sections"],
+      "additionalProperties": false,
+      "properties": {
+        "bars": { "type": "integer", "minimum": 1, "description": "The sum of its sections' bars." },
+        "count": { "type": "integer", "minimum": 1, "description": "The variations or layers the size has." },
+        "default": { "type": "boolean", "description": "The size a request gets when it asks for none; exactly one size has it." },
+        "sections": { "type": "array", "minItems": 1, "maxItems": 9, "items": { "$ref": "#/$defs/section" } }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["name", "letter", "role", "beginning", "ending", "cadence"],
+      "additionalProperties": false,
+      "oneOf": [{ "required": ["bars"] }, { "required": ["beats"] }],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 31, "description": "Unique in its size." },
+        "letter": { "type": "string", "minLength": 1, "maxLength": 3 },
+        "role": { "enum": ["theme", "contrast", "return", "variation", "layer", "intro", "body", "turnaround", "ending"] },
+        "bars": { "type": "integer", "minimum": 1 },
+        "beats": { "type": "integer", "minimum": 1 },
+        "beginning": { "enum": ["presentation", "antecedent", "compound_basic_idea"] },
+        "ending": { "enum": ["continuation", "consequent", "cadential"] },
+        "cadence": { "type": "string", "description": "A name of the standard-harmony cadence vocabulary whose core is a PAC, an IAC or an HC." },
+        "closed": { "type": "boolean", "default": false },
+        "keys": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "start": { "type": "string", "description": "\"home\" or a region's name." },
+            "end": { "type": "string", "description": "\"home\" or a region's name." }
+          }
+        },
+        "motive": { "type": "string", "description": "How the section's motive is made from m0, as motive_relation_step_text writes it." },
+        "returns": { "type": "string", "description": "The name of an earlier section of the size." },
+        "variation": { "enum": ["exact", "ornament", "reharmonize", "reregister"], "description": "Needs returns." },
+        "layers": {
+          "oneOf": [
+            { "const": "all" },
+            { "type": "array", "minItems": 1, "items": { "enum": ["bass", "inner_voice", "melody"] } }
+          ]
+        }
+      }
+    }
+  }
+}
