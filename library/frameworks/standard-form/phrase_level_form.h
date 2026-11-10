@@ -36,4 +36,8 @@ bool phrase_level_form_valid(PhraseLevelForm value);
    value. */
 const char *phrase_level_form_name(PhraseLevelForm value);
 
+/* Looks a value up by its name (the strings phrase_..._name gives). False, with *out untouched,
+   for an unknown name or NULL. */
+bool phrase_level_form_from_name(const char *name, PhraseLevelForm *out);
+
 #endif

@@ -29,4 +29,8 @@ bool phrase_ending_valid(PhraseEnding value);
    value. */
 const char *phrase_ending_name(PhraseEnding value);
 
+/* Looks a value up by its name (the strings phrase_..._name gives). False, with *out untouched,
+   for an unknown name or NULL. */
+bool phrase_ending_from_name(const char *name, PhraseEnding *out);
+
 #endif
