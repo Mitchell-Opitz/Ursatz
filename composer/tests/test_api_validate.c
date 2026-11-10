@@ -203,6 +203,8 @@ static void test_preferences(void) {
     expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), unknown, 1, "/preferences/bogus", "");
     const char *const wrong[][2] = {{"preferences", "[]"}};
     expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), wrong, 1, "/preferences", "preferences must be an object");
+    const char *const leaps[][2] = {{"preferences", "{\"motif\": {\"leaps_per_motif\": 12}}"}};
+    expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), leaps, 1, "/preferences/motif/leaps_per_motif", "0 to 11");
     const char *const fine[][2] = {{"preferences", "{\"melody\": {\"keep\": 2}, \"motif\": {\"pickup_one_in\": 0}}"}};
     expect_valid(THEME("one-motive.json"), fine, 1);
 }

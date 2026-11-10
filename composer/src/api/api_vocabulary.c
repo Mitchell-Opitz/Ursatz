@@ -410,6 +410,8 @@ static bool add_preference_limits(cJSON *limits) {
     cJSON *item = cJSON_AddObjectToObject(limits, "preferences");
     return item && cJSON_AddNumberToObject(item, "weight_max", COMPOSER_PREFERENCES_WEIGHT_MAX) &&
            cJSON_AddNumberToObject(item, "pickup_one_in_max", COMPOSER_PREFERENCES_PICKUP_ONE_IN_MAX) &&
+           cJSON_AddNumberToObject(item, "accented_one_in_max", COMPOSER_PREFERENCES_ACCENTED_ONE_IN_MAX) &&
+           cJSON_AddNumberToObject(item, "leaps_per_motif_max", COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX) &&
            cJSON_AddNumberToObject(item, "leap_min", COMPOSER_PREFERENCES_LEAP_MIN) &&
            cJSON_AddNumberToObject(item, "leap_max", COMPOSER_PREFERENCES_LEAP_MAX) &&
            cJSON_AddNumberToObject(item, "range_low_min", COMPOSER_PREFERENCES_RANGE_LOW_MIN) &&

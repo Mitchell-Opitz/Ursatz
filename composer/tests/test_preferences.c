@@ -23,7 +23,10 @@ static const char *DEFAULT_MOTIF =
     "\"features\":{\"dotted\":1,\"leap\":1,\"repeat\":1},\"leap\":{\"low\":5,\"high\":9},"
     "\"rung_moves\":{\"step\":6,\"skip\":2},"
     "\"decorations\":{\"chord_tone\":1,\"passing\":1,\"neighbor\":1,\"appoggiatura\":1,\"escape\":1},"
-    "\"durations\":{\"half_beat\":2,\"beat\":4,\"two_beats\":1}}";
+    "\"durations\":{\"half_beat\":2,\"beat\":4,\"two_beats\":1},\"accented_one_in\":0,"
+    "\"accented_types\":{\"appoggiatura\":1,\"passing\":1,\"suspension\":1},\"avoid_repeats\":false,"
+    "\"leaps_per_motif\":11,\"leap_recovery\":false,\"pickup_from_accent\":false,\"contrast_fidelity_min\":\"0/1\","
+    "\"long_on_weak\":0,\"final_long\":false}";
 
 static const char *DEFAULT_DEVELOPMENT =
     "{\"fidelity_minimum\":{"
@@ -74,7 +77,7 @@ static void defaults_round_trip(void) {
     cJSON_free(text);
     /* The whole document is the three groups, in this order. */
     text = cJSON_PrintUnformatted(document);
-    char whole[2048];
+    char whole[4096];
     snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s}", DEFAULT_MELODY, DEFAULT_MOTIF,
              DEFAULT_DEVELOPMENT);
     assert(text && strcmp(text, whole) == 0);
@@ -100,6 +103,12 @@ static void defaults_round_trip(void) {
     assert(defaults.melody.attempts == 48 && defaults.melody.keep == 6 && defaults.melody.weights.seam == 1);
     assert(defaults.motif.pickup_one_in == 4 && defaults.motif.leap_low == 5 && defaults.motif.leap_high == 9);
     assert(defaults.motif.durations[0] == 2 && defaults.motif.durations[1] == 4 && defaults.motif.durations[2] == 1);
+    assert(defaults.motif.accented_one_in == 0 && defaults.motif.accented_types[0] == 1 &&
+           defaults.motif.accented_types[1] == 1 && defaults.motif.accented_types[2] == 1 &&
+           !defaults.motif.avoid_repeats && defaults.motif.leaps_per_motif == 11 && !defaults.motif.leap_recovery &&
+           !defaults.motif.pickup_from_accent && defaults.motif.contrast_fidelity_min.numerator == 0 &&
+           defaults.motif.contrast_fidelity_min.denominator == 1 && defaults.motif.long_on_weak == 0 &&
+           !defaults.motif.final_long);
     assert(defaults.development.minimum[GROW_DEVELOP_BALANCED][GROW_ROLE_PRESENTATION].numerator == 11 &&
            defaults.development.minimum[GROW_DEVELOP_BALANCED][GROW_ROLE_PRESENTATION].denominator == 20);
     assert(defaults.development.minimum[GROW_DEVELOP_THEME][GROW_ROLE_CONTRAST].numerator == 0);
@@ -148,6 +157,33 @@ static void members_read_over_defaults(void) {
     assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
     assert(again.motif.pickup_one_in == 0 && again.motif.leap_low == 4 && again.motif.plans_two[1] == 7 &&
            again.development.minimum[GROW_DEVELOP_THEME][GROW_ROLE_PRESENTATION].numerator == 1);
+    cJSON_Delete(document);
+
+    /* All nine listening settings set read back equal through write and read (R-422). */
+    assert(read_text("{\"motif\":{\"accented_one_in\":3,\"accented_types\":{\"appoggiatura\":0,\"passing\":2,\"suspension\":5},"
+                     "\"avoid_repeats\":true,\"leaps_per_motif\":2,\"leap_recovery\":true,\"pickup_from_accent\":true,"
+                     "\"contrast_fidelity_min\":\"1/3\",\"long_on_weak\":4,\"final_long\":true}}",
+                     &preferences, path, message));
+    assert(!composer_preferences_is_default(&preferences));
+    assert(preferences.motif.accented_one_in == 3 && preferences.motif.accented_types[0] == 0 &&
+           preferences.motif.accented_types[1] == 2 && preferences.motif.accented_types[2] == 5 &&
+           preferences.motif.avoid_repeats && preferences.motif.leaps_per_motif == 2 && preferences.motif.leap_recovery &&
+           preferences.motif.pickup_from_accent && preferences.motif.contrast_fidelity_min.numerator == 1 &&
+           preferences.motif.contrast_fidelity_min.denominator == 3 && preferences.motif.long_on_weak == 4 &&
+           preferences.motif.final_long);
+    document = composer_preferences_write(&preferences);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(again.motif.accented_one_in == 3 && again.motif.accented_types[2] == 5 && again.motif.avoid_repeats &&
+           again.motif.leaps_per_motif == 2 && again.motif.leap_recovery && again.motif.pickup_from_accent &&
+           again.motif.contrast_fidelity_min.numerator == 1 && again.motif.contrast_fidelity_min.denominator == 3 &&
+           again.motif.long_on_weak == 4 && again.motif.final_long);
+    char *written = cJSON_PrintUnformatted(document);
+    cJSON *rewritten = composer_preferences_write(&again);
+    char *rewritten_text = cJSON_PrintUnformatted(rewritten);
+    assert(written && rewritten_text && strcmp(written, rewritten_text) == 0);
+    cJSON_free(written);
+    cJSON_free(rewritten_text);
+    cJSON_Delete(rewritten);
     cJSON_Delete(document);
 
     /* A single setting equal to its default is still the defaults. */
@@ -206,6 +242,18 @@ static void limits_are_refused(void) {
     refused("{\"motif\":{\"leap\":{\"low\":2}}}", "/motif/leap/low");
     refused("{\"motif\":{\"leap\":{\"high\":13}}}", "/motif/leap/high");
     refused("{\"motif\":{\"leap\":{\"mid\":6}}}", "/motif/leap/mid");
+    refused("{\"motif\":{\"accented_one_in\":65}}", "/motif/accented_one_in");
+    refused("{\"motif\":{\"accented_types\":{\"appoggiatura\":0,\"passing\":0,\"suspension\":0}}}", "/motif/accented_types");
+    refused("{\"motif\":{\"accented_types\":{\"escape\":1}}}", "/motif/accented_types/escape");
+    refused("{\"motif\":{\"leaps_per_motif\":12}}", "/motif/leaps_per_motif");
+    refused("{\"motif\":{\"long_on_weak\":21}}", "/motif/long_on_weak");
+    refused("{\"motif\":{\"avoid_repeats\":1}}", "/motif/avoid_repeats");
+    refused("{\"motif\":{\"leap_recovery\":\"yes\"}}", "/motif/leap_recovery");
+    refused("{\"motif\":{\"pickup_from_accent\":null}}", "/motif/pickup_from_accent");
+    refused("{\"motif\":{\"final_long\":0}}", "/motif/final_long");
+    refused("{\"motif\":{\"contrast_fidelity_min\":\"3/2\"}}", "/motif/contrast_fidelity_min");
+    refused("{\"motif\":{\"contrast_fidelity_min\":\"1/1001\"}}", "/motif/contrast_fidelity_min");
+    refused("{\"motif\":{\"contrast_fidelity_min\":0.5}}", "/motif/contrast_fidelity_min");
     refused("{\"motif\":{\"bogus\":1}}", "/motif/bogus");
     refused("{\"development\":5}", "/development");
     refused("{\"development\":{\"bogus\":{}}}", "/development/bogus");

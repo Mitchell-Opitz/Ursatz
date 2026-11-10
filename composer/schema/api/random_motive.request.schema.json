@@ -425,6 +425,67 @@
                   "maximum": 20
                 }
               }
+            },
+            "accented_one_in": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 64,
+              "description": "An eligible note becomes an accented non-chord tone one time in this many; 0 never. Off by default."
+            },
+            "accented_types": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. Which accented non-chord tone is placed.",
+              "additionalProperties": false,
+              "properties": {
+                "appoggiatura": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "passing": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "suspension": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "avoid_repeats": {
+              "type": "boolean",
+              "description": "No repeated note: decorations try the other kinds before a chord tone, and a repeat of a pitch is refused. Off by default."
+            },
+            "leaps_per_motif": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 11,
+              "description": "The most intervals of 5 semitones or more in a motive; 11 never rejects."
+            },
+            "leap_recovery": {
+              "type": "boolean",
+              "description": "A leap is followed by a move of 1 or 2 semitones the other way. Off by default."
+            },
+            "pickup_from_accent": {
+              "type": "boolean",
+              "description": "A pickup is one chord tone below segment a's first note and no longer than it; a motive that opens with an implied upbeat but has no pickup is refused. Off by default."
+            },
+            "contrast_fidelity_min": {
+              "type": "string",
+              "pattern": "^[0-9]+/[0-9]+$",
+              "description": "n/d with 0 <= n <= d and d from 1 to 1000. The least recognizability of a contrasting segment against segment a; 0/1 never rejects."
+            },
+            "long_on_weak": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "The two-beat note is this much more likely on a weak beat (its weight times 1 plus this); 0 changes nothing."
+            },
+            "final_long": {
+              "type": "boolean",
+              "description": "The last note of the last segment is longer than every other note in it. Off by default."
             }
           }
         },

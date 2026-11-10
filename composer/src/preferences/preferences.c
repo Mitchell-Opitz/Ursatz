@@ -18,6 +18,8 @@
 #define CLIMAX_RISE_MIN COMPOSER_PREFERENCES_CLIMAX_RISE_MIN
 #define CLIMAX_RISE_MAX COMPOSER_PREFERENCES_CLIMAX_RISE_MAX
 #define PICKUP_ONE_IN_MAX COMPOSER_PREFERENCES_PICKUP_ONE_IN_MAX
+#define ACCENTED_ONE_IN_MAX COMPOSER_PREFERENCES_ACCENTED_ONE_IN_MAX
+#define LEAPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX
 #define LEAP_MIN COMPOSER_PREFERENCES_LEAP_MIN
 #define LEAP_MAX COMPOSER_PREFERENCES_LEAP_MAX
 #define FIDELITY_DENOMINATOR_MAX COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX
@@ -294,7 +296,8 @@ static const WeightedList MOTIF_LISTS[] = {
     {"rung_moves", offsetof(MotiveRandomPreferences, rung_moves), 2, {"step", "skip"}},
     {"decorations", offsetof(MotiveRandomPreferences, decorations), 5,
      {"chord_tone", "passing", "neighbor", "appoggiatura", "escape"}},
-    {"durations", offsetof(MotiveRandomPreferences, durations), 3, {"half_beat", "beat", "two_beats"}}};
+    {"durations", offsetof(MotiveRandomPreferences, durations), 3, {"half_beat", "beat", "two_beats"}},
+    {"accented_types", offsetof(MotiveRandomPreferences, accented_types), 3, {"appoggiatura", "passing", "suspension"}}};
 #define MOTIF_LIST_COUNT (sizeof(MOTIF_LISTS) / sizeof(MOTIF_LISTS[0]))
 
 static unsigned long *list_values(MotiveRandomPreferences *motif, const WeightedList *list) {
@@ -375,6 +378,23 @@ static bool read_leap(const cJSON *item, MotiveRandomPreferences *motif, const R
     return true;
 }
 
+static bool read_motif_bool(const cJSON *item, const char *key, bool *out, const Refusal *refusal) {
+    if (!cJSON_IsBool(item)) {
+        return refuse_in(refusal, "motif", key, "must be true or false");
+    }
+    *out = cJSON_IsTrue(item);
+    return true;
+}
+
+static bool read_contrast_fidelity_min(const cJSON *item, MotiveRandomPreferences *motif, const Refusal *refusal) {
+    ComposerRatio ratio;
+    if (!cJSON_IsString(item) || !parse_ratio(item->valuestring, FIDELITY_DENOMINATOR_MAX, &ratio)) {
+        return refuse_in(refusal, "motif", "contrast_fidelity_min", "must be a ratio n/d from 0 to 1 with 1 <= d <= 1000");
+    }
+    motif->contrast_fidelity_min = ratio;
+    return true;
+}
+
 static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const Refusal *refusal) {
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
@@ -400,6 +420,40 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
             }
         } else if (strcmp(key, "leap") == 0) {
             if (!read_leap(item, motif, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "accented_one_in") == 0) {
+            if (!read_unsigned_in(item, "motif", key, 0, ACCENTED_ONE_IN_MAX, &motif->accented_one_in, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "leaps_per_motif") == 0) {
+            if (!read_unsigned_in(item, "motif", key, 0, LEAPS_PER_MOTIF_MAX, &motif->leaps_per_motif, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "long_on_weak") == 0) {
+            unsigned value;
+            if (!read_unsigned_in(item, "motif", key, 0, WEIGHT_MAX, &value, refusal)) {
+                return false;
+            }
+            motif->long_on_weak = value;
+        } else if (strcmp(key, "avoid_repeats") == 0) {
+            if (!read_motif_bool(item, key, &motif->avoid_repeats, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "leap_recovery") == 0) {
+            if (!read_motif_bool(item, key, &motif->leap_recovery, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "pickup_from_accent") == 0) {
+            if (!read_motif_bool(item, key, &motif->pickup_from_accent, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "final_long") == 0) {
+            if (!read_motif_bool(item, key, &motif->final_long, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "contrast_fidelity_min") == 0) {
+            if (!read_contrast_fidelity_min(item, motif, refusal)) {
                 return false;
             }
         } else {
@@ -589,10 +643,15 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     cJSON *group = cJSON_CreateObject();
     cJSON *leap = NULL;
     bool ok = group != NULL;
-    /* The document's order: bars, pickup_one_in, then the lists, with leap between features and rung_moves. */
+    char ratio[32];
+    /* The document's order: bars, pickup_one_in, then the lists, with leap between features and rung_moves, and
+     * accented_one_in before accented_types (the last list), the other new settings after it. */
     for (size_t i = 0; ok && i < MOTIF_LIST_COUNT; i++) {
         if (i == 1) {
             ok = add_number(group, "pickup_one_in", motif->pickup_one_in);
+        }
+        if (ok && i == MOTIF_LIST_COUNT - 1) {
+            ok = add_number(group, "accented_one_in", motif->accented_one_in);
         }
         if (ok && i == 6) {
             leap = cJSON_AddObjectToObject(group, "leap");
@@ -600,6 +659,15 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
         }
         ok = ok && add_weighted_list(group, &MOTIF_LISTS[i], motif);
     }
+    snprintf(ratio, sizeof(ratio), "%lu/%lu", motif->contrast_fidelity_min.numerator,
+             motif->contrast_fidelity_min.denominator);
+    ok = ok && cJSON_AddBoolToObject(group, "avoid_repeats", motif->avoid_repeats) != NULL &&
+         add_number(group, "leaps_per_motif", motif->leaps_per_motif) &&
+         cJSON_AddBoolToObject(group, "leap_recovery", motif->leap_recovery) != NULL &&
+         cJSON_AddBoolToObject(group, "pickup_from_accent", motif->pickup_from_accent) != NULL &&
+         cJSON_AddStringToObject(group, "contrast_fidelity_min", ratio) != NULL &&
+         add_number(group, "long_on_weak", (double)motif->long_on_weak) &&
+         cJSON_AddBoolToObject(group, "final_long", motif->final_long) != NULL;
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -681,7 +749,12 @@ static bool motif_is_default(const MotiveRandomPreferences *motif) {
         }
     }
     return motif->pickup_one_in == defaults.pickup_one_in && motif->leap_low == defaults.leap_low &&
-           motif->leap_high == defaults.leap_high;
+           motif->leap_high == defaults.leap_high && motif->accented_one_in == defaults.accented_one_in &&
+           motif->avoid_repeats == defaults.avoid_repeats && motif->leaps_per_motif == defaults.leaps_per_motif &&
+           motif->leap_recovery == defaults.leap_recovery && motif->pickup_from_accent == defaults.pickup_from_accent &&
+           motif->contrast_fidelity_min.numerator == defaults.contrast_fidelity_min.numerator &&
+           motif->contrast_fidelity_min.denominator == defaults.contrast_fidelity_min.denominator &&
+           motif->long_on_weak == defaults.long_on_weak && motif->final_long == defaults.final_long;
 }
 
 static bool development_is_default(const GrowFidelityTable *table) {
