@@ -672,6 +672,10 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
             place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s];
         }
     }
+    /* A pickup that leads into the accent is no longer than the note it leads into. */
+    if (preferences->pickup_from_accent && layout->rhythm.pickup > 0 && layout->rhythm.ticks[layout->cell_start] < layout->rhythm.pickup) {
+        return false;
+    }
     if (!draw_frame_a(preferences, key, layout, rng, feature, &place, melody)) {
         return false;
     }
@@ -681,10 +685,21 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
             return false;
         }
     }
+    /* ... and sits one chord tone below it. */
+    if (preferences->pickup_from_accent && layout->rhythm.pickup > 0 &&
+        !set_frame(key, layout, &place, melody, 0, place.rung[layout->cell_start] - 1)) {
+        return false;
+    }
     if (preferences->accented_one_in > 0 && !place_accents(preferences, key, layout, rng, &place, melody)) {
         return false;
     }
     if (!draw_decorations(preferences, key, layout, rng, &place, melody)) {
+        return false;
+    }
+    /* A motive with no pickup does not open as one that has: a short note, then a longer one on the root, higher. */
+    if (preferences->pickup_from_accent && layout->rhythm.pickup == 0 && layout->rhythm.ticks[0] <= 2 &&
+        layout->rhythm.ticks[1] > layout->rhythm.ticks[0] &&
+        step_of(place.position[1] - chord_shift(layout->plan.degrees[place.segment[1]])) == 0 && melody->pitches[1] > melody->pitches[0]) {
         return false;
     }
     if (preferences->avoid_repeats) {
