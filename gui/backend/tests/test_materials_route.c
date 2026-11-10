@@ -2039,7 +2039,7 @@ static void test_clear_themes(void) {
   free(later);
 }
 
-/* ---- the replies of the Composer run as a command (P27 B6) ------------------------------------------------------ */
+/* ---- the replies of the Composer routes (P27 B6) ---------------------------------------------------------------- */
 
 #ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
 static char *read_whole_file(const char *path) {
@@ -2096,17 +2096,6 @@ static unsigned char *hex_bytes(const char *hex, size_t *size) {
   return bytes;
 }
 
-/* True when every member of expected is in actual and equal (the status route gained members). */
-static bool members_equal(const cJSON *expected, const cJSON *actual) {
-  const cJSON *member = NULL;
-  cJSON_ArrayForEach(member, expected) {
-    if (!cJSON_Compare(member, cJSON_GetObjectItemCaseSensitive(actual, member->string), 1)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 static char *saved_motif_item(const char *project, const char *name, const char *notes) {
   char body[512];
   snprintf(body, sizeof(body),
@@ -2116,101 +2105,124 @@ static char *saved_motif_item(const char *project, const char *name, const char 
   return create_item("motif", name, project, body);
 }
 
-/* A reply equals the one the command gave. A render's playback is compared up to what P27 B9 declares (it is built
-   from the MIDI file by the Analyzer); every other member must be equal. */
-static bool reply_matches(const cJSON *answer, const cJSON *expected) {
-  const cJSON *got_playback = cJSON_GetObjectItemCaseSensitive(answer, "playback");
-  const cJSON *want_playback = cJSON_GetObjectItemCaseSensitive(expected, "playback");
-  if (!cJSON_IsObject(got_playback) || !cJSON_IsObject(want_playback)) {
-    return cJSON_Compare(answer, expected, 1);
+/* One request of the Composer's motif routes: the answer's status, and for a success the top-level members its route
+   documents (docs/motifs-backend.md, docs/api/materials-routes.md). The placeholders @project, @source and @target are a
+   project id and two saved motifs (kReplySourceNotes, kReplyTargetNotes), in C minor. An analyze_ case saves a motif:
+   the stored motif holds the members "analysis", "degrees" and "analysis_error". Its members are a comma list. */
+typedef struct {
+  const char *name;
+  const char *method;
+  const char *path;
+  const char *body;
+  const char *raw_hex;
+  int status;
+  const char *members;
+} ReplyCase;
+
+static const char *const kReplySourceNotes = "C4:q Eb4:e G4:e C5:h";
+static const char *const kReplyTargetNotes = "C5:q Ab4:e F4:e C4:h";
+
+static const ReplyCase kReplyCases[] = {
+    {"analyze_full", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C minor\",\"meter\":\"4/4\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"analyze_features_harmony", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[{\"first\":0,\"label\":\"a\",\"last\":2}],\"form\":\"full\",\"harmony\":\"I V@2\",\"key\":\"C minor\",\"meter\":\"4/4\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"analyze_tones", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C minor\",\"meter\":\"4/4\",\"notes\":\"C4:q D4:e Eb4:e G4:h\",\"pickup\":\"0\",\"role\":\"melodic\",\"tone_overrides\":{\"2\":\"passing\"}},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"analyze_rhythm", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"rhythm\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"x:q x:q x:h\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"analyze_contour", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"contour\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"0 2 1 3\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"analyze_pickup", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"G3:q C4:q E4:q G4:q\",\"pickup\":\"1\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"analyze_accompaniment", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"C3:q E3:q G3:q E3:q\",\"pickup\":\"0\",\"role\":\"accompaniment\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"analyze_bad_harmony", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"harmony\":\"not a chord\",\"key\":\"C minor\",\"meter\":\"4/4\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 400, ""},
+    {"analyze_refused_notes", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":null,\"meter\":\"4/4\",\"notes\":\"zzz\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 400, ""},
+    {"analyze_refused_pickup", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"C4:q D4:q\",\"pickup\":\"9/4\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
+    {"to_c_0", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"meter\":\"4/4\",\"mode\":\"minor\"}", NULL, 200, "notes_text,ok"},
+    {"to_c_1", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 200, "notes_text,ok"},
+    {"to_c_2", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 3:q 5:q\",\"meter\":\"3/4\",\"mode\":\"major\",\"pickup\":\"1/2\"}", NULL, 200, "notes_text,ok"},
+    {"to_c_3", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 9:q\",\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 422, ""},
+    {"import_key", "POST", "/api/materials/motifs/import?key=D%20minor", NULL, "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00", 200, "analysis,key,key_found,meter,moved_from,notes_text,ok,pickup"},
+    {"import_nokey", "POST", "/api/materials/motifs/import", NULL, "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00", 200, "analysis,key,key_found,meter,moved_from,notes_text,ok,pickup"},
+    {"import_meter", "POST", "/api/materials/motifs/import?meter=3/4&key=G%20major", NULL, "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00", 200, "analysis,key,key_found,meter,moved_from,notes_text,ok,pickup"},
+    {"import_polyphonic", "POST", "/api/materials/motifs/import", NULL, "4d546864000000060000000101e04d54726b0000001500903e64009041648360803e000080410000ff2f00", 422, ""},
+    {"render_same", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"D minor\",\"role\":\"melodic\"}", NULL, 200, "musicxml,ok,playback"},
+    {"render_moved", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"G minor\",\"role\":\"melodic\"}", NULL, 200, "musicxml,ok,playback"},
+    {"render_pickup_tempo", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"1\",\"render_key\":\"D minor\",\"role\":\"melodic\",\"tempo\":90}", NULL, 200, "musicxml,ok,playback"},
+    {"render_harmony_features", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"features\":[{\"first\":0,\"label\":\"a\",\"last\":2}],\"form\":\"full\",\"harmony\":\"I V@2\",\"key\":\"C minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"C minor\",\"role\":\"melodic\"}", NULL, 200, "musicxml,ok,playback"},
+    {"render_rhythm", "POST", "/api/materials/render", "{\"degrees\":\"x:q x:q x:h\",\"form\":\"rhythm\",\"key\":\"C major\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"C major\",\"role\":\"melodic\"}", NULL, 200, "musicxml,ok,playback"},
+    {"render_accompaniment", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"D minor\",\"role\":\"accompaniment\"}", NULL, 200, "musicxml,ok,playback"},
+    {"render_bad_key", "POST", "/api/materials/render", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"form\":\"full\",\"key\":\"D minor\",\"meter\":\"4/4\",\"pickup\":\"0\",\"render_key\":\"H major\",\"role\":\"melodic\"}", NULL, 400, ""},
+    {"operations", "GET", "/api/materials/variant-operations", NULL, NULL, 200, "ok,operations"},
+    {"recognize", "POST", "/api/materials/recognize", "{\"source\":{\"item\":\"@source\",\"version\":1},\"target\":{\"item\":\"@target\",\"version\":1}}", NULL, 200, "chain,changed,derivation,distance,found,kept,ok,remoteness"},
+    {"recognize_self", "POST", "/api/materials/recognize", "{\"source\":{\"item\":\"@source\",\"version\":1},\"target\":{\"item\":\"@source\",\"version\":1}}", NULL, 200, "chain,changed,derivation,distance,found,kept,ok,remoteness"},
+    {"random_0", "POST", "/api/materials/motifs/random", "{\"count\":3,\"form\":\"full\",\"meter\":\"3/4\",\"mode\":\"minor\",\"seed\":5}", NULL, 200, "motives,ok,seed"},
+    {"random_1", "POST", "/api/materials/motifs/random", "{\"count\":1,\"form\":\"rhythm\",\"key\":\"D major\",\"meter\":\"4/4\",\"mode\":\"major\",\"seed\":2}", NULL, 200, "motives,ok,seed"},
+    {"random_3", "POST", "/api/materials/motifs/random", "{\"count\":1,\"form\":\"contour\",\"meter\":\"4/4\",\"mode\":\"major\",\"role\":\"accompaniment\",\"seed\":9}", NULL, 200, "motives,ok,seed"},
+    {"random_4", "POST", "/api/materials/motifs/random", "{\"meter\":\"four\",\"mode\":\"major\"}", NULL, 400, ""},
+    {"random_5", "POST", "/api/materials/motifs/random", "{\"meter\":\"4/4\",\"mode\":\"dorian\"}", NULL, 400, ""},
+    {"random_6", "POST", "/api/materials/motifs/random", "{\"count\":99,\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 400, ""},
+    {"status", "GET", "/api/composer/status", NULL, NULL, 200, "available,ok,version"},
+};
+
+/* True when answer has every member of the comma list. */
+static bool has_members(const cJSON *answer, const char *members) {
+  char list[160];
+  snprintf(list, sizeof(list), "%s", members);
+  for (char *name = strtok(list, ","); name; name = strtok(NULL, ",")) {
+    if (!cJSON_HasObjectItem(answer, name)) {
+      return false;
+    }
   }
-  cJSON *got_rest = cJSON_Duplicate(answer, 1);
-  cJSON *want_rest = cJSON_Duplicate(expected, 1);
-  cJSON_DeleteItemFromObjectCaseSensitive(got_rest, "playback");
-  cJSON_DeleteItemFromObjectCaseSensitive(want_rest, "playback");
-  bool same = cJSON_Compare(got_rest, want_rest, 1) && playback_matches_capture(got_playback, want_playback);
-  cJSON_Delete(got_rest);
-  cJSON_Delete(want_rest);
-  return same;
+  return true;
 }
 
-/* Each request the Composer answered as a command at the start of P27 B6 (fixtures/composer/b5_replies.json, captured
-   before the routes moved) gets the same answer from the Composer API: a success is equal, a refusal has the same
-   status (its text came from the command's stderr and is the API's now). */
-static void test_replies_match_the_command(void) {
-  char *text = read_whole_file(URSATZ_GUI_TEST_COMPOSER_FIXTURES "/b5_replies.json");
-  cJSON *fixture = text ? cJSON_Parse(text) : NULL;
-  free(text);
-  check(fixture != NULL, "the captured replies are read");
-  if (!fixture) {
-    return;
-  }
+/* Each request in the table gets its status; a refusal has an error, a success the members its route documents. */
+static void test_replies(void) {
   char project[64] = "";
   first_project(project, sizeof(project));
-  char *source = saved_motif_item(project, "B5 source", string_of(fixture, "source_notes"));
-  char *target = saved_motif_item(project, "B5 target", string_of(fixture, "target_notes"));
+  char *source = saved_motif_item(project, "B5 source", kReplySourceNotes);
+  char *target = saved_motif_item(project, "B5 target", kReplyTargetNotes);
   check(source && target, "the motifs the recognize requests name are saved");
 
-  const cJSON *entry = NULL;
-  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(fixture, "cases")) {
-    const char *name = string_of(entry, "name");
-    const char *method = string_of(entry, "method");
-    const char *raw_hex = string_of(entry, "raw_hex");
-    const cJSON *body_item = cJSON_GetObjectItemCaseSensitive(entry, "body");
-    int expected_status = (int)number_of(entry, "status");
-    const cJSON *expected = cJSON_GetObjectItemCaseSensitive(entry, "reply");
+  for (size_t i = 0; i < sizeof(kReplyCases) / sizeof(kReplyCases[0]); i++) {
+    const ReplyCase *entry = &kReplyCases[i];
     char label[160];
-
     char *request = NULL;
-    if (cJSON_IsObject(body_item)) {
-      char *printed = cJSON_PrintUnformatted(body_item);
-      char *with_project = printed ? replace_all(printed, "@project", project) : NULL;
+    if (entry->body) {
+      char *with_project = replace_all(entry->body, "@project", project);
       char *with_source = with_project ? replace_all(with_project, "@source", source ? source : "") : NULL;
       request = with_source ? replace_all(with_source, "@target", target ? target : "") : NULL;
-      free(printed);
       free(with_project);
       free(with_source);
     }
     cJSON *answer = NULL;
     int status = 0;
-    if (raw_hex[0] != '\0') {
+    if (entry->raw_hex) {
       size_t size = 0;
-      unsigned char *bytes = hex_bytes(raw_hex, &size);
-      char *response = http_exchange(method, string_of(entry, "path"), "Content-Type: application/octet-stream\r\n", bytes, size);
+      unsigned char *bytes = hex_bytes(entry->raw_hex, &size);
+      char *response = http_exchange(entry->method, entry->path, "Content-Type: application/octet-stream\r\n", bytes, size);
       status = response && strncmp(response, "HTTP/1.1 ", 9) == 0 ? atoi(response + 9) : 0;
       answer = response ? cJSON_Parse(response_body(response)) : NULL;
       free(response);
       free(bytes);
     } else {
-      answer = json_exchange(method, string_of(entry, "path"), request, &status);
+      answer = json_exchange(entry->method, entry->path, request, &status);
     }
     free(request);
 
-    snprintf(label, sizeof(label), "%s answers status %d as the command did", name, expected_status);
-    check(status == expected_status, label);
-    if (expected_status >= 400) {
-      snprintf(label, sizeof(label), "%s refuses with a message", name);
+    snprintf(label, sizeof(label), "%s answers status %d", entry->name, entry->status);
+    check(status == entry->status, label);
+    if (entry->status >= 400) {
+      snprintf(label, sizeof(label), "%s refuses with a message", entry->name);
       check(!ok_true(answer) && string_of(answer, "error")[0] != '\0', label);
-    } else if (strncmp(name, "analyze_", 8) == 0) {
-      /* The saved motif holds the analysis, its degrees and the reason, as before. */
+    } else if (strncmp(entry->name, "analyze_", 8) == 0) {
       const cJSON *saved = saved_motif(string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "id"), 1);
-      cJSON *stored = cJSON_CreateObject();
-      const char *members[] = {"analysis", "degrees", "analysis_error"};
-      for (int i = 0; stored && i < 3; i++) {
-        cJSON_AddItemToObject(stored, members[i], cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(saved, members[i]), 1));
-      }
-      snprintf(label, sizeof(label), "%s stores the analysis the command gave", name);
-      check(stored && cJSON_Compare(stored, expected, 1), label);
-      cJSON_Delete(stored);
+      snprintf(label, sizeof(label), "%s stores the analysis members", entry->name);
+      check(saved && has_members(saved, entry->members), label);
     } else {
-      snprintf(label, sizeof(label), "%s is the reply the command gave", name);
-      check(strcmp(name, "status") == 0 ? members_equal(expected, answer) : reply_matches(answer, expected), label);
+      snprintf(label, sizeof(label), "%s answers the members its route documents", entry->name);
+      check(ok_true(answer) && has_members(answer, entry->members), label);
     }
     cJSON_Delete(answer);
   }
   free(source);
   free(target);
-  cJSON_Delete(fixture);
 }
 
 /* The mode and meter a seed draws and the cadence a section gets when none is chosen are the Composer's, and equal what
@@ -2416,7 +2428,7 @@ static void test_validation(void) {
 
 /* ---- the text export of motifs, themes and pieces (P31 B5) ------------------------------------------------------ */
 
-#ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
+#ifdef URSATZ_GUI_TEST_EXPORT_FIXTURES
 /* GET /api/materials/items/<id>/export<query>: the whole response (caller frees). */
 static char *export_response(const char *id, const char *query) {
   char path[256];
@@ -2424,12 +2436,10 @@ static char *export_response(const char *id, const char *query) {
   return http_exchange("GET", path, NULL, "", 0);
 }
 
-/* Copies a file of the Composer's capture b6_compose/<capture> into the folder of version 1 of item id, as a composed
- * version keeps it. */
-static bool install_capture(const char *id, const char *capture, const char *name) {
-  char from[700];
-  snprintf(from, sizeof(from), "%s/b6_compose/%s/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, capture, name);
-  char *bytes = read_whole_file(from);
+/* Copies fixtures/export/one-bar.musicxml (one part, one 4/4 measure, a whole-note C4) into the folder of version 1 of
+ * item id as name, as a composed version keeps its score. */
+static bool install_score(const char *id, const char *name) {
+  char *bytes = read_whole_file(URSATZ_GUI_TEST_EXPORT_FIXTURES "/one-bar.musicxml");
   char dir[300];
   snprintf(dir, sizeof(dir), "materials/items/%s/v1", id);
   MKDIR(dir);
@@ -2497,7 +2507,7 @@ static void test_material_export(void) {
   check(response_has_status(response, 400), "a version that is not a number is a 400");
   free(response);
 
-  /* A theme made from the capture's form, with its motif in the basic slot. */
+  /* A theme with a form and its motif in the basic slot. */
   char body[2048];
   snprintf(body, sizeof(body),
            "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\",\"meter\":\"4/4\","
@@ -2508,7 +2518,7 @@ static void test_material_export(void) {
   char *plain = create_item("theme", "Plain theme", project, body);
   check(composed && plain, "two themes with a slot motif are saved");
   if (composed && plain) {
-    check(install_capture(composed, "theme-v2", "theme.musicxml"), "the captured theme.musicxml is put in version 1");
+    check(install_score(composed, "theme.musicxml"), "the theme.musicxml is put in version 1");
     response = export_response(composed, "");
     text = response_body(response);
     check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v2: theme\n", 26) == 0 &&
@@ -2519,7 +2529,7 @@ static void test_material_export(void) {
     const char *slot_section = strstr(text, "\n## slot basic: Opening v1\n");
     check(theme_section && slot_section && theme_section < slot_section && strstr(theme_section, "\nm1") != NULL &&
               strstr(theme_section, "not composed") == NULL,
-          "the theme section holds the captured score and the slot motif follows as a section");
+          "the theme section holds the score and the slot motif follows as a section");
     free(response);
 
     response = export_response(plain, "");
@@ -2530,7 +2540,7 @@ static void test_material_export(void) {
     free(response);
   }
 
-  /* A piece made from the capture's structure, with the capture's loop and ending. */
+  /* A piece with a structure, a loop and an ending. */
   const char *piece_body =
       "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\",\"sections\":["
       "{\"id\":\"s0\",\"part\":\"intro\",\"letter\":\"I\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null},"
@@ -2539,8 +2549,8 @@ static void test_material_export(void) {
   char *piece = create_item("piece", "Composed piece", project, piece_body);
   check(piece != NULL, "a piece with a structure is saved");
   if (piece) {
-    check(install_capture(piece, "piece-v4", "loop.musicxml") && install_capture(piece, "piece-v4", "ending.musicxml"),
-          "the captured loop and ending are put in version 1");
+    check(install_score(piece, "loop.musicxml") && install_score(piece, "ending.musicxml"),
+          "the loop.musicxml and ending.musicxml are put in version 1");
     response = export_response(piece, "");
     text = response_body(response);
     check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v2: piece\n", 26) == 0 &&
@@ -2551,7 +2561,7 @@ static void test_material_export(void) {
     const char *loop = strstr(text, "\n## loop\n");
     const char *ending = strstr(text, "\n## ending\n");
     check(loop && ending && loop < ending && strstr(loop, "\nm1") != NULL && strstr(text, "not composed") == NULL,
-          "the loop and the ending hold the captured scores");
+          "the loop and the ending hold the scores");
     free(response);
   }
   free(motif);
@@ -2612,8 +2622,10 @@ int main(void) {
   test_refusal_paths();
   test_validation();
 #ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
-  test_replies_match_the_command();
+  test_replies();
   test_served_defaults_and_draws();
+#endif
+#ifdef URSATZ_GUI_TEST_EXPORT_FIXTURES
   test_material_export();
 #endif
 #ifndef _WIN32

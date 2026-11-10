@@ -58,10 +58,12 @@ ursatz_gui_add_test(subject_service test_subject_service.c ${CMAKE_CURRENT_BINAR
 # The test creates its own materials_<pid>/, subjects_<pid>/ and pieces/ in its working directory.
 
 ursatz_gui_add_test(materials_route test_materials_route.c ${CMAKE_CURRENT_BINARY_DIR}/materials_route)
-# The test creates materials/, subjects/ and pieces/ in its own working directory and reads the replies the Composer
-# gave as a command (fixtures/composer).
+# The test creates materials/, subjects/ and pieces/ in its own working directory. It reads the GUI-computed defaults
+# (fixtures/composer/b11_captures.json), the motif playback captures (fixtures/playback) and the one-bar score the export
+# test installs as a composed version's score (fixtures/export).
 target_compile_definitions(test_materials_route PRIVATE
   URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
+  URSATZ_GUI_TEST_EXPORT_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/export"
   URSATZ_GUI_TEST_PLAYBACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/playback"
 )
 
