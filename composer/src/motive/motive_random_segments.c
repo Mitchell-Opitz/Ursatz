@@ -234,7 +234,8 @@ static bool draw_layout(const Setup *setup, FillRng *rng, Layout *layout, Featur
     }
     /* The feature is drawn with equal weight; one that cannot fit the cell in this shape (a dotted figure in a cell that
        must end on a beat) gives way to the next, so the shape's odds hold. */
-    Feature feature = (Feature)fill_rng_below(rng, FEATURE_KINDS);
+    static const unsigned long feature_weights[FEATURE_KINDS] = {1, 1, 1};
+    Feature feature = (Feature)pick_weighted(rng, feature_weights, FEATURE_KINDS);
     Cell a;
     size_t tried = 0;
     while (tried < FEATURE_KINDS && !draw_cell_a(rng, a_length, feature, shape == SHAPE_REPEAT, &a)) {
@@ -314,13 +315,13 @@ static bool set_frame(const AnalysisKey *key, const Layout *layout, Place *place
 
 /* The next rung of a walk on the chord tones: one rung most often, two now and then, and a move of two or more comes back. */
 static long next_rung(FillRng *rng, long rung, int *step_back) {
-    static const int moves[] = {1, 1, 1, 1, 1, 1, 2, 2};
+    static const unsigned long move_weights[] = {6, 2}; /* a rung of one, a rung of two */
     int move;
     if (*step_back != 0) {
         move = *step_back;
         *step_back = 0;
     } else {
-        int size = moves[fill_rng_below(rng, sizeof(moves) / sizeof(moves[0]))];
+        int size = 1 + (int)pick_weighted(rng, move_weights, 2);
         move = fill_rng_below(rng, 2) == 0 ? size : -size;
         if (size >= BIG_LEAP_RUNGS) {
             *step_back = move > 0 ? -1 : 1;
@@ -476,7 +477,8 @@ static bool draw_decorations(const AnalysisKey *key, const Layout *layout, FillR
         int degree = layout->plan.degrees[place->segment[i]];
         long shift = chord_shift(degree);
         long before = place->position[i - 1];
-        size_t kind = (size_t)fill_rng_below(rng, DECORATION_KINDS + 1);
+        static const unsigned long decoration_weights[DECORATION_KINDS + 1] = {1, 1, 1, 1, 1};
+        size_t kind = pick_weighted(rng, decoration_weights, DECORATION_KINDS + 1);
         long options[2 * OFF_FRAME_REACH + 1];
         size_t option_count = 0;
         if (kind > 0) {
