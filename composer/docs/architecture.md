@@ -13,8 +13,8 @@ What the Ursatz-Composer is, how its parts fit and where each is documented. Bac
 
 | Direction | Repo | How it is pinned |
 |---|---|---|
-| Below | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) (kernel and frameworks) | git submodule `external/ursatz`, linked PRIVATE |
-| Below | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md) (hearing, styles, corpus) | git submodule `external/ursatz-analyzer`, linked PRIVATE |
+| Below | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) (kernel and frameworks) | git submodule `external/ursatz` (`49a5523`), linked PRIVATE |
+| Below | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md) (hearing, styles, corpus) | git submodule `external/ursatz-analyzer` (`4374060`), linked PRIVATE |
 | Vendored | cJSON 1.7.18 | `external/cjson`, added before the submodules |
 | Above | [Ursatz-GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI/blob/main/docs/architecture.md) | links `ursatz_composer` and includes only `composer_api.h` |
 

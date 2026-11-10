@@ -43,6 +43,10 @@ the caller's, else the input's (a key signature with a major or minor mode, or `
 inferred when the pitches settle on one key, and is left out when they do not. A key that was inferred is not
 written, since reading the motive infers it again.
 
+### Triplet values in the texts
+
+The notes, degrees and rhythm texts write a duration as a letter (`w`, `h`, `q`, `e`, `s`, `t`) and up to two dots, or a letter and a `3` (R-442): a triplet value, two thirds of the plain one, so `h3` is 1/3, `q3` is 1/6, `e3` is 1/12, `s3` is 1/24 and `t3` is 1/48. `x:e3 x:e3 x:e3 x:q` is three 1/12 notes and a quarter. A triplet value takes no dots: `q.3` is refused with "'q.3' is not a duration; a triplet value takes no dots". The writers use triplet values only for a time whose denominator is divisible by 3 (a note of 1/4 plus 1/12 is `h3`), so the text of every motive without triplets is the same as before. `motive analysis` names a triplet duration the same way (`q3`). See [cli-motive.md](cli-motive.md).
+
 ### Motive analysis
 
 `motive_analysis_to_json` writes the motive and its analysis together, as an object with a `motive` member (the
