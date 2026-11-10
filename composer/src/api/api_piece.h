@@ -44,12 +44,13 @@
  */
 size_t api_piece_version_names(const FormSpec *form, const char **names, const char **labels, size_t capacity);
 
-/* The form every piece is: the game loop, whose sections the piece request gives (forms/game-loop.json). */
+/* The form of a version 1 piece request: the game loop, whose sections the request gives (forms/game-loop.json). */
 #define API_PIECE_FORM "game-loop"
 
 /* The piece request, read: the request of the form, the brief, every motive and theme plan. */
 typedef struct {
-    PieceRequest request; /* form API_PIECE_FORM, its sections in `sections` */
+    PieceRequest request; /* its form is form->name; the sections of a form that takes them from the request are in `sections` */
+    FormSpec *form;       /* owned: the form the request names (API_PIECE_FORM for schema version 1) */
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS + 1];
     const cJSON *motive_json[PIECE_STRUCTURE_MAX_SECTIONS + 1]; /* a motif fill's own motive */
     const cJSON *forms_json[PIECE_STRUCTURE_MAX_SECTIONS + 1];  /* a motif fill's saved forms */
