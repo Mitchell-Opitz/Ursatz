@@ -1,0 +1,9 @@
+{
+ "schema": "ursatz-piece-request",
+ "schema_version": 2,
+ "form": "rounded-binary",
+ "key": "C",
+ "mode": "major",
+ "meter": "4/4",
+ "motive": null
+}

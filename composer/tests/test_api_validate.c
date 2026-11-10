@@ -209,8 +209,26 @@ static void test_preferences(void) {
     expect_valid(THEME("one-motive.json"), fine, 1);
 }
 
+/* A piece request of a form with sizes comes back with the size it chose, and no section defaults (P45 B2). */
+static void test_piece_of_a_form(void) {
+    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/piece/rounded-binary.json", NULL);
+    ComposerResponse response;
+    ComposerStatus status = composer_api_validate("piece", text, &response);
+    assert(status == COMPOSER_OK && response.json);
+    free(text);
+    cJSON *document = cJSON_Parse(response.json);
+    const cJSON *request = cJSON_GetObjectItemCaseSensitive(document, "request");
+    assert(request);
+    assert(cJSON_GetObjectItemCaseSensitive(request, "bars") && cJSON_GetObjectItemCaseSensitive(request, "bars")->valuedouble == 16);
+    assert(cJSON_GetObjectItemCaseSensitive(request, "count") && cJSON_GetObjectItemCaseSensitive(request, "count")->valuedouble == 0);
+    assert(!cJSON_GetObjectItemCaseSensitive(request, "sections"));
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+}
+
 int main(void) {
     test_valid();
+    test_piece_of_a_form();
     test_plan_refusals();
     test_chord_refusals();
     test_preferences();

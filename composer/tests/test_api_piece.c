@@ -789,6 +789,222 @@ static void test_regenerate_theme_harmony(void) {
     }
 }
 
+/* --- a piece of any form (schema version 2, B2 of P45) ------------------------------------------------- */
+
+/* The piece request fixture with the members replaced: {name, JSON text}, a NULL text removing the member. */
+static cJSON *form_piece(const char *fixture, const char *plan, const char *const edits[][2], size_t count) {
+    cJSON *piece = piece_fixture(fixture, plan);
+    for (size_t i = 0; i < count; i++) {
+        cJSON_DeleteItemFromObjectCaseSensitive(piece, edits[i][0]);
+        cJSON *item = edits[i][1] ? cJSON_Parse(edits[i][1]) : NULL;
+        assert(!edits[i][1] || (item && cJSON_AddItemToObject(piece, edits[i][0], item)));
+    }
+    return piece;
+}
+
+/* The API request of a piece of any form at seed 1, with the members of the piece request replaced. */
+static char *form_request(const char *fixture, const char *plan, const char *const edits[][2], size_t count, bool midi) {
+    cJSON *request = api_request(form_piece(fixture, plan, edits, count), 1);
+    assert(!midi || cJSON_AddBoolToObject(request, "midi", true));
+    return print(request);
+}
+
+static cJSON *composed_document(const char *printed, ComposerResponse *response) {
+    ComposerStatus status = composer_api_piece(printed, NULL, response);
+    if (status != COMPOSER_OK) {
+        fprintf(stderr, "any form: %s: %s\n", composer_status_name(status), response->error.message);
+    }
+    assert(status == COMPOSER_OK);
+    cJSON *document = cJSON_Parse(response->json);
+    assert(document);
+    return document;
+}
+
+/* The document holds the one version "piece", with the sections of ids and roles. */
+static void expect_one_version(const cJSON *document, const char *const *ids, const char *const *roles, size_t count) {
+    const cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
+    const cJSON *plans = cJSON_GetObjectItemCaseSensitive(document, "plans");
+    assert(cJSON_GetArraySize(versions) == 1 && cJSON_GetObjectItemCaseSensitive(versions, "piece"));
+    assert(cJSON_GetArraySize(plans) == 1 && cJSON_GetObjectItemCaseSensitive(plans, "piece"));
+    assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(document, "loop")));
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(versions, "piece"), "sections");
+    assert(cJSON_GetArraySize(sections) == (int)count);
+    for (size_t i = 0; i < count; i++) {
+        const cJSON *row = cJSON_GetArrayItem(sections, (int)i);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(row, "id")->valuestring, ids[i]) == 0);
+        if (roles) {
+            assert(strcmp(cJSON_GetObjectItemCaseSensitive(row, "role")->valuestring, roles[i]) == 0);
+        }
+        assert(cJSON_GetObjectItemCaseSensitive(row, "beats")->valuedouble > 0);
+    }
+}
+
+static void test_composed_forms(char **rounded_plan) {
+    static const char *const RB_IDS[] = {"A", "B", "A'"};
+    static const char *const RB_ROLES[] = {"theme", "contrast", "return"};
+    static const char *const VAR_IDS[] = {"theme", "variation 1", "variation 2", "variation 3"};
+    ComposerResponse response;
+    ComposerResponse again;
+    /* Rounded binary: one version, its three sections, a MIDI file, and the same plan from the same request. */
+    char *printed = form_request("rounded-binary.json", NULL, NULL, 0, true);
+    cJSON *document = composed_document(printed, &response);
+    expect_one_version(document, RB_IDS, RB_ROLES, 3);
+    assert(response.midi && response.midi_size > 4 && memcmp(response.midi, "MThd", 4) == 0);
+    cJSON_Delete(composed_document(printed, &again));
+    assert(response.plan_json && again.plan_json && strcmp(response.plan_json, again.plan_json) == 0);
+    write_pair("piece", "rounded-binary", printed, &response);
+    *rounded_plan = strdup(response.plan_json);
+    assert(*rounded_plan);
+    cJSON_Delete(document);
+    composer_response_destroy(&again);
+    composer_response_destroy(&response);
+    free(printed);
+    /* Variations: the theme and its three variations. */
+    printed = form_request("variations.json", NULL, NULL, 0, false);
+    document = composed_document(printed, &response);
+    expect_one_version(document, VAR_IDS, NULL, 4);
+    write_pair("piece", "variations", printed, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+    /* A modulating rounded binary of 24 bars in A minor, 3/4 (R-429: 10 of 10 seeds compose). */
+    static const char *const EDITS[][2] = {{"key", "\"A\""}, {"mode", "\"minor\""}, {"meter", "\"3/4\""}, {"bars", "24"}, {"modulate", "true"}};
+    printed = form_request("rounded-binary.json", NULL, EDITS, 5, false);
+    document = composed_document(printed, &response);
+    expect_one_version(document, RB_IDS, RB_ROLES, 3);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+}
+
+/* Regenerating a section of a rounded binary keeps the others; the variations of a section hold the one version. */
+static void test_edited_forms(const char *rounded_plan) {
+    ComposerResponse response;
+    cJSON *request = api_request(piece_fixture("rounded-binary.json", NULL), 1);
+    add_edit(request, rounded_plan, "B", "melody");
+    char *printed = print(request);
+    cJSON *document = composed_document(printed, &response);
+    const cJSON *sections =
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "piece"),
+                                         "sections");
+    assert(cJSON_GetArraySize(sections) == 3);
+    for (int i = 0; i < 3; i++) {
+        const cJSON *row = cJSON_GetArrayItem(sections, i);
+        const cJSON *in_scope = cJSON_GetObjectItemCaseSensitive(row, "in_scope");
+        /* Only B was written again: the sections A and A' were kept. */
+        assert(i == 1 ? in_scope == NULL : (in_scope && cJSON_IsFalse(in_scope)));
+    }
+    write_pair("piece", "rounded-binary-regenerate", printed, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+
+    request = api_request(piece_fixture("rounded-binary.json", NULL), 1);
+    cJSON *variations = cJSON_CreateObject();
+    cJSON *lanes = cJSON_CreateArray();
+    assert(variations && lanes && cJSON_AddItemToObject(request, "from", cJSON_Parse(rounded_plan)));
+    assert(cJSON_AddItemToArray(lanes, cJSON_CreateString("melody")) && cJSON_AddItemToObject(variations, "lanes", lanes));
+    assert(cJSON_AddStringToObject(variations, "section", "B") && cJSON_AddNumberToObject(variations, "count", 2));
+    assert(cJSON_AddItemToObject(request, "variations", variations));
+    printed = print(request);
+    ComposerStatus status = composer_api_piece_variations(printed, NULL, &response);
+    if (status != COMPOSER_OK) {
+        fprintf(stderr, "variations of a rounded binary: %s: %s\n", composer_status_name(status), response.error.message);
+    }
+    assert(status == COMPOSER_OK && response.json);
+    document = cJSON_Parse(response.json);
+    assert(document);
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(document, "variations");
+    assert(cJSON_GetArraySize(list) == 2);
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, list) {
+        assert(cJSON_GetObjectItemCaseSensitive(entry, "piece") && !cJSON_GetObjectItemCaseSensitive(entry, "loop"));
+        assert(!cJSON_GetObjectItemCaseSensitive(entry, "loop_markers"));
+        assert(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(entry, "piece"), "plan")));
+    }
+    write_pair("piece_variations", "rounded-binary", printed, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+}
+
+/* The game loop as a version 2 request with "form": "game-loop" answers as the version 1 request does. */
+static void test_game_loop_version_two(const char *plan) {
+    ComposerResponse first;
+    ComposerResponse second;
+    cJSON *request = api_request(piece_fixture("loop-and-ending.json", plan), 1);
+    assert(cJSON_AddBoolToObject(request, "midi", true) && cJSON_AddBoolToObject(request, "musicxml", true));
+    char *printed = print(request);
+    cJSON_Delete(composed_document(printed, &first));
+    free(printed);
+    static const char *const EDITS[][2] = {{"schema_version", "2"}, {"form", "\"game-loop\""}};
+    request = api_request(form_piece("loop-and-ending.json", plan, EDITS, 2), 1);
+    assert(cJSON_AddBoolToObject(request, "midi", true) && cJSON_AddBoolToObject(request, "musicxml", true));
+    printed = print(request);
+    cJSON_Delete(composed_document(printed, &second));
+    free(printed);
+    assert(strcmp(first.json, second.json) == 0);
+    assert(strcmp(first.plan_json, second.plan_json) == 0);
+    assert(first.midi_size == second.midi_size && memcmp(first.midi, second.midi, first.midi_size) == 0);
+    assert(strcmp(first.musicxml, second.musicxml) == 0);
+    composer_response_destroy(&first);
+    composer_response_destroy(&second);
+}
+
+static void expect_form_refusal(const char *fixture, const char *plan, const char *const edits[][2], size_t count, const char *path,
+                                const char *message) {
+    char *text = form_request(fixture, plan, edits, count, false);
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, path, message);
+    free(text);
+}
+
+/* What a piece request of any form refuses, with the paths; none of it composes anything. */
+static void test_refused_forms(const char *plan) {
+    static const char *const NO_FORM[][2] = {{"form", NULL}};
+    static const char *const UNKNOWN[][2] = {{"form", "\"sonata\""}};
+    static const char *const VERSION_ONE[][2] = {{"schema_version", "1"}};
+    static const char *const SECTIONS[][2] = {{"sections", "[]"}};
+    static const char *const VOICING[][2] = {{"voicing", "\"satb\""}};
+    static const char *const BARS[][2] = {{"bars", "20"}};
+    static const char *const COUNT[][2] = {{"count", "9"}};
+    static const char *const GAME_LOOP_BARS[][2] = {{"schema_version", "2"}, {"form", "\"game-loop\""}, {"bars", "4"}};
+    static const char *const GAME_LOOP_MODULATE[][2] = {{"schema_version", "2"}, {"form", "\"game-loop\""}, {"modulate", "true"}};
+    expect_form_refusal("rounded-binary.json", NULL, NO_FORM, 1, "/request/form", "the request needs \"form\"");
+    expect_form_refusal("rounded-binary.json", NULL, UNKNOWN, 1, "/request/form", "unknown form 'sonata'");
+    expect_form_refusal("rounded-binary.json", NULL, VERSION_ONE, 1, "/request/form", "schema_version 1 is the game loop");
+    expect_form_refusal("rounded-binary.json", NULL, SECTIONS, 1, "/request/sections", "takes its sections from its form");
+    expect_form_refusal("rounded-binary.json", NULL, VOICING, 1, "/request/voicing", "no voicing");
+    expect_form_refusal("rounded-binary.json", NULL, BARS, 1, "/request/bars", "has no size of 20 bars; it has 16, 24 bars");
+    expect_form_refusal("rounded-binary.json", NULL, COUNT, 1, "/request/count", "has no size of count 9");
+    expect_form_refusal("loop-and-ending.json", plan, GAME_LOOP_BARS, 3, "/request/bars", "takes its sections from the request");
+    expect_form_refusal("loop-and-ending.json", plan, GAME_LOOP_MODULATE, 3, "/request/modulate", "takes its sections from the request");
+    /* The ending version's MusicXML of a form that has none. */
+    cJSON *request = api_request(piece_fixture("rounded-binary.json", NULL), 1);
+    assert(cJSON_AddBoolToObject(request, "ending_musicxml", true));
+    char *text = print(request);
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/ending_musicxml", "the rounded-binary form has no ending version");
+    free(text);
+}
+
+/* The section of a regenerate must be one the plan has. */
+static void test_refused_form_edit(const char *rounded_plan) {
+    cJSON *request = api_request(piece_fixture("rounded-binary.json", NULL), 1);
+    add_edit(request, rounded_plan, "C", "melody");
+    char *text = print(request);
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/regenerate/section", "the plan has no section 'C'");
+    free(text);
+}
+
+/* Pieces of the other forms: composed, written again in a section, varied, and the refusals that need a plan. */
+static void test_any_form(const char *plan) {
+    char *rounded_plan = NULL;
+    test_composed_forms(&rounded_plan);
+    test_edited_forms(rounded_plan);
+    test_game_loop_version_two(plan);
+    test_refused_form_edit(rounded_plan);
+    free(rounded_plan);
+}
+
 /*
  * With the argument "quick" only the cancel at the first step and the refused requests run, which stop before a piece is
  * heard: the valgrind run uses it, because hearing a piece leaks in the Analyzer's make_kernel_window (notes.md).
@@ -802,6 +1018,7 @@ int main(int argc, char **argv) {
         loop_plan_of_theme_fill = strdup(plan);
         test_cancel(plan, true);
         test_refused(plan);
+        test_refused_forms(plan);
     } else {
         test_snapshots(plan);
         test_variations(plan);
@@ -812,6 +1029,7 @@ int main(int argc, char **argv) {
         test_cancel_edit(plan);
         test_refused(plan);
         test_refused_edits(plan);
+        test_any_form(plan);
     }
     free(loop_plan_of_theme_fill);
     free(plan);
