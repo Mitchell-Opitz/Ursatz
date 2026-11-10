@@ -582,7 +582,7 @@ static void test_bodies(const Items *m) {
       {"an unknown part", "[{\"id\":\"s0\",\"part\":\"coda\",\"beats\":8}]"},
       {"no beats", "[{\"id\":\"s0\",\"part\":\"body\"}]"},
       {"zero beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":0}]"},
-      {"too many beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":2049}]"},
+      {"too many beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":4097}]"},
       {"half a beat", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":2.5}]"},
       {"a pickup that is no number", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"x\"}]"},
       {"an unknown fill kind", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"bogus\"}}]"},
@@ -772,7 +772,8 @@ static void test_compose(const Items *m) {
 
   /* The request. */
   cJSON *request = last_request();
-  check(strcmp(string_of(request, "schema"), "ursatz-piece-request") == 0 && number_of(request, "schema_version") == 1,
+  check(strcmp(string_of(request, "schema"), "ursatz-piece-request") == 0 && number_of(request, "schema_version") == 2 &&
+            strcmp(string_of(request, "form"), "game-loop") == 0,
         "the request has the piece request schema");
   check(strcmp(string_of(request, "key"), "D") == 0 && strcmp(string_of(request, "mode"), "minor") == 0 &&
             strcmp(string_of(request, "meter"), "4/4") == 0 && number_of(request, "tempo") == 96,

@@ -1078,13 +1078,12 @@ static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, s
 
 /* --- piece bodies -------------------------------------------------------- */
 
-static const char *const kPieceParts[] = {"intro", "body", "turnaround", "ending", NULL};
 /* The members a placeholder piece (structure null, a string, an array or an object without sections) does not have. */
 static const char *const kPieceNewMembers[] = {"motive", "pool",  "accompaniment", "brief", "style_weight", "without",
                                                "tempo",  "check", "seed",          "result", NULL};
 
 #define PIECE_SECTIONS_MAX 32
-#define PIECE_BEATS_MAX 2048
+#define PIECE_ROLES_MAX 8
 #define PIECE_ID_MAX 15
 #define PIECE_LETTER_MAX 8
 #define PIECE_TEXT_MAX 1024
@@ -1094,7 +1093,8 @@ static const char *const kPieceNewMembers[] = {"motive", "pool",  "accompaniment
 /* True when the piece is a placeholder: no new member and a structure that is not an object with a list of sections. */
 static bool piece_is_placeholder(const cJSON *piece) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (cJSON_IsObject(structure) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections"))) {
+    if (cJSON_IsObject(structure) && (cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections")) ||
+                                      cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "form")))) {
         return false;
     }
     for (const char *const *name = kPieceNewMembers; *name; name++) {
@@ -1158,12 +1158,21 @@ static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *erro
     return URSATZ_GUI_MATERIAL_OK;
 }
 
-static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, char *error, size_t error_size) {
-    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(structure, "sections");
-    if (!cJSON_IsObject(structure) || !cJSON_IsArray(sections)) {
-        return invalid_body(error, error_size, "a piece structure needs key, mode, meter and sections");
+/* The words of a form's list (roles or sizes members) joined by ", ": member (value or label) of each entry. */
+static void join_members(const cJSON *list, const char *member, char *out, size_t out_size) {
+    size_t used = 0;
+    out[0] = '\0';
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, list) {
+        const char *text = ursatz_gui_json_string(entry, member);
+        if (text && used + strlen(text) + 3 < out_size) {
+            used += (size_t)snprintf(out + used, out_size - used, "%s%s", used ? ", " : "", text);
+        }
     }
-    /* Key, mode and meter are the Composer's words (R-276): a save keeps their type and size. */
+}
+
+/* The key, mode and meter of a structure: the Composer's words (R-276), a save keeps their type and size. */
+static UrsatzGuiMaterialResult validate_piece_words(const cJSON *structure, char *error, size_t error_size) {
     static const char *const words[] = {"key", "mode", "meter", NULL};
     for (const char *const *word = words; *word; word++) {
         const cJSON *value = cJSON_GetObjectItemCaseSensitive(structure, *word);
@@ -1171,41 +1180,74 @@ static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, 
             return invalid_body(error, error_size, "piece key, mode and meter must be text");
         }
     }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/* A form whose sections are the request's own (the game loop): each part is one of the form's roles, in their order,
+ * with every required role present. */
+static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, const cJSON *form, char *error,
+                                                       size_t error_size) {
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    const cJSON *roles = cJSON_GetObjectItemCaseSensitive(form, "roles");
+    int role_count = cJSON_GetArraySize(roles);
+    if (!cJSON_IsArray(sections)) {
+        return invalid_body(error, error_size, "a piece structure needs key, mode, meter and sections");
+    }
+    if (role_count < 1 || role_count > PIECE_ROLES_MAX) {
+        return invalid_body(error, error_size, "the Composer gave no roles for this form");
+    }
+    char values[160];
+    char labels[160];
+    join_members(roles, "value", values, sizeof(values));
+    join_members(roles, "label", labels, sizeof(labels));
     int count = cJSON_GetArraySize(sections);
     if (count < 1 || count > PIECE_SECTIONS_MAX) {
         return invalid_body(error, error_size, "a piece has 1 to 32 sections");
     }
+    double beats_max = ursatz_gui_composer_limit("piece_beats");
     int last_part = -1;
-    bool has_body = false;
+    bool present[PIECE_ROLES_MAX] = {false};
     const cJSON *section = NULL;
     cJSON_ArrayForEach(section, sections) {
         const cJSON *id = cJSON_GetObjectItemCaseSensitive(section, "id");
         const cJSON *part = cJSON_GetObjectItemCaseSensitive(section, "part");
         const cJSON *letter = cJSON_GetObjectItemCaseSensitive(section, "letter");
         const cJSON *beats = cJSON_GetObjectItemCaseSensitive(section, "beats");
-        if (!cJSON_IsObject(section) || !cJSON_IsString(id) || !piece_section_id_ok(id->valuestring) || !in_set(part, kPieceParts)) {
-            return invalid_body(error, error_size, "each section needs an id like s0 or end and a part of intro, body, turnaround or ending");
+        int part_index = -1;
+        int index = 0;
+        const cJSON *role = NULL;
+        cJSON_ArrayForEach(role, roles) {
+            const char *value = ursatz_gui_json_string(role, "value");
+            if (cJSON_IsString(part) && value && strcmp(value, part->valuestring) == 0) {
+                part_index = index;
+            }
+            index++;
+        }
+        if (!cJSON_IsObject(section) || !cJSON_IsString(id) || !piece_section_id_ok(id->valuestring) || part_index < 0) {
+            char message[320];
+            snprintf(message, sizeof(message), "each section needs an id like s0 or end and a part of %s", values);
+            return invalid_body(error, error_size, message);
         }
         for (const cJSON *earlier = sections->child; earlier != section; earlier = earlier->next) {
             if (strcmp(cJSON_GetObjectItemCaseSensitive(earlier, "id")->valuestring, id->valuestring) == 0) {
                 return invalid_body(error, error_size, "each section id may be used once");
             }
         }
-        int part_index = 0;
-        while (strcmp(kPieceParts[part_index], part->valuestring) != 0) {
-            part_index++;
-        }
         if (part_index < last_part) {
-            return invalid_body(error, error_size, "sections must come in the order intro, body, turnaround, ending");
+            char message[320];
+            snprintf(message, sizeof(message), "sections must come in the order %s", labels);
+            return invalid_body(error, error_size, message);
         }
         last_part = part_index;
-        has_body = has_body || part_index == 1;
+        present[part_index] = true;
         if (!is_absent_or_null(section, "letter") &&
             (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' || utf8_length(letter->valuestring) > PIECE_LETTER_MAX)) {
             return invalid_body(error, error_size, "a section letter must be 1 to 8 characters");
         }
-        if (!is_whole_number(beats, 1) || beats->valuedouble > PIECE_BEATS_MAX) {
-            return invalid_body(error, error_size, "a section has 1 to 2048 beats");
+        if (!is_whole_number(beats, 1) || (beats_max >= 1 && beats->valuedouble > beats_max)) {
+            char message[96];
+            snprintf(message, sizeof(message), "a section has 1 to %.0f beats", beats_max);
+            return invalid_body(error, error_size, message);
         }
         const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(section, "pickup");
         if (!is_absent_or_null(section, "pickup") && (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false))) {
@@ -1220,7 +1262,91 @@ static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, 
             return filled;
         }
     }
-    return has_body ? URSATZ_GUI_MATERIAL_OK : invalid_body(error, error_size, "a piece needs at least one body section");
+    int index = 0;
+    const cJSON *role = NULL;
+    cJSON_ArrayForEach(role, roles) {
+        const cJSON *required = cJSON_GetObjectItemCaseSensitive(role, "required");
+        if (cJSON_IsTrue(required) && !present[index]) {
+            char message[160];
+            snprintf(message, sizeof(message), "a piece needs at least one %s section", ursatz_gui_json_string(role, "label"));
+            return invalid_body(error, error_size, message);
+        }
+        index++;
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/* A form with sizes: no sections, bars and count (absent is 0) that one of the form's sizes has, 0 and 0 being the
+ * default, and modulate only where the form allows it. */
+static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const cJSON *form, char *error,
+                                                   size_t error_size) {
+    const char *label = ursatz_gui_json_string(form, "label");
+    char message[256];
+    if (!is_absent_or_null(structure, "sections")) {
+        snprintf(message, sizeof(message), "a %s piece has no sections of its own", label ? label : "sized");
+        return invalid_body(error, error_size, message);
+    }
+    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
+    const cJSON *count = cJSON_GetObjectItemCaseSensitive(structure, "count");
+    if ((!is_absent_or_null(structure, "bars") && !is_whole_number(bars, 0)) ||
+        (!is_absent_or_null(structure, "count") && !is_whole_number(count, 0))) {
+        return invalid_body(error, error_size, "piece bars and count must be whole numbers");
+    }
+    double want_bars = cJSON_IsNumber(bars) ? bars->valuedouble : 0;
+    double want_count = cJSON_IsNumber(count) ? count->valuedouble : 0;
+    if (want_bars != 0 || want_count != 0) {
+        bool found = false;
+        const cJSON *size = NULL;
+        cJSON_ArrayForEach(size, cJSON_GetObjectItemCaseSensitive(form, "sizes")) {
+            const cJSON *size_bars = cJSON_GetObjectItemCaseSensitive(size, "bars");
+            const cJSON *size_count = cJSON_GetObjectItemCaseSensitive(size, "count");
+            found = found || (cJSON_IsNumber(size_bars) && cJSON_IsNumber(size_count) &&
+                              size_bars->valuedouble == want_bars && size_count->valuedouble == want_count);
+        }
+        if (!found) {
+            snprintf(message, sizeof(message), "a %s piece has no size of %.0f bars and %.0f count", label ? label : "sized",
+                     want_bars, want_count);
+            return invalid_body(error, error_size, message);
+        }
+    }
+    const cJSON *modulate = cJSON_GetObjectItemCaseSensitive(structure, "modulate");
+    if (!is_absent_or_null(structure, "modulate")) {
+        const cJSON *allowed = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(form, "settings"), "modulate");
+        if (!cJSON_IsBool(modulate)) {
+            return invalid_body(error, error_size, "piece modulate must be true or false");
+        }
+        if (cJSON_IsTrue(modulate) && !cJSON_IsTrue(allowed)) {
+            snprintf(message, sizeof(message), "a %s piece does not modulate", label ? label : "sized");
+            return invalid_body(error, error_size, message);
+        }
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/* structure.form names a form of the Composer (absent is game-loop); the form says whether the structure lists its
+ * own sections or is a size. */
+static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, char *error, size_t error_size) {
+    if (!cJSON_IsObject(structure)) {
+        return invalid_body(error, error_size, "a piece structure needs key, mode, meter and sections");
+    }
+    const cJSON *form_name = cJSON_GetObjectItemCaseSensitive(structure, "form");
+    if (!is_absent_or_null(structure, "form") && !cJSON_IsString(form_name)) {
+        return invalid_body(error, error_size, "a piece form must be text");
+    }
+    const char *name = cJSON_IsString(form_name) ? form_name->valuestring : "game-loop";
+    const cJSON *form = ursatz_gui_composer_form(name);
+    if (!form) {
+        return invalid_body(error, error_size, "a piece form must be one the Composer builds");
+    }
+    UrsatzGuiMaterialResult words = validate_piece_words(structure, error, error_size);
+    if (words != URSATZ_GUI_MATERIAL_OK) {
+        return words;
+    }
+    const char *sections = ursatz_gui_json_string(form, "sections");
+    if (sections && strcmp(sections, "request") == 0) {
+        return validate_piece_sections(structure, form, error, error_size);
+    }
+    return validate_piece_size(structure, form, error, error_size);
 }
 
 static UrsatzGuiMaterialResult validate_piece(const cJSON *piece, char *error, size_t error_size) {

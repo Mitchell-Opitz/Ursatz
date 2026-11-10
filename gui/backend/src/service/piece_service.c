@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "compose_common.h"
+#include "composer_client.h"
 #include "material_service.h"
 
 #define PATH_BYTES 800
@@ -136,14 +137,30 @@ static cJSON *section_json(const cJSON *section, cJSON *fill) {
     return object;
 }
 
-/* What the request needs from the piece, checked before anything is made. */
+/* The name of the form of a piece structure: structure.form, or game-loop for a piece saved before the forms. */
+static const char *structure_form(const cJSON *structure) {
+    const cJSON *form = cJSON_GetObjectItemCaseSensitive(structure, "form");
+    return cJSON_IsString(form) ? form->valuestring : "game-loop";
+}
+
+/* True when the form of the structure has sizes in place of the request's own sections. */
+static bool structure_sized(const cJSON *structure) {
+    const cJSON *form = ursatz_gui_composer_form(structure_form(structure));
+    const char *sections = ursatz_gui_json_string(form, "sections");
+    return form && sections && strcmp(sections, "request") != 0;
+}
+
+/* What the request needs from the piece, checked before anything is made. A form with sizes asks only key, mode and
+ * meter. */
 static bool composable(const cJSON *piece, bool has_brief, char *message, size_t message_size) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (!cJSON_IsObject(structure) || !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections")) ||
+    bool sized = cJSON_IsObject(structure) && structure_sized(structure);
+    if (!cJSON_IsObject(structure) || (!sized && !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections"))) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "key")) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "mode")) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "meter"))) {
-        ursatz_gui_copy_message(message, message_size, "the piece structure needs key, mode, meter and sections");
+        ursatz_gui_copy_message(message, message_size, sized ? "the piece structure needs key, mode and meter"
+                                                             : "the piece structure needs key, mode, meter and sections");
         return false;
     }
     if (strcmp(ursatz_gui_json_string(structure, "mode"), "style") == 0 && !has_brief) {
@@ -151,7 +168,8 @@ static bool composable(const cJSON *piece, bool has_brief, char *message, size_t
         return false;
     }
     const cJSON *section = NULL;
-    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(structure, "sections")) {
+    const cJSON *own_sections = sized ? NULL : cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    cJSON_ArrayForEach(section, own_sections) {
         const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
         if (cJSON_IsObject(fill) && strcmp(ursatz_gui_json_string(fill, "kind"), "motif") == 0 &&
             strcmp(ursatz_gui_json_string(fill, "into"), "hybrid") == 0 && !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(fill, "hybrid"))) {
@@ -172,6 +190,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
     const char *pool = cJSON_IsString(cJSON_GetObjectItemCaseSensitive(piece, "pool")) ? ursatz_gui_json_string(piece, "pool")
                                                                                        : "approved-and-unflagged";
+    bool sized = structure_sized(structure);
     cJSON *request = cJSON_CreateObject();
     cJSON *sections = cJSON_CreateArray();
     cJSON *derived_list = NULL;
@@ -184,7 +203,8 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
         result = URSATZ_GUI_THEME_ERR_FAILED;
     }
     const cJSON *section = NULL;
-    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(structure, "sections")) {
+    const cJSON *own_sections = sized ? NULL : cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    cJSON_ArrayForEach(section, own_sections) {
         if (result != URSATZ_GUI_THEME_OK) {
             break;
         }
@@ -198,7 +218,8 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
     }
 
     bool ok = result == URSATZ_GUI_THEME_OK && cJSON_AddStringToObject(request, "schema", "ursatz-piece-request") &&
-              cJSON_AddNumberToObject(request, "schema_version", 1) && ursatz_gui_json_add_copy_if(request, structure, "key") &&
+              cJSON_AddNumberToObject(request, "schema_version", 2) &&
+              cJSON_AddStringToObject(request, "form", structure_form(structure)) && ursatz_gui_json_add_copy_if(request, structure, "key") &&
               ursatz_gui_json_add_copy_if(request, structure, "mode") && ursatz_gui_json_add_copy_if(request, structure, "meter");
     const cJSON *motive_ref = cJSON_GetObjectItemCaseSensitive(piece, "motive");
     if (ok && cJSON_IsObject(motive_ref)) {
@@ -212,7 +233,13 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
     } else if (ok) {
         ok = cJSON_AddNullToObject(request, "motive") != NULL;
     }
-    if (ok) {
+    if (ok && sized) {
+        const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
+        const cJSON *count = cJSON_GetObjectItemCaseSensitive(structure, "count");
+        ok = cJSON_AddNumberToObject(request, "bars", cJSON_IsNumber(bars) ? bars->valuedouble : 0) &&
+             cJSON_AddNumberToObject(request, "count", cJSON_IsNumber(count) ? count->valuedouble : 0) &&
+             cJSON_AddBoolToObject(request, "modulate", cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(structure, "modulate")));
+    } else if (ok) {
         ok = ursatz_gui_json_attach(request, "sections", sections);
         sections = NULL;
     }
@@ -230,7 +257,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
             cJSON_Delete(pattern);
         }
     }
-    ok = ok && cJSON_AddNullToObject(request, "voicing") != NULL;
+    ok = ok && (sized || cJSON_AddNullToObject(request, "voicing") != NULL);
     if (ok && style_path) {
         cJSON *without = cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(piece, "without"), 1);
         ok = cJSON_AddStringToObject(request, "style", style_path) && ursatz_gui_json_add_copy_if(request, piece, "style_weight");

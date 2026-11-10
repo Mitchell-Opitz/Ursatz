@@ -144,6 +144,15 @@ double ursatz_gui_composer_seed_max(const char *kind) {
   return cJSON_IsNumber(value) ? value->valuedouble : -1;
 }
 
+double ursatz_gui_composer_limit(const char *name) {
+  if (!name || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
+    return -1;
+  }
+  const cJSON *limits = cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "limits");
+  const cJSON *value = cJSON_GetObjectItemCaseSensitive(limits, name);
+  return cJSON_IsNumber(value) ? value->valuedouble : -1;
+}
+
 int ursatz_gui_composer_vocabulary_index(const char *list, const char *value) {
   if (!list || !value || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
     return -1;
