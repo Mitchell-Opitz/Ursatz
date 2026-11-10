@@ -257,9 +257,9 @@ static void check_triplet_piece(void) {
     }
     char *text = export_range(&piece, NULL, 0, 0);
     if (text) {
-        /* The score writer splits the second triplet note at the beat; the export shows it as written. */
-        CHECK(block_has(text, "1", " P1 S1 V1: C5 @1 3:2q, D5 @1+2/3 3:2e~, D5 @2 3:2e, E5 @2+1/3 3:2q, F5 @3 h\n"),
-              "a tuplet is written 3:2 before its value, with exact beats and a tie");
+        /* The score writer writes three quarter-note triplets as one group across the beat; the export shows it as written. */
+        CHECK(block_has(text, "1", " P1 S1 V1: C5 @1 3:2q, D5 @1+2/3 3:2q, E5 @2+1/3 3:2q, F5 @3 h\n"),
+              "a tuplet is written 3:2 before its value, with exact beats, and a quarter triplet crosses the beat whole");
         free(text);
     }
     piece_release(&piece);
