@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/piece_plan.h>
 
 /*
  * A form as a document (R-416): the sections of a short form in order, at each size it comes in, with the keys a piece
@@ -144,5 +145,19 @@ void form_spec_destroy(FormSpec *form);
 
 /* The index of the region with that name, or -1. */
 int form_spec_region_find(const FormSpec *form, const char *name);
+
+/*
+ * The forms built into the library, one per file in forms/ in the order COMPOSER_FORMS in src/CMakeLists.txt lists
+ * them (binary, rounded-binary, ternary, variations, loop, layered). The documents are embedded at build time
+ * (cmake/EmbedForms.cmake); adding a form is a file in forms/ and a line in COMPOSER_FORMS.
+ */
+size_t form_spec_builtin_count(void);
+/* The document text of the form at index (NUL-terminated), and the name its file goes by; NULL past the end. */
+const char *form_spec_builtin_document(size_t index);
+const char *form_spec_builtin_name(size_t index);
+/* Parses the built-in form with this name into *out (on every call: no state is kept); FORM_SPEC_ERR_UNKNOWN for none. */
+FormSpecResult form_spec_builtin(const char *name, FormSpec **out);
+/* The built-in form the plan's root node is named for (a form's plan_name); FORM_SPEC_ERR_UNKNOWN when none is. */
+FormSpecResult form_spec_builtin_for_plan(const PiecePlan *plan, FormSpec **out);
 
 #endif

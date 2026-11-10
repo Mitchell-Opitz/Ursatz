@@ -1,0 +1,24 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "layered",
+  "label": "Layered",
+  "accompaniment": "required",
+  "sizes": [
+    {"bars": 16, "count": 2, "sections": [
+      {"name": "layer 1", "letter": "L1", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "layers": ["bass"]},
+      {"name": "layer 2", "letter": "L2", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "returns": "layer 1", "variation": "exact", "layers": "all"}
+    ]},
+    {"bars": 24, "count": 3, "sections": [
+      {"name": "layer 1", "letter": "L1", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "layers": ["bass"]},
+      {"name": "layer 2", "letter": "L2", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "returns": "layer 1", "variation": "exact", "layers": ["bass", "inner_voice"]},
+      {"name": "layer 3", "letter": "L3", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "returns": "layer 1", "variation": "exact", "layers": "all"}
+    ]},
+    {"bars": 32, "count": 4, "default": true, "sections": [
+      {"name": "layer 1", "letter": "L1", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "layers": ["bass"]},
+      {"name": "layer 2", "letter": "L2", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "returns": "layer 1", "variation": "exact", "layers": ["bass", "inner_voice"]},
+      {"name": "layer 3", "letter": "L3", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "returns": "layer 1", "variation": "exact", "layers": ["bass", "inner_voice", "melody"]},
+      {"name": "layer 4", "letter": "L4", "role": "layer", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "returns": "layer 1", "variation": "exact", "layers": "all"}
+    ]}
+  ]
+}
