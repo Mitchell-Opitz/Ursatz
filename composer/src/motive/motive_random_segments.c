@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_develop.h>
 
 #include "motive/motive_random_internal.h"
 
@@ -19,6 +20,7 @@
 #define SEGMENT_CELL_TRIES 32 /* a cell that does not fit is drawn again, so a failed cell does not change the shape's odds */
 #define SEGMENT_START_REACH 4 /* rungs either side of the note before, searched for where a new segment starts */
 #define SEGMENT_START_DISTANCE 5 /* the most semitones from the note before to where a new segment starts */
+#define LEAP_SEMITONES 5 /* an interval this large or larger is a leap (leaps_per_motif, leap_recovery) */
 
 /* Shapes: a a' (a cell and its repeat), a b (a cell and a new one), a a' b (two half-bar cells, then a bar). */
 typedef enum { SHAPE_REPEAT = 0, SHAPE_CONTRAST, SHAPE_REPEAT_CONTRAST, SHAPE_KINDS } Shape;
@@ -85,6 +87,12 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
     for (size_t i = 0; i < DURATION_KINDS; i++) {
         out->durations[i] = MOTIVE_RANDOM_DURATION_WEIGHTS[i];
     }
+    /* The listening settings (R-420 to R-422), all off. */
+    for (size_t i = 0; i < 3; i++) {
+        out->accented_types[i] = 1;
+    }
+    out->leaps_per_motif = MAX_NOTES - 1; /* no motive has more intervals, so this never rejects */
+    out->contrast_fidelity_min.denominator = 1;
 }
 
 /* The scale-step offset of a chord's tones from the tones of I: I 0, V down a fourth, IV up a fourth (same octave). */
@@ -96,13 +104,38 @@ static long step_of(long position) {
     return ((position % 7) + 7) % 7;
 }
 
+/* The alteration of a position on the chord of a degree: in minor, the third of V is raised. */
+static int chord_alteration(const AnalysisKey *key, int degree, long position) {
+    return key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && step_of(position - chord_shift(degree)) == 2 ? 1 : 0;
+}
+
 typedef struct {
     long ticks[MAX_NOTES];
     size_t count;
 } Cell;
 
+/*
+ * The half-beats from one strong beat to the next: the bar's beats in threes in a compound meter, in twos in an even one,
+ * else the whole bar. A beat that is not a multiple of it is weak (cells start at half bars or bars, so a position from the
+ * cell start decides).
+ */
+static long weak_beat_unit(long beats) {
+    return beats % 3 == 0 ? 6 : beats % 2 == 0 ? 4 : 2 * beats;
+}
+
+/* True when the last note of the cell is longer than each of the others. */
+static bool last_is_longest(const Cell *cell) {
+    for (size_t i = 0; i + 1 < cell->count; i++) {
+        if (cell->ticks[i] >= cell->ticks[cell->count - 1]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /* Tiles from to to (half-beats from the start of the cell) with the notes of the DURATIONS table. */
-static bool tile(const MotiveRandomPreferences *preferences, FillRng *rng, long from, long to, Cell *cell) {
+static bool tile(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long from, long to, Cell *cell) {
+    long unit = weak_beat_unit(beats);
     for (long position = from; position < to;) {
         long room = to - position;
         bool on_beat = position % 2 == 0;
@@ -110,6 +143,9 @@ static bool tile(const MotiveRandomPreferences *preferences, FillRng *rng, long 
         for (size_t i = 0; i < DURATION_KINDS; i++) {
             bool fits = MOTIVE_RANDOM_DURATIONS[i] <= room && (MOTIVE_RANDOM_DURATIONS[i] == 1 || on_beat);
             weights[i] = fits ? preferences->durations[i] : 0;
+        }
+        if (on_beat && position % unit != 0) {
+            weights[2] *= 1 + preferences->long_on_weak; /* the two-beat note on a weak beat (long_on_weak) */
         }
         size_t chosen = pick_weighted(rng, weights, DURATION_KINDS);
         if (cell->count == MAX_NOTES) {
@@ -122,7 +158,7 @@ static bool tile(const MotiveRandomPreferences *preferences, FillRng *rng, long 
 }
 
 /* Segment a's cell of length half-beats for a feature: a dotted figure on a beat, or a cell with two notes on beats. */
-static bool try_cell_a(const MotiveRandomPreferences *preferences, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
+static bool try_cell_a(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
     if (feature == FEATURE_DOTTED) {
         long slots = (length - (DOTTED_LONG + DOTTED_SHORT)) / 2 + 1;
@@ -130,16 +166,16 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, FillRng *rng,
             return false;
         }
         long start = 2 * (long)fill_rng_below(rng, (uint64_t)slots);
-        if (!tile(preferences, rng, 0, start, cell) || cell->count + 2 > MAX_NOTES) {
+        if (!tile(preferences, beats, rng, 0, start, cell) || cell->count + 2 > MAX_NOTES) {
             return false;
         }
         cell->ticks[cell->count++] = DOTTED_LONG;
         cell->ticks[cell->count++] = DOTTED_SHORT;
-        if (!tile(preferences, rng, start + DOTTED_LONG + DOTTED_SHORT, length, cell)) {
+        if (!tile(preferences, beats, rng, start + DOTTED_LONG + DOTTED_SHORT, length, cell)) {
             return false;
         }
     } else {
-        if (!tile(preferences, rng, 0, length, cell)) {
+        if (!tile(preferences, beats, rng, 0, length, cell)) {
             return false;
         }
         size_t on_beats = 0;
@@ -152,13 +188,16 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, FillRng *rng,
             return false;
         }
     }
-    return !long_end || cell->ticks[cell->count - 1] >= 2;
+    if (long_end && cell->ticks[cell->count - 1] < 2) {
+        return false;
+    }
+    return !(long_end && preferences->final_long) || last_is_longest(cell);
 }
 
 /* A new cell for the last segment: tiled, then its last notes joined until the last note is at least a beat long. */
-static bool try_cell_b(const MotiveRandomPreferences *preferences, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
+static bool try_cell_b(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
-    if (!tile(preferences, rng, 0, length, cell)) {
+    if (!tile(preferences, beats, rng, 0, length, cell)) {
         return false;
     }
     while (cell->count >= 2 && cell->ticks[cell->count - 1] < 2) {
@@ -168,21 +207,24 @@ static bool try_cell_b(const MotiveRandomPreferences *preferences, FillRng *rng,
     if (cell->ticks[cell->count - 1] < 2) {
         return false;
     }
+    if (preferences->final_long && (!last_is_longest(cell) || cell->count > not_like->count)) {
+        return false;
+    }
     return cell->count != not_like->count || memcmp(cell->ticks, not_like->ticks, cell->count * sizeof(long)) != 0;
 }
 
-static bool draw_cell_a(const MotiveRandomPreferences *preferences, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
+static bool draw_cell_a(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_a(preferences, rng, length, feature, long_end, cell)) {
+        if (try_cell_a(preferences, beats, rng, length, feature, long_end, cell)) {
             return true;
         }
     }
     return false;
 }
 
-static bool draw_cell_b(const MotiveRandomPreferences *preferences, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
+static bool draw_cell_b(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_b(preferences, rng, length, not_like, cell)) {
+        if (try_cell_b(preferences, beats, rng, length, not_like, cell)) {
             return true;
         }
     }
@@ -262,7 +304,7 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     Feature feature = (Feature)pick_weighted(rng, preferences->features, FEATURE_KINDS);
     Cell a;
     size_t tried = 0;
-    while (tried < FEATURE_KINDS && !draw_cell_a(preferences, rng, a_length, feature, shape == SHAPE_REPEAT, &a)) {
+    while (tried < FEATURE_KINDS && !draw_cell_a(preferences, beats, rng, a_length, feature, shape == SHAPE_REPEAT, &a)) {
         Feature next = feature;
         for (size_t step = 1; step <= FEATURE_KINDS; step++) {
             Feature candidate = (Feature)((feature + step) % FEATURE_KINDS);
@@ -301,7 +343,7 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     if (shape != SHAPE_REPEAT) {
         Cell b;
         size_t index = shape == SHAPE_CONTRAST ? 1 : 2;
-        if (!draw_cell_b(preferences, rng, last_length, &a, &b)) {
+        if (!draw_cell_b(preferences, beats, rng, last_length, &a, &b)) {
             return false;
         }
         layout->first[index] = layout->rhythm.count;
@@ -322,6 +364,7 @@ typedef struct {
     bool frame[MAX_NOTES];
     int segment[MAX_NOTES];
     int alteration[MAX_NOTES];
+    bool repeat_pair[MAX_NOTES]; /* the second note of the repeat feature's pair, and the matching note of a repeat of segment a */
 } Place;
 
 static int pitch_of(const AnalysisKey *key, const Place *place, size_t i) {
@@ -378,6 +421,7 @@ static bool draw_frame_a(const MotiveRandomPreferences *preferences, const Analy
         if (f > 0) {
             if (feature == FEATURE_REPEAT && f == pair + 1) {
                 /* the same pitch */
+                place->repeat_pair[frames[f]] = true;
             } else if (feature == FEATURE_LEAP && f == pair + 1) {
                 long options[6];
                 size_t option_count = 0;
@@ -414,8 +458,8 @@ static bool draw_frame_a(const MotiveRandomPreferences *preferences, const Analy
  * by a number of rungs (an octave is three) so that it starts near the note before it; on the same chord it is moved at
  * least one rung, so it is not a copy.
  */
-static bool draw_frame_repeat(const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment, Place *place,
-                              Melody *melody) {
+static bool draw_frame_repeat(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment,
+                              Place *place, Melody *melody) {
     size_t first = layout->first[segment];
     size_t previous = first - 1;
     while (!place->frame[previous]) {
@@ -430,7 +474,7 @@ static bool draw_frame_repeat(const AnalysisKey *key, const Layout *layout, Fill
             continue;
         }
         if (set_frame(key, layout, place, melody, first, place->rung[layout->cell_start] + offset) &&
-            abs(melody->pitches[first] - before) <= SEGMENT_START_DISTANCE) {
+            abs(melody->pitches[first] - before) <= SEGMENT_START_DISTANCE && !(preferences->avoid_repeats && melody->pitches[first] == before)) {
             offsets[offset_count++] = offset;
         }
     }
@@ -443,6 +487,7 @@ static bool draw_frame_repeat(const AnalysisKey *key, const Layout *layout, Fill
         if (place->frame[i] && !set_frame(key, layout, place, melody, i, place->rung[from] + offset)) {
             return false;
         }
+        place->repeat_pair[i] = place->repeat_pair[from];
     }
     return true;
 }
@@ -466,6 +511,9 @@ static bool draw_frame_new(const MotiveRandomPreferences *preferences, const Ana
             continue;
         }
         int distance = abs(melody->pitches[first] - before);
+        if (preferences->avoid_repeats && distance == 0) {
+            continue;
+        }
         if (distance <= SEGMENT_START_DISTANCE) {
             near_rung[near_count++] = rung;
         }
@@ -493,6 +541,19 @@ static bool draw_frame_new(const MotiveRandomPreferences *preferences, const Ana
     return true;
 }
 
+/* The positions near the note before where a non-chord tone of a kind (1 to 4 of the decorations list) makes its figure. */
+static size_t find_figures(const AnalysisKey *key, const Melody *melody, size_t i, long before, long shift, size_t kind, long *options) {
+    size_t option_count = 0;
+    for (long p = before - OFF_FRAME_REACH; p <= before + OFF_FRAME_REACH; p++) {
+        int pitch = motive_position_pitch(key, p, 0);
+        if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+            motive_random_forms(MOTIVE_RANDOM_DECORATIONS[kind - 1], melody->pitches[i - 1], pitch, melody->pitches[i + 1])) {
+            options[option_count++] = p;
+        }
+    }
+    return option_count;
+}
+
 /*
  * The notes between frame notes: a type is drawn for each (or none), and a note takes a non-chord pitch near the note
  * before it that makes the figure with the notes either side, else a chord tone of its segment's chord near it.
@@ -510,14 +571,13 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
         long before = place->position[i - 1];
         size_t kind = pick_weighted(rng, preferences->decorations, DECORATION_KINDS + 1);
         long options[2 * OFF_FRAME_REACH + 1];
-        size_t option_count = 0;
-        if (kind > 0) {
-            for (long p = before - OFF_FRAME_REACH; p <= before + OFF_FRAME_REACH; p++) {
-                int pitch = motive_position_pitch(key, p, 0);
-                if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
-                    motive_random_forms(MOTIVE_RANDOM_DECORATIONS[kind - 1], melody->pitches[i - 1], pitch,
-                                        melody->pitches[i + 1])) {
-                    options[option_count++] = p;
+        size_t option_count = kind > 0 ? find_figures(key, melody, i, before, shift, kind, options) : 0;
+        if (option_count == 0 && preferences->avoid_repeats && kind > 0) {
+            /* the other kinds, in list order after the one drawn, before a chord tone */
+            for (size_t step = 1; step < DECORATION_KINDS && option_count == 0; step++) {
+                size_t other = 1 + (kind - 1 + step) % DECORATION_KINDS;
+                if (preferences->decorations[other] > 0 && (option_count = find_figures(key, melody, i, before, shift, other, options)) > 0) {
+                    kind = other;
                 }
             }
         }
@@ -528,8 +588,10 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
             melody->types[i] = MOTIVE_RANDOM_DECORATIONS[kind - 1];
         } else {
             for (long p = before - 4; p <= before + 4; p++) {
-                int alteration = key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && step_of(p - shift) == 2 ? 1 : 0;
-                if (motive_random_is_chord_step(p - shift) && motive_random_in_range(motive_position_pitch(key, p, alteration))) {
+                int alteration = chord_alteration(key, degree, p);
+                int pitch = motive_position_pitch(key, p, alteration);
+                if (motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+                    !(preferences->avoid_repeats && (pitch == melody->pitches[i - 1] || pitch == melody->pitches[i + 1]))) {
                     options[option_count++] = p;
                 }
             }
@@ -537,12 +599,93 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
                 return false;
             }
             place->position[i] = options[fill_rng_below(rng, option_count)];
-            place->alteration[i] = key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 &&
-                                           step_of(place->position[i] - shift) == 2
-                                       ? 1
-                                       : 0;
+            place->alteration[i] = chord_alteration(key, degree, place->position[i]);
         }
         melody->pitches[i] = pitch_of(key, place, i);
+    }
+    return true;
+}
+
+/* Note i keeps a non-chord tone `type` at position p, and the note after it takes the chord tone (a position and alteration). */
+static void put_accent(const AnalysisKey *key, Place *place, Melody *melody, size_t i, long position, int alteration, NonChordTone type,
+                       long target_position, int target_alteration) {
+    place->position[i] = position;
+    place->alteration[i] = alteration;
+    melody->pitches[i] = pitch_of(key, place, i);
+    melody->decorated[i] = true;
+    melody->types[i] = type;
+    place->position[i + 1] = target_position;
+    place->alteration[i + 1] = target_alteration;
+    place->rung[i + 1] = place->rung[i];
+    place->frame[i + 1] = true;
+    melody->pitches[i + 1] = pitch_of(key, place, i + 1);
+}
+
+/* An appoggiatura or passing tone on the beat: the chord tone moves one note later, and a step beside it comes first. */
+static bool place_step_accent(const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t i, NonChordTone type, Place *place, Melody *melody) {
+    int degree = layout->plan.degrees[place->segment[i]];
+    long shift = chord_shift(degree);
+    long target = place->position[i];
+    int target_pitch = melody->pitches[i];
+    long options[2];
+    size_t option_count = 0;
+    for (long p = target - 1; p <= target + 1; p += 2) {
+        int pitch = motive_position_pitch(key, p, 0);
+        if (!motive_random_is_chord_step(p - shift) && motive_random_in_range(pitch) &&
+            motive_random_forms(type, melody->pitches[i - 1], pitch, target_pitch)) {
+            options[option_count++] = p;
+        }
+    }
+    if (option_count == 0) {
+        return false;
+    }
+    long chosen = options[fill_rng_below(rng, option_count)];
+    put_accent(key, place, melody, i, chosen, 0, type, target, place->alteration[i]);
+    return true;
+}
+
+/* A suspension where the chord changes: the note before is held over as a non-chord tone and falls to a chord tone. */
+static bool place_suspension(const AnalysisKey *key, const Layout *layout, size_t i, Place *place, Melody *melody) {
+    size_t s = (size_t)place->segment[i];
+    if (s == 0 || i != layout->first[s] || layout->plan.degrees[s] == layout->plan.degrees[s - 1]) {
+        return false;
+    }
+    int degree = layout->plan.degrees[s];
+    long held = place->position[i - 1];
+    long resolution = held - 1;
+    int resolution_alteration = chord_alteration(key, degree, resolution);
+    int resolution_pitch = motive_position_pitch(key, resolution, resolution_alteration);
+    if (motive_random_is_chord_step(held - chord_shift(degree)) || !motive_random_is_chord_step(resolution - chord_shift(degree)) ||
+        !motive_random_in_range(resolution_pitch) ||
+        !motive_random_forms(NON_CHORD_TONE_SUSPENSION, melody->pitches[i - 1], melody->pitches[i - 1], resolution_pitch)) {
+        return false;
+    }
+    put_accent(key, place, melody, i, held, place->alteration[i - 1], NON_CHORD_TONE_SUSPENSION, resolution, resolution_alteration);
+    return true;
+}
+
+/*
+ * Accented non-chord tones (R-425): a note that starts on a beat becomes an appoggiatura, a passing tone or a suspension
+ * that resolves to the next note, which takes the chord tone the accented note displaced. One per segment, and never the
+ * pickup, the first note, or the last note of a segment. Each eligible note is chosen in one of `accented_one_in`.
+ */
+static bool place_accents(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place,
+                          Melody *melody) {
+    bool accented[SEGMENT_MAX] = {false, false, false};
+    for (size_t i = 1; i + 1 < layout->rhythm.count; i++) {
+        size_t s = (size_t)place->segment[i];
+        if (!layout->rhythm.on_beat[i] || !place->frame[i] || i < layout->cell_start || !place->frame[i - 1] ||
+            place->segment[i + 1] != place->segment[i] || accented[s]) {
+            continue;
+        }
+        if (fill_rng_below(rng, preferences->accented_one_in) != 0) {
+            continue;
+        }
+        size_t kind = pick_weighted(rng, preferences->accented_types, 3);
+        bool placed = kind == 2 ? place_suspension(key, layout, i, place, melody)
+                                : place_step_accent(key, layout, rng, i, kind == 0 ? NON_CHORD_TONE_APPOGGIATURA : NON_CHORD_TONE_PASSING, place,
+                                                    melody);
+        accented[s] = accented[s] || placed;
     }
     return true;
 }
@@ -558,23 +701,67 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
             place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s];
         }
     }
+    /* A pickup that leads into the accent is no longer than the note it leads into. */
+    if (preferences->pickup_from_accent && layout->rhythm.pickup > 0 && layout->rhythm.ticks[layout->cell_start] < layout->rhythm.pickup) {
+        return false;
+    }
     if (!draw_frame_a(preferences, key, layout, rng, feature, &place, melody)) {
         return false;
     }
     for (size_t s = 1; s < layout->segment_count; s++) {
-        if (!(layout->repeats[s] ? draw_frame_repeat(key, layout, rng, s, &place, melody)
+        if (!(layout->repeats[s] ? draw_frame_repeat(preferences, key, layout, rng, s, &place, melody)
                                  : draw_frame_new(preferences, key, layout, rng, s, &place, melody))) {
             return false;
         }
     }
+    /* ... and sits one chord tone below it. */
+    if (preferences->pickup_from_accent && layout->rhythm.pickup > 0 &&
+        !set_frame(key, layout, &place, melody, 0, place.rung[layout->cell_start] - 1)) {
+        return false;
+    }
+    if (preferences->accented_one_in > 0 && !place_accents(preferences, key, layout, rng, &place, melody)) {
+        return false;
+    }
     if (!draw_decorations(preferences, key, layout, rng, &place, melody)) {
         return false;
+    }
+    /* A motive with no pickup does not open as one that has: a short note, then a longer one on the root, higher. */
+    if (preferences->pickup_from_accent && layout->rhythm.pickup == 0 && layout->rhythm.ticks[0] <= 2 &&
+        layout->rhythm.ticks[1] > layout->rhythm.ticks[0] &&
+        step_of(place.position[1] - chord_shift(layout->plan.degrees[place.segment[1]])) == 0 && melody->pitches[1] > melody->pitches[0]) {
+        return false;
+    }
+    if (preferences->avoid_repeats) {
+        for (size_t k = 0; k + 1 < layout->rhythm.count; k++) {
+            bool suspension = melody->decorated[k + 1] && melody->types[k + 1] == NON_CHORD_TONE_SUSPENSION;
+            if (melody->pitches[k] == melody->pitches[k + 1] && !suspension && !place.repeat_pair[k + 1]) {
+                return false;
+            }
+        }
     }
     int low = 127;
     int high = 0;
     for (size_t i = 0; i < layout->rhythm.count; i++) {
         low = melody->pitches[i] < low ? melody->pitches[i] : low;
         high = melody->pitches[i] > high ? melody->pitches[i] : high;
+    }
+    /* Leaps (an interval of a fourth or more): at most leaps_per_motif, and each one followed by a step back when asked. */
+    unsigned leaps = 0;
+    for (size_t k = 0; k + 1 < layout->rhythm.count; k++) {
+        int move = melody->pitches[k + 1] - melody->pitches[k];
+        if (abs(move) < LEAP_SEMITONES) {
+            continue;
+        }
+        leaps++;
+        if (preferences->leap_recovery && k + 2 < layout->rhythm.count) {
+            int back = melody->pitches[k + 2] - melody->pitches[k + 1];
+            if (abs(back) < 1 || abs(back) > 2 || (back > 0) == (move > 0)) {
+                return false;
+            }
+        }
+    }
+    if (leaps > preferences->leaps_per_motif) {
+        return false;
     }
     return high - low <= MAX_RANGE_SEMITONES;
 }
@@ -641,6 +828,53 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
     return true;
 }
 
+/* A motive of the notes first to last of a layout (no pickup), to be scored against another. */
+static bool segment_motive(const MotiveRandomOptions *options, const AnalysisKey *key, const Layout *layout, const Melody *melody, size_t first,
+                           size_t last, Motive *out) {
+    Rhythm rhythm;
+    Melody notes;
+    memset(&rhythm, 0, sizeof(rhythm));
+    memset(&notes, 0, sizeof(notes));
+    for (size_t i = first; i <= last; i++) {
+        size_t k = i - first;
+        rhythm.ticks[k] = layout->rhythm.ticks[i];
+        rhythm.on_beat[k] = layout->rhythm.on_beat[i];
+        rhythm.total += layout->rhythm.ticks[i];
+        notes.pitches[k] = melody->pitches[i];
+        notes.decorated[k] = melody->decorated[i];
+        notes.types[k] = melody->types[i];
+    }
+    rhythm.count = last - first + 1;
+    return motive_random_build(options, key, &rhythm, &notes, out);
+}
+
+/*
+ * The contrast distance (contrast_fidelity_min): the recognizability of the segment that is not a repeat against segment a
+ * is at least the minimum. A layout with no such segment passes. Both motives are made and scored here; false when
+ * the score is below the minimum or cannot be made.
+ */
+static bool contrast_is_close(const MotiveRandomOptions *options, const AnalysisKey *key, const MotiveRandomPreferences *preferences, const Layout *layout,
+                              const Melody *melody) {
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        if (layout->repeats[s]) {
+            continue;
+        }
+        Motive a;
+        Motive b;
+        MotiveRecognizability score;
+        if (!segment_motive(options, key, layout, melody, layout->cell_start, layout->last[0], &a) ||
+            !segment_motive(options, key, layout, melody, layout->first[s], layout->last[s], &b) ||
+            !motive_recognizability(&a, &b, NULL, &score)) {
+            return false;
+        }
+        const ComposerRatio *least = &preferences->contrast_fidelity_min;
+        if ((unsigned long long)score.total.numerator * least->denominator < (unsigned long long)least->numerator * score.total.denominator) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
                                       bool *found) {
     Setup setup;
@@ -660,6 +894,9 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
         if (!draw_layout(preferences, &setup, rng, &layout, &feature) || !draw_melody(preferences, key, &layout, rng, feature, &melody) ||
             !motive_random_build(options, key, &layout.rhythm, &melody, out) ||
             !set_plan_and_segments(options, &layout, out) || !tones_as_drawn(out, &layout, &melody)) {
+            continue;
+        }
+        if (preferences->contrast_fidelity_min.numerator > 0 && !contrast_is_close(options, key, preferences, &layout, &melody)) {
             continue;
         }
         if (!motive_melodic_fault(out, &fault)) {
