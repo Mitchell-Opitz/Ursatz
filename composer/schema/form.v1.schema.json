@@ -40,14 +40,70 @@
       "maxItems": 8,
       "items": { "$ref": "#/$defs/size" }
     },
-    "sections": { "const": "request" }
+    "sections": { "const": "request" },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "enum": ["intro", "body", "turnaround", "ending"] },
+      "description": "A form whose sections the request gives: the roles a section may have, in the order intro, body, turnaround, ending, and including body (until P45)."
+    },
+    "loop": {
+      "type": "object",
+      "required": ["roles"],
+      "additionalProperties": false,
+      "properties": {
+        "roles": { "$ref": "#/$defs/partRoles", "description": "The roles that are the loop: its end is held for the seam stage and a seam bar follows it; the ending version replaces the turnaround with the ending. Each is one of the form's roles." }
+      }
+    },
+    "cadences": {
+      "type": "object",
+      "required": ["default"],
+      "additionalProperties": false,
+      "properties": {
+        "default": { "$ref": "#/$defs/cadenceName", "description": "The cadence of a section the request gives none." },
+        "last": {
+          "type": "array",
+          "maxItems": 4,
+          "description": "Applied in order: the last section whose role is in roles ends in cadence.",
+          "items": {
+            "type": "object",
+            "required": ["roles", "cadence"],
+            "additionalProperties": false,
+            "properties": {
+              "roles": { "$ref": "#/$defs/partRoles" },
+              "cadence": { "$ref": "#/$defs/cadenceName" }
+            }
+          }
+        }
+      }
+    },
+    "default_ending": {
+      "type": "object",
+      "required": ["id", "letter", "role", "bars", "cadence"],
+      "additionalProperties": false,
+      "description": "The section a request with no ending gets.",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 15 },
+        "letter": { "type": "string", "minLength": 1, "maxLength": 3 },
+        "role": { "const": "ending" },
+        "bars": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "cadence": { "$ref": "#/$defs/cadenceName" }
+      }
+    }
   },
   "oneOf": [
-    { "required": ["sizes"], "not": { "required": ["sections"] } },
-    { "required": ["sections"], "not": { "required": ["sizes"] } }
+    {
+      "required": ["sizes"],
+      "not": { "anyOf": [{ "required": ["sections"] }, { "required": ["roles"] }, { "required": ["loop"] }, { "required": ["cadences"] }, { "required": ["default_ending"] }] }
+    },
+    { "required": ["sections", "roles", "loop", "cadences"], "not": { "required": ["sizes"] } }
   ],
   "$defs": {
     "name": { "type": "string", "pattern": "^[a-z0-9-]{1,31}$" },
+    "cadenceName": { "type": "string", "description": "A name of the standard-harmony cadence vocabulary whose core is a PAC, an IAC or an HC." },
+    "partRoles": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "enum": ["intro", "body", "turnaround", "ending"] } },
     "degrees": {
       "type": "array",
       "minItems": 1,

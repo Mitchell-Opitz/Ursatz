@@ -173,11 +173,23 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, const ch
     }
 }
 
+/* Whether the built-in form comes in sizes: the game loop's sections are the request's (P44 B5). */
+static bool has_sizes(const char *name) {
+    FormSpec *form = NULL;
+    assert(form_spec_builtin(name, &form) == FORM_SPEC_OK);
+    bool sized = !form->request_sections;
+    form_spec_destroy(form);
+    return sized;
+}
+
 static int test_plans(void) {
     size_t plans = 0;
     size_t modulating = 0;
     for (size_t form = 0; form < form_spec_builtin_count(); form++) {
         const char *k = form_spec_builtin_name(form);
+        if (!has_sizes(k)) {
+            continue;
+        }
         for (size_t s = 0; s < SCENARIO_COUNT; s++) {
             size_t modulated = 0;
             for (unsigned long seed = 1; seed <= SEEDS; seed++) {

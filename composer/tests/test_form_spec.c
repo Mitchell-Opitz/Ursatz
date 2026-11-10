@@ -122,7 +122,8 @@ static const FormRow FORMS[] = {
 #define FORM_COUNT (sizeof(FORMS) / sizeof(FORMS[0]))
 
 static void test_builtin_forms(void) {
-    assert(form_spec_builtin_count() == FORM_COUNT);
+    /* The forms that come in sizes, then the game loop, whose sections the request gives (P44 B5). */
+    assert(form_spec_builtin_count() == FORM_COUNT + 1 && strcmp(form_spec_builtin_name(FORM_COUNT), "game-loop") == 0);
     for (size_t f = 0; f < FORM_COUNT; f++) {
         const FormRow *row = &FORMS[f];
         /* Registry order, and a document that is its file's name. */
@@ -150,7 +151,7 @@ static void test_builtin_forms(void) {
         }
         form_spec_destroy(form);
     }
-    assert(form_spec_builtin_name(FORM_COUNT) == NULL && form_spec_builtin_document(FORM_COUNT) == NULL);
+    assert(form_spec_builtin_name(FORM_COUNT + 1) == NULL && form_spec_builtin_document(FORM_COUNT + 1) == NULL);
     FormSpec *none = NULL;
     assert(form_spec_builtin("sonata", &none) == FORM_SPEC_ERR_UNKNOWN && none == NULL);
     assert(form_spec_builtin(NULL, &none) == FORM_SPEC_ERR_NULL);
@@ -362,7 +363,8 @@ static void test_refusals(void) {
     refused(text, "/sizes");
     document(text, sizeof(text), ", \"sections\": \"given\"", sizes);
     refused(text, "/sections");
-    snprintf(text, sizeof(text), "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sections\": \"request\"}");
+    snprintf(text, sizeof(text), "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sections\": \"request\", "
+             "\"roles\": [\"body\"], \"loop\": {\"roles\": [\"body\"]}, \"cadences\": {\"default\": \"half\"}}");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->request_sections && form->size_count == 0);
     assert(form_spec_size(form, 0, 0) == NULL && form_spec_default_size(form) == NULL);
     form_spec_destroy(form);

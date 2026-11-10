@@ -1,0 +1,20 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "game-loop",
+  "label": "Game loop",
+  "plan_name": "structure",
+  "closing": false,
+  "sections": "request",
+  "roles": ["intro", "body", "turnaround", "ending"],
+  "loop": {"roles": ["body", "turnaround"]},
+  "cadences": {
+    "default": "imperfect-authentic",
+    "last": [
+      {"roles": ["ending"], "cadence": "perfect-authentic"},
+      {"roles": ["body", "turnaround"], "cadence": "half"},
+      {"roles": ["intro"], "cadence": "half"}
+    ]
+  },
+  "default_ending": {"id": "end", "letter": "E", "role": "ending", "bars": 2, "cadence": "perfect-authentic"}
+}
