@@ -387,19 +387,23 @@
  "theme_slots": [
   {
    "value": "basic",
-   "label": "Basic idea"
+   "label": "Basic idea",
+   "required": true
   },
   {
    "value": "contrasting",
-   "label": "Contrasting idea"
+   "label": "Contrasting idea",
+   "required": false
   },
   {
    "value": "continuation",
-   "label": "Continuation"
+   "label": "Continuation",
+   "required": false
   },
   {
    "value": "cadential",
-   "label": "Cadential"
+   "label": "Cadential",
+   "required": false
   }
  ],
  "theme_ideas": [
@@ -602,11 +606,15 @@
  "piece_intos": [
   {
    "value": "sentence",
-   "label": "Sentence"
+   "label": "Sentence",
+   "beginning": "presentation",
+   "ending": "continuation"
   },
   {
    "value": "period",
-   "label": "Period"
+   "label": "Period",
+   "beginning": "antecedent",
+   "ending": "consequent"
   },
   {
    "value": "hybrid",
