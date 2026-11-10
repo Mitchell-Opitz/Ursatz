@@ -15,19 +15,27 @@
 #define DEFAULT_DENSITY 0
 #define DEFAULT_CLIMAX 667
 
-/* Melodies tried per call, and kept; ones that repeat an earlier one are dropped. */
+/* Melodies tried per call, and kept; ones that repeat an earlier one are dropped (until the params carry them). */
 #define MELODY_ATTEMPTS 48
 #define MELODY_KEEP 6
 
+#define DEFAULT_CLIMAX_RISE 4
+#define DEFAULT_CLIMAX_SLACK 150
+#define DEFAULT_ATTEMPTS 48 /* melodies tried per call */
+#define DEFAULT_KEEP 6      /* melodies kept; ones that repeat an earlier one are dropped */
+
+#define MELODY_FILL_PARAMS_INIT                                                                                      \
+    {DEFAULT_RANGE_LOW,   DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY,               \
+     DEFAULT_CLIMAX,      false,              DEFAULT_CLIMAX_RISE, DEFAULT_CLIMAX_SLACK, {1, 3},                    \
+     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}
+
 MelodyFillParams melody_fill_params_default(void) {
-    MelodyFillParams params = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
-                               DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
+    MelodyFillParams params = MELODY_FILL_PARAMS_INIT;
     return params;
 }
 
 static const MelodyFillParams *params_of(void *context) {
-    static const MelodyFillParams defaults = {DEFAULT_RANGE_LOW, DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES,
-                                              DEFAULT_DENSITY,   DEFAULT_CLIMAX,    false};
+    static const MelodyFillParams defaults = MELODY_FILL_PARAMS_INIT;
     return context ? context : &defaults;
 }
 

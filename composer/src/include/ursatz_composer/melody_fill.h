@@ -6,6 +6,7 @@
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/fill_loop.h>
+#include <ursatz_composer/style.h>
 
 /*
  * The melody operator: a Fill operator for the melody lane. It reads a harmony lane and a bass lane that are
@@ -51,6 +52,8 @@
 #define MELODY_NCT_DOUBLE_NEIGHBOR (1u << 7)
 #define MELODY_NCT_CHANGING_TONE (1u << 8)
 
+#define MELODY_KEEP_MAX 16 /* the most melodies keep may ask for */
+
 /*
  * range_low and range_high are the melody voice's range, MIDI pitches both included. start_cell is the cell of
  * the phrase the motive starts on (0 is the first), the time before it a rest. nct_types is the set of
@@ -59,7 +62,37 @@
  * phrase the climax falls, in thousandths of its length (values above 1000 count as 1000). plain_shaping, false by
  * default, leaves out the shaping rules (phrase-ending reduction, waves, central range, monotony), which score
  * with the others; true gives the scores the checker gave before them.
+ *
+ * climax_rise is how far above the highest generated note a climax may be drawn, in scale steps (the peak is drawn
+ * from 2 to climax_rise + 1 above it; default 4). climax_slack is how far, in thousandths of the phrase, the climax
+ * may be from climax_position and still score as in place (default 150). second_nearest is the share of draws that
+ * pick the second-nearest chord tone over the nearest where there is one, as numerator over denominator (default 1/3,
+ * denominator at least 1). attempts is how many melodies are tried per call (default 48, 1 to 256), and
+ * keep is how many of them are kept, repeats of an earlier one dropped (default 6, 1 to MELODY_KEEP_MAX).
+ * weights is how many times each soft-rule group counts in a melody's score (see MelodyWeights; default 1 each).
  */
+
+/*
+ * How many times each group of soft rules counts in the checker's score: the share of soft rules held is
+ * the sum of weight * held over the sum of weight * total. A weight of 0 leaves a group out of the score; 1 each
+ * gives the score the checker gave before weights existed. melodic and against_bass are the standard-counterpoint
+ * melodic and harmonic rules, tendency the resolution of tendency tones, climax the one-climax rule, contour the
+ * climax's place and the contour score, ending_reduction, waves, central_range and monotony the shaping rules
+ * (params.plain_shaping false), seam the rules at the join with the motive.
+ */
+typedef struct {
+    unsigned melodic;
+    unsigned against_bass;
+    unsigned tendency;
+    unsigned climax;
+    unsigned contour;
+    unsigned ending_reduction;
+    unsigned waves;
+    unsigned central_range;
+    unsigned monotony;
+    unsigned seam;
+} MelodyWeights;
+
 typedef struct {
     int range_low;
     int range_high;
@@ -68,11 +101,18 @@ typedef struct {
     unsigned density;
     unsigned climax_position;
     bool plain_shaping;
+    unsigned climax_rise;
+    unsigned climax_slack;
+    ComposerRatio second_nearest;
+    unsigned attempts;
+    unsigned keep;
+    MelodyWeights weights;
 } MelodyFillParams;
 
 /*
  * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
- * motive's rhythm after the motive (density 0), and the climax 667 thousandths of the way through.
+ * motive's rhythm after the motive (density 0), the climax 667 thousandths of the way through, climax_rise 4,
+ * climax_slack 150, second_nearest 1/3, attempts 48, keep 6 and every weight 1.
  */
 MelodyFillParams melody_fill_params_default(void);
 
