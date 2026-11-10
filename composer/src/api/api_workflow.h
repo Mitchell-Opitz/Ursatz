@@ -6,6 +6,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/export.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -120,5 +121,11 @@ ComposerStatus api_target_list(const PiecePlan *plan, const ApiTarget *target, F
                                ComposerError *error);
 /* The target in words: "section B", "node 12", "the harmony of section B". */
 void api_target_describe(const PiecePlan *plan, const ApiTarget *target, char *out, size_t size);
+
+/*
+ * The sizes the form has, for the message about one it has not: the bars its sizes come in, then their counts when they have
+ * any ("16, 24 bars"), into out (size bytes).
+ */
+void api_form_sizes_text(const FormSpec *form, char *out, size_t size);
 
 #endif

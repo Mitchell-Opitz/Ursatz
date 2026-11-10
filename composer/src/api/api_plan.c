@@ -269,56 +269,6 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
     return read_given(state, error);
 }
 
-static void append_number(char *out, size_t size, unsigned long value, bool first) {
-    size_t used = strlen(out);
-    snprintf(out + used, size - used, first ? "%lu" : ", %lu", value);
-}
-
-/* The sizes the form has, for the message about one it has not: the bars its sizes come in, then their counts. */
-static void describe_sizes(const FormSpec *form, char *out, size_t size) {
-    unsigned long bars[FORM_SPEC_MAX_SIZES];
-    unsigned long counts[FORM_SPEC_MAX_SIZES];
-    size_t bars_count = 0;
-    size_t count_count = 0;
-    out[0] = '\0';
-    /* Ascending, each once. */
-    for (size_t i = 0; i < form->size_count; i++) {
-        unsigned long b = (unsigned long)form->sizes[i].bars;
-        unsigned long c = (unsigned long)form->sizes[i].count;
-        size_t at = 0;
-        while (at < bars_count && bars[at] < b) {
-            at++;
-        }
-        if (at == bars_count || bars[at] != b) {
-            memmove(bars + at + 1, bars + at, (bars_count - at) * sizeof(bars[0]));
-            bars[at] = b;
-            bars_count++;
-        }
-        at = 0;
-        while (c != 0 && at < count_count && counts[at] < c) {
-            at++;
-        }
-        if (c != 0 && (at == count_count || counts[at] != c)) {
-            memmove(counts + at + 1, counts + at, (count_count - at) * sizeof(counts[0]));
-            counts[at] = c;
-            count_count++;
-        }
-    }
-    for (size_t i = 0; i < bars_count; i++) {
-        append_number(out, size, bars[i], i == 0);
-    }
-    size_t used = strlen(out);
-    snprintf(out + used, size - used, " bars");
-    for (size_t i = 0; i < count_count; i++) {
-        used = strlen(out);
-        snprintf(out + used, size - used, i ? ", %lu" : " (or count %lu", counts[i]);
-    }
-    if (count_count > 0) {
-        used = strlen(out);
-        snprintf(out + used, size - used, ")");
-    }
-}
-
 /* The cells of a bar of the meter, which the harmony operators place chords on (harmony_rhythm.c). */
 static unsigned long cells_in_bar(const PlanMeter *meter) {
     return (meter->beat_unit == 4 && meter->beats_per_bar == 4) || meter->beat_unit == 8 ? 2 : 1;
@@ -439,7 +389,7 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     bool has_count = member_text(state->root, "count", count_text, sizeof count_text);
     if (!form_spec_size(state->form, state->bars, state->count)) {
         char sizes[160];
-        describe_sizes(state->form, sizes, sizeof(sizes));
+        api_form_sizes_text(state->form, sizes, sizeof(sizes));
         return api_fail(error, COMPOSER_ERR_REQUEST, has_bars ? "/bars" : "/count", "%s has no size of %s%s%s%s%s; it has %s",
                         state->form->name, has_bars ? bars_text : "", has_bars ? " bars" : "",
                         has_bars && has_count ? " with " : "", has_count ? "count " : "", has_count ? count_text : "", sizes);
