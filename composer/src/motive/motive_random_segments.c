@@ -114,9 +114,28 @@ typedef struct {
     size_t count;
 } Cell;
 
+/*
+ * The half-beats from one strong beat to the next: the bar's beats in threes in a compound meter, in twos in an even one,
+ * else the whole bar. A beat that is not a multiple of it is weak (cells start at half bars or bars, so a position from the
+ * cell start decides).
+ */
+static long weak_beat_unit(long beats) {
+    return beats % 3 == 0 ? 6 : beats % 2 == 0 ? 4 : 2 * beats;
+}
+
+/* True when the last note of the cell is longer than each of the others. */
+static bool last_is_longest(const Cell *cell) {
+    for (size_t i = 0; i + 1 < cell->count; i++) {
+        if (cell->ticks[i] >= cell->ticks[cell->count - 1]) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /* Tiles from to to (half-beats from the start of the cell) with the notes of the DURATIONS table. */
 static bool tile(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long from, long to, Cell *cell) {
-    (void)beats;
+    long unit = weak_beat_unit(beats);
     for (long position = from; position < to;) {
         long room = to - position;
         bool on_beat = position % 2 == 0;
@@ -124,6 +143,9 @@ static bool tile(const MotiveRandomPreferences *preferences, long beats, FillRng
         for (size_t i = 0; i < DURATION_KINDS; i++) {
             bool fits = MOTIVE_RANDOM_DURATIONS[i] <= room && (MOTIVE_RANDOM_DURATIONS[i] == 1 || on_beat);
             weights[i] = fits ? preferences->durations[i] : 0;
+        }
+        if (on_beat && position % unit != 0) {
+            weights[2] *= 1 + preferences->long_on_weak; /* the two-beat note on a weak beat (long_on_weak) */
         }
         size_t chosen = pick_weighted(rng, weights, DURATION_KINDS);
         if (cell->count == MAX_NOTES) {
@@ -166,7 +188,10 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, long beats, F
             return false;
         }
     }
-    return !long_end || cell->ticks[cell->count - 1] >= 2;
+    if (long_end && cell->ticks[cell->count - 1] < 2) {
+        return false;
+    }
+    return !(long_end && preferences->final_long) || last_is_longest(cell);
 }
 
 /* A new cell for the last segment: tiled, then its last notes joined until the last note is at least a beat long. */
@@ -180,6 +205,9 @@ static bool try_cell_b(const MotiveRandomPreferences *preferences, long beats, F
         cell->count--;
     }
     if (cell->ticks[cell->count - 1] < 2) {
+        return false;
+    }
+    if (preferences->final_long && (!last_is_longest(cell) || cell->count > not_like->count)) {
         return false;
     }
     return cell->count != not_like->count || memcmp(cell->ticks, not_like->ticks, cell->count * sizeof(long)) != 0;
