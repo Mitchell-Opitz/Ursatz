@@ -1276,7 +1276,7 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
     return URSATZ_GUI_MATERIAL_OK;
 }
 
-/* A form with sizes: no sections, bars and count (absent is 0) that one of the form's sizes has, 0 and 0 being the
+/* A form with sizes: no sections, bars and count (absent is 0) that pick one of the form's sizes, 0 and 0 being the
  * default, and modulate only where the form allows it. */
 static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const cJSON *form, char *error,
                                                    size_t error_size) {
@@ -1295,17 +1295,19 @@ static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const
     double want_bars = cJSON_IsNumber(bars) ? bars->valuedouble : 0;
     double want_count = cJSON_IsNumber(count) ? count->valuedouble : 0;
     if (want_bars != 0 || want_count != 0) {
+        /* A size is picked by its bars, by its count, or by both: the one not given is not compared. */
         bool found = false;
         const cJSON *size = NULL;
         cJSON_ArrayForEach(size, cJSON_GetObjectItemCaseSensitive(form, "sizes")) {
             const cJSON *size_bars = cJSON_GetObjectItemCaseSensitive(size, "bars");
             const cJSON *size_count = cJSON_GetObjectItemCaseSensitive(size, "count");
             found = found || (cJSON_IsNumber(size_bars) && cJSON_IsNumber(size_count) &&
-                              size_bars->valuedouble == want_bars && size_count->valuedouble == want_count);
+                              (want_bars == 0 || size_bars->valuedouble == want_bars) &&
+                              (want_count == 0 || size_count->valuedouble == want_count));
         }
         if (!found) {
-            snprintf(message, sizeof(message), "a %s piece has no size of %.0f bars and %.0f count", label ? label : "sized",
-                     want_bars, want_count);
+            snprintf(message, sizeof(message), "a %s piece has no size of %.0f bars and %.0f count (0 is not given)",
+                     label ? label : "sized", want_bars, want_count);
             return invalid_body(error, error_size, message);
         }
     }
