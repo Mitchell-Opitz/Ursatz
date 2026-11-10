@@ -246,7 +246,7 @@ static uint64_t piece_hash(const char *name, const char *theme) {
         exit(1);
     }
     PiecePlan *plan = NULL;
-    PieceResult built = piece_structure_build_plan(&spec->structure, &plan);
+    PieceResult built = piece_build_plan(&spec->request, &plan);
     if (built != PIECE_OK || !plan) {
         fprintf(stderr, "%s: %s\n", name, piece_result_name(built));
         exit(1);
