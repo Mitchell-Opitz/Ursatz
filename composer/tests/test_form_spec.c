@@ -4,9 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
+#include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
+#include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_state.h>
 
 /*
  * The form documents (R-416, docs/forms.md).
@@ -15,6 +19,8 @@
  *                               every built-in parses and is what docs/forms.md says of it;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
+ *   test_form_spec custom     a form added as a document alone (tests/fixtures/forms/bar-form.json) composes: seeds 1
+ *                             to 10 in C major 4/4 with an invented motive; no C code names the form
  */
 
 /* ------------------------------------------------------------- helpers */
@@ -432,7 +438,143 @@ static void test_sizes(void) {
     assert(form_spec_size(NULL, 0, 0) == NULL && form_spec_default_size(NULL) == NULL);
 }
 
-int main(void) {
+/* ------------------------------------------------------------- a form added as a document alone */
+
+#define CUSTOM_SEEDS 10
+
+static char *read_file(const char *path) {
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        fprintf(stderr, "cannot read %s\n", path);
+        exit(2);
+    }
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *text = malloc((size_t)length + 1);
+    size_t read = text ? fread(text, 1, (size_t)length, file) : 0;
+    assert(text && read == (size_t)length);
+    text[length] = '\0';
+    fclose(file);
+    return text;
+}
+
+/* Composes the form's piece with the seed; the plan is returned (the caller destroys it), the result in *ran. */
+static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = form->name;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    PiecePlan *plan = NULL;
+    PieceResult built = form_build_plan(form, &request, &plan);
+    assert(built == PIECE_OK && plan);
+    ComposeConfig config;
+    memset(&config, 0, sizeof(config));
+    config.seed = seed;
+    config.form = form;
+    *ran = compose_run(plan, &config, outcome);
+    return plan;
+}
+
+/* Every melody span in the section is written by the Composer, and there is at least one. */
+static bool section_written(const PiecePlan *plan, NodeId section) {
+    LaneSpanId ids[16];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, section), ids, 16);
+    for (size_t i = 0; i < found && i < 16; i++) {
+        if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_REALIZED) {
+            return false;
+        }
+    }
+    return found > 0;
+}
+
+static int test_custom(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/bar-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
+        return 2;
+    }
+    free(text);
+    assert(strcmp(form->name, "bar-form") == 0 && form->size_count == 1 && form->sizes[0].bars == 24 &&
+           form->sizes[0].section_count == 3 && form->checks == FORM_CHECK_ALL);
+    /* The form is not one of the built-in ones: only its document says it exists. */
+    FormSpec *builtin_none = NULL;
+    assert(form_spec_builtin("bar-form", &builtin_none) == FORM_SPEC_ERR_UNKNOWN);
+
+    unsigned long first = 0;
+    char *first_json = NULL;
+    for (unsigned long seed = 1; seed <= CUSTOM_SEEDS && !first; seed++) {
+        ComposeOutcome outcome;
+        PieceResult ran;
+        PiecePlan *plan = compose_custom(form, seed, &outcome, &ran);
+        if (ran == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            size_t count = 0;
+            NodeId root = plan_root(plan);
+            for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+                NodeId child = plan_node_child_at(plan, root, i);
+                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                    sections[count++] = child;
+                }
+            }
+            assert(count == 3 && outcome.section_count == 3);
+            for (size_t i = 0; i < 3; i++) {
+                assert(outcome.sections[i].section == sections[i] && section_written(plan, sections[i]));
+            }
+            assert(outcome.returns_planned == 1);
+            first = seed;
+            first_json = plan_to_json(plan, NULL);
+            assert(first_json);
+        } else {
+            printf("  seed %lu: %s at %s\n", seed, piece_result_name(ran), compose_stage_name(outcome.stuck_stage));
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    if (!first) {
+        fprintf(stderr, "bar-form: no seed of 1 to %d completes\n", CUSTOM_SEEDS);
+        return 1;
+    }
+
+    /* The same seed with the form naming one check: what is written does not change, the returns are not heard. */
+    FormSpec *sections_only = NULL;
+    char *again_text = read_file(path);
+    FormSpecResult parsed = form_spec_parse(again_text, &sections_only, NULL);
+    assert(parsed == FORM_SPEC_OK);
+    free(again_text);
+    sections_only->checks = FORM_CHECK_SECTIONS;
+    ComposeOutcome outcome;
+    PieceResult ran;
+    PiecePlan *plan = compose_custom(sections_only, first, &outcome, &ran);
+    assert(ran == PIECE_OK);
+    char *again = plan_to_json(plan, NULL);
+    assert(again && strcmp(again, first_json) == 0);
+    assert(outcome.returns_planned == 0 && outcome.section_count == 3);
+    compose_outcome_destroy(&outcome);
+    plan_destroy(plan);
+    free(again);
+    free(first_json);
+    form_spec_destroy(sections_only);
+    form_spec_destroy(form);
+    printf("bar-form: composed with seed %lu (first of 1 to %d); with only the sections check the plan is the same and no return is heard\n",
+           first, CUSTOM_SEEDS);
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "custom") == 0) {
+        return test_custom();
+    }
+    if (argc != 1) {
+        fprintf(stderr, "usage: test_form_spec [custom]\n");
+        return 2;
+    }
     test_builtin_forms();
     test_builtin_details();
     test_for_plan();
