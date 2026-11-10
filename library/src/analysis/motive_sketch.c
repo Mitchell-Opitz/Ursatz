@@ -375,6 +375,48 @@ bool motive_sketch_on_grid(Rational onset) {
     return msk_ok(onset) && 32 % onset.den == 0;
 }
 
+static bool msk_triplet_den(Rational r) {
+    return msk_ok(r) && r.den % 3 == 0;
+}
+
+bool motive_sketch_has_triplets(const MotiveSketch *sketch) {
+    if (!sketch) {
+        return false;
+    }
+    if (msk_triplet_den(sketch->pickup) || msk_triplet_den(sketch->length)) {
+        return true;
+    }
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (msk_triplet_den(sketch->notes[i].onset) || msk_triplet_den(sketch->notes[i].duration)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool motive_sketch_time_writable(const MotiveSketch *source, Rational duration) {
+    if (motive_sketch_expressible(duration)) {
+        return true;
+    }
+    if (!motive_sketch_has_triplets(source) || !msk_ok(duration) || duration.num == 0) {
+        return false;
+    }
+    /* Two thirds of 1/2^k: a triplet of a half, quarter, eighth and so on, undotted. */
+    for (unsigned k = 0; k < 6; k++) {
+        if (msk_eq(duration, rational_ratio(2, 3ULL << k))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool motive_sketch_time_on_grid(const MotiveSketch *source, Rational onset) {
+    if (motive_sketch_on_grid(onset)) {
+        return true;
+    }
+    return motive_sketch_has_triplets(source) && msk_ok(onset) && 96 % onset.den == 0;
+}
+
 int motive_sketch_strength(const MotiveSketch *sketch, Rational onset) {
     Rational shift = msk_is_zero(sketch->pickup) ? msk_int(0) : msk_sub(sketch->bar, sketch->pickup);
     Rational inside = msk_mod(msk_add(onset, shift), sketch->bar);
