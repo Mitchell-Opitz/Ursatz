@@ -259,6 +259,10 @@
         "text",
         "json"
       ]
+    },
+    "preferences": {
+      "$ref": "#/$defs/preferences",
+      "description": "The settings; the melody group and the development group apply, the motif group is accepted and has no effect (the motives come from the request)."
     }
   },
   "$defs": {
@@ -341,6 +345,440 @@
         }
       },
       "description": "A motive carries its content: a member \"path\" or \"file\" is refused (path /motives/<n>/path)."
+    },
+    "preferences": {
+      "type": "object",
+      "description": "The Composer's settings (docs/preferences.md); every member is optional and its default is the value the Composer used before the document existed. An unknown member is refused with its path.",
+      "additionalProperties": false,
+      "properties": {
+        "melody": {
+          "type": "object",
+          "description": "The settings of the melody stage (docs/preferences.md).",
+          "additionalProperties": false,
+          "properties": {
+            "range": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "low": {
+                  "type": "integer",
+                  "minimum": 36,
+                  "maximum": 96
+                },
+                "high": {
+                  "type": "integer",
+                  "minimum": 48,
+                  "maximum": 108,
+                  "description": "At least range.low + 12."
+                }
+              }
+            },
+            "nct_types": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "passing",
+                  "neighbor",
+                  "appoggiatura",
+                  "suspension",
+                  "anticipation"
+                ]
+              }
+            },
+            "density": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4
+            },
+            "climax_position": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "climax_rise": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "climax_slack": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "second_nearest_chord_tone": {
+              "type": "string",
+              "pattern": "^[0-9]+/[0-9]+$",
+              "description": "n/d with 0 <= n <= d and d from 1 to 16."
+            },
+            "attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 256
+            },
+            "keep": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16,
+              "description": "At most attempts."
+            },
+            "plain_shaping": {
+              "type": "boolean"
+            },
+            "weights": {
+              "type": "object",
+              "description": "The weight each group of soft rules counts in a melody's score.",
+              "additionalProperties": false,
+              "properties": {
+                "melodic": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "against_bass": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "tendency": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "climax": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "contour": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "ending_reduction": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "waves": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "central_range": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "monotony": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "seam": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            }
+          }
+        },
+        "motif": {
+          "type": "object",
+          "description": "The settings of the segments motive generator (docs/preferences.md).",
+          "additionalProperties": false,
+          "properties": {
+            "bars": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "one": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "two": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "pickup_one_in": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 64,
+              "description": "A pickup is drawn one time in this many; 0 never draws one."
+            },
+            "shapes_one_bar": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "repeat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "contrast": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "shapes_two_bars": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "repeat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "contrast": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "repeat_contrast": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "plans_two": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "I-V": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "I-IV": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "I-I": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "plans_three": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "I-V-I": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "I-IV-I": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "features": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "dotted": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "leap": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "repeat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "leap": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "low": {
+                  "type": "integer",
+                  "minimum": 3,
+                  "maximum": 12
+                },
+                "high": {
+                  "type": "integer",
+                  "minimum": 3,
+                  "maximum": 12,
+                  "description": "At least leap.low."
+                }
+              }
+            },
+            "rung_moves": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "step": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "skip": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "decorations": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "chord_tone": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "passing": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "neighbor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "appoggiatura": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "escape": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "durations": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0.",
+              "additionalProperties": false,
+              "properties": {
+                "half_beat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "beat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "two_beats": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            }
+          }
+        },
+        "development": {
+          "type": "object",
+          "description": "The settings of the theme's development (docs/preferences.md).",
+          "additionalProperties": false,
+          "properties": {
+            "fidelity_minimum": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "melody": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "presentation": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    },
+                    "continuation": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    },
+                    "cadential": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    }
+                  }
+                },
+                "balanced": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "presentation": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    },
+                    "continuation": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    },
+                    "cadential": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    }
+                  }
+                },
+                "theme": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "presentation": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    },
+                    "continuation": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    },
+                    "cadential": {
+                      "type": "string",
+                      "pattern": "^[0-9]+/[0-9]+$",
+                      "description": "n/d with 0 <= n <= d and d from 1 to 1000."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
