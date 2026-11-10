@@ -59,6 +59,8 @@ cadential slot in a period). A slot motive keeps no harmony, features or role (a
 
 ### Idea motives
 
+A theme's shape is one table (R-416, `src/grow/theme_shape.c`, `theme_shape.h`). Each beginning and ending is a `ThemeShapeHalf` (its plan name and its standard-form name); each idea of each half is a `ThemeShapeIdea` row with its `GrowIdea`, name, `GrowPlace`, slot, whether it is the first of its slot, role and length in eighths of the theme; each slot is a `ThemeShapeSlot` (name, function, plan node name). `grow_idea_name`, `grow_idea_place`, `grow_idea_in_pairing`, `grow_place_units`, `grow_idea_slot`, `grow_slot_used`, the slot readers, `grow_idea_role`, the vocabulary's `theme_slots` and `theme_ideas` and the mapping to standard-form's `PhraseBeginning` and `PhraseEnding` all read it, so a new idea or a new length is a row, not a `switch`. `GrowSlot`, `GrowIdea` and `GrowIdeaRole` are declared in `theme_shape.h`, which `grow.h` includes. `tests/test_theme_shape.c` checks the table against the values the old code gave for the nine pairings.
+
 `GrowIdea` names the ideas of a theme as the plan does (`grow_idea_name`: `basic idea`, `repetition`, `contrasting idea`,
 `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,
 `cadential 2`); `grow_idea_in_pairing` says whether a pairing has one (R-206). `GrowRequest.idea_motives` gives a single idea a

@@ -37,7 +37,7 @@ The pins are checked by `scripts/check-pins.sh` (see [building.md](building.md#s
 | `src/counterpoint/` | The counter-melody operator, species 1 to 4 | [counterpoint.md](counterpoint.md) |
 | `src/texture/` | The accompaniment and four-part voicing operators | [accompaniment.md](accompaniment.md), [voicing.md](voicing.md) |
 | `src/piece/` | Form templates, the piece plan and the compose run | [piece.md](piece.md) |
-| `src/grow/` | Growing a theme from a motive | [grow.md](grow.md) |
+| `src/grow/` | Growing a theme from a motive; `theme_shape.c` is the table of what a theme of each beginning and ending is made of (ideas, slots, roles, places, lengths) | [grow.md](grow.md) |
 | `src/check/` | Hearing a render through the Analyzer, the check loop, the explanation | [analyzer-check.md](analyzer-check.md), [explain.md](explain.md) |
 | `src/style/` | Style models, blending, style checks, seeding from a corpus | [style.md](style.md) |
 | `src/util/` | Private helpers the sources share | [structure.md](structure.md) |
