@@ -34,6 +34,24 @@ static ComposerStatus fail_cancelled(ComposerError *error) {
 
 /* ------------------------------------------------------------- composing */
 
+size_t api_piece_version_names(const FormSpec *form, const char **names, const char **labels, size_t capacity) {
+    size_t count = 0;
+    if (form->request_sections && form->loop_role_count > 0) {
+        if (count < capacity) {
+            names[count] = "loop";
+            labels[count++] = "Loop version";
+        }
+        if (count < capacity) {
+            names[count] = "ending";
+            labels[count++] = "Ending version";
+        }
+    } else if (count < capacity) {
+        names[count] = "piece";
+        labels[count++] = "Piece";
+    }
+    return count;
+}
+
 void api_piece_version_destroy(PieceVersion *version) {
     if (version->composed) {
         compose_outcome_destroy(&version->outcome);

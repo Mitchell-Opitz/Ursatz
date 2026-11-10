@@ -12,11 +12,12 @@
  *
  * Versioning: a request may carry "api_version": <major>; a different major is refused. The major version changes on any
  * removed or changed member or entry; the minor version on an addition (an entry, a request member, a response member).
- * 1.0 is the first stable API; 1.1 adds the theme form, style weight and seed vocabularies.
+ * 1.0 is the first stable API; 1.1 adds the theme form, style weight and seed vocabularies; 1.13 adds composer_api_forms and
+ * the vocabulary members that drop the Pieces view's theme slot rules.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 12
+#define COMPOSER_API_VERSION_MINOR 13
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -327,6 +328,20 @@ ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *jo
  * the settings as numbers)}. Every list but those noted is [{"value", "label"}]; a request accepts every value.
  */
 ComposerStatus composer_api_vocabulary(ComposerResponse *out);
+
+/*
+ * The built-in forms, in registry order (R-428; quick, no job, never cancelled). json: {"forms": [{"name", "label",
+ * "closing", "sections" ("sizes": the sizes list the sections; "request": the piece request gives them), "versions" ([{"value",
+ * "label", "loop", "after" (only on "ending")}]), "settings" ({"modulate", "accompaniment" ("required" or "optional"),
+ * "voicing", "section_fills"}), "regions" (names), "sizes" ([{"bars", "count", "default", "sections": [{"name", "letter",
+ * "role" {"value", "label"}, "bars" and "beats" (one of them null), "beginning" and "ending" {"value", "label"}, "cadence"
+ * {"value", "label", "core"}, "closed", "keys" {"start", "end"}, "motive", "returns", "variation" (each null for none),
+ * "layers" ("all" or lane names), "slots": [{"slot", "ideas": [names]}]}]}]), "roles" ([{"value", "label", "required"}]),
+ * "loop_roles" (names), "cadences" ({"default", "last": [{"roles", "cadence"}]}) and "default_ending" ({"id", "letter",
+ * "role", "bars", "cadence"}); the last four are [], [], null and null for a form whose sizes list the sections}]}.
+ * COMPOSER_ERR_INTERNAL if a built-in form does not parse.
+ */
+ComposerStatus composer_api_forms(ComposerResponse *out);
 
 /*
  * Reads a request as its entry does and composes nothing. kind: "motive" (the request of composer_api_motive), "theme" (of

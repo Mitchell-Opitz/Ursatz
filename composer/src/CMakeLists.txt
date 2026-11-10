@@ -24,6 +24,7 @@ add_library(ursatz_composer STATIC
     api/api_develop.c
     api/api_grow_request.c
     api/api_vocabulary.c
+    api/api_forms.c
     api/api_validate.c
     util/job.c
     util/util.c
