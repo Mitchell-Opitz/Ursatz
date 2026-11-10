@@ -207,6 +207,53 @@ check(
 const empty = P.resultView(null);
 check(empty.seed === null && empty.versions.length === 0 && empty.loop === "" && empty.files.length === 0, "no result gives no rows");
 
+/* forms (fixtures/forms.json is the route's answer) */
+const roundedState = P.withForm(P.emptyState("pce-2"), "rounded-binary");
+roundedState.key = "A";
+roundedState.mode = "minor";
+roundedState.meter = "3/4";
+roundedState.bars = 24;
+roundedState.modulate = true;
+roundedState.motive = { item_id: "mot-9", version: 3 };
+const roundedBody = P.bodyFromState(roundedState);
+check(
+  same(roundedBody.piece.structure, { form: "rounded-binary", key: "A", mode: "minor", meter: "3/4", bars: 24, count: 0, modulate: true }),
+  "a sized form's body holds its form, size and modulate and no sections",
+);
+const roundedBack = P.stateFromBody(roundedBody, "pce-2");
+check(
+  roundedBack.form === "rounded-binary" && roundedBack.bars === 24 && roundedBack.count === 0 && roundedBack.modulate === true && roundedBack.sections.length === 0 &&
+    roundedBack.key === "A" && roundedBack.mode === "minor" && roundedBack.meter === "3/4" && roundedBack.motive.item_id === "mot-9",
+  "a rounded binary state round-trips through its body",
+);
+check(same(P.bodyFromState(roundedBack), roundedBody), "a rounded binary body round-trips through its state");
+const noModulate = P.withForm(roundedState, "loop");
+check(noModulate.form === "loop" && noModulate.modulate === false && noModulate.bars === 0, "a form that cannot modulate drops modulate and the size");
+const gameBody = P.bodyFromState(filled());
+check(gameBody.piece.structure.form === "game-loop" && gameBody.piece.structure.sections.length === 5 && gameBody.piece.structure.bars === undefined, "a game loop body names its form and keeps its sections");
+const oldBody = JSON.parse(JSON.stringify(gameBody));
+delete oldBody.piece.structure.form;
+const oldState = P.stateFromBody(oldBody, "pce-1");
+check(oldState.form === "game-loop" && oldState.sections.length === 5 && oldState.sections[4].part === "ending", "a body without a form is the game loop");
+const sizes = P.sizeOptions(P.formOf("variations"));
+check(sizes.length === 8 && sizes[2].label === "3 variations, 32 bars" && sizes[2].default && sizes[0].label === "1 variation, 16 bars", "the sizes of the variations form");
+check(same(P.sizeOptions(P.formOf("rounded-binary")).map((size) => size.label), ["16 bars", "24 bars"]) && P.sizeOptions(P.formOf("game-loop")).length === 0, "sizes of other forms");
+check(P.sectionsOf(P.formOf("rounded-binary"), 0, 0).length === 3 && P.sectionsOf(P.formOf("variations"), 0, 4).length === 5 && P.sectionsOf(P.formOf("game-loop"), 0, 0).length === 0, "the sections of a size");
+const noBody2 = P.emptyState("pce-3");
+check(P.structureProblems(noBody2).some((text) => /Loop body/.test(text)) && P.structureProblems(P.withForm(noBody2, "ternary")).length === 0, "a game loop without a body names Loop body; a sized form has no structure problems");
+const reordered = filled();
+reordered.sections.reverse();
+check(P.structureProblems(reordered).some((text) => text === "The parts must come in the order Intro, Loop body, Turnaround, Ending."), "the order problem names the roles by label");
+check(P.addSection(P.emptyState("pce-4"), "intro").sections.length === 1 && P.rolesOf(P.formOf("game-loop")).length === 4 && P.defaultRole(P.formOf("game-loop")) === "body", "the roles are the form's");
+const oneVersion = { meter: "4/4", key: "C major", versions: { piece: { plan: "plan.json", sections: [{ id: "A", role: "theme", letter: "A", start: "0/1", beats: 32, cadence: "PAC", heard: "perfect-authentic" }] } } };
+const oneView = P.resultView({ summary: oneVersion }, { form: "rounded-binary" });
+check(oneView.versions.length === 1 && oneView.versions[0].name === "piece" && oneView.versions[0].label === "Piece" && !oneView.versions[0].loop && oneView.playLoop === null, "a one-version summary has no loop and one version piece");
+check(oneView.versions[0].view.rows[0].partLabel === "Theme" && oneView.versions[0].view.rows[0].part === "theme", "a row of a sized form names its role");
+check(same(view.versions.map((version) => version.name), ["loop", "ending"]) && view.versions[0].loop && view.versions[1].after === "loop" && view.versions[1].label === "Ending version", "the game loop has its loop and its ending after it");
+const actions = P.actionSections(filled(), [{ id: "s0" }, { id: "s1" }, { id: "s2" }, { id: "s3" }]);
+check(same(actions.map((entry) => entry.id), ["s0", "s1", "s2", "s3"]) && actions[1].lanes.length === 4 && actions[1].length === "8 bars", "regenerate is offered for the sections of the first version only");
+check(same(P.actionSections(roundedState, oneView.versions[0].view.rows).map((entry) => entry.id), ["A"]), "a sized form offers the sections of its result");
+
 /* sources and themes */
 const updates = P.updatedUses({ uses_status: [{ item_id: "mot-1", name: "Motif A", version: 1, current_version: 2 }, { item_id: "thm-1", version: 2, current_version: 2 }, { item_id: "x", version: 1, current_version: 4, missing: true }] });
 check(updates.length === 1 && updates[0].label === "Source updated: Motif A v2", "an updated source is offered");

@@ -33,6 +33,20 @@ async function main() {
     return { status: 200, json: async () => (url === "/api/composer/forms" ? { forms: [] } : fixture) };
   });
   check(loaded === fixture && V.loaded() && same(calls, ["/api/composer/vocabulary", "/api/composer/forms"]), "load fetches the routes once and keeps the answers");
+  const forms = require("./fixtures/forms.json");
+  V.set(fixture, forms);
+  check(V.forms().length === forms.forms.length && V.form("game-loop").label === "Game loop" && V.form("rounded-binary").sections === "sizes" && V.form("nothing") === null,
+        "the forms are the Composer's, each by name");
+  check(same(V.forms().map((form) => form.name), ["binary", "rounded-binary", "ternary", "variations", "loop", "layered", "game-loop"]), "the forms come in the Composer's order");
+  await V.load(async (url) => ({ status: 200, json: async () => (url === "/api/composer/forms" ? { forms: forms.forms.slice(0, 2) } : fixture) }));
+  check(V.forms().length === 2, "load keeps the forms the route gave");
+  let formsFailed = false;
+  try {
+    await V.load(async (url) => ({ status: url === "/api/composer/forms" ? 500 : 200, json: async () => fixture }));
+  } catch (err) {
+    formsFailed = /forms are unavailable/.test(err.message);
+  }
+  check(formsFailed && V.forms().length === 2, "unavailable forms are an error and keep what was loaded");
   let failed = false;
   try {
     await V.load(async () => ({ status: 500, json: async () => ({}) }));
