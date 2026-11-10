@@ -13,35 +13,27 @@
  * segment motive; tune them here.
  */
 
-#define SEGMENT_BAR_ONE_BAR_WEIGHT 1 /* a motive of one bar ... */
-#define SEGMENT_BAR_TWO_BARS_WEIGHT 1 /* ... and of two bars, as often */
-#define SEGMENT_PICKUP_ONE_IN 4       /* a pickup (half a beat or a beat), one note before segment a, in one motive of this many */
 #define SEGMENT_MIN_CELL_TICKS 4      /* a cell must hold a feature: the shortest cell is two beats */
 #define SEGMENT_MAX 3
 #define SEGMENT_TRIES_PER_SETUP 8 /* notes drawn within one bars, shape and plan before another is drawn (a candidate) */
 #define SEGMENT_CELL_TRIES 32 /* a cell that does not fit is drawn again, so a failed cell does not change the shape's odds */
-#define SEGMENT_LEAP_LOW 5  /* a leap of a fourth (5 semitones) ... */
-#define SEGMENT_LEAP_HIGH 9 /* ... to a sixth (9 semitones) */
 #define SEGMENT_START_REACH 4 /* rungs either side of the note before, searched for where a new segment starts */
 #define SEGMENT_START_DISTANCE 5 /* the most semitones from the note before to where a new segment starts */
 
 /* Shapes: a a' (a cell and its repeat), a b (a cell and a new one), a a' b (two half-bar cells, then a bar). */
 typedef enum { SHAPE_REPEAT = 0, SHAPE_CONTRAST, SHAPE_REPEAT_CONTRAST, SHAPE_KINDS } Shape;
-static const unsigned long SHAPE_WEIGHTS_ONE_BAR[SHAPE_KINDS] = {3, 2, 0};
-static const unsigned long SHAPE_WEIGHTS_TWO_BARS[SHAPE_KINDS] = {3, 2, 2};
 
 /* Harmony plans, one chord (a degree) per segment, and how often each is drawn (ch. V). */
 typedef struct {
     size_t count;
     int degrees[SEGMENT_MAX];
-    unsigned long weight;
 } Plan;
-static const Plan PLANS_TWO[] = {{2, {1, 5, 0}, 3}, {2, {1, 4, 0}, 1}, {2, {1, 1, 0}, 1}};
-static const Plan PLANS_THREE[] = {{3, {1, 5, 1}, 2}, {3, {1, 4, 1}, 1}};
+static const Plan PLANS_TWO[] = {{2, {1, 5, 0}}, {2, {1, 4, 0}}, {2, {1, 1, 0}}};
+static const Plan PLANS_THREE[] = {{3, {1, 5, 1}}, {3, {1, 4, 1}}};
 #define PLAN_KINDS_TWO (sizeof(PLANS_TWO) / sizeof(PLANS_TWO[0]))
 #define PLAN_KINDS_THREE (sizeof(PLANS_THREE) / sizeof(PLANS_THREE[0]))
 
-/* The distinctive feature of segment a, drawn with equal weight. */
+/* The distinctive feature of segment a. */
 typedef enum { FEATURE_DOTTED = 0, FEATURE_LEAP, FEATURE_REPEAT, FEATURE_KINDS } Feature;
 #define DOTTED_LONG 3  /* a dotted beat, in half-beats ... */
 #define DOTTED_SHORT 1 /* ... and what completes the beat after it */
@@ -53,12 +45,46 @@ static size_t pick_weighted(FillRng *rng, const unsigned long *weights, size_t c
     for (size_t i = 0; i < count; i++) {
         sum += weights[i];
     }
+    if (sum == 0) {
+        return 0;
+    }
     unsigned long pick = (unsigned long)fill_rng_below(rng, sum);
     size_t chosen = 0;
     while (pick >= weights[chosen]) {
         pick -= weights[chosen++];
     }
     return chosen;
+}
+
+/* The defaults of the SEGMENTS strategy: what its draws were tuned to. */
+void motive_random_preferences_default(MotiveRandomPreferences *out) {
+    memset(out, 0, sizeof(*out));
+    out->bars[0] = 1; /* a motive of one bar ... */
+    out->bars[1] = 1; /* ... and of two bars, as often */
+    out->pickup_one_in = 4; /* a pickup (half a beat or a beat), one note before segment a, in one motive of this many */
+    out->shapes_one_bar[0] = 3;
+    out->shapes_one_bar[1] = 2;
+    out->shapes_two_bars[0] = 3;
+    out->shapes_two_bars[1] = 2;
+    out->shapes_two_bars[2] = 2;
+    out->plans_two[0] = 3;
+    out->plans_two[1] = 1;
+    out->plans_two[2] = 1;
+    out->plans_three[0] = 2;
+    out->plans_three[1] = 1;
+    for (size_t i = 0; i < 3; i++) {
+        out->features[i] = 1; /* drawn with equal weight */
+    }
+    out->leap_low = 5; /* a leap of a fourth (5 semitones) ... */
+    out->leap_high = 9; /* ... to a sixth (9 semitones) */
+    out->rung_moves[0] = 6; /* one rung most often ... */
+    out->rung_moves[1] = 2; /* ... two now and then */
+    for (size_t i = 0; i < 5; i++) {
+        out->decorations[i] = 1;
+    }
+    for (size_t i = 0; i < DURATION_KINDS; i++) {
+        out->durations[i] = MOTIVE_RANDOM_DURATION_WEIGHTS[i];
+    }
 }
 
 /* The scale-step offset of a chord's tones from the tones of I: I 0, V down a fourth, IV up a fourth (same octave). */
@@ -76,14 +102,14 @@ typedef struct {
 } Cell;
 
 /* Tiles from to to (half-beats from the start of the cell) with the notes of the DURATIONS table. */
-static bool tile(FillRng *rng, long from, long to, Cell *cell) {
+static bool tile(const MotiveRandomPreferences *preferences, FillRng *rng, long from, long to, Cell *cell) {
     for (long position = from; position < to;) {
         long room = to - position;
         bool on_beat = position % 2 == 0;
         unsigned long weights[DURATION_KINDS];
         for (size_t i = 0; i < DURATION_KINDS; i++) {
             bool fits = MOTIVE_RANDOM_DURATIONS[i] <= room && (MOTIVE_RANDOM_DURATIONS[i] == 1 || on_beat);
-            weights[i] = fits ? MOTIVE_RANDOM_DURATION_WEIGHTS[i] : 0;
+            weights[i] = fits ? preferences->durations[i] : 0;
         }
         size_t chosen = pick_weighted(rng, weights, DURATION_KINDS);
         if (cell->count == MAX_NOTES) {
@@ -96,7 +122,7 @@ static bool tile(FillRng *rng, long from, long to, Cell *cell) {
 }
 
 /* Segment a's cell of length half-beats for a feature: a dotted figure on a beat, or a cell with two notes on beats. */
-static bool try_cell_a(FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
+static bool try_cell_a(const MotiveRandomPreferences *preferences, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
     if (feature == FEATURE_DOTTED) {
         long slots = (length - (DOTTED_LONG + DOTTED_SHORT)) / 2 + 1;
@@ -104,16 +130,16 @@ static bool try_cell_a(FillRng *rng, long length, Feature feature, bool long_end
             return false;
         }
         long start = 2 * (long)fill_rng_below(rng, (uint64_t)slots);
-        if (!tile(rng, 0, start, cell) || cell->count + 2 > MAX_NOTES) {
+        if (!tile(preferences, rng, 0, start, cell) || cell->count + 2 > MAX_NOTES) {
             return false;
         }
         cell->ticks[cell->count++] = DOTTED_LONG;
         cell->ticks[cell->count++] = DOTTED_SHORT;
-        if (!tile(rng, start + DOTTED_LONG + DOTTED_SHORT, length, cell)) {
+        if (!tile(preferences, rng, start + DOTTED_LONG + DOTTED_SHORT, length, cell)) {
             return false;
         }
     } else {
-        if (!tile(rng, 0, length, cell)) {
+        if (!tile(preferences, rng, 0, length, cell)) {
             return false;
         }
         size_t on_beats = 0;
@@ -130,9 +156,9 @@ static bool try_cell_a(FillRng *rng, long length, Feature feature, bool long_end
 }
 
 /* A new cell for the last segment: tiled, then its last notes joined until the last note is at least a beat long. */
-static bool try_cell_b(FillRng *rng, long length, const Cell *not_like, Cell *cell) {
+static bool try_cell_b(const MotiveRandomPreferences *preferences, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
-    if (!tile(rng, 0, length, cell)) {
+    if (!tile(preferences, rng, 0, length, cell)) {
         return false;
     }
     while (cell->count >= 2 && cell->ticks[cell->count - 1] < 2) {
@@ -145,18 +171,18 @@ static bool try_cell_b(FillRng *rng, long length, const Cell *not_like, Cell *ce
     return cell->count != not_like->count || memcmp(cell->ticks, not_like->ticks, cell->count * sizeof(long)) != 0;
 }
 
-static bool draw_cell_a(FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
+static bool draw_cell_a(const MotiveRandomPreferences *preferences, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_a(rng, length, feature, long_end, cell)) {
+        if (try_cell_a(preferences, rng, length, feature, long_end, cell)) {
             return true;
         }
     }
     return false;
 }
 
-static bool draw_cell_b(FillRng *rng, long length, const Cell *not_like, Cell *cell) {
+static bool draw_cell_b(const MotiveRandomPreferences *preferences, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_b(rng, length, not_like, cell)) {
+        if (try_cell_b(preferences, rng, length, not_like, cell)) {
             return true;
         }
     }
@@ -196,30 +222,29 @@ typedef struct {
     Plan plan;
 } Setup;
 
-static void draw_setup(const PlanMeter *meter, FillRng *rng, Setup *setup) {
+static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMeter *meter, FillRng *rng, Setup *setup) {
     memset(setup, 0, sizeof(*setup));
     long beats = meter->beats_per_bar;
     bool halves = beats % 2 == 0 && beats >= SEGMENT_MIN_CELL_TICKS;
     setup->beats = beats;
     setup->bars = 2;
     if (halves) {
-        const unsigned long weights[] = {SEGMENT_BAR_ONE_BAR_WEIGHT, SEGMENT_BAR_TWO_BARS_WEIGHT};
-        setup->bars = 1 + (long)pick_weighted(rng, weights, 2);
+        setup->bars = 1 + (long)pick_weighted(rng, preferences->bars, 2);
     }
-    setup->pickup = fill_rng_below(rng, SEGMENT_PICKUP_ONE_IN) == 0 ? 1 + (long)fill_rng_below(rng, 2) : 0;
-    setup->shape = (Shape)pick_weighted(rng, setup->bars == 1 ? SHAPE_WEIGHTS_ONE_BAR : SHAPE_WEIGHTS_TWO_BARS,
-                                        halves ? SHAPE_KINDS : SHAPE_KINDS - 1);
+    setup->pickup = preferences->pickup_one_in > 0 && fill_rng_below(rng, preferences->pickup_one_in) == 0
+                        ? 1 + (long)fill_rng_below(rng, 2)
+                        : 0;
+    setup->shape = (Shape)(setup->bars == 1 ? pick_weighted(rng, preferences->shapes_one_bar, 2)
+                                            : pick_weighted(rng, preferences->shapes_two_bars, halves ? SHAPE_KINDS : SHAPE_KINDS - 1));
     if (setup->shape == SHAPE_REPEAT_CONTRAST) {
-        setup->plan = PLANS_THREE[pick_weighted(rng, (unsigned long[]){PLANS_THREE[0].weight, PLANS_THREE[1].weight},
-                                                PLAN_KINDS_THREE)];
+        setup->plan = PLANS_THREE[pick_weighted(rng, preferences->plans_three, PLAN_KINDS_THREE)];
     } else {
-        setup->plan = PLANS_TWO[pick_weighted(rng, (unsigned long[]){PLANS_TWO[0].weight, PLANS_TWO[1].weight, PLANS_TWO[2].weight},
-                                              PLAN_KINDS_TWO)];
+        setup->plan = PLANS_TWO[pick_weighted(rng, preferences->plans_two, PLAN_KINDS_TWO)];
     }
 }
 
 /* The rhythm of every segment of a setup. False when this draw does not fit. */
-static bool draw_layout(const Setup *setup, FillRng *rng, Layout *layout, Feature *feature_out) {
+static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup *setup, FillRng *rng, Layout *layout, Feature *feature_out) {
     memset(layout, 0, sizeof(*layout));
     Shape shape = setup->shape;
     long beats = setup->beats;
@@ -232,13 +257,21 @@ static bool draw_layout(const Setup *setup, FillRng *rng, Layout *layout, Featur
     if (a_length < SEGMENT_MIN_CELL_TICKS) {
         return false;
     }
-    /* The feature is drawn with equal weight; one that cannot fit the cell in this shape (a dotted figure in a cell that
-       must end on a beat) gives way to the next, so the shape's odds hold. */
-    Feature feature = (Feature)fill_rng_below(rng, FEATURE_KINDS);
+    /* The feature is drawn by its weight; one that cannot fit the cell in this shape (a dotted figure in a cell that
+       must end on a beat) gives way to the next with a weight, so the shape's odds hold. */
+    Feature feature = (Feature)pick_weighted(rng, preferences->features, FEATURE_KINDS);
     Cell a;
     size_t tried = 0;
-    while (tried < FEATURE_KINDS && !draw_cell_a(rng, a_length, feature, shape == SHAPE_REPEAT, &a)) {
-        feature = (Feature)((feature + 1) % FEATURE_KINDS);
+    while (tried < FEATURE_KINDS && !draw_cell_a(preferences, rng, a_length, feature, shape == SHAPE_REPEAT, &a)) {
+        Feature next = feature;
+        for (size_t step = 1; step <= FEATURE_KINDS; step++) {
+            Feature candidate = (Feature)((feature + step) % FEATURE_KINDS);
+            if (preferences->features[candidate] > 0) {
+                next = candidate;
+                break;
+            }
+        }
+        feature = next;
         tried++;
     }
     if (tried == FEATURE_KINDS) {
@@ -268,7 +301,7 @@ static bool draw_layout(const Setup *setup, FillRng *rng, Layout *layout, Featur
     if (shape != SHAPE_REPEAT) {
         Cell b;
         size_t index = shape == SHAPE_CONTRAST ? 1 : 2;
-        if (!draw_cell_b(rng, last_length, &a, &b)) {
+        if (!draw_cell_b(preferences, rng, last_length, &a, &b)) {
             return false;
         }
         layout->first[index] = layout->rhythm.count;
@@ -313,14 +346,13 @@ static bool set_frame(const AnalysisKey *key, const Layout *layout, Place *place
 }
 
 /* The next rung of a walk on the chord tones: one rung most often, two now and then, and a move of two or more comes back. */
-static long next_rung(FillRng *rng, long rung, int *step_back) {
-    static const int moves[] = {1, 1, 1, 1, 1, 1, 2, 2};
+static long next_rung(const MotiveRandomPreferences *preferences, FillRng *rng, long rung, int *step_back) {
     int move;
     if (*step_back != 0) {
         move = *step_back;
         *step_back = 0;
     } else {
-        int size = moves[fill_rng_below(rng, sizeof(moves) / sizeof(moves[0]))];
+        int size = 1 + (int)pick_weighted(rng, preferences->rung_moves, 2);
         move = fill_rng_below(rng, 2) == 0 ? size : -size;
         if (size >= BIG_LEAP_RUNGS) {
             *step_back = move > 0 ? -1 : 1;
@@ -330,7 +362,7 @@ static long next_rung(FillRng *rng, long rung, int *step_back) {
 }
 
 /* Segment a's frame: a walk, with the feature (a leap or a repeated note) between two frame notes. */
-static bool draw_frame_a(const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Place *place,
+static bool draw_frame_a(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Place *place,
                          Melody *melody) {
     size_t frames[MAX_NOTES];
     size_t frame_count = 0;
@@ -356,7 +388,7 @@ static bool draw_frame_a(const AnalysisKey *key, const Layout *layout, FillRng *
                     }
                     int to = motive_position_pitch(key, motive_random_rung_position(rung + move), 0);
                     int leap = abs(to - from);
-                    if (leap >= SEGMENT_LEAP_LOW && leap <= SEGMENT_LEAP_HIGH) {
+                    if (leap >= preferences->leap_low && leap <= preferences->leap_high) {
                         options[option_count++] = move;
                     }
                 }
@@ -367,7 +399,7 @@ static bool draw_frame_a(const AnalysisKey *key, const Layout *layout, FillRng *
                 rung += move;
                 step_back = move > 0 ? -1 : 1;
             } else {
-                rung = next_rung(rng, rung, &step_back);
+                rung = next_rung(preferences, rng, rung, &step_back);
             }
         }
         if (!set_frame(key, layout, place, melody, frames[f], rung)) {
@@ -416,7 +448,7 @@ static bool draw_frame_repeat(const AnalysisKey *key, const Layout *layout, Fill
 }
 
 /* The frame of a new segment: it starts on a chord tone near the last frame note before it, then walks. */
-static bool draw_frame_new(const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment, Place *place,
+static bool draw_frame_new(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment, Place *place,
                            Melody *melody) {
     size_t first = layout->first[segment];
     size_t previous = first - 1;
@@ -452,7 +484,7 @@ static bool draw_frame_new(const AnalysisKey *key, const Layout *layout, FillRng
             continue;
         }
         if (i > first) {
-            rung = next_rung(rng, rung, &step_back);
+            rung = next_rung(preferences, rng, rung, &step_back);
         }
         if (!set_frame(key, layout, place, melody, i, rung)) {
             return false;
@@ -465,7 +497,7 @@ static bool draw_frame_new(const AnalysisKey *key, const Layout *layout, FillRng
  * The notes between frame notes: a type is drawn for each (or none), and a note takes a non-chord pitch near the note
  * before it that makes the figure with the notes either side, else a chord tone of its segment's chord near it.
  */
-static bool draw_decorations(const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody) {
+static bool draw_decorations(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody) {
     for (size_t i = 0; i < layout->rhythm.count; i++) {
         if (place->frame[i]) {
             continue;
@@ -476,7 +508,7 @@ static bool draw_decorations(const AnalysisKey *key, const Layout *layout, FillR
         int degree = layout->plan.degrees[place->segment[i]];
         long shift = chord_shift(degree);
         long before = place->position[i - 1];
-        size_t kind = (size_t)fill_rng_below(rng, DECORATION_KINDS + 1);
+        size_t kind = pick_weighted(rng, preferences->decorations, DECORATION_KINDS + 1);
         long options[2 * OFF_FRAME_REACH + 1];
         size_t option_count = 0;
         if (kind > 0) {
@@ -516,7 +548,7 @@ static bool draw_decorations(const AnalysisKey *key, const Layout *layout, FillR
 }
 
 /* The frames of every segment, the notes between, and a range of no more than a twelfth. */
-static bool draw_melody(const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody) {
+static bool draw_melody(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody) {
     Place place;
     memset(&place, 0, sizeof(place));
     memset(melody, 0, sizeof(*melody));
@@ -526,16 +558,16 @@ static bool draw_melody(const AnalysisKey *key, const Layout *layout, FillRng *r
             place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s];
         }
     }
-    if (!draw_frame_a(key, layout, rng, feature, &place, melody)) {
+    if (!draw_frame_a(preferences, key, layout, rng, feature, &place, melody)) {
         return false;
     }
     for (size_t s = 1; s < layout->segment_count; s++) {
         if (!(layout->repeats[s] ? draw_frame_repeat(key, layout, rng, s, &place, melody)
-                                 : draw_frame_new(key, layout, rng, s, &place, melody))) {
+                                 : draw_frame_new(preferences, key, layout, rng, s, &place, melody))) {
             return false;
         }
     }
-    if (!draw_decorations(key, layout, rng, &place, melody)) {
+    if (!draw_decorations(preferences, key, layout, rng, &place, melody)) {
         return false;
     }
     int low = 127;
@@ -612,14 +644,20 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
 bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
                                       bool *found) {
     Setup setup;
+    MotiveRandomPreferences defaults;
+    const MotiveRandomPreferences *preferences = options->preferences;
+    if (preferences == NULL) {
+        motive_random_preferences_default(&defaults);
+        preferences = &defaults;
+    }
     *found = false;
-    draw_setup(&options->meter, rng, &setup);
+    draw_setup(preferences, &options->meter, rng, &setup);
     for (int attempt = 0; attempt < SEGMENT_TRIES_PER_SETUP; attempt++) {
         Layout layout;
         Melody melody;
         Feature feature;
         const char *fault = NULL;
-        if (!draw_layout(&setup, rng, &layout, &feature) || !draw_melody(key, &layout, rng, feature, &melody) ||
+        if (!draw_layout(preferences, &setup, rng, &layout, &feature) || !draw_melody(preferences, key, &layout, rng, feature, &melody) ||
             !motive_random_build(options, key, &layout.rhythm, &melody, out) ||
             !set_plan_and_segments(options, &layout, out) || !tones_as_drawn(out, &layout, &melody)) {
             continue;

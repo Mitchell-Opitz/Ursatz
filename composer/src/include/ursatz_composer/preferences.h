@@ -5,7 +5,9 @@
 #include <stddef.h>
 
 #include <cJSON.h>
+#include <ursatz_composer/grow.h>
 #include <ursatz_composer/melody_fill.h>
+#include <ursatz_composer/motive_random.h>
 
 /*
  * The composer's settings (R-411): the numbers that shape what it makes, held in one document so that a listening
@@ -15,10 +17,15 @@
  *
  * ComposerPreferences holds the melody group, the settings of the melody stage (MelodyFillParams): the range, the
  * non-chord tones, the density, where the climax falls and how it is rated, the search (attempts and keep), and the
- * weight each group of soft rules counts in a melody's score. The motif and development groups follow.
+ * weight each group of soft rules counts in a melody's score. The motif group is the settings of the segments motive
+ * generator (MotiveRandomPreferences): the bars, pickup, shapes, chord plans, features, leap, rung moves, decorations and
+ * durations it draws from. The development group is the fidelity minimum table of the theme's development
+ * (GrowFidelityTable).
  */
 typedef struct {
     MelodyFillParams melody;
+    MotiveRandomPreferences motif;
+    GrowFidelityTable development;
 } ComposerPreferences;
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128

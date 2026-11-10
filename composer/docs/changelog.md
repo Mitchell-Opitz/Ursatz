@@ -4,6 +4,8 @@ The Composer versions and what each changed. Back to the [docs index](README.md)
 
 ## Unreleased (phase P43)
 
+The motive generator and the fidelity check read their settings (R-411, B2): the segments strategy reads a `MotiveRandomPreferences` through `MotiveRandomOptions.preferences` (bars, pickup, shapes, chord plans, features, leap, rung moves, decorations and note lengths; the drawn strategy keeps its constants), and the melody stage's fidelity minimums are a `GrowFidelityTable` set through `GrowConfig.fidelity` and `ComposeConfig.fidelity` (`GrowSetup.fidelity` for the Development list). `ComposerPreferences` gains the `motif` and `development` groups. Every default is the constant it replaces and every draw keeps its random-number calls, so seeded output and the snapshots are unchanged; nothing calls the document from the API yet, and the API version does not change. See [preferences.md](preferences.md).
+
 The melody stage reads its settings from `MelodyFillParams` (R-411, B1): the climax rise and slack, the share of draws that take the second-nearest chord tone, the attempts and the melodies kept (`MELODY_KEEP_MAX` 16), and a weight for each group of the checker's soft rules (`MelodyWeights`). A new `ComposerPreferences` (`preferences.h`) holds the melody group and reads it from and writes it to JSON with a path for every refusal. The defaults are the constants they replace, so with no preferences every output is byte-identical to before; nothing calls the document from the API yet, and the API version does not change. See [preferences.md](preferences.md).
 
 ## Unreleased (phase P37)

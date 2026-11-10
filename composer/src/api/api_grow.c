@@ -600,6 +600,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     config.seed = seed;
     config.basic = setup->motive;
     config.context.development = setup->development;
+    config.fidelity = setup->fidelity;
     config.style = setup->style;
     config.style_weight = setup->style_weight;
     config.tempo = setup->tempo;
@@ -957,7 +958,8 @@ static double score_fraction(MotiveScore score) {
  * (grow_idea_fidelity), with the minimum of the idea's role under the development setting. An idea whose ref makes it differ
  * from its source (grow_ref_departs) has no minimum: it is ranked, never refused. Left unmeasured when the plan cannot say.
  */
-static void measure_development(const PiecePlan *plan, LaneSpanId span, const Motive *basic, GrowDevelopment development,
+static void measure_development(const PiecePlan *plan, LaneSpanId span, const Motive *basic, const GrowFidelityTable *table,
+                                GrowDevelopment development,
                                 Development *out) {
     MotiveFidelity fidelity;
     Motive source;
@@ -970,7 +972,7 @@ static void measure_development(const PiecePlan *plan, LaneSpanId span, const Mo
     }
     MotiveScore minimum = {0, 1};
     if (!grow_ref_departs(&ref, from_segment)) {
-        minimum = grow_fidelity_minimum(development, grow_idea_role(out->idea));
+        minimum = grow_fidelity_minimum_in(table, development, grow_idea_role(out->idea));
     }
     out->measured = true;
     out->fidelity = score_fraction(fidelity.score);
@@ -983,7 +985,8 @@ static void measure_development(const PiecePlan *plan, LaneSpanId span, const Mo
  * The motives made from m0 (every motive node with a motive_ref) and the idea each one is the melody of, with the idea's
  * fidelity when it has a melody span (basic is the motive the run was made from, development its setting).
  */
-static size_t collect_developments(const PiecePlan *plan, NodeId theme, const Motive *basic, GrowDevelopment development,
+static size_t collect_developments(const PiecePlan *plan, NodeId theme, const Motive *basic, const GrowFidelityTable *fidelity,
+                                   GrowDevelopment development,
                                    Development *out) {
     size_t count = 0;
     LaneSpanId melodies[MAX_LANE_SPANS];
@@ -1018,7 +1021,7 @@ static size_t collect_developments(const PiecePlan *plan, NodeId theme, const Mo
             }
         }
         if (has_span) {
-            measure_development(plan, idea_span, basic, development, &out[count]);
+            measure_development(plan, idea_span, basic, fidelity, development, &out[count]);
         }
         describe_ref(&ref->params.motive, out[count].how, sizeof(out[count].how));
         snprintf(out[count].segment, sizeof(out[count].segment), "%s", ref->params.motive.segment);
@@ -1029,9 +1032,10 @@ static size_t collect_developments(const PiecePlan *plan, NodeId theme, const Mo
     return count;
 }
 
-static cJSON *developments_json(const PiecePlan *plan, NodeId theme, const Motive *basic, GrowDevelopment development) {
+static cJSON *developments_json(const PiecePlan *plan, NodeId theme, const Motive *basic, const GrowFidelityTable *fidelity,
+                                GrowDevelopment development) {
     Development developments[MAX_DEVELOPMENTS];
-    size_t count = collect_developments(plan, theme, basic, development, developments);
+    size_t count = collect_developments(plan, theme, basic, fidelity, development, developments);
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < count; i++) {
         cJSON *item = cJSON_CreateObject();
@@ -1378,7 +1382,7 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
               cJSON_AddItemToObject(object, "structure", structure_json(plan, node, bar)) &&
               cJSON_AddItemToObject(object, "chords", chords_json(plan, node, &setup->meter)) &&
               cJSON_AddItemToObject(object, "developments",
-                                    developments_json(plan, node, setup->motive, setup->development));
+                                    developments_json(plan, node, setup->motive, setup->fidelity, setup->development));
     if (ok && info) {
         ok = cJSON_AddItemToObject(object, "slots", slots_json(info, plan, &theme->outcome));
     }
