@@ -717,7 +717,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.13") == 0);
+    assert(strcmp(composer_api_version(), "1.14") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

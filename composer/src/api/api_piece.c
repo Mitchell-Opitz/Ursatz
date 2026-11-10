@@ -18,6 +18,7 @@
 #include "api_grow.h"
 #include "api_internal.h"
 #include "api_piece.h"
+#include "api_workflow.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
 #include "util/util.h"
@@ -66,10 +67,21 @@ void api_piece_made_destroy(PieceMade *piece) {
     }
 }
 
-/* The name of version index of the piece in the document: "loop" and "ending" of a game loop. */
-static const char *version_name(const PieceMade *piece, size_t index) {
-    (void)piece;
-    return index == 0 ? "loop" : "ending";
+/* How many versions the form of the request has, and the name of one in the document: "loop" and "ending", or "piece". */
+static size_t version_count(const PieceSpec *request) {
+    const char *names[API_PIECE_VERSIONS_MAX];
+    const char *labels[API_PIECE_VERSIONS_MAX];
+    return api_piece_version_names(request->form, names, labels, API_PIECE_VERSIONS_MAX);
+}
+
+static const char *version_name(const PieceSpec *request, size_t index) {
+    const char *names[API_PIECE_VERSIONS_MAX];
+    const char *labels[API_PIECE_VERSIONS_MAX];
+    return api_piece_version_names(request->form, names, labels, API_PIECE_VERSIONS_MAX) > index ? names[index] : "";
+}
+
+const char *api_piece_first_version_name(const PieceSpec *request) {
+    return version_name(request, 0);
 }
 
 static void make_config(const PieceSpec *request, bool check, unsigned long seed, ComposeConfig *config) {
@@ -101,16 +113,22 @@ PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsig
     return result;
 }
 
-/* One try from a seed: the loop version, then the ending version built from it with seed + 20. */
-static PieceResult compose_piece(const PieceSpec *request, bool check, unsigned long seed, PieceMade *piece) {
+/*
+ * One try from a seed: the first version (the loop of a game loop), then the ending version built from it with seed + 20. A
+ * sized form has the one version, and its plan is built again with the seed, which plans the keys of a modulating piece.
+ */
+static PieceResult compose_piece(PieceSpec *request, bool check, unsigned long seed, PieceMade *piece) {
     memset(piece, 0, sizeof(*piece));
     piece->seed = seed;
-    piece->version_count = 2;
+    piece->version_count = version_count(request);
+    if (!request->form->request_sections) {
+        request->request.seed = seed;
+    }
     PieceResult result = piece_build_plan(&request->request, &piece->versions[0].plan);
     if (result == PIECE_OK) {
         result = compose_version(request, check, seed, &piece->versions[0]);
     }
-    if (result == PIECE_OK) {
+    if (result == PIECE_OK && piece->version_count == 2) {
         result = api_piece_compose_ending(request, check, seed, piece);
     }
     return result;
@@ -190,6 +208,18 @@ static PieceFillKind request_fill(const PieceSpec *request, const char *id) {
     return PIECE_FILL_EMPTY;
 }
 
+/* The section of a plan a form with sizes has, by the name of its node: "A", "B'", "variation 2". */
+static NodeId sized_section_find(const PiecePlan *plan, const char *name) {
+    ApiSection sections[API_MAX_SECTIONS];
+    size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
+    for (size_t i = 0; i < count && i < API_MAX_SECTIONS; i++) {
+        if (strcmp(sections[i].name, name) == 0) {
+            return sections[i].node;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
 static bool is_node_target(const FillTarget *targets, size_t count, NodeId node) {
     for (size_t i = 0; i < count; i++) {
         if (targets[i].kind == FILL_TARGET_NODE && targets[i].id == node) {
@@ -209,21 +239,24 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
                                 size_t *count, char *what, size_t what_size, ComposerError *error) {
     PlanJsonError plan_error;
     PiecePlan *plan = NULL;
+    bool sized = !request->form->request_sections;
     *out = NULL;
     *targets = NULL;
     *count = 0;
     if (plan_from_json(edit->text, &plan, &plan_error) != PLAN_OK) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s", sized ? "plan" : "loop plan",
+                        plan_error.message);
     }
     char member[64];
-    NodeId node = piece_section_find(plan, edit->section);
+    NodeId node = sized ? sized_section_find(plan, edit->section) : piece_section_find(plan, edit->section);
     if (node == PLAN_NODE_NONE) {
         plan_destroy(plan);
         snprintf(member, sizeof member, "%s/section", edit->path);
-        return api_fail(error, COMPOSER_ERR_REQUEST, member, "the loop plan has no section '%s'", edit->section);
+        return api_fail(error, COMPOSER_ERR_REQUEST, member, "the %s has no section '%s'", sized ? "plan" : "loop plan",
+                        edit->section);
     }
     snprintf(member, sizeof member, "%s/lanes", edit->path);
-    bool theme = request_fill(request, edit->section) == PIECE_FILL_THEME;
+    bool theme = !sized && request_fill(request, edit->section) == PIECE_FILL_THEME;
     if (theme && edit->lane_count == 0) {
         plan_destroy(plan);
         return api_fail(error, COMPOSER_ERR_REQUEST, member,
@@ -288,7 +321,7 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     snprintf(what, what_size, "%s%s section %s", edit->lane_count ? "the " : "", edit->lane_count ? lanes : "", edit->section);
     NodeId held[PIECE_STRUCTURE_MAX_SECTIONS];
     size_t held_count = 0;
-    bool refresh = piece_section_holds_body_start(plan, node);
+    bool refresh = !sized && piece_section_holds_body_start(plan, node);
     if (refresh) {
         held_count = piece_held_sections(plan, held, PIECE_STRUCTURE_MAX_SECTIONS);
         held_count = held_count > PIECE_STRUCTURE_MAX_SECTIONS ? PIECE_STRUCTURE_MAX_SECTIONS : held_count;
@@ -323,7 +356,8 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
         PlanJsonError plan_error;
         if (plan_from_json(edit->text, &loop->plan, &plan_error) != PLAN_OK) {
             *result = PIECE_ERR_BAD_REQUEST;
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s",
+                            request->form->request_sections ? "loop plan" : "plan", plan_error.message);
         }
         return COMPOSER_OK;
     }
@@ -356,14 +390,14 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
     return COMPOSER_OK;
 }
 
-/* One try from a seed: the loop plan written again, then the ending version built from it with seed + 20. */
+/* One try from a seed: the first plan written again, then the ending version built from it with seed + 20 when the form has one. */
 static ComposerStatus regenerate_piece(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
                                        PieceMade *piece, PieceResult *result, ComposerError *error) {
     memset(piece, 0, sizeof(*piece));
     piece->seed = seed;
-    piece->version_count = 2;
+    piece->version_count = version_count(request);
     ComposerStatus status = api_piece_regenerate_loop(request, edit, check, seed, &piece->versions[0], result, error);
-    if (status == COMPOSER_OK && *result == PIECE_OK) {
+    if (status == COMPOSER_OK && *result == PIECE_OK && piece->version_count == 2) {
         *result = api_piece_compose_ending(request, check, seed, piece);
     }
     return status;
@@ -431,17 +465,92 @@ cJSON *api_piece_plan_object(const PiecePlan *plan) {
 }
 
 typedef struct {
-    const PieceSection *section;
+    const PieceSection *section;     /* the section the request gave, for a form whose sections it gives */
+    const FormSectionSpec *spec;     /* the section of the form's size, for a form with sizes */
+    const FormSpecSize *size;
     const char *source;
     Rational start;
+    Rational length;
     bool has_cadence;
     CadenceType cadence;
     const char *heard; /* the cadence the Analyzer heard, NULL without a check */
     bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
 } Row;
 
+/* The cadence heard for the next cadence the plan has, from the Analyzer check; NULL without a check. */
+static const char *heard_cadence(const AnalyzerCheck *check, size_t next_item) {
+    size_t seen = 0;
+    for (size_t i = 0; check && i < check->item_count; i++) {
+        if (check->items[i].kind == ANALYZER_CHECK_CADENCE && seen++ == next_item) {
+            return check->items[i].heard;
+        }
+    }
+    return NULL;
+}
+
+static bool section_kept(const PieceVersion *version, NodeId id) {
+    for (size_t h = 0; h < version->outcome.section_count; h++) {
+        if (version->outcome.sections[h].section == id && !version->outcome.sections[h].in_scope) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * Whether a regenerate left a section of a form with sizes as it was: the run composed something, and the section was not one
+ * of the open ones it heard (a section already written is not open) or was heard out of scope.
+ */
+static bool size_section_kept(const PieceVersion *version, NodeId id) {
+    if (!version->composed) {
+        return false;
+    }
+    for (size_t h = 0; h < version->outcome.section_count; h++) {
+        if (version->outcome.sections[h].section == id) {
+            return !version->outcome.sections[h].in_scope;
+        }
+    }
+    return true;
+}
+
+/* The sections of the size a form with sizes was asked for, each matched to the plan's section of its name, in order. */
+static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
+    const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
+    const FormSpecSize *size = form_spec_size(request->form, request->request.bars, request->request.count);
+    const PiecePlan *plan = version->plan;
+    size_t next_item = 0;
+    size_t count = 0;
+    for (size_t i = 0; size && i < size->section_count && count < PIECE_ROWS_MAX; i++) {
+        NodeId id = sized_section_find(plan, size->sections[i].name);
+        if (id == PLAN_NODE_NONE) {
+            continue;
+        }
+        const PlanConstraint *cadence = NULL;
+        for (size_t c = 0; c < plan_node_constraint_count(plan, id); c++) {
+            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, c);
+            cadence = constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence ? constraint : cadence;
+        }
+        Row *row = &rows[count++];
+        memset(row, 0, sizeof(*row));
+        row->spec = &size->sections[i];
+        row->size = size;
+        row->start = plan_node_span(plan, id).start;
+        row->length = plan_node_span(plan, id).length;
+        row->kept = size_section_kept(version, id);
+        row->has_cadence = cadence != NULL;
+        row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
+        if (cadence) {
+            row->heard = heard_cadence(check, next_item++);
+        }
+    }
+    return count;
+}
+
 /* The sections of a version in time order, with the cadence each planned and, with a check, the one heard. */
 static size_t collect_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
+    if (!request->form->request_sections) {
+        return collect_size_rows(request, version, rows);
+    }
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
     size_t next_item = 0;
     size_t count = 0;
@@ -473,20 +582,11 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
             continue;
         }
         row->start = plan_node_span(plan, id).start;
-        for (size_t h = 0; h < version->outcome.section_count; h++) {
-            if (version->outcome.sections[h].section == id && !version->outcome.sections[h].in_scope) {
-                row->kept = true;
-            }
-        }
+        row->kept = section_kept(version, id);
         row->has_cadence = cadence != NULL;
         row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
         if (cadence && check) {
-            size_t seen = 0;
-            for (size_t i = 0; i < check->item_count; i++) {
-                if (check->items[i].kind == ANALYZER_CHECK_CADENCE && seen++ == next_item) {
-                    row->heard = check->items[i].heard;
-                }
-            }
+            row->heard = heard_cadence(check, next_item);
             next_item++;
         }
         count++;
@@ -556,6 +656,51 @@ static cJSON *seam_json(const ComposeOutcome *outcome) {
     return object;
 }
 
+/* A row of a form whose sections the request gives: {id, part, letter, start, beats, cadence, heard, [in_scope], fill, source}. */
+static cJSON *loop_row_json(const Row *row) {
+    cJSON *entry = cJSON_CreateObject();
+    bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->id) &&
+              cJSON_AddStringToObject(entry, "part", piece_part_name(row->section->part)) &&
+              cJSON_AddStringToObject(entry, "letter", row->section->letter) && api_add(entry, "start", time_json(row->start)) &&
+              cJSON_AddNumberToObject(entry, "beats", (double)row->section->beats) &&
+              api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
+              api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
+              cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&
+              cJSON_AddStringToObject(entry, "source", row->source);
+    if (!ok) {
+        cJSON_Delete(entry);
+        return NULL;
+    }
+    return entry;
+}
+
+/* The length of a span in beats of the request's meter. */
+static double span_beats(const PieceSpec *request, Rational length) {
+    return length.den != 0 ? (double)length.num * (double)request->request.meter.beat_unit / (double)length.den : 0;
+}
+
+/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive}. */
+static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
+    const FormSectionSpec *spec = row->spec;
+    char motive[96];
+    bool has_motive = spec->has_motive && motive_relation_step_text(&spec->motive, motive, sizeof motive);
+    bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < row->size->section_count;
+    cJSON *entry = cJSON_CreateObject();
+    bool ok = entry && cJSON_AddStringToObject(entry, "id", spec->name) &&
+              cJSON_AddStringToObject(entry, "role", form_role_name(spec->role)) &&
+              cJSON_AddStringToObject(entry, "letter", spec->letter) && api_add(entry, "start", time_json(row->start)) &&
+              cJSON_AddNumberToObject(entry, "beats", span_beats(request, row->length)) &&
+              api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
+              api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
+              api_add(entry, "returns", string_or_null(returns ? row->size->sections[spec->returns].name : NULL)) &&
+              api_add(entry, "motive", string_or_null(has_motive ? motive : NULL));
+    if (!ok) {
+        cJSON_Delete(entry);
+        return NULL;
+    }
+    return entry;
+}
+
 cJSON *api_piece_version_json(const PieceSpec *request, const PieceVersion *version) {
     Row rows[PIECE_ROWS_MAX];
     size_t count = collect_rows(request, version, rows);
@@ -564,16 +709,8 @@ cJSON *api_piece_version_json(const PieceSpec *request, const PieceVersion *vers
     cJSON *sections = cJSON_CreateArray();
     bool ok = api_add(object, "plan", cJSON_CreateNull()) && api_add(object, "sections", sections);
     for (size_t i = 0; ok && i < count; i++) {
-        cJSON *entry = cJSON_CreateObject();
-        ok = entry && cJSON_AddStringToObject(entry, "id", rows[i].section->id) &&
-             cJSON_AddStringToObject(entry, "part", piece_part_name(rows[i].section->part)) &&
-             cJSON_AddStringToObject(entry, "letter", rows[i].section->letter) && api_add(entry, "start", time_json(rows[i].start)) &&
-             cJSON_AddNumberToObject(entry, "beats", (double)rows[i].section->beats) &&
-             api_add(entry, "cadence", string_or_null(rows[i].has_cadence ? plan_cadence_name(rows[i].cadence) : NULL)) &&
-             api_add(entry, "heard", string_or_null(rows[i].heard)) && (!rows[i].kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
-             cJSON_AddStringToObject(entry, "fill", piece_fill_name(rows[i].section->fill)) &&
-             cJSON_AddStringToObject(entry, "source", rows[i].source);
-        if (!ok || !cJSON_AddItemToArray(sections, entry)) {
+        cJSON *entry = rows[i].spec ? size_row_json(request, &rows[i]) : loop_row_json(&rows[i]);
+        if (!entry || !cJSON_AddItemToArray(sections, entry)) {
             cJSON_Delete(entry);
             ok = false;
         }
@@ -607,11 +744,12 @@ typedef struct {
     bool midi;
     bool musicxml;
     bool ending_musicxml;
+    bool musicxml_versions;
     int explain; /* 0 none, 1 text, 2 json */
 } PieceOutputs;
 
 /* The explanation of the versions as the command writes it: text with a heading for each, or JSON {"<version>": ...}. */
-static char *explanation_text(const PieceMade *piece, bool json) {
+static char *explanation_text(const PieceSpec *request, const PieceMade *piece, bool json) {
     Explanation explanations[API_PIECE_VERSIONS_MAX];
     char *texts[API_PIECE_VERSIONS_MAX] = {NULL};
     size_t built = 0;
@@ -626,7 +764,7 @@ static char *explanation_text(const PieceMade *piece, bool json) {
             ok = texts[i] != NULL;
         }
         if (ok) {
-            size += strlen(version_name(piece, i)) + strlen(texts[i]) + 24;
+            size += strlen(version_name(request, i)) + strlen(texts[i]) + 24;
         }
     }
     joined = ok ? malloc(size) : NULL;
@@ -636,7 +774,7 @@ static char *explanation_text(const PieceMade *piece, bool json) {
             joined[used++] = '{';
         }
         for (size_t i = 0; i < piece->version_count; i++) {
-            const char *name = version_name(piece, i);
+            const char *name = version_name(request, i);
             used += (size_t)(json ? snprintf(joined + used, size - used, "%s\"%s\":%s", i > 0 ? "," : "", name, texts[i])
                                   : snprintf(joined + used, size - used, "== %s version ==\n%s\n", name, texts[i]));
         }
@@ -652,8 +790,9 @@ static char *explanation_text(const PieceMade *piece, bool json) {
 }
 
 /*
- * The result document: {schema, seed, key, meter, brief, loop, [regenerated,] versions: {loop, ending}}, as the command prints
- * it, with no plan paths (the plans are in "plans") and no files.
+ * The result document: {schema, seed, key, meter, brief, loop, [regenerated,] versions: {<name>: ...}}, the versions named as
+ * api_piece_version_names has them ("loop" and "ending", or "piece"), as the command prints it, with no plan paths (the plans
+ * are in "plans") and no files.
  */
 static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, const PieceEdit *edit,
                              const cJSON *regenerate_section, bool from) {
@@ -686,7 +825,7 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
     }
     cJSON *versions = cJSON_CreateObject();
     for (size_t i = 0; ok && i < piece->version_count; i++) {
-        ok = api_add(versions, version_name(piece, i), api_piece_version_json(request, &piece->versions[i]));
+        ok = api_add(versions, version_name(request, i), api_piece_version_json(request, &piece->versions[i]));
     }
     ok = ok && api_add(document, "versions", versions);
     if (!ok) {
@@ -745,27 +884,48 @@ ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *pla
 }
 
 /*
- * Adds "plans": {"loop", "ending"}, with an explanation "explanation", and with ending_musicxml the ending version's MusicXML
- * as "ending_musicxml" to the document.
+ * Adds "plans": {<name>: ...} for each version, with an explanation "explanation", with ending_musicxml the ending version's
+ * MusicXML as "ending_musicxml", and with musicxml_versions the MusicXML of every version after the first as
+ * "musicxml_versions": {<name>: ...} to the document.
  */
 static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, const PieceMade *piece, const PieceOutputs *outputs,
                                   ComposerResponse *out) {
     cJSON *plans = cJSON_CreateObject();
     bool plans_ok = plans != NULL;
     for (size_t i = 0; plans_ok && i < piece->version_count; i++) {
-        plans_ok = api_add(plans, version_name(piece, i), api_piece_plan_object(piece->versions[i].plan));
+        plans_ok = api_add(plans, version_name(request, i), api_piece_plan_object(piece->versions[i].plan));
     }
     if (!plans_ok || !api_add(document, "plans", plans)) {
         cJSON_Delete(plans);
         return api_fail_alloc(&out->error);
     }
     if (outputs->explain) {
-        char *text = explanation_text(piece, outputs->explain == 2);
+        char *text = explanation_text(request, piece, outputs->explain == 2);
         if (!text || !cJSON_AddStringToObject(document, "explanation", text)) {
             free(text);
             return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the explanation");
         }
         free(text);
+    }
+    if (outputs->musicxml_versions) {
+        cJSON *musicxml = cJSON_CreateObject();
+        for (size_t i = 1; musicxml && i < piece->version_count; i++) {
+            char *text = NULL;
+            ComposerStatus status = api_piece_musicxml(request, piece->versions[i].plan, &text, &out->error);
+            if (status != COMPOSER_OK) {
+                cJSON_Delete(musicxml);
+                return status;
+            }
+            bool added = cJSON_AddStringToObject(musicxml, version_name(request, i), text) != NULL;
+            free(text);
+            if (!added) {
+                cJSON_Delete(musicxml);
+                musicxml = NULL;
+            }
+        }
+        if (!api_add(document, "musicxml_versions", musicxml)) {
+            return api_fail_alloc(&out->error);
+        }
     }
     if (outputs->ending_musicxml) {
         char *text = NULL;
@@ -798,6 +958,7 @@ static ComposerStatus read_outputs(const cJSON *request, PieceOutputs *outputs, 
     if (!api_member_bool(request, "midi", &outputs->midi, &present, error) ||
         !api_member_bool(request, "musicxml", &outputs->musicxml, &present, error) ||
         !api_member_bool(request, "ending_musicxml", &outputs->ending_musicxml, &present, error) ||
+        !api_member_bool(request, "musicxml_versions", &outputs->musicxml_versions, &present, error) ||
         !api_member_bool(request, "plain_midi", plain_midi, &present, error) ||
         !api_member_string(request, "explain", &explain, &present, error)) {
         return COMPOSER_ERR_REQUEST;
@@ -877,7 +1038,7 @@ ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult resu
             stuck->outcome.rejection_count > 0 ? &stuck->outcome.rejections[stuck->outcome.rejection_count - 1] : NULL;
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
                         "no piece could be composed from seeds %lu to %lu (the last was stuck in the %s version, %s stage%s%s)%s",
-                        first_seed, last_seed, version_name(last, (size_t)(stuck - last->versions)),
+                        first_seed, last_seed, version_name(request, (size_t)(stuck - last->versions)),
                         rejection && rejection->stage[0] ? rejection->stage : "?", rejection ? ", " : "",
                         rejection ? rejection->reason : "",
                         rejection && (strcmp(rejection->stage, "seam") == 0 || strcmp(rejection->stage, "structure") == 0 ||
@@ -934,6 +1095,10 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
     if (status == COMPOSER_OK) {
         status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
                                         job, &out->error);
+    }
+    if (status == COMPOSER_OK && outputs.ending_musicxml && version_count(request) < 2) {
+        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/ending_musicxml", "the %s form has no ending version",
+                          request->form->name);
     }
     PieceResult result = PIECE_ERR_STUCK;
     unsigned long last_seed = seed;

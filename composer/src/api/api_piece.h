@@ -89,6 +89,9 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
                                       bool plain_midi, const ComposerJob *job, ComposerError *error);
 void api_piece_request_destroy(PieceSpec *request);
 
+/* The name of the first version of the request's form: "loop" for the game loop, "piece" for a form with sizes. */
+const char *api_piece_first_version_name(const PieceSpec *request);
+
 /*
  * Reads the piece request root without composing and writes the defaults into filled (a copy of root): the cadence of every
  * section that has none (piece_default_cadences) and the default ending section when there is none

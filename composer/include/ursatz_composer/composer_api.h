@@ -13,11 +13,12 @@
  * Versioning: a request may carry "api_version": <major>; a different major is refused. The major version changes on any
  * removed or changed member or entry; the minor version on an addition (an entry, a request member, a response member).
  * 1.0 is the first stable API; 1.1 adds the theme form, style weight and seed vocabularies; 1.13 adds composer_api_forms and
- * the vocabulary members that drop the Pieces view's theme slot rules.
+ * the vocabulary members that drop the Pieces view's theme slot rules; 1.14 lets the piece entries compose, regenerate and
+ * vary a piece of any built-in form (piece request schema version 2) and answer with the form's versions by name.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 13
+#define COMPOSER_API_VERSION_MINOR 14
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -170,15 +171,19 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
 
 /*
  * Composes a piece (docs/piece-request.md): the loop version and the ending version built from it, or the loop plan of an
- * earlier piece with one section written again. Request: {"request": <the piece request: schema "ursatz-piece-request"
- * version 1, a theme fill carrying "plan": <plan object> and, for the display, "source": <a name> instead of a path>,
+ * earlier piece with one section written again; a piece of another form (schema_version 2, "form": a built-in name, "bars",
+ * "count", "modulate" and no "sections") has the one version "piece", and "regenerate"."section" names a section of its plan
+ * by name ("A", "variation 2"). Request: {"request": <the piece request: schema "ursatz-piece-request"
+ * version 1 (the game loop) or 2, a theme fill carrying "plan": <plan object> and, for the display, "source": <a name> instead of a path>,
  * "from": <the loop plan object of an earlier piece, or absent>, "regenerate": {"section": <section id>|null, "lanes":
  * ["harmony"|"bass"|"melody"|"inner", ...] (none or "all": the whole section)} (null section: only the ending version is
  * built again; needs "from"), "seed" (0 to 4294967295; default from the clock), "check", "style" (a style model path that
  * replaces the request's), "midi", "musicxml" (the loop version's files), "ending_musicxml" (the ending version's MusicXML as
- * "ending_musicxml" in the document; the ending version's MIDI file is composer_api_export of "plans"."ending"), "plain_midi", "explain" ("text" or "json": the
- * explanation of both versions in the document)}. json: what `piece --format json` prints (without the files it wrote), with
- * "plans": {"loop": <plan object>, "ending": <plan object>}, the "plan" of each version null, and "explanation" when asked; a
+ * "ending_musicxml" in the document, refused for a form with no ending version; the ending version's MIDI file is composer_api_export of
+ * "plans"."ending"), "musicxml_versions" (the MusicXML of every version after the first as "musicxml_versions": {<name>:
+ * <MusicXML>} in the document), "plain_midi", "explain" ("text" or "json": the explanation of every version in the
+ * document)}. json: what `piece --format json` prints (without the files it wrote), with
+ * "plans": {<version>: <plan object>} ("loop" and "ending", or "piece"), the "plan" of each version null, and "explanation" when asked; a
  * section a regenerate left as it was has "in_scope": false. plan_json: the loop plan. midi and musicxml: the loop version's
  * files, when asked (the MIDI file has the loopStart and loopEnd markers). Progress per seed ("seed") and per compose stage; a
  * cancel is COMPOSER_ERR_CANCELLED with no partial plan. A theme fill with a path in "plan" is refused with its path.
@@ -193,7 +198,7 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
  * "plain_midi", "style", "musicxml" (each variation's MusicXML as "musicxml" in its entry; its MIDI file is
  * composer_api_export of its plan with its "loop_markers" as "loop")}. json: {"schema": "ursatz-piece-variations", "section", "lane", "brief", "variations": [{"index",
  * "seed", "loop": <the version, its "plan" the plan object>, "loop_markers": {"start", "end"}}], "kept", "requested",
- * "seeds_tried"};
+ * "seeds_tried"}; the version of a form with sizes is "piece" and has no "loop_markers";
  * "loop_markers" is the region a MIDI file of the loop version marks with loopStart and loopEnd (composer_api_export's
  * "loop"). Progress once per seed tried, stage "variations" and the compose stages; a cancel is COMPOSER_ERR_CANCELLED.
  * COMPOSER_ERR_UNSATISFIABLE when no version differs from the plan.
@@ -345,7 +350,8 @@ ComposerStatus composer_api_forms(ComposerResponse *out);
 
 /*
  * Reads a request as its entry does and composes nothing. kind: "motive" (the request of composer_api_motive), "theme" (of
- * composer_api_theme), "piece" (the piece request object, docs/piece-request.md, not the wrapper of composer_api_piece) or
+ * composer_api_theme), "piece" (the piece request object, docs/piece-request.md, not the wrapper of composer_api_piece; one of a form with sizes
+ * gets the "bars" and "count" of the size it chose and no section defaults) or
  * "random_motive" (of composer_api_random_motive). json: {"request": <the request with the Composer's defaults filled>}: a
  * motive gets its "meter", "role", "input" "format" and "form" when it has none and its "harmony" as [{"numeral", "onset"}]
  * (the onset in beats of the meter, as "3/2"); a piece gets the "cadence" of every section that has none and the default
