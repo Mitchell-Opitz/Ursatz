@@ -284,10 +284,11 @@ static void cache_add(GrowFidelityCache *cache, unsigned long long key, const Mo
 
 /*
  * Whether the ref itself makes the idea differ from its source: a liquidation, a fragment by notes, an inversion, any relation
- * but exact, a transposition, a dominant form and a segment's own fragment. Such an idea's score against the source is low
+ * but exact, a transposition, a dominant form and a fragment cut from a segment. Such an idea's score against the source is low
  * by what it was asked to be, so it is ranked but never refused.
  */
 bool grow_ref_departs(const PlanMotiveRef *ref, bool from_segment) {
+    (void)from_segment;
     if (ref->steps > 0) {
         return true;
     }
@@ -300,7 +301,8 @@ bool grow_ref_departs(const PlanMotiveRef *ref, bool from_segment) {
     case MOTIVE_RELATION_DOMINANT_FORM:
         return false;
     case MOTIVE_RELATION_FRAGMENT:
-        return !from_segment;
+        /* A fragment by notes departs from its source, whether that is m0 or a segment of it (R-464). */
+        return true;
     default:
         return true;
     }
