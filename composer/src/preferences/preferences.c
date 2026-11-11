@@ -283,7 +283,7 @@ typedef struct {
     const char *key;
     size_t offset;
     size_t count;
-    const char *names[5];
+    const char *names[8];
 } WeightedList;
 
 static const WeightedList MOTIF_LISTS[] = {
@@ -296,7 +296,8 @@ static const WeightedList MOTIF_LISTS[] = {
     {"rung_moves", offsetof(MotiveRandomPreferences, rung_moves), 2, {"step", "skip"}},
     {"decorations", offsetof(MotiveRandomPreferences, decorations), 5,
      {"chord_tone", "passing", "neighbor", "appoggiatura", "escape"}},
-    {"durations", offsetof(MotiveRandomPreferences, durations), 3, {"half_beat", "beat", "two_beats"}},
+    {"durations", offsetof(MotiveRandomPreferences, durations), 8,
+     {"half_beat", "beat", "two_beats", "quarter_beats", "long_short", "short_long", "triplet", "triplet_two_beats"}},
     {"accented_types", offsetof(MotiveRandomPreferences, accented_types), 3, {"appoggiatura", "passing", "suspension"}}};
 #define MOTIF_LIST_COUNT (sizeof(MOTIF_LISTS) / sizeof(MOTIF_LISTS[0]))
 
@@ -631,7 +632,9 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
 static bool add_weighted_list(cJSON *group, const WeightedList *list, const MotiveRandomPreferences *motif) {
     cJSON *object = cJSON_AddObjectToObject(group, list->key);
     const unsigned long *values = list_values_const(motif, list);
-    for (size_t i = 0; object && i < list->count; i++) {
+    /* The five new durations are read but not written until the document carries them (phase L2, B6): the document is as it was. */
+    size_t count = strcmp(list->key, "durations") == 0 ? 3 : list->count;
+    for (size_t i = 0; object && i < count; i++) {
         if (!add_number(object, list->names[i], (double)values[i])) {
             return false;
         }

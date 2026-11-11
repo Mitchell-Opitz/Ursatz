@@ -70,7 +70,11 @@ typedef enum {
  *   leap_low/high     the size of a leap, in semitones (a fourth to a sixth)
  *   rung_moves        a walk on the chord tones moves one rung (step) or two (skip)
  *   decorations       a note between frame notes: chord tone, passing, neighbor, appoggiatura, escape
- *   durations         half beat, beat, two beats
+ *   durations         half beat, beat, two beats, then five figures, each off (0) by default: quarter_beats (two notes of a
+ *                     quarter beat, anywhere a half beat may start), long_short (a note of three quarters of a beat and one
+ *                     of a quarter, on a beat; in a compound grid two thirds and a third), short_long (the reverse),
+ *                     triplet (three notes of a third of a beat, on a beat) and triplet_two_beats (three notes of two
+ *                     thirds of a beat, on a beat); the triplets are drawn on the simple grid only
  *   accented_one_in   an accented non-chord tone (on a beat, resolving to the next note) in one eligible note of this many; 0 never
  *   accented_types    which one: appoggiatura, passing, suspension (a suspension only where the chord changes)
  *   avoid_repeats     no repeated note: a decoration that finds no figure tries the other kinds before a chord tone, and no
@@ -82,6 +86,9 @@ typedef enum {
  *   contrast_fidelity_min  the least recognizability of a contrasting segment against segment a (a ratio; 0 never rejects)
  *   long_on_weak      the two-beat note is this much more likely on a weak beat (weight times 1 plus this)
  *   final_long        the last note of the last segment is longer than every other note in it
+ *   compound_beats    in 6/8, 9/8 and 12/8 the beat is the dotted quarter: cells are tiled in beats of three eighths, the
+ *                     dotted feature is a dotted eighth, sixteenth and eighth, and a run of eighths between two frame
+ *                     notes is filled by step; no effect in any other meter
  */
 typedef struct {
     unsigned long bars[2];
@@ -94,7 +101,7 @@ typedef struct {
     int leap_low, leap_high;
     unsigned long rung_moves[2];
     unsigned long decorations[5];
-    unsigned long durations[3];
+    unsigned long durations[8];
     unsigned accented_one_in;
     unsigned long accented_types[3];
     bool avoid_repeats;
@@ -104,6 +111,7 @@ typedef struct {
     ComposerRatio contrast_fidelity_min;
     unsigned long long_on_weak;
     bool final_long;
+    bool compound_beats;
 } MotiveRandomPreferences;
 
 /* The defaults. */
