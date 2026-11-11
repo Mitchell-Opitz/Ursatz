@@ -189,6 +189,7 @@ static bool construction_layout(const GrowThemeRequest *request, GrowLayout *lay
         }
     }
     size_t ending = total - beginning;
+    layout->main_ending_bars = ending - evaded_bars;
     for (size_t k = 0; k < layout->extension_count; k++) {
         GrowLayoutExtension *laid = &layout->extensions[k];
         if (laid->kind == PLAN_EXTENSION_ADDITION) {
@@ -235,6 +236,7 @@ bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out) {
     layout.ending_bars = whole_bars(layout.ending, request->bar);
     layout.idea_beginning_bars = layout.beginning_bars;
     layout.idea_ending_bars = layout.ending_bars;
+    layout.main_ending_bars = layout.ending_bars;
     *out = layout;
     return true;
 }
@@ -341,17 +343,34 @@ bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec) 
             if (!placed_motive(spec, extension->place, &base) || !addition_motive(base, extension->length, want, &made)) {
                 return false;
             }
-        } else if (extension->kind == PLAN_EXTENSION_EVADED) {
-            /* The idea after the evaded cadence restates the last idea's motive exactly: it must have the room. */
-            if (!placed_motive(spec, extension->place, &base) || rational_cmp(base->length, extension->length) > 0) {
-                return false;
-            }
-            continue;
         } else {
             continue;
         }
         spec->extended[k] = made;
         spec->has_extended[k] = true;
+    }
+    /*
+     * The idea after an evaded cadence restates the motive of the idea before it exactly (the last repeat after the theme's
+     * last idea, else that idea): it must have the room.
+     */
+    for (size_t k = 0; k < layout->extension_count; k++) {
+        const GrowLayoutExtension *extension = &layout->extensions[k];
+        const Motive *base;
+        if (extension->kind != PLAN_EXTENSION_EVADED) {
+            continue;
+        }
+        if (!placed_motive(spec, extension->place, &base)) {
+            return false;
+        }
+        for (size_t other = 0; other < layout->extension_count; other++) {
+            if (layout->extensions[other].kind == PLAN_EXTENSION_REPEAT && layout->extensions[other].place == extension->place &&
+                spec->has_extended[other]) {
+                base = &spec->extended[other];
+            }
+        }
+        if (rational_cmp(base->length, extension->length) > 0) {
+            return false;
+        }
     }
     return true;
 }

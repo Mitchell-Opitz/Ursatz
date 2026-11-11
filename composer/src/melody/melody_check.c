@@ -66,6 +66,9 @@ unsigned melody_cadence_mask(const MelodyContext *context) {
         return tonic;
     case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
         return third;
+    case CADENCE_TYPE_DECEPTIVE:
+        /* The tonic and the third are both tones of vi (R-468). */
+        return tonic | third;
     default:
         return 0xFFFu;
     }

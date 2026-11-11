@@ -79,6 +79,7 @@ typedef struct {
     size_t ending_bars;
     size_t idea_beginning_bars;
     size_t idea_ending_bars;
+    size_t main_ending_bars; /* the ending's bars up to the idea after an evaded cadence: `ending_bars` without it */
     size_t extension_count;
     GrowLayoutExtension extensions[PLAN_CONSTRUCTION_EXTENSIONS]; /* in the construction's order */
 } GrowLayout;
@@ -316,6 +317,12 @@ size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar);
 size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
 /* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
 size_t grow_extension_material_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+/*
+ * As grow_add_chord_targets, over `span` of the owner, which may stop short of the owner's end (the harmony of an ending
+ * up to the idea after an evaded cadence, R-468).
+ */
+PlanResult grow_add_chord_targets_over(GrowBuild *build, NodeId owner, PlanSpan span, const PlanHarmonyShape *shape,
+                                       const PlanConstraint *cadence);
 /* The idea node of the repeat layout.extensions[k] in the container, named "<the idea it follows> repeated". */
 PlanResult grow_add_repeat_node(GrowBuild *build, NodeId container, size_t k, NodeId *out);
 /* The ref of an extension's idea: its motive node (`extension <k>`), restated exactly. */

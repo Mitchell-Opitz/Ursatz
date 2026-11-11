@@ -1224,13 +1224,13 @@ static PlanHarmonyShape gap_shape(const PlanHarmonyShape *shape, bool at_start, 
 
 /* The chords of an owner: open targets asking for the shape, or, with a degree, that one diatonic chord written whole. */
 static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
-                                    const PlanConstraint *cadence, int degree) {
+                                    const PlanConstraint *cadence, int degree, const PlanSpan *over) {
     PiecePlan *plan = build->plan;
     PhraseChord fixed;
     if (degree > 0 && !harmony_make_chord(build->request->key.mode, degree, 0, false, false, 1, &fixed)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
-    PlanSpan span = plan_node_span(plan, owner);
+    PlanSpan span = over ? *over : plan_node_span(plan, owner);
     Rational span_end;
     PlanSpan gaps[GROW_MAX_GAPS];
     PlanResult result = plan_span_end(span, &span_end);
@@ -1296,13 +1296,18 @@ static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHa
 
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                   const PlanConstraint *cadence) {
-    return add_chord_targets(build, owner, shape, cadence, 0);
+    return add_chord_targets(build, owner, shape, cadence, 0, NULL);
+}
+
+PlanResult grow_add_chord_targets_over(GrowBuild *build, NodeId owner, PlanSpan span, const PlanHarmonyShape *shape,
+                                       const PlanConstraint *cadence) {
+    return add_chord_targets(build, owner, shape, cadence, 0, &span);
 }
 
 PlanResult grow_add_chord_written(GrowBuild *build, NodeId owner, int degree) {
     PlanHarmonyShape unused;
     memset(&unused, 0, sizeof(unused));
-    return add_chord_targets(build, owner, &unused, NULL, degree);
+    return add_chord_targets(build, owner, &unused, NULL, degree, NULL);
 }
 
 /* The bars the material holds, counted. */
