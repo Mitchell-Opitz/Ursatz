@@ -158,9 +158,13 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
     out->skips_per_motif = MAX_NOTES - 1; /* no motive has more intervals, so this never rejects */
 }
 
-/* The scale-step offset of a chord's tones from the tones of I: I 0, V down a fourth, IV up a fourth (same octave). */
+/*
+ * The scale-step offset of a chord's tones from the tones of I (same octave): ii 1, iii 2, IV 3, V down a fourth (-3), vi -2,
+ * vii -1. The tones are the diatonic triad of the degree; in minor only V's third is raised (chord_alteration).
+ */
 static long chord_shift(int degree) {
-    return degree == 5 ? -3 : degree == 4 ? 3 : 0;
+    long shift = degree - 1;
+    return shift > 3 ? shift - 7 : shift;
 }
 
 static long step_of(long position) {
