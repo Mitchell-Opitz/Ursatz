@@ -20,6 +20,16 @@ With `modulate` (two seeds in three) A ends in the `away` region and B starts th
 
 The pedal and the region are composed and recorded in the plan. The hearing does not find them (R-408). The cadence heard at the end of B is the last one the recognizer finds in B, and with `modulate` B is heard from the away key, so its V of the tonic is not always heard as a half cadence there.
 
+## The checks
+
+A piece request of the ternary form answers each row with what was heard and written (the API's `key_heard`, `heard`, `pedal` and `changes`, [api/theme-and-piece.md](api/theme-and-piece.md)):
+
+| Row | Check |
+| --- | --- |
+| A | `key_heard`: the key the Analyzer hears at A's start, the home key. |
+| B | `key_heard`: the key heard at B's start (over a dominant pedal the Analyzer may hear V as the key, G major in C; with `modulate` the away key). `pedal`: `"dominant"` when B's first half was written over the pedal, `null` with `modulate`. `heard`: the last cadence heard in B's last bar, an HC when the form works. |
+| A return | `changes`: `copied` true and `variation` `varied` with the melody notes added, the chords changed of the total and the cadence chords against A's, or `copied` false with the reconstruction text when A's keys moved. `heard` is the cadence heard in its last bar. |
+
 ## Later
 
 - Other regions (IV, vi) for A's ending and B's start.

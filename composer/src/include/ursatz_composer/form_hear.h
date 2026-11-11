@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
 
 /*
@@ -60,6 +61,19 @@ const char *form_hear_result_name(FormHearResult result);
 
 /* Hears the form of plan over span into *out, which the caller destroys. On failure *out is empty. */
 FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out);
+
+/* A key the Analyzer heard from start on, until the next region's start (or the end of the span). */
+typedef struct {
+    Rational start; /* in whole notes from the start of the plan */
+    AnalysisKey key;
+} FormHeardKey;
+
+/*
+ * Hears the key regions of plan over span: one hearing of the span as form_hear does, then the key regions of the
+ * Analyzer's chain (analysis_chain_key_regions), in order. *out is owned by the caller (free), NULL with *count 0 when
+ * none were heard. The same errors as form_hear.
+ */
+FormHearResult form_hear_keys(const PiecePlan *plan, PlanSpan span, FormHeardKey **out, size_t *count);
 
 /*
  * form_hear with the starts of the sections or phrases the caller knows of, plan times inside span. The Analyzer's hearing

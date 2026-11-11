@@ -202,6 +202,29 @@ static void test_layered(void) {
     assert_strings(member(cJSON_GetArrayItem(sections, 3), "layers"), all, 3);
 }
 
+/* Ternary's B is written over a dominant pedal at both sizes (R-446); no other section of any form names one. */
+static void test_pedal(void) {
+    const cJSON *list = member(forms, "forms");
+    const cJSON *form = NULL;
+    size_t pedals = 0;
+    cJSON_ArrayForEach(form, list) {
+        const cJSON *size = NULL;
+        cJSON_ArrayForEach(size, member(form, "sizes")) {
+            const cJSON *section = NULL;
+            cJSON_ArrayForEach(section, member(size, "sections")) {
+                const cJSON *pedal = member(section, "pedal");
+                if (strcmp(text(form, "name"), "ternary") == 0 && strcmp(text(section, "name"), "B") == 0) {
+                    assert_choice(section, "pedal", "dominant", "Dominant pedal");
+                    pedals++;
+                } else {
+                    assert(cJSON_IsNull(pedal));
+                }
+            }
+        }
+    }
+    assert((int)pedals == cJSON_GetArraySize(member(form_named("ternary"), "sizes")) && pedals >= 2);
+}
+
 static void test_game_loop(void) {
     const cJSON *form = form_named("game-loop");
     assert(strcmp(text(form, "sections"), "request") == 0 && !flag(form, "closing"));
@@ -257,6 +280,7 @@ int main(void) {
     test_rounded_binary();
     test_variations();
     test_layered();
+    test_pedal();
     test_game_loop();
     cJSON_Delete(forms);
     printf("test_api_forms: ok\n");

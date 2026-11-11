@@ -144,6 +144,48 @@ static void test_constrained_melody(void) {
     plan_destroy(plan);
 }
 
+static void expect_key(const FormHeardKey *key, long numerator, long denominator, int tonic, KeyStructureMode mode) {
+    Rational start;
+    assert(rational_make(numerator, denominator, &start) == RATIONAL_OK);
+    assert(rational_cmp(key->start, start) == 0);
+    assert(analysis_key_tonic_pitch_class(&key->key) == tonic && key->key.mode == mode);
+}
+
+/* The key regions heard: the C major sentence is one region from 0, the one that modulates ends in a G major region. */
+static void test_keys(void) {
+    PiecePlan *plan = load("sentence_c_major.json");
+    FormHeardKey *keys = NULL;
+    size_t count = 0;
+    assert(form_hear_keys(plan, bars(0, 8), &keys, &count) == FORM_HEAR_OK);
+    assert(count == 1);
+    expect_key(&keys[0], 0, 1, 0, KEY_STRUCTURE_MODE_MAJOR);
+    free(keys);
+    plan_destroy(plan);
+
+    plan = load("sentence_c_to_g.json");
+    assert(form_hear_keys(plan, bars(0, 8), &keys, &count) == FORM_HEAR_OK);
+    /* Recorded: C major from 0, G major from bar 4 (the continuation). */
+    assert(count == 2);
+    expect_key(&keys[0], 0, 1, 0, KEY_STRUCTURE_MODE_MAJOR);
+    expect_key(&keys[1], 4, 1, 7, KEY_STRUCTURE_MODE_MAJOR);
+    free(keys);
+    plan_destroy(plan);
+}
+
+static void test_keys_refused(void) {
+    FormHeardKey *keys = NULL;
+    size_t count = 7;
+    assert(form_hear_keys(NULL, bars(0, 8), &keys, &count) == FORM_HEAR_ERR_NULL);
+    assert(keys == NULL && count == 0);
+    PiecePlan *plan = load("sentence_c_major.json");
+    LaneSpanId melody;
+    assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, bars(0, 8), &melody, 1) == 1);
+    assert(plan_lane_span_set_state(plan, melody, PLAN_STATE_CONSTRAINED) == PLAN_OK);
+    assert(form_hear_keys(plan, bars(0, 8), &keys, &count) == FORM_HEAR_ERR_NOT_WRITTEN);
+    assert(keys == NULL && count == 0);
+    plan_destroy(plan);
+}
+
 static void test_names_and_null(void) {
     FormHeard heard;
     assert(form_hear(NULL, bars(0, 8), &heard) == FORM_HEAR_ERR_NULL);
@@ -157,6 +199,8 @@ int main(void) {
     test_no_cadence();
     test_modulating_sentence();
     test_constrained_melody();
+    test_keys();
+    test_keys_refused();
     test_names_and_null();
     return 0;
 }

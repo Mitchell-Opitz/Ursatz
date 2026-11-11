@@ -5,6 +5,8 @@
 
 #include <standard-form/analysis/analysis_theme.h>
 #include <standard-form/phrase_level_form.h>
+#include <time/time_rational.h>
+#include <time/time_span.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/result_chain.h>
 #include <ursatz_chain/analysis_chain.h>
@@ -192,6 +194,63 @@ FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, con
     FormHearResult status = result_of(hearing_create(plan, &hearing));
     if (status == FORM_HEAR_OK) {
         status = form_hear_in(hearing, plan, span, out);
+    }
+    hearing_destroy(hearing);
+    return status;
+}
+
+/* The key regions the Analyzer heard over the span, with where each starts. */
+static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out, size_t *count) {
+    const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(analyzer_result_chain(result));
+    if (!regions || regions->region_count == 0) {
+        return FORM_HEAR_OK;
+    }
+    FormHeardKey *keys = calloc(regions->region_count, sizeof(*keys));
+    if (!keys) {
+        return FORM_HEAR_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < regions->region_count; i++) {
+        const CommonPracticeKeyRegion *region = &regions->regions[i];
+        if (!region->span || rational_of_musical_time(time_span_start(region->span), &keys[i].start) != RATIONAL_OK ||
+            !common_practice_key_region_analysis_key(region, &keys[i].key)) {
+            free(keys);
+            return FORM_HEAR_ERR_ANALYSIS;
+        }
+        keys[i].key.id = NULL;
+    }
+    *out = keys;
+    *count = regions->region_count;
+    return FORM_HEAR_OK;
+}
+
+FormHearResult form_hear_keys(const PiecePlan *plan, PlanSpan span, FormHeardKey **out, size_t *count) {
+    if (!out || !count) {
+        return FORM_HEAR_ERR_NULL;
+    }
+    *out = NULL;
+    *count = 0;
+    if (!plan) {
+        return FORM_HEAR_ERR_NULL;
+    }
+    ComposerHearing *hearing = NULL;
+    FormHearResult status = result_of(hearing_create(plan, &hearing));
+    if (status != FORM_HEAR_OK) {
+        return status;
+    }
+    if (lane_open(plan, PLAN_LANE_MELODY, span) || lane_open(plan, PLAN_LANE_BASS, span) ||
+        lane_open(plan, PLAN_LANE_HARMONY, span)) {
+        status = FORM_HEAR_ERR_NOT_WRITTEN;
+    }
+    PhraseMetre metre;
+    if (status == FORM_HEAR_OK && !harmony_read_metre(plan, span, &metre)) {
+        status = FORM_HEAR_ERR_METER;
+    }
+    const AnalyzerResult *result = NULL;
+    if (status == FORM_HEAR_OK) {
+        status = result_of(hearing_section(hearing, span, &result));
+    }
+    if (status == FORM_HEAR_OK) {
+        status = copy_keys(result, out, count);
     }
     hearing_destroy(hearing);
     return status;

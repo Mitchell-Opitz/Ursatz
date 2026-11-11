@@ -30,6 +30,12 @@ static bool add_choice_member(cJSON *object, const char *name, const char *value
     return api_add(object, name, choice);
 }
 
+/* The degree a section's presentation sits over in the bass: only the dominant (5) is a choice (R-446). */
+static bool add_pedal(cJSON *section, int pedal) {
+    return pedal == 5 ? add_choice_member(section, "pedal", "dominant", "Dominant pedal")
+                      : api_add(section, "pedal", cJSON_CreateNull());
+}
+
 static bool add_string_or_null(cJSON *object, const char *name, const char *text) {
     return api_add(object, name, text ? cJSON_CreateString(text) : cJSON_CreateNull());
 }
@@ -135,7 +141,7 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            add_keys(section, form, spec) && add_string_or_null(section, "motive", has_motive ? motive : NULL) &&
            add_string_or_null(section, "returns", returns ? size->sections[spec->returns].name : NULL) &&
            add_string_or_null(section, "variation", returns ? plan_return_variation_name(spec->variation) : NULL) &&
-           add_layers(section, spec->layers) && add_slots(section, &spec->pairing);
+           add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing);
 }
 
 static bool add_sizes(cJSON *form_json, const FormSpec *form) {

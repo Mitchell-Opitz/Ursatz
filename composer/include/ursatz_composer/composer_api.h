@@ -16,10 +16,11 @@
  * the vocabulary members that drop the Pieces view's theme slot rules; 1.14 lets the piece entries compose, regenerate and
  * vary a piece of any built-in form (piece request schema version 2) and answer with the form's versions by name.
  * 1.15 adds the B3 text values (triplets) and the L2 motif settings (rhythm, endings, long non-chord tones).
+ * 1.16 adds the section hearing, pedal and changes of piece rows and the forms entry's pedal.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 15
+#define COMPOSER_API_VERSION_MINOR 16
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

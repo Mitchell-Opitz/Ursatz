@@ -79,6 +79,20 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
 bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed);
 
 /*
+ * The numerals of the chords of a section that returns another (a RETURN constraint) that start in the last quarter of
+ * the returned section (from) and of the section (to), each space separated ("IV V I"). False when the section has no
+ * RETURN, either harmony lane cannot be read, or size is too small.
+ */
+bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *from, char *to, size_t size);
+
+/*
+ * Whether the section holds a copy of the section it returns, in any state: the RETURN names another section of the
+ * piece (not the material) as long as the section, in the same meter and in keys of the same shape. False for a section
+ * grown afresh because its keys differ from the other's.
+ */
+bool form_return_copies(const PiecePlan *plan, NodeId section);
+
+/*
  * Registers form-return. melody gives the range a re-registered melody keeps to (NULL for the defaults); the registry
  * keeps the pointer, so it must outlive the registry.
  */
