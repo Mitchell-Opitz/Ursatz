@@ -791,6 +791,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_PAYLOAD_MAGIC;
     spec->bars = request->bars;
+    if (!grow_layout_of(request, &spec->layout)) {
+        return false;
+    }
     spec->meter = request->meter;
     spec->key = request->key;
     spec->cadence = request->cadence;
@@ -1487,6 +1490,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.spec = spec;
     build.request = &request;
     build.unit = grow_unit(&request);
+    build.layout = spec->layout;
     build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
     build.cadence.params.cadence = request.cadence;
     build.phrase = PLAN_NODE_NONE;

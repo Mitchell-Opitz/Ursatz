@@ -48,6 +48,21 @@ typedef enum {
 /* How a presentation repeats its basic idea (ch. V). */
 typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
 
+/*
+ * Where each idea of a theme lies, as exact lengths from the theme's start, computed once per request (grow_layout_of).
+ * A place the pairing does not have has length 0. The ending starts at `beginning`. A *_bars member is the whole bars the
+ * length is, 0 when it is not whole.
+ */
+typedef struct {
+    Rational start[GROW_PLACE_COUNT];
+    Rational length[GROW_PLACE_COUNT];
+    Rational beginning;      /* the length of the first half */
+    Rational ending;         /* the length of the second half */
+    size_t basic_bars;
+    size_t beginning_bars;
+    size_t ending_bars;
+} GrowLayout;
+
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
 typedef struct {
     unsigned long magic;
@@ -56,6 +71,7 @@ typedef struct {
     AnalysisKey key;
     CadenceType cadence;
     PlanThemePairing pairing;
+    GrowLayout layout;                 /* where each idea lies (grow_layout_of) */
     CadenceType first_cadence;         /* the weak cadence an antecedent ends in */
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
     bool beginning_split;                  /* no chord of the antecedent crosses a barline */
@@ -167,6 +183,7 @@ typedef struct {
     const GrowThemeSpec *spec;
     const GrowThemeRequest *request;
     Rational unit;           /* an eighth of the theme */
+    GrowLayout layout;       /* the spec's layout */
     PlanConstraint cadence;  /* the theme's cadence */
     NodeId phrase;           /* the phrase the parts go in, made by the beginning */
     NodeId material;         /* the idea of the material section the motive nodes go in */
@@ -240,6 +257,8 @@ size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShape
 bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
 /* An eighth of the theme. */
 Rational grow_unit(const GrowThemeRequest *request);
+/* Where each idea of the request's theme lies; false when the theme has no length or a length does not fit a Rational. */
+bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out);
 /* standard-form's own beginning and ending for the plan's. */
 int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);
