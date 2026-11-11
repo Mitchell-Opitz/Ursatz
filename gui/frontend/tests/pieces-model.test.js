@@ -250,6 +250,20 @@ const oneView = P.resultView({ summary: oneVersion }, { form: "rounded-binary" }
 check(oneView.versions.length === 1 && oneView.versions[0].name === "piece" && oneView.versions[0].label === "Piece" && !oneView.versions[0].loop && oneView.playLoop === null, "a one-version summary has no loop and one version piece");
 check(oneView.versions[0].view.rows[0].partLabel === "Theme" && oneView.versions[0].view.rows[0].part === "theme", "a row of a sized form names its role");
 check(same(view.versions.map((version) => version.name), ["loop", "ending"]) && view.versions[0].loop && view.versions[1].after === "loop" && view.versions[1].label === "Ending version", "the game loop has its loop and its ending after it");
+const ternarySummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "ternary-summary.json"), "utf8"));
+const ternaryRows = P.resultView({ seed: 3, summary: ternarySummary }, { form: "ternary" }).versions[0].view.rows;
+check(
+  ternaryRows.length === 3 && ternaryRows[0].keyHeard === "C major" && ternaryRows[1].keyHeard === "G major" && ternaryRows[0].pedal === "" && ternaryRows[1].pedal === "Dominant pedal" && ternaryRows[2].pedal === "",
+  "a sized piece row carries the key heard and the label of the pedal of its section",
+);
+check(
+  ternaryRows[0].returns === "" && ternaryRows[0].changes === "" && ternaryRows[2].returns === "A" && ternaryRows[2].changes === "varied: 6 notes added, 2 of 8 chords changed",
+  "a returning row names its section and how it differs",
+);
+check(
+  view.versions[0].view.rows.every((row) => row.keyHeard === "" && row.pedal === "" && row.returns === "" && row.changes === "") && view.versions[0].view.rows[2].heard === "perfect-authentic",
+  "a game loop summary's rows have no section details",
+);
 const actions = P.actionSections(filled(), [{ id: "s0" }, { id: "s1" }, { id: "s2" }, { id: "s3" }]);
 check(same(actions.map((entry) => entry.id), ["s0", "s1", "s2", "s3"]) && actions[1].lanes.length === 4 && actions[1].length === "8 bars", "regenerate is offered for the sections of the first version only");
 check(same(P.actionSections(roundedState, oneView.versions[0].view.rows).map((entry) => entry.id), ["A"]), "a sized form offers the sections of its result");
