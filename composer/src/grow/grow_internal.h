@@ -195,6 +195,13 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
 PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
                                   const PlanConstraint *cadence);
 
+/*
+ * The melody of an idea written as the motive is (R-466): one span over the idea with the motive's notes from time 0, the
+ * pitches as given, asking for the motive ref and already Realized, so the melody stage leaves it and the harmony, the
+ * bass and the fidelity read it.
+ */
+PlanResult grow_add_melody_written(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref, const Motive *motive);
+
 /* The key lane over the section: see grow_theme.c. False when the lane does not tile the section. */
 bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
