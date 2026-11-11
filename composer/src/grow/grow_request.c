@@ -319,6 +319,15 @@ static bool construction_fault(const PlanThemePairing *pairing, size_t bars, con
         snprintf(message, size, "the ideas are %zu bars; the theme has %zu", total, bars);
         return true;
     }
+    /* A continuation fragments the basic idea (standard-form's rule): each fragment is shorter than it. */
+    if (pairing->ending == PLAN_THEME_ENDING_CONTINUATION) {
+        for (int idea = GROW_IDEA_FRAGMENT_1; idea <= GROW_IDEA_FRAGMENT_2; idea++) {
+            if (construction->idea_bars[idea] >= construction->idea_bars[GROW_IDEA_BASIC]) {
+                snprintf(message, size, "the %s needs fewer bars than the basic idea", grow_idea_name((GrowIdea)idea));
+                return true;
+            }
+        }
+    }
     if (construction->extension_count != 0) {
         snprintf(message, size, "an extension is not built yet");
         return true;
