@@ -429,8 +429,9 @@ endforeach()
 add_executable(test_form_return test_form_return.c)
 target_link_libraries(test_form_return PRIVATE ursatz_composer)
 target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_form_return PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Returning sections (form_return.h): the smoke test is quick; the others compose a few pieces each.
-foreach(mode smoke exact ornament reharmonize reregister)
+foreach(mode smoke exact ornament reharmonize varied reregister)
     add_test(NAME test_form_return_${mode} COMMAND test_form_return ${mode})
 endforeach()
 # Reregister measured 14.6 s of CPU, over the 10 s fast-set limit.

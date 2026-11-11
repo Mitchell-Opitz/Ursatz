@@ -71,6 +71,14 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section);
 bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total);
 
 /*
+ * Whether the cadence of a section that returns another is changed: a chord that starts in the last quarter of the
+ * section (the last 2 bars of 8, the last bar of 4) is not the chord of the other at the same place, as
+ * form_return_chords_changed compares them. False when the section has no RETURN or either harmony lane cannot be
+ * read.
+ */
+bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed);
+
+/*
  * Registers form-return. melody gives the range a re-registered melody keeps to (NULL for the defaults); the registry
  * keeps the pointer, so it must outlive the registry.
  */

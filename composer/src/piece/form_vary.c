@@ -10,7 +10,8 @@
 /*
  * The variations of a returning section (R-070), made on the copy form-return moved onto the target: ORNAMENT adds
  * passing and neighbor tones between the notes of the melody, REHARMONIZE reopens the chords (and what is written over
- * them), REREGISTER moves the melody an octave. Time inside this file is whole ticks, TICKS to a whole note.
+ * them), REREGISTER moves the melody an octave, VARIED does the first two the way Schoenberg's A1 does (a few
+ * ornaments, at most one a bar, over a reharmonized harmony). Time inside this file is whole ticks, TICKS to a whole note.
  */
 
 #define TICKS 128L
@@ -97,6 +98,7 @@ typedef struct {
     size_t note;
     long first;
     int pitch;
+    long onset; /* ticks from the start of the target section to the tone that is added */
 } Ornament;
 
 /* The ticks of the first part of a note split in two, so that the tone after it falls off the strong beats; 0 for none. */
@@ -128,7 +130,8 @@ static bool contiguous(const PlanNote *notes, size_t i) {
            to_ticks(notes[i + 1].offset, &next) && end == next;
 }
 
-static bool ornament_melody(ReturnPayload *payload, FillRng *rng) {
+/* per_bar: at most this many ornaments are kept in a bar (0: no limit). */
+static bool ornament_melody(ReturnPayload *payload, FillRng *rng, size_t per_bar) {
     ReturnCopy *copy = &payload->result;
     long cell = cell_ticks(&payload->meter);
     size_t capacity = 0;
@@ -137,7 +140,11 @@ static bool ornament_melody(ReturnPayload *payload, FillRng *rng) {
     }
     Ornament *found = capacity ? calloc(capacity, sizeof(Ornament)) : NULL;
     size_t count = 0;
-    if (cell == 0 || !found) {
+    long bar_ticks = 0;
+    if (per_bar > 0 && !to_ticks(grow_bar_length(&payload->meter), &bar_ticks)) {
+        bar_ticks = 0;
+    }
+    if (cell == 0 || !found || (per_bar > 0 && bar_ticks <= 0)) {
         free(found);
         return false;
     }
@@ -161,15 +168,27 @@ static bool ornament_melody(ReturnPayload *payload, FillRng *rng) {
                 !choose_tone(payload->key, span->notes[n].midi, span->notes[n + 1].midi, rng, &pitch)) {
                 continue;
             }
-            found[count++] = (Ornament){s, n, first, pitch};
+            found[count++] = (Ornament){s, n, first, pitch, onset + first};
         }
     }
-    /* Each is taken with the chance of one in two, and at least one is. */
+    /* Each is taken with the chance of one in two (with a limit per bar, the first kept in a bar), and at least one is. */
     size_t kept = 0;
+    long bar_of_last = -1;
+    size_t in_bar = 0;
     for (size_t i = 0; i < count; i++) {
-        if (fill_rng_below(rng, 2) == 0) {
-            found[kept++] = found[i];
+        if (fill_rng_below(rng, 2) != 0) {
+            continue;
         }
+        if (per_bar > 0) {
+            long bar = found[i].onset / bar_ticks;
+            in_bar = bar == bar_of_last ? in_bar : 0;
+            bar_of_last = bar;
+            if (in_bar >= per_bar) {
+                continue;
+            }
+            in_bar++;
+        }
+        found[kept++] = found[i];
     }
     if (kept == 0 && count > 0) {
         found[0] = found[fill_rng_below(rng, count)];
@@ -425,7 +444,9 @@ bool return_vary(ReturnPayload *payload, FillRng *rng) {
     case PLAN_RETURN_EXACT:
         return true;
     case PLAN_RETURN_ORNAMENT:
-        return ornament_melody(payload, rng);
+        return ornament_melody(payload, rng, 0);
+    case PLAN_RETURN_VARIED:
+        return ornament_melody(payload, rng, 1) && reharmonize(payload);
     case PLAN_RETURN_REHARMONIZE:
         return reharmonize(payload);
     case PLAN_RETURN_REREGISTER:
@@ -474,6 +495,33 @@ static long find_onset(const ReturnSpan *span, Rational offset) {
     return -1;
 }
 
+/*
+ * The test of one note a variation adds: off the strong beats, and passing or neighbor. NULL when it passes, else the
+ * reason; onset gets the ticks from the start of the target section to the note.
+ */
+static const char *added_note_fault(const ReturnPayload *payload, const ReturnSpan *span, size_t n, long cell,
+                                    long *onset) {
+    if (!note_onset(payload, span, &span->notes[n], onset) || *onset % cell == 0) {
+        return "ornament adds a note on a strong beat";
+    }
+    int from = n > 0 ? span->notes[n].midi - span->notes[n - 1].midi : 0;
+    int to = n + 1 < span->note_count ? span->notes[n + 1].midi - span->notes[n].midi : 0;
+    bool passing = is_step(from) && is_step(to) && util_sign(from) == util_sign(to);
+    bool neighbor = is_step(from) && is_step(to) && util_sign(from) == -util_sign(to) && n > 0 &&
+                    n + 1 < span->note_count && span->notes[n + 1].midi == span->notes[n - 1].midi;
+    return passing || neighbor ? NULL : "ornament adds a note that is neither passing nor neighbor";
+}
+
+/* Whether a note of the result is one the source has (the same offset in its span). */
+static bool is_original(const ReturnSpan *kept, const ReturnSpan *span, size_t n) {
+    for (size_t k = 0; k < kept->note_count; k++) {
+        if (rational_cmp(kept->notes[k].offset, span->notes[n].offset) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* The ornamented melody keeps every note of the returned one and adds only passing and neighbor tones off the strong beats. */
 static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
     ReturnAllow allow = {1u << PLAN_LANE_MELODY, 0, 0};
@@ -500,25 +548,13 @@ static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
         long last_beat = -1;
         for (size_t n = 0; n < span->note_count; n++) {
             long onset;
-            bool original = false;
-            for (size_t k = 0; k < kept->note_count && !original; k++) {
-                original = rational_cmp(kept->notes[k].offset, span->notes[n].offset) == 0;
-            }
-            if (original) {
+            if (is_original(kept, span, n)) {
                 continue;
             }
             added_total++;
-            if (!note_onset(payload, span, &span->notes[n], &onset) || onset % cell == 0) {
-                reject(out, "ornament adds a note on a strong beat");
-                return;
-            }
-            int from = n > 0 ? span->notes[n].midi - span->notes[n - 1].midi : 0;
-            int to = n + 1 < span->note_count ? span->notes[n + 1].midi - span->notes[n].midi : 0;
-            bool passing = is_step(from) && is_step(to) && util_sign(from) == util_sign(to);
-            bool neighbor = is_step(from) && is_step(to) && util_sign(from) == -util_sign(to) &&
-                            n > 0 && n + 1 < span->note_count && span->notes[n + 1].midi == span->notes[n - 1].midi;
-            if (!passing && !neighbor) {
-                reject(out, "ornament adds a note that is neither passing nor neighbor");
+            const char *fault = added_note_fault(payload, span, n, cell, &onset);
+            if (fault) {
+                reject(out, fault);
                 return;
             }
             /* One added note a beat. */
@@ -548,13 +584,15 @@ static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
     return true;
 }
 
-/* The harmony, bass and inner voices are open (the harmony spans with the shape they were written from); the melody is the returned one. */
-static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
+/*
+ * The harmony, bass and inner voices are open (the harmony spans with the shape they were written from), the melody
+ * is written, and the open harmony covers the returned section's. A violation is recorded in out.
+ */
+static void check_reopened(const ReturnPayload *payload, FillCheck *out) {
     const ReturnCopy *copy = &payload->result;
     Rational harmony = {0, 1};
     Rational source_harmony = {0, 1};
     size_t reopened = 0;
-    size_t next_melody = 0;
     for (size_t i = 0; i < copy->span_count; i++) {
         const ReturnSpan *span = &copy->spans[i];
         bool written = span->lane == PLAN_LANE_MELODY;
@@ -577,21 +615,97 @@ static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
             reject(out, "the returned harmony cannot be read");
             return;
         }
-        if (span->lane != PLAN_LANE_MELODY) {
-            continue;
-        }
-        /* The melody of the result is the returned one's, in the same spans, moved. */
-        while (next_melody < copy->span_count && copy->spans[next_melody].lane != PLAN_LANE_MELODY) {
-            next_melody++;
-        }
-        if (next_melody == copy->span_count || !same_notes(span, &copy->spans[next_melody], payload->transpose)) {
-            reject(out, "reharmonization changes the melody");
-            return;
-        }
-        next_melody++;
     }
     if (reopened == 0 || rational_cmp(harmony, source_harmony) != 0) {
         reject(out, "reharmonization does not cover the returned harmony");
+    }
+}
+
+/* The next melody span of the result at or after index *next, which moves past it; NULL when there is none. */
+static const ReturnSpan *next_melody_span(const ReturnCopy *copy, size_t *next) {
+    while (*next < copy->span_count && copy->spans[*next].lane != PLAN_LANE_MELODY) {
+        (*next)++;
+    }
+    return *next < copy->span_count ? &copy->spans[(*next)++] : NULL;
+}
+
+/* The melody of the result is the returned one's, in the same spans, moved. */
+static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
+    size_t next_melody = 0;
+    check_reopened(payload, out);
+    if (out->hard_violation) {
+        return;
+    }
+    for (size_t i = 0; i < payload->source.span_count; i++) {
+        const ReturnSpan *span = &payload->source.spans[i];
+        if (span->lane != PLAN_LANE_MELODY) {
+            continue;
+        }
+        const ReturnSpan *result = next_melody_span(&payload->result, &next_melody);
+        if (!result || !same_notes(span, result, payload->transpose)) {
+            reject(out, "reharmonization changes the melody");
+            return;
+        }
+    }
+    out->score_numerator = 1;
+}
+
+/*
+ * A varied return: the melody keeps every note of the returned one at its offset, moved, and adds at most one
+ * passing or neighbor tone a bar off the strong beats, at least one in all; the other lanes are open as for a
+ * reharmonization.
+ */
+static void check_varied(const ReturnPayload *payload, FillCheck *out) {
+    long cell = cell_ticks(&payload->meter);
+    long bar_ticks = 0;
+    long last_bar = -1;
+    size_t added_total = 0;
+    size_t next_melody = 0;
+    if (cell == 0 || !to_ticks(grow_bar_length(&payload->meter), &bar_ticks) || bar_ticks <= 0) {
+        reject(out, "varied return has a meter it cannot place notes in");
+        return;
+    }
+    check_reopened(payload, out);
+    if (out->hard_violation) {
+        return;
+    }
+    for (size_t i = 0; i < payload->source.span_count; i++) {
+        const ReturnSpan *kept = &payload->source.spans[i];
+        if (kept->lane != PLAN_LANE_MELODY) {
+            continue;
+        }
+        const ReturnSpan *span = next_melody_span(&payload->result, &next_melody);
+        if (!span) {
+            reject(out, "varied return changes the melody");
+            return;
+        }
+        for (size_t n = 0; n < kept->note_count; n++) {
+            long at = find_onset(span, kept->notes[n].offset);
+            if (at < 0 || span->notes[at].midi != kept->notes[n].midi + payload->transpose) {
+                reject(out, "varied return drops a note of the melody");
+                return;
+            }
+        }
+        for (size_t n = 0; n < span->note_count; n++) {
+            long onset;
+            if (is_original(kept, span, n)) {
+                continue;
+            }
+            const char *fault = added_note_fault(payload, span, n, cell, &onset);
+            if (fault) {
+                reject(out, fault);
+                return;
+            }
+            if (onset / bar_ticks == last_bar) {
+                reject(out, "varied return adds two notes in a bar");
+                return;
+            }
+            last_bar = onset / bar_ticks;
+            added_total++;
+        }
+    }
+    if (added_total == 0) {
+        reject(out, "varied return adds no note");
         return;
     }
     out->score_numerator = 1;
@@ -626,6 +740,9 @@ void return_vary_check(const ReturnPayload *payload, FillCheck *out) {
         break;
     case PLAN_RETURN_REHARMONIZE:
         check_reharmonize(payload, out);
+        break;
+    case PLAN_RETURN_VARIED:
+        check_varied(payload, out);
         break;
     case PLAN_RETURN_REREGISTER:
         check_reregister(payload, out);

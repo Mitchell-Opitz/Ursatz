@@ -197,13 +197,19 @@ typedef enum {
     PLAN_RETURN_EXACT,
     PLAN_RETURN_ORNAMENT,
     PLAN_RETURN_REHARMONIZE,
-    PLAN_RETURN_REREGISTER
+    PLAN_RETURN_REREGISTER,
+    PLAN_RETURN_VARIED /* a moderately varied repetition (Schoenberg's A1): a few ornaments and a reharmonized ending */
 } PlanReturnVariation;
 
 typedef struct {
     NodeId section;
     PlanReturnVariation variation;
 } PlanReturn;
+
+/* The name of a return variation as plans, forms and the API write it; NULL for a value out of range. */
+const char *plan_return_variation_name(PlanReturnVariation variation);
+/* The variation a name stands for; false (out untouched) for an unknown name. */
+bool plan_return_variation_from_name(const char *name, PlanReturnVariation *out);
 
 /*
  * The lanes that sound in a layer section: bit (1u << lane) for each PlanLaneKind. A layer section is grown in

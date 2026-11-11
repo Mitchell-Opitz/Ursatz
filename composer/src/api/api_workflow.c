@@ -22,7 +22,6 @@
 
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
-static const char *const VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
 
 const char *api_key_name(const AnalysisKey *key, char *out, size_t size) {
     util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
@@ -126,7 +125,7 @@ cJSON *api_section_json(const ApiSection *section) {
     if (ok && section->returns) {
         cJSON *returns = cJSON_CreateObject();
         ok = returns && cJSON_AddStringToObject(returns, "section", section->returns_letter) &&
-             cJSON_AddStringToObject(returns, "variation", VARIATION_NAMES[section->variation]) &&
+             cJSON_AddStringToObject(returns, "variation", plan_return_variation_name(section->variation)) &&
              api_add(object, "returns", returns);
     } else {
         ok = ok && cJSON_AddNullToObject(object, "returns");

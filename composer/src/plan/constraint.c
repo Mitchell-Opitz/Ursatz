@@ -75,7 +75,7 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         const PlanReturn *section_return = &constraint->params.section_return;
         return plan_has_node(plan, section_return->section) &&
                plan_node_kind(plan, section_return->section) == PLAN_NODE_SECTION &&
-               section_return->variation >= PLAN_RETURN_EXACT && section_return->variation <= PLAN_RETURN_REREGISTER;
+               section_return->variation >= PLAN_RETURN_EXACT && section_return->variation <= PLAN_RETURN_VARIED;
     }
     case PLAN_CONSTRAINT_LAYERS:
         return constraint->params.layers.lanes != 0 && (constraint->params.layers.lanes & ~PLAN_LAYERS_ALL) == 0;
@@ -280,6 +280,28 @@ const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, Lane
         }
     }
     return NULL;
+}
+
+static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister", "varied"};
+
+const char *plan_return_variation_name(PlanReturnVariation variation) {
+    if ((int)variation < 0 || (size_t)variation >= sizeof(RETURN_VARIATION_NAMES) / sizeof(RETURN_VARIATION_NAMES[0])) {
+        return NULL;
+    }
+    return RETURN_VARIATION_NAMES[variation];
+}
+
+bool plan_return_variation_from_name(const char *name, PlanReturnVariation *out) {
+    if (!name) {
+        return false;
+    }
+    for (size_t i = 0; i < sizeof(RETURN_VARIATION_NAMES) / sizeof(RETURN_VARIATION_NAMES[0]); i++) {
+        if (strcmp(name, RETURN_VARIATION_NAMES[i]) == 0) {
+            *out = (PlanReturnVariation)i;
+            return true;
+        }
+    }
+    return false;
 }
 
 bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
