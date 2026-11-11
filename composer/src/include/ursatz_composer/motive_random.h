@@ -79,7 +79,10 @@ typedef enum {
  *   accented_types    which one: appoggiatura, passing, suspension (a suspension only where the chord changes)
  *   avoid_repeats     no repeated note: a decoration that finds no figure tries the other kinds before a chord tone, and no
  *                     two adjacent notes share a pitch unless the second is a suspension or the repeat feature's pair
- *   leaps_per_motif   the most intervals of 5 semitones or more in a motive (11 never rejects)
+ *   leaps_per_motif   the most leaps (intervals of 5 semitones or more, a 4th or larger) in a motive (11 never rejects)
+ *   skips_per_motif   the most skips (intervals of 3 or 4 semitones, a 3rd) in a motive (11 never rejects); a step (1 or 2)
+ *                     and a repeated note are neither; both limits count every interval: pickup, non-chord tones and
+ *                     segment joins
  *   leap_recovery     a leap is followed by a move of 1 or 2 semitones the other way
  *   pickup_from_accent a pickup is one chord tone below segment a's first note and no longer than it, and a motive with
  *                     no pickup does not open with the upbeat that implies one
@@ -140,6 +143,7 @@ typedef struct {
     unsigned syncopation_one_in;
     unsigned long syncopation_types[4];
     unsigned long syncopation_levels[2];
+    unsigned skips_per_motif;
 } MotiveRandomPreferences;
 
 /* The defaults. */

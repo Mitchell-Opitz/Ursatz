@@ -22,6 +22,7 @@
 #define SEGMENT_START_REACH 4 /* rungs either side of the note before, searched for where a new segment starts */
 #define SEGMENT_START_DISTANCE 5 /* the most semitones from the note before to where a new segment starts */
 #define LEAP_SEMITONES 5 /* an interval this large or larger is a leap (leaps_per_motif, leap_recovery) */
+#define SKIP_SEMITONES 3 /* an interval of 3 or 4 semitones is a skip (skips_per_motif) */
 
 /* Syncopation figures (R-454): the two inside a cell, then the two across a segment boundary. */
 typedef enum { SYNC_OFF_BEAT = 0, SYNC_TIE_BEAT, SYNC_TIE_BAR, SYNC_ANTICIPATION, SYNC_TYPES } Sync;
@@ -153,6 +154,7 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
     for (size_t i = 0; i < 2; i++) {
         out->syncopation_levels[i] = 1;
     }
+    out->skips_per_motif = MAX_NOTES - 1; /* no motive has more intervals, so this never rejects */
 }
 
 /* The scale-step offset of a chord's tones from the tones of I: I 0, V down a fourth, IV up a fourth (same octave). */
@@ -1446,11 +1448,13 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
         low = melody->pitches[i] < low ? melody->pitches[i] : low;
         high = melody->pitches[i] > high ? melody->pitches[i] : high;
     }
-    /* Leaps (an interval of a fourth or more): at most leaps_per_motif, and each one followed by a step back when asked. */
+    /* Leaps (a fourth or more) and skips (a third): at most leaps_per_motif and skips_per_motif, and each leap followed by a step back when asked. */
     unsigned leaps = 0;
+    unsigned skips = 0;
     for (size_t k = 0; k + 1 < layout->rhythm.count; k++) {
         int move = melody->pitches[k + 1] - melody->pitches[k];
         if (abs(move) < LEAP_SEMITONES) {
+            skips += abs(move) >= SKIP_SEMITONES;
             continue;
         }
         leaps++;
@@ -1461,7 +1465,7 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
             }
         }
     }
-    if (leaps > preferences->leaps_per_motif) {
+    if (leaps > preferences->leaps_per_motif || skips > preferences->skips_per_motif) {
         return false;
     }
     return high - low <= MAX_RANGE_SEMITONES;
