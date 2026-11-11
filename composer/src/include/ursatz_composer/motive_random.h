@@ -52,7 +52,8 @@ typedef enum {
     MOTIVE_RANDOM_ERR_METER,         /* beats per bar from 1 to 64 over a beat unit of 1, 2, 4, 8 or 16 */
     MOTIVE_RANDOM_ERR_KEY,           /* a key that is not of the mode asked for */
     MOTIVE_RANDOM_ERR_UNSATISFIABLE, /* no motive passed the melodic rules in the attempts allowed */
-    MOTIVE_RANDOM_ERR_ALLOC
+    MOTIVE_RANDOM_ERR_ALLOC,
+    MOTIVE_RANDOM_ERR_PLAN           /* a given plan that does not fit the meter, the bars, the shapes or the endings allowed */
 } MotiveRandomResult;
 
 /*
@@ -64,8 +65,8 @@ typedef enum {
  *   pickup_one_in     a pickup (half a beat or a beat) in one motive of this many; 0 never draws one
  *   shapes_one_bar    a a' (repeat), a b (contrast), for a one-bar motive
  *   shapes_two_bars   a a', a b, a a' b (repeat_contrast), for a two-bar motive (the third only with an even meter)
- *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I
- *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I
+ *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I; not drawn when a plan is given
+ *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I; not drawn when a plan is given
  *   features          the distinctive feature of segment a: dotted figure, leap, repeated note
  *   leap_low/high     the size of a leap, in semitones (a fourth to a sixth)
  *   rung_moves        a walk on the chord tones moves one rung (step) or two (skip)
@@ -111,7 +112,23 @@ typedef enum {
  *                     segment's first note arriving early, off the beat, on the new chord's tone and held into it;
  *                     only where the chord changes)
  *   syncopation_levels at which level: eighth (the short note a half beat), sixteenth (a quarter beat)
+ *   plan              a given chord plan, written as drawn from nothing: plan_count (0 draws the plan from plans_two and
+ *                     plans_three) chords of 1 to MOTIVE_RANDOM_PLAN_MAX, each the diatonic triad on a degree of the key (1
+ *                     to 7; in minor V's third is raised). Without places (bar 0) the chords go one to each segment, in
+ *                     order, so the count (1 to 3) fixes the shape (2: a a' or a b, 3: a a' b; 1 holds one chord throughout);
+ *                     with places the first chord is at 1:1 and holds the pickup, and each later chord starts at its bar (1
+ *                     or 2) and beat, the shape drawn as usual. No progression logic: the Composer draws no chord of its
+ *                     own. A plan that cannot fit the meter, the bars, the shapes or the endings allowed is refused
+ *                     (MOTIVE_RANDOM_ERR_PLAN) before anything is drawn
  */
+#define MOTIVE_RANDOM_PLAN_MAX 4
+
+typedef struct {
+    int degree;    /* 1 to 7 */
+    unsigned bar;  /* 0 when the chord falls on its segment, else 1 or 2, counted from the first downbeat */
+    unsigned beat; /* 1 to the bar's beats, when bar is not 0 */
+} MotiveRandomPlanChord;
+
 typedef struct {
     unsigned long bars[2];
     unsigned pickup_one_in;
@@ -144,6 +161,8 @@ typedef struct {
     unsigned long syncopation_types[4];
     unsigned long syncopation_levels[2];
     unsigned skips_per_motif;
+    size_t plan_count;
+    MotiveRandomPlanChord plan[MOTIVE_RANDOM_PLAN_MAX];
 } MotiveRandomPreferences;
 
 /* The defaults. */

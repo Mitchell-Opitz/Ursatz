@@ -39,6 +39,8 @@ const char *motive_random_result_name(MotiveRandomResult result) {
         return "unsatisfiable";
     case MOTIVE_RANDOM_ERR_ALLOC:
         return "alloc";
+    case MOTIVE_RANDOM_ERR_PLAN:
+        return "plan";
     }
     return "unknown";
 }
@@ -193,6 +195,12 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
         }
     } else {
         key = plan_key_of_pitch_class(options->mode == KEY_STRUCTURE_MODE_MAJOR ? 0 : 9, options->mode);
+    }
+
+    /* A given chord plan that can never fit is refused before anything is drawn. */
+    if (options->strategy == MOTIVE_RANDOM_STRATEGY_SEGMENTS && options->preferences && options->preferences->plan_count > 0 &&
+        !motive_random_segments_plan_fits(options->preferences, &options->meter)) {
+        return MOTIVE_RANDOM_ERR_PLAN;
     }
 
     FillRng rng;
