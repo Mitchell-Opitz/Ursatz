@@ -40,14 +40,8 @@ static void ask(Soft *soft, bool holds) {
 
 /* The rules of a continuation: it fragments the basic idea, the fragments in their span and in their notes. */
 static const char *judge_continuation(const GrowThemeSpec *spec) {
-    Rational bar = grow_bar_length(&spec->meter);
-    Rational unit = {0, 1};
-    if (rational_make(bar.num * (long)spec->bars, bar.den * 8, &unit) != RATIONAL_OK) {
-        return "theme not measurable";
-    }
-    Rational basic = {unit.num * 2, unit.den};
-    size_t basic_ticks = ticks_of(basic);
-    size_t fragment_ticks = ticks_of(unit);
+    size_t basic_ticks = ticks_of(spec->layout.length[GROW_PLACE_BASIC]);
+    size_t fragment_ticks = ticks_of(spec->layout.length[GROW_PLACE_FRAGMENT_1]);
     if (basic_ticks == 0 || fragment_ticks == 0 || !standard_form_is_fragmentation(basic_ticks, fragment_ticks)) {
         return "continuation does not fragment";
     }
@@ -80,17 +74,18 @@ static const char *judge_sentence(const GrowThemeSpec *spec, Soft *soft) {
     if (!standard_form_phrase_is_sentential(true, true)) {
         return "phrase not sentential";
     }
-    if (!standard_form_basic_idea_length_valid(spec->bars / 4)) {
+    if (!standard_form_basic_idea_length_valid(spec->layout.basic_bars)) {
         return "basic idea length not valid";
     }
     const char *hard = judge_continuation(spec);
     if (hard) {
         return hard;
     }
-    size_t half = spec->bars / 2;
-    ask(soft, standard_form_sentence_is_archetypal(spec->bars, half, half, true));
-    ask(soft, standard_form_presentation_length_usual(half));
-    ask(soft, standard_form_continuation_balanced(half, half));
+    size_t first = spec->layout.beginning_bars;
+    size_t second = spec->layout.ending_bars;
+    ask(soft, standard_form_sentence_is_archetypal(spec->bars, first, second, true));
+    ask(soft, standard_form_presentation_length_usual(first));
+    ask(soft, standard_form_continuation_balanced(first, second));
     /* A presentation filled whole by a motive has no repetition to read as one. */
     if (!spec->part_whole) {
         ask(soft, spec->has_developed[GROW_PLACE_REPETITION] &&
@@ -118,7 +113,8 @@ static bool motives_differ(const Motive *a, const Motive *b) {
 }
 
 static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
-    size_t half = spec->bars / 2;
+    size_t first = spec->layout.beginning_bars;
+    size_t second = spec->layout.ending_bars;
     if (!standard_form_phrase_roles_in_order(PHRASE_ROLE_ANTECEDENT, PHRASE_ROLE_CONSEQUENT)) {
         return "phrase roles out of order";
     }
@@ -130,8 +126,8 @@ static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
     }
     ask(soft, standard_form_antecedent_cadence_usual(spec->first_cadence));
     ask(soft, standard_form_consequent_cadence_usual(spec->cadence));
-    ask(soft, standard_form_antecedent_length_usual(half));
-    ask(soft, standard_form_consequent_length_usual(half, half));
+    ask(soft, standard_form_antecedent_length_usual(first));
+    ask(soft, standard_form_consequent_length_usual(first, second));
     /* An antecedent filled whole has no contrasting idea of its own to differ from the consequent's. */
     if (!spec->part_whole) {
         ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_PLACE_CONTRAST],
@@ -150,7 +146,8 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
     if (hard) {
         return hard;
     }
-    size_t half = spec->bars / 2;
+    size_t first = spec->layout.beginning_bars;
+    size_t second = spec->layout.ending_bars;
     StandardFormCommonality commonality;
     if (!standard_form_pairing_commonality(beginning, ending, &commonality)) {
         return "pairing has no commonality";
@@ -160,13 +157,13 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
         ask(soft, step < STANDARD_FORM_COMMONALITY_COUNT - 1 - (int)commonality);
     }
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
-        ask(soft, standard_form_presentation_length_usual(half));
+        ask(soft, standard_form_presentation_length_usual(first));
         if (!spec->part_whole) {
             ask(soft, spec->has_developed[GROW_PLACE_REPETITION] && reads_as_repetition(spec, GROW_PLACE_REPETITION));
         }
     }
     if (spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
-        ask(soft, standard_form_continuation_balanced(half, half));
+        ask(soft, standard_form_continuation_balanced(first, second));
     }
     return NULL;
 }
@@ -182,7 +179,7 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     if (form == PHRASE_LEVEL_FORM_SENTENCE) {
         return judge_sentence(spec, soft);
     }
-    if (!standard_form_basic_idea_length_valid(spec->bars / 4)) {
+    if (!standard_form_basic_idea_length_valid(spec->layout.basic_bars)) {
         return "basic idea length not valid";
     }
     /* A contrasting idea that keeps m0's contour would read as its repetition. */

@@ -435,9 +435,10 @@ size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShape
            (cadence == CADENCE_TYPE_HALF ? 0 : 1);
 }
 
-bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
+bool grow_split_possible(const GrowThemeRequest *request, size_t half_bars, PlanHarmonyShapeKind shape,
+                         CadenceType cadence) {
     size_t chords = grow_chords_before_last(request, shape, cadence);
-    size_t cells = request->bars / 2 * request->cells_per_bar;
+    size_t cells = half_bars * request->cells_per_bar;
     /* The last chord is the whole last bar. */
     return cells <= request->cells_per_bar || cells - request->cells_per_bar <= chords * request->cells_per_bar;
 }
@@ -459,9 +460,10 @@ static bool lands_on(const Motive *result, int want) {
 }
 
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
-                        const Motive *source, int want_pc, const MotiveRelationStep *avoid, MotiveRelationStep *out) {
-    (void)spec;
-    Rational room = grow_scaled(grow_unit(request), 2);
+                        GrowPlace place, const Motive *source, int want_pc, const MotiveRelationStep *avoid,
+                        MotiveRelationStep *out) {
+    (void)request;
+    Rational room = spec->layout.length[place];
     size_t intervals = source->note_count - 1;
     MotiveRelationStep fits[CONTRAST_MAX];
     MotiveRelationStep exact[CONTRAST_MAX];
@@ -651,7 +653,7 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
         }
         ref.step = dev;
         if (motive_develop(m0, &dev, &result) != MOTIVE_DEV_OK || result.note_count < 2 ||
-            rational_cmp(result.length, grow_scaled(request->bar, request->bars == 4 ? 1 : 2)) > 0) {
+            rational_cmp(result.length, grow_scaled(request->bar, spec->layout.basic_bars)) > 0) {
             continue;
         }
         spec->has_section_motive = true;
@@ -791,6 +793,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_PAYLOAD_MAGIC;
     spec->bars = request->bars;
+    if (!grow_layout_of(request, &spec->layout)) {
+        return false;
+    }
     spec->meter = request->meter;
     spec->key = request->key;
     spec->cadence = request->cadence;
@@ -803,7 +808,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
         spec->source.note_count < 2) {
         return false;
     }
-    size_t basic_bars = request->bars == 4 ? 1 : 2;
+    size_t basic_bars = spec->layout.basic_bars;
     if (grow_motive_fit(&spec->source, request->bar, basic_bars) == GROW_FIT_LONGER) {
         if (request->has_motive_ref || !draw_part_whole(request, spec)) {
             return false;
@@ -842,8 +847,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     draw_segments(shared, spec);
     draw_liquid_base(shared, spec);
     spec->segment_room = material_has_room(plan, request, spec);
-    /* The basic idea is two bars of eight, one of four. */
-    spec->basic_cells = request->bars == 4 ? request->cells_per_bar : 2 * request->cells_per_bar;
+    spec->basic_cells = spec->layout.basic_bars * request->cells_per_bar;
     return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) && made_nodes_fit(plan, request, spec);
 }
 
@@ -1002,11 +1006,11 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
 
 /* ------------------------------------------------------------- applying */
 
-PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
+PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, Rational start, Rational length,
                          const char *name, NodeId *out) {
     PlanSpan span;
-    PlanResult result = plan_result_of_rational(rational_add(build->request->span.start, grow_scaled(build->unit, start_unit), &span.start));
-    span.length = grow_scaled(build->unit, units);
+    PlanResult result = plan_result_of_rational(rational_add(build->request->span.start, start, &span.start));
+    span.length = length;
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, parent, kind, span, name, out);
     }
@@ -1486,7 +1490,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.plan = plan;
     build.spec = spec;
     build.request = &request;
-    build.unit = grow_unit(&request);
+    build.layout = spec->layout;
     build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
     build.cadence.params.cadence = request.cadence;
     build.phrase = PLAN_NODE_NONE;

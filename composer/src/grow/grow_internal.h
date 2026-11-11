@@ -48,6 +48,21 @@ typedef enum {
 /* How a presentation repeats its basic idea (ch. V). */
 typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
 
+/*
+ * Where each idea of a theme lies, as exact lengths from the theme's start, computed once per request (grow_layout_of).
+ * A place the pairing does not have has length 0. The ending starts at `beginning`. A *_bars member is the whole bars the
+ * length is, 0 when it is not whole.
+ */
+typedef struct {
+    Rational start[GROW_PLACE_COUNT];
+    Rational length[GROW_PLACE_COUNT];
+    Rational beginning;      /* the length of the first half */
+    Rational ending;         /* the length of the second half */
+    size_t basic_bars;
+    size_t beginning_bars;
+    size_t ending_bars;
+} GrowLayout;
+
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
 typedef struct {
     unsigned long magic;
@@ -56,6 +71,7 @@ typedef struct {
     AnalysisKey key;
     CadenceType cadence;
     PlanThemePairing pairing;
+    GrowLayout layout;                 /* where each idea lies (grow_layout_of) */
     CadenceType first_cadence;         /* the weak cadence an antecedent ends in */
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
     bool beginning_split;                  /* no chord of the antecedent crosses a barline */
@@ -166,7 +182,7 @@ typedef struct {
     PiecePlan *plan;
     const GrowThemeSpec *spec;
     const GrowThemeRequest *request;
-    Rational unit;           /* an eighth of the theme */
+    GrowLayout layout;       /* the spec's layout */
     PlanConstraint cadence;  /* the theme's cadence */
     NodeId phrase;           /* the phrase the parts go in, made by the beginning */
     NodeId material;         /* the idea of the material section the motive nodes go in */
@@ -181,8 +197,8 @@ typedef struct {
 
 /* A length of count units. */
 Rational grow_scaled(Rational unit, size_t count);
-/* A node of the theme, Realized, from start_unit units after the theme's start and units long. */
-PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
+/* A node of the theme, Realized, starting `start` after the theme's start and `length` long. */
+PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, Rational start, Rational length,
                          const char *name, NodeId *out);
 /* The motive node m<slot> in the material, made from the ref, at bar slot_base + (slot - 1) * motive_bars of the material. */
 PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out);
@@ -234,22 +250,26 @@ int grow_pairing_archetype(const PlanThemePairing *pairing);
  */
 size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
 /*
- * Whether the chords of half of the theme can be kept from crossing a barline: a phrase model of this cadence has
+ * Whether the chords of a half of the theme of half_bars bars can be kept from crossing a barline: a phrase model of this cadence has
  * only so many chords, and each may be no longer than a bar. False when they cannot cover the half's cells.
  */
-bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
+bool grow_split_possible(const GrowThemeRequest *request, size_t half_bars, PlanHarmonyShapeKind shape,
+                         CadenceType cadence);
 /* An eighth of the theme. */
 Rational grow_unit(const GrowThemeRequest *request);
+/* Where each idea of the request's theme lies; false when the theme has no length or a length does not fit a Rational. */
+bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out);
 /* standard-form's own beginning and ending for the plan's. */
 int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);
 /* Whether two motives go up and down in the same places. */
 bool grow_same_contour(const Motive *a, const Motive *b);
 /* The development of m0 the contrasting idea is, drawn from rng so that its contour differs from m0's and the result
-   fits two units. want_pc is the pitch class its last note should land on (negative for any); avoid, if given, is a
+   fits the idea at `place`. want_pc is the pitch class its last note should land on (negative for any); avoid, if given, is a
    development it may not repeat. False when there is none. */
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
-                        const Motive *source, int want_pc, const MotiveRelationStep *avoid, MotiveRelationStep *out);
+                        GrowPlace place, const Motive *source, int want_pc, const MotiveRelationStep *avoid,
+                        MotiveRelationStep *out);
 /* The development of m0 an idea is made as, and whether the idea is made from m0 at all. The first idea of a slot with
    a motive of its own is that motive exact. */
 bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep *out);
