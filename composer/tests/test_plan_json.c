@@ -216,6 +216,21 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.harmony_shape.pedal == b->params.harmony_shape.pedal;
     case PLAN_CONSTRAINT_PEDAL:
         return a->params.pedal.degree == b->params.pedal.degree;
+    case PLAN_CONSTRAINT_CONSTRUCTION: {
+        const PlanConstruction *x = &a->params.construction;
+        const PlanConstruction *y = &b->params.construction;
+        if (memcmp(x->idea_bars, y->idea_bars, sizeof(x->idea_bars)) != 0 || x->extension_count != y->extension_count ||
+            x->reason != y->reason) {
+            return false;
+        }
+        for (size_t i = 0; i < x->extension_count; i++) {
+            if (x->extensions[i].kind != y->extensions[i].kind || x->extensions[i].idea != y->extensions[i].idea ||
+                x->extensions[i].bars != y->extensions[i].bars || x->extensions[i].varied != y->extensions[i].varied) {
+                return false;
+            }
+        }
+        return true;
+    }
     case PLAN_CONSTRAINT_THEME_PAIRING:
         return a->params.theme_pairing.beginning == b->params.theme_pairing.beginning &&
                a->params.theme_pairing.ending == b->params.theme_pairing.ending;

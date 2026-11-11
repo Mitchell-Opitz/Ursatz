@@ -169,7 +169,7 @@
           "enum": ["length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema", "material",
                    "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint", "return", "layers",
                    "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold",
-                   "seam", "motive_tones", "pedal"]
+                   "seam", "motive_tones", "pedal", "construction"]
         }
       },
       "allOf": [
@@ -211,6 +211,38 @@
         {
           "if": { "properties": { "kind": { "const": "pedal" } } },
           "then": { "required": ["degree"], "properties": { "degree": { "const": 5 } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "construction" } } },
+          "then": {
+            "required": ["ideas", "extensions", "reason"],
+            "properties": {
+              "ideas": {
+                "type": "object",
+                "propertyNames": {
+                  "enum": ["basic idea", "repetition", "contrasting idea", "consequent basic idea",
+                           "consequent contrasting idea", "fragment 1", "fragment 2", "cadential", "cadential 1",
+                           "cadential 2"]
+                },
+                "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 16 }
+              },
+              "extensions": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "required": ["kind", "idea", "bars", "varied"],
+                  "properties": {
+                    "kind": { "enum": ["repeat", "stretch", "addition", "evaded"] },
+                    "idea": { "type": "string" },
+                    "bars": { "type": "integer", "minimum": 0, "maximum": 4 },
+                    "varied": { "type": "boolean" }
+                  }
+                }
+              },
+              "reason": { "enum": ["given", "motive", "length"] }
+            }
+          }
         },
         {
           "if": { "properties": { "kind": { "const": "section_letter" } } },

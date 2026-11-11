@@ -150,6 +150,25 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     }
     case PLAN_CONSTRAINT_PEDAL:
         return constraint->params.pedal.degree == 5;
+    case PLAN_CONSTRAINT_CONSTRUCTION: {
+        const PlanConstruction *construction = &constraint->params.construction;
+        for (size_t i = 0; i < PLAN_CONSTRUCTION_IDEAS; i++) {
+            if (construction->idea_bars[i] > 16) {
+                return false;
+            }
+        }
+        if (construction->extension_count > PLAN_CONSTRUCTION_EXTENSIONS) {
+            return false;
+        }
+        for (size_t i = 0; i < construction->extension_count; i++) {
+            const PlanExtension *extension = &construction->extensions[i];
+            if (extension->kind < PLAN_EXTENSION_REPEAT || extension->kind > PLAN_EXTENSION_EVADED ||
+                extension->idea >= PLAN_CONSTRUCTION_IDEAS || extension->bars > 4) {
+                return false;
+            }
+        }
+        return construction->reason >= PLAN_CONSTRUCTION_GIVEN && construction->reason <= PLAN_CONSTRUCTION_FROM_LENGTH;
+    }
     case PLAN_CONSTRAINT_PIECE_PART: {
         const PlanPiecePart *part = &constraint->params.piece_part;
         size_t length = strnlen(part->id, PLAN_PIECE_ID_MAX);
@@ -197,7 +216,8 @@ PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstr
     if (node->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    if (!constraint_is_valid(plan, constraint)) {
+    if (!constraint_is_valid(plan, constraint) ||
+        (constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION && node->kind != PLAN_NODE_SECTION)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     return list_add(&node->constraints, constraint);
@@ -235,7 +255,7 @@ PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const P
     if (entry->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    if (!constraint_is_valid(plan, constraint)) {
+    if (!constraint_is_valid(plan, constraint) || constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     return list_add(&entry->constraints, constraint);
