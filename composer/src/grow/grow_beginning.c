@@ -4,12 +4,9 @@
 #include "harmony/harmony_internal.h"
 #include "util/plan_util.h"
 
-/* The second idea of the first half, in eighths of the theme (the layout's room for it is B1 commit 3). */
-#define SECOND_UNITS 2
-
 /* The shape of the chords of the first half: a phrase model if it has room for its cadence, else the cadential one. */
-static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, CadenceType cadence) {
-    size_t cells = request->bars / 2 * request->cells_per_bar;
+static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, const GrowThemeSpec *spec, CadenceType cadence) {
+    size_t cells = spec->layout.beginning_bars * request->cells_per_bar;
     return cells >= harmony_phrase_room_cells(cadence, request->cells_per_bar) ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                                                                                : PLAN_HARMONY_SHAPE_CADENTIAL;
 }
@@ -52,7 +49,7 @@ static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng,
     /* A contrasting slot with a motive of its own gives the idea as it is (grow_idea_dev). */
     bool drawn = grow_idea_own(spec, GROW_PLACE_CONTRAST)
                      ? (spec->contrast.kind = MOTIVE_RELATION_EXACT, true)
-                     : grow_draw_contrast(request, rng, spec, &spec->source, -1, NULL, &spec->contrast);
+                     : grow_draw_contrast(request, rng, spec, GROW_PLACE_CONTRAST, &spec->source, -1, NULL, &spec->contrast);
     return drawn &&
            grow_idea_develop(spec, GROW_PLACE_CONTRAST, &spec->developed[GROW_PLACE_CONTRAST]) &&
            (spec->has_developed[GROW_PLACE_CONTRAST] = true);
@@ -75,15 +72,15 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
                                            !request->given_first_half && !request->pedal);
         if (!grow_idea_develop(spec, GROW_PLACE_REPETITION, &spec->developed[GROW_PLACE_REPETITION]) ||
             rational_cmp(spec->developed[GROW_PLACE_REPETITION].length,
-                              grow_scaled(grow_unit(request), SECOND_UNITS)) > 0) {
+                              spec->layout.length[GROW_PLACE_REPETITION]) > 0) {
             return false;
         }
         spec->has_developed[GROW_PLACE_REPETITION] = true;
         return true;
     }
     case PLAN_THEME_BEGINNING_ANTECEDENT:
-        spec->beginning_shape = shape_for(request, spec->first_cadence);
-        spec->beginning_split = grow_split_possible(request, spec->beginning_shape, spec->first_cadence);
+        spec->beginning_shape = shape_for(request, spec, spec->first_cadence);
+        spec->beginning_split = grow_split_possible(request, spec->layout.beginning_bars, spec->beginning_shape, spec->first_cadence);
         if (request->has_start_change && spec->beginning_shape != PLAN_HARMONY_SHAPE_PHRASE_MODEL) {
             return false;
         }
@@ -132,7 +129,7 @@ static PlanResult build_presentation(GrowBuild *build) {
     /* A motif as long as the basic idea with chords of its own, written as it is (R-466). */
     bool whole = spec->basic_as_written && !spec->part_whole && !spec->has_section_motive && spec->basic_has_chords &&
                  !build->request->given_first_half && !build->request->pedal &&
-                 grow_motive_fit(&spec->source, build->request->bar, build->request->bars == 4 ? 1 : 2) == GROW_FIT_WHOLE;
+                 grow_motive_fit(&spec->source, build->request->bar, build->layout.basic_bars) == GROW_FIT_WHOLE;
     PlanResult result = make_phrase(build);
     if (result == PLAN_OK) {
         result = grow_add_node(build, build->phrase, PLAN_NODE_SUBPHRASE, rational_ratio(0, 1), build->layout.beginning,

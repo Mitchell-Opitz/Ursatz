@@ -250,10 +250,11 @@ int grow_pairing_archetype(const PlanThemePairing *pairing);
  */
 size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
 /*
- * Whether the chords of half of the theme can be kept from crossing a barline: a phrase model of this cadence has
+ * Whether the chords of a half of the theme of half_bars bars can be kept from crossing a barline: a phrase model of this cadence has
  * only so many chords, and each may be no longer than a bar. False when they cannot cover the half's cells.
  */
-bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
+bool grow_split_possible(const GrowThemeRequest *request, size_t half_bars, PlanHarmonyShapeKind shape,
+                         CadenceType cadence);
 /* An eighth of the theme. */
 Rational grow_unit(const GrowThemeRequest *request);
 /* Where each idea of the request's theme lies; false when the theme has no length or a length does not fit a Rational. */
@@ -264,10 +265,11 @@ int grow_phrase_ending(PlanThemeEnding ending);
 /* Whether two motives go up and down in the same places. */
 bool grow_same_contour(const Motive *a, const Motive *b);
 /* The development of m0 the contrasting idea is, drawn from rng so that its contour differs from m0's and the result
-   fits two units. want_pc is the pitch class its last note should land on (negative for any); avoid, if given, is a
+   fits the idea at `place`. want_pc is the pitch class its last note should land on (negative for any); avoid, if given, is a
    development it may not repeat. False when there is none. */
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
-                        const Motive *source, int want_pc, const MotiveRelationStep *avoid, MotiveRelationStep *out);
+                        GrowPlace place, const Motive *source, int want_pc, const MotiveRelationStep *avoid,
+                        MotiveRelationStep *out);
 /* The development of m0 an idea is made as, and whether the idea is made from m0 at all. The first idea of a slot with
    a motive of its own is that motive exact. */
 bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep *out);
