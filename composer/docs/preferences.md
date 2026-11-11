@@ -86,7 +86,7 @@ The settings of the segments motive generator ([cli-random-motive.md](cli-random
 | `leap.high` | 9 | `leap.low` to 12 | The largest. | `SEGMENT_LEAP_HIGH` |
 | `rung_moves` | `step` 6, `skip` 2 | weighted list | A walk on the chord tones moves one rung or two. | the `moves` table of `next_rung` |
 | `decorations` | `chord_tone` 1, `passing` 1, `neighbor` 1, `appoggiatura` 1, `escape` 1 | weighted list | What a note between two frame notes is: another chord tone or a non-chord tone of the type. | `DECORATION_KINDS` (equal) |
-| `durations` | `half_beat` 2, `beat` 4, `two_beats` 1 | weighted list | The note lengths a cell is tiled with; a length that does not fit its place is left out. | `MOTIVE_RANDOM_DURATION_WEIGHTS` (the drawn strategy still reads it) |
+| `durations` | `half_beat` 2, `beat` 4, `two_beats` 1, `quarter_beats` 0, `long_short` 0, `short_long` 0, `triplet` 0, `triplet_two_beats` 0 | weighted list | The note lengths a cell is tiled with; a length that does not fit its place is left out. The five after `two_beats` are off by default (R-422): two notes of a quarter beat, a dotted-beat figure and its reverse, and the two triplets (simple meters only). | `MOTIVE_RANDOM_DURATION_WEIGHTS` (the drawn strategy still reads it) |
 | `accented_one_in` | 0 | 0 to 64 | One eligible note in this many becomes an accented non-chord tone: a beat note whose neighbors are frame notes and which resolves to the next note. 0 never and draws no random number. Off by default; R-422. | new (R-425) |
 | `accented_types` | `appoggiatura` 1, `passing` 1, `suspension` 1 | weighted list | Which accented figure is placed; a suspension only where the chord changes. Off by default (it matters only with `accented_one_in`); R-422. | new |
 | `avoid_repeats` | `false` | true or false | No repeated note: a decoration that finds no figure tries the other kinds before a chord tone, and an adjacent repeat is refused unless the feature or a suspension makes it. Off by default; R-422. | new |
@@ -96,6 +96,13 @@ The settings of the segments motive generator ([cli-random-motive.md](cli-random
 | `contrast_fidelity_min` | `"0/1"` | a ratio `n/d` as text, 0 <= n <= d, 1 <= d <= 1000 | The least recognizability of a contrasting segment against segment a; 0 never rejects. Off by default; R-422. | new |
 | `long_on_weak` | 0 | 0 to 20 | The two-beat note is this much more likely on a weak beat (its weight times 1 plus this); 0 changes nothing. Off by default; R-422. | new |
 | `final_long` | `false` | true or false | The last note of the last segment is longer than every other note in it. Off by default; R-422. | new |
+| `compound_beats` | `false` | true or false | In 6/8, 9/8 and 12/8 the beat is the dotted quarter: cells are tiled in beats of three eighths. No effect in any other meter. Off by default; R-422. | new (R-439) |
+| `endings` | `free` 1, `closed` 0, `open` 0, `lead_in` 0 | weighted list | How the last segment ends: `free` as drawn, `closed` (a long last note on the strongest beat available, the root or third of the chord), `open` (the last note is degree 2, 5 or 7 of the key) or `lead_in` (two short last notes, the last off the beat). A motive that ends on IV cannot end open; `final_long` never passes with a lead-in. Off by default; R-422. | new (R-440) |
+| `long_nct_one_in` | 0 | 0 to 64 | A segment gets a long non-chord tone (on a beat, a beat or longer, resolving to the next note) one time in this many. 0 never and draws no random number. Off by default; R-422. | new (R-441) |
+| `long_nct_types` | `appoggiatura` 1, `suspension` 1, `retardation` 1, `passing` 1, `neighbor` 1 | weighted list | Which long tone is placed; a suspension or retardation only where the chord changes. Matters only with `long_nct_one_in`; R-422. | new |
+| `long_nct_intervals` | `second` 1, `fourth` 1, `sixth` 1, `seventh` 1 | weighted list | The tone's interval above the chord root. Matters only with `long_nct_one_in`; R-422. | new |
+| `long_nct_beats` | `downbeat` 1, `middle` 1, `other` 1 | weighted list | Where the tone sits: the downbeat, the middle of the bar, another beat. Matters only with `long_nct_one_in`; R-422. | new |
+| `long_nct_lengths` | `beat` 1, `dotted_beat` 1, `two_beats` 1 | weighted list | How long the tone is: a beat, a dotted beat, two beats or more. Matters only with `long_nct_one_in`; R-422. | new |
 
 With every default each draw makes the random-number calls it always made, so a seed gives the motives it always gave (the `random-motive*` snapshots are unchanged). The plan degrees (I-V, I-IV, I-I, I-V-I, I-IV-I) stay in `motive_random_segments.c`; the preferences set only how often each is drawn.
 
@@ -112,7 +119,8 @@ With every default each draw makes the random-number calls it always made, so a 
     "leap": {"low": 5, "high": 9},
     "rung_moves": {"step": 6, "skip": 2},
     "decorations": {"chord_tone": 1, "passing": 1, "neighbor": 1, "appoggiatura": 1, "escape": 1},
-    "durations": {"half_beat": 2, "beat": 4, "two_beats": 1},
+    "durations": {"half_beat": 2, "beat": 4, "two_beats": 1, "quarter_beats": 0, "long_short": 0, "short_long": 0,
+                  "triplet": 0, "triplet_two_beats": 0},
     "accented_one_in": 0,
     "accented_types": {"appoggiatura": 1, "passing": 1, "suspension": 1},
     "avoid_repeats": false,
@@ -121,7 +129,14 @@ With every default each draw makes the random-number calls it always made, so a 
     "pickup_from_accent": false,
     "contrast_fidelity_min": "0/1",
     "long_on_weak": 0,
-    "final_long": false
+    "final_long": false,
+    "compound_beats": false,
+    "endings": {"free": 1, "closed": 0, "open": 0, "lead_in": 0},
+    "long_nct_one_in": 0,
+    "long_nct_types": {"appoggiatura": 1, "suspension": 1, "retardation": 1, "passing": 1, "neighbor": 1},
+    "long_nct_intervals": {"second": 1, "fourth": 1, "sixth": 1, "seventh": 1},
+    "long_nct_beats": {"downbeat": 1, "middle": 1, "other": 1},
+    "long_nct_lengths": {"beat": 1, "dotted_beat": 1, "two_beats": 1}
   }
 }
 ```
@@ -163,4 +178,4 @@ The random motive and theme requests take the document as an optional `preferenc
 | `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants). `melody` and `development` are accepted and echoed. |
 | `composer_api_theme` | `melody` and `development` (the fidelity minimums, also shown in the `minimum` of each development item). `motif` is accepted, echoed and has no effect: a theme's motives come from the request. |
 
-`composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `accented_one_in_max`, `leaps_per_motif_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.
+`composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `accented_one_in_max`, `long_nct_one_in_max`, `leaps_per_motif_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.
