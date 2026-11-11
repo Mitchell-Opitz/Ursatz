@@ -70,15 +70,15 @@ ursatz-composer plan --form rounded-binary --key C --meter 4/4 --given-progressi
 In text: the form with its size, the key, the meter and the seed; the motive file or `motive invented at fill`;
 the accompaniment if there is one; then a line for each section with its letter, its bars, the key it ends in, the
 cadence it ends in (and, in brackets, the weaker cadence its antecedent ends in), its pairing, and the section it
-returns with how it varies it (`exact`, `ornament`, `reharmonize` or `reregister`):
+returns with how it varies it (`exact`, `ornament`, `reharmonize`, `varied` or `reregister`):
 
 ```
 ternary, 24 bars, key A minor, meter 3/4, seed 4, keys and cadences planned
 motive invented at fill
 sections
-  A    8 bars, key A minor, cadence PAC (antecedent HC), antecedent + consequent
-  B    8 bars, key D minor, cadence PAC, presentation + continuation
-  A    8 bars, key A minor, cadence PAC (antecedent HC), antecedent + consequent, returns A (exact)
+  A    8 bars, key C major, cadence PAC (antecedent HC), antecedent + consequent
+  B    8 bars, key A minor, cadence HC, presentation + continuation
+  A    8 bars, key A minor, cadence PAC (antecedent HC), antecedent + consequent, returns A (varied)
 wrote doc_t.json
 ```
 
