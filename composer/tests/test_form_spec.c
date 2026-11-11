@@ -55,6 +55,19 @@ static char *replaced(const char *name, const char *from, const char *to) {
     return out;
 }
 
+/* A copy of `text` with the first `from` replaced by `to`. */
+static char *replaced_in(const char *text, const char *from, const char *to) {
+    const char *at = strstr(text, from);
+    assert(at);
+    size_t head = (size_t)(at - text);
+    char *out = malloc(strlen(text) + strlen(to) + 1);
+    assert(out);
+    memcpy(out, text, head);
+    strcpy(out + head, to);
+    strcat(out, at + strlen(from));
+    return out;
+}
+
 /* The text is refused as an invalid document, naming `path`. */
 static void refused(const char *text, const char *path) {
     FormSpec *form = NULL;
@@ -145,6 +158,7 @@ static void test_builtin_forms(void) {
                 assert(section->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || section->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
                        section->cadence == CADENCE_TYPE_HALF);
                 assert(section->returns == FORM_SPEC_NO_RETURN || section->returns < i);
+                assert(section->pedal == 0);
                 sum += section->bars;
             }
             assert(sum == size->bars);
@@ -738,6 +752,45 @@ static int test_custom(void) {
     return 0;
 }
 
+/* The section member pedal (R-446): "dominant" under a presentation, nothing else. */
+static void test_pedal(void) {
+    char text[4096];
+    char sizes[2048];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 8, \"default\": true, \"sections\": [" SECTION_A "]}");
+    document(text, sizeof(text), "", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].pedal == 0);
+    form_spec_destroy(form);
+
+    snprintf(sizes, sizeof(sizes),
+             "{\"bars\": 8, \"default\": true, \"sections\": [" SECTION_A "]}");
+    char *with = replaced_in(sizes, "\"cadence\"", "\"pedal\": \"dominant\", \"cadence\"");
+    document(text, sizeof(text), "", with);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].pedal == 5);
+    form_spec_destroy(form);
+    free(with);
+
+    with = replaced_in(sizes, "\"cadence\"", "\"pedal\": \"tonic\", \"cadence\"");
+    document(text, sizeof(text), "", with);
+    refused(text, "/sizes/0/sections/0/pedal");
+    free(with);
+    with = replaced_in(sizes, "\"cadence\"", "\"pedal\": 5, \"cadence\"");
+    document(text, sizeof(text), "", with);
+    refused(text, "/sizes/0/sections/0/pedal");
+    free(with);
+
+    /* An antecedent has no presentation to put over a pedal. */
+    with = replaced_in(sizes, "\"cadence\"", "\"pedal\": \"dominant\", \"cadence\"");
+    char *antecedent = replaced_in(with, "\"presentation\"", "\"antecedent\"");
+    char *consequent = replaced_in(antecedent, "\"continuation\"", "\"consequent\"");
+    document(text, sizeof(text), "", consequent);
+    refused(text, "/sizes/0/sections/0/pedal");
+    free(with);
+    free(antecedent);
+    free(consequent);
+}
+
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "custom") == 0) {
         return test_custom();
@@ -753,6 +806,7 @@ int main(int argc, char **argv) {
     test_game_loop();
     test_default_cadences();
     test_sizes();
+    test_pedal();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }

@@ -212,7 +212,10 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.harmony_shape.starts_on == b->params.harmony_shape.starts_on &&
                a->params.harmony_shape.ends_on == b->params.harmony_shape.ends_on &&
                a->params.harmony_shape.max_cells_per_chord == b->params.harmony_shape.max_cells_per_chord &&
-               a->params.harmony_shape.split_at_bars == b->params.harmony_shape.split_at_bars;
+               a->params.harmony_shape.split_at_bars == b->params.harmony_shape.split_at_bars &&
+               a->params.harmony_shape.pedal == b->params.harmony_shape.pedal;
+    case PLAN_CONSTRAINT_PEDAL:
+        return a->params.pedal.degree == b->params.pedal.degree;
     case PLAN_CONSTRAINT_THEME_PAIRING:
         return a->params.theme_pairing.beginning == b->params.theme_pairing.beginning &&
                a->params.theme_pairing.ending == b->params.theme_pairing.ending;
@@ -418,6 +421,75 @@ static void test_round_trip(void) {
     plan_destroy(plan);
     plan_destroy(parsed);
     plan_destroy(from_file);
+}
+
+/*
+ * The dominant pedal (R-446): a section's pedal constraint and a harmony shape with pedal round-trip byte for byte, a
+ * plan without them is written as it always was, and a pedal on a degree but the dominant is refused.
+ */
+static void test_pedal(void) {
+    PlanJsonError error;
+    PiecePlan *plain = build_sentence_plan();
+    char *plain_text = plan_to_json(plain, &error);
+    assert(plain_text && strstr(plain_text, "pedal") == NULL);
+
+    PiecePlan *plan = build_sentence_plan();
+    NodeId section = PLAN_NODE_NONE;
+    for (NodeId id = 1; id < 40 && section == PLAN_NODE_NONE; id++) {
+        if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
+            section = id;
+        }
+    }
+    assert(section != PLAN_NODE_NONE);
+    PlanConstraint pedal = {PLAN_CONSTRAINT_PEDAL, {0}};
+    pedal.params.pedal.degree = 4;
+    assert(plan_node_add_constraint(plan, section, &pedal) == PLAN_ERR_BAD_PAYLOAD);
+    pedal.params.pedal.degree = 5;
+    assert(plan_node_add_constraint(plan, section, &pedal) == PLAN_OK);
+
+    PlanConstraint shape = {PLAN_CONSTRAINT_HARMONY_SHAPE, {0}};
+    shape.params.harmony_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
+    shape.params.harmony_shape.starts_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+    shape.params.harmony_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
+    shape.params.harmony_shape.pedal = true;
+    LaneSpanId spans[32];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, bars(0, 8), spans, 32);
+    LaneSpanId held = PLAN_LANE_SPAN_NONE;
+    for (size_t i = 0; i < found && held == PLAN_LANE_SPAN_NONE; i++) {
+        if (plan_lane_span_state(plan, spans[i]) != PLAN_STATE_GIVEN) {
+            held = spans[i];
+        }
+    }
+    assert(held != PLAN_LANE_SPAN_NONE);
+    /* A pedal needs both anchors on the dominant. */
+    assert(plan_lane_span_add_constraint(plan, held, &shape) == PLAN_ERR_BAD_PAYLOAD);
+    shape.params.harmony_shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+    assert(plan_lane_span_add_constraint(plan, held, &shape) == PLAN_OK);
+
+    char *text = plan_to_json(plan, &error);
+    assert(text && strstr(text, "\"kind\": \"pedal\"") != NULL && strstr(text, "\"degree\": 5") != NULL &&
+           strstr(text, "\"pedal\": true") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+
+    /* A degree but the dominant is refused when the plan is read. */
+    char *wrong = strdup(text);
+    char *at = wrong ? strstr(wrong, "\"degree\": 5") : NULL;
+    assert(at);
+    at[10] = '4';
+    PiecePlan *refused = (PiecePlan *)0x1;
+    assert(plan_from_json(wrong, &refused, &error) != PLAN_OK && refused == NULL);
+
+    free(plain_text);
+    free(text);
+    free(again);
+    free(wrong);
+    plan_destroy(plain);
+    plan_destroy(plan);
+    plan_destroy(parsed);
 }
 
 /*
@@ -1165,6 +1237,7 @@ int main(void) {
     test_round_trip();
     test_old_transforms();
     test_motive_tones();
+    test_pedal();
     test_section_constraints();
     test_empty_plan();
     test_malformed_input();
