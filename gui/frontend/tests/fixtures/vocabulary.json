@@ -1634,7 +1634,12 @@
    "durations": {
     "half_beat": 2,
     "beat": 4,
-    "two_beats": 1
+    "two_beats": 1,
+    "quarter_beats": 0,
+    "long_short": 0,
+    "short_long": 0,
+    "triplet": 0,
+    "triplet_two_beats": 0
    },
    "accented_one_in": 0,
    "accented_types": {
@@ -1648,7 +1653,38 @@
    "pickup_from_accent": false,
    "contrast_fidelity_min": "0/1",
    "long_on_weak": 0,
-   "final_long": false
+   "final_long": false,
+   "compound_beats": false,
+   "endings": {
+    "free": 1,
+    "closed": 0,
+    "open": 0,
+    "lead_in": 0
+   },
+   "long_nct_one_in": 0,
+   "long_nct_types": {
+    "appoggiatura": 1,
+    "suspension": 1,
+    "retardation": 1,
+    "passing": 1,
+    "neighbor": 1
+   },
+   "long_nct_intervals": {
+    "second": 1,
+    "fourth": 1,
+    "sixth": 1,
+    "seventh": 1
+   },
+   "long_nct_beats": {
+    "downbeat": 1,
+    "middle": 1,
+    "other": 1
+   },
+   "long_nct_lengths": {
+    "beat": 1,
+    "dotted_beat": 1,
+    "two_beats": 1
+   }
   },
   "development": {
    "fidelity_minimum": {
@@ -1691,6 +1727,7 @@
    "weight_max": 20,
    "pickup_one_in_max": 64,
    "accented_one_in_max": 64,
+   "long_nct_one_in_max": 64,
    "leaps_per_motif_max": 11,
    "leap_min": 3,
    "leap_max": 12,
