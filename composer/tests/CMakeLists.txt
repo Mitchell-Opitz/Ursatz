@@ -1016,7 +1016,7 @@ target_compile_definitions(test_grow_continuation PRIVATE COMPOSER_FIXTURE_DIR="
 target_compile_options(test_grow_continuation PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_continuation COMMAND test_grow_continuation)
 add_test(NAME test_grow_continuation_rates COMMAND test_grow_continuation rates)
-# Measured 29 s of CPU for the cases and 38 s for the compose rates, over the 10 s fast-set limit; test_grow_continuation_smoke (6 s) runs seed 1 of every case and rate.
+# Measured 51 s of CPU for the cases and 41 s for the compose rates, over the 10 s fast-set limit; test_grow_continuation_smoke (7.5 s) runs seed 1 of every case and rate.
 set_tests_properties(test_grow_continuation test_grow_continuation_rates PROPERTIES LABELS slow)
 add_test(NAME test_grow_continuation_smoke COMMAND test_grow_continuation fast)
 

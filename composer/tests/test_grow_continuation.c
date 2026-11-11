@@ -17,8 +17,8 @@
 #endif
 
 /*
- * The accelerating continuation (B4 of L3, R-462 to R-464): s77 (C major) and u51 (C minor), two bars of 4/4 each, in an
- * 8-bar sentence. Every setting is off by default; each is turned on through GrowContext.continuation and its effect read
+ * The accelerating continuation (B4 and B5 of L3, R-462 to R-466): s77 (C major) and u51 (C minor), two bars of 4/4 each, in
+ * an 8-bar sentence; the -chords fixtures are the same motifs with chords of their own, for the basic idea as written. Every setting is off by default; each is turned on through GrowContext.continuation and its effect read
  * in the plan: the segments the fragments name, their cut or diminution, the liquidated fragment 2 and the cadential idea.
  * No argument runs every case but the compose rates; "rates" runs the rates (slow); "fast" runs seed 1 of every case, the
  * rates included (test_grow_continuation_smoke).
@@ -33,6 +33,8 @@ typedef struct {
 
 static bool fast_run = false;
 static Fixture FIXTURES[2];
+static Fixture CHORD_FIXTURES[2]; /* the same motifs with harmony of their own */
+static Motive TRIPLE_MOTIVE;      /* two bars of 3/4 in A minor with harmony of its own */
 
 static unsigned long last_seed(void) {
     return fast_run ? 1 : SEEDS;
@@ -57,6 +59,11 @@ static void load_fixtures(void) {
     FIXTURES[0].motive = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77.json");
     FIXTURES[1].name = "u51";
     FIXTURES[1].motive = load_motive(COMPOSER_FIXTURE_DIR "/continuation/u51.json");
+    CHORD_FIXTURES[0].name = "s77";
+    CHORD_FIXTURES[0].motive = load_motive(COMPOSER_FIXTURE_DIR "/continuation/s77-chords.json");
+    CHORD_FIXTURES[1].name = "u51";
+    CHORD_FIXTURES[1].motive = load_motive(COMPOSER_FIXTURE_DIR "/continuation/u51-chords.json");
+    TRIPLE_MOTIVE = load_motive(COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json");
 }
 
 static NodeId find_node(const PiecePlan *plan, const char *name) {
@@ -69,8 +76,10 @@ static NodeId find_node(const PiecePlan *plan, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-/* The 8-bar sentence of the motive and seed under the continuation settings (NULL for none): the plan after grow_run. */
-static PiecePlan *grow(const Motive *motive, unsigned long seed, const GrowContinuation *continuation) {
+/* The 8-bar sentence of the motive and seed under the continuation settings (NULL for none) and the basic idea as written
+   or not: the plan after grow_run. */
+static PiecePlan *grow_with(const Motive *motive, unsigned long seed, const GrowContinuation *continuation,
+                            bool as_written) {
     GrowRequest request;
     GrowConfig config;
     GrowOutcome outcome;
@@ -86,6 +95,7 @@ static PiecePlan *grow(const Motive *motive, unsigned long seed, const GrowConti
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.basic = motive;
+    config.context.basic_as_written = as_written;
     if (continuation) {
         config.context.continuation = *continuation;
     }
@@ -93,6 +103,10 @@ static PiecePlan *grow(const Motive *motive, unsigned long seed, const GrowConti
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     grow_outcome_destroy(&outcome);
     return plan;
+}
+
+static PiecePlan *grow(const Motive *motive, unsigned long seed, const GrowContinuation *continuation) {
+    return grow_with(motive, seed, continuation, false);
 }
 
 /* The motive_ref of the node `name`. */
@@ -157,19 +171,23 @@ static void test_defaults_change_nothing(void) {
     whole.fragment_lengths[GROW_FRAGMENT_SEGMENT] = 1;
     for (size_t f = 0; f < 2; f++) {
         for (unsigned long seed = 1; seed <= (fast_run ? 1 : 4); seed++) {
-            PiecePlan *plain = grow(&FIXTURES[f].motive, seed, NULL);
-            PiecePlan *with_zero = grow(&FIXTURES[f].motive, seed, &zero);
-            PiecePlan *with_whole = grow(&FIXTURES[f].motive, seed, &whole);
-            char *a = plan_text(plain);
-            char *b = plan_text(with_zero);
-            char *c = plan_text(with_whole);
-            assert(strcmp(a, b) == 0 && strcmp(a, c) == 0);
-            free(a);
-            free(b);
-            free(c);
-            plan_destroy(plain);
-            plan_destroy(with_zero);
-            plan_destroy(with_whole);
+            const Motive *motives[2] = {&FIXTURES[f].motive, &CHORD_FIXTURES[f].motive};
+            for (size_t m = 0; m < 2; m++) {
+                /* faster_harmony and basic_as_written are set false explicitly: the plan is the same. */
+                PiecePlan *plain = grow(motives[m], seed, NULL);
+                PiecePlan *with_zero = grow_with(motives[m], seed, &zero, false);
+                PiecePlan *with_whole = grow_with(motives[m], seed, &whole, false);
+                char *a = plan_text(plain);
+                char *b = plan_text(with_zero);
+                char *c = plan_text(with_whole);
+                assert(strcmp(a, b) == 0 && strcmp(a, c) == 0);
+                free(a);
+                free(b);
+                free(c);
+                plan_destroy(plain);
+                plan_destroy(with_zero);
+                plan_destroy(with_whole);
+            }
         }
     }
 }
@@ -357,16 +375,141 @@ static void test_cut_departs(void) {
     }
 }
 
+/* The chords of the theme in time order: onset (in whole notes, as a rational) and numeral. */
+typedef struct {
+    Rational start;
+    char numeral[PLAN_ROMAN_NUMERAL_MAX];
+} Chord;
+
+static size_t chords_of(const PiecePlan *plan, Chord *out, size_t size) {
+    NodeId theme = find_node(plan, "theme");
+    LaneSpanId spans[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, theme), spans, 64);
+    assert(found <= size);
+    for (size_t i = 0; i < found; i++) {
+        out[i].start = plan_lane_span_span(plan, spans[i]).start;
+        snprintf(out[i].numeral, sizeof(out[i].numeral), "%s", plan_lane_span_payload(plan, spans[i])->harmony.roman_numeral);
+    }
+    /* In time order. */
+    for (size_t i = 1; i < found; i++) {
+        for (size_t j = i; j > 0 && rational_cmp(out[j - 1].start, out[j].start) > 0; j--) {
+            Chord swap = out[j];
+            out[j] = out[j - 1];
+            out[j - 1] = swap;
+        }
+    }
+    return found;
+}
+
+/* With faster_harmony the continuation of 4/4 changes chord on beats 1 and 3 of bars 5 to 7, no two neighbors the same, and
+   it has more chord changes than the presentation; in 3/4 a bar is one cell and the plan is the plan without it. */
+static void test_faster_harmony_changes_each_cell(void) {
+    GrowContinuation faster;
+    memset(&faster, 0, sizeof(faster));
+    faster.faster_harmony = true;
+    static const Rational ONSETS[6] = {{4, 1}, {9, 2}, {5, 1}, {11, 2}, {6, 1}, {13, 2}};
+    for (size_t f = 0; f < 2; f++) {
+        for (unsigned long seed = 1; seed <= last_seed(); seed++) {
+            PiecePlan *plan = grow(&FIXTURES[f].motive, seed, &faster);
+            Chord chords[64];
+            size_t count = chords_of(plan, chords, 64);
+            const Chord *at[6];
+            for (size_t k = 0; k < 6; k++) {
+                at[k] = NULL;
+                for (size_t c = 0; c < count; c++) {
+                    if (rational_cmp(chords[c].start, ONSETS[k]) == 0) {
+                        at[k] = &chords[c];
+                    }
+                }
+                assert(at[k]);
+                assert(k == 0 || strcmp(at[k]->numeral, at[k - 1]->numeral) != 0);
+            }
+            size_t presentation = 0;
+            size_t continuation = 0;
+            for (size_t c = 0; c < count; c++) {
+                (rational_cmp(chords[c].start, (Rational){4, 1}) < 0 ? &presentation : &continuation)[0]++;
+            }
+            assert(continuation > presentation);
+            plan_destroy(plan);
+        }
+    }
+    for (unsigned long seed = 1; seed <= last_seed(); seed++) {
+        PiecePlan *with = grow(&TRIPLE_MOTIVE, seed, &faster);
+        PiecePlan *without = grow(&TRIPLE_MOTIVE, seed, NULL);
+        char *a = plan_text(with);
+        char *b = plan_text(without);
+        assert(strcmp(a, b) == 0);
+        free(a);
+        free(b);
+        plan_destroy(with);
+        plan_destroy(without);
+    }
+}
+
+/* Whether the melody of the first two bars of the theme is the motif's notes exactly. */
+static bool basic_idea_is(const PiecePlan *plan, const Motive *motive) {
+    NodeId theme = find_node(plan, "theme");
+    LaneSpanId spans[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
+    size_t next = 0;
+    for (size_t s = 0; s < found; s++) {
+        if (plan_lane_span_span(plan, spans[s]).start.num != 0) {
+            continue;
+        }
+        const PlanNotes *notes = &plan_lane_span_payload(plan, spans[s])->notes;
+        for (size_t i = 0; i < notes->note_count; i++, next++) {
+            if (next >= motive->note_count || notes->notes[i].midi != motive_pitch(motive, next) ||
+                rational_cmp(notes->notes[i].offset, motive->notes[next].onset) != 0 ||
+                rational_cmp(notes->notes[i].duration, motive->notes[next].duration) != 0) {
+                return false;
+            }
+        }
+    }
+    return next == motive->note_count;
+}
+
+/* A motif as long as the basic idea with chords of its own is the basic idea as it is; a motif with no chords is not
+   changed by the setting. */
+static void test_basic_as_written_keeps_the_motif(void) {
+    for (size_t f = 0; f < 2; f++) {
+        unsigned on = 0;
+        unsigned off = 0;
+        unsigned long seeds = fast_run ? 1 : 16;
+        for (unsigned long seed = 1; seed <= seeds; seed++) {
+            PiecePlan *written = grow_with(&CHORD_FIXTURES[f].motive, seed, NULL, true);
+            PiecePlan *plain = grow_with(&CHORD_FIXTURES[f].motive, seed, NULL, false);
+            on += basic_idea_is(written, &CHORD_FIXTURES[f].motive) ? 1 : 0;
+            off += basic_idea_is(plain, &CHORD_FIXTURES[f].motive) ? 1 : 0;
+            plan_destroy(written);
+            plan_destroy(plain);
+            PiecePlan *no_chords = grow_with(&FIXTURES[f].motive, seed, NULL, true);
+            PiecePlan *no_chords_off = grow_with(&FIXTURES[f].motive, seed, NULL, false);
+            char *a = plan_text(no_chords);
+            char *b = plan_text(no_chords_off);
+            assert(strcmp(a, b) == 0);
+            free(a);
+            free(b);
+            plan_destroy(no_chords);
+            plan_destroy(no_chords_off);
+        }
+        printf("basic_as_written %s: %u of %lu keep the motif, %u without\n", CHORD_FIXTURES[f].name, on, seeds, off);
+        assert(on == seeds && off == 0);
+    }
+}
+
 /* Compose rates: through api_grow_run, each setting alone and all together, seeds 1 to 16 (start seeds, each retried
-   by api_grow_run), both motifs: how many compose. Measured 16 of 16 each. */
+   by api_grow_run), both motifs: how many compose. Measured 16 of 16 each; the basic idea as written is read on the motifs
+   with chords of their own. */
 #define RATE_SEEDS 16
 #define MIN_COMPOSED 15
 
 static void test_rates(void) {
-    static const char *const NAMES[] = {"every_segment", "half_bar", "beat", "diminish", "liquidate", "all together"};
-    for (int which = 0; which < 6; which++) {
+    static const char *const NAMES[] = {"every_segment", "half_bar", "beat",          "diminish",
+                                        "liquidate",     "all together", "faster_harmony", "basic_as_written"};
+    for (int which = 0; which < 8; which++) {
         GrowContinuation settings;
         memset(&settings, 0, sizeof(settings));
+        settings.faster_harmony = which == 6;
         settings.every_segment = which == 0 || which == 5;
         settings.fragment_lengths[GROW_FRAGMENT_SEGMENT] = which == 5 ? 1 : 0;
         settings.fragment_lengths[GROW_FRAGMENT_HALF_BAR] = which == 1 || which == 5 ? 1 : 0;
@@ -374,6 +517,7 @@ static void test_rates(void) {
         settings.diminish = which == 3 || which == 5;
         settings.liquidate = which == 4 || which == 5;
         for (size_t f = 0; f < 2; f++) {
+            const Motive *motive = which == 7 ? &CHORD_FIXTURES[f].motive : &FIXTURES[f].motive;
             unsigned composed = 0;
             unsigned long seeds = fast_run ? 1 : RATE_SEEDS;
             for (unsigned long seed = 1; seed <= seeds; seed++) {
@@ -389,16 +533,17 @@ static void test_rates(void) {
                 setup.into = GROW_INTO_SENTENCE;
                 setup.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
                 setup.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-                setup.key = motive_key(&FIXTURES[f].motive);
-                setup.meter = motive_meter(&FIXTURES[f].motive);
+                setup.key = motive_key(motive);
+                setup.meter = motive_meter(motive);
                 setup.bars = 8;
                 setup.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
                 setup.first_cadence = CADENCE_TYPE_HALF;
-                setup.motive = &FIXTURES[f].motive;
+                setup.motive = motive;
                 setup.suggest = 1;
                 setup.seed = seed;
                 setup.tempo_from = "none";
                 setup.continuation = &settings;
+                setup.basic_as_written = which == 7;
                 GrowRun run;
                 ComposerError error;
                 memset(&error, 0, sizeof(error));
@@ -423,6 +568,8 @@ int main(int argc, char **argv) {
         test_diminish_halves();
         test_liquidate_through();
         test_cut_departs();
+        test_faster_harmony_changes_each_cell();
+        test_basic_as_written_keeps_the_motif();
     }
     if (rates_only || fast_run) {
         test_rates();
