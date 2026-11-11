@@ -176,6 +176,7 @@ static void test_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "attempts_max")->valuedouble == 256);
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "pickup_one_in_max")->valuedouble == 64);
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "accented_one_in_max")->valuedouble == 64);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "long_nct_one_in_max")->valuedouble == 64);
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "leaps_per_motif_max")->valuedouble == 11);
 
     /* The orders and the notes of the GUI tables it replaces. */
@@ -717,7 +718,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.14") == 0);
+    assert(strcmp(composer_api_version(), "1.15") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

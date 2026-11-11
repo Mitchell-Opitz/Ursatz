@@ -39,7 +39,7 @@ same theme on any thread; the entry keeps no state, so requests may run at the s
 ## `composer_api_piece(request_json, job, out)`
 
 Composes a looping game track from the piece request of [piece-request.md](../piece-request.md) (`"schema":
-"ursatz-piece-request"`, `"schema_version": 1`, the game loop, or `2` with a `form`: any built-in form, API 1.14), or writes
+"ursatz-piece-request"`, `"schema_version": 1`, the game loop, or `2` with a `form`: any built-in form, API 1.14; the `preferences` document gained the L2 motif members in 1.15), or writes
 one section of the plan of an earlier piece again, and builds the ending version from the loop (a form with sizes has the one
 version `piece`). The request is an object around the piece request, which carries no path but the style
 model (R-267):

@@ -848,6 +848,31 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 20
+                },
+                "quarter_beats": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "long_short": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "short_long": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "triplet": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "triplet_two_beats": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
                 }
               }
             },
@@ -911,6 +936,146 @@
             "final_long": {
               "type": "boolean",
               "description": "The last note of the last segment is longer than every other note in it. Off by default."
+            },
+            "compound_beats": {
+              "type": "boolean",
+              "description": "In 6/8, 9/8 and 12/8 the beat is the dotted quarter: cells are tiled in beats of three eighths. No effect in any other meter. Off by default."
+            },
+            "endings": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. How the last segment ends: free (as drawn), closed, open or lead_in. Free by default.",
+              "additionalProperties": false,
+              "properties": {
+                "free": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "closed": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "open": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "lead_in": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "long_nct_one_in": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 64,
+              "description": "A segment gets a long non-chord tone (on a beat, a beat or longer, resolving to the next note) one time in this many; 0 never. Off by default."
+            },
+            "long_nct_types": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. Which long non-chord tone is placed.",
+              "additionalProperties": false,
+              "properties": {
+                "appoggiatura": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "suspension": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "retardation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "passing": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "neighbor": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "long_nct_intervals": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. The tone's interval above the chord root.",
+              "additionalProperties": false,
+              "properties": {
+                "second": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "fourth": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "sixth": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "seventh": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "long_nct_beats": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. Where the tone sits: the downbeat, the middle of the bar, another beat.",
+              "additionalProperties": false,
+              "properties": {
+                "downbeat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "middle": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "other": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "long_nct_lengths": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. How long the tone is: a beat, a dotted beat, two beats or more.",
+              "additionalProperties": false,
+              "properties": {
+                "beat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "dotted_beat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "two_beats": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
             }
           }
         },
@@ -999,6 +1164,7 @@
         "weight_max",
         "pickup_one_in_max",
         "accented_one_in_max",
+        "long_nct_one_in_max",
         "leaps_per_motif_max",
         "leap_min",
         "leap_max",
@@ -1026,6 +1192,10 @@
           "minimum": 1
         },
         "accented_one_in_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "long_nct_one_in_max": {
           "type": "integer",
           "minimum": 1
         },
