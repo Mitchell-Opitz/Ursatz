@@ -904,8 +904,15 @@ static void continuation_label(const GrowThemeSpec *spec, char *out, size_t size
         } else if (spec->fragment_diminished[1]) {
             snprintf(second, sizeof(second), " diminished");
         }
-        snprintf(fragments, sizeof(fragments), "segment %s%s then %s%s%s", spec->segments[spec->fragment_segment[0]].label,
-                 first, spec->segments[spec->fragment_segment[1]].label, second, spec->fragment_sequence ? " down" : "");
+        if (spec->has_liquidated[GROW_PLACE_FRAGMENT_2]) {
+            snprintf(fragments, sizeof(fragments), "segment %s%s then liquidated", spec->segments[spec->fragment_segment[0]].label,
+                     first);
+        } else {
+            snprintf(fragments, sizeof(fragments), "segment %s%s then %s%s%s", spec->segments[spec->fragment_segment[0]].label,
+                     first, spec->segments[spec->fragment_segment[1]].label, second, spec->fragment_sequence ? " down" : "");
+        }
+    } else if (spec->has_liquidated[GROW_PLACE_FRAGMENT_2]) {
+        snprintf(fragments, sizeof(fragments), "%zu notes then liquidated", spec->fragment_notes[0]);
     } else {
         snprintf(fragments, sizeof(fragments), "%zu+%zu notes", spec->fragment_notes[0], spec->fragment_notes[1]);
     }

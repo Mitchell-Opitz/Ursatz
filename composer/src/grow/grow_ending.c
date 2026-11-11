@@ -120,7 +120,7 @@ static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, Gr
 
 /* Whether any continuation setting is on: the continuation is then drawn by draw_accelerating_continuation. */
 static bool continuation_on(const GrowContinuation *settings) {
-    return settings->every_segment || settings->diminish || settings->fragment_lengths[GROW_FRAGMENT_HALF_BAR] > 0 ||
+    return settings->every_segment || settings->diminish || settings->liquidate || settings->fragment_lengths[GROW_FRAGMENT_HALF_BAR] > 0 ||
            settings->fragment_lengths[GROW_FRAGMENT_BEAT] > 0;
 }
 
@@ -189,7 +189,8 @@ static void draw_fragment_length(FillRng *rng, const GrowContinuation *settings,
 /*
  * The fragments of an accelerating continuation (R-462): fragment 1 is a segment of m0 that fits a bar, the segment `avoid`
  * (SIZE_MAX for none) left out when another fits, weight 1 each with every_segment; fragment 2 is the first segment after
- * fragment 1's, round to the first and fragment 1's own last, that fits, exact. False, with nothing set, when none does.
+ * fragment 1's, round to the first and fragment 1's own last, that fits, exact. With `liquidate` it stops at fragment 1:
+ * fragment 2 is the residue. False, with nothing set, when none fits.
  */
 static bool draw_accelerating_fragments(FillRng *rng, const GrowThemeRequest *request, GrowThemeSpec *spec, Rational unit,
                                         size_t avoid) {
@@ -234,6 +235,11 @@ static bool draw_accelerating_fragments(FillRng *rng, const GrowThemeRequest *re
     spec->fragment_from_segment[1] = true;
     spec->fragment_sequence = false;
     draw_fragment_length(rng, settings, spec, unit, 0);
+    if (settings->liquidate) {
+        /* Fragment 2 is the liquidated residue (draw_accelerating_continuation), not a segment. */
+        spec->fragment_from_segment[1] = false;
+        return true;
+    }
     if (settings->every_segment || spec->fragment_cut[0] > 0 || spec->fragment_diminished[0]) {
         /* Fragment 2 is the first segment after fragment 1's that fits, at its own length, exact. */
         for (size_t i = 1; i <= spec->segment_count; i++) {
@@ -687,12 +693,32 @@ static bool finish_continuation(const GrowThemeRequest *request, GrowThemeSpec *
 /* A continuation by the settings of request->continuation (R-452): the fragments by draw_accelerating_fragments, else the leading ones. */
 static bool draw_accelerating_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit,
                                            size_t first, size_t second) {
-    if (!draw_accelerating_fragments(rng, request, spec, unit, SIZE_MAX) &&
+    const GrowContinuation *settings = &request->continuation;
+    bool liquidated = false;
+    size_t avoid = SIZE_MAX;
+    size_t from = 1;
+    if (settings->liquidate && spec->segment_room && !grow_idea_own(spec, GROW_PLACE_FRAGMENT_2)) {
+        /* Fragment 2 first: m0 liquidated until a residue fits its bar and keeps a segment; the cadential idea takes it further. */
+        size_t steps;
+        size_t segment;
+        bool head;
+        Motive result;
+        if (!liquidate_segments(spec, request->development, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2]),
+                                false, request->cadence, &steps, &segment, &head, &result)) {
+            return false;
+        }
+        keep_liquidation(spec, GROW_PLACE_FRAGMENT_2, steps, segment, head, &result);
+        liquidated = true;
+        from = steps;
+        avoid = settings->every_segment ? segment : SIZE_MAX;
+    }
+    if (!draw_accelerating_fragments(rng, request, spec, unit, avoid) &&
         (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
-         fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0)) {
+         (!liquidated &&
+          fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0))) {
         return false;
     }
-    return finish_continuation(request, spec, unit, 1);
+    return finish_continuation(request, spec, unit, from);
 }
 
 static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
