@@ -418,10 +418,11 @@ void grow_extension_ref(const GrowBuild *build, size_t k, PlanMotiveRef *out) {
     out->step.kind = MOTIVE_RELATION_EXACT;
 }
 
-size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction) {
+void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out) {
     size_t bars[GROW_PLACE_COUNT] = {0};
-    size_t extra = 0;
+    size_t repeated[GROW_PLACE_COUNT] = {0};
     GrowPlace last = last_place(pairing);
+    memset(out, 0, sizeof(*out));
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
         if (row) {
@@ -437,19 +438,31 @@ size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanC
         }
         switch (extension->kind) {
         case PLAN_EXTENSION_REPEAT:
-            extra += extension->bars ? extension->bars : bars[place];
+            repeated[place] += extension->bars ? extension->bars : bars[place];
             break;
         case PLAN_EXTENSION_STRETCH:
             bars[place] += extension->bars ? extension->bars : 1;
-            extra += extension->bars ? extension->bars : 1;
             break;
         case PLAN_EXTENSION_EVADED:
-            extra += extension->bars ? extension->bars : bars[last];
+            out->evaded = extension->bars ? extension->bars : bars[last];
             break;
         case PLAN_EXTENSION_ADDITION:
-            extra += extension->bars ? extension->bars : 1;
+            out->addition = extension->bars ? extension->bars : 1;
             break;
         }
     }
-    return extra;
+    for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
+        size_t *half = place <= GROW_PLACE_REPETITION ? &out->beginning : &out->ending;
+        *half += bars[place] + repeated[place];
+    }
+}
+
+size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction) {
+    GrowConstructionBars halves;
+    size_t ideas = 0;
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        ideas += theme_shape_idea_in(pairing, (GrowIdea)idea) ? construction->idea_bars[idea] : 0;
+    }
+    grow_construction_bars(pairing, construction, &halves);
+    return halves.beginning + halves.ending + halves.evaded + halves.addition - ideas;
 }

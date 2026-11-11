@@ -313,6 +313,17 @@ bool grow_extension_allowed(const PlanThemePairing *pairing, PlanExtensionKind k
 bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec);
 /* The bars the made motives of the spec's extensions take in the material, one bar at least each. */
 size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar);
+/*
+ * The bars of a construction as grow_layout_of lays them out (R-468): its beginning and its ending with their stretches
+ * and repeats, the idea after an evaded cadence (not in the ending) and the addition (after it).
+ */
+typedef struct {
+    size_t beginning;
+    size_t ending;
+    size_t evaded;
+    size_t addition;
+} GrowConstructionBars;
+void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out);
 /* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
 size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
 /* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
