@@ -54,7 +54,7 @@ function pieceSizedStrip(form, bars, count) {
   box.appendChild(lane);
   box.appendChild(
     pieceTable(
-      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Returns", "Slots"],
+      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots"],
       sections.map((section) => [
         section.letter,
         section.role ? section.role.label : "",
@@ -63,7 +63,8 @@ function pieceSizedStrip(form, bars, count) {
         section.ending ? section.ending.label : "",
         section.cadence ? section.cadence.label : "",
         section.keys ? `${section.keys.start} to ${section.keys.end}` : "",
-        section.returns || "",
+        section.pedal ? section.pedal.label : "",
+        section.returns ? (section.variation ? `${section.returns} (${section.variation})` : section.returns) : "",
         (Array.isArray(section.slots) ? section.slots : []).map((slot) => `${slot.slot}: ${slot.ideas.join(", ")}`).join("; "),
       ]),
     ),
@@ -217,14 +218,19 @@ function pieceTable(headers, rows) {
 }
 
 /* One version of a piece result: its section rows, seam rules, score, Analyzer check and style distance. */
-function pieceVersionTables(view, heading, check) {
+function pieceVersionTables(view, heading, check, sized) {
   const box = materialsElement("div", "piece-version");
   box.appendChild(materialsElement("h3", "section-title", heading));
   box.appendChild(
-    pieceTable(
-      ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source"],
-      view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source]),
-    ),
+    sized
+      ? pieceTable(
+          ["Section", "Role", "Letter", "Start", "Length", "Cadence", "Heard", "Key heard", "Harmony", "Returns", "How it differs"],
+          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.keyHeard, row.pedal, row.returns, row.changes]),
+        )
+      : pieceTable(
+          ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source"],
+          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source]),
+        ),
   );
   box.appendChild(
     themeFacts([
@@ -353,7 +359,7 @@ function buildPieceResult(ctx) {
       sourceNames[section.id] = `${ctx.nameOf(section.fill.item_id)} v${section.fill.version}`;
     }
   }
-  const view = PiecesModel.resultView(result, { sourceNames, form: state.form });
+  const view = PiecesModel.resultView(result, { sourceNames, form: state.form, bars: state.bars, count: state.count });
   const section = materialsElement("section", "panel materials-analysis piece-result");
   section.appendChild(materialsElement("h2", "section-title", "Result"));
   section.appendChild(
@@ -369,7 +375,7 @@ function buildPieceResult(ctx) {
     ]),
   );
   for (const version of view.versions) {
-    section.appendChild(pieceVersionTables(version.view, version.label, ctx.piece.check === true));
+    section.appendChild(pieceVersionTables(version.view, version.label, ctx.piece.check === true, PiecesModel.isSized(PiecesModel.formOf(state.form))));
   }
   const downloads = materialsElement("div", "upload-controls");
   for (const version of view.versions) {
