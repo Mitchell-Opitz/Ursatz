@@ -151,6 +151,9 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
             request.motive_ref = constraint->params.motive;
         } else if (constraint->kind == PLAN_CONSTRAINT_PEDAL) {
             request.pedal = true;
+        } else if (constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION && !request.has_construction) {
+            request.has_construction = true;
+            request.construction = constraint->params.construction;
         }
     }
     LaneSpanId lane[2];
@@ -183,21 +186,27 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         request.bar.num == 0) {
         return false;
     }
-    /* The theme is 4 or 8 whole bars. */
+    /* The theme is 4 or 8 whole bars, or 3 to 16 with a construction (R-468). */
     Rational bars = {0, 1};
     size_t count = 0;
-    while (rational_cmp(bars, request.span.length) < 0 && count <= 8) {
+    size_t most = request.has_construction ? 16 : 8;
+    while (rational_cmp(bars, request.span.length) < 0 && count <= most) {
         if (rational_add(bars, request.bar, &bars) != RATIONAL_OK) {
             return false;
         }
         count++;
     }
-    if (rational_cmp(bars, request.span.length) != 0 || (count != 4 && count != 8)) {
+    if (rational_cmp(bars, request.span.length) != 0 ||
+        (request.has_construction ? (count < 3 || count > 16) : (count != 4 && count != 8))) {
         return false;
     }
     request.bars = count;
+    GrowLayout layout;
+    if (!grow_layout_of(&request, &layout)) {
+        return false;
+    }
     PlanSpan first_half = request.span;
-    first_half.length = grow_scaled(request.bar, count / 2);
+    first_half.length = layout.beginning;
     static const PlanLaneKind GIVEN_LANES[] = {PLAN_LANE_MELODY, PLAN_LANE_HARMONY, PLAN_LANE_BASS};
     for (size_t l = 0; l < sizeof(GIVEN_LANES) / sizeof(GIVEN_LANES[0]); l++) {
         LaneSpanId held[GROW_MAX_GAPS];

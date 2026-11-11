@@ -649,6 +649,12 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         constraint.params.key = request->key;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
+    if (result == GROW_OK && request->construction) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
+        constraint.params.construction = *request->construction;
+        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
+    }
 
     if (result == GROW_OK && has_accompaniment) {
         memset(&constraint, 0, sizeof(constraint));

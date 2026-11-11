@@ -159,6 +159,8 @@ typedef struct {
     CadenceType first_cadence; /* meaningful when has_first */
     bool has_first;
     PlanThemePairing pairing;
+    bool has_construction;   /* the section has a construction (R-468): its ideas are the bars it gives */
+    PlanConstruction construction;
     NodeId source;
     size_t bars;
     size_t cells_per_bar;
