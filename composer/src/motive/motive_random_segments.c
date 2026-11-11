@@ -39,24 +39,31 @@ static const Plan PLANS_THREE[] = {{3, {1, 5, 1}}, {3, {1, 4, 1}}};
 /* The distinctive feature of segment a. */
 typedef enum { FEATURE_DOTTED = 0, FEATURE_LEAP, FEATURE_REPEAT, FEATURE_KINDS } Feature;
 
+/* How the last segment ends (the endings list, R-440). */
+typedef enum { ENDING_FREE = 0, ENDING_CLOSED, ENDING_OPEN, ENDING_LEAD_IN, ENDING_KINDS } Ending;
+
 /*
  * The tick grid of a meter: the bar's beats, the ticks in a beat and in half of it, and whether the beat is a dotted unit.
- * Simple meters beat once per beat unit (12 ticks); a compound meter with compound_beats beats once per three.
+ * Simple meters beat once per beat unit (12 ticks); a compound meter with compound_beats beats once per three. It also
+ * carries the ending drawn for the motive and `last_offset`, the ticks from its barline to where the last segment's cell
+ * starts (draw_setup sets both).
  */
 typedef struct {
     long beats;
     long beat;
     long half;
     bool compound;
+    Ending ending;
+    long last_offset;
 } Grid;
 
 static Grid grid_of(const MotiveRandomPreferences *preferences, const PlanMeter *meter) {
     long bar = (long)meter->beats_per_bar;
     if (preferences->compound_beats && (bar == 6 || bar == 9 || bar == 12)) {
-        Grid grid = {bar / 3, 3 * TICKS_PER_UNIT, TICKS_PER_UNIT, true};
+        Grid grid = {bar / 3, 3 * TICKS_PER_UNIT, TICKS_PER_UNIT, true, ENDING_FREE, 0};
         return grid;
     }
-    Grid grid = {bar, TICKS_PER_UNIT, TICKS_PER_UNIT / 2, false};
+    Grid grid = {bar, TICKS_PER_UNIT, TICKS_PER_UNIT / 2, false, ENDING_FREE, 0};
     return grid;
 }
 
@@ -165,6 +172,47 @@ static bool last_is_longest(const Cell *cell) {
     return true;
 }
 
+/* The metric level of a position in ticks from the barline: 3 on the downbeat, 2 on a strong beat, 1 on another beat. */
+static int metric_level(const Grid *grid, long position) {
+    if (position % (grid->beats * grid->beat) == 0) {
+        return 3;
+    }
+    return position % weak_beat_unit(grid) == 0 ? 2 : 1;
+}
+
+/*
+ * A closed ending: where the last note of a cell of `length` ticks starts. Among the beats p with beat <= p <= length - beat,
+ * those of the highest metric level (counted from the barline), one by `fill_rng_below`. False when there is none.
+ */
+static bool closed_start(const Grid *grid, FillRng *rng, long length, long *start) {
+    long best[16];
+    size_t best_count = 0;
+    int level = 0;
+    for (long p = grid->beat; p <= length - grid->beat; p += grid->beat) {
+        int here = metric_level(grid, grid->last_offset + p);
+        if (here > level) {
+            level = here;
+            best_count = 0;
+        }
+        if (here == level && best_count < sizeof(best) / sizeof(best[0])) {
+            best[best_count++] = p;
+        }
+    }
+    if (best_count == 0) {
+        return false;
+    }
+    *start = best[fill_rng_below(rng, best_count)];
+    return true;
+}
+
+/* A lead-in ending: the cell's last two notes are each at most a half beat and the last starts off the beat. */
+static bool lead_in_end(const Grid *grid, long length, const Cell *cell) {
+    if (cell->count < 2 || cell->ticks[cell->count - 1] > grid->half || cell->ticks[cell->count - 2] > grid->half) {
+        return false;
+    }
+    return (length - cell->ticks[cell->count - 1]) % grid->beat != 0;
+}
+
 /* The entries of the durations list. */
 #define FIGURE_KINDS 8
 #define FIGURE_NOTES_MAX 3
@@ -257,9 +305,18 @@ static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, F
     return true;
 }
 
-/* Segment a's cell of length ticks for a feature: a dotted figure on a beat, or a cell with two notes on beats. */
+/*
+ * Segment a's cell of length ticks for a feature: a dotted figure on a beat, or a cell with two notes on beats. When the cell
+ * is the last one (long_end) and the ending is closed, its last note starts on the strongest beat available and is longer
+ * than every other; with a lead-in it ends in two short notes, the last off the beat.
+ */
 static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
+    bool closed = long_end && grid->ending == ENDING_CLOSED;
+    long body = length; /* the ticks tiled before a closed ending's last note */
+    if (closed && !closed_start(grid, rng, length, &body)) {
+        return false;
+    }
     if (feature == FEATURE_DOTTED) {
         /* A dotted beat and the half beat that completes the next one (two beats); in a compound beat, a dotted eighth,
            a sixteenth and an eighth in 6/8 (one beat). */
@@ -275,7 +332,7 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *g
         for (size_t i = 0; i < dotted_count; i++) {
             figure += dotted[i];
         }
-        long slots = (length - figure) / grid->beat + 1;
+        long slots = (body - figure) / grid->beat + 1;
         if (slots < 1) {
             return false;
         }
@@ -286,12 +343,24 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *g
         for (size_t i = 0; i < dotted_count; i++) {
             cell->ticks[cell->count++] = dotted[i];
         }
-        if (!tile(preferences, grid, rng, start + figure, length, cell)) {
+        if (!tile(preferences, grid, rng, start + figure, body, cell)) {
             return false;
         }
+        if (closed) {
+            if (cell->count == MAX_NOTES) {
+                return false;
+            }
+            cell->ticks[cell->count++] = length - body;
+        }
     } else {
-        if (!tile(preferences, grid, rng, 0, length, cell)) {
+        if (!tile(preferences, grid, rng, 0, body, cell)) {
             return false;
+        }
+        if (closed) {
+            if (cell->count == MAX_NOTES) {
+                return false;
+            }
+            cell->ticks[cell->count++] = length - body;
         }
         size_t on_beats = 0;
         long position = 0;
@@ -303,24 +372,49 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *g
             return false;
         }
     }
-    if (long_end && cell->ticks[cell->count - 1] < grid->beat) {
+    if (long_end && grid->ending == ENDING_LEAD_IN) {
+        if (!lead_in_end(grid, length, cell)) {
+            return false;
+        }
+    } else if (long_end && cell->ticks[cell->count - 1] < grid->beat) {
         return false;
     }
-    return !(long_end && preferences->final_long) || last_is_longest(cell);
+    return !(long_end && (preferences->final_long || closed)) || last_is_longest(cell);
 }
 
-/* A new cell for the last segment: tiled, then its last notes joined until the last note is at least a beat long. */
+/*
+ * A new cell for the last segment: tiled, then its last notes joined until the last note is at least a beat long. A closed
+ * ending tiles up to the last note's start instead and then adds it, longer than every other note; a lead-in joins nothing
+ * and ends in two short notes, the last off the beat.
+ */
 static bool try_cell_b(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
-    if (!tile(preferences, grid, rng, 0, length, cell)) {
-        return false;
-    }
-    while (cell->count >= 2 && cell->ticks[cell->count - 1] < grid->beat) {
-        cell->ticks[cell->count - 2] += cell->ticks[cell->count - 1];
-        cell->count--;
-    }
-    if (cell->ticks[cell->count - 1] < grid->beat) {
-        return false;
+    if (grid->ending == ENDING_CLOSED) {
+        long start;
+        if (!closed_start(grid, rng, length, &start) || !tile(preferences, grid, rng, 0, start, cell) || cell->count == MAX_NOTES) {
+            return false;
+        }
+        cell->ticks[cell->count++] = length - start;
+        if (!last_is_longest(cell)) {
+            return false;
+        }
+    } else {
+        if (!tile(preferences, grid, rng, 0, length, cell)) {
+            return false;
+        }
+        if (grid->ending == ENDING_LEAD_IN) {
+            if (!lead_in_end(grid, length, cell)) {
+                return false;
+            }
+        } else {
+            while (cell->count >= 2 && cell->ticks[cell->count - 1] < grid->beat) {
+                cell->ticks[cell->count - 2] += cell->ticks[cell->count - 1];
+                cell->count--;
+            }
+            if (cell->ticks[cell->count - 1] < grid->beat) {
+                return false;
+            }
+        }
     }
     if (preferences->final_long && (!last_is_longest(cell) || cell->count > not_like->count)) {
         return false;
@@ -399,6 +493,14 @@ static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMet
     } else {
         setup->plan = PLANS_TWO[pick_weighted(rng, preferences->plans_two, PLAN_KINDS_TWO)];
     }
+    /* The ending (R-440), drawn only when one besides free has a weight, so the defaults draw nothing here. */
+    if (preferences->endings[1] + preferences->endings[2] + preferences->endings[3] > 0) {
+        setup->grid.ending = (Ending)pick_weighted(rng, preferences->endings, ENDING_KINDS);
+    }
+    long bar = setup->grid.beats * setup->grid.beat;
+    long a_length = setup->shape == SHAPE_REPEAT_CONTRAST ? bar / 2 : (setup->bars == 1 ? bar / 2 : bar);
+    long last_length = setup->shape == SHAPE_REPEAT_CONTRAST ? bar : a_length;
+    setup->grid.last_offset = (setup->bars * bar - last_length) % bar;
 }
 
 /* The rhythm of every segment of a setup. False when this draw does not fit. */
@@ -906,6 +1008,24 @@ static bool place_accents(const MotiveRandomPreferences *preferences, const Anal
     return true;
 }
 
+/*
+ * The last note of a closed ending is the root or third of its chord, one or two semitones from the note before; of an
+ * open ending, degree 2, 5 or 7 of the key.
+ */
+static bool ending_holds(const Layout *layout, const Place *place, const Melody *melody) {
+    size_t last = layout->rhythm.count - 1;
+    if (layout->grid.ending == ENDING_CLOSED) {
+        long step = step_of(place->position[last] - chord_shift(layout->plan.degrees[place->segment[last]]));
+        int move = abs(melody->pitches[last] - melody->pitches[last - 1]);
+        return (step == 0 || step == 2) && (move == 1 || move == 2);
+    }
+    if (layout->grid.ending == ENDING_OPEN) {
+        long step = step_of(place->position[last]);
+        return step == 1 || step == 4 || step == 6;
+    }
+    return true;
+}
+
 /* The frames of every segment, the notes between, and a range of no more than a twelfth. */
 static bool draw_melody(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody) {
     Place place;
@@ -915,6 +1035,14 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
         for (size_t i = layout->first[s]; i <= layout->last[s]; i++) {
             place.segment[i] = (int)s;
             place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s];
+        }
+    }
+    /* A lead-in's last note is a frame note (a chord tone off the beat); when the last segment repeats a, so is a's. */
+    if (layout->grid.ending == ENDING_LEAD_IN) {
+        size_t last_segment = layout->segment_count - 1;
+        place.frame[layout->last[last_segment]] = true;
+        if (layout->repeats[last_segment]) {
+            place.frame[layout->last[0]] = true;
         }
     }
     /* A pickup that leads into the accent is no longer than the note it leads into. */
@@ -939,6 +1067,9 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
         return false;
     }
     if (!draw_decorations(preferences, key, layout, rng, &place, melody)) {
+        return false;
+    }
+    if (!ending_holds(layout, &place, melody)) {
         return false;
     }
     /* A motive with no pickup does not open as one that has: a short note, then a longer one on the root, higher. */
@@ -1104,6 +1235,9 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
     }
     *found = false;
     draw_setup(preferences, &options->meter, rng, &setup);
+    if (setup.grid.ending == ENDING_OPEN && setup.plan.degrees[setup.plan.count - 1] == 4) {
+        return true; /* no chord tone of IV is degree 2, 5 or 7 */
+    }
     for (int attempt = 0; attempt < SEGMENT_TRIES_PER_SETUP; attempt++) {
         Layout layout;
         Melody melody;
