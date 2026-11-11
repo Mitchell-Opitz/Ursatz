@@ -57,19 +57,25 @@ static char *text_finish(Text *text) {
     return text->data;
 }
 
-/* The longest plain or dotted value (w to t, up to two dots) that is not longer than time; false when none is. */
-static bool longest_value(Rational time, char *letter, int *dots, Rational *value) {
+/*
+ * The longest value not longer than time; false when none is. A time whose denominator is divisible by 3 is written
+ * with triplet values (w3 to t3, two thirds of w to t, letter and dots 0 with triplet set); every other time with the
+ * plain and dotted values (w to t, up to two dots), so a binary motive's text never changes.
+ */
+static bool longest_value(Rational time, char *letter, int *dots, bool *triplet, Rational *value) {
     static const char LETTERS[] = {'w', 'h', 'q', 'e', 's', 't'};
+    bool use_triplets = time.den % 3 == 0;
     bool found = false;
     for (unsigned k = 0; k < sizeof(LETTERS); k++) {
-        for (unsigned d = 0; d < 3; d++) {
+        for (unsigned d = 0; d < (use_triplets ? 1U : 3U); d++) {
             long numerator = d == 0 ? 1 : (d == 1 ? 3 : 7);
             unsigned long denominator = (1UL << k) * (d == 0 ? 1UL : (d == 1 ? 2UL : 4UL));
-            Rational candidate = motive_time(numerator, denominator);
+            Rational candidate = use_triplets ? motive_time(2, 3UL * (1UL << k)) : motive_time(numerator, denominator);
             if (rational_cmp(candidate, time) <= 0 &&
                 (!found || rational_cmp(candidate, *value) > 0)) {
                 *letter = LETTERS[k];
                 *dots = (int)d;
+                *triplet = use_triplets;
                 *value = candidate;
                 found = true;
             }
@@ -80,18 +86,19 @@ static bool longest_value(Rational time, char *letter, int *dots, Rational *valu
 
 /*
  * Writes time as one or more tokens "<head>:<duration>", all but the last tied when tie is set, each followed by a
- * space. False when time is not a sum of values from w to t.
+ * space. False when time is not a sum of values from w to t (or w3 to t3).
  */
 static bool add_pieces(Text *text, const char *head, Rational time, bool tie) {
     while (time.num > 0) {
         char letter;
         int dots;
+        bool triplet;
         Rational value;
-        if (!longest_value(time, &letter, &dots, &value)) {
+        if (!longest_value(time, &letter, &dots, &triplet, &value)) {
             return false;
         }
         time = motive_time_minus(time, value);
-        text_add(text, "%s:%c%.*s%s ", head, letter, dots, "..", tie && time.num > 0 ? "~" : "");
+        text_add(text, "%s:%c%.*s%s%s ", head, letter, dots, "..", triplet ? "3" : "", tie && time.num > 0 ? "~" : "");
     }
     return true;
 }

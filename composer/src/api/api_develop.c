@@ -140,16 +140,23 @@ typedef struct {
 static const LengthValue VALUES[] = {{1, 1, "w"},  {3, 4, "h."},  {1, 2, "h"},  {3, 8, "q."}, {1, 4, "q"},
                                      {3, 16, "e."}, {1, 8, "e"}, {3, 32, "s."}, {1, 16, "s"}, {1, 32, "t"}};
 
+/* The triplet values (two thirds of w to t) a note list writes for a length whose denominator is divisible by 3. */
+static const LengthValue TRIPLET_VALUES[] = {{2, 3, "w3"}, {1, 3, "h3"},  {1, 6, "q3"},
+                                             {1, 12, "e3"}, {1, 24, "s3"}, {1, 48, "t3"}};
+
 /* A length as one or more tokens: "q", or "q~ q" for a note (tie true) when no one value is the length. */
 static void append_length(char *out, size_t size, size_t *used, const char *pitch, Rational length, bool tie) {
     bool first = true;
     while (length.num > 0) {
+        const LengthValue *table = length.den % 3 == 0 ? TRIPLET_VALUES : VALUES;
+        size_t table_size = length.den % 3 == 0 ? sizeof(TRIPLET_VALUES) / sizeof(TRIPLET_VALUES[0])
+                                                : sizeof(VALUES) / sizeof(VALUES[0]);
         const LengthValue *piece = NULL;
-        for (size_t i = 0; i < sizeof(VALUES) / sizeof(VALUES[0]) && !piece; i++) {
+        for (size_t i = 0; i < table_size && !piece; i++) {
             Rational value;
-            rational_make(VALUES[i].num, VALUES[i].den, &value);
+            rational_make(table[i].num, table[i].den, &value);
             if (rational_cmp(value, length) <= 0) {
-                piece = &VALUES[i];
+                piece = &table[i];
             }
         }
         if (!piece) {

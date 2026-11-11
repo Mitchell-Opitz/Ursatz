@@ -503,6 +503,26 @@ static const int AUGMENT_RATIOS[][2] = {{2, 1}, {3, 2}, {4, 3}};
 static const int DIMINISH_RATIOS[][2] = {{1, 2}, {2, 3}, {3, 4}};
 #define RHYTHM_RATIOS 3
 
+/* Whether the motive has a triplet: a note's onset or duration, the pickup or the length with a denominator divisible
+ * by 3. */
+static bool has_triplets(const Motive *motive) {
+    if (motive->pickup.den % 3 == 0 || motive->length.den % 3 == 0) {
+        return true;
+    }
+    for (size_t i = 0; i < motive->note_count; i++) {
+        if (motive->notes[i].onset.den % 3 == 0 || motive->notes[i].duration.den % 3 == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Whether a ratio's result is one to use for m0: a motive with triplets keeps them, so a result without any is passed
+ * over (a binary m0 accepts every result). */
+static bool keeps_triplets(const Motive *m0, const Motive *result) {
+    return !has_triplets(m0) || has_triplets(result);
+}
+
 /* Whether any usual ratio augments or diminishes the motive into a rhythm the meter can write. */
 static bool rhythm_writable(const Motive *m0, bool augment) {
     MotiveRelationStep dev;
@@ -512,7 +532,7 @@ static bool rhythm_writable(const Motive *m0, bool augment) {
     for (size_t r = 0; r < RHYTHM_RATIOS; r++) {
         dev.value[0] = (augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][0];
         dev.den[0] = (augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][1];
-        if (motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
+        if (motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK && keeps_triplets(m0, &result)) {
             return true;
         }
     }
@@ -587,7 +607,8 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
             for (size_t r = 0; r < RHYTHM_RATIOS; r++) {
                 dev.value[0] = given.value[0] > 0 ? given.value[0] : ratios[r][0];
                 dev.den[0] = given.den[0] > 0 ? given.den[0] : ratios[r][1];
-                if (given.value[0] > 0 || motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
+                if (given.value[0] > 0 ||
+                    (motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK && keeps_triplets(m0, &result))) {
                     break;
                 }
             }

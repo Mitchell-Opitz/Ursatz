@@ -91,6 +91,19 @@ static uint64_t fnv1a(const char *text) {
     return hash;
 }
 
+/* The plan text records the pinned Ursatz commit (metadata.ursatz_commit); a pin bump must not move a plan, so the
+ * 40 hex digits are overwritten with zeros before the hash. */
+static uint64_t fnv1a_plan(char *json) {
+    char *field = strstr(json, "ursatz_commit");
+    if (field) {
+        char *quote = strchr(field + strlen("ursatz_commit") + 1, '"');
+        for (char *c = quote ? quote + 1 : NULL; c && *c && *c != '"'; c++) {
+            *c = '0';
+        }
+    }
+    return fnv1a(json);
+}
+
 /* The hash of the plan the request makes. */
 static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modulate, unsigned long seed) {
     PieceRequest request;
@@ -116,7 +129,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modul
         fprintf(stderr, "plan_to_json: %s\n", error.message);
         exit(1);
     }
-    uint64_t hash = fnv1a(json);
+    uint64_t hash = fnv1a_plan(json);
     free(json);
     plan_destroy(plan);
     return hash;
@@ -257,7 +270,7 @@ static uint64_t piece_hash(const char *name, const char *theme) {
         fprintf(stderr, "plan_to_json: %s\n", json_error.message);
         exit(1);
     }
-    uint64_t hash = fnv1a(json);
+    uint64_t hash = fnv1a_plan(json);
     free(json);
     plan_destroy(plan);
     api_piece_request_destroy(spec);

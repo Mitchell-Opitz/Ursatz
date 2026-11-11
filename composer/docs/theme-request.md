@@ -69,6 +69,8 @@ gives nothing.
 | `continuation` | fragment 1 and fragment 2 |
 | `cadential` | the cadential idea of a continuation, cadential 1 and cadential 2 |
 
+A motive with triplets, sixteenths or compound figures (the dotted-eighth, sixteenth, eighth of 6/8) keeps them through development: a theme that augments or diminishes it passes over a ratio whose result has no triplets when the motive has them, and the fragments, the basic idea and the repetition keep the figure (R-435, R-442). Themes in 9/8 and 12/8 stay refused.
+
 A slot the pairing has no idea for (a contrasting slot in a sentence) cannot be grown (exit 2). The motive of a slot other
 than `basic` must be a full motive of two notes or more, in the key and meter, and no longer than the idea it begins: two bars
 of eight for the contrasting idea and the cadential idea, one for fragment 1. A motif as long as its idea is that idea, placed

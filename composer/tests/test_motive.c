@@ -885,6 +885,65 @@ static void test_writing_round_trips(void) {
     assert(motive_to_notes_text(NULL) == NULL && motive_to_contour_text(NULL) == NULL);
 }
 
+/* A triplet value is two thirds of the plain one (R-442): q3 is 1/6, e3 is 1/12, s3 is 1/24; a time whose denominator
+ * is divisible by 3 is written with triplet values, every other time as before. */
+static void test_triplet_values(void) {
+    Motive motive = load_with(motive_from_rhythm_text, "x:e3 x:e3 x:e3 x:q", &FOUR_FOUR, NULL);
+    assert(motive.note_count == 4);
+    assert(note_is(&motive, 0, motive_pitch(&motive, 0), 0, 1, 1, 12));
+    assert(time_is(motive.notes[1].onset, 1, 12) && time_is(motive.notes[1].duration, 1, 12));
+    assert(time_is(motive.notes[2].onset, 1, 6) && time_is(motive.notes[2].duration, 1, 12));
+    assert(time_is(motive.notes[3].onset, 1, 4) && time_is(motive.notes[3].duration, 1, 4));
+    expect_text(motive_to_rhythm_text(&motive), "x:e3 x:e3 x:e3 x:q");
+
+    /* The notes and degrees texts round-trip. */
+    motive = load_notes("D4:e3 E4:e3 F4:e3 G4:q", &FOUR_FOUR, &C_MAJOR);
+    char *text = motive_to_notes_text(&motive);
+    assert(text);
+    Motive again = load_with(motive_from_notes_text, text, &FOUR_FOUR, &C_MAJOR);
+    assert(motive_equal(&motive, &again));
+    free(text);
+    expect_text(motive_to_notes_text(&motive), "D4:e3 E4:e3 F4:e3 G4:q");
+    motive = load_with(motive_from_degrees_text, "1:e3 2:e3 3:e3 5:q 3:q3 2:q3 1:q3 5:h", &FOUR_FOUR, &C_MAJOR);
+    text = motive_to_degrees_text(&motive);
+    assert(text);
+    again = load_with(motive_from_degrees_text, text, &FOUR_FOUR, &C_MAJOR);
+    assert(motive_equal(&motive, &again));
+    free(text);
+    expect_text(motive_to_degrees_text(&motive), "1:e3 2:e3 3:e3 5:q 3:q3 2:q3 1:q3 5:h");
+
+    /* Triplet values join in a tie and in a sum: 1/6 and 1/12 make 1/4, written plain; 7/12 is h3 and a quarter. */
+    motive = load_notes("D4:q3~ D4:e3 E4:h~ E4:e3 F4:h3 F4:h3 F4:h3", &FOUR_FOUR, &C_MAJOR);
+    assert(time_is(motive.notes[0].duration, 1, 4) && time_is(motive.notes[1].duration, 7, 12));
+    expect_text(motive_to_notes_text(&motive), "D4:q E4:h3~ E4:q F4:h3 F4:h3 F4:h3");
+
+    /* The name of a duration. */
+    char name[16];
+    motive_duration_name(motive.notes[2].duration, name, sizeof(name));
+    assert(strcmp(name, "h3") == 0);
+    Rational sixth = {1, 6};
+    motive_duration_name(sixth, name, sizeof(name));
+    assert(strcmp(name, "q3") == 0);
+    Rational twelfth = {1, 12};
+    motive_duration_name(twelfth, name, sizeof(name));
+    assert(strcmp(name, "e3") == 0);
+    Rational ninth = {1, 9};
+    motive_duration_name(ninth, name, sizeof(name));
+    assert(strcmp(name, "1/9") == 0);
+
+    /* A triplet value takes no dots. */
+    expect_read_error(motive_from_rhythm_text, "x:q.3", NULL, MOTIVE_ERR_VALUE, "token 1 (column 1)",
+                      "'q.3' is not a duration; a triplet value takes no dots");
+    expect_read_error(motive_from_rhythm_text, "x:q3.", NULL, MOTIVE_ERR_VALUE, "token 1 (column 1)",
+                      "only dots may follow the letter");
+    expect_read_error(motive_from_rhythm_text, "x:z", NULL, MOTIVE_ERR_VALUE, "token 1 (column 1)",
+                      "then up to two dots or a 3");
+
+    /* A binary motive's texts do not change. */
+    motive = load_notes("D4:q F4:e. G4:s A4:h", &FOUR_FOUR, NULL);
+    expect_text(motive_to_notes_text(&motive), "D4:q F4:e. G4:s A4:h");
+}
+
 /* ------------------------------------------------------------ pickup and form */
 
 static void test_analysis_with_a_pickup(void) {
@@ -1367,6 +1426,7 @@ int main(void) {
     test_degrees_errors();
     test_rhythm_and_contour_reading();
     test_writing_round_trips();
+    test_triplet_values();
     test_analysis_with_a_pickup();
     test_pickup_and_form_in_json();
     test_analysis_by_form();

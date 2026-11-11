@@ -53,7 +53,7 @@ Tokens are separated by white space. Each is a pitch, a colon and a duration, wi
 | Part | Syntax |
 | --- | --- |
 | Pitch | A letter `A`-`G`, up to two accidentals (`#` or `b`), and an octave: `C4` is middle C (MIDI 60), `F#3`, `Bb5`, `C-1`. `r` is a rest and has no octave. |
-| Duration | `w` whole, `h` half, `q` quarter, `e` eighth, `s` sixteenth, `t` thirty-second, then up to two dots: `q.` is 3/8. |
+| Duration | `w` whole, `h` half, `q` quarter, `e` eighth, `s` sixteenth, `t` thirty-second, then up to two dots (`q.` is 3/8) or a `3`, a triplet value, two thirds of the plain one: `q3` is 1/6, `e3` is 1/12, `s3` is 1/24. A triplet value takes no dots (`q.3` is refused). |
 | Tie | `~` after the duration ties the note to the next token, which must be the same pitch. The two are one note as long as both. A rest cannot be tied. |
 | Barline | `\|` is ignored. |
 

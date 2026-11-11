@@ -960,6 +960,15 @@ target_include_directories(test_grow_whole_motif PRIVATE ${PROJECT_SOURCE_DIR}/s
 target_compile_options(test_grow_whole_motif PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_whole_motif COMMAND test_grow_whole_motif)
 
+add_executable(test_grow_triplets test_grow_triplets.c)
+target_link_libraries(test_grow_triplets PRIVATE ursatz_composer composer_test_support cjson)
+target_compile_options(test_grow_triplets PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_grow_triplets PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+# The sweep (3 motives, a sentence and a period, seeds 1 to 8) takes about 90 s: labeled slow; the smoke test is seed 1 of a sentence.
+add_test(NAME test_grow_triplets COMMAND test_grow_triplets)
+set_tests_properties(test_grow_triplets PROPERTIES LABELS slow)
+add_test(NAME test_grow_triplets_smoke COMMAND test_grow_triplets quick)
+
 add_executable(test_grow_repetitions test_grow_repetitions.c)
 target_link_libraries(test_grow_repetitions PRIVATE ursatz_composer)
 target_compile_options(test_grow_repetitions PRIVATE -Wall -Wextra -Wpedantic)
