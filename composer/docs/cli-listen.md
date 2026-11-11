@@ -62,3 +62,26 @@ A round makes a batch, listens, changes one setting and makes the same batch aga
 7. Change one setting in `settings.json` and make `round-2` with the same `--seed`: samples with the same number come from the same seed, so the difference between `round-1/03` and `round-2/03` is the setting.
 
 Seed 2 of [`tests/fixtures/theme/one-motive.json`](../tests/fixtures/theme/one-motive.json) is a theme whose heard text changes with `melody.attempts` 1, `keep` 1 and `weights.against_bass` 20 (`--what themes --theme-request tests/fixtures/theme/one-motive.json --seed 2 --settings settings.json`).
+
+## A settings file for the L3 settings
+
+Every L3 setting is off by default, so a settings file turns on only the ones a round compares (R-422). This file syncopates one cell in two with an off-beat note or an anticipation at the eighth level, allows at most two skips, gives the plan `ii V@1:3` (a ii chord, then V from bar 1 beat 3), and turns on the accelerating continuation and the basic idea as written for a theme:
+
+```json
+{
+  "motif": {
+    "syncopation_one_in": 2,
+    "syncopation_types": {"off_beat": 1, "tie_beat": 0, "tie_bar": 0, "anticipation": 1},
+    "syncopation_levels": {"eighth": 1, "sixteenth": 0},
+    "skips_per_motif": 2,
+    "plan": ["ii", "V@1:3"]
+  },
+  "development": {
+    "continuation": {"every_segment": true, "fragment_lengths": {"segment": 1, "half_bar": 1, "beat": 1},
+                     "diminish": true, "liquidate": true, "faster_harmony": true},
+    "basic_as_written": true
+  }
+}
+```
+
+The `motif` group reaches motifs (`--what motifs`); the `development` group reaches themes. A plan that does not fit the meter (`["I", "vi", "ii"]` in 3/4) is not a usage error: each sample is a manifest line `refused: /preferences/motif/plan: ...`, and the command exits 2 when none was written. The settings are described in [preferences-motif.md](preferences-motif.md) and [preferences.md](preferences.md).
