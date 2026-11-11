@@ -26,7 +26,8 @@ seed + 5; the compose run's invention stage takes seed + 6), so a grown theme is
 | --- | --- |
 | `motive` | The motive. It must be no longer than the basic idea (`GROW_ERR_MOTIVE_TOO_LONG` otherwise) and have two notes or more. See [How a motif fills its idea](#how-a-motif-fills-its-idea). |
 | `key`, `meter` | The key and meter. The harmony operators write for 2/4, 3/4, 4/4 and 6/8 only. |
-| `bars` | 8, with a basic idea of 2 bars, or 4, with one of 1 bar. |
+| `bars` | 8, with a basic idea of 2 bars, or 4, with one of 1 bar; 3 to 16 with a `construction`. |
+| `construction` | The bars of each idea (`PlanConstruction`, R-468); NULL for none. See [grow-construction.md](grow-construction.md). |
 | `pairing` | Any of the nine pairings of a beginning (presentation, antecedent, compound basic idea) and an ending (continuation, consequent, cadential). Presentation and continuation make a sentence, antecedent and consequent a period, the other seven a hybrid (`standard_form_pairing_form`). |
 | `cadence` | PAC, IAC or HC: the cadence the theme ends in. |
 | `first_cadence` | The weak cadence an antecedent ends in, HC or IAC and weaker than `cadence` by `harmony_cadence_strength`. Zero (PAC) means the default, HC. Read only for an antecedent. |
@@ -34,7 +35,7 @@ seed + 5; the compose run's invention stage takes seed + 6), so a grown theme is
 | `has_accompaniment`, `accompaniment` | An accompaniment under the melody and bass ([accompaniment.md](accompaniment.md)): a `PlanAccompaniment` with a pattern (`ANY` for any), a texture (`-1` for none) and a range (0 for the defaults 48 and 67). Without `has_accompaniment` the theme has no inner voice. The theme section carries it as an `accompaniment` constraint. |
 | `has_voicing`, `voicing` | A four-part voicing of the harmony and bass ([voicing.md](voicing.md)): a `PlanVoicing`, whose `write_soprano` has the voicing write the melody too, a note a chord (a chorale), instead of the melody stage. The alto and the tenor are the inner voices 1 and 2. The theme section carries it as a `voicing` constraint. Refused together with an accompaniment. |
 
-`GROW_ERR_BAD_REQUEST` is also the result for a meter the harmony operators do not support, bars other than 4 or 8, a
+`GROW_ERR_BAD_REQUEST` is also the result for a meter the harmony operators do not support, bars other than 4 or 8 (3 to 16 with a construction), a
 cadence other than those three, a motive of one note, a half of the theme too short for its cadence, and an antecedent
 whose cadences cannot be ordered: a theme that ends in HC has nothing weaker for the antecedent, `first_cadence` DC or
 PC is not a weak cadence, and equal cadences are not a period. An accompaniment is refused when its pattern is not one,
@@ -71,6 +72,8 @@ before, and the same `Motive` may back several nodes. Melody-fill places an exac
 motive, not as a copy of the idea before it. `GROW_ERR_BAD_REQUEST` for an idea the pairing does not have, an entry for the
 basic idea, or a motive that is not a full motive of two notes or more in the theme's key and meter or is longer than its idea
 (the idea's bars: two bars of eight for the contrasting idea and the cadential idea, one for fragment 1 and in a 4-bar theme).
+
+With a `construction` each idea has the bars it gives: [grow-construction.md](grow-construction.md).
 
 ### How a motif fills its idea
 
