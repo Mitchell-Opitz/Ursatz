@@ -113,6 +113,13 @@ hears a cadence, inside or at the end, whatever the soprano; the phrase model's 
 of a prolongation. A prolongation that follows one of the same shape repeats its chords, which is how an exact
 repetition gets the harmony of the basic idea.
 
+A prolongation shape with `pedal` (R-446) goes from the dominant to the dominant and draws only from the pedal figures:
+V, V-I6/4-V (the neighbor six-four), V-I6/4-V7 and V-V7, so every chord's bass is the dominant. A shape without `pedal`
+draws only from the figures above, so no existing plan moves. Grow gives a presentation the pedal shape for both ideas
+when its section has the `pedal` constraint and starts in the home key (the plan's first key), with no key change at its
+start and no Given material in its first half; the presentation then never repeats its basic idea in sequence, which would
+write the chords I and ii whole. Anywhere else the constraint is ignored and the presentation is built as before.
+
 `harmony-phrase-model` reads an optional `phrase_model` or `cadential` shape. `max_cells_per_chord` caps every chord
 but the last, which always takes the cells from the last downbeat (the whole last bar of a span of bars) so the cadence
 arrives on a downbeat; `split_at_bars` keeps every
