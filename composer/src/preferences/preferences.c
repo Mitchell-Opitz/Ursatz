@@ -19,6 +19,7 @@
 #define CLIMAX_RISE_MAX COMPOSER_PREFERENCES_CLIMAX_RISE_MAX
 #define PICKUP_ONE_IN_MAX COMPOSER_PREFERENCES_PICKUP_ONE_IN_MAX
 #define ACCENTED_ONE_IN_MAX COMPOSER_PREFERENCES_ACCENTED_ONE_IN_MAX
+#define LONG_NCT_ONE_IN_MAX COMPOSER_PREFERENCES_LONG_NCT_ONE_IN_MAX
 #define LEAPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX
 #define LEAP_MIN COMPOSER_PREFERENCES_LEAP_MIN
 #define LEAP_MAX COMPOSER_PREFERENCES_LEAP_MAX
@@ -301,6 +302,17 @@ static const WeightedList MOTIF_LISTS[] = {
     {"accented_types", offsetof(MotiveRandomPreferences, accented_types), 3, {"appoggiatura", "passing", "suspension"}}};
 #define MOTIF_LIST_COUNT (sizeof(MOTIF_LISTS) / sizeof(MOTIF_LISTS[0]))
 
+/* The lists of phase L2: how a motive ends and the long non-chord tones. They follow final_long and compound_beats. */
+static const WeightedList MOTIF_LISTS_L2[] = {
+    {"endings", offsetof(MotiveRandomPreferences, endings), 4, {"free", "closed", "open", "lead_in"}},
+    {"long_nct_types", offsetof(MotiveRandomPreferences, long_nct_types), 5,
+     {"appoggiatura", "suspension", "retardation", "passing", "neighbor"}},
+    {"long_nct_intervals", offsetof(MotiveRandomPreferences, long_nct_intervals), 4,
+     {"second", "fourth", "sixth", "seventh"}},
+    {"long_nct_beats", offsetof(MotiveRandomPreferences, long_nct_beats), 3, {"downbeat", "middle", "other"}},
+    {"long_nct_lengths", offsetof(MotiveRandomPreferences, long_nct_lengths), 3, {"beat", "dotted_beat", "two_beats"}}};
+#define MOTIF_LIST_L2_COUNT (sizeof(MOTIF_LISTS_L2) / sizeof(MOTIF_LISTS_L2[0]))
+
 static unsigned long *list_values(MotiveRandomPreferences *motif, const WeightedList *list) {
     return (unsigned long *)(void *)((char *)motif + list->offset);
 }
@@ -412,6 +424,14 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
                 }
             }
         }
+        for (size_t i = 0; i < MOTIF_LIST_L2_COUNT && !known; i++) {
+            if (strcmp(key, MOTIF_LISTS_L2[i].key) == 0) {
+                known = true;
+                if (!read_weighted_list(item, &MOTIF_LISTS_L2[i], motif, refusal)) {
+                    return false;
+                }
+            }
+        }
         if (known) {
             continue;
         }
@@ -451,6 +471,14 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
             }
         } else if (strcmp(key, "final_long") == 0) {
             if (!read_motif_bool(item, key, &motif->final_long, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "compound_beats") == 0) {
+            if (!read_motif_bool(item, key, &motif->compound_beats, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "long_nct_one_in") == 0) {
+            if (!read_unsigned_in(item, "motif", key, 0, LONG_NCT_ONE_IN_MAX, &motif->long_nct_one_in, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "contrast_fidelity_min") == 0) {
@@ -632,9 +660,7 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
 static bool add_weighted_list(cJSON *group, const WeightedList *list, const MotiveRandomPreferences *motif) {
     cJSON *object = cJSON_AddObjectToObject(group, list->key);
     const unsigned long *values = list_values_const(motif, list);
-    /* The five new durations are read but not written until the document carries them (phase L2, B6): the document is as it was. */
-    size_t count = strcmp(list->key, "durations") == 0 ? 3 : list->count;
-    for (size_t i = 0; object && i < count; i++) {
+    for (size_t i = 0; object && i < list->count; i++) {
         if (!add_number(object, list->names[i], (double)values[i])) {
             return false;
         }
@@ -648,7 +674,7 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     bool ok = group != NULL;
     char ratio[32];
     /* The document's order: bars, pickup_one_in, then the lists, with leap between features and rung_moves, and
-     * accented_one_in before accented_types (the last list), the other new settings after it. */
+     * accented_one_in before accented_types (the last list), the other settings after it. */
     for (size_t i = 0; ok && i < MOTIF_LIST_COUNT; i++) {
         if (i == 1) {
             ok = add_number(group, "pickup_one_in", motif->pickup_one_in);
@@ -670,7 +696,15 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
          cJSON_AddBoolToObject(group, "pickup_from_accent", motif->pickup_from_accent) != NULL &&
          cJSON_AddStringToObject(group, "contrast_fidelity_min", ratio) != NULL &&
          add_number(group, "long_on_weak", (double)motif->long_on_weak) &&
-         cJSON_AddBoolToObject(group, "final_long", motif->final_long) != NULL;
+         cJSON_AddBoolToObject(group, "final_long", motif->final_long) != NULL &&
+         cJSON_AddBoolToObject(group, "compound_beats", motif->compound_beats) != NULL;
+    /* endings, long_nct_one_in, then the four long_nct lists: the order of the document. */
+    for (size_t i = 0; ok && i < MOTIF_LIST_L2_COUNT; i++) {
+        if (i == 1) {
+            ok = add_number(group, "long_nct_one_in", motif->long_nct_one_in);
+        }
+        ok = ok && add_weighted_list(group, &MOTIF_LISTS_L2[i], motif);
+    }
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -751,13 +785,23 @@ static bool motif_is_default(const MotiveRandomPreferences *motif) {
             }
         }
     }
+    for (size_t i = 0; i < MOTIF_LIST_L2_COUNT; i++) {
+        const unsigned long *a = list_values_const(motif, &MOTIF_LISTS_L2[i]);
+        const unsigned long *b = list_values_const(&defaults, &MOTIF_LISTS_L2[i]);
+        for (size_t k = 0; k < MOTIF_LISTS_L2[i].count; k++) {
+            if (a[k] != b[k]) {
+                return false;
+            }
+        }
+    }
     return motif->pickup_one_in == defaults.pickup_one_in && motif->leap_low == defaults.leap_low &&
            motif->leap_high == defaults.leap_high && motif->accented_one_in == defaults.accented_one_in &&
            motif->avoid_repeats == defaults.avoid_repeats && motif->leaps_per_motif == defaults.leaps_per_motif &&
            motif->leap_recovery == defaults.leap_recovery && motif->pickup_from_accent == defaults.pickup_from_accent &&
            motif->contrast_fidelity_min.numerator == defaults.contrast_fidelity_min.numerator &&
            motif->contrast_fidelity_min.denominator == defaults.contrast_fidelity_min.denominator &&
-           motif->long_on_weak == defaults.long_on_weak && motif->final_long == defaults.final_long;
+           motif->long_on_weak == defaults.long_on_weak && motif->final_long == defaults.final_long &&
+           motif->compound_beats == defaults.compound_beats && motif->long_nct_one_in == defaults.long_nct_one_in;
 }
 
 static bool development_is_default(const GrowFidelityTable *table) {
