@@ -828,9 +828,11 @@
     if (!v) {
       return null;
     }
+    const planned = options && options.form && isSized(options.form) ? sectionsOf(options.form, options.bars, options.count) : [];
     const rows = (Array.isArray(v.sections) ? v.sections : []).map((section) => {
       const beats = beatsOfTime(section.start, meter);
       const part = section.part || section.role || "";
+      const entry = planned.find((item) => item.name === section.id);
       return {
         id: section.id,
         part,
@@ -844,6 +846,10 @@
         heard: section.heard || "",
         fill: FILL_TEXT[section.fill] || section.fill || "",
         source: sourceText(section.source, options && options.sourceNames),
+        keyHeard: section.key_heard || "",
+        pedal: entry && entry.pedal && entry.pedal.label ? entry.pedal.label : "",
+        returns: section.returns || "",
+        changes: (section.changes && section.changes.text) || "",
       };
     });
     const seam = v.seam && typeof v.seam === "object" ? v.seam : null;

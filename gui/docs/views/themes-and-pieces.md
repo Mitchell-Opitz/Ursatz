@@ -113,7 +113,8 @@ builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
 - Structure of a sized form (every form but the game loop): a Size select (each size of the form, such as "16 bars", or
   "3 variations, 32 bars" for one with a count) and, for a form that can modulate, a Modulate checkbox. The sections are
   the Composer's and cannot be edited: a strip of blocks as wide as their bars and a table of each section's letter, role,
-  length, beginning and ending, cadence, keys, the section it returns to and its slots with their ideas. The body is
+  length, beginning and ending, cadence, keys, harmony (the pedal the section is written over, such as "Dominant
+  pedal"), the section it returns to (with its variation, such as "A (varied)") and its slots with their ideas. The body is
   `{form, key, mode, meter, bars, count, modulate}` with no sections; the piece's motive, pool, accompaniment and brief are
   as below. Per-section fills are not offered (the Composer does not take them for these forms yet). A refusal of the size
   or of Modulate marks that control. Changing the form starts it at its default size.
@@ -149,7 +150,9 @@ The Result panel of the current version, and of any version opened from the
 versions list (read-only), shows the seed, key, loop region, brief and, for
 each version of the form (the game loop has a loop version and an ending
 version, any other form one version, `piece`), a row for each section (section,
-part by its role label, letter, start, length, cadence planned and heard, fill, source), the
+part by its role label, letter, start, length, cadence planned and heard, fill, source; for a sized form: section,
+role, letter, start, length, cadence, heard, the key heard, harmony (the pedal label of the form's section), the
+section it returns and how it differs, in the Composer's own text), the
 score, the seam rules that held, the Analyzer check and the style
 distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
 per version (`<name>.musicxml`), with playback served by the

@@ -1,0 +1,35 @@
+{
+  "schema": "ursatz-piece",
+  "seed": 3,
+  "key": "C major",
+  "meter": "4/4",
+  "brief": { "tempo": { "qpm": 96, "from": "style" }, "mode": { "mode": "major", "from": "request" }, "density": 2, "without": [] },
+  "loop": null,
+  "versions": {
+    "piece": {
+      "plan": "piece.plan.json",
+      "sections": [
+        { "id": "A", "role": "theme", "letter": "A", "start": "0/1", "beats": 32, "cadence": "PAC", "heard": "perfect-authentic", "returns": null, "motive": null, "key_heard": "C major", "pedal": null, "changes": null },
+        { "id": "B", "role": "contrast", "letter": "B", "start": "8/1", "beats": 32, "cadence": "HC", "heard": "half", "returns": null, "motive": "invert tonal=1", "key_heard": "G major", "pedal": "dominant", "changes": null },
+        {
+          "id": "A return",
+          "role": "return",
+          "letter": "A",
+          "start": "16/1",
+          "beats": 32,
+          "cadence": "PAC",
+          "heard": "perfect-authentic",
+          "returns": "A",
+          "motive": null,
+          "key_heard": "C major",
+          "pedal": null,
+          "changes": { "copied": true, "variation": "varied", "melody_added": 6, "chords_changed": 2, "chords": 8, "cadence_from": "V I", "cadence_to": "V I", "text": "varied: 6 notes added, 2 of 8 chords changed" }
+        }
+      ],
+      "score": { "numerator": 9, "denominator": 10 },
+      "seam": null,
+      "analyzer_check": null,
+      "style_distance": null
+    }
+  }
+}
