@@ -625,26 +625,101 @@ typedef struct {
     long pickup;
     Shape shape;
     Plan plan;
+    bool placed; /* a given plan whose chords are at a bar and beat, not one to a segment */
 } Setup;
+
+/* True when a given plan places a chord after the first at a bar and beat (the places are all or none, checked by the refusal). */
+static bool plan_placed(const MotiveRandomPreferences *preferences) {
+    for (size_t k = 1; k < preferences->plan_count; k++) {
+        if (preferences->plan[k].bar > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * The weights of the shapes of a motive of `bars` bars, as drawn (the one- or two-bar list), with a shape set to 0 that a given
+ * plan cannot fill: an unplaced plan of two chords fills a a' and a b, one of three fills a a' b; one chord or a placed plan
+ * fills every shape. Returns how many shapes the list draws from.
+ */
+static size_t shape_weights(const MotiveRandomPreferences *preferences, long bars, bool halves, unsigned long *weights) {
+    size_t count = bars == 1 ? 2 : halves ? SHAPE_KINDS : SHAPE_KINDS - 1;
+    const unsigned long *list = bars == 1 ? preferences->shapes_one_bar : preferences->shapes_two_bars;
+    bool unplaced = !plan_placed(preferences);
+    for (size_t shape = 0; shape < count; shape++) {
+        size_t segments = shape == SHAPE_REPEAT_CONTRAST ? 3 : 2;
+        bool fits = !unplaced || preferences->plan_count == 1 || preferences->plan_count == segments;
+        weights[shape] = fits ? list[shape] : 0;
+    }
+    return count;
+}
+
+/* True when a motive of `bars` bars can hold the given plan: the bars are allowed, a placed chord is in them, a shape fits. */
+static bool plan_bars_fit(const MotiveRandomPreferences *preferences, bool halves, long bars) {
+    if (bars == 1 && !halves) {
+        return false;
+    }
+    if (halves && preferences->bars[bars - 1] == 0) {
+        return false;
+    }
+    for (size_t k = 1; bars == 1 && k < preferences->plan_count; k++) {
+        if (preferences->plan[k].bar == 2) {
+            return false;
+        }
+    }
+    unsigned long weights[SHAPE_KINDS];
+    size_t count = shape_weights(preferences, bars, halves, weights);
+    unsigned long total = 0;
+    for (size_t shape = 0; shape < count; shape++) {
+        total += weights[shape];
+    }
+    return total > 0;
+}
 
 static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMeter *meter, FillRng *rng, Setup *setup) {
     memset(setup, 0, sizeof(*setup));
     setup->grid = grid_of(preferences, meter);
     long beats = setup->grid.beats;
     bool halves = beats % 2 == 0 && beats >= 2 * SEGMENT_MIN_CELL_BEATS;
+    bool given = preferences->plan_count > 0;
+    setup->placed = given && plan_placed(preferences);
     setup->bars = 2;
     if (halves) {
-        setup->bars = 1 + (long)pick_weighted(rng, preferences->bars, 2);
+        unsigned long weights[2] = {preferences->bars[0], preferences->bars[1]};
+        for (size_t b = 0; given && b < 2; b++) {
+            if (!plan_bars_fit(preferences, halves, (long)b + 1)) {
+                weights[b] = 0; /* a given plan does not fit that many bars */
+            }
+        }
+        setup->bars = 1 + (long)pick_weighted(rng, weights, 2);
     }
     setup->pickup = preferences->pickup_one_in > 0 && fill_rng_below(rng, preferences->pickup_one_in) == 0
                         ? (1 + (long)fill_rng_below(rng, 2)) * setup->grid.half
                         : 0;
-    setup->shape = (Shape)(setup->bars == 1 ? pick_weighted(rng, preferences->shapes_one_bar, 2)
-                                            : pick_weighted(rng, preferences->shapes_two_bars, halves ? SHAPE_KINDS : SHAPE_KINDS - 1));
-    if (setup->shape == SHAPE_REPEAT_CONTRAST) {
-        setup->plan = PLANS_THREE[pick_weighted(rng, preferences->plans_three, PLAN_KINDS_THREE)];
+    if (given) {
+        /* A given plan: the shape is drawn among those it fills, and no plan is drawn. The degrees are the chord of each segment;
+           a placed plan keeps its first chord on the early segments and its last on the last (the chords themselves are placed
+           by set_chord_list). */
+        unsigned long shapes[SHAPE_KINDS];
+        size_t shape_count = shape_weights(preferences, setup->bars, halves, shapes);
+        setup->shape = (Shape)pick_weighted(rng, shapes, shape_count);
+        setup->plan.count = setup->shape == SHAPE_REPEAT_CONTRAST ? 3 : 2;
+        for (size_t s = 0; s < setup->plan.count; s++) {
+            bool own = !setup->placed && preferences->plan_count > 1;
+            setup->plan.degrees[s] = preferences->plan[own ? s : 0].degree;
+        }
+        if (setup->placed) {
+            setup->plan.degrees[setup->plan.count - 1] = preferences->plan[preferences->plan_count - 1].degree;
+        }
     } else {
-        setup->plan = PLANS_TWO[pick_weighted(rng, preferences->plans_two, PLAN_KINDS_TWO)];
+        setup->shape = (Shape)(setup->bars == 1 ? pick_weighted(rng, preferences->shapes_one_bar, 2)
+                                                : pick_weighted(rng, preferences->shapes_two_bars, halves ? SHAPE_KINDS : SHAPE_KINDS - 1));
+        if (setup->shape == SHAPE_REPEAT_CONTRAST) {
+            setup->plan = PLANS_THREE[pick_weighted(rng, preferences->plans_three, PLAN_KINDS_THREE)];
+        } else {
+            setup->plan = PLANS_TWO[pick_weighted(rng, preferences->plans_two, PLAN_KINDS_TWO)];
+        }
     }
     /* The ending (R-440), drawn only when one besides free has a weight, so the defaults draw nothing here. */
     if (preferences->endings[1] + preferences->endings[2] + preferences->endings[3] > 0) {
@@ -683,7 +758,10 @@ static void place_boundary_syncopation(const MotiveRandomPreferences *preference
             continue;
         }
         bool barline = (layout->start[s] - layout->rhythm.pickup) % bar == 0;
-        bool change = layout->plan.degrees[s] != layout->plan.degrees[s - 1];
+        bool change = false; /* a chord starts where segment s does, and it is not the chord before */
+        for (size_t k = 1; k < layout->chord_count; k++) {
+            change = change || (layout->chord_onset[k] == layout->start[s] && layout->chord_degree[k] != layout->chord_degree[k - 1]);
+        }
         unsigned long weights[2 * SYNC_LEVELS];
         unsigned long total = 0;
         for (size_t type = SYNC_TIE_BAR; type < SYNC_TYPES; type++) {
@@ -715,8 +793,22 @@ static void place_boundary_syncopation(const MotiveRandomPreferences *preference
     }
 }
 
-/* The chords of a layout: one per segment on the plan's degrees, each from its segment's cell start (the first from 0). */
-static void set_chord_list(const Setup *setup, Layout *layout) {
+/*
+ * The chords of a layout: one per segment on the plan's degrees, each from its segment's cell start (the first from 0), or
+ * the chords of a given placed plan.
+ */
+static void set_chord_list(const MotiveRandomPreferences *preferences, const Setup *setup, Layout *layout) {
+    if (setup->placed) {
+        /* A given plan's own chords: the first holds the pickup, each later one starts at its bar and beat (grid beats). */
+        layout->chord_count = preferences->plan_count;
+        for (size_t k = 0; k < layout->chord_count; k++) {
+            const MotiveRandomPlanChord *chord = &preferences->plan[k];
+            layout->chord_degree[k] = chord->degree;
+            layout->chord_onset[k] =
+                k == 0 ? 0 : setup->pickup + (((long)chord->bar - 1) * setup->grid.beats + (long)chord->beat - 1) * setup->grid.beat;
+        }
+        return;
+    }
     layout->chord_count = setup->plan.count;
     for (size_t s = 0; s < layout->chord_count; s++) {
         layout->chord_degree[s] = setup->plan.degrees[s];
@@ -828,10 +920,10 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
         layout->last[index] = layout->rhythm.count - 1;
     }
     layout->rhythm.total = layout->rhythm.pickup + position;
+    set_chord_list(preferences, setup, layout);
     if (preferences->syncopation_one_in > 0 && simple_meter(grid)) {
         place_boundary_syncopation(preferences, rng, layout);
     }
-    set_chord_list(setup, layout);
     set_note_chords(layout);
     return layout->rhythm.count >= MIN_NOTES;
 }
@@ -1424,7 +1516,7 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
         for (size_t i = layout->first[s]; i <= layout->last[s]; i++) {
             place.segment[i] = (int)s;
             /* An off-beat note held across the next beat (a syncopation) is a chord tone. */
-            place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s] ||
+            place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s] || layout->chord_first[i] ||
                              (preferences->syncopation_one_in > 0 && crosses_beat(layout, onset, i));
         }
     }
@@ -1647,8 +1739,16 @@ bool motive_random_segments_candidate(const MotiveRandomOptions *options, const 
     }
     *found = false;
     draw_setup(preferences, &options->meter, rng, &setup);
-    if (setup.grid.ending == ENDING_OPEN && setup.plan.degrees[setup.plan.count - 1] == 4) {
-        return true; /* no chord tone of IV is degree 2, 5 or 7 */
+    if (setup.grid.ending == ENDING_OPEN) {
+        /* An open ending is on degree 2, 5 or 7 of the key: the last chord needs a tone there (not so for IV and vi). */
+        bool tone = false;
+        for (long t = 0; t < 3; t++) {
+            long step = step_of(setup.plan.degrees[setup.plan.count - 1] - 1 + 2 * t);
+            tone = tone || step == 1 || step == 4 || step == 6;
+        }
+        if (!tone) {
+            return true;
+        }
     }
     for (int attempt = 0; attempt < SEGMENT_TRIES_PER_SETUP; attempt++) {
         Layout layout;
