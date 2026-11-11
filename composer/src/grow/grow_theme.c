@@ -677,7 +677,8 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
 static bool draw_part_whole(const ThemeRequest *request, GrowThemeSpec *spec) {
     Motive basic;
     MotiveRelationStep step;
-    if (!grow_part_basic_idea(&spec->source, request->bar, request->bars, request->pairing.beginning, &basic, &step)) {
+    if (!grow_part_basic_idea(&spec->source, request->bar, spec->layout.beginning_bars, spec->layout.basic_bars,
+                              request->pairing.beginning, &basic, &step)) {
         return false;
     }
     memset(&spec->section_ref, 0, sizeof(spec->section_ref));

@@ -318,6 +318,12 @@ PlanResult grow_ending_build(GrowBuild *build);
  */
 bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
                           CadenceType cadence, CadenceType first);
+/*
+ * The same for a theme with a construction (R-468): 3 to 16 bars, the construction's ideas fit the pairing and add up
+ * to the bars, and each half has room for its cadence by the bars the construction gives it.
+ */
+bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                                 CadenceType cadence, CadenceType first, const PlanConstruction *construction);
 /* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
 
@@ -343,17 +349,17 @@ GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_ba
 GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType first, GrowRefusal *refusal);
 bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars);
 /*
- * Whether a motive longer than the basic idea is exactly as long as the first part of a theme of theme_bars bars, and the
+ * Whether a motive longer than the basic idea is exactly as long as the first part of the theme, part_bars bars, and the
  * beginning is one with a part to fill whole: a presentation or an antecedent (a compound basic idea is one idea).
  */
-bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning);
+bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t part_bars, PlanThemeBeginning beginning);
 /*
  * The basic idea a part-length motive gives the rest of the theme: its leading notes that start inside the idea's
  * bars, as the MotiveRelationStep (a leading fragment) that makes it from the motive. False when the motive is not
  * part-length, fewer than two notes start inside the idea, or a note runs past the idea's end.
  */
-bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning,
-                          Motive *basic, MotiveRelationStep *step);
+bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, size_t basic_bars,
+                          PlanThemeBeginning beginning, Motive *basic, MotiveRelationStep *step);
 /* The bars a motive's node takes in the material, ceil(length / bar), at least one: its pickup is part of the node. */
 size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 

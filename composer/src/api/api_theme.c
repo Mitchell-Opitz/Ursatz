@@ -337,8 +337,8 @@ static ComposerStatus refuse_idea_beside_part(const GrowMaterial *material, cons
                                               const GrowSetup *setup, ComposerError *error) {
     Motive basic;
     MotiveRelationStep step;
-    if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), setup->bars, setup->pairing.beginning, &basic,
-                              &step)) {
+    if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), setup->bars / 2, setup->bars == 4 ? 1 : 2,
+                              setup->pairing.beginning, &basic, &step)) {
         return COMPOSER_OK;
     }
     const char *part = setup->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? "antecedent" : "presentation";

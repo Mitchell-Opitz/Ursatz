@@ -168,20 +168,19 @@ bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars)
            rational_mul_int(bar, (long long)idea_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
 }
 
-bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning) {
+bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t part_bars, PlanThemeBeginning beginning) {
     Rational room = {0, 1};
-    size_t part_bars = theme_bars / 2;
     return (beginning == PLAN_THEME_BEGINNING_PRESENTATION || beginning == PLAN_THEME_BEGINNING_ANTECEDENT) &&
            grow_motive_fit(motive, bar, part_bars) == GROW_FIT_WHOLE &&
            rational_mul_int(bar, (long long)part_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
 }
 
-bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t theme_bars, PlanThemeBeginning beginning,
-                          Motive *basic, MotiveRelationStep *step) {
+bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, size_t basic_bars,
+                          PlanThemeBeginning beginning, Motive *basic, MotiveRelationStep *step) {
     Rational idea_end = {0, 1};
     size_t leading = 0;
-    if (!grow_motive_fills_part(motive, bar, theme_bars, beginning) ||
-        rational_add(motive_pickup(motive), grow_scaled(bar, theme_bars == 4 ? 1 : 2), &idea_end) != RATIONAL_OK) {
+    if (!grow_motive_fills_part(motive, bar, part_bars, beginning) ||
+        rational_add(motive_pickup(motive), grow_scaled(bar, basic_bars), &idea_end) != RATIONAL_OK) {
         return false;
     }
     /* The notes that start inside the idea's bars; a note running past the idea's end makes no basic idea. */
@@ -219,9 +218,9 @@ static GrowResult from_plan(PlanResult result) {
     return result == PLAN_OK ? GROW_OK : (result == PLAN_ERR_ALLOC ? GROW_ERR_ALLOC : GROW_ERR_BAD_REQUEST);
 }
 
-/* Whether half of the theme has room for a cadence at all. */
-static bool half_fits(size_t bars, size_t cells_per_bar, CadenceType cadence) {
-    size_t cells = bars / 2 * cells_per_bar;
+/* Whether a half of the theme, half_bars bars, has room for a cadence at all. */
+static bool half_fits(size_t half_bars, size_t cells_per_bar, CadenceType cadence) {
+    size_t cells = half_bars * cells_per_bar;
     /* A cadential progression has no opening tonic, so it needs one cell fewer than the phrase model. */
     return cells + 1 >= harmony_phrase_room_cells(cadence, cells_per_bar);
 }
@@ -265,8 +264,80 @@ bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePa
     return grow_cells_per_bar(meter, &cells_per_bar) && (bars == 4 || bars == 8) &&
            grow_pairing_archetype(pairing) >= 0 &&
            (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC || cadence == CADENCE_TYPE_HALF) &&
-           half_fits(bars, cells_per_bar, cadence) &&
-           (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars, cells_per_bar, first)));
+           half_fits(bars / 2, cells_per_bar, cadence) &&
+           (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars / 2, cells_per_bar, first)));
+}
+
+/* The bars of the beginning (or the ending) of a theme with a construction: those of the ideas its pairing has there. */
+static size_t construction_half_bars(const PlanThemePairing *pairing, bool beginning, const PlanConstruction *construction) {
+    size_t bars = 0;
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
+        if (row && row->in_beginning == beginning) {
+            bars += construction->idea_bars[idea];
+        }
+    }
+    return bars;
+}
+
+/* The bars of the first idea of the slot under the construction; 0 when the pairing has none. */
+static size_t construction_slot_bars(const PlanThemePairing *pairing, GrowSlot slot, const PlanConstruction *construction) {
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
+        if (row && row->slot == slot && row->first) {
+            return construction->idea_bars[idea];
+        }
+    }
+    return 0;
+}
+
+/*
+ * Why a construction does not fit the pairing and the bars, NULL when it does: an idea the pairing does not have, an idea
+ * it has with no bar, ideas that do not add up to the theme, an extension (not built yet). The message goes in `message`.
+ */
+static bool construction_fault(const PlanThemePairing *pairing, size_t bars, const PlanConstruction *construction,
+                               char *message, size_t size) {
+    size_t total = 0;
+    const ThemeShapeHalf *beginning = theme_shape_beginning(pairing->beginning);
+    const ThemeShapeHalf *ending = theme_shape_ending(pairing->ending);
+    char name[64];
+    snprintf(name, sizeof(name), "%s+%s", beginning ? beginning->plan_name : "?", ending ? ending->plan_name : "?");
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        if (!theme_shape_idea_in(pairing, (GrowIdea)idea)) {
+            if (construction->idea_bars[idea] != 0) {
+                snprintf(message, size, "the %s has no %s", name, grow_idea_name((GrowIdea)idea));
+                return true;
+            }
+        } else if (construction->idea_bars[idea] == 0) {
+            snprintf(message, size, "the %s needs a bar or more", grow_idea_name((GrowIdea)idea));
+            return true;
+        } else {
+            total += construction->idea_bars[idea];
+        }
+    }
+    if (total != bars) {
+        snprintf(message, size, "the ideas are %zu bars; the theme has %zu", total, bars);
+        return true;
+    }
+    if (construction->extension_count != 0) {
+        snprintf(message, size, "an extension is not built yet");
+        return true;
+    }
+    return false;
+}
+
+bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                                 CadenceType cadence, CadenceType first, const PlanConstruction *construction) {
+    size_t cells_per_bar;
+    char message[96];
+    bool antecedent = pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    return construction && grow_cells_per_bar(meter, &cells_per_bar) && bars >= 3 && bars <= 16 &&
+           grow_pairing_archetype(pairing) >= 0 &&
+           (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC || cadence == CADENCE_TYPE_HALF) &&
+           !construction_fault(pairing, bars, construction, message, sizeof(message)) &&
+           half_fits(construction_half_bars(pairing, false, construction), cells_per_bar, cadence) &&
+           (!antecedent || (cadences_ordered(first, cadence) &&
+                            half_fits(construction_half_bars(pairing, true, construction), cells_per_bar, first)));
 }
 
 /* The bars of an idea that has `units` eighths of a theme of `bars` bars, at least one (a half-bar idea is a bar's). */
@@ -275,8 +346,12 @@ static size_t idea_bars(size_t bars, size_t units) {
     return whole < 1 ? 1 : whole;
 }
 
-/* Why a motive given for an idea of `units` eighths of the theme cannot be used there, NULL when it can. */
-static const char *motive_reason(const GrowRequest *request, const Motive *motive, size_t units, Rational bar) {
+/*
+ * Why a motive given for an idea cannot be used there, NULL when it can. The idea has `units` eighths of the theme, or,
+ * when `given_bars` is not 0, that many bars (a construction's).
+ */
+static const char *motive_reason(const GrowRequest *request, const Motive *motive, size_t units, size_t given_bars,
+                                 Rational bar) {
     Rational room;
     if (motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2) {
         return "needs a full motif of at least two notes";
@@ -291,6 +366,13 @@ static const char *motive_reason(const GrowRequest *request, const Motive *motiv
         return "is not in the theme's key";
     }
     /* The idea has units eighths of the theme; the longest motive is as long as that idea. */
+    if (given_bars > 0) {
+        if ((rational_mul_int(bar, (long long)given_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) > 0) ||
+            !grow_motive_fits_idea(motive, bar, given_bars)) {
+            return "is longer than the idea it fills";
+        }
+        return NULL;
+    }
     if ((units > 0 && rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
          rational_cmp(motive->length, room) > 0) ||
         !grow_motive_fits_idea(motive, bar, idea_bars(request->bars, units))) {
@@ -307,7 +389,8 @@ static GrowResult slot_motive_valid(const GrowRequest *request, GrowSlot slot, R
     if (!grow_slot_used(&request->pairing, slot, &units)) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the %s idea has no place in this pairing", grow_slot_name(slot));
     }
-    const char *reason = motive_reason(request, request->slot_motives[slot], units, bar);
+    size_t given = request->construction ? construction_slot_bars(&request->pairing, slot, request->construction) : 0;
+    const char *reason = motive_reason(request, request->slot_motives[slot], units, given, bar);
     return reason ? refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the %s motif %s", grow_slot_name(slot), reason) : GROW_OK;
 }
 
@@ -319,7 +402,9 @@ static GrowResult idea_motive_valid(const GrowRequest *request, GrowIdea idea, R
     if (idea == GROW_IDEA_BASIC || !grow_idea_place(&request->pairing, idea, &place)) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the idea %s has no place in this pairing", grow_idea_name(idea));
     }
-    const char *reason = motive_reason(request, request->idea_motives[idea], grow_place_units(&request->pairing, place), bar);
+    size_t given = request->construction ? request->construction->idea_bars[idea] : 0;
+    const char *reason =
+        motive_reason(request, request->idea_motives[idea], grow_place_units(&request->pairing, place), given, bar);
     return reason ? refuse(refusal, GROW_ERR_BAD_REQUEST, path, "the motif of idea %s %s", grow_idea_name(idea), reason)
                   : GROW_OK;
 }
@@ -329,9 +414,17 @@ static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, G
     size_t cells_per_bar;
     bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
     CadenceType cadence = request->cadence;
-    if (request->bars != 4 && request->bars != 8) {
-        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "a theme has 4 or 8 bars, not %zu", request->bars);
+    const PlanConstruction *construction = request->construction;
+    if (construction ? (request->bars < 3 || request->bars > 16) : (request->bars != 4 && request->bars != 8)) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "a theme has 4 or 8 bars, or 3 to 16 with a construction, not %zu",
+                      request->bars);
     }
+    char fault[96];
+    if (construction && construction_fault(&request->pairing, request->bars, construction, fault, sizeof(fault))) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/construction/ideas", "%s", fault);
+    }
+    size_t beginning_bars = construction ? construction_half_bars(&request->pairing, true, construction) : request->bars / 2;
+    size_t ending_bars = construction ? construction_half_bars(&request->pairing, false, construction) : request->bars / 2;
     if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || grow_pairing_archetype(&request->pairing) < 0) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/hybrid", "this pairing cannot be built in %d/%d",
                       (int)request->meter.beats_per_bar, (int)request->meter.beat_unit);
@@ -344,10 +437,10 @@ static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, G
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/first_cadence",
                       "an antecedent ends in a cadence weaker than the theme's (an HC or an IAC below a PAC)");
     }
-    if (!half_fits(request->bars, cells_per_bar, cadence)) {
+    if (!half_fits(ending_bars, cells_per_bar, cadence)) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "%zu bars leave no room for the cadence", request->bars);
     }
-    if (antecedent && !half_fits(request->bars, cells_per_bar, first)) {
+    if (antecedent && !half_fits(beginning_bars, cells_per_bar, first)) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/first_cadence", "half of %zu bars leaves no room for the first cadence",
                       request->bars);
     }
@@ -439,7 +532,9 @@ GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType fir
     /* The cadence fixes the harmony of the last bar of the theme, and of the first part for an antecedent. */
     GrowResult result = check_cadence_bar(request, bar, (long)request->bars - 1, request->cadence, refusal);
     if (result == GROW_OK && request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
-        result = check_cadence_bar(request, bar, (long)request->bars / 2 - 1, first, refusal);
+        size_t beginning_bars =
+            request->construction ? construction_half_bars(&request->pairing, true, request->construction) : request->bars / 2;
+        result = check_cadence_bar(request, bar, (long)beginning_bars - 1, first, refusal);
     }
     return result;
 }
@@ -472,9 +567,11 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         accompaniment.pattern = PLAN_ACCOMPANIMENT_MOTIVE;
         snprintf(accompaniment.motive_node, sizeof(accompaniment.motive_node), "%s", GROW_ACCOMPANIMENT_NAME);
     }
-    GrowResult checked = grow_theme_buildable(&request->meter, request->bars, &request->pairing, request->cadence, first)
-                             ? GROW_OK
-                             : theme_refusal(request, first, refusal);
+    bool buildable = request->construction
+                         ? grow_construction_buildable(&request->meter, request->bars, &request->pairing, request->cadence,
+                                                       first, request->construction)
+                         : grow_theme_buildable(&request->meter, request->bars, &request->pairing, request->cadence, first);
+    GrowResult checked = buildable ? GROW_OK : theme_refusal(request, first, refusal);
     if (checked != GROW_OK) {
         return checked;
     }
@@ -493,10 +590,14 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     /* A motive as long as the presentation or the antecedent fills that part whole (it has no ideas of its own). */
     bool part_whole = false;
     bool too_long = false;
-    if (!grow_motive_fits_idea(request->motive, bar, idea_bars(request->bars, basic_units))) {
+    size_t basic_bars = request->construction ? request->construction->idea_bars[GROW_IDEA_BASIC]
+                                              : idea_bars(request->bars, basic_units);
+    size_t part_bars = request->construction ? construction_half_bars(&request->pairing, true, request->construction)
+                                             : request->bars / 2;
+    if (!grow_motive_fits_idea(request->motive, bar, basic_bars)) {
         Motive basic;
         MotiveRelationStep step;
-        part_whole = grow_part_basic_idea(request->motive, bar, request->bars, request->pairing.beginning, &basic, &step);
+        part_whole = grow_part_basic_idea(request->motive, bar, part_bars, basic_bars, request->pairing.beginning, &basic, &step);
         too_long = !part_whole;
     }
     /* The slot motives, each a node of the material after m0. */
@@ -555,7 +656,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         return refuse(refusal, GROW_ERR_MOTIVE_TOO_LONG, "/slots/basic",
                       "the motif is %zu bars; a %zu-bar theme takes a motif of up to %zu bars, or of %zu for its "
                       "presentation or antecedent",
-                      bars, request->bars, request->bars == 4 ? (size_t)1 : (size_t)2, request->bars / 2);
+                      bars, request->bars, basic_bars, part_bars);
     }
     /* The derived motives take the bars of the longest motive given: the section's own and the four of the ideas. */
     size_t longest = grow_motive_layout_bars(request->motive, bar);
