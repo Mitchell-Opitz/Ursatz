@@ -746,8 +746,9 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     }
     if (!keep_idea(spec, GROW_PLACE_RESTATED) ||
         (!own_contrast &&
-         !grow_draw_contrast(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), want, avoid,
-                             &spec->consequent_contrast)) ||
+         (!grow_shorten_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST) ||
+          !grow_draw_contrast(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), want, avoid,
+                             &spec->consequent_contrast))) ||
         !keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST)) {
         return false;
     }

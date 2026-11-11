@@ -674,6 +674,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     size_t segment_bars = request->pairing.ending == PLAN_THEME_ENDING_CONTINUATION
                               ? 3
                               : (request->pairing.ending == PLAN_THEME_ENDING_CADENTIAL ? 2 : 0);
+    /* A construction's contrasting ideas shorter than their source are made from shortened copies of it (R-471). */
+    segment_bars += request->construction ? 2 * longest : 0;
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars + segment_bars;
 
     PiecePlan *plan = plan_create();

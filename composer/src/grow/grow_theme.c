@@ -409,6 +409,9 @@ const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
     if (spec->has_liquidated[idea]) {
         return &spec->liquidated[idea];
     }
+    if (spec->has_shortened[idea]) {
+        return &spec->shortened[idea];
+    }
     if (idea != GROW_PLACE_BASIC && spec->has_idea_source[idea]) {
         return &spec->idea_source[idea];
     }
@@ -422,6 +425,9 @@ NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
     }
     if (build->spec->has_liquidated[idea]) {
         return build->liquid_node[idea];
+    }
+    if (build->spec->has_shortened[idea]) {
+        return build->short_node[idea];
     }
     if (idea != GROW_PLACE_BASIC && build->request->idea_node[idea] != PLAN_NODE_NONE) {
         return build->request->idea_node[idea];
@@ -466,6 +472,29 @@ static bool same_kind(const MotiveRelationStep *a, const MotiveRelationStep *b) 
 /* Whether the last note of a development lands on the pitch class asked for (any when want is negative). */
 static bool lands_on(const Motive *result, int want) {
     return want < 0 || ((motive_pitch(result, result->note_count - 1) % 12) + 12) % 12 == want;
+}
+
+bool grow_shorten_source(GrowThemeSpec *spec, GrowPlace place) {
+    const Motive *from = grow_idea_source(spec, place);
+    Rational room = spec->layout.length[place];
+    if (rational_cmp(from->length, room) <= 0) {
+        return true;
+    }
+    for (size_t notes = from->note_count - 1; notes >= 2; notes--) {
+        MotiveRelationStep step;
+        Motive result;
+        memset(&step, 0, sizeof(step));
+        step.kind = MOTIVE_RELATION_FRAGMENT;
+        step.value[0] = MOTIVE_FRAGMENT_LEADING;
+        step.value[1] = (long)notes;
+        step.value[2] = 1;
+        if (motive_develop(from, &step, &result) == MOTIVE_DEV_OK && rational_cmp(result.length, room) <= 0) {
+            spec->shortened[place] = result;
+            spec->has_shortened[place] = true;
+            return true;
+        }
+    }
+    return false;
 }
 
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
@@ -728,6 +757,7 @@ static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, c
     size_t made = (spec->fragment_from_segment[0] ? 1 : 0) + (spec->fragment_from_segment[1] ? 1 : 0);
     for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
         made += spec->has_liquidated[k] ? 1 : 0;
+        made += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request->bar) : 0;
     }
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + made;
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
@@ -1525,13 +1555,16 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.segment_node[1] = PLAN_NODE_NONE;
     /* A section's motives: its own, when it has one, and the four the ideas are made from, then the fragments' segments. */
     size_t made = (spec->fragment_from_segment[0] ? 1 : 0) + (spec->fragment_from_segment[1] ? 1 : 0);
+    size_t shortened_bars = 0;
     for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
         made += spec->has_liquidated[k] ? 1 : 0;
         build.liquid_node[k] = PLAN_NODE_NONE;
+        build.short_node[k] = PLAN_NODE_NONE;
+        shortened_bars += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request.bar) : 0;
     }
     build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
                                           ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * build.motive_bars +
-                                              made);
+                                              made + shortened_bars);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
         result = add_section_motive(&build, build.slot_base, &build.source);
@@ -1541,6 +1574,25 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
         return result;
     }
     build.result_base = build.slot_base + (GROW_PLACE_COUNT - 1) * build.motive_bars;
+    /* The shortened sources are made nodes too, after the segments and the liquidations, each at its own bars (R-471). */
+    size_t short_at = build.result_base + made;
+    for (size_t k = 0; result == PLAN_OK && k < GROW_PLACE_COUNT; k++) {
+        if (!spec->has_shortened[k]) {
+            continue;
+        }
+        Rational start;
+        char name[32];
+        snprintf(name, sizeof(name), "shortened for m%zu", k);
+        result = plan_result_of_rational(
+            rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+        result = result == PLAN_OK ? motive_attach_as(plan, build.material, start, &spec->shortened[k], name,
+                                                      PLAN_STATE_REALIZED, &build.short_node[k], NULL)
+                                   : result;
+        short_at += grow_motive_layout_bars(&spec->shortened[k], request.bar);
+    }
+    if (result != PLAN_OK) {
+        return result;
+    }
     result = grow_beginning_build(&build);
     return result == PLAN_OK ? grow_ending_build(&build) : result;
 }

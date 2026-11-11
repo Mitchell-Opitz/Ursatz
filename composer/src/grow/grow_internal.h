@@ -139,6 +139,12 @@ typedef struct {
     /* The motives the ideas after the basic idea are made from m0 as, planned here to be checked. */
     Motive developed[GROW_PLACE_COUNT];
     bool has_developed[GROW_PLACE_COUNT];
+    /*
+     * A contrasting idea shorter than the motive it is made from (a construction's, R-471) is made from the leading notes
+     * of that motive that fit it: shortened[place], a made node of the material when has_shortened[place].
+     */
+    Motive shortened[GROW_PLACE_COUNT];
+    bool has_shortened[GROW_PLACE_COUNT];
     bool has_construction;                 /* the request's: the label names the halves' bars */
     GrowContinuation continuation;         /* the request's, for the build (grow_apply) */
     bool basic_as_written;                 /* the request's */
@@ -196,6 +202,7 @@ typedef struct {
     size_t result_base;      /* the bar of the material the motives grow-theme makes go in, one bar each */
     NodeId segment_node[2];  /* the material node of the segment fragment k is made from, else PLAN_NODE_NONE */
     NodeId liquid_node[GROW_PLACE_COUNT]; /* the material node holding an idea's liquidation, else PLAN_NODE_NONE */
+    NodeId short_node[GROW_PLACE_COUNT];  /* the material node holding an idea's shortened source, else PLAN_NODE_NONE */
 } GrowBuild;
 
 /* A length of count units. */
@@ -267,6 +274,12 @@ int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);
 /* Whether two motives go up and down in the same places. */
 bool grow_same_contour(const Motive *a, const Motive *b);
+/*
+ * Makes the source of the idea at `place` fit the idea: when it is longer than the idea's room, its leading notes with the
+ * most notes that fit become spec->shortened[place] (has_shortened), which grow_idea_source then returns. True with nothing
+ * set when the source fits; false when no leading fragment of two notes or more does.
+ */
+bool grow_shorten_source(GrowThemeSpec *spec, GrowPlace place);
 /* The development of m0 the contrasting idea is, drawn from rng so that its contour differs from m0's and the result
    fits the idea at `place`. want_pc is the pitch class its last note should land on (negative for any); avoid, if given, is a
    development it may not repeat. False when there is none. */
