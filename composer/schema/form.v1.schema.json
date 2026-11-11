@@ -152,7 +152,8 @@
             { "const": "all" },
             { "type": "array", "minItems": 1, "items": { "enum": ["bass", "inner_voice", "melody"] } }
           ]
-        }
+        },
+        "pedal": { "enum": ["dominant"], "description": "The presentation is written over a dominant pedal; needs a presentation beginning." }
       }
     }
   }

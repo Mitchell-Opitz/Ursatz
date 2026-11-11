@@ -154,6 +154,12 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.params.layers.lanes = section->layers;
         result = piece_add_constraint(plan, *out, &constraint);
     }
+    if (result == PIECE_OK && section->pedal != 0) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_PEDAL;
+        constraint.params.pedal.degree = section->pedal;
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
     return result;
 }
 

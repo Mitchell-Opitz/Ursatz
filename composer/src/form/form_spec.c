@@ -423,7 +423,8 @@ static bool read_cadence(Reader *reader, const cJSON *object, const char *path, 
 static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSize *size, const cJSON *json,
                          const char *path, FormSectionSpec *out) {
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
-                                          "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers"};
+                                          "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
+                                          "pedal"};
     char text[FORM_SPEC_CADENCE_NAME_MAX];
     char at[64];
     if (!cJSON_IsObject(json)) {
@@ -554,6 +555,19 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
             return false;
         }
         out->variation = (PlanReturnVariation)variation;
+    }
+    /* pedal: only "dominant", and only under a presentation */
+    if (cJSON_GetObjectItemCaseSensitive(json, "pedal")) {
+        static const char *const PEDAL_NAMES[] = {"dominant"};
+        int pedal = -1;
+        join(at, sizeof(at), path, "pedal");
+        if (!read_choice(reader, json, path, "pedal", PEDAL_NAMES, 1, &pedal)) {
+            return false;
+        }
+        if (out->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
+            return fail(reader, at, "a pedal needs a presentation beginning");
+        }
+        out->pedal = 5;
     }
     return read_layers(reader, json, path, &out->layers);
 }
