@@ -25,12 +25,18 @@
  *                off the strong beats, one a beat, and keep its harmony and bass
  *   reharmonize  variations (3): variation 2 has the theme's melody and a harmony the melody fits, with the cadence;
  *                the share of its chords that differ from the theme's is printed and is not below its baseline
+ *   varied       tests/fixtures/forms/varied-form.json (A, a pedal B, A returned varied), C major 4/4, seeds 1 to 10:
+ *                at least 9 compose; the return keeps every note of A at its place, adds notes (at most one a bar), has a
+ *                melody its chords fit, and in at least 7 runs a chord of its last 2 bars is not A's
  *   reregister   rounded binary with A' re-registered, with and without an accompaniment: the melody and the inner
  *                voices are an octave from A's and inside the range; with the default range a run completes only when
  *                one octave fits, else it is stuck at the returns
  */
 
 #define SEEDS 5
+#define VARIED_SEEDS 10
+#define VARIED_COMPOSED_LEAST 9
+#define VARIED_CADENCE_LEAST 7
 #define MAX_EVENTS 512
 
 /* One chord, or one note, of a lane over a section, with its time from the section's start. */
@@ -373,6 +379,119 @@ static int test_reharmonize(void) {
     return changed_total >= REHARMONIZE_CHANGED_BASELINE ? 0 : 1;
 }
 
+/* ------------------------------------------------------------ varied */
+
+static char *read_file(const char *path) {
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        fprintf(stderr, "cannot read %s\n", path);
+        exit(2);
+    }
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *text = malloc((size_t)length + 1);
+    size_t read = text ? fread(text, 1, (size_t)length, file) : 0;
+    assert(text && read == (size_t)length);
+    text[length] = '\0';
+    fclose(file);
+    return text;
+}
+
+/* The notes the varied return adds to A's melody: every note of A is there at its place and pitch, at most one added a bar. */
+static size_t check_varied(const PiecePlan *plan, NodeId source, NodeId section) {
+    static Event a[MAX_EVENTS];
+    static Event b[MAX_EVENTS];
+    size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
+    size_t bn = events(plan, section, PLAN_LANE_MELODY, 0, b);
+    size_t added = 0;
+    long last_bar = -1;
+    assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
+    assert(same_subtree(plan, source, section));
+    for (size_t i = 0; i < an; i++) {
+        bool found = false;
+        for (size_t j = 0; j < bn && !found; j++) {
+            found = equal(a[i].at, b[j].at) && a[i].pitch == b[j].pitch;
+        }
+        assert(found);
+    }
+    for (size_t j = 0; j < bn; j++) {
+        bool original = false;
+        for (size_t i = 0; i < an && !original; i++) {
+            original = equal(a[i].at, b[j].at);
+        }
+        if (original) {
+            continue;
+        }
+        long bar = b[j].at.num / (long)b[j].at.den; /* a bar of 4/4 is a whole note */
+        assert(bar != last_bar);
+        last_bar = bar;
+        added++;
+    }
+    assert(bn == an + added && added > 0);
+    /* Every strong-beat note is a tone of the chord now under it. */
+    assert(form_return_melody_fits(plan, section));
+    return added;
+}
+
+static int test_varied(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/varied-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
+        return 2;
+    }
+    free(text);
+    assert(form->sizes[0].section_count == 3 && form->sizes[0].sections[2].variation == PLAN_RETURN_VARIED);
+    size_t composed = 0;
+    size_t added = 0;
+    size_t cadence = 0;
+    for (unsigned long seed = 1; seed <= VARIED_SEEDS; seed++) {
+        PieceRequest request = request_of(form->name, 0, 0, false);
+        PiecePlan *plan = NULL;
+        ComposeOutcome outcome;
+        ComposeConfig config;
+        assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        config.form = form;
+        if (compose_run(plan, &config, &outcome) == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            size_t count = 0;
+            NodeId root = plan_root(plan);
+            for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+                NodeId child = plan_node_child_at(plan, root, i);
+                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                    sections[count++] = child;
+                }
+            }
+            const PlanConstraint *back = return_of(plan, sections[2]);
+            bool changed = false;
+            assert(count == 3 && back && back->params.section_return.variation == PLAN_RETURN_VARIED);
+            added += check_varied(plan, back->params.section_return.section, sections[2]);
+            assert(form_return_cadence_changed(plan, sections[2], &changed));
+            cadence += changed;
+            composed++;
+        } else {
+            printf("  seed %lu: not composed\n", seed);
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    form_spec_destroy(form);
+    printf("varied-form: %zu of %d seeds compose, %zu notes added, a chord of the last 2 bars differs in %zu runs\n",
+           composed, VARIED_SEEDS, added, cadence);
+    if (composed < VARIED_COMPOSED_LEAST || cadence < VARIED_CADENCE_LEAST) {
+        fprintf(stderr, "varied-form: at least %d composed and %d changed cadences expected\n", VARIED_COMPOSED_LEAST,
+                VARIED_CADENCE_LEAST);
+        return 1;
+    }
+    return 0;
+}
+
 /* ------------------------------------------------------------ reregister */
 
 static void make_reregister(PiecePlan *plan) {
@@ -465,9 +584,12 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "reharmonize") == 0) {
         return test_reharmonize();
     }
+    if (strcmp(mode, "varied") == 0) {
+        return test_varied();
+    }
     if (strcmp(mode, "reregister") == 0) {
         return test_reregister();
     }
-    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|reregister\n");
+    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|varied|reregister\n");
     return 2;
 }
