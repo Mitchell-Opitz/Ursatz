@@ -223,7 +223,7 @@ development, left alone by R-405).
 
 ### Keys
 
-`tests/test_piece_keys.c`: every template, C major and A minor 4/4, an invented motive, seeds 1 to 10, with `modulate`.
+`tests/test_piece_keys.c`: every template, C major and A minor 4/4, an invented motive, seeds 1 to 10, with `modulate`, a stuck seed tried again from the next ones up to 16 times as the piece entry does.
 
 | Test | What it checks | Label |
 | --- | --- | --- |
