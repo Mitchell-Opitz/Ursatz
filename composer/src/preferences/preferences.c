@@ -61,6 +61,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     out->melody = melody_fill_params_default();
     motive_random_preferences_default(&out->motif);
     grow_fidelity_table_default(&out->development);
+    out->continuation.fragment_lengths[GROW_FRAGMENT_SEGMENT] = 1;
 }
 
 /* Where a refusal goes: the path and the message of the caller, which may both be absent. */
@@ -705,13 +706,100 @@ static bool read_fidelity_setting(const cJSON *setting, const char *name, GrowDe
     return true;
 }
 
-static bool read_development(const cJSON *group, GrowFidelityTable *table, const Refusal *refusal) {
+/* The weights of the continuation's fragment lengths, in the order the document writes them. */
+static const char *const FRAGMENT_LENGTH_NAMES[GROW_FRAGMENT_LENGTH_COUNT] = {"segment", "half_bar", "beat"};
+
+static bool read_fragment_lengths(const cJSON *item, GrowContinuation *continuation, const Refusal *refusal) {
+    const char *where = "development/continuation/fragment_lengths";
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    const cJSON *entry;
+    unsigned sum = 0;
+    double value;
+    if (!cJSON_IsObject(item)) {
+        return refuse(refusal, where, "must be an object of whole numbers 0 to 20");
+    }
+    cJSON_ArrayForEach(entry, item) {
+        bool known = false;
+        for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT && !known; i++) {
+            if (strcmp(entry->string, FRAGMENT_LENGTH_NAMES[i]) == 0) {
+                known = true;
+                snprintf(path, sizeof(path), "%s/%s", where, entry->string);
+                if (!whole_number(entry, 0, WEIGHT_MAX, &value)) {
+                    return refuse(refusal, path, "must be a whole number from 0 to 20");
+                }
+                continuation->fragment_lengths[i] = (unsigned)entry->valuedouble;
+            }
+        }
+        if (!known) {
+            snprintf(path, sizeof(path), "%s/%s", where, entry->string);
+            return refuse(refusal, path, "unknown name");
+        }
+    }
+    for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
+        sum += continuation->fragment_lengths[i];
+    }
+    if (sum == 0) {
+        return refuse(refusal, where, "the weights must sum to more than 0");
+    }
+    return true;
+}
+
+static bool read_continuation(const cJSON *group, GrowContinuation *continuation, const Refusal *refusal) {
+    const cJSON *item;
+    if (!cJSON_IsObject(group)) {
+        return refuse(refusal, "development/continuation", "must be an object");
+    }
+    cJSON_ArrayForEach(item, group) {
+        bool *flag = NULL;
+        char path[COMPOSER_PREFERENCES_PATH_MAX];
+        if (strcmp(item->string, "fragment_lengths") == 0) {
+            if (!read_fragment_lengths(item, continuation, refusal)) {
+                return false;
+            }
+            continue;
+        }
+        if (strcmp(item->string, "every_segment") == 0) {
+            flag = &continuation->every_segment;
+        } else if (strcmp(item->string, "diminish") == 0) {
+            flag = &continuation->diminish;
+        } else if (strcmp(item->string, "liquidate") == 0) {
+            flag = &continuation->liquidate;
+        } else if (strcmp(item->string, "faster_harmony") == 0) {
+            flag = &continuation->faster_harmony;
+        }
+        snprintf(path, sizeof(path), "development/continuation/%s", item->string);
+        if (flag == NULL) {
+            return refuse(refusal, path, "unknown member");
+        }
+        if (!cJSON_IsBool(item)) {
+            return refuse(refusal, path, "must be true or false");
+        }
+        *flag = cJSON_IsTrue(item);
+    }
+    return true;
+}
+
+static bool read_development(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal) {
+    GrowFidelityTable *table = &preferences->development;
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
         return refuse(refusal, "development", "must be an object");
     }
     cJSON_ArrayForEach(item, group) {
         const cJSON *setting;
+        if (strcmp(item->string, "continuation") == 0) {
+            if (!read_continuation(item, &preferences->continuation, refusal)) {
+                return false;
+            }
+            continue;
+        }
+        if (strcmp(item->string, "basic_as_written") == 0) {
+            if (!cJSON_IsBool(item)) {
+                return refuse_in(refusal, "development", "basic_as_written", "must be true or false");
+            }
+            preferences->basic_as_written = cJSON_IsTrue(item);
+            continue;
+        }
         if (strcmp(item->string, "fidelity_minimum") != 0) {
             return refuse_in(refusal, "development", item->string, "unknown member");
         }
@@ -763,7 +851,7 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
                 return false;
             }
         } else if (strcmp(item->string, "development") == 0) {
-            if (!read_development(item, &out->development, &refusal)) {
+            if (!read_development(item, out, &refusal)) {
                 return false;
             }
         } else {
@@ -906,7 +994,25 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     return group;
 }
 
-static cJSON *write_development(const GrowFidelityTable *table) {
+static bool write_continuation(cJSON *group, const GrowContinuation *continuation) {
+    cJSON *object = cJSON_AddObjectToObject(group, "continuation");
+    cJSON *lengths = object ? cJSON_CreateObject() : NULL;
+    bool ok = lengths != NULL && cJSON_AddBoolToObject(object, "every_segment", continuation->every_segment) != NULL;
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "fragment_lengths", lengths);
+    } else {
+        cJSON_Delete(lengths);
+    }
+    for (size_t i = 0; ok && i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
+        ok = add_number(lengths, FRAGMENT_LENGTH_NAMES[i], continuation->fragment_lengths[i]);
+    }
+    return ok && cJSON_AddBoolToObject(object, "diminish", continuation->diminish) != NULL &&
+           cJSON_AddBoolToObject(object, "liquidate", continuation->liquidate) != NULL &&
+           cJSON_AddBoolToObject(object, "faster_harmony", continuation->faster_harmony) != NULL;
+}
+
+static cJSON *write_development(const ComposerPreferences *preferences) {
+    const GrowFidelityTable *table = &preferences->development;
     cJSON *group = cJSON_CreateObject();
     cJSON *minimum = group ? cJSON_AddObjectToObject(group, "fidelity_minimum") : NULL;
     bool ok = minimum != NULL;
@@ -920,6 +1026,8 @@ static cJSON *write_development(const GrowFidelityTable *table) {
             ok = cJSON_AddStringToObject(setting, ROLE_KEYS[r].name, text) != NULL;
         }
     }
+    ok = ok && write_continuation(group, &preferences->continuation) &&
+         cJSON_AddBoolToObject(group, "basic_as_written", preferences->basic_as_written) != NULL;
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -941,7 +1049,7 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
-    cJSON *development = write_development(&preferences->development);
+    cJSON *development = write_development(preferences);
     if (!development || !cJSON_AddItemToObject(document, "development", development)) {
         cJSON_Delete(development);
         cJSON_Delete(document);
@@ -1008,8 +1116,23 @@ static bool motif_is_default(const MotiveRandomPreferences *motif) {
            motif->compound_beats == defaults.compound_beats && motif->long_nct_one_in == defaults.long_nct_one_in;
 }
 
-static bool development_is_default(const GrowFidelityTable *table) {
+static bool development_is_default(const ComposerPreferences *preferences) {
+    const GrowFidelityTable *table = &preferences->development;
+    ComposerPreferences standard;
     GrowFidelityTable defaults;
+    composer_preferences_default(&standard);
+    if (preferences->basic_as_written != standard.basic_as_written ||
+        preferences->continuation.every_segment != standard.continuation.every_segment ||
+        preferences->continuation.diminish != standard.continuation.diminish ||
+        preferences->continuation.liquidate != standard.continuation.liquidate ||
+        preferences->continuation.faster_harmony != standard.continuation.faster_harmony) {
+        return false;
+    }
+    for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
+        if (preferences->continuation.fragment_lengths[i] != standard.continuation.fragment_lengths[i]) {
+            return false;
+        }
+    }
     grow_fidelity_table_default(&defaults);
     for (size_t d = 0; d < GROW_DEVELOP_COUNT; d++) {
         for (size_t r = 0; r <= GROW_ROLE_CONTRAST; r++) {
@@ -1024,5 +1147,5 @@ static bool development_is_default(const GrowFidelityTable *table) {
 
 bool composer_preferences_is_default(const ComposerPreferences *preferences) {
     return melody_is_default(&preferences->melody) && motif_is_default(&preferences->motif) &&
-           development_is_default(&preferences->development);
+           development_is_default(preferences);
 }
