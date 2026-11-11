@@ -93,6 +93,20 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
     return true;
 }
 
+/* Whether the section starts in the first key of the plan, the home key. */
+static bool starts_in_home_key(const PiecePlan *plan, const GrowThemeRequest *request) {
+    LaneSpanId spans[MAX_KEY_SPANS];
+    Rational end;
+    PlanSpan whole = {{0, 1}, {0, 1}};
+    if (plan_span_end(request->span, &end) != PLAN_OK || rational_make(end.num, end.den, &whole.length) != RATIONAL_OK ||
+        plan_lane_find(plan, PLAN_LANE_KEY, 0, whole, spans, MAX_KEY_SPANS) == 0) {
+        return false;
+    }
+    const AnalysisKey *home = &plan_lane_span_payload(plan, spans[0])->key;
+    return analysis_key_tonic_pitch_class(home) == analysis_key_tonic_pitch_class(&request->key) &&
+           home->mode == request->key.mode;
+}
+
 static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest *out) {
     ThemeRequest request;
     memset(&request, 0, sizeof(request));
@@ -135,6 +149,8 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         } else if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && !request.has_motive_ref) {
             request.has_motive_ref = true;
             request.motive_ref = constraint->params.motive;
+        } else if (constraint->kind == PLAN_CONSTRAINT_PEDAL) {
+            request.pedal = true;
         }
     }
     LaneSpanId lane[2];
@@ -190,6 +206,9 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
             request.given_first_half = request.given_first_half || plan_lane_span_state(plan, held[i]) == PLAN_STATE_GIVEN;
         }
     }
+    /* A pedal is kept only under a presentation that opens in the home key, with no Given material in its first half. */
+    request.pedal = request.pedal && request.pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
+                    !request.has_start_change && !request.given_first_half && starts_in_home_key(plan, &request);
     *out = request;
     return true;
 }
