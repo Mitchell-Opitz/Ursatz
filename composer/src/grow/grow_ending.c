@@ -487,6 +487,21 @@ static bool keep_idea(GrowThemeSpec *spec, GrowPlace idea, Rational unit, size_t
     return true;
 }
 
+/* The continuation's harmonic rhythm: a phrase model if it has room for one, else the cadential progression alone. */
+static void set_continuation_harmony(const GrowThemeRequest *request, GrowThemeSpec *spec) {
+    size_t cells = request->bars / 2 * request->cells_per_bar;
+    spec->ending_shape = cells >= harmony_phrase_room_cells(request->cadence, request->cells_per_bar)
+                             ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
+                             : PLAN_HARMONY_SHAPE_CADENTIAL;
+    /* Its chords change at least twice as fast as the presentation's longest could, and still deal the cells out. */
+    size_t cap = spec->basic_cells / 2 > 1 ? spec->basic_cells / 2 : 1;
+    size_t room = cells > request->cells_per_bar ? cells - request->cells_per_bar : 1;
+    size_t chords = grow_chords_before_last(request, spec->ending_shape, request->cadence);
+    size_t least = (room + chords - 1) / chords;
+    spec->ending_cap = (int)(cap > least ? cap : least);
+    spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
+}
+
 static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
     size_t first = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
     size_t second = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
@@ -516,18 +531,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
         }
     }
 
-    /* The continuation is a phrase model if it has room for one, else the cadential progression alone. */
-    size_t cells = request->bars / 2 * request->cells_per_bar;
-    spec->ending_shape = cells >= harmony_phrase_room_cells(request->cadence, request->cells_per_bar)
-                             ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
-                             : PLAN_HARMONY_SHAPE_CADENTIAL;
-    /* Its chords change at least twice as fast as the presentation's longest could, and still deal the cells out. */
-    size_t cap = spec->basic_cells / 2 > 1 ? spec->basic_cells / 2 : 1;
-    size_t room = cells > request->cells_per_bar ? cells - request->cells_per_bar : 1;
-    size_t chords = grow_chords_before_last(request, spec->ending_shape, request->cadence);
-    size_t least = (room + chords - 1) / chords;
-    spec->ending_cap = (int)(cap > least ? cap : least);
-    spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
+    set_continuation_harmony(request, spec);
     /* A key opens on a phrase model's pivot chord. */
     return !request->has_end_change || spec->ending_shape == PLAN_HARMONY_SHAPE_PHRASE_MODEL;
 }
