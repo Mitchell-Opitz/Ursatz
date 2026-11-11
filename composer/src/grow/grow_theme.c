@@ -993,7 +993,7 @@ static void bars_text(const GrowThemeSpec *spec, char *out, size_t size) {
     }
 }
 
-static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
+static void base_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     char bars[24];
@@ -1025,6 +1025,45 @@ static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
         liquidation_label(spec, GROW_PLACE_CADENTIAL_2, second, sizeof(second));
         snprintf(label + used, size - used, " cadential %s then %s", first, second);
     }
+}
+
+/* The extensions of a construction after the halves' bars in the label (R-468): "repeated fragment 2", "evaded cadence". */
+static void extension_label(const GrowThemeSpec *spec, char *out, size_t size) {
+    size_t used = 0;
+    out[0] = '\0';
+    for (size_t k = 0; k < spec->layout.extension_count && used + 1 < size; k++) {
+        const GrowLayoutExtension *extension = &spec->layout.extensions[k];
+        const ThemeShapeIdea *row = theme_shape_place_in(&spec->pairing, (unsigned)extension->place);
+        const char *idea = row ? row->name : "idea";
+        switch (extension->kind) {
+        case PLAN_EXTENSION_REPEAT:
+            used += (size_t)snprintf(out + used, size - used, " repeated %s", idea);
+            break;
+        case PLAN_EXTENSION_STRETCH:
+            used += (size_t)snprintf(out + used, size - used, " stretched %s", idea);
+            break;
+        case PLAN_EXTENSION_ADDITION:
+            used += (size_t)snprintf(out + used, size - used, " addition");
+            break;
+        case PLAN_EXTENSION_EVADED:
+            used += (size_t)snprintf(out + used, size - used, " evaded cadence");
+            break;
+        }
+    }
+}
+
+/*
+ * The label of a candidate: its halves' bars, then its extensions, then its choices, so the extensions are not lost when
+ * the label is cut short: "sentence 4+6 bars evaded cadence exact fragments ...".
+ */
+static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
+    char base[256];
+    char extensions[128];
+    base_label(spec, base, sizeof(base));
+    extension_label(spec, extensions, sizeof(extensions));
+    const char *bars = strstr(base, " bars");
+    size_t head = bars ? (size_t)(bars - base) + strlen(" bars") : strlen(base);
+    snprintf(label, size, "%.*s%s%s", (int)head, base, extensions, base + head);
 }
 
 static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,

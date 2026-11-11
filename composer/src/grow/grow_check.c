@@ -73,6 +73,18 @@ static const char *judge_continuation(const GrowThemeSpec *spec) {
     return NULL;
 }
 
+/*
+ * The halves the soft rules are asked on: those of the construction's ideas alone, without the bars its extensions add
+ * (R-468), so an extension never lowers the planned structure's score. Without a construction they are the theme's halves.
+ */
+static size_t rule_beginning(const GrowThemeSpec *spec) {
+    return spec->layout.idea_beginning_bars;
+}
+
+static size_t rule_ending(const GrowThemeSpec *spec) {
+    return spec->layout.idea_ending_bars;
+}
+
 /* The verdict on a planned sentence: standard-form's rule functions, called on the lengths the candidate plans. */
 static const char *judge_sentence(const GrowThemeSpec *spec, Soft *soft) {
     PhraseLevelForm form;
@@ -92,9 +104,9 @@ static const char *judge_sentence(const GrowThemeSpec *spec, Soft *soft) {
     if (hard) {
         return hard;
     }
-    size_t first = spec->layout.beginning_bars;
-    size_t second = spec->layout.ending_bars;
-    ask(soft, standard_form_sentence_is_archetypal(spec->bars, first, second, true));
+    size_t first = rule_beginning(spec);
+    size_t second = rule_ending(spec);
+    ask(soft, standard_form_sentence_is_archetypal(first + second, first, second, true));
     ask(soft, standard_form_presentation_length_usual(first));
     ask(soft, standard_form_continuation_balanced(first, second));
     /* A presentation filled whole by a motive has no repetition to read as one. */
@@ -124,8 +136,8 @@ static bool motives_differ(const Motive *a, const Motive *b) {
 }
 
 static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
-    size_t first = spec->layout.beginning_bars;
-    size_t second = spec->layout.ending_bars;
+    size_t first = rule_beginning(spec);
+    size_t second = rule_ending(spec);
     if (!standard_form_phrase_roles_in_order(PHRASE_ROLE_ANTECEDENT, PHRASE_ROLE_CONSEQUENT)) {
         return "phrase roles out of order";
     }
@@ -157,8 +169,8 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
     if (hard) {
         return hard;
     }
-    size_t first = spec->layout.beginning_bars;
-    size_t second = spec->layout.ending_bars;
+    size_t first = rule_beginning(spec);
+    size_t second = rule_ending(spec);
     StandardFormCommonality commonality;
     if (!standard_form_pairing_commonality(beginning, ending, &commonality)) {
         return "pairing has no commonality";
