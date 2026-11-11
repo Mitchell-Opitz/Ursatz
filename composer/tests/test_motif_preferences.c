@@ -100,6 +100,11 @@ static void defaults_change_nothing(void) {
     explicit_defaults.contrast_fidelity_min.denominator = 1;
     explicit_defaults.long_on_weak = 0;
     explicit_defaults.final_long = false;
+    /* the rhythm settings of phase L2 (R-439) too */
+    for (size_t i = 3; i < 8; i++) {
+        explicit_defaults.durations[i] = 0;
+    }
+    explicit_defaults.compound_beats = false;
     for (int beats = 3; beats <= 4; beats++) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Motive without = make(beats, seed, NULL);
@@ -516,16 +521,169 @@ static void long_notes(void) {
     printf("final_long: the last note is longer than every other note of the last segment in %d motives\n", SEEDS);
 }
 
-/* Each setting alone: how many of the seeds 1 to 16 still give a motive. */
-static int motives_made(const MotiveRandomPreferences *preferences) {
+/* Each setting alone: how many of the seeds 1 to 16 still give a motive, in a meter of this many beats over this unit. */
+static int motives_made_in(int beats, int unit, const MotiveRandomPreferences *preferences) {
     int made = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        MotiveRandomOptions options = options_of(4, seed, preferences);
+        MotiveRandomOptions options = options_of(beats, seed, preferences);
+        options.meter.beat_unit = unit;
         Motive motive;
         size_t count = 0;
         made += motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK;
     }
     return made;
+}
+
+/* ------------------------------------------------- the rhythm settings (phase L2, R-439) */
+
+#define GRID 48 /* ticks of 1/48 whole: a quarter beat of 4/4 is 3, a beat 12, a third of a beat 4 */
+
+/* Note i as whole-note forty-eighths from the first bar line (the pickup, if any, comes before it): its start and its length. */
+static long grid_start(const Motive *motive, size_t i) {
+    Rational from_bar;
+    Rational scaled;
+    assert(rational_sub(motive->notes[i].onset, motive_pickup(motive), &from_bar) == RATIONAL_OK);
+    assert(rational_mul_int(from_bar, GRID, &scaled) == RATIONAL_OK && scaled.den == 1);
+    return (long)scaled.num;
+}
+
+static long grid_length(const Motive *motive, size_t i) {
+    Rational scaled;
+    assert(rational_mul_int(motive->notes[i].duration, GRID, &scaled) == RATIONAL_OK && scaled.den == 1);
+    return (long)scaled.num;
+}
+
+/*
+ * Counts the figures of a durations entry in the motives of seeds 1 to 16 in 4/4 (the defaults plus the entry at weight 4):
+ * `first` then `rest` consecutive notes of the lengths `lengths` (in forty-eighths), the first starting at a multiple of
+ * `start_unit`. Every such figure must start where requirement 3 of B4 says; the motives holding at least one are counted.
+ */
+static int motives_with_figure(size_t entry, const long *lengths, size_t notes, long start_unit) {
+    MotiveRandomPreferences preferences;
+    motive_random_preferences_default(&preferences);
+    preferences.durations[entry] = 4;
+    int holding = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Motive motive = make(4, seed, &preferences);
+        bool found = false;
+        for (size_t i = 0; i + notes <= motive.note_count; i++) {
+            bool match = true;
+            for (size_t k = 0; k < notes && match; k++) {
+                match = grid_length(&motive, i + k) == lengths[k];
+            }
+            if (match) {
+                assert(grid_start(&motive, i) % start_unit == 0);
+                found = true;
+                i += notes - 1; /* the next figure starts after this one */
+            }
+        }
+        holding += found;
+    }
+    return holding;
+}
+
+static void rhythm_figures(void) {
+    const long sixteenths[] = {3, 3};
+    const long long_short[] = {9, 3};
+    const long short_long[] = {3, 9};
+    const long triplet[] = {4, 4, 4};
+    const long triplet_two[] = {8, 8, 8};
+    const struct {
+        const char *name;
+        size_t entry;
+        const long *lengths;
+        size_t notes;
+        long start_unit;
+    } figures[] = {{"quarter_beats", 3, sixteenths, 2, 6}, {"long_short", 4, long_short, 2, 12},
+                   {"short_long", 5, short_long, 2, 12},   {"triplet", 6, triplet, 3, 12},
+                   {"triplet_two_beats", 7, triplet_two, 3, 12}};
+    for (size_t f = 0; f < sizeof(figures) / sizeof(figures[0]); f++) {
+        int holding = motives_with_figure(figures[f].entry, figures[f].lengths, figures[f].notes, figures[f].start_unit);
+        printf("%s 4: %d of %d motives hold the figure\n", figures[f].name, holding, SEEDS);
+        assert(holding >= 1);
+    }
+}
+
+/* The notes of a motive in a compound meter that cross a dotted-quarter beat (3/8 of a whole, 36 ninety-sixths). */
+static int notes_crossing_beats(const Motive *motive) {
+    int crossing = 0;
+    for (size_t i = 0; i < motive->note_count; i++) {
+        Rational from_bar;
+        Rational start;
+        Rational length;
+        assert(rational_sub(motive->notes[i].onset, motive_pickup(motive), &from_bar) == RATIONAL_OK);
+        assert(rational_mul_int(from_bar, 96, &start) == RATIONAL_OK && start.den == 1);
+        assert(rational_mul_int(motive->notes[i].duration, 96, &length) == RATIONAL_OK && length.den == 1);
+        long offset = (((long)start.num % 36) + 36) % 36; /* a beat is 3/8 = 36 ninety-sixths */
+        crossing += offset != 0 && offset + (long)length.num > 36;
+    }
+    return crossing;
+}
+
+static void compound_beats(void) {
+    MotiveRandomPreferences off;
+    motive_random_preferences_default(&off);
+    MotiveRandomPreferences on = off;
+    on.compound_beats = true;
+    int crossing_off = 0;
+    const int meters[] = {6, 9, 12};
+    for (size_t m = 0; m < 3; m++) {
+        int crossing_on = 0;
+        int made = 0;
+        for (unsigned long seed = 1; seed <= 40; seed++) {
+            MotiveRandomOptions options = options_of(meters[m], seed, &on);
+            options.meter.beat_unit = 8;
+            Motive motive;
+            size_t count = 0;
+            assert(motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK);
+            crossing_on += notes_crossing_beats(&motive);
+            options.preferences = &off;
+            /* a seed that gives no motive without the setting (9/8, seed 36, as at e14fa45) is not counted */
+            if (motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK) {
+                crossing_off += notes_crossing_beats(&motive);
+            }
+            made++;
+        }
+        printf("compound_beats in %d/8: %d notes cross a beat (%d of %d motives made)\n", meters[m], crossing_on, made, 40);
+        assert(crossing_on == 0);
+    }
+    /* the dotted feature of a compound beat: a dotted eighth, a sixteenth and an eighth, from a beat */
+    MotiveRandomPreferences dotted = on;
+    dotted.features[1] = 0;
+    dotted.features[2] = 0;
+    int dotted_motives = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        MotiveRandomOptions options = options_of(6, seed, &dotted);
+        options.meter.beat_unit = 8;
+        Motive motive;
+        size_t count = 0;
+        assert(motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK);
+        bool found = false;
+        for (size_t i = motive.features[0].first; i + 2 <= motive.features[0].last; i++) {
+            Rational start;
+            Rational a;
+            Rational b;
+            Rational c;
+            assert(rational_sub(motive.notes[i].onset, motive_pickup(&motive), &start) == RATIONAL_OK);
+            assert(rational_mul_int(start, 96, &a) == RATIONAL_OK && a.den == 1);
+            if ((long)a.num % 36 == 0 && rational_mul_int(motive.notes[i].duration, 96, &a) == RATIONAL_OK && a.num == 18 &&
+                rational_mul_int(motive.notes[i + 1].duration, 96, &b) == RATIONAL_OK && b.num == 6 &&
+                rational_mul_int(motive.notes[i + 2].duration, 96, &c) == RATIONAL_OK && c.num == 12) {
+                found = true;
+            }
+        }
+        dotted_motives += found;
+    }
+    printf("compound_beats in 6/8: %d of %d motives hold the dotted eighth, sixteenth, eighth\n", dotted_motives, SEEDS);
+    assert(dotted_motives >= 1);
+    printf("compound_beats off: %d notes cross a beat in 6/8, 9/8 and 12/8\n", crossing_off);
+    assert(crossing_off > 0);
+    /* in 4/4 it changes nothing */
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Motive without = make(4, seed, &off);
+        Motive with = make(4, seed, &on);
+        assert(same_motive(&without, &with));
+    }
 }
 
 static void each_setting_still_gives_motives(void) {
@@ -548,14 +706,28 @@ static void each_setting_still_gives_motives(void) {
     weak.long_on_weak = 20;
     MotiveRandomPreferences final_long = base;
     final_long.final_long = true;
+    MotiveRandomPreferences figures[5];
+    for (size_t i = 0; i < 5; i++) {
+        figures[i] = base;
+        figures[i].durations[3 + i] = 4;
+    }
+    MotiveRandomPreferences compound = base;
+    compound.compound_beats = true;
     const struct {
         const char *name;
         const MotiveRandomPreferences *preferences;
-    } settings[] = {{"accented_one_in 1", &accented}, {"avoid_repeats", &repeats},  {"leaps_per_motif 1", &leaps},
-                    {"leap_recovery", &recovery},     {"pickup_from_accent", &pickup}, {"contrast_fidelity_min 1/2", &contrast},
-                    {"long_on_weak 20", &weak},       {"final_long", &final_long}};
+        int beats;
+        int unit;
+    } settings[] = {{"accented_one_in 1", &accented, 4, 4},   {"avoid_repeats", &repeats, 4, 4},
+                    {"leaps_per_motif 1", &leaps, 4, 4},      {"leap_recovery", &recovery, 4, 4},
+                    {"pickup_from_accent", &pickup, 4, 4},    {"contrast_fidelity_min 1/2", &contrast, 4, 4},
+                    {"long_on_weak 20", &weak, 4, 4},         {"final_long", &final_long, 4, 4},
+                    {"quarter_beats 4", &figures[0], 4, 4},   {"long_short 4", &figures[1], 4, 4},
+                    {"short_long 4", &figures[2], 4, 4},      {"triplet 4", &figures[3], 4, 4},
+                    {"triplet_two_beats 4", &figures[4], 4, 4}, {"compound_beats in 6/8", &compound, 6, 8},
+                    {"compound_beats in 12/8", &compound, 12, 8}};
     for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); i++) {
-        int made = motives_made(settings[i].preferences);
+        int made = motives_made_in(settings[i].beats, settings[i].unit, settings[i].preferences);
         printf("%s alone: %d of %d seeds give a motive\n", settings[i].name, made, SEEDS);
         assert(made >= 12);
     }
@@ -574,6 +746,8 @@ int main(void) {
     pickups_from_the_accent();
     close_contrast();
     long_notes();
+    rhythm_figures();
+    compound_beats();
     each_setting_still_gives_motives();
     printf("test_motif_preferences: ok\n");
     return 0;

@@ -147,7 +147,7 @@ bool motive_random_draw_between(const AnalysisKey *key, const Rhythm *rhythm, Fi
 
 bool motive_random_build(const MotiveRandomOptions *options, const AnalysisKey *key, const Rhythm *rhythm,
                          const Melody *melody, Motive *out) {
-    unsigned long den = 2UL * (unsigned long)options->meter.beat_unit;
+    unsigned long den = (unsigned long)(rhythm->ticks_per_unit > 0 ? rhythm->ticks_per_unit : 2) * (unsigned long)options->meter.beat_unit;
     motive_init(out, options->meter);
     motive_set_key(out, key, MOTIVE_SKETCH_KEY_GIVEN);
     long onset = 0;
