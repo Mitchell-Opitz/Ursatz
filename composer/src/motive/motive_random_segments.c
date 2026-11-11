@@ -113,6 +113,18 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
     }
     out->leaps_per_motif = MAX_NOTES - 1; /* no motive has more intervals, so this never rejects */
     out->contrast_fidelity_min.denominator = 1;
+    /* Endings and long non-chord tones (R-440, R-441), all off. */
+    out->endings[0] = 1; /* free, as drawn */
+    for (size_t i = 0; i < 5; i++) {
+        out->long_nct_types[i] = 1;
+    }
+    for (size_t i = 0; i < 4; i++) {
+        out->long_nct_intervals[i] = 1;
+    }
+    for (size_t i = 0; i < 3; i++) {
+        out->long_nct_beats[i] = 1;
+        out->long_nct_lengths[i] = 1;
+    }
 }
 
 /* The scale-step offset of a chord's tones from the tones of I: I 0, V down a fourth, IV up a fourth (same octave). */
