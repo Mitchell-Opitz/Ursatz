@@ -129,6 +129,8 @@ static void defaults_change_nothing(void) {
     for (size_t i = 0; i < 2; i++) {
         explicit_defaults.syncopation_levels[i] = 1;
     }
+    /* and the skip limit of phase L3 (R-455) */
+    explicit_defaults.skips_per_motif = 11;
     for (int beats = 3; beats <= 4; beats++) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Motive without = make(beats, seed, NULL);
@@ -400,6 +402,39 @@ static void fewer_leaps(void) {
         leaps += count;
     }
     printf("leaps_per_motif 1: %d leaps in %d motives\n", leaps, SEEDS);
+
+    /* skips (3 or 4 semitones) beside leaps (5 or more), both counted on every adjacent interval */
+    preferences.skips_per_motif = 2;
+    for (int beats = 3; beats <= 4; beats++) {
+        int skip_total = 0;
+        int leap_total = 0;
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            Motive motive = make(beats, seed, &preferences);
+            int skip_count = 0;
+            int leap_count = 0;
+            for (size_t k = 0; k + 1 < motive.note_count; k++) {
+                int size = abs(interval(&motive, k));
+                skip_count += size == 3 || size == 4;
+                leap_count += size >= 5;
+            }
+            assert(skip_count <= 2 && leap_count <= 1);
+            skip_total += skip_count;
+            leap_total += leap_count;
+        }
+        printf("skips_per_motif 2, leaps_per_motif 1 in %d/4: %d skips, %d leaps in %d motives\n", beats, skip_total, leap_total, SEEDS);
+    }
+    preferences.leaps_per_motif = 11;
+    preferences.skips_per_motif = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Motive motive = make(4, seed, &preferences);
+        for (size_t k = 0; k + 1 < motive.note_count; k++) {
+            int size = abs(interval(&motive, k));
+            assert(size != 3 && size != 4);
+        }
+    }
+    printf("skips_per_motif 0: no interval of 3 or 4 semitones in %d motives\n", SEEDS);
+    preferences.skips_per_motif = 11;
+    preferences.leaps_per_motif = 1;
 
     preferences.leap_recovery = true;
     int recovered = 0;
@@ -1142,6 +1177,10 @@ static void each_setting_still_gives_motives(void) {
     repeats.avoid_repeats = true;
     MotiveRandomPreferences leaps = base;
     leaps.leaps_per_motif = 1;
+    MotiveRandomPreferences skips = base;
+    skips.skips_per_motif = 2;
+    MotiveRandomPreferences no_skips = base;
+    no_skips.skips_per_motif = 0;
     MotiveRandomPreferences recovery = base;
     recovery.leap_recovery = true;
     MotiveRandomPreferences pickup = base;
@@ -1172,7 +1211,8 @@ static void each_setting_still_gives_motives(void) {
         int beats;
         int unit;
     } settings[] = {{"accented_one_in 1", &accented, 4, 4},   {"avoid_repeats", &repeats, 4, 4},
-                    {"leaps_per_motif 1", &leaps, 4, 4},      {"leap_recovery", &recovery, 4, 4},
+                    {"leaps_per_motif 1", &leaps, 4, 4},      {"skips_per_motif 2", &skips, 4, 4},
+                    {"skips_per_motif 0", &no_skips, 4, 4},   {"leap_recovery", &recovery, 4, 4},
                     {"pickup_from_accent", &pickup, 4, 4},    {"contrast_fidelity_min 1/2", &contrast, 4, 4},
                     {"long_on_weak 20", &weak, 4, 4},         {"final_long", &final_long, 4, 4},
                     {"quarter_beats 4", &figures[0], 4, 4},   {"long_short 4", &figures[1], 4, 4},
