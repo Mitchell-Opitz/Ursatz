@@ -65,6 +65,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-harmony.md](grow-harmony.md): the motive-forms, harmony, melody and free phrases of the grow stages.
 - [grow-segments.md](grow-segments.md): segments of the motif as fragments and liquidation in a theme (P34).
 - [grow-development.md](grow-development.md): the theme `development` setting and its weight tables (P34).
+- [grow-continuation.md](grow-continuation.md): the accelerating continuation settings: fragments from every segment, cut, diminished, and a liquidated fragment 2 (L3).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.
 - [forms.md](forms.md): forms as JSON documents (P44): the members, the six built-in forms and the game loop, how to add one.

@@ -1009,6 +1009,17 @@ target_link_libraries(test_grow_development PRIVATE ursatz_composer cjson)
 target_compile_options(test_grow_development PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_development COMMAND test_grow_development)
 
+add_executable(test_grow_continuation test_grow_continuation.c)
+target_link_libraries(test_grow_continuation PRIVATE ursatz_composer composer_test_support cjson)
+target_include_directories(test_grow_continuation PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_continuation PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_continuation PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_continuation COMMAND test_grow_continuation)
+add_test(NAME test_grow_continuation_rates COMMAND test_grow_continuation rates)
+# Measured 29 s of CPU for the cases and 38 s for the compose rates, over the 10 s fast-set limit; test_grow_continuation_smoke (6 s) runs seed 1 of every case and rate.
+set_tests_properties(test_grow_continuation test_grow_continuation_rates PROPERTIES LABELS slow)
+add_test(NAME test_grow_continuation_smoke COMMAND test_grow_continuation fast)
+
 add_executable(test_grow_compose_rates test_grow_compose_rates.c)
 target_link_libraries(test_grow_compose_rates PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_grow_compose_rates PRIVATE ${PROJECT_SOURCE_DIR}/src)

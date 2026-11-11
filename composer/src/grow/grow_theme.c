@@ -311,6 +311,19 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
     case GROW_PLACE_FRAGMENT_1:
     case GROW_PLACE_FRAGMENT_2: {
         size_t second = idea == GROW_PLACE_FRAGMENT_2;
+        if (grow_idea_segment(spec, idea, NULL) && spec->fragment_cut[second] > 0) {
+            /* A segment cut to its leading notes (R-462). */
+            dev->kind = MOTIVE_RELATION_FRAGMENT;
+            dev->value[0] = MOTIVE_FRAGMENT_LEADING;
+            dev->value[1] = (long)spec->fragment_cut[second];
+            dev->value[2] = 1;
+            return true;
+        }
+        if (grow_idea_segment(spec, idea, NULL) && spec->fragment_diminished[second]) {
+            /* A whole segment in diminution, the registry's 1:2 (R-463). */
+            dev->kind = MOTIVE_RELATION_DIMINISH;
+            return true;
+        }
         if (grow_idea_segment(spec, idea, NULL)) {
             /* A segment is the fragment as it is, or in sequence one step down in the key's scale. */
             dev->kind = second && spec->fragment_sequence ? MOTIVE_RELATION_TRANSPOSE : MOTIVE_RELATION_EXACT;
@@ -838,7 +851,9 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
            a->fragment_from_segment[0] == b->fragment_from_segment[0] &&
            a->fragment_from_segment[1] == b->fragment_from_segment[1] &&
            a->fragment_segment[0] == b->fragment_segment[0] && a->fragment_segment[1] == b->fragment_segment[1] &&
-           a->fragment_sequence == b->fragment_sequence &&
+           a->fragment_sequence == b->fragment_sequence && a->fragment_cut[0] == b->fragment_cut[0] &&
+           a->fragment_cut[1] == b->fragment_cut[1] && a->fragment_diminished[0] == b->fragment_diminished[0] &&
+           a->fragment_diminished[1] == b->fragment_diminished[1] &&
            a->liquidation_steps[GROW_PLACE_FRAGMENT_1] == b->liquidation_steps[GROW_PLACE_FRAGMENT_1] &&
            a->liquidation_steps[GROW_PLACE_FRAGMENT_2] == b->liquidation_steps[GROW_PLACE_FRAGMENT_2] &&
            a->liquidation_steps[GROW_PLACE_CADENTIAL] == b->liquidation_steps[GROW_PLACE_CADENTIAL] &&
@@ -874,11 +889,30 @@ static void liquidation_label(const GrowThemeSpec *spec, GrowPlace idea, char *o
 
 /* The continuation of the label: the fragments (leading notes, or segments) and how the cadential idea is liquidated. */
 static void continuation_label(const GrowThemeSpec *spec, char *out, size_t size) {
-    char fragments[48];
+    char fragments[64];
     char liquidated[32];
     if (spec->fragment_from_segment[0]) {
-        snprintf(fragments, sizeof(fragments), "segment %s then %s%s", spec->segments[spec->fragment_segment[0]].label,
-                 spec->segments[spec->fragment_segment[1]].label, spec->fragment_sequence ? " down" : "");
+        char first[16] = "";
+        char second[16] = "";
+        if (spec->fragment_cut[0] > 0) {
+            snprintf(first, sizeof(first), " cut %zu", spec->fragment_cut[0]);
+        } else if (spec->fragment_diminished[0]) {
+            snprintf(first, sizeof(first), " diminished");
+        }
+        if (spec->fragment_cut[1] > 0) {
+            snprintf(second, sizeof(second), " cut %zu", spec->fragment_cut[1]);
+        } else if (spec->fragment_diminished[1]) {
+            snprintf(second, sizeof(second), " diminished");
+        }
+        if (spec->has_liquidated[GROW_PLACE_FRAGMENT_2]) {
+            snprintf(fragments, sizeof(fragments), "segment %s%s then liquidated", spec->segments[spec->fragment_segment[0]].label,
+                     first);
+        } else {
+            snprintf(fragments, sizeof(fragments), "segment %s%s then %s%s%s", spec->segments[spec->fragment_segment[0]].label,
+                     first, spec->segments[spec->fragment_segment[1]].label, second, spec->fragment_sequence ? " down" : "");
+        }
+    } else if (spec->has_liquidated[GROW_PLACE_FRAGMENT_2]) {
+        snprintf(fragments, sizeof(fragments), "%zu notes then liquidated", spec->fragment_notes[0]);
     } else {
         snprintf(fragments, sizeof(fragments), "%zu+%zu notes", spec->fragment_notes[0], spec->fragment_notes[1]);
     }
@@ -926,6 +960,9 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         return grow_free_applies(plan, target) ? grow_free_generate(plan, target, rng, shared, out) : true;
     }
     request.development = shared ? shared->development : GROW_DEVELOP_BALANCED;
+    if (shared) {
+        request.continuation = shared->continuation;
+    }
     size_t wanted = shared && shared->candidates > 0 ? shared->candidates : GROW_DEFAULT_CANDIDATES;
     GrowThemeSpec *kept[16];
     size_t kept_count = 0;

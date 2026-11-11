@@ -89,7 +89,7 @@ const char *compose_stage_name(ComposeStage stage);
 /* All-zero is the default configuration (seed 0). The members are GrowConfig's. */
 typedef struct {
     unsigned long seed;
-    GrowContext context;
+    GrowContext context;            /* its continuation is carried unchanged; a piece's theme sections stay at zero */
     const MelodyFillParams *melody; /* NULL for the defaults; must outlive compose_run */
     bool analyzer_check;            /* reject a complete run the Analyzer's analysis contradicts (false: no check) */
     const ComposerStyle *style;     /* NULL for none; must outlive compose_run */

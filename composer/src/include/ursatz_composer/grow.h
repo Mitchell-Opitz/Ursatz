@@ -177,6 +177,24 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
 /* How far a theme's presentation and continuation stray from its motif (ch. XI). All-zero is balanced. */
 typedef enum { GROW_DEVELOP_BALANCED = 0, GROW_DEVELOP_MELODY, GROW_DEVELOP_THEME, GROW_DEVELOP_COUNT } GrowDevelopment;
 
+/* How long a continuation's fragment is: its whole segment, half a bar of it, or a beat of it. */
+typedef enum { GROW_FRAGMENT_SEGMENT, GROW_FRAGMENT_HALF_BAR, GROW_FRAGMENT_BEAT, GROW_FRAGMENT_LENGTH_COUNT } GrowFragmentLength;
+
+/*
+ * How a sentence's continuation accelerates (R-452, R-462 to R-464). All zero is the P34 continuation, and
+ * fragment_lengths all 0 reads as {1, 0, 0}.
+ * every_segment: both fragments are drawn from every segment of m0, never both from the same one.
+ * fragment_lengths: the weights of a fragment being its whole segment, half a bar of it, or a beat of it.
+ * diminish: a fragment that is a whole segment is that segment in diminution 1:2.
+ * liquidate: fragment 2 is liquidated, and the cadential idea liquidates a step further than it.
+ */
+typedef struct {
+    bool every_segment;
+    unsigned fragment_lengths[GROW_FRAGMENT_LENGTH_COUNT];
+    bool diminish;
+    bool liquidate;
+} GrowContinuation;
+
 
 /*
  * The least fidelity an idea of a role may have under each development setting before the melody stage refuses it (R-355),
@@ -190,6 +208,7 @@ typedef struct {
 typedef struct {
     size_t candidates; /* the structures grow-theme proposes; 0 means 4 */
     GrowDevelopment development; /* the weights of the repetition, the fragments and the liquidation (grow_beginning.c, grow_ending.c) */
+    GrowContinuation continuation; /* all zero: today's continuation; set by the compose run and api_grow from the preferences */
     /*
      * The basic motive the request was made from, for the features (segments) and pickup the plan does not keep. Set by
      * the compose run from GrowConfig.basic; NULL for none. grow-theme uses it only when its notes are m0's.

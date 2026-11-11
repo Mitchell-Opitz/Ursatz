@@ -22,11 +22,15 @@ and a fragment shorter than its idea is grown as a shorter motif is ([grow.md](g
 records the segment on the fragment's motive node: `"segment": "b"`. With a motive of the continuation slot given, or when no
 segment fits, the fragments are the leading notes of `m0`, with no segment.
 
+Four settings, off by default, draw the fragments from every segment, cut them to half a bar or a beat, or diminish them: [grow-continuation.md](grow-continuation.md).
+
 A presentation in sequence writes I and ii whole when the motif has no harmony of its own, and takes the repetition's chord from its motive when it has (R-348).
 
 The motives stage writes a fragment as the step its ref names, through one function (`grow_develop_motive`, see [grow-development.md](grow-development.md#what-sounds)): a segment is `exact`, fragment 2 in sequence is the tonal `transpose` with its chords moved a step down, and the leading notes are a `fragment`. A fragment is no longer chosen among the liquidations by features the registry offers; the halving of the units is the liquidation below.
 
 ## Liquidation
+
+With the `liquidate` continuation setting fragment 2 is also a liquidation, and the cadential idea goes a step further: [grow-continuation.md](grow-continuation.md).
 
 The cadential idea of a continuation, and both ideas of a cadential ending, liquidate the segments: `liquidate-features` with
 `steps 1` and `shorten 1`, applied to `m0` with its segments as its features, one more step each draw (at most as many as the

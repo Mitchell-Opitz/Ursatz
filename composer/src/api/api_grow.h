@@ -100,6 +100,7 @@ typedef struct {
     PlanVoicing voicing;
     ComposerRatio style_weight;
     GrowDevelopment development;
+    const GrowContinuation *continuation;    /* NULL for the defaults; not owned */
     const Motive *motive;                    /* the basic motive */
     const Motive *accompaniment_motive;      /* NULL for none */
     const GrowMaterial *material;            /* NULL for grow itself */

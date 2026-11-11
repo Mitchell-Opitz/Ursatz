@@ -600,6 +600,9 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     config.seed = seed;
     config.basic = setup->motive;
     config.context.development = setup->development;
+    if (setup->continuation) {
+        config.context.continuation = *setup->continuation;
+    }
     config.fidelity = setup->fidelity;
     config.melody = setup->melody;
     config.style = setup->style;

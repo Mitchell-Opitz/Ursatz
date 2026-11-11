@@ -80,6 +80,8 @@ typedef struct {
     size_t fragment_segment[2];
     bool fragment_sequence;
     Motive fragment_motive[2];
+    size_t fragment_cut[2];                /* the leading notes of the segment fragment k is cut to, 0 for the whole segment */
+    bool fragment_diminished[2];           /* fragment k is its segment in diminution 1:2 */
     bool segment_room;                     /* the material has bars to put the motives grow-theme makes in */
     /*
      * The ideas that end the theme as liquidations by segments (ch. VIII): m0 as the motive-forms read it (liquid_base,
@@ -151,6 +153,7 @@ typedef struct {
     NodeId slot_node[GROW_SLOT_COUNT]; /* the material node of each slot with a motive of its own, else PLAN_NODE_NONE */
     NodeId idea_node[GROW_PLACE_COUNT]; /* the material node of each place with a motive of its own (R-206), else none */
     GrowDevelopment development; /* from the GrowContext: how far the ideas stray from the motive */
+    GrowContinuation continuation; /* from the GrowContext: how the continuation accelerates; zero for today's */
     bool given_first_half;   /* Given melody, harmony or bass lies in the first half: its chords are not written whole */
 } GrowThemeRequest;
 
