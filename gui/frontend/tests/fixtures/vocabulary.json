@@ -1684,7 +1684,19 @@
     "beat": 1,
     "dotted_beat": 1,
     "two_beats": 1
-   }
+   },
+   "syncopation_one_in": 0,
+   "syncopation_types": {
+    "off_beat": 1,
+    "tie_beat": 1,
+    "tie_bar": 1,
+    "anticipation": 1
+   },
+   "syncopation_levels": {
+    "eighth": 1,
+    "sixteenth": 1
+   },
+   "skips_per_motif": 11
   },
   "development": {
    "fidelity_minimum": {
@@ -1703,7 +1715,19 @@
      "continuation": "7/20",
      "cadential": "1/5"
     }
-   }
+   },
+   "continuation": {
+    "every_segment": false,
+    "fragment_lengths": {
+     "segment": 1,
+     "half_bar": 0,
+     "beat": 0
+    },
+    "diminish": false,
+    "liquidate": false,
+    "faster_harmony": false
+   },
+   "basic_as_written": false
   }
  },
  "limits": {
@@ -1729,6 +1753,10 @@
    "accented_one_in_max": 64,
    "long_nct_one_in_max": 64,
    "leaps_per_motif_max": 11,
+   "syncopation_one_in_max": 64,
+   "skips_per_motif_max": 11,
+   "plan_chords_max": 4,
+   "plan_beat_max": 12,
    "leap_min": 3,
    "leap_max": 12,
    "range_low_min": 36,
