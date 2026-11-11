@@ -825,7 +825,9 @@ static cJSON *changes_json(const Row *row) {
         }
     }
     if (!copied) {
-        snprintf(text, sizeof text, "composed anew from %s's shape and motive (its keys differ)", name);
+        bool shorter = rational_cmp(plan_node_span(row->plan, source).length, row->length) != 0;
+        snprintf(text, sizeof text, "composed anew from %s's shape and motive (its %s differ%s)", name,
+                 shorter ? "length" : "keys", shorter ? "s" : "");
     } else if (text[0] == '\0') {
         snprintf(text, sizeof text, "the same as %s", name);
     }

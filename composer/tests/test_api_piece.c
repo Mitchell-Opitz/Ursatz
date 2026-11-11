@@ -995,11 +995,77 @@ static void test_refused_form_edit(const char *rounded_plan) {
     free(text);
 }
 
+static const cJSON *row_named(const cJSON *document, const char *id) {
+    const cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(versions, "piece"), "sections");
+    const cJSON *row = NULL;
+    cJSON_ArrayForEach(row, sections) {
+        if (strcmp(cJSON_GetObjectItemCaseSensitive(row, "id")->valuestring, id) == 0) {
+            return row;
+        }
+    }
+    assert(!"row not found");
+    return NULL;
+}
+
+static const char *row_text(const cJSON *row, const char *member) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(row, member);
+    assert(item);
+    return cJSON_IsString(item) ? item->valuestring : NULL;
+}
+
+/*
+ * The rows of a small ternary (R-449): what the Analyzer heard (B's half cadence, the key at A's start), B's dominant pedal as
+ * written, and how A return differs from A: a varied copy with melody added, or, with modulate and keys that move, a section
+ * composed anew.
+ */
+static void test_ternary_rows(void) {
+    static const char *const EDITS[][2] = {{"form", "\"ternary\""}};
+    static const char *const MODULATE[][2] = {{"form", "\"ternary\""}, {"modulate", "true"}};
+    ComposerResponse response;
+    char *printed = form_request("rounded-binary.json", NULL, EDITS, 1, false);
+    cJSON *document = composed_document(printed, &response);
+    const cJSON *a = row_named(document, "A");
+    const cJSON *b = row_named(document, "B");
+    const cJSON *back = row_named(document, "A return");
+    assert(row_text(b, "heard") && strcmp(row_text(b, "heard"), "HC") == 0);
+    assert(row_text(a, "key_heard") && strcmp(row_text(a, "key_heard"), "C major") == 0);
+    assert(row_text(b, "pedal") && strcmp(row_text(b, "pedal"), "dominant") == 0);
+    assert(row_text(a, "pedal") == NULL && row_text(back, "pedal") == NULL);
+    assert(row_text(a, "changes") == NULL && row_text(b, "changes") == NULL);
+    const cJSON *changes = cJSON_GetObjectItemCaseSensitive(back, "changes");
+    assert(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(changes, "copied")));
+    assert(strcmp(row_text(changes, "variation"), "varied") == 0);
+    assert(cJSON_GetObjectItemCaseSensitive(changes, "melody_added")->valuedouble >= 1);
+    assert(strncmp(row_text(changes, "text"), "melody: ", 8) == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+    /* With modulate A ends in the away key, so A return's keys differ from A's in some seeds: it is composed anew. */
+    bool anew = false;
+    for (unsigned seed = 1; seed <= 6 && !anew; seed++) {
+        cJSON *request = api_request(form_piece("rounded-binary.json", NULL, MODULATE, 2), seed);
+        printed = print(request);
+        document = composed_document(printed, &response);
+        changes = cJSON_GetObjectItemCaseSensitive(row_named(document, "A return"), "changes");
+        if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(changes, "copied"))) {
+            anew = true;
+            assert(strcmp(row_text(changes, "text"), "composed anew from A's shape and motive (its keys differ)") == 0);
+            assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(changes, "melody_added")));
+        }
+        cJSON_Delete(document);
+        composer_response_destroy(&response);
+        free(printed);
+    }
+    assert(anew);
+}
+
 /* Pieces of the other forms: composed, written again in a section, varied, and the refusals that need a plan. */
 static void test_any_form(const char *plan) {
     char *rounded_plan = NULL;
     test_composed_forms(&rounded_plan);
     test_edited_forms(rounded_plan);
+    test_ternary_rows();
     test_game_loop_version_two(plan);
     test_refused_form_edit(rounded_plan);
     free(rounded_plan);

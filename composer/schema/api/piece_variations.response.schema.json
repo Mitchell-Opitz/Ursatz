@@ -407,7 +407,10 @@
         "cadence",
         "heard",
         "returns",
-        "motive"
+        "motive",
+        "key_heard",
+        "pedal",
+        "changes"
       ],
       "additionalProperties": false,
       "properties": {
@@ -467,9 +470,97 @@
             "null"
           ],
           "description": "How its motive is made from the first, as the form's document writes it."
+        },
+        "key_heard": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The key the Analyzer heard at the section's start over the whole piece, as \"C major\"; null when none was heard."
+        },
+        "pedal": {
+          "enum": [
+            "dominant",
+            null
+          ],
+          "description": "\"dominant\" when the section's first half was written over a dominant pedal."
+        },
+        "changes": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/changes"
+            }
+          ],
+          "description": "How a section that returns another differs from it; null for a section that returns none."
         }
       },
       "description": "A section of the size of a form with sizes."
+    },
+    "changes": {
+      "type": "object",
+      "required": [
+        "copied",
+        "variation",
+        "melody_added",
+        "chords_changed",
+        "chords",
+        "cadence_from",
+        "cadence_to",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "copied": {
+          "type": "boolean",
+          "description": "The section holds a copy of the section it returns (same length, meter and key-lane shape); false when it was composed anew."
+        },
+        "variation": {
+          "type": "string"
+        },
+        "melody_added": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "chords_changed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "chords": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cadence_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The numerals of the returned section's last quarter."
+        },
+        "cadence_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The numerals of the section's last quarter."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "description": "How a returned section differs from its source."
     }
   }
 }
