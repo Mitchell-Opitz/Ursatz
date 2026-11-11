@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+#include <ursatz_composer/motive_develop.h>
+
 #include "grow/grow_internal.h"
 
 _Static_assert(PLAN_CONSTRUCTION_IDEAS == GROW_IDEA_COUNT, "a construction holds the bars of every idea");
@@ -234,4 +236,132 @@ bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out) {
     layout.idea_ending_bars = layout.ending_bars;
     *out = layout;
     return true;
+}
+
+/* The motive of the idea at a place as the draw made it: its liquidation when it has one, else its development. */
+static bool placed_motive(const GrowThemeSpec *spec, GrowPlace place, const Motive **out) {
+    if (spec->has_liquidated[place]) {
+        *out = &spec->liquidated[place];
+        return true;
+    }
+    if (spec->has_developed[place]) {
+        *out = &spec->developed[place];
+        return true;
+    }
+    return false;
+}
+
+/* Whether two motives have the same notes: count, pitches and durations. */
+static bool same_notes(const Motive *a, const Motive *b) {
+    if (a->note_count != b->note_count) {
+        return false;
+    }
+    for (size_t i = 0; i < a->note_count; i++) {
+        if (motive_pitch(a, i) != motive_pitch(b, i) || rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The pitches a repeat may go to, so the melody has room to place it. */
+#define EXTENSION_LOW 50
+#define EXTENSION_HIGH 90
+
+/*
+ * The motive of a repeat of `base` (R-468): one step down in the key's scale, or, varied, its last interval widened by two
+ * semitones with the contour kept, else narrowed by two, whichever differs from the idea. It must fit `room`.
+ */
+static bool repeat_motive(const Motive *base, bool varied, Rational room, Motive *out) {
+    for (int attempt = 0; attempt < (varied ? 2 : 1); attempt++) {
+        PlanMotiveRef ref;
+        memset(&ref, 0, sizeof(ref));
+        ref.has_step = true;
+        if (varied) {
+            ref.step.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+            ref.step.value[0] = (long)base->note_count - 1;
+            ref.step.value[1] = attempt == 0 ? 2 : -2;
+            ref.step.value[2] = 1;
+        } else {
+            ref.step.kind = MOTIVE_RELATION_TRANSPOSE;
+            ref.step.value[0] = 1;
+            ref.step.value[1] = -1;
+        }
+        Motive result;
+        if (base->note_count >= (varied ? 2u : 1u) && grow_develop_motive(base, &ref, &result) &&
+            (!varied || !same_notes(&result, base)) && rational_cmp(result.length, room) <= 0 &&
+            grow_motive_in_range(&result, EXTENSION_LOW, EXTENSION_HIGH, false)) {
+            *out = result;
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * The addition's motive: the longest trailing segment of the last idea's motive, two notes or more and fewer than it has,
+ * that fits `room` and ends on `want`, the pitch class of the cadence's tone.
+ */
+static bool addition_motive(const Motive *last, Rational room, int want, Motive *out) {
+    for (size_t notes = last->note_count - 1; last->note_count > 2 && notes >= 2; notes--) {
+        MotiveRelationStep step;
+        Motive result;
+        memset(&step, 0, sizeof(step));
+        step.kind = MOTIVE_RELATION_FRAGMENT;
+        step.value[0] = MOTIVE_FRAGMENT_TRAILING;
+        step.value[1] = (long)notes;
+        step.value[2] = 1;
+        if (motive_develop(last, &step, &result) == MOTIVE_DEV_OK && rational_cmp(result.length, room) <= 0 &&
+            (want < 0 || ((motive_pitch(&result, result.note_count - 1) % 12) + 12) % 12 == want)) {
+            *out = result;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec) {
+    const GrowLayout *layout = &spec->layout;
+    AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
+    int tonic = analysis_key_tonic_pitch_class(&ends_in);
+    int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
+               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (ends_in.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12
+                                                                      : -1;
+    for (size_t k = 0; k < layout->extension_count; k++) {
+        const GrowLayoutExtension *extension = &layout->extensions[k];
+        const Motive *base;
+        Motive made;
+        if (extension->kind == PLAN_EXTENSION_REPEAT) {
+            if (!placed_motive(spec, extension->place, &base) ||
+                !repeat_motive(base, extension->varied, extension->length, &made)) {
+                return false;
+            }
+        } else if (extension->kind == PLAN_EXTENSION_ADDITION) {
+            if (!placed_motive(spec, extension->place, &base) || !addition_motive(base, extension->length, want, &made)) {
+                return false;
+            }
+        } else if (extension->kind == PLAN_EXTENSION_EVADED) {
+            /* The idea after the evaded cadence restates the last idea's motive exactly: it must have the room. */
+            if (!placed_motive(spec, extension->place, &base) || rational_cmp(base->length, extension->length) > 0) {
+                return false;
+            }
+            continue;
+        } else {
+            continue;
+        }
+        spec->extended[k] = made;
+        spec->has_extended[k] = true;
+    }
+    return true;
+}
+
+size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar) {
+    size_t bars = 0;
+    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (spec->has_extended[k]) {
+            size_t wanted = grow_motive_layout_bars(&spec->extended[k], bar);
+            bars += wanted > 0 ? wanted : 1;
+        }
+    }
+    return bars;
 }

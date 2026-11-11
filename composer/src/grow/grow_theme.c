@@ -743,6 +743,10 @@ static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request
     NodeId material = plan_node_parent(plan, request->source);
     PlanSpan span = plan_node_span(plan, material);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + GROW_MADE_NODES;
+    /* An extension that is a repeat or an addition has a motive of its own, a bar of the material at least (R-468). */
+    for (size_t k = 0; k < spec->layout.extension_count; k++) {
+        wanted += spec->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT || spec->layout.extensions[k].kind == PLAN_EXTENSION_ADDITION;
+    }
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
 }
 
@@ -759,6 +763,7 @@ static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, c
         made += spec->has_liquidated[k] ? 1 : 0;
         made += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request->bar) : 0;
     }
+    made += grow_extended_bars(spec, request->bar);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + made;
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
 }
@@ -889,7 +894,18 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     draw_liquid_base(shared, spec);
     spec->segment_room = material_has_room(plan, request, spec);
     spec->basic_cells = spec->layout.basic_bars * request->cells_per_bar;
-    return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) && made_nodes_fit(plan, request, spec);
+    return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) &&
+           grow_extensions_draw(request, spec) && made_nodes_fit(plan, request, spec);
+}
+
+/* Whether two specs make the same motives for their extensions. */
+static bool same_extended(const GrowThemeSpec *a, const GrowThemeSpec *b) {
+    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (a->has_extended[k] != b->has_extended[k] || (a->has_extended[k] && !motive_equal(&a->extended[k], &b->extended[k]))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
@@ -912,7 +928,7 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
            a->liquidation_head[GROW_PLACE_FRAGMENT_2] == b->liquidation_head[GROW_PLACE_FRAGMENT_2] &&
            a->liquidation_head[GROW_PLACE_CADENTIAL] == b->liquidation_head[GROW_PLACE_CADENTIAL] &&
            a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
-           same_kind(&a->consequent_contrast, &b->consequent_contrast);
+           same_kind(&a->consequent_contrast, &b->consequent_contrast) && same_extended(a, b);
 }
 
 static const char *dev_name(const MotiveRelationStep *dev) {

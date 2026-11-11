@@ -165,6 +165,12 @@ typedef struct {
      */
     Motive shortened[GROW_PLACE_COUNT];
     bool has_shortened[GROW_PLACE_COUNT];
+    /*
+     * The motives of the extensions that have one of their own (R-468): extended[k] is what the repeat or the addition
+     * layout.extensions[k] is, a made node of the material when has_extended[k]. A stretch and an evaded cadence make none.
+     */
+    Motive extended[PLAN_CONSTRUCTION_EXTENSIONS];
+    bool has_extended[PLAN_CONSTRUCTION_EXTENSIONS];
     bool has_construction;                 /* the request's: the label names the halves' bars */
     GrowContinuation continuation;         /* the request's, for the build (grow_apply) */
     bool basic_as_written;                 /* the request's */
@@ -296,6 +302,15 @@ bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out);
  * antecedent's contrasting idea. An addition and an evaded cadence name no idea: they are always allowed here.
  */
 bool grow_extension_allowed(const PlanThemePairing *pairing, PlanExtensionKind kind, GrowIdea idea);
+/*
+ * The motives of the extensions of the spec's layout, drawn after the beginning and the ending: a repeat's is its idea's
+ * developed motive in sequence one step down (or, varied, with its last interval changed), an addition's the trailing
+ * segment of the theme's last idea ending on the cadence's tone. Each is kept in spec->extended and fits its bars. False,
+ * with nothing to build, when one cannot be made or an evaded cadence's idea cannot restate the last idea's motive.
+ */
+bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec);
+/* The bars the made motives of the spec's extensions take in the material, one bar at least each. */
+size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar);
 /* standard-form's own beginning and ending for the plan's. */
 int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);
