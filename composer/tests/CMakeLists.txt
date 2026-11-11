@@ -368,12 +368,15 @@ add_test(NAME test_form_plans_pieces COMMAND test_form_plans pieces)
 
 add_executable(test_form_spec test_form_spec.c)
 target_link_libraries(test_form_spec PRIVATE ursatz_composer)
+target_include_directories(test_form_spec PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_form_spec PRIVATE -Wall -Wextra -Wpedantic)
 # The form documents: the reader, its refusals, the six built-in forms and their sizes.
 target_compile_definitions(test_form_spec PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_form_spec COMMAND test_form_spec)
 # A form added as a document alone composes (tests/fixtures/forms/bar-form.json).
 add_test(NAME test_form_spec_custom COMMAND test_form_spec custom)
+# A form with a dominant pedal in its B composes with B's first half on the dominant (tests/fixtures/forms/pedal-form.json).
+add_test(NAME test_form_spec_pedal COMMAND test_form_spec pedal)
 
 add_executable(test_piece_keys test_piece_keys.c)
 target_link_libraries(test_piece_keys PRIVATE ursatz_composer)
