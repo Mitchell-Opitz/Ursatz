@@ -33,6 +33,12 @@ A motive is made of segments, as a theme starts: a first cell, its repeat on the
 - `contrast_fidelity_min` (step 9): the recognizability of segment b against segment a, from the motive-development score, is at least this ratio (0/1 never rejects).
 - `long_on_weak` and `final_long` (steps 2 and 8): the two-beat note is `1 + long_on_weak` times as likely on a weak beat; with `final_long` the last note of the last segment is longer than every other note in it.
 
+**Rhythm settings** (phase L2, R-439), set from C only until the preferences document carries them. Segment motives count time in a tick grid of twelfths of the beat unit (a beat is 12 ticks, a half beat 6, a third 4, a quarter 3); with the settings off the notes, durations and files are byte-identical to before.
+
+- `durations` gains five figures after `half_beat`, `beat` and `two_beats`, each weight 0 by default: `quarter_beats` (two sixteenths filling a half beat, anywhere a half beat may start), `long_short` (a dotted eighth and a sixteenth, on a beat), `short_long` (the reverse), `triplet` (three eighth triplets, on a beat) and `triplet_two_beats` (three quarter triplets across two beats, on a beat). A figure is drawn only where its total fits the cell.
+- Runs: two or more notes between frame notes are no longer refused. They are a run, walked by step from the frame note before to the one after (the first move may be two steps onto a chord tone of the segment's chord, the last note is a step from the frame note after). One path is drawn from all of them, every note is a chord tone or a resolved non-chord tone, and no two adjacent notes repeat a pitch. This is what lets sixteenths and triplets sit between the beats.
+- `compound_beats` (6/8, 9/8 and 12/8): the beat is the dotted quarter, so cells tile in beats of three eighths, no note crosses a beat, the dotted feature is a dotted eighth, a sixteenth and an eighth from a beat, `long_short` and `short_long` are a quarter and an eighth, the triplets are not drawn, and the eighths between beats are a run. 6/8 is two bars, as 2/4; 9/8 as 3/4; 12/8 as 4/4. It changes nothing in any other meter.
+
 The segments are the motive's `features`, lettered `a` to `h` in order of first appearance, a later segment with an earlier one's rhythm taking that letter with a `'` for each earlier occurrence. `form` and `style` work as for `drawn`: a rhythm or contour motive keeps the segments and the harmony of the full one.
 
 ## The drawn strategy
