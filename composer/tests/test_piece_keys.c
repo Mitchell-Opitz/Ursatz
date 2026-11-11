@@ -25,11 +25,13 @@
  *   compose <template> the composed runs: of those that complete, every key change is opened by a pivot chord
  *                      standard-harmony calls valid, every planned modulation is a modulation confirmed by an
  *                      authentic cadence heard inside the new key, and the last cadence is the strongest. The share
- *                      of runs that complete is printed; below 100% the test fails (WILL_FAIL, docs/piece.md)
+ *                      of seeds that complete is printed, each tried up to 16 times from the next seeds as the piece
+ *                      entry does; below 100% the test fails (WILL_FAIL, docs/piece.md)
  *   smoke              the first of seeds 1 to 5 of binary in C major that composes
  */
 
 #define SEEDS 10
+#define SEED_TRIES 16
 
 typedef struct {
     const char *name;
@@ -369,7 +371,16 @@ static int test_compose(const char *kind) {
     memset(&tally, 0, sizeof(tally));
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-            compose_one(&SCENARIOS[s], kind, seed, &tally);
+            /* A stuck run is tried again from the next seed, as the piece entry does (PIECE_SEED_TRIES). */
+            Tally attempt;
+            bool done = false;
+            for (unsigned long extra = 0; extra < SEED_TRIES && !done; extra++) {
+                memset(&attempt, 0, sizeof(attempt));
+                done = compose_one(&SCENARIOS[s], kind, seed + extra, &attempt);
+            }
+            tally.runs++;
+            tally.completed += done;
+            tally.changing += done ? attempt.changing : 0;
         }
     }
     printf("%s: %zu of %zu runs complete (%.0f%%), %zu of them change key\n", kind,

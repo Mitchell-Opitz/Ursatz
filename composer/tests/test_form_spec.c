@@ -163,7 +163,8 @@ static void test_builtin_forms(void) {
                 assert(section->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || section->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
                        section->cadence == CADENCE_TYPE_HALF);
                 assert(section->returns == FORM_SPEC_NO_RETURN || section->returns < i);
-                assert(section->pedal == 0);
+                /* Only the ternary's B asks for a pedal (R-446, R-445). */
+                assert(section->pedal == (strcmp(row->name, "ternary") == 0 && i == 1 ? 5 : 0));
                 sum += section->bars;
             }
             assert(sum == size->bars);
@@ -205,15 +206,20 @@ static void test_builtin_details(void) {
     form_spec_destroy(form);
 
     form = builtin("ternary");
-    assert(form->regions[0].major_count == 3 && form->regions[0].major[0] == 4 && form->regions[0].major[1] == 6 &&
-           form->regions[0].major[2] == 5 && form->regions[0].minor_count == 3 && form->regions[0].minor[0] == 3 &&
-           form->regions[0].minor[1] == 4 && form->regions[0].minor[2] == 6);
-    const FormSpecSize *ternary = form_spec_size(form, 24, 0);
-    assert(ternary->sections[0].closed && !ternary->sections[1].closed && !ternary->sections[2].closed);
-    assert(ternary->sections[1].key_start == FORM_SPEC_HOME && ternary->sections[1].key_end == 0);
-    assert(strcmp(ternary->sections[2].name, "A return") == 0 && strcmp(ternary->sections[2].letter, "A") == 0 &&
-           ternary->sections[0].pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
-           ternary->sections[0].pairing.ending == PLAN_THEME_ENDING_CONSEQUENT);
+    assert(form->regions[0].major_count == 2 && form->regions[0].major[0] == 5 && form->regions[0].major[1] == 3 &&
+           form->regions[0].minor_count == 2 && form->regions[0].minor[0] == 3 && form->regions[0].minor[1] == 5);
+    for (size_t z = 0; z < form->size_count; z++) {
+        const FormSpecSize *ternary = &form->sizes[z];
+        assert(ternary->sections[0].closed && !ternary->sections[1].closed && !ternary->sections[2].closed);
+        /* A ends in the away region, B starts there and returns home, ending on V (a half cadence) over a pedal. */
+        assert(ternary->sections[0].key_start == FORM_SPEC_HOME && ternary->sections[0].key_end == 0);
+        assert(ternary->sections[1].key_start == 0 && ternary->sections[1].key_end == FORM_SPEC_HOME);
+        assert(ternary->sections[1].cadence == CADENCE_TYPE_HALF && ternary->sections[1].pedal == 5);
+        assert(ternary->sections[2].variation == PLAN_RETURN_VARIED && ternary->sections[2].returns == 0);
+        assert(strcmp(ternary->sections[2].name, "A return") == 0 && strcmp(ternary->sections[2].letter, "A") == 0 &&
+               ternary->sections[0].pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
+               ternary->sections[0].pairing.ending == PLAN_THEME_ENDING_CONSEQUENT);
+    }
     form_spec_destroy(form);
 
     /* Variations: the theme is index 0; with three or more the section at (count + 1) / 2 is wholly away. */

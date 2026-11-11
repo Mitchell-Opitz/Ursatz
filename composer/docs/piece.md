@@ -40,14 +40,14 @@ other than the table's are planned only with `modulate`.
 | | 8 | A 4, B 4 |
 | rounded binary | 16 | A 8 (PAC), B 4 (compound basic idea + continuation, HC), A' 4 (returns A, PAC) |
 | | 24 | A 8, B 8, A' 8 |
-| ternary | 24 | A 8 (antecedent + consequent, PAC), B 8 (presentation + continuation, PAC), A 8 (returns A, PAC) |
+| ternary | 24 | A 8 (antecedent + consequent, PAC), B 8 (presentation + continuation, HC), A 8 (returns A, varied, PAC); [small-ternary.md](small-ternary.md) |
 | | 12 | 4 each |
 | variations | 8 x (1 + n) | Theme 8 (antecedent + consequent, PAC), Var 1 to n, each returning the theme; n 1 to 8, default 3 |
 | loop | 8 | one section (presentation + continuation, HC), so the end leads back to the first bar |
 | | 16 | A 8 ending IAC, B 8 ending HC |
 | layered | 8 x layers | Layer 1 8 (presentation + continuation, HC), then each later layer returns Layer 1; layers 2 to 4, default 4 |
 
-The return defaults: A' of the rounded binary and the second A of the ternary are `exact`, Var k is `ornament` for odd k
+The return defaults: A' of the rounded binary is `exact`, the second A of the ternary `varied`, Var k is `ornament` for odd k
 and `reharmonize` for even k, a layer is `exact`.
 
 Pieces of other shapes, laid out in beats and not from these templates, are [the game loop](piece-structure.md), a form whose
@@ -94,7 +94,7 @@ Measured, seeds 1 to 10, C major 4/4, invented motive (`test_return_heard`):
 | Template | Returns heard | Why not all |
 | --- | --- | --- |
 | rounded binary (24 bars) | 10 of 10 | |
-| ternary (24 bars) | 3 of 10 | A is a period, and standard-form hears no theme in a period (see below), so the section has no entry in the detection |
+| ternary (24 bars) | 9 of 10 | |
 | variations (3) | 6 of 30 | The same: the theme and every variation are periods |
 
 The cause is the kernel's: the detection compares the exact contour and rhythm of the themes standard-form finds, and
@@ -111,7 +111,7 @@ with `seed`, from the form's regions and its sections' `keys` and `closed` ([for
 | --- | --- |
 | binary | A ends in V (major) or III (minor), B starts there and returns home. |
 | rounded binary | The same for A and B; A' is home. |
-| ternary | A home; B starts home and ends in IV, vi or V (major), III, iv or VI (minor); A home again. |
+| ternary | A ends in V or iii (major), III or v (minor); B starts there and returns home, ending on V; A home again. |
 | variations | All home, except with three variations or more the middle one, wholly in the relative key (vi in major, III in minor). The parallel mode is not closely related and has no pivot, so it is not used. |
 | loop, layered | Home. |
 
@@ -212,18 +212,18 @@ Baselines, with grow's measured shares for the same sections for comparison:
 | --- | --- | --- | --- | --- |
 | binary | 30 of 40 | 20 of 80 | 25% | 26 |
 | rounded binary | 40 of 40 | 58 of 120 | 48% | 58 |
-| ternary | 30 of 40 | 35 of 120 | 29% | 13 |
+| ternary | 39 of 40 | 51 of 120 | 43% | 13 |
 | loop | 40 of 40 | 32 of 60 | 53% | 39 |
 | layered | 60 of 60 | 74 of 180 | 41% | 117 |
 | variations | 60 of 60 | 184 of 220 | 84% | 0 |
 
-Binary 8 and 16 and ternary 12 and 24 in A minor 3/4 with a given motive stay 0 of 5 (stuck at the structure stage:
+Binary 8 and 16 in A minor 3/4 with a given motive stay 0 of 5 (stuck at the structure stage:
 B's inverted motive gets no structure, because the cadential liquidation fails in 36 of its draws, R-345; theme
 development, left alone by R-405).
 
 ### Keys
 
-`tests/test_piece_keys.c`: every template, C major and A minor 4/4, an invented motive, seeds 1 to 10, with `modulate`.
+`tests/test_piece_keys.c`: every template, C major and A minor 4/4, an invented motive, seeds 1 to 10, with `modulate`, a stuck seed tried again from the next ones up to 16 times as the piece entry does.
 
 | Test | What it checks | Label |
 | --- | --- | --- |

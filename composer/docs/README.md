@@ -68,6 +68,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.
 - [forms.md](forms.md): forms as JSON documents (P44): the members, the six built-in forms and the game loop, how to add one.
+- [small-ternary.md](small-ternary.md): the built-in ternary form after Schoenberg ch. XIII (P46): A, B over a pedal or in the away region, A1 varied, and what was measured.
 - [piece-structure.md](piece-structure.md): the game loop, a game track as data: intro, body, turnaround and ending.
 - [loop-seam.md](loop-seam.md): how the end of a loop leads back into its start.
 - [regenerate.md](regenerate.md): locking and regenerating nodes of a plan.
