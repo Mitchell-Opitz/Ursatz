@@ -925,6 +925,72 @@
                   "maximum": 20
                 }
               }
+            },
+            "syncopation_one_in": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 64,
+              "description": "A cell, and a segment boundary, gets a syncopation one time in this many; 0 never. Simple meters only, never on the motif's last note. Off by default."
+            },
+            "syncopation_types": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. Which figure: an off-beat note held across the beat, a tie across the beat, a tie across the barline, or an anticipation of a new chord.",
+              "additionalProperties": false,
+              "properties": {
+                "off_beat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "tie_beat": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "tie_bar": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "anticipation": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "syncopation_levels": {
+              "type": "object",
+              "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. At which level: the short note a half beat (eighth) or a quarter beat (sixteenth).",
+              "additionalProperties": false,
+              "properties": {
+                "eighth": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "sixteenth": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "skips_per_motif": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 11,
+              "description": "The most skips (intervals of 3 or 4 semitones) in a motif; 11 never rejects, the default."
+            },
+            "plan": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "description": "A given chord plan: Roman numerals I to VII in any case, an optional o or degree sign, an optional place @bar or @bar:beat (bar 1 or 2, beat 1 to 12). Either no chord has a place (at most 3 chords) or every chord after the first has one, rising. Absent by default: the plan is drawn.",
+              "items": {
+                "type": "string",
+                "pattern": "^(?i:VII|VI|V|IV|III|II|I)(o|°)?(@[12](:([1-9]|1[0-2]))?)?$"
+              }
             }
           }
         },
@@ -1001,6 +1067,55 @@
                   }
                 }
               }
+            },
+            "continuation": {
+              "type": "object",
+              "description": "How a sentence's continuation accelerates (docs/grow-continuation.md). Every member is off by default.",
+              "additionalProperties": false,
+              "properties": {
+                "every_segment": {
+                  "type": "boolean",
+                  "description": "Both fragments are drawn from every segment of the motif, never both from the same one."
+                },
+                "fragment_lengths": {
+                  "type": "object",
+                  "description": "Whole-number weights 0 to 20; the sum of the entries is above 0. A fragment is its whole segment, half a bar of it, or a beat of it. Segment alone by default.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "segment": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 20
+                    },
+                    "half_bar": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 20
+                    },
+                    "beat": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 20
+                    }
+                  }
+                },
+                "diminish": {
+                  "type": "boolean",
+                  "description": "A fragment that is a whole segment is that segment in diminution 1:2."
+                },
+                "liquidate": {
+                  "type": "boolean",
+                  "description": "Fragment 2 is liquidated, and the cadential idea liquidates a step further."
+                },
+                "faster_harmony": {
+                  "type": "boolean",
+                  "description": "An 8-bar sentence's continuation changes chord every cell and cadences on the cadential idea."
+                }
+              }
+            },
+            "basic_as_written": {
+              "type": "boolean",
+              "description": "A motif as long as the basic idea is the basic idea as written, over its own chords. Off by default."
             }
           }
         }
