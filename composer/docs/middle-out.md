@@ -126,8 +126,8 @@ These were met, and are the limits of what is built:
 | --- | --- |
 | `give` | The refusals (not a section, a bar outside the section, past the end, notes, numerals, a bass with a rest, overlap, a key change inside a section) leave the plan as it was; the Given spans a call adds; the gaps; the snapshot. |
 | `smoke` | The first of seeds 1 to 5 that composes with the melody below. |
-| `partial` | A melody given in bars 4 to 7 of the B of a ternary form: composes, the idea that begins in it is made from its first bar (a Given motive node in the material), every melody span is written or Given. |
-| `melody`, `progression`, `bass` | Seeds 1 to 10, C major 4/4: `melody` an 8-bar melody given as the B of a ternary form (24 bars); `progression` `I IV V I`, a bar each, given at bars 1 to 4 of the A of a rounded binary form (16 bars); `bass` an 8-bar bass line given in the B of a binary form (16 bars). |
+| `partial` | A melody given in bars 4 to 7 of the B of a binary form: composes, the idea that begins in it is made from its first bar (a Given motive node in the material), every melody span is written or Given. |
+| `melody`, `progression`, `bass` | Seeds 1 to 10, C major 4/4: `melody` an 8-bar melody given as the B of a binary form (16 bars); `progression` `I IV V I`, a bar each, given at bars 1 to 4 of the A of a rounded binary form (16 bars); `bass` an 8-bar bass line given in the B of a binary form (16 bars). |
 
 Every run that completes leaves the Given payloads byte for byte as they were (every run, completed or stuck), the chords
 stand on the given bass at each chord's start and carry the given melody's downbeats. The shares are baselines in
@@ -135,7 +135,7 @@ stand on the given bass at each chord's start and carry the given melody's downb
 
 | Scenario | Completed | Sections heard | Cadence heard as planned |
 | --- | --- | --- | --- |
-| melody (ternary) | 10 of 10 | 10 of 30 | 12 of 30 |
+| melody (binary) | 10 of 10 | 19 of 20 | 18 of 20 |
 | progression (rounded binary) | 10 of 10 | 6 of 30 | 24 of 30 |
 | bass (binary) | 9 of 10 | 18 of 18 | 18 of 18 |
 
@@ -149,6 +149,6 @@ The melody the test gives is `C5:h E5:h G5:q E5:q C5:h E5:h G5:h G5:q F5:q E5:h 
 C5:w`: its downbeats are `C G E G E A D C`, tones of the chords the operators can write there (the tonic, then a
 predominant, the dominant and the tonic in the last four bars). The bass is `C3:w` five times, `F3:w`, `G3:w`, `C3:w`.
 
-`tests/test_plan_cli.c` has the command cases (`test_given`): no form gives a ternary form of 24 bars with the melody in
+`tests/test_plan_cli.c` has the command cases (`test_given`): no form gives a binary form of 16 bars with the melody in
 B and says so, the given spans are printed as unchanged by `fill` in text and JSON, the same seed gives the same file,
 and each usage error and each refusal is named.

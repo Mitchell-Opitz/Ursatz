@@ -339,7 +339,7 @@ static void test_check_and_candidates(void) {
 
 /*
  * Given material (given.h): a phrase, a progression or a bass line placed in a plan with --given-* and --at, planned as a
- * ternary form of 24 bars when no form is named, and shown by `fill` as given and unchanged.
+ * binary form of 16 bars when no form is named, and shown by `fill` as given and unchanged.
  */
 static const char GIVEN_MELODY[] = "C5:h E5:h G5:q E5:q C5:h E5:h G5:h G5:q F5:q E5:h "
                                    "E5:h C5:h A4:q B4:q C5:h D5:h B4:h C5:w\n";
@@ -350,10 +350,10 @@ static void test_given(void) {
     write_text("plan_cli_given_bass.txt", GIVEN_BASS);
     write_text("plan_cli_given_rest.txt", "r:h C3:h C3:w\n"); /* a line that opens with a rest is no bass line */
 
-    /* No form: a ternary form of 24 bars with the melody in B, and the plan says so. */
+    /* No form: a binary form of 16 bars with the melody in B, and the plan says so. */
     char *out = output_of("plan", "--key C --meter 4/4 --given-melody plan_cli_given_melody.txt --seed 1 --out plan_cli_given.json");
-    assert(strstr(out, "ternary, 24 bars") == out);
-    assert(strstr(out, "no --form: a ternary form of 24 bars, the given material in B") != NULL);
+    assert(strstr(out, "binary, 16 bars") == out);
+    assert(strstr(out, "no --form: a binary form of 16 bars, the given material in B") != NULL);
     assert(strstr(out, "given melody plan_cli_given_melody.txt at B:1") != NULL);
     free(out);
     out = output_of("plan", "--key C --meter 4/4 --given-melody plan_cli_given_melody.txt --seed 1 --format json "

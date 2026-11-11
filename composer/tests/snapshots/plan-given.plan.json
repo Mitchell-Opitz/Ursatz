@@ -14,7 +14,7 @@
             "den": 1
           },
           "end": {
-            "num": 56,
+            "num": 38,
             "den": 1
           }
         },
@@ -44,7 +44,7 @@
           "den": 1
         },
         "end": {
-          "num": 56,
+          "num": 38,
           "den": 1
         }
       },
@@ -68,14 +68,14 @@
   "chords": [],
   "form": {
     "kind": "form",
-    "label": "ternary",
+    "label": "binary",
     "span": {
       "start": {
         "num": 0,
         "den": 1
       },
       "end": {
-        "num": 56,
+        "num": 38,
         "den": 1
       }
     },
@@ -98,17 +98,14 @@
           "state": "constrained",
           "constraints": [{
               "kind": "archetype",
-              "type": "period"
+              "type": "sentence"
             }, {
               "kind": "theme_pairing",
-              "beginning": "antecedent",
-              "ending": "consequent"
+              "beginning": "presentation",
+              "ending": "continuation"
             }, {
               "kind": "cadence",
               "type": "pac"
-            }, {
-              "kind": "cadence",
-              "type": "hc"
             }, {
               "kind": "key",
               "tonic": "C",
@@ -154,51 +151,8 @@
               "letter": "B"
             }, {
               "kind": "motive_ref",
-              "motive": 8,
+              "motive": 7,
               "step": "invert tonal=1"
-            }]
-        }
-      }, {
-        "kind": "section",
-        "label": "A return",
-        "span": {
-          "start": {
-            "num": 16,
-            "den": 1
-          },
-          "end": {
-            "num": 24,
-            "den": 1
-          }
-        },
-        "children": [],
-        "composer": {
-          "id": 4,
-          "state": "constrained",
-          "constraints": [{
-              "kind": "archetype",
-              "type": "period"
-            }, {
-              "kind": "theme_pairing",
-              "beginning": "antecedent",
-              "ending": "consequent"
-            }, {
-              "kind": "cadence",
-              "type": "pac"
-            }, {
-              "kind": "cadence",
-              "type": "hc"
-            }, {
-              "kind": "key",
-              "tonic": "C",
-              "mode": "major"
-            }, {
-              "kind": "section_letter",
-              "letter": "A"
-            }, {
-              "kind": "return",
-              "section": 2,
-              "variation": "exact"
             }]
         }
       }, {
@@ -206,11 +160,11 @@
         "label": "material",
         "span": {
           "start": {
-            "num": 24,
+            "num": 16,
             "den": 1
           },
           "end": {
-            "num": 56,
+            "num": 38,
             "den": 1
           }
         },
@@ -219,11 +173,11 @@
             "label": "material",
             "span": {
               "start": {
-                "num": 24,
+                "num": 16,
                 "den": 1
               },
               "end": {
-                "num": 56,
+                "num": 38,
                 "den": 1
               }
             },
@@ -232,11 +186,11 @@
                 "label": "material",
                 "span": {
                   "start": {
-                    "num": 24,
+                    "num": 16,
                     "den": 1
                   },
                   "end": {
-                    "num": 56,
+                    "num": 38,
                     "den": 1
                   }
                 },
@@ -245,35 +199,35 @@
                     "label": "m0",
                     "span": {
                       "start": {
-                        "num": 24,
+                        "num": 16,
                         "den": 1
                       },
                       "end": {
-                        "num": 25,
+                        "num": 17,
                         "den": 1
                       }
                     },
                     "children": [],
                     "composer": {
-                      "id": 8,
+                      "id": 7,
                       "state": "constrained",
                       "constraints": []
                     }
                   }],
                 "composer": {
-                  "id": 7,
+                  "id": 6,
                   "state": "realized",
                   "constraints": []
                 }
               }],
             "composer": {
-              "id": 6,
+              "id": 5,
               "state": "realized",
               "constraints": []
             }
           }],
         "composer": {
-          "id": 5,
+          "id": 4,
           "state": "realized",
           "constraints": [{
               "kind": "material"
@@ -290,11 +244,11 @@
       "framework": "ursatz-composer",
       "span": {
         "start": {
-          "num": 24,
+          "num": 16,
           "den": 1
         },
         "end": {
-          "num": 25,
+          "num": 17,
           "den": 1
         }
       },
@@ -303,7 +257,7 @@
       "uncertainty": null,
       "composer": {
         "id": 2,
-        "owner": 8,
+        "owner": 7,
         "lane": "melody",
         "voice": 0,
         "state": "constrained",

@@ -23,7 +23,7 @@
  *                  seed gives the same variations again (quick)
  *   refused        a locked section gives REGENERATE_ERR_LOCKED, a count of 0 or 17, a target that is not there and
  *                  the Given meter span are refused, nothing is kept (quick)
- *   harmonize      a ternary form with an 8-bar melody given in B: 4 harmonizations keep every melody note and differ in
+ *   harmonize      a binary form with an 8-bar melody given in B: 4 harmonizations keep every melody note and differ in
  *                  their harmony; a section with no given melody and a node that is no section are refused (quick)
  *   sweep_smoke    the sweep on seeds 1 and 2 (quick)
  *   sweep          seeds 1 to 20 of the variations of B, 4 asked for each: how many were kept (slow)
@@ -222,7 +222,7 @@ static void refused(void) {
 /* --- harmonize ----------------------------------------------------------------------- */
 
 static PiecePlan *with_given_melody(unsigned long seed) {
-    PieceRequest asked = request("ternary");
+    PieceRequest asked = request("binary");
     asked.given_melodies = 1;
     asked.seed = seed;
     PiecePlan *plan = NULL;

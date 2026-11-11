@@ -204,7 +204,7 @@ static void test_plan(void) {
     composer_response_destroy(&response);
     free(printed);
 
-    /* Given material with no form: the form is a ternary form of 24 bars, the melody goes in B. The name to show is the
+    /* Given material with no form: the form is a binary form of 16 bars, the melody goes in B. The name to show is the
        motive's own "source". */
     char *melody = test_read_file(FIXTURE("melody_c_major_8_bars.txt"), NULL);
     request = cJSON_CreateObject();

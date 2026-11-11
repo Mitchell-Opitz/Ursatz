@@ -17,7 +17,7 @@ Plans a whole short piece from a form template ([cli-plan.md](../cli-plan.md)); 
 
 | Member | Value |
 |---|---|
-| `form`, `key`, `mode`, `meter`, `bars`, `count`, `modulate` | the options of the command. `key` is a tonic with `mode`, or tonic and mode ("D minor"). With `given` and no `form` the form is a ternary form of 24 bars and the given material goes in section B |
+| `form`, `key`, `mode`, `meter`, `bars`, `count`, `modulate` | the options of the command. `key` is a tonic with `mode`, or tonic and mode ("D minor"). With `given` and no `form` the form is a binary form of 16 bars and the given material goes in section B |
 | `motive` | `{"input": {"format", "text"}, "source": "<name>"}`: a motive request ([Motive requests](motives.md#motive-requests)) read in the plan's meter and key; `source` is the name shown for it (the command gives the file) |
 | `corpus`, `like` | a corpus directory and a passage file in it to look for: the motive is the first bar of a similar passage (`motive_source` in the result). `corpus` needs `like` or a `like_progression` given; `like` and `motive` are exclusive |
 | `accompaniment`, `texture` | as the options |
