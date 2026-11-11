@@ -15,6 +15,8 @@ One table per decision, indexed by `GrowDevelopment`, at the top of the file tha
 | Fragment 2: sequence one step down, then the next segment (`FRAGMENT_2_WEIGHTS`, `grow_ending.c`) | 1, 3 | 3, 1 | 1, 0 |
 | Liquidation steps (`LIQUIDATION_STEPS`, `grow_ending.c`) | at most 1 | as many as fit | at least 2 (a motif with 2 segments or more) |
 
+The [continuation settings](grow-continuation.md) (every segment, cut and diminished fragments, a liquidated fragment 2) are separate from these weights and off by default.
+
 A weight of 0 removes the option. The weights apply to the options a request allows: when every option allowed is 0 (a theme setting with a one-cell basic idea, which allows no dominant form or sequence, leaves only the exact repetition), the balanced weights are used for that draw. A `theme` fragment 2 is the sequence unless it does not fit its idea, when the next segment is used; a liquidation the steps cannot meet drops notes as before. Exact repetitions are a choice again with `melody`.
 
 ## What sounds
@@ -72,7 +74,7 @@ R-355 started them at 3/4, 1/2 and 3/10 for `balanced`, 1/10 higher for `melody`
 
 The table is a setting (`GrowFidelityTable`, `GrowConfig.fidelity`; `grow_fidelity_minimum_in(table, development, role)` reads it, NULL for this table): see [preferences.md](preferences.md#the-development-group).
 
-A contrasting idea is meant to stray, so it is scored and ranked but never refused. So is an idea whose ref cuts the motive down itself (a fragment by notes, a liquidation, a condensation, with no segment): its score against the whole source is low by what it was asked to be. A minimum may be lowered in steps of 1/20, only as far as the compose rates need (R-317).
+A contrasting idea is meant to stray, so it is scored and ranked but never refused. So is an idea whose ref cuts the motive down itself (a fragment by notes of m0 or of a segment, a liquidation, a condensation): its score against the whole source is low by what it was asked to be (R-464, [grow-continuation.md](grow-continuation.md#fidelity)). A minimum may be lowered in steps of 1/20, only as far as the compose rates need (R-317).
 
 Measuring is the costly part (R-307). The ranking searches the recognizer one step, not two: the score is the same at any depth and most relations an idea is asked for are one step, so the agreement a search of one step misses counts as none. A cadential idea is for its cadence, so it is only refused under its minimum (by its score: its residue is liquidated in more steps than the search reaches, so its agreement is not measured) and is ranked by the melody rules alone, which put the cadence tone first. Ranking it by fidelity as well lowered the cadences heard as planned in `test_middle_out_bass` from 17 of 20 to 16. The heard text of an idea (the API's, later) is still searched to two steps. A candidate whose realized notes were measured before for the same span, in any octave, is not measured again within a stage run.
 
