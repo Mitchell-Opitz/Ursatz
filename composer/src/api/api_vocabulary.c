@@ -444,6 +444,10 @@ static bool add_preference_limits(cJSON *limits) {
            cJSON_AddNumberToObject(item, "accented_one_in_max", COMPOSER_PREFERENCES_ACCENTED_ONE_IN_MAX) &&
            cJSON_AddNumberToObject(item, "long_nct_one_in_max", COMPOSER_PREFERENCES_LONG_NCT_ONE_IN_MAX) &&
            cJSON_AddNumberToObject(item, "leaps_per_motif_max", COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX) &&
+           cJSON_AddNumberToObject(item, "syncopation_one_in_max", COMPOSER_PREFERENCES_SYNCOPATION_ONE_IN_MAX) &&
+           cJSON_AddNumberToObject(item, "skips_per_motif_max", COMPOSER_PREFERENCES_SKIPS_PER_MOTIF_MAX) &&
+           cJSON_AddNumberToObject(item, "plan_chords_max", COMPOSER_PREFERENCES_PLAN_MAX) &&
+           cJSON_AddNumberToObject(item, "plan_beat_max", COMPOSER_PREFERENCES_PLAN_BEAT_MAX) &&
            cJSON_AddNumberToObject(item, "leap_min", COMPOSER_PREFERENCES_LEAP_MIN) &&
            cJSON_AddNumberToObject(item, "leap_max", COMPOSER_PREFERENCES_LEAP_MAX) &&
            cJSON_AddNumberToObject(item, "range_low_min", COMPOSER_PREFERENCES_RANGE_LOW_MIN) &&
