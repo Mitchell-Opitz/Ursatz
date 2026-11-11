@@ -21,6 +21,10 @@
 #define ACCENTED_ONE_IN_MAX COMPOSER_PREFERENCES_ACCENTED_ONE_IN_MAX
 #define LONG_NCT_ONE_IN_MAX COMPOSER_PREFERENCES_LONG_NCT_ONE_IN_MAX
 #define LEAPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX
+#define SYNCOPATION_ONE_IN_MAX COMPOSER_PREFERENCES_SYNCOPATION_ONE_IN_MAX
+#define SKIPS_PER_MOTIF_MAX COMPOSER_PREFERENCES_SKIPS_PER_MOTIF_MAX
+#define PLAN_MAX COMPOSER_PREFERENCES_PLAN_MAX
+#define PLAN_BEAT_MAX COMPOSER_PREFERENCES_PLAN_BEAT_MAX
 #define LEAP_MIN COMPOSER_PREFERENCES_LEAP_MIN
 #define LEAP_MAX COMPOSER_PREFERENCES_LEAP_MAX
 #define FIDELITY_DENOMINATOR_MAX COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX
@@ -57,6 +61,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     out->melody = melody_fill_params_default();
     motive_random_preferences_default(&out->motif);
     grow_fidelity_table_default(&out->development);
+    out->continuation.fragment_lengths[GROW_FRAGMENT_SEGMENT] = 1;
 }
 
 /* Where a refusal goes: the path and the message of the caller, which may both be absent. */
@@ -313,6 +318,146 @@ static const WeightedList MOTIF_LISTS_L2[] = {
     {"long_nct_lengths", offsetof(MotiveRandomPreferences, long_nct_lengths), 3, {"beat", "dotted_beat", "two_beats"}}};
 #define MOTIF_LIST_L2_COUNT (sizeof(MOTIF_LISTS_L2) / sizeof(MOTIF_LISTS_L2[0]))
 
+/* The lists of phase L3: the syncopation figures and their levels. They follow long_nct_lengths, after syncopation_one_in. */
+static const WeightedList MOTIF_LISTS_L3[] = {
+    {"syncopation_types", offsetof(MotiveRandomPreferences, syncopation_types), 4,
+     {"off_beat", "tie_beat", "tie_bar", "anticipation"}},
+    {"syncopation_levels", offsetof(MotiveRandomPreferences, syncopation_levels), 2, {"eighth", "sixteenth"}}};
+#define MOTIF_LIST_L3_COUNT (sizeof(MOTIF_LISTS_L3) / sizeof(MOTIF_LISTS_L3[0]))
+
+/* The Roman numerals a plan chord may name, upper case, by degree 1 to 7. */
+static const char *const PLAN_NUMERALS[] = {"I", "II", "III", "IV", "V", "VI", "VII"};
+
+typedef enum { PLAN_CHORD_OK, PLAN_CHORD_SYNTAX, PLAN_CHORD_BAR, PLAN_CHORD_BEAT } PlanChordResult;
+
+/* Digits of the text from *at, up to 4 of them; false when there is none. */
+static bool plan_digits(const char *text, size_t *at, unsigned *out) {
+    size_t digits = 0;
+    unsigned value = 0;
+    while (text[*at] >= '0' && text[*at] <= '9') {
+        if (digits < 4) {
+            value = value * 10 + (unsigned)(text[*at] - '0');
+        } else {
+            value = 99999;
+        }
+        digits++;
+        (*at)++;
+    }
+    *out = value;
+    return digits > 0;
+}
+
+/* One plan chord: a Roman numeral I to VII in any case, an optional o or degree sign, an optional @bar or @bar:beat. */
+static PlanChordResult parse_plan_chord(const char *text, MotiveRandomPlanChord *out) {
+    char numeral[8];
+    size_t n = 0;
+    size_t at = 0;
+    int degree = 0;
+    unsigned value;
+    while ((text[at] == 'i' || text[at] == 'I' || text[at] == 'v' || text[at] == 'V') && n < 7) {
+        numeral[n++] = (char)(text[at] == 'i' || text[at] == 'I' ? 'I' : 'V');
+        at++;
+    }
+    numeral[n] = '\0';
+    for (int d = 0; d < 7; d++) {
+        if (strcmp(numeral, PLAN_NUMERALS[d]) == 0) {
+            degree = d + 1;
+        }
+    }
+    if (degree == 0) {
+        return PLAN_CHORD_SYNTAX;
+    }
+    if (text[at] == 'o') {
+        at++;
+    } else if ((unsigned char)text[at] == 0xC2 && (unsigned char)text[at + 1] == 0xB0) {
+        at += 2;
+    }
+    out->degree = degree;
+    out->bar = 0;
+    out->beat = 0;
+    if (text[at] == '@') {
+        at++;
+        if (!plan_digits(text, &at, &value)) {
+            return PLAN_CHORD_SYNTAX;
+        }
+        if (value < 1 || value > 2) {
+            return PLAN_CHORD_BAR;
+        }
+        out->bar = value;
+        out->beat = 1;
+        if (text[at] == ':') {
+            at++;
+            if (!plan_digits(text, &at, &value)) {
+                return PLAN_CHORD_SYNTAX;
+            }
+            if (value < 1 || value > PLAN_BEAT_MAX) {
+                return PLAN_CHORD_BEAT;
+            }
+            out->beat = value;
+        }
+    }
+    return text[at] == '\0' ? PLAN_CHORD_OK : PLAN_CHORD_SYNTAX;
+}
+
+static bool refuse_plan_chord(const Refusal *refusal, size_t index, const char *limit) {
+    char key[COMPOSER_PREFERENCES_PATH_MAX];
+    snprintf(key, sizeof(key), "plan/%zu", index);
+    return refuse_in(refusal, "motif", key, limit);
+}
+
+/*
+ * The given chord plan: 1 to PLAN_MAX strings. Either no chord has a place (at most 3 chords, one per segment) or every chord
+ * after the first has one, strictly rising; the first is at 1:1 and may be written with it. The meter-dependent refusal (the
+ * beat against the bar's beats, the bars and shapes allowed) is the run's (MOTIVE_RANDOM_ERR_PLAN).
+ */
+static bool read_plan(const cJSON *item, MotiveRandomPreferences *motif, const Refusal *refusal) {
+    MotiveRandomPlanChord plan[COMPOSER_PREFERENCES_PLAN_MAX];
+    size_t count = 0;
+    size_t placed = 0;
+    const cJSON *entry;
+    if (!cJSON_IsArray(item) || cJSON_GetArraySize(item) < 1 || cJSON_GetArraySize(item) > PLAN_MAX) {
+        return refuse_in(refusal, "motif", "plan", "must be a list of 1 to 4 chords");
+    }
+    cJSON_ArrayForEach(entry, item) {
+        PlanChordResult result = cJSON_IsString(entry) ? parse_plan_chord(entry->valuestring, &plan[count]) : PLAN_CHORD_SYNTAX;
+        if (result == PLAN_CHORD_SYNTAX) {
+            return refuse_plan_chord(refusal, count, "must be a Roman numeral I to VII with an optional @bar or @bar:beat");
+        }
+        if (result == PLAN_CHORD_BAR) {
+            return refuse_plan_chord(refusal, count, "the bar must be 1 or 2");
+        }
+        if (result == PLAN_CHORD_BEAT) {
+            return refuse_plan_chord(refusal, count, "the beat must be a whole number from 1 to 12");
+        }
+        if (count > 0 && plan[count].bar > 0) {
+            placed++;
+        }
+        count++;
+    }
+    if (plan[0].bar != 0 && (plan[0].bar != 1 || plan[0].beat != 1)) {
+        return refuse_plan_chord(refusal, 0, "the first chord starts at 1:1");
+    }
+    if (placed > 0) {
+        for (size_t k = 1; k < count; k++) {
+            if (plan[k].bar == 0) {
+                return refuse_plan_chord(refusal, k, "every chord after the first has a place, or none does");
+            }
+        }
+        for (size_t k = 1; k < count; k++) {
+            unsigned before_bar = k == 1 ? 1 : plan[k - 1].bar;
+            unsigned before_beat = k == 1 ? 1 : plan[k - 1].beat;
+            if (plan[k].bar < before_bar || (plan[k].bar == before_bar && plan[k].beat <= before_beat)) {
+                return refuse_plan_chord(refusal, k, "must start after the chord before");
+            }
+        }
+    } else if (count > 3) {
+        return refuse_in(refusal, "motif", "plan", "at most 3 chords without places (one per segment)");
+    }
+    motif->plan_count = count;
+    memcpy(motif->plan, plan, count * sizeof(plan[0]));
+    return true;
+}
+
 static unsigned long *list_values(MotiveRandomPreferences *motif, const WeightedList *list) {
     return (unsigned long *)(void *)((char *)motif + list->offset);
 }
@@ -432,6 +577,14 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
                 }
             }
         }
+        for (size_t i = 0; i < MOTIF_LIST_L3_COUNT && !known; i++) {
+            if (strcmp(key, MOTIF_LISTS_L3[i].key) == 0) {
+                known = true;
+                if (!read_weighted_list(item, &MOTIF_LISTS_L3[i], motif, refusal)) {
+                    return false;
+                }
+            }
+        }
         if (known) {
             continue;
         }
@@ -479,6 +632,18 @@ static bool read_motif(const cJSON *group, MotiveRandomPreferences *motif, const
             }
         } else if (strcmp(key, "long_nct_one_in") == 0) {
             if (!read_unsigned_in(item, "motif", key, 0, LONG_NCT_ONE_IN_MAX, &motif->long_nct_one_in, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "syncopation_one_in") == 0) {
+            if (!read_unsigned_in(item, "motif", key, 0, SYNCOPATION_ONE_IN_MAX, &motif->syncopation_one_in, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "skips_per_motif") == 0) {
+            if (!read_unsigned_in(item, "motif", key, 0, SKIPS_PER_MOTIF_MAX, &motif->skips_per_motif, refusal)) {
+                return false;
+            }
+        } else if (strcmp(key, "plan") == 0) {
+            if (!read_plan(item, motif, refusal)) {
                 return false;
             }
         } else if (strcmp(key, "contrast_fidelity_min") == 0) {
@@ -541,13 +706,100 @@ static bool read_fidelity_setting(const cJSON *setting, const char *name, GrowDe
     return true;
 }
 
-static bool read_development(const cJSON *group, GrowFidelityTable *table, const Refusal *refusal) {
+/* The weights of the continuation's fragment lengths, in the order the document writes them. */
+static const char *const FRAGMENT_LENGTH_NAMES[GROW_FRAGMENT_LENGTH_COUNT] = {"segment", "half_bar", "beat"};
+
+static bool read_fragment_lengths(const cJSON *item, GrowContinuation *continuation, const Refusal *refusal) {
+    const char *where = "development/continuation/fragment_lengths";
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    const cJSON *entry;
+    unsigned sum = 0;
+    double value;
+    if (!cJSON_IsObject(item)) {
+        return refuse(refusal, where, "must be an object of whole numbers 0 to 20");
+    }
+    cJSON_ArrayForEach(entry, item) {
+        bool known = false;
+        for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT && !known; i++) {
+            if (strcmp(entry->string, FRAGMENT_LENGTH_NAMES[i]) == 0) {
+                known = true;
+                snprintf(path, sizeof(path), "%s/%s", where, entry->string);
+                if (!whole_number(entry, 0, WEIGHT_MAX, &value)) {
+                    return refuse(refusal, path, "must be a whole number from 0 to 20");
+                }
+                continuation->fragment_lengths[i] = (unsigned)entry->valuedouble;
+            }
+        }
+        if (!known) {
+            snprintf(path, sizeof(path), "%s/%s", where, entry->string);
+            return refuse(refusal, path, "unknown name");
+        }
+    }
+    for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
+        sum += continuation->fragment_lengths[i];
+    }
+    if (sum == 0) {
+        return refuse(refusal, where, "the weights must sum to more than 0");
+    }
+    return true;
+}
+
+static bool read_continuation(const cJSON *group, GrowContinuation *continuation, const Refusal *refusal) {
+    const cJSON *item;
+    if (!cJSON_IsObject(group)) {
+        return refuse(refusal, "development/continuation", "must be an object");
+    }
+    cJSON_ArrayForEach(item, group) {
+        bool *flag = NULL;
+        char path[COMPOSER_PREFERENCES_PATH_MAX];
+        if (strcmp(item->string, "fragment_lengths") == 0) {
+            if (!read_fragment_lengths(item, continuation, refusal)) {
+                return false;
+            }
+            continue;
+        }
+        if (strcmp(item->string, "every_segment") == 0) {
+            flag = &continuation->every_segment;
+        } else if (strcmp(item->string, "diminish") == 0) {
+            flag = &continuation->diminish;
+        } else if (strcmp(item->string, "liquidate") == 0) {
+            flag = &continuation->liquidate;
+        } else if (strcmp(item->string, "faster_harmony") == 0) {
+            flag = &continuation->faster_harmony;
+        }
+        snprintf(path, sizeof(path), "development/continuation/%s", item->string);
+        if (flag == NULL) {
+            return refuse(refusal, path, "unknown member");
+        }
+        if (!cJSON_IsBool(item)) {
+            return refuse(refusal, path, "must be true or false");
+        }
+        *flag = cJSON_IsTrue(item);
+    }
+    return true;
+}
+
+static bool read_development(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal) {
+    GrowFidelityTable *table = &preferences->development;
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
         return refuse(refusal, "development", "must be an object");
     }
     cJSON_ArrayForEach(item, group) {
         const cJSON *setting;
+        if (strcmp(item->string, "continuation") == 0) {
+            if (!read_continuation(item, &preferences->continuation, refusal)) {
+                return false;
+            }
+            continue;
+        }
+        if (strcmp(item->string, "basic_as_written") == 0) {
+            if (!cJSON_IsBool(item)) {
+                return refuse_in(refusal, "development", "basic_as_written", "must be true or false");
+            }
+            preferences->basic_as_written = cJSON_IsTrue(item);
+            continue;
+        }
         if (strcmp(item->string, "fidelity_minimum") != 0) {
             return refuse_in(refusal, "development", item->string, "unknown member");
         }
@@ -599,7 +851,7 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
                 return false;
             }
         } else if (strcmp(item->string, "development") == 0) {
-            if (!read_development(item, &out->development, &refusal)) {
+            if (!read_development(item, out, &refusal)) {
                 return false;
             }
         } else {
@@ -668,6 +920,30 @@ static bool add_weighted_list(cJSON *group, const WeightedList *list, const Moti
     return object != NULL;
 }
 
+/* The plan as strings, "II" or "V@1:3": the place only when set (R-195). Nothing is written when no plan is given. */
+static bool write_plan(cJSON *group, const MotiveRandomPreferences *motif) {
+    cJSON *array;
+    if (motif->plan_count == 0) {
+        return true;
+    }
+    array = cJSON_AddArrayToObject(group, "plan");
+    for (size_t k = 0; array && k < motif->plan_count; k++) {
+        char text[24];
+        const MotiveRandomPlanChord *chord = &motif->plan[k];
+        if (chord->bar > 0) {
+            snprintf(text, sizeof(text), "%s@%u:%u", PLAN_NUMERALS[chord->degree - 1], chord->bar, chord->beat);
+        } else {
+            snprintf(text, sizeof(text), "%s", PLAN_NUMERALS[chord->degree - 1]);
+        }
+        cJSON *string = cJSON_CreateString(text);
+        if (!string || !cJSON_AddItemToArray(array, string)) {
+            cJSON_Delete(string);
+            return false;
+        }
+    }
+    return array != NULL;
+}
+
 static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     cJSON *group = cJSON_CreateObject();
     cJSON *leap = NULL;
@@ -705,6 +981,12 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
         }
         ok = ok && add_weighted_list(group, &MOTIF_LISTS_L2[i], motif);
     }
+    /* Phase L3: syncopation_one_in, its two lists, skips_per_motif, and the plan when one is given. */
+    ok = ok && add_number(group, "syncopation_one_in", motif->syncopation_one_in);
+    for (size_t i = 0; ok && i < MOTIF_LIST_L3_COUNT; i++) {
+        ok = add_weighted_list(group, &MOTIF_LISTS_L3[i], motif);
+    }
+    ok = ok && add_number(group, "skips_per_motif", motif->skips_per_motif) && write_plan(group, motif);
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -712,7 +994,25 @@ static cJSON *write_motif(const MotiveRandomPreferences *motif) {
     return group;
 }
 
-static cJSON *write_development(const GrowFidelityTable *table) {
+static bool write_continuation(cJSON *group, const GrowContinuation *continuation) {
+    cJSON *object = cJSON_AddObjectToObject(group, "continuation");
+    cJSON *lengths = object ? cJSON_CreateObject() : NULL;
+    bool ok = lengths != NULL && cJSON_AddBoolToObject(object, "every_segment", continuation->every_segment) != NULL;
+    if (ok) {
+        ok = cJSON_AddItemToObject(object, "fragment_lengths", lengths);
+    } else {
+        cJSON_Delete(lengths);
+    }
+    for (size_t i = 0; ok && i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
+        ok = add_number(lengths, FRAGMENT_LENGTH_NAMES[i], continuation->fragment_lengths[i]);
+    }
+    return ok && cJSON_AddBoolToObject(object, "diminish", continuation->diminish) != NULL &&
+           cJSON_AddBoolToObject(object, "liquidate", continuation->liquidate) != NULL &&
+           cJSON_AddBoolToObject(object, "faster_harmony", continuation->faster_harmony) != NULL;
+}
+
+static cJSON *write_development(const ComposerPreferences *preferences) {
+    const GrowFidelityTable *table = &preferences->development;
     cJSON *group = cJSON_CreateObject();
     cJSON *minimum = group ? cJSON_AddObjectToObject(group, "fidelity_minimum") : NULL;
     bool ok = minimum != NULL;
@@ -726,6 +1026,8 @@ static cJSON *write_development(const GrowFidelityTable *table) {
             ok = cJSON_AddStringToObject(setting, ROLE_KEYS[r].name, text) != NULL;
         }
     }
+    ok = ok && write_continuation(group, &preferences->continuation) &&
+         cJSON_AddBoolToObject(group, "basic_as_written", preferences->basic_as_written) != NULL;
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -747,7 +1049,7 @@ cJSON *composer_preferences_write(const ComposerPreferences *preferences) {
         cJSON_Delete(document);
         return NULL;
     }
-    cJSON *development = write_development(&preferences->development);
+    cJSON *development = write_development(preferences);
     if (!development || !cJSON_AddItemToObject(document, "development", development)) {
         cJSON_Delete(development);
         cJSON_Delete(document);
@@ -794,7 +1096,17 @@ static bool motif_is_default(const MotiveRandomPreferences *motif) {
             }
         }
     }
-    return motif->pickup_one_in == defaults.pickup_one_in && motif->leap_low == defaults.leap_low &&
+    for (size_t i = 0; i < MOTIF_LIST_L3_COUNT; i++) {
+        const unsigned long *a = list_values_const(motif, &MOTIF_LISTS_L3[i]);
+        const unsigned long *b = list_values_const(&defaults, &MOTIF_LISTS_L3[i]);
+        for (size_t k = 0; k < MOTIF_LISTS_L3[i].count; k++) {
+            if (a[k] != b[k]) {
+                return false;
+            }
+        }
+    }
+    return motif->syncopation_one_in == defaults.syncopation_one_in && motif->skips_per_motif == defaults.skips_per_motif &&
+           motif->plan_count == 0 && motif->pickup_one_in == defaults.pickup_one_in && motif->leap_low == defaults.leap_low &&
            motif->leap_high == defaults.leap_high && motif->accented_one_in == defaults.accented_one_in &&
            motif->avoid_repeats == defaults.avoid_repeats && motif->leaps_per_motif == defaults.leaps_per_motif &&
            motif->leap_recovery == defaults.leap_recovery && motif->pickup_from_accent == defaults.pickup_from_accent &&
@@ -804,8 +1116,23 @@ static bool motif_is_default(const MotiveRandomPreferences *motif) {
            motif->compound_beats == defaults.compound_beats && motif->long_nct_one_in == defaults.long_nct_one_in;
 }
 
-static bool development_is_default(const GrowFidelityTable *table) {
+static bool development_is_default(const ComposerPreferences *preferences) {
+    const GrowFidelityTable *table = &preferences->development;
+    ComposerPreferences standard;
     GrowFidelityTable defaults;
+    composer_preferences_default(&standard);
+    if (preferences->basic_as_written != standard.basic_as_written ||
+        preferences->continuation.every_segment != standard.continuation.every_segment ||
+        preferences->continuation.diminish != standard.continuation.diminish ||
+        preferences->continuation.liquidate != standard.continuation.liquidate ||
+        preferences->continuation.faster_harmony != standard.continuation.faster_harmony) {
+        return false;
+    }
+    for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
+        if (preferences->continuation.fragment_lengths[i] != standard.continuation.fragment_lengths[i]) {
+            return false;
+        }
+    }
     grow_fidelity_table_default(&defaults);
     for (size_t d = 0; d < GROW_DEVELOP_COUNT; d++) {
         for (size_t r = 0; r <= GROW_ROLE_CONTRAST; r++) {
@@ -820,5 +1147,5 @@ static bool development_is_default(const GrowFidelityTable *table) {
 
 bool composer_preferences_is_default(const ComposerPreferences *preferences) {
     return melody_is_default(&preferences->melody) && motif_is_default(&preferences->motif) &&
-           development_is_default(&preferences->development);
+           development_is_default(preferences);
 }

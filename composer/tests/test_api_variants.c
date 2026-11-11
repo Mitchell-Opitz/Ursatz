@@ -398,6 +398,16 @@ static void test_refusals(void) {
                    COMPOSER_ERR_REQUEST, "/preferences/bogus");
     expect_refused(composer_api_random_motive, "{\"mode\":\"major\",\"meter\":\"4/4\",\"preferences\":[]}", COMPOSER_ERR_REQUEST,
                    "/preferences");
+    /* A given plan the meter cannot hold is the run's refusal (B6 of L3); the syntax refusals come from the reader. */
+    expect_refused(composer_api_random_motive,
+                   "{\"mode\":\"major\",\"meter\":\"3/4\",\"preferences\":{\"motif\":{\"plan\":[\"I\",\"vi\",\"ii\"]}}}",
+                   COMPOSER_ERR_REQUEST, "/preferences/motif/plan");
+    expect_refused(composer_api_random_motive,
+                   "{\"mode\":\"major\",\"meter\":\"4/4\",\"preferences\":{\"motif\":{\"plan\":[\"I\",\"V@1:6\"]}}}",
+                   COMPOSER_ERR_REQUEST, "/preferences/motif/plan");
+    expect_refused(composer_api_random_motive,
+                   "{\"mode\":\"major\",\"meter\":\"4/4\",\"preferences\":{\"motif\":{\"plan\":[\"I\",\"V@3\"]}}}",
+                   COMPOSER_ERR_REQUEST, "/preferences/motif/plan/1");
 
     const char *const input = "\"input\":{\"text\":\"1:q 3:e 5:e 1':h\",\"format\":\"degrees\"},\"meter\":\"4/4\",\"key\":\"C major\"";
     char request[512];
@@ -481,7 +491,7 @@ static void test_cancel(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.16") == 0);
+    assert(strcmp(composer_api_version(), "1.17") == 0);
     test_operations();
     test_variants();
     test_recognize();

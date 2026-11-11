@@ -20,12 +20,14 @@
  * weight each group of soft rules counts in a melody's score. The motif group is the settings of the segments motive
  * generator (MotiveRandomPreferences): the bars, pickup, shapes, chord plans, features, leap, rung moves, decorations and
  * durations it draws from. The development group is the fidelity minimum table of the theme's development
- * (GrowFidelityTable).
+ * (GrowFidelityTable), the continuation settings (GrowContinuation) and basic_as_written.
  */
 typedef struct {
     MelodyFillParams melody;
     MotiveRandomPreferences motif;
     GrowFidelityTable development;
+    GrowContinuation continuation; /* the development group's continuation settings (phase L3, off by default) */
+    bool basic_as_written;         /* the development group's basic_as_written (phase L3, off by default) */
 } ComposerPreferences;
 
 /*
@@ -35,7 +37,8 @@ typedef struct {
  * is 1 to MELODY_KEEP_MAX and at most attempts); range.low RANGE_LOW_MIN to RANGE_LOW_MAX, range.high at least
  * range.low + RANGE_SPAN_MIN and at most RANGE_HIGH_MAX; density 0 to DENSITY_MAX; climax_rise CLIMAX_RISE_MIN to
  * CLIMAX_RISE_MAX; pickup_one_in 0 to PICKUP_ONE_IN_MAX; accented_one_in 0 to ACCENTED_ONE_IN_MAX; long_nct_one_in 0 to LONG_NCT_ONE_IN_MAX; leaps_per_motif 0 to
- * LEAPS_PER_MOTIF_MAX; leap.low and leap.high LEAP_MIN to LEAP_MAX.
+ * LEAPS_PER_MOTIF_MAX; leap.low and leap.high LEAP_MIN to LEAP_MAX; syncopation_one_in 0 to SYNCOPATION_ONE_IN_MAX;
+ * skips_per_motif 0 to SKIPS_PER_MOTIF_MAX; plan 1 to PLAN_MAX chords, each with a bar 1 or 2 and a beat 1 to PLAN_BEAT_MAX.
  */
 #define COMPOSER_PREFERENCES_WEIGHT_MAX 20
 #define COMPOSER_PREFERENCES_SCALE_MAX 1000
@@ -51,6 +54,10 @@ typedef struct {
 #define COMPOSER_PREFERENCES_PICKUP_ONE_IN_MAX 64
 #define COMPOSER_PREFERENCES_ACCENTED_ONE_IN_MAX 64
 #define COMPOSER_PREFERENCES_LONG_NCT_ONE_IN_MAX 64
+#define COMPOSER_PREFERENCES_SYNCOPATION_ONE_IN_MAX 64
+#define COMPOSER_PREFERENCES_SKIPS_PER_MOTIF_MAX 11
+#define COMPOSER_PREFERENCES_PLAN_MAX MOTIVE_RANDOM_PLAN_MAX
+#define COMPOSER_PREFERENCES_PLAN_BEAT_MAX 12
 #define COMPOSER_PREFERENCES_LEAPS_PER_MOTIF_MAX 11
 #define COMPOSER_PREFERENCES_LEAP_MIN 3
 #define COMPOSER_PREFERENCES_LEAP_MAX 12
