@@ -553,6 +553,17 @@ static ChordAt *read_chords(const PiecePlan *plan, NodeId section, size_t *count
     return chords;
 }
 
+/* Whether the source has a chord of the same numeral at the same place and length. */
+static bool chord_in_source(const ChordAt *chord, const ChordAt *source, size_t source_count) {
+    for (size_t j = 0; j < source_count; j++) {
+        if (same_times(chord->from, source[j].from) && same_times(chord->length, source[j].length) &&
+            strcmp(chord->roman, source[j].roman) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total) {
     PlanReturn ret;
     size_t count;
@@ -565,16 +576,39 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
     bool ok = chords && source;
     size_t different = 0;
     for (size_t i = 0; ok && i < count; i++) {
-        bool same = false;
-        for (size_t j = 0; j < source_count && !same; j++) {
-            same = same_times(chords[i].from, source[j].from) && same_times(chords[i].length, source[j].length) &&
-                   strcmp(chords[i].roman, source[j].roman) == 0;
-        }
-        different += !same;
+        different += !chord_in_source(&chords[i], source, source_count);
     }
     if (ok) {
         *changed = different;
         *total = count;
+    }
+    free(chords);
+    free(source);
+    return ok;
+}
+
+bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed) {
+    PlanReturn ret;
+    size_t count;
+    size_t source_count;
+    if (!plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section)) {
+        return false;
+    }
+    Rational length = plan_node_span(plan, section).length;
+    ChordAt *chords = read_chords(plan, section, &count);
+    ChordAt *source = read_chords(plan, ret.section, &source_count);
+    bool ok = chords && source;
+    bool different = false;
+    for (size_t i = 0; ok && i < count; i++) {
+        Rational share;
+        ok = rational_div(chords[i].from, length, &share) == RATIONAL_OK;
+        /* A chord that starts in the last quarter of the section. */
+        if (ok && rational_cmp(share, (Rational){3, 4}) >= 0) {
+            different = different || !chord_in_source(&chords[i], source, source_count);
+        }
+    }
+    if (ok) {
+        *changed = different;
     }
     free(chords);
     free(source);

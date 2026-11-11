@@ -748,12 +748,13 @@ static bool returns_pending(const PiecePlan *plan, const NodeId *themes, size_t 
     return false;
 }
 
-/* The theme sections to be returned with a reharmonization. */
+/* The theme sections to be returned with a reharmonization (a REHARMONIZE or a VARIED return). */
 static size_t reharmonized(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
     size_t count = 0;
     for (size_t t = 0; t < theme_count; t++) {
         PlanReturnVariation variation;
-        if (form_return_source(plan, themes[t], NULL, &variation) && variation == PLAN_RETURN_REHARMONIZE) {
+        if (form_return_source(plan, themes[t], NULL, &variation) &&
+            (variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_VARIED)) {
             out[count++] = themes[t];
         }
     }
@@ -763,8 +764,8 @@ static size_t reharmonized(const PiecePlan *plan, const NodeId *themes, size_t t
 /*
  * The returns, then the stages that write what they reopened. The chords of a reharmonization are the harmony
  * operators', which know nothing of the melody the return keeps: when a strong-beat note of it is not a tone of the
- * chord now under it, or (in the first half of the attempts) no chord differs from the returned one, the returns are
- * made again from the plan as it was, with other seeds, a few times.
+ * chord now under it, or (in the first half of the attempts) no chord differs from the returned one (for a varied
+ * return: none in its last quarter), the returns are made again from the plan as it was, with other seeds, a few times.
  */
 static PieceResult run_returns(Run *run) {
     PiecePlan *plan = run->plan;
@@ -796,8 +797,13 @@ static PieceResult run_returns(Run *run) {
         for (size_t i = 0; result == PIECE_OK && i < pending_count; i++) {
             size_t changed = 0;
             size_t total = 0;
+            bool cadence = false;
+            PlanReturnVariation variation = PLAN_RETURN_REHARMONIZE;
             fits = fits && form_return_melody_fits(plan, pending[i]);
-            if (attempt < attempts / 2) {
+            form_return_source(plan, pending[i], NULL, &variation);
+            if (attempt < attempts / 2 && variation == PLAN_RETURN_VARIED) {
+                fits = fits && form_return_cadence_changed(plan, pending[i], &cadence) && cadence;
+            } else if (attempt < attempts / 2) {
                 fits = fits && form_return_chords_changed(plan, pending[i], &changed, &total) && changed > 0;
             }
         }
