@@ -207,6 +207,12 @@ static void test_preferences(void) {
     expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), leaps, 1, "/preferences/motif/leaps_per_motif", "0 to 11");
     const char *const long_nct[][2] = {{"preferences", "{\"motif\": {\"long_nct_one_in\": 65}}"}};
     expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), long_nct, 1, "/preferences/motif/long_nct_one_in", "0 to 64");
+    const char *const plan[][2] = {{"preferences", "{\"motif\": {\"plan\": [\"VIII\"]}}"}};
+    expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), plan, 1, "/preferences/motif/plan/0", "Roman numeral");
+    const char *const fragments[][2] = {
+        {"preferences", "{\"development\": {\"continuation\": {\"fragment_lengths\": {\"segment\": 0}}}}"}};
+    expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), fragments, 1,
+                      "/preferences/development/continuation/fragment_lengths", "more than 0");
     const char *const fine[][2] = {{"preferences", "{\"melody\": {\"keep\": 2}, \"motif\": {\"pickup_one_in\": 0}}"}};
     expect_valid(THEME("one-motive.json"), fine, 1);
 }

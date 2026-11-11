@@ -150,6 +150,30 @@ if(NOT l2_one_in EQUAL 1 OR NOT l2_compound STREQUAL "ON" OR NOT l2_closed EQUAL
     message(FATAL_ERROR "the manifest does not record the L2 settings: ${first}")
 endif()
 
+# Every L3 motif setting on (R-453): the command runs and the manifest records it; a plan that does not fit the meter is
+# recorded as refused.
+file(WRITE "${WORK}/l3.json"
+     "{\"motif\": {\"syncopation_one_in\": 1, \"skips_per_motif\": 2, \"plan\": [\"ii\", \"V\"]}}")
+expect_status(0 listen --what motifs --count 3 --seed 5 --settings l3.json --out-dir motifs-l3)
+expect_samples(motifs-l3 3)
+file(STRINGS "${WORK}/motifs-l3/listen.jsonl" lines)
+list(GET lines 0 first)
+string(JSON l3_sync GET "${first}" preferences motif syncopation_one_in)
+string(JSON l3_skips GET "${first}" preferences motif skips_per_motif)
+string(JSON l3_plan GET "${first}" preferences motif plan 0)
+if(NOT l3_sync EQUAL 1 OR NOT l3_skips EQUAL 2 OR NOT l3_plan STREQUAL "ii")
+    message(FATAL_ERROR "the manifest does not record the L3 settings: ${first}")
+endif()
+file(WRITE "${WORK}/l3-refused.json" "{\"motif\": {\"plan\": [\"I\", \"vi\", \"ii\"]}}")
+expect_status(2 listen --what motifs --count 3 --seed 5 --meter 3/4 --settings l3-refused.json --out-dir motifs-l3-refused)
+file(STRINGS "${WORK}/motifs-l3-refused/listen.jsonl" lines)
+list(GET lines 0 first)
+string(JSON l3_status GET "${first}" status)
+string(FIND "${l3_status}" "refused: /preferences/motif/plan" l3_found)
+if(NOT l3_found EQUAL 0)
+    message(FATAL_ERROR "a plan that does not fit 3/4 is not recorded as refused: ${first}")
+endif()
+
 # --- themes ------------------------------------------------------------------------------
 
 # A generated motif for each sample.
@@ -179,6 +203,14 @@ foreach(line IN LISTS lines)
         message(FATAL_ERROR "a theme from the eighth-triplet motif is not ok: ${line}")
     endif()
 endforeach()
+
+# Every development setting on (R-453): the continuation and the basic idea as written reach the grow run (B4's fixture).
+file(WRITE "${WORK}/l3-development.json"
+     "{\"development\": {\"continuation\": {\"every_segment\": true, \"fragment_lengths\": {\"segment\": 1, \"half_bar\": 1, "
+     "\"beat\": 1}, \"diminish\": true, \"liquidate\": true, \"faster_harmony\": true}, \"basic_as_written\": true}}")
+expect_status(0 listen --what themes --count 2 --seed 1 --motif "${FIXTURES}/continuation/s77.json"
+              --settings l3-development.json --out-dir themes-l3)
+expect_samples(themes-l3 2)
 
 # A theme request: the same MIDI as the theme command writes for the seed.
 expect_status(0 listen --what themes --count 1 --seed 2 --theme-request "${FIXTURES}/theme/one-motive.json" --out-dir themes-request)

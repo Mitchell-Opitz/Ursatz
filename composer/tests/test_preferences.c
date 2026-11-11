@@ -32,13 +32,17 @@ static const char *DEFAULT_MOTIF =
     "\"long_nct_types\":{\"appoggiatura\":1,\"suspension\":1,\"retardation\":1,\"passing\":1,\"neighbor\":1},"
     "\"long_nct_intervals\":{\"second\":1,\"fourth\":1,\"sixth\":1,\"seventh\":1},"
     "\"long_nct_beats\":{\"downbeat\":1,\"middle\":1,\"other\":1},"
-    "\"long_nct_lengths\":{\"beat\":1,\"dotted_beat\":1,\"two_beats\":1}}";
+    "\"long_nct_lengths\":{\"beat\":1,\"dotted_beat\":1,\"two_beats\":1},\"syncopation_one_in\":0,"
+    "\"syncopation_types\":{\"off_beat\":1,\"tie_beat\":1,\"tie_bar\":1,\"anticipation\":1},"
+    "\"syncopation_levels\":{\"eighth\":1,\"sixteenth\":1},\"skips_per_motif\":11}";
 
 static const char *DEFAULT_DEVELOPMENT =
     "{\"fidelity_minimum\":{"
     "\"melody\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"7/20\"},"
     "\"balanced\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"3/10\"},"
-    "\"theme\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"1/5\"}}}";
+    "\"theme\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"1/5\"}},"
+    "\"continuation\":{\"every_segment\":false,\"fragment_lengths\":{\"segment\":1,\"half_bar\":0,\"beat\":0},"
+    "\"diminish\":false,\"liquidate\":false,\"faster_harmony\":false},\"basic_as_written\":false}";
 
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
@@ -218,6 +222,49 @@ static void members_read_over_defaults(void) {
            memcmp(again.motif.long_nct_beats, preferences.motif.long_nct_beats, sizeof(again.motif.long_nct_beats)) == 0 &&
            memcmp(again.motif.long_nct_lengths, preferences.motif.long_nct_lengths, sizeof(again.motif.long_nct_lengths)) == 0);
     cJSON_Delete(document);
+    /* Every L3 setting set reads back equal through write and read (R-422, R-453). */
+    assert(read_text("{\"motif\":{\"syncopation_one_in\":3,\"syncopation_types\":{\"off_beat\":0,\"tie_beat\":2,\"tie_bar\":0,"
+                     "\"anticipation\":5},\"syncopation_levels\":{\"eighth\":4,\"sixteenth\":0},\"skips_per_motif\":2,"
+                     "\"plan\":[\"ii\",\"V@1:3\"]},\"development\":{\"continuation\":{\"every_segment\":true,"
+                     "\"fragment_lengths\":{\"segment\":0,\"half_bar\":3,\"beat\":2},\"diminish\":true,\"liquidate\":true,"
+                     "\"faster_harmony\":true},\"basic_as_written\":true}}",
+                     &preferences, path, message));
+    assert(!composer_preferences_is_default(&preferences));
+    assert(preferences.motif.syncopation_one_in == 3 && preferences.motif.syncopation_types[0] == 0 &&
+           preferences.motif.syncopation_types[1] == 2 && preferences.motif.syncopation_types[3] == 5 &&
+           preferences.motif.syncopation_levels[0] == 4 && preferences.motif.syncopation_levels[1] == 0 &&
+           preferences.motif.skips_per_motif == 2 && preferences.motif.plan_count == 2 &&
+           preferences.motif.plan[0].degree == 2 && preferences.motif.plan[0].bar == 0 &&
+           preferences.motif.plan[1].degree == 5 && preferences.motif.plan[1].bar == 1 && preferences.motif.plan[1].beat == 3);
+    assert(preferences.continuation.every_segment && preferences.continuation.fragment_lengths[0] == 0 &&
+           preferences.continuation.fragment_lengths[1] == 3 && preferences.continuation.fragment_lengths[2] == 2 &&
+           preferences.continuation.diminish && preferences.continuation.liquidate &&
+           preferences.continuation.faster_harmony && preferences.basic_as_written);
+    document = composer_preferences_write(&preferences);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(again.motif.plan_count == 2 && again.motif.plan[1].degree == 5 && again.motif.plan[1].beat == 3 &&
+           again.motif.skips_per_motif == 2 && again.motif.syncopation_types[3] == 5 && again.basic_as_written &&
+           again.continuation.fragment_lengths[2] == 2 && again.continuation.faster_harmony);
+    written = cJSON_PrintUnformatted(document);
+    rewritten = composer_preferences_write(&again);
+    rewritten_text = cJSON_PrintUnformatted(rewritten);
+    assert(written && rewritten_text && strcmp(written, rewritten_text) == 0);
+    assert(strstr(written, "\"plan\":[\"II\",\"V@1:3\"]"));
+    cJSON_free(written);
+    cJSON_free(rewritten_text);
+    cJSON_Delete(rewritten);
+    cJSON_Delete(document);
+    /* The default document has no plan; the places and marks read as the grammar says. */
+    assert(read_text("{\"motif\":{\"plan\":[\"i\",\"V\"]}}", &preferences, path, message) && preferences.motif.plan_count == 2 &&
+           preferences.motif.plan[0].degree == 1 && preferences.motif.plan[1].bar == 0);
+    assert(read_text("{\"motif\":{\"plan\":[\"I@1\",\"vii\u00b0@2\",\"IVo@2:3\"]}}", &preferences, path, message) &&
+           preferences.motif.plan[0].bar == 1 && preferences.motif.plan[0].beat == 1 && preferences.motif.plan[1].degree == 7 &&
+           preferences.motif.plan[1].bar == 2 && preferences.motif.plan[1].beat == 1 && preferences.motif.plan[2].degree == 4 &&
+           preferences.motif.plan[2].beat == 3);
+    assert(read_text("{\"motif\":{\"plan\":[\"I\",\"V\",\"vi\",\"IV\"]}}", &preferences, path, message) == false);
+    assert(read_text("{\"motif\":{\"plan\":[\"I\",\"V@1:3\",\"vi@2\",\"IV@2:4\"]}}", &preferences, path, message) &&
+           preferences.motif.plan_count == 4);
+
     /* The first three durations still read as they did, the others keep their defaults. */
     assert(read_text("{\"motif\":{\"durations\":{\"half_beat\":1,\"beat\":2,\"two_beats\":3}}}", &preferences, path, message));
     assert(preferences.motif.durations[0] == 1 && preferences.motif.durations[1] == 2 && preferences.motif.durations[2] == 3 &&
@@ -317,6 +364,43 @@ static void limits_are_refused(void) {
             "/development/fidelity_minimum/theme/contrast");
     refused("{\"development\":{\"fidelity_minimum\":{\"contrast\":{}}}}", "/development/fidelity_minimum/contrast");
     refused("{\"development\":{\"fidelity_minimum\":{\"theme\":5}}}", "/development/fidelity_minimum/theme");
+    refused("{\"motif\":{\"syncopation_one_in\":65}}", "/motif/syncopation_one_in");
+    refused("{\"motif\":{\"skips_per_motif\":12}}", "/motif/skips_per_motif");
+    refused("{\"motif\":{\"syncopation_types\":{\"off_beat\":0,\"tie_beat\":0,\"tie_bar\":0,\"anticipation\":0}}}",
+            "/motif/syncopation_types");
+    refused("{\"motif\":{\"syncopation_types\":{\"slide\":1}}}", "/motif/syncopation_types/slide");
+    refused("{\"motif\":{\"syncopation_levels\":{\"eighth\":21}}}", "/motif/syncopation_levels/eighth");
+    refused("{\"motif\":{\"plan\":[]}}", "/motif/plan");
+    refused("{\"motif\":{\"plan\":\"I\"}}", "/motif/plan");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V\",\"I\",\"V\",\"I\"]}}", "/motif/plan");
+    refused("{\"motif\":{\"plan\":[\"VIII\"]}}", "/motif/plan/0");
+    refused("{\"motif\":{\"plan\":[\"I\",5]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V:3\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@2:\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@3\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@1:0\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@1:13\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I@1:2\",\"V@2\"]}}", "/motif/plan/0");
+    refused("{\"motif\":{\"plan\":[\"I@2\",\"V@2:2\"]}}", "/motif/plan/0");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@1:3\",\"I\"]}}", "/motif/plan/2");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V\",\"I@2\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@1:1\"]}}", "/motif/plan/1");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@1:3\",\"I@1:3\"]}}", "/motif/plan/2");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V@2:1\",\"I@1:3\"]}}", "/motif/plan/2");
+    refused("{\"motif\":{\"plan\":[\"I\",\"V\",\"vi\",\"IV\"]}}", "/motif/plan");
+    refused("{\"development\":{\"continuation\":5}}", "/development/continuation");
+    refused("{\"development\":{\"continuation\":{\"bogus\":true}}}", "/development/continuation/bogus");
+    refused("{\"development\":{\"continuation\":{\"diminish\":1}}}", "/development/continuation/diminish");
+    refused("{\"development\":{\"continuation\":{\"every_segment\":null}}}", "/development/continuation/every_segment");
+    refused("{\"development\":{\"continuation\":{\"fragment_lengths\":{\"segment\":0}}}}",
+            "/development/continuation/fragment_lengths");
+    refused("{\"development\":{\"continuation\":{\"fragment_lengths\":{\"beat\":21}}}}",
+            "/development/continuation/fragment_lengths/beat");
+    refused("{\"development\":{\"continuation\":{\"fragment_lengths\":{\"bar\":1}}}}",
+            "/development/continuation/fragment_lengths/bar");
+    refused("{\"development\":{\"continuation\":{\"fragment_lengths\":3}}}", "/development/continuation/fragment_lengths");
+    refused("{\"development\":{\"basic_as_written\":\"yes\"}}", "/development/basic_as_written");
     refused("{\"bogus\":{}}", "/bogus");
 
     ComposerPreferences preferences;

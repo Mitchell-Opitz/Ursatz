@@ -178,6 +178,10 @@ static void test_lists(void) {
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "accented_one_in_max")->valuedouble == 64);
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "long_nct_one_in_max")->valuedouble == 64);
     assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "leaps_per_motif_max")->valuedouble == 11);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "syncopation_one_in_max")->valuedouble == 64);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "skips_per_motif_max")->valuedouble == 11);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "plan_chords_max")->valuedouble == 4);
+    assert(cJSON_GetObjectItemCaseSensitive(preference_limits, "plan_beat_max")->valuedouble == 12);
 
     /* The orders and the notes of the GUI tables it replaces. */
     const cJSON *meters = list("meters");
@@ -718,7 +722,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.16") == 0);
+    assert(strcmp(composer_api_version(), "1.17") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();
