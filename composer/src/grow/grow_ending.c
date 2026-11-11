@@ -55,6 +55,8 @@ static void clear_segment_fragments(GrowThemeSpec *spec) {
     spec->fragment_sequence = false;
     spec->fragment_cut[0] = 0;
     spec->fragment_cut[1] = 0;
+    spec->fragment_diminished[0] = false;
+    spec->fragment_diminished[1] = false;
 }
 
 /*
@@ -118,7 +120,7 @@ static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, Gr
 
 /* Whether any continuation setting is on: the continuation is then drawn by draw_accelerating_continuation. */
 static bool continuation_on(const GrowContinuation *settings) {
-    return settings->every_segment || settings->fragment_lengths[GROW_FRAGMENT_HALF_BAR] > 0 ||
+    return settings->every_segment || settings->diminish || settings->fragment_lengths[GROW_FRAGMENT_HALF_BAR] > 0 ||
            settings->fragment_lengths[GROW_FRAGMENT_BEAT] > 0;
 }
 
@@ -142,7 +144,8 @@ static Rational fragment_beat(const PlanMeter *meter) {
  * How long fragment k is (R-462): its whole segment, half a bar of it, or a beat of it, by the weights of
  * `settings->fragment_lengths` (all 0 reads as the whole segment alone; no draw when only that has weight, else one
  * fill_rng_below of their sum). A beat with under 2 notes falls back to half a bar, then to the whole segment; a cut the
- * library refuses, or that does not fit the idea's room, is the whole segment. fragment_motive[k] is the segment.
+ * library refuses, or that does not fit the idea's room, is the whole segment. A whole segment is its diminution 1:2 with
+ * `settings->diminish`; the library refuses that of a one-bar segment in 3/4, which stays whole. fragment_motive[k] is the segment.
  */
 static void draw_fragment_length(FillRng *rng, const GrowContinuation *settings, GrowThemeSpec *spec, Rational unit, size_t k) {
     GrowPlace idea = k == 0 ? GROW_PLACE_FRAGMENT_1 : GROW_PLACE_FRAGMENT_2;
@@ -176,8 +179,10 @@ static void draw_fragment_length(FillRng *rng, const GrowContinuation *settings,
         cut = cut_notes(&spec->fragment_motive[k], position_div(grow_bar_length(&spec->meter), 2));
     }
     spec->fragment_cut[k] = cut;
-    if (cut > 0 && !fragment_fits(spec, idea, grow_scaled(unit, IDEA_UNITS[idea]))) {
+    spec->fragment_diminished[k] = cut == 0 && settings->diminish;
+    if ((cut > 0 || spec->fragment_diminished[k]) && !fragment_fits(spec, idea, grow_scaled(unit, IDEA_UNITS[idea]))) {
         spec->fragment_cut[k] = 0;
+        spec->fragment_diminished[k] = false;
     }
 }
 
@@ -229,7 +234,7 @@ static bool draw_accelerating_fragments(FillRng *rng, const GrowThemeRequest *re
     spec->fragment_from_segment[1] = true;
     spec->fragment_sequence = false;
     draw_fragment_length(rng, settings, spec, unit, 0);
-    if (settings->every_segment || spec->fragment_cut[0] > 0) {
+    if (settings->every_segment || spec->fragment_cut[0] > 0 || spec->fragment_diminished[0]) {
         /* Fragment 2 is the first segment after fragment 1's that fits, at its own length, exact. */
         for (size_t i = 1; i <= spec->segment_count; i++) {
             size_t next = (chosen + i) % spec->segment_count;

@@ -81,6 +81,7 @@ typedef struct {
     bool fragment_sequence;
     Motive fragment_motive[2];
     size_t fragment_cut[2];                /* the leading notes of the segment fragment k is cut to, 0 for the whole segment */
+    bool fragment_diminished[2];           /* fragment k is its segment in diminution 1:2 */
     bool segment_room;                     /* the material has bars to put the motives grow-theme makes in */
     /*
      * The ideas that end the theme as liquidations by segments (ch. VIII): m0 as the motive-forms read it (liquid_base,

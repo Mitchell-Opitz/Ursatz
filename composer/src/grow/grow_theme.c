@@ -319,6 +319,11 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
             dev->value[2] = 1;
             return true;
         }
+        if (grow_idea_segment(spec, idea, NULL) && spec->fragment_diminished[second]) {
+            /* A whole segment in diminution, the registry's 1:2 (R-463). */
+            dev->kind = MOTIVE_RELATION_DIMINISH;
+            return true;
+        }
         if (grow_idea_segment(spec, idea, NULL)) {
             /* A segment is the fragment as it is, or in sequence one step down in the key's scale. */
             dev->kind = second && spec->fragment_sequence ? MOTIVE_RELATION_TRANSPOSE : MOTIVE_RELATION_EXACT;
@@ -847,7 +852,8 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
            a->fragment_from_segment[1] == b->fragment_from_segment[1] &&
            a->fragment_segment[0] == b->fragment_segment[0] && a->fragment_segment[1] == b->fragment_segment[1] &&
            a->fragment_sequence == b->fragment_sequence && a->fragment_cut[0] == b->fragment_cut[0] &&
-           a->fragment_cut[1] == b->fragment_cut[1] &&
+           a->fragment_cut[1] == b->fragment_cut[1] && a->fragment_diminished[0] == b->fragment_diminished[0] &&
+           a->fragment_diminished[1] == b->fragment_diminished[1] &&
            a->liquidation_steps[GROW_PLACE_FRAGMENT_1] == b->liquidation_steps[GROW_PLACE_FRAGMENT_1] &&
            a->liquidation_steps[GROW_PLACE_FRAGMENT_2] == b->liquidation_steps[GROW_PLACE_FRAGMENT_2] &&
            a->liquidation_steps[GROW_PLACE_CADENTIAL] == b->liquidation_steps[GROW_PLACE_CADENTIAL] &&
@@ -890,9 +896,13 @@ static void continuation_label(const GrowThemeSpec *spec, char *out, size_t size
         char second[16] = "";
         if (spec->fragment_cut[0] > 0) {
             snprintf(first, sizeof(first), " cut %zu", spec->fragment_cut[0]);
+        } else if (spec->fragment_diminished[0]) {
+            snprintf(first, sizeof(first), " diminished");
         }
         if (spec->fragment_cut[1] > 0) {
             snprintf(second, sizeof(second), " cut %zu", spec->fragment_cut[1]);
+        } else if (spec->fragment_diminished[1]) {
+            snprintf(second, sizeof(second), " diminished");
         }
         snprintf(fragments, sizeof(fragments), "segment %s%s then %s%s%s", spec->segments[spec->fragment_segment[0]].label,
                  first, spec->segments[spec->fragment_segment[1]].label, second, spec->fragment_sequence ? " down" : "");
