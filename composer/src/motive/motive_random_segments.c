@@ -14,7 +14,8 @@
  * segment motive; tune them here.
  */
 
-#define SEGMENT_MIN_CELL_TICKS 4      /* a cell must hold a feature: the shortest cell is two beats */
+#define SEGMENT_MIN_CELL_BEATS 2 /* a cell must hold a feature: the shortest cell is two beats */
+#define TICKS_PER_UNIT 12        /* ticks in the meter's beat unit: halves, thirds and quarters of it are whole */
 #define SEGMENT_MAX 3
 #define SEGMENT_TRIES_PER_SETUP 8 /* notes drawn within one bars, shape and plan before another is drawn (a candidate) */
 #define SEGMENT_CELL_TRIES 32 /* a cell that does not fit is drawn again, so a failed cell does not change the shape's odds */
@@ -37,8 +38,23 @@ static const Plan PLANS_THREE[] = {{3, {1, 5, 1}}, {3, {1, 4, 1}}};
 
 /* The distinctive feature of segment a. */
 typedef enum { FEATURE_DOTTED = 0, FEATURE_LEAP, FEATURE_REPEAT, FEATURE_KINDS } Feature;
-#define DOTTED_LONG 3  /* a dotted beat, in half-beats ... */
-#define DOTTED_SHORT 1 /* ... and what completes the beat after it */
+
+/*
+ * The tick grid of a meter: the bar's beats, the ticks in a beat and in half of it, and whether the beat is a dotted unit.
+ * Simple meters beat once per beat unit (12 ticks); a compound meter with compound_beats beats once per three.
+ */
+typedef struct {
+    long beats;
+    long beat;
+    long half;
+    bool compound;
+} Grid;
+
+static Grid grid_of(const MotiveRandomPreferences *preferences, const PlanMeter *meter) {
+    (void)preferences;
+    Grid grid = {(long)meter->beats_per_bar, TICKS_PER_UNIT, TICKS_PER_UNIT / 2, false};
+    return grid;
+}
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -115,12 +131,12 @@ typedef struct {
 } Cell;
 
 /*
- * The half-beats from one strong beat to the next: the bar's beats in threes in a compound meter, in twos in an even one,
- * else the whole bar. A beat that is not a multiple of it is weak (cells start at half bars or bars, so a position from the
+ * The ticks from one strong beat to the next: the bar's beats in threes in a compound meter, in twos in an even one, else
+ * the whole bar. A beat that is not a multiple of it is weak (cells start at half bars or bars, so a position from the
  * cell start decides).
  */
-static long weak_beat_unit(long beats) {
-    return beats % 3 == 0 ? 6 : beats % 2 == 0 ? 4 : 2 * beats;
+static long weak_beat_unit(const Grid *grid) {
+    return (grid->beats % 3 == 0 ? 3 : grid->beats % 2 == 0 ? 2 : grid->beats) * grid->beat;
 }
 
 /* True when the last note of the cell is longer than each of the others. */
@@ -133,15 +149,16 @@ static bool last_is_longest(const Cell *cell) {
     return true;
 }
 
-/* Tiles from to to (half-beats from the start of the cell) with the notes of the DURATIONS table. */
-static bool tile(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long from, long to, Cell *cell) {
-    long unit = weak_beat_unit(beats);
+/* Tiles from to to (ticks from the start of the cell) with the notes of the durations list: half a beat, a beat, two beats. */
+static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long from, long to, Cell *cell) {
+    long unit = weak_beat_unit(grid);
+    const long lengths[DURATION_KINDS] = {grid->half, grid->beat, 2 * grid->beat};
     for (long position = from; position < to;) {
         long room = to - position;
-        bool on_beat = position % 2 == 0;
+        bool on_beat = position % grid->beat == 0;
         unsigned long weights[DURATION_KINDS];
         for (size_t i = 0; i < DURATION_KINDS; i++) {
-            bool fits = MOTIVE_RANDOM_DURATIONS[i] <= room && (MOTIVE_RANDOM_DURATIONS[i] == 1 || on_beat);
+            bool fits = lengths[i] <= room && (lengths[i] == grid->half || on_beat);
             weights[i] = fits ? preferences->durations[i] : 0;
         }
         if (on_beat && position % unit != 0) {
@@ -151,60 +168,61 @@ static bool tile(const MotiveRandomPreferences *preferences, long beats, FillRng
         if (cell->count == MAX_NOTES) {
             return false;
         }
-        cell->ticks[cell->count++] = MOTIVE_RANDOM_DURATIONS[chosen];
-        position += MOTIVE_RANDOM_DURATIONS[chosen];
+        cell->ticks[cell->count++] = lengths[chosen];
+        position += lengths[chosen];
     }
     return true;
 }
 
-/* Segment a's cell of length half-beats for a feature: a dotted figure on a beat, or a cell with two notes on beats. */
-static bool try_cell_a(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
+/* Segment a's cell of length ticks for a feature: a dotted figure on a beat, or a cell with two notes on beats. */
+static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
     if (feature == FEATURE_DOTTED) {
-        long slots = (length - (DOTTED_LONG + DOTTED_SHORT)) / 2 + 1;
+        long figure = 4 * grid->half; /* a dotted beat and the half beat that completes the next one: two beats */
+        long slots = (length - figure) / grid->beat + 1;
         if (slots < 1) {
             return false;
         }
-        long start = 2 * (long)fill_rng_below(rng, (uint64_t)slots);
-        if (!tile(preferences, beats, rng, 0, start, cell) || cell->count + 2 > MAX_NOTES) {
+        long start = grid->beat * (long)fill_rng_below(rng, (uint64_t)slots);
+        if (!tile(preferences, grid, rng, 0, start, cell) || cell->count + 2 > MAX_NOTES) {
             return false;
         }
-        cell->ticks[cell->count++] = DOTTED_LONG;
-        cell->ticks[cell->count++] = DOTTED_SHORT;
-        if (!tile(preferences, beats, rng, start + DOTTED_LONG + DOTTED_SHORT, length, cell)) {
+        cell->ticks[cell->count++] = 3 * grid->half;
+        cell->ticks[cell->count++] = grid->half;
+        if (!tile(preferences, grid, rng, start + figure, length, cell)) {
             return false;
         }
     } else {
-        if (!tile(preferences, beats, rng, 0, length, cell)) {
+        if (!tile(preferences, grid, rng, 0, length, cell)) {
             return false;
         }
         size_t on_beats = 0;
         long position = 0;
         for (size_t i = 0; i < cell->count; i++) {
-            on_beats += position % 2 == 0;
+            on_beats += position % grid->beat == 0;
             position += cell->ticks[i];
         }
         if (on_beats < 2) {
             return false;
         }
     }
-    if (long_end && cell->ticks[cell->count - 1] < 2) {
+    if (long_end && cell->ticks[cell->count - 1] < grid->beat) {
         return false;
     }
     return !(long_end && preferences->final_long) || last_is_longest(cell);
 }
 
 /* A new cell for the last segment: tiled, then its last notes joined until the last note is at least a beat long. */
-static bool try_cell_b(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
+static bool try_cell_b(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
-    if (!tile(preferences, beats, rng, 0, length, cell)) {
+    if (!tile(preferences, grid, rng, 0, length, cell)) {
         return false;
     }
-    while (cell->count >= 2 && cell->ticks[cell->count - 1] < 2) {
+    while (cell->count >= 2 && cell->ticks[cell->count - 1] < grid->beat) {
         cell->ticks[cell->count - 2] += cell->ticks[cell->count - 1];
         cell->count--;
     }
-    if (cell->ticks[cell->count - 1] < 2) {
+    if (cell->ticks[cell->count - 1] < grid->beat) {
         return false;
     }
     if (preferences->final_long && (!last_is_longest(cell) || cell->count > not_like->count)) {
@@ -213,18 +231,18 @@ static bool try_cell_b(const MotiveRandomPreferences *preferences, long beats, F
     return cell->count != not_like->count || memcmp(cell->ticks, not_like->ticks, cell->count * sizeof(long)) != 0;
 }
 
-static bool draw_cell_a(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
+static bool draw_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_a(preferences, beats, rng, length, feature, long_end, cell)) {
+        if (try_cell_a(preferences, grid, rng, length, feature, long_end, cell)) {
             return true;
         }
     }
     return false;
 }
 
-static bool draw_cell_b(const MotiveRandomPreferences *preferences, long beats, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
+static bool draw_cell_b(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_b(preferences, beats, rng, length, not_like, cell)) {
+        if (try_cell_b(preferences, grid, rng, length, not_like, cell)) {
             return true;
         }
     }
@@ -241,14 +259,15 @@ typedef struct {
     bool repeats[SEGMENT_MAX]; /* the segment repeats segment a's rhythm */
     Plan plan;
     size_t cell_start; /* the first note of segment a's cell: after the pickup note, if any */
+    Grid grid;
 } Layout;
 
-static bool add_cell(Layout *layout, const Cell *cell, long *position) {
+static bool add_cell(Layout *layout, const Grid *grid, const Cell *cell, long *position) {
     for (size_t i = 0; i < cell->count; i++) {
         if (layout->rhythm.count == MAX_NOTES) {
             return false;
         }
-        layout->rhythm.on_beat[layout->rhythm.count] = *position % 2 == 0;
+        layout->rhythm.on_beat[layout->rhythm.count] = *position % grid->beat == 0;
         layout->rhythm.ticks[layout->rhythm.count++] = cell->ticks[i];
         *position += cell->ticks[i];
     }
@@ -257,7 +276,7 @@ static bool add_cell(Layout *layout, const Cell *cell, long *position) {
 
 /* What a motive is before its notes: its bars, pickup, shape and harmony plan. Drawn once; the notes are drawn within it. */
 typedef struct {
-    long beats;
+    Grid grid;
     long bars;
     long pickup;
     Shape shape;
@@ -266,15 +285,15 @@ typedef struct {
 
 static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMeter *meter, FillRng *rng, Setup *setup) {
     memset(setup, 0, sizeof(*setup));
-    long beats = meter->beats_per_bar;
-    bool halves = beats % 2 == 0 && beats >= SEGMENT_MIN_CELL_TICKS;
-    setup->beats = beats;
+    setup->grid = grid_of(preferences, meter);
+    long beats = setup->grid.beats;
+    bool halves = beats % 2 == 0 && beats >= 2 * SEGMENT_MIN_CELL_BEATS;
     setup->bars = 2;
     if (halves) {
         setup->bars = 1 + (long)pick_weighted(rng, preferences->bars, 2);
     }
     setup->pickup = preferences->pickup_one_in > 0 && fill_rng_below(rng, preferences->pickup_one_in) == 0
-                        ? 1 + (long)fill_rng_below(rng, 2)
+                        ? (1 + (long)fill_rng_below(rng, 2)) * setup->grid.half
                         : 0;
     setup->shape = (Shape)(setup->bars == 1 ? pick_weighted(rng, preferences->shapes_one_bar, 2)
                                             : pick_weighted(rng, preferences->shapes_two_bars, halves ? SHAPE_KINDS : SHAPE_KINDS - 1));
@@ -289,14 +308,16 @@ static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMet
 static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup *setup, FillRng *rng, Layout *layout, Feature *feature_out) {
     memset(layout, 0, sizeof(*layout));
     Shape shape = setup->shape;
-    long beats = setup->beats;
-    long bar = 2 * beats;
+    const Grid *grid = &setup->grid;
+    long bar = grid->beats * grid->beat;
+    layout->grid = *grid;
+    layout->rhythm.ticks_per_unit = TICKS_PER_UNIT;
     layout->rhythm.pickup = setup->pickup;
-    long a_length = shape == SHAPE_REPEAT_CONTRAST ? beats : (setup->bars == 1 ? beats : bar);
+    long a_length = shape == SHAPE_REPEAT_CONTRAST ? bar / 2 : (setup->bars == 1 ? bar / 2 : bar);
     long last_length = shape == SHAPE_REPEAT_CONTRAST ? bar : a_length;
     layout->segment_count = shape == SHAPE_REPEAT_CONTRAST ? 3 : 2;
     layout->plan = setup->plan;
-    if (a_length < SEGMENT_MIN_CELL_TICKS) {
+    if (a_length < SEGMENT_MIN_CELL_BEATS * grid->beat) {
         return false;
     }
     /* The feature is drawn by its weight; one that cannot fit the cell in this shape (a dotted figure in a cell that
@@ -304,7 +325,7 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     Feature feature = (Feature)pick_weighted(rng, preferences->features, FEATURE_KINDS);
     Cell a;
     size_t tried = 0;
-    while (tried < FEATURE_KINDS && !draw_cell_a(preferences, beats, rng, a_length, feature, shape == SHAPE_REPEAT, &a)) {
+    while (tried < FEATURE_KINDS && !draw_cell_a(preferences, grid, rng, a_length, feature, shape == SHAPE_REPEAT, &a)) {
         Feature next = feature;
         for (size_t step = 1; step <= FEATURE_KINDS; step++) {
             Feature candidate = (Feature)((feature + step) % FEATURE_KINDS);
@@ -322,20 +343,20 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     *feature_out = feature;
     long position = 0;
     if (layout->rhythm.pickup > 0) {
-        layout->rhythm.on_beat[0] = layout->rhythm.pickup % 2 == 0;
+        layout->rhythm.on_beat[0] = layout->rhythm.pickup % grid->beat == 0;
         layout->rhythm.ticks[0] = layout->rhythm.pickup;
         layout->rhythm.count = 1;
     }
     layout->cell_start = layout->rhythm.count;
     layout->first[0] = 0;
-    if (!add_cell(layout, &a, &position)) {
+    if (!add_cell(layout, grid, &a, &position)) {
         return false;
     }
     layout->last[0] = layout->rhythm.count - 1;
     if (shape == SHAPE_REPEAT || shape == SHAPE_REPEAT_CONTRAST) {
         layout->first[1] = layout->rhythm.count;
         layout->repeats[1] = true;
-        if (!add_cell(layout, &a, &position)) {
+        if (!add_cell(layout, grid, &a, &position)) {
             return false;
         }
         layout->last[1] = layout->rhythm.count - 1;
@@ -343,11 +364,11 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     if (shape != SHAPE_REPEAT) {
         Cell b;
         size_t index = shape == SHAPE_CONTRAST ? 1 : 2;
-        if (!draw_cell_b(preferences, beats, rng, last_length, &a, &b)) {
+        if (!draw_cell_b(preferences, grid, rng, last_length, &a, &b)) {
             return false;
         }
         layout->first[index] = layout->rhythm.count;
-        if (!add_cell(layout, &b, &position)) {
+        if (!add_cell(layout, grid, &b, &position)) {
             return false;
         }
         layout->last[index] = layout->rhythm.count - 1;
@@ -726,7 +747,7 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
         return false;
     }
     /* A motive with no pickup does not open as one that has: a short note, then a longer one on the root, higher. */
-    if (preferences->pickup_from_accent && layout->rhythm.pickup == 0 && layout->rhythm.ticks[0] <= 2 &&
+    if (preferences->pickup_from_accent && layout->rhythm.pickup == 0 && layout->rhythm.ticks[0] <= layout->grid.beat &&
         layout->rhythm.ticks[1] > layout->rhythm.ticks[0] &&
         step_of(place.position[1] - chord_shift(layout->plan.degrees[place.segment[1]])) == 0 && melody->pitches[1] > melody->pitches[0]) {
         return false;
@@ -770,7 +791,7 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
 
 /* The plan as the motive's own harmony (a chord on each segment's first beat) and the segments as its features. */
 static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layout *layout, Motive *motive) {
-    unsigned long den = 2UL * (unsigned long)options->meter.beat_unit;
+    unsigned long den = (unsigned long)TICKS_PER_UNIT * (unsigned long)options->meter.beat_unit;
     long onset[MAX_NOTES];
     long position = 0;
     for (size_t i = 0; i < layout->rhythm.count; i++) {
@@ -845,6 +866,7 @@ static bool segment_motive(const MotiveRandomOptions *options, const AnalysisKey
         notes.types[k] = melody->types[i];
     }
     rhythm.count = last - first + 1;
+    rhythm.ticks_per_unit = layout->rhythm.ticks_per_unit;
     return motive_random_build(options, key, &rhythm, &notes, out);
 }
 

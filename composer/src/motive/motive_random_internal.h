@@ -51,6 +51,7 @@ typedef struct {
     size_t count;
     long pickup;
     long total;
+    long ticks_per_unit; /* ticks in the beat unit; 0 is the drawn strategy's 2 (half-beats) */
 } Rhythm;
 
 typedef struct {
