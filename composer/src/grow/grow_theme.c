@@ -796,6 +796,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     spec->cadence = request->cadence;
     spec->pairing = request->pairing;
     spec->first_cadence = request->first_cadence;
+    spec->continuation = request->continuation;
+    spec->basic_as_written = request->basic_as_written;
+    spec->basic_has_chords = shared && shared->basic && shared->basic->chord_count > 0;
     if (!grow_read_motive(plan, request->source, &request->meter, &request->key, &spec->source) ||
         spec->source.note_count < 2) {
         return false;
@@ -962,6 +965,7 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     request.development = shared ? shared->development : GROW_DEVELOP_BALANCED;
     if (shared) {
         request.continuation = shared->continuation;
+        request.basic_as_written = shared->basic_as_written;
     }
     size_t wanted = shared && shared->candidates > 0 ? shared->candidates : GROW_DEFAULT_CANDIDATES;
     GrowThemeSpec *kept[16];

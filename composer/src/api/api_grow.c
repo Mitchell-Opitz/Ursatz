@@ -603,6 +603,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     if (setup->continuation) {
         config.context.continuation = *setup->continuation;
     }
+    config.context.basic_as_written = setup->basic_as_written;
     config.fidelity = setup->fidelity;
     config.melody = setup->melody;
     config.style = setup->style;

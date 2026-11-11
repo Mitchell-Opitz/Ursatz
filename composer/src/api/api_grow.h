@@ -101,6 +101,7 @@ typedef struct {
     ComposerRatio style_weight;
     GrowDevelopment development;
     const GrowContinuation *continuation;    /* NULL for the defaults; not owned */
+    bool basic_as_written;                   /* a motif as long as the basic idea is it as written, over its own chords */
     const Motive *motive;                    /* the basic motive */
     const Motive *accompaniment_motive;      /* NULL for none */
     const GrowMaterial *material;            /* NULL for grow itself */

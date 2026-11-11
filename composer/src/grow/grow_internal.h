@@ -123,6 +123,9 @@ typedef struct {
     /* The motives the ideas after the basic idea are made from m0 as, planned here to be checked. */
     Motive developed[GROW_PLACE_COUNT];
     bool has_developed[GROW_PLACE_COUNT];
+    GrowContinuation continuation;         /* the request's, for the build (grow_apply) */
+    bool basic_as_written;                 /* the request's */
+    bool basic_has_chords;                 /* the compose run's basic motive has harmony of its own (R-348) */
 } GrowThemeSpec;
 
 /* The theme section grow-theme grows, read from the plan. */
@@ -154,6 +157,7 @@ typedef struct {
     NodeId idea_node[GROW_PLACE_COUNT]; /* the material node of each place with a motive of its own (R-206), else none */
     GrowDevelopment development; /* from the GrowContext: how far the ideas stray from the motive */
     GrowContinuation continuation; /* from the GrowContext: how the continuation accelerates; zero for today's */
+    bool basic_as_written;   /* from the GrowContext: a motif as long as the basic idea is it as written */
     bool given_first_half;   /* Given melody, harmony or bass lies in the first half: its chords are not written whole */
 } GrowThemeRequest;
 
