@@ -12,6 +12,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "harmony/harmony_internal.h"
+
 /*
  * The form documents (R-416, docs/forms.md).
  *
@@ -19,6 +21,9 @@
  *                               every built-in parses and is what docs/forms.md says of it;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
+ *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
+ *                             1 to 10 in C major 4/4, at least 9 compose, and in each the chords and the bass of B's
+ *                             first half are all on the dominant
  *   test_form_spec custom     a form added as a document alone (tests/fixtures/forms/bar-form.json) composes: seeds 1
  *                             to 10 in C major 4/4 with an invented motive; no C code names the form
  */
@@ -52,6 +57,19 @@ static char *replaced(const char *name, const char *from, const char *to) {
     memcpy(out, document, head);
     memcpy(out + head, to, strlen(to));
     strcpy(out + head + strlen(to), at + strlen(from));
+    return out;
+}
+
+/* A copy of `text` with the first `from` replaced by `to`. */
+static char *replaced_in(const char *text, const char *from, const char *to) {
+    const char *at = strstr(text, from);
+    assert(at);
+    size_t head = (size_t)(at - text);
+    char *out = malloc(strlen(text) + strlen(to) + 1);
+    assert(out);
+    memcpy(out, text, head);
+    strcpy(out + head, to);
+    strcat(out, at + strlen(from));
     return out;
 }
 
@@ -145,6 +163,7 @@ static void test_builtin_forms(void) {
                 assert(section->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || section->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
                        section->cadence == CADENCE_TYPE_HALF);
                 assert(section->returns == FORM_SPEC_NO_RETURN || section->returns < i);
+                assert(section->pedal == 0);
                 sum += section->bars;
             }
             assert(sum == size->bars);
@@ -738,12 +757,136 @@ static int test_custom(void) {
     return 0;
 }
 
+/* The section member pedal (R-446): "dominant" under a presentation, nothing else. */
+static void test_pedal(void) {
+    char text[4096];
+    char sizes[2048];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 8, \"default\": true, \"sections\": [" SECTION_A "]}");
+    document(text, sizeof(text), "", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].pedal == 0);
+    form_spec_destroy(form);
+
+    snprintf(sizes, sizeof(sizes),
+             "{\"bars\": 8, \"default\": true, \"sections\": [" SECTION_A "]}");
+    char *with = replaced_in(sizes, "\"cadence\"", "\"pedal\": \"dominant\", \"cadence\"");
+    document(text, sizeof(text), "", with);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].pedal == 5);
+    form_spec_destroy(form);
+    free(with);
+
+    with = replaced_in(sizes, "\"cadence\"", "\"pedal\": \"tonic\", \"cadence\"");
+    document(text, sizeof(text), "", with);
+    refused(text, "/sizes/0/sections/0/pedal");
+    free(with);
+    with = replaced_in(sizes, "\"cadence\"", "\"pedal\": 5, \"cadence\"");
+    document(text, sizeof(text), "", with);
+    refused(text, "/sizes/0/sections/0/pedal");
+    free(with);
+
+    /* An antecedent has no presentation to put over a pedal. */
+    with = replaced_in(sizes, "\"cadence\"", "\"pedal\": \"dominant\", \"cadence\"");
+    char *antecedent = replaced_in(with, "\"presentation\"", "\"antecedent\"");
+    char *consequent = replaced_in(antecedent, "\"continuation\"", "\"consequent\"");
+    document(text, sizeof(text), "", consequent);
+    refused(text, "/sizes/0/sections/0/pedal");
+    free(with);
+    free(antecedent);
+    free(consequent);
+}
+
+/* ------------------------------------------------------------- a form with a dominant pedal */
+
+#define PEDAL_SEEDS 10
+#define PEDAL_COMPOSED_LEAST 9
+
+/* In B's first half every chord is V, its seventh or the neighbor six-four, and every bass note is the dominant. */
+static void check_pedal_half(const PiecePlan *plan, NodeId section) {
+    PlanSpan half = plan_node_span(plan, section);
+    assert(rational_div_int(half.length, 2, &half.length) == RATIONAL_OK);
+    PhraseChord chords[16];
+    PhraseMetre metre;
+    size_t read = 0;
+    assert(harmony_read_lane(plan, half, KEY_STRUCTURE_MODE_MAJOR, chords, &read, &metre) && read >= 1 && read <= 16);
+    for (size_t i = 0; i < read; i++) {
+        const HarmonyChord *chord = &chords[i].chord;
+        assert(!chords[i].applied && !chord->leading_tone);
+        bool dominant = chord->degree == 5 && chord->inversion == 0;
+        bool six_four = chord->degree == 1 && chord->inversion == 2 && !chord->seventh;
+        assert(dominant || six_four);
+    }
+    LaneSpanId bass[32];
+    size_t found = plan_lane_find(plan, PLAN_LANE_BASS, 0, half, bass, 32);
+    assert(found >= 1 && found <= 32);
+    for (size_t i = 0; i < found; i++) {
+        const PlanNotes *notes = &plan_lane_span_payload(plan, bass[i])->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            assert(notes->notes[n].midi % 12 == 7);
+        }
+    }
+}
+
+static int test_pedal_form(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/pedal-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
+        return 2;
+    }
+    free(text);
+    assert(strcmp(form->name, "pedal-form") == 0 && form->sizes[0].section_count == 3 &&
+           form->sizes[0].sections[0].pedal == 0 && form->sizes[0].sections[1].pedal == 5 &&
+           form->sizes[0].sections[2].pedal == 0);
+    FormSpec *builtin_none = NULL;
+    assert(form_spec_builtin("pedal-form", &builtin_none) == FORM_SPEC_ERR_UNKNOWN);
+
+    int composed = 0;
+    for (unsigned long seed = 1; seed <= PEDAL_SEEDS; seed++) {
+        ComposeOutcome outcome;
+        PieceResult ran;
+        PiecePlan *plan = compose_custom(form, seed, &outcome, &ran);
+        if (ran == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            size_t count = 0;
+            NodeId root = plan_root(plan);
+            for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+                NodeId child = plan_node_child_at(plan, root, i);
+                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                    sections[count++] = child;
+                }
+            }
+            assert(count == 3 && plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_PEDAL));
+            assert(!plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_PEDAL));
+            check_pedal_half(plan, sections[1]);
+            composed++;
+        } else {
+            printf("  seed %lu: %s at %s\n", seed, piece_result_name(ran), compose_stage_name(outcome.stuck_stage));
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    form_spec_destroy(form);
+    if (composed < PEDAL_COMPOSED_LEAST) {
+        fprintf(stderr, "pedal-form: %d of %d seeds compose, at least %d expected\n", composed, PEDAL_SEEDS, PEDAL_COMPOSED_LEAST);
+        return 1;
+    }
+    printf("pedal-form: %d of %d seeds compose, B's first half on the dominant in each\n", composed, PEDAL_SEEDS);
+    return 0;
+}
+
 int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "pedal") == 0) {
+        return test_pedal_form();
+    }
     if (argc == 2 && strcmp(argv[1], "custom") == 0) {
         return test_custom();
     }
     if (argc != 1) {
-        fprintf(stderr, "usage: test_form_spec [custom]\n");
+        fprintf(stderr, "usage: test_form_spec [custom|pedal]\n");
         return 2;
     }
     test_builtin_forms();
@@ -753,6 +896,7 @@ int main(int argc, char **argv) {
     test_game_loop();
     test_default_cadences();
     test_sizes();
+    test_pedal();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }

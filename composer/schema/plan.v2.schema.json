@@ -169,7 +169,7 @@
           "enum": ["length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema", "material",
                    "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint", "return", "layers",
                    "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold",
-                   "seam", "motive_tones"]
+                   "seam", "motive_tones", "pedal"]
         }
       },
       "allOf": [
@@ -207,6 +207,10 @@
         {
           "if": { "properties": { "kind": { "const": "pickup" } } },
           "then": { "required": ["length"], "properties": { "length": { "$ref": "#/$defs/time" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "pedal" } } },
+          "then": { "required": ["degree"], "properties": { "degree": { "const": 5 } } }
         },
         {
           "if": { "properties": { "kind": { "const": "section_letter" } } },

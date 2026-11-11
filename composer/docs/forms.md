@@ -66,6 +66,7 @@ sections given by the piece request ([The game loop](#the-game-loop)). The docum
 | `motive` | How its motive is made from m0, as `motive_relation_step_text` writes it (`"invert tonal=1"`, `"diminish"`, `"interval-change"`). | m0 itself |
 | `returns`, `variation` | The name of an earlier section it returns, and how it varies it (`exact`, `ornament`, `reharmonize`, `reregister`). A returning section with no `motive` takes its source's. `variation` needs `returns`. | none; `exact` |
 | `layers` | The lanes that sound in it: `"all"`, or a list of `bass`, `inner_voice`, `melody`. | all, no LAYERS constraint |
+| `pedal` | `"dominant"`: its presentation is written over a pedal on the dominant (R-446). Refused for any other value, and for a section whose `beginning` is not `presentation` (`/sizes/<i>/sections/<j>/pedal`). The section gets a `pedal` constraint; grow keeps it only when the section starts in the home key with no Given material in its first half. No built-in form uses it yet. | none, no PEDAL constraint |
 
 The reader refuses anything it does not know, naming the member by its JSON pointer (`FormSpecError.path`, for example
 `/sizes/0/sections/2/returns`): an unknown member at any level, a wrong type, a missing required member, `schema` or

@@ -45,7 +45,10 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return shape->kind >= PLAN_HARMONY_SHAPE_PROLONGATION && shape->kind <= PLAN_HARMONY_SHAPE_CADENTIAL &&
                shape->starts_on >= PLAN_HARMONY_ANCHOR_ANY && shape->starts_on <= PLAN_HARMONY_ANCHOR_PIVOT &&
                shape->ends_on >= PLAN_HARMONY_ANCHOR_ANY && shape->ends_on <= PLAN_HARMONY_ANCHOR_DOMINANT &&
-               shape->max_cells_per_chord >= 0;
+               shape->max_cells_per_chord >= 0 &&
+               (!shape->pedal || (shape->kind == PLAN_HARMONY_SHAPE_PROLONGATION &&
+                                  shape->starts_on == PLAN_HARMONY_ANCHOR_DOMINANT &&
+                                  shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT));
     }
     case PLAN_CONSTRAINT_THEME_PAIRING: {
         const PlanThemePairing *pairing = &constraint->params.theme_pairing;
@@ -145,6 +148,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         }
         return true;
     }
+    case PLAN_CONSTRAINT_PEDAL:
+        return constraint->params.pedal.degree == 5;
     case PLAN_CONSTRAINT_PIECE_PART: {
         const PlanPiecePart *part = &constraint->params.piece_part;
         size_t length = strnlen(part->id, PLAN_PIECE_ID_MAX);

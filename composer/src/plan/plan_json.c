@@ -34,7 +34,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 #define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 /* The parts of a game loop, in PiecePart order (piece.h). */
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
@@ -159,6 +159,9 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
              plan_json_add(object, "ends_on", cJSON_CreateString(ANCHOR_NAMES[shape->ends_on])) &&
              plan_json_add(object, "max_cells_per_chord", json_number(shape->max_cells_per_chord)) &&
              plan_json_add(object, "split_at_bars", cJSON_CreateBool(shape->split_at_bars));
+        if (ok && shape->pedal) {
+            ok = plan_json_add(object, "pedal", cJSON_CreateBool(true));
+        }
         break;
     }
     case PLAN_CONSTRAINT_THEME_PAIRING:
@@ -274,6 +277,9 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && plan_json_add(object, "length", cJSON_CreateString(length));
         break;
     }
+    case PLAN_CONSTRAINT_PEDAL:
+        ok = ok && plan_json_add(object, "degree", json_number(constraint->params.pedal.degree));
+        break;
     case PLAN_CONSTRAINT_PIECE_PART:
         ok = ok && plan_json_add(object, "part", cJSON_CreateString(PIECE_PART_NAMES[constraint->params.piece_part.part])) &&
              plan_json_add(object, "id", cJSON_CreateString(constraint->params.piece_part.id));
@@ -1242,7 +1248,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
             shape->ends_on = (PlanHarmonyAnchor)anchor;
         }
         return read_optional_int(reader, item, path, "max_cells_per_chord", 0, 64, &shape->max_cells_per_chord) &&
-               read_optional_bool(reader, item, path, "split_at_bars", &shape->split_at_bars);
+               read_optional_bool(reader, item, path, "split_at_bars", &shape->split_at_bars) &&
+               read_optional_bool(reader, item, path, "pedal", &shape->pedal);
     }
     case PLAN_CONSTRAINT_THEME_PAIRING: {
         int ending;
@@ -1496,6 +1503,12 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     }
     case PLAN_CONSTRAINT_MOTIVE_TONES:
         return read_motive_tones(reader, item, path, &out->params.motive_tones);
+    case PLAN_CONSTRAINT_PEDAL:
+        if (!json_read_int_member(reader, item, path, "degree", 1, 7, &number_value)) {
+            return false;
+        }
+        out->params.pedal.degree = (int)number_value;
+        return true;
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:

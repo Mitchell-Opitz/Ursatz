@@ -77,6 +77,10 @@ lies inside its parent's.
 
 A `motive_ref` constraint may carry two members that record how a developed idea was made (P34, ch. VIII), both optional: `"segment": "b"`, the label of the segment of the basic motif its motive node is made from (a continuation's fragments), and `"steps": 2`, how many liquidation steps by segments made it (a cadential idea). A plan without them reads as no segment and no steps, and writing it again leaves them out. Regenerating a section or locking a lane keeps them with the rest of the constraint. They name what happened; the motive operators do not read them. (The `steps` of an older file's `transform` is that transform's own.) See [plan-constraints.md](plan-constraints.md#motive-relation-steps).
 
+### Pedal
+
+A `pedal` constraint (`{"kind": "pedal", "degree": 5}`, on a section node) and the `pedal` member of a `harmony_shape` (written `"pedal": true` after `split_at_bars`, only when set) ask for a dominant pedal under a presentation (R-446). The degree is required and only 5 is valid. A plan without either reads as before and writing it again gives the same bytes; the schema version is the same.
+
 ## Lane claims
 
 Each lane span is a claim in the section for its lane:

@@ -107,6 +107,7 @@ typedef struct {
     bool has_motive;                       /* its motive is made from m0 by `motive`; false for m0 itself */
     MotiveRelationStep motive;             /* how its motive is made from m0 (open parameters are drawn) */
     unsigned layers;                       /* the LAYERS mask (PlanLayers) in a layered form; 0 for none */
+    int pedal;                             /* the degree its presentation sits over in the bass: 0 none, 5 dominant (R-446) */
 } FormSectionSpec;
 
 /* One size of a form. */

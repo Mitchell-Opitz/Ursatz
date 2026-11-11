@@ -74,7 +74,8 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
             return true;
         }
         /* A sequence writes its chords whole, which Given material under the presentation would not fit. */
-        spec->repetition = draw_repetition(rng, request->development, spec->basic_cells >= 2, !request->given_first_half);
+        spec->repetition = draw_repetition(rng, request->development, spec->basic_cells >= 2,
+                                           !request->given_first_half && !request->pedal);
         if (!grow_idea_develop(spec, GROW_PLACE_REPETITION, &spec->developed[GROW_PLACE_REPETITION]) ||
             rational_cmp(spec->developed[GROW_PLACE_REPETITION].length,
                               grow_scaled(grow_unit(request), SECOND_UNITS)) > 0) {
@@ -167,6 +168,13 @@ static PlanResult build_presentation(GrowBuild *build) {
     repetition_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
     repetition_shape.starts_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
     repetition_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
+    if (build->request->pedal) {
+        /* Over a dominant pedal both ideas prolong V; a sequence is never drawn then (R-446). */
+        basic_shape.starts_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+        basic_shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+        basic_shape.pedal = true;
+        repetition_shape = basic_shape;
+    }
     if (spec->repetition == GROW_REPEAT_SEQUENCE && spec->source.chord_count == 0) {
         /* A motif with no harmony of its own: the chord moves with the melody, the basic idea's tonic and the repetition's
            chord a step up (I to ii, i to iio), written whole (R-348). */

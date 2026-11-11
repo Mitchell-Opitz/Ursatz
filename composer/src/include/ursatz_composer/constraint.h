@@ -43,7 +43,8 @@ typedef enum {
     PLAN_CONSTRAINT_FREE_PHRASE,    /* no parameters: on a section node, a phrase of any length in beats (R-170), not a theme */
     PLAN_CONSTRAINT_HOLD,           /* no parameters: on a section node, the stages from structure to texture leave it alone; the seam stage fills it (R-171) */
     PLAN_CONSTRAINT_SEAM,           /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
-    PLAN_CONSTRAINT_MOTIVE_TONES    /* on a motive node: its base harmony and the tone role of each note (R-215) */
+    PLAN_CONSTRAINT_MOTIVE_TONES,   /* on a motive node: its base harmony and the tone role of each note (R-215) */
+    PLAN_CONSTRAINT_PEDAL           /* on a section node: its presentation is written over a pedal on `degree` (R-446) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -108,13 +109,17 @@ typedef enum {
     PLAN_HARMONY_ANCHOR_PIVOT
 } PlanHarmonyAnchor;
 
-/* max_cells_per_chord 0 means no limit; split_at_bars lets no chord cross a barline. */
+/*
+ * max_cells_per_chord 0 means no limit; split_at_bars lets no chord cross a barline. pedal: every chord's bass is the
+ * start anchor's root; only with starts_on and ends_on DOMINANT on a prolongation (R-446).
+ */
 typedef struct {
     PlanHarmonyShapeKind kind;
     PlanHarmonyAnchor starts_on;
     PlanHarmonyAnchor ends_on;
     int max_cells_per_chord;
     bool split_at_bars;
+    bool pedal;
 } PlanHarmonyShape;
 
 typedef enum {
@@ -300,6 +305,11 @@ typedef struct {
     size_t label_count;
 } PlanMotiveTones;
 
+/* The scale degree a pedal sounds in the bass. Only 5 (the dominant) is valid. */
+typedef struct {
+    int degree;
+} PlanPedal;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -323,6 +333,7 @@ typedef struct {
         Rational pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
         PlanPiecePart piece_part;
         PlanMotiveTones motive_tones;
+        PlanPedal pedal;
     } params;
 } PlanConstraint;
 

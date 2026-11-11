@@ -258,7 +258,57 @@ static void test_shape_decides_the_operator(void) {
     plan_destroy(fixture.plan);
 }
 
+/*
+ * A prolongation of V over a dominant pedal (R-446) writes only V, its seventh and the neighbor six-four, every chord's
+ * bass the dominant. The same shape without pedal writes the figures it always did, from the dominant to the tonic.
+ */
+static void test_dominant_pedal(void) {
+    static const int METERS[][2] = {{4, 4}, {3, 4}, {6, 8}};
+    for (size_t m = 0; m < 3; m++) {
+        for (int mode = 0; mode < 2; mode++) {
+            for (unsigned long seed = 1; seed <= 20; seed++) {
+                Scenario scenario;
+                memset(&scenario, 0, sizeof(scenario));
+                scenario.beats_per_bar = METERS[m][0];
+                scenario.beat_unit = METERS[m][1];
+                scenario.mode = (KeyStructureMode)mode;
+                scenario.bars = 2;
+                scenario.shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
+                scenario.shape.starts_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+                scenario.shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+                scenario.shape.pedal = true;
+                Fixture fixture = build(&scenario);
+                FillOutcome outcome = run(&fixture, seed);
+                assert(outcome.status == FILL_STATUS_COMPLETE);
+                PhraseChord chords[MAX_CHORDS];
+                PhraseMetre metre;
+                size_t read;
+                assert(harmony_read_lane(fixture.plan, fixture.span, scenario.mode, chords, &read, &metre));
+                assert(read >= 1);
+                for (size_t i = 0; i < read; i++) {
+                    const HarmonyChord *chord = &chords[i].chord;
+                    assert(!chords[i].applied && !chord->leading_tone);
+                    int bass_degree = (chord->degree - 1 + 2 * chord->inversion) % 7 + 1;
+                    assert(bass_degree == 5);
+                    bool v = chord->degree == 5 && chord->inversion == 0;
+                    bool six_four = chord->degree == 1 && chord->inversion == 2 && !chord->seventh;
+                    assert(v || six_four);
+                }
+                assert(chords[0].chord.degree == 5 && chords[read - 1].chord.degree == 5);
+                fill_outcome_destroy(&outcome);
+                plan_destroy(fixture.plan);
+
+                /* Without pedal the same span goes from the dominant to the tonic, as it did. */
+                scenario.shape.pedal = false;
+                scenario.shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
+                run_scenario(&scenario, seed);
+            }
+        }
+    }
+}
+
 int main(void) {
+    test_dominant_pedal();
     test_every_meter_and_shape();
     test_cap_and_split();
     test_same_seed_same_chords();
