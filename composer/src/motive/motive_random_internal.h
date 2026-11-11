@@ -98,4 +98,8 @@ int motive_random_ratio_compare(const ComposerRatio *a, const ComposerRatio *b);
 bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
                                       bool *found);
 
+/* True when a given chord plan (preferences->plan_count > 0) can be drawn in the meter (motive_random_segments.c); false means
+   the plan never fits, whatever the seed. */
+bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences, const PlanMeter *meter);
+
 #endif

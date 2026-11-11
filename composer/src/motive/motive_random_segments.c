@@ -677,11 +677,15 @@ static bool plan_bars_fit(const MotiveRandomPreferences *preferences, bool halve
     return total > 0;
 }
 
+/* True when a bar splits into two cells: an even number of beats, four or more. */
+static bool has_halves(const Grid *grid) {
+    return grid->beats % 2 == 0 && grid->beats >= 2 * SEGMENT_MIN_CELL_BEATS;
+}
+
 static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMeter *meter, FillRng *rng, Setup *setup) {
     memset(setup, 0, sizeof(*setup));
     setup->grid = grid_of(preferences, meter);
-    long beats = setup->grid.beats;
-    bool halves = beats % 2 == 0 && beats >= 2 * SEGMENT_MIN_CELL_BEATS;
+    bool halves = has_halves(&setup->grid);
     bool given = preferences->plan_count > 0;
     setup->placed = given && plan_placed(preferences);
     setup->bars = 2;
@@ -1726,6 +1730,53 @@ static bool contrast_is_close(const MotiveRandomOptions *options, const Analysis
         }
     }
     return true;
+}
+
+/*
+ * True when the given plan (plan_count > 0) can be drawn in the meter: a count of 1 to MOTIVE_RANDOM_PLAN_MAX, degrees 1 to 7,
+ * places that are all or none after the first, rising from 1:1 and inside the bars and the bar's beats, no more chords than
+ * segments when unplaced, a bar count the settings allow that a shape fits (plan_bars_fit), and, when only an open ending can
+ * be drawn, a last chord with a tone on degree 2, 5 or 7 (not IV or vi).
+ */
+bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences, const PlanMeter *meter) {
+    size_t count = preferences->plan_count;
+    if (count == 0 || count > MOTIVE_RANDOM_PLAN_MAX) {
+        return false;
+    }
+    Grid grid = grid_of(preferences, meter);
+    size_t placed = 0;
+    long before = 0; /* the place of the chord before, in beats from 1:1 (the first chord is at 1:1) */
+    for (size_t k = 0; k < count; k++) {
+        const MotiveRandomPlanChord *chord = &preferences->plan[k];
+        if (chord->degree < 1 || chord->degree > 7 || chord->bar > 2) {
+            return false;
+        }
+        if (k == 0) {
+            if (chord->bar != 0 && (chord->bar != 1 || chord->beat != 1)) {
+                return false;
+            }
+        } else if (chord->bar > 0) {
+            long at = ((long)chord->bar - 1) * grid.beats + (long)chord->beat - 1;
+            if (chord->beat < 1 || (long)chord->beat > grid.beats || at <= before) {
+                return false;
+            }
+            before = at;
+            placed++;
+        }
+    }
+    if (placed != 0 && placed != count - 1) {
+        return false; /* some but not all of the chords after the first are placed */
+    }
+    if (placed == 0 && count > SEGMENT_MAX) {
+        return false;
+    }
+    bool halves = has_halves(&grid);
+    if (!plan_bars_fit(preferences, halves, 1) && !plan_bars_fit(preferences, halves, 2)) {
+        return false;
+    }
+    int last = preferences->plan[count - 1].degree;
+    bool only_open = preferences->endings[2] > 0 && preferences->endings[0] + preferences->endings[1] + preferences->endings[3] == 0;
+    return !(only_open && (last == 4 || last == 6));
 }
 
 bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
