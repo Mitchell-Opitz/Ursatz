@@ -121,6 +121,14 @@ static void defaults_change_nothing(void) {
         explicit_defaults.long_nct_beats[i] = 1;
         explicit_defaults.long_nct_lengths[i] = 1;
     }
+    /* and the syncopation of phase L3 (R-454) */
+    explicit_defaults.syncopation_one_in = 0;
+    for (size_t i = 0; i < 4; i++) {
+        explicit_defaults.syncopation_types[i] = 1;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        explicit_defaults.syncopation_levels[i] = 1;
+    }
     for (int beats = 3; beats <= 4; beats++) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Motive without = make(beats, seed, NULL);
@@ -931,9 +939,203 @@ static void rhythm_variety(void) {
     }
 }
 
+/* ------------------------------------------------------ syncopation (phase L3, R-454) */
+
+/* One syncopation type at the given levels (bit 0 eighth, bit 1 sixteenth), one in one. */
+static MotiveRandomPreferences only_syncopation(size_t type, unsigned levels) {
+    MotiveRandomPreferences preferences;
+    motive_random_preferences_default(&preferences);
+    preferences.syncopation_one_in = 1;
+    for (size_t i = 0; i < 4; i++) {
+        preferences.syncopation_types[i] = i == type;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        preferences.syncopation_levels[i] = (levels >> i) & 1u;
+    }
+    return preferences;
+}
+
+/* The last note starts on a beat or is not held across one: it is never syncopated. */
+static void last_note_plain(const Motive *motive) {
+    size_t last = motive->note_count - 1;
+    long offset = ((grid_start(motive, last) % 12) + 12) % 12;
+    assert(offset == 0 || offset + grid_length(motive, last) <= 12);
+}
+
+/* True when the motive holds notes of the lengths `lengths` (forty-eighths) in a row, the first starting on a beat. */
+static bool holds_figure_on_beat(const Motive *motive, const long *lengths, size_t notes) {
+    for (size_t i = 0; i + notes <= motive->note_count; i++) {
+        bool match = grid_start(motive, i) % 12 == 0;
+        for (size_t k = 0; k < notes && match; k++) {
+            match = grid_length(motive, i + k) == lengths[k];
+        }
+        if (match) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Each in-cell figure at each level alone: the motives of seeds 1 to 16 that hold it, in 4/4 and 3/4. */
+static void syncopation_figures(void) {
+    const long off_beat_eighth_a[] = {6, 12, 6};
+    const long off_beat_eighth_b[] = {6, 18};
+    const long off_beat_sixteenth_a[] = {3, 6, 3};
+    const long off_beat_sixteenth_b[] = {3, 9};
+    const long tie_beat_eighth[] = {18, 18, 12};
+    const long tie_beat_sixteenth[] = {9, 9, 6};
+    const struct {
+        const char *name;
+        size_t type;
+        unsigned level;
+        const long *first;
+        size_t first_notes;
+        const long *second;
+        size_t second_notes;
+    } figures[] = {{"off_beat eighth", 0, 1, off_beat_eighth_a, 3, off_beat_eighth_b, 2},
+                   {"off_beat sixteenth", 0, 2, off_beat_sixteenth_a, 3, off_beat_sixteenth_b, 2},
+                   {"tie_beat eighth", 1, 1, tie_beat_eighth, 3, NULL, 0},
+                   {"tie_beat sixteenth", 1, 2, tie_beat_sixteenth, 3, NULL, 0}};
+    for (size_t f = 0; f < sizeof(figures) / sizeof(figures[0]); f++) {
+        MotiveRandomPreferences preferences = only_syncopation(figures[f].type, figures[f].level);
+        for (int beats = 4; beats >= 3; beats--) {
+            int holding = 0;
+            for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+                Motive motive = make(beats, seed, &preferences);
+                last_note_plain(&motive);
+                holding += holds_figure_on_beat(&motive, figures[f].first, figures[f].first_notes) ||
+                           (figures[f].second != NULL && holds_figure_on_beat(&motive, figures[f].second, figures[f].second_notes));
+            }
+            printf("syncopation %s in %d/4: %d of %d motives hold the figure\n", figures[f].name, beats, holding, SEEDS);
+            if (figures[f].type == 1 && figures[f].level == 1 && beats == 3) {
+                assert(holding == 0); /* four beats never fit a 3/4 cell */
+            } else {
+                assert(holding >= 1);
+            }
+        }
+    }
+}
+
+static bool triad_tone(int pitch, int degree) {
+    int pc = pitch_class(pitch);
+    return pc == root_pc(degree) || pc == MAJOR_SCALE[(degree + 1) % 7] || pc == MAJOR_SCALE[(degree + 3) % 7];
+}
+
+/* Chord c's onset as whole-note forty-eighths from the first bar line. */
+static long chord_grid_start(const Motive *motive, size_t c) {
+    Rational from_bar;
+    Rational scaled;
+    assert(rational_sub(motive->chords[c].onset, motive_pickup(motive), &from_bar) == RATIONAL_OK);
+    assert(rational_mul_int(from_bar, GRID, &scaled) == RATIONAL_OK && scaled.den == 1);
+    return (long)scaled.num;
+}
+
+/* Tie across the barline: a note held over a chord onset at a barline ends its feature and is a triad tone of both chords.
+   Anticipation: a feature's first note starting before its chord's onset is a triad tone of the new chord, and the chord changed. */
+static void syncopation_boundaries(void) {
+    MotiveRandomPreferences tie_bar = only_syncopation(2, 3);
+    MotiveRandomPreferences anticipation = only_syncopation(3, 3);
+    for (int beats = 3; beats <= 4; beats++) {
+        long bar = 12 * beats;
+        int tied = 0;
+        int early = 0;
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            Motive motive = make(beats, seed, &tie_bar);
+            last_note_plain(&motive);
+            bool held = false;
+            for (size_t c = 1; c < motive.chord_count; c++) {
+                long onset = chord_grid_start(&motive, c);
+                if (onset % bar != 0) {
+                    continue;
+                }
+                for (size_t i = 0; i < motive.note_count; i++) {
+                    long start = grid_start(&motive, i);
+                    if (start < onset && start + grid_length(&motive, i) > onset) {
+                        held = true;
+                        assert(i == motive.features[c - 1].last);
+                        assert(triad_tone(motive.notes[i].pitch, motive.chords[c - 1].degree));
+                        assert(triad_tone(motive.notes[i].pitch, motive.chords[c].degree));
+                    }
+                }
+            }
+            tied += held;
+            Motive anticipated = make(beats, seed, &anticipation);
+            last_note_plain(&anticipated);
+            bool arrived = false;
+            for (size_t c = 1; c < anticipated.chord_count; c++) {
+                size_t first = anticipated.features[c].first;
+                if (grid_start(&anticipated, first) < chord_grid_start(&anticipated, c)) {
+                    arrived = true;
+                    assert(anticipated.chords[c].degree != anticipated.chords[c - 1].degree);
+                    assert(triad_tone(anticipated.notes[first].pitch, anticipated.chords[c].degree));
+                }
+            }
+            early += arrived;
+        }
+        printf("syncopation tie_bar in %d/4: %d of %d motives tie across a barline; anticipation: %d of %d\n", beats, tied, SEEDS, early, SEEDS);
+        assert(tied >= 1 && early >= 1);
+    }
+}
+
+/* A motive of any meter and beat unit; false when none is made. */
+static bool make_in_unit(int beats, int unit, unsigned long seed, const MotiveRandomPreferences *preferences, Motive *out) {
+    MotiveRandomOptions options = options_of(beats, seed, preferences);
+    options.meter.beat_unit = unit;
+    size_t count = 0;
+    return motive_random(&options, out, &count) == MOTIVE_RANDOM_OK && count == 1;
+}
+
+/* Compound and six, nine and twelve beat meters are never syncopated, and a setting with nothing to draw draws nothing. */
+static void syncopation_changes_nothing_else(void) {
+    MotiveRandomPreferences off;
+    motive_random_preferences_default(&off);
+    MotiveRandomPreferences on = off;
+    on.syncopation_one_in = 1;
+    MotiveRandomPreferences compound_off = off;
+    MotiveRandomPreferences compound_on = on;
+    compound_on.compound_beats = true;
+    const int meters[] = {6, 12};
+    for (size_t m = 0; m < 2; m++) {
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            Motive without;
+            Motive with;
+            bool made = make_in_unit(meters[m], 8, seed, &compound_off, &without);
+            assert(make_in_unit(meters[m], 8, seed, &on, &with) == made);
+            assert(!made || same_motive(&without, &with));
+            Motive grouped_without;
+            Motive grouped_with;
+            MotiveRandomPreferences grouped_off = off;
+            grouped_off.compound_beats = true;
+            made = make_in_unit(meters[m], 8, seed, &grouped_off, &grouped_without);
+            assert(make_in_unit(meters[m], 8, seed, &compound_on, &grouped_with) == made);
+            assert(!made || same_motive(&grouped_without, &grouped_with));
+        }
+    }
+    MotiveRandomPreferences no_types = on;
+    MotiveRandomPreferences no_levels = on;
+    for (size_t i = 0; i < 4; i++) {
+        no_types.syncopation_types[i] = 0;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        no_levels.syncopation_levels[i] = 0;
+    }
+    for (int beats = 3; beats <= 4; beats++) {
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            Motive without = make(beats, seed, &off);
+            Motive types = make(beats, seed, &no_types);
+            Motive levels = make(beats, seed, &no_levels);
+            assert(same_motive(&without, &types));
+            assert(same_motive(&without, &levels));
+        }
+    }
+    printf("syncopation: compound and six, nine, twelve beat meters and empty settings change nothing\n");
+}
+
 static void each_setting_still_gives_motives(void) {
     MotiveRandomPreferences base;
     motive_random_preferences_default(&base);
+    MotiveRandomPreferences syncopation = base;
+    syncopation.syncopation_one_in = 1;
     MotiveRandomPreferences accented = base;
     accented.accented_one_in = 1;
     MotiveRandomPreferences repeats = base;
@@ -978,7 +1180,8 @@ static void each_setting_still_gives_motives(void) {
                     {"triplet_two_beats 4", &figures[4], 4, 4}, {"compound_beats in 6/8", &compound, 6, 8},
                     {"compound_beats in 12/8", &compound, 12, 8}, {"endings closed", &endings[0], 4, 4},
                     {"endings open", &endings[1], 4, 4},      {"endings lead_in", &endings[2], 4, 4},
-                    {"long_nct_one_in 1", &long_nct, 4, 4}};
+                    {"long_nct_one_in 1", &long_nct, 4, 4},   {"syncopation_one_in 1 in 4/4", &syncopation, 4, 4},
+                    {"syncopation_one_in 1 in 3/4", &syncopation, 3, 4}};
     for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); i++) {
         int made = motives_made_in(settings[i].beats, settings[i].unit, settings[i].preferences);
         printf("%s alone: %d of %d seeds give a motive\n", settings[i].name, made, SEEDS);
@@ -1006,6 +1209,9 @@ int main(void) {
     lead_in_endings();
     long_non_chord_tones();
     rhythm_variety();
+    syncopation_figures();
+    syncopation_boundaries();
+    syncopation_changes_nothing_else();
     each_setting_still_gives_motives();
     printf("test_motif_preferences: ok\n");
     return 0;

@@ -100,6 +100,14 @@ typedef enum {
  *   long_nct_intervals the tone's interval above the chord root: second, fourth, sixth, seventh
  *   long_nct_beats    where the note sits: downbeat, middle of the bar, other beat
  *   long_nct_lengths  how long the note is: a beat, a dotted beat, two beats or more
+ *   syncopation_one_in a syncopation in one cell, and at one segment boundary, of this many; 0 never, and no random
+ *                     number is drawn; simple meters only (not 6, 9 or 12 beats a bar), never the motive's last note
+ *   syncopation_types which figure: off_beat (an off-beat note held across the beat: e q e or e q., s e s or s e.),
+ *                     tie_beat (3+3+2: the middle note tied across the beat), tie_bar (the last note before a barline
+ *                     held across it, the next note entering late; a chord tone of both chords), anticipation (a
+ *                     segment's first note arriving early, off the beat, on the new chord's tone and held into it;
+ *                     only where the chord changes)
+ *   syncopation_levels at which level: eighth (the short note a half beat), sixteenth (a quarter beat)
  */
 typedef struct {
     unsigned long bars[2];
@@ -129,6 +137,9 @@ typedef struct {
     unsigned long long_nct_intervals[4];
     unsigned long long_nct_beats[3];
     unsigned long long_nct_lengths[3];
+    unsigned syncopation_one_in;
+    unsigned long syncopation_types[4];
+    unsigned long syncopation_levels[2];
 } MotiveRandomPreferences;
 
 /* The defaults. */

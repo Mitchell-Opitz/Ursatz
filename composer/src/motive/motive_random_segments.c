@@ -23,6 +23,10 @@
 #define SEGMENT_START_DISTANCE 5 /* the most semitones from the note before to where a new segment starts */
 #define LEAP_SEMITONES 5 /* an interval this large or larger is a leap (leaps_per_motif, leap_recovery) */
 
+/* Syncopation figures (R-454): the two inside a cell, then the two across a segment boundary. */
+typedef enum { SYNC_OFF_BEAT = 0, SYNC_TIE_BEAT, SYNC_TIE_BAR, SYNC_ANTICIPATION, SYNC_TYPES } Sync;
+#define SYNC_LEVELS 2 /* eighth, sixteenth */
+
 /* Shapes: a a' (a cell and its repeat), a b (a cell and a new one), a a' b (two half-bar cells, then a bar). */
 typedef enum { SHAPE_REPEAT = 0, SHAPE_CONTRAST, SHAPE_REPEAT_CONTRAST, SHAPE_KINDS } Shape;
 
@@ -65,6 +69,16 @@ static Grid grid_of(const MotiveRandomPreferences *preferences, const PlanMeter 
     }
     Grid grid = {bar, TICKS_PER_UNIT, TICKS_PER_UNIT / 2, false, ENDING_FREE, 0};
     return grid;
+}
+
+/* Syncopation needs a simple meter: not a compound grid and not 6, 9 or 12 beats a bar. */
+static bool simple_meter(const Grid *grid) {
+    return !grid->compound && (grid->beats == 3 || grid->beats % 3 != 0);
+}
+
+/* The short note of a figure: an eighth (a half beat) or a sixteenth (a quarter beat), 6 or 3 ticks. */
+static long sync_unit(const Grid *grid, size_t level) {
+    return level == 0 ? grid->half : grid->half / 2;
 }
 
 /* ---------------------------------------------------------------- helpers */
@@ -131,6 +145,13 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
     for (size_t i = 0; i < 3; i++) {
         out->long_nct_beats[i] = 1;
         out->long_nct_lengths[i] = 1;
+    }
+    /* Syncopation (phase L3, R-454), off. */
+    for (size_t i = 0; i < 4; i++) {
+        out->syncopation_types[i] = 1;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        out->syncopation_levels[i] = 1;
     }
 }
 
@@ -274,8 +295,106 @@ static bool figure_of(const Grid *grid, size_t kind, Figure *figure) {
     return true;
 }
 
-/* Tiles from to to (ticks from the start of the cell) with the figures of the durations list. */
-static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long from, long to, Cell *cell) {
+/* The ticks of a syncopation figure inside a cell: off_beat four short notes long, tie_beat eight. */
+static long sync_length(const Grid *grid, size_t type, size_t level) {
+    return (type == SYNC_TIE_BEAT ? 8 : 4) * sync_unit(grid, level);
+}
+
+/* The notes of a figure inside a cell (u is the short note): the count. Every figure starts on a beat and ends on a beat or a half beat. */
+static size_t sync_figure(const Grid *grid, size_t type, size_t level, size_t shape, long *ticks) {
+    long u = sync_unit(grid, level);
+    if (type == SYNC_TIE_BEAT) {
+        ticks[0] = 3 * u;
+        ticks[1] = 3 * u;
+        ticks[2] = 2 * u;
+        return 3;
+    }
+    if (shape == 0) {
+        ticks[0] = u;
+        ticks[1] = 2 * u;
+        ticks[2] = u;
+        return 3;
+    }
+    ticks[0] = u;
+    ticks[1] = 3 * u;
+    return 2;
+}
+
+/*
+ * Where in a cell of `length` ticks a syncopation is tried: -1 for none, else the tick from which the first beat that holds a
+ * figure takes it. One cell in syncopation_one_in; the beat is drawn among those from which the shortest wanted figure fits.
+ * clean_end keeps the figure off the cell's last note. No random number is drawn when nothing can be placed.
+ */
+static long sync_target(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, bool clean_end) {
+    if (preferences->syncopation_one_in == 0 || !simple_meter(grid)) {
+        return -1;
+    }
+    long shortest = 0;
+    for (size_t type = SYNC_OFF_BEAT; type <= SYNC_TIE_BEAT; type++) {
+        for (size_t level = 0; level < SYNC_LEVELS; level++) {
+            if (preferences->syncopation_types[type] * preferences->syncopation_levels[level] > 0) {
+                long ticks = sync_length(grid, type, level);
+                if (shortest == 0 || ticks < shortest) {
+                    shortest = ticks;
+                }
+            }
+        }
+    }
+    if (shortest == 0) {
+        return -1;
+    }
+    long beats = 0;
+    for (long p = 0; clean_end ? p + shortest < length : p + shortest <= length; p += grid->beat) {
+        beats++;
+    }
+    if (beats == 0 || fill_rng_below(rng, preferences->syncopation_one_in) != 0) {
+        return -1;
+    }
+    return grid->beat * (long)fill_rng_below(rng, (uint64_t)beats);
+}
+
+/*
+ * Adds a drawn syncopation figure that fits in `room` ticks (and, with clean_end, leaves a note after it) to the cell.
+ * `added` is its ticks, 0 when none fits (no random number is drawn). False when the cell is out of notes.
+ */
+static bool try_sync_figure(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long room, bool clean_end, Cell *cell,
+                            long *added) {
+    unsigned long weights[2 * SYNC_LEVELS];
+    unsigned long total = 0;
+    for (size_t type = SYNC_OFF_BEAT; type <= SYNC_TIE_BEAT; type++) {
+        for (size_t level = 0; level < SYNC_LEVELS; level++) {
+            long ticks = sync_length(grid, type, level);
+            bool fits = ticks <= room && !(clean_end && ticks == room);
+            weights[type * SYNC_LEVELS + level] = fits ? preferences->syncopation_types[type] * preferences->syncopation_levels[level] : 0;
+            total += weights[type * SYNC_LEVELS + level];
+        }
+    }
+    *added = 0;
+    if (total == 0) {
+        return true;
+    }
+    size_t pick = pick_weighted(rng, weights, 2 * SYNC_LEVELS);
+    size_t type = pick / SYNC_LEVELS;
+    size_t level = pick % SYNC_LEVELS;
+    size_t shape = type == SYNC_OFF_BEAT ? (size_t)fill_rng_below(rng, 2) : 0;
+    long ticks[FIGURE_NOTES_MAX];
+    size_t count = sync_figure(grid, type, level, shape, ticks);
+    if (cell->count + count > MAX_NOTES) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        cell->ticks[cell->count++] = ticks[i];
+    }
+    *added = sync_length(grid, type, level);
+    return true;
+}
+
+/*
+ * Tiles from to to (ticks from the start of the cell) with the figures of the durations list. At the first beat from
+ * `*sync_at` (when it is not -1) that holds one, a syncopation figure goes in instead and `*sync_at` becomes -1.
+ */
+static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long from, long to, bool clean_end, long *sync_at,
+                 Cell *cell) {
     long unit = weak_beat_unit(grid);
     Figure figures[FIGURE_KINDS];
     bool available[FIGURE_KINDS];
@@ -285,6 +404,17 @@ static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, F
     for (long position = from; position < to;) {
         long room = to - position;
         bool on_beat = position % grid->beat == 0;
+        if (on_beat && *sync_at >= 0 && position >= *sync_at) {
+            long added;
+            if (!try_sync_figure(preferences, grid, rng, room, clean_end, cell, &added)) {
+                return false;
+            }
+            if (added > 0) {
+                *sync_at = -1;
+                position += added;
+                continue;
+            }
+        }
         unsigned long weights[FIGURE_KINDS];
         for (size_t i = 0; i < FIGURE_KINDS; i++) {
             bool fits = available[i] && figures[i].total <= room && (on_beat || !figures[i].on_beat_only);
@@ -310,13 +440,15 @@ static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, F
  * is the last one (long_end) and the ending is closed, its last note starts on the strongest beat available and is longer
  * than every other; with a lead-in it ends in two short notes, the last off the beat.
  */
-static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
+static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end,
+                       bool syncopate, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
     bool closed = long_end && grid->ending == ENDING_CLOSED;
     long body = length; /* the ticks tiled before a closed ending's last note */
     if (closed && !closed_start(grid, rng, length, &body)) {
         return false;
     }
+    long sync_at = syncopate ? sync_target(preferences, grid, rng, body, long_end && !closed) : -1;
     if (feature == FEATURE_DOTTED) {
         /* A dotted beat and the half beat that completes the next one (two beats); in a compound beat, a dotted eighth,
            a sixteenth and an eighth in 6/8 (one beat). */
@@ -337,13 +469,13 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *g
             return false;
         }
         long start = grid->beat * (long)fill_rng_below(rng, (uint64_t)slots);
-        if (!tile(preferences, grid, rng, 0, start, cell) || cell->count + dotted_count > MAX_NOTES) {
+        if (!tile(preferences, grid, rng, 0, start, false, &sync_at, cell) || cell->count + dotted_count > MAX_NOTES) {
             return false;
         }
         for (size_t i = 0; i < dotted_count; i++) {
             cell->ticks[cell->count++] = dotted[i];
         }
-        if (!tile(preferences, grid, rng, start + figure, body, cell)) {
+        if (!tile(preferences, grid, rng, start + figure, body, long_end && !closed, &sync_at, cell)) {
             return false;
         }
         if (closed) {
@@ -353,7 +485,7 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *g
             cell->ticks[cell->count++] = length - body;
         }
     } else {
-        if (!tile(preferences, grid, rng, 0, body, cell)) {
+        if (!tile(preferences, grid, rng, 0, body, long_end && !closed, &sync_at, cell)) {
             return false;
         }
         if (closed) {
@@ -387,11 +519,17 @@ static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *g
  * ending tiles up to the last note's start instead and then adds it, longer than every other note; a lead-in joins nothing
  * and ends in two short notes, the last off the beat.
  */
-static bool try_cell_b(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
+static bool try_cell_b(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, const Cell *not_like, bool syncopate,
+                       Cell *cell) {
     memset(cell, 0, sizeof(*cell));
+    long sync_at = -1;
     if (grid->ending == ENDING_CLOSED) {
         long start;
-        if (!closed_start(grid, rng, length, &start) || !tile(preferences, grid, rng, 0, start, cell) || cell->count == MAX_NOTES) {
+        if (!closed_start(grid, rng, length, &start)) {
+            return false;
+        }
+        sync_at = syncopate ? sync_target(preferences, grid, rng, start, false) : -1;
+        if (!tile(preferences, grid, rng, 0, start, false, &sync_at, cell) || cell->count == MAX_NOTES) {
             return false;
         }
         cell->ticks[cell->count++] = length - start;
@@ -399,7 +537,8 @@ static bool try_cell_b(const MotiveRandomPreferences *preferences, const Grid *g
             return false;
         }
     } else {
-        if (!tile(preferences, grid, rng, 0, length, cell)) {
+        sync_at = syncopate ? sync_target(preferences, grid, rng, length, true) : -1;
+        if (!tile(preferences, grid, rng, 0, length, true, &sync_at, cell)) {
             return false;
         }
         if (grid->ending == ENDING_LEAD_IN) {
@@ -424,7 +563,7 @@ static bool try_cell_b(const MotiveRandomPreferences *preferences, const Grid *g
 
 static bool draw_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_a(preferences, grid, rng, length, feature, long_end, cell)) {
+        if (try_cell_a(preferences, grid, rng, length, feature, long_end, attempt < SEGMENT_CELL_TRIES / 2, cell)) {
             return true;
         }
     }
@@ -433,7 +572,7 @@ static bool draw_cell_a(const MotiveRandomPreferences *preferences, const Grid *
 
 static bool draw_cell_b(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, const Cell *not_like, Cell *cell) {
     for (int attempt = 0; attempt < SEGMENT_CELL_TRIES; attempt++) {
-        if (try_cell_b(preferences, grid, rng, length, not_like, cell)) {
+        if (try_cell_b(preferences, grid, rng, length, not_like, attempt < SEGMENT_CELL_TRIES / 2, cell)) {
             return true;
         }
     }
@@ -451,6 +590,8 @@ typedef struct {
     Plan plan;
     size_t cell_start; /* the first note of segment a's cell: after the pickup note, if any */
     Grid grid;
+    long start[SEGMENT_MAX];     /* ticks from the motive's start, the pickup included, to where each segment's cell starts */
+    Sync boundary[SEGMENT_MAX];  /* SYNC_TIE_BAR or SYNC_ANTICIPATION at the start of segment s >= 1, else SYNC_TYPES */
 } Layout;
 
 static bool add_cell(Layout *layout, const Grid *grid, const Cell *cell, long *position) {
@@ -503,6 +644,65 @@ static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMet
     setup->grid.last_offset = (setup->bars * bar - last_length) % bar;
 }
 
+/*
+ * True when the ending still holds with note j at `ticks` (j is the first note of the last segment): a final_long or closed
+ * ending keeps its last note longest, a lead-in keeps its last two notes at most a half beat.
+ */
+static bool ending_kept(const MotiveRandomPreferences *preferences, const Layout *layout, size_t j, long ticks) {
+    size_t last = layout->rhythm.count - 1;
+    if ((preferences->final_long || layout->grid.ending == ENDING_CLOSED) && ticks >= layout->rhythm.ticks[last]) {
+        return false;
+    }
+    return !(layout->grid.ending == ENDING_LEAD_IN && j + 2 == layout->rhythm.count && ticks > layout->grid.half);
+}
+
+/*
+ * Syncopation across a segment boundary (R-454): the last note before a barline held across it (tie_bar), or a segment's
+ * first note arriving early on a chord change (anticipation). One boundary in syncopation_one_in; note counts do not change.
+ */
+static void place_boundary_syncopation(const MotiveRandomPreferences *preferences, FillRng *rng, Layout *layout) {
+    const Grid *grid = &layout->grid;
+    long bar = grid->beats * grid->beat;
+    long *ticks = layout->rhythm.ticks;
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        size_t i = layout->last[s - 1];
+        size_t j = layout->first[s];
+        if (j + 1 >= layout->rhythm.count || i < layout->cell_start) {
+            continue;
+        }
+        bool barline = (layout->start[s] - layout->rhythm.pickup) % bar == 0;
+        bool change = layout->plan.degrees[s] != layout->plan.degrees[s - 1];
+        unsigned long weights[2 * SYNC_LEVELS];
+        unsigned long total = 0;
+        for (size_t type = SYNC_TIE_BAR; type < SYNC_TYPES; type++) {
+            for (size_t level = 0; level < SYNC_LEVELS; level++) {
+                long u = sync_unit(grid, level);
+                bool fits = type == SYNC_TIE_BAR ? barline && ticks[j] >= 2 * u
+                                                 : change && ticks[i] >= 2 * u &&
+                                                       (s + 1 != layout->segment_count || ending_kept(preferences, layout, j, ticks[j] + u));
+                size_t slot = (type - SYNC_TIE_BAR) * SYNC_LEVELS + level;
+                weights[slot] = fits ? preferences->syncopation_types[type] * preferences->syncopation_levels[level] : 0;
+                total += weights[slot];
+            }
+        }
+        if (total == 0 || fill_rng_below(rng, preferences->syncopation_one_in) != 0) {
+            continue;
+        }
+        size_t pick = pick_weighted(rng, weights, 2 * SYNC_LEVELS);
+        Sync type = (Sync)(SYNC_TIE_BAR + pick / SYNC_LEVELS);
+        long u = sync_unit(grid, pick % SYNC_LEVELS);
+        if (type == SYNC_TIE_BAR) {
+            ticks[i] += u;
+            ticks[j] -= u;
+        } else {
+            ticks[i] -= u;
+            ticks[j] += u;
+        }
+        layout->rhythm.on_beat[j] = false;
+        layout->boundary[s] = type;
+    }
+}
+
 /* The rhythm of every segment of a setup. False when this draw does not fit. */
 static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup *setup, FillRng *rng, Layout *layout, Feature *feature_out) {
     memset(layout, 0, sizeof(*layout));
@@ -548,6 +748,9 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     }
     layout->cell_start = layout->rhythm.count;
     layout->first[0] = 0;
+    for (size_t s = 0; s < SEGMENT_MAX; s++) {
+        layout->boundary[s] = SYNC_TYPES;
+    }
     if (!add_cell(layout, grid, &a, &position)) {
         return false;
     }
@@ -555,6 +758,7 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     if (shape == SHAPE_REPEAT || shape == SHAPE_REPEAT_CONTRAST) {
         layout->first[1] = layout->rhythm.count;
         layout->repeats[1] = true;
+        layout->start[1] = layout->rhythm.pickup + position;
         if (!add_cell(layout, grid, &a, &position)) {
             return false;
         }
@@ -567,12 +771,16 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
             return false;
         }
         layout->first[index] = layout->rhythm.count;
+        layout->start[index] = layout->rhythm.pickup + position;
         if (!add_cell(layout, grid, &b, &position)) {
             return false;
         }
         layout->last[index] = layout->rhythm.count - 1;
     }
     layout->rhythm.total = layout->rhythm.pickup + position;
+    if (preferences->syncopation_one_in > 0 && simple_meter(grid)) {
+        place_boundary_syncopation(preferences, rng, layout);
+    }
     return layout->rhythm.count >= MIN_NOTES;
 }
 
@@ -1145,15 +1353,31 @@ static bool ending_holds(const Layout *layout, const Place *place, const Melody 
     return true;
 }
 
+/* True when note i starts off the beat and is held across the next one (the beat counted from the first note after the pickup). */
+static bool crosses_beat(const Layout *layout, const long *onset, size_t i) {
+    long beat = layout->grid.beat;
+    long from = onset[i] - layout->rhythm.pickup;
+    long offset = ((from % beat) + beat) % beat;
+    return offset != 0 && offset + layout->rhythm.ticks[i] > beat;
+}
+
 /* The frames of every segment, the notes between, and a range of no more than a twelfth. */
 static bool draw_melody(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody) {
     Place place;
     memset(&place, 0, sizeof(place));
     memset(melody, 0, sizeof(*melody));
+    long onset[MAX_NOTES];
+    long at = 0;
+    for (size_t i = 0; i < layout->rhythm.count; i++) {
+        onset[i] = at;
+        at += layout->rhythm.ticks[i];
+    }
     for (size_t s = 0; s < layout->segment_count; s++) {
         for (size_t i = layout->first[s]; i <= layout->last[s]; i++) {
             place.segment[i] = (int)s;
-            place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s];
+            /* An off-beat note held across the next beat (a syncopation) is a chord tone. */
+            place.frame[i] = layout->rhythm.on_beat[i] || i == layout->first[s] ||
+                             (preferences->syncopation_one_in > 0 && crosses_beat(layout, onset, i));
         }
     }
     /* A lead-in's last note is a frame note (a chord tone off the beat); when the last segment repeats a, so is a's. */
@@ -1194,6 +1418,13 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
     }
     if (!ending_holds(layout, &place, melody)) {
         return false;
+    }
+    /* A note tied across the barline is a chord tone of the chord after it too. */
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        if (layout->boundary[s] == SYNC_TIE_BAR &&
+            !motive_random_is_chord_step(place.position[layout->last[s - 1]] - chord_shift(layout->plan.degrees[s]))) {
+            return false;
+        }
     }
     /* A motive with no pickup does not open as one that has: a short note, then a longer one on the root, higher. */
     if (preferences->pickup_from_accent && layout->rhythm.pickup == 0 && layout->rhythm.ticks[0] <= layout->grid.beat &&
@@ -1241,12 +1472,6 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
 /* The plan as the motive's own harmony (a chord on each segment's first beat) and the segments as its features. */
 static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layout *layout, Motive *motive) {
     unsigned long den = (unsigned long)TICKS_PER_UNIT * (unsigned long)options->meter.beat_unit;
-    long onset[MAX_NOTES];
-    long position = 0;
-    for (size_t i = 0; i < layout->rhythm.count; i++) {
-        onset[i] = position;
-        position += layout->rhythm.ticks[i];
-    }
     static const char *const LETTERS = "abcdefgh";
     char names[SEGMENT_MAX][MOTIVE_FEATURE_LABEL_MAX + 1];
     size_t letter = 0;
@@ -1254,7 +1479,8 @@ static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layo
         MotiveSketchChord *chord = &motive->chords[s];
         memset(chord, 0, sizeof(*chord));
         chord->degree = layout->plan.degrees[s];
-        if (rational_make(s == 0 ? 0 : onset[layout->first[s]], den, &chord->onset) != RATIONAL_OK) {
+        /* The chord stays on the beat (the segment's cell start) when an anticipation sounds before it. */
+        if (rational_make(s == 0 ? 0 : layout->start[s], den, &chord->onset) != RATIONAL_OK) {
             return false;
         }
         names[s][0] = layout->repeats[s] ? LETTERS[0] : LETTERS[letter++];
@@ -1271,9 +1497,20 @@ static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layo
     return true;
 }
 
+/* True when note i is the first of a segment that arrives early (an anticipation). */
+static bool anticipated(const Layout *layout, size_t i) {
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        if (layout->first[s] == i && layout->boundary[s] == SYNC_ANTICIPATION) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /*
  * True when the tone roles read the motive as it was drawn: the base harmony is the plan, given, every frame note is a
- * chord tone, and every other note is a non-chord tone of its type that resolves.
+ * chord tone, and every other note is a non-chord tone of its type that resolves. An early note is read against the chord
+ * before it, so like a run note it may be a chord tone or a non-chord tone that resolves.
  */
 static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Melody *melody) {
     MotiveAnalysis analysis;
@@ -1288,7 +1525,7 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
     }
     for (size_t i = 0; i < motive->note_count; i++) {
         const MotiveToneLabel *label = &analysis.tones[i];
-        bool expected = melody->run[i] ? label->role == MOTIVE_TONE_CHORD || (label->role == MOTIVE_TONE_NON_CHORD && !label->unresolved)
+        bool expected = melody->run[i] || anticipated(layout, i) ? label->role == MOTIVE_TONE_CHORD || (label->role == MOTIVE_TONE_NON_CHORD && !label->unresolved)
                         : melody->decorated[i] ? label->role == MOTIVE_TONE_NON_CHORD && label->type == melody->types[i] &&
                                                    !label->unresolved
                                              : label->role == MOTIVE_TONE_CHORD;
