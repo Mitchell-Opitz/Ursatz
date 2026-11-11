@@ -17,6 +17,7 @@
 #define SEGMENT_MIN_CELL_BEATS 2 /* a cell must hold a feature: the shortest cell is two beats */
 #define TICKS_PER_UNIT 12        /* ticks in the meter's beat unit: halves, thirds and quarters of it are whole */
 #define SEGMENT_MAX 3
+#define CHORD_MAX SEGMENT_MAX /* the chords of a motive: one per segment */
 #define SEGMENT_TRIES_PER_SETUP 8 /* notes drawn within one bars, shape and plan before another is drawn (a candidate) */
 #define SEGMENT_CELL_TRIES 32 /* a cell that does not fit is drawn again, so a failed cell does not change the shape's odds */
 #define SEGMENT_START_REACH 4 /* rungs either side of the note before, searched for where a new segment starts */
@@ -594,6 +595,11 @@ typedef struct {
     Grid grid;
     long start[SEGMENT_MAX];     /* ticks from the motive's start, the pickup included, to where each segment's cell starts */
     Sync boundary[SEGMENT_MAX];  /* SYNC_TIE_BAR or SYNC_ANTICIPATION at the start of segment s >= 1, else SYNC_TYPES */
+    size_t chord_count;
+    int chord_degree[CHORD_MAX];
+    long chord_onset[CHORD_MAX]; /* ticks from the motive's start, the pickup included, to where each chord starts */
+    int degree[MAX_NOTES];       /* the chord at each note's onset (set_note_chords) */
+    bool chord_first[MAX_NOTES]; /* the first note on a chord after the first */
 } Layout;
 
 static bool add_cell(Layout *layout, const Grid *grid, const Cell *cell, long *position) {
@@ -705,6 +711,44 @@ static void place_boundary_syncopation(const MotiveRandomPreferences *preference
     }
 }
 
+/* The chords of a layout: one per segment on the plan's degrees, each from its segment's cell start (the first from 0). */
+static void set_chord_list(const Setup *setup, Layout *layout) {
+    layout->chord_count = setup->plan.count;
+    for (size_t s = 0; s < layout->chord_count; s++) {
+        layout->chord_degree[s] = setup->plan.degrees[s];
+        layout->chord_onset[s] = s == 0 ? 0 : layout->start[s];
+    }
+}
+
+/*
+ * The chord at each note: the last chord whose onset is at or before the note's, except that an anticipated note (the first
+ * of a segment that arrives early) takes the chord that starts where its segment's cell does, so it is still drawn on the
+ * new chord's tone. chord_first marks the first note on each chord after the first.
+ */
+static void set_note_chords(Layout *layout) {
+    long at = 0;
+    size_t previous = 0;
+    for (size_t i = 0; i < layout->rhythm.count; i++) {
+        size_t chord = 0;
+        while (chord + 1 < layout->chord_count && layout->chord_onset[chord + 1] <= at) {
+            chord++;
+        }
+        for (size_t s = 1; s < layout->segment_count; s++) {
+            if (layout->first[s] == i && layout->boundary[s] == SYNC_ANTICIPATION) {
+                for (size_t k = 0; k < layout->chord_count; k++) {
+                    if (layout->chord_onset[k] == layout->start[s]) {
+                        chord = k;
+                    }
+                }
+            }
+        }
+        layout->degree[i] = layout->chord_degree[chord];
+        layout->chord_first[i] = i > 0 && chord != previous;
+        previous = chord;
+        at += layout->rhythm.ticks[i];
+    }
+}
+
 /* The rhythm of every segment of a setup. False when this draw does not fit. */
 static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup *setup, FillRng *rng, Layout *layout, Feature *feature_out) {
     memset(layout, 0, sizeof(*layout));
@@ -783,6 +827,8 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     if (preferences->syncopation_one_in > 0 && simple_meter(grid)) {
         place_boundary_syncopation(preferences, rng, layout);
     }
+    set_chord_list(setup, layout);
+    set_note_chords(layout);
     return layout->rhythm.count >= MIN_NOTES;
 }
 
@@ -801,19 +847,16 @@ static int pitch_of(const AnalysisKey *key, const Place *place, size_t i) {
     return motive_position_pitch(key, place->position[i], place->alteration[i]);
 }
 
-/* A frame note on the ladder of I, moved to the tones of the chord of its segment. In minor, the third of V is raised. */
+/* A frame note on the ladder of I, moved to the tones of the chord at its onset. In minor, the third of V is raised. */
 static bool set_frame(const AnalysisKey *key, const Layout *layout, Place *place, Melody *melody, size_t i, long rung) {
-    int degree = layout->plan.degrees[place->segment[i]];
+    int degree = layout->degree[i];
     long shift = chord_shift(degree);
     if (rung < 0) {
         return false;
     }
     place->rung[i] = rung;
     place->position[i] = motive_random_rung_position(rung) + shift;
-    place->alteration[i] = key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 &&
-                                   step_of(place->position[i] - shift) == 2
-                               ? 1
-                               : 0;
+    place->alteration[i] = chord_alteration(key, degree, place->position[i]);
     melody->pitches[i] = pitch_of(key, place, i);
     return motive_random_in_range(melody->pitches[i]);
 }
@@ -896,7 +939,7 @@ static bool draw_frame_repeat(const MotiveRandomPreferences *preferences, const 
         previous--;
     }
     int before = melody->pitches[previous];
-    bool same_chord = layout->plan.degrees[segment] == layout->plan.degrees[0];
+    bool same_chord = layout->degree[layout->first[segment]] == layout->degree[layout->cell_start];
     long offsets[7];
     size_t offset_count = 0;
     for (long offset = -3; offset <= 3; offset++) {
@@ -1044,7 +1087,7 @@ static bool draw_run(const AnalysisKey *key, const Layout *layout, FillRng *rng,
     RunWalk walk;
     memset(&walk, 0, sizeof(walk));
     walk.key = key;
-    walk.degree = layout->plan.degrees[place->segment[first]];
+    walk.degree = layout->degree[first];
     walk.shift = chord_shift(walk.degree);
     walk.length = last - first + 1;
     walk.target = place->position[last + 1];
@@ -1094,7 +1137,7 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
             i = last;
             continue;
         }
-        int degree = layout->plan.degrees[place->segment[i]];
+        int degree = layout->degree[i];
         long shift = chord_shift(degree);
         long before = place->position[i - 1];
         size_t kind = pick_weighted(rng, preferences->decorations, DECORATION_KINDS + 1);
@@ -1151,7 +1194,7 @@ static void put_accent(const AnalysisKey *key, Place *place, Melody *melody, siz
 
 /* An appoggiatura or passing tone on the beat: the chord tone moves one note later, and a step beside it comes first. */
 static bool place_step_accent(const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t i, NonChordTone type, Place *place, Melody *melody) {
-    int degree = layout->plan.degrees[place->segment[i]];
+    int degree = layout->degree[i];
     long shift = chord_shift(degree);
     long target = place->position[i];
     int target_pitch = melody->pitches[i];
@@ -1174,11 +1217,10 @@ static bool place_step_accent(const AnalysisKey *key, const Layout *layout, Fill
 
 /* A suspension where the chord changes: the note before is held over as a non-chord tone and falls to a chord tone. */
 static bool place_suspension(const AnalysisKey *key, const Layout *layout, size_t i, Place *place, Melody *melody) {
-    size_t s = (size_t)place->segment[i];
-    if (s == 0 || i != layout->first[s] || layout->plan.degrees[s] == layout->plan.degrees[s - 1]) {
+    if (i == 0 || layout->degree[i] == layout->degree[i - 1]) {
         return false;
     }
-    int degree = layout->plan.degrees[s];
+    int degree = layout->degree[i];
     long held = place->position[i - 1];
     long resolution = held - 1;
     int resolution_alteration = chord_alteration(key, degree, resolution);
@@ -1235,9 +1277,9 @@ typedef struct {
 } LongNct;
 
 /* Adds the figure `type` at position n resolving to r at note i when the rules allow it, weighted by its type and interval. */
-static void add_long_nct(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, const Place *place, const Melody *melody,
+static void add_long_nct(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, const Melody *melody,
                          size_t i, size_t type, long n, int n_alteration, long r, LongNct *out, size_t *count) {
-    int degree = layout->plan.degrees[place->segment[i]];
+    int degree = layout->degree[i];
     long shift = chord_shift(degree);
     long step = step_of(n - shift);
     if (motive_random_is_chord_step(n - shift) || !motive_random_is_chord_step(r - shift) || *count == LONG_NCT_CANDIDATES) {
@@ -1303,22 +1345,22 @@ static bool place_long_accents(const MotiveRandomPreferences *preferences, const
             continue;
         }
         size_t i = eligible[pick_weighted(rng, weights, eligible_count)];
-        int degree = layout->plan.degrees[s];
+        int degree = layout->degree[i];
         LongNct candidates[LONG_NCT_CANDIDATES];
         size_t count = 0;
         for (size_t type = 0; type < LONG_NCT_TYPES; type++) {
             if (type == 1 || type == 2) {
                 /* held over from the note before, where the chord changes: down by step, or up (retardation) */
-                if (s >= 1 && i == layout->first[s] && degree != layout->plan.degrees[s - 1]) {
+                if (degree != layout->degree[i - 1]) {
                     long held = place->position[i - 1];
-                    add_long_nct(preferences, key, layout, place, melody, i, type, held, place->alteration[i - 1], held + (type == 1 ? -1 : 1), candidates,
+                    add_long_nct(preferences, key, layout, melody, i, type, held, place->alteration[i - 1], held + (type == 1 ? -1 : 1), candidates,
                                  &count);
                 }
                 continue;
             }
             for (long n = place->position[i] - 2; n <= place->position[i] + 2; n++) {
-                add_long_nct(preferences, key, layout, place, melody, i, type, n, 0, n - 1, candidates, &count);
-                add_long_nct(preferences, key, layout, place, melody, i, type, n, 0, n + 1, candidates, &count);
+                add_long_nct(preferences, key, layout, melody, i, type, n, 0, n - 1, candidates, &count);
+                add_long_nct(preferences, key, layout, melody, i, type, n, 0, n + 1, candidates, &count);
             }
         }
         unsigned long candidate_weights[LONG_NCT_CANDIDATES];
@@ -1344,7 +1386,7 @@ static bool place_long_accents(const MotiveRandomPreferences *preferences, const
 static bool ending_holds(const Layout *layout, const Place *place, const Melody *melody) {
     size_t last = layout->rhythm.count - 1;
     if (layout->grid.ending == ENDING_CLOSED) {
-        long step = step_of(place->position[last] - chord_shift(layout->plan.degrees[place->segment[last]]));
+        long step = step_of(place->position[last] - chord_shift(layout->degree[last]));
         int move = abs(melody->pitches[last] - melody->pitches[last - 1]);
         return (step == 0 || step == 2) && (move == 1 || move == 2);
     }
@@ -1424,14 +1466,14 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
     /* A note tied across the barline is a chord tone of the chord after it too. */
     for (size_t s = 1; s < layout->segment_count; s++) {
         if (layout->boundary[s] == SYNC_TIE_BAR &&
-            !motive_random_is_chord_step(place.position[layout->last[s - 1]] - chord_shift(layout->plan.degrees[s]))) {
+            !motive_random_is_chord_step(place.position[layout->last[s - 1]] - chord_shift(layout->degree[layout->first[s]]))) {
             return false;
         }
     }
     /* A motive with no pickup does not open as one that has: a short note, then a longer one on the root, higher. */
     if (preferences->pickup_from_accent && layout->rhythm.pickup == 0 && layout->rhythm.ticks[0] <= layout->grid.beat &&
         layout->rhythm.ticks[1] > layout->rhythm.ticks[0] &&
-        step_of(place.position[1] - chord_shift(layout->plan.degrees[place.segment[1]])) == 0 && melody->pitches[1] > melody->pitches[0]) {
+        step_of(place.position[1] - chord_shift(layout->degree[1])) == 0 && melody->pitches[1] > melody->pitches[0]) {
         return false;
     }
     if (preferences->avoid_repeats) {
@@ -1479,14 +1521,16 @@ static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layo
     static const char *const LETTERS = "abcdefgh";
     char names[SEGMENT_MAX][MOTIVE_FEATURE_LABEL_MAX + 1];
     size_t letter = 0;
-    for (size_t s = 0; s < layout->segment_count; s++) {
-        MotiveSketchChord *chord = &motive->chords[s];
+    for (size_t k = 0; k < layout->chord_count; k++) {
+        MotiveSketchChord *chord = &motive->chords[k];
         memset(chord, 0, sizeof(*chord));
-        chord->degree = layout->plan.degrees[s];
+        chord->degree = layout->chord_degree[k];
         /* The chord stays on the beat (the segment's cell start) when an anticipation sounds before it. */
-        if (rational_make(s == 0 ? 0 : layout->start[s], den, &chord->onset) != RATIONAL_OK) {
+        if (rational_make(layout->chord_onset[k], den, &chord->onset) != RATIONAL_OK) {
             return false;
         }
+    }
+    for (size_t s = 0; s < layout->segment_count; s++) {
         names[s][0] = layout->repeats[s] ? LETTERS[0] : LETTERS[letter++];
         names[s][1] = layout->repeats[s] ? '\'' : '\0';
         names[s][2] = '\0';
@@ -1496,7 +1540,7 @@ static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layo
         feature->first = layout->first[s];
         feature->last = layout->last[s];
     }
-    motive->chord_count = layout->segment_count;
+    motive->chord_count = layout->chord_count;
     motive->feature_count = layout->segment_count;
     return true;
 }
@@ -1519,11 +1563,11 @@ static bool anticipated(const Layout *layout, size_t i) {
 static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Melody *melody) {
     MotiveAnalysis analysis;
     if (!motive_analyze(motive, &analysis) || !analysis.base_harmony_known || !analysis.tones_known ||
-        !analysis.base_harmony.given || analysis.base_harmony.count != layout->segment_count) {
+        !analysis.base_harmony.given || analysis.base_harmony.count != layout->chord_count) {
         return false;
     }
-    for (size_t s = 0; s < layout->segment_count; s++) {
-        if (analysis.base_harmony.chords[s].degree != layout->plan.degrees[s]) {
+    for (size_t k = 0; k < layout->chord_count; k++) {
+        if (analysis.base_harmony.chords[k].degree != layout->chord_degree[k]) {
             return false;
         }
     }
