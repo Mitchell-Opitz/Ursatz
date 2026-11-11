@@ -590,6 +590,8 @@ typedef struct {
     Plan plan;
     size_t cell_start; /* the first note of segment a's cell: after the pickup note, if any */
     Grid grid;
+    long start[SEGMENT_MAX];     /* ticks from the motive's start, the pickup included, to where each segment's cell starts */
+    Sync boundary[SEGMENT_MAX];  /* SYNC_TIE_BAR or SYNC_ANTICIPATION at the start of segment s >= 1, else SYNC_TYPES */
 } Layout;
 
 static bool add_cell(Layout *layout, const Grid *grid, const Cell *cell, long *position) {
@@ -642,6 +644,65 @@ static void draw_setup(const MotiveRandomPreferences *preferences, const PlanMet
     setup->grid.last_offset = (setup->bars * bar - last_length) % bar;
 }
 
+/*
+ * True when the ending still holds with note j at `ticks` (j is the first note of the last segment): a final_long or closed
+ * ending keeps its last note longest, a lead-in keeps its last two notes at most a half beat.
+ */
+static bool ending_kept(const MotiveRandomPreferences *preferences, const Layout *layout, size_t j, long ticks) {
+    size_t last = layout->rhythm.count - 1;
+    if ((preferences->final_long || layout->grid.ending == ENDING_CLOSED) && ticks >= layout->rhythm.ticks[last]) {
+        return false;
+    }
+    return !(layout->grid.ending == ENDING_LEAD_IN && j + 2 == layout->rhythm.count && ticks > layout->grid.half);
+}
+
+/*
+ * Syncopation across a segment boundary (R-454): the last note before a barline held across it (tie_bar), or a segment's
+ * first note arriving early on a chord change (anticipation). One boundary in syncopation_one_in; note counts do not change.
+ */
+static void place_boundary_syncopation(const MotiveRandomPreferences *preferences, FillRng *rng, Layout *layout) {
+    const Grid *grid = &layout->grid;
+    long bar = grid->beats * grid->beat;
+    long *ticks = layout->rhythm.ticks;
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        size_t i = layout->last[s - 1];
+        size_t j = layout->first[s];
+        if (j + 1 >= layout->rhythm.count || i < layout->cell_start) {
+            continue;
+        }
+        bool barline = (layout->start[s] - layout->rhythm.pickup) % bar == 0;
+        bool change = layout->plan.degrees[s] != layout->plan.degrees[s - 1];
+        unsigned long weights[2 * SYNC_LEVELS];
+        unsigned long total = 0;
+        for (size_t type = SYNC_TIE_BAR; type < SYNC_TYPES; type++) {
+            for (size_t level = 0; level < SYNC_LEVELS; level++) {
+                long u = sync_unit(grid, level);
+                bool fits = type == SYNC_TIE_BAR ? barline && ticks[j] >= 2 * u
+                                                 : change && ticks[i] >= 2 * u &&
+                                                       (s + 1 != layout->segment_count || ending_kept(preferences, layout, j, ticks[j] + u));
+                size_t slot = (type - SYNC_TIE_BAR) * SYNC_LEVELS + level;
+                weights[slot] = fits ? preferences->syncopation_types[type] * preferences->syncopation_levels[level] : 0;
+                total += weights[slot];
+            }
+        }
+        if (total == 0 || fill_rng_below(rng, preferences->syncopation_one_in) != 0) {
+            continue;
+        }
+        size_t pick = pick_weighted(rng, weights, 2 * SYNC_LEVELS);
+        Sync type = (Sync)(SYNC_TIE_BAR + pick / SYNC_LEVELS);
+        long u = sync_unit(grid, pick % SYNC_LEVELS);
+        if (type == SYNC_TIE_BAR) {
+            ticks[i] += u;
+            ticks[j] -= u;
+        } else {
+            ticks[i] -= u;
+            ticks[j] += u;
+        }
+        layout->rhythm.on_beat[j] = false;
+        layout->boundary[s] = type;
+    }
+}
+
 /* The rhythm of every segment of a setup. False when this draw does not fit. */
 static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup *setup, FillRng *rng, Layout *layout, Feature *feature_out) {
     memset(layout, 0, sizeof(*layout));
@@ -687,6 +748,9 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     }
     layout->cell_start = layout->rhythm.count;
     layout->first[0] = 0;
+    for (size_t s = 0; s < SEGMENT_MAX; s++) {
+        layout->boundary[s] = SYNC_TYPES;
+    }
     if (!add_cell(layout, grid, &a, &position)) {
         return false;
     }
@@ -694,6 +758,7 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
     if (shape == SHAPE_REPEAT || shape == SHAPE_REPEAT_CONTRAST) {
         layout->first[1] = layout->rhythm.count;
         layout->repeats[1] = true;
+        layout->start[1] = layout->rhythm.pickup + position;
         if (!add_cell(layout, grid, &a, &position)) {
             return false;
         }
@@ -706,12 +771,16 @@ static bool draw_layout(const MotiveRandomPreferences *preferences, const Setup 
             return false;
         }
         layout->first[index] = layout->rhythm.count;
+        layout->start[index] = layout->rhythm.pickup + position;
         if (!add_cell(layout, grid, &b, &position)) {
             return false;
         }
         layout->last[index] = layout->rhythm.count - 1;
     }
     layout->rhythm.total = layout->rhythm.pickup + position;
+    if (preferences->syncopation_one_in > 0 && simple_meter(grid)) {
+        place_boundary_syncopation(preferences, rng, layout);
+    }
     return layout->rhythm.count >= MIN_NOTES;
 }
 
@@ -1350,6 +1419,13 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
     if (!ending_holds(layout, &place, melody)) {
         return false;
     }
+    /* A note tied across the barline is a chord tone of the chord after it too. */
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        if (layout->boundary[s] == SYNC_TIE_BAR &&
+            !motive_random_is_chord_step(place.position[layout->last[s - 1]] - chord_shift(layout->plan.degrees[s]))) {
+            return false;
+        }
+    }
     /* A motive with no pickup does not open as one that has: a short note, then a longer one on the root, higher. */
     if (preferences->pickup_from_accent && layout->rhythm.pickup == 0 && layout->rhythm.ticks[0] <= layout->grid.beat &&
         layout->rhythm.ticks[1] > layout->rhythm.ticks[0] &&
@@ -1396,12 +1472,6 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
 /* The plan as the motive's own harmony (a chord on each segment's first beat) and the segments as its features. */
 static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layout *layout, Motive *motive) {
     unsigned long den = (unsigned long)TICKS_PER_UNIT * (unsigned long)options->meter.beat_unit;
-    long onset[MAX_NOTES];
-    long position = 0;
-    for (size_t i = 0; i < layout->rhythm.count; i++) {
-        onset[i] = position;
-        position += layout->rhythm.ticks[i];
-    }
     static const char *const LETTERS = "abcdefgh";
     char names[SEGMENT_MAX][MOTIVE_FEATURE_LABEL_MAX + 1];
     size_t letter = 0;
@@ -1409,7 +1479,8 @@ static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layo
         MotiveSketchChord *chord = &motive->chords[s];
         memset(chord, 0, sizeof(*chord));
         chord->degree = layout->plan.degrees[s];
-        if (rational_make(s == 0 ? 0 : onset[layout->first[s]], den, &chord->onset) != RATIONAL_OK) {
+        /* The chord stays on the beat (the segment's cell start) when an anticipation sounds before it. */
+        if (rational_make(s == 0 ? 0 : layout->start[s], den, &chord->onset) != RATIONAL_OK) {
             return false;
         }
         names[s][0] = layout->repeats[s] ? LETTERS[0] : LETTERS[letter++];
@@ -1426,9 +1497,20 @@ static bool set_plan_and_segments(const MotiveRandomOptions *options, const Layo
     return true;
 }
 
+/* True when note i is the first of a segment that arrives early (an anticipation). */
+static bool anticipated(const Layout *layout, size_t i) {
+    for (size_t s = 1; s < layout->segment_count; s++) {
+        if (layout->first[s] == i && layout->boundary[s] == SYNC_ANTICIPATION) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /*
  * True when the tone roles read the motive as it was drawn: the base harmony is the plan, given, every frame note is a
- * chord tone, and every other note is a non-chord tone of its type that resolves.
+ * chord tone, and every other note is a non-chord tone of its type that resolves. An early note is read against the chord
+ * before it, so like a run note it may be a chord tone or a non-chord tone that resolves.
  */
 static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Melody *melody) {
     MotiveAnalysis analysis;
@@ -1443,7 +1525,7 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
     }
     for (size_t i = 0; i < motive->note_count; i++) {
         const MotiveToneLabel *label = &analysis.tones[i];
-        bool expected = melody->run[i] ? label->role == MOTIVE_TONE_CHORD || (label->role == MOTIVE_TONE_NON_CHORD && !label->unresolved)
+        bool expected = melody->run[i] || anticipated(layout, i) ? label->role == MOTIVE_TONE_CHORD || (label->role == MOTIVE_TONE_NON_CHORD && !label->unresolved)
                         : melody->decorated[i] ? label->role == MOTIVE_TONE_NON_CHORD && label->type == melody->types[i] &&
                                                    !label->unresolved
                                              : label->role == MOTIVE_TONE_CHORD;
