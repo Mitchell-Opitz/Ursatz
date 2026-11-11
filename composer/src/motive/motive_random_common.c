@@ -55,6 +55,8 @@ bool motive_random_forms(NonChordTone type, int before, int pitch, int after) {
         return in_step && abs(out) > 2 && !same_way;
     case NON_CHORD_TONE_SUSPENSION: /* held over from the note before, then down by step (the caller checks the chord change) */
         return in == 0 && out < 0 && out_step;
+    case NON_CHORD_TONE_RETARDATION: /* held over from the note before, then up by step */
+        return in == 0 && out > 0 && out_step;
     default:
         return false;
     }

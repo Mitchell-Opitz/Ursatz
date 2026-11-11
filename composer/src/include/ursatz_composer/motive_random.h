@@ -89,6 +89,17 @@ typedef enum {
  *   compound_beats    in 6/8, 9/8 and 12/8 the beat is the dotted quarter: cells are tiled in beats of three eighths, the
  *                     dotted feature is a dotted eighth, sixteenth and eighth, and a run of eighths between two frame
  *                     notes is filled by step; no effect in any other meter
+ *   endings           how the last segment ends: free (as drawn), closed (the last note is long, on the strongest beat
+ *                     available, the root or third of the chord, one or two semitones from the note before), open (the last
+ *                     note is degree 2, 5 or 7 of the key) or lead_in (the last two notes are short and the last is off the
+ *                     beat); a motive that ends on IV cannot end open; final_long never passes with a lead_in
+ *   long_nct_one_in   a long non-chord tone (on a beat, a beat or longer, resolving to the next note) in one segment of
+ *                     this many; 0 never, and no random number is drawn
+ *   long_nct_types    which kind: appoggiatura, suspension, retardation, passing, neighbor (a suspension or retardation
+ *                     only where the chord changes)
+ *   long_nct_intervals the tone's interval above the chord root: second, fourth, sixth, seventh
+ *   long_nct_beats    where the note sits: downbeat, middle of the bar, other beat
+ *   long_nct_lengths  how long the note is: a beat, a dotted beat, two beats or more
  */
 typedef struct {
     unsigned long bars[2];
@@ -112,6 +123,12 @@ typedef struct {
     unsigned long long_on_weak;
     bool final_long;
     bool compound_beats;
+    unsigned long endings[4];
+    unsigned long_nct_one_in;
+    unsigned long long_nct_types[5];
+    unsigned long long_nct_intervals[4];
+    unsigned long long_nct_beats[3];
+    unsigned long long_nct_lengths[3];
 } MotiveRandomPreferences;
 
 /* The defaults. */
