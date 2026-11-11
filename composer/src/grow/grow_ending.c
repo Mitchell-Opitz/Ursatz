@@ -114,6 +114,71 @@ static bool draw_segment_fragments(FillRng *rng, GrowDevelopment development, Gr
     return false;
 }
 
+/* Whether any continuation setting is on: the continuation is then drawn by draw_accelerating_continuation. */
+static bool continuation_on(const GrowContinuation *settings) {
+    return settings->every_segment;
+}
+
+/*
+ * The fragments of an accelerating continuation (R-462): fragment 1 is a segment of m0 that fits a bar, the segment `avoid`
+ * (SIZE_MAX for none) left out when another fits, weight 1 each with every_segment; fragment 2 is the first segment after
+ * fragment 1's, round to the first and fragment 1's own last, that fits, exact. False, with nothing set, when none does.
+ */
+static bool draw_accelerating_fragments(FillRng *rng, const GrowThemeRequest *request, GrowThemeSpec *spec, Rational unit,
+                                        size_t avoid) {
+    const GrowContinuation *settings = &request->continuation;
+    const unsigned *segment_weights = FRAGMENT_SEGMENT_WEIGHTS[request->development];
+    Rational room1 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1]);
+    Rational room2 = grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2]);
+    size_t fits[MOTIVE_MAX_FEATURES];
+    unsigned weights[MOTIVE_MAX_FEATURES];
+    size_t count = 0;
+    unsigned total = 0;
+    if (!spec->segment_room || grow_idea_own(spec, GROW_PLACE_FRAGMENT_1) || grow_idea_own(spec, GROW_PLACE_FRAGMENT_2)) {
+        return false;
+    }
+    for (int skip = avoid != SIZE_MAX; skip >= 0 && count == 0; skip--) {
+        total = 0;
+        for (size_t s = 0; s < spec->segment_count; s++) {
+            Motive motive;
+            if ((skip && s == avoid) || !segment_fragment(spec, s, &motive) || rational_cmp(motive.length, room1) > 0) {
+                continue;
+            }
+            weights[count] = settings->every_segment ? 1 : segment_weights[spec->segments[s].label[0] == 'a' ? 1 : 0];
+            fits[count++] = s;
+            total += weights[count - 1];
+        }
+    }
+    if (count == 0) {
+        return false;
+    }
+    uint64_t pick = fill_rng_below(rng, total);
+    size_t chosen = fits[count - 1];
+    for (size_t i = 0; i < count; i++) {
+        if (pick < weights[i]) {
+            chosen = fits[i];
+            break;
+        }
+        pick -= weights[i];
+    }
+    segment_fragment(spec, chosen, &spec->fragment_motive[0]);
+    spec->fragment_from_segment[0] = true;
+    spec->fragment_segment[0] = chosen;
+    spec->fragment_from_segment[1] = true;
+    spec->fragment_sequence = false;
+    for (size_t i = 1; i <= spec->segment_count; i++) {
+        size_t next = (chosen + i) % spec->segment_count;
+        if (segment_fragment(spec, next, &spec->fragment_motive[1])) {
+            spec->fragment_segment[1] = next;
+            if (fragment_fits(spec, GROW_PLACE_FRAGMENT_2, room2)) {
+                return true;
+            }
+        }
+    }
+    clear_segment_fragments(spec);
+    return false;
+}
+
 /* The pitches an idea made by the motive-forms may use (grow_form.c), so the melody has room to place it. */
 #define LIQUID_LOW 58
 #define LIQUID_HIGH 84
@@ -502,9 +567,50 @@ static void set_continuation_harmony(const GrowThemeRequest *request, GrowThemeS
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
 }
 
+/*
+ * The rest of a continuation once its fragments are kept: the cadential idea liquidates the segments of m0 from `from`
+ * steps until a residue fits, keeps a segment and meets the cadence (a draw with no such residue fails, R-345); each idea
+ * after the presentation is made from m0 and has to fit in the room it has; then the harmonic rhythm.
+ */
+static bool finish_continuation(const GrowThemeRequest *request, GrowThemeSpec *spec, Rational unit, size_t from) {
+    if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
+        size_t steps;
+        size_t segment;
+        bool head;
+        Motive result;
+        if (!liquidate_segments(spec, request->development, from, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]),
+                                true, request->cadence, &steps, &segment, &head, &result)) {
+            return false;
+        }
+        keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, segment, head, &result);
+    }
+    for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea < GROW_PLACE_COUNT; idea++) {
+        if (!keep_idea(spec, idea, unit, IDEA_UNITS[idea])) {
+            return false;
+        }
+    }
+    set_continuation_harmony(request, spec);
+    /* A key opens on a phrase model's pivot chord. */
+    return !request->has_end_change || spec->ending_shape == PLAN_HARMONY_SHAPE_PHRASE_MODEL;
+}
+
+/* A continuation by the settings of request->continuation (R-452): the fragments by draw_accelerating_fragments, else the leading ones. */
+static bool draw_accelerating_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit,
+                                           size_t first, size_t second) {
+    if (!draw_accelerating_fragments(rng, request, spec, unit, SIZE_MAX) &&
+        (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
+         fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0)) {
+        return false;
+    }
+    return finish_continuation(request, spec, unit, 1);
+}
+
 static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
     size_t first = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
     size_t second = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
+    if (continuation_on(&request->continuation)) {
+        return draw_accelerating_continuation(request, rng, spec, unit, first, second);
+    }
     /* Fragments are segments of m0 when it has them that fit, else its leading notes. */
     if (!draw_segment_fragments(rng, request->development, spec, unit) &&
         (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
@@ -513,27 +619,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     }
     /* The cadential idea liquidates the segments of m0 until a residue fits, keeps a segment and meets the cadence; a draw
        with no such residue fails (R-345). */
-    if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
-        size_t steps;
-        size_t segment;
-        bool head;
-        Motive result;
-        if (!liquidate_segments(spec, request->development, 1, idea_room(spec, unit, IDEA_UNITS[GROW_PLACE_CADENTIAL]),
-                                true, request->cadence, &steps, &segment, &head, &result)) {
-            return false;
-        }
-        keep_liquidation(spec, GROW_PLACE_CADENTIAL, steps, segment, head, &result);
-    }
-    /* Each idea after the presentation is made from m0 and has to fit in the room it has. */
-    for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea < GROW_PLACE_COUNT; idea++) {
-        if (!keep_idea(spec, idea, unit, IDEA_UNITS[idea])) {
-            return false;
-        }
-    }
-
-    set_continuation_harmony(request, spec);
-    /* A key opens on a phrase model's pivot chord. */
-    return !request->has_end_change || spec->ending_shape == PLAN_HARMONY_SHAPE_PHRASE_MODEL;
+    return finish_continuation(request, spec, unit, 1);
 }
 
 /* A consequent restates the basic idea and ends with a contrasting idea that is not the antecedent's. */
