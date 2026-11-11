@@ -39,6 +39,8 @@ typedef struct {
 #define I6 {1, 1, false, false}
 #define IV {4, 0, false, false}
 #define V {5, 0, false, false}
+#define I64 {1, 2, false, false}
+#define V7 {5, 0, true, false}
 #define V6 {5, 1, false, false}
 #define V65 {5, 1, true, false}
 #define V43 {5, 2, true, false}
@@ -65,6 +67,20 @@ static const Figure FIGURES[] = {
     {ANCHOR_DOMINANT, ANCHOR_TONIC, 3, {V6, I6, I}},
 };
 
+/*
+ * The figures of a span over a dominant pedal (R-446): every chord has the dominant in the bass, so each is V, its
+ * seventh, or the neighbor six-four above the pedal. A shape with pedal draws only from these; a shape without it
+ * draws only from FIGURES.
+ */
+static const Figure PEDAL_FIGURES[] = {
+    {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 1, {V}},
+    {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 3, {V, I64, V}},
+    {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 3, {V, I64, V7}},
+    {ANCHOR_DOMINANT, ANCHOR_DOMINANT, 2, {V, V7}},
+};
+
+#undef I64
+#undef V7
 #undef I
 #undef I6
 #undef IV
@@ -75,6 +91,7 @@ static const Figure FIGURES[] = {
 #undef VIIO6
 
 #define FIGURE_COUNT (sizeof(FIGURES) / sizeof(FIGURES[0]))
+#define PEDAL_FIGURE_COUNT (sizeof(PEDAL_FIGURES) / sizeof(PEDAL_FIGURES[0]))
 
 /* The operator's context is non-NULL when it works around Given material (harmony_prolong_register_given). */
 static const char AROUND_GIVEN = 1;
@@ -131,9 +148,9 @@ static bool deal_figure(const PhraseRequest *request, const Figure *figure, Fill
     if (!harmony_shape_keeps_in(&request->shape, cells, figure->count, &request->metre, false)) {
         return false;
     }
-    /* A span that ends on a root-position V keeps that V off a downbeat. */
+    /* A span that goes from the tonic to a root-position V keeps that V off a downbeat. */
     const FigureChord *last = &figure->chords[figure->count - 1];
-    if (figure->ends == ANCHOR_DOMINANT && last->inversion == 0) {
+    if (figure->starts == ANCHOR_TONIC && figure->ends == ANCHOR_DOMINANT && last->inversion == 0) {
         size_t start = request->cells - cells[figure->count - 1];
         if (harmony_metre_cell_on_downbeat(&request->metre, start)) {
             return false;
@@ -161,7 +178,8 @@ static bool deal_figure(const PhraseRequest *request, const Figure *figure, Fill
 
 static bool same_shape(const PlanHarmonyShape *a, const PlanHarmonyShape *b) {
     return a->kind == b->kind && a->starts_on == b->starts_on && a->ends_on == b->ends_on &&
-           a->max_cells_per_chord == b->max_cells_per_chord && a->split_at_bars == b->split_at_bars;
+           a->max_cells_per_chord == b->max_cells_per_chord && a->split_at_bars == b->split_at_bars &&
+           a->pedal == b->pedal;
 }
 
 /*
@@ -214,10 +232,12 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
     if (!harmony_is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
         return false;
     }
-    size_t wanted[FIGURE_COUNT];
+    const Figure *table = request.shape.pedal ? PEDAL_FIGURES : FIGURES;
+    size_t table_count = request.shape.pedal ? PEDAL_FIGURE_COUNT : FIGURE_COUNT;
+    size_t wanted[FIGURE_COUNT > PEDAL_FIGURE_COUNT ? FIGURE_COUNT : PEDAL_FIGURE_COUNT];
     size_t wanted_count = 0;
-    for (size_t i = 0; i < FIGURE_COUNT; i++) {
-        if (FIGURES[i].count <= request.cells && figure_wanted(&FIGURES[i], &request.shape)) {
+    for (size_t i = 0; i < table_count; i++) {
+        if (table[i].count <= request.cells && figure_wanted(&table[i], &request.shape)) {
             wanted[wanted_count++] = i;
         }
     }
@@ -252,7 +272,7 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
         kept[kept_count++] = payload;
     }
     for (size_t attempt = 0; wanted_count && attempt < CANDIDATE_ATTEMPTS; attempt++) {
-        const Figure *figure = &FIGURES[wanted[fill_rng_below(rng, wanted_count)]];
+        const Figure *figure = &table[wanted[fill_rng_below(rng, wanted_count)]];
         PhraseProgression progression;
         bool dealt = false;
         for (size_t deal = 0; !dealt && deal < (request.has_given ? GIVEN_DEAL_ATTEMPTS : DEAL_ATTEMPTS); deal++) {
