@@ -64,7 +64,7 @@ static void print_help(FILE *out) {
     fprintf(out, "realizes the plan.\n\n");
     fprintf(out, "Required:\n");
     fprintf(out, "  --form <name>        binary, rounded-binary, ternary, variations, loop or layered; with --given-* material\n");
-    fprintf(out, "                       it may be left out, and the form is a ternary form of 24 bars\n");
+    fprintf(out, "                       it may be left out, and the form is a binary form of 16 bars\n");
     fprintf(out, "  --key <K>            the tonic (\"D\", \"F#\", \"Bb\"); or tonic and mode in one argument (\"D minor\")\n");
     fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8\n");
     fprintf(out, "  --out <plan.json>    where the plan is written\n\n");
@@ -399,7 +399,7 @@ static void print_section_text(const cJSON *section) {
 
 static void print_given_text(const cJSON *document) {
     if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(document, "defaulted_form"))) {
-        printf("no --form: a ternary form of %.0f bars, the given material in B\n", cli_json_number(document, "bars"));
+        printf("no --form: a binary form of %.0f bars, the given material in B\n", cli_json_number(document, "bars"));
     }
     const cJSON *given = NULL;
     cJSON_ArrayForEach(given, cJSON_GetObjectItemCaseSensitive(document, "given")) {

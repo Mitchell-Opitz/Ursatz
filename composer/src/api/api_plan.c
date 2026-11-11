@@ -29,7 +29,7 @@
 #define MAX_GIVEN 8
 #define MAX_NUMERALS 64
 /* The form a plan with given material and no form is made as, and the section the material goes in. */
-#define DEFAULT_GIVEN_BARS 24
+#define DEFAULT_GIVEN_BARS 16
 #define DEFAULT_GIVEN_SECTION "B"
 #define MAX_NOTICES 4
 
@@ -328,8 +328,8 @@ static ComposerStatus check_given(PlanBuild *state, ComposerError *error) {
 
 static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     if (!state->form_text && state->given_count > 0) {
-        /* Given material with no form to put it in: the middle of a ternary form, B. */
-        state->form_text = "ternary";
+        /* Given material with no form to put it in: the B of a binary form. */
+        state->form_text = "binary";
         state->form_defaulted = true;
         state->bars = DEFAULT_GIVEN_BARS;
     }
