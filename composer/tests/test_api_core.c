@@ -34,7 +34,7 @@ static char *export_request(const char *plan_text, const char *options) {
 }
 
 static void test_versions(void) {
-    assert(strcmp(composer_api_version(), "1.14") == 0);
+    assert(strcmp(composer_api_version(), "1.15") == 0);
     assert(strcmp(composer_status_name(COMPOSER_OK), "ok") == 0);
     assert(strcmp(composer_status_name(COMPOSER_ERR_REQUEST), "request") == 0);
     assert(strcmp(composer_status_name(COMPOSER_ERR_UNSATISFIABLE), "unsatisfiable") == 0);
@@ -49,7 +49,7 @@ static void test_versions(void) {
     char expected[64];
     snprintf(expected, sizeof expected, "\"composer_version\":\"%s\"", composer_version());
     assert(strstr(response.json, expected));
-    assert(strstr(response.json, "\"api_version\":\"1.14\""));
+    assert(strstr(response.json, "\"api_version\":\"1.15\""));
     assert(strstr(response.json, "\"analyzer_version\":\""));
     assert(strstr(response.json, "\"ursatz_commit\":\""));
     snprintf(expected, sizeof expected, "\"plan_format_version\":%d", URSATZ_COMPOSER_PLAN_FORMAT_VERSION);

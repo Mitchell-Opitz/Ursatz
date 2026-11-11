@@ -23,10 +23,16 @@ static const char *DEFAULT_MOTIF =
     "\"features\":{\"dotted\":1,\"leap\":1,\"repeat\":1},\"leap\":{\"low\":5,\"high\":9},"
     "\"rung_moves\":{\"step\":6,\"skip\":2},"
     "\"decorations\":{\"chord_tone\":1,\"passing\":1,\"neighbor\":1,\"appoggiatura\":1,\"escape\":1},"
-    "\"durations\":{\"half_beat\":2,\"beat\":4,\"two_beats\":1},\"accented_one_in\":0,"
+    "\"durations\":{\"half_beat\":2,\"beat\":4,\"two_beats\":1,\"quarter_beats\":0,\"long_short\":0,\"short_long\":0,"
+    "\"triplet\":0,\"triplet_two_beats\":0},\"accented_one_in\":0,"
     "\"accented_types\":{\"appoggiatura\":1,\"passing\":1,\"suspension\":1},\"avoid_repeats\":false,"
     "\"leaps_per_motif\":11,\"leap_recovery\":false,\"pickup_from_accent\":false,\"contrast_fidelity_min\":\"0/1\","
-    "\"long_on_weak\":0,\"final_long\":false}";
+    "\"long_on_weak\":0,\"final_long\":false,\"compound_beats\":false,"
+    "\"endings\":{\"free\":1,\"closed\":0,\"open\":0,\"lead_in\":0},\"long_nct_one_in\":0,"
+    "\"long_nct_types\":{\"appoggiatura\":1,\"suspension\":1,\"retardation\":1,\"passing\":1,\"neighbor\":1},"
+    "\"long_nct_intervals\":{\"second\":1,\"fourth\":1,\"sixth\":1,\"seventh\":1},"
+    "\"long_nct_beats\":{\"downbeat\":1,\"middle\":1,\"other\":1},"
+    "\"long_nct_lengths\":{\"beat\":1,\"dotted_beat\":1,\"two_beats\":1}}";
 
 static const char *DEFAULT_DEVELOPMENT =
     "{\"fidelity_minimum\":{"
@@ -77,7 +83,7 @@ static void defaults_round_trip(void) {
     cJSON_free(text);
     /* The whole document is the three groups, in this order. */
     text = cJSON_PrintUnformatted(document);
-    char whole[4096];
+    char whole[8192];
     snprintf(whole, sizeof(whole), "{\"melody\":%s,\"motif\":%s,\"development\":%s}", DEFAULT_MELODY, DEFAULT_MOTIF,
              DEFAULT_DEVELOPMENT);
     assert(text && strcmp(text, whole) == 0);
@@ -186,6 +192,37 @@ static void members_read_over_defaults(void) {
     cJSON_Delete(rewritten);
     cJSON_Delete(document);
 
+    /* Every L2 setting set reads back equal through write and read (R-422, R-443). */
+    assert(read_text("{\"motif\":{\"durations\":{\"half_beat\":1,\"beat\":1,\"two_beats\":1,\"quarter_beats\":2,"
+                     "\"long_short\":3,\"short_long\":4,\"triplet\":5,\"triplet_two_beats\":6},"
+                     "\"compound_beats\":true,\"endings\":{\"free\":0,\"closed\":2,\"open\":1,\"lead_in\":1},"
+                     "\"long_nct_one_in\":7,\"long_nct_types\":{\"appoggiatura\":0,\"suspension\":2,\"retardation\":3,"
+                     "\"passing\":4,\"neighbor\":5},\"long_nct_intervals\":{\"second\":2,\"fourth\":0,\"sixth\":3,"
+                     "\"seventh\":4},\"long_nct_beats\":{\"downbeat\":0,\"middle\":6,\"other\":7},"
+                     "\"long_nct_lengths\":{\"beat\":8,\"dotted_beat\":0,\"two_beats\":9}}}",
+                     &preferences, path, message));
+    assert(!composer_preferences_is_default(&preferences));
+    assert(preferences.motif.durations[3] == 2 && preferences.motif.durations[7] == 6 && preferences.motif.compound_beats &&
+           preferences.motif.endings[0] == 0 && preferences.motif.endings[1] == 2 && preferences.motif.endings[3] == 1 &&
+           preferences.motif.long_nct_one_in == 7 && preferences.motif.long_nct_types[0] == 0 &&
+           preferences.motif.long_nct_types[4] == 5 && preferences.motif.long_nct_intervals[1] == 0 &&
+           preferences.motif.long_nct_beats[2] == 7 && preferences.motif.long_nct_lengths[2] == 9);
+    document = composer_preferences_write(&preferences);
+    assert(document && composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(memcmp(&again.motif.durations, &preferences.motif.durations, sizeof(preferences.motif.durations)) == 0 &&
+           again.motif.compound_beats && memcmp(again.motif.endings, preferences.motif.endings, sizeof(again.motif.endings)) == 0 &&
+           again.motif.long_nct_one_in == 7 &&
+           memcmp(again.motif.long_nct_types, preferences.motif.long_nct_types, sizeof(again.motif.long_nct_types)) == 0 &&
+           memcmp(again.motif.long_nct_intervals, preferences.motif.long_nct_intervals,
+                  sizeof(again.motif.long_nct_intervals)) == 0 &&
+           memcmp(again.motif.long_nct_beats, preferences.motif.long_nct_beats, sizeof(again.motif.long_nct_beats)) == 0 &&
+           memcmp(again.motif.long_nct_lengths, preferences.motif.long_nct_lengths, sizeof(again.motif.long_nct_lengths)) == 0);
+    cJSON_Delete(document);
+    /* The first three durations still read as they did, the others keep their defaults. */
+    assert(read_text("{\"motif\":{\"durations\":{\"half_beat\":1,\"beat\":2,\"two_beats\":3}}}", &preferences, path, message));
+    assert(preferences.motif.durations[0] == 1 && preferences.motif.durations[1] == 2 && preferences.motif.durations[2] == 3 &&
+           preferences.motif.durations[3] == 0 && preferences.motif.durations[7] == 0);
+
     /* A single setting equal to its default is still the defaults. */
     assert(read_text("{\"melody\":{\"keep\":6}}", &preferences, path, message) && composer_preferences_is_default(&preferences));
 }
@@ -235,6 +272,19 @@ static void limits_are_refused(void) {
     refused("{\"motif\":{\"decorations\":{\"suspension\":1}}}", "/motif/decorations/suspension");
     refused("{\"motif\":{\"durations\":{\"half_beat\":0,\"beat\":0,\"two_beats\":0}}}", "/motif/durations");
     refused("{\"motif\":{\"rung_moves\":{\"step\":0,\"skip\":0}}}", "/motif/rung_moves");
+    refused("{\"motif\":{\"durations\":{\"quintuplet\":1}}}", "/motif/durations/quintuplet");
+    refused("{\"motif\":{\"long_nct_one_in\":65}}", "/motif/long_nct_one_in");
+    refused("{\"motif\":{\"long_nct_one_in\":-1}}", "/motif/long_nct_one_in");
+    refused("{\"motif\":{\"endings\":{\"free\":0,\"closed\":0,\"open\":0,\"lead_in\":0}}}", "/motif/endings");
+    refused("{\"motif\":{\"endings\":{\"half\":1}}}", "/motif/endings/half");
+    refused("{\"motif\":{\"long_nct_types\":{\"appoggiatura\":0,\"suspension\":0,\"retardation\":0,\"passing\":0,"
+            "\"neighbor\":0}}}",
+            "/motif/long_nct_types");
+    refused("{\"motif\":{\"long_nct_intervals\":{\"second\":0,\"fourth\":0,\"sixth\":0,\"seventh\":0}}}",
+            "/motif/long_nct_intervals");
+    refused("{\"motif\":{\"long_nct_beats\":{\"downbeat\":0,\"middle\":0,\"other\":0}}}", "/motif/long_nct_beats");
+    refused("{\"motif\":{\"long_nct_lengths\":{\"beat\":21}}}", "/motif/long_nct_lengths/beat");
+    refused("{\"motif\":{\"compound_beats\":1}}", "/motif/compound_beats");
     refused("{\"motif\":{\"pickup_one_in\":65}}", "/motif/pickup_one_in");
     refused("{\"motif\":{\"pickup_one_in\":-1}}", "/motif/pickup_one_in");
     refused("{\"motif\":{\"leap\":{\"low\":8,\"high\":6}}}", "/motif/leap/high");

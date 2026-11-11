@@ -131,6 +131,25 @@ if(NOT listening_one_in EQUAL 2 OR NOT listening_final STREQUAL "ON" OR NOT list
     message(FATAL_ERROR "the manifest does not record the listening settings: ${first}")
 endif()
 
+# Every L2 setting on (R-440 to R-444): the command runs in 4/4 and in 6/8, and the manifest records the document.
+file(WRITE "${WORK}/l2.json"
+     "{\"motif\": {\"durations\": {\"half_beat\": 1, \"beat\": 1, \"two_beats\": 1, \"quarter_beats\": 1, "
+     "\"long_short\": 1, \"short_long\": 1, \"triplet\": 1, \"triplet_two_beats\": 1}, \"compound_beats\": true, "
+     "\"endings\": {\"free\": 0, \"closed\": 2, \"open\": 1, \"lead_in\": 1}, \"long_nct_one_in\": 1}}")
+expect_status(0 listen --what motifs --count 3 --seed 5 --settings l2.json --out-dir motifs-l2)
+expect_samples(motifs-l2 3)
+expect_status(0 listen --what motifs --count 3 --seed 5 --meter 6/8 --settings l2.json --out-dir motifs-l2-68)
+expect_samples(motifs-l2-68 3)
+file(STRINGS "${WORK}/motifs-l2/listen.jsonl" lines)
+list(GET lines 0 first)
+string(JSON l2_one_in GET "${first}" preferences motif long_nct_one_in)
+string(JSON l2_compound GET "${first}" preferences motif compound_beats)
+string(JSON l2_closed GET "${first}" preferences motif endings closed)
+string(JSON l2_triplet GET "${first}" preferences motif durations triplet)
+if(NOT l2_one_in EQUAL 1 OR NOT l2_compound STREQUAL "ON" OR NOT l2_closed EQUAL 2 OR NOT l2_triplet EQUAL 1)
+    message(FATAL_ERROR "the manifest does not record the L2 settings: ${first}")
+endif()
+
 # --- themes ------------------------------------------------------------------------------
 
 # A generated motif for each sample.
