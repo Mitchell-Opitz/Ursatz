@@ -187,12 +187,15 @@ typedef enum { GROW_FRAGMENT_SEGMENT, GROW_FRAGMENT_HALF_BAR, GROW_FRAGMENT_BEAT
  * fragment_lengths: the weights of a fragment being its whole segment, half a bar of it, or a beat of it.
  * diminish: a fragment that is a whole segment is that segment in diminution 1:2.
  * liquidate: fragment 2 is liquidated, and the cadential idea liquidates a step further than it.
+ * faster_harmony: an 8-bar sentence's continuation changes chord every cell, one chord each fragment cell and a cadence
+ * on the cadential idea; in a meter whose bar is one cell it changes nothing (R-465).
  */
 typedef struct {
     bool every_segment;
     unsigned fragment_lengths[GROW_FRAGMENT_LENGTH_COUNT];
     bool diminish;
     bool liquidate;
+    bool faster_harmony;
 } GrowContinuation;
 
 
@@ -209,6 +212,8 @@ typedef struct {
     size_t candidates; /* the structures grow-theme proposes; 0 means 4 */
     GrowDevelopment development; /* the weights of the repetition, the fragments and the liquidation (grow_beginning.c, grow_ending.c) */
     GrowContinuation continuation; /* all zero: today's continuation; set by the compose run and api_grow from the preferences */
+    /* A motif as long as the basic idea that has chords of its own is the basic idea as it is, over its own chords (R-466). */
+    bool basic_as_written;
     /*
      * The basic motive the request was made from, for the features (segments) and pickup the plan does not keep. Set by
      * the compose run from GrowConfig.basic; NULL for none. grow-theme uses it only when its notes are m0's.

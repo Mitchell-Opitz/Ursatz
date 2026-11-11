@@ -79,6 +79,8 @@ development gives"); the stage's checker context says whether the motif has harm
 it always was: its developed motives carry chords proposed from the notes, which are not held. A melody span already written (a
 reharmonized return, a kept melody) is judged as before.
 
+An 8-bar sentence's continuation can ask for a chord a cell (`GrowContinuation.faster_harmony`, [grow-continuation.md](grow-continuation.md)): `build_parts` then writes one target an idea instead of one for the whole continuation, each with `max_cells_per_chord` 1 and `split_at_bars`. Fragment 1 and fragment 2 are prolongations from the tonic to the dominant, whose cell 0 holds the motive's tonic and whose cell 1 the anchor frees; the cadential idea is the cadential shape and takes the cadence. In 2/4 and 3/4 a bar is one cell and it changes nothing.
+
 ## The harmony
 
 **Targets on beats.** A harmony target (phrase model, prolongation, schema, sequence, embellishment, and the bass under

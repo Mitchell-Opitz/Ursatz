@@ -796,6 +796,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     spec->cadence = request->cadence;
     spec->pairing = request->pairing;
     spec->first_cadence = request->first_cadence;
+    spec->continuation = request->continuation;
+    spec->basic_as_written = request->basic_as_written;
+    spec->basic_has_chords = shared && shared->basic && shared->basic->chord_count > 0;
     if (!grow_read_motive(plan, request->source, &request->meter, &request->key, &spec->source) ||
         spec->source.note_count < 2) {
         return false;
@@ -962,6 +965,7 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     request.development = shared ? shared->development : GROW_DEVELOP_BALANCED;
     if (shared) {
         request.continuation = shared->continuation;
+        request.basic_as_written = shared->basic_as_written;
     }
     size_t wanted = shared && shared->candidates > 0 ? shared->candidates : GROW_DEFAULT_CANDIDATES;
     GrowThemeSpec *kept[16];
@@ -1373,6 +1377,32 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         }
     }
     return result;
+}
+
+PlanResult grow_add_melody_written(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref, const Motive *motive) {
+    PiecePlan *plan = build->plan;
+    /* A voicing that writes the soprano takes the place of the melody (grow_add_melody_target). */
+    if (build->request->has_voicing && build->request->voicing.write_soprano) {
+        return PLAN_OK;
+    }
+    PlanNote notes[MOTIVE_MAX_NOTES];
+    PlanLanePayload payload;
+    LaneSpanId melody;
+    PlanConstraint constraint;
+    for (size_t i = 0; i < motive->note_count; i++) {
+        notes[i] = plan_note(motive_pitch(motive, i), motive->notes[i].onset, motive->notes[i].duration);
+    }
+    memset(&payload, 0, sizeof(payload));
+    payload.notes.notes = notes;
+    payload.notes.note_count = motive->note_count;
+    PlanResult result = plan_add_lane_span(plan, idea, PLAN_LANE_MELODY, 0, plan_node_span(plan, idea), &payload, &melody);
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
+    constraint.params.motive = *ref;
+    if (result == PLAN_OK) {
+        result = plan_lane_span_add_constraint(plan, melody, &constraint);
+    }
+    return result == PLAN_OK ? plan_lane_span_set_state(plan, melody, PLAN_STATE_REALIZED) : result;
 }
 
 /*

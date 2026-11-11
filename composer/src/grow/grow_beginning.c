@@ -128,6 +128,10 @@ static PlanResult build_presentation(GrowBuild *build) {
     NodeId motive;
     PlanMotiveRef refs[2];
 
+    /* A motif as long as the basic idea with chords of its own, written as it is (R-466). */
+    bool whole = spec->basic_as_written && !spec->part_whole && !spec->has_section_motive && spec->basic_has_chords &&
+                 !build->request->given_first_half && !build->request->pedal &&
+                 grow_motive_fit(&spec->source, build->request->bar, build->request->bars == 4 ? 1 : 2) == GROW_FIT_WHOLE;
     PlanResult result = make_phrase(build);
     if (result == PLAN_OK) {
         result = grow_add_node(build, build->phrase, PLAN_NODE_SUBPHRASE, 0, BEGINNING_UNITS, "presentation",
@@ -165,6 +169,9 @@ static PlanResult build_presentation(GrowBuild *build) {
     basic_shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
     bool answers = spec->repetition == GROW_REPEAT_DOMINANT_FORM;
     basic_shape.ends_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
+    if (whole) {
+        basic_shape.ends_on = PLAN_HARMONY_ANCHOR_ANY; /* the motif's last chord stands */
+    }
     repetition_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
     repetition_shape.starts_on = answers ? PLAN_HARMONY_ANCHOR_DOMINANT : PLAN_HARMONY_ANCHOR_TONIC;
     repetition_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
@@ -175,7 +182,8 @@ static PlanResult build_presentation(GrowBuild *build) {
         basic_shape.pedal = true;
         repetition_shape = basic_shape;
     }
-    if (spec->repetition == GROW_REPEAT_SEQUENCE && spec->source.chord_count == 0) {
+    bool no_chords = whole ? !spec->basic_has_chords : spec->source.chord_count == 0;
+    if (spec->repetition == GROW_REPEAT_SEQUENCE && no_chords) {
         /* A motif with no harmony of its own: the chord moves with the melody, the basic idea's tonic and the repetition's
            chord a step up (I to ii, i to iio), written whole (R-348). */
         if (result == PLAN_OK) {
@@ -201,7 +209,8 @@ static PlanResult build_presentation(GrowBuild *build) {
 
     /* The melody to write for each idea. */
     if (result == PLAN_OK) {
-        result = grow_add_melody_target(build, ideas[0], &refs[GROW_PLACE_BASIC], NULL);
+        result = whole ? grow_add_melody_written(build, ideas[0], &refs[GROW_PLACE_BASIC], &spec->source)
+                       : grow_add_melody_target(build, ideas[0], &refs[GROW_PLACE_BASIC], NULL);
     }
     if (result == PLAN_OK) {
         refs[GROW_PLACE_REPETITION].motive = motive;
