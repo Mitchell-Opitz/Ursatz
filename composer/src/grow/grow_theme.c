@@ -1005,11 +1005,11 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
 
 /* ------------------------------------------------------------- applying */
 
-PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
+PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, Rational start, Rational length,
                          const char *name, NodeId *out) {
     PlanSpan span;
-    PlanResult result = plan_result_of_rational(rational_add(build->request->span.start, grow_scaled(build->unit, start_unit), &span.start));
-    span.length = grow_scaled(build->unit, units);
+    PlanResult result = plan_result_of_rational(rational_add(build->request->span.start, start, &span.start));
+    span.length = length;
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, parent, kind, span, name, out);
     }
@@ -1489,7 +1489,6 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.plan = plan;
     build.spec = spec;
     build.request = &request;
-    build.unit = grow_unit(&request);
     build.layout = spec->layout;
     build.cadence.kind = PLAN_CONSTRAINT_CADENCE;
     build.cadence.params.cadence = request.cadence;

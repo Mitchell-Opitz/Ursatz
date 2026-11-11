@@ -182,7 +182,6 @@ typedef struct {
     PiecePlan *plan;
     const GrowThemeSpec *spec;
     const GrowThemeRequest *request;
-    Rational unit;           /* an eighth of the theme */
     GrowLayout layout;       /* the spec's layout */
     PlanConstraint cadence;  /* the theme's cadence */
     NodeId phrase;           /* the phrase the parts go in, made by the beginning */
@@ -198,8 +197,8 @@ typedef struct {
 
 /* A length of count units. */
 Rational grow_scaled(Rational unit, size_t count);
-/* A node of the theme, Realized, from start_unit units after the theme's start and units long. */
-PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
+/* A node of the theme, Realized, starting `start` after the theme's start and `length` long. */
+PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, Rational start, Rational length,
                          const char *name, NodeId *out);
 /* The motive node m<slot> in the material, made from the ref, at bar slot_base + (slot - 1) * motive_bars of the material. */
 PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out);
