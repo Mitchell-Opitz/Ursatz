@@ -154,6 +154,15 @@ static PlanResult build_presentation(GrowBuild *build) {
         result = grow_add_node(build, presentation, PLAN_NODE_IDEA, build->layout.start[GROW_PLACE_REPETITION],
                                build->layout.length[GROW_PLACE_REPETITION], "repetition", &ideas[1]);
     }
+    /* A repeat of the repetition follows it (R-468). */
+    NodeId repeats[PLAN_CONSTRUCTION_EXTENSIONS];
+    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        repeats[k] = PLAN_NODE_NONE;
+        if (result == PLAN_OK && k < build->layout.extension_count && build->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT &&
+            build->layout.extensions[k].place == GROW_PLACE_REPETITION) {
+            result = grow_add_repeat_node(build, presentation, k, &repeats[k]);
+        }
+    }
     for (GrowPlace idea = GROW_PLACE_BASIC; idea <= GROW_PLACE_REPETITION; idea++) {
         grow_idea_ref(spec, idea, grow_idea_node(build, idea), &refs[idea]);
     }
@@ -207,6 +216,12 @@ static PlanResult build_presentation(GrowBuild *build) {
             result = grow_add_chord_targets(build, ideas[1], &repetition_shape, NULL);
         }
     }
+    /* A repeat has the repetition's shape of chords. */
+    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (repeats[k] != PLAN_NODE_NONE) {
+            result = grow_add_chord_targets(build, repeats[k], &repetition_shape, NULL);
+        }
+    }
 
     /* The melody to write for each idea. */
     if (result == PLAN_OK) {
@@ -217,20 +232,40 @@ static PlanResult build_presentation(GrowBuild *build) {
         refs[GROW_PLACE_REPETITION].motive = motive;
         result = grow_add_melody_target(build, ideas[1], &refs[GROW_PLACE_REPETITION], NULL);
     }
+    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (repeats[k] != PLAN_NODE_NONE) {
+            PlanMotiveRef ref;
+            grow_extension_ref(build, k, &ref);
+            result = grow_add_melody_target(build, repeats[k], &ref, NULL);
+        }
+    }
     return result;
 }
 
-/* A basic idea and a contrasting idea in a container, with their motives and melody; the harmony is the caller's. */
+/*
+ * A basic idea and a contrasting idea in a container, with their motives and melody; the harmony is the caller's. A repeat
+ * of the contrasting idea (R-468) follows it and ends the container, so it asks for the cadence the contrasting idea would.
+ */
 static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanConstraint *cadence, NodeId *ideas) {
     const GrowThemeSpec *spec = build->spec;
     PlanMotiveRef refs[2];
     NodeId motive;
+    NodeId repeats[PLAN_CONSTRUCTION_EXTENSIONS];
+    bool repeated = false;
 
     PlanResult result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[GROW_PLACE_BASIC],
                                       build->layout.length[GROW_PLACE_BASIC], "basic idea", &ideas[0]);
     if (result == PLAN_OK) {
         result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[GROW_PLACE_CONTRAST],
                                build->layout.length[GROW_PLACE_CONTRAST], "contrasting idea", &ideas[1]);
+    }
+    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        repeats[k] = PLAN_NODE_NONE;
+        if (result == PLAN_OK && k < build->layout.extension_count && build->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT &&
+            build->layout.extensions[k].place == GROW_PLACE_CONTRAST) {
+            result = grow_add_repeat_node(build, container, k, &repeats[k]);
+            repeated = true;
+        }
     }
     for (GrowPlace idea = GROW_PLACE_BASIC; idea <= GROW_PLACE_CONTRAST; idea++) {
         grow_idea_ref(spec, idea, grow_idea_node(build, idea), &refs[idea]);
@@ -243,7 +278,14 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
     }
     if (result == PLAN_OK) {
         refs[GROW_PLACE_CONTRAST].motive = motive;
-        result = grow_add_melody_target(build, ideas[1], &refs[GROW_PLACE_CONTRAST], cadence);
+        result = grow_add_melody_target(build, ideas[1], &refs[GROW_PLACE_CONTRAST], repeated ? NULL : cadence);
+    }
+    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (repeats[k] != PLAN_NODE_NONE) {
+            PlanMotiveRef ref;
+            grow_extension_ref(build, k, &ref);
+            result = grow_add_melody_target(build, repeats[k], &ref, cadence);
+        }
     }
     return result;
 }

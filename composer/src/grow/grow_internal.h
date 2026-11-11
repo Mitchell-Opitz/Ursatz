@@ -229,6 +229,7 @@ typedef struct {
     NodeId segment_node[2];  /* the material node of the segment fragment k is made from, else PLAN_NODE_NONE */
     NodeId liquid_node[GROW_PLACE_COUNT]; /* the material node holding an idea's liquidation, else PLAN_NODE_NONE */
     NodeId short_node[GROW_PLACE_COUNT];  /* the material node holding an idea's shortened source, else PLAN_NODE_NONE */
+    NodeId extension_node[PLAN_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
 } GrowBuild;
 
 /* A length of count units. */
@@ -311,6 +312,14 @@ bool grow_extension_allowed(const PlanThemePairing *pairing, PlanExtensionKind k
 bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec);
 /* The bars the made motives of the spec's extensions take in the material, one bar at least each. */
 size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar);
+/* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
+size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+/* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
+size_t grow_extension_material_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+/* The idea node of the repeat layout.extensions[k] in the container, named "<the idea it follows> repeated". */
+PlanResult grow_add_repeat_node(GrowBuild *build, NodeId container, size_t k, NodeId *out);
+/* The ref of an extension's idea: its motive node (`extension <k>`), restated exactly. */
+void grow_extension_ref(const GrowBuild *build, size_t k, PlanMotiveRef *out);
 /* standard-form's own beginning and ending for the plan's. */
 int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);

@@ -1578,9 +1578,13 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
         build.short_node[k] = PLAN_NODE_NONE;
         shortened_bars += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request.bar) : 0;
     }
+    size_t extended_bars = grow_extended_bars(spec, request.bar);
+    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        build.extension_node[k] = PLAN_NODE_NONE;
+    }
     build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
                                           ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * build.motive_bars +
-                                              made + shortened_bars);
+                                              made + shortened_bars + extended_bars);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
         result = add_section_motive(&build, build.slot_base, &build.source);
@@ -1605,6 +1609,21 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
                                                       PLAN_STATE_REALIZED, &build.short_node[k], NULL)
                                    : result;
         short_at += grow_motive_layout_bars(&spec->shortened[k], request.bar);
+    }
+    /* The motives of the extensions follow, each at its own bars (R-468): the repeats' and the addition's. */
+    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (!spec->has_extended[k]) {
+            continue;
+        }
+        Rational start;
+        char name[32];
+        size_t bars = grow_motive_layout_bars(&spec->extended[k], request.bar);
+        snprintf(name, sizeof(name), "extension %zu", k + 1);
+        result = plan_result_of_rational(rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+        result = result == PLAN_OK ? motive_attach_as(plan, build.material, start, &spec->extended[k], name,
+                                                      PLAN_STATE_REALIZED, &build.extension_node[k], NULL)
+                                   : result;
+        short_at += bars > 0 ? bars : 1;
     }
     if (result != PLAN_OK) {
         return result;

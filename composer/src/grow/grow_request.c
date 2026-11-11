@@ -315,6 +315,7 @@ static bool construction_fault(const PlanThemePairing *pairing, size_t bars, con
             total += construction->idea_bars[idea];
         }
     }
+    total += grow_construction_extra_bars(pairing, construction);
     if (total != bars) {
         snprintf(message, size, "the ideas are %zu bars; the theme has %zu", total, bars);
         return true;
@@ -685,6 +686,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
                               : (request->pairing.ending == PLAN_THEME_ENDING_CADENTIAL ? 2 : 0);
     /* A construction's contrasting ideas shorter than their source are made from shortened copies of it (R-471). */
     segment_bars += request->construction ? 2 * longest : 0;
+    /* The motives of a construction's repeats and addition (R-468). */
+    segment_bars += request->construction ? grow_extension_material_bars(&request->pairing, request->construction) : 0;
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars + segment_bars;
 
     PiecePlan *plan = plan_create();

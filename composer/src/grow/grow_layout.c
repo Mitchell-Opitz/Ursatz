@@ -1,5 +1,6 @@
 #include <ursatz_composer/theme_shape.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include <ursatz_composer/motive_develop.h>
@@ -364,4 +365,72 @@ size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar) {
         }
     }
     return bars;
+}
+
+size_t grow_extension_material_bars(const PlanThemePairing *pairing, const PlanConstruction *construction) {
+    size_t bars = 0;
+    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        const PlanExtension *extension = &construction->extensions[k];
+        if (extension->kind == PLAN_EXTENSION_REPEAT) {
+            size_t own = extension->idea < PLAN_CONSTRUCTION_IDEAS && theme_shape_idea_in(pairing, (GrowIdea)extension->idea)
+                             ? construction->idea_bars[extension->idea]
+                             : 1;
+            size_t wanted = extension->bars ? extension->bars : own;
+            bars += wanted > 0 ? wanted : 1;
+        } else if (extension->kind == PLAN_EXTENSION_ADDITION) {
+            bars += extension->bars ? extension->bars : 1;
+        }
+    }
+    return bars;
+}
+
+PlanResult grow_add_repeat_node(GrowBuild *build, NodeId container, size_t k, NodeId *out) {
+    const GrowLayoutExtension *extension = &build->layout.extensions[k];
+    const ThemeShapeIdea *row = theme_shape_place_in(&build->spec->pairing, (unsigned)extension->place);
+    char name[64];
+    snprintf(name, sizeof(name), "%s repeated", row ? row->name : "idea");
+    return grow_add_node(build, container, PLAN_NODE_IDEA, extension->start, extension->length, name, out);
+}
+
+void grow_extension_ref(const GrowBuild *build, size_t k, PlanMotiveRef *out) {
+    memset(out, 0, sizeof(*out));
+    out->motive = build->extension_node[k];
+    out->has_step = true;
+    out->step.kind = MOTIVE_RELATION_EXACT;
+}
+
+size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction) {
+    size_t bars[GROW_PLACE_COUNT] = {0};
+    size_t extra = 0;
+    GrowPlace last = last_place(pairing);
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
+        if (row) {
+            bars[row->place] = construction->idea_bars[idea];
+        }
+    }
+    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        const PlanExtension *extension = &construction->extensions[k];
+        GrowPlace place = last;
+        if ((extension->kind == PLAN_EXTENSION_REPEAT || extension->kind == PLAN_EXTENSION_STRETCH) &&
+            !grow_idea_place(pairing, (GrowIdea)extension->idea, &place)) {
+            continue;
+        }
+        switch (extension->kind) {
+        case PLAN_EXTENSION_REPEAT:
+            extra += extension->bars ? extension->bars : bars[place];
+            break;
+        case PLAN_EXTENSION_STRETCH:
+            bars[place] += extension->bars ? extension->bars : 1;
+            extra += extension->bars ? extension->bars : 1;
+            break;
+        case PLAN_EXTENSION_EVADED:
+            extra += extension->bars ? extension->bars : bars[last];
+            break;
+        case PLAN_EXTENSION_ADDITION:
+            extra += extension->bars ? extension->bars : 1;
+            break;
+        }
+    }
+    return extra;
 }
