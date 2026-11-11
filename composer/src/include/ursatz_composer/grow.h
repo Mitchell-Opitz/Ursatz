@@ -82,8 +82,15 @@ typedef struct {
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
     AnalysisKey key;
     PlanMeter meter;
-    size_t bars;              /* 4 or 8 */
+    size_t bars;              /* 4 or 8; 3 to 16 with a construction */
     PlanThemePairing pairing; /* any of the nine beginning and ending pairings */
+    /*
+     * The bars of each idea of the theme (R-468), NULL for none: the theme is then 4 or 8 bars, its ideas fixed fractions
+     * of it. It is added to the theme section as a CONSTRUCTION constraint; with it the theme is `bars` bars, 3 to 16,
+     * and its ideas are the bars it gives (grow_layout_of). Refused (GROW_ERR_BAD_REQUEST) when the ideas do not fit the
+     * pairing and the bars (an extension is not built yet). Must outlive grow_build_plan only.
+     */
+    const PlanConstruction *construction;
     CadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
     /*
      * The weak cadence an antecedent beginning ends in: HC or IAC, and weaker than `cadence`. Zero (PAC) means the

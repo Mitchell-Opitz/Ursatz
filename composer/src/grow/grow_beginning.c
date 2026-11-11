@@ -49,7 +49,9 @@ static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng,
     /* A contrasting slot with a motive of its own gives the idea as it is (grow_idea_dev). */
     bool drawn = grow_idea_own(spec, GROW_PLACE_CONTRAST)
                      ? (spec->contrast.kind = MOTIVE_RELATION_EXACT, true)
-                     : grow_draw_contrast(request, rng, spec, GROW_PLACE_CONTRAST, &spec->source, -1, NULL, &spec->contrast);
+                     : grow_shorten_source(spec, GROW_PLACE_CONTRAST) &&
+                           grow_draw_contrast(request, rng, spec, GROW_PLACE_CONTRAST,
+                                              grow_idea_source(spec, GROW_PLACE_CONTRAST), -1, NULL, &spec->contrast);
     return drawn &&
            grow_idea_develop(spec, GROW_PLACE_CONTRAST, &spec->developed[GROW_PLACE_CONTRAST]) &&
            (spec->has_developed[GROW_PLACE_CONTRAST] = true);

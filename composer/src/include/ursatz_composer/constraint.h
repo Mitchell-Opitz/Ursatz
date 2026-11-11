@@ -44,7 +44,8 @@ typedef enum {
     PLAN_CONSTRAINT_HOLD,           /* no parameters: on a section node, the stages from structure to texture leave it alone; the seam stage fills it (R-171) */
     PLAN_CONSTRAINT_SEAM,           /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
     PLAN_CONSTRAINT_MOTIVE_TONES,   /* on a motive node: its base harmony and the tone role of each note (R-215) */
-    PLAN_CONSTRAINT_PEDAL           /* on a section node: its presentation is written over a pedal on `degree` (R-446) */
+    PLAN_CONSTRAINT_PEDAL,          /* on a section node: its presentation is written over a pedal on `degree` (R-446) */
+    PLAN_CONSTRAINT_CONSTRUCTION    /* on a section node: the bars of each idea of its theme, its extensions, and why (R-468) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -316,6 +317,43 @@ typedef struct {
     int degree;
 } PlanPedal;
 
+/*
+ * The construction of a theme (R-468, R-469): the bars of each of its ideas, and its extensions, on the theme's section
+ * node. idea_bars is indexed by GrowIdea (theme_shape.h; PLAN_CONSTRUCTION_IDEAS is GROW_IDEA_COUNT): an idea the
+ * theme's pairing has needs 1 bar or more, an idea it does not have is 0. An extension (R-468) follows or stretches the
+ * idea numbered `idea` and is `bars` bars long, written as a varied copy when `varied`. reason is why the theme has
+ * this construction: given by the caller, taken from the length of a motive, or taken from the length asked for.
+ */
+#define PLAN_CONSTRUCTION_IDEAS 10
+#define PLAN_CONSTRUCTION_EXTENSIONS 3
+
+typedef enum {
+    PLAN_EXTENSION_REPEAT,
+    PLAN_EXTENSION_STRETCH,
+    PLAN_EXTENSION_ADDITION,
+    PLAN_EXTENSION_EVADED
+} PlanExtensionKind;
+
+typedef struct {
+    PlanExtensionKind kind;
+    unsigned char idea; /* the GrowIdea the extension follows or stretches */
+    unsigned char bars;
+    bool varied;
+} PlanExtension;
+
+typedef enum {
+    PLAN_CONSTRUCTION_GIVEN,
+    PLAN_CONSTRUCTION_FROM_MOTIVE,
+    PLAN_CONSTRUCTION_FROM_LENGTH
+} PlanConstructionReason;
+
+typedef struct {
+    unsigned char idea_bars[PLAN_CONSTRUCTION_IDEAS];
+    size_t extension_count;
+    PlanExtension extensions[PLAN_CONSTRUCTION_EXTENSIONS];
+    PlanConstructionReason reason;
+} PlanConstruction;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -340,6 +378,7 @@ typedef struct {
         PlanPiecePart piece_part;
         PlanMotiveTones motive_tones;
         PlanPedal pedal;
+        PlanConstruction construction;
     } params;
 } PlanConstraint;
 

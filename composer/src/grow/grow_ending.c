@@ -746,8 +746,9 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     }
     if (!keep_idea(spec, GROW_PLACE_RESTATED) ||
         (!own_contrast &&
-         !grow_draw_contrast(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), want, avoid,
-                             &spec->consequent_contrast)) ||
+         (!grow_shorten_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST) ||
+          !grow_draw_contrast(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), want, avoid,
+                             &spec->consequent_contrast))) ||
         !keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST)) {
         return false;
     }
@@ -824,12 +825,14 @@ static PlanResult make_container(GrowBuild *build, const char *phrase_name, cons
 }
 
 /*
- * A chord a cell through an 8-bar sentence's continuation (R-465): the setting is on, the ending is a continuation with no
- * key change, and a bar has two cells or more. In 2/4 and 3/4 a bar is one cell and nothing changes.
+ * A chord a cell through a sentence's continuation (R-465): the setting is on, the ending is a continuation with no
+ * key change, its fragments are a bar or more (an 8-bar theme's; a construction's of whole bars), and a bar has two cells
+ * or more. In 2/4 and 3/4 a bar is one cell and nothing changes.
  */
 static bool faster_harmony(const GrowBuild *build, size_t first_slot, size_t last_slot) {
     return build->spec->continuation.faster_harmony && first_slot == GROW_PLACE_FRAGMENT_1 &&
-           last_slot == GROW_PLACE_CADENTIAL && !build->request->has_end_change && build->request->bars == 8 &&
+           last_slot == GROW_PLACE_CADENTIAL && !build->request->has_end_change &&
+           rational_cmp(build->layout.length[GROW_PLACE_FRAGMENT_1], build->request->bar) >= 0 &&
            build->request->cells_per_bar >= 2;
 }
 

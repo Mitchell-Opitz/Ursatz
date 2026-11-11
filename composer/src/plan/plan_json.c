@@ -34,7 +34,9 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 #define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction"};
+static const char *const EXTENSION_KIND_NAMES[] = {"repeat", "stretch", "addition", "evaded"};
+static const char *const CONSTRUCTION_REASON_NAMES[] = {"given", "motive", "length"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 /* The parts of a game loop, in PiecePart order (piece.h). */
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
@@ -279,6 +281,29 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_PEDAL:
         ok = ok && plan_json_add(object, "degree", json_number(constraint->params.pedal.degree));
         break;
+    case PLAN_CONSTRAINT_CONSTRUCTION: {
+        const PlanConstruction *construction = &constraint->params.construction;
+        cJSON *ideas = cJSON_CreateObject();
+        cJSON *extensions = cJSON_CreateArray();
+        ok = ok && plan_json_add(object, "ideas", ideas) && plan_json_add(object, "extensions", extensions);
+        for (int idea = 0; ok && idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
+            if (construction->idea_bars[idea] != 0) {
+                ok = plan_json_add(ideas, theme_shape_idea_name((GrowIdea)idea),
+                                   json_number(construction->idea_bars[idea]));
+            }
+        }
+        for (size_t i = 0; ok && i < construction->extension_count; i++) {
+            const PlanExtension *extension = &construction->extensions[i];
+            cJSON *item = cJSON_CreateObject();
+            ok = plan_json_append(extensions, item) &&
+                 plan_json_add(item, "kind", cJSON_CreateString(EXTENSION_KIND_NAMES[extension->kind])) &&
+                 plan_json_add(item, "idea", cJSON_CreateString(theme_shape_idea_name((GrowIdea)extension->idea))) &&
+                 plan_json_add(item, "bars", json_number(extension->bars)) &&
+                 plan_json_add(item, "varied", cJSON_CreateBool(extension->varied));
+        }
+        ok = ok && plan_json_add(object, "reason", cJSON_CreateString(CONSTRUCTION_REASON_NAMES[construction->reason]));
+        break;
+    }
     case PLAN_CONSTRAINT_PIECE_PART:
         ok = ok && plan_json_add(object, "part", cJSON_CreateString(PIECE_PART_NAMES[constraint->params.piece_part.part])) &&
              plan_json_add(object, "id", cJSON_CreateString(constraint->params.piece_part.id));
@@ -768,6 +793,102 @@ static bool read_theme_half(JsonReader *reader, const cJSON *object, const char 
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
     }
     *out = half->value;
+    return true;
+}
+
+/* An idea by the name the theme shape table gives it; `at` is its path. */
+static bool read_idea_name(JsonReader *reader, const cJSON *item, const char *at, int *out) {
+    if (!cJSON_IsString(item)) {
+        return json_bad_format(reader, at, "expected an idea name");
+    }
+    const ThemeShapeIdea *row = theme_shape_idea_find(item->valuestring);
+    if (!row) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown idea '%.40s'", item->valuestring);
+    }
+    *out = (int)row->idea;
+    return true;
+}
+
+/* A construction constraint's ideas, extensions and reason. */
+static bool read_construction(JsonReader *reader, const cJSON *item, const char *path, PlanConstruction *out) {
+    char at[PLAN_JSON_PATH_MAX];
+    int value;
+    long number;
+    const cJSON *ideas = plan_json_member(reader, item, path, "ideas", true);
+    if (!ideas) {
+        return false;
+    }
+    json_child_path(at, path, "ideas");
+    if (!cJSON_IsObject(ideas)) {
+        return json_bad_format(reader, at, "expected an object of idea names and bars");
+    }
+    for (const cJSON *member = ideas->child; member; member = member->next) {
+        char member_at[PLAN_JSON_PATH_MAX];
+        const ThemeShapeIdea *row = theme_shape_idea_find(member->string);
+        json_child_path(member_at, at, member->string);
+        if (!row) {
+            return json_fail(reader, PLAN_ERR_FORMAT, member_at, "unknown idea '%.40s'", member->string);
+        }
+        if (!json_read_long(reader, member, member_at, 0, 16, &number)) {
+            return false;
+        }
+        out->idea_bars[row->idea] = (unsigned char)number;
+    }
+    const cJSON *extensions = plan_json_member(reader, item, path, "extensions", true);
+    if (!extensions) {
+        return false;
+    }
+    json_child_path(at, path, "extensions");
+    if (!cJSON_IsArray(extensions)) {
+        return json_bad_format(reader, at, "expected an array");
+    }
+    if ((size_t)cJSON_GetArraySize(extensions) > PLAN_CONSTRUCTION_EXTENSIONS) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "at most %d extensions", PLAN_CONSTRUCTION_EXTENSIONS);
+    }
+    size_t index = 0;
+    for (const cJSON *extension = extensions->child; extension; extension = extension->next, index++) {
+        char extension_at[PLAN_JSON_PATH_MAX];
+        json_index_path(extension_at, at, index);
+        if (!cJSON_IsObject(extension)) {
+            return json_bad_format(reader, extension_at, "expected an object");
+        }
+        PlanExtension *target = &out->extensions[index];
+        const cJSON *idea;
+        const cJSON *varied;
+        if (!read_enum_member(reader, extension, extension_at, "kind", EXTENSION_KIND_NAMES, COUNT_OF(EXTENSION_KIND_NAMES),
+                              &value)) {
+            return false;
+        }
+        target->kind = (PlanExtensionKind)value;
+        if (!(idea = plan_json_member(reader, extension, extension_at, "idea", true))) {
+            return false;
+        }
+        char idea_at[PLAN_JSON_PATH_MAX];
+        json_child_path(idea_at, extension_at, "idea");
+        if (!read_idea_name(reader, idea, idea_at, &value)) {
+            return false;
+        }
+        target->idea = (unsigned char)value;
+        if (!json_read_int_member(reader, extension, extension_at, "bars", 0, 4, &number)) {
+            return false;
+        }
+        target->bars = (unsigned char)number;
+        if (!(varied = plan_json_member(reader, extension, extension_at, "varied", true))) {
+            return false;
+        }
+        if (!cJSON_IsBool(varied)) {
+            char varied_at[PLAN_JSON_PATH_MAX];
+            json_child_path(varied_at, extension_at, "varied");
+            return json_bad_format(reader, varied_at, "expected true or false");
+        }
+        target->varied = cJSON_IsTrue(varied);
+        out->extension_count = index + 1;
+    }
+    if (!read_enum_member(reader, item, path, "reason", CONSTRUCTION_REASON_NAMES, COUNT_OF(CONSTRUCTION_REASON_NAMES),
+                          &value)) {
+        return false;
+    }
+    out->reason = (PlanConstructionReason)value;
     return true;
 }
 
@@ -1524,6 +1645,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         out->params.pedal.degree = (int)number_value;
         return true;
+    case PLAN_CONSTRAINT_CONSTRUCTION:
+        return read_construction(reader, item, path, &out->params.construction);
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:

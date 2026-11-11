@@ -38,6 +38,19 @@ static void ask(Soft *soft, bool holds) {
     soft->total++;
 }
 
+/*
+ * The length of the basic idea: standard-form holds 1, 2 or 4 bars valid. A theme with a construction (R-468) has ideas of
+ * any whole bars, so there it only counts toward the score; without one it is a rule every theme must keep.
+ */
+static const char *judge_basic_idea(const GrowThemeSpec *spec, Soft *soft) {
+    bool valid = standard_form_basic_idea_length_valid(spec->layout.basic_bars);
+    if (spec->has_construction) {
+        ask(soft, valid);
+        return NULL;
+    }
+    return valid ? NULL : "basic idea length not valid";
+}
+
 /* The rules of a continuation: it fragments the basic idea, the fragments in their span and in their notes. */
 static const char *judge_continuation(const GrowThemeSpec *spec) {
     size_t basic_ticks = ticks_of(spec->layout.length[GROW_PLACE_BASIC]);
@@ -74,10 +87,8 @@ static const char *judge_sentence(const GrowThemeSpec *spec, Soft *soft) {
     if (!standard_form_phrase_is_sentential(true, true)) {
         return "phrase not sentential";
     }
-    if (!standard_form_basic_idea_length_valid(spec->layout.basic_bars)) {
-        return "basic idea length not valid";
-    }
-    const char *hard = judge_continuation(spec);
+    const char *hard = judge_basic_idea(spec, soft);
+    hard = hard ? hard : judge_continuation(spec);
     if (hard) {
         return hard;
     }
@@ -179,8 +190,9 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     if (form == PHRASE_LEVEL_FORM_SENTENCE) {
         return judge_sentence(spec, soft);
     }
-    if (!standard_form_basic_idea_length_valid(spec->layout.basic_bars)) {
-        return "basic idea length not valid";
+    const char *basic = judge_basic_idea(spec, soft);
+    if (basic) {
+        return basic;
     }
     /* A contrasting idea that keeps m0's contour would read as its repetition. */
     if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION && !spec->part_whole &&
