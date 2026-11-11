@@ -105,6 +105,22 @@ static void defaults_change_nothing(void) {
         explicit_defaults.durations[i] = 0;
     }
     explicit_defaults.compound_beats = false;
+    /* and the endings and long non-chord tones of phase L2 (R-440, R-441) */
+    explicit_defaults.endings[0] = 1;
+    explicit_defaults.endings[1] = 0;
+    explicit_defaults.endings[2] = 0;
+    explicit_defaults.endings[3] = 0;
+    explicit_defaults.long_nct_one_in = 0;
+    for (size_t i = 0; i < 5; i++) {
+        explicit_defaults.long_nct_types[i] = 1;
+    }
+    for (size_t i = 0; i < 4; i++) {
+        explicit_defaults.long_nct_intervals[i] = 1;
+    }
+    for (size_t i = 0; i < 3; i++) {
+        explicit_defaults.long_nct_beats[i] = 1;
+        explicit_defaults.long_nct_lengths[i] = 1;
+    }
     for (int beats = 3; beats <= 4; beats++) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Motive without = make(beats, seed, NULL);
@@ -686,6 +702,235 @@ static void compound_beats(void) {
     }
 }
 
+/* ------------------------------------------- endings and long non-chord tones (phase L2, R-440, R-441) */
+
+static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
+
+/* The pitch class of the root of the chord of degree d in C major. */
+static int root_pc(int degree) {
+    return MAJOR_SCALE[(degree - 1) % 7];
+}
+
+static int pitch_class(int pitch) {
+    return ((pitch % 12) + 12) % 12;
+}
+
+static MotiveRandomPreferences only_ending(size_t ending) {
+    MotiveRandomPreferences preferences;
+    motive_random_preferences_default(&preferences);
+    preferences.endings[0] = 0;
+    preferences.endings[ending] = 1;
+    return preferences;
+}
+
+/* The metric level of a position in forty-eighths of a whole note from the bar line of 4/4: 3 the downbeat, 2 beat three, 1 other beats. */
+static int level_of(long position) {
+    return position % 48 == 0 ? 3 : position % 24 == 0 ? 2 : 1;
+}
+
+/* Closed: the last note is the root or third of the last chord, 1 or 2 semitones from the note before, longer than every other
+   note of the last segment, and starts on a beat of the highest level the segment offers. */
+static void closed_endings(void) {
+    MotiveRandomPreferences preferences = only_ending(1);
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Motive motive = make(4, seed, &preferences);
+        size_t last = motive.note_count - 1;
+        const MotiveSketchFeature *segment = &motive.features[motive.feature_count - 1];
+        int degree = motive.chords[motive.chord_count - 1].degree;
+        int pc = pitch_class(motive.notes[last].pitch);
+        assert(pc == root_pc(degree) || pc == MAJOR_SCALE[(degree + 1) % 7]);
+        int move = abs(motive.notes[last].pitch - motive.notes[last - 1].pitch);
+        assert(move == 1 || move == 2);
+        for (size_t i = segment->first; i < last; i++) {
+            assert(rational_cmp(motive.notes[i].duration, motive.notes[last].duration) < 0);
+        }
+        long first = grid_start(&motive, segment->first);
+        long start = grid_start(&motive, last);
+        Rational body;
+        Rational scaled;
+        assert(rational_sub(motive.length, motive_pickup(&motive), &body) == RATIONAL_OK);
+        assert(rational_mul_int(body, GRID, &scaled) == RATIONAL_OK && scaled.den == 1);
+        long length = (long)scaled.num - first;
+        int best = 0;
+        for (long p = 12; p <= length - 12; p += 12) {
+            best = level_of(first + p) > best ? level_of(first + p) : best;
+        }
+        assert(start - first >= 12 && start - first <= length - 12 && level_of(start) == best);
+    }
+    printf("endings closed only: %d motives end closed\n", SEEDS);
+}
+
+/* Open: the last note is degree 2, 5 or 7 of the key. */
+static void open_endings(void) {
+    MotiveRandomPreferences preferences = only_ending(2);
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Motive motive = make(4, seed, &preferences);
+        int pc = pitch_class(motive.notes[motive.note_count - 1].pitch);
+        assert(pc == MAJOR_SCALE[1] || pc == MAJOR_SCALE[4] || pc == MAJOR_SCALE[6]);
+    }
+    printf("endings open only: %d motives end on degree 2, 5 or 7\n", SEEDS);
+}
+
+/* Lead-in: the last two notes are each at most a half beat and the last starts off the beat. */
+static void lead_in_endings(void) {
+    MotiveRandomPreferences preferences = only_ending(3);
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Motive motive = make(4, seed, &preferences);
+        size_t last = motive.note_count - 1;
+        assert(grid_length(&motive, last) <= 6 && grid_length(&motive, last - 1) <= 6);
+        assert(grid_start(&motive, last) % 12 != 0);
+    }
+    printf("endings lead_in only: %d motives end in a lead-in\n", SEEDS);
+}
+
+/* The notes of a motive that are on-beat non-chord tones a beat long or longer resolving to the next note: how many, and each
+   one is passed to `check` (NULL for none) with its label and its motive. */
+typedef void (*LongToneCheck)(const Motive *motive, size_t i, const MotiveToneLabel *label);
+
+static int long_tones(const MotiveRandomPreferences *preferences, LongToneCheck check) {
+    int total = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        Motive motive = make(4, seed, preferences);
+        MotiveAnalysis analysis;
+        assert(motive_analyze(&motive, &analysis) && analysis.tones_known);
+        for (size_t i = 0; i + 1 < motive.note_count; i++) {
+            const MotiveToneLabel *label = &analysis.tones[i];
+            if (label->role == MOTIVE_TONE_NON_CHORD && !label->unresolved && label->resolves_to == (long)i + 1 && starts_on_beat(&motive, i) &&
+                grid_length(&motive, i) >= 12) {
+                total++;
+                if (check) {
+                    check(&motive, i, label);
+                }
+            }
+        }
+    }
+    return total;
+}
+
+static MotiveRandomPreferences long_nct_base(void) {
+    MotiveRandomPreferences preferences;
+    motive_random_preferences_default(&preferences);
+    preferences.long_nct_one_in = 1;
+    preferences.durations[2] = 4;
+    return preferences;
+}
+
+static void only_neighbors(const Motive *motive, size_t i, const MotiveToneLabel *label) {
+    (void)motive;
+    (void)i;
+    assert(label->type == NON_CHORD_TONE_NEIGHBOR);
+}
+
+static void only_seconds(const Motive *motive, size_t i, const MotiveToneLabel *label) {
+    (void)label;
+    size_t segment = 0;
+    while (segment + 1 < motive->feature_count && motive->features[segment].last < i) {
+        segment++;
+    }
+    int above = pitch_class(motive->notes[i].pitch - root_pc(motive->chords[segment].degree));
+    assert(above == 1 || above == 2);
+}
+
+static void only_downbeats(const Motive *motive, size_t i, const MotiveToneLabel *label) {
+    (void)label;
+    assert(grid_start(motive, i) % 48 == 0);
+}
+
+static void only_two_beats(const Motive *motive, size_t i, const MotiveToneLabel *label) {
+    (void)label;
+    assert(grid_length(motive, i) >= 24);
+}
+
+static void long_non_chord_tones(void) {
+    MotiveRandomPreferences preferences = long_nct_base();
+    int any = long_tones(&preferences, NULL);
+    printf("long_nct_one_in 1: %d long non-chord tones in %d motives\n", any, SEEDS);
+    assert(any >= 1);
+
+    MotiveRandomPreferences neighbors = long_nct_base();
+    for (size_t i = 0; i < 5; i++) {
+        neighbors.long_nct_types[i] = i == 4;
+    }
+    printf("long_nct_types neighbor only: %d tones, all neighbors\n", long_tones(&neighbors, only_neighbors));
+
+    MotiveRandomPreferences seconds = long_nct_base();
+    for (size_t i = 0; i < 4; i++) {
+        seconds.long_nct_intervals[i] = i == 0;
+    }
+    printf("long_nct_intervals second only: %d tones, all a second above the chord root\n", long_tones(&seconds, only_seconds));
+
+    MotiveRandomPreferences downbeats = long_nct_base();
+    downbeats.long_nct_beats[1] = 0;
+    downbeats.long_nct_beats[2] = 0;
+    printf("long_nct_beats downbeat only: %d tones, all on a downbeat\n", long_tones(&downbeats, only_downbeats));
+
+    MotiveRandomPreferences two = long_nct_base();
+    two.long_nct_lengths[0] = 0;
+    two.long_nct_lengths[1] = 0;
+    printf("long_nct_lengths two_beats only: %d tones, all two beats or longer\n", long_tones(&two, only_two_beats));
+}
+
+/* Rhythm variety (R-443): with the taste profile "none" settings and the endings drawn, the most common duration sequence is under
+   18 of 60 motives, in each of three meters and two modes. */
+static bool same_durations(const Motive *a, const Motive *b) {
+    if (a->note_count != b->note_count) {
+        return false;
+    }
+    for (size_t i = 0; i < a->note_count; i++) {
+        if (rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void rhythm_variety(void) {
+    MotiveRandomPreferences preferences;
+    motive_random_preferences_default(&preferences);
+    preferences.durations[0] = 4;
+    preferences.durations[1] = 2;
+    preferences.durations[2] = 2;
+    preferences.features[0] = 3;
+    preferences.features[1] = 1;
+    preferences.features[2] = 0;
+    preferences.rung_moves[0] = 6;
+    preferences.rung_moves[1] = 1;
+    preferences.decorations[0] = 0;
+    preferences.decorations[1] = 2;
+    preferences.decorations[2] = 2;
+    preferences.decorations[3] = 1;
+    preferences.decorations[4] = 1;
+    preferences.endings[0] = 0;
+    preferences.endings[1] = 2;
+    preferences.endings[2] = 1;
+    preferences.endings[3] = 1;
+    const int beats[3] = {4, 3, 6};
+    const int units[3] = {4, 4, 8};
+    for (int minor = 0; minor < 2; minor++) {
+        for (int m = 0; m < 3; m++) {
+            static Motive motives[60];
+            for (unsigned long seed = 500; seed < 560; seed++) {
+                MotiveRandomOptions options = options_of(beats[m], seed, &preferences);
+                options.meter.beat_unit = units[m];
+                options.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+                size_t count = 0;
+                assert(motive_random(&options, &motives[seed - 500], &count) == MOTIVE_RANDOM_OK && count == 1);
+            }
+            int most = 0;
+            for (size_t a = 0; a < 60; a++) {
+                int same = 0;
+                for (size_t b = 0; b < 60; b++) {
+                    same += same_durations(&motives[a], &motives[b]);
+                }
+                most = same > most ? same : most;
+            }
+            printf("rhythm variety, %s %d/%d: the most common duration sequence is %d of 60 motives\n", minor ? "A minor" : "C major", beats[m],
+                   units[m] == 4 ? 4 : 8, most);
+            assert(most < 18);
+        }
+    }
+}
+
 static void each_setting_still_gives_motives(void) {
     MotiveRandomPreferences base;
     motive_random_preferences_default(&base);
@@ -713,6 +958,12 @@ static void each_setting_still_gives_motives(void) {
     }
     MotiveRandomPreferences compound = base;
     compound.compound_beats = true;
+    MotiveRandomPreferences endings[3];
+    for (size_t i = 0; i < 3; i++) {
+        endings[i] = only_ending(1 + i);
+    }
+    MotiveRandomPreferences long_nct = base;
+    long_nct.long_nct_one_in = 1;
     const struct {
         const char *name;
         const MotiveRandomPreferences *preferences;
@@ -725,7 +976,9 @@ static void each_setting_still_gives_motives(void) {
                     {"quarter_beats 4", &figures[0], 4, 4},   {"long_short 4", &figures[1], 4, 4},
                     {"short_long 4", &figures[2], 4, 4},      {"triplet 4", &figures[3], 4, 4},
                     {"triplet_two_beats 4", &figures[4], 4, 4}, {"compound_beats in 6/8", &compound, 6, 8},
-                    {"compound_beats in 12/8", &compound, 12, 8}};
+                    {"compound_beats in 12/8", &compound, 12, 8}, {"endings closed", &endings[0], 4, 4},
+                    {"endings open", &endings[1], 4, 4},      {"endings lead_in", &endings[2], 4, 4},
+                    {"long_nct_one_in 1", &long_nct, 4, 4}};
     for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); i++) {
         int made = motives_made_in(settings[i].beats, settings[i].unit, settings[i].preferences);
         printf("%s alone: %d of %d seeds give a motive\n", settings[i].name, made, SEEDS);
@@ -748,6 +1001,11 @@ int main(void) {
     long_notes();
     rhythm_figures();
     compound_beats();
+    closed_endings();
+    open_endings();
+    lead_in_endings();
+    long_non_chord_tones();
+    rhythm_variety();
     each_setting_still_gives_motives();
     printf("test_motif_preferences: ok\n");
     return 0;
