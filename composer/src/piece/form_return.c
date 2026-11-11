@@ -1,5 +1,6 @@
 #include <ursatz_composer/form_return.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -385,27 +386,38 @@ static bool variation_offered(PlanReturnVariation variation) {
            variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED;
 }
 
-bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation) {
-    PlanReturn ret;
+/* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
+static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
     PlanMeter source_meter;
     PlanMeter target_meter;
     int shift;
+    if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION || !find_return(plan, section, ret)) {
+        return false;
+    }
+    if (ret->section == section || !plan_has_node(plan, ret->section) ||
+        plan_node_kind(plan, ret->section) != PLAN_NODE_SECTION ||
+        plan_node_has_constraint(plan, ret->section, PLAN_CONSTRAINT_MATERIAL)) {
+        return false;
+    }
+    PlanSpan from = plan_node_span(plan, ret->section);
+    PlanSpan to = plan_node_span(plan, section);
+    return rational_cmp(from.length, to.length) == 0 && return_meter_over(plan, from, &source_meter) &&
+           return_meter_over(plan, to, &target_meter) && source_meter.beats_per_bar == target_meter.beats_per_bar &&
+           source_meter.beat_unit == target_meter.beat_unit && return_key_shift(plan, from, plan, to, &shift);
+}
+
+bool form_return_copies(const PiecePlan *plan, NodeId section) {
+    PlanReturn ret;
+    return return_geometry(plan, section, &ret);
+}
+
+bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation) {
+    PlanReturn ret;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
         plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, section) != 0 ||
         !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_ARCHETYPE) ||
-        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !find_return(plan, section, &ret)) {
-        return false;
-    }
-    if (ret.section == section || !plan_has_node(plan, ret.section) ||
-        plan_node_kind(plan, ret.section) != PLAN_NODE_SECTION ||
-        plan_node_has_constraint(plan, ret.section, PLAN_CONSTRAINT_MATERIAL) || !variation_offered(ret.variation)) {
-        return false;
-    }
-    PlanSpan from = plan_node_span(plan, ret.section);
-    PlanSpan to = plan_node_span(plan, section);
-    if (rational_cmp(from.length, to.length) != 0 || !return_meter_over(plan, from, &source_meter) ||
-        !return_meter_over(plan, to, &target_meter) || source_meter.beats_per_bar != target_meter.beats_per_bar ||
-        source_meter.beat_unit != target_meter.beat_unit || !return_key_shift(plan, from, plan, to, &shift)) {
+        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !return_geometry(plan, section, &ret) ||
+        !variation_offered(ret.variation)) {
         return false;
     }
     if (source) {
@@ -613,6 +625,33 @@ bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *ch
     free(chords);
     free(source);
     return ok;
+}
+
+/* The numerals of the chords that start in the last quarter of the section, space separated. */
+static bool cadence_numerals(const PiecePlan *plan, NodeId section, char *out, size_t size) {
+    size_t count;
+    ChordAt *chords = read_chords(plan, section, &count);
+    Rational length = plan_node_span(plan, section).length;
+    size_t used = 0;
+    bool ok = chords != NULL && size > 0;
+    out[0] = '\0';
+    for (size_t i = 0; ok && i < count; i++) {
+        Rational share;
+        ok = rational_div(chords[i].from, length, &share) == RATIONAL_OK;
+        if (ok && rational_cmp(share, (Rational){3, 4}) >= 0) {
+            int wrote = snprintf(out + used, size - used, "%s%s", used ? " " : "", chords[i].roman);
+            ok = wrote > 0 && (size_t)wrote < size - used;
+            used += ok ? (size_t)wrote : 0;
+        }
+    }
+    free(chords);
+    return ok;
+}
+
+bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *from, char *to, size_t size) {
+    PlanReturn ret;
+    return plan_has_node(plan, section) && find_return(plan, section, &ret) && plan_has_node(plan, ret.section) &&
+           cadence_numerals(plan, ret.section, from, size) && cadence_numerals(plan, section, to, size);
 }
 
 /* ------------------------------------------------------------- the operator */

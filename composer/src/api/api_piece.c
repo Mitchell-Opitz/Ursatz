@@ -8,6 +8,8 @@
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/explain.h>
+#include <ursatz_composer/form_hear.h>
+#include <ursatz_composer/form_return.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/piece_reopen.h>
 #include <ursatz_composer/plan_json.h>
@@ -474,6 +476,10 @@ typedef struct {
     bool has_cadence;
     CadenceType cadence;
     const char *heard; /* the cadence the Analyzer heard, NULL without a check */
+    const PiecePlan *plan; /* a form with sizes: the plan and the section's node, for the pedal and the changes */
+    NodeId node;
+    char key_heard[16]; /* the key the Analyzer heard at the section's start over the whole piece, "" when none */
+    bool pedal;         /* a harmony span in the section's first half was written over a pedal */
     bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
 } Row;
 
@@ -513,6 +519,71 @@ static bool size_section_kept(const PieceVersion *version, NodeId id) {
     return true;
 }
 
+/* The type of the last cadence the compose run heard in a section, when it arrives in the section's last bar; else NULL. */
+static const char *last_bar_cadence(const PieceSpec *request, const PieceVersion *version, NodeId id, PlanSpan span) {
+    Rational bar;
+    Rational end;
+    Rational last;
+    unsigned top = request->request.meter.beats_per_bar;
+    unsigned bottom = request->request.meter.beat_unit;
+    if (top == 0 || bottom == 0 || rational_make((long long)top, (long long)bottom, &bar) != RATIONAL_OK ||
+        plan_span_end(span, &end) != PLAN_OK || rational_sub(end, bar, &last) != RATIONAL_OK) {
+        return NULL;
+    }
+    for (size_t h = 0; h < version->outcome.section_count; h++) {
+        const ComposeHeard *section = &version->outcome.sections[h];
+        if (section->section != id || !section->in_scope) {
+            continue;
+        }
+        const char *type = NULL;
+        for (size_t c = 0; c < section->heard.cadence_count; c++) {
+            Rational arrival = section->heard.cadences[c].arrival;
+            if (rational_cmp(arrival, last) >= 0 && rational_cmp(arrival, end) < 0) {
+                type = plan_cadence_name((CadenceType)section->heard.cadences[c].type);
+            }
+        }
+        return type;
+    }
+    return NULL;
+}
+
+/* Whether a harmony span in the first half of the section was written over a pedal. */
+static bool section_pedal(const PiecePlan *plan, PlanSpan span) {
+    Rational half;
+    if (rational_make(span.length.num, span.length.den * 2, &half) != RATIONAL_OK) {
+        return false;
+    }
+    PlanSpan first = {span.start, half};
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, first, NULL, 0);
+    LaneSpanId *ids = found ? calloc(found, sizeof(*ids)) : NULL;
+    bool pedal = false;
+    if (ids) {
+        plan_lane_find(plan, PLAN_LANE_HARMONY, 0, first, ids, found);
+    }
+    for (size_t i = 0; ids && i < found && !pedal; i++) {
+        for (size_t c = 0; c < plan_lane_span_constraint_count(plan, ids[i]); c++) {
+            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, ids[i], c);
+            pedal = pedal || (constraint->kind == PLAN_CONSTRAINT_HARMONY_SHAPE && constraint->params.harmony_shape.pedal);
+        }
+    }
+    free(ids);
+    return pedal;
+}
+
+/* The key heard at the start of a span in the keys of the whole piece, as "C major"; "" when none. */
+static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational start, char *out, size_t size) {
+    const FormHeardKey *at = NULL;
+    for (size_t i = 0; i < key_count; i++) {
+        if (rational_cmp(keys[i].start, start) <= 0) {
+            at = &keys[i];
+        }
+    }
+    out[0] = '\0';
+    if (at) {
+        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.mode == KEY_STRUCTURE_MODE_MINOR, out, size);
+    }
+}
+
 /* The sections of the size a form with sizes was asked for, each matched to the plan's section of its name, in order. */
 static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
@@ -520,6 +591,12 @@ static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *ve
     const PiecePlan *plan = version->plan;
     size_t next_item = 0;
     size_t count = 0;
+    FormHeardKey *keys = NULL;
+    size_t key_count = 0;
+    if (version->plan && form_hear_keys(plan, plan_node_span(plan, plan_root(plan)), &keys, &key_count) != FORM_HEAR_OK) {
+        keys = NULL;
+        key_count = 0;
+    }
     for (size_t i = 0; size && i < size->section_count && count < PIECE_ROWS_MAX; i++) {
         NodeId id = sized_section_find(plan, size->sections[i].name);
         if (id == PLAN_NODE_NONE) {
@@ -539,10 +616,18 @@ static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *ve
         row->kept = size_section_kept(version, id);
         row->has_cadence = cadence != NULL;
         row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
+        row->plan = plan;
+        row->node = id;
+        row->pedal = section_pedal(plan, plan_node_span(plan, id));
+        key_heard_at(keys, key_count, row->start, row->key_heard, sizeof row->key_heard);
         if (cadence) {
             row->heard = heard_cadence(check, next_item++);
         }
+        if (!check) {
+            row->heard = last_bar_cadence(request, version, id, plan_node_span(plan, id));
+        }
     }
+    free(keys);
     return count;
 }
 
@@ -679,7 +764,85 @@ static double span_beats(const PieceSpec *request, Rational length) {
     return length.den != 0 ? (double)length.num * (double)request->request.meter.beat_unit / (double)length.den : 0;
 }
 
-/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive}. */
+/* The melody notes written over a section. */
+static size_t melody_notes(const PiecePlan *plan, NodeId section) {
+    PlanSpan span = plan_node_span(plan, section);
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
+    LaneSpanId *ids = found ? calloc(found, sizeof(*ids)) : NULL;
+    size_t notes = 0;
+    if (ids) {
+        plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, found);
+    }
+    for (size_t i = 0; ids && i < found; i++) {
+        notes += plan_lane_span_payload(plan, ids[i])->notes.note_count;
+    }
+    free(ids);
+    return notes;
+}
+
+static void append_part(char *text, size_t size, const char *part) {
+    size_t used = strlen(text);
+    snprintf(text + used, size - used, "%s%s", used ? "; " : "", part);
+}
+
+/* How a section that returns another differs from it: null for a section that returns none. */
+static cJSON *changes_json(const Row *row) {
+    const FormSectionSpec *spec = row->spec;
+    bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < row->size->section_count;
+    NodeId source = returns ? sized_section_find(row->plan, row->size->sections[spec->returns].name) : PLAN_NODE_NONE;
+    if (!returns || source == PLAN_NODE_NONE) {
+        return cJSON_CreateNull();
+    }
+    const char *name = row->size->sections[spec->returns].name;
+    bool copied = form_return_copies(row->plan, row->node);
+    cJSON *entry = cJSON_CreateObject();
+    bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
+              cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation));
+    char text[192] = "";
+    size_t changed = 0;
+    size_t chords = 0;
+    size_t added = 0;
+    char from[64] = "";
+    char to[64] = "";
+    bool read = copied && form_return_chords_changed(row->plan, row->node, &changed, &chords) &&
+                form_return_cadence_numerals(row->plan, row->node, from, to, sizeof from);
+    if (read) {
+        size_t had = melody_notes(row->plan, source);
+        size_t has = melody_notes(row->plan, row->node);
+        added = has > had ? has - had : 0;
+        char part[160];
+        if (added > 0) {
+            snprintf(part, sizeof part, "melody: %zu note%s added", added, added == 1 ? "" : "s");
+            append_part(text, sizeof text, part);
+        }
+        if (changed > 0) {
+            snprintf(part, sizeof part, "harmony: %zu of %zu chords changed", changed, chords);
+            append_part(text, sizeof text, part);
+        }
+        if (strcmp(from, to) != 0) {
+            snprintf(part, sizeof part, "cadence: %s for %s", to, from);
+            append_part(text, sizeof text, part);
+        }
+    }
+    if (!copied) {
+        snprintf(text, sizeof text, "composed anew from %s's shape and motive (its keys differ)", name);
+    } else if (text[0] == '\0') {
+        snprintf(text, sizeof text, "the same as %s", name);
+    }
+    ok = ok && api_add(entry, "melody_added", read ? cJSON_CreateNumber((double)added) : cJSON_CreateNull()) &&
+         api_add(entry, "chords_changed", read ? cJSON_CreateNumber((double)changed) : cJSON_CreateNull()) &&
+         api_add(entry, "chords", read ? cJSON_CreateNumber((double)chords) : cJSON_CreateNull()) &&
+         api_add(entry, "cadence_from", read ? cJSON_CreateString(from) : cJSON_CreateNull()) &&
+         api_add(entry, "cadence_to", read ? cJSON_CreateString(to) : cJSON_CreateNull()) &&
+         cJSON_AddStringToObject(entry, "text", text);
+    if (!ok) {
+        cJSON_Delete(entry);
+        return NULL;
+    }
+    return entry;
+}
+
+/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, pedal, changes}. */
 static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
     const FormSectionSpec *spec = row->spec;
     char motive[96];
@@ -693,7 +856,10 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
               api_add(entry, "returns", string_or_null(returns ? row->size->sections[spec->returns].name : NULL)) &&
-              api_add(entry, "motive", string_or_null(has_motive ? motive : NULL));
+              api_add(entry, "motive", string_or_null(has_motive ? motive : NULL)) &&
+              api_add(entry, "key_heard", string_or_null(row->key_heard[0] ? row->key_heard : NULL)) &&
+              api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
+              api_add(entry, "changes", changes_json(row));
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;
