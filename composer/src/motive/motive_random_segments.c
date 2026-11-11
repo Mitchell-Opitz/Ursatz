@@ -17,7 +17,7 @@
 #define SEGMENT_MIN_CELL_BEATS 2 /* a cell must hold a feature: the shortest cell is two beats */
 #define TICKS_PER_UNIT 12        /* ticks in the meter's beat unit: halves, thirds and quarters of it are whole */
 #define SEGMENT_MAX 3
-#define CHORD_MAX SEGMENT_MAX /* the chords of a motive: one per segment */
+#define CHORD_MAX MOTIVE_RANDOM_PLAN_MAX /* the chords of a motive: one per segment, or a given plan's */
 #define SEGMENT_TRIES_PER_SETUP 8 /* notes drawn within one bars, shape and plan before another is drawn (a candidate) */
 #define SEGMENT_CELL_TRIES 32 /* a cell that does not fit is drawn again, so a failed cell does not change the shape's odds */
 #define SEGMENT_START_REACH 4 /* rungs either side of the note before, searched for where a new segment starts */

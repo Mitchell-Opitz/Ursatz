@@ -39,6 +39,8 @@ const char *motive_random_result_name(MotiveRandomResult result) {
         return "unsatisfiable";
     case MOTIVE_RANDOM_ERR_ALLOC:
         return "alloc";
+    case MOTIVE_RANDOM_ERR_PLAN:
+        return "plan";
     }
     return "unknown";
 }
