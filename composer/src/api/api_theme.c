@@ -674,6 +674,8 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     if (state->has_preferences) {
         setup->melody = &state->preferences.melody;
         setup->fidelity = &state->preferences.development;
+        setup->continuation = &state->preferences.continuation;
+        setup->basic_as_written = state->preferences.basic_as_written;
     }
 
     status = api_grow_read_brief(&state->brief.text, setup, error);
