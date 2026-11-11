@@ -812,6 +812,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     spec->pairing = request->pairing;
     spec->first_cadence = request->first_cadence;
     spec->continuation = request->continuation;
+    spec->has_construction = request->has_construction;
     spec->basic_as_written = request->basic_as_written;
     spec->basic_has_chords = shared && shared->basic && shared->basic->chord_count > 0;
     if (!grow_read_motive(plan, request->source, &request->meter, &request->key, &spec->source) ||
@@ -937,18 +938,29 @@ static void continuation_label(const GrowThemeSpec *spec, char *out, size_t size
     snprintf(out, size, "fragments %s, cadential %s", fragments, liquidated);
 }
 
+/* The theme's length in the label: "8" or, with a construction, the halves' bars, "4+5". */
+static void bars_text(const GrowThemeSpec *spec, char *out, size_t size) {
+    if (spec->has_construction) {
+        snprintf(out, size, "%zu+%zu", spec->layout.beginning_bars, spec->layout.ending_bars);
+    } else {
+        snprintf(out, size, "%zu", spec->bars);
+    }
+}
+
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
+    char bars[24];
+    bars_text(spec, bars, sizeof(bars));
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
         spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         char continuation[96];
         continuation_label(spec, continuation, sizeof(continuation));
-        snprintf(label, size, "sentence %zu bars %s %s", spec->bars, repetition_name(spec->repetition), continuation);
+        snprintf(label, size, "sentence %s bars %s %s", bars, repetition_name(spec->repetition), continuation);
         return;
     }
-    size_t used = (size_t)snprintf(label, size, "%s + %s %zu bars", BEGINNINGS[spec->pairing.beginning],
-                                   ENDINGS[spec->pairing.ending], spec->bars);
+    size_t used = (size_t)snprintf(label, size, "%s + %s %s bars", BEGINNINGS[spec->pairing.beginning],
+                                   ENDINGS[spec->pairing.ending], bars);
     if (used < size && spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
         used += (size_t)snprintf(label + used, size - used, " %s", repetition_name(spec->repetition));
     } else if (used < size) {

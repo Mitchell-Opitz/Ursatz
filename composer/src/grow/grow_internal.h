@@ -139,6 +139,7 @@ typedef struct {
     /* The motives the ideas after the basic idea are made from m0 as, planned here to be checked. */
     Motive developed[GROW_PLACE_COUNT];
     bool has_developed[GROW_PLACE_COUNT];
+    bool has_construction;                 /* the request's: the label names the halves' bars */
     GrowContinuation continuation;         /* the request's, for the build (grow_apply) */
     bool basic_as_written;                 /* the request's */
     bool basic_has_chords;                 /* the compose run's basic motive has harmony of its own (R-348) */
