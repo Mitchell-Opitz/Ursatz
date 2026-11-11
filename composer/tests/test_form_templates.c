@@ -102,7 +102,7 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
     } else if (IS("ternary")) {
         size_t third = size.bars / 3;
         set(&out[n++], "A", third, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
-        set(&out[n++], "B", third, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "B", third, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         set(&out[n++], "A", third, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
     } else if (IS("variations")) {
         set(&out[n++], "T", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
@@ -457,7 +457,8 @@ static void compose_all(const char *kind, Tally *total) {
  * it holds or rises; raise a baseline when a change lifts it. The causes of the stuck runs and of the shares being
  * below grow's are in docs/piece.md. The rounded binary one was 28, 84, 20 until the presentation drew its repetition by
  * weight and a sequence wrote its chords whole (P34 B1); it was 25, 75, 19 until P44 B6 gave minor half cadences chords
- * and heard key changes inside a section in their new key (R-418), and is 40, 120, 58.
+ * and heard key changes inside a section in their new key (R-418), and is 40, 120, 58. The ternary one was 30, 90, 35
+ * until it became the small ternary (R-445: B over a pedal ending on V, A1 varied), and is 39, 117, 51.
  */
 typedef struct {
     const char *kind;
@@ -468,7 +469,7 @@ typedef struct {
 
 static const Baseline BASELINES[] = {
     {"binary", 30, 60, 20},     {"rounded-binary", 40, 120, 58},
-    {"ternary", 30, 90, 35},    {"variations", 60, 220, 184},
+    {"ternary", 39, 117, 51},    {"variations", 60, 220, 184},
     {"loop", 40, 60, 32},       {"layered", 60, 180, 74},
 };
 

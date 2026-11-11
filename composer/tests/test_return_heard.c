@@ -115,7 +115,7 @@ static int test_smoke(void) {
 static int test_heard(void) {
     static const Scenario SCENARIOS[] = {
         {"rounded binary 24 bars", "rounded-binary", 24, 0, 9},
-        {"ternary 24 bars", "ternary", 24, 0, 3},
+        {"ternary 24 bars", "ternary", 24, 0, 9},
         {"variations (3)", "variations", 0, 3, 7},
     };
     int status = 0;

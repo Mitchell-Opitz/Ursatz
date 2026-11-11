@@ -19,7 +19,7 @@
  * afresh.
  *
  *   smoke        rounded binary 24 bars, seed 1: A' is A, shifted (quick)
- *   exact        rounded binary (also with an accompaniment), ternary and layered: every return has the nodes and the
+ *   exact        rounded binary (also with an accompaniment) and layered: every return has the nodes and the
  *                harmony, bass, melody and inner voices of the section it returns, shifted by the time between them
  *   ornament     variations (3): variations 1 and 3 keep every note of the theme, add only passing and neighbor tones
  *                off the strong beats, one a beat, and keep its harmony and bass
@@ -27,7 +27,8 @@
  *                the share of its chords that differ from the theme's is printed and is not below its baseline
  *   varied       tests/fixtures/forms/varied-form.json (A, a pedal B, A returned varied), C major 4/4, seeds 1 to 10:
  *                at least 9 compose; the return keeps every note of A at its place, adds notes (at most one a bar), has a
- *                melody its chords fit, and in at least 7 runs a chord of its last 2 bars is not A's
+ *                melody its chords fit, and in at least 7 runs a chord of its last 2 bars is not A's; the built-in ternary
+ *                (24 bars, seeds 1 to 5) returns A varied the same way
  *   reregister   rounded binary with A' re-registered, with and without an accompaniment: the melody and the inner
  *                voices are an octave from A's and inside the range; with the default range a run completes only when
  *                one octave fits, else it is stuck at the returns
@@ -214,7 +215,6 @@ static int test_exact(bool smoke) {
     static const Scenario SCENARIOS[] = {
         {"rounded binary 24 bars", "rounded-binary", 24, 0, false},
         {"rounded binary 24 bars, accompanied", "rounded-binary", 24, 0, true},
-        {"ternary 24 bars", "ternary", 24, 0, false},
         {"layered, 3 layers", "layered", 0, 3, false},
     };
     size_t scenario_count = smoke ? 1 : sizeof(SCENARIOS) / sizeof(SCENARIOS[0]);
@@ -484,6 +484,25 @@ static int test_varied(void) {
     form_spec_destroy(form);
     printf("varied-form: %zu of %d seeds compose, %zu notes added, a chord of the last 2 bars differs in %zu runs\n",
            composed, VARIED_SEEDS, added, cadence);
+    /* The built-in ternary returns A varied (R-445): every composed run keeps A's notes and adds some. */
+    PieceRequest ternary = request_of("ternary", 24, 0, false);
+    size_t ternary_composed = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        PiecePlan *plan;
+        ComposeOutcome outcome;
+        if (compose(&ternary, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            assert(sections_of(plan, sections) == 3);
+            const PlanConstraint *back = return_of(plan, sections[2]);
+            assert(back && back->params.section_return.variation == PLAN_RETURN_VARIED);
+            check_varied(plan, back->params.section_return.section, sections[2]);
+            ternary_composed++;
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    printf("ternary 24 bars: %zu of %d seeds compose, A returned varied\n", ternary_composed, SEEDS);
+    assert(ternary_composed > 0);
     if (composed < VARIED_COMPOSED_LEAST || cadence < VARIED_CADENCE_LEAST) {
         fprintf(stderr, "varied-form: at least %d composed and %d changed cadences expected\n", VARIED_COMPOSED_LEAST,
                 VARIED_CADENCE_LEAST);

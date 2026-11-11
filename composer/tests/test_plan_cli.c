@@ -178,7 +178,7 @@ static void test_options(void) {
     /* The keys and cadences planned across the sections, and the sizes. */
     out = output_of("plan", "--form ternary --key A --mode minor --meter 3/4 --modulate --seed 4 --out plan_cli_keys.json");
     assert(strstr(out, "keys and cadences planned") != NULL);
-    assert(strstr(out, "returns A (exact)") != NULL);
+    assert(strstr(out, "returns A (varied)") != NULL);
     free(out);
     out = output_of("plan", "--form variations --key G --meter 4/4 --count 2 --out plan_cli_count.json");
     assert(strstr(out, "variations, 24 bars") == out);
