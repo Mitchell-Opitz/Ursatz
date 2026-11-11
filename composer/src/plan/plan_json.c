@@ -41,7 +41,6 @@ static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "e
 static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "cadential"};
 static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant", "pivot"};
 static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
-static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
 
@@ -198,7 +197,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_RETURN:
         ok = ok && plan_json_add(object, "section", json_number((long)plan_node_rank(plan, constraint->params.section_return.section))) &&
              plan_json_add(object, "variation",
-                      cJSON_CreateString(RETURN_VARIATION_NAMES[constraint->params.section_return.variation]));
+                      cJSON_CreateString(plan_return_variation_name(constraint->params.section_return.variation)));
         break;
     case PLAN_CONSTRAINT_LAYERS: {
         cJSON *lanes = cJSON_CreateArray();
@@ -732,6 +731,24 @@ static bool read_enum_member(JsonReader *reader, const cJSON *object, const char
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, key);
     return read_enum(reader, item, at, names, count, out);
+}
+
+/* A return constraint's variation, by the name the one table holds. */
+static bool read_return_variation(JsonReader *reader, const cJSON *object, const char *path,
+                                  PlanReturnVariation *out) {
+    const cJSON *item = plan_json_member(reader, object, path, "variation", true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "variation");
+    if (!cJSON_IsString(item)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    if (!plan_return_variation_from_name(item->valuestring, out)) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
+    }
+    return true;
 }
 
 /* A theme pairing's beginning or ending by its plan name (the theme shape table's). */
@@ -1306,12 +1323,10 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
                read_optional_bool(reader, item, path, "above", &out->params.counterpoint.above);
     case PLAN_CONSTRAINT_RETURN:
         if (!json_read_int_member(reader, item, path, "section", 1, TIME_LIMIT, &number_value) ||
-            !read_enum_member(reader, item, path, "variation", RETURN_VARIATION_NAMES,
-                              COUNT_OF(RETURN_VARIATION_NAMES), &value)) {
+            !read_return_variation(reader, item, path, &out->params.section_return.variation)) {
             return false;
         }
         out->params.section_return.section = (NodeId)number_value;
-        out->params.section_return.variation = (PlanReturnVariation)value;
         return true;
     case PLAN_CONSTRAINT_LAYERS: {
         const cJSON *lanes = plan_json_member(reader, item, path, "lanes", true);

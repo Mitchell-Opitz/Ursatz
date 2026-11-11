@@ -17,8 +17,6 @@
  * allows. Everything comes from the parsed documents and the vocabulary tables; nothing is written again here.
  */
 
-static const char *const VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
-
 /* The lanes a layers mask names, in the order the form reader lists them. */
 static const PlanLaneKind LAYER_LANES[] = {PLAN_LANE_BASS, PLAN_LANE_INNER_VOICE, PLAN_LANE_MELODY};
 
@@ -136,7 +134,7 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            api_add(section, "cadence", cadence) && cJSON_AddBoolToObject(section, "closed", spec->closed) &&
            add_keys(section, form, spec) && add_string_or_null(section, "motive", has_motive ? motive : NULL) &&
            add_string_or_null(section, "returns", returns ? size->sections[spec->returns].name : NULL) &&
-           add_string_or_null(section, "variation", returns ? VARIATION_NAMES[spec->variation] : NULL) &&
+           add_string_or_null(section, "variation", returns ? plan_return_variation_name(spec->variation) : NULL) &&
            add_layers(section, spec->layers) && add_slots(section, &spec->pairing);
 }
 

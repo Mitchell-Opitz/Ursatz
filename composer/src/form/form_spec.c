@@ -64,8 +64,6 @@ const char *form_check_name(FormCheck check) {
     return NULL;
 }
 
-static const char *const VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
-#define VARIATION_COUNT (sizeof(VARIATION_NAMES) / sizeof(VARIATION_NAMES[0]))
 
 static const struct {
     const char *name;
@@ -546,15 +544,17 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         }
     }
     if (has_variation) {
-        int variation = PLAN_RETURN_EXACT;
+        const cJSON *variation = cJSON_GetObjectItemCaseSensitive(json, "variation");
         join(at, sizeof(at), path, "variation");
         if (!returns) {
             return fail(reader, at, "a variation needs returns");
         }
-        if (!read_choice(reader, json, path, "variation", VARIATION_NAMES, VARIATION_COUNT, &variation)) {
-            return false;
+        if (!cJSON_IsString(variation) || !variation->valuestring) {
+            return fail(reader, at, "must be a string");
         }
-        out->variation = (PlanReturnVariation)variation;
+        if (!plan_return_variation_from_name(variation->valuestring, &out->variation)) {
+            return fail(reader, at, "unknown variation \"%s\"", variation->valuestring);
+        }
     }
     /* pedal: only "dominant", and only under a presentation */
     if (cJSON_GetObjectItemCaseSensitive(json, "pedal")) {
