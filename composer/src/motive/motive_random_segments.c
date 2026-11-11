@@ -642,17 +642,115 @@ static size_t find_figures(const AnalysisKey *key, const Melody *melody, size_t 
     return option_count;
 }
 
+/* A run of notes between two frame notes, walked by step (draw_run). */
+typedef struct {
+    const AnalysisKey *key;
+    int degree;
+    long shift;
+    size_t length;       /* the notes of the run */
+    long target;         /* the position of the frame note after the run */
+    int target_pitch;
+    int start_pitch;     /* the pitch of the frame note before the run */
+    long path[MAX_NOTES];
+    int alteration[MAX_NOTES];
+    int pitch[MAX_NOTES];
+    unsigned long seen;  /* complete paths counted so far */
+    unsigned long pick;  /* the path to keep */
+    long chosen[MAX_NOTES];
+    int chosen_alteration[MAX_NOTES];
+} RunWalk;
+
+/* Counts (and, at index `pick`, keeps) every path of the run's notes from the position `from` at depth d. */
+static void walk_run(RunWalk *walk, size_t d, long from, int from_pitch) {
+    if (d == walk->length) {
+        if (labs(from - walk->target) == 1 && from_pitch != walk->target_pitch) {
+            if (walk->seen == walk->pick) {
+                memcpy(walk->chosen, walk->path, walk->length * sizeof(long));
+                memcpy(walk->chosen_alteration, walk->alteration, walk->length * sizeof(int));
+            }
+            walk->seen++;
+        }
+        return;
+    }
+    for (long move = d == 0 ? -2 : -1; move <= (d == 0 ? 2 : 1); move++) {
+        if (move == 0) {
+            continue;
+        }
+        long position = from + move;
+        bool chord_tone = motive_random_is_chord_step(position - walk->shift);
+        if (labs(move) == 2 && !chord_tone) {
+            continue; /* the first move may be two steps, onto a chord tone */
+        }
+        int alteration = chord_tone ? chord_alteration(walk->key, walk->degree, position) : 0;
+        int pitch = motive_position_pitch(walk->key, position, alteration);
+        if (!motive_random_in_range(pitch) || pitch == from_pitch) {
+            continue;
+        }
+        walk->path[d] = position;
+        walk->alteration[d] = alteration;
+        walk_run(walk, d + 1, position, pitch);
+    }
+}
+
+/*
+ * The notes first to last, none of them a frame note, between the frame notes before and after: a path of scale steps from
+ * the first to the second in which each move is one step, except that the first may be two steps onto a chord tone of the
+ * segment's chord, and the last note is a step from the frame note after. One path is drawn by `fill_rng_below`; none fails
+ * the draw.
+ */
+static bool draw_run(const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody, size_t first, size_t last) {
+    RunWalk walk;
+    memset(&walk, 0, sizeof(walk));
+    walk.key = key;
+    walk.degree = layout->plan.degrees[place->segment[first]];
+    walk.shift = chord_shift(walk.degree);
+    walk.length = last - first + 1;
+    walk.target = place->position[last + 1];
+    walk.target_pitch = melody->pitches[last + 1];
+    walk.start_pitch = melody->pitches[first - 1];
+    walk.pick = ~0UL;
+    walk_run(&walk, 0, place->position[first - 1], walk.start_pitch);
+    if (walk.seen == 0) {
+        return false;
+    }
+    walk.pick = (unsigned long)fill_rng_below(rng, walk.seen);
+    walk.seen = 0;
+    walk_run(&walk, 0, place->position[first - 1], walk.start_pitch);
+    for (size_t k = 0; k < walk.length; k++) {
+        place->position[first + k] = walk.chosen[k];
+        place->alteration[first + k] = walk.chosen_alteration[k];
+        melody->pitches[first + k] = pitch_of(key, place, first + k);
+        melody->run[first + k] = true;
+    }
+    return true;
+}
+
 /*
  * The notes between frame notes: a type is drawn for each (or none), and a note takes a non-chord pitch near the note
- * before it that makes the figure with the notes either side, else a chord tone of its segment's chord near it.
+ * before it that makes the figure with the notes either side, else a chord tone of its segment's chord near it. Two or more
+ * such notes in a row are a run (draw_run), walked by step.
  */
 static bool draw_decorations(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody) {
     for (size_t i = 0; i < layout->rhythm.count; i++) {
         if (place->frame[i]) {
             continue;
         }
-        if (i == 0 || i + 1 == layout->rhythm.count || !place->frame[i - 1] || !place->frame[i + 1]) {
+        if (i == 0 || !place->frame[i - 1]) {
             return false;
+        }
+        size_t last = i;
+        while (last + 1 < layout->rhythm.count && !place->frame[last + 1]) {
+            last++;
+        }
+        if (last + 1 == layout->rhythm.count) {
+            return false;
+        }
+        if (last > i) {
+            if (!draw_run(key, layout, rng, place, melody, i, last)) {
+                return false;
+            }
+            i = last;
+            continue;
         }
         int degree = layout->plan.degrees[place->segment[i]];
         long shift = chord_shift(degree);
@@ -906,7 +1004,8 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
     }
     for (size_t i = 0; i < motive->note_count; i++) {
         const MotiveToneLabel *label = &analysis.tones[i];
-        bool expected = melody->decorated[i] ? label->role == MOTIVE_TONE_NON_CHORD && label->type == melody->types[i] &&
+        bool expected = melody->run[i] ? label->role == MOTIVE_TONE_CHORD || (label->role == MOTIVE_TONE_NON_CHORD && !label->unresolved)
+                        : melody->decorated[i] ? label->role == MOTIVE_TONE_NON_CHORD && label->type == melody->types[i] &&
                                                    !label->unresolved
                                              : label->role == MOTIVE_TONE_CHORD;
         if (!expected) {

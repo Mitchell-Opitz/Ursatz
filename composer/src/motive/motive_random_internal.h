@@ -58,6 +58,7 @@ typedef struct {
     int pitches[MAX_NOTES];
     bool decorated[MAX_NOTES]; /* a non-chord tone of types[i] */
     NonChordTone types[MAX_NOTES];
+    bool run[MAX_NOTES]; /* a note of a run between two frame notes (segments strategy): a chord tone or a non-chord tone */
 } Melody;
 
 long motive_random_rung_position(long rung);
