@@ -985,11 +985,11 @@ static bool place_suspension(const AnalysisKey *key, const Layout *layout, size_
 /*
  * Accented non-chord tones (R-425): a note that starts on a beat becomes an appoggiatura, a passing tone or a suspension
  * that resolves to the next note, which takes the chord tone the accented note displaced. One per segment, and never the
- * pickup, the first note, or the last note of a segment. Each eligible note is chosen in one of `accented_one_in`.
+ * pickup, the first note, or the last note of a segment. Each eligible note is chosen in one of `accented_one_in`. A
+ * segment that already holds a long non-chord tone (`accented`, place_long_accents) is skipped.
  */
 static bool place_accents(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place,
-                          Melody *melody) {
-    bool accented[SEGMENT_MAX] = {false, false, false};
+                          Melody *melody, bool accented[SEGMENT_MAX]) {
     for (size_t i = 1; i + 1 < layout->rhythm.count; i++) {
         size_t s = (size_t)place->segment[i];
         if (!layout->rhythm.on_beat[i] || !place->frame[i] || i < layout->cell_start || !place->frame[i - 1] ||
@@ -1004,6 +1004,125 @@ static bool place_accents(const MotiveRandomPreferences *preferences, const Anal
                                 : place_step_accent(key, layout, rng, i, kind == 0 ? NON_CHORD_TONE_APPOGGIATURA : NON_CHORD_TONE_PASSING, place,
                                                     melody);
         accented[s] = accented[s] || placed;
+    }
+    return true;
+}
+
+/* The long non-chord tone types, in the order of the long_nct_types list. */
+#define LONG_NCT_TYPES 5
+static const NonChordTone LONG_NCT[LONG_NCT_TYPES] = {NON_CHORD_TONE_APPOGGIATURA, NON_CHORD_TONE_SUSPENSION, NON_CHORD_TONE_RETARDATION,
+                                                      NON_CHORD_TONE_PASSING, NON_CHORD_TONE_NEIGHBOR};
+#define LONG_NCT_CANDIDATES 64
+
+/* One way to make note i a long non-chord tone: its position and alteration, and the chord tone the next note takes. */
+typedef struct {
+    NonChordTone type;
+    long position;
+    int alteration;
+    long target;
+    int target_alteration;
+    unsigned long weight;
+} LongNct;
+
+/* Adds the figure `type` at position n resolving to r at note i when the rules allow it, weighted by its type and interval. */
+static void add_long_nct(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, const Place *place, const Melody *melody,
+                         size_t i, size_t type, long n, int n_alteration, long r, LongNct *out, size_t *count) {
+    int degree = layout->plan.degrees[place->segment[i]];
+    long shift = chord_shift(degree);
+    long step = step_of(n - shift);
+    if (motive_random_is_chord_step(n - shift) || !motive_random_is_chord_step(r - shift) || *count == LONG_NCT_CANDIDATES) {
+        return;
+    }
+    size_t interval = step == 1 ? 0 : step == 3 ? 1 : step == 5 ? 2 : 3;
+    int r_alteration = chord_alteration(key, degree, r);
+    int n_pitch = motive_position_pitch(key, n, n_alteration);
+    int r_pitch = motive_position_pitch(key, r, r_alteration);
+    if (!motive_random_in_range(n_pitch) || !motive_random_in_range(r_pitch) ||
+        !motive_random_forms(LONG_NCT[type], melody->pitches[i - 1], n_pitch, r_pitch)) {
+        return;
+    }
+    LongNct *c = &out[(*count)++];
+    c->type = LONG_NCT[type];
+    c->position = n;
+    c->alteration = n_alteration;
+    c->target = r;
+    c->target_alteration = r_alteration;
+    c->weight = preferences->long_nct_types[type] * preferences->long_nct_intervals[interval];
+}
+
+/*
+ * Long non-chord tones (R-441): in one segment of `long_nct_one_in`, a frame note that starts on a beat and lasts a beat or
+ * more becomes an appoggiatura, suspension, retardation, passing tone or neighbor that resolves to the next note. The note
+ * is drawn by where it sits in the bar (long_nct_beats) and its length (long_nct_lengths), the figure by its type and its
+ * interval above the chord root (long_nct_types, long_nct_intervals). A suspension or retardation holds the note before over
+ * where the chord changes. A segment with none eligible, or whose weights are all 0, draws nothing.
+ */
+static bool place_long_accents(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place,
+                               Melody *melody, bool accented[SEGMENT_MAX]) {
+    long bar = layout->grid.beats * layout->grid.beat;
+    long onset[MAX_NOTES];
+    long position = 0;
+    for (size_t i = layout->cell_start; i < layout->rhythm.count; i++) {
+        onset[i] = position;
+        position += layout->rhythm.ticks[i];
+    }
+    for (size_t s = 0; s < layout->segment_count; s++) {
+        size_t eligible[MAX_NOTES];
+        unsigned long weights[MAX_NOTES];
+        size_t eligible_count = 0;
+        for (size_t i = layout->first[s]; i <= layout->last[s]; i++) {
+            long ticks = layout->rhythm.ticks[i];
+            if (!layout->rhythm.on_beat[i] || !place->frame[i] || i < layout->cell_start || i < 1 || !place->frame[i - 1] ||
+                i + 1 >= layout->rhythm.count || place->segment[i + 1] != (int)s || ticks < layout->grid.beat) {
+                continue;
+            }
+            long at = onset[i] % bar;
+            size_t where = at == 0 ? 0 : layout->grid.beats % 2 == 0 && at == bar / 2 ? 1 : 2;
+            size_t length = ticks >= 2 * layout->grid.beat ? 2 : ticks >= 3 * layout->grid.beat / 2 ? 1 : 0;
+            weights[eligible_count] = preferences->long_nct_beats[where] * preferences->long_nct_lengths[length];
+            eligible[eligible_count++] = i;
+        }
+        if (eligible_count == 0 || fill_rng_below(rng, preferences->long_nct_one_in) != 0) {
+            continue;
+        }
+        unsigned long total = 0;
+        for (size_t k = 0; k < eligible_count; k++) {
+            total += weights[k];
+        }
+        if (total == 0) {
+            continue;
+        }
+        size_t i = eligible[pick_weighted(rng, weights, eligible_count)];
+        int degree = layout->plan.degrees[s];
+        LongNct candidates[LONG_NCT_CANDIDATES];
+        size_t count = 0;
+        for (size_t type = 0; type < LONG_NCT_TYPES; type++) {
+            if (type == 1 || type == 2) {
+                /* held over from the note before, where the chord changes: down by step, or up (retardation) */
+                if (s >= 1 && i == layout->first[s] && degree != layout->plan.degrees[s - 1]) {
+                    long held = place->position[i - 1];
+                    add_long_nct(preferences, key, layout, place, melody, i, type, held, place->alteration[i - 1], held + (type == 1 ? -1 : 1), candidates,
+                                 &count);
+                }
+                continue;
+            }
+            for (long n = place->position[i] - 2; n <= place->position[i] + 2; n++) {
+                add_long_nct(preferences, key, layout, place, melody, i, type, n, 0, n - 1, candidates, &count);
+                add_long_nct(preferences, key, layout, place, melody, i, type, n, 0, n + 1, candidates, &count);
+            }
+        }
+        unsigned long candidate_weights[LONG_NCT_CANDIDATES];
+        unsigned long candidate_total = 0;
+        for (size_t k = 0; k < count; k++) {
+            candidate_weights[k] = candidates[k].weight;
+            candidate_total += candidates[k].weight;
+        }
+        if (candidate_total == 0) {
+            continue;
+        }
+        const LongNct *chosen = &candidates[pick_weighted(rng, candidate_weights, count)];
+        put_accent(key, place, melody, i, chosen->position, chosen->alteration, chosen->type, chosen->target, chosen->target_alteration);
+        accented[s] = true;
     }
     return true;
 }
@@ -1063,7 +1182,11 @@ static bool draw_melody(const MotiveRandomPreferences *preferences, const Analys
         !set_frame(key, layout, &place, melody, 0, place.rung[layout->cell_start] - 1)) {
         return false;
     }
-    if (preferences->accented_one_in > 0 && !place_accents(preferences, key, layout, rng, &place, melody)) {
+    bool accented[SEGMENT_MAX] = {false, false, false};
+    if (preferences->long_nct_one_in > 0 && !place_long_accents(preferences, key, layout, rng, &place, melody, accented)) {
+        return false;
+    }
+    if (preferences->accented_one_in > 0 && !place_accents(preferences, key, layout, rng, &place, melody, accented)) {
         return false;
     }
     if (!draw_decorations(preferences, key, layout, rng, &place, melody)) {
