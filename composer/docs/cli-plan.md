@@ -55,8 +55,8 @@ names the section by its letter and the bar of it (from 1) where the material st
 followed by `--cells`. The material is read after the plan is made, so it is refused if it would cross the section's
 end, cross a change of key, or overlap Given material of the same kind.
 
-With given material and no `--form`, the plan is a ternary form of 24 bars, the given material goes in B unless its
-`--at` says otherwise, and the output says so (`no --form: a ternary form of 24 bars, the given material in B`).
+With given material and no `--form`, the plan is a binary form of 16 bars, the given material goes in B unless its
+`--at` says otherwise, and the output says so (`no --form: a binary form of 16 bars, the given material in B`).
 The plan takes a bar more of material for each `--given-melody`, for the motive an idea with a Given melody inside it
 is made from.
 

@@ -2,6 +2,10 @@
 
 The Composer versions and what each changed. Back to the [docs index](README.md). Older entries are in the [changelog archive](changelog-archive.md).
 
+## Unreleased (phase P46)
+
+Given material with no form goes in the B of a binary form (R-448, B1). The default form of a plan with `--given-*` material and no `--form` is a binary form of 16 bars instead of a ternary form of 24 (`DEFAULT_GIVEN_BARS` 16, `check_request`, the `plan` help and its `no --form:` line), because the ternary form's B will end on the dominant (B4). The tests that place a given melody in a ternary B move to binary, the `test_middle_out` melody baseline is `{10, 19, 18}` (20 sections a run set), and the `plan-given`, `fill-given` and `harmonize` snapshots are recorded again. No other snapshot, plan hash or rate moved.
+
 ## Unreleased (phase L2)
 
 Triplets run through the motive texts and themes (R-435, R-442, B3). The Ursatz and Analyzer pins move to the merges of the triplet motive times (`49a5523`, `4374060`). A duration token is a letter then up to two dots or a `3`, a triplet value two thirds of the plain one (`q3` 1/6, `e3` 1/12, `s3` 1/24; `q.3` is refused): `motive_notes.c` reads it and `motive_text.c`, `motive_analysis.c` and `api_develop.c` write it for a time whose denominator is divisible by 3, so every other text is unchanged. `grow_check.c` counts fragments in 384 ticks per whole note, and a theme that scales the rhythm of a motive with triplets passes over a ratio whose result has none (`grow_theme.c`). `test_form_plans` masks the pinned Ursatz commit before it hashes a plan, so a pin bump no longer moves the pinned form plans (their fixtures were recorded once more). New: `test_grow_triplets` (slow, with `test_grow_triplets_smoke`), a `listen` case for a triplet motif. Binary motives and every snapshot are as before. See [motive-format.md](motive-format.md#triplet-values-in-the-texts) and [theme-request.md](theme-request.md).
