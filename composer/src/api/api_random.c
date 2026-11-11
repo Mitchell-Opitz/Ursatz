@@ -227,6 +227,10 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     size_t made = 0;
     MotiveRandomResult result = motive_random(&options, motives, &made);
     composer_style_destroy(style);
+    if (result == MOTIVE_RANDOM_ERR_PLAN) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/preferences/motif/plan",
+                        "the motif plan does not fit the meter, bars, shapes or endings allowed");
+    }
     if (result != MOTIVE_RANDOM_OK) {
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot make random motives (%s)",
                         motive_random_result_name(result));
