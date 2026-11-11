@@ -49,9 +49,25 @@ typedef enum {
 typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
 
 /*
+ * One extension of a construction (R-468) as laid out. A repeat and an evaded cadence are an idea of their own: `place` is
+ * the place of the idea a repeat follows, or the last place of the theme for an evaded cadence, and start and length are
+ * the new idea's. A stretch is no idea: `place` is the place it lengthens, start that place's start and length the bars
+ * added. An addition lies after the theme's last idea: place is that idea's, start and length are the addition's.
+ */
+typedef struct {
+    PlanExtensionKind kind;
+    GrowPlace place;
+    Rational start;
+    Rational length;
+    bool varied;
+} GrowLayoutExtension;
+
+/*
  * Where each idea of a theme lies, as exact lengths from the theme's start, computed once per request (grow_layout_of).
  * A place the pairing does not have has length 0. The ending starts at `beginning`. A *_bars member is the whole bars the
- * length is, 0 when it is not whole.
+ * length is, 0 when it is not whole. The halves hold their repeats, their stretched ideas and, in the ending, an evaded
+ * cadence's idea; an addition is after the ending. `idea_beginning_bars` and `idea_ending_bars` are the halves of the
+ * construction's ideas alone, without any extension.
  */
 typedef struct {
     Rational start[GROW_PLACE_COUNT];
@@ -61,6 +77,10 @@ typedef struct {
     size_t basic_bars;
     size_t beginning_bars;
     size_t ending_bars;
+    size_t idea_beginning_bars;
+    size_t idea_ending_bars;
+    size_t extension_count;
+    GrowLayoutExtension extensions[PLAN_CONSTRUCTION_EXTENSIONS]; /* in the construction's order */
 } GrowLayout;
 
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
@@ -269,6 +289,13 @@ bool grow_split_possible(const GrowThemeRequest *request, size_t half_bars, Plan
 Rational grow_unit(const GrowThemeRequest *request);
 /* Where each idea of the request's theme lies; false when the theme has no length or a length does not fit a Rational. */
 bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out);
+/*
+ * Whether an extension of this kind can follow or stretch the idea under the pairing (R-468): a repeat follows the
+ * repetition, the contrasting idea, fragment 1, fragment 2, the consequent contrasting idea or cadential 1; a stretch
+ * lengthens the idea that ends the theme (the cadential idea, the consequent contrasting idea, cadential 2) or an
+ * antecedent's contrasting idea. An addition and an evaded cadence name no idea: they are always allowed here.
+ */
+bool grow_extension_allowed(const PlanThemePairing *pairing, PlanExtensionKind kind, GrowIdea idea);
 /* standard-form's own beginning and ending for the plan's. */
 int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);
