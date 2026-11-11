@@ -29,10 +29,10 @@
 #define SEEDS 16
 #define THEME_SEEDS 8
 
-static MotiveRandomOptions options_of(int beats, unsigned long seed, const MotiveRandomPreferences *preferences) {
+static MotiveRandomOptions options_in(int beats, KeyStructureMode mode, unsigned long seed, const MotiveRandomPreferences *preferences) {
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
-    options.mode = KEY_STRUCTURE_MODE_MAJOR;
+    options.mode = mode;
     options.meter.beats_per_bar = beats;
     options.meter.beat_unit = 4;
     options.form = MOTIVE_SKETCH_FORM_FULL;
@@ -41,6 +41,10 @@ static MotiveRandomOptions options_of(int beats, unsigned long seed, const Motiv
     options.seed = seed;
     options.preferences = preferences;
     return options;
+}
+
+static MotiveRandomOptions options_of(int beats, unsigned long seed, const MotiveRandomPreferences *preferences) {
+    return options_in(beats, KEY_STRUCTURE_MODE_MAJOR, seed, preferences);
 }
 
 static Motive make(int beats, unsigned long seed, const MotiveRandomPreferences *preferences) {
@@ -131,11 +135,31 @@ static void defaults_change_nothing(void) {
     }
     /* and the skip limit of phase L3 (R-455) */
     explicit_defaults.skips_per_motif = 11;
+    /* and no given chord plan (R-456) */
+    explicit_defaults.plan_count = 0;
     for (int beats = 3; beats <= 4; beats++) {
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Motive without = make(beats, seed, NULL);
             Motive with = make(beats, seed, &explicit_defaults);
             assert(same_motive(&without, &with));
+        }
+    }
+    /* with a plan given, no plan is drawn: the weights of plans_two and plans_three change nothing */
+    MotiveRandomPreferences given = defaults;
+    given.plan_count = 2;
+    given.plan[0].degree = 2;
+    given.plan[1].degree = 5;
+    MotiveRandomPreferences reweighted = given;
+    reweighted.plans_two[0] = 0;
+    reweighted.plans_two[1] = 0;
+    reweighted.plans_two[2] = 7;
+    reweighted.plans_three[0] = 0;
+    reweighted.plans_three[1] = 5;
+    for (int beats = 3; beats <= 4; beats++) {
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            Motive one = make(beats, seed, &given);
+            Motive other = make(beats, seed, &reweighted);
+            assert(same_motive(&one, &other));
         }
     }
 }
@@ -1166,6 +1190,175 @@ static void syncopation_changes_nothing_else(void) {
     printf("syncopation: compound and six, nine, twelve beat meters and empty settings change nothing\n");
 }
 
+/* ------------------------------------------------- given chord plans (phase L3, R-456 to R-461) */
+
+static const int MINOR_SCALE[7] = {9, 11, 0, 2, 4, 5, 7}; /* A natural minor */
+
+/* The pitch classes of the diatonic triad on a degree of C major or A minor; in minor only V's third is raised. */
+static void chord_pcs(KeyStructureMode mode, int degree, int pcs[3]) {
+    for (int t = 0; t < 3; t++) {
+        int index = (degree - 1 + 2 * t) % 7;
+        pcs[t] = mode == KEY_STRUCTURE_MODE_MAJOR ? MAJOR_SCALE[index] : MINOR_SCALE[index];
+        if (mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && t == 1) {
+            pcs[t] = (pcs[t] + 1) % 12;
+        }
+    }
+}
+
+static bool in_chord(KeyStructureMode mode, int degree, int pitch) {
+    int pcs[3];
+    chord_pcs(mode, degree, pcs);
+    return pitch_class(pitch) == pcs[0] || pitch_class(pitch) == pcs[1] || pitch_class(pitch) == pcs[2];
+}
+
+static MotiveRandomPreferences plan_of(size_t count, const MotiveRandomPlanChord *chords) {
+    MotiveRandomPreferences preferences;
+    motive_random_preferences_default(&preferences);
+    preferences.plan_count = count;
+    memcpy(preferences.plan, chords, count * sizeof(chords[0]));
+    return preferences;
+}
+
+/* The motive is on the plan: the chords are its degrees (one to a segment, or at the bar and beat given), every note is a chord
+   tone or a non-chord tone that resolves, and every chord tone and every note on a beat is a tone of the chord at its onset. */
+static void check_plan(const Motive *motive, KeyStructureMode mode, int beats, const MotiveRandomPlanChord *plan, size_t count) {
+    bool placed = count > 1 && plan[1].bar > 0;
+    if (placed) {
+        assert(motive->chord_count == count);
+        for (size_t c = 0; c < count; c++) {
+            assert(motive->chords[c].degree == plan[c].degree);
+            if (c > 0) {
+                assert(chord_grid_start(motive, c) == ((long)(plan[c].bar - 1) * beats + (long)plan[c].beat - 1) * 12);
+            }
+        }
+    } else {
+        assert(motive->chord_count == (count == 1 ? motive->feature_count : count));
+        for (size_t c = 0; c < motive->chord_count; c++) {
+            assert(motive->chords[c].degree == plan[count == 1 ? 0 : c].degree);
+        }
+    }
+    MotiveAnalysis analysis;
+    assert(motive_analyze(motive, &analysis) && analysis.tones_known);
+    for (size_t i = 0; i < motive->note_count; i++) {
+        const MotiveToneLabel *label = &analysis.tones[i];
+        assert(label->role == MOTIVE_TONE_CHORD || (label->role == MOTIVE_TONE_NON_CHORD && !label->unresolved));
+        long start = grid_start(motive, i);
+        size_t at = 0;
+        for (size_t c = 1; c < motive->chord_count; c++) {
+            at = chord_grid_start(motive, c) <= start ? c : at;
+        }
+        if (label->role == MOTIVE_TONE_CHORD || start % 12 == 0) {
+            assert(in_chord(mode, motive->chords[at].degree, motive->notes[i].pitch));
+        }
+    }
+}
+
+/* A chord plan given as written: the motives hold exactly its chords, in both modes, in 4/4 and 3/4. */
+static void given_plans(void) {
+    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0}, {5, 0, 0}};
+    const MotiveRandomPlanChord ii_iii[] = {{2, 0, 0}, {3, 0, 0}};
+    const MotiveRandomPlanChord vi_IV[] = {{6, 0, 0}, {4, 0, 0}};
+    const MotiveRandomPlanChord vi[] = {{6, 0, 0}};
+    const MotiveRandomPlanChord I_vi_ii[] = {{1, 0, 0}, {6, 0, 0}, {2, 0, 0}};
+    const MotiveRandomPlanChord placed[] = {{1, 0, 0}, {6, 1, 3}, {2, 2, 1}, {5, 2, 3}};
+    const struct {
+        const char *name;
+        const MotiveRandomPlanChord *chords;
+        size_t count;
+        bool four_four_only;
+    } plans[] = {{"ii-V", ii_V, 2, false},     {"ii-iii", ii_iii, 2, false}, {"vi-IV", vi_IV, 2, false},
+                 {"vi", vi, 1, false},         {"I-vi-ii", I_vi_ii, 3, true}, {"I-vi@1:3-ii@2:1-V@2:3", placed, 4, false}};
+    for (size_t p = 0; p < sizeof(plans) / sizeof(plans[0]); p++) {
+        MotiveRandomPreferences preferences = plan_of(plans[p].count, plans[p].chords);
+        int made = 0;
+        for (int beats = 3; beats <= 4; beats++) {
+            if (plans[p].four_four_only && beats == 3) {
+                continue;
+            }
+            for (int m = 0; m < 2; m++) {
+                KeyStructureMode mode = m == 0 ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR;
+                for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+                    MotiveRandomOptions options = options_in(beats, mode, seed, &preferences);
+                    Motive motive;
+                    size_t count = 0;
+                    assert(motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK && count == 1);
+                    check_plan(&motive, mode, beats, plans[p].chords, plans[p].count);
+                    if (plans[p].count == 3) {
+                        assert(motive.feature_count == 3);
+                    }
+                    made++;
+                }
+            }
+        }
+        printf("given chord plan %s: %d motives, each on its chords\n", plans[p].name, made);
+    }
+}
+
+static bool refused(int beats, const MotiveRandomPreferences *preferences) {
+    MotiveRandomOptions options = options_of(beats, 1, preferences);
+    Motive motive;
+    size_t count = 7;
+    MotiveRandomResult result = motive_random(&options, &motive, &count);
+    assert(result != MOTIVE_RANDOM_ERR_PLAN || count == 0);
+    return result == MOTIVE_RANDOM_ERR_PLAN;
+}
+
+/* A plan that cannot fit is refused with `plan`, before anything is drawn; one that fits without reading a setting is not. */
+static void plans_that_do_not_fit(void) {
+    const MotiveRandomPlanChord three[] = {{1, 0, 0}, {6, 0, 0}, {2, 0, 0}};
+    MotiveRandomPreferences preferences = plan_of(3, three);
+    assert(refused(3, &preferences)); /* three chords need a a' b, which a 3/4 motive has no half-bar cells for */
+    const MotiveRandomPlanChord late[] = {{2, 0, 0}, {5, 2, 1}};
+    preferences = plan_of(2, late);
+    preferences.bars[0] = 1;
+    preferences.bars[1] = 0;
+    assert(refused(4, &preferences)); /* a chord in bar 2 of a one-bar motive */
+    int made = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        MotiveRandomOptions options = options_of(3, seed, &preferences);
+        Motive motive;
+        size_t count = 0;
+        made += motive_random(&options, &motive, &count) == MOTIVE_RANDOM_OK; /* 3/4 has no one-bar motive: bars are not read */
+    }
+    assert(made >= 12);
+    const MotiveRandomPlanChord beat_four[] = {{2, 0, 0}, {5, 1, 4}};
+    preferences = plan_of(2, beat_four);
+    assert(refused(3, &preferences));
+    MotiveRandomPreferences four_chords = plan_of(0, NULL);
+    four_chords.plan_count = 4;
+    for (size_t k = 0; k < 4; k++) {
+        four_chords.plan[k].degree = 1 + (int)k;
+    }
+    assert(refused(4, &four_chords));
+    for (int degree = 0; degree <= 8; degree += 8) {
+        const MotiveRandomPlanChord bad[] = {{2, 0, 0}, {degree, 0, 0}};
+        preferences = plan_of(2, bad);
+        assert(refused(4, &preferences));
+    }
+    const MotiveRandomPlanChord falling[] = {{1, 0, 0}, {6, 2, 1}, {2, 1, 3}};
+    preferences = plan_of(3, falling);
+    assert(refused(4, &preferences));
+    const MotiveRandomPlanChord half[] = {{1, 0, 0}, {6, 1, 3}, {2, 0, 0}};
+    preferences = plan_of(3, half);
+    assert(refused(4, &preferences)); /* some of the chords placed, not all */
+    const MotiveRandomPlanChord ii_vi[] = {{2, 0, 0}, {6, 0, 0}};
+    const MotiveRandomPlanChord ii_IV[] = {{2, 0, 0}, {4, 0, 0}};
+    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0}, {5, 0, 0}};
+    preferences = plan_of(2, ii_vi);
+    preferences.endings[0] = 0;
+    preferences.endings[2] = 1;
+    assert(refused(4, &preferences)); /* an open ending needs a tone on degree 2, 5 or 7: not vi */
+    preferences = plan_of(2, ii_IV);
+    preferences.endings[0] = 0;
+    preferences.endings[2] = 1;
+    assert(refused(4, &preferences)); /* nor IV */
+    preferences = plan_of(2, ii_V);
+    preferences.endings[0] = 0;
+    preferences.endings[2] = 1;
+    assert(!refused(4, &preferences));
+    printf("given chord plans that cannot fit: refused with plan\n");
+}
+
 static void each_setting_still_gives_motives(void) {
     MotiveRandomPreferences base;
     motive_random_preferences_default(&base);
@@ -1205,6 +1398,10 @@ static void each_setting_still_gives_motives(void) {
     }
     MotiveRandomPreferences long_nct = base;
     long_nct.long_nct_one_in = 1;
+    const MotiveRandomPlanChord ii_V[] = {{2, 0, 0}, {5, 0, 0}};
+    const MotiveRandomPlanChord placed[] = {{1, 0, 0}, {6, 1, 3}, {2, 2, 1}, {5, 2, 3}};
+    MotiveRandomPreferences plan_two = plan_of(2, ii_V);
+    MotiveRandomPreferences plan_placed = plan_of(4, placed);
     const struct {
         const char *name;
         const MotiveRandomPreferences *preferences;
@@ -1221,7 +1418,9 @@ static void each_setting_still_gives_motives(void) {
                     {"compound_beats in 12/8", &compound, 12, 8}, {"endings closed", &endings[0], 4, 4},
                     {"endings open", &endings[1], 4, 4},      {"endings lead_in", &endings[2], 4, 4},
                     {"long_nct_one_in 1", &long_nct, 4, 4},   {"syncopation_one_in 1 in 4/4", &syncopation, 4, 4},
-                    {"syncopation_one_in 1 in 3/4", &syncopation, 3, 4}};
+                    {"syncopation_one_in 1 in 3/4", &syncopation, 3, 4}, {"plan ii-V in 4/4", &plan_two, 4, 4},
+                    {"plan ii-V in 3/4", &plan_two, 3, 4},    {"plan I-vi-ii-V placed in 4/4", &plan_placed, 4, 4},
+                    {"plan I-vi-ii-V placed in 3/4", &plan_placed, 3, 4}};
     for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); i++) {
         int made = motives_made_in(settings[i].beats, settings[i].unit, settings[i].preferences);
         printf("%s alone: %d of %d seeds give a motive\n", settings[i].name, made, SEEDS);
@@ -1252,6 +1451,8 @@ int main(void) {
     syncopation_figures();
     syncopation_boundaries();
     syncopation_changes_nothing_else();
+    given_plans();
+    plans_that_do_not_fit();
     each_setting_still_gives_motives();
     printf("test_motif_preferences: ok\n");
     return 0;
