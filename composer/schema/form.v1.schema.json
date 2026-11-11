@@ -146,7 +146,7 @@
         },
         "motive": { "type": "string", "description": "How the section's motive is made from m0, as motive_relation_step_text writes it." },
         "returns": { "type": "string", "description": "The name of an earlier section of the size." },
-        "variation": { "enum": ["exact", "ornament", "reharmonize", "reregister"], "description": "Needs returns." },
+        "variation": { "enum": ["exact", "ornament", "reharmonize", "reregister", "varied"], "description": "Needs returns." },
         "layers": {
           "oneOf": [
             { "const": "all" },

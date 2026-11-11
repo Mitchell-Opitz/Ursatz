@@ -382,7 +382,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
 /* The variations the operator makes: all of them. */
 static bool variation_offered(PlanReturnVariation variation) {
     return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
-           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER;
+           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED;
 }
 
 bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation) {
@@ -636,7 +636,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     if (!range) {
         range = &defaults;
     }
-    if (variation == PLAN_RETURN_ORNAMENT) {
+    if (variation == PLAN_RETURN_ORNAMENT || variation == PLAN_RETURN_VARIED) {
         ReturnPayload *kept[ORNAMENT_CANDIDATES];
         size_t kept_count = 0;
         for (size_t draw = 0; draw < 2 * ORNAMENT_CANDIDATES && kept_count < ORNAMENT_CANDIDATES; draw++) {
@@ -653,7 +653,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
                 continue;
             }
             kept[kept_count++] = payload;
-            if (!add_payload(out, "ornament", payload)) {
+            if (!add_payload(out, variation == PLAN_RETURN_VARIED ? "varied" : "ornament", payload)) {
                 return false;
             }
         }

@@ -197,7 +197,8 @@ typedef enum {
     PLAN_RETURN_EXACT,
     PLAN_RETURN_ORNAMENT,
     PLAN_RETURN_REHARMONIZE,
-    PLAN_RETURN_REREGISTER
+    PLAN_RETURN_REREGISTER,
+    PLAN_RETURN_VARIED /* a moderately varied repetition (Schoenberg's A1): a few ornaments and a reharmonized ending */
 } PlanReturnVariation;
 
 typedef struct {
