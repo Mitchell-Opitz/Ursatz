@@ -835,6 +835,40 @@ static PlanResult make_container(GrowBuild *build, const char *phrase_name, cons
                : result;
 }
 
+/*
+ * A chord a cell through an 8-bar sentence's continuation (R-465): the setting is on, the ending is a continuation with no
+ * key change, and a bar has two cells or more. In 2/4 and 3/4 a bar is one cell and nothing changes.
+ */
+static bool faster_harmony(const GrowBuild *build, size_t first_slot, size_t last_slot) {
+    return build->spec->continuation.faster_harmony && first_slot == GROW_PLACE_FRAGMENT_1 &&
+           last_slot == GROW_PLACE_CADENTIAL && !build->request->has_end_change && build->request->bars == 8 &&
+           build->request->cells_per_bar >= 2;
+}
+
+/*
+ * One target an idea in place of the continuation's single one, each with a chord of at most a cell that crosses no
+ * barline: the fragments prolong the tonic to the dominant (I then V, V6, V65 or V43, R-344), the cadential idea is the
+ * cadential progression and takes the cadence.
+ */
+static PlanResult add_faster_targets(GrowBuild *build, const NodeId *ideas, size_t first_slot, size_t last_slot) {
+    PlanResult result = PLAN_OK;
+    for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
+        PlanHarmonyShape shape;
+        memset(&shape, 0, sizeof(shape));
+        shape.max_cells_per_chord = 1;
+        shape.split_at_bars = true;
+        if (slot == last_slot) {
+            shape.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
+        } else {
+            shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
+            shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
+            shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
+        }
+        result = grow_add_chord_targets(build, ideas[slot], &shape, slot == last_slot ? &build->cadence : NULL);
+    }
+    return result;
+}
+
 /* The chords over the container, and a melody span for each idea: the motive nodes m<slot> are made first. */
 static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarmonyShape *shape,
                               const char *const *names, const size_t *starts, const size_t *units, size_t first_slot,
@@ -853,7 +887,9 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
         grow_idea_ref(spec, (GrowPlace)slot, grow_idea_node(build, (GrowPlace)slot), &refs[slot]);
         result = grow_add_motive(build, slot, &refs[slot], &motives[slot]);
     }
-    if (result == PLAN_OK) {
+    if (result == PLAN_OK && faster_harmony(build, first_slot, last_slot)) {
+        result = add_faster_targets(build, ideas, first_slot, last_slot);
+    } else if (result == PLAN_OK) {
         result = grow_add_chord_targets(build, container, shape, &build->cadence);
     }
     /* The melody to write, one span for each idea, the last asking for the cadence. */
