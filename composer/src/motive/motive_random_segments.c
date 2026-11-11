@@ -23,6 +23,10 @@
 #define SEGMENT_START_DISTANCE 5 /* the most semitones from the note before to where a new segment starts */
 #define LEAP_SEMITONES 5 /* an interval this large or larger is a leap (leaps_per_motif, leap_recovery) */
 
+/* Syncopation figures (R-454): the two inside a cell, then the two across a segment boundary. */
+typedef enum { SYNC_OFF_BEAT = 0, SYNC_TIE_BEAT, SYNC_TIE_BAR, SYNC_ANTICIPATION, SYNC_TYPES } Sync;
+#define SYNC_LEVELS 2 /* eighth, sixteenth */
+
 /* Shapes: a a' (a cell and its repeat), a b (a cell and a new one), a a' b (two half-bar cells, then a bar). */
 typedef enum { SHAPE_REPEAT = 0, SHAPE_CONTRAST, SHAPE_REPEAT_CONTRAST, SHAPE_KINDS } Shape;
 
@@ -65,6 +69,16 @@ static Grid grid_of(const MotiveRandomPreferences *preferences, const PlanMeter 
     }
     Grid grid = {bar, TICKS_PER_UNIT, TICKS_PER_UNIT / 2, false, ENDING_FREE, 0};
     return grid;
+}
+
+/* Syncopation needs a simple meter: not a compound grid and not 6, 9 or 12 beats a bar. */
+static bool simple_meter(const Grid *grid) {
+    return !grid->compound && (grid->beats == 3 || grid->beats % 3 != 0);
+}
+
+/* The short note of a figure: an eighth (a half beat) or a sixteenth (a quarter beat), 6 or 3 ticks. */
+static long sync_unit(const Grid *grid, size_t level) {
+    return level == 0 ? grid->half : grid->half / 2;
 }
 
 /* ---------------------------------------------------------------- helpers */
@@ -131,6 +145,13 @@ void motive_random_preferences_default(MotiveRandomPreferences *out) {
     for (size_t i = 0; i < 3; i++) {
         out->long_nct_beats[i] = 1;
         out->long_nct_lengths[i] = 1;
+    }
+    /* Syncopation (phase L3, R-454), off. */
+    for (size_t i = 0; i < 4; i++) {
+        out->syncopation_types[i] = 1;
+    }
+    for (size_t i = 0; i < 2; i++) {
+        out->syncopation_levels[i] = 1;
     }
 }
 
