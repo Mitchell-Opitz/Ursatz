@@ -23,10 +23,10 @@
  *
  *   give                 the placing calls: what they refuse, what they add, that a refused call adds nothing, the gaps
  *                        Given spans leave, and the snapshot that tells the run left them as they were
- *   smoke                the first of seeds 1 to 5 that composes with an 8-bar melody given as the B of a ternary form
+ *   smoke                the first of seeds 1 to 5 that composes with an 8-bar melody given as the B of a binary form
  *   melody|progression|bass
  *                        seeds 1 to 10 of C major 4/4 with, in turn,
- *                          melody       an 8-bar melody given as the B of a ternary form (24 bars)
+ *                          melody       an 8-bar melody given as the B of a binary form (16 bars)
  *                          progression  I IV V I (a bar each) given at the first four bars of the A of a rounded binary
  *                          bass         an 8-bar bass line given in the B of a binary form (16 bars)
  *                        Every run that completes leaves the Given payloads byte for byte as they were, has chords that
@@ -63,8 +63,9 @@ typedef struct {
     size_t cadences;
 } Baseline;
 
-/* Of 10 runs and, for the melody and the progression, 30 sections (3 a run); the bass has 2 sections a run. */
-static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 22, 22}, {10, 5, 19}, {10, 19, 17}};
+/* Of 10 runs and, for the progression, 30 sections (3 a run); the melody has 2 a run, as the bass does. */
+static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 19, 18}, {10, 5, 19}, {10, 19, 17}};
+/* P46 B1 (given melody in a binary B, R-448): 20 sections a run set; 19 heard, 18 cadences. */
 /* Re-recorded at P36 B1 (every idea is the step its ref names): the melody's sections heard rose from 18 to 26 and its cadences
    stay at 16; the progression's rose from 2 to 8 and 19 to 21; the bass's from 19 to 20 and 17 to 19. */
 /* P36 B2 (the material holds what grow-theme makes, R-349): the progression's sections heard 8 to 7 of 30; completed and cadences hold. */
@@ -126,7 +127,7 @@ static PieceRequest request_of(const char *form, unsigned long seed) {
 
 /* The plan of a scenario with its material placed. */
 static PiecePlan *plan_of(ScenarioKind kind, unsigned long seed) {
-    const char *form = kind == SCENARIO_MELODY ? "ternary"
+    const char *form = kind == SCENARIO_MELODY ? "binary"
                             : kind == SCENARIO_PROGRESSION ? "rounded-binary"
                                                            : "binary";
     PieceRequest request = request_of(form, seed);
@@ -165,7 +166,7 @@ static size_t given_count(const PiecePlan *plan, PlanLaneKind lane) {
 }
 
 static void test_refusals(void) {
-    PieceRequest request = request_of("ternary", 1);
+    PieceRequest request = request_of("binary", 1);
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
@@ -226,7 +227,7 @@ static void test_refusals(void) {
 }
 
 static void test_placing(void) {
-    PieceRequest request = request_of("ternary", 1);
+    PieceRequest request = request_of("binary", 1);
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
@@ -304,7 +305,7 @@ static void test_placing(void) {
 static void test_key_change(void) {
     bool found = false;
     for (unsigned long seed = 1; seed <= 20 && !found; seed++) {
-        PieceRequest request = request_of("ternary", seed);
+        PieceRequest request = request_of("binary", seed);
         PiecePlan *plan = NULL;
         request.modulate = true;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
@@ -467,7 +468,7 @@ static void test_smoke(void) {
 static void test_partial(void) {
     bool composed = false;
     for (unsigned long seed = 1; seed <= 10 && !composed; seed++) {
-        PieceRequest request = request_of("ternary", seed);
+        PieceRequest request = request_of("binary", seed);
         request.given_melodies = 1;
         PiecePlan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);

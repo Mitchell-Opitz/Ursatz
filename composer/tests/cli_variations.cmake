@@ -44,7 +44,7 @@ endfunction()
 
 expect_status(0 plan --form rounded-binary --key C --meter 4/4 --bars 24 --seed 3 --out plan.json)
 expect_status(0 fill plan.json --seed 3 --out filled.json)
-expect_status(0 plan --form ternary --key C --meter 4/4 --given-melody "${FIXTURES}/melody_c_major_8_bars.txt" --at B
+expect_status(0 plan --form binary --key C --meter 4/4 --given-melody "${FIXTURES}/melody_c_major_8_bars.txt" --at B
               --seed 1 --out given.json)
 expect_status(0 fill given.json --seed 1 --out given-filled.json)
 
