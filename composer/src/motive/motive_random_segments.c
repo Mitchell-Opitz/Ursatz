@@ -149,27 +149,94 @@ static bool last_is_longest(const Cell *cell) {
     return true;
 }
 
-/* Tiles from to to (ticks from the start of the cell) with the notes of the durations list: half a beat, a beat, two beats. */
+/* The entries of the durations list. */
+#define FIGURE_KINDS 8
+#define FIGURE_NOTES_MAX 3
+
+/* The notes of one entry of the durations list and where it may start. False when the grid has no such figure. */
+typedef struct {
+    long ticks[FIGURE_NOTES_MAX];
+    size_t count;
+    long total;
+    bool on_beat_only;
+} Figure;
+
+static bool figure_of(const Grid *grid, size_t kind, Figure *figure) {
+    long beat = grid->beat;
+    memset(figure, 0, sizeof(*figure));
+    figure->on_beat_only = true;
+    switch (kind) {
+    case 0: /* half_beat: anywhere */
+        figure->ticks[0] = grid->half;
+        figure->count = 1;
+        figure->on_beat_only = false;
+        break;
+    case 1: /* beat */
+        figure->ticks[0] = beat;
+        figure->count = 1;
+        break;
+    case 2: /* two_beats */
+        figure->ticks[0] = 2 * beat;
+        figure->count = 1;
+        break;
+    case 3: /* quarter_beats: two notes filling a half beat, anywhere a half beat may start */
+        figure->ticks[0] = grid->half / 2;
+        figure->ticks[1] = grid->half / 2;
+        figure->count = 2;
+        figure->on_beat_only = false;
+        break;
+    case 4: /* long_short: a dotted pair, three quarters then one quarter of the beat (two thirds, one third in a compound beat) */
+    case 5: /* short_long: the reverse */
+        figure->ticks[kind == 4 ? 0 : 1] = grid->compound ? 2 * beat / 3 : 3 * beat / 4;
+        figure->ticks[kind == 4 ? 1 : 0] = grid->compound ? beat / 3 : beat / 4;
+        figure->count = 2;
+        break;
+    case 6: /* triplet: three notes in a beat (simple grid only) */
+    case 7: /* triplet_two_beats: three notes in two beats (simple grid only) */
+        if (grid->compound) {
+            return false;
+        }
+        for (size_t i = 0; i < 3; i++) {
+            figure->ticks[i] = (kind == 6 ? 1 : 2) * beat / 3;
+        }
+        figure->count = 3;
+        break;
+    default:
+        return false;
+    }
+    for (size_t i = 0; i < figure->count; i++) {
+        figure->total += figure->ticks[i];
+    }
+    return true;
+}
+
+/* Tiles from to to (ticks from the start of the cell) with the figures of the durations list. */
 static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long from, long to, Cell *cell) {
     long unit = weak_beat_unit(grid);
-    const long lengths[DURATION_KINDS] = {grid->half, grid->beat, 2 * grid->beat};
+    Figure figures[FIGURE_KINDS];
+    bool available[FIGURE_KINDS];
+    for (size_t i = 0; i < FIGURE_KINDS; i++) {
+        available[i] = figure_of(grid, i, &figures[i]);
+    }
     for (long position = from; position < to;) {
         long room = to - position;
         bool on_beat = position % grid->beat == 0;
-        unsigned long weights[DURATION_KINDS];
-        for (size_t i = 0; i < DURATION_KINDS; i++) {
-            bool fits = lengths[i] <= room && (lengths[i] == grid->half || on_beat);
+        unsigned long weights[FIGURE_KINDS];
+        for (size_t i = 0; i < FIGURE_KINDS; i++) {
+            bool fits = available[i] && figures[i].total <= room && (on_beat || !figures[i].on_beat_only);
             weights[i] = fits ? preferences->durations[i] : 0;
         }
         if (on_beat && position % unit != 0) {
             weights[2] *= 1 + preferences->long_on_weak; /* the two-beat note on a weak beat (long_on_weak) */
         }
-        size_t chosen = pick_weighted(rng, weights, DURATION_KINDS);
-        if (cell->count == MAX_NOTES) {
+        const Figure *chosen = &figures[pick_weighted(rng, weights, FIGURE_KINDS)];
+        if (cell->count + chosen->count > MAX_NOTES) {
             return false;
         }
-        cell->ticks[cell->count++] = lengths[chosen];
-        position += lengths[chosen];
+        for (size_t i = 0; i < chosen->count; i++) {
+            cell->ticks[cell->count++] = chosen->ticks[i];
+        }
+        position += chosen->total;
     }
     return true;
 }
