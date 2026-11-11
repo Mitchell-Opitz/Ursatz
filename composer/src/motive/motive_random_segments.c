@@ -51,8 +51,12 @@ typedef struct {
 } Grid;
 
 static Grid grid_of(const MotiveRandomPreferences *preferences, const PlanMeter *meter) {
-    (void)preferences;
-    Grid grid = {(long)meter->beats_per_bar, TICKS_PER_UNIT, TICKS_PER_UNIT / 2, false};
+    long bar = (long)meter->beats_per_bar;
+    if (preferences->compound_beats && (bar == 6 || bar == 9 || bar == 12)) {
+        Grid grid = {bar / 3, 3 * TICKS_PER_UNIT, TICKS_PER_UNIT, true};
+        return grid;
+    }
+    Grid grid = {bar, TICKS_PER_UNIT, TICKS_PER_UNIT / 2, false};
     return grid;
 }
 
@@ -245,17 +249,31 @@ static bool tile(const MotiveRandomPreferences *preferences, const Grid *grid, F
 static bool try_cell_a(const MotiveRandomPreferences *preferences, const Grid *grid, FillRng *rng, long length, Feature feature, bool long_end, Cell *cell) {
     memset(cell, 0, sizeof(*cell));
     if (feature == FEATURE_DOTTED) {
-        long figure = 4 * grid->half; /* a dotted beat and the half beat that completes the next one: two beats */
+        /* A dotted beat and the half beat that completes the next one (two beats); in a compound beat, a dotted eighth,
+           a sixteenth and an eighth in 6/8 (one beat). */
+        long dotted[3] = {3 * grid->half, grid->half, 0};
+        size_t dotted_count = 2;
+        if (grid->compound) {
+            dotted[0] = grid->beat / 2;
+            dotted[1] = grid->beat / 6;
+            dotted[2] = grid->beat / 3;
+            dotted_count = 3;
+        }
+        long figure = 0;
+        for (size_t i = 0; i < dotted_count; i++) {
+            figure += dotted[i];
+        }
         long slots = (length - figure) / grid->beat + 1;
         if (slots < 1) {
             return false;
         }
         long start = grid->beat * (long)fill_rng_below(rng, (uint64_t)slots);
-        if (!tile(preferences, grid, rng, 0, start, cell) || cell->count + 2 > MAX_NOTES) {
+        if (!tile(preferences, grid, rng, 0, start, cell) || cell->count + dotted_count > MAX_NOTES) {
             return false;
         }
-        cell->ticks[cell->count++] = 3 * grid->half;
-        cell->ticks[cell->count++] = grid->half;
+        for (size_t i = 0; i < dotted_count; i++) {
+            cell->ticks[cell->count++] = dotted[i];
+        }
         if (!tile(preferences, grid, rng, start + figure, length, cell)) {
             return false;
         }
