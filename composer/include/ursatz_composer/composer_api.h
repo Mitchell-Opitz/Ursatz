@@ -17,10 +17,12 @@
  * vary a piece of any built-in form (piece request schema version 2) and answer with the form's versions by name.
  * 1.15 adds the B3 text values (triplets) and the L2 motif settings (rhythm, endings, long non-chord tones).
  * 1.16 adds the section hearing, pedal and changes of piece rows and the forms entry's pedal.
+ * 1.17 adds the L3 settings to the preferences document: syncopation, skips, a given chord plan and the continuation
+ * settings, with their limits in the vocabulary.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 16
+#define COMPOSER_API_VERSION_MINOR 17
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
