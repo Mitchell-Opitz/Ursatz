@@ -20,7 +20,7 @@
  * weight each group of soft rules counts in a melody's score. The motif group is the settings of the segments motive
  * generator (MotiveRandomPreferences): the bars, pickup, shapes, chord plans, features, leap, rung moves, decorations and
  * durations it draws from. The development group is the fidelity minimum table of the theme's development
- * (GrowFidelityTable), the continuation settings (GrowContinuation) and basic_as_written.
+ * (GrowFidelityTable), the continuation settings (GrowContinuation), basic_as_written and the contrast settings (GrowContrast).
  */
 typedef struct {
     MelodyFillParams melody;
@@ -28,6 +28,7 @@ typedef struct {
     GrowFidelityTable development;
     GrowContinuation continuation; /* the development group's continuation settings (phase L3, off by default) */
     bool basic_as_written;         /* the development group's basic_as_written (phase L3, off by default) */
+    GrowContrast contrast;         /* the development group's contrast settings (phase L4, R-475: similar 1, the rest 0) */
 } ComposerPreferences;
 
 /*

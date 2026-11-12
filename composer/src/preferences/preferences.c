@@ -63,6 +63,7 @@ void composer_preferences_default(ComposerPreferences *out) {
     motive_random_preferences_default(&out->motif);
     grow_fidelity_table_default(&out->development);
     out->continuation.fragment_lengths[GROW_FRAGMENT_SEGMENT] = 1;
+    out->contrast.distance[GROW_CONTRAST_SIMILAR] = 1;
 }
 
 /* Where a refusal goes: the path and the message of the caller, which may both be absent. */
@@ -812,6 +813,62 @@ static bool read_continuation(const cJSON *group, GrowContinuation *continuation
     return true;
 }
 
+/* The distance weights, similar and distant, each 0 to 20; a name left out keeps its value, all 0 reads as similar 1. */
+static bool read_contrast_distance(const cJSON *distance, GrowContrast *contrast, const Refusal *refusal) {
+    static const char *const NAMES[GROW_CONTRAST_DISTANCE_COUNT] = {"similar", "distant"};
+    const cJSON *item;
+    if (!cJSON_IsObject(distance)) {
+        return refuse_in(refusal, "development", "contrast/distance", "must be an object with similar and distant, whole numbers 0 to 20");
+    }
+    cJSON_ArrayForEach(item, distance) {
+        bool known = false;
+        for (size_t i = 0; i < GROW_CONTRAST_DISTANCE_COUNT && !known; i++) {
+            if (strcmp(item->string, NAMES[i]) == 0) {
+                char key[COMPOSER_PREFERENCES_PATH_MAX];
+                snprintf(key, sizeof(key), "contrast/distance/%s", NAMES[i]);
+                if (!read_unsigned_in(item, "development", key, 0, WEIGHT_MAX, &contrast->distance[i], refusal)) {
+                    return false;
+                }
+                known = true;
+            }
+        }
+        if (!known) {
+            char key[COMPOSER_PREFERENCES_PATH_MAX];
+            snprintf(key, sizeof(key), "contrast/distance/%s", item->string);
+            return refuse_in(refusal, "development", key, "unknown member");
+        }
+    }
+    if (contrast->distance[GROW_CONTRAST_SIMILAR] == 0 && contrast->distance[GROW_CONTRAST_DISTANT] == 0) {
+        contrast->distance[GROW_CONTRAST_SIMILAR] = 1;
+    }
+    return true;
+}
+
+/* The contrast settings (phase L4): distance {similar, distant} and new_material. */
+static bool read_contrast(const cJSON *group, GrowContrast *contrast, const Refusal *refusal) {
+    const cJSON *item;
+    if (!cJSON_IsObject(group)) {
+        return refuse_in(refusal, "development", "contrast", "must be an object with distance and new_material");
+    }
+    cJSON_ArrayForEach(item, group) {
+        if (strcmp(item->string, "distance") == 0) {
+            if (!read_contrast_distance(item, contrast, refusal)) {
+                return false;
+            }
+        } else if (strcmp(item->string, "new_material") == 0) {
+            if (!read_unsigned_in(item, "development", "contrast/new_material", 0, WEIGHT_MAX, &contrast->new_material,
+                                  refusal)) {
+                return false;
+            }
+        } else {
+            char key[COMPOSER_PREFERENCES_PATH_MAX];
+            snprintf(key, sizeof(key), "contrast/%s", item->string);
+            return refuse_in(refusal, "development", key, "unknown member");
+        }
+    }
+    return true;
+}
+
 static bool read_development(const cJSON *group, ComposerPreferences *preferences, const Refusal *refusal) {
     GrowFidelityTable *table = &preferences->development;
     const cJSON *item;
@@ -831,6 +888,12 @@ static bool read_development(const cJSON *group, ComposerPreferences *preference
                 return refuse_in(refusal, "development", "basic_as_written", "must be true or false");
             }
             preferences->basic_as_written = cJSON_IsTrue(item);
+            continue;
+        }
+        if (strcmp(item->string, "contrast") == 0) {
+            if (!read_contrast(item, &preferences->contrast, refusal)) {
+                return false;
+            }
             continue;
         }
         if (strcmp(item->string, "fidelity_minimum") != 0) {
@@ -1066,6 +1129,11 @@ static cJSON *write_development(const ComposerPreferences *preferences) {
     }
     ok = ok && write_continuation(group, &preferences->continuation) &&
          cJSON_AddBoolToObject(group, "basic_as_written", preferences->basic_as_written) != NULL;
+    cJSON *contrast = ok ? cJSON_AddObjectToObject(group, "contrast") : NULL;
+    cJSON *distance = contrast ? cJSON_AddObjectToObject(contrast, "distance") : NULL;
+    ok = ok && distance && add_number(distance, "similar", preferences->contrast.distance[GROW_CONTRAST_SIMILAR]) &&
+         add_number(distance, "distant", preferences->contrast.distance[GROW_CONTRAST_DISTANT]) &&
+         add_number(contrast, "new_material", preferences->contrast.new_material);
     if (!ok) {
         cJSON_Delete(group);
         return NULL;
@@ -1166,7 +1234,10 @@ static bool development_is_default(const ComposerPreferences *preferences) {
         preferences->continuation.every_segment != standard.continuation.every_segment ||
         preferences->continuation.diminish != standard.continuation.diminish ||
         preferences->continuation.liquidate != standard.continuation.liquidate ||
-        preferences->continuation.faster_harmony != standard.continuation.faster_harmony) {
+        preferences->continuation.faster_harmony != standard.continuation.faster_harmony ||
+        preferences->contrast.distance[GROW_CONTRAST_SIMILAR] != standard.contrast.distance[GROW_CONTRAST_SIMILAR] ||
+        preferences->contrast.distance[GROW_CONTRAST_DISTANT] != standard.contrast.distance[GROW_CONTRAST_DISTANT] ||
+        preferences->contrast.new_material != standard.contrast.new_material) {
         return false;
     }
     for (size_t i = 0; i < GROW_FRAGMENT_LENGTH_COUNT; i++) {
