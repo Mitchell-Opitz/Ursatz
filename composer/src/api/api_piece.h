@@ -15,6 +15,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
+#include <ursatz_composer/piece_perform.h>
 #include <ursatz_composer/style.h>
 
 /*
@@ -104,7 +105,13 @@ typedef struct {
     PiecePlan *plan;
     ComposeOutcome outcome;
     bool composed;
+    /* A form with repeats or parts (form_spec_performed): the plan performed in order, what is rendered and answered (R-485). */
+    PiecePerformance performance;
+    bool performed;
 } PieceVersion;
+
+/* The plan a version is rendered and written out from: its performance when it is performed, else its plan. */
+const PiecePlan *api_piece_version_output_plan(const PieceVersion *version);
 
 /* The most versions a piece has: the loop and the ending of a game loop (api_piece_version_names). */
 #define API_PIECE_VERSIONS_MAX 2
