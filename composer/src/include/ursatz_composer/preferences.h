@@ -38,7 +38,8 @@ typedef struct {
  * range.low + RANGE_SPAN_MIN and at most RANGE_HIGH_MAX; density 0 to DENSITY_MAX; climax_rise CLIMAX_RISE_MIN to
  * CLIMAX_RISE_MAX; pickup_one_in 0 to PICKUP_ONE_IN_MAX; accented_one_in 0 to ACCENTED_ONE_IN_MAX; long_nct_one_in 0 to LONG_NCT_ONE_IN_MAX; leaps_per_motif 0 to
  * LEAPS_PER_MOTIF_MAX; leap.low and leap.high LEAP_MIN to LEAP_MAX; syncopation_one_in 0 to SYNCOPATION_ONE_IN_MAX;
- * skips_per_motif 0 to SKIPS_PER_MOTIF_MAX; plan 1 to PLAN_MAX chords, each with a bar 1 or 2 and a beat 1 to PLAN_BEAT_MAX.
+ * skips_per_motif 0 to SKIPS_PER_MOTIF_MAX; plan 1 to PLAN_MAX chords, each with a bar 1 or 2 and a beat 1 to PLAN_BEAT_MAX;
+ * rhythm_repeat_bars 0 to RHYTHM_REPEAT_BARS_MAX (the L4 weights, closure, leaps, register and contrast, are weights).
  */
 #define COMPOSER_PREFERENCES_WEIGHT_MAX 20
 #define COMPOSER_PREFERENCES_SCALE_MAX 1000
@@ -62,6 +63,7 @@ typedef struct {
 #define COMPOSER_PREFERENCES_LEAP_MIN 3
 #define COMPOSER_PREFERENCES_LEAP_MAX 12
 #define COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX 1000
+#define COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX 16
 
 #define COMPOSER_PREFERENCES_PATH_MAX 128
 #define COMPOSER_PREFERENCES_MESSAGE_MAX 160

@@ -28,6 +28,7 @@
 #define LEAP_MIN COMPOSER_PREFERENCES_LEAP_MIN
 #define LEAP_MAX COMPOSER_PREFERENCES_LEAP_MAX
 #define FIDELITY_DENOMINATOR_MAX COMPOSER_PREFERENCES_FIDELITY_DENOMINATOR_MAX
+#define RHYTHM_REPEAT_BARS_MAX COMPOSER_PREFERENCES_RHYTHM_REPEAT_BARS_MAX
 
 /* The non-chord tones nct_types may name, in the order the document writes them. */
 static const struct {
@@ -237,6 +238,30 @@ static bool read_weights(const cJSON *weights, MelodyWeights *out, const Refusal
     return true;
 }
 
+/* The closure weights (phase L4): final and first, each 0 to 20; a name left out keeps its value. */
+static bool read_closure(const cJSON *closure, MelodyFillParams *melody, const Refusal *refusal) {
+    const cJSON *item;
+    if (!cJSON_IsObject(closure)) {
+        return refuse_melody(refusal, "closure", "must be an object with final and first, whole numbers 0 to 20");
+    }
+    cJSON_ArrayForEach(item, closure) {
+        if (strcmp(item->string, "final") == 0) {
+            if (!read_unsigned(item, "closure/final", 0, WEIGHT_MAX, &melody->closure_final, refusal)) {
+                return false;
+            }
+        } else if (strcmp(item->string, "first") == 0) {
+            if (!read_unsigned(item, "closure/first", 0, WEIGHT_MAX, &melody->closure_first, refusal)) {
+                return false;
+            }
+        } else {
+            char key[COMPOSER_PREFERENCES_PATH_MAX];
+            snprintf(key, sizeof(key), "closure/%s", item->string);
+            return refuse_melody(refusal, key, "unknown member");
+        }
+    }
+    return true;
+}
+
 static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refusal *refusal) {
     const cJSON *item;
     if (!cJSON_IsObject(group)) {
@@ -268,6 +293,14 @@ static bool read_melody(const cJSON *group, MelodyFillParams *melody, const Refu
                                     : refuse_melody(refusal, key, "must be true or false");
         } else if (strcmp(key, "weights") == 0) {
             ok = read_weights(item, &melody->weights, refusal);
+        } else if (strcmp(key, "closure") == 0) {
+            ok = read_closure(item, melody, refusal);
+        } else if (strcmp(key, "rhythm_repeat_bars") == 0) {
+            ok = read_unsigned(item, key, 0, RHYTHM_REPEAT_BARS_MAX, &melody->rhythm_repeat_bars, refusal);
+        } else if (strcmp(key, "leaps") == 0) {
+            ok = read_unsigned(item, key, 0, WEIGHT_MAX, &melody->leap_weight, refusal);
+        } else if (strcmp(key, "register") == 0) {
+            ok = read_unsigned(item, key, 0, WEIGHT_MAX, &melody->register_weight, refusal);
         } else {
             ok = refuse_melody(refusal, key, "unknown member");
         }
@@ -901,6 +934,11 @@ static cJSON *write_melody(const MelodyFillParams *melody) {
         const unsigned *value = (const unsigned *)(const void *)((const char *)&melody->weights + WEIGHT_KEYS[i].offset);
         ok = ok && add_number(weights, WEIGHT_KEYS[i].name, *value);
     }
+    cJSON *closure = ok && weights ? cJSON_AddObjectToObject(group, "closure") : NULL;
+    ok = ok && closure && add_number(closure, "final", melody->closure_final) &&
+         add_number(closure, "first", melody->closure_first) &&
+         add_number(group, "rhythm_repeat_bars", melody->rhythm_repeat_bars) &&
+         add_number(group, "leaps", melody->leap_weight) && add_number(group, "register", melody->register_weight);
     if (!ok || !weights) {
         cJSON_Delete(types);
         cJSON_Delete(group);
@@ -1072,7 +1110,10 @@ static bool melody_is_default(const MelodyFillParams *melody) {
            melody->attempts == defaults.attempts && melody->keep == defaults.keep && a->melodic == b->melodic &&
            a->against_bass == b->against_bass && a->tendency == b->tendency && a->climax == b->climax &&
            a->contour == b->contour && a->ending_reduction == b->ending_reduction && a->waves == b->waves &&
-           a->central_range == b->central_range && a->monotony == b->monotony && a->seam == b->seam;
+           a->central_range == b->central_range && a->monotony == b->monotony && a->seam == b->seam &&
+           melody->closure_final == defaults.closure_final && melody->closure_first == defaults.closure_first &&
+           melody->rhythm_repeat_bars == defaults.rhythm_repeat_bars && melody->leap_weight == defaults.leap_weight &&
+           melody->register_weight == defaults.register_weight;
 }
 
 static bool motif_is_default(const MotiveRandomPreferences *motif) {
