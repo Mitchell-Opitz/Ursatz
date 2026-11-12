@@ -185,7 +185,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
  * (FROM_LENGTH). The halves follow from it and the ending's excess over its regular length becomes extensions: a
  * stretch, a repeat, an evaded cadence, an addition. False, with *out zeroed, when none fits: 4 and 8 bars with a motif
  * of 2 bars or fewer (the theme is built as it always was), a motif longer than the basic idea, an excess the ending
- * cannot take, a construction grow_build_plan would refuse. `cadence` is the theme's.
+ * cannot take, a construction grow_build_plan would refuse. `cadence` is the theme's. A NULL motive is one still to be
+ * invented, of one bar.
  */
 bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
                               CadenceType cadence, PlanConstruction *out);

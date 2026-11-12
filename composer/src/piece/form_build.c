@@ -95,7 +95,7 @@ static bool piece_accompaniment(const FormSpec *form, const PieceRequest *reques
 
 /* One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. */
 static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormSectionSpec *section,
-                               PlanSpan span, NodeId form, const NodeId *sections,
+                               const PlanConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, NodeId *out) {
     PlanConstraint constraint;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
@@ -158,6 +158,12 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_PEDAL;
         constraint.params.pedal.degree = section->pedal;
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
+    if (result == PIECE_OK && construction) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
+        constraint.params.construction = *construction;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     return result;
@@ -254,18 +260,42 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
 }
 
 /*
- * Every section of the size must be one grow-theme can build in the meter: a theme-like role of whole bars (until P47
- * a sized form's section is a 4 or 8-bar theme).
+ * Every section of the size must be one grow-theme can build in the meter: a theme-like role of whole bars, 4 or 8, or
+ * 3 to 16 with a construction (R-468). The construction of each section that has one goes into constructions[i], given,
+ * or for "auto" chosen from the section's bars and the motive (R-469, an open motive counts as one bar); the others'
+ * are zeroed, with has[i] false for them.
  */
-static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter) {
+static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter, const Motive *motive,
+                           PlanConstruction *constructions, bool *has) {
     for (size_t i = 0; i < size->section_count; i++) {
         const FormSectionSpec *section = &size->sections[i];
-        if (section->beats != 0 || !form_role_is_theme(section->role) ||
-            !grow_theme_buildable(meter, section->bars, &section->pairing, section->cadence, ANTECEDENT_CADENCE)) {
+        memset(&constructions[i], 0, sizeof(constructions[i]));
+        has[i] = section->has_construction;
+        if (section->beats != 0 || !form_role_is_theme(section->role)) {
             return false;
+        }
+        if (!section->has_construction) {
+            if (!grow_theme_buildable(meter, section->bars, &section->pairing, section->cadence, ANTECEDENT_CADENCE)) {
+                return false;
+            }
+        } else if (section->construction_auto) {
+            if (!grow_construction_choose(motive, meter, section->bars, &section->pairing, section->cadence, &constructions[i])) {
+                return false;
+            }
+        } else {
+            constructions[i] = section->construction;
+            if (!grow_construction_buildable(meter, section->bars, &section->pairing, section->cadence, ANTECEDENT_CADENCE,
+                                             &constructions[i])) {
+                return false;
+            }
         }
     }
     return true;
+}
+
+/* The bars of a section's basic idea: its construction's, else 2 of an 8-bar theme and 1 of any other. */
+static size_t section_basic_bars(const FormSectionSpec *section, const PlanConstruction *construction, bool has) {
+    return has ? construction->idea_bars[GROW_IDEA_BASIC] : (section->bars == 8 ? 2 : 1);
 }
 
 bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *idea_bars) {
@@ -275,9 +305,18 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     }
     const FormSpecSize *size = form_spec_size(form, request->bars, request->count);
     size_t shortest = 8;
+    size_t basic = 2;
     bool found = size != NULL;
     for (size_t i = 0; size && i < size->section_count; i++) {
-        shortest = size->sections[i].bars == 8 ? shortest : 4;
+        const FormSectionSpec *section = &size->sections[i];
+        /* A section with a construction is its own bars long and its construction gives its basic idea; "auto" is
+           judged by its length, as grow_construction_choose does when the motif is short (R-469). */
+        size_t bars = section->has_construction ? section->bars : (section->bars == 8 ? 8 : 4);
+        size_t idea = !section->has_construction ? (section->bars == 8 ? 2 : 1)
+                      : section->construction_auto ? (section->bars >= 6 ? 2 : 1)
+                                                   : section->construction.idea_bars[GROW_IDEA_BASIC];
+        shortest = bars < shortest ? bars : shortest;
+        basic = idea < basic ? idea : basic;
     }
     /* A form whose sections the request gives: the shortest of them, 8 bars or else 4. */
     if (form->request_sections) {
@@ -286,13 +325,14 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
         for (size_t i = 0; i < request->section_count; i++) {
             shortest = request->sections[i].beats == 8 * per_bar ? shortest : 4;
         }
+        basic = shortest == 8 ? 2 : 1;
     }
     form_spec_destroy(form);
     if (!found) {
         return false;
     }
     *theme_bars = shortest;
-    *idea_bars = shortest == 8 ? 2 : 1;
+    *idea_bars = basic;
     return true;
 }
 
@@ -311,19 +351,25 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     PlanAccompaniment accompaniment;
     bool accompanied = piece_accompaniment(form, request, &accompaniment);
     size_t cells_per_bar;
+    PlanConstruction constructions[FORM_SPEC_MAX_SECTIONS];
+    bool has_construction[FORM_SPEC_MAX_SECTIONS];
     if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || analysis_key_tonic_pitch_class(&request->key) < 0 ||
         analysis_key_tonic_pitch_class(&request->key) > 11 ||
         (request->key.mode != KEY_STRUCTURE_MODE_MAJOR && request->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
         (request->motive && request->motive->note_count < 2) ||
         (accompanied && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
-        !size_buildable(size, &request->meter)) {
+        !size_buildable(size, &request->meter, request->motive, constructions, has_construction)) {
         return PIECE_ERR_BAD_REQUEST;
     }
     Rational bar = grow_bar_length(&request->meter);
-    /* The motive fills the basic idea of every section: 2 bars of an 8-bar theme section, 1 of a 4-bar one. */
+    /* The motive fills the basic idea of every section: its construction's, else 2 bars of an 8-bar theme section, 1 of a 4-bar one. */
     size_t basic_bars = 2;
+    size_t extension_bars = 0;
     for (size_t i = 0; i < size->section_count; i++) {
-        basic_bars = size->sections[i].bars == 8 ? basic_bars : 1;
+        size_t section_bars = section_basic_bars(&size->sections[i], &constructions[i], has_construction[i]);
+        basic_bars = section_bars < basic_bars ? section_bars : basic_bars;
+        /* The repeats and the addition of a construction have motives of their own in the material (R-468). */
+        extension_bars += has_construction[i] ? grow_extension_material_bars(&size->sections[i].pairing, &constructions[i]) : 0;
     }
     if (request->motive && !grow_motive_fits_idea(request->motive, bar, basic_bars)) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
@@ -335,7 +381,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         return PIECE_ERR_ALLOC;
     }
     PlanSpan piece = {{0, 1}, bars_of(bar, size->bars)};
-    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + request->given_melodies)};
+    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies)};
     PlanSpan extent = {{0, 1}, {0, 1}};
     PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(piece.length, material.length, &extent.length)));
     NodeId form_id = PLAN_NODE_NONE;
@@ -358,8 +404,8 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     Rational start = {0, 1};
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
         PlanSpan span = {start, bars_of(bar, size->sections[i].bars)};
-        result = add_section(plan, request, &size->sections[i], span, form_id, sections,
-                             accompanied ? &accompaniment : NULL, &sections[i]);
+        result = add_section(plan, request, &size->sections[i], has_construction[i] ? &constructions[i] : NULL, span, form_id,
+                             sections, accompanied ? &accompaniment : NULL, &sections[i]);
         if (result == PIECE_OK) {
             result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
         }
