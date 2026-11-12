@@ -350,6 +350,16 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         snprintf(path, sizeof path, "%s/meter", base);
         return api_fail_meter(error, path, request->meter_text);
     }
+    if (!form_spec_meter_allowed(request->form, &piece->meter)) {
+        char listed[96] = "";
+        size_t used = 0;
+        for (size_t i = 0; i < request->form->meter_count && used < sizeof listed; i++) {
+            used += (size_t)snprintf(listed + used, sizeof listed - used, i ? ", %d/%d" : "%d/%d",
+                                     request->form->meters[i].beats_per_bar, request->form->meters[i].beat_unit);
+        }
+        snprintf(path, sizeof path, "%s/meter", base);
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "the %s form is in %s", request->form->label, listed);
+    }
     request->weight = (ComposerRatio){1, 1};
     if (style_weight && !request_parse_ratio(style_weight, &request->weight)) {
         snprintf(path, sizeof path, "%s/style_weight", base);

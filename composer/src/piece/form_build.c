@@ -360,7 +360,8 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     size_t cells_per_bar;
     PlanConstruction constructions[FORM_SPEC_MAX_SECTIONS];
     bool has_construction[FORM_SPEC_MAX_SECTIONS];
-    if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || analysis_key_tonic_pitch_class(&request->key) < 0 ||
+    if (!form_spec_meter_allowed(form, &request->meter) || !grow_cells_per_bar(&request->meter, &cells_per_bar) ||
+        analysis_key_tonic_pitch_class(&request->key) < 0 ||
         analysis_key_tonic_pitch_class(&request->key) > 11 ||
         (request->key.mode != KEY_STRUCTURE_MODE_MAJOR && request->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
         (request->motive && request->motive->note_count < 2) ||
