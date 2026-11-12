@@ -373,7 +373,7 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
     out->motive = source;
     out->steps = spec->has_liquidated[idea] ? spec->liquidation_steps[idea] : 0;
     const MotiveSketchFeature *segment;
-    if (grow_idea_segment(spec, idea, &segment)) {
+    if (!spec->has_distant[idea] && grow_idea_segment(spec, idea, &segment)) {
         snprintf(out->segment, sizeof(out->segment), "%s", segment->label);
     } else if (spec->has_liquidated[idea] && spec->liquidation_segment[idea] < spec->segment_count) {
         /* A residue names the segment it keeps (R-345). */
@@ -403,14 +403,14 @@ bool grow_idea_segment(const GrowThemeSpec *spec, GrowPlace idea, const MotiveSk
 }
 
 const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
+    if (spec->has_distant[idea]) {
+        return &spec->distant[idea];
+    }
     if (grow_idea_segment(spec, idea, NULL)) {
         return &spec->fragment_motive[idea == GROW_PLACE_FRAGMENT_2];
     }
     if (spec->has_liquidated[idea]) {
         return &spec->liquidated[idea];
-    }
-    if (spec->has_distant[idea]) {
-        return &spec->distant[idea];
     }
     if (spec->has_shortened[idea]) {
         return &spec->shortened[idea];
@@ -423,14 +423,14 @@ const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
 }
 
 NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
+    if (build->spec->has_distant[idea]) {
+        return build->distant_node[idea];
+    }
     if (grow_idea_segment(build->spec, idea, NULL)) {
         return build->segment_node[idea == GROW_PLACE_FRAGMENT_2];
     }
     if (build->spec->has_liquidated[idea]) {
         return build->liquid_node[idea];
-    }
-    if (build->spec->has_distant[idea]) {
-        return build->distant_node[idea];
     }
     if (build->spec->has_shortened[idea]) {
         return build->short_node[idea];

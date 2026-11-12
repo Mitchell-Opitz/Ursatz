@@ -47,11 +47,17 @@ static GrowRepetition draw_repetition(FillRng *rng, GrowDevelopment development,
 /* The contrasting idea is made from m0 and has to fit its room. */
 static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     /* A contrasting slot with a motive of its own gives the idea as it is (grow_idea_dev). */
-    bool drawn = grow_idea_own(spec, GROW_PLACE_CONTRAST)
-                     ? (spec->contrast.kind = MOTIVE_RELATION_EXACT, true)
+    bool own = grow_idea_own(spec, GROW_PLACE_CONTRAST);
+    bool drawn = own ? (spec->contrast.kind = MOTIVE_RELATION_EXACT, true)
                      : grow_shorten_source(spec, GROW_PLACE_CONTRAST) &&
                            grow_draw_contrast(request, rng, spec, GROW_PLACE_CONTRAST,
                                               grow_idea_source(spec, GROW_PLACE_CONTRAST), -1, NULL, &spec->contrast);
+    /* A distant contrast (R-475): the contour change on a rhythm of its own; a failed make keeps the similar step. */
+    if (drawn && !own && grow_draw_distance(request, rng) == GROW_CONTRAST_DISTANT &&
+        grow_make_distant(request, rng, spec, GROW_PLACE_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONTRAST),
+                          &spec->contrast, -1)) {
+        spec->contrast.kind = MOTIVE_RELATION_EXACT;
+    }
     return drawn &&
            grow_idea_develop(spec, GROW_PLACE_CONTRAST, &spec->developed[GROW_PLACE_CONTRAST]) &&
            (spec->has_developed[GROW_PLACE_CONTRAST] = true);

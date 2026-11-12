@@ -656,11 +656,28 @@ static void set_continuation_harmony(const GrowThemeRequest *request, GrowThemeS
 }
 
 /*
+ * A distant first fragment (R-475): fragment 1, when it is not a slot's motive and not cut or diminished, is drawn like a
+ * contrasting idea: a contour change of its source on a rhythm of the motif vocabulary. A failed make keeps the fragment.
+ */
+static void draw_distant_fragment(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
+    if (grow_idea_own(spec, GROW_PLACE_FRAGMENT_1) || spec->fragment_cut[0] > 0 || spec->fragment_diminished[0] ||
+        grow_draw_distance(request, rng) != GROW_CONTRAST_DISTANT) {
+        return;
+    }
+    const Motive *source = grow_idea_source(spec, GROW_PLACE_FRAGMENT_1);
+    MotiveRelationStep step;
+    if (grow_draw_contrast(request, rng, spec, GROW_PLACE_FRAGMENT_1, source, -1, NULL, &step)) {
+        grow_make_distant(request, rng, spec, GROW_PLACE_FRAGMENT_1, source, &step, -1);
+    }
+}
+
+/*
  * The rest of a continuation once its fragments are kept: the cadential idea liquidates the segments of m0 from `from`
  * steps until a residue fits, keeps a segment and meets the cadence (a draw with no such residue fails, R-345); each idea
  * after the presentation is made from m0 and has to fit in the room it has; then the harmonic rhythm.
  */
-static bool finish_continuation(const GrowThemeRequest *request, GrowThemeSpec *spec, size_t from) {
+static bool finish_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, size_t from) {
+    draw_distant_fragment(request, rng, spec);
     if (!grow_idea_own(spec, GROW_PLACE_CADENTIAL)) {
         size_t steps;
         size_t segment;
@@ -710,7 +727,7 @@ static bool draw_accelerating_continuation(const GrowThemeRequest *request, Fill
           fitting_fragment(spec, 1, second, spec->layout.length[GROW_PLACE_FRAGMENT_2]) == 0))) {
         return false;
     }
-    return finish_continuation(request, spec, from);
+    return finish_continuation(request, rng, spec, from);
 }
 
 static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
@@ -727,7 +744,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
     }
     /* The cadential idea liquidates the segments of m0 until a residue fits, keeps a segment and meets the cadence; a draw
        with no such residue fails (R-345). */
-    return finish_continuation(request, spec, 1);
+    return finish_continuation(request, rng, spec, 1);
 }
 
 /* A consequent restates the basic idea and ends with a contrasting idea that is not the antecedent's. */
@@ -748,8 +765,16 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
         (!own_contrast &&
          (!grow_shorten_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST) ||
           !grow_draw_contrast(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), want, avoid,
-                             &spec->consequent_contrast))) ||
-        !keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST)) {
+                             &spec->consequent_contrast)))) {
+        return false;
+    }
+    /* A distant contrast (R-475): the contour change on a rhythm of its own; a failed make keeps the similar step. */
+    if (!own_contrast && grow_draw_distance(request, rng) == GROW_CONTRAST_DISTANT &&
+        grow_make_distant(request, rng, spec, GROW_PLACE_CONSEQUENT_CONTRAST,
+                          grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), &spec->consequent_contrast, want)) {
+        spec->consequent_contrast.kind = MOTIVE_RELATION_EXACT;
+    }
+    if (!keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST)) {
         return false;
     }
     size_t cells = spec->layout.main_ending_bars * request->cells_per_bar;
