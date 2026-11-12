@@ -99,6 +99,13 @@ is built from the realized loop (R-172).
 - A motif or empty section of 4 or 8 whole bars that starts on a barline, has no pickup and is a theme the meter and the
   cadence allow is a theme section: it has the `archetype` and `theme_pairing` of its `into`, and an antecedent's second
   `cadence` (HC), and `grow-theme` builds it as [grow.md](grow.md) says.
+- A motif section with a `construction` (R-468) is a theme section of its whole bars, 3 to 16, on a barline with no pickup:
+  it has the `archetype` and `theme_pairing` of its `into` and a `construction` constraint (given, or for `"auto"` chosen
+  from the bars and the piece's basic motive, [grow-construction.md](grow-construction.md)); the basic idea of the motive
+  is the construction's, and the material holds the bars of its repeats and addition. One that cannot be built (a
+  construction the pairing refuses, none that fits, a pickup, a start off a barline) is `PIECE_ERR_BAD_REQUEST`. Without a
+  `construction` a section is a theme only at 4 or 8 bars and a free phrase otherwise, as ever, so every saved piece
+  composes as before.
 - Any other section is a free phrase: it has `free_phrase`, and `grow-theme` builds it as ideas of a bar
   ([grow-harmony.md](grow-harmony.md#free-phrases)).
 - The loop's end (the last section of the turnaround, else the last body section) is held: it has `hold`, and the seam
