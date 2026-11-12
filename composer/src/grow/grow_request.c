@@ -783,6 +783,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     segment_bars += request->construction ? 2 * longest : 0;
     /* The motives of a construction's repeats and addition (R-468). */
     segment_bars += request->construction ? grow_extension_material_bars(&request->pairing, request->construction) : 0;
+    /* A distant contrast is a motive of its own as long as its idea: two of two bars at most (R-475). */
+    segment_bars += request->contrast.distance[GROW_CONTRAST_DISTANT] > 0 ? 4 : 0;
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars + segment_bars;
 
     PiecePlan *plan = plan_create();

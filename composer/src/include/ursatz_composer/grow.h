@@ -78,6 +78,20 @@ const char *grow_idea_name(GrowIdea idea);
 /* Whether a theme of the pairing has the idea. */
 bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea);
 
+/* How far a contrasting idea strays from the basic idea's rhythm (R-475): a similar contrast or a distant one. */
+typedef enum { GROW_CONTRAST_SIMILAR, GROW_CONTRAST_DISTANT, GROW_CONTRAST_DISTANCE_COUNT } GrowContrastDistance;
+
+/*
+ * How a theme's contrasting ideas contrast (R-475, R-476). distance weighs a similar contrast (today's: an inversion or
+ * interval change, the motive's rhythm) against a distant one (a contour change on a rhythm drawn from the motif
+ * vocabulary); all distance weights 0 read as similar 1. new_material is the weight of a contrasting idea made of new
+ * material. All zero is today's draw, with no random number.
+ */
+typedef struct {
+    unsigned distance[GROW_CONTRAST_DISTANCE_COUNT];
+    unsigned new_material;
+} GrowContrast;
+
 typedef struct {
     const Motive *motive;
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
@@ -93,6 +107,11 @@ typedef struct {
      */
     const PlanConstruction *construction;
     CadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
+    /*
+     * The contrast weights grow_run will be given (GrowContext.contrast): with a distant weight the material has the bars the
+     * motives a distant contrast makes take (R-475). All zero: the material of today.
+     */
+    GrowContrast contrast;
     /*
      * The weak cadence an antecedent beginning ends in: HC or IAC, and weaker than `cadence`. Zero (PAC) means the
      * default, HC. Read only for an antecedent beginning.
@@ -226,20 +245,6 @@ typedef struct {
     bool liquidate;
     bool faster_harmony;
 } GrowContinuation;
-
-/* How far a contrasting idea strays from the basic idea's rhythm (R-475): a similar contrast or a distant one. */
-typedef enum { GROW_CONTRAST_SIMILAR, GROW_CONTRAST_DISTANT, GROW_CONTRAST_DISTANCE_COUNT } GrowContrastDistance;
-
-/*
- * How a theme's contrasting ideas contrast (R-475, R-476). distance weighs a similar contrast (today's: an inversion or
- * interval change, the motive's rhythm) against a distant one (a contour change on a rhythm drawn from the motif
- * vocabulary); all distance weights 0 read as similar 1. new_material is the weight of a contrasting idea made of new
- * material. All zero is today's draw, with no random number.
- */
-typedef struct {
-    unsigned distance[GROW_CONTRAST_DISTANCE_COUNT];
-    unsigned new_material;
-} GrowContrast;
 
 
 /*

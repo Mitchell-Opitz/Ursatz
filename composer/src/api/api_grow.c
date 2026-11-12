@@ -698,6 +698,9 @@ void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowReques
     request->pairing = setup->pairing;
     request->cadence = setup->cadence;
     request->first_cadence = setup->first_cadence;
+    if (setup->contrast) {
+        request->contrast = *setup->contrast;
+    }
     request->has_accompaniment = setup->has_accompaniment;
     request->accompaniment = setup->accompaniment;
     request->accompaniment_motive = setup->accompaniment_motive;

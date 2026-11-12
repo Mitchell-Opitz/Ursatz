@@ -85,6 +85,7 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, bool perio
     config.seed = seed;
     config.basic = motive;
     if (contrast) {
+        request.contrast = *contrast;
         config.context.contrast = *contrast;
     }
     assert(grow_build_plan(&request, &plan) == GROW_OK);
