@@ -152,6 +152,20 @@
     return size ? size.sections : [];
   }
 
+  /* The construction of a sized form's section (P47, R-468) as {halves, text}: the halves as `4+6` and the sentence that
+   * says why, both "" for a section with none; a section whose construction is "auto" has no halves yet and says the
+   * Composer chooses it. */
+  function sectionConstruction(section) {
+    const construction = section && section.construction;
+    if (construction === "auto") {
+      return { halves: "", text: "Chosen by the Composer" };
+    }
+    if (!construction || typeof construction !== "object") {
+      return { halves: "", text: "" };
+    }
+    return { halves: Themes.constructionHalves(construction), text: typeof construction.text === "string" ? construction.text : "" };
+  }
+
   /* A state on another form: a request-listed form starts with one section of its first required role, a sized form
    * with its default size and no sections. */
   function withForm(state, name) {
@@ -1032,6 +1046,7 @@
     sizeLabel,
     sizeOf,
     sectionsOf,
+    sectionConstruction,
     withForm,
     get CADENCES() {
       return cadences();

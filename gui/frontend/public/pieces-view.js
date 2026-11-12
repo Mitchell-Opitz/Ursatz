@@ -43,7 +43,8 @@ function pieceSizedStrip(form, bars, count) {
   const total = Math.max(1, sections.reduce((sum, section) => sum + (Number.isFinite(section.bars) ? section.bars : 0), 0));
   const track = materialsElement("div", "piece-lane-track");
   for (const section of sections) {
-    const label = `${section.letter} · ${lengthOf(section)}`;
+    const halves = PiecesModel.sectionConstruction(section).halves;
+    const label = `${section.letter} · ${lengthOf(section)}${halves ? ` · ${halves}` : ""}`;
     const block = materialsElement("div", "piece-block", label);
     block.title = `${section.role ? section.role.label : ""} ${label}`.trim();
     block.style.flex = `0 0 ${((Number.isFinite(section.bars) ? section.bars : 0) / total) * 100}%`;
@@ -52,10 +53,13 @@ function pieceSizedStrip(form, bars, count) {
   const lane = materialsElement("div", "piece-lane");
   lane.appendChild(track);
   box.appendChild(lane);
+  /* The Construction column is there only when a section has one. */
+  const constructions = sections.map((section) => PiecesModel.sectionConstruction(section).text);
+  const withConstruction = constructions.some((text) => text !== "");
   box.appendChild(
     pieceTable(
-      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots"],
-      sections.map((section) => [
+      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots", ...(withConstruction ? ["Construction"] : [])],
+      sections.map((section, at) => [
         section.letter,
         section.role ? section.role.label : "",
         lengthOf(section),
@@ -66,6 +70,7 @@ function pieceSizedStrip(form, bars, count) {
         section.pedal ? section.pedal.label : "",
         section.returns ? (section.variation ? `${section.returns} (${section.variation})` : section.returns) : "",
         (Array.isArray(section.slots) ? section.slots : []).map((slot) => `${slot.slot}: ${slot.ideas.join(", ")}`).join("; "),
+        ...(withConstruction ? [constructions[at]] : []),
       ]),
     ),
   );
