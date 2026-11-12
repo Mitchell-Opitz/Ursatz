@@ -512,54 +512,92 @@ static bool bar_notes(const MelodyCandidate *out, Rational start, Rational bar_l
     return *count <= MELODY_BAR_NOTES;
 }
 
+/* Whether the notes from `first`, `count` of them, have the rhythm (onsets from the bar's start, durations) given. */
+static bool same_rhythm(const MelodyCandidate *out, Rational start, size_t first, size_t count, const Rational *onset,
+                        const Rational *duration, size_t given) {
+    bool same = given == count;
+    for (size_t i = 0; same && i < count; i++) {
+        same = rational_cmp(position_sub(out->notes[first + i].onset, start), onset[i]) == 0 &&
+               rational_cmp(out->notes[first + i].duration, duration[i]) == 0;
+    }
+    return same;
+}
+
+/*
+ * Varies the bar: its last two notes merge when neither carries the motive (the earlier takes the later's time), else the
+ * last two neighbouring notes of different lengths trade lengths, so the motive keeps its notes; the target's last note
+ * is never one of them, so a cadence still arrives with it. False when neither can be done.
+ */
+static bool vary_bar(MelodyCandidate *out, size_t first, size_t count) {
+    MelodyNote *last = &out->notes[first + count - 1];
+    MelodyNote *earlier = last - 1;
+    if (last->motive_index < 0 && earlier->motive_index < 0) {
+        earlier->duration = position_add(earlier->duration, last->duration);
+        memmove(last, last + 1, (out->count - (first + count)) * sizeof(*last));
+        out->count--;
+        return true;
+    }
+    size_t top = first + count == out->count ? count - 1 : count;
+    for (size_t i = top; i-- > 1;) {
+        MelodyNote *a = &out->notes[first + i - 1];
+        MelodyNote *b = &out->notes[first + i];
+        if (rational_cmp(a->duration, b->duration) != 0) {
+            Rational held = a->duration;
+            a->duration = b->duration;
+            b->duration = held;
+            b->onset = position_add(a->onset, a->duration);
+            return true;
+        }
+    }
+    return false;
+}
+
 static void limit_rhythm_repeats(const MelodyContext *context, const MelodyFillParams *params, MelodyCandidate *out) {
-    Rational onset[MELODY_BAR_NOTES];
-    Rational duration[MELODY_BAR_NOTES];
-    size_t previous = 0;
-    size_t run = context->repeat_run;
     Rational bar = context->metre.bar_length;
+    bool varied[MELODY_MAX_NOTES] = {false};
     if (params->rhythm_repeat_bars == 0 || !context->repeat_aligned || !position_is_positive(bar)) {
         return;
     }
-    if (context->repeat_run > 0) {
-        previous = context->repeat_count;
+    /* Walk the bars with the run carried in; at the first bar that passes the cap, vary it or the latest bar before it in
+       the run and in the target that can be varied (each bar once), and walk again. */
+    for (bool again = true; again;) {
+        Rational onset[MELODY_BAR_NOTES];
+        Rational duration[MELODY_BAR_NOTES];
+        size_t previous = context->repeat_run > 0 ? context->repeat_count : 0;
+        size_t run = context->repeat_run;
+        size_t index = 0;
+        again = false;
         for (size_t i = 0; i < previous; i++) {
             onset[i] = context->repeat_onset[i];
             duration[i] = context->repeat_duration[i];
         }
-    }
-    for (Rational start = POSITION_ZERO; rational_cmp(start, context->length) < 0; start = position_add(start, bar)) {
-        size_t first;
-        size_t count;
-        bool changed = false;
-        if (!bar_notes(out, start, bar, &first, &count) || count < 2) {
-            previous = 0;
-            run = 0;
-            continue;
-        }
-        bool same = previous == count;
-        for (size_t i = 0; same && i < count; i++) {
-            same = rational_cmp(position_sub(out->notes[first + i].onset, start), onset[i]) == 0 &&
-                   rational_cmp(out->notes[first + i].duration, duration[i]) == 0;
-        }
-        run = same ? run + 1 : 1;
-        MelodyNote *last = &out->notes[first + count - 1];
-        MelodyNote *earlier = last - 1;
-        if (run > params->rhythm_repeat_bars && last->motive_index < 0 && earlier->motive_index < 0) {
-            earlier->duration = position_add(earlier->duration, last->duration);
-            memmove(last, last + 1, (out->count - (first + count)) * sizeof(*last));
-            out->count--;
-            count--;
-            run = count >= 2 ? 1 : 0;
-            changed = true;
-        }
-        previous = count;
-        for (size_t i = 0; i < count; i++) {
-            onset[i] = position_sub(out->notes[first + i].onset, start);
-            duration[i] = out->notes[first + i].duration;
-        }
-        if (changed && count < 2) {
-            previous = 0;
+        for (Rational start = POSITION_ZERO; !again && rational_cmp(start, context->length) < 0;
+             start = position_add(start, bar), index++) {
+            size_t first;
+            size_t count;
+            if (!bar_notes(out, start, bar, &first, &count) || count < 2) {
+                previous = 0;
+                run = 0;
+                continue;
+            }
+            run = same_rhythm(out, start, first, count, onset, duration, previous) ? run + 1 : 1;
+            if (run > params->rhythm_repeat_bars) {
+                size_t lowest = index + 1 >= run ? index + 1 - run : 0;
+                for (size_t back = index + 1; !again && back-- > lowest && index < MELODY_MAX_NOTES;) {
+                    size_t f;
+                    size_t c;
+                    Rational at = position_mul(bar, (long long)back);
+                    if (!varied[back] && bar_notes(out, at, bar, &f, &c) && c >= 2 && vary_bar(out, f, c)) {
+                        varied[back] = true;
+                        again = true;
+                    }
+                }
+            }
+            previous = count;
+            for (size_t i = 0; i < count; i++) {
+                onset[i] = position_sub(out->notes[first + i].onset, start);
+                duration[i] = out->notes[first + i].duration;
+            }
         }
     }
     for (size_t i = 0; i < out->count; i++) {
