@@ -698,6 +698,9 @@ void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowReques
     request->pairing = setup->pairing;
     request->cadence = setup->cadence;
     request->first_cadence = setup->first_cadence;
+    if (setup->contrast) {
+        request->contrast = *setup->contrast;
+    }
     request->has_accompaniment = setup->has_accompaniment;
     request->accompaniment = setup->accompaniment;
     request->accompaniment_motive = setup->accompaniment_motive;
@@ -736,6 +739,10 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
         config.context.continuation = *setup->continuation;
     }
     config.context.basic_as_written = setup->basic_as_written;
+    if (setup->contrast) {
+        config.context.contrast = *setup->contrast;
+    }
+    config.context.motif = setup->motif;
     config.fidelity = setup->fidelity;
     config.melody = setup->melody;
     config.style = setup->style;
@@ -1054,6 +1061,9 @@ static void source_words(const PiecePlan *plan, const PlanMotiveRef *ref, char *
     const char *name = plan_has_node(plan, ref->motive) ? plan_node_name(plan, ref->motive) : NULL;
     if (ref->segment[0] != '\0') {
         snprintf(out, size, "segment %s", ref->segment);
+    } else if (name && strncmp(name, "distant for m", 13) == 0) {
+        /* A distant contrast made for the idea (R-475): its own rhythm, the contour changed. */
+        snprintf(out, size, "a distant variant");
     } else if (ref->steps > 0 || !name) {
         snprintf(out, size, "basic idea");
     } else if (name[0] == 's' && name[1] >= '1' && name[1] <= '3' && name[2] == '\0') {
@@ -1353,6 +1363,10 @@ static size_t collect_slot_rows(const PiecePlan *plan, const GrowOutcome *outcom
                     /* The idea has a motive of its own: the node "i<k>" of the material. */
                     row->own_idea = direct[1] - '0';
                     row->source = "idea";
+                    row->connection = -1;
+                } else if (direct && strncmp(direct, "distant for m", 13) == 0) {
+                    /* A distant contrast made for the idea (R-475). */
+                    row->source = "distant";
                     row->connection = -1;
                 } else if (direct && strcmp(direct, "m0") == 0) {
                     row->source = "motive"; /* the basic idea is the basic motive */

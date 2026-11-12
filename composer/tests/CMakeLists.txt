@@ -1045,6 +1045,16 @@ add_test(NAME test_grow_continuation_rates COMMAND test_grow_continuation rates)
 set_tests_properties(test_grow_continuation test_grow_continuation_rates PROPERTIES LABELS slow)
 add_test(NAME test_grow_continuation_smoke COMMAND test_grow_continuation fast)
 
+add_executable(test_grow_contrast test_grow_contrast.c)
+target_link_libraries(test_grow_contrast PRIVATE ursatz_composer composer_test_support cjson)
+target_include_directories(test_grow_contrast PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_contrast PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_contrast PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_grow_contrast COMMAND test_grow_contrast)
+# Measured 58 s of CPU, over the 10 s fast-set limit; test_grow_contrast_smoke runs seed 1 of every case.
+set_tests_properties(test_grow_contrast PROPERTIES LABELS slow)
+add_test(NAME test_grow_contrast_smoke COMMAND test_grow_contrast fast)
+
 add_executable(test_grow_compose_rates test_grow_compose_rates.c)
 target_link_libraries(test_grow_compose_rates PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_grow_compose_rates PRIVATE ${PROJECT_SOURCE_DIR}/src)
