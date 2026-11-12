@@ -473,6 +473,7 @@ function buildThemeResult(ctx) {
       ["Seed", view.seed === null ? "" : String(view.seed)],
       ["Given chords", ThemesModel.chordsText(state)],
       ["Form heard", view.heard],
+      ["Construction", view.construction],
       ["Tempo", view.brief.tempo],
       ["Mode", view.brief.mode],
       ["Note density", view.brief.density],

@@ -850,6 +850,8 @@
         pedal: entry && entry.pedal && entry.pedal.label ? entry.pedal.label : "",
         returns: section.returns || "",
         changes: (section.changes && section.changes.text) || "",
+        /* A section with a construction (P47) carries the sentence that says why it is as long as it is; no other has the member. */
+        construction: typeof section.construction_text === "string" ? section.construction_text : "",
       };
     });
     const seam = v.seam && typeof v.seam === "object" ? v.seam : null;

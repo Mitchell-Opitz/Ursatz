@@ -904,6 +904,7 @@
           }))
         : [],
       heard: theme.heard_text || "",
+      construction: constructionText(theme),
       heardAsRequested: theme.heard_as_requested === true,
       check: o.check ? "no contradiction found" : "not run",
       files: Array.isArray(r.files) ? r.files.slice() : [],

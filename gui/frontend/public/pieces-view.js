@@ -221,15 +221,19 @@ function pieceTable(headers, rows) {
 function pieceVersionTables(view, heading, check, sized) {
   const box = materialsElement("div", "piece-version");
   box.appendChild(materialsElement("h3", "section-title", heading));
+  /* The Construction column is there only when a section has one (P47). */
+  const withConstruction = view.rows.some((row) => row.construction !== "");
+  const extraHead = withConstruction ? ["Construction"] : [];
+  const extra = (row) => (withConstruction ? [row.construction] : []);
   box.appendChild(
     sized
       ? pieceTable(
-          ["Section", "Role", "Letter", "Start", "Length", "Cadence", "Heard", "Key heard", "Harmony", "Returns", "How it differs"],
-          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.keyHeard, row.pedal, row.returns, row.changes]),
+          ["Section", "Role", "Letter", "Start", "Length", "Cadence", "Heard", "Key heard", "Harmony", "Returns", "How it differs", ...extraHead],
+          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.keyHeard, row.pedal, row.returns, row.changes, ...extra(row)]),
         )
       : pieceTable(
-          ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source"],
-          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source]),
+          ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source", ...extraHead],
+          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source, ...extra(row)]),
         ),
   );
   box.appendChild(
