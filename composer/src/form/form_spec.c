@@ -9,7 +9,10 @@
 
 #include <ursatz_composer/theme_shape.h>
 
+#include <ursatz_composer/harmony_phrase.h>
+
 #include "grow/grow_internal.h"
+#include "util/request_parse.h"
 
 /* ------------------------------------------------------------- the vocabularies the document names */
 
@@ -1064,10 +1067,72 @@ static bool read_checks(Reader *reader, const cJSON *root, FormSpec *form) {
     return true;
 }
 
+/* meters and tempo: a form with sizes may list the meters it is written in and give a tempo (R-487). */
+static bool read_meters_and_tempo(Reader *reader, const cJSON *root, FormSpec *form) {
+    char at[64];
+    for (size_t i = 0; i < 2; i++) {
+        const char *key = i == 0 ? "meters" : "tempo";
+        if (form->request_sections && cJSON_GetObjectItemCaseSensitive(root, key)) {
+            join(at, sizeof(at), "", key);
+            return fail(reader, at, "only a form with sizes has this member");
+        }
+    }
+    const cJSON *list = array_member(reader, root, "", "meters", false, at, sizeof(at));
+    if (reader->failed) {
+        return false;
+    }
+    if (list) {
+        int n = cJSON_GetArraySize(list);
+        if (n < 1 || n > FORM_SPEC_MAX_METERS) {
+            return fail(reader, at, "must list 1 to %d meters", FORM_SPEC_MAX_METERS);
+        }
+        for (int i = 0; i < n; i++) {
+            char item[64];
+            PlanMeter meter;
+            const cJSON *entry = cJSON_GetArrayItem(list, i);
+            join_index(item, sizeof(item), at, (size_t)i);
+            if (!cJSON_IsString(entry) || !entry->valuestring) {
+                return fail(reader, item, "must be a meter such as \"3/4\"");
+            }
+            if (!request_parse_meter(entry->valuestring, &meter) || !harmony_meter_supported(&meter)) {
+                return fail(reader, item, "\"%s\" is not a meter the builder supports", entry->valuestring);
+            }
+            for (size_t other = 0; other < form->meter_count; other++) {
+                if (form->meters[other].beats_per_bar == meter.beats_per_bar &&
+                    form->meters[other].beat_unit == meter.beat_unit) {
+                    return fail(reader, item, "the meter is already listed");
+                }
+            }
+            form->meters[form->meter_count++] = meter;
+        }
+    }
+    const cJSON *tempo = member_of(reader, root, "", "tempo", false);
+    if (tempo) {
+        long number;
+        if (!whole(reader, tempo, "/tempo", 30, 300, &number)) {
+            return false;
+        }
+        form->tempo = (unsigned)number;
+    }
+    return true;
+}
+
+bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter) {
+    if (!form || !meter || form->meter_count == 0) {
+        return true;
+    }
+    for (size_t i = 0; i < form->meter_count; i++) {
+        if (form->meters[i].beats_per_bar == meter->beats_per_bar && form->meters[i].beat_unit == meter->beat_unit) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
     static const char *const ALLOWED[] = {"schema", "version", "name",    "label",  "plan_name", "closing", "accompaniment",
                                           "regions", "checks", "sizes", "sections", "roles",   "loop",    "cadences",
-                                          "default_ending"};
+                                          "default_ending", "meters", "tempo"};
     static const char *const REQUEST_ONLY[] = {"roles", "loop", "cadences", "default_ending"};
     char text[FORM_SPEC_NAME_MAX];
     bool present;
@@ -1125,7 +1190,7 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
         }
         form->request_sections = true;
     }
-    if (!read_sizes(reader, root, form)) {
+    if (!read_meters_and_tempo(reader, root, form) || !read_sizes(reader, root, form)) {
         return false;
     }
     if (form->request_sections) {

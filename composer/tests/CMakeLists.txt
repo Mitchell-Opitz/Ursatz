@@ -400,6 +400,8 @@ target_compile_definitions(test_form_spec PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_
 add_test(NAME test_form_spec COMMAND test_form_spec)
 # A form added as a document alone composes (tests/fixtures/forms/bar-form.json).
 add_test(NAME test_form_spec_custom COMMAND test_form_spec custom)
+# A form that lists its meters builds in one of them and is refused in another (tests/fixtures/forms/meter-form.json).
+add_test(NAME test_form_spec_meters COMMAND test_form_spec meters)
 # A form with a dominant pedal in its B composes with B's first half on the dominant (tests/fixtures/forms/pedal-form.json).
 add_test(NAME test_form_spec_pedal COMMAND test_form_spec pedal)
 

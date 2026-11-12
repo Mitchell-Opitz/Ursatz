@@ -34,6 +34,14 @@
       "items": { "enum": ["sections", "returns", "keys", "cadences", "seam"] },
       "uniqueItems": true
     },
+    "meters": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": { "enum": ["2/4", "3/4", "4/4", "6/8"] },
+      "uniqueItems": true
+    },
+    "tempo": { "type": "integer", "minimum": 30, "maximum": 300 },
     "sizes": {
       "type": "array",
       "minItems": 1,

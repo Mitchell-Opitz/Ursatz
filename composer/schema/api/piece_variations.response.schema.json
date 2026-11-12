@@ -53,6 +53,7 @@
               "enum": [
                 "option",
                 "style",
+                "form",
                 "none"
               ]
             }

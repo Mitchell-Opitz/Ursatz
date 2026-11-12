@@ -25,6 +25,8 @@
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
  *                             1 to 10 in C major 4/4, at least 9 compose, and in each the chords and the bass of B's
  *                             first half are all on the dominant
+ *   test_form_spec meters     a form document that lists 3/4 and a tempo (tests/fixtures/forms/meter-form.json) builds in
+ *                             3/4 and is refused in 4/4 (R-487); the reader's meters and tempo refusals are in the fast run
  *   test_form_spec custom     a form added as a document alone (tests/fixtures/forms/bar-form.json) composes: seeds 1
  *                             to 10 in C major 4/4 with an invented motive; no C code names the form. The same for
  *                             tests/fixtures/forms/uneven-form.json (a 4+6 period and a 4+6 sentence with an evaded
@@ -435,6 +437,91 @@ static void test_refusals(void) {
     refused(big, "/sizes/0/sections");
     free(big);
     free(list);
+}
+
+/* ------------------------------------------------------------- meters and tempo (R-487) */
+
+static char *read_file(const char *path);
+
+static void test_meters_and_tempo(void) {
+    char sizes[512];
+    char text[1024];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 8, \"default\": true, \"sections\": [" SECTION_A "]}");
+
+    document(text, sizeof(text), ", \"meters\": [\"3/4\"], \"tempo\": 112", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form);
+    assert(form->meter_count == 1 && form->meters[0].beats_per_bar == 3 && form->meters[0].beat_unit == 4 && form->tempo == 112);
+    PlanMeter three_four = {3, 4, 0};
+    PlanMeter four_four = {4, 4, 0};
+    assert(form_spec_meter_allowed(form, &three_four) && !form_spec_meter_allowed(form, &four_four));
+    form_spec_destroy(form);
+
+    document(text, sizeof(text), ", \"meters\": [\"3/4\", \"6/8\"]", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->meter_count == 2 && form->tempo == 0);
+    PlanMeter six_eight = {6, 8, 0};
+    assert(form_spec_meter_allowed(form, &six_eight) && form_spec_meter_allowed(form, &three_four));
+    form_spec_destroy(form);
+
+    document(text, sizeof(text), ", \"meters\": [\"5/4\"]", sizes);
+    refused(text, "/meters/0");
+    document(text, sizeof(text), ", \"meters\": [\"3/4\", \"3/4\"]", sizes);
+    refused(text, "/meters/1");
+    document(text, sizeof(text), ", \"meters\": []", sizes);
+    refused(text, "/meters");
+    document(text, sizeof(text), ", \"meters\": [\"2/4\", \"3/4\", \"4/4\", \"6/8\", \"3/4\"]", sizes);
+    refused(text, "/meters");
+    document(text, sizeof(text), ", \"meters\": [3]", sizes);
+    refused(text, "/meters/0");
+    document(text, sizeof(text), ", \"meters\": \"3/4\"", sizes);
+    refused(text, "/meters");
+    document(text, sizeof(text), ", \"tempo\": 20", sizes);
+    refused(text, "/tempo");
+    document(text, sizeof(text), ", \"tempo\": 301", sizes);
+    refused(text, "/tempo");
+    document(text, sizeof(text), ", \"tempo\": 112.5", sizes);
+    refused(text, "/tempo");
+
+    /* A form whose sections the request gives has neither. */
+    refused_edit("game-loop", "\"closing\"", "\"meters\": [\"4/4\"], \"closing\"", "/meters");
+    refused_edit("game-loop", "\"closing\"", "\"tempo\": 120, \"closing\"", "/tempo");
+
+    /* Every built-in lists no meters and gives no tempo (until B5), and allows any meter. */
+    for (size_t i = 0; i < form_spec_builtin_count(); i++) {
+        FormSpec *builtin_form = builtin(form_spec_builtin_name(i));
+        assert(builtin_form->meter_count == 0 && builtin_form->tempo == 0 && form_spec_meter_allowed(builtin_form, &six_eight));
+        form_spec_destroy(builtin_form);
+    }
+}
+
+/* tests/fixtures/forms/meter-form.json: a document that lists 3/4 and a tempo; its plan builds in 3/4 and not in 4/4. */
+static int test_meters(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/meter-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
+        return 2;
+    }
+    free(text);
+    assert(form->meter_count == 1 && form->meters[0].beats_per_bar == 3 && form->meters[0].beat_unit == 4 && form->tempo == 112);
+    PieceRequest request;
+    PiecePlan *plan = NULL;
+    memset(&request, 0, sizeof(request));
+    request.form = form->name;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    assert(form_build_plan(form, &request, &plan) == PIECE_ERR_BAD_REQUEST && plan == NULL);
+    request.meter.beats_per_bar = 3;
+    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+    plan_destroy(plan);
+    form_spec_destroy(form);
+    printf("meter-form: refused in 4/4, built in 3/4\n");
+    return 0;
 }
 
 /* ------------------------------------------------------------- the game loop */
@@ -1067,8 +1154,11 @@ int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "custom") == 0) {
         return test_custom();
     }
+    if (argc == 2 && strcmp(argv[1], "meters") == 0) {
+        return test_meters();
+    }
     if (argc != 1) {
-        fprintf(stderr, "usage: test_form_spec [custom|pedal]\n");
+        fprintf(stderr, "usage: test_form_spec [custom|meters|pedal]\n");
         return 2;
     }
     test_builtin_forms();
@@ -1077,6 +1167,7 @@ int main(int argc, char **argv) {
     test_refusals();
     test_game_loop();
     test_default_cadences();
+    test_meters_and_tempo();
     test_sizes();
     test_pedal();
     test_construction();
