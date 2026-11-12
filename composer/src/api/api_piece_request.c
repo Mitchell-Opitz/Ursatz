@@ -464,6 +464,11 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
         request->export_options.tempo_numerator = request->tempo.numerator;
         request->export_options.tempo_denominator = request->tempo.denominator;
         request->tempo_from = "style";
+    } else if (request->form && request->form->tempo > 0) {
+        request->tempo = (ComposerRatio){request->form->tempo, 1};
+        request->export_options.tempo_numerator = request->tempo.numerator;
+        request->export_options.tempo_denominator = request->tempo.denominator;
+        request->tempo_from = "form";
     }
     request->mode_from = "request";
     if (request_equals_ignore_case(request->mode_text, "style")) {
