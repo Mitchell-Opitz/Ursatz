@@ -262,6 +262,26 @@ static bool is_theme_section(const PieceRequest *request, const PieceSection *se
            grow_theme_buildable(&request->meter, bars, pairing, section->cadence, ANTECEDENT_CADENCE);
 }
 
+/*
+ * The construction of a motif section that has one (R-468): the section is a theme of its whole bars, 3 to 16, on a
+ * barline with no pickup. Given, or for "auto" chosen from the bars and the piece's motive (R-469, NULL is a motive
+ * still to be invented, of one bar). False when the section is none of that, or the construction cannot be built.
+ */
+static bool section_construction(const PieceRequest *request, const PieceSection *section, size_t start_beats,
+                                 const Motive *motive, PlanThemePairing *pairing, PlanConstruction *out) {
+    size_t per_bar = (size_t)request->meter.beats_per_bar;
+    if (!section->has_construction || section->fill != PIECE_FILL_MOTIF || section->pickup.num != 0 ||
+        start_beats % per_bar != 0 || section->beats % per_bar != 0 || !theme_pairing(section, pairing)) {
+        return false;
+    }
+    size_t bars = section->beats / per_bar;
+    if (section->construction_auto) {
+        return grow_construction_choose(motive, &request->meter, bars, pairing, section->cadence, out);
+    }
+    *out = section->construction;
+    return grow_construction_buildable(&request->meter, bars, pairing, section->cadence, ANTECEDENT_CADENCE, out);
+}
+
 /* The key over the start of a span, when one key span holds it. */
 static bool key_over(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
     LaneSpanId ids[2];
@@ -395,16 +415,21 @@ static bool is_held(const FormSpec *form, const PieceRequest *request, size_t in
 }
 
 static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *request, const PieceSection *section,
-                                       size_t start_beats, NodeId form, PlanSpan span, NodeId *out) {
+                                       size_t start_beats, const Motive *motive, NodeId form, PlanSpan span, NodeId *out) {
     PlanConstraint constraint;
     PlanThemePairing pairing;
+    PlanConstruction construction;
     /* A theme fill is the theme it was composed as: its archetype, pairing and cadences, not the request's. */
     const PiecePlan *theme_plan = section->fill == PIECE_FILL_THEME ? section->theme_plan : NULL;
     NodeId given = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
     if (section->fill == PIECE_FILL_THEME && given == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    bool theme = given == PLAN_NODE_NONE && is_theme_section(request, section, start_beats, &pairing);
+    bool constructed = given == PLAN_NODE_NONE && section->has_construction;
+    if (constructed && !section_construction(request, section, start_beats, motive, &pairing, &construction)) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    bool theme = constructed || (given == PLAN_NODE_NONE && is_theme_section(request, section, start_beats, &pairing));
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
     if (result == PIECE_OK && given != PLAN_NODE_NONE) {
         result = add_theme_constraints(plan, *out, theme_plan, given);
@@ -417,6 +442,12 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
             memset(&constraint, 0, sizeof(constraint));
             constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
             constraint.params.theme_pairing = pairing;
+            result = piece_add_constraint(plan, *out, &constraint);
+        }
+        if (result == PIECE_OK && constructed) {
+            memset(&constraint, 0, sizeof(constraint));
+            constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
+            constraint.params.construction = construction;
             result = piece_add_constraint(plan, *out, &constraint);
         }
     } else if (result == PIECE_OK) {
@@ -526,12 +557,23 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     size_t material_bars = motive_bars;
     size_t per_bar = (size_t)request->meter.beats_per_bar;
     bool has_ending = false;
-    /* The motive fills the basic idea of every section laid out: 2 bars of an 8-bar theme, 1 of a 4-bar one or a free phrase. */
+    /* The motive fills the basic idea of every section laid out: its construction's, else 2 bars of an 8-bar theme, 1 of a 4-bar one or a free phrase. */
     size_t basic_bars = 2;
     for (size_t i = 0; i < copy.section_count; i++) {
         has_ending = has_ending || copy.sections[i].part == PIECE_PART_ENDING;
         if (loop_plan ? !is_dropped(form, copy.sections[i].part) : copy.sections[i].part != PIECE_PART_ENDING) {
-            basic_bars = copy.sections[i].beats == 8 * per_bar ? basic_bars : 1;
+            size_t section_basic = copy.sections[i].beats == 8 * per_bar ? 2 : 1;
+            if (copy.sections[i].has_construction) {
+                PlanThemePairing pairing;
+                PlanConstruction construction;
+                if (!section_construction(&copy, &copy.sections[i], beats, motive, &pairing, &construction)) {
+                    return PIECE_ERR_BAD_REQUEST;
+                }
+                section_basic = construction.idea_bars[GROW_IDEA_BASIC];
+                /* The repeats and the addition of a construction have motives of their own in the material (R-468). */
+                material_bars += grow_extension_material_bars(&pairing, &construction);
+            }
+            basic_bars = section_basic < basic_bars ? section_basic : basic_bars;
             laid = i + 1;
             beats += copy.sections[i].beats;
             material_bars += MATERIAL_BARS_PER_SECTION * motive_bars + (copy.sections[i].beats + per_bar - 1) / per_bar;
@@ -595,7 +637,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         bool from_loop = loop_plan && copy.sections[i].part != PIECE_PART_ENDING;
         NodeId loop_section = from_loop ? find_part_section(loop_plan, &copy.sections[i]) : PLAN_NODE_NONE;
         PlanSpan span = {start, beats_of(&request->meter, copy.sections[i].beats)};
-        result = add_request_section(plan, &copy, &copy.sections[i], start_beats, form_id, span, &id);
+        result = add_request_section(plan, &copy, &copy.sections[i], start_beats, motive, form_id, span, &id);
         if (result == PIECE_OK && from_loop) {
             if (loop_section == PLAN_NODE_NONE || plan_give_section(plan, id, loop_plan, loop_section) != GIVEN_OK) {
                 result = PIECE_ERR_BAD_REQUEST;

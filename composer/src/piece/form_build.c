@@ -322,10 +322,17 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     if (form->request_sections) {
         size_t per_bar = request->meter.beats_per_bar > 0 ? (size_t)request->meter.beats_per_bar : 1;
         found = true;
+        shortest = 8;
+        basic = 2;
         for (size_t i = 0; i < request->section_count; i++) {
-            shortest = request->sections[i].beats == 8 * per_bar ? shortest : 4;
+            const PieceSection *section = &request->sections[i];
+            size_t bars = section->has_construction ? section->beats / per_bar : (section->beats == 8 * per_bar ? 8 : 4);
+            size_t idea = !section->has_construction ? (section->beats == 8 * per_bar ? 2 : 1)
+                          : section->construction_auto ? (bars >= 6 ? 2 : 1)
+                                                       : section->construction.idea_bars[GROW_IDEA_BASIC];
+            shortest = bars < shortest ? bars : shortest;
+            basic = idea < basic ? idea : basic;
         }
-        basic = shortest == 8 ? 2 : 1;
     }
     form_spec_destroy(form);
     if (!found) {
