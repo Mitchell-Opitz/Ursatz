@@ -5,7 +5,8 @@
  *    slots: [{slot, item_id, version}], ideas: [{idea, item_id, version}], accompaniment: {kind, pattern,
  *    item_id, version}, picks: [...], switches: {<category>: bool}, weight,
  *    tempo, check, seed}
- * with tempo and seed as the text typed (blank for none). */
+ * with tempo and seed as the text typed (blank for none), and construction null (the Composer chooses) or
+ * {ideas: {<idea>: bars}, extensions: [{kind, idea, bars, varied}]} (P47, R-468). */
 (function (root) {
   const Req = root.ApiRequest || (typeof require === "function" ? require("./request.js") : null);
   const Materials = root.MaterialsModel || (typeof require === "function" ? require("./materials-model.js") : null);
@@ -50,7 +51,9 @@
   const tempoMax = () => Vocab.limit("tempo_max");
   const maxSeed = () => Vocab.seedMax("theme");
   /* UI limits the Composer does not hold (R-276). */
-  const CHORD_BARS = 8;
+  const CHORD_BARS = 16;
+  /* Extensions a given construction may carry (the Composer's PLAN_CONSTRUCTION_EXTENSIONS). */
+  const MAX_EXTENSIONS = 3;
   const CHORD_TEXT_MAX = 64;
   const SWITCH_TEXT = "Use the brief's motive degrees, intervals, rhythm, non-chord figures";
   const THEME_TABS = [
@@ -94,6 +97,7 @@
       cadence: "PAC",
       firstCadence: "",
       development: "balanced",
+      construction: null,
       slots: [],
       ideas: [],
       chords: Array(CHORD_BARS).fill(""),
@@ -332,6 +336,103 @@
     return `Roman numerals in C, at most 2 per bar; @ sets the beat a chord starts on, from 0 (${second}).`;
   }
 
+  /* --- the construction (P47, R-468) -------------------------------------- */
+
+  /* The bars a theme has without a construction (the Composer's theme_bars_regular), as numbers. */
+  const regularBars = () => Vocab.list("theme_bars_regular").map(Number);
+  /* True when a theme of that many bars needs a construction: it is not one of the regular lengths. */
+  function needsConstruction(bars) {
+    return !regularBars().includes(Number(bars));
+  }
+  /* The kinds of extension, as the vocabulary gives them: [{value, label, ideas?, varied?}]. */
+  const extensionKinds = () => Vocab.list("theme_extensions");
+  /* The ideas a kind of extension can follow, limited to those of the form; [] for a kind that follows none. */
+  function extensionIdeas(kind, ideaNames) {
+    const entry = Vocab.entry("theme_extensions", kind) || {};
+    return (Array.isArray(entry.ideas) ? entry.ideas : []).filter((idea) => ideaNames.includes(idea));
+  }
+  /* The idea names of a pairing (an [beginning, ending] pair of the form) in order. */
+  function pairingIdeaNames(pair) {
+    return [...halfIdeas("theme_beginnings", pair[0]), ...halfIdeas("theme_endings", pair[1])].map((entry) => entry.idea);
+  }
+
+  /* A construction to start from: the bars spread over the ideas, the last taking the rest, no extension. */
+  function defaultConstruction(ideaNames, bars) {
+    const total = Math.max(Number(bars) || 0, ideaNames.length);
+    const share = Math.floor(total / ideaNames.length);
+    const ideas = {};
+    ideaNames.forEach((name, at) => {
+      ideas[name] = at === ideaNames.length - 1 ? total - share * (ideaNames.length - 1) : share;
+    });
+    return { ideas, extensions: [] };
+  }
+
+  function wholeBars(value) {
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 0 ? number : 0;
+  }
+
+  /* The request member of a construction state: the ideas of the form in order (an idea the state lacks has 0 bars) and
+   * the extensions with the members their kind has; null for no construction. */
+  function constructionBody(construction, ideaNames) {
+    if (!construction || typeof construction !== "object") {
+      return null;
+    }
+    const given = construction.ideas && typeof construction.ideas === "object" ? construction.ideas : {};
+    const ideas = {};
+    for (const name of ideaNames) {
+      ideas[name] = wholeBars(given[name]);
+    }
+    const extensions = (Array.isArray(construction.extensions) ? construction.extensions : [])
+      .filter((entry) => entry && Vocab.entry("theme_extensions", entry.kind))
+      .slice(0, MAX_EXTENSIONS)
+      .map((entry) => {
+        const kind = Vocab.entry("theme_extensions", entry.kind);
+        const out = { kind: entry.kind };
+        if (Array.isArray(kind.ideas)) {
+          out.idea = typeof entry.idea === "string" ? entry.idea : "";
+        }
+        out.bars = wholeBars(entry.bars);
+        if (kind.varied) {
+          out.varied = entry.varied === true;
+        }
+        return out;
+      });
+    return { ideas, extensions };
+  }
+
+  /* The construction state of a request member: null unless it is an object with ideas. */
+  function constructionFromBody(value) {
+    if (!value || typeof value !== "object" || !value.ideas || typeof value.ideas !== "object" || Array.isArray(value.ideas)) {
+      return null;
+    }
+    const ideas = {};
+    for (const [name, bars] of Object.entries(value.ideas)) {
+      ideas[name] = wholeBars(bars);
+    }
+    const extensions = (Array.isArray(value.extensions) ? value.extensions : [])
+      .filter((entry) => entry && typeof entry === "object" && typeof entry.kind === "string")
+      .map((entry) => ({
+        kind: entry.kind,
+        idea: typeof entry.idea === "string" ? entry.idea : "",
+        bars: wholeBars(entry.bars),
+        varied: entry.varied === true,
+      }));
+    return { ideas, extensions };
+  }
+
+  /* The sentence for the reason of a theme's construction (the Composer's construction.text), "" for none. */
+  function constructionText(theme) {
+    const construction = theme && theme.construction;
+    return construction && typeof construction.text === "string" ? construction.text : "";
+  }
+
+  /* The halves of a theme's construction as `4+6` (the Composer's construction.halves), "" for none. */
+  function constructionHalves(construction) {
+    const halves = construction && Array.isArray(construction.halves) ? construction.halves : [];
+    return halves.length === 2 && halves.every(Number.isInteger) ? `${halves[0]}+${halves[1]}` : "";
+  }
+
   /* The version body of a form state: {uses, theme}. The result is left out;
    * the backend fills the uses of the slot and accompaniment motifs. */
   function bodyFromForm(state) {
@@ -356,6 +457,7 @@
         cadence: s.cadence,
         first_cadence: firstCadence,
         development: DEVELOPMENTS.some((entry) => entry.value === s.development) ? s.development : "balanced",
+        construction: constructionBody(s.construction, pairingIdeaNames(pairing(s))),
       },
       slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
       ideas: ideaEntries(s.ideas, ownIdeaNames(s)),
@@ -402,6 +504,7 @@
     if (DEVELOPMENTS.some((entry) => entry.value === form.development)) {
       state.development = form.development;
     }
+    state.construction = constructionFromBody(form.construction);
     state.slots = slotEntries((Array.isArray(theme.slots) ? theme.slots : []).filter((slot) => slot && typeof slot === "object"));
     state.ideas = (Array.isArray(theme.ideas) ? theme.ideas : [])
       .filter((entry) => entry && typeof entry === "object")
@@ -538,6 +641,7 @@
     ["/mode", "mode"],
     ["/meter", "meter"],
     ["/bars", "bars"],
+    ["/construction", "construction"],
     ["/first_cadence", "firstCadence"],
     ["/cadence", "cadence"],
     ["/development", "development"],
@@ -585,6 +689,7 @@
     into: "structure",
     hybrid: "structure",
     bars: "structure",
+    construction: "structure",
     cadence: "structure",
     firstCadence: "structure",
     development: "structure",
@@ -885,6 +990,19 @@
       return barChoices();
     },
     CHORD_BARS,
+    MAX_EXTENSIONS,
+    needsConstruction,
+    get EXTENSIONS() {
+      return extensionKinds();
+    },
+    extensionIdeas,
+    pairing,
+    pairingIdeaNames,
+    defaultConstruction,
+    constructionBody,
+    constructionFromBody,
+    constructionText,
+    constructionHalves,
     chordHint,
     chordEntries,
     chordsText,

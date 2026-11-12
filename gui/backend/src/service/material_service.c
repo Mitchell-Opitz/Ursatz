@@ -862,6 +862,11 @@ static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *erro
     if (!is_absent_or_null(form, "bars") && !cJSON_IsNumber(bars)) {
         return invalid_body(error, error_size, "theme form bars must be a number");
     }
+    /* The construction (Composer API 1.18) is the Composer's: a save keeps only that it is an object or null. */
+    const cJSON *construction = cJSON_GetObjectItemCaseSensitive(form, "construction");
+    if (!is_absent_or_null(form, "construction") && !cJSON_IsObject(construction)) {
+        return invalid_body(error, error_size, "theme form construction must be an object or null");
+    }
     return URSATZ_GUI_MATERIAL_OK;
 }
 
