@@ -234,6 +234,22 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
     return true;
 }
 
+/* The target's cadence is the last of its section: the span ends where the section node it is in ends (R-478). */
+static bool ends_its_section(const PiecePlan *plan, NodeId owner, PlanSpan span) {
+    Rational end;
+    if (plan_span_end(span, &end) != PLAN_OK) {
+        return false;
+    }
+    for (NodeId node = owner; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
+        if (plan_node_kind(plan, node) == PLAN_NODE_SECTION) {
+            Rational section_end;
+            return plan_span_end(plan_node_span(plan, node), &section_end) == PLAN_OK &&
+                   rational_cmp(end, section_end) == 0;
+        }
+    }
+    return false;
+}
+
 bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, AnalysisKey key, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t cells = 0;
@@ -277,6 +293,7 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Anal
     if (harmony_find_constraint(plan, ids[context->count - 1], owner, PLAN_CONSTRAINT_CADENCE, &cadence)) {
         context->has_cadence = true;
         context->cadence = cadence.params.cadence;
+        context->last_cadence = ends_its_section(plan, owner, span);
     }
     return read_bass(plan, context);
 }
@@ -602,6 +619,7 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
     if (harmony_find_constraint(plan, target, owner, PLAN_CONSTRAINT_CADENCE, &constraint)) {
         context->has_cadence = true;
         context->cadence = constraint.params.cadence;
+        context->last_cadence = ends_its_section(plan, owner, span);
     }
     return read_idea_chords(plan, context) && read_idea_bass(plan, context) &&
            read_idea_melody(plan, context, phrase) && read_motive(plan, context) &&

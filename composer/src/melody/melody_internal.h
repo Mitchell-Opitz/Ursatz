@@ -57,6 +57,7 @@ typedef struct {
     size_t bass_count;
     bool has_cadence;
     CadenceType cadence;
+    bool last_cadence; /* has_cadence, and the target ends where its section ends (the theme's last cadence) */
     bool motive_given; /* the motive is the original, not a development */
     bool restated; /* the motive_ref is an exact restatement of its source */
     bool liquidated; /* the motive is a liquidated residue (its motive node's motive_ref has steps, R-345) */
