@@ -814,6 +814,69 @@ static bool check_lead_ins(Reader *reader, const FormSpecSize *size, const char 
     return true;
 }
 
+/* repeats (R-485): groups of consecutive sections, by name, the same indexes in every size. */
+static bool read_repeats(Reader *reader, const cJSON *root, FormSpec *form) {
+    char at[64];
+    if (form->request_sections && cJSON_GetObjectItemCaseSensitive(root, "repeats")) {
+        return fail(reader, "/repeats", "only a form with sizes has this member");
+    }
+    const cJSON *list = array_member(reader, root, "", "repeats", false, at, sizeof(at));
+    if (reader->failed || !list) {
+        return !reader->failed;
+    }
+    int n = cJSON_GetArraySize(list);
+    if (n < 1 || n > FORM_SPEC_MAX_SECTIONS) {
+        return fail(reader, at, "must list 1 to %d groups", FORM_SPEC_MAX_SECTIONS);
+    }
+    size_t next_free = 0; /* the first section index a group may start at: groups are in order and do not overlap */
+    for (int i = 0; i < n; i++) {
+        char group_at[64];
+        const cJSON *group = cJSON_GetArrayItem(list, i);
+        join_index(group_at, sizeof(group_at), at, (size_t)i);
+        if (!cJSON_IsArray(group) || cJSON_GetArraySize(group) < 1) {
+            return fail(reader, group_at, "must list the names of one or more sections");
+        }
+        FormRepeat repeat = {0, (size_t)cJSON_GetArraySize(group)};
+        for (int j = 0; j < cJSON_GetArraySize(group); j++) {
+            char item[64];
+            const cJSON *entry = cJSON_GetArrayItem(group, j);
+            join_index(item, sizeof(item), group_at, (size_t)j);
+            if (!cJSON_IsString(entry) || !entry->valuestring) {
+                return fail(reader, item, "must be a section name");
+            }
+            for (size_t z = 0; z < form->size_count; z++) {
+                const FormSpecSize *size = &form->sizes[z];
+                size_t index = size->section_count;
+                for (size_t s = 0; s < size->section_count; s++) {
+                    if (strcmp(size->sections[s].name, entry->valuestring) == 0) {
+                        index = s;
+                        break;
+                    }
+                }
+                if (index == size->section_count) {
+                    return fail(reader, item, "\"%s\" is not a section of every size", entry->valuestring);
+                }
+                if (j == 0 && z == 0) {
+                    repeat.first = index;
+                }
+                if (index != repeat.first + (size_t)j) {
+                    return fail(reader, item, "the sections of a group must be consecutive and in order in every size");
+                }
+            }
+            if (repeat.first + (size_t)j < next_free) {
+                return fail(reader, item, "groups must be in order and not overlap");
+            }
+        }
+        next_free = repeat.first + repeat.count;
+        form->repeats[form->repeat_count++] = repeat;
+    }
+    return true;
+}
+
+bool form_spec_performed(const FormSpec *form) {
+    return form && form->repeat_count > 0;
+}
+
 /* ------------------------------------------------------------- a form whose sections the request gives */
 
 bool form_spec_has_role(const FormSpec *form, FormRole role) {
@@ -1180,7 +1243,7 @@ bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter) {
 static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
     static const char *const ALLOWED[] = {"schema", "version", "name",    "label",  "plan_name", "closing", "accompaniment",
                                           "regions", "checks", "sizes", "sections", "roles",   "loop",    "cadences",
-                                          "default_ending", "meters", "tempo"};
+                                          "default_ending", "meters", "tempo", "repeats"};
     static const char *const REQUEST_ONLY[] = {"roles", "loop", "cadences", "default_ending"};
     char text[FORM_SPEC_NAME_MAX];
     bool present;
@@ -1238,7 +1301,8 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
         }
         form->request_sections = true;
     }
-    if (!read_meters_and_tempo(reader, root, form) || !read_sizes(reader, root, form)) {
+    if (!read_meters_and_tempo(reader, root, form) || !read_sizes(reader, root, form) ||
+        !read_repeats(reader, root, form)) {
         return false;
     }
     if (form->request_sections) {

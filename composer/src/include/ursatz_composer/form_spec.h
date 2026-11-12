@@ -149,6 +149,12 @@ typedef struct {
     char cadence_name[FORM_SPEC_CADENCE_NAME_MAX];
 } FormDefaultEnding;
 
+/* A group of consecutive sections a form repeats (R-485): section indexes of a size, the same in every size. */
+typedef struct {
+    size_t first;
+    size_t count;
+} FormRepeat;
+
 typedef struct {
     char name[FORM_SPEC_NAME_MAX];
     char label[FORM_SPEC_LABEL_MAX];
@@ -162,6 +168,8 @@ typedef struct {
     size_t meter_count;                 /* 0: any the builder supports */
     unsigned tempo;                     /* quarter notes a minute when the request and its style give none; 0: none */
     bool request_sections;              /* the piece request gives the sections (no sizes) */
+    FormRepeat repeats[FORM_SPEC_MAX_SECTIONS]; /* the groups performed twice in place, in order (R-485) */
+    size_t repeat_count;
     /*
      * The members of a form whose sections the request gives (the game loop, R-419); all empty for any other. The roles a
      * section may have, in order (until P45: intro, body, turnaround and ending); the roles that are the loop (the body
@@ -220,6 +228,9 @@ bool form_spec_role_in_loop(const FormSpec *form, FormRole role);
 
 /* Whether a piece of the form may be in the meter: true when the form lists no meters or lists this one. */
 bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter);
+
+/* Whether a piece of the form is performed: its composed plan is not what it renders (R-485): the form has repeats. */
+bool form_spec_performed(const FormSpec *form);
 
 /* The index of the region with that name, or -1. */
 int form_spec_region_find(const FormSpec *form, const char *name);
