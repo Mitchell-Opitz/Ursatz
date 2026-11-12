@@ -92,6 +92,8 @@ typedef struct {
     AnalysisKey key;
     PlanMeter meter;
     size_t bars;
+    bool has_construction;                   /* a construction was given (api_grow_read_construction), reason GIVEN */
+    PlanConstruction construction;
     CadenceType cadence;
     CadenceType first_cadence;
     bool has_accompaniment;
@@ -148,6 +150,14 @@ typedef struct {
 /* The brief of the text: sentence, period or hybrid with its pairing, the key, the meter, the bars, the cadences, the
    accompaniment and the voicing, into *out (not out->style, out->motive...). Messages name the member. */
 ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, ComposerError *error);
+
+/*
+ * The construction member of a request (R-468): null or absent for none, else {"ideas": {"<idea name>": bars, ...},
+ * "extensions": [{"kind", "idea", "bars", "varied"}]}, into out->construction with reason GIVEN. Run after
+ * api_grow_read_brief (it needs the pairing): a request with a construction and no bars is as long as the construction.
+ * Whether the ideas fit the pairing and add up to the bars is grow_build_plan's to refuse, at /construction/...
+ */
+ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, ComposerError *error);
 
 /* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive". */
 const char *api_accompaniment_name(PlanAccompanimentPattern pattern);

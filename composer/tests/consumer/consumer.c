@@ -8,8 +8,8 @@
 /* Links the Composer as a subproject and asks it for its versions and its vocabulary, nothing more. */
 
 int main(void) {
-    if (strcmp(composer_api_version(), "1.17") != 0) {
-        fprintf(stderr, "consumer: API version %s, expected 1.17\n", composer_api_version());
+    if (strcmp(composer_api_version(), "1.18") != 0) {
+        fprintf(stderr, "consumer: API version %s, expected 1.18\n", composer_api_version());
         return 1;
     }
     ComposerResponse response;
@@ -25,7 +25,7 @@ int main(void) {
     cJSON *vocabulary = cJSON_Parse(response.json);
     composer_response_destroy(&response);
     const cJSON *bars = vocabulary ? cJSON_GetObjectItemCaseSensitive(vocabulary, "theme_bars") : NULL;
-    int ok = cJSON_IsArray(bars) && cJSON_GetArraySize(bars) == 2;
+    int ok = cJSON_IsArray(bars) && cJSON_GetArraySize(bars) == 14;
     cJSON_Delete(vocabulary);
     if (!ok) {
         fprintf(stderr, "consumer: the vocabulary has no theme_bars\n");

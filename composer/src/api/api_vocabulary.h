@@ -40,7 +40,7 @@ extern const ApiChoice API_THEME_POOLS[];      /* approved-and-unflagged, approv
 extern const ApiChoice API_ACCOMPANIMENT_PATTERNS[];
 extern const ApiChoice API_PIECE_INTOS[];      /* sentence, period, hybrid */
 extern const ApiChoice API_PICKUPS[];          /* the pickups an application offers, in beats */
-extern const ApiChoice API_THEME_BARS[];       /* 4, 8 */
+extern const ApiChoice API_THEME_BARS[];       /* 3 to 16 */
 extern const ApiChoice API_STYLE_WEIGHTS[];    /* 1/4, 1/2, 1: the weights offered (any fraction the readers accept still works) */
 
 /* A beginning ("presentation") or an ending ("continuation") of a theme, with the ideas it is made of, in GrowIdea order. */

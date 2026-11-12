@@ -439,13 +439,49 @@ static void test_slot_rules(void) {
 
 static void test_theme_form_lists(void) {
     const cJSON *entry = NULL;
+    /* 3 to 16 bars: the regular lengths are accepted as they are, any other is read, and a length no construction makes
+       from the motif is refused at /bars. */
+    assert(cJSON_GetArraySize(list("theme_bars")) == 14);
+    int expected = 3;
     cJSON_ArrayForEach(entry, list("theme_bars")) {
+        int bars = atoi(value_of(entry));
+        assert(bars == expected++);
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/period-contrast.json");
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(bars));
+        char *text = print(request);
+        ComposerResponse response;
+        ComposerStatus status = composer_api_validate("theme", text, &response);
+        assert(status == COMPOSER_OK || strcmp(response.error.path, "/bars") == 0);
+        composer_response_destroy(&response);
+        free(text);
+        cJSON_Delete(request);
+    }
+    const cJSON *regular = list("theme_bars_regular");
+    assert(cJSON_GetArraySize(regular) == 2 && cJSON_GetArrayItem(regular, 0)->valuedouble == 4 &&
+           cJSON_GetArrayItem(regular, 1)->valuedouble == 8);
+    cJSON_ArrayForEach(entry, regular) {
         cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
-        cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(atoi(value_of(entry))));
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(entry->valuedouble));
         accepted("theme", request);
         cJSON_Delete(request);
     }
-    assert(cJSON_GetArraySize(list("theme_bars")) == 2);
+    /* The extensions of a construction (R-468): four kinds; a repeat and a stretch name the ideas they can follow. */
+    const cJSON *extensions = list("theme_extensions");
+    assert(cJSON_GetArraySize(extensions) == 4);
+    const char *kinds[] = {"repeat", "stretch", "addition", "evaded"};
+    for (int k = 0; k < 4; k++) {
+        const cJSON *kind = cJSON_GetArrayItem(extensions, k);
+        assert(strcmp(value_of(kind), kinds[k]) == 0);
+        const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(kind, "ideas");
+        assert((k < 2) == (ideas != NULL));
+        assert((k == 0) == (cJSON_GetObjectItemCaseSensitive(kind, "varied") != NULL));
+    }
+    const cJSON *repeat = cJSON_GetArrayItem(extensions, 0);
+    const cJSON *stretch = cJSON_GetArrayItem(extensions, 1);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(repeat, "label")->valuestring, "Internal repetition") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(stretch, "label")->valuestring, "Stretched cadence") == 0);
+    assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(repeat, "ideas")) == 6);
+    assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(stretch, "ideas")) == 4);
     assert(cJSON_GetArraySize(list("theme_first_cadences")) == 2);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("theme_first_cadences"), 0)), "IAC") == 0);
     cJSON_ArrayForEach(entry, list("theme_first_cadences")) {
@@ -722,7 +758,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.17") == 0);
+    assert(strcmp(composer_api_version(), "1.18") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

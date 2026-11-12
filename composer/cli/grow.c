@@ -71,7 +71,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --hybrid <b>+<e>     with --into hybrid only: the beginning (presentation, antecedent or cbi, a compound\n");
     fprintf(out, "                       basic idea) and the ending (continuation, consequent or cadential), for example\n");
     fprintf(out, "                       antecedent+continuation\n");
-    fprintf(out, "  --bars <4|8>         length of the theme (default 8; 4 uses a one-bar basic idea)\n");
+    fprintf(out, "  --bars <3-16>        length of the theme (default 8; 4 uses a one-bar basic idea, others a chosen construction)\n");
     fprintf(out, "  --cadence <type>     PAC (default), IAC or HC: the cadence the theme ends in\n");
     fprintf(out, "  --first-cadence <t>  HC (default) or IAC: the weaker cadence an antecedent ends in (a period or a hybrid\n");
     fprintf(out, "                       that begins with an antecedent only)\n");

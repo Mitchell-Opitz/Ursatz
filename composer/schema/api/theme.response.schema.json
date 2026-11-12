@@ -25,10 +25,9 @@
       "type": "string"
     },
     "bars": {
-      "enum": [
-        4,
-        8
-      ]
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 16
     },
     "into": {
       "type": "string"
@@ -180,6 +179,75 @@
     "preferences": {
       "$ref": "#/$defs/preferences",
       "description": "The full settings document, present when the request had the member."
+    },
+    "construction": {
+      "type": "object",
+      "description": "The construction as the request gave it.",
+      "required": [
+        "ideas",
+        "extensions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ideas": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "basic idea",
+              "repetition",
+              "contrasting idea",
+              "consequent basic idea",
+              "consequent contrasting idea",
+              "fragment 1",
+              "fragment 2",
+              "cadential",
+              "cadential 1",
+              "cadential 2"
+            ]
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "extensions": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "idea",
+              "bars",
+              "varied"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "repeat",
+                  "stretch",
+                  "addition",
+                  "evaded"
+                ]
+              },
+              "idea": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "bars": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "varied": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -188,6 +256,7 @@
       "required": [
         "seed",
         "structure",
+        "construction",
         "chords",
         "developments",
         "slots",
@@ -236,6 +305,120 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "construction": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "The construction of the theme as built (R-468), null for a theme without one.",
+          "required": [
+            "halves",
+            "ideas",
+            "extensions",
+            "reason",
+            "text"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "halves": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "ideas": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "idea",
+                  "bars",
+                  "first_bar"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "idea": {
+                    "enum": [
+                      "basic idea",
+                      "repetition",
+                      "contrasting idea",
+                      "consequent basic idea",
+                      "consequent contrasting idea",
+                      "fragment 1",
+                      "fragment 2",
+                      "cadential",
+                      "cadential 1",
+                      "cadential 2"
+                    ]
+                  },
+                  "bars": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "first_bar": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            },
+            "extensions": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "idea",
+                  "bars",
+                  "first_bar",
+                  "varied"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "repeat",
+                      "stretch",
+                      "addition",
+                      "evaded"
+                    ]
+                  },
+                  "idea": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "bars": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "first_bar": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "varied": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "reason": {
+              "enum": [
+                "given",
+                "motive",
+                "length"
+              ]
+            },
+            "text": {
+              "type": "string"
+            }
           }
         },
         "chords": {

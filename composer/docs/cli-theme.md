@@ -18,11 +18,11 @@ The tempo of the brief (the request's, else the style's) is written to the MIDI 
 
 The output of `grow`, with:
 
-- text: a `brief:` line after the tempo (and a `chords bar <n>: <text>` line for each chord given), and after each theme's developments a `slots` table, one line for each idea:
+- text: a `construction: <sentence>` line after each theme's seed when it has a construction (API 1.18: `4+6 period as given.`, `4+5 sentence: the section is 9 bars, so fragment 2 is repeated a step lower (bar 7).`), a `brief:` line after the tempo (and a `chords bar <n>: <text>` line for each chord given), and after each theme's developments a `slots` table, one line for each idea:
   `<idea>: <slot> slot, motive <id>, <source>`, with the chain of a registry form or an operator and the connection in percent;
 - JSON: a `brief` member, `{"tempo": {"qpm", "from"}, "mode": {"mode", "from"}, "density", "without"}` (`from` is
   `request`, `option` or `style`; `density` is the style's attacks per beat, or `null`), a `chords` member, the chords of the
-  request as read (`[{"bar", "text"}]`, [theme-request.md](theme-request.md#chords)), and in each theme a `slots` member,
+  request as read (`[{"bar", "text"}]`, [theme-request.md](theme-request.md#chords)), in each theme a `construction` member (`null` or `{"halves", "ideas", "extensions", "reason", "text"}`, [api/theme-and-piece.md](api/theme-and-piece.md)), at the root the construction the request gave, and in each theme a `slots` member,
   one entry for each idea: `{"idea", "slot", "motive", "source", "item", "chain", "connection"}`.
 
 `slot` is the function slot of the idea and `motive` the id of the request motive it is made from: the motive of the idea

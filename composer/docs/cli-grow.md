@@ -3,7 +3,7 @@
 The `grow` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 4|8] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|motive|any] [--accompaniment-motive <file>] [--accompaniment-format <format>] [--accompaniment-pickup <beats>] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--explain <file>] [--format text|json]
+ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into <sentence|period|hybrid> [--hybrid <beginning>+<ending>] --key <key> --meter <n/m> [--bars 3-16] [--cadence PAC|IAC|HC] [--first-cadence HC|IAC] [--accompaniment block|arpeggiated|alberti|oom-pah|motive|any] [--accompaniment-motive <file>] [--accompaniment-format <format>] [--accompaniment-pickup <beats>] [--texture <name>|chorale] [--voicing] [--check] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
@@ -34,7 +34,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 
 | Option | Meaning |
 | --- | --- |
-| `--bars <4\|8>` | Length of the theme. 8 by default, with a two-bar basic idea; 4 has a one-bar basic idea. |
+| `--bars <3-16>` | Length of the theme. 8 by default, with a two-bar basic idea; 4 has a one-bar basic idea; any other length gets a construction chosen from the motif or the length ([grow-construction.md](grow-construction.md#choosing-a-construction)). |
 | `--cadence <type>` | PAC (default), IAC or HC: the cadence the theme ends in. |
 | `--first-cadence <type>` | HC (default) or IAC: the weak cadence of an antecedent. Only for a period or a hybrid that begins with an antecedent. |
 | `--accompaniment <pattern>` | Write an accompaniment in the inner voices: `block`, `arpeggiated`, `alberti` (not in 6/8), `oom-pah`, or `any`, which chooses from the seed. See [accompaniment.md](accompaniment.md). |

@@ -51,11 +51,91 @@
       "type": "string"
     },
     "bars": {
-      "enum": [
-        4,
-        8,
-        null
-      ]
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 3,
+      "maximum": 16,
+      "description": "3 to 16 bars; 4 and 8 need no construction, any other length gets one (R-469)."
+    },
+    "construction": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "The bars of each idea of the theme and its extensions (R-468); null for none, then a theme of 4 or 8 bars is as it always was and any other length gets a construction chosen from the motif or the length (R-469).",
+      "required": [
+        "ideas"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ideas": {
+          "type": "object",
+          "description": "Bars of each idea by name; an idea the pairing does not have is left out or 0.",
+          "propertyNames": {
+            "enum": [
+              "basic idea",
+              "repetition",
+              "contrasting idea",
+              "consequent basic idea",
+              "consequent contrasting idea",
+              "fragment 1",
+              "fragment 2",
+              "cadential",
+              "cadential 1",
+              "cadential 2"
+            ]
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 16
+          }
+        },
+        "extensions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "repeat",
+                  "stretch",
+                  "addition",
+                  "evaded"
+                ]
+              },
+              "idea": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Required for a repeat and a stretch."
+              },
+              "bars": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 4
+              },
+              "varied": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
     },
     "cadence": {
       "type": [
