@@ -19,13 +19,16 @@
  *
  *   test_form_spec            the reader and the built-in forms (fast):
  *                               every built-in parses and is what docs/forms.md says of it;
+ *                               a section's construction (B6 of P47): "auto", the ideas and extensions, the refusals;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
  *                             1 to 10 in C major 4/4, at least 9 compose, and in each the chords and the bass of B's
  *                             first half are all on the dominant
  *   test_form_spec custom     a form added as a document alone (tests/fixtures/forms/bar-form.json) composes: seeds 1
- *                             to 10 in C major 4/4 with an invented motive; no C code names the form
+ *                             to 10 in C major 4/4 with an invented motive; no C code names the form. The same for
+ *                             tests/fixtures/forms/uneven-form.json (a 4+6 period and a 4+6 sentence with an evaded
+ *                             cadence, 20 bars, each section with a construction): 10 of 10 seeds compose
  */
 
 /* ------------------------------------------------------------- helpers */
@@ -686,6 +689,8 @@ static bool section_written(const PiecePlan *plan, NodeId section) {
     return found > 0;
 }
 
+static int test_uneven_form(void);
+
 static int test_custom(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/bar-form.json", COMPOSER_FIXTURE_DIR);
@@ -760,6 +765,63 @@ static int test_custom(void) {
     form_spec_destroy(form);
     printf("bar-form: composed with seed %lu (first of 1 to %d); with only the sections check the plan is the same and no return is heard\n",
            first, CUSTOM_SEEDS);
+    return test_uneven_form();
+}
+
+/* ------------------------------------------------------------- a form with uneven sections */
+
+/* The seeds of 1 to 10 that compose uneven-form.json, measured: a 4+6 period and a 4+6 sentence with an evaded cadence. */
+#define UNEVEN_COMPOSED 10
+
+static int test_uneven_form(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/uneven-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
+        return 2;
+    }
+    free(text);
+    assert(strcmp(form->name, "uneven-form") == 0 && form->sizes[0].bars == 20 && form->sizes[0].section_count == 2 &&
+           form->sizes[0].sections[0].has_construction && form->sizes[0].sections[0].bars == 10 &&
+           form->sizes[0].sections[1].has_construction && form->sizes[0].sections[1].bars == 10);
+
+    int composed = 0;
+    for (unsigned long seed = 1; seed <= CUSTOM_SEEDS; seed++) {
+        ComposeOutcome outcome;
+        PieceResult ran;
+        PiecePlan *plan = compose_custom(form, seed, &outcome, &ran);
+        if (ran == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            size_t count = 0;
+            NodeId root = plan_root(plan);
+            for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+                NodeId child = plan_node_child_at(plan, root, i);
+                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                    sections[count++] = child;
+                }
+            }
+            assert(count == 2 && outcome.section_count == 2);
+            for (size_t i = 0; i < 2; i++) {
+                const PlanConstraint *construction = plan_node_find_constraint(plan, sections[i], PLAN_CONSTRAINT_CONSTRUCTION);
+                assert(construction && construction->params.construction.reason == PLAN_CONSTRUCTION_GIVEN);
+                assert(section_written(plan, sections[i]) && outcome.sections[i].construction_text[0] != '\0');
+            }
+            composed++;
+        } else {
+            printf("  seed %lu: %s at %s\n", seed, piece_result_name(ran), compose_stage_name(outcome.stuck_stage));
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    form_spec_destroy(form);
+    if (composed != UNEVEN_COMPOSED) {
+        fprintf(stderr, "uneven-form: %d of %d seeds compose, %d expected\n", composed, CUSTOM_SEEDS, UNEVEN_COMPOSED);
+        return 1;
+    }
+    printf("uneven-form: %d of %d seeds compose, each section with its construction\n", composed, CUSTOM_SEEDS);
     return 0;
 }
 
@@ -800,6 +862,120 @@ static void test_pedal(void) {
     free(with);
     free(antecedent);
     free(consequent);
+}
+
+/* ------------------------------------------------------------- a section's construction */
+
+/* The text of one size of `bars` bars with one theme section A of `bars` bars and the given `construction` member text
+   (with its leading comma, or ""). */
+static void construction_document(char *out, size_t cap, size_t bars, const char *role, const char *construction) {
+    char sizes[2048];
+    snprintf(sizes, sizeof(sizes),
+             "{\"bars\": %zu, \"default\": true, \"sections\": [{\"name\": \"A\", \"letter\": \"A\", \"role\": \"%s\", "
+             "\"bars\": %zu, \"beginning\": \"presentation\", \"ending\": \"continuation\", "
+             "\"cadence\": \"perfect-authentic\"%s}]}",
+             bars, role, bars, construction);
+    document(out, cap, "", sizes);
+}
+
+#define SIX_BAR_SENTENCE                                                                                                   \
+    ", \"construction\": {\"ideas\": {\"basic idea\": 2, \"repetition\": 1, \"fragment 1\": 1, \"fragment 2\": 1, "         \
+    "\"cadential\": 1}}"
+
+/* The section member construction (R-468): "auto" or the bars of each idea, 3 to 16 bars, and a return keeping its source's. */
+static void test_construction(void) {
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+
+    /* The object: read as the Composer's construction, reason given. */
+    construction_document(text, sizeof(text), 6, "theme", SIX_BAR_SENTENCE);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    const FormSectionSpec *section = &form->sizes[0].sections[0];
+    assert(section->has_construction && !section->construction_auto && section->bars == 6 &&
+           section->construction.reason == PLAN_CONSTRUCTION_GIVEN && section->construction.extension_count == 0 &&
+           section->construction.idea_bars[GROW_IDEA_BASIC] == 2 && section->construction.idea_bars[GROW_IDEA_REPETITION] == 1 &&
+           section->construction.idea_bars[GROW_IDEA_CADENTIAL] == 1 && section->construction.idea_bars[GROW_IDEA_CONTRASTING] == 0);
+    form_spec_destroy(form);
+
+    /* With an extension: its bars count toward the section's (an evaded cadence of 0 bars is the last idea's own). */
+    construction_document(text, sizeof(text), 7, "theme",
+                          ", \"construction\": {\"ideas\": {\"basic idea\": 2, \"repetition\": 1, \"fragment 1\": 1, "
+                          "\"fragment 2\": 1, \"cadential\": 1}, \"extensions\": [{\"kind\": \"repeat\", \"idea\": \"fragment 2\", "
+                          "\"bars\": 1, \"varied\": true}]}");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    section = &form->sizes[0].sections[0];
+    assert(section->construction.extension_count == 1 && section->construction.extensions[0].kind == PLAN_EXTENSION_REPEAT &&
+           section->construction.extensions[0].idea == GROW_IDEA_FRAGMENT_2 && section->construction.extensions[0].bars == 1 &&
+           section->construction.extensions[0].varied);
+    form_spec_destroy(form);
+
+    /* "auto": chosen when the form is built, so there is nothing to add up. */
+    construction_document(text, sizeof(text), 9, "theme", ", \"construction\": \"auto\"");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    section = &form->sizes[0].sections[0];
+    assert(section->has_construction && section->construction_auto && section->bars == 9);
+    form_spec_destroy(form);
+
+    /* 4 and 8 bars need none; no other length of a theme-like section does without. */
+    construction_document(text, sizeof(text), 4, "theme", "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && !form->sizes[0].sections[0].has_construction);
+    form_spec_destroy(form);
+    construction_document(text, sizeof(text), 6, "theme", "");
+    refused(text, "/sizes/0/sections/0/bars");
+    construction_document(text, sizeof(text), 12, "theme", "");
+    refused(text, "/sizes/0/sections/0/bars");
+
+    /* A construction is 3 to 16 bars, of a theme-like section of whole bars. */
+    construction_document(text, sizeof(text), 2, "theme", ", \"construction\": \"auto\"");
+    refused(text, "/sizes/0/sections/0/bars");
+    construction_document(text, sizeof(text), 17, "theme", ", \"construction\": \"auto\"");
+    refused(text, "/sizes/0/sections/0/bars");
+    construction_document(text, sizeof(text), 9, "body", ", \"construction\": \"auto\"");
+    refused(text, "/sizes/0/sections/0/construction");
+
+    /* What is wrong in the member, at its own path. */
+    construction_document(text, sizeof(text), 6, "theme", ", \"construction\": \"chosen\"");
+    refused(text, "/sizes/0/sections/0/construction");
+    construction_document(text, sizeof(text), 6, "theme", ", \"construction\": 6");
+    refused(text, "/sizes/0/sections/0/construction");
+    construction_document(text, sizeof(text), 6, "theme", ", \"construction\": {}");
+    refused(text, "/sizes/0/sections/0/construction/ideas");
+    construction_document(text, sizeof(text), 6, "theme", ", \"construction\": {\"ideas\": {\"basic idea\": 6}, \"bars\": 6}");
+    refused(text, "/sizes/0/sections/0/construction/bars");
+    construction_document(text, sizeof(text), 6, "theme", ", \"construction\": {\"ideas\": {\"theme\": 6}}");
+    refused(text, "/sizes/0/sections/0/construction/ideas/theme");
+    construction_document(text, sizeof(text), 6, "theme", ", \"construction\": {\"ideas\": {\"basic idea\": 2.5}}");
+    refused(text, "/sizes/0/sections/0/construction/ideas/basic idea");
+    construction_document(text, sizeof(text), 6, "theme", ", \"construction\": {\"ideas\": {\"basic idea\": 2, \"repetition\": 2}}");
+    refused(text, "/sizes/0/sections/0/construction");
+    construction_document(text, sizeof(text), 7, "theme",
+                          ", \"construction\": {\"ideas\": {\"basic idea\": 7}, \"extensions\": [{\"kind\": \"slide\"}]}");
+    refused(text, "/sizes/0/sections/0/construction/extensions/0/kind");
+    construction_document(text, sizeof(text), 7, "theme",
+                          ", \"construction\": {\"ideas\": {\"basic idea\": 7}, \"extensions\": [{\"kind\": \"repeat\"}]}");
+    refused(text, "/sizes/0/sections/0/construction/extensions/0/idea");
+    construction_document(text, sizeof(text), 7, "theme",
+                          ", \"construction\": {\"ideas\": {\"basic idea\": 7}, \"extensions\": [{\"kind\": \"evaded\", \"bars\": 5}]}");
+    refused(text, "/sizes/0/sections/0/construction/extensions/0/bars");
+
+    /* A return copies its source, so it keeps the source's construction: the same, or none on both. */
+    char sizes[3072];
+    const char *first = "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 9, \"beginning\": \"presentation\", "
+                        "\"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"construction\": \"auto\"}";
+    const char *same = "{\"name\": \"A'\", \"letter\": \"A'\", \"role\": \"return\", \"bars\": 9, \"beginning\": \"presentation\", "
+                       "\"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"returns\": \"A\", \"construction\": \"auto\"}";
+    const char *none = "{\"name\": \"A'\", \"letter\": \"A'\", \"role\": \"return\", \"bars\": 8, \"beginning\": \"presentation\", "
+                       "\"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"returns\": \"A\"}";
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 18, \"default\": true, \"sections\": [%s, %s]}", first, same);
+    document(text, sizeof(text), "", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].construction_auto);
+    form_spec_destroy(form);
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 17, \"default\": true, \"sections\": [%s, %s]}", first, none);
+    document(text, sizeof(text), "", sizes);
+    refused(text, "/sizes/0/sections/1/construction");
+    FormSpecResult result = form_spec_parse(text, &form, &error);
+    assert(result == FORM_SPEC_ERR_INVALID && strcmp(error.message, "a return keeps the construction of A") == 0);
 }
 
 /* ------------------------------------------------------------- a form with a dominant pedal */
@@ -903,6 +1079,7 @@ int main(int argc, char **argv) {
     test_default_cadences();
     test_sizes();
     test_pedal();
+    test_construction();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }

@@ -108,6 +108,9 @@ typedef struct {
     MotiveRelationStep motive;             /* how its motive is made from m0 (open parameters are drawn) */
     unsigned layers;                       /* the LAYERS mask (PlanLayers) in a layered form; 0 for none */
     int pedal;                             /* the degree its presentation sits over in the bass: 0 none, 5 dominant (R-446) */
+    bool has_construction;                 /* the section is a theme of `bars` bars of any length, 3 to 16, with a construction (R-468) */
+    bool construction_auto;                /* the construction is chosen at build from the bars and the motive (R-469); else `construction` */
+    PlanConstruction construction;         /* the bars of each idea and the extensions, reason GIVEN; read when has_construction and not auto */
 } FormSectionSpec;
 
 /* One size of a form. */

@@ -548,11 +548,12 @@ static bool choose_cadential_ending(PlanConstruction *construction, size_t b, lo
 
 bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
                               CadenceType cadence, PlanConstruction *out) {
-    if (!motive || !meter || !pairing || !out) {
+    if (!meter || !pairing || !out) {
         return false;
     }
     memset(out, 0, sizeof(*out));
-    size_t motif_bars = grow_motive_layout_bars(motive, grow_bar_length(meter));
+    /* No motive is a motive still to be invented: one bar. */
+    size_t motif_bars = motive ? grow_motive_layout_bars(motive, grow_bar_length(meter)) : 1;
     if ((bars == 4 || bars == 8) && motif_bars <= 2) {
         return false;
     }

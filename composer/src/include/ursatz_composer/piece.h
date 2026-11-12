@@ -49,7 +49,7 @@ bool piece_part_from_name(const char *name, PiecePart *out);
 
 /*
  * What fills a section (R-170): nothing of its own (empty, made from the piece's basic motive), a motive (a theme
- * section at 4 or 8 bars, else a free phrase), a composed theme's realized lanes (Given), or a progression.
+ * section at 4 or 8 bars or with a construction, else a free phrase), a composed theme's realized lanes (Given), or a progression.
  */
 typedef enum { PIECE_FILL_EMPTY, PIECE_FILL_MOTIF, PIECE_FILL_THEME, PIECE_FILL_PROGRESSION } PieceFillKind;
 
@@ -77,6 +77,9 @@ typedef struct {
     bool has_into;               /* motif: a theme section's archetype */
     PlanArchetype into;          /* sentence by default; PLAN_ARCHETYPE_HYBRID reads `hybrid` */
     PlanThemePairing hybrid;
+    bool has_construction;       /* motif: a theme of the section's whole bars, 3 to 16, with a construction (R-468); no pickup */
+    bool construction_auto;      /* the construction is chosen from the bars and the motive (R-469); else `construction` */
+    PlanConstruction construction; /* reason GIVEN; read when has_construction and not construction_auto */
     const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B6) */
     size_t pool_count;
     const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */

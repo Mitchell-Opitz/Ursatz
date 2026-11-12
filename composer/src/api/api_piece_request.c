@@ -166,6 +166,23 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
             snprintf(path, sizeof path, "%s/hybrid", base);
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': \"hybrid\" applies only to \"into\": \"hybrid\"", id);
         }
+        /* A construction makes the section a theme of its whole bars, 3 to 16 (R-468): "auto", or the bars of the ideas. */
+        const cJSON *construction = cJSON_GetObjectItemCaseSensitive(fill, "construction");
+        if (construction && !cJSON_IsNull(construction)) {
+            snprintf(path, sizeof path, "%s/construction", base);
+            if (cJSON_IsString(construction) && construction->valuestring && strcmp(construction->valuestring, "auto") == 0) {
+                section->construction_auto = true;
+            } else if (cJSON_IsObject(construction)) {
+                ComposerStatus read = api_grow_read_construction_object(construction, path, &section->construction, error);
+                if (read != COMPOSER_OK) {
+                    return read;
+                }
+            } else {
+                return api_fail(error, COMPOSER_ERR_REQUEST, path,
+                                "section '%s': \"construction\" must be \"auto\" or {\"ideas\": {...}, \"extensions\": [...]}", id);
+            }
+            section->has_construction = true;
+        }
     } else if (section->fill == PIECE_FILL_THEME) {
         /* The caller reads the plan file; the request carries the plan. */
         const char *label = NULL;
@@ -275,7 +292,17 @@ static ComposerStatus read_section(PieceSpec *request, size_t index, const cJSON
         section->has_cadence = true;
     }
     snprintf(path, sizeof path, "%s/fill", base);
-    return read_fill(request, index, cJSON_GetObjectItemCaseSensitive(item, "fill"), path, error);
+    ComposerStatus filled = read_fill(request, index, cJSON_GetObjectItemCaseSensitive(item, "fill"), path, error);
+    if (filled == COMPOSER_OK && section->has_construction) {
+        size_t per_bar = (size_t)meter->beats_per_bar;
+        if (section->pickup.num != 0 || per_bar == 0 || section->beats % per_bar != 0 || section->beats / per_bar < 3 ||
+            section->beats / per_bar > 16) {
+            snprintf(path, sizeof path, "%s/fill/construction", base);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path,
+                            "section '%s': a construction needs a theme of 3 to 16 whole bars and no pickup", id);
+        }
+    }
+    return filled;
 }
 
 /* The brief: key, mode, meter, the style and its weight, the tempo, the accompaniment or voicing. */

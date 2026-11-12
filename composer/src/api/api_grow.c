@@ -118,9 +118,9 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
 
 static const char *const EXTENSION_KINDS[] = {"repeat", "stretch", "addition", "evaded"};
 
-static ComposerStatus read_extension(const cJSON *item, size_t index, PlanExtension *out, ComposerError *error) {
-    char path[96];
-    snprintf(path, sizeof path, "/construction/extensions/%zu", index);
+static ComposerStatus read_extension(const cJSON *item, const char *base, size_t index, PlanExtension *out, ComposerError *error) {
+    char path[192];
+    snprintf(path, sizeof path, "%s/extensions/%zu", base, index);
     if (!cJSON_IsObject(item)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "each extension must be {\"kind\", \"idea\", \"bars\", \"varied\"}");
     }
@@ -138,7 +138,7 @@ static ComposerStatus read_extension(const cJSON *item, size_t index, PlanExtens
             kind_at = k;
         }
     }
-    char member[128];
+    char member[224];
     if (kind_at < 0) {
         snprintf(member, sizeof member, "%s/kind", path);
         return api_fail(error, COMPOSER_ERR_REQUEST, member, "kind must be repeat, stretch, addition or evaded, not '%s'", kind);
@@ -167,27 +167,20 @@ static ComposerStatus read_extension(const cJSON *item, size_t index, PlanExtens
     return COMPOSER_OK;
 }
 
-ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, ComposerError *error) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, "construction");
-    out->has_construction = false;
-    if (!item || cJSON_IsNull(item)) {
-        return COMPOSER_OK;
-    }
-    if (!cJSON_IsObject(item)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/construction",
-                        "\"construction\" must be null or {\"ideas\": {...}, \"extensions\": [...]}");
-    }
-    PlanConstruction *construction = &out->construction;
+ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, PlanConstruction *construction,
+                                                 ComposerError *error) {
+    char ideas_path[192];
+    snprintf(ideas_path, sizeof ideas_path, "%s/ideas", base);
     memset(construction, 0, sizeof(*construction));
     construction->reason = PLAN_CONSTRUCTION_GIVEN;
     const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(item, "ideas");
     if (!cJSON_IsObject(ideas)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/construction/ideas",
+        return api_fail(error, COMPOSER_ERR_REQUEST, ideas_path,
                         "\"ideas\" must be an object of idea names and bars, for example {\"basic idea\": 2}");
     }
     for (const cJSON *member = ideas->child; member; member = member->next) {
-        char path[128];
-        snprintf(path, sizeof path, "/construction/ideas/%.80s", member->string);
+        char path[320];
+        snprintf(path, sizeof path, "%s/%.80s", ideas_path, member->string);
         const ThemeShapeIdea *row = theme_shape_idea_find(member->string);
         if (!row) {
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "unknown idea '%.60s'", member->string);
@@ -200,21 +193,42 @@ ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, 
     }
     const cJSON *extensions = cJSON_GetObjectItemCaseSensitive(item, "extensions");
     if (extensions && !cJSON_IsNull(extensions)) {
+        char extensions_path[192];
+        snprintf(extensions_path, sizeof extensions_path, "%s/extensions", base);
         if (!cJSON_IsArray(extensions)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/construction/extensions", "\"extensions\" must be a list");
+            return api_fail(error, COMPOSER_ERR_REQUEST, extensions_path, "\"extensions\" must be a list");
         }
         if ((size_t)cJSON_GetArraySize(extensions) > PLAN_CONSTRUCTION_EXTENSIONS) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/construction/extensions", "a construction has at most %d extensions",
+            return api_fail(error, COMPOSER_ERR_REQUEST, extensions_path, "a construction has at most %d extensions",
                             PLAN_CONSTRUCTION_EXTENSIONS);
         }
         const cJSON *extension = NULL;
         cJSON_ArrayForEach(extension, extensions) {
-            ComposerStatus read = read_extension(extension, construction->extension_count, &construction->extensions[construction->extension_count], error);
+            ComposerStatus read = read_extension(extension, base, construction->extension_count,
+                                                 &construction->extensions[construction->extension_count], error);
             if (read != COMPOSER_OK) {
                 return read;
             }
             construction->extension_count++;
         }
+    }
+    return COMPOSER_OK;
+}
+
+ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, ComposerError *error) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, "construction");
+    out->has_construction = false;
+    if (!item || cJSON_IsNull(item)) {
+        return COMPOSER_OK;
+    }
+    if (!cJSON_IsObject(item)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/construction",
+                        "\"construction\" must be null or {\"ideas\": {...}, \"extensions\": [...]}");
+    }
+    PlanConstruction *construction = &out->construction;
+    ComposerStatus read = api_grow_read_construction_object(item, "/construction", construction, error);
+    if (read != COMPOSER_OK) {
+        return read;
     }
     out->has_construction = true;
     /* Without bars the theme is as long as its construction. */
@@ -1493,19 +1507,10 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     out->development = setup->material ? api_development_name(setup->development) : NULL; /* a theme's, not a grow's */
 }
 
-/* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
-static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
+cJSON *api_grow_construction_json(const PlanConstruction *given, const PlanThemePairing *pairing, const char *text) {
     static const char *const REASONS[] = {"given", "motive", "length"};
-    const PlanConstraint *construction = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_CONSTRUCTION);
-    const PlanConstraint *pairing = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_THEME_PAIRING);
-    if (!construction || !pairing) {
-        return cJSON_CreateNull();
-    }
-    const PlanConstruction *given = &construction->params.construction;
     GrowConstructionSpans spans;
-    grow_construction_spans(&pairing->params.theme_pairing, given, &spans);
-    char text[192];
-    grow_section_describe(plan, node, text, sizeof text);
+    grow_construction_spans(pairing, given, &spans);
     cJSON *object = cJSON_CreateObject();
     cJSON *halves = object ? cJSON_AddArrayToObject(object, "halves") : NULL;
     cJSON *ideas = object ? cJSON_AddArrayToObject(object, "ideas") : NULL;
@@ -1542,13 +1547,24 @@ static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
              cJSON_AddNumberToObject(item, "first_bar", (double)spans.extension_first[k] + 1) &&
              cJSON_AddBoolToObject(item, "varied", extension->varied);
     }
-    ok = ok && cJSON_AddStringToObject(object, "reason", REASONS[construction->params.construction.reason]) &&
-         cJSON_AddStringToObject(object, "text", text);
+    ok = ok && cJSON_AddStringToObject(object, "reason", REASONS[given->reason]) && cJSON_AddStringToObject(object, "text", text);
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
     }
     return object;
+}
+
+/* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
+static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
+    const PlanConstraint *construction = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_CONSTRUCTION);
+    const PlanConstraint *pairing = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_THEME_PAIRING);
+    if (!construction || !pairing) {
+        return cJSON_CreateNull();
+    }
+    char text[192];
+    grow_section_describe(plan, node, text, sizeof text);
+    return api_grow_construction_json(&construction->params.construction, &pairing->params.theme_pairing, text);
 }
 
 static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const GrowThemeInfo *info, Rational bar) {

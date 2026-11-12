@@ -6,6 +6,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/theme_shape.h>
 
+#include "api_grow.h"
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_vocabulary.h"
@@ -112,6 +113,22 @@ static bool add_keys(cJSON *section, const FormSpec *form, const FormSectionSpec
     return api_add(section, "keys", keys);
 }
 
+/*
+ * The construction of a section that has one (R-468), served as a theme's response gives it (api_grow_construction_json),
+ * or "auto" when the Composer chooses it with the piece's motive. A section without one has no member.
+ */
+static bool add_construction(cJSON *section, const FormSectionSpec *spec) {
+    if (!spec->has_construction) {
+        return true;
+    }
+    if (spec->construction_auto) {
+        return cJSON_AddStringToObject(section, "construction", "auto") != NULL;
+    }
+    char text[192];
+    grow_construction_describe(&spec->construction, &spec->pairing, text, sizeof text);
+    return api_add(section, "construction", api_grow_construction_json(&spec->construction, &spec->pairing, text));
+}
+
 static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *size, const FormSectionSpec *spec) {
     cJSON *section = cJSON_CreateObject();
     if (!section || !cJSON_AddItemToArray(list, section)) {
@@ -141,7 +158,8 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            add_keys(section, form, spec) && add_string_or_null(section, "motive", has_motive ? motive : NULL) &&
            add_string_or_null(section, "returns", returns ? size->sections[spec->returns].name : NULL) &&
            add_string_or_null(section, "variation", returns ? plan_return_variation_name(spec->variation) : NULL) &&
-           add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing);
+           add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
+           add_construction(section, spec);
 }
 
 static bool add_sizes(cJSON *form_json, const FormSpec *form) {
