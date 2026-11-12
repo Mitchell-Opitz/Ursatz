@@ -17,8 +17,7 @@ if (grow_build_plan(&request, &plan) == GROW_OK && grow_run(plan, &config, &outc
 ```
 
 `grow_run` is a [compose run](piece.md) over the plan's one theme section: the stages, seeds, retries and records below are
-the compose run's, and `GrowOutcome` is filled from its `ComposeOutcome`. The stage seeds are unchanged (seed + 0 to
-seed + 5; the compose run's invention stage takes seed + 6), so a grown theme is the same as before.
+the compose run's, and `GrowOutcome` is filled from its `ComposeOutcome`. The stage seeds are unchanged, so a grown theme is the same as before.
 
 ## The request
 
@@ -50,7 +49,8 @@ consequent's contrasting idea), `continuation` (fragment 1 and 2) and `cadential
 `s1` (contrasting), `s2` (continuation) or `s3` (cadential), a Given melody span, after `m0`; the material is as many bars
 longer as the motive has bars. The first idea of the slot is the motive itself (exact, or a saved form of it, see below); the later ideas of the slot
 (the consequent's contrasting idea, fragment 2, cadential 2) are made from it as the basic motive's are, and the remoteness of
-their forms is measured from it. The basic idea's ideas are unchanged.
+their forms is measured from it. The basic idea's ideas are unchanged. A contrasting motive drawn by the composer is the node
+`new material` ([grow-contrast.md](grow-contrast.md)).
 
 `GROW_ERR_BAD_REQUEST` for a slot motive that is not a full motive of two notes or more in the theme's key and meter, that is
 longer than the first idea of its slot (two bars of eight for the contrasting idea and the cadential idea, one for fragment 1; a
@@ -66,7 +66,7 @@ A theme's shape is one table (R-416, `src/grow/theme_shape.c`, `theme_shape.h`).
 `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,
 `cadential 2`); `grow_idea_in_pairing` says whether a pairing has one (R-206). `GrowRequest.idea_motives` gives a single idea a
 motive of its own, in place of its slot's for that idea. It is added to the material as the node `i<k>` (k the `GrowIdea`
-value), a Given melody span after the slot motives (the material is as many bars longer as the motive has bars), and the idea's melody asks for it
+value), a Given melody span after the slot motives, and the idea's melody asks for it
 directly, as an exact restatement: the motives stage makes no motive for that idea. The other ideas of the slot are made as
 before, and the same `Motive` may back several nodes. Melody-fill places an exact restatement of a motive of its own as that
 motive, not as a copy of the idea before it. `GROW_ERR_BAD_REQUEST` for an idea the pairing does not have, an entry for the

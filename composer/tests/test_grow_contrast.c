@@ -16,9 +16,10 @@
 #endif
 
 /*
- * The contrast distance of a theme (B1 of L4, R-475, R-476): s77 (C major) and u51 (C minor), two bars of 4/4 each, in an
+ * The contrast distance and new material of a theme (B1 and B2 of L4, R-475 to R-477): s77 (C major) and u51 (C minor), two bars of 4/4 each, in an
  * 8-bar period (antecedent and consequent, a PAC after a half cadence) and an 8-bar sentence. A distant contrast is drawn
- * through GrowContext.contrast and read in the plan: the node `distant for m<k>` and the melody of the idea it makes.
+ * through GrowContext.contrast and read in the plan: the node `distant for m<k>` and the melody of the idea it makes; new
+ * material is the node `new material`, the period's contrasting slot motive.
  */
 
 #define SEEDS 8
@@ -105,10 +106,11 @@ static char *plan_text(const PiecePlan *plan) {
     return text;
 }
 
-/* No distance setting changes nothing: {1, 0} and {0, 0} with new material off are the plan of a zero context. */
+/* No distance setting changes nothing: {1, 0} and {0, 0} with new material off (0 given explicitly) are the plan of a zero
+   context, and have no new material. */
 static void test_defaults_change_nothing(void) {
-    GrowContrast similar = {{1, 0}, 0};
-    GrowContrast zero = {{0, 0}, 0};
+    GrowContrast similar = {.distance = {1, 0}, .new_material = 0};
+    GrowContrast zero = {.distance = {0, 0}, .new_material = 0};
     for (size_t f = 0; f < 2; f++) {
         for (int period = 0; period < 2; period++) {
             for (unsigned long seed = 1; seed <= seeds(); seed++) {
@@ -121,6 +123,7 @@ static void test_defaults_change_nothing(void) {
                     char *b = plan_text(with_similar);
                     char *c = plan_text(with_zero);
                     assert(strcmp(a, b) == 0 && strcmp(a, c) == 0);
+                    assert(find_node(with_zero, "new material") == PLAN_NODE_NONE);
                     free(a);
                     free(b);
                     free(c);
@@ -238,10 +241,9 @@ static void test_distant_changes_rhythm(void) {
     }
 }
 
-/* Distance {1, 1} and {0, 1} compose on both motifs, in both pairings, from every start seed. */
-static void test_distant_composes(void) {
-    static const GrowContrast SETTINGS[2] = {{{1, 1}, 0}, {{0, 1}, 0}};
-    for (size_t s = 0; s < 2; s++) {
+/* Each setting composes on both motifs, in both pairings, from every start seed: through the API, a whole run. */
+static void composes_under(const GrowContrast *settings, size_t count) {
+    for (size_t s = 0; s < count; s++) {
         for (size_t f = 0; f < 2; f++) {
             for (int period = 0; period < 2; period++) {
                 unsigned composed = 0;
@@ -267,19 +269,106 @@ static void test_distant_composes(void) {
                     setup.suggest = 1;
                     setup.seed = seed;
                     setup.tempo_from = "none";
-                    setup.contrast = &SETTINGS[s];
+                    setup.contrast = &settings[s];
                     GrowRun run;
                     ComposerError error;
                     memset(&error, 0, sizeof(error));
                     composed += api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1 ? 1 : 0;
                     api_grow_run_destroy(&run);
                 }
-                printf("distance {%u, %u} %s %s: %u of %d composed\n", SETTINGS[s].distance[0], SETTINGS[s].distance[1],
-                       FIXTURES[f].name, period ? "period" : "sentence", composed, (unsigned)start_seeds());
+                printf("distance {%u, %u} new material %u, %s %s: %u of %d composed\n", settings[s].distance[0],
+                       settings[s].distance[1], settings[s].new_material, FIXTURES[f].name,
+                       period ? "period" : "sentence", composed, (unsigned)start_seeds());
                 assert(composed == start_seeds());
             }
         }
     }
+}
+
+/* Distance {1, 1} and {0, 1} compose on both motifs, in both pairings, from every start seed. */
+static void test_distant_composes(void) {
+    static const GrowContrast SETTINGS[2] = {{{1, 1}, 0}, {{0, 1}, 0}};
+    composes_under(SETTINGS, 2);
+}
+
+/* The motive node an idea's melody span asks for, or PLAN_NODE_NONE. */
+static NodeId melody_motive(const PiecePlan *plan, const char *idea_name) {
+    NodeId idea = find_node(plan, idea_name);
+    LaneSpanId spans[16];
+    size_t count = idea == PLAN_NODE_NONE ? 0 : plan_node_lane_spans(plan, idea, spans, 16);
+    for (size_t s = 0; s < count && s < 16; s++) {
+        for (size_t c = 0; plan_lane_span_lane(plan, spans[s]) == PLAN_LANE_MELODY &&
+                           c < plan_lane_span_constraint_count(plan, spans[s]);
+             c++) {
+            const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, spans[s], c);
+            if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
+                return constraint->params.motive.motive;
+            }
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* The motive node the node `from` is made from (its motive_ref), or PLAN_NODE_NONE. */
+static NodeId made_from(const PiecePlan *plan, NodeId from) {
+    for (size_t c = 0; from != PLAN_NODE_NONE && c < plan_node_constraint_count(plan, from); c++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, from, c);
+        if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
+            return constraint->params.motive.motive;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* New material for the contrasting slot (R-477): a period's contrasting idea is the node `new material` as it is, its
+   rhythm unlike the basic idea's, and the consequent's contrasting idea is made from it; a sentence has no such slot. */
+static void test_new_material_recorded(void) {
+    GrowContrast fresh = {{0, 0}, 1};
+    for (size_t f = 0; f < 2; f++) {
+        size_t composed = 0;
+        size_t made = 0;
+        size_t asked = 0;
+        size_t consequent = 0;
+        size_t unlike = 0;
+        size_t sentence_made = 0;
+        for (unsigned long seed = 1; seed <= seeds(); seed++) {
+            PiecePlan *plan = grow_with(&FIXTURES[f].motive, seed, true, &fresh);
+            if (plan) {
+                composed++;
+                NodeId node = find_node(plan, "new material");
+                if (node != PLAN_NODE_NONE) {
+                    made++;
+                    NodeId first = melody_motive(plan, "contrasting idea");
+                    asked += first == node || made_from(plan, first) == node ? 1 : 0;
+                    NodeId from = melody_motive(plan, "consequent contrasting idea");
+                    consequent += from == node || made_from(plan, from) == node ? 1 : 0;
+                    Beat basic[64];
+                    Beat idea[64];
+                    size_t basic_count = melody_rhythm(plan, 0, 2, basic, 64);
+                    size_t idea_count = melody_rhythm(plan, 2, 4, idea, 64);
+                    unlike += same_over(basic, basic_count, idea, idea_count, 2) ? 0 : 1;
+                }
+                plan_destroy(plan);
+            }
+            plan = grow_with(&FIXTURES[f].motive, seed, false, &fresh);
+            if (plan) {
+                sentence_made += find_node(plan, "new material") != PLAN_NODE_NONE ? 1 : 0;
+                plan_destroy(plan);
+            }
+        }
+        printf("%s: new material in %zu of %zu composed periods (asked by the contrasting idea %zu, by the consequent's %zu, rhythm "
+               "unlike the basic idea's %zu); %zu sentences have it (%lu seeds)\n",
+               FIXTURES[f].name, made, composed, asked, consequent, unlike, sentence_made, seeds());
+        /* Measured: every seed composes and makes it; no sentence has it. */
+        assert(composed == seeds() && made == seeds() && asked == made && consequent == made && unlike == made &&
+               sentence_made == 0);
+    }
+}
+
+/* New material, alone and with both distances, composes on both motifs, in both pairings, from every start seed. */
+static void test_new_material_composes(void) {
+    static const GrowContrast SETTINGS[2] = {{{0, 0}, 1}, {{1, 1}, 1}};
+    composes_under(SETTINGS, 2);
 }
 
 /* A one-bar motif and a distant contrast of two bars: the derived motives and the material take the distant motive's bars. */
@@ -316,6 +405,8 @@ int main(int argc, char **argv) {
     test_defaults_change_nothing();
     test_distant_changes_rhythm();
     test_distant_composes();
+    test_new_material_recorded();
+    test_new_material_composes();
     test_one_bar_motif_composes();
     return 0;
 }

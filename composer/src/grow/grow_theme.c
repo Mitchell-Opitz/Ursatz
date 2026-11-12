@@ -439,6 +439,9 @@ NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
         return build->request->idea_node[idea];
     }
     GrowSlot slot = grow_idea_slot(&build->spec->pairing, idea, NULL);
+    if (slot == GROW_SLOT_CONTRASTING && build->spec->has_new_material) {
+        return build->new_node;
+    }
     return slot != GROW_SLOT_BASIC && build->spec->has_slot_source[slot] ? build->request->slot_node[slot]
                                                                          : build->source;
 }
@@ -567,13 +570,18 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
     return true;
 }
 
-GrowContrastDistance grow_draw_distance(const GrowThemeRequest *request, FillRng *rng) {
-    unsigned similar = request->contrast.distance[GROW_CONTRAST_SIMILAR];
-    unsigned distant = request->contrast.distance[GROW_CONTRAST_DISTANT];
-    if (distant == 0) {
-        return GROW_CONTRAST_SIMILAR;
+GrowContrastKind grow_draw_contrast_kind(const GrowThemeRequest *request, FillRng *rng, bool new_allowed) {
+    uint64_t similar = request->contrast.distance[GROW_CONTRAST_SIMILAR];
+    uint64_t distant = request->contrast.distance[GROW_CONTRAST_DISTANT];
+    uint64_t fresh = new_allowed ? request->contrast.new_material : 0;
+    if (distant == 0 && fresh == 0) {
+        return GROW_CONTRAST_KIND_SIMILAR;
     }
-    return fill_rng_below(rng, (uint64_t)similar + distant) < similar ? GROW_CONTRAST_SIMILAR : GROW_CONTRAST_DISTANT;
+    /* Both distance weights 0 with new material to draw: the contrast is new or, when it cannot be made, similar. */
+    uint64_t total = similar + distant + fresh;
+    uint64_t pick = fill_rng_below(rng, total);
+    return pick < similar ? GROW_CONTRAST_KIND_SIMILAR
+                          : (pick < similar + distant ? GROW_CONTRAST_KIND_DISTANT : GROW_CONTRAST_KIND_NEW);
 }
 
 /* The most rhythms a distant contrast tries. */
@@ -610,13 +618,10 @@ static int scale_step(int pitch, int direction, int tonic_pc, bool minor) {
     return next;
 }
 
-bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
-                       const Motive *source, const MotiveRelationStep *step, int want_pc) {
-    Motive developed;
-    if (motive_develop(source, step, &developed) != MOTIVE_DEV_OK || developed.note_count < 2) {
-        return false;
-    }
-    Rational room = spec->layout.length[place];
+/* One draw of the motif generator for the idea at `place`: a motive of the key and the meter, one bar when the idea has
+   the room for one only, else two, from the request's motif settings or the defaults. False when it makes none. */
+static bool draw_motif(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec, GrowPlace place,
+                       Motive *out) {
     Rational two_bars = grow_scaled(request->bar, 2);
     MotiveRandomPreferences preferences;
     if (request->motif) {
@@ -624,29 +629,61 @@ bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeS
     } else {
         motive_random_preferences_default(&preferences);
     }
-    bool two = rational_cmp(room, two_bars) >= 0;
+    bool two = rational_cmp(spec->layout.length[place], two_bars) >= 0;
     preferences.bars[0] = two ? 0 : 1;
     preferences.bars[1] = two ? 1 : 0;
     preferences.pickup_one_in = 0;
     preferences.plan_count = 0;
+    MotiveRandomOptions options;
+    memset(&options, 0, sizeof(options));
+    options.mode = request->key.mode;
+    options.meter = request->meter;
+    options.has_key = true;
+    options.key = request->key;
+    options.form = MOTIVE_SKETCH_FORM_FULL;
+    options.count = 1;
+    options.seed = (unsigned long)fill_rng_below(rng, 1u << 31);
+    options.preferences = &preferences;
+    size_t made = 0;
+    return motive_random(&options, out, &made) == MOTIVE_RANDOM_OK && made >= 1 && out->note_count >= 2 &&
+           rational_cmp(out->length, spec->layout.length[place]) <= 0;
+}
+
+/* Whole octaves into the contrast's range, the nearest shift first; false when no shift fits or a note is out of the
+   key's scale (a motive in a key). */
+static bool move_into_contrast_range(Motive *motive, bool in_scale) {
+    static const int SHIFTS[] = {0, 12, -12, 24, -24, 36, -36};
+    int low = 127;
+    int high = 0;
+    for (size_t j = 0; j < motive->note_count; j++) {
+        int pitch = motive_pitch(motive, j);
+        motive->notes[j].pitch = pitch;
+        low = pitch < low ? pitch : low;
+        high = pitch > high ? pitch : high;
+    }
+    for (size_t s = 0; s < sizeof(SHIFTS) / sizeof(SHIFTS[0]); s++) {
+        if (low + SHIFTS[s] >= CONTRAST_LOW && high + SHIFTS[s] <= CONTRAST_HIGH) {
+            for (size_t j = 0; j < motive->note_count; j++) {
+                motive->notes[j].pitch += SHIFTS[s];
+            }
+            return grow_motive_in_range(motive, CONTRAST_LOW, CONTRAST_HIGH, in_scale);
+        }
+    }
+    return false;
+}
+
+bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
+                       const Motive *source, const MotiveRelationStep *step, int want_pc) {
+    Motive developed;
+    if (motive_develop(source, step, &developed) != MOTIVE_DEV_OK || developed.note_count < 2) {
+        return false;
+    }
     bool in_scale = grow_motive_in_range(&developed, 0, 127, true);
     Motive first;
     bool have_first = false;
     for (int draw = 0; draw < DISTANT_DRAWS; draw++) {
-        MotiveRandomOptions options;
-        memset(&options, 0, sizeof(options));
-        options.mode = request->key.mode;
-        options.meter = request->meter;
-        options.has_key = true;
-        options.key = request->key;
-        options.form = MOTIVE_SKETCH_FORM_FULL;
-        options.count = 1;
-        options.seed = (unsigned long)fill_rng_below(rng, 1u << 31);
-        options.preferences = &preferences;
         Motive rhythm;
-        size_t made = 0;
-        if (motive_random(&options, &rhythm, &made) != MOTIVE_RANDOM_OK || made < 1 || rhythm.note_count < 2 ||
-            rational_cmp(rhythm.length, room) > 0 || same_rhythm_over_common(&rhythm, source)) {
+        if (!draw_motif(request, rng, spec, place, &rhythm) || same_rhythm_over_common(&rhythm, source)) {
             continue;
         }
         /* The rhythm's notes take the developed motive's pitches, spread over its notes. */
@@ -654,8 +691,6 @@ bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeS
         size_t k = rhythm.note_count;
         size_t n = developed.note_count;
         int raw[MOTIVE_SKETCH_MAX_NOTES];
-        int low = 127;
-        int high = 0;
         for (size_t j = 0; j < k; j++) {
             size_t from = (j * (n - 1) + (k - 1) / 2) / (k - 1);
             raw[j] = motive_pitch(&developed, from);
@@ -676,8 +711,6 @@ bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeS
             result.notes[j].pitch = pitch;
             result.notes[j].onset = rhythm.notes[j].onset;
             result.notes[j].duration = rhythm.notes[j].duration;
-            low = pitch < low ? pitch : low;
-            high = pitch > high ? pitch : high;
         }
         result.note_count = k;
         result.length = rhythm.length;
@@ -688,23 +721,7 @@ bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeS
         if (grow_same_contour(source, &result)) {
             continue;
         }
-        /* Whole octaves into the contrast's range, the nearest shift first. */
-        int shift = 0;
-        bool placed = false;
-        static const int SHIFTS[] = {0, 12, -12, 24, -24, 36, -36};
-        for (size_t s = 0; s < sizeof(SHIFTS) / sizeof(SHIFTS[0]) && !placed; s++) {
-            if (low + SHIFTS[s] >= CONTRAST_LOW && high + SHIFTS[s] <= CONTRAST_HIGH) {
-                shift = SHIFTS[s];
-                placed = true;
-            }
-        }
-        if (!placed) {
-            continue;
-        }
-        for (size_t j = 0; j < k; j++) {
-            result.notes[j].pitch += shift;
-        }
-        if (!grow_motive_in_range(&result, CONTRAST_LOW, CONTRAST_HIGH, in_scale)) {
+        if (!move_into_contrast_range(&result, in_scale)) {
             continue;
         }
         if (lands_on(&result, want_pc)) {
@@ -722,6 +739,39 @@ bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeS
     }
     spec->distant[place] = first;
     spec->has_distant[place] = true;
+    return true;
+}
+
+bool grow_make_new_material(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, int want_pc) {
+    Motive first;
+    bool have_first = false;
+    for (int draw = 0; draw < DISTANT_DRAWS; draw++) {
+        Motive result;
+        if (!draw_motif(request, rng, spec, GROW_PLACE_CONTRAST, &result) || grow_same_contour(&spec->source, &result)) {
+            continue;
+        }
+        result.chord_count = 0;
+        result.feature_count = 0;
+        result.tone_override_count = 0;
+        if (!move_into_contrast_range(&result, true)) {
+            continue;
+        }
+        if (lands_on(&result, want_pc)) {
+            first = result;
+            have_first = true;
+            break;
+        }
+        if (!have_first) {
+            first = result;
+            have_first = true;
+        }
+    }
+    if (!have_first) {
+        return false;
+    }
+    spec->slot_source[GROW_SLOT_CONTRASTING] = first;
+    spec->has_slot_source[GROW_SLOT_CONTRASTING] = true;
+    spec->has_new_material = true;
     return true;
 }
 
@@ -930,6 +980,7 @@ static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, c
         made += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request->bar) : 0;
         made += spec->has_distant[k] ? grow_motive_layout_bars(&spec->distant[k], request->bar) : 0;
     }
+    made += spec->has_new_material ? grow_motive_layout_bars(&spec->slot_source[GROW_SLOT_CONTRASTING], request->bar) : 0;
     made += grow_extended_bars(spec, request->bar);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + made;
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
@@ -1793,6 +1844,11 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
         shortened_bars += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request.bar) : 0;
         shortened_bars += spec->has_distant[k] ? grow_motive_layout_bars(&spec->distant[k], request.bar) : 0;
     }
+    build.new_node = PLAN_NODE_NONE;
+    size_t new_bars = spec->has_new_material
+                          ? grow_motive_layout_bars(&spec->slot_source[GROW_SLOT_CONTRASTING], request.bar)
+                          : 0;
+    shortened_bars += new_bars;
     size_t extended_bars = grow_extended_bars(spec, request.bar);
     for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
         build.extension_node[k] = PLAN_NODE_NONE;
@@ -1839,6 +1895,17 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
                                                       PLAN_STATE_REALIZED, &build.distant_node[k], NULL)
                                    : result;
         short_at += grow_motive_layout_bars(&spec->distant[k], request.bar);
+    }
+    /* The contrasting slot's new material follows the distant contrasts, at its own bars (R-477). */
+    if (result == PLAN_OK && spec->has_new_material) {
+        Rational start;
+        result = plan_result_of_rational(
+            rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+        result = result == PLAN_OK ? motive_attach_as(plan, build.material, start,
+                                                      &spec->slot_source[GROW_SLOT_CONTRASTING], "new material",
+                                                      PLAN_STATE_REALIZED, &build.new_node, NULL)
+                                   : result;
+        short_at += new_bars;
     }
     /* The motives of the extensions follow, each at its own bars (R-468): the repeats' and the addition's. */
     for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {

@@ -1064,6 +1064,9 @@ static void source_words(const PiecePlan *plan, const PlanMotiveRef *ref, char *
     } else if (name && strncmp(name, "distant for m", 13) == 0) {
         /* A distant contrast made for the idea (R-475): its own rhythm, the contour changed. */
         snprintf(out, size, "a distant variant");
+    } else if (name && strcmp(name, "new material") == 0) {
+        /* The contrasting slot's motive made for the theme (R-477). */
+        snprintf(out, size, "new material");
     } else if (ref->steps > 0 || !name) {
         snprintf(out, size, "basic idea");
     } else if (name[0] == 's' && name[1] >= '1' && name[1] <= '3' && name[2] == '\0') {
@@ -1367,6 +1370,10 @@ static size_t collect_slot_rows(const PiecePlan *plan, const GrowOutcome *outcom
                 } else if (direct && strncmp(direct, "distant for m", 13) == 0) {
                     /* A distant contrast made for the idea (R-475). */
                     row->source = "distant";
+                    row->connection = -1;
+                } else if (node_name && strcmp(node_name, "new material") == 0) {
+                    /* The idea is the contrasting slot's new material, or is made from it (R-477). */
+                    row->source = "new";
                     row->connection = -1;
                 } else if (direct && strcmp(direct, "m0") == 0) {
                     row->source = "motive"; /* the basic idea is the basic motive */

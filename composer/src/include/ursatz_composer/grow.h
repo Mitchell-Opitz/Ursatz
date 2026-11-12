@@ -84,8 +84,10 @@ typedef enum { GROW_CONTRAST_SIMILAR, GROW_CONTRAST_DISTANT, GROW_CONTRAST_DISTA
 /*
  * How a theme's contrasting ideas contrast (R-475, R-476). distance weighs a similar contrast (today's: an inversion or
  * interval change, the motive's rhythm) against a distant one (a contour change on a rhythm drawn from the motif
- * vocabulary); all distance weights 0 read as similar 1. new_material is the weight of a contrasting idea made of new
- * material. All zero is today's draw, with no random number.
+ * vocabulary); all distance weights 0 read as similar 1. new_material weighs a contrasting idea made of new material (a
+ * second motif from the motif settings, R-477) against those two, for the first contrasting idea of a theme with a
+ * contrasting slot only; with distance weights 0 and new_material above 0 the draw is new material or, when none can be
+ * made, similar. All zero is today's draw, with no random number.
  */
 typedef struct {
     unsigned distance[GROW_CONTRAST_DISTANCE_COUNT];
