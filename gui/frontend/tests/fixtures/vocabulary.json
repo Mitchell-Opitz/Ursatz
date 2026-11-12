@@ -1670,7 +1670,14 @@
     "central_range": 1,
     "monotony": 1,
     "seam": 1
-   }
+   },
+   "closure": {
+    "final": 0,
+    "first": 0
+   },
+   "rhythm_repeat_bars": 0,
+   "leaps": 0,
+   "register": 0
   },
   "motif": {
    "bars": {
@@ -1812,7 +1819,14 @@
     "liquidate": false,
     "faster_harmony": false
    },
-   "basic_as_written": false
+   "basic_as_written": false,
+   "contrast": {
+    "distance": {
+     "similar": 1,
+     "distant": 0
+    },
+    "new_material": 0
+   }
   }
  },
  "limits": {
@@ -1855,7 +1869,8 @@
    "ratio_denominator_max": 16,
    "fidelity_denominator_max": 1000,
    "attempts_max": 256,
-   "keep_max": 16
+   "keep_max": 16,
+   "rhythm_repeat_bars_max": 16
   }
  }
 }
