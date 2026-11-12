@@ -775,3 +775,23 @@ size_t grow_construction_describe(const PlanConstruction *construction, const Pl
     put(text, size, &used, ".");
     return used;
 }
+
+size_t grow_section_describe(const PiecePlan *plan, NodeId section, char *text, size_t size) {
+    const PlanConstraint *construction = NULL;
+    const PlanConstraint *pairing = NULL;
+    if (text && size > 0) {
+        text[0] = '\0';
+    }
+    for (size_t i = 0; plan && i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION) {
+            construction = constraint;
+        } else if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
+            pairing = constraint;
+        }
+    }
+    if (!construction || !pairing) {
+        return 0;
+    }
+    return grow_construction_describe(&construction->params.construction, &pairing->params.theme_pairing, text, size);
+}

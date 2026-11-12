@@ -326,6 +326,11 @@ typedef struct {
 void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out);
 /* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
 size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+/*
+ * The sentence grow_construction_describe writes for the theme section's CONSTRUCTION and THEME_PAIRING constraints, ""
+ * (and 0) for a section without a construction.
+ */
+size_t grow_section_describe(const PiecePlan *plan, NodeId section, char *text, size_t size);
 /* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
 size_t grow_extension_material_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
 /*

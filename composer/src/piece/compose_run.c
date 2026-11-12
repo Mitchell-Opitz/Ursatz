@@ -405,6 +405,7 @@ static bool structure_score(const FillRecord *record, NodeId section, GrowScore 
 /* The part and the id a piece structure gave the section, if it did. */
 static void read_part(const PiecePlan *plan, NodeId section, ComposeHeard *out) {
     out->has_part = false;
+    grow_section_describe(plan, section, out->construction_text, sizeof(out->construction_text));
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
         if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART) {

@@ -54,9 +54,11 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     outcome->heard_result = FORM_HEAR_ERR_NOT_WRITTEN;
     outcome->heard_form = -1;
     outcome->requested_form = -1;
-    if (grow_find_theme(plan, true) == PLAN_NODE_NONE) {
+    NodeId theme = grow_find_theme(plan, true);
+    if (theme == PLAN_NODE_NONE) {
         return GROW_ERR_BAD_REQUEST;
     }
+    grow_section_describe(plan, theme, outcome->construction_text, sizeof(outcome->construction_text));
     if (job_step(config->job, "grow", 0, 1)) {
         outcome->cancelled = true;
         return GROW_ERR_STUCK;

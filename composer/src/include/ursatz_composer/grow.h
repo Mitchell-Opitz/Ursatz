@@ -328,6 +328,7 @@ typedef struct {
     int requested_ending;
     bool heard_as_requested;               /* the requested form; for a hybrid, with the requested beginning and ending */
     GrowScore score;                       /* the share of the structure's soft rules and the heard form that hold */
+    char construction_text[192];           /* why the theme is as long as it is (grow_construction_describe), "" without a construction */
     bool style_measured;                   /* with a style, after a complete run: the Analyzer's distance from it (compose.h) */
     StyleComparison style_distance;        /* owned */
     ComposeRejection *rejections;          /* owned; the runs thrown away before this one (compose.h), NULL when none */

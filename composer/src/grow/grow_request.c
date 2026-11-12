@@ -641,6 +641,21 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         return refuse(refusal, GROW_ERR_NULL, "", "no request");
     }
     *out = NULL;
+    /* A theme of any length but 4 or 8 bars with no construction given gets the one its motif or its length makes (R-469). */
+    GrowRequest chosen;
+    PlanConstruction construction;
+    if (!request->construction && request->bars != 4 && request->bars != 8) {
+        if (!grow_construction_choose(request->motive, &request->meter, request->bars, &request->pairing, request->cadence,
+                                      &construction)) {
+            int form = grow_pairing_archetype(&request->pairing);
+            return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "no construction makes a %zu-bar %s from this motif",
+                          request->bars,
+                          form == PLAN_ARCHETYPE_PERIOD ? "period" : form == PLAN_ARCHETYPE_SENTENCE ? "sentence" : "hybrid");
+        }
+        chosen = *request;
+        chosen.construction = &construction;
+        request = &chosen;
+    }
     /* An antecedent ends in a weak cadence, HC unless the request says IAC, and the theme in a stronger one. */
     bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
     CadenceType first = request->first_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? CADENCE_TYPE_HALF : request->first_cadence;
