@@ -404,6 +404,9 @@ add_test(NAME test_form_spec_custom COMMAND test_form_spec custom)
 add_test(NAME test_form_spec_meters COMMAND test_form_spec meters)
 # A form with a dominant pedal in its B composes with B's first half on the dominant (tests/fixtures/forms/pedal-form.json).
 add_test(NAME test_form_spec_pedal COMMAND test_form_spec pedal)
+# A form whose B leads into A return (held, then filled against it) composes, and the connective is written in most seeds
+# (tests/fixtures/forms/lead-form.json).
+add_test(NAME test_form_spec_leads COMMAND test_form_spec leads)
 
 add_executable(test_piece_keys test_piece_keys.c)
 target_link_libraries(test_piece_keys PRIVATE ursatz_composer)

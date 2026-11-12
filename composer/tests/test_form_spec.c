@@ -25,6 +25,11 @@
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
  *                             1 to 10 in C major 4/4, at least 9 compose, and in each the chords and the bass of B's
  *                             first half are all on the dominant
+ *   test_form_spec leads      a form whose B leads into A return (tests/fixtures/forms/lead-form.json, R-486) composes: seeds
+ *                             1 to 10 in C major and A minor 3/4, at least 9 compose in each, B ends on V or V7 and A return
+ *                             opens on the tonic, and in at least 6 the connective is written (B's downbeat note kept, four
+ *                             eighths in the scale, the last a step from A return's first note); a "sometimes" connective
+ *                             is asked for on some seeds and not others. The reader's lead-in refusals are in the fast run
  *   test_form_spec meters     a form document that lists 3/4 and a tempo (tests/fixtures/forms/meter-form.json) builds in
  *                             3/4 and is refused in 4/4 (R-487); the reader's meters and tempo refusals are in the fast run
  *   test_form_spec custom     a form added as a document alone (tests/fixtures/forms/bar-form.json) composes: seeds 1
@@ -1147,7 +1152,348 @@ static int test_pedal_form(void) {
     return 0;
 }
 
+/* ------------------------------------------------------------- a section that leads into the next (R-486) */
+
+#define LEAD_SEEDS 10
+#define LEAD_COMPOSED_LEAST 9
+#define LEAD_WRITTEN_LEAST 6
+
+/* Section `name` with `extra` members after the cadence (with a leading comma, or ""), 8 bars. */
+static void lead_section(char *out, size_t cap, const char *name, const char *extra) {
+    snprintf(out, cap,
+             "{\"name\": \"%s\", \"letter\": \"%s\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\", "
+             "\"ending\": \"continuation\", \"cadence\": \"perfect-authentic\"%s}",
+             name, name, extra);
+}
+
+/* A document of three 8-bar sections A, B, C with `a`, `b` and `c` the members each has after its cadence. */
+static void lead_document(char *out, size_t cap, const char *a, const char *b, const char *c) {
+    char sections[3][400];
+    char sizes[1400];
+    lead_section(sections[0], sizeof(sections[0]), "A", a);
+    lead_section(sections[1], sizeof(sections[1]), "B", b);
+    lead_section(sections[2], sizeof(sections[2]), "C", c);
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 24, \"default\": true, \"sections\": [%s, %s, %s]}", sections[0], sections[1],
+             sections[2]);
+    document(out, cap, "", sizes);
+}
+
+/* The members lead_in and connective: what they read as, and each refusal with the path of the member at fault. */
+static void test_lead_ins(void) {
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    lead_document(text, sizeof(text), "", ", \"leads_in\": true, \"connective\": \"always\"", "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form);
+    assert(!form->sizes[0].sections[0].leads_in && form->sizes[0].sections[0].connective == FORM_CONNECTIVE_NONE);
+    assert(form->sizes[0].sections[1].leads_in && form->sizes[0].sections[1].connective == FORM_CONNECTIVE_ALWAYS);
+    assert(!form->sizes[0].sections[2].leads_in);
+    form_spec_destroy(form);
+    lead_document(text, sizeof(text), "", ", \"leads_in\": true, \"connective\": \"sometimes\"", "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].connective == FORM_CONNECTIVE_SOMETIMES);
+    form_spec_destroy(form);
+    lead_document(text, sizeof(text), "", ", \"leads_in\": true", "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].leads_in &&
+           form->sizes[0].sections[1].connective == FORM_CONNECTIVE_NONE);
+    form_spec_destroy(form);
+    lead_document(text, sizeof(text), ", \"leads_in\": true", "", "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].leads_in);
+    form_spec_destroy(form);
+    lead_document(text, sizeof(text), "", ", \"leads_in\": false", "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && !form->sizes[0].sections[1].leads_in);
+    form_spec_destroy(form);
+
+    /* The last section of a size has no section to lead into. */
+    lead_document(text, sizeof(text), "", "", ", \"leads_in\": true");
+    refused(text, "/sizes/0/sections/2/leads_in");
+    /* Two in a row: the first is the one refused. */
+    lead_document(text, sizeof(text), ", \"leads_in\": true", ", \"leads_in\": true", "");
+    refused(text, "/sizes/0/sections/0/leads_in");
+    /* A section that returns one. */
+    lead_document(text, sizeof(text), "", ", \"returns\": \"A\", \"leads_in\": true", "");
+    refused(text, "/sizes/0/sections/1/leads_in");
+    /* A section another section returns. */
+    lead_document(text, sizeof(text), "", ", \"leads_in\": true", ", \"returns\": \"B\"");
+    refused(text, "/sizes/0/sections/1/leads_in");
+    /* A connective needs leads_in, and is one of two words. */
+    lead_document(text, sizeof(text), "", ", \"connective\": \"always\"", "");
+    refused(text, "/sizes/0/sections/1/connective");
+    lead_document(text, sizeof(text), "", ", \"leads_in\": false, \"connective\": \"sometimes\"", "");
+    refused(text, "/sizes/0/sections/1/connective");
+    lead_document(text, sizeof(text), "", ", \"leads_in\": true, \"connective\": \"never\"", "");
+    refused(text, "/sizes/0/sections/1/connective");
+    lead_document(text, sizeof(text), "", ", \"leads_in\": true, \"connective\": true", "");
+    refused(text, "/sizes/0/sections/1/connective");
+    lead_document(text, sizeof(text), "", ", \"leads_in\": \"yes\"", "");
+    refused(text, "/sizes/0/sections/1/leads_in");
+
+    /* No built-in form leads in (until B5). */
+    for (size_t i = 0; i < form_spec_builtin_count(); i++) {
+        FormSpec *built = builtin(form_spec_builtin_name(i));
+        for (size_t s = 0; s < built->size_count; s++) {
+            for (size_t k = 0; k < built->sizes[s].section_count; k++) {
+                assert(!built->sizes[s].sections[k].leads_in && built->sizes[s].sections[k].connective == FORM_CONNECTIVE_NONE);
+            }
+        }
+        form_spec_destroy(built);
+    }
+}
+
+static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
+    size_t count = 0;
+    NodeId root = plan_root(plan);
+    for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+        NodeId child = plan_node_child_at(plan, root, i);
+        if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+            sections[count++] = child;
+        }
+    }
+    return count;
+}
+
+/* The numeral of the chord sounding at `time`; "" when none is written. */
+static const char *chord_at(const PiecePlan *plan, Rational time) {
+    LaneSpanId id = PLAN_LANE_SPAN_NONE;
+    PlanSpan range = {time, {1, 4096}};
+    if (plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, &id, 1) == 0) {
+        return "";
+    }
+    return plan_lane_span_payload(plan, id)->harmony.roman_numeral;
+}
+
+static Rational add_time(Rational a, Rational b) {
+    Rational out;
+    assert(rational_add(a, b, &out) == RATIONAL_OK);
+    return out;
+}
+
+/* The notes of the melody that start in [from, to), as (pitch, onset, duration), in order; returns how many. */
+typedef struct {
+    int midi;
+    Rational onset;
+    Rational duration;
+} HeardNote;
+
+static size_t melody_notes(const PiecePlan *plan, Rational from, Rational to, HeardNote *out, size_t cap) {
+    LaneSpanId ids[16];
+    PlanSpan range = {from, {0, 1}};
+    assert(rational_sub(to, from, &range.length) == RATIONAL_OK);
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, range, ids, 16);
+    size_t count = 0;
+    for (size_t s = 0; s < found && s < 16; s++) {
+        Rational origin = plan_lane_span_span(plan, ids[s]).start;
+        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
+        for (size_t i = 0; i < notes->note_count; i++) {
+            Rational onset = add_time(origin, notes->notes[i].offset);
+            if (rational_cmp(onset, from) >= 0 && rational_cmp(onset, to) < 0 && count < cap) {
+                out[count].midi = notes->notes[i].midi;
+                out[count].onset = onset;
+                out[count].duration = notes->notes[i].duration;
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+static bool pitch_in_scale(int tonic, bool minor, int pitch) {
+    static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
+    static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 11};
+    int pitch_class = ((pitch - tonic) % 12 + 12) % 12;
+    for (int i = 0; i < 7; i++) {
+        if ((minor ? MINOR : MAJOR)[i] == pitch_class) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pitch_class, KeyStructureMode mode,
+                               ComposeOutcome *outcome, PieceResult *ran) {
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = form->name;
+    request.key = plan_key_of_pitch_class(pitch_class, mode);
+    request.meter.beats_per_bar = 3;
+    request.meter.beat_unit = 4;
+    request.seed = seed;
+    PiecePlan *plan = NULL;
+    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+    ComposeConfig config;
+    memset(&config, 0, sizeof(config));
+    config.seed = seed;
+    config.form = form;
+    *ran = compose_run(plan, &config, outcome);
+    return plan;
+}
+
+/*
+ * One key of the lead-in sweep: seeds 1 to 10 of lead-form.json in 3/4. Each run that composes has B ending on V or V7
+ * and A return opening on the tonic; where the connective was written B's last bar keeps its downbeat note (the same
+ * seed composed without the connective has it too) as one beat, the rest of the bar is four eighths in the scale of the
+ * key, and the last of them is a step from A return's first note. Returns how many composed and how many were written.
+ */
+static void lead_sweep(const char *text, int pitch_class, KeyStructureMode mode, int *composed, int *written) {
+    FormSpec *form = NULL;
+    FormSpec *plain_form = NULL;
+    FormSpecError error;
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    char *without = replaced_in(text, ", \"connective\": \"always\"", "");
+    assert(form_spec_parse(without, &plain_form, &error) == FORM_SPEC_OK);
+    free(without);
+    *composed = 0;
+    *written = 0;
+    bool minor = mode == KEY_STRUCTURE_MODE_MINOR;
+    for (unsigned long seed = 1; seed <= LEAD_SEEDS; seed++) {
+        ComposeOutcome outcome;
+        ComposeOutcome plain_outcome;
+        PieceResult ran;
+        PieceResult plain_ran;
+        PiecePlan *plan = compose_lead(form, seed, pitch_class, mode, &outcome, &ran);
+        PiecePlan *plain = compose_lead(plain_form, seed, pitch_class, mode, &plain_outcome, &plain_ran);
+        if (ran == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            assert(piece_sections(plan, sections) == 3);
+            PlanSpan b = plan_node_span(plan, sections[1]);
+            Rational b_end = add_time(b.start, b.length);
+            Rational tick = {1, 4096};
+            Rational last_tick;
+            assert(rational_sub(b_end, tick, &last_tick) == RATIONAL_OK);
+            const char *last = chord_at(plan, last_tick);
+            assert(strcmp(last, "V") == 0 || strcmp(last, "V7") == 0);
+            const char *first = chord_at(plan, b_end);
+            assert(strcmp(first, "I") == 0 || strcmp(first, "i") == 0);
+            /* B is held and asks for the connective; the flag says whether it was written. */
+            assert(plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_HOLD));
+            const PlanConstraint *constraint = plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_CONNECTIVE);
+            assert(constraint);
+            assert(!plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_CONNECTIVE) &&
+                   !plan_node_find_constraint(plan, sections[2], PLAN_CONSTRAINT_CONNECTIVE));
+            if (constraint->params.connective.written) {
+                Rational bar = {3, 4};
+                Rational beat = {1, 4};
+                Rational eighth = {1, 8};
+                Rational bar_start;
+                assert(rational_sub(b_end, bar, &bar_start) == RATIONAL_OK);
+                HeardNote bar_notes[16];
+                size_t count = melody_notes(plan, bar_start, b_end, bar_notes, 16);
+                assert(count == 5 && rational_cmp(bar_notes[0].onset, bar_start) == 0 &&
+                       rational_cmp(bar_notes[0].duration, beat) == 0);
+                /* The same seed without the connective keeps the downbeat note. */
+                if (plain_ran == PIECE_OK) {
+                    HeardNote plain_notes[16];
+                    size_t plain_count = melody_notes(plain, bar_start, b_end, plain_notes, 16);
+                    assert(plain_count >= 1 && plain_notes[0].midi == bar_notes[0].midi);
+                }
+                for (size_t i = 1; i < count; i++) {
+                    Rational offset = add_time(bar_start, add_time(beat, (Rational){(long long)(i - 1), 8}));
+                    assert(rational_cmp(bar_notes[i].onset, offset) == 0 && rational_cmp(bar_notes[i].duration, eighth) == 0);
+                    assert(pitch_in_scale(pitch_class, minor, bar_notes[i].midi));
+                }
+                /* The last note is a step from A return's first note. */
+                HeardNote next[4];
+                size_t next_count = melody_notes(plan, b_end, add_time(b_end, beat), next, 4);
+                assert(next_count >= 1);
+                int target = next[0].midi;
+                for (size_t i = 1; i < next_count; i++) {
+                    target = rational_cmp(next[i].onset, next[0].onset) < 0 ? next[i].midi : target;
+                }
+                int step = bar_notes[count - 1].midi - target;
+                assert(step == 1 || step == 2 || step == -1 || step == -2);
+                (*written)++;
+            }
+            (*composed)++;
+        } else {
+            printf("  seed %lu: %s at %s\n", seed, piece_result_name(ran), compose_stage_name(outcome.stuck_stage));
+        }
+        compose_outcome_destroy(&outcome);
+        compose_outcome_destroy(&plain_outcome);
+        plan_destroy(plan);
+        plan_destroy(plain);
+    }
+    form_spec_destroy(form);
+    form_spec_destroy(plain_form);
+}
+
+/* A "sometimes" connective is on B for some seeds and not others, and the same seed always gives the same plan. */
+static void lead_sometimes(const char *text) {
+    char *sometimes = replaced_in(text, "\"always\"", "\"sometimes\"");
+    FormSpec *form = NULL;
+    FormSpecError error;
+    assert(form_spec_parse(sometimes, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].connective == FORM_CONNECTIVE_SOMETIMES);
+    free(sometimes);
+    int with = 0;
+    int without = 0;
+    for (unsigned long seed = 1; seed <= LEAD_SEEDS; seed++) {
+        bool has[2] = {false, false};
+        for (int pass = 0; pass < 2; pass++) {
+            PieceRequest request;
+            memset(&request, 0, sizeof(request));
+            request.form = form->name;
+            request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+            request.meter.beats_per_bar = 3;
+            request.meter.beat_unit = 4;
+            request.seed = seed;
+            PiecePlan *plan = NULL;
+            assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            assert(piece_sections(plan, sections) == 3);
+            assert(plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_HOLD));
+            const PlanConstraint *constraint = plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_CONNECTIVE);
+            assert(!constraint || !constraint->params.connective.written);
+            has[pass] = constraint != NULL;
+            plan_destroy(plan);
+        }
+        assert(has[0] == has[1]);
+        with += has[0] ? 1 : 0;
+        without += has[0] ? 0 : 1;
+    }
+    assert(with > 0 && without > 0);
+    form_spec_destroy(form);
+    printf("lead-form with \"sometimes\": a connective asked for on %d of %d seeds\n", with, LEAD_SEEDS);
+}
+
+static int test_leads(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/lead-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
+        return 2;
+    }
+    assert(strcmp(form->name, "lead-form") == 0 && form->sizes[0].section_count == 3 && !form->sizes[0].sections[0].leads_in &&
+           form->sizes[0].sections[1].leads_in && form->sizes[0].sections[1].connective == FORM_CONNECTIVE_ALWAYS &&
+           !form->sizes[0].sections[2].leads_in);
+    form_spec_destroy(form);
+    static const struct {
+        const char *name;
+        int pitch_class;
+        KeyStructureMode mode;
+    } KEYS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
+    int status = 0;
+    for (size_t k = 0; k < sizeof(KEYS) / sizeof(KEYS[0]); k++) {
+        int composed;
+        int written;
+        lead_sweep(text, KEYS[k].pitch_class, KEYS[k].mode, &composed, &written);
+        printf("lead-form in %s 3/4: %d of %d seeds compose, connective written in %d\n", KEYS[k].name, composed, LEAD_SEEDS,
+               written);
+        if (composed < LEAD_COMPOSED_LEAST || written < LEAD_WRITTEN_LEAST) {
+            fprintf(stderr, "lead-form in %s: %d composed (at least %d expected), %d written (at least %d expected)\n",
+                    KEYS[k].name, composed, LEAD_COMPOSED_LEAST, written, LEAD_WRITTEN_LEAST);
+            status = 1;
+        }
+    }
+    lead_sometimes(text);
+    free(text);
+    return status;
+}
+
 int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "leads") == 0) {
+        return test_leads();
+    }
     if (argc == 2 && strcmp(argv[1], "pedal") == 0) {
         return test_pedal_form();
     }
@@ -1158,7 +1504,7 @@ int main(int argc, char **argv) {
         return test_meters();
     }
     if (argc != 1) {
-        fprintf(stderr, "usage: test_form_spec [custom|meters|pedal]\n");
+        fprintf(stderr, "usage: test_form_spec [custom|leads|meters|pedal]\n");
         return 2;
     }
     test_builtin_forms();
@@ -1170,6 +1516,7 @@ int main(int argc, char **argv) {
     test_meters_and_tempo();
     test_sizes();
     test_pedal();
+    test_lead_ins();
     test_construction();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
