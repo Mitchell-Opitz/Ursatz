@@ -778,15 +778,18 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
  *   ideaNames()    the idea names of the pairing, in order;
  *   bars()         the bars of the theme;
  *   get() / set(v) the construction state (null or {ideas, extensions}, themes-model.js);
- *   changed()      called after the block changed it.
+ *   changed()      called after the block changed it;
+ *   modeHidden     true to leave out the chosen/given select (the host has its own).
  * Returns {element, refresh()}; refresh re-reads the host (bars, pairing, state) and opens the block when the bars need one. */
 function buildConstructionBlock(host) {
   const element = materialsElement("details", "theme-construction");
   element.appendChild(materialsElement("summary", "section-title", "Construction"));
-  const body = materialsElement("div", "upload-controls");
+  const body = materialsElement("div");
+  const modeRow = materialsElement("div", "upload-controls");
+  body.appendChild(modeRow);
   const mode = themeField(
-    body,
-    "Construction",
+    modeRow,
+    "Bars set by",
     themeSelect(
       [
         { value: "chosen", label: "Chosen by the Composer" },
@@ -795,6 +798,8 @@ function buildConstructionBlock(host) {
       host.get() ? "given" : "chosen",
     ),
   );
+  /* host.modeHidden: the host has its own choice between chosen and given and shows the block only for given. */
+  mode.parentElement.hidden = host.modeHidden === true;
   const ideasRow = materialsElement("div", "upload-controls");
   const extensionsRow = materialsElement("div", "theme-extensions");
   const hint = materialsElement("div", "materials-hint");

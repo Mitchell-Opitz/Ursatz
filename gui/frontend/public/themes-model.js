@@ -993,6 +993,9 @@
     CHORD_BARS,
     MAX_EXTENSIONS,
     needsConstruction,
+    get REGULAR_BARS() {
+      return regularBars();
+    },
     get EXTENSIONS() {
       return extensionKinds();
     },

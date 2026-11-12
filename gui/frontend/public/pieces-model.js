@@ -23,7 +23,9 @@
   const meters = () => Themes.METERS;
   const pools = () => Themes.POOLS;
   const weights = () => Themes.WEIGHTS;
-  const themeBars = () => Themes.BARS;
+  /* The bars of a theme without a construction (4 and 8) and the bars a theme may have with one (3 to 16). */
+  const themeBars = () => Themes.REGULAR_BARS;
+  const constructedBars = () => Themes.BARS;
   /* The pickups offered in a meter, in beats (any other multiple of 1/32 shorter than a bar is accepted too). */
   const pickups = (meter) => (Vocab.get().pickups || {})[meter] || [];
   /* A limit of the GUI's own: the Composer holds none for the cells of a chord. */
@@ -288,7 +290,9 @@
   /* --- body and form --------------------------------------------------- */
 
   /* A fill as the body keeps it. A fill that names nothing yet is empty, so every fill may be saved unfinished.
-   * A motif fill keeps `into` only for a theme length (4 or 8 whole bars, no pickup); any other is a free phrase. */
+   * A motif fill keeps `into` for a theme length (4 or 8 whole bars, no pickup) or a section of 3 to 16 whole bars with a
+   * construction and no pickup; any other is a free phrase. The construction (P47, R-468) is "auto" (the Composer chooses
+   * it) or the given {ideas, extensions}; a fill with none has no member. */
   function fillFromState(fill, free) {
     const f = fill && typeof fill === "object" ? fill : emptyFill();
     switch (f.kind) {
@@ -300,6 +304,11 @@
         if (!free && Vocab.values("piece_intos").includes(f.into)) {
           out.into = f.into;
           out.hybrid = f.into === "hybrid" ? text(f.hybrid) : null;
+          if (f.construction === "auto") {
+            out.construction = "auto";
+          } else if (f.construction && typeof f.construction === "object") {
+            out.construction = Themes.constructionBody(f.construction, Themes.pairingIdeaNames(Themes.pairing(out)));
+          }
         }
         return out;
       }
@@ -333,6 +342,7 @@
           version: Number(fill.version),
           into: typeof fill.into === "string" ? fill.into : "",
           hybrid: typeof fill.hybrid === "string" ? fill.hybrid : "",
+          construction: fill.construction === "auto" ? "auto" : Themes.constructionFromBody(fill.construction),
         };
       case "theme":
         return { kind: "theme", item_id: fill.item_id, version: Number(fill.version) };
@@ -529,13 +539,32 @@
 
   /* --- problems -------------------------------------------------------- */
 
-  /* A motif fill takes its theme form (sentence, period, hybrid) at 4 or 8 whole bars without a pickup; any other length
-   * is a free phrase. */
-  function motifIsFree(section, meter) {
-    const per = barBeats(meter);
-    const bars = Number(section.beats) / per;
+  /* True when the section is whole bars (3 to 16) with no pickup: it may be a theme with a construction. */
+  function constructionPossible(section, meter) {
+    const bars = Number(section.beats) / barBeats(meter);
     const pickup = rational(section.pickup);
-    return !(themeBars().includes(bars) && (pickup === null || pickup === 0));
+    return constructedBars().includes(bars) && (pickup === null || pickup === 0);
+  }
+
+  /* A motif fill takes its theme form (sentence, period, hybrid) at 4 or 8 whole bars without a pickup, or at any whole
+   * 3 to 16 bars with a construction chosen or given; any other length is a free phrase. */
+  function motifIsFree(section, meter) {
+    if (!constructionPossible(section, meter)) {
+      return true;
+    }
+    const bars = Number(section.beats) / barBeats(meter);
+    const construction = section.fill && section.fill.construction;
+    return !(themeBars().includes(bars) || construction === "auto" || (construction && typeof construction === "object"));
+  }
+
+  /* The construction choice of a motif fill: "default" (a theme of 4 or 8 bars as today, else a free phrase), "auto" or
+   * "given". */
+  function constructionChoice(fill) {
+    const construction = fill && fill.construction;
+    if (construction === "auto") {
+      return "auto";
+    }
+    return construction && typeof construction === "object" ? "given" : "default";
   }
 
   /* What stops Compose or Save, as a list of sentences. options.themeBeats(fill) gives the length in beats of the
@@ -1046,6 +1075,8 @@
     servedCadences,
     cadenceOf,
     motifIsFree,
+    constructionPossible,
+    constructionChoice,
     themeLengthBeats,
     themeFormText,
     themeComposed,

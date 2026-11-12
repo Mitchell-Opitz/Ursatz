@@ -1156,6 +1156,12 @@ static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *erro
             (cJSON_IsString(hybrid) && strlen(hybrid->valuestring) > PIECE_WORD_MAX)) {
             return invalid_body(error, error_size, "a motif fill into and hybrid must be text");
         }
+        /* The construction (Composer API 1.18) is "auto" or the Composer's object; the Composer checks what is in it. */
+        const cJSON *construction = cJSON_GetObjectItemCaseSensitive(fill, "construction");
+        if (!is_absent_or_null(fill, "construction") && !cJSON_IsObject(construction) &&
+            !(cJSON_IsString(construction) && strcmp(construction->valuestring, "auto") == 0)) {
+            return invalid_body(error, error_size, "a motif fill construction must be \"auto\" or an object");
+        }
     }
     if (strcmp(kind->valuestring, "progression") == 0) {
         const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");

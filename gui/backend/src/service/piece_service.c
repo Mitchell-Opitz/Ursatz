@@ -87,7 +87,8 @@ static UrsatzGuiThemeResult build_fill(const cJSON *body, const cJSON *derived_l
         if (ok) {
             result = ursatz_gui_theme_add_pool(derived_list, ursatz_gui_json_string(fill, "item_id"), pool, forms);
         }
-        ok = ok && ursatz_gui_json_add_copy_if(object, fill, "into") && ursatz_gui_json_add_copy_if(object, fill, "hybrid");
+        ok = ok && ursatz_gui_json_add_copy_if(object, fill, "into") && ursatz_gui_json_add_copy_if(object, fill, "hybrid") &&
+             ursatz_gui_json_add_copy_if(object, fill, "construction");
     } else if (ok && strcmp(kind, "theme") == 0) {
         char source[PATH_BYTES];
         char plan[PATH_BYTES + 16];

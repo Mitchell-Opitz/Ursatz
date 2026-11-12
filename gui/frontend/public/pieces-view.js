@@ -748,24 +748,81 @@ function buildPieceEditor(ctx) {
         const intoEl = materialsElement("div", "upload-controls");
         drawInto = () => {
           intoEl.innerHTML = "";
-          if (PiecesModel.motifIsFree(section, state.meter)) {
+          const free = PiecesModel.motifIsFree(section, state.meter);
+          if (free) {
             intoEl.appendChild(
-              materialsElement("span", "piece-list-status", "Free phrase: a theme form needs 4 or 8 bars and no pickup."),
+              materialsElement(
+                "span",
+                "piece-list-status",
+                "Free phrase: a theme needs 4 or 8 bars, or a construction, and no pickup.",
+              ),
             );
+          }
+          if (!PiecesModel.constructionPossible(section, state.meter)) {
+            return;
+          }
+          /* The choice of a section of 3 to 16 whole bars: a free phrase (a theme as today at 4 or 8 bars), a theme the
+           * Composer builds a construction for, or a theme with the construction given (P47, R-468). */
+          const regular = ThemesModel.REGULAR_BARS.includes(Number(section.beats) / PiecesModel.barBeats(state.meter));
+          const choice = themeField(
+            intoEl,
+            "As",
+            themeSelect(
+              [
+                { value: "default", label: regular ? "Theme" : "Free phrase" },
+                { value: "auto", label: "Theme, chosen" },
+                { value: "given", label: "Theme, given" },
+              ],
+              PiecesModel.constructionChoice(fill),
+            ),
+          );
+          choice.addEventListener("input", () => {
+            if (choice.value === "auto") {
+              fill.construction = "auto";
+            } else if (choice.value === "given") {
+              fill.construction = ThemesModel.defaultConstruction(
+                ThemesModel.pairingIdeaNames(ThemesModel.pairing(fill)),
+                section.beats / PiecesModel.barBeats(state.meter),
+              );
+            } else {
+              fill.construction = null;
+            }
+            drawInto();
+            problems();
+          });
+          if (free) {
             return;
           }
           const into = themeField(intoEl, "Into", themeSelect(PiecesModel.INTOS, fill.into || "sentence"));
           const [beginning, ending] = (fill.hybrid || "presentation+continuation").split("+");
           const beginningSelect = themeField(intoEl, "Beginning", themeSelect(ThemesModel.BEGINNINGS, beginning));
           const endingSelect = themeField(intoEl, "Ending", themeSelect(ThemesModel.ENDINGS, ending));
+          let block = null;
           function syncInto() {
             fill.into = into.value;
             fill.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
             beginningSelect.parentElement.hidden = fill.into !== "hybrid";
             endingSelect.parentElement.hidden = fill.into !== "hybrid";
+            if (block) {
+              block.refresh();
+            }
           }
           for (const control of [into, beginningSelect, endingSelect]) {
             control.addEventListener("input", syncInto);
+          }
+          if (PiecesModel.constructionChoice(fill) === "given") {
+            block = buildConstructionBlock({
+              ideaNames: () => ThemesModel.pairingIdeaNames(ThemesModel.pairing(fill)),
+              bars: () => section.beats / PiecesModel.barBeats(state.meter),
+              get: () => fill.construction,
+              set: (value) => {
+                fill.construction = value;
+              },
+              changed: () => problems(),
+              modeHidden: true,
+            });
+            block.element.open = true;
+            intoEl.appendChild(block.element);
           }
           syncInto();
         };
