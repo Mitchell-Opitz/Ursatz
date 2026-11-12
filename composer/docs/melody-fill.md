@@ -153,6 +153,7 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 | `second_nearest` | 1/3 | The share of draws that take the second-nearest chord tone. |
 | `attempts`, `keep` | 48, 6 | Melodies tried for each target, and kept (at most `MELODY_KEEP_MAX`, 16). |
 | `weights` | all 1 | `MelodyWeights`: how many times each group of soft rules counts in the score. |
+| `closure_final`, `closure_first` | 0, 0 | How many times the closure rules count for the target that ends the theme's last cadence, and for one that ends an earlier cadence (an antecedent's weak cadence); 0 leaves them out and draws no random number. Set from C only (R-478). |
 
 Each field is a setting of the [preferences](preferences.md) document, with its limits.
 
@@ -191,6 +192,12 @@ not, never a rejection, and is on for every caller of the checker (grow, fill, r
 | `waves` (XI) | A candidate of 8 or more notes has at least 2 local high points (a note higher than the notes either side, repeated notes read as one) at or before its climax. |
 | `central-range` (XI) | At least 3/4 of the notes lie within 6 semitones of the median pitch. |
 | `monotony` (XII) | No three consecutive bars of two or more notes have the same rhythm and the same intervals. |
+
+#### Closure (phase L4, R-478)
+
+With `closure_final` or `closure_first` above 0, a target that ends a cadence (the last of its section, or an earlier one) ranks an intentional ending by two more soft rules, counted by that weight: the last note is at least twice the phrase's mean note value, and no note of the last bar is shorter than the note before it. Half the layouts of such a target (one random number each, none at weight 0) are settled: the notes from the latest cell line that leaves twice the mean become one long last note, the bar before it merges a shorter note into the note before it, and a note of the motive is never merged. Why a layout draw: every candidate of a target had one rhythm, so `weights.ending_reduction` 20 could not move it (t7 s42). Both weights 0 change nothing.
+
+Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, both weights 20, set by a temporary hook): the final note over the theme's mean note value, batch means 1.06 to 2.05 for periods (1.06 to 1.89 at the defaults) with 275 of 370 longer than the mean (250), and 2.71 to 3.72 for sentences (1.52 to 3.07) with 363 of 365 (364). The same 33 to 56 of 60 compose per batch. On the Test Motif sentence the defaults already end on a note 2 or more times the mean in 8 of 8 seeds, so the rule shows only as 8 of 8 changed melodies (`test_melody_preferences`).
 
 `melody_check_lane(plan, span, key, params, &violation)` runs the same rules on a melody lane read from
 the plan, for tests and tools.

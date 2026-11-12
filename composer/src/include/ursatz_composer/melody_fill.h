@@ -107,12 +107,19 @@ typedef struct {
     unsigned attempts;
     unsigned keep;
     MelodyWeights weights;
+    /*
+     * Closure (phase L4, R-478): how many times the closure rules count for the target that ends the theme's last
+     * cadence (closure_final) and for one that ends an earlier cadence, such as an antecedent's weak cadence
+     * (closure_first). 0 (the default) leaves them out and draws no random number.
+     */
+    unsigned closure_final;
+    unsigned closure_first;
 } MelodyFillParams;
 
 /*
  * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), the climax 667 thousandths of the way through, climax_rise 4,
- * climax_slack 150, second_nearest 1/3, attempts 48, keep 6 and every weight 1.
+ * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final and closure_first 0.
  */
 MelodyFillParams melody_fill_params_default(void);
 

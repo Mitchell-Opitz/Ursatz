@@ -57,6 +57,7 @@ typedef struct {
     size_t bass_count;
     bool has_cadence;
     CadenceType cadence;
+    bool last_cadence; /* has_cadence, and the target ends where its section ends (the theme's last cadence) */
     bool motive_given; /* the motive is the original, not a development */
     bool restated; /* the motive_ref is an exact restatement of its source */
     bool liquidated; /* the motive is a liquidated residue (its motive node's motive_ref has steps, R-345) */
@@ -124,6 +125,9 @@ typedef enum {
 /* The position of the target at which the phrase's climax falls, which may lie before 0 or past the end. */
 Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params);
 MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params);
+
+/* How many times the closure rules count for the target (phase L4, R-478): 0 when it ends no cadence. */
+unsigned melody_closure_weight(const MelodyContext *context, const MelodyFillParams *params);
 
 /* One note of a candidate. motive_index is the motive note it carries, or -1 for a note that fills the phrase. */
 typedef struct {

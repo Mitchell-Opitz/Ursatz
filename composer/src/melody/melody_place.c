@@ -416,6 +416,83 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
     return true;
 }
 
+/* How many times the closure rules count for this target (R-478): its weight when it ends a cadence, else 0. */
+unsigned melody_closure_weight(const MelodyContext *context, const MelodyFillParams *params) {
+    if (!context->has_cadence) {
+        return 0;
+    }
+    return context->last_cadence ? params->closure_final : params->closure_first;
+}
+
+/*
+ * Closure (phase L4, R-478): the notes from a cell line c on become one long last note, so the phrase ends on a note at
+ * least twice as long as its mean note value, and the bar before it settles: a note shorter than the one before it takes
+ * its time. c is the latest cell line at or before the last note's onset that leaves 2M, M being the phrase's mean note
+ * value; not before the target's last bar, and not inside a note of the motive, so a motive stays as written. No change
+ * when no such line exists.
+ */
+static void settle_ending(const MelodyContext *context, MelodyCandidate *out) {
+    if (out->count < 2) {
+        return;
+    }
+    size_t last = out->count - 1;
+    size_t before = context->phrase_before_notes + out->count - 1;
+    Rational mean = position_div(position_sub(out->notes[last].onset, context->phrase_start), (long long)before);
+    Rational room = position_sub(context->length, position_mul(mean, 2));
+    Rational latest = rational_cmp(out->notes[last].onset, room) < 0 ? out->notes[last].onset : room;
+    Rational low = position_sub(context->length, context->metre.bar_length);
+    if (rational_cmp(low, POSITION_ZERO) < 0) {
+        low = POSITION_ZERO;
+    }
+    for (size_t i = 0; i < out->count; i++) {
+        if (out->notes[i].motive_index >= 0) {
+            Rational end = position_add(out->notes[i].onset, out->notes[i].duration);
+            if (rational_cmp(end, low) > 0) {
+                low = end;
+            }
+        }
+    }
+    Rational at = position_sub(
+        position_mul(context->cell, position_floor_units(position_add(latest, context->phase), context->cell)),
+        context->phase);
+    if (rational_cmp(at, low) < 0) {
+        return;
+    }
+    size_t first = 0;
+    while (first < out->count && rational_cmp(out->notes[first].onset, at) < 0) {
+        first++;
+    }
+    if (first == 0) {
+        return;
+    }
+    out->notes[first - 1].duration = position_sub(at, out->notes[first - 1].onset);
+    out->notes[first].onset = at;
+    out->notes[first].duration = position_sub(context->length, at);
+    out->notes[first].motive_index = -1;
+    out->count = first + 1;
+    /* The bar of the last note: a shorter note takes the time of the note before it, the rhythm settling into the end. */
+    Rational bar = position_sub(context->length, context->metre.bar_length);
+    for (size_t j = 1; j + 1 < out->count;) {
+        MelodyNote *note = &out->notes[j];
+        MelodyNote *prior = &out->notes[j - 1];
+        if (rational_cmp(prior->onset, bar) >= 0 && note->motive_index < 0 &&
+            rational_cmp(note->duration, prior->duration) < 0) {
+            prior->duration = position_add(prior->duration, note->duration);
+            memmove(note, note + 1, (out->count - j - 1) * sizeof(*note));
+            out->count--;
+            if (j > 1) {
+                j--;
+            }
+        } else {
+            j++;
+        }
+    }
+    for (size_t i = 0; i < out->count; i++) {
+        out->notes[i].strong = melody_on_cell(context, out->notes[i].onset);
+        out->notes[i].chord = melody_chord_at(context, out->notes[i].onset);
+    }
+}
+
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, int shift, bool keep_figures,
                   bool relaxed, FillRng *rng, MelodyCandidate *out) {
     MelodyFillParams arch = arch_params(context, params);
@@ -426,7 +503,12 @@ bool melody_build(const MelodyContext *context, const MelodyFillParams *params, 
     /* The checker holds every note to the voice's range: the arch caps are for the notes that are generated (R-327). */
     out->params = *params;
     /* A melody with two notes as high as its highest has no one climax. */
-    bool assigned = layout(context, &arch, out) && melody_realize(context, params, shift, keep_figures, out) &&
+    bool laid = layout(context, &arch, out);
+    /* Closure: half the layouts of a target that ends a cadence settle into a long last note; no draw at weight 0. */
+    if (laid && melody_closure_weight(context, params) > 0 && fill_rng_below(rng, 2) == 0) {
+        settle_ending(context, out);
+    }
+    bool assigned = laid && melody_realize(context, params, shift, keep_figures, out) &&
                     assign(context, &arch, rng, out) && place_pickup(context, &arch, rng, out);
     /* The phrase has one highest note: the whole phrase, or the target with its climax, has one, when it generates notes
        (R-335). A target of realized notes alone is scored by melody_contour_score instead. */

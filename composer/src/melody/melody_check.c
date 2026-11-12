@@ -792,6 +792,39 @@ static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict)
 }
 
 /*
+ * Closure (phase L4, R-478): a phrase that ends a cadence ends on purpose. Two rules, counted by the weight of the
+ * target's cadence (closure_final for the theme's last, closure_first for an earlier one): (a) the last note is at least
+ * twice the phrase's mean note value, and (b) no note of the last bar is shorter than the note before it in that bar,
+ * so the rhythm settles into the end. Weight 0 adds nothing.
+ */
+static void check_closure(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+    unsigned weight = melody_closure_weight(&melody->context, &melody->params);
+    if (weight == 0 || melody->count < 2) {
+        return;
+    }
+    const MelodyContext *context = &melody->context;
+    size_t last = melody->count - 1;
+    size_t before = context->phrase_before_notes + melody->count - 1;
+    Rational mean = position_div(position_sub(melody->notes[last].onset, context->phrase_start), (long long)before);
+    unsigned held = 0;
+    if (rational_cmp(melody->notes[last].duration, position_mul(mean, 2)) >= 0) {
+        held++;
+    }
+    Rational bar = position_sub(context->length, context->metre.bar_length);
+    bool settled = true;
+    for (size_t j = 1; j < melody->count; j++) {
+        if (rational_cmp(melody->notes[j - 1].onset, bar) >= 0 &&
+            rational_cmp(melody->notes[j].duration, melody->notes[j - 1].duration) < 0) {
+            settled = false;
+        }
+    }
+    if (settled) {
+        held++;
+    }
+    add_soft(verdict, weight, held, 2);
+}
+
+/*
  * A candidate that ends at the seam (R-171) is also scored by three of its rules: no parallel fifths or octaves between
  * bass and melody across it, a melody that moves by step (or a leap answered), and a leading tone that goes up. The
  * progression is the harmony's. Nothing is rejected for them.
@@ -882,6 +915,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         melody_contour_score(melody, &held, &total);
         add_soft(verdict, melody->params.weights.contour, held, total);
         check_shaping(melody, verdict);
+        check_closure(melody, verdict);
         check_seam(melody, verdict);
     }
     return ok;
