@@ -136,6 +136,7 @@ typedef struct {
     int requested_ending;
     bool heard_as_requested;
     GrowScore structure;         /* the score grow-theme's checker gave the section's structure */
+    char construction_text[192]; /* why the section is as long as it is (grow_construction_describe), "" without a construction */
 } ComposeHeard;
 
 typedef struct {

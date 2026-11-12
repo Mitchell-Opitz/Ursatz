@@ -240,11 +240,14 @@ static void test_refusals(void) {
     assert(grow_build_plan(&request, &plan) == GROW_OK);
     plan_destroy(plan);
 
-    /* A theme without a construction is 4 or 8 bars; with one it is 3 to 16. */
+    /* A theme without a construction has one chosen from its length (R-469), or none: then it is 4 or 8 bars. */
     GrowRequest plain = request;
     plain.construction = NULL;
     plain.bars = 6;
-    expect_refusal(&plain, "/bars", "a theme has 4 or 8 bars, or 3 to 16 with a construction, not 6");
+    assert(grow_build_plan(&plain, &plan) == GROW_OK);
+    plan_destroy(plan);
+    plain.bars = 2;
+    expect_refusal(&plain, "/bars", "no construction makes a 2-bar period from this motif");
     GrowRequest changed = request;
     changed.bars = 2;
     expect_refusal(&changed, "/bars", "a theme has 4 or 8 bars, or 3 to 16 with a construction, not 2");

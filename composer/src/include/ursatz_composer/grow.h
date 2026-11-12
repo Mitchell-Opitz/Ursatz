@@ -179,6 +179,26 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out);
  */
 GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal);
 
+/*
+ * The construction of a theme of `bars` bars that has none given (R-469), chosen without a draw from the idea or the
+ * structure: a motif of 3 bars or more makes the basic idea that long (reason FROM_MOTIVE), else the length makes it
+ * (FROM_LENGTH). The halves follow from it and the ending's excess over its regular length becomes extensions: a
+ * stretch, a repeat, an evaded cadence, an addition. False, with *out zeroed, when none fits: 4 and 8 bars with a motif
+ * of 2 bars or fewer (the theme is built as it always was), a motif longer than the basic idea, an excess the ending
+ * cannot take, a construction grow_build_plan would refuse. `cadence` is the theme's.
+ */
+bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                              CadenceType cadence, PlanConstruction *out);
+
+/*
+ * One sentence that says why a theme has its construction (R-469), by its reason: from the motif ("5+5 period: the motif
+ * is 3 bars, ..."), from the length ("4+5 sentence: the section is 9 bars, so fragment 2 is repeated a step lower (bar
+ * 7)."), or as given, with the halves and each extension named. Bars are counted from 1. Writes at most size - 1 characters
+ * and a terminator; returns the length written, 0 for no construction or no room.
+ */
+size_t grow_construction_describe(const PlanConstruction *construction, const PlanThemePairing *pairing, char *text,
+                                  size_t size);
+
 /* --- the structure operator -------------------------------------------- */
 
 /* How far a theme's presentation and continuation stray from its motif (ch. XI). All-zero is balanced. */
@@ -308,6 +328,7 @@ typedef struct {
     int requested_ending;
     bool heard_as_requested;               /* the requested form; for a hybrid, with the requested beginning and ending */
     GrowScore score;                       /* the share of the structure's soft rules and the heard form that hold */
+    char construction_text[192];           /* why the theme is as long as it is (grow_construction_describe), "" without a construction */
     bool style_measured;                   /* with a style, after a complete run: the Analyzer's distance from it (compose.h) */
     StyleComparison style_distance;        /* owned */
     ComposeRejection *rejections;          /* owned; the runs thrown away before this one (compose.h), NULL when none */
