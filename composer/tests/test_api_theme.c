@@ -372,6 +372,74 @@ static void test_preferences(void) {
     composer_response_destroy(&plain);
 }
 
+/* A period request of the one-motive fixture (a contrasting slot with no motive of its own) with "preferences" set. */
+static char *period_request(unsigned seed, const char *preferences) {
+    char *text = preferences_request(seed, preferences);
+    cJSON *request = cJSON_Parse(text);
+    free(text);
+    assert(request);
+    cJSON_DeleteItemFromObjectCaseSensitive(request, "into");
+    assert(cJSON_AddStringToObject(request, "into", "period"));
+    char *printed = cJSON_PrintUnformatted(request);
+    cJSON_Delete(request);
+    assert(printed);
+    return printed;
+}
+
+static bool has_source(const cJSON *document, const char *source) {
+    const cJSON *slots = cJSON_GetObjectItemCaseSensitive(first_theme(document), "slots");
+    const cJSON *row;
+    cJSON_ArrayForEach(row, slots) {
+        const cJSON *value = cJSON_GetObjectItemCaseSensitive(row, "source");
+        if (cJSON_IsString(value) && strcmp(value->valuestring, source) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * The L4 settings in a theme request (B6 of L4, R-422): new material on (development.contrast.new_material) puts a `new` row
+ * in the slots of a period, and every L4 member at its default composes the same theme as a request with no preferences
+ * (the echoed preferences apart).
+ */
+static void test_l4_preferences(void) {
+    ComposerResponse plain;
+    char *request = period_request(2, NULL);
+    assert(composer_api_theme(request, NULL, &plain) == COMPOSER_OK);
+    free(request);
+    cJSON *plain_document = cJSON_Parse(plain.json);
+    assert(plain_document && !has_source(plain_document, "new"));
+
+    ComposerResponse set;
+    request = period_request(2, "{\"development\": {\"contrast\": {\"new_material\": 20}}}");
+    assert(composer_api_theme(request, NULL, &set) == COMPOSER_OK);
+    free(request);
+    cJSON *document = cJSON_Parse(set.json);
+    assert(document && has_source(document, "new"));
+    const cJSON *contrast = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "preferences"), "development"), "contrast");
+    assert(cJSON_GetObjectItemCaseSensitive(contrast, "new_material")->valueint == 20);
+    cJSON_Delete(document);
+    composer_response_destroy(&set);
+
+    const char *defaults =
+        "{\"melody\": {\"closure\": {\"final\": 0, \"first\": 0}, \"rhythm_repeat_bars\": 0, \"leaps\": 0, \"register\": 0}, "
+        "\"development\": {\"contrast\": {\"distance\": {\"similar\": 1, \"distant\": 0}, \"new_material\": 0}}}";
+    request = period_request(2, defaults);
+    assert(composer_api_theme(request, NULL, &set) == COMPOSER_OK);
+    free(request);
+    document = cJSON_Parse(set.json);
+    assert(document && cJSON_GetObjectItemCaseSensitive(document, "preferences"));
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "preferences");
+    assert(cJSON_Compare(plain_document, document, true));
+    assert(set.midi_size == plain.midi_size && memcmp(set.midi, plain.midi, plain.midi_size) == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&set);
+    cJSON_Delete(plain_document);
+    composer_response_destroy(&plain);
+}
+
 /* --- suggest, plans and explanations ------------------------------------------------------------- */
 
 static void test_suggest_plans_explain(void) {
@@ -810,6 +878,7 @@ int main(int argc, char **argv) {
         test_uneven();
         test_given_construction();
         test_preferences();
+        test_l4_preferences();
         test_suggest_plans_explain();
         test_developments();
     }

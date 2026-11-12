@@ -212,6 +212,21 @@ expect_status(0 listen --what themes --count 2 --seed 1 --motif "${FIXTURES}/con
               --settings l3-development.json --out-dir themes-l3)
 expect_samples(themes-l3 2)
 
+# Every L4 setting on (R-474): the closure, the cap on bars with one rhythm, leaps, register, the contrast distance and new
+# material reach the grow run, and the command accepts the settings file.
+file(WRITE "${WORK}/l4-settings.json"
+     "{\"melody\": {\"closure\": {\"final\": 20, \"first\": 10}, \"rhythm_repeat_bars\": 3, \"leaps\": 10, \"register\": 10}, "
+     "\"development\": {\"contrast\": {\"distance\": {\"similar\": 1, \"distant\": 1}, \"new_material\": 1}}}")
+expect_status(0 listen --what themes --count 2 --seed 1 --into period --bars 8 --settings l4-settings.json --out-dir themes-l4)
+file(STRINGS "${WORK}/themes-l4/listen.jsonl" lines)
+list(GET lines 0 first)
+string(JSON l4_final GET "${first}" preferences melody closure final)
+string(JSON l4_repeat GET "${first}" preferences melody rhythm_repeat_bars)
+string(JSON l4_new GET "${first}" preferences development contrast new_material)
+if(NOT l4_final EQUAL 20 OR NOT l4_repeat EQUAL 3 OR NOT l4_new EQUAL 1)
+    message(FATAL_ERROR "the manifest does not record the L4 settings: ${first}")
+endif()
+
 # A theme request: the same MIDI as the theme command writes for the seed.
 expect_status(0 listen --what themes --count 1 --seed 2 --theme-request "${FIXTURES}/theme/one-motive.json" --out-dir themes-request)
 expect_samples(themes-request 1)

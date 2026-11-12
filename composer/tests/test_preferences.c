@@ -14,7 +14,8 @@ static const char *DEFAULT_MELODY =
     "{\"range\":{\"low\":60,\"high\":84},\"nct_types\":[\"passing\",\"neighbor\"],\"density\":0,\"climax_position\":667,"
     "\"climax_rise\":4,\"climax_slack\":150,\"second_nearest_chord_tone\":\"1/3\",\"attempts\":48,\"keep\":6,"
     "\"plain_shaping\":false,\"weights\":{\"melodic\":1,\"against_bass\":1,\"tendency\":1,\"climax\":1,\"contour\":1,"
-    "\"ending_reduction\":1,\"waves\":1,\"central_range\":1,\"monotony\":1,\"seam\":1}}";
+    "\"ending_reduction\":1,\"waves\":1,\"central_range\":1,\"monotony\":1,\"seam\":1},"
+    "\"closure\":{\"final\":0,\"first\":0},\"rhythm_repeat_bars\":0,\"leaps\":0,\"register\":0}";
 
 static const char *DEFAULT_MOTIF =
     "{\"bars\":{\"one\":1,\"two\":1},\"pickup_one_in\":4,\"shapes_one_bar\":{\"repeat\":3,\"contrast\":2},"
@@ -42,7 +43,8 @@ static const char *DEFAULT_DEVELOPMENT =
     "\"balanced\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"3/10\"},"
     "\"theme\":{\"presentation\":\"11/20\",\"continuation\":\"7/20\",\"cadential\":\"1/5\"}},"
     "\"continuation\":{\"every_segment\":false,\"fragment_lengths\":{\"segment\":1,\"half_bar\":0,\"beat\":0},"
-    "\"diminish\":false,\"liquidate\":false,\"faster_harmony\":false},\"basic_as_written\":false}";
+    "\"diminish\":false,\"liquidate\":false,\"faster_harmony\":false},\"basic_as_written\":false,"
+    "\"contrast\":{\"distance\":{\"similar\":1,\"distant\":0},\"new_material\":0}}";
 
 static bool read_text(const char *text, ComposerPreferences *out, char *path, char *message) {
     cJSON *object = cJSON_Parse(text);
@@ -64,6 +66,54 @@ static void refused(const char *text, const char *path) {
     }
     /* A refusal leaves the preferences usable: the defaults with whatever was read before it. */
     assert(preferences.melody.attempts >= 1);
+}
+
+/* The L4 members (phase L4): every one set reads back equal through write and read, each is a change from the defaults. */
+static void l4_members_round_trip(void) {
+    static const char *const TEXT =
+        "{\"melody\":{\"closure\":{\"final\":20,\"first\":7},\"rhythm_repeat_bars\":3,\"leaps\":9,\"register\":20},"
+        "\"development\":{\"contrast\":{\"distance\":{\"similar\":2,\"distant\":5},\"new_material\":4}}}";
+    ComposerPreferences read;
+    ComposerPreferences again;
+    char path[COMPOSER_PREFERENCES_PATH_MAX];
+    char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
+    assert(read_text(TEXT, &read, path, message));
+    assert(read.melody.closure_final == 20 && read.melody.closure_first == 7 && read.melody.rhythm_repeat_bars == 3 &&
+           read.melody.leap_weight == 9 && read.melody.register_weight == 20);
+    assert(read.contrast.distance[GROW_CONTRAST_SIMILAR] == 2 && read.contrast.distance[GROW_CONTRAST_DISTANT] == 5 &&
+           read.contrast.new_material == 4);
+    assert(!composer_preferences_is_default(&read));
+    cJSON *document = composer_preferences_write(&read);
+    assert(document);
+    assert(composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
+    assert(again.melody.closure_final == 20 && again.melody.closure_first == 7 && again.melody.rhythm_repeat_bars == 3 &&
+           again.melody.leap_weight == 9 && again.melody.register_weight == 20);
+    assert(again.contrast.distance[GROW_CONTRAST_SIMILAR] == 2 && again.contrast.distance[GROW_CONTRAST_DISTANT] == 5 &&
+           again.contrast.new_material == 4);
+    cJSON *second = composer_preferences_write(&again);
+    char *first_text = cJSON_PrintUnformatted(document);
+    char *second_text = cJSON_PrintUnformatted(second);
+    assert(first_text && second_text && strcmp(first_text, second_text) == 0);
+    cJSON_free(first_text);
+    cJSON_free(second_text);
+    cJSON_Delete(second);
+    cJSON_Delete(document);
+
+    /* Each member alone is a change; a name left out keeps its default; distance all 0 reads as similar 1. */
+    static const char *const ALONE[] = {"{\"melody\":{\"closure\":{\"final\":1}}}", "{\"melody\":{\"closure\":{\"first\":1}}}",
+                                        "{\"melody\":{\"rhythm_repeat_bars\":16}}", "{\"melody\":{\"leaps\":1}}",
+                                        "{\"melody\":{\"register\":1}}",
+                                        "{\"development\":{\"contrast\":{\"distance\":{\"distant\":1}}}}",
+                                        "{\"development\":{\"contrast\":{\"new_material\":1}}}"};
+    for (size_t i = 0; i < sizeof(ALONE) / sizeof(ALONE[0]); i++) {
+        assert(read_text(ALONE[i], &read, path, message));
+        assert(!composer_preferences_is_default(&read));
+    }
+    assert(read_text("{\"development\":{\"contrast\":{\"distance\":{\"similar\":0,\"distant\":0}}}}", &read, path, message));
+    assert(read.contrast.distance[GROW_CONTRAST_SIMILAR] == 1 && read.contrast.distance[GROW_CONTRAST_DISTANT] == 0);
+    assert(composer_preferences_is_default(&read));
+    assert(read_text("{\"melody\":{\"closure\":{\"first\":3}}}", &read, path, message));
+    assert(read.melody.closure_final == 0 && read.melody.closure_first == 3);
 }
 
 static void defaults_round_trip(void) {
@@ -305,6 +355,19 @@ static void limits_are_refused(void) {
     refused("{\"melody\":{\"weights\":{\"waves\":-1}}}", "/melody/weights/waves");
     refused("{\"melody\":{\"weights\":{\"bogus\":1}}}", "/melody/weights/bogus");
     refused("{\"melody\":{\"bogus\":1}}", "/melody/bogus");
+    refused("{\"melody\":{\"rhythm_repeat_bars\":17}}", "/melody/rhythm_repeat_bars");
+    refused("{\"melody\":{\"closure\":{\"final\":21}}}", "/melody/closure/final");
+    refused("{\"melody\":{\"closure\":{\"first\":-1}}}", "/melody/closure/first");
+    refused("{\"melody\":{\"closure\":{\"last\":1}}}", "/melody/closure/last");
+    refused("{\"melody\":{\"closure\":5}}", "/melody/closure");
+    refused("{\"melody\":{\"leaps\":21}}", "/melody/leaps");
+    refused("{\"melody\":{\"register\":21}}", "/melody/register");
+    refused("{\"development\":{\"contrast\":{\"new_material\":21}}}", "/development/contrast/new_material");
+    refused("{\"development\":{\"contrast\":{\"distance\":{\"distant\":21}}}}", "/development/contrast/distance/distant");
+    refused("{\"development\":{\"contrast\":{\"distance\":{\"similar\":21}}}}", "/development/contrast/distance/similar");
+    refused("{\"development\":{\"contrast\":{\"distance\":{\"far\":1}}}}", "/development/contrast/distance/far");
+    refused("{\"development\":{\"contrast\":{\"bogus\":1}}}", "/development/contrast/bogus");
+    refused("{\"development\":{\"contrast\":1}}", "/development/contrast");
     refused("{\"melody\":5}", "/melody");
     refused("{\"motif\":5}", "/motif");
     refused("{\"motif\":{\"bars\":{\"one\":0,\"two\":0}}}", "/motif/bars");
@@ -413,6 +476,7 @@ static void limits_are_refused(void) {
 
 int main(void) {
     defaults_round_trip();
+    l4_members_round_trip();
     members_read_over_defaults();
     limits_are_refused();
     printf("test_preferences: ok\n");
