@@ -125,6 +125,7 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
+    case PLAN_CONSTRAINT_CONNECTIVE:
         return true;
     case PLAN_CONSTRAINT_MOTIVE_TONES: {
         const PlanMotiveTones *tones = &constraint->params.motive_tones;
@@ -217,7 +218,8 @@ PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstr
         return PLAN_ERR_GIVEN_LOCKED;
     }
     if (!constraint_is_valid(plan, constraint) ||
-        (constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION && node->kind != PLAN_NODE_SECTION)) {
+        ((constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION || constraint->kind == PLAN_CONSTRAINT_CONNECTIVE) &&
+         node->kind != PLAN_NODE_SECTION)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     return list_add(&node->constraints, constraint);
@@ -255,7 +257,8 @@ PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const P
     if (entry->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    if (!constraint_is_valid(plan, constraint) || constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION) {
+    if (!constraint_is_valid(plan, constraint) || constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION ||
+        constraint->kind == PLAN_CONSTRAINT_CONNECTIVE) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     return list_add(&entry->constraints, constraint);
