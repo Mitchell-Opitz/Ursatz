@@ -15,8 +15,16 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   holds the accompaniment, the brief, the switches, weight, Check with the
   Analyzer and Seed. Below is the composed theme (Result).
 - Structure tab: form: into (sentence, period, hybrid with its pairing, and the
-  first cadence for a period or hybrid), bars and cadence, all from the Composer's
-  vocabulary. Development (Melody, Balanced, Theme; Balanced by default) says
+  first cadence for a period or hybrid), bars (3 to 16, `theme_bars`) and cadence, all from the Composer's
+  vocabulary. A Construction block (P47, R-468) shows under the form when the bars are not 4 or 8
+  (`theme_bars_regular`) or the construction is given, and can be opened by hand. "Bars set by" is "Chosen by the
+  Composer" (the default: the body's `form.construction` is `null`) or "Given": the bars of each idea of the form's
+  pairing (from `theme_ideas`) and up to 3 extensions, each a kind (`theme_extensions`: repeat, stretch, addition,
+  evaded), the idea it follows (only the ideas of that kind the form has), bars (0 takes the Composer's default) and,
+  for a repeat, Varied. The ideas and extensions must add up to the bars: the Composer checks it with the rest of the
+  form, at `/construction`, and a refusal marks the block. The body keeps `form.construction` as
+  `{ideas: {<idea>: bars}, extensions: [{kind, idea, bars, varied}]}` and sent as the request's `construction`; a body
+  without it reads as chosen. The same block is the game loop section editor's "Theme, given". Development (Melody, Balanced, Theme; Balanced by default) says
   how far the theme strays from the motif: Melody repeats, Theme develops
   (Schoenberg ch. XI). It is the body's `form.development`, sent to the
   Composer as the request's `development`; a body saved without it reads as
@@ -41,7 +49,7 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   each "From <slot>" until it gets a motif (and Use) of its own. Ideas are kept
   in the body's `ideas`; those the form does not have are dropped on save. The
   result table says "From its own motif" for them.
-- Chords: under the slots, one text field per bar (`Bar 1` to `Bar 4` or `Bar 8`),
+- Chords: under the slots, one text field per bar of the theme (`Bar 1` to `Bar 16`),
   placeholder `Composer`. Roman numerals in C, at most 2 a bar, `@` the beat a
   chord starts on from 0. The Composer writes chords on the cells of the meter
   only: a second chord at `@2` in 4/4, `@3` in 6/8, none in 2/4 and 3/4 (the
@@ -55,8 +63,8 @@ the theme body the backend composes (see [Theme bodies and version files](../sto
   form lacks to be a request (the basic motif, a motif for an idea, the accompaniment motif, a brief
   for the mode From the brief) stops Save and Compose. The Composer reads a chord as a numeral with
   onsets that rise, are whole or half beats, fall inside the bar and on a cell
-  of the meter; its message names the bar. Bars 8 to 4 clears the chords of bars 5 to
-  8 with a status line. The body keeps `chords` as `[{bar, text}]` (bar from 0)
+  of the meter; its message names the bar. Fewer bars clear the chords of the bars the theme
+  no longer has, with a status line. The body keeps `chords` as `[{bar, text}]` (bar from 0)
   for filled bars only; the result lists them as Given chords. A Composer
   refusal naming a bar shows in the status line.
 - Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
@@ -80,7 +88,8 @@ Composer's message. A slot or accompaniment motif with a newer version shows
 The Result panel of the current version, and of any version opened from the
 versions list (read-only), has a row for each idea (idea, slot, motif, source,
 chain, connection), the brief's tempo, mode and note density, the motive
-categories read without, the style distance, the form heard and the Analyzer
+categories read without, the style distance, the form heard, its construction (the sentence of the theme's `construction.text` that says why the theme is as long as
+it is, shown for a theme that has one) and the Analyzer
 check. A Development list names each composed idea's development in the
 Composer's summary line and, when the idea comes from one of the motif's
 segments, that segment's label; a version composed before the summary line
@@ -130,7 +139,11 @@ builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
 - Fill: Empty, Motif, Theme or Progression. Any fill may be left empty and
   saved; one that names nothing is saved as empty. A motif fill has a motif
   picker and, at 4 or 8 whole bars without a pickup, into sentence, period or
-  hybrid (with its pairing); any other length shows "Free phrase". A theme
+  hybrid (with its pairing); any other length shows "Free phrase: a theme needs 4 or 8 bars, or a construction, and no
+  pickup." A section of 3 to 16 whole bars with no pickup also has an "As" choice (P47, R-468): Free phrase (Theme at 4
+  or 8 bars; no `construction` member, as before), "Theme, chosen" (`fill.construction` is `"auto"`: the Composer
+  chooses it) or "Theme, given" (the Theme editor's Construction block, `fill.construction` is `{ideas, extensions}`).
+  A construction keeps `into` for any such length. A saved piece without the member opens and is sent as before. A theme
   fill picks a composed theme version (a theme with no composed version asks
   to be composed first), shows its form and key and sets the section's length
   from the theme; a section whose length differs from the theme's is a
@@ -152,12 +165,14 @@ each version of the form (the game loop has a loop version and an ending
 version, any other form one version, `piece`), a row for each section (section,
 part by its role label, letter, start, length, cadence planned and heard, fill, source; for a sized form: section,
 role, letter, start, length, cadence, heard, the key heard, harmony (the pedal label of the form's section), the
-section it returns and how it differs, in the Composer's own text), the
+section it returns and how it differs, in the Composer's own text; either table gains a Construction column, the
+Composer's `construction_text`, when a section has one), the
 score, the seam rules that held, the Analyzer check and the style
 distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
 per version (`<name>.musicxml`), with playback served by the
 backend from `<name>.mid` (`GET .../versions/<n>/playback?file=<name>`). A read-only version of a sized form
-names its form, size and the sections the Composer plans.
+names its form, size and the sections the Composer plans. The strip of a sized form shows the halves of a section with a
+construction in its block (`4+6`) and its reason in a Construction column of the table (no built-in form has one yet).
 
 On the current version each section of the first version (the loop version of a game loop, `piece` of any other form)
 has Regenerate (lane: all

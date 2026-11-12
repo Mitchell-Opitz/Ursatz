@@ -862,6 +862,11 @@ static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *erro
     if (!is_absent_or_null(form, "bars") && !cJSON_IsNumber(bars)) {
         return invalid_body(error, error_size, "theme form bars must be a number");
     }
+    /* The construction (Composer API 1.18) is the Composer's: a save keeps only that it is an object or null. */
+    const cJSON *construction = cJSON_GetObjectItemCaseSensitive(form, "construction");
+    if (!is_absent_or_null(form, "construction") && !cJSON_IsObject(construction)) {
+        return invalid_body(error, error_size, "theme form construction must be an object or null");
+    }
     return URSATZ_GUI_MATERIAL_OK;
 }
 
@@ -1150,6 +1155,12 @@ static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *erro
             (cJSON_IsString(into) && strlen(into->valuestring) > PIECE_WORD_MAX) ||
             (cJSON_IsString(hybrid) && strlen(hybrid->valuestring) > PIECE_WORD_MAX)) {
             return invalid_body(error, error_size, "a motif fill into and hybrid must be text");
+        }
+        /* The construction (Composer API 1.18) is "auto" or the Composer's object; the Composer checks what is in it. */
+        const cJSON *construction = cJSON_GetObjectItemCaseSensitive(fill, "construction");
+        if (!is_absent_or_null(fill, "construction") && !cJSON_IsObject(construction) &&
+            !(cJSON_IsString(construction) && strcmp(construction->valuestring, "auto") == 0)) {
+            return invalid_body(error, error_size, "a motif fill construction must be \"auto\" or an object");
         }
     }
     if (strcmp(kind->valuestring, "progression") == 0) {

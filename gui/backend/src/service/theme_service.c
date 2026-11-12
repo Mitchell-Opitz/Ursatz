@@ -400,7 +400,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
     bool ok = result == URSATZ_GUI_THEME_OK && cJSON_AddStringToObject(request, "schema", "ursatz-theme-request") &&
               cJSON_AddNumberToObject(request, "schema_version", 2) &&
               cJSON_AddStringToObject(request, "key", "C");
-    static const char *const form_members[] = {"into", "hybrid", "mode", "meter", "bars", "cadence", "first_cadence", "development"};
+    static const char *const form_members[] = {"into", "hybrid", "mode", "meter", "bars", "cadence", "first_cadence", "development", "construction"};
     for (size_t i = 0; ok && i < sizeof(form_members) / sizeof(form_members[0]); i++) {
         ok = ursatz_gui_json_add_copy_if(request, form, form_members[i]);
     }

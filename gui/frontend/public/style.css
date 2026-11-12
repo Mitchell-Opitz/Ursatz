@@ -2533,3 +2533,10 @@ button.button-danger:disabled {
 .export-message {
   font-size: 0.85rem;
 }
+
+.theme-construction .upload-controls {
+  flex-wrap: wrap;
+}
+.theme-construction .theme-extensions {
+  margin-top: 8px;
+}

@@ -276,6 +276,37 @@ check(P.themeLengthBeats(themeBody) === 32 && P.themeLengthBeats({ theme: { form
 check(P.themeFormText(themeBody) === "hybrid (presentation+continuation) in D minor, 4/4, 8 bars" && P.themeComposed(themeBody) && !P.themeComposed({ theme: { form: {}, result: null } }), "a theme's form and whether it was composed");
 check(P.motifIsFree(section("s", "body", "A", 6)) && !P.motifIsFree(section("s", "body", "A", 32)) && P.motifIsFree(section("s", "body", "A", 32, null, { pickup: "1" })), "a motif fill is free unless 4 or 8 bars without a pickup");
 
+/* the construction of a motif fill (P47, R-468) */
+const sixBars = (fill) => section("s", "body", "A", 24, { kind: "motif", item_id: "m", version: 1, into: "sentence", hybrid: "", ...fill });
+check(P.motifIsFree(sixBars({})) && !P.motifIsFree(sixBars({ construction: "auto" })), "6 bars are a free phrase until a construction is chosen");
+check(!P.motifIsFree(sixBars({ construction: { ideas: {}, extensions: [] } })), "6 bars with a given construction are a theme");
+check(P.motifIsFree({ ...sixBars({ construction: "auto" }), pickup: "1" }), "a section with a pickup is a free phrase whatever its construction");
+check(P.motifIsFree(section("s", "body", "A", 26, { kind: "motif", item_id: "m", version: 1, construction: "auto" })), "a section of part bars is a free phrase whatever its construction");
+check(P.motifIsFree(section("s", "body", "A", 68, { kind: "motif", item_id: "m", version: 1, construction: "auto" })), "17 bars are a free phrase whatever its construction");
+check(P.constructionPossible(sixBars({})) && !P.constructionPossible(section("s", "body", "A", 8)), "a section of 3 to 16 whole bars can have a construction");
+check(P.constructionChoice(sixBars({}).fill) === "default" && P.constructionChoice(sixBars({ construction: "auto" }).fill) === "auto" && P.constructionChoice(sixBars({ construction: { ideas: {}, extensions: [] } }).fill) === "given", "the three choices read from the fill");
+const constructed = P.emptyState("c");
+constructed.sections = [sixBars({ construction: "auto" })];
+check(P.bodyFromState(constructed).piece.structure.sections[0].fill.construction === "auto", "a chosen construction is sent as auto");
+constructed.sections = [sixBars({ construction: { ideas: { "basic idea": 2, repetition: 1, "fragment 1": 1, "fragment 2": 1, cadential: 1, stray: 9 }, extensions: [{ kind: "evaded", idea: "", bars: 0, varied: false }] } })];
+const givenFill = P.bodyFromState(constructed).piece.structure.sections[0].fill;
+check(same(givenFill.construction, { ideas: { "basic idea": 2, repetition: 1, "fragment 1": 1, "fragment 2": 1, cadential: 1 }, extensions: [{ kind: "evaded", bars: 0 }] }), "a given construction is sent as the ideas of the pairing and its extensions");
+check(same(P.bodyFromState(P.stateFromBody(P.bodyFromState(constructed), "c")), P.bodyFromState(constructed)), "a given construction round trips through the body");
+constructed.sections = [sixBars({ construction: "auto", into: "period" })];
+check(P.stateFromBody(P.bodyFromState(constructed), "c").sections[0].fill.construction === "auto", "a chosen construction reads back");
+constructed.sections = [sixBars({ construction: "auto", pickup: "1" })];
+constructed.sections[0].pickup = "1";
+check(P.bodyFromState(constructed).piece.structure.sections[0].fill.construction === undefined, "a free phrase sends no construction");
+constructed.sections = [section("s", "body", "A", 32, { kind: "motif", item_id: "m", version: 1, into: "sentence", hybrid: "" })];
+check(P.bodyFromState(constructed).piece.structure.sections[0].fill.construction === undefined, "a theme of 8 bars with no construction sends no member");
+const oldPiece = { uses: [], piece: { structure: { form: "game-loop", key: "C", mode: "minor", meter: "4/4", sections: [{ id: "s0", part: "body", letter: "A", beats: 32, pickup: "0", cadence: null, fill: { kind: "motif", item_id: "m", version: 1, into: "sentence", hybrid: null } }] } } };
+check(P.stateFromBody(oldPiece, "o").sections[0].fill.construction === null, "a saved piece without the member reads as no construction");
+check(P.bodyFromState(P.stateFromBody(oldPiece, "o")).piece.structure.sections[0].fill.construction === undefined, "a saved piece without the member is sent as before");
+check(same(P.sectionConstruction({ construction: { halves: [4, 6], text: "A 10-bar period." } }), { halves: "4+6", text: "A 10-bar period." }), "a section's construction reads its halves and reason");
+check(P.sectionConstruction({ construction: "auto" }).text === "Chosen by the Composer" && P.sectionConstruction({}).text === "" && P.sectionConstruction(null).halves === "", "a section without a construction shows nothing");
+const rowView = P.resultView({ seed: 1, summary: { meter: "4/4", versions: { loop: { sections: [{ id: "s0", part: "body", start: "0", beats: 24, construction_text: "A 6-bar sentence." }, { id: "s1", part: "ending", start: "6", beats: 8 }] } } } }).versions[0].view;
+check(rowView.rows[0].construction === "A 6-bar sentence." && rowView.rows[1].construction === "", "a section row with construction_text shows it and one without shows nothing");
+
 if (failures > 0) {
   console.error(`${failures} failure(s)`);
   process.exit(1);

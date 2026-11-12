@@ -473,6 +473,7 @@ function buildThemeResult(ctx) {
       ["Seed", view.seed === null ? "" : String(view.seed)],
       ["Given chords", ThemesModel.chordsText(state)],
       ["Form heard", view.heard],
+      ["Construction", view.construction],
       ["Tempo", view.brief.tempo],
       ["Mode", view.brief.mode],
       ["Note density", view.brief.density],
@@ -772,6 +773,148 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
 
 /* The Advanced details of the Theme tab (closed by default): accompaniment, brief with weight and switches, seed
  * and check. The tempo is a field of the tab itself. */
+/* The construction block (P47, R-468), shared by the theme editor and the game loop section editor. It sets a construction
+ * that is null (the Composer chooses it) or given: the bars of each idea of the pairing and up to 3 extensions. host:
+ *   ideaNames()    the idea names of the pairing, in order;
+ *   bars()         the bars of the theme;
+ *   get() / set(v) the construction state (null or {ideas, extensions}, themes-model.js);
+ *   changed()      called after the block changed it;
+ *   modeHidden     true to leave out the chosen/given select (the host has its own).
+ * Returns {element, refresh()}; refresh re-reads the host (bars, pairing, state) and opens the block when the bars need one. */
+function buildConstructionBlock(host) {
+  const element = materialsElement("details", "theme-construction");
+  element.appendChild(materialsElement("summary", "section-title", "Construction"));
+  const body = materialsElement("div");
+  const modeRow = materialsElement("div", "upload-controls");
+  body.appendChild(modeRow);
+  const mode = themeField(
+    modeRow,
+    "Bars set by",
+    themeSelect(
+      [
+        { value: "chosen", label: "Chosen by the Composer" },
+        { value: "given", label: "Given" },
+      ],
+      host.get() ? "given" : "chosen",
+    ),
+  );
+  /* host.modeHidden: the host has its own choice between chosen and given and shows the block only for given. */
+  mode.parentElement.hidden = host.modeHidden === true;
+  const ideasRow = materialsElement("div", "upload-controls");
+  const extensionsRow = materialsElement("div", "theme-extensions");
+  const hint = materialsElement("div", "materials-hint");
+  body.appendChild(ideasRow);
+  body.appendChild(extensionsRow);
+  element.appendChild(body);
+  element.appendChild(hint);
+
+  function change() {
+    host.changed();
+  }
+
+  function renderIdeas(construction) {
+    ideasRow.replaceChildren();
+    for (const name of host.ideaNames()) {
+      const input = themeInput("bars", String(construction.ideas[name] === undefined ? "" : construction.ideas[name]));
+      input.size = 3;
+      input.addEventListener("input", () => {
+        construction.ideas[name] = Number(input.value);
+        change();
+      });
+      themeField(ideasRow, name, input);
+    }
+  }
+
+  function renderExtensions(construction) {
+    extensionsRow.replaceChildren();
+    const names = host.ideaNames();
+    construction.extensions.forEach((extension, at) => {
+      const row = materialsElement("div", "upload-controls");
+      const kind = themeField(row, `Extension ${at + 1}`, themeSelect(ThemesModel.EXTENSIONS, extension.kind));
+      const idea = themeSelect(ThemesModel.extensionIdeas(extension.kind, names), extension.idea);
+      const ideaField = themeField(row, "After", idea);
+      const bars = themeInput("0 = default", extension.bars ? String(extension.bars) : "");
+      bars.size = 6;
+      themeField(row, "Bars", bars);
+      const varied = materialsElement("input");
+      varied.type = "checkbox";
+      varied.checked = extension.varied === true;
+      const variedLabel = themeField(row, "Varied", varied);
+      const remove = themeButton("Remove", () => {
+        construction.extensions.splice(at, 1);
+        renderExtensions(construction);
+        change();
+      });
+      row.appendChild(remove);
+      function sync() {
+        extension.kind = kind.value;
+        const kinds = ThemesModel.extensionIdeas(extension.kind, names);
+        ideaField.parentElement.hidden = kinds.length === 0;
+        if (!kinds.includes(idea.value)) {
+          idea.replaceChildren(...kinds.map((name) => Object.assign(materialsElement("option", "", name), { value: name })));
+        }
+        extension.idea = kinds.length === 0 ? "" : idea.value;
+        extension.bars = Number(bars.value) || 0;
+        const entry = ThemesModel.EXTENSIONS.find((item) => item.value === extension.kind) || {};
+        variedLabel.parentElement.hidden = !entry.varied;
+        extension.varied = Boolean(entry.varied) && varied.checked;
+      }
+      for (const control of [kind, idea, bars, varied]) {
+        control.addEventListener("input", () => {
+          sync();
+          change();
+        });
+      }
+      sync();
+      extensionsRow.appendChild(row);
+    });
+    if (construction.extensions.length < ThemesModel.MAX_EXTENSIONS) {
+      extensionsRow.appendChild(
+        themeButton("Add extension", () => {
+          const first = ThemesModel.EXTENSIONS[0];
+          if (!first) {
+            return;
+          }
+          const ideas = ThemesModel.extensionIdeas(first.value, names);
+          construction.extensions.push({ kind: first.value, idea: ideas[0] || "", bars: 0, varied: false });
+          renderExtensions(construction);
+          change();
+        }),
+      );
+    }
+  }
+
+  function refresh() {
+    const construction = host.get();
+    const names = host.ideaNames();
+    mode.value = construction ? "given" : "chosen";
+    if (construction && names.some((name) => construction.ideas[name] === undefined)) {
+      /* The pairing changed: the ideas start again, the extensions stay. */
+      construction.ideas = ThemesModel.defaultConstruction(names, host.bars()).ideas;
+    }
+    ideasRow.hidden = !construction;
+    extensionsRow.hidden = !construction;
+    hint.textContent = construction
+      ? `The ideas and extensions add up to the theme's ${host.bars()} bars; an extension with 0 bars takes the Composer's default.`
+      : "The Composer chooses the bars of each idea from the motif and the length.";
+    if (construction) {
+      renderIdeas(construction);
+      renderExtensions(construction);
+    }
+    if (ThemesModel.needsConstruction(host.bars()) || construction) {
+      element.open = true;
+    }
+  }
+
+  mode.addEventListener("input", () => {
+    host.set(mode.value === "given" ? ThemesModel.defaultConstruction(host.ideaNames(), host.bars()) : null);
+    refresh();
+    change();
+  });
+  refresh();
+  return { element, refresh };
+}
+
 /* The chord row: one text field per bar of the theme, empty bars left to the Composer. Returns {element, refresh()}. */
 function buildThemeChordRow(state) {
   const element = materialsElement("div", "theme-chords");
@@ -888,8 +1031,12 @@ function buildThemeEditor(ctx) {
     if (chordRow) {
       chordRow.refresh();
     }
+    if (constructionBlock) {
+      constructionBlock.refresh();
+    }
   }
   let chordRow = null;
+  let constructionBlock = null;
   for (const control of [into, beginningSelect, endingSelect, meter, bars, cadence, firstCadence, development]) {
     control.addEventListener("input", syncForm);
   }
@@ -897,8 +1044,18 @@ function buildThemeEditor(ctx) {
     state.modeChosen = true;
     syncForm();
   });
-  syncForm();
   structure.appendChild(form);
+  constructionBlock = buildConstructionBlock({
+    ideaNames: () => ThemesModel.pairingIdeaNames(ThemesModel.pairing(state)),
+    bars: () => state.bars,
+    get: () => state.construction,
+    set: (value) => {
+      state.construction = value;
+    },
+    changed: () => {},
+  });
+  structure.appendChild(constructionBlock.element);
+  syncForm();
   sections.structure = structure;
 
   /* Structure tab: the slots. The first basic motif sets the mode (R-205). */
@@ -930,6 +1087,7 @@ function buildThemeEditor(ctx) {
       mode,
       meter,
       bars,
+      construction: constructionBlock.element,
       cadence,
       firstCadence,
       development,

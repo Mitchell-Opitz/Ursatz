@@ -524,6 +524,20 @@ static void test_bodies(const Items *m) {
   /* Structure only, then every fill kind. */
   check(create_piece("Structure only", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":32}]", "", NULL) == 200,
         "a structure-only body with one body section is valid");
+  /* The construction of a motif fill (Composer API 1.18): "auto" or an object is kept, anything else is refused. */
+  motif_fill_of(fill, sizeof(fill), m->a, 1, ",\"into\":\"sentence\",\"construction\":\"auto\"");
+  section_of(one, sizeof(one), "s1", "body", 24, fill);
+  snprintf(two, sizeof(two), "[%s]", one);
+  check(create_piece("Chosen construction", two, "", NULL) == 200, "a motif fill with construction auto is valid");
+  motif_fill_of(fill, sizeof(fill), m->a, 1,
+                ",\"into\":\"sentence\",\"construction\":{\"ideas\":{\"basic idea\":2},\"extensions\":[]}");
+  section_of(one, sizeof(one), "s1", "body", 24, fill);
+  snprintf(two, sizeof(two), "[%s]", one);
+  check(create_piece("Given construction", two, "", NULL) == 200, "a motif fill with a given construction is valid");
+  motif_fill_of(fill, sizeof(fill), m->a, 1, ",\"into\":\"sentence\",\"construction\":5");
+  section_of(one, sizeof(one), "s1", "body", 24, fill);
+  snprintf(two, sizeof(two), "[%s]", one);
+  check(create_piece("Bad construction", two, "", NULL) != 200, "a motif fill construction that is a number is refused");
   motif_fill_of(fill, sizeof(fill), m->a, 1, ",\"into\":\"hybrid\",\"hybrid\":\"antecedent+continuation\"");
   section_of(one, sizeof(one), "s1", "body", 32, fill);
   theme_fill_of(fill2, sizeof(fill2), m->theme, 2);

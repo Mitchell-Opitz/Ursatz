@@ -155,6 +155,13 @@ async function main() {
   await empty.now();
   check(!shown[shown.length - 1].complete && shown[shown.length - 1].ok, "nothing to check shows nothing");
 
+  /* The construction members (Composer API 1.18, P47). */
+  check(same(V.values("theme_bars").map(Number), [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]), "theme_bars lists 3 to 16 bars");
+  check(same(V.list("theme_bars_regular"), [4, 8]), "theme_bars_regular lists the lengths that need no construction");
+  check(same(V.values("theme_extensions"), ["repeat", "stretch", "addition", "evaded"]), "theme_extensions lists the four kinds");
+  check(V.entry("theme_extensions", "repeat").varied === true && V.entry("theme_extensions", "repeat").ideas.includes("fragment 1"), "a repeat may be varied and follows ideas");
+  check(V.entry("theme_extensions", "evaded").ideas === undefined && V.entry("theme_extensions", "addition").ideas === undefined, "an addition and an evaded cadence follow no idea");
+
   if (failures > 0) {
     console.error(`${failures} check(s) failed`);
     process.exit(1);

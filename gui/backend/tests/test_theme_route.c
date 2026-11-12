@@ -1309,6 +1309,49 @@ static void test_development(const Motifs *m) {
   cJSON_Delete(answer);
 }
 
+/* The construction (Composer API 1.18): a given construction reaches the Composer, the result names it with its reason, and a
+ * construction that is not an object is refused by a save. */
+static void test_construction(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char body[2800];
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\","
+           "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null,\"construction\":{\"ideas\":"
+           "{\"basic idea\":2,\"repetition\":2,\"fragment 1\":1,\"fragment 2\":1,\"cadential\":2},\"extensions\":[]}},"
+           "\"slots\":%s}}",
+           slots);
+  char *theme = create_item("theme", "Constructed", body, &status);
+  check(theme != NULL, "the theme with a construction is saved");
+  if (theme) {
+    cJSON *answer = compose(theme, "{\"seed\":97}", &status);
+    check(status == 200 && ok_true(answer), "a theme with a given construction composes");
+    cJSON_Delete(answer);
+    cJSON *sent = last_request();
+    const cJSON *ideas = member(member(sent, "construction"), "ideas");
+    check(cJSON_GetArraySize((cJSON *)ideas) == 5, "the request to the Composer carries the construction");
+    cJSON_Delete(sent);
+    answer = get_item(theme, &status);
+    const cJSON *themes = member(member(member(theme_of(answer), "result"), "summary"), "themes");
+    check(strcmp(string_of(member(cJSON_GetArrayItem(themes, 0), "construction"), "reason"), "given") == 0,
+          "the result names the construction as given");
+    cJSON_Delete(answer);
+  }
+  free(theme);
+
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\","
+           "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null,\"construction\":\"auto\"},"
+           "\"slots\":%s}}",
+           slots);
+  char request[3000];
+  snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
+  cJSON *answer = exchange("POST", "/api/materials/items/validate", request, &status);
+  check(status == 400 && !ok_true(answer), "a construction that is not an object is refused");
+  cJSON_Delete(answer);
+}
+
 /* A 2-bar 3/4 basic motif in an 8-bar theme: validate accepts it (the Composer checks the plan before any seeding), refuses a
  * given V in the last bar of a PAC theme at its /chords/<index> path, and compose builds a version. */
 static void test_two_bar_theme(void) {
@@ -1395,6 +1438,7 @@ int main(void) {
     test_jobs_route(&motifs);
     test_real_composer(&motifs);
     test_development(&motifs);
+    test_construction(&motifs);
     test_two_bar_theme();
   }
 

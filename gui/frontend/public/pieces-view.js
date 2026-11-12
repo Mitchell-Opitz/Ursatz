@@ -43,7 +43,8 @@ function pieceSizedStrip(form, bars, count) {
   const total = Math.max(1, sections.reduce((sum, section) => sum + (Number.isFinite(section.bars) ? section.bars : 0), 0));
   const track = materialsElement("div", "piece-lane-track");
   for (const section of sections) {
-    const label = `${section.letter} · ${lengthOf(section)}`;
+    const halves = PiecesModel.sectionConstruction(section).halves;
+    const label = `${section.letter} · ${lengthOf(section)}${halves ? ` · ${halves}` : ""}`;
     const block = materialsElement("div", "piece-block", label);
     block.title = `${section.role ? section.role.label : ""} ${label}`.trim();
     block.style.flex = `0 0 ${((Number.isFinite(section.bars) ? section.bars : 0) / total) * 100}%`;
@@ -52,10 +53,13 @@ function pieceSizedStrip(form, bars, count) {
   const lane = materialsElement("div", "piece-lane");
   lane.appendChild(track);
   box.appendChild(lane);
+  /* The Construction column is there only when a section has one. */
+  const constructions = sections.map((section) => PiecesModel.sectionConstruction(section).text);
+  const withConstruction = constructions.some((text) => text !== "");
   box.appendChild(
     pieceTable(
-      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots"],
-      sections.map((section) => [
+      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots", ...(withConstruction ? ["Construction"] : [])],
+      sections.map((section, at) => [
         section.letter,
         section.role ? section.role.label : "",
         lengthOf(section),
@@ -66,6 +70,7 @@ function pieceSizedStrip(form, bars, count) {
         section.pedal ? section.pedal.label : "",
         section.returns ? (section.variation ? `${section.returns} (${section.variation})` : section.returns) : "",
         (Array.isArray(section.slots) ? section.slots : []).map((slot) => `${slot.slot}: ${slot.ideas.join(", ")}`).join("; "),
+        ...(withConstruction ? [constructions[at]] : []),
       ]),
     ),
   );
@@ -221,15 +226,19 @@ function pieceTable(headers, rows) {
 function pieceVersionTables(view, heading, check, sized) {
   const box = materialsElement("div", "piece-version");
   box.appendChild(materialsElement("h3", "section-title", heading));
+  /* The Construction column is there only when a section has one (P47). */
+  const withConstruction = view.rows.some((row) => row.construction !== "");
+  const extraHead = withConstruction ? ["Construction"] : [];
+  const extra = (row) => (withConstruction ? [row.construction] : []);
   box.appendChild(
     sized
       ? pieceTable(
-          ["Section", "Role", "Letter", "Start", "Length", "Cadence", "Heard", "Key heard", "Harmony", "Returns", "How it differs"],
-          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.keyHeard, row.pedal, row.returns, row.changes]),
+          ["Section", "Role", "Letter", "Start", "Length", "Cadence", "Heard", "Key heard", "Harmony", "Returns", "How it differs", ...extraHead],
+          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.keyHeard, row.pedal, row.returns, row.changes, ...extra(row)]),
         )
       : pieceTable(
-          ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source"],
-          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source]),
+          ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source", ...extraHead],
+          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source, ...extra(row)]),
         ),
   );
   box.appendChild(
@@ -744,24 +753,81 @@ function buildPieceEditor(ctx) {
         const intoEl = materialsElement("div", "upload-controls");
         drawInto = () => {
           intoEl.innerHTML = "";
-          if (PiecesModel.motifIsFree(section, state.meter)) {
+          const free = PiecesModel.motifIsFree(section, state.meter);
+          if (free) {
             intoEl.appendChild(
-              materialsElement("span", "piece-list-status", "Free phrase: a theme form needs 4 or 8 bars and no pickup."),
+              materialsElement(
+                "span",
+                "piece-list-status",
+                "Free phrase: a theme needs 4 or 8 bars, or a construction, and no pickup.",
+              ),
             );
+          }
+          if (!PiecesModel.constructionPossible(section, state.meter)) {
+            return;
+          }
+          /* The choice of a section of 3 to 16 whole bars: a free phrase (a theme as today at 4 or 8 bars), a theme the
+           * Composer builds a construction for, or a theme with the construction given (P47, R-468). */
+          const regular = ThemesModel.REGULAR_BARS.includes(Number(section.beats) / PiecesModel.barBeats(state.meter));
+          const choice = themeField(
+            intoEl,
+            "As",
+            themeSelect(
+              [
+                { value: "default", label: regular ? "Theme" : "Free phrase" },
+                { value: "auto", label: "Theme, chosen" },
+                { value: "given", label: "Theme, given" },
+              ],
+              PiecesModel.constructionChoice(fill),
+            ),
+          );
+          choice.addEventListener("input", () => {
+            if (choice.value === "auto") {
+              fill.construction = "auto";
+            } else if (choice.value === "given") {
+              fill.construction = ThemesModel.defaultConstruction(
+                ThemesModel.pairingIdeaNames(ThemesModel.pairing(fill)),
+                section.beats / PiecesModel.barBeats(state.meter),
+              );
+            } else {
+              fill.construction = null;
+            }
+            drawInto();
+            problems();
+          });
+          if (free) {
             return;
           }
           const into = themeField(intoEl, "Into", themeSelect(PiecesModel.INTOS, fill.into || "sentence"));
           const [beginning, ending] = (fill.hybrid || "presentation+continuation").split("+");
           const beginningSelect = themeField(intoEl, "Beginning", themeSelect(ThemesModel.BEGINNINGS, beginning));
           const endingSelect = themeField(intoEl, "Ending", themeSelect(ThemesModel.ENDINGS, ending));
+          let block = null;
           function syncInto() {
             fill.into = into.value;
             fill.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
             beginningSelect.parentElement.hidden = fill.into !== "hybrid";
             endingSelect.parentElement.hidden = fill.into !== "hybrid";
+            if (block) {
+              block.refresh();
+            }
           }
           for (const control of [into, beginningSelect, endingSelect]) {
             control.addEventListener("input", syncInto);
+          }
+          if (PiecesModel.constructionChoice(fill) === "given") {
+            block = buildConstructionBlock({
+              ideaNames: () => ThemesModel.pairingIdeaNames(ThemesModel.pairing(fill)),
+              bars: () => section.beats / PiecesModel.barBeats(state.meter),
+              get: () => fill.construction,
+              set: (value) => {
+                fill.construction = value;
+              },
+              changed: () => problems(),
+              modeHidden: true,
+            });
+            block.element.open = true;
+            intoEl.appendChild(block.element);
           }
           syncInto();
         };
