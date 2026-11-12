@@ -165,6 +165,12 @@ ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, 
  */
 ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, PlanConstruction *out, ComposerError *error);
 
+/*
+ * A construction as a response gives it (R-468): {"halves", "ideas", "extensions", "reason", "text"}, `text` the sentence
+ * that says why (grow_construction_describe). NULL when memory runs out.
+ */
+cJSON *api_grow_construction_json(const PlanConstruction *construction, const PlanThemePairing *pairing, const char *text);
+
 /* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive". */
 const char *api_accompaniment_name(PlanAccompanimentPattern pattern);
 /* The accompaniment of the two texts (either may be NULL) for the meter. */

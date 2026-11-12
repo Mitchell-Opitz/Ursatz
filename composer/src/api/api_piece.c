@@ -21,6 +21,7 @@
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_workflow.h"
+#include "grow/grow_internal.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
 #include "util/util.h"
@@ -666,6 +667,8 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
         if (!row->section) {
             continue;
         }
+        row->plan = plan;
+        row->node = id;
         row->start = plan_node_span(plan, id).start;
         row->kept = section_kept(version, id);
         row->has_cadence = cadence != NULL;
@@ -741,7 +744,17 @@ static cJSON *seam_json(const ComposeOutcome *outcome) {
     return object;
 }
 
-/* A row of a form whose sections the request gives: {id, part, letter, start, beats, cadence, heard, [in_scope], fill, source}. */
+/*
+ * Adds why a theme section is as long as it is (R-469), the sentence grow_construction_describe writes, as the row's
+ * construction_text. A section without a construction has no member, so a piece of 4 and 8-bar themes reads as before.
+ */
+static bool add_construction_text(cJSON *entry, const Row *row) {
+    char text[192];
+    return !row->plan || grow_section_describe(row->plan, row->node, text, sizeof text) == 0 ||
+           cJSON_AddStringToObject(entry, "construction_text", text) != NULL;
+}
+
+/* A row of a form whose sections the request gives: {id, part, letter, start, beats, cadence, heard, [in_scope], fill, source, [construction_text]}. */
 static cJSON *loop_row_json(const Row *row) {
     cJSON *entry = cJSON_CreateObject();
     bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->id) &&
@@ -751,7 +764,7 @@ static cJSON *loop_row_json(const Row *row) {
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
               cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&
-              cJSON_AddStringToObject(entry, "source", row->source);
+              cJSON_AddStringToObject(entry, "source", row->source) && add_construction_text(entry, row);
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;
@@ -844,7 +857,7 @@ static cJSON *changes_json(const Row *row) {
     return entry;
 }
 
-/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, pedal, changes}. */
+/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, pedal, changes, [construction_text]}. */
 static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
     const FormSectionSpec *spec = row->spec;
     char motive[96];
@@ -861,7 +874,7 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
               api_add(entry, "motive", string_or_null(has_motive ? motive : NULL)) &&
               api_add(entry, "key_heard", string_or_null(row->key_heard[0] ? row->key_heard : NULL)) &&
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
-              api_add(entry, "changes", changes_json(row));
+              api_add(entry, "changes", changes_json(row)) && add_construction_text(entry, row);
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;

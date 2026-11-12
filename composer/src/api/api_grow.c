@@ -1507,19 +1507,10 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     out->development = setup->material ? api_development_name(setup->development) : NULL; /* a theme's, not a grow's */
 }
 
-/* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
-static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
+cJSON *api_grow_construction_json(const PlanConstruction *given, const PlanThemePairing *pairing, const char *text) {
     static const char *const REASONS[] = {"given", "motive", "length"};
-    const PlanConstraint *construction = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_CONSTRUCTION);
-    const PlanConstraint *pairing = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_THEME_PAIRING);
-    if (!construction || !pairing) {
-        return cJSON_CreateNull();
-    }
-    const PlanConstruction *given = &construction->params.construction;
     GrowConstructionSpans spans;
-    grow_construction_spans(&pairing->params.theme_pairing, given, &spans);
-    char text[192];
-    grow_section_describe(plan, node, text, sizeof text);
+    grow_construction_spans(pairing, given, &spans);
     cJSON *object = cJSON_CreateObject();
     cJSON *halves = object ? cJSON_AddArrayToObject(object, "halves") : NULL;
     cJSON *ideas = object ? cJSON_AddArrayToObject(object, "ideas") : NULL;
@@ -1556,13 +1547,24 @@ static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
              cJSON_AddNumberToObject(item, "first_bar", (double)spans.extension_first[k] + 1) &&
              cJSON_AddBoolToObject(item, "varied", extension->varied);
     }
-    ok = ok && cJSON_AddStringToObject(object, "reason", REASONS[construction->params.construction.reason]) &&
-         cJSON_AddStringToObject(object, "text", text);
+    ok = ok && cJSON_AddStringToObject(object, "reason", REASONS[given->reason]) && cJSON_AddStringToObject(object, "text", text);
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
     }
     return object;
+}
+
+/* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
+static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
+    const PlanConstraint *construction = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_CONSTRUCTION);
+    const PlanConstraint *pairing = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_THEME_PAIRING);
+    if (!construction || !pairing) {
+        return cJSON_CreateNull();
+    }
+    char text[192];
+    grow_section_describe(plan, node, text, sizeof text);
+    return api_grow_construction_json(&construction->params.construction, &pairing->params.theme_pairing, text);
 }
 
 static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const GrowThemeInfo *info, Rational bar) {
