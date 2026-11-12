@@ -23,7 +23,7 @@
 #define MELODY_FILL_PARAMS_INIT                                                                                      \
     {DEFAULT_RANGE_LOW,   DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY,               \
      DEFAULT_CLIMAX,      false,              DEFAULT_CLIMAX_RISE, DEFAULT_CLIMAX_SLACK, {1, 3},                    \
-     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0}
+     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0,                        0, 0}
 
 MelodyFillParams melody_fill_params_default(void) {
     MelodyFillParams params = MELODY_FILL_PARAMS_INIT;
