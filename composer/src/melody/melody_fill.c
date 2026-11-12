@@ -96,6 +96,10 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !melody_context_read(plan, (LaneSpanId)target.id, read))) {
         ok = false;
     }
+    /* The bars right before the target that share one rhythm, for the rhythm repetition cap (R-479). */
+    if (ok && params->rhythm_repeat_bars > 0 && !melody_context_read_repeats(plan, read)) {
+        ok = false;
+    }
     /* The octave of the motive's notes is chosen per attempt from the ranked shifts (R-334); one that fits none leaves the span open. */
     if (ok) {
         shift_count = melody_realize_shifts(read, params, shifts);

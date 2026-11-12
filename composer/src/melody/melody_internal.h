@@ -17,6 +17,8 @@
 #define MELODY_FINEST_NOTE_DENOMINATOR 128L
 #define MELODY_MAX_NOTES 256
 #define MELODY_MAX_BASS 256
+/* The most notes of a bar the rhythm repetition cap reads (phase L4, R-479). */
+#define MELODY_BAR_NOTES 32
 /* The most notes of a pickup (R-168). */
 #define MELODY_MAX_PICKUP 4
 #define MELODY_PAYLOAD_MAGIC 0x4D454C31UL
@@ -104,6 +106,17 @@ typedef struct {
     int seam_bass;
     int seam_next;
     bool restating;      /* the motive is the melody of the idea before, to be said again as it was */
+    /*
+     * Rhythm repetition (phase L4, R-479), read only when rhythm_repeat_bars is above 0: repeat_run whole bars right
+     * before the target, in its section, share one rhythm of 2 or more notes, and that rhythm (repeat_count notes, from
+     * the bar's start) is repeat_onset and repeat_duration. 0 when the target does not start on a barline or the bar
+     * before it has fewer than 2 notes.
+     */
+    bool repeat_aligned; /* the target starts on a barline of its section and has no pickup: its own bars are counted */
+    size_t repeat_run;
+    size_t repeat_count;
+    Rational repeat_onset[MELODY_BAR_NOTES];
+    Rational repeat_duration[MELODY_BAR_NOTES];
 } MelodyContext;
 
 #define MELODY_TONE_CHORD (-1)
@@ -125,6 +138,9 @@ typedef enum {
 /* The position of the target at which the phrase's climax falls, which may lie before 0 or past the end. */
 Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params);
 MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params);
+
+/* Reads the bars before the target that share one rhythm into repeat_run (phase L4, R-479). False only on a plan error. */
+bool melody_context_read_repeats(const PiecePlan *plan, MelodyContext *context);
 
 /* How many times the closure rules count for the target (phase L4, R-478): 0 when it ends no cadence. */
 unsigned melody_closure_weight(const MelodyContext *context, const MelodyFillParams *params);
