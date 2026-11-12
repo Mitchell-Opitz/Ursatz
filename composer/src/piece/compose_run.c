@@ -880,6 +880,14 @@ static PieceResult run_seam(Run *run) {
     run->seam = held_count > 0 && released == held_count;
     for (size_t s = 0; run->seam && result == PIECE_OK && s < sizeof(STAGES) / sizeof(STAGES[0]); s++) {
         result = run_stage(run, STAGES[s], false);
+        /* A held section that asks for a connective gets it once its melody is written, before the texture reads it. */
+        if (result == PIECE_OK && STAGES[s] == COMPOSE_STAGE_MELODY) {
+            for (size_t i = 0; result == PIECE_OK && i < released; i++) {
+                if (plan_node_has_constraint(plan, held[i], PLAN_CONSTRAINT_CONNECTIVE)) {
+                    result = piece_connective_write(plan, held[i]);
+                }
+            }
+        }
     }
     if (result == PIECE_ERR_STUCK && !run->outcome->cancelled) {
         run->outcome->stuck = true;
