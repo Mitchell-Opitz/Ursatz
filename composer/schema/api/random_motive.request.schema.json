@@ -207,6 +207,41 @@
                   "maximum": 20
                 }
               }
+            },
+            "closure": {
+              "type": "object",
+              "description": "How many times the closure rules count for the theme's last cadence (final) and for an earlier one (first). 0 leaves them out.",
+              "additionalProperties": false,
+              "properties": {
+                "final": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "first": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
+            },
+            "rhythm_repeat_bars": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16,
+              "description": "The most bars in a row of 2 or more notes that may share one rhythm. 0 sets no limit."
+            },
+            "leaps": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "How many times a melody's leaps count against it. 0 leaves them out."
+            },
+            "register": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20,
+              "description": "How many times an idea's drift from the register of the span before it counts against it. 0 leaves it out."
             }
           }
         },
@@ -842,6 +877,34 @@
             "basic_as_written": {
               "type": "boolean",
               "description": "A motif as long as the basic idea is the basic idea as written, over its own chords. Off by default."
+            },
+            "contrast": {
+              "type": "object",
+              "description": "How a theme's contrasting ideas contrast: a similar or a distant rhythm, or new material. All 0 reads as similar 1.",
+              "additionalProperties": false,
+              "properties": {
+                "distance": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "similar": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 20
+                    },
+                    "distant": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 20
+                    }
+                  }
+                },
+                "new_material": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                }
+              }
             }
           }
         }
