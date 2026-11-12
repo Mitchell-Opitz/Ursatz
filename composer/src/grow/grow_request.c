@@ -105,7 +105,7 @@ NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea) {
 bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea) {
     bool first;
     GrowSlot slot = grow_idea_slot(&spec->pairing, idea, &first);
-    return (idea != GROW_PLACE_BASIC && spec->has_idea_source[idea]) ||
+    return spec->has_distant[idea] || (idea != GROW_PLACE_BASIC && spec->has_idea_source[idea]) ||
            (idea != GROW_PLACE_BASIC && first && spec->has_slot_source[slot]);
 }
 

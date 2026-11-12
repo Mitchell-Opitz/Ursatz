@@ -409,6 +409,9 @@ const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
     if (spec->has_liquidated[idea]) {
         return &spec->liquidated[idea];
     }
+    if (spec->has_distant[idea]) {
+        return &spec->distant[idea];
+    }
     if (spec->has_shortened[idea]) {
         return &spec->shortened[idea];
     }
@@ -425,6 +428,9 @@ NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
     }
     if (build->spec->has_liquidated[idea]) {
         return build->liquid_node[idea];
+    }
+    if (build->spec->has_distant[idea]) {
+        return build->distant_node[idea];
     }
     if (build->spec->has_shortened[idea]) {
         return build->short_node[idea];
@@ -558,6 +564,164 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
         return false;
     }
     *out = pool[fill_rng_below(rng, count)];
+    return true;
+}
+
+GrowContrastDistance grow_draw_distance(const GrowThemeRequest *request, FillRng *rng) {
+    unsigned similar = request->contrast.distance[GROW_CONTRAST_SIMILAR];
+    unsigned distant = request->contrast.distance[GROW_CONTRAST_DISTANT];
+    if (distant == 0) {
+        return GROW_CONTRAST_SIMILAR;
+    }
+    return fill_rng_below(rng, (uint64_t)similar + distant) < similar ? GROW_CONTRAST_SIMILAR : GROW_CONTRAST_DISTANT;
+}
+
+/* The most rhythms a distant contrast tries. */
+#define DISTANT_DRAWS 8
+
+/* Whether two motives have the same onsets and durations over the time both have. */
+static bool same_rhythm_over_common(const Motive *a, const Motive *b) {
+    Rational common = rational_cmp(a->length, b->length) < 0 ? a->length : b->length;
+    size_t i = 0;
+    size_t j = 0;
+    while (i < a->note_count && rational_cmp(a->notes[i].onset, common) < 0 && j < b->note_count &&
+           rational_cmp(b->notes[j].onset, common) < 0) {
+        if (rational_cmp(a->notes[i].onset, b->notes[j].onset) != 0 ||
+            rational_cmp(a->notes[i].duration, b->notes[j].duration) != 0) {
+            return false;
+        }
+        i++;
+        j++;
+    }
+    bool a_more = i < a->note_count && rational_cmp(a->notes[i].onset, common) < 0;
+    bool b_more = j < b->note_count && rational_cmp(b->notes[j].onset, common) < 0;
+    return !a_more && !b_more;
+}
+
+/* The pitch one step of the key's scale from `pitch` in `direction` (the nearest scale pitch that way). */
+static int scale_step(int pitch, int direction, int tonic_pc, bool minor) {
+    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
+    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
+    const bool *scale = minor ? MINOR : MAJOR;
+    int next = pitch;
+    do {
+        next += direction;
+    } while (!scale[((next - tonic_pc) % 12 + 12) % 12]);
+    return next;
+}
+
+bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
+                       const Motive *source, const MotiveRelationStep *step, int want_pc) {
+    Motive developed;
+    if (motive_develop(source, step, &developed) != MOTIVE_DEV_OK || developed.note_count < 2) {
+        return false;
+    }
+    Rational room = spec->layout.length[place];
+    Rational two_bars = grow_scaled(request->bar, 2);
+    MotiveRandomPreferences preferences;
+    if (request->motif) {
+        preferences = *request->motif;
+    } else {
+        motive_random_preferences_default(&preferences);
+    }
+    bool two = rational_cmp(room, two_bars) >= 0;
+    preferences.bars[0] = two ? 0 : 1;
+    preferences.bars[1] = two ? 1 : 0;
+    preferences.pickup_one_in = 0;
+    preferences.plan_count = 0;
+    bool in_scale = grow_motive_in_range(&developed, 0, 127, true);
+    Motive first;
+    bool have_first = false;
+    for (int draw = 0; draw < DISTANT_DRAWS; draw++) {
+        MotiveRandomOptions options;
+        memset(&options, 0, sizeof(options));
+        options.mode = request->key.mode;
+        options.meter = request->meter;
+        options.has_key = true;
+        options.key = request->key;
+        options.form = MOTIVE_SKETCH_FORM_FULL;
+        options.count = 1;
+        options.seed = (unsigned long)fill_rng_below(rng, 1u << 31);
+        options.preferences = &preferences;
+        Motive rhythm;
+        size_t made = 0;
+        if (motive_random(&options, &rhythm, &made) != MOTIVE_RANDOM_OK || made < 1 || rhythm.note_count < 2 ||
+            rational_cmp(rhythm.length, room) > 0 || same_rhythm_over_common(&rhythm, source)) {
+            continue;
+        }
+        /* The rhythm's notes take the developed motive's pitches, spread over its notes. */
+        Motive result = developed;
+        size_t k = rhythm.note_count;
+        size_t n = developed.note_count;
+        int raw[MOTIVE_SKETCH_MAX_NOTES];
+        int low = 127;
+        int high = 0;
+        for (size_t j = 0; j < k; j++) {
+            size_t from = (j * (n - 1) + (k - 1) / 2) / (k - 1);
+            raw[j] = motive_pitch(&developed, from);
+        }
+        for (size_t j = 0; j < k; j++) {
+            int pitch = raw[j];
+            if (j > 0 && pitch == result.notes[j - 1].pitch) {
+                int direction = 1;
+                for (size_t m = j + 1; m < k; m++) {
+                    if (raw[m] != pitch) {
+                        direction = raw[m] > pitch ? 1 : -1;
+                        break;
+                    }
+                }
+                pitch = developed.has_scale ? scale_step(pitch, direction, developed.tonic_pc, developed.minor)
+                                            : pitch + 2 * direction;
+            }
+            result.notes[j].pitch = pitch;
+            result.notes[j].onset = rhythm.notes[j].onset;
+            result.notes[j].duration = rhythm.notes[j].duration;
+            low = pitch < low ? pitch : low;
+            high = pitch > high ? pitch : high;
+        }
+        result.note_count = k;
+        result.length = rhythm.length;
+        result.pickup = rhythm.pickup;
+        result.chord_count = 0;
+        result.feature_count = 0;
+        result.tone_override_count = 0;
+        if (grow_same_contour(source, &result)) {
+            continue;
+        }
+        /* Whole octaves into the contrast's range, the nearest shift first. */
+        int shift = 0;
+        bool placed = false;
+        static const int SHIFTS[] = {0, 12, -12, 24, -24, 36, -36};
+        for (size_t s = 0; s < sizeof(SHIFTS) / sizeof(SHIFTS[0]) && !placed; s++) {
+            if (low + SHIFTS[s] >= CONTRAST_LOW && high + SHIFTS[s] <= CONTRAST_HIGH) {
+                shift = SHIFTS[s];
+                placed = true;
+            }
+        }
+        if (!placed) {
+            continue;
+        }
+        for (size_t j = 0; j < k; j++) {
+            result.notes[j].pitch += shift;
+        }
+        if (!grow_motive_in_range(&result, CONTRAST_LOW, CONTRAST_HIGH, in_scale)) {
+            continue;
+        }
+        if (lands_on(&result, want_pc)) {
+            spec->distant[place] = result;
+            spec->has_distant[place] = true;
+            return true;
+        }
+        if (!have_first) {
+            first = result;
+            have_first = true;
+        }
+    }
+    if (!have_first) {
+        return false;
+    }
+    spec->distant[place] = first;
+    spec->has_distant[place] = true;
     return true;
 }
 
@@ -762,6 +926,7 @@ static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, c
     for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
         made += spec->has_liquidated[k] ? 1 : 0;
         made += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request->bar) : 0;
+        made += spec->has_distant[k] ? grow_motive_layout_bars(&spec->distant[k], request->bar) : 0;
     }
     made += grow_extended_bars(spec, request->bar);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + made;
@@ -1622,7 +1787,9 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
         made += spec->has_liquidated[k] ? 1 : 0;
         build.liquid_node[k] = PLAN_NODE_NONE;
         build.short_node[k] = PLAN_NODE_NONE;
+        build.distant_node[k] = PLAN_NODE_NONE;
         shortened_bars += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request.bar) : 0;
+        shortened_bars += spec->has_distant[k] ? grow_motive_layout_bars(&spec->distant[k], request.bar) : 0;
     }
     size_t extended_bars = grow_extended_bars(spec, request.bar);
     for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
@@ -1655,6 +1822,21 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
                                                       PLAN_STATE_REALIZED, &build.short_node[k], NULL)
                                    : result;
         short_at += grow_motive_layout_bars(&spec->shortened[k], request.bar);
+    }
+    /* The distant contrasts follow the shortened sources, each at its own bars (R-475). */
+    for (size_t k = 0; result == PLAN_OK && k < GROW_PLACE_COUNT; k++) {
+        if (!spec->has_distant[k]) {
+            continue;
+        }
+        Rational start;
+        char name[32];
+        snprintf(name, sizeof(name), "distant for m%zu", k);
+        result = plan_result_of_rational(
+            rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+        result = result == PLAN_OK ? motive_attach_as(plan, build.material, start, &spec->distant[k], name,
+                                                      PLAN_STATE_REALIZED, &build.distant_node[k], NULL)
+                                   : result;
+        short_at += grow_motive_layout_bars(&spec->distant[k], request.bar);
     }
     /* The motives of the extensions follow, each at its own bars (R-468): the repeats' and the addition's. */
     for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {

@@ -166,6 +166,9 @@ typedef struct {
      */
     Motive shortened[GROW_PLACE_COUNT];
     bool has_shortened[GROW_PLACE_COUNT];
+    /* A distant contrast made for the idea: its own source, restated exact (R-475). */
+    Motive distant[GROW_PLACE_COUNT];
+    bool has_distant[GROW_PLACE_COUNT];
     /*
      * The motives of the extensions that have one of their own (R-468): extended[k] is what the repeat or the addition
      * layout.extensions[k] is, a made node of the material when has_extended[k]. A stretch and an evaded cadence make none.
@@ -232,6 +235,7 @@ typedef struct {
     NodeId segment_node[2];  /* the material node of the segment fragment k is made from, else PLAN_NODE_NONE */
     NodeId liquid_node[GROW_PLACE_COUNT]; /* the material node holding an idea's liquidation, else PLAN_NODE_NONE */
     NodeId short_node[GROW_PLACE_COUNT];  /* the material node holding an idea's shortened source, else PLAN_NODE_NONE */
+    NodeId distant_node[GROW_PLACE_COUNT]; /* the material node holding an idea's distant contrast, else PLAN_NODE_NONE */
     NodeId extension_node[PLAN_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
 } GrowBuild;
 
@@ -376,6 +380,14 @@ bool grow_shorten_source(GrowThemeSpec *spec, GrowPlace place);
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
                         GrowPlace place, const Motive *source, int want_pc, const MotiveRelationStep *avoid,
                         MotiveRelationStep *out);
+/* Whether a contrasting idea is made similar to the basic idea or distant from it (R-475): the request's weights, all 0
+   read as similar 1. No random number is drawn when the distant weight is 0. */
+GrowContrastDistance grow_draw_distance(const GrowThemeRequest *request, FillRng *rng);
+/* A distant contrast for the idea at `place` (R-475): the development `step` of source gives the pitches and a rhythm drawn
+   from the motif generator the rhythm; the contour must differ from source's. want_pc is the pitch class its last note
+   should land on (negative for any). True sets spec->distant[place] and has_distant[place]; false when none is made. */
+bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
+                       const Motive *source, const MotiveRelationStep *step, int want_pc);
 /* The development of m0 an idea is made as, and whether the idea is made from m0 at all. The first idea of a slot with
    a motive of its own is that motive exact. */
 bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep *out);
