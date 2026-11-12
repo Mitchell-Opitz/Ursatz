@@ -380,9 +380,12 @@ bool grow_shorten_source(GrowThemeSpec *spec, GrowPlace place);
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
                         GrowPlace place, const Motive *source, int want_pc, const MotiveRelationStep *avoid,
                         MotiveRelationStep *out);
-/* Whether a contrasting idea is made similar to the basic idea or distant from it (R-475): the request's weights, all 0
-   read as similar 1. No random number is drawn when the distant weight is 0. */
-GrowContrastDistance grow_draw_distance(const GrowThemeRequest *request, FillRng *rng);
+/* How a contrasting idea is made (R-475, R-477): similar to the basic idea, distant from it, or of new material. */
+typedef enum { GROW_CONTRAST_KIND_SIMILAR, GROW_CONTRAST_KIND_DISTANT, GROW_CONTRAST_KIND_NEW } GrowContrastKind;
+/* The kind of a contrasting idea: the request's weights, new material counted only when `new_allowed`. All weights 0 read
+   as similar 1; similar is 0 only when another weight is given and the distance weights are both 0. No random number is
+   drawn when only similar has weight. */
+GrowContrastKind grow_draw_contrast_kind(const GrowThemeRequest *request, FillRng *rng, bool new_allowed);
 /* A distant contrast for the idea at `place` (R-475): the development `step` of source gives the pitches and a rhythm drawn
    from the motif generator the rhythm; the contour must differ from source's. want_pc is the pitch class its last note
    should land on (negative for any). True sets spec->distant[place] and has_distant[place]; false when none is made. */

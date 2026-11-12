@@ -53,7 +53,7 @@ static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng,
                            grow_draw_contrast(request, rng, spec, GROW_PLACE_CONTRAST,
                                               grow_idea_source(spec, GROW_PLACE_CONTRAST), -1, NULL, &spec->contrast);
     /* A distant contrast (R-475): the contour change on a rhythm of its own; a failed make keeps the similar step. */
-    if (drawn && !own && grow_draw_distance(request, rng) == GROW_CONTRAST_DISTANT &&
+    if (drawn && !own && grow_draw_contrast_kind(request, rng, false) == GROW_CONTRAST_KIND_DISTANT &&
         grow_make_distant(request, rng, spec, GROW_PLACE_CONTRAST, grow_idea_source(spec, GROW_PLACE_CONTRAST),
                           &spec->contrast, -1)) {
         spec->contrast.kind = MOTIVE_RELATION_EXACT;

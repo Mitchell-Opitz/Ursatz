@@ -567,13 +567,18 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
     return true;
 }
 
-GrowContrastDistance grow_draw_distance(const GrowThemeRequest *request, FillRng *rng) {
-    unsigned similar = request->contrast.distance[GROW_CONTRAST_SIMILAR];
-    unsigned distant = request->contrast.distance[GROW_CONTRAST_DISTANT];
-    if (distant == 0) {
-        return GROW_CONTRAST_SIMILAR;
+GrowContrastKind grow_draw_contrast_kind(const GrowThemeRequest *request, FillRng *rng, bool new_allowed) {
+    uint64_t similar = request->contrast.distance[GROW_CONTRAST_SIMILAR];
+    uint64_t distant = request->contrast.distance[GROW_CONTRAST_DISTANT];
+    uint64_t fresh = new_allowed ? request->contrast.new_material : 0;
+    if (distant == 0 && fresh == 0) {
+        return GROW_CONTRAST_KIND_SIMILAR;
     }
-    return fill_rng_below(rng, (uint64_t)similar + distant) < similar ? GROW_CONTRAST_SIMILAR : GROW_CONTRAST_DISTANT;
+    /* Both distance weights 0 with new material to draw: the contrast is new or, when it cannot be made, similar. */
+    uint64_t total = similar + distant + fresh;
+    uint64_t pick = fill_rng_below(rng, total);
+    return pick < similar ? GROW_CONTRAST_KIND_SIMILAR
+                          : (pick < similar + distant ? GROW_CONTRAST_KIND_DISTANT : GROW_CONTRAST_KIND_NEW);
 }
 
 /* The most rhythms a distant contrast tries. */
