@@ -492,12 +492,97 @@
  ],
  "theme_bars": [
   {
+   "value": "3",
+   "label": "3 bars"
+  },
+  {
    "value": "4",
    "label": "4 bars"
   },
   {
+   "value": "5",
+   "label": "5 bars"
+  },
+  {
+   "value": "6",
+   "label": "6 bars"
+  },
+  {
+   "value": "7",
+   "label": "7 bars"
+  },
+  {
    "value": "8",
    "label": "8 bars"
+  },
+  {
+   "value": "9",
+   "label": "9 bars"
+  },
+  {
+   "value": "10",
+   "label": "10 bars"
+  },
+  {
+   "value": "11",
+   "label": "11 bars"
+  },
+  {
+   "value": "12",
+   "label": "12 bars"
+  },
+  {
+   "value": "13",
+   "label": "13 bars"
+  },
+  {
+   "value": "14",
+   "label": "14 bars"
+  },
+  {
+   "value": "15",
+   "label": "15 bars"
+  },
+  {
+   "value": "16",
+   "label": "16 bars"
+  }
+ ],
+ "theme_bars_regular": [
+  4,
+  8
+ ],
+ "theme_extensions": [
+  {
+   "value": "repeat",
+   "label": "Internal repetition",
+   "ideas": [
+    "repetition",
+    "contrasting idea",
+    "consequent contrasting idea",
+    "fragment 1",
+    "fragment 2",
+    "cadential 1"
+   ],
+   "varied": true
+  },
+  {
+   "value": "stretch",
+   "label": "Stretched cadence",
+   "ideas": [
+    "contrasting idea",
+    "consequent contrasting idea",
+    "cadential",
+    "cadential 2"
+   ]
+  },
+  {
+   "value": "addition",
+   "label": "Addition after the cadence"
+  },
+  {
+   "value": "evaded",
+   "label": "Evaded cadence"
   }
  ],
  "theme_first_cadences": [
