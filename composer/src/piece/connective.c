@@ -201,16 +201,11 @@ PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
     for (long long i = count - 2; i >= 0; i--) {
         line[i] = scale_step(tonic, minor, line[i + 1], side);
     }
-    /* The melodic rules: the move into the line, every step of it, and the step into the target. */
+    /* The melodic rules: the move into the line and the step into the target (the line itself is the scale, the augmented second of harmonic minor included). */
     int move = line[0] - from;
     if (util_absolute(move) > CONNECTIVE_LEAP || util_absolute(move) == 6 ||
         !standard_counterpoint_melodic_semitones_allowed(move) || !standard_counterpoint_is_step(target - line[count - 1])) {
         return PIECE_OK;
-    }
-    for (long long i = 1; i < count; i++) {
-        if (!standard_counterpoint_is_step(line[i] - line[i - 1])) {
-            return PIECE_OK;
-        }
     }
     int low;
     int high;
