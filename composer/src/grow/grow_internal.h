@@ -324,6 +324,20 @@ typedef struct {
     size_t addition;
 } GrowConstructionBars;
 void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out);
+/*
+ * Where the ideas and the extensions of a construction lie, as grow_construction_describe counts them: 0-based first bars
+ * and bars, a stretched idea with its stretch, an extension with its bars made explicit (a stretch spans the idea it
+ * lengthens). An idea the pairing does not have has 0 bars; `halves` are the halves' bars, the ending with the idea after an
+ * evaded cadence.
+ */
+typedef struct {
+    size_t halves[2];
+    size_t idea_first[GROW_IDEA_COUNT];
+    size_t idea_bars[GROW_IDEA_COUNT];
+    size_t extension_first[PLAN_CONSTRUCTION_EXTENSIONS];
+    size_t extension_bars[PLAN_CONSTRUCTION_EXTENSIONS];
+} GrowConstructionSpans;
+void grow_construction_spans(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionSpans *out);
 /* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
 size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
 /*

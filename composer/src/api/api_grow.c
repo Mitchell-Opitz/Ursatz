@@ -1493,6 +1493,64 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     out->development = setup->material ? api_development_name(setup->development) : NULL; /* a theme's, not a grow's */
 }
 
+/* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
+static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
+    static const char *const REASONS[] = {"given", "motive", "length"};
+    const PlanConstraint *construction = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_CONSTRUCTION);
+    const PlanConstraint *pairing = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_THEME_PAIRING);
+    if (!construction || !pairing) {
+        return cJSON_CreateNull();
+    }
+    const PlanConstruction *given = &construction->params.construction;
+    GrowConstructionSpans spans;
+    grow_construction_spans(&pairing->params.theme_pairing, given, &spans);
+    char text[192];
+    grow_section_describe(plan, node, text, sizeof text);
+    cJSON *object = cJSON_CreateObject();
+    cJSON *halves = object ? cJSON_AddArrayToObject(object, "halves") : NULL;
+    cJSON *ideas = object ? cJSON_AddArrayToObject(object, "ideas") : NULL;
+    cJSON *extensions = object ? cJSON_AddArrayToObject(object, "extensions") : NULL;
+    bool ok = object && halves && ideas && extensions;
+    for (int half = 0; ok && half < 2; half++) {
+        ok = cJSON_AddItemToArray(halves, cJSON_CreateNumber((double)spans.halves[half]));
+    }
+    bool listed[GROW_IDEA_COUNT] = {false};
+    for (int taken = 0; ok && taken < GROW_IDEA_COUNT; taken++) {
+        int next = -1;
+        for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+            if (!listed[idea] && spans.idea_bars[idea] > 0 && (next < 0 || spans.idea_first[idea] < spans.idea_first[next])) {
+                next = idea;
+            }
+        }
+        if (next < 0) {
+            break;
+        }
+        listed[next] = true;
+        cJSON *item = cJSON_CreateObject();
+        ok = item && cJSON_AddItemToArray(ideas, item) && cJSON_AddStringToObject(item, "idea", theme_shape_idea_name((GrowIdea)next)) &&
+             cJSON_AddNumberToObject(item, "bars", (double)spans.idea_bars[next]) &&
+             cJSON_AddNumberToObject(item, "first_bar", (double)spans.idea_first[next] + 1);
+    }
+    for (size_t k = 0; ok && k < given->extension_count; k++) {
+        const PlanExtension *extension = &given->extensions[k];
+        bool names_idea = extension->kind == PLAN_EXTENSION_REPEAT || extension->kind == PLAN_EXTENSION_STRETCH;
+        cJSON *item = cJSON_CreateObject();
+        ok = item && cJSON_AddItemToArray(extensions, item) && cJSON_AddStringToObject(item, "kind", EXTENSION_KINDS[extension->kind]) &&
+             cJSON_AddItemToObject(item, "idea",
+                                   names_idea ? cJSON_CreateString(theme_shape_idea_name((GrowIdea)extension->idea)) : cJSON_CreateNull()) &&
+             cJSON_AddNumberToObject(item, "bars", (double)spans.extension_bars[k]) &&
+             cJSON_AddNumberToObject(item, "first_bar", (double)spans.extension_first[k] + 1) &&
+             cJSON_AddBoolToObject(item, "varied", extension->varied);
+    }
+    ok = ok && cJSON_AddStringToObject(object, "reason", REASONS[construction->params.construction.reason]) &&
+         cJSON_AddStringToObject(object, "text", text);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const GrowThemeInfo *info, Rational bar) {
     const PiecePlan *plan = theme->plan;
     NodeId node = api_find_node(plan, "theme");
@@ -1504,6 +1562,7 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
     cJSON *score = cJSON_CreateObject();
     bool ok = object && score && cJSON_AddNumberToObject(object, "seed", (double)theme->seed) &&
               cJSON_AddItemToObject(object, "structure", structure_json(plan, node, bar)) &&
+              cJSON_AddItemToObject(object, "construction", construction_json(plan, node)) &&
               cJSON_AddItemToObject(object, "chords", chords_json(plan, node, &setup->meter)) &&
               cJSON_AddItemToObject(object, "developments",
                                     developments_json(plan, node, setup->motive, setup->fidelity, setup->development));
@@ -1531,6 +1590,32 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
     return object;
 }
 
+/* The construction as the request gave it: {"ideas": {"<idea>": bars}, "extensions": [{"kind", "idea", "bars", "varied"}]}. */
+static cJSON *given_construction_json(const PlanConstruction *construction) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *ideas = object ? cJSON_AddObjectToObject(object, "ideas") : NULL;
+    cJSON *extensions = object ? cJSON_AddArrayToObject(object, "extensions") : NULL;
+    bool ok = object && ideas && extensions;
+    for (int idea = 0; ok && idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
+        ok = construction->idea_bars[idea] == 0 ||
+             cJSON_AddNumberToObject(ideas, theme_shape_idea_name((GrowIdea)idea), construction->idea_bars[idea]) != NULL;
+    }
+    for (size_t k = 0; ok && k < construction->extension_count; k++) {
+        const PlanExtension *extension = &construction->extensions[k];
+        bool names_idea = extension->kind == PLAN_EXTENSION_REPEAT || extension->kind == PLAN_EXTENSION_STRETCH;
+        cJSON *item = cJSON_CreateObject();
+        ok = item && cJSON_AddItemToArray(extensions, item) && cJSON_AddStringToObject(item, "kind", EXTENSION_KINDS[extension->kind]) &&
+             cJSON_AddItemToObject(item, "idea",
+                                   names_idea ? cJSON_CreateString(theme_shape_idea_name((GrowIdea)extension->idea)) : cJSON_CreateNull()) &&
+             cJSON_AddNumberToObject(item, "bars", extension->bars) && cJSON_AddBoolToObject(item, "varied", extension->varied);
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const GrowThemeInfo *info) {
     const GrowBriefText *text = setup->text;
     char key[24];
@@ -1549,6 +1634,9 @@ cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const Gr
               cJSON_AddStringToObject(root, "cadence", plan_cadence_name(setup->cadence));
     if (ok && setup->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
         ok = cJSON_AddStringToObject(root, "first_cadence", plan_cadence_name(setup->first_cadence)) != NULL;
+    }
+    if (ok && setup->has_construction) {
+        ok = cJSON_AddItemToObject(root, "construction", given_construction_json(&setup->construction));
     }
     if (ok && setup->has_accompaniment) {
         ok = cJSON_AddStringToObject(root, "accompaniment", api_accompaniment_name(setup->accompaniment.pattern)) != NULL;

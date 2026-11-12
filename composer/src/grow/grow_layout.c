@@ -670,6 +670,68 @@ static void extension_clause(const PlanExtension *extension, size_t first, size_
     }
 }
 
+void grow_construction_spans(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionSpans *out) {
+    memset(out, 0, sizeof(*out));
+    if (!pairing || !construction) {
+        return;
+    }
+    size_t bars[GROW_PLACE_COUNT];
+    size_t repeated[GROW_PLACE_COUNT];
+    size_t evaded;
+    size_t addition;
+    construction_places(pairing, construction, bars, repeated, &evaded, &addition);
+    GrowConstructionBars halves;
+    grow_construction_bars(pairing, construction, &halves);
+    out->halves[0] = halves.beginning;
+    out->halves[1] = halves.ending + halves.evaded;
+    size_t start[GROW_PLACE_COUNT];
+    size_t repeat_start[GROW_PLACE_COUNT];
+    size_t position = 0;
+    for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
+        start[place] = position;
+        position += bars[place];
+        repeat_start[place] = position;
+        position += repeated[place];
+    }
+    size_t evaded_start = position;
+    size_t addition_start = position + evaded;
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
+        if (row) {
+            out->idea_first[idea] = start[row->place];
+            out->idea_bars[idea] = bars[row->place];
+        }
+    }
+    size_t repeat_seen[GROW_PLACE_COUNT] = {0};
+    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        const PlanExtension *extension = &construction->extensions[k];
+        GrowPlace place;
+        switch (extension->kind) {
+        case PLAN_EXTENSION_REPEAT:
+            if (grow_idea_place(pairing, (GrowIdea)extension->idea, &place)) {
+                out->extension_bars[k] = extension->bars ? extension->bars : bars[place];
+                out->extension_first[k] = repeat_start[place] + repeat_seen[place];
+                repeat_seen[place] += out->extension_bars[k];
+            }
+            break;
+        case PLAN_EXTENSION_STRETCH:
+            if (grow_idea_place(pairing, (GrowIdea)extension->idea, &place)) {
+                out->extension_first[k] = start[place];
+                out->extension_bars[k] = bars[place];
+            }
+            break;
+        case PLAN_EXTENSION_EVADED:
+            out->extension_first[k] = evaded_start;
+            out->extension_bars[k] = evaded;
+            break;
+        case PLAN_EXTENSION_ADDITION:
+            out->extension_first[k] = addition_start;
+            out->extension_bars[k] = addition;
+            break;
+        }
+    }
+}
+
 size_t grow_construction_describe(const PlanConstruction *construction, const PlanThemePairing *pairing, char *text,
                                   size_t size) {
     if (!text || size == 0) {

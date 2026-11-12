@@ -46,6 +46,10 @@ static void print_structure(const cJSON *structure) {
 
 static void print_theme_text(const cJSON *theme) {
     printf("seed %.0f\n", number_of(theme, "seed"));
+    const cJSON *construction = cJSON_GetObjectItemCaseSensitive(theme, "construction");
+    if (cJSON_IsObject(construction)) {
+        printf("construction: %s\n", string_of(construction, "text"));
+    }
     printf("\nstructure (bars from the start of the theme)\n");
     print_structure(cJSON_GetObjectItemCaseSensitive(theme, "structure"));
     printf("\n%-4s %-4s %-10s %-12s %s\n", "bar", "beat", "chord", "function", "bass");
