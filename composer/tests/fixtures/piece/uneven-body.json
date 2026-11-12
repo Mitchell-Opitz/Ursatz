@@ -1,0 +1,60 @@
+{
+ "schema": "ursatz-piece-request",
+ "schema_version": 1,
+ "key": "D",
+ "mode": "style",
+ "meter": "4/4",
+ "motive": null,
+ "sections": [
+  {
+   "id": "intro",
+   "part": "intro",
+   "letter": "I",
+   "beats": 8,
+   "pickup": "0",
+   "cadence": null,
+   "fill": {
+    "kind": "empty"
+   }
+  },
+  {
+   "id": "a",
+   "part": "body",
+   "letter": "A",
+   "beats": 36,
+   "pickup": "0",
+   "cadence": null,
+   "fill": {
+    "kind": "motif",
+    "motive": {
+     "degrees": "1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+     "pickup": "0",
+     "harmony": null,
+     "features": [],
+     "role": "melodic"
+    },
+    "forms": [],
+    "into": "sentence",
+    "hybrid": null,
+    "construction": "auto"
+   }
+  },
+  {
+   "id": "t",
+   "part": "turnaround",
+   "letter": "T",
+   "beats": 8,
+   "pickup": "0",
+   "cadence": null,
+   "fill": {
+    "kind": "empty"
+   }
+  }
+ ],
+ "accompaniment": null,
+ "voicing": null,
+ "style": "@STYLE@",
+ "style_weight": "1/2",
+ "without": [],
+ "tempo": null
+}

@@ -338,6 +338,74 @@ static void test_done_when(void) {
     assert(marker_tick("plain.mid", "loopStart") == (long)(2 * WHOLE_TICKS) && marker_tick("plain.mid", "A") < 0);
 }
 
+/* ------------------------------------------------------------- uneven sections */
+
+#define UNEVEN_SEEDS 10
+
+/* A 9-bar motif body section with "construction": "auto" is a theme: a 4+5 sentence, each seed of 1 to 10 composes with the
+   reason in the section's row (R-468, B6 of P47). The same section without a construction is a free phrase, as before. */
+static void test_uneven_body(void) {
+    write_request(PIECE("uneven-body.json"), "uneven.json", "@STYLE@", FIXTURE("style-fast-minor.json"));
+    for (unsigned long seed = 1; seed <= UNEVEN_SEEDS; seed++) {
+        char arguments[128];
+        snprintf(arguments, sizeof(arguments), "uneven.json --seed %lu --check --format json", seed);
+        char *shown = piece_output(arguments);
+        assert(strstr(shown, "\"construction_text\":\"4+5 sentence: the section is 9 bars, so fragment 2 is repeated a step lower (bar 7).\""));
+        /* Only the body has a construction: the intro and the turnaround rows have none. */
+        assert(count_of(shown, "\"construction_text\"") == 2);
+        free(shown);
+    }
+
+    /* A construction object is read as the theme API reads it: a 4+5 sentence by its ideas. */
+    write_request(PIECE("uneven-body.json"), "given.json", "@STYLE@", FIXTURE("style-fast-minor.json"));
+    char *text = test_read_file("given.json", NULL);
+    char *at = strstr(text, "\"construction\": \"auto\"");
+    assert(at);
+    FILE *file = fopen("given.json", "wb");
+    assert(file);
+    fwrite(text, 1, (size_t)(at - text), file);
+    fputs("\"construction\": {\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"fragment 1\": 1, \"fragment 2\": 1, "
+          "\"cadential\": 2}, \"extensions\": [{\"kind\": \"repeat\", \"idea\": \"fragment 2\", \"bars\": 1}]}",
+          file);
+    fputs(at + strlen("\"construction\": \"auto\""), file);
+    fclose(file);
+    free(text);
+    char *shown = piece_output("given.json --seed 1 --check --format json");
+    assert(strstr(shown, "\"construction_text\":\"4+5 sentence"));
+    free(shown);
+}
+
+static void expect_construction_refusals(void) {
+    static const char *const HEAD = "{\"schema\":\"ursatz-piece-request\",\"schema_version\":1,\"key\":\"D\",\"mode\":\"minor\","
+                                    "\"meter\":\"4/4\",\"motive\":null,";
+    char text[2048];
+    /* A construction needs 3 to 16 whole bars and no pickup. */
+    snprintf(text, sizeof(text),
+             "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,"
+             "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":\"auto\"}}]}",
+             HEAD);
+    write_text("short_construction.json", text);
+    expect_failure("short_construction.json --seed 1", 1, "a construction needs a theme of 3 to 16 whole bars and no pickup");
+    snprintf(text, sizeof(text),
+             "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":36,\"pickup\":\"1\",\"cadence\":null,"
+             "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":\"auto\"}}]}",
+             HEAD);
+    write_text("pickup_construction.json", text);
+    expect_failure("pickup_construction.json --seed 1", 1, "a construction needs a theme of 3 to 16 whole bars and no pickup");
+    snprintf(text, sizeof(text),
+             "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":36,\"pickup\":\"0\",\"cadence\":null,"
+             "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":\"chosen\"}}]}",
+             HEAD);
+    write_text("bad_construction.json", text);
+    expect_failure("bad_construction.json --seed 1", 1, "\"construction\" must be \"auto\" or");
+    snprintf(text, sizeof(text),
+             "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":36,\"pickup\":\"0\",\"cadence\":null,"
+             "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":{\"ideas\":{\"coda\":9}}}}]}",
+             HEAD);
+    write_text("unknown_idea.json", text);
+    expect_failure("unknown_idea.json --seed 1", 1, "unknown idea 'coda'");
+}
+
 /* ------------------------------------------------------------- the other fills */
 
 static void test_theme_fill(void) {
@@ -676,7 +744,9 @@ int main(void) {
     test_regenerate();
     test_variations();
     test_harmonize_theme();
+    test_uneven_body();
     test_errors();
+    expect_construction_refusals();
     printf("test_piece_cli: ok\n");
     return 0;
 }
