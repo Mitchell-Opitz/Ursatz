@@ -133,11 +133,31 @@ static Rational fragment_beat(const PlanMeter *meter) {
 }
 
 /*
+ * Whether the idea, made as the spec now says, writes no note under a sixteenth (R-480): a diminution that would leave
+ * one, such as a dotted sixteenth and a thirty-second, is one the library refuses, and the fragment is then its whole
+ * segment. False also when the idea cannot be made.
+ */
+static bool diminution_readable(const GrowThemeSpec *spec, GrowPlace idea) {
+    Motive result;
+    Rational sixteenth;
+    if (rational_make(1, 16, &sixteenth) != RATIONAL_OK || !grow_idea_develop(spec, idea, &result)) {
+        return false;
+    }
+    for (size_t i = 0; i < result.note_count; i++) {
+        if (rational_cmp(result.notes[i].duration, sixteenth) < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
  * How long fragment k is (R-462): its whole segment, half a bar of it, or a beat of it, by the weights of
  * `settings->fragment_lengths` (all 0 reads as the whole segment alone; no draw when only that has weight, else one
  * fill_rng_below of their sum). A beat with under 2 notes falls back to half a bar, then to the whole segment; a cut the
  * library refuses, or that does not fit the idea's room, is the whole segment. A whole segment is its diminution 1:2 with
- * `settings->diminish`; the library refuses that of a one-bar segment in 3/4, which stays whole. fragment_motive[k] is the segment.
+ * `settings->diminish`; the library refuses that of a one-bar segment in 3/4, which stays whole, and one that would write a
+ * note under a sixteenth (R-480). fragment_motive[k] is the segment.
  */
 static void draw_fragment_length(FillRng *rng, const GrowContinuation *settings, GrowThemeSpec *spec, size_t k) {
     GrowPlace idea = k == 0 ? GROW_PLACE_FRAGMENT_1 : GROW_PLACE_FRAGMENT_2;
@@ -172,6 +192,9 @@ static void draw_fragment_length(FillRng *rng, const GrowContinuation *settings,
     }
     spec->fragment_cut[k] = cut;
     spec->fragment_diminished[k] = cut == 0 && settings->diminish;
+    if (spec->fragment_diminished[k] && !diminution_readable(spec, idea)) {
+        spec->fragment_diminished[k] = false;
+    }
     if ((cut > 0 || spec->fragment_diminished[k]) && !fragment_fits(spec, idea, spec->layout.length[idea])) {
         spec->fragment_cut[k] = 0;
         spec->fragment_diminished[k] = false;

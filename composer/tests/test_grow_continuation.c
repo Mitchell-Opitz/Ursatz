@@ -35,6 +35,7 @@ static bool fast_run = false;
 static Fixture FIXTURES[2];
 static Fixture CHORD_FIXTURES[2]; /* the same motifs with harmony of their own */
 static Motive TRIPLE_MOTIVE;      /* two bars of 3/4 in A minor with harmony of its own */
+static Motive DOTTED_MOTIVE;      /* two bars of 4/4 whose segment b diminishes to notes under a sixteenth */
 
 static unsigned long last_seed(void) {
     return fast_run ? 1 : SEEDS;
@@ -64,6 +65,7 @@ static void load_fixtures(void) {
     CHORD_FIXTURES[1].name = "u51";
     CHORD_FIXTURES[1].motive = load_motive(COMPOSER_FIXTURE_DIR "/continuation/u51-chords.json");
     TRIPLE_MOTIVE = load_motive(COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json");
+    DOTTED_MOTIVE = load_motive(COMPOSER_FIXTURE_DIR "/continuation/dotted.json");
 }
 
 static NodeId find_node(const PiecePlan *plan, const char *name) {
@@ -556,6 +558,62 @@ static void test_rates(void) {
     }
 }
 
+/* The shortest note of the theme's melody that starts in the bars from `from` up to `to` (whole numbers of whole notes). */
+static Rational shortest_note(const PiecePlan *plan, long from, long to) {
+    NodeId theme = find_node(plan, "theme");
+    LaneSpanId spans[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
+    Rational shortest = {1, 1};
+    for (size_t s = 0; s < found; s++) {
+        PlanSpan span = plan_lane_span_span(plan, spans[s]);
+        const PlanNotes *notes = &plan_lane_span_payload(plan, spans[s])->notes;
+        for (size_t i = 0; i < notes->note_count; i++) {
+            Rational onset;
+            long long whole = 0;
+            assert(rational_add(span.start, notes->notes[i].offset, &onset) == RATIONAL_OK);
+            assert(rational_floor(onset, &whole) == RATIONAL_OK);
+            if (whole >= from && whole < to && rational_cmp(notes->notes[i].duration, shortest) < 0) {
+                shortest = notes->notes[i].duration;
+            }
+        }
+    }
+    return shortest;
+}
+
+/*
+ * The diminution floor (phase L4, R-480): diminution never writes a note under a sixteenth. Segment b of the dotted motif
+ * (`e. s e. s h`) would diminish to a thirty-second, so a fragment on it is its whole segment; segment a (`q. e q q`) may
+ * still be diminished.
+ */
+static void test_diminish_floor(void) {
+    GrowContinuation diminish;
+    Rational sixteenth = {1, 16};
+    size_t a_seen = 0;
+    size_t a_diminished = 0;
+    size_t b_seen = 0;
+    memset(&diminish, 0, sizeof(diminish));
+    diminish.diminish = true;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        PiecePlan *plan = grow(&DOTTED_MOTIVE, seed, &diminish);
+        for (size_t k = 0; k < 2; k++) {
+            const PlanMotiveRef *ref = ref_of(plan, FRAGMENTS[k]);
+            bool diminished = ref->has_step && ref->step.kind == MOTIVE_RELATION_DIMINISH;
+            if (strcmp(ref->segment, "a") == 0) {
+                a_seen++;
+                a_diminished += diminished;
+            } else if (strcmp(ref->segment, "b") == 0) {
+                b_seen++;
+                assert(!diminished);
+            }
+        }
+        assert(rational_cmp(shortest_note(plan, 4, 6), sixteenth) >= 0);
+        plan_destroy(plan);
+    }
+    printf("dotted: segment a diminished %zu of %zu fragments, segment b 0 of %zu, no note under a sixteenth in bars 5 and 6\n",
+           a_diminished, a_seen, b_seen);
+    assert(a_seen > 0 && a_diminished == a_seen && b_seen > 0);
+}
+
 int main(int argc, char **argv) {
     fast_run = argc > 1 && strcmp(argv[1], "fast") == 0;
     bool rates_only = argc > 1 && strcmp(argv[1], "rates") == 0;
@@ -570,6 +628,7 @@ int main(int argc, char **argv) {
         test_cut_departs();
         test_faster_harmony_changes_each_cell();
         test_basic_as_written_keeps_the_motif();
+        test_diminish_floor();
     }
     if (rates_only || fast_run) {
         test_rates();

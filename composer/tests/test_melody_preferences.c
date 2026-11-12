@@ -190,6 +190,81 @@ static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *mel
     return plan;
 }
 
+/*
+ * Rhythm repetition (phase L4, R-479, R-483): the longest run of whole bars of 2 or more notes in the theme's melody that
+ * share one rhythm (onsets and durations within the bar). Only the idea nodes are read: the plan's motive and material
+ * nodes have melody spans of their own after the theme. Times are in 128ths of a whole note, the finest the operator writes.
+ */
+#define BAR_UNITS 96 /* a 6/8 bar */
+#define MAX_MELODY_NOTES 512
+#define MAX_BAR_NOTES 64
+
+typedef struct {
+    long long onset;
+    long long duration;
+} UnitNote;
+
+static int compare_units(const void *a, const void *b) {
+    long long x = ((const UnitNote *)a)->onset;
+    long long y = ((const UnitNote *)b)->onset;
+    return (x > y) - (x < y);
+}
+
+static size_t longest_rhythm_run(const PiecePlan *plan) {
+    static UnitNote list[MAX_MELODY_NOTES];
+    size_t count = 0;
+    for (NodeId node = 1; node <= plan_node_count(plan); node++) {
+        LaneSpanId span;
+        if (plan_node_kind(plan, node) != PLAN_NODE_IDEA || !plan_melody_span_of(plan, node, &span)) {
+            continue;
+        }
+        Rational start = plan_lane_span_span(plan, span).start;
+        const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            assert(count < MAX_MELODY_NOTES && 128 % start.den == 0 && 128 % notes->notes[n].offset.den == 0 &&
+                   128 % notes->notes[n].duration.den == 0);
+            list[count].onset =
+                start.num * (128 / start.den) + notes->notes[n].offset.num * (128 / notes->notes[n].offset.den);
+            list[count].duration = notes->notes[n].duration.num * (128 / notes->notes[n].duration.den);
+            count++;
+        }
+    }
+    assert(count > 0);
+    qsort(list, count, sizeof(list[0]), compare_units);
+    size_t longest = 0;
+    size_t run = 0;
+    long long previous_onset[MAX_BAR_NOTES];
+    long long previous_duration[MAX_BAR_NOTES];
+    size_t previous_count = 0;
+    for (long long bar = 0; bar * BAR_UNITS <= list[count - 1].onset; bar++) {
+        long long onset[MAX_BAR_NOTES];
+        long long duration[MAX_BAR_NOTES];
+        size_t in_bar = 0;
+        for (size_t i = 0; i < count; i++) {
+            if (list[i].onset >= bar * BAR_UNITS && list[i].onset < (bar + 1) * BAR_UNITS && in_bar < MAX_BAR_NOTES) {
+                onset[in_bar] = list[i].onset - bar * BAR_UNITS;
+                duration[in_bar] = list[i].duration;
+                in_bar++;
+            }
+        }
+        if (in_bar < 2) {
+            run = 0;
+            previous_count = 0;
+            continue;
+        }
+        bool same = in_bar == previous_count;
+        for (size_t i = 0; same && i < in_bar; i++) {
+            same = onset[i] == previous_onset[i] && duration[i] == previous_duration[i];
+        }
+        run = same ? run + 1 : 1;
+        longest = run > longest ? run : longest;
+        previous_count = in_bar;
+        memcpy(previous_onset, onset, in_bar * sizeof(onset[0]));
+        memcpy(previous_duration, duration, in_bar * sizeof(duration[0]));
+    }
+    return longest;
+}
+
 int main(void) {
     Motive motive = load_motive();
     MelodyFillParams defaults = melody_fill_params_default();
@@ -275,5 +350,34 @@ int main(void) {
     printf("test_melody_preferences: closure_first 20: the antecedent's last note is longer in %d of %d seeds\n",
            antecedent_longer, SEEDS);
     assert(antecedent_longer >= MEASURED_FIRST);
+
+    /* Rhythm repetition (R-479): with a cap of 3 no run of bars with one rhythm passes 3; a cap of 0 is the defaults. */
+    MelodyFillParams capped = melody_fill_params_default();
+    MelodyFillParams cap_zero = melody_fill_params_default();
+    capped.rhythm_repeat_bars = 3;
+    cap_zero.rhythm_repeat_bars = 0;
+    size_t longest_off = 0;
+    size_t longest_on = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        size_t absent_notes;
+        size_t zero_notes;
+        PiecePlan *absent = compose(&motive, seed, NULL);
+        PiecePlan *zero = compose(&motive, seed, &cap_zero);
+        PiecePlan *with_cap = compose(&motive, seed, &capped);
+        assert(melody_hash(zero, &zero_notes) == melody_hash(absent, &absent_notes) && zero_notes == absent_notes);
+        size_t run_off = longest_rhythm_run(absent);
+        size_t run_on = longest_rhythm_run(with_cap);
+        if (run_on > 3) {
+            fprintf(stderr, "seed %lu: a run of %zu bars with one rhythm under a cap of 3\n", seed, run_on);
+        }
+        assert(run_on <= 3);
+        longest_off = run_off > longest_off ? run_off : longest_off;
+        longest_on = run_on > longest_on ? run_on : longest_on;
+        plan_destroy(absent);
+        plan_destroy(zero);
+        plan_destroy(with_cap);
+    }
+    printf("test_melody_preferences: rhythm_repeat_bars 3: the longest run of bars with one rhythm is %zu (0: %zu)\n",
+           longest_on, longest_off);
     return 0;
 }

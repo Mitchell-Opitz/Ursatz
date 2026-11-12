@@ -114,12 +114,17 @@ typedef struct {
      */
     unsigned closure_final;
     unsigned closure_first;
+    /*
+     * Rhythm repetition (phase L4, R-479): the most bars in a row of two or more notes with one rhythm (onsets and
+     * durations within the bar). 0 (the default) sets no cap and changes nothing.
+     */
+    unsigned rhythm_repeat_bars;
 } MelodyFillParams;
 
 /*
  * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), the climax 667 thousandths of the way through, climax_rise 4,
- * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final and closure_first 0.
+ * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final, closure_first and rhythm_repeat_bars 0.
  */
 MelodyFillParams melody_fill_params_default(void);
 

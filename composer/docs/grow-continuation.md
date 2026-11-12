@@ -10,7 +10,7 @@ Off by default (R-422). Five are members of `GrowContinuation` (`grow.h`), carri
 |---|---|
 | `every_segment` | Fragment 1 is any segment that fits a bar (weight 1 each, not the development's weights). Fragment 2 is the first segment after it, round to the first, and fragment 1's own segment last, that fits: never the same segment unless it is the only one. Fragment 2 is exact, not the sequence. |
 | `fragment_lengths` | The weights of a fragment being its whole segment, half a bar of it, or a beat of it. All 0 reads as {1, 0, 0}. |
-| `diminish` | A fragment that is a whole segment is that segment in diminution 1:2 (a `diminish` step), half its length. |
+| `diminish` | A fragment that is a whole segment is that segment in diminution 1:2 (a `diminish` step), half its length, unless that would write a note under a sixteenth (R-480). |
 | `liquidate` | Fragment 2 is a liquidation by segments (a residue that keeps a segment's rhythm and head interval), and the cadential idea liquidates at least as far, from fragment 2's step count. |
 | `faster_harmony` | An 8-bar sentence's continuation has a chord a cell: one target an idea, each of at most one cell and none across a barline. Fragment 1 and fragment 2 prolong the tonic to the dominant (two cells: I, then V, V6, V65 or V43; the motive's tonic is held on cell 0 and its chord on cell 1 is freed by the anchor, R-344). The cadential idea is the cadential progression with the cadence (a predominant, V, then I on the last bar). |
 | `basic_as_written` (`GrowContext`) | A motif as long as the basic idea, with chords of its own, is the basic idea as it is, over its own chords. |
@@ -26,7 +26,7 @@ A fragment cut to half a bar or a beat is the segment's leading notes that start
 ## Fallbacks
 
 - A beat with under 2 notes falls back to half a bar, then to the whole segment.
-- A cut or a diminution the library refuses, or that does not fit its idea, is the whole segment, undiminished. The library refuses the 1:2 diminution of a one-bar segment in 3/4 (a beat and a half), so in 3/4 `diminish` keeps the whole segment.
+- A cut or a diminution the library refuses, or that does not fit its idea, is the whole segment, undiminished. The library refuses the 1:2 diminution of a one-bar segment in 3/4 (a beat and a half), so in 3/4 `diminish` keeps the whole segment. A diminution that would write a note under a sixteenth (a dotted sixteenth and a thirty-second, from `e. s`) is refused as well (R-480, `diminution_readable` in `grow_ending.c`): the fragment is its whole segment.
 - With no segment that fits, or with a continuation-slot motive given, the fragments are the leading notes of m0 as before.
 - A liquidation with no residue that keeps a segment fails the draw, as the cadential idea's does (R-345).
 

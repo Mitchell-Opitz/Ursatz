@@ -23,7 +23,7 @@
 #define MELODY_FILL_PARAMS_INIT                                                                                      \
     {DEFAULT_RANGE_LOW,   DEFAULT_RANGE_HIGH, DEFAULT_START_CELL, DEFAULT_NCT_TYPES, DEFAULT_DENSITY,               \
      DEFAULT_CLIMAX,      false,              DEFAULT_CLIMAX_RISE, DEFAULT_CLIMAX_SLACK, {1, 3},                    \
-     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0}
+     DEFAULT_ATTEMPTS,    DEFAULT_KEEP,       {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},         0,                        0,                        0}
 
 MelodyFillParams melody_fill_params_default(void) {
     MelodyFillParams params = MELODY_FILL_PARAMS_INIT;
@@ -94,6 +94,10 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     size_t shift_count = 0;
     /* A span the operator does not read, or a motive that cannot be placed, leaves the span open. */
     if (ok && (target.kind != FILL_TARGET_LANE_SPAN || !melody_context_read(plan, (LaneSpanId)target.id, read))) {
+        ok = false;
+    }
+    /* The bars right before the target that share one rhythm, for the rhythm repetition cap (R-479). */
+    if (ok && params->rhythm_repeat_bars > 0 && !melody_context_read_repeats(plan, read)) {
         ok = false;
     }
     /* The octave of the motive's notes is chosen per attempt from the ranked shifts (R-334); one that fits none leaves the span open. */

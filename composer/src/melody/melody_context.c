@@ -1,5 +1,6 @@
 #include "melody/melody_internal.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include <ursatz_composer/constraint.h>
@@ -23,6 +24,10 @@ void melody_context_zero(MelodyContext *context) {
     for (size_t i = 0; i < MOTIVE_MAX_NOTES; i++) {
         context->motive_onset[i] = POSITION_ZERO;
         context->motive_duration[i] = POSITION_ZERO;
+    }
+    for (size_t i = 0; i < MELODY_BAR_NOTES; i++) {
+        context->repeat_onset[i] = POSITION_ZERO;
+        context->repeat_duration[i] = POSITION_ZERO;
     }
 }
 
@@ -685,4 +690,139 @@ bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext
     out->target = target;
     return (!has_pickup || read_pickup(plan, span.start, pickup.params.pickup, out)) && read_motive(plan, out) &&
            ((out->motive_waived = melody_motive_waived(out)), true);
+}
+
+/* ---------------------------------------------------------- rhythm repetition */
+
+#define REPEAT_SPANS 128
+#define REPEAT_NOTES 512
+
+typedef struct {
+    Rational onset; /* from the section's start */
+    Rational duration;
+} RepeatNote;
+
+/* The notes of the written melody spans of the section that end at or before `limit`, from the section's start, by onset. */
+static bool read_section_notes(const PiecePlan *plan, PlanSpan section, Rational limit, RepeatNote *list, size_t *count) {
+    LaneSpanId ids[REPEAT_SPANS];
+    PlanSpan before = {section.start, limit};
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, before, ids, REPEAT_SPANS);
+    *count = 0;
+    if (found > REPEAT_SPANS) {
+        return false;
+    }
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        Rational end;
+        Rational base;
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED || plan_span_end(span, &end) != PLAN_OK ||
+            rational_cmp(span.start, section.start) < 0 || rational_sub(span.start, section.start, &base) != RATIONAL_OK ||
+            rational_cmp(position_sub(end, section.start), limit) > 0) {
+            continue;
+        }
+        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            if (*count >= REPEAT_NOTES) {
+                return false;
+            }
+            list[*count].onset = position_add(base, notes->notes[n].offset);
+            list[*count].duration = notes->notes[n].duration;
+            (*count)++;
+        }
+    }
+    for (size_t i = 1; i < *count; i++) {
+        RepeatNote note = list[i];
+        size_t k = i;
+        for (; k > 0 && rational_cmp(list[k - 1].onset, note.onset) > 0; k--) {
+            list[k] = list[k - 1];
+        }
+        list[k] = note;
+    }
+    return true;
+}
+
+/* The notes of the bar from `start`, as onsets and durations within the bar; false when it has more than MELODY_BAR_NOTES. */
+static bool bar_rhythm(const RepeatNote *list, size_t count, Rational start, Rational bar_length, Rational *onset,
+                       Rational *duration, size_t *notes) {
+    Rational end = position_add(start, bar_length);
+    *notes = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (rational_cmp(list[i].onset, start) < 0 || rational_cmp(list[i].onset, end) >= 0) {
+            continue;
+        }
+        if (*notes >= MELODY_BAR_NOTES) {
+            return false;
+        }
+        onset[*notes] = position_sub(list[i].onset, start);
+        duration[*notes] = list[i].duration;
+        (*notes)++;
+    }
+    return true;
+}
+
+static bool same_bar_rhythm(const Rational *onset_a, const Rational *duration_a, size_t count_a, const Rational *onset_b,
+                            const Rational *duration_b, size_t count_b) {
+    if (count_a != count_b) {
+        return false;
+    }
+    for (size_t i = 0; i < count_a; i++) {
+        if (rational_cmp(onset_a[i], onset_b[i]) != 0 || rational_cmp(duration_a[i], duration_b[i]) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool melody_context_read_repeats(const PiecePlan *plan, MelodyContext *context) {
+    RepeatNote *list = malloc(REPEAT_NOTES * sizeof(*list));
+    PlanSpan section = context->span;
+    Rational bar = context->metre.bar_length;
+    context->repeat_aligned = false;
+    context->repeat_run = 0;
+    context->repeat_count = 0;
+    if (!list) {
+        return false;
+    }
+    bool has_section = false;
+    for (NodeId node = context->owner; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
+        if (plan_node_kind(plan, node) == PLAN_NODE_SECTION) {
+            section = plan_node_span(plan, node);
+            has_section = true;
+            break;
+        }
+    }
+    Rational lead = position_sub(context->span.start, section.start);
+    size_t count = 0;
+    /* Only a target that starts on a barline of its section, with no pickup, counts bars before it or in it. */
+    context->repeat_aligned = has_section && !position_is_positive(context->pickup) &&
+                              (rational_cmp(lead, POSITION_ZERO) == 0 || position_is_multiple(lead, bar));
+    if (context->repeat_aligned && rational_cmp(lead, bar) >= 0 &&
+        read_section_notes(plan, section, lead, list, &count)) {
+        Rational onset[MELODY_BAR_NOTES];
+        Rational duration[MELODY_BAR_NOTES];
+        Rational other_onset[MELODY_BAR_NOTES];
+        Rational other_duration[MELODY_BAR_NOTES];
+        size_t notes = 0;
+        size_t other_notes = 0;
+        Rational start = position_sub(lead, bar);
+        if (bar_rhythm(list, count, start, bar, onset, duration, &notes) && notes >= 2) {
+            size_t run = 1;
+            while (rational_cmp(start, bar) >= 0) {
+                start = position_sub(start, bar);
+                if (!bar_rhythm(list, count, start, bar, other_onset, other_duration, &other_notes) ||
+                    !same_bar_rhythm(onset, duration, notes, other_onset, other_duration, other_notes)) {
+                    break;
+                }
+                run++;
+            }
+            context->repeat_run = run;
+            context->repeat_count = notes;
+            for (size_t i = 0; i < notes; i++) {
+                context->repeat_onset[i] = onset[i];
+                context->repeat_duration[i] = duration[i];
+            }
+        }
+    }
+    free(list);
+    return true;
 }
