@@ -673,8 +673,9 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     setup->job = job;
 
     /*
-     * The settings of the melody and of the development's fidelity minimums. The motif group is accepted, echoed and has
-     * no effect: a theme's motives come from the request (docs/theme-request.md).
+     * The settings of the melody, of the development's fidelity minimums and continuation, and of its contrasting ideas.
+     * The motif group shapes a theme's drawn rhythms and its new material (R-475, R-477) and nothing else: a theme's
+     * motives come from the request (docs/theme-request.md).
      */
     if (!api_read_preferences(request, &state->preferences, &state->has_preferences, error)) {
         return COMPOSER_ERR_REQUEST;
@@ -684,6 +685,8 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
         setup->fidelity = &state->preferences.development;
         setup->continuation = &state->preferences.continuation;
         setup->basic_as_written = state->preferences.basic_as_written;
+        setup->contrast = &state->preferences.contrast;
+        setup->motif = &state->preferences.motif;
     }
 
     status = api_grow_read_brief(&state->brief.text, setup, error);
