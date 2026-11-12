@@ -15,7 +15,7 @@ Every member is optional and its default is the value the Composer used before t
 | `composer_preferences_write(preferences)` | The full document, every member, as a `cJSON` object the caller deletes. Ratios are `"n/d"` text and `nct_types` is in the order passing, neighbor, appoggiatura, suspension, anticipation. |
 | `composer_preferences_is_default(preferences)` | True when every setting is the default. |
 
-`ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif` and `GrowFidelityTable development`. The API carries the document as the `preferences` member of the random motive and theme requests (below).
+`ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif`, `GrowFidelityTable development` and, from 1.19, `GrowContrast contrast` (the development group's contrast settings). The API carries the document as the `preferences` member of the random motive and theme requests (below).
 
 ## The melody group
 
@@ -35,6 +35,11 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
 | `keep` | 6 | 1 to 16, at most `attempts` | Melodies kept of those tried, repeats dropped. | `MELODY_KEEP` |
 | `plain_shaping` | false | true or false | True leaves out the four shaping rules. | |
 | `weights` | all 1 | each 0 to 20 | How many times each group of soft rules counts in a melody's score. | |
+| `closure.final` | 0 | 0 to 20 | How many times the closure rules count for the target that ends the theme's last cadence. 0 leaves them out. Off by default; R-422. | new (R-478) |
+| `closure.first` | 0 | 0 to 20 | The same for a target that ends an earlier cadence, such as an antecedent's weak cadence. A name left out of `closure` keeps its default. | new (R-478) |
+| `rhythm_repeat_bars` | 0 | 0 to 16 | The most bars of 2 or more notes in a row that may share one rhythm in a theme's line; 0 sets no cap. | new (R-479) |
+| `leaps` | 0 | 0 to 20 | How many times a melody's leaps count against it (`leap_weight`). 0 leaves them out. | new (R-481) |
+| `register` | 0 | 0 to 20 | How many times an idea's drift from the register of the span before it counts against it (`register_weight`). 0 leaves it out. | new (R-481) |
 
 `weights` has ten keys. The score is the share of soft rules held: the sum of `weight * held` over the sum of `weight * total`. A weight of 0 leaves a group out; every weight 1 is the score before weights existed.
 
@@ -62,7 +67,11 @@ The settings of the melody stage ([melody-fill.md](melody-fill.md)), stored in `
     "keep": 6,
     "plain_shaping": false,
     "weights": {"melodic": 1, "against_bass": 1, "tendency": 1, "climax": 1, "contour": 1,
-                "ending_reduction": 1, "waves": 1, "central_range": 1, "monotony": 1, "seam": 1}
+                "ending_reduction": 1, "waves": 1, "central_range": 1, "monotony": 1, "seam": 1},
+    "closure": {"final": 0, "first": 0},
+    "rhythm_repeat_bars": 0,
+    "leaps": 0,
+    "register": 0
   }
 }
 ```
@@ -86,6 +95,8 @@ The least fidelity an idea of a role may have under each development setting bef
 | `continuation.liquidate` | `false` | true or false | Fragment 2 is liquidated, and the cadential idea liquidates a step further. Off by default; R-422. | new (R-464) |
 | `continuation.faster_harmony` | `false` | true or false | An 8-bar sentence's continuation changes chord every cell and cadences on the cadential idea; no effect where a bar is one cell. Off by default; R-422. | new (R-465) |
 | `basic_as_written` | `false` | true or false | A motif as long as the basic idea, with chords of its own, is the basic idea as it is, over its own chords. Off by default; R-422. | new (R-466) |
+| `contrast.distance` | `similar` 1, `distant` 0 | weights 0 to 20 | A contrasting idea strays from the basic idea's rhythm as today (`similar`) or takes a rhythm drawn from the motif settings (`distant`). All 0 reads as `similar` 1; a name left out keeps its default. | new (R-475) |
+| `contrast.new_material` | 0 | 0 to 20 | The weight of a period's contrasting idea made of new material, a second motif from the motif settings, against the distance draw. Off by default; R-422. | new (R-477) |
 
 | Role | `melody` | `balanced` | `theme` |
 | --- | --- | --- | --- |
@@ -110,18 +121,22 @@ The continuation settings are described in [grow-continuation.md](grow-continuat
       "liquidate": false,
       "faster_harmony": false
     },
-    "basic_as_written": false
+    "basic_as_written": false,
+    "contrast": {
+      "distance": {"similar": 1, "distant": 0},
+      "new_material": 0
+    }
   }
 }
 ```
 
-## In the API (1.17)
+## In the API (1.19)
 
 The random motive and theme requests take the document as an optional `preferences` member: a JSON object of the shape above, every member optional, read with `composer_preferences_read`. A member that is unknown, of the wrong type or outside its limit is refused with `COMPOSER_ERR_REQUEST` and the reader's path under `/preferences`, for example `/preferences/melody/keep`. A request that has the member gets `"preferences"` in its response: the full document with the defaults filled in, so the response says what was used. A request without it has no such member and its response is what it was before.
 
 | Request | Groups that apply |
 |---|---|
 | `composer_api_random_motive` | `motif`, for the segments strategy (the drawn strategy keeps its constants). `melody` and `development` are accepted and echoed. |
-| `composer_api_theme` | `melody` and `development` (the fidelity minimums, also shown in the `minimum` of each development item, and, from 1.17, the continuation settings and `basic_as_written`). `motif` is accepted, echoed and has no effect: a theme's motives come from the request. |
+| `composer_api_theme` | `melody` and `development` (the fidelity minimums, also shown in the `minimum` of each development item, from 1.17 the continuation settings and `basic_as_written`, and from 1.19 the L4 settings: `melody.closure`, `rhythm_repeat_bars`, `leaps`, `register` and `development.contrast`). `motif` shapes a theme's drawn rhythms and new material (1.19) and nothing else: a theme's motives come from the request. |
 
-`composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `accented_one_in_max`, `long_nct_one_in_max`, `leaps_per_motif_max`, `syncopation_one_in_max`, `skips_per_motif_max`, `plan_chords_max`, `plan_beat_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`). API 1.17 adds the L3 settings (syncopation, skips, a given chord plan, the continuation settings and `basic_as_written`; every one off by default, R-422). A given `motif.plan` that does not fit the meter, bars, shapes or endings allowed is refused by a random motive run as `COMPOSER_ERR_REQUEST` at `/preferences/motif/plan` (`validate` leaves that meter-dependent refusal to the run; its syntax refusals come from the reader). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.
+`composer_api_validate` reads the member for `theme` and `random_motive` and refuses a bad one with its path. The vocabulary serves the default document as `preferences` and the limits as numbers in `limits.preferences` (`weight_max`, `pickup_one_in_max`, `accented_one_in_max`, `long_nct_one_in_max`, `leaps_per_motif_max`, `syncopation_one_in_max`, `skips_per_motif_max`, `plan_chords_max`, `plan_beat_max`, `leap_min`, `leap_max`, `range_low_min`, `range_low_max`, `range_high_max`, `range_span_min`, `density_max`, `scale_max`, `climax_rise_min`, `climax_rise_max`, `ratio_denominator_max`, `fidelity_denominator_max`, `attempts_max`, `keep_max`, and from 1.19 `rhythm_repeat_bars_max`). API 1.19 adds the L4 settings (closure, the cap on bars with one rhythm, leaps, register, the contrast distance and new material; every one off by default, R-422). API 1.17 adds the L3 settings (syncopation, skips, a given chord plan, the continuation settings and `basic_as_written`; every one off by default, R-422). A given `motif.plan` that does not fit the meter, bars, shapes or endings allowed is refused by a random motive run as `COMPOSER_ERR_REQUEST` at `/preferences/motif/plan` (`validate` leaves that meter-dependent refusal to the run; its syntax refusals come from the reader). The piece, fill, grow, regenerate and variations requests take no `preferences` member yet; a setting is promoted to them when it earns it (R-411), and a plan does not store the document.
