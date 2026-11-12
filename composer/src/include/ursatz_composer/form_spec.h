@@ -36,6 +36,8 @@
 #define FORM_SPEC_MAX_CADENCE_RULES 4
 /* The size of a section id, with its terminator: the id the request gives a section (piece.h PIECE_SECTION_ID_MAX). */
 #define FORM_SPEC_ID_MAX 16
+/* The most meters a form lists. */
+#define FORM_SPEC_MAX_METERS 4
 
 /*
  * What a section is in the form. The theme-like roles (theme, contrast, return, variation, layer) are the sections
@@ -149,6 +151,9 @@ typedef struct {
     FormRegion regions[FORM_SPEC_MAX_REGIONS];
     size_t region_count;
     unsigned checks;                    /* FormCheck bits; FORM_CHECK_ALL when the document names none */
+    PlanMeter meters[FORM_SPEC_MAX_METERS]; /* the meters a piece of the form may be in */
+    size_t meter_count;                 /* 0: any the builder supports */
+    unsigned tempo;                     /* quarter notes a minute when the request and its style give none; 0: none */
     bool request_sections;              /* the piece request gives the sections (no sizes) */
     /*
      * The members of a form whose sections the request gives (the game loop, R-419); all empty for any other. The roles a
@@ -205,6 +210,9 @@ const FormSpecSize *form_spec_default_size(const FormSpec *form);
 bool form_spec_has_role(const FormSpec *form, FormRole role);
 /* Whether the role is one of the form's loop roles. */
 bool form_spec_role_in_loop(const FormSpec *form, FormRole role);
+
+/* Whether a piece of the form may be in the meter: true when the form lists no meters or lists this one. */
+bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter);
 
 /* The index of the region with that name, or -1. */
 int form_spec_region_find(const FormSpec *form, const char *name);
