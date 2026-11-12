@@ -422,6 +422,57 @@ check(T.refusalText("V cannot end a PAC", "/chords/3", "structure") === "V canno
 check(T.refusalText("too slow", "/tempo", "structure") === "on Theme: too slow", "a Theme field refused while Structure is open names the Theme tab");
 check(T.refusalText("no", "", "theme") === "no" && T.refusalText("no", "/unknown", "other") === "no", "a refusal without a field keeps its text");
 
+/* the construction (P47, R-468) */
+check(T.BARS.length === 14 && T.BARS[0] === 3 && T.BARS[13] === 16, "the bars offered are the vocabulary's 3 to 16");
+check(same(T.REGULAR_BARS, [4, 8]) && !T.needsConstruction(8) && T.needsConstruction(6), "only 4 and 8 bars need no construction");
+check(T.emptyState("c").construction === null && T.bodyFromForm(T.emptyState("c")).theme.form.construction === null, "a form has no construction by default and sends null");
+const oldBody = { uses: [], theme: { form: { into: "sentence", hybrid: null, mode: "minor", meter: "4/4", bars: 8, cadence: "PAC", first_cadence: null }, slots: [] } };
+check(T.formFromBody(oldBody, "c").construction === null, "a body without a construction reads as null");
+check(T.formFromBody({ uses: [], theme: { form: { construction: "auto" } } }, "c").construction === null, "a construction that is not an object reads as null");
+const sentenceIdeas = T.pairingIdeaNames(["presentation", "continuation"]);
+check(same(sentenceIdeas, ["basic idea", "repetition", "fragment 1", "fragment 2", "cadential"]), "a sentence has five ideas in order");
+check(same(T.pairingIdeaNames(["antecedent", "consequent"]), ["basic idea", "contrasting idea", "consequent basic idea", "consequent contrasting idea"]), "a period has four ideas in order");
+check(same(T.defaultConstruction(sentenceIdeas, 10), { ideas: { "basic idea": 2, repetition: 2, "fragment 1": 2, "fragment 2": 2, cadential: 2 }, extensions: [] }), "the default construction spreads the bars over the ideas");
+check(T.defaultConstruction(sentenceIdeas, 11).ideas.cadential === 3, "the last idea takes the remaining bars");
+const givenState = T.emptyState("g");
+givenState.into = "period";
+givenState.bars = 10;
+givenState.construction = {
+  ideas: { "basic idea": 3, "contrasting idea": 2, "consequent basic idea": 3, "consequent contrasting idea": 2, "fragment 1": 9 },
+  extensions: [
+    { kind: "repeat", idea: "contrasting idea", bars: 0, varied: true },
+    { kind: "stretch", idea: "cadential 2", bars: 2, varied: true },
+    { kind: "addition", idea: "basic idea", bars: 1, varied: true },
+    { kind: "evaded", idea: "", bars: 0, varied: false },
+    { kind: "evaded", idea: "", bars: 0, varied: false },
+    { kind: "nonsense", idea: "", bars: 1, varied: false },
+  ],
+};
+const given = T.bodyFromForm(givenState).theme.form.construction;
+check(same(Object.keys(given.ideas), ["basic idea", "contrasting idea", "consequent basic idea", "consequent contrasting idea"]), "the construction sends the ideas of the pairing only, in order");
+check(given.ideas["basic idea"] === 3 && given.ideas["consequent contrasting idea"] === 2, "the construction sends the bars of each idea");
+check(given.extensions.length === 3, "at most 3 extensions are sent");
+check(same(given.extensions[0], { kind: "repeat", idea: "contrasting idea", bars: 0, varied: true }), "a repeat sends its idea and whether it is varied");
+check(same(given.extensions[1], { kind: "stretch", idea: "cadential 2", bars: 2 }), "a stretch sends its idea and no varied");
+check(same(given.extensions[2], { kind: "addition", bars: 1 }), "an addition sends neither idea nor varied");
+givenState.construction.extensions = [{ kind: "evaded", idea: "", bars: 0, varied: false }];
+check(same(T.bodyFromForm(givenState).theme.form.construction.extensions, [{ kind: "evaded", bars: 0 }]), "an evaded cadence sends only its kind and bars");
+const readBack = T.formFromBody(T.bodyFromForm(givenState), "g");
+check(readBack.construction.ideas["basic idea"] === 3 && readBack.construction.extensions[0].kind === "evaded", "the construction reads back from the body");
+check(same(T.bodyFromForm(readBack), T.bodyFromForm(givenState)), "the construction round trips through the body");
+check(T.fieldForPath("/construction/extensions/0/bars") === "construction" && T.tabOfField("construction") === "structure", "a refusal under /construction marks the construction on the Structure tab");
+check(T.extensionIdeas("repeat", sentenceIdeas).join() === "repetition,fragment 1,fragment 2" && T.extensionIdeas("addition", sentenceIdeas).length === 0, "an extension offers the ideas of its kind that the form has");
+check(T.CHORD_BARS === 16, "the chord row reaches 16 bars");
+const longChords = T.emptyState("l");
+longChords.bars = 16;
+longChords.chords[15] = "I";
+check(same(T.chordEntries(longChords), [{ bar: 15, text: "I" }]), "a chord in bar 16 is sent");
+const themeResult = { themes: [{ construction: { halves: [4, 6], text: "A 10-bar sentence.", reason: "length" }, slots: [] }] };
+check(T.resultView({ seed: 1, summary: themeResult }).construction === "A 10-bar sentence.", "the result shows the construction's reason");
+check(T.resultView({ seed: 1, summary: { themes: [{ construction: null }] } }).construction === "", "a theme without a construction shows no reason");
+check(T.resultView({ seed: 1, summary: { themes: [{}] } }).construction === "", "a result without the member shows no reason");
+check(T.constructionHalves({ halves: [4, 6] }) === "4+6" && T.constructionHalves(null) === "", "the halves read as 4+6");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
