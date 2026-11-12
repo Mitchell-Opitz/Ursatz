@@ -126,6 +126,9 @@ typedef enum {
 Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params);
 MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params);
 
+/* How many times the closure rules count for the target (phase L4, R-478): 0 when it ends no cadence. */
+unsigned melody_closure_weight(const MelodyContext *context, const MelodyFillParams *params);
+
 /* One note of a candidate. motive_index is the motive note it carries, or -1 for a note that fills the phrase. */
 typedef struct {
     Rational onset;
