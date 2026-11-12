@@ -91,6 +91,11 @@ typedef struct {
     size_t minor_count;
 } FormRegion;
 
+/* Whether a section that leads into the next ends with a connective (R-486): never, on some seeds, or on every seed. */
+#define FORM_CONNECTIVE_NONE 0
+#define FORM_CONNECTIVE_SOMETIMES 1
+#define FORM_CONNECTIVE_ALWAYS 2
+
 /* One section of one size. */
 typedef struct {
     char name[FORM_SPEC_SECTION_NAME_MAX]; /* the section node's name: "A", "theme", "variation 1", "layer 1" */
@@ -110,7 +115,9 @@ typedef struct {
     MotiveRelationStep motive;             /* how its motive is made from m0 (open parameters are drawn) */
     unsigned layers;                       /* the LAYERS mask (PlanLayers) in a layered form; 0 for none */
     int pedal;                             /* the degree its presentation sits over in the bass: 0 none, 5 dominant (R-446) */
-    bool has_construction;                 /* the section is a theme of `bars` bars of any length, 3 to 16, with a construction (R-468) */
+    bool leads_in;                         /* it is held until the sections after it are written, then filled against them (R-486) */
+    int connective;                        /* FORM_CONNECTIVE_*: a stepwise link in its last bar; only with leads_in */
+    bool has_construction;                /* the section is a theme of `bars` bars of any length, 3 to 16, with a construction (R-468) */
     bool construction_auto;                /* the construction is chosen at build from the bars and the motive (R-469); else `construction` */
     PlanConstruction construction;         /* the bars of each idea and the extensions, reason GIVEN; read when has_construction and not auto */
 } FormSectionSpec;
