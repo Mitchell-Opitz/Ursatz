@@ -190,6 +190,15 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
 bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
                               CadenceType cadence, PlanConstruction *out);
 
+/*
+ * One sentence that says why a theme has its construction (R-469), by its reason: from the motif ("5+5 period: the motif
+ * is 3 bars, ..."), from the length ("4+5 sentence: the section is 9 bars, so fragment 2 is repeated a step lower (bar
+ * 7)."), or as given, with the halves and each extension named. Bars are counted from 1. Writes at most size - 1 characters
+ * and a terminator; returns the length written, 0 for no construction or no room.
+ */
+size_t grow_construction_describe(const PlanConstruction *construction, const PlanThemePairing *pairing, char *text,
+                                  size_t size);
+
 /* --- the structure operator -------------------------------------------- */
 
 /* How far a theme's presentation and continuation stray from its motif (ch. XI). All-zero is balanced. */

@@ -1,5 +1,6 @@
 #include <ursatz_composer/theme_shape.h>
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -418,11 +419,18 @@ void grow_extension_ref(const GrowBuild *build, size_t k, PlanMotiveRef *out) {
     out->step.kind = MOTIVE_RELATION_EXACT;
 }
 
-void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out) {
-    size_t bars[GROW_PLACE_COUNT] = {0};
-    size_t repeated[GROW_PLACE_COUNT] = {0};
+/*
+ * The bars of each place of the construction (with its stretches), of the repeats that follow it, and of the evaded idea
+ * and the addition after the last place, in the order the extensions are listed.
+ */
+static void construction_places(const PlanThemePairing *pairing, const PlanConstruction *construction,
+                                size_t bars[GROW_PLACE_COUNT], size_t repeated[GROW_PLACE_COUNT], size_t *evaded,
+                                size_t *addition) {
     GrowPlace last = last_place(pairing);
-    memset(out, 0, sizeof(*out));
+    memset(bars, 0, sizeof(size_t) * GROW_PLACE_COUNT);
+    memset(repeated, 0, sizeof(size_t) * GROW_PLACE_COUNT);
+    *evaded = 0;
+    *addition = 0;
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
         if (row) {
@@ -444,13 +452,20 @@ void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruct
             bars[place] += extension->bars ? extension->bars : 1;
             break;
         case PLAN_EXTENSION_EVADED:
-            out->evaded = extension->bars ? extension->bars : bars[last];
+            *evaded = extension->bars ? extension->bars : bars[last];
             break;
         case PLAN_EXTENSION_ADDITION:
-            out->addition = extension->bars ? extension->bars : 1;
+            *addition = extension->bars ? extension->bars : 1;
             break;
         }
     }
+}
+
+void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out) {
+    size_t bars[GROW_PLACE_COUNT];
+    size_t repeated[GROW_PLACE_COUNT];
+    memset(out, 0, sizeof(*out));
+    construction_places(pairing, construction, bars, repeated, &out->evaded, &out->addition);
     for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
         size_t *half = place <= GROW_PLACE_REPETITION ? &out->beginning : &out->ending;
         *half += bars[place] + repeated[place];
@@ -594,4 +609,169 @@ bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size
         memset(out, 0, sizeof(*out));
     }
     return ok;
+}
+
+/* --- describing a construction (R-469) ---------------------------------- */
+
+/* "bar 7", "bars 9 and 10", "bars 3 to 5" for the 0-based bars first to first + count - 1. */
+static void bars_text(size_t first, size_t count, char *text, size_t size) {
+    if (count <= 1) {
+        snprintf(text, size, "bar %zu", first + 1);
+    } else if (count == 2) {
+        snprintf(text, size, "bars %zu and %zu", first + 1, first + 2);
+    } else {
+        snprintf(text, size, "bars %zu to %zu", first + 1, first + count);
+    }
+}
+
+/* Appends the formatted text to text at *used, as much as fits. */
+static void put(char *text, size_t size, size_t *used, const char *format, ...) {
+    if (*used >= size) {
+        return;
+    }
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(text + *used, size - *used, format, args);
+    va_end(args);
+    if (written > 0) {
+        *used += (size_t)written;
+        if (*used >= size) {
+            *used = size - 1;
+        }
+    }
+}
+
+/* The clause that names one extension and the bars it takes, 0-based `first` and `count`. */
+static void extension_clause(const PlanExtension *extension, size_t first, size_t count, size_t cadence_bar, char *text,
+                             size_t size) {
+    char at[32];
+    bars_text(first, count, at, sizeof(at));
+    const char *name = grow_idea_name((GrowIdea)extension->idea);
+    switch (extension->kind) {
+    case PLAN_EXTENSION_REPEAT:
+        if (extension->idea == GROW_IDEA_CONSEQUENT_CONTRASTING) {
+            snprintf(text, size, "the consequent repeats its contrasting idea, %s (%s)", extension->varied ? "varied" : "as it is", at);
+        } else if (extension->varied) {
+            snprintf(text, size, "%s is repeated, varied (%s)", name, at);
+        } else {
+            snprintf(text, size, "%s is repeated a step lower (%s)", name, at);
+        }
+        break;
+    case PLAN_EXTENSION_STRETCH:
+        snprintf(text, size, "the %s is stretched to %zu bars (%s)", name, count, at);
+        break;
+    case PLAN_EXTENSION_ADDITION:
+        snprintf(text, size, "a %zu-bar addition follows (%s)", count, at);
+        break;
+    case PLAN_EXTENSION_EVADED:
+        snprintf(text, size, "the cadence in bar %zu is evaded (V to vi) and the cadential idea returns to close in bar %zu",
+                 cadence_bar, first + count);
+        break;
+    }
+}
+
+size_t grow_construction_describe(const PlanConstruction *construction, const PlanThemePairing *pairing, char *text,
+                                  size_t size) {
+    if (!text || size == 0) {
+        return 0;
+    }
+    text[0] = '\0';
+    if (!construction || !pairing) {
+        return 0;
+    }
+    size_t bars[GROW_PLACE_COUNT];
+    size_t repeated[GROW_PLACE_COUNT];
+    size_t evaded;
+    size_t addition;
+    construction_places(pairing, construction, bars, repeated, &evaded, &addition);
+    GrowConstructionBars halves;
+    grow_construction_bars(pairing, construction, &halves);
+    /* Where each place, each repeat after it, the evaded idea and the addition start (0-based bars). */
+    size_t start[GROW_PLACE_COUNT];
+    size_t repeat_start[GROW_PLACE_COUNT];
+    size_t position = 0;
+    for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
+        start[place] = position;
+        position += bars[place];
+        repeat_start[place] = position;
+        position += repeated[place];
+    }
+    size_t evaded_start = position;
+    size_t addition_start = position + evaded;
+    size_t total = addition_start + addition;
+    int archetype = grow_pairing_archetype(pairing);
+    const char *form = archetype == PLAN_ARCHETYPE_PERIOD ? "period" : archetype == PLAN_ARCHETYPE_SENTENCE ? "sentence" : "hybrid";
+    size_t first_half = halves.beginning;
+    size_t second_half = halves.ending + halves.evaded;
+    size_t used = 0;
+    put(text, size, &used, "%zu+%zu %s", first_half, second_half, form);
+    /* The extension clauses, each from the bars its extension takes. */
+    char clauses[PLAN_CONSTRUCTION_EXTENSIONS][160];
+    size_t clause_count = 0;
+    size_t repeat_seen[GROW_PLACE_COUNT] = {0};
+    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        const PlanExtension *extension = &construction->extensions[k];
+        GrowPlace place;
+        size_t first = 0;
+        size_t count = 0;
+        switch (extension->kind) {
+        case PLAN_EXTENSION_REPEAT:
+            if (!grow_idea_place(pairing, (GrowIdea)extension->idea, &place)) {
+                continue;
+            }
+            count = extension->bars ? extension->bars : bars[place];
+            first = repeat_start[place] + repeat_seen[place];
+            repeat_seen[place] += count;
+            break;
+        case PLAN_EXTENSION_STRETCH:
+            if (!grow_idea_place(pairing, (GrowIdea)extension->idea, &place)) {
+                continue;
+            }
+            first = start[place];
+            count = bars[place];
+            break;
+        case PLAN_EXTENSION_EVADED:
+            first = evaded_start;
+            count = evaded;
+            break;
+        case PLAN_EXTENSION_ADDITION:
+            first = addition_start;
+            count = addition;
+            break;
+        }
+        extension_clause(extension, first, count, evaded_start, clauses[clause_count], sizeof(clauses[clause_count]));
+        clause_count++;
+    }
+    const char *noun = archetype == PLAN_ARCHETYPE_PERIOD ? "phrase" : "half";
+    bool from_length = construction->reason == PLAN_CONSTRUCTION_FROM_LENGTH;
+    char halves_text[64];
+    if (first_half == second_half) {
+        snprintf(halves_text, sizeof(halves_text), "each %s %s%zu", noun, from_length ? "is " : "", first_half);
+    } else {
+        snprintf(halves_text, sizeof(halves_text), "the %ss are %zu and %zu", noun, first_half, second_half);
+    }
+    const char *joint = ", ";
+    switch (construction->reason) {
+    case PLAN_CONSTRUCTION_GIVEN:
+        put(text, size, &used, " as given");
+        joint = ": ";
+        break;
+    case PLAN_CONSTRUCTION_FROM_MOTIVE: {
+        size_t basic = construction->idea_bars[GROW_IDEA_BASIC];
+        put(text, size, &used, ": the motif is %zu bars, so the basic idea is %zu bars and %s", basic, basic, halves_text);
+        break;
+    }
+    case PLAN_CONSTRUCTION_FROM_LENGTH:
+        put(text, size, &used, ": the section is %zu bars, so ", total);
+        if (clause_count == 0) {
+            put(text, size, &used, "%s", halves_text);
+        }
+        joint = "";
+        break;
+    }
+    for (size_t k = 0; k < clause_count; k++) {
+        put(text, size, &used, "%s%s", k == 0 ? joint : " and ", clauses[k]);
+    }
+    put(text, size, &used, ".");
+    return used;
 }
