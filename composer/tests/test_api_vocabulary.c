@@ -465,6 +465,23 @@ static void test_theme_form_lists(void) {
         accepted("theme", request);
         cJSON_Delete(request);
     }
+    /* The extensions of a construction (R-468): four kinds; a repeat and a stretch name the ideas they can follow. */
+    const cJSON *extensions = list("theme_extensions");
+    assert(cJSON_GetArraySize(extensions) == 4);
+    const char *kinds[] = {"repeat", "stretch", "addition", "evaded"};
+    for (int k = 0; k < 4; k++) {
+        const cJSON *kind = cJSON_GetArrayItem(extensions, k);
+        assert(strcmp(value_of(kind), kinds[k]) == 0);
+        const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(kind, "ideas");
+        assert((k < 2) == (ideas != NULL));
+        assert((k == 0) == (cJSON_GetObjectItemCaseSensitive(kind, "varied") != NULL));
+    }
+    const cJSON *repeat = cJSON_GetArrayItem(extensions, 0);
+    const cJSON *stretch = cJSON_GetArrayItem(extensions, 1);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(repeat, "label")->valuestring, "Internal repetition") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(stretch, "label")->valuestring, "Stretched cadence") == 0);
+    assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(repeat, "ideas")) == 6);
+    assert(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(stretch, "ideas")) == 4);
     assert(cJSON_GetArraySize(list("theme_first_cadences")) == 2);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("theme_first_cadences"), 0)), "IAC") == 0);
     cJSON_ArrayForEach(entry, list("theme_first_cadences")) {

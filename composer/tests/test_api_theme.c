@@ -144,6 +144,147 @@ static void test_snapshots(void) {
     }
 }
 
+/* --- uneven themes (B5 of P47) -------------------------------------------------------------------- */
+
+typedef struct {
+    const char *tag;      /* the written response: api_theme_response_<tag>.json */
+    const char *fixture;
+    size_t first_half;
+    size_t second_half;
+    const char *text;     /* what construction.text says, the words of B4 */
+    const char *extension; /* the kind of its one extension */
+} Uneven;
+
+static const Uneven UNEVEN[] = {
+    {"uneven-period", THEME("uneven-period.json"), 4, 6,
+     "4+6 period: the section is 10 bars, so the consequent repeats its contrasting idea, varied (bars 9 and 10).", "repeat"},
+    {"uneven-sentence", THEME("uneven-sentence.json"), 4, 5,
+     "4+5 sentence: the section is 9 bars, so fragment 2 is repeated a step lower (bar 7).", "repeat"},
+    {"evaded-sentence", THEME("evaded-sentence.json"), 4, 6,
+     "4+6 sentence: the section is 10 bars, so the cadence in bar 8 is evaded (V to vi) and the cadential idea returns to close "
+     "in bar 10.",
+     "evaded"}};
+
+static const cJSON *member(const cJSON *object, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    assert(item);
+    return item;
+}
+
+/* The request of a case with seed `seed`, composed: the status, and the response. */
+static ComposerStatus compose_uneven(const char *fixture, unsigned seed, cJSON *edits, char **request, ComposerResponse *response) {
+    char *text = test_read_file(fixture, NULL);
+    cJSON *json = cJSON_Parse(text);
+    free(text);
+    assert(json);
+    for (cJSON *edit = edits ? edits->child : NULL; edit; edit = edit->next) {
+        cJSON_DeleteItemFromObjectCaseSensitive(json, edit->string);
+        assert(cJSON_AddItemToObject(json, edit->string, cJSON_Duplicate(edit, true)));
+    }
+    assert(cJSON_AddNumberToObject(json, "seed", seed));
+    *request = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    assert(*request);
+    return composer_api_theme(*request, NULL, response);
+}
+
+/* A 4+6 period, a 4+5 sentence and a 10-bar sentence with an evaded cadence, from a motif of one bar: each composes at the first of
+   16 seeds that does, with the construction named, its halves and its extension, and its text as docs/grow-construction.md has it. */
+static void test_uneven(void) {
+    for (size_t i = 0; i < sizeof UNEVEN / sizeof UNEVEN[0]; i++) {
+        const Uneven *item = &UNEVEN[i];
+        ComposerResponse response;
+        char *request = NULL;
+        ComposerStatus status = COMPOSER_ERR_UNSATISFIABLE;
+        for (unsigned seed = 1; seed <= 16 && status != COMPOSER_OK; seed++) {
+            if (request) {
+                free(request);
+            }
+            status = compose_uneven(item->fixture, seed, NULL, &request, &response);
+            if (status != COMPOSER_OK) {
+                composer_response_destroy(&response);
+            }
+        }
+        if (status != COMPOSER_OK) {
+            fprintf(stderr, "%s: no seed from 1 to 16 composes\n", item->tag);
+        }
+        assert(status == COMPOSER_OK);
+        cJSON *document = cJSON_Parse(response.json);
+        assert(document);
+        assert(!cJSON_GetObjectItemCaseSensitive(document, "construction")); /* none was given: nothing to echo */
+        const cJSON *construction = member(cJSON_GetArrayItem(member(document, "themes"), 0), "construction");
+        assert(cJSON_IsObject(construction));
+        const cJSON *text = member(construction, "text");
+        if (strcmp(text->valuestring, item->text) != 0) {
+            fprintf(stderr, "%s: '%s', expected '%s'\n", item->tag, text->valuestring, item->text);
+        }
+        assert(strcmp(text->valuestring, item->text) == 0);
+        assert(strcmp(member(construction, "reason")->valuestring, "length") == 0);
+        const cJSON *halves = member(construction, "halves");
+        assert(cJSON_GetArraySize(halves) == 2);
+        assert(cJSON_GetArrayItem(halves, 0)->valuedouble == (double)item->first_half);
+        assert(cJSON_GetArrayItem(halves, 1)->valuedouble == (double)item->second_half);
+        const cJSON *extensions = member(construction, "extensions");
+        assert(cJSON_GetArraySize(extensions) == 1);
+        assert(strcmp(member(cJSON_GetArrayItem(extensions, 0), "kind")->valuestring, item->extension) == 0);
+        /* The ideas follow one another from bar 1 (a repeat sits between two of them), and with the extension they are the bars. */
+        const cJSON *ideas = member(construction, "ideas");
+        double total = member(cJSON_GetArrayItem(extensions, 0), "bars")->valuedouble;
+        double previous_end = 1;
+        const cJSON *idea = NULL;
+        cJSON_ArrayForEach(idea, ideas) {
+            assert(member(idea, "first_bar")->valuedouble >= previous_end);
+            previous_end = member(idea, "first_bar")->valuedouble + member(idea, "bars")->valuedouble;
+            total += member(idea, "bars")->valuedouble;
+        }
+        assert(total == member(document, "bars")->valuedouble);
+        write_pair(item->tag, request, &response);
+        cJSON_Delete(document);
+        composer_response_destroy(&response);
+        free(request);
+    }
+}
+
+/* A construction given with no bars: the theme is as long as it, the document echoes it, and the reason is "given". */
+static void test_given_construction(void) {
+    cJSON *edits = cJSON_CreateObject();
+    cJSON *given = cJSON_Parse("{\"ideas\": {\"basic idea\": 2, \"contrasting idea\": 2, \"consequent basic idea\": 2, "
+                              "\"consequent contrasting idea\": 4}, \"extensions\": []}");
+    assert(edits && given && cJSON_AddItemToObject(edits, "construction", given) && cJSON_AddNullToObject(edits, "bars"));
+    ComposerResponse response;
+    char *request = NULL;
+    ComposerStatus status = compose_uneven(THEME("uneven-period.json"), 1, edits, &request, &response);
+    if (status != COMPOSER_OK) {
+        fprintf(stderr, "given construction: %s: %s\n", composer_status_name(status), response.error.message);
+    }
+    assert(status == COMPOSER_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    assert(document && member(document, "bars")->valuedouble == 10);
+    const cJSON *echoed = member(document, "construction");
+    assert(member(member(echoed, "ideas"), "consequent contrasting idea")->valuedouble == 4);
+    const cJSON *construction = member(cJSON_GetArrayItem(member(document, "themes"), 0), "construction");
+    assert(strcmp(member(construction, "reason")->valuestring, "given") == 0);
+    assert(strcmp(member(construction, "text")->valuestring, "4+6 period as given.") == 0);
+    assert(cJSON_GetArraySize(member(construction, "extensions")) == 0);
+    write_pair("given-construction", request, &response);
+    cJSON_Delete(document);
+    cJSON_Delete(edits);
+    composer_response_destroy(&response);
+    free(request);
+}
+
+/* A theme without a construction says so: its construction is null. */
+static void test_plain_has_no_construction(void) {
+    char *request = case_request(&CASES[0]);
+    ComposerResponse response;
+    assert(composer_api_theme(request, NULL, &response) == COMPOSER_OK);
+    cJSON *document = cJSON_Parse(response.json);
+    assert(document && cJSON_IsNull(member(cJSON_GetArrayItem(member(document, "themes"), 0), "construction")));
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(request);
+}
+
 /* --- preferences (B3 of P43) --------------------------------------------------------------------- */
 
 /* The one-motive request with seed `seed` and, when not NULL, the member "preferences" set to the JSON text. */
@@ -608,6 +749,23 @@ static void test_refused(void) {
                    "");
     expect_refused("preferences", "{\"bogus\": 1}", COMPOSER_ERR_REQUEST, "/preferences/bogus", "");
     expect_refused("preferences", "3", COMPOSER_ERR_REQUEST, "/preferences", "preferences must be an object");
+    /* A length and a construction (B5 of P47), each at its path. */
+    expect_refused("bars", "2", COMPOSER_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '2'");
+    expect_refused("bars", "17", COMPOSER_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '17'");
+    expect_refused("bars", "15", COMPOSER_ERR_UNSATISFIABLE, "/bars", "no construction makes a 15-bar sentence from this motif");
+    expect_refused("construction", "[]", COMPOSER_ERR_REQUEST, "/construction", "must be null or");
+    expect_refused("construction", "{\"ideas\": {\"bogus\": 1}}", COMPOSER_ERR_REQUEST, "/construction/ideas/bogus", "unknown idea");
+    expect_refused("construction", "{\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"fragment 1\": 1, \"fragment 2\": 1, "
+                                  "\"cadential\": 3}}",
+                   COMPOSER_ERR_UNSATISFIABLE, "/construction/ideas", "the ideas are 9 bars; the theme has 8");
+    expect_refused("construction",
+                   "{\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"fragment 1\": 1, \"fragment 2\": 1, \"cadential\": 2}, "
+                   "\"extensions\": [{\"kind\": \"echo\"}]}",
+                   COMPOSER_ERR_REQUEST, "/construction/extensions/0/kind", "kind must be repeat, stretch, addition or evaded");
+    expect_refused("construction",
+                   "{\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"fragment 1\": 1, \"fragment 2\": 1, \"cadential\": 2}, "
+                   "\"extensions\": [{\"kind\": \"stretch\", \"idea\": \"fragment 1\", \"bars\": 1}]}",
+                   COMPOSER_ERR_UNSATISFIABLE, "/construction/extensions/0", "cannot follow the fragment 1");
     /* A theme no seed can write: a last bar V under a perfect cadence. */
     expect_refused("chords", "[{\"bar\": 7, \"text\": \"V\"}]", COMPOSER_ERR_UNSATISFIABLE, "/chords/0", "chords bar 7: V cannot end a PAC");
     expect_refused("chords", "[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 7, \"text\": \"I6\"}]", COMPOSER_ERR_UNSATISFIABLE,
@@ -648,6 +806,9 @@ int main(int argc, char **argv) {
     if (responses) {
         test_two_bar_motif();
         test_snapshots();
+        test_plain_has_no_construction();
+        test_uneven();
+        test_given_construction();
         test_preferences();
         test_suggest_plans_explain();
         test_developments();
