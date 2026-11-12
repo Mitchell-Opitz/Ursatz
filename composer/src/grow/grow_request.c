@@ -268,16 +268,33 @@ bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePa
            (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars / 2, cells_per_bar, first)));
 }
 
-/* The bars of the beginning (or the ending) of a theme with a construction: those of the ideas its pairing has there. */
+/*
+ * The bars of the beginning (or the ending) of a theme with a construction: those of its ideas there with their repeats
+ * and stretches; the idea after an evaded cadence is not the ending's (construction_evaded_bars).
+ */
 static size_t construction_half_bars(const PlanThemePairing *pairing, bool beginning, const PlanConstruction *construction) {
-    size_t bars = 0;
-    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
-        const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
-        if (row && row->in_beginning == beginning) {
-            bars += construction->idea_bars[idea];
+    GrowConstructionBars bars;
+    grow_construction_bars(pairing, construction, &bars);
+    return beginning ? bars.beginning : bars.ending;
+}
+
+/* The bars of the idea after an evaded cadence, 0 when the construction does not evade it. */
+static size_t construction_evaded_bars(const PlanThemePairing *pairing, const PlanConstruction *construction) {
+    GrowConstructionBars bars;
+    grow_construction_bars(pairing, construction, &bars);
+    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (construction->extensions[k].kind == PLAN_EXTENSION_EVADED) {
+            return bars.evaded;
         }
     }
-    return bars;
+    return 0;
+}
+
+/* Whether the idea after an evaded cadence has room for the cadence it ends in (a theme that evades none always does). */
+static bool evaded_fits(const PlanThemePairing *pairing, const PlanConstruction *construction, size_t cells_per_bar,
+                        CadenceType cadence) {
+    size_t evaded = construction_evaded_bars(pairing, construction);
+    return evaded == 0 || half_fits(evaded, cells_per_bar, cadence);
 }
 
 /* The bars of the first idea of the slot under the construction; 0 when the pairing has none. */
@@ -291,17 +308,70 @@ static size_t construction_slot_bars(const PlanThemePairing *pairing, GrowSlot s
     return 0;
 }
 
+/* The words for an extension in a refusal. */
+static const char *extension_name(PlanExtensionKind kind) {
+    static const char *const NAMES[] = {"repeat", "stretch", "addition", "evaded cadence"};
+    return (int)kind >= 0 && kind <= PLAN_EXTENSION_EVADED ? NAMES[kind] : "extension";
+}
+
+/* Why an extension of the construction cannot be built, in `path` and `message`; false when each can. */
+static bool extension_fault(const PlanThemePairing *pairing, CadenceType cadence, const PlanConstruction *construction,
+                            const char *name, char *path, size_t path_size, char *message, size_t size) {
+    bool authentic = cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC;
+    bool added = false;
+    bool evaded = false;
+    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        const PlanExtension *extension = &construction->extensions[k];
+        snprintf(path, path_size, "/construction/extensions/%zu", k);
+        if (extension->kind == PLAN_EXTENSION_REPEAT || extension->kind == PLAN_EXTENSION_STRETCH) {
+            if (extension->idea >= GROW_IDEA_COUNT || !theme_shape_idea_in(pairing, (GrowIdea)extension->idea)) {
+                snprintf(message, size, "the %s has no %s", name, grow_idea_name((GrowIdea)extension->idea));
+                return true;
+            }
+            if (!grow_extension_allowed(pairing, extension->kind, (GrowIdea)extension->idea)) {
+                snprintf(message, size, "a %s cannot follow the %s", extension_name(extension->kind),
+                         grow_idea_name((GrowIdea)extension->idea));
+                return true;
+            }
+        } else if (extension->kind == PLAN_EXTENSION_EVADED) {
+            if (!authentic) {
+                snprintf(message, size, "an HC cannot be evaded");
+                return true;
+            }
+            if (evaded) {
+                snprintf(message, size, "a theme has one evaded cadence");
+                return true;
+            }
+            evaded = true;
+        } else {
+            if (!authentic) {
+                snprintf(message, size, "an addition follows a PAC or an IAC");
+                return true;
+            }
+            if (added || extension->bars > 2) {
+                snprintf(message, size, added ? "a theme has one addition" : "an addition is 2 bars at most");
+                return true;
+            }
+            added = true;
+        }
+    }
+    return false;
+}
+
 /*
  * Why a construction does not fit the pairing and the bars, NULL when it does: an idea the pairing does not have, an idea
- * it has with no bar, ideas that do not add up to the theme, an extension (not built yet). The message goes in `message`.
+ * it has with no bar, an extension that cannot be built, ideas and extensions that do not add up to the theme, a
+ * fragment as long as the basic idea. The field to blame goes in `path`, the message in `message`.
  */
-static bool construction_fault(const PlanThemePairing *pairing, size_t bars, const PlanConstruction *construction,
-                               char *message, size_t size) {
+static bool construction_fault(const PlanThemePairing *pairing, size_t bars, CadenceType cadence,
+                               const PlanConstruction *construction, char *path, size_t path_size, char *message,
+                               size_t size) {
     size_t total = 0;
     const ThemeShapeHalf *beginning = theme_shape_beginning(pairing->beginning);
     const ThemeShapeHalf *ending = theme_shape_ending(pairing->ending);
     char name[64];
     snprintf(name, sizeof(name), "%s+%s", beginning ? beginning->plan_name : "?", ending ? ending->plan_name : "?");
+    snprintf(path, path_size, "/construction/ideas");
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         if (!theme_shape_idea_in(pairing, (GrowIdea)idea)) {
             if (construction->idea_bars[idea] != 0) {
@@ -315,6 +385,11 @@ static bool construction_fault(const PlanThemePairing *pairing, size_t bars, con
             total += construction->idea_bars[idea];
         }
     }
+    if (extension_fault(pairing, cadence, construction, name, path, path_size, message, size)) {
+        return true;
+    }
+    snprintf(path, path_size, "/construction/ideas");
+    total += grow_construction_extra_bars(pairing, construction);
     if (total != bars) {
         snprintf(message, size, "the ideas are %zu bars; the theme has %zu", total, bars);
         return true;
@@ -328,10 +403,6 @@ static bool construction_fault(const PlanThemePairing *pairing, size_t bars, con
             }
         }
     }
-    if (construction->extension_count != 0) {
-        snprintf(message, size, "an extension is not built yet");
-        return true;
-    }
     return false;
 }
 
@@ -339,12 +410,14 @@ bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const Plan
                                  CadenceType cadence, CadenceType first, const PlanConstruction *construction) {
     size_t cells_per_bar;
     char message[96];
+    char path[64];
     bool antecedent = pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
     return construction && grow_cells_per_bar(meter, &cells_per_bar) && bars >= 3 && bars <= 16 &&
            grow_pairing_archetype(pairing) >= 0 &&
            (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC || cadence == CADENCE_TYPE_HALF) &&
-           !construction_fault(pairing, bars, construction, message, sizeof(message)) &&
+           !construction_fault(pairing, bars, cadence, construction, path, sizeof(path), message, sizeof(message)) &&
            half_fits(construction_half_bars(pairing, false, construction), cells_per_bar, cadence) &&
+           evaded_fits(pairing, construction, cells_per_bar, cadence) &&
            (!antecedent || (cadences_ordered(first, cadence) &&
                             half_fits(construction_half_bars(pairing, true, construction), cells_per_bar, first)));
 }
@@ -429,8 +502,10 @@ static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, G
                       request->bars);
     }
     char fault[96];
-    if (construction && construction_fault(&request->pairing, request->bars, construction, fault, sizeof(fault))) {
-        return refuse(refusal, GROW_ERR_BAD_REQUEST, "/construction/ideas", "%s", fault);
+    char fault_path[64];
+    if (construction && construction_fault(&request->pairing, request->bars, cadence, construction, fault_path,
+                                           sizeof(fault_path), fault, sizeof(fault))) {
+        return refuse(refusal, GROW_ERR_BAD_REQUEST, fault_path, "%s", fault);
     }
     size_t beginning_bars = construction ? construction_half_bars(&request->pairing, true, construction) : request->bars / 2;
     size_t ending_bars = construction ? construction_half_bars(&request->pairing, false, construction) : request->bars / 2;
@@ -446,7 +521,8 @@ static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, G
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/first_cadence",
                       "an antecedent ends in a cadence weaker than the theme's (an HC or an IAC below a PAC)");
     }
-    if (!half_fits(ending_bars, cells_per_bar, cadence)) {
+    if (!half_fits(ending_bars, cells_per_bar, cadence) ||
+        (construction && !evaded_fits(&request->pairing, construction, cells_per_bar, cadence))) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "%zu bars leave no room for the cadence", request->bars);
     }
     if (antecedent && !half_fits(beginning_bars, cells_per_bar, first)) {
@@ -539,7 +615,12 @@ GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType fir
         return GROW_OK;
     }
     /* The cadence fixes the harmony of the last bar of the theme, and of the first part for an antecedent. */
-    GrowResult result = check_cadence_bar(request, bar, (long)request->bars - 1, request->cadence, refusal);
+    /* The cadence is the last bar of the theme, before an addition (R-468). */
+    GrowConstructionBars bars_of = {0, 0, 0, 0};
+    if (request->construction) {
+        grow_construction_bars(&request->pairing, request->construction, &bars_of);
+    }
+    GrowResult result = check_cadence_bar(request, bar, (long)(request->bars - bars_of.addition) - 1, request->cadence, refusal);
     if (result == GROW_OK && request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
         size_t beginning_bars =
             request->construction ? construction_half_bars(&request->pairing, true, request->construction) : request->bars / 2;
@@ -685,6 +766,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
                               : (request->pairing.ending == PLAN_THEME_ENDING_CADENTIAL ? 2 : 0);
     /* A construction's contrasting ideas shorter than their source are made from shortened copies of it (R-471). */
     segment_bars += request->construction ? 2 * longest : 0;
+    /* The motives of a construction's repeats and addition (R-468). */
+    segment_bars += request->construction ? grow_extension_material_bars(&request->pairing, request->construction) : 0;
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars + segment_bars;
 
     PiecePlan *plan = plan_create();

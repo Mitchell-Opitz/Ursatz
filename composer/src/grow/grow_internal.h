@@ -49,9 +49,25 @@ typedef enum {
 typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
 
 /*
+ * One extension of a construction (R-468) as laid out. A repeat and an evaded cadence are an idea of their own: `place` is
+ * the place of the idea a repeat follows, or the last place of the theme for an evaded cadence, and start and length are
+ * the new idea's. A stretch is no idea: `place` is the place it lengthens, start that place's start and length the bars
+ * added. An addition lies after the theme's last idea: place is that idea's, start and length are the addition's.
+ */
+typedef struct {
+    PlanExtensionKind kind;
+    GrowPlace place;
+    Rational start;
+    Rational length;
+    bool varied;
+} GrowLayoutExtension;
+
+/*
  * Where each idea of a theme lies, as exact lengths from the theme's start, computed once per request (grow_layout_of).
  * A place the pairing does not have has length 0. The ending starts at `beginning`. A *_bars member is the whole bars the
- * length is, 0 when it is not whole.
+ * length is, 0 when it is not whole. The halves hold their repeats, their stretched ideas and, in the ending, an evaded
+ * cadence's idea; an addition is after the ending. `idea_beginning_bars` and `idea_ending_bars` are the halves of the
+ * construction's ideas alone, without any extension.
  */
 typedef struct {
     Rational start[GROW_PLACE_COUNT];
@@ -61,6 +77,11 @@ typedef struct {
     size_t basic_bars;
     size_t beginning_bars;
     size_t ending_bars;
+    size_t idea_beginning_bars;
+    size_t idea_ending_bars;
+    size_t main_ending_bars; /* the ending's bars up to the idea after an evaded cadence: `ending_bars` without it */
+    size_t extension_count;
+    GrowLayoutExtension extensions[PLAN_CONSTRUCTION_EXTENSIONS]; /* in the construction's order */
 } GrowLayout;
 
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
@@ -145,6 +166,12 @@ typedef struct {
      */
     Motive shortened[GROW_PLACE_COUNT];
     bool has_shortened[GROW_PLACE_COUNT];
+    /*
+     * The motives of the extensions that have one of their own (R-468): extended[k] is what the repeat or the addition
+     * layout.extensions[k] is, a made node of the material when has_extended[k]. A stretch and an evaded cadence make none.
+     */
+    Motive extended[PLAN_CONSTRUCTION_EXTENSIONS];
+    bool has_extended[PLAN_CONSTRUCTION_EXTENSIONS];
     bool has_construction;                 /* the request's: the label names the halves' bars */
     GrowContinuation continuation;         /* the request's, for the build (grow_apply) */
     bool basic_as_written;                 /* the request's */
@@ -203,6 +230,7 @@ typedef struct {
     NodeId segment_node[2];  /* the material node of the segment fragment k is made from, else PLAN_NODE_NONE */
     NodeId liquid_node[GROW_PLACE_COUNT]; /* the material node holding an idea's liquidation, else PLAN_NODE_NONE */
     NodeId short_node[GROW_PLACE_COUNT];  /* the material node holding an idea's shortened source, else PLAN_NODE_NONE */
+    NodeId extension_node[PLAN_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
 } GrowBuild;
 
 /* A length of count units. */
@@ -269,6 +297,47 @@ bool grow_split_possible(const GrowThemeRequest *request, size_t half_bars, Plan
 Rational grow_unit(const GrowThemeRequest *request);
 /* Where each idea of the request's theme lies; false when the theme has no length or a length does not fit a Rational. */
 bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out);
+/*
+ * Whether an extension of this kind can follow or stretch the idea under the pairing (R-468): a repeat follows the
+ * repetition, the contrasting idea, fragment 1, fragment 2, the consequent contrasting idea or cadential 1; a stretch
+ * lengthens the idea that ends the theme (the cadential idea, the consequent contrasting idea, cadential 2) or an
+ * antecedent's contrasting idea. An addition and an evaded cadence name no idea: they are always allowed here.
+ */
+bool grow_extension_allowed(const PlanThemePairing *pairing, PlanExtensionKind kind, GrowIdea idea);
+/*
+ * The motives of the extensions of the spec's layout, drawn after the beginning and the ending: a repeat's is its idea's
+ * developed motive in sequence one step down (or, varied, with its last interval changed), an addition's the trailing
+ * segment of the theme's last idea ending on the cadence's tone. Each is kept in spec->extended and fits its bars. False,
+ * with nothing to build, when one cannot be made or an evaded cadence's idea cannot restate the last idea's motive.
+ */
+bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec);
+/* The bars the made motives of the spec's extensions take in the material, one bar at least each. */
+size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar);
+/*
+ * The bars of a construction as grow_layout_of lays them out (R-468): its beginning and its ending with their stretches
+ * and repeats, the idea after an evaded cadence (not in the ending) and the addition (after it).
+ */
+typedef struct {
+    size_t beginning;
+    size_t ending;
+    size_t evaded;
+    size_t addition;
+} GrowConstructionBars;
+void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out);
+/* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
+size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+/* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
+size_t grow_extension_material_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+/*
+ * As grow_add_chord_targets, over `span` of the owner, which may stop short of the owner's end (the harmony of an ending
+ * up to the idea after an evaded cadence, R-468).
+ */
+PlanResult grow_add_chord_targets_over(GrowBuild *build, NodeId owner, PlanSpan span, const PlanHarmonyShape *shape,
+                                       const PlanConstraint *cadence);
+/* The idea node of the repeat layout.extensions[k] in the container, named "<the idea it follows> repeated". */
+PlanResult grow_add_repeat_node(GrowBuild *build, NodeId container, size_t k, NodeId *out);
+/* The ref of an extension's idea: its motive node (`extension <k>`), restated exactly. */
+void grow_extension_ref(const GrowBuild *build, size_t k, PlanMotiveRef *out);
 /* standard-form's own beginning and ending for the plan's. */
 int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);

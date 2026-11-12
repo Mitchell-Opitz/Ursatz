@@ -642,7 +642,7 @@ static bool keep_idea(GrowThemeSpec *spec, GrowPlace idea) {
 
 /* The continuation's harmonic rhythm: a phrase model if it has room for one, else the cadential progression alone. */
 static void set_continuation_harmony(const GrowThemeRequest *request, GrowThemeSpec *spec) {
-    size_t cells = spec->layout.ending_bars * request->cells_per_bar;
+    size_t cells = spec->layout.main_ending_bars * request->cells_per_bar;
     spec->ending_shape = cells >= harmony_phrase_room_cells(request->cadence, request->cells_per_bar)
                              ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                              : PLAN_HARMONY_SHAPE_CADENTIAL;
@@ -652,7 +652,7 @@ static void set_continuation_harmony(const GrowThemeRequest *request, GrowThemeS
     size_t chords = grow_chords_before_last(request, spec->ending_shape, request->cadence);
     size_t least = (room + chords - 1) / chords;
     spec->ending_cap = (int)(cap > least ? cap : least);
-    spec->ending_split = grow_split_possible(request, spec->layout.ending_bars, spec->ending_shape, request->cadence);
+    spec->ending_split = grow_split_possible(request, spec->layout.main_ending_bars, spec->ending_shape, request->cadence);
 }
 
 /*
@@ -752,11 +752,11 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
         !keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST)) {
         return false;
     }
-    size_t cells = spec->layout.ending_bars * request->cells_per_bar;
+    size_t cells = spec->layout.main_ending_bars * request->cells_per_bar;
     spec->ending_shape = cells >= harmony_phrase_room_cells(request->cadence, request->cells_per_bar)
                              ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                              : PLAN_HARMONY_SHAPE_CADENTIAL;
-    spec->ending_split = grow_split_possible(request, spec->layout.ending_bars, spec->ending_shape, request->cadence);
+    spec->ending_split = grow_split_possible(request, spec->layout.main_ending_bars, spec->ending_shape, request->cadence);
     return !request->has_end_change || spec->ending_shape == PLAN_HARMONY_SHAPE_PHRASE_MODEL;
 }
 
@@ -782,7 +782,7 @@ static bool draw_cadential(const GrowThemeRequest *request, GrowThemeSpec *spec)
         from = steps;
     }
     spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;
-    spec->ending_split = grow_split_possible(request, spec->layout.ending_bars, spec->ending_shape, request->cadence);
+    spec->ending_split = grow_split_possible(request, spec->layout.main_ending_bars, spec->ending_shape, request->cadence);
     /* A cadential progression has no pivot to open a key with. */
     return !request->has_end_change && keep_idea(spec, GROW_PLACE_CADENTIAL_1) &&
            keep_idea(spec, GROW_PLACE_CADENTIAL_2);
@@ -825,6 +825,35 @@ static PlanResult make_container(GrowBuild *build, const char *phrase_name, cons
 }
 
 /*
+ * Whether the cadential progression, a chord a cell before its last chord, which is the whole last bar, can fill the
+ * cadential idea and the idea after an evaded cadence (R-468): a construction's longer ones have no such progression.
+ * Every other theme is as it was.
+ */
+static bool faster_cadential_fits(const GrowBuild *build) {
+    const GrowLayout *layout = &build->layout;
+    if (!build->spec->has_construction) {
+        return true;
+    }
+    size_t chords = grow_chords_before_last(build->request, PLAN_HARMONY_SHAPE_CADENTIAL, build->request->cadence);
+    for (size_t k = 0; k <= layout->extension_count; k++) {
+        Rational length = k == layout->extension_count ? layout->length[GROW_PLACE_CADENTIAL]
+                                                       : layout->extensions[k].kind == PLAN_EXTENSION_EVADED ? layout->extensions[k].length
+                                                                                                                : rational_ratio(0, 1);
+        Rational bars;
+        if (length.num == 0) {
+            continue;
+        }
+        size_t cells = rational_div(length, build->request->bar, &bars) == RATIONAL_OK && bars.den == 1 && bars.num > 0
+                           ? (size_t)bars.num * build->request->cells_per_bar
+                           : 0;
+        if (cells == 0 || (cells > build->request->cells_per_bar && cells - build->request->cells_per_bar > chords)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
  * A chord a cell through a sentence's continuation (R-465): the setting is on, the ending is a continuation with no
  * key change, its fragments are a bar or more (an 8-bar theme's; a construction's of whole bars), and a bar has two cells
  * or more. In 2/4 and 3/4 a bar is one cell and nothing changes.
@@ -833,64 +862,155 @@ static bool faster_harmony(const GrowBuild *build, size_t first_slot, size_t las
     return build->spec->continuation.faster_harmony && first_slot == GROW_PLACE_FRAGMENT_1 &&
            last_slot == GROW_PLACE_CADENTIAL && !build->request->has_end_change &&
            rational_cmp(build->layout.length[GROW_PLACE_FRAGMENT_1], build->request->bar) >= 0 &&
-           build->request->cells_per_bar >= 2;
+           build->request->cells_per_bar >= 2 && faster_cadential_fits(build);
+}
+
+/* An idea of the second half in time order: one of the pairing's, a repeat of one, or the idea after an evaded cadence. */
+typedef struct {
+    NodeId node;
+    size_t slot;      /* the place of the idea, or of the idea a repeat follows */
+    size_t extension; /* the layout extension the idea is, SIZE_MAX for an idea of the pairing */
+} Part;
+
+/* The cadence a theme ends in when it is evaded first (R-468): the deceptive one, V to vi. */
+static PlanConstraint deceptive_cadence(void) {
+    PlanConstraint cadence;
+    memset(&cadence, 0, sizeof(cadence));
+    cadence.kind = PLAN_CONSTRAINT_CADENCE;
+    cadence.params.cadence = CADENCE_TYPE_DECEPTIVE;
+    return cadence;
+}
+
+/* The layout extension of the evaded cadence, SIZE_MAX when the theme has none. */
+static size_t evaded_extension(const GrowLayout *layout) {
+    for (size_t k = 0; k < layout->extension_count; k++) {
+        if (layout->extensions[k].kind == PLAN_EXTENSION_EVADED) {
+            return k;
+        }
+    }
+    return SIZE_MAX;
 }
 
 /*
  * One target an idea in place of the continuation's single one, each with a chord of at most a cell that crosses no
- * barline: the fragments prolong the tonic to the dominant (I then V, V6, V65 or V43, R-344), the cadential idea is the
- * cadential progression and takes the cadence.
+ * barline: the fragments (and their repeats) prolong the tonic to the dominant (I then V, V6, V65 or V43, R-344), the
+ * cadential idea is the cadential progression and takes the cadence, the deceptive one when the theme evades it, the
+ * idea after it taking the theme's.
  */
-static PlanResult add_faster_targets(GrowBuild *build, const NodeId *ideas, size_t first_slot, size_t last_slot) {
+static PlanResult add_faster_targets(GrowBuild *build, const Part *parts, size_t count, size_t last_slot) {
     PlanResult result = PLAN_OK;
-    for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
+    PlanConstraint deceptive = deceptive_cadence();
+    bool evaded = evaded_extension(&build->layout) != SIZE_MAX;
+    for (size_t i = 0; result == PLAN_OK && i < count; i++) {
+        bool after = parts[i].extension != SIZE_MAX && build->layout.extensions[parts[i].extension].kind == PLAN_EXTENSION_EVADED;
+        bool last = parts[i].extension == SIZE_MAX && parts[i].slot == last_slot;
         PlanHarmonyShape shape;
         memset(&shape, 0, sizeof(shape));
         shape.max_cells_per_chord = 1;
         shape.split_at_bars = true;
-        if (slot == last_slot) {
+        if (last || after) {
             shape.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
         } else {
             shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
             shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
             shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
         }
-        result = grow_add_chord_targets(build, ideas[slot], &shape, slot == last_slot ? &build->cadence : NULL);
+        result = grow_add_chord_targets(build, parts[i].node, &shape,
+                                        after ? &build->cadence : (last ? (evaded ? &deceptive : &build->cadence) : NULL));
     }
     return result;
+}
+
+/*
+ * The chords of an ending that evades its cadence (R-468): the container's up to the end of the idea before the evaded
+ * one, ending on the deceptive cadence, and the evaded idea's own cadential ones, with the theme's cadence.
+ */
+static PlanResult add_evaded_targets(GrowBuild *build, NodeId container, const PlanHarmonyShape *shape, NodeId after) {
+    PlanSpan span = plan_node_span(build->plan, container);
+    PlanSpan idea = plan_node_span(build->plan, after);
+    PlanConstraint deceptive = deceptive_cadence();
+    PlanHarmonyShape cadential;
+    Rational length;
+    PlanResult result = plan_result_of_rational(rational_sub(idea.start, span.start, &length));
+    span.length = length;
+    memset(&cadential, 0, sizeof(cadential));
+    cadential.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
+    cadential.split_at_bars = shape->split_at_bars;
+    result = result == PLAN_OK ? grow_add_chord_targets_over(build, container, span, shape, &deceptive) : result;
+    return result == PLAN_OK ? grow_add_chord_targets(build, after, &cadential, &build->cadence) : result;
 }
 
 /* The chords over the container, and a melody span for each idea: the motive nodes m<slot> are made first. */
 static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarmonyShape *shape,
                               const char *const *names, size_t first_slot, size_t last_slot) {
     const GrowThemeSpec *spec = build->spec;
-    NodeId ideas[GROW_PLACE_COUNT];
     NodeId motives[GROW_PLACE_COUNT];
     PlanMotiveRef refs[GROW_PLACE_COUNT];
+    PlanMotiveRef asked[GROW_PLACE_COUNT + PLAN_CONSTRUCTION_EXTENSIONS];
+    Part parts[GROW_PLACE_COUNT + PLAN_CONSTRUCTION_EXTENSIONS];
+    size_t count = 0;
+    size_t evaded = evaded_extension(&build->layout);
     PlanResult result = PLAN_OK;
 
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
+        NodeId idea;
         result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[slot], build->layout.length[slot],
-                               names[slot], &ideas[slot]);
+                               names[slot], &idea);
+        parts[count].node = idea;
+        parts[count].slot = slot;
+        parts[count++].extension = SIZE_MAX;
+        /* A repeat follows the idea it repeats (R-468). */
+        for (size_t k = 0; result == PLAN_OK && k < build->layout.extension_count; k++) {
+            if (build->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT && build->layout.extensions[k].place == slot) {
+                result = grow_add_repeat_node(build, container, k, &parts[count].node);
+                parts[count].slot = slot;
+                parts[count++].extension = k;
+            }
+        }
+    }
+    /* The idea after an evaded cadence ends the theme, after the idea that evaded it. */
+    if (result == PLAN_OK && evaded != SIZE_MAX) {
+        char name[96];
+        snprintf(name, sizeof(name), "%s after the evaded cadence", names[last_slot]);
+        result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.extensions[evaded].start,
+                               build->layout.extensions[evaded].length, name, &parts[count].node);
+        parts[count].slot = last_slot;
+        parts[count++].extension = evaded;
     }
     /* A motive in the material for each idea, each made from m0. */
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
         grow_idea_ref(spec, (GrowPlace)slot, grow_idea_node(build, (GrowPlace)slot), &refs[slot]);
         result = grow_add_motive(build, slot, &refs[slot], &motives[slot]);
     }
+    for (size_t i = 0; result == PLAN_OK && i < count; i++) {
+        if (parts[i].extension != SIZE_MAX && build->layout.extensions[parts[i].extension].kind == PLAN_EXTENSION_REPEAT) {
+            grow_extension_ref(build, parts[i].extension, &asked[i]);
+        } else if (parts[i].extension != SIZE_MAX) {
+            /* The idea after an evaded cadence restates the motive of the idea before it exactly. */
+            memset(&asked[i], 0, sizeof(asked[i]));
+            asked[i].motive = asked[i - 1].motive;
+            asked[i].has_step = true;
+            asked[i].step.kind = MOTIVE_RELATION_EXACT;
+        } else {
+            asked[i] = refs[parts[i].slot];
+            asked[i].motive = motives[parts[i].slot];
+            /* The segment and the steps are recorded on the motive node; the melody asks for the node. */
+            asked[i].segment[0] = '\0';
+            asked[i].steps = 0;
+        }
+    }
     if (result == PLAN_OK && faster_harmony(build, first_slot, last_slot)) {
-        result = add_faster_targets(build, ideas, first_slot, last_slot);
+        result = add_faster_targets(build, parts, count, last_slot);
+    } else if (result == PLAN_OK && evaded != SIZE_MAX) {
+        result = add_evaded_targets(build, container, shape, parts[count - 1].node);
     } else if (result == PLAN_OK) {
         result = grow_add_chord_targets(build, container, shape, &build->cadence);
     }
-    /* The melody to write, one span for each idea, the last asking for the cadence. */
-    for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
-        PlanMotiveRef ref = refs[slot];
-        ref.motive = motives[slot];
-        /* The segment and the steps are recorded on the motive node; the melody asks for the node. */
-        ref.segment[0] = '\0';
-        ref.steps = 0;
-        result = grow_add_melody_target(build, ideas[slot], &ref, slot == last_slot ? &build->cadence : NULL);
+    /* The melody to write, one span for each idea, the last asking for the cadence (the deceptive one before an evaded). */
+    PlanConstraint deceptive = deceptive_cadence();
+    for (size_t i = 0; result == PLAN_OK && i < count; i++) {
+        const PlanConstraint *cadence = i + 1 == count ? &build->cadence : (i + 2 == count && evaded != SIZE_MAX ? &deceptive : NULL);
+        result = grow_add_melody_target(build, parts[i].node, &asked[i], cadence);
     }
     return result;
 }
@@ -979,14 +1099,49 @@ static PlanResult build_cadential(GrowBuild *build) {
                              : result;
 }
 
+/*
+ * The addition after the cadence (R-468): a phrase of its own after the theme's, a tonic prolonged from tonic to tonic
+ * with no cadence, its melody the motive made for it.
+ */
+static PlanResult build_addition(GrowBuild *build, size_t k) {
+    const GrowLayoutExtension *extension = &build->layout.extensions[k];
+    PlanHarmonyShape shape;
+    PlanMotiveRef ref;
+    NodeId phrase;
+    NodeId idea;
+    PlanResult result = grow_add_node(build, build->request->section, PLAN_NODE_PHRASE, extension->start, extension->length,
+                                      "addition", &phrase);
+    if (result == PLAN_OK) {
+        result = grow_add_node(build, phrase, PLAN_NODE_IDEA, extension->start, extension->length, "addition idea", &idea);
+    }
+    memset(&shape, 0, sizeof(shape));
+    shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
+    shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
+    shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
+    if (result == PLAN_OK) {
+        result = grow_add_chord_targets(build, phrase, &shape, NULL);
+    }
+    grow_extension_ref(build, k, &ref);
+    return result == PLAN_OK ? grow_add_melody_target(build, idea, &ref, &build->cadence) : result;
+}
+
 PlanResult grow_ending_build(GrowBuild *build) {
+    PlanResult result = PLAN_ERR_BAD_PAYLOAD;
     switch (build->spec->pairing.ending) {
     case PLAN_THEME_ENDING_CONTINUATION:
-        return build_continuation(build);
+        result = build_continuation(build);
+        break;
     case PLAN_THEME_ENDING_CONSEQUENT:
-        return build_consequent(build);
+        result = build_consequent(build);
+        break;
     case PLAN_THEME_ENDING_CADENTIAL:
-        return build_cadential(build);
+        result = build_cadential(build);
+        break;
     }
-    return PLAN_ERR_BAD_PAYLOAD;
+    for (size_t k = 0; result == PLAN_OK && k < build->layout.extension_count; k++) {
+        if (build->layout.extensions[k].kind == PLAN_EXTENSION_ADDITION) {
+            result = build_addition(build, k);
+        }
+    }
+    return result;
 }

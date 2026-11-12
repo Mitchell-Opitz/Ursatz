@@ -743,6 +743,10 @@ static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request
     NodeId material = plan_node_parent(plan, request->source);
     PlanSpan span = plan_node_span(plan, material);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + GROW_MADE_NODES;
+    /* An extension that is a repeat or an addition has a motive of its own, a bar of the material at least (R-468). */
+    for (size_t k = 0; k < spec->layout.extension_count; k++) {
+        wanted += spec->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT || spec->layout.extensions[k].kind == PLAN_EXTENSION_ADDITION;
+    }
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
 }
 
@@ -759,6 +763,7 @@ static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, c
         made += spec->has_liquidated[k] ? 1 : 0;
         made += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request->bar) : 0;
     }
+    made += grow_extended_bars(spec, request->bar);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + made;
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
 }
@@ -889,7 +894,18 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     draw_liquid_base(shared, spec);
     spec->segment_room = material_has_room(plan, request, spec);
     spec->basic_cells = spec->layout.basic_bars * request->cells_per_bar;
-    return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) && made_nodes_fit(plan, request, spec);
+    return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) &&
+           grow_extensions_draw(request, spec) && made_nodes_fit(plan, request, spec);
+}
+
+/* Whether two specs make the same motives for their extensions. */
+static bool same_extended(const GrowThemeSpec *a, const GrowThemeSpec *b) {
+    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (a->has_extended[k] != b->has_extended[k] || (a->has_extended[k] && !motive_equal(&a->extended[k], &b->extended[k]))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
@@ -912,7 +928,7 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
            a->liquidation_head[GROW_PLACE_FRAGMENT_2] == b->liquidation_head[GROW_PLACE_FRAGMENT_2] &&
            a->liquidation_head[GROW_PLACE_CADENTIAL] == b->liquidation_head[GROW_PLACE_CADENTIAL] &&
            a->compound_ends_on == b->compound_ends_on && same_kind(&a->contrast, &b->contrast) &&
-           same_kind(&a->consequent_contrast, &b->consequent_contrast);
+           same_kind(&a->consequent_contrast, &b->consequent_contrast) && same_extended(a, b);
 }
 
 static const char *dev_name(const MotiveRelationStep *dev) {
@@ -977,7 +993,7 @@ static void bars_text(const GrowThemeSpec *spec, char *out, size_t size) {
     }
 }
 
-static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
+static void base_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const BEGINNINGS[] = {"presentation", "antecedent", "compound basic idea"};
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     char bars[24];
@@ -1009,6 +1025,45 @@ static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
         liquidation_label(spec, GROW_PLACE_CADENTIAL_2, second, sizeof(second));
         snprintf(label + used, size - used, " cadential %s then %s", first, second);
     }
+}
+
+/* The extensions of a construction after the halves' bars in the label (R-468): "repeated fragment 2", "evaded cadence". */
+static void extension_label(const GrowThemeSpec *spec, char *out, size_t size) {
+    size_t used = 0;
+    out[0] = '\0';
+    for (size_t k = 0; k < spec->layout.extension_count && used + 1 < size; k++) {
+        const GrowLayoutExtension *extension = &spec->layout.extensions[k];
+        const ThemeShapeIdea *row = theme_shape_place_in(&spec->pairing, (unsigned)extension->place);
+        const char *idea = row ? row->name : "idea";
+        switch (extension->kind) {
+        case PLAN_EXTENSION_REPEAT:
+            used += (size_t)snprintf(out + used, size - used, " repeated %s", idea);
+            break;
+        case PLAN_EXTENSION_STRETCH:
+            used += (size_t)snprintf(out + used, size - used, " stretched %s", idea);
+            break;
+        case PLAN_EXTENSION_ADDITION:
+            used += (size_t)snprintf(out + used, size - used, " addition");
+            break;
+        case PLAN_EXTENSION_EVADED:
+            used += (size_t)snprintf(out + used, size - used, " evaded cadence");
+            break;
+        }
+    }
+}
+
+/*
+ * The label of a candidate: its halves' bars, then its extensions, then its choices, so the extensions are not lost when
+ * the label is cut short: "sentence 4+6 bars evaded cadence exact fragments ...".
+ */
+static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
+    char base[256];
+    char extensions[128];
+    base_label(spec, base, sizeof(base));
+    extension_label(spec, extensions, sizeof(extensions));
+    const char *bars = strstr(base, " bars");
+    size_t head = bars ? (size_t)(bars - base) + strlen(" bars") : strlen(base);
+    snprintf(label, size, "%.*s%s%s", (int)head, base, extensions, base + head);
 }
 
 static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
@@ -1208,13 +1263,13 @@ static PlanHarmonyShape gap_shape(const PlanHarmonyShape *shape, bool at_start, 
 
 /* The chords of an owner: open targets asking for the shape, or, with a degree, that one diatonic chord written whole. */
 static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
-                                    const PlanConstraint *cadence, int degree) {
+                                    const PlanConstraint *cadence, int degree, const PlanSpan *over) {
     PiecePlan *plan = build->plan;
     PhraseChord fixed;
     if (degree > 0 && !harmony_make_chord(build->request->key.mode, degree, 0, false, false, 1, &fixed)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
-    PlanSpan span = plan_node_span(plan, owner);
+    PlanSpan span = over ? *over : plan_node_span(plan, owner);
     Rational span_end;
     PlanSpan gaps[GROW_MAX_GAPS];
     PlanResult result = plan_span_end(span, &span_end);
@@ -1280,13 +1335,18 @@ static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHa
 
 PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                   const PlanConstraint *cadence) {
-    return add_chord_targets(build, owner, shape, cadence, 0);
+    return add_chord_targets(build, owner, shape, cadence, 0, NULL);
+}
+
+PlanResult grow_add_chord_targets_over(GrowBuild *build, NodeId owner, PlanSpan span, const PlanHarmonyShape *shape,
+                                       const PlanConstraint *cadence) {
+    return add_chord_targets(build, owner, shape, cadence, 0, &span);
 }
 
 PlanResult grow_add_chord_written(GrowBuild *build, NodeId owner, int degree) {
     PlanHarmonyShape unused;
     memset(&unused, 0, sizeof(unused));
-    return add_chord_targets(build, owner, &unused, NULL, degree);
+    return add_chord_targets(build, owner, &unused, NULL, degree, NULL);
 }
 
 /* The bars the material holds, counted. */
@@ -1562,9 +1622,13 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
         build.short_node[k] = PLAN_NODE_NONE;
         shortened_bars += spec->has_shortened[k] ? grow_motive_layout_bars(&spec->shortened[k], request.bar) : 0;
     }
+    size_t extended_bars = grow_extended_bars(spec, request.bar);
+    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        build.extension_node[k] = PLAN_NODE_NONE;
+    }
     build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
                                           ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * build.motive_bars +
-                                              made + shortened_bars);
+                                              made + shortened_bars + extended_bars);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
         result = add_section_motive(&build, build.slot_base, &build.source);
@@ -1589,6 +1653,21 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
                                                       PLAN_STATE_REALIZED, &build.short_node[k], NULL)
                                    : result;
         short_at += grow_motive_layout_bars(&spec->shortened[k], request.bar);
+    }
+    /* The motives of the extensions follow, each at its own bars (R-468): the repeats' and the addition's. */
+    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+        if (!spec->has_extended[k]) {
+            continue;
+        }
+        Rational start;
+        char name[32];
+        size_t bars = grow_motive_layout_bars(&spec->extended[k], request.bar);
+        snprintf(name, sizeof(name), "extension %zu", k + 1);
+        result = plan_result_of_rational(rational_add(build.material_span.start, grow_scaled(request.bar, short_at), &start));
+        result = result == PLAN_OK ? motive_attach_as(plan, build.material, start, &spec->extended[k], name,
+                                                      PLAN_STATE_REALIZED, &build.extension_node[k], NULL)
+                                   : result;
+        short_at += bars > 0 ? bars : 1;
     }
     if (result != PLAN_OK) {
         return result;

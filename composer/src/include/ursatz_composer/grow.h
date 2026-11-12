@@ -87,8 +87,8 @@ typedef struct {
     /*
      * The bars of each idea of the theme (R-468), NULL for none: the theme is then 4 or 8 bars, its ideas fixed fractions
      * of it. It is added to the theme section as a CONSTRUCTION constraint; with it the theme is `bars` bars, 3 to 16,
-     * and its ideas are the bars it gives (grow_layout_of). Refused (GROW_ERR_BAD_REQUEST) when the ideas do not fit the
-     * pairing and the bars (an extension is not built yet). Must outlive grow_build_plan only.
+     * and its ideas are the bars it gives with its extensions (grow_layout_of). Refused (GROW_ERR_BAD_REQUEST) when the
+     * ideas and the extensions do not fit the pairing, the cadence and the bars. Must outlive grow_build_plan only.
      */
     const PlanConstruction *construction;
     CadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
