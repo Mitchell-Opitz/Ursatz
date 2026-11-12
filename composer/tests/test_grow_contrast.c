@@ -282,6 +282,31 @@ static void test_distant_composes(void) {
     }
 }
 
+/* A one-bar motif and a distant contrast of two bars: the derived motives and the material take the distant motive's bars. */
+static void test_one_bar_motif_composes(void) {
+    GrowContrast distant = {{0, 1}, 0};
+    Motive motive = load_motive(COMPOSER_FIXTURE_DIR "/rates/one-bar-4-4.json");
+    unsigned composed[2] = {0, 0};
+    unsigned made = 0;
+    for (int period = 0; period < 2; period++) {
+        for (unsigned long seed = 1; seed <= seeds(); seed++) {
+            PiecePlan *plan = grow_with(&motive, seed, period, &distant);
+            if (!plan) {
+                continue;
+            }
+            composed[period]++;
+            made += find_node(plan, "distant for m1") != PLAN_NODE_NONE ||
+                            find_node(plan, "distant for m2") != PLAN_NODE_NONE
+                        ? 1
+                        : 0;
+            plan_destroy(plan);
+        }
+    }
+    printf("one-bar motif: %u of %lu sentences and %u of %lu periods composed, %u with a distant contrast\n", composed[0],
+           seeds(), composed[1], seeds(), made);
+    assert(composed[0] == seeds() && composed[1] == seeds() && made > 0);
+}
+
 int main(int argc, char **argv) {
     fast_run = argc > 1 && strcmp(argv[1], "fast") == 0;
     FIXTURES[0].name = "s77";
@@ -291,5 +316,6 @@ int main(int argc, char **argv) {
     test_defaults_change_nothing();
     test_distant_changes_rhythm();
     test_distant_composes();
+    test_one_bar_motif_composes();
     return 0;
 }

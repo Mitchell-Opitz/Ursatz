@@ -896,6 +896,8 @@ static size_t derived_bars(const GrowThemeSpec *spec, Rational bar) {
     for (size_t k = 0; k < GROW_PLACE_COUNT; k++) {
         size_t idea_bars = spec->has_idea_source[k] ? grow_motive_layout_bars(&spec->idea_source[k], bar) : 0;
         bars = idea_bars > bars ? idea_bars : bars;
+        size_t distant_bars = spec->has_distant[k] ? grow_motive_layout_bars(&spec->distant[k], bar) : 0;
+        bars = distant_bars > bars ? distant_bars : bars;
     }
     return bars;
 }

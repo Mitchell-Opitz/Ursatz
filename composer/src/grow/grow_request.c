@@ -773,6 +773,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         size_t bars = request->idea_motives[idea] ? grow_motive_layout_bars(request->idea_motives[idea], bar) : 0;
         longest = bars > longest ? bars : longest;
     }
+    /* A distant contrast is a motive of up to two bars, and the derived motives take its bars (R-475). */
+    longest = request->contrast.distance[GROW_CONTRAST_DISTANT] > 0 && longest < 2 ? 2 : longest;
     extra_bars += GROW_PLACE_COUNT * (longest - 1);
     /* The fragments' segments and the liquidated ideas of the ending are motives of their own in the material
        (grow_ending.c): three at most for a continuation, two for a cadential ending. */
