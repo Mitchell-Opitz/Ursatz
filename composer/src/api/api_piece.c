@@ -65,6 +65,14 @@ void api_piece_version_destroy(PieceVersion *version) {
     memset(version, 0, sizeof(*version));
 }
 
+ComposerStatus api_piece_refuse_performed(const PieceSpec *request, ComposerError *error) {
+    if (request->form && form_spec_performed(request->form)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/request/form",
+                        "regenerate and variations of the %s form are Later: it is composed whole", request->form->label);
+    }
+    return COMPOSER_OK;
+}
+
 const PiecePlan *api_piece_version_output_plan(const PieceVersion *version) {
     return version->performed ? version->performance.plan : version->plan;
 }
@@ -1319,6 +1327,9 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
     if (status == COMPOSER_OK) {
         status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
                                         job, &out->error);
+    }
+    if (status == COMPOSER_OK && edit.text) {
+        status = api_piece_refuse_performed(request, &out->error);
     }
     if (status == COMPOSER_OK && outputs.ending_musicxml && version_count(request) < 2) {
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/ending_musicxml", "the %s form has no ending version",

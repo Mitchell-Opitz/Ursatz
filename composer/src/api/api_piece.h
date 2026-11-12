@@ -124,6 +124,12 @@ typedef struct {
 } PieceMade;
 
 void api_piece_version_destroy(PieceVersion *version);
+
+/*
+ * A performed form is composed whole (R-485): regenerating a section and varying one are Later. COMPOSER_ERR_REQUEST at
+ * /request/form when the request's form is performed (form_spec_performed), else COMPOSER_OK.
+ */
+ComposerStatus api_piece_refuse_performed(const PieceSpec *request, ComposerError *error);
 void api_piece_made_destroy(PieceMade *piece);
 
 /* The lanes of a section to write again; none means the whole section. */

@@ -179,6 +179,9 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
         status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
                                         job, &out->error);
     }
+    if (status == COMPOSER_OK) {
+        status = api_piece_refuse_performed(request, &out->error);
+    }
     unsigned total = (unsigned)(PIECE_SEEDS_PER_VARIATION * requested);
     for (size_t attempt = 0; status == COMPOSER_OK && kept < requested && attempt < total; attempt++) {
         if (job_step(job, "variations", (unsigned)attempt, total)) {
