@@ -439,13 +439,32 @@ static void test_slot_rules(void) {
 
 static void test_theme_form_lists(void) {
     const cJSON *entry = NULL;
+    /* 3 to 16 bars: the regular lengths are accepted as they are, any other is read, and a length no construction makes
+       from the motif is refused at /bars. */
+    assert(cJSON_GetArraySize(list("theme_bars")) == 14);
+    int expected = 3;
     cJSON_ArrayForEach(entry, list("theme_bars")) {
+        int bars = atoi(value_of(entry));
+        assert(bars == expected++);
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/period-contrast.json");
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(bars));
+        char *text = print(request);
+        ComposerResponse response;
+        ComposerStatus status = composer_api_validate("theme", text, &response);
+        assert(status == COMPOSER_OK || strcmp(response.error.path, "/bars") == 0);
+        composer_response_destroy(&response);
+        free(text);
+        cJSON_Delete(request);
+    }
+    const cJSON *regular = list("theme_bars_regular");
+    assert(cJSON_GetArraySize(regular) == 2 && cJSON_GetArrayItem(regular, 0)->valuedouble == 4 &&
+           cJSON_GetArrayItem(regular, 1)->valuedouble == 8);
+    cJSON_ArrayForEach(entry, regular) {
         cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
-        cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(atoi(value_of(entry))));
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(entry->valuedouble));
         accepted("theme", request);
         cJSON_Delete(request);
     }
-    assert(cJSON_GetArraySize(list("theme_bars")) == 2);
     assert(cJSON_GetArraySize(list("theme_first_cadences")) == 2);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("theme_first_cadences"), 0)), "IAC") == 0);
     cJSON_ArrayForEach(entry, list("theme_first_cadences")) {

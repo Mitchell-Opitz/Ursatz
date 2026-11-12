@@ -48,7 +48,9 @@ const ApiChoice API_PIECE_INTOS[] = {{"sentence", "Sentence"}, {"period", "Perio
 const ApiChoice API_PICKUPS[] = {{"0", "0"},   {"1/4", "1/4"}, {"1/2", "1/2"}, {"1", "1"},
                                  {"3/2", "3/2"}, {"2", "2"},   {"3", "3"},     {NULL, NULL}};
 
-const ApiChoice API_THEME_BARS[] = {{"4", "4 bars"}, {"8", "8 bars"}, {NULL, NULL}};
+const ApiChoice API_THEME_BARS[] = {{"3", "3 bars"},   {"4", "4 bars"},   {"5", "5 bars"},   {"6", "6 bars"},   {"7", "7 bars"},
+                                   {"8", "8 bars"},   {"9", "9 bars"},   {"10", "10 bars"}, {"11", "11 bars"}, {"12", "12 bars"},
+                                   {"13", "13 bars"}, {"14", "14 bars"}, {"15", "15 bars"}, {"16", "16 bars"}, {NULL, NULL}};
 const ApiChoice API_STYLE_WEIGHTS[] = {{"1/4", "Light"}, {"1/2", "Normal"}, {"1", "Strong"}, {NULL, NULL}};
 
 /* The beginning and ending words of a hybrid ("antecedent+continuation") with the ideas each is made of (grow_idea_place). */
@@ -401,6 +403,59 @@ static bool add_theme_parts(cJSON *root, const char *name, const ApiThemePart *t
     return list != NULL;
 }
 
+/* The lengths a theme has with no construction given: the others get one chosen (R-469). */
+static bool add_regular_bars(cJSON *root) {
+    cJSON *list = add_list(root, "theme_bars_regular");
+    return list && cJSON_AddItemToArray(list, cJSON_CreateNumber(4)) && cJSON_AddItemToArray(list, cJSON_CreateNumber(8));
+}
+
+/* Whether some pairing has the idea and takes an extension of the kind on it. */
+static bool extension_on_idea(PlanExtensionKind kind, GrowIdea idea) {
+    for (int beginning = PLAN_THEME_BEGINNING_PRESENTATION; beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA; beginning++) {
+        for (int ending = PLAN_THEME_ENDING_CONTINUATION; ending <= PLAN_THEME_ENDING_CADENTIAL; ending++) {
+            PlanThemePairing pairing;
+            memset(&pairing, 0, sizeof(pairing));
+            pairing.beginning = (PlanThemeBeginning)beginning;
+            pairing.ending = (PlanThemeEnding)ending;
+            if (grow_extension_allowed(&pairing, kind, idea)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* The extensions of a construction (R-468) and, for a repeat and a stretch, the ideas each can follow. */
+static bool add_theme_extensions(cJSON *root) {
+    static const struct {
+        const char *value;
+        const char *label;
+        PlanExtensionKind kind;
+        bool names_idea;
+    } KINDS[] = {{"repeat", "Internal repetition", PLAN_EXTENSION_REPEAT, true},
+                 {"stretch", "Stretched cadence", PLAN_EXTENSION_STRETCH, true},
+                 {"addition", "Addition after the cadence", PLAN_EXTENSION_ADDITION, false},
+                 {"evaded", "Evaded cadence", PLAN_EXTENSION_EVADED, false}};
+    cJSON *list = add_list(root, "theme_extensions");
+    for (size_t i = 0; list && i < sizeof(KINDS) / sizeof(KINDS[0]); i++) {
+        cJSON *entry = add_choice(list, KINDS[i].value, KINDS[i].label);
+        cJSON *ideas = entry && KINDS[i].names_idea ? cJSON_AddArrayToObject(entry, "ideas") : NULL;
+        if (!entry || (KINDS[i].names_idea && !ideas)) {
+            return false;
+        }
+        for (int idea = 0; ideas && idea < GROW_IDEA_COUNT; idea++) {
+            if (extension_on_idea(KINDS[i].kind, (GrowIdea)idea) &&
+                !cJSON_AddItemToArray(ideas, cJSON_CreateString(grow_idea_name((GrowIdea)idea)))) {
+                return false;
+            }
+        }
+        if (KINDS[i].kind == PLAN_EXTENSION_REPEAT && !cJSON_AddBoolToObject(entry, "varied", true)) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 /* The first cadences of a period: the half and imperfect authentic cadences, in the order of the cadences list. */
 static bool add_first_cadences(cJSON *root) {
     cJSON *list = add_list(root, "theme_first_cadences");
@@ -493,6 +548,7 @@ bool api_vocabulary_build(cJSON *root) {
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_theme_slots(root) && add_theme_lists(root) &&
            add_choices(root, "theme_pools", API_THEME_POOLS) && add_choices(root, "theme_bars", API_THEME_BARS) &&
+           add_regular_bars(root) && add_theme_extensions(root) &&
            add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
            add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
