@@ -155,6 +155,7 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 | `weights` | all 1 | `MelodyWeights`: how many times each group of soft rules counts in the score. |
 | `closure_final`, `closure_first` | 0, 0 | How many times the closure rules count for the target that ends the theme's last cadence, and for one that ends an earlier cadence (an antecedent's weak cadence); 0 leaves them out and draws no random number. Set from C only (R-478). |
 | `rhythm_repeat_bars` | 0 | The most bars in a row of 2 or more notes with one rhythm (onsets and durations within the bar); 0 sets no cap and changes nothing. Set from C only (R-479, R-483). |
+| `leap_weight`, `register_weight` | 0, 0 | How many times the leap rule and the register rules count in the score (R-481): see Leaps and register. Set from C only. |
 
 Each field is a setting of the [preferences](preferences.md) document, with its limits.
 
@@ -205,6 +206,10 @@ Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, both
 With `rhythm_repeat_bars` above 0, a target that starts on a barline of its section (and has no pickup) counts the bars in a row of 2 or more notes that share one rhythm, the run carried in from the bars before it (`melody_context_read_repeats`). A bar that would pass the cap is varied after the layout and the settled ending (`limit_rhythm_repeats`): when neither of its last two notes carries the motive they merge (the earlier takes the later's time); else its last two neighbouring notes of different lengths trade lengths, so a realized motive keeps every note, its order and its pitches. The target's last note is never traded, so a cadence still arrives on it. When the bar that passes the cap cannot change, the latest earlier bar of the same run inside the target is varied instead, each bar once. No random number is drawn, and a run that cannot be broken is left. A target that starts inside a bar is left as it is.
 
 The cost: a theme whose presentation cannot hold the cap above the motive fidelity floor (R-355) does not compose, such as a 3/4 two-bar motif whose bars share one rhythm. Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, cap 3, set by a temporary hook): a run over 3 bars in 0 of 703 themes composed against 584 of 735 at 0; the final note longer than the mean in 259 of 370 periods against 240; 703 of 735 compose, the loss in the taste profile `uematsu-ff7` 3/4 sentences (23 of 37 and 20 of 33). On the Test Motif sentence the longest run is 3 against 6. Recorded, not asserted.
+
+#### Leaps and register (phase L4, R-481)
+
+With `leap_weight` above 0, each interval of a candidate (and the one from the last written note before it) counts once, twice when it lands on a strong beat, and holds when under 5 semitones (a leap is 5 or more, as `leaps_per_motif` counts). With `register_weight` above 0 and melody written right before the target, two rules hold when the candidate's median pitch is within 7 and within 4 semitones of that melody's median. Both rank among the `keep` candidates, so a round may raise `keep`; `assign` is not steered, so the effect is small. 0 adds nothing and draws no random number. Measured on the baseline (735 themes, both weights 20): leaps per theme 2.2 to 8.3 (2.5 to 9.8), on a downbeat 1.4 to 4.2 (1.9 to 5.0), largest move of the mean pitch between ideas 4.3 to 7.8 (6.7 to 12.2); 33 to 56 of 60 compose as before.
 
 `melody_check_lane(plan, span, key, params, &violation)` runs the same rules on a melody lane read from
 the plan, for tests and tools.
