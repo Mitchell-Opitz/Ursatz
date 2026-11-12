@@ -169,6 +169,8 @@ typedef struct {
     /* A distant contrast made for the idea: its own source, restated exact (R-475). */
     Motive distant[GROW_PLACE_COUNT];
     bool has_distant[GROW_PLACE_COUNT];
+    /* The contrasting slot's source was made here, new material (R-477): slot_source[GROW_SLOT_CONTRASTING], not a given motif. */
+    bool has_new_material;
     /*
      * The motives of the extensions that have one of their own (R-468): extended[k] is what the repeat or the addition
      * layout.extensions[k] is, a made node of the material when has_extended[k]. A stretch and an evaded cadence make none.
@@ -236,6 +238,7 @@ typedef struct {
     NodeId liquid_node[GROW_PLACE_COUNT]; /* the material node holding an idea's liquidation, else PLAN_NODE_NONE */
     NodeId short_node[GROW_PLACE_COUNT];  /* the material node holding an idea's shortened source, else PLAN_NODE_NONE */
     NodeId distant_node[GROW_PLACE_COUNT]; /* the material node holding an idea's distant contrast, else PLAN_NODE_NONE */
+    NodeId new_node;                       /* the material node holding the contrasting slot's new material, else PLAN_NODE_NONE */
     NodeId extension_node[PLAN_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
 } GrowBuild;
 
@@ -391,6 +394,11 @@ GrowContrastKind grow_draw_contrast_kind(const GrowThemeRequest *request, FillRn
    should land on (negative for any). True sets spec->distant[place] and has_distant[place]; false when none is made. */
 bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, GrowPlace place,
                        const Motive *source, const MotiveRelationStep *step, int want_pc);
+/* New material for the contrasting slot (R-477): a motive of the key and the meter from the motif generator, up to two bars,
+   that does not keep m0's contour, in the contrast's range. want_pc is the pitch class its last note should land on
+   (negative for any). True sets slot_source, has_slot_source of the contrasting slot and has_new_material; false when none
+   is made. */
+bool grow_make_new_material(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, int want_pc);
 /* The development of m0 an idea is made as, and whether the idea is made from m0 at all. The first idea of a slot with
    a motive of its own is that motive exact. */
 bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep *out);
