@@ -267,6 +267,9 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
         return status;
     }
     status = api_grow_read_brief(&state->brief.text, setup, error);
+    if (status == COMPOSER_OK) {
+        status = api_grow_read_construction(request, setup, error);
+    }
     if (status != COMPOSER_OK) {
         return status;
     }

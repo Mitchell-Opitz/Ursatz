@@ -220,7 +220,7 @@ static ComposerStatus read_motives(ThemeRequest *theme, const cJSON *request, Co
  * end of the bar.
  */
 static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, const PlanMeter *meter, const AnalysisKey *key,
-                                  ComposerError *error) {
+                                  long bars, ComposerError *error) {
     const cJSON *list = cJSON_GetObjectItemCaseSensitive(request, "chords");
     if (!list || cJSON_IsNull(list)) {
         return COMPOSER_OK;
@@ -229,8 +229,6 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
         return api_fail(error, COMPOSER_ERR_REQUEST, "/chords",
                         "\"chords\" must be a list of {\"bar\": <number from 0>, \"text\": \"I V@3/2\"}");
     }
-    const cJSON *bars_item = cJSON_GetObjectItemCaseSensitive(request, "bars");
-    long bars = cJSON_IsNumber(bars_item) ? (long)bars_item->valuedouble : 8;
     Rational bar_length;
     if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar_length) != RATIONAL_OK) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "the meter has no bar length");
@@ -337,7 +335,17 @@ static ComposerStatus refuse_idea_beside_part(const GrowMaterial *material, cons
                                               const GrowSetup *setup, ComposerError *error) {
     Motive basic;
     MotiveRelationStep step;
-    if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), setup->bars / 2, setup->bars == 4 ? 1 : 2,
+    size_t part_bars = setup->bars / 2;
+    size_t basic_bars = setup->bars == 4 ? 1 : 2;
+    if (setup->has_construction) {
+        GrowConstructionBars of;
+        grow_construction_bars(&setup->pairing, &setup->construction, &of);
+        part_bars = of.beginning;
+        basic_bars = setup->construction.idea_bars[GROW_IDEA_BASIC];
+    } else if (setup->bars != 4 && setup->bars != 8) {
+        return COMPOSER_OK; /* a construction chosen at the build (R-469): grow_build_plan checks the idea then */
+    }
+    if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), part_bars, basic_bars,
                               setup->pairing.beginning, &basic, &step)) {
         return COMPOSER_OK;
     }
@@ -412,7 +420,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
         material->has_accompaniment_motive = true;
     }
     status = refuse_idea_beside_part(material, theme, setup, error);
-    return status != COMPOSER_OK ? status : read_chords(material, request, &setup->meter, &setup->key, error);
+    return status != COMPOSER_OK ? status : read_chords(material, request, &setup->meter, &setup->key, (long)setup->bars, error);
 }
 
 /* --- the brief ---------------------------------------------------------------------------------------- */
@@ -472,7 +480,7 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(request, "bars");
     if (bars && !cJSON_IsNull(bars)) {
         if (!cJSON_IsNumber(bars)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/bars", "\"bars\" in the request must be 4 or 8");
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/bars", "\"bars\" in the request must be a whole number from 3 to 16");
         }
         snprintf(brief->bars_text, sizeof(brief->bars_text), "%g", bars->valuedouble);
         text->bars = brief->bars_text;
@@ -679,6 +687,9 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     }
 
     status = api_grow_read_brief(&state->brief.text, setup, error);
+    if (status == COMPOSER_OK) {
+        status = api_grow_read_construction(request, setup, error);
+    }
     if (status != COMPOSER_OK) {
         return status;
     }

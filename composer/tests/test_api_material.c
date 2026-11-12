@@ -487,8 +487,8 @@ static void test_grow_refusals(void) {
     assert(cJSON_AddStringToObject(request, "cadence", "DC"));
     expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/cadence", "cadence must be PAC, IAC or HC");
     request = grow_request("sentence");
-    assert(cJSON_AddNumberToObject(request, "bars", 6));
-    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/bars", "bars must be 4 or 8");
+    assert(cJSON_AddNumberToObject(request, "bars", 2));
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/bars", "bars must be 3 to 16");
     request = grow_request("sentence");
     assert(cJSON_AddNumberToObject(request, "suggest", 17));
     expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/suggest", "suggest must be a whole number from 1 to 16");

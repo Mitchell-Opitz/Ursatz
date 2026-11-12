@@ -305,8 +305,8 @@ static void test_bad_arguments(void) {
     expect_failure(BASE " --into period --first-cadence PAC", 1, "--first-cadence must be HC or IAC");
     expect_failure(BASE " --into sentence --cadence DC", 1, "--cadence must be PAC, IAC or HC");
     expect_failure(BASE " --into sentence --cadence perfect", 1, "--cadence must be PAC, IAC or HC");
-    expect_failure(BASE " --into sentence --bars 6", 1, "--bars must be 4 or 8");
-    expect_failure(BASE " --into sentence --bars x", 1, "--bars must be 4 or 8");
+    expect_failure(BASE " --into sentence --bars 2", 1, "--bars must be 3 to 16");
+    expect_failure(BASE " --into sentence --bars x", 1, "--bars must be 3 to 16");
     expect_failure(BASE " --into sentence --seed x", 1, "--seed must be");
     expect_failure(BASE " --into sentence --suggest 0", 1, "--suggest must be a whole number from 1 to 16");
     expect_failure(BASE " --into sentence --suggest 17", 1, "--suggest must be a whole number from 1 to 16");

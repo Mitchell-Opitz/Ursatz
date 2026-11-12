@@ -16,6 +16,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/rejection.h>
+#include <ursatz_composer/theme_shape.h>
 
 #include "api_internal.h"
 #include "api_vocabulary.h"
@@ -113,6 +114,122 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
     return beginning_found && ending_found;
 }
 
+/* --- the construction -------------------------------------------------------------------------------- */
+
+static const char *const EXTENSION_KINDS[] = {"repeat", "stretch", "addition", "evaded"};
+
+static ComposerStatus read_extension(const cJSON *item, size_t index, PlanExtension *out, ComposerError *error) {
+    char path[96];
+    snprintf(path, sizeof path, "/construction/extensions/%zu", index);
+    if (!cJSON_IsObject(item)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "each extension must be {\"kind\", \"idea\", \"bars\", \"varied\"}");
+    }
+    memset(out, 0, sizeof(*out));
+    const char *kind;
+    const char *idea = NULL;
+    bool found;
+    if (!api_request_string(item, path, "kind", true, &kind, error) || !api_request_string(item, path, "idea", false, &idea, error) ||
+        !api_member_bool(item, "varied", &out->varied, &found, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    int kind_at = -1;
+    for (int k = 0; k < 4; k++) {
+        if (strcmp(kind, EXTENSION_KINDS[k]) == 0) {
+            kind_at = k;
+        }
+    }
+    char member[128];
+    if (kind_at < 0) {
+        snprintf(member, sizeof member, "%s/kind", path);
+        return api_fail(error, COMPOSER_ERR_REQUEST, member, "kind must be repeat, stretch, addition or evaded, not '%s'", kind);
+    }
+    out->kind = (PlanExtensionKind)kind_at;
+    if (idea) {
+        const ThemeShapeIdea *row = theme_shape_idea_find(idea);
+        if (!row) {
+            snprintf(member, sizeof member, "%s/idea", path);
+            return api_fail(error, COMPOSER_ERR_REQUEST, member, "unknown idea '%s'", idea);
+        }
+        out->idea = (unsigned char)row->idea;
+    } else if (out->kind == PLAN_EXTENSION_REPEAT || out->kind == PLAN_EXTENSION_STRETCH) {
+        snprintf(member, sizeof member, "%s/idea", path);
+        return api_fail(error, COMPOSER_ERR_REQUEST, member, "a %s needs the idea it follows", kind);
+    }
+    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(item, "bars");
+    if (bars && !cJSON_IsNull(bars)) {
+        if (!cJSON_IsNumber(bars) || bars->valuedouble != (double)(int)bars->valuedouble || bars->valuedouble < 0 ||
+            bars->valuedouble > 4) {
+            snprintf(member, sizeof member, "%s/bars", path);
+            return api_fail(error, COMPOSER_ERR_REQUEST, member, "an extension's bars must be a whole number from 0 to 4");
+        }
+        out->bars = (unsigned char)bars->valuedouble;
+    }
+    return COMPOSER_OK;
+}
+
+ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, ComposerError *error) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, "construction");
+    out->has_construction = false;
+    if (!item || cJSON_IsNull(item)) {
+        return COMPOSER_OK;
+    }
+    if (!cJSON_IsObject(item)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/construction",
+                        "\"construction\" must be null or {\"ideas\": {...}, \"extensions\": [...]}");
+    }
+    PlanConstruction *construction = &out->construction;
+    memset(construction, 0, sizeof(*construction));
+    construction->reason = PLAN_CONSTRUCTION_GIVEN;
+    const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(item, "ideas");
+    if (!cJSON_IsObject(ideas)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/construction/ideas",
+                        "\"ideas\" must be an object of idea names and bars, for example {\"basic idea\": 2}");
+    }
+    for (const cJSON *member = ideas->child; member; member = member->next) {
+        char path[128];
+        snprintf(path, sizeof path, "/construction/ideas/%.80s", member->string);
+        const ThemeShapeIdea *row = theme_shape_idea_find(member->string);
+        if (!row) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "unknown idea '%.60s'", member->string);
+        }
+        if (!cJSON_IsNumber(member) || member->valuedouble != (double)(int)member->valuedouble || member->valuedouble < 0 ||
+            member->valuedouble > 16) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "the bars of an idea must be a whole number from 0 to 16");
+        }
+        construction->idea_bars[row->idea] = (unsigned char)member->valuedouble;
+    }
+    const cJSON *extensions = cJSON_GetObjectItemCaseSensitive(item, "extensions");
+    if (extensions && !cJSON_IsNull(extensions)) {
+        if (!cJSON_IsArray(extensions)) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/construction/extensions", "\"extensions\" must be a list");
+        }
+        if ((size_t)cJSON_GetArraySize(extensions) > PLAN_CONSTRUCTION_EXTENSIONS) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/construction/extensions", "a construction has at most %d extensions",
+                            PLAN_CONSTRUCTION_EXTENSIONS);
+        }
+        const cJSON *extension = NULL;
+        cJSON_ArrayForEach(extension, extensions) {
+            ComposerStatus read = read_extension(extension, construction->extension_count, &construction->extensions[construction->extension_count], error);
+            if (read != COMPOSER_OK) {
+                return read;
+            }
+            construction->extension_count++;
+        }
+    }
+    out->has_construction = true;
+    /* Without bars the theme is as long as its construction. */
+    if (!out->text->bars) {
+        size_t total = grow_construction_extra_bars(&out->pairing, construction);
+        for (int idea = 0; idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
+            total += construction->idea_bars[idea];
+        }
+        if (total >= 3 && total <= 16) {
+            out->bars = total;
+        }
+    }
+    return COMPOSER_OK;
+}
+
 ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, ComposerError *error) {
     out->text = text;
     if (!text->into || !text->key || !text->meter) {
@@ -187,8 +304,8 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     out->bars = 8;
     if (text->bars) {
         unsigned long bars;
-        if (!request_parse_whole_number(text->bars, 8, &bars) || (bars != 4 && bars != 8)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/bars", "bars must be 4 or 8, not '%s'", text->bars);
+        if (!request_parse_whole_number(text->bars, 16, &bars) || bars < 3) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '%s'", text->bars);
         }
         out->bars = bars;
     }
@@ -563,6 +680,7 @@ void api_grow_request_for(const GrowSetup *setup, unsigned long seed, GrowReques
     request->key = setup->key;
     request->meter = setup->meter;
     request->bars = setup->bars;
+    request->construction = setup->has_construction ? &setup->construction : NULL;
     request->pairing = setup->pairing;
     request->cadence = setup->cadence;
     request->first_cadence = setup->first_cadence;
@@ -696,9 +814,10 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
         } else if (result != GROW_ERR_STUCK) {
             /* A refusal before seeding says why and where: its path is that of the field in a theme request. */
             const GrowRefusal *refusal = &run->refusal;
+            bool named = setup->material || strncmp(refusal->path, "/construction", 13) == 0 ||
+                         strcmp(refusal->path, "/bars") == 0;
             return refusal->message[0] != '\0'
-                       ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, setup->material ? refusal->path : "", "%s",
-                                  refusal->message)
+                       ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, named ? refusal->path : "", "%s", refusal->message)
                        : api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", grow_result_name(result));
         }
     }

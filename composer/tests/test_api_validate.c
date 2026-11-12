@@ -134,9 +134,9 @@ static void test_valid(void) {
 /* Each refusal of the plan, with the path of its field. */
 static void test_plan_refusals(void) {
     {
-        const char *const edits[][2] = {{"bars", "6"}};
-        /* The reader refuses a bar count that is not 4 or 8 before the plan is built, at the same path. */
-        expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), edits, 1, "/bars", "bars must be 4 or 8");
+        const char *const edits[][2] = {{"bars", "2"}};
+        /* The reader refuses a bar count outside 3 to 16 before the plan is built, at the same path. */
+        expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), edits, 1, "/bars", "bars must be 3 to 16");
     }
     {
         const char *const edits[][2] = {{"into", "\"period\""}, {"cadence", "\"HC\""}, {"first_cadence", "\"IAC\""}};
