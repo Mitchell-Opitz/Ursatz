@@ -179,6 +179,17 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out);
  */
 GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal);
 
+/*
+ * The construction of a theme of `bars` bars that has none given (R-469), chosen without a draw from the idea or the
+ * structure: a motif of 3 bars or more makes the basic idea that long (reason FROM_MOTIVE), else the length makes it
+ * (FROM_LENGTH). The halves follow from it and the ending's excess over its regular length becomes extensions: a
+ * stretch, a repeat, an evaded cadence, an addition. False, with *out zeroed, when none fits: 4 and 8 bars with a motif
+ * of 2 bars or fewer (the theme is built as it always was), a motif longer than the basic idea, an excess the ending
+ * cannot take, a construction grow_build_plan would refuse. `cadence` is the theme's.
+ */
+bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                              CadenceType cadence, PlanConstruction *out);
+
 /* --- the structure operator -------------------------------------------- */
 
 /* How far a theme's presentation and continuation stray from its motif (ch. XI). All-zero is balanced. */

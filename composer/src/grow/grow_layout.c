@@ -466,3 +466,132 @@ size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanC
     grow_construction_bars(pairing, construction, &halves);
     return halves.beginning + halves.ending + halves.evaded + halves.addition - ideas;
 }
+
+/* --- choosing a construction (R-469) ------------------------------------ */
+
+/* Adds an extension to the construction; false when it holds the most there are. */
+static bool add_extension(PlanConstruction *construction, PlanExtensionKind kind, GrowIdea idea, size_t bars, bool varied) {
+    if (construction->extension_count >= PLAN_CONSTRUCTION_EXTENSIONS || bars > 255) {
+        return false;
+    }
+    PlanExtension *extension = &construction->extensions[construction->extension_count++];
+    extension->kind = kind;
+    extension->idea = (unsigned char)idea;
+    extension->bars = (unsigned char)bars;
+    extension->varied = varied;
+    return true;
+}
+
+/* The ending's excess over a consequent's regular length: a stretch for one bar, a varied repeat and a stretch for more. */
+static bool choose_consequent_ending(PlanConstruction *construction, size_t b, size_t h1, long excess) {
+    if (excess == 0) {
+        return true;
+    }
+    if (excess == 1) {
+        return add_extension(construction, PLAN_EXTENSION_STRETCH, GROW_IDEA_CONSEQUENT_CONTRASTING, 1, false);
+    }
+    long repeated = (long)(h1 - b);
+    long left = excess - repeated;
+    return left >= 0 && left <= 4 &&
+           add_extension(construction, PLAN_EXTENSION_REPEAT, GROW_IDEA_CONSEQUENT_CONTRASTING, (size_t)repeated, true) &&
+           (left == 0 || add_extension(construction, PLAN_EXTENSION_STRETCH, GROW_IDEA_CONSEQUENT_CONTRASTING, (size_t)left, false));
+}
+
+/* A continuation's excess: a sequential repeat of fragment 2 (a stretch of the cadential idea when fragments are longer than a bar). */
+static bool choose_continuation_ending(PlanConstruction *construction, size_t b, size_t f, long excess, CadenceType cadence) {
+    bool authentic = cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC;
+    if (excess == 0) {
+        return true;
+    }
+    if (excess > 4 || (excess >= 2 && !authentic)) {
+        return false;
+    }
+    bool repeat = excess == 1 || excess == 3;
+    bool evaded = excess >= 2;
+    if (repeat) {
+        bool added = f == 1 ? add_extension(construction, PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 1, false)
+                            : add_extension(construction, PLAN_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false);
+        if (!added) {
+            return false;
+        }
+    }
+    return (!evaded || add_extension(construction, PLAN_EXTENSION_EVADED, GROW_IDEA_CADENTIAL, b, false)) &&
+           (excess != 4 || add_extension(construction, PLAN_EXTENSION_ADDITION, GROW_IDEA_CADENTIAL, 2, false));
+}
+
+/* A cadential ending's excess: cadential 2 stretched for one bar, the cadence evaded for two. */
+static bool choose_cadential_ending(PlanConstruction *construction, size_t b, long excess, CadenceType cadence) {
+    if (excess == 0) {
+        return true;
+    }
+    if (excess == 1) {
+        return add_extension(construction, PLAN_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL_2, 1, false);
+    }
+    return excess == 2 && cadence != CADENCE_TYPE_HALF &&
+           add_extension(construction, PLAN_EXTENSION_EVADED, GROW_IDEA_CADENTIAL_2, b, false);
+}
+
+bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+                              CadenceType cadence, PlanConstruction *out) {
+    if (!motive || !meter || !pairing || !out) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    size_t motif_bars = grow_motive_layout_bars(motive, grow_bar_length(meter));
+    if ((bars == 4 || bars == 8) && motif_bars <= 2) {
+        return false;
+    }
+    /* The basic idea: the motif's bars from 3, else 2 from 6 bars up (R-469 gives 3+3 from 6 bars), else 1. */
+    size_t b = motif_bars >= 3 ? motif_bars : (bars >= 6 ? 2 : 1);
+    out->reason = motif_bars >= 3 ? PLAN_CONSTRUCTION_FROM_MOTIVE : PLAN_CONSTRUCTION_FROM_LENGTH;
+    if (motif_bars > b || bars < 3 || bars > 16) {
+        memset(out, 0, sizeof(*out));
+        return false;
+    }
+    size_t h1 = pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION ? 2 * b
+                : (2 * b < bars && 2 * b <= bars - 2 * b) ? 2 * b
+                                                          : bars / 2;
+    bool ok = h1 > b && h1 < bars;
+    size_t h2 = ok ? bars - h1 : 0;
+    long excess = 0;
+    if (ok) {
+        out->idea_bars[GROW_IDEA_BASIC] = (unsigned char)b;
+        if (pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+            out->idea_bars[GROW_IDEA_REPETITION] = (unsigned char)b;
+        } else {
+            out->idea_bars[GROW_IDEA_CONTRASTING] = (unsigned char)(h1 - b);
+        }
+        switch (pairing->ending) {
+        case PLAN_THEME_ENDING_CONSEQUENT:
+            out->idea_bars[GROW_IDEA_CONSEQUENT_BASIC] = (unsigned char)b;
+            out->idea_bars[GROW_IDEA_CONSEQUENT_CONTRASTING] = (unsigned char)(h1 - b);
+            excess = (long)h2 - (long)h1;
+            ok = excess >= 0 && choose_consequent_ending(out, b, h1, excess);
+            break;
+        case PLAN_THEME_ENDING_CONTINUATION: {
+            size_t f = b / 2 > 1 ? b / 2 : 1;
+            out->idea_bars[GROW_IDEA_FRAGMENT_1] = (unsigned char)f;
+            out->idea_bars[GROW_IDEA_FRAGMENT_2] = (unsigned char)f;
+            out->idea_bars[GROW_IDEA_CADENTIAL] = (unsigned char)b;
+            excess = (long)h2 - (long)(2 * f + b);
+            ok = b >= 2 && excess >= 0 && choose_continuation_ending(out, b, f, excess, cadence);
+            break;
+        }
+        case PLAN_THEME_ENDING_CADENTIAL:
+            out->idea_bars[GROW_IDEA_CADENTIAL_1] = (unsigned char)b;
+            out->idea_bars[GROW_IDEA_CADENTIAL_2] = (unsigned char)b;
+            excess = (long)h2 - (long)(2 * b);
+            ok = excess >= 0 && choose_cadential_ending(out, b, excess, cadence);
+            break;
+        default:
+            ok = false;
+            break;
+        }
+    }
+    /* An antecedent's first cadence is the default, HC: the request's own is checked when the plan is built. */
+    ok = ok && grow_construction_buildable(meter, bars, pairing, cadence, CADENCE_TYPE_HALF, out);
+    if (!ok) {
+        memset(out, 0, sizeof(*out));
+    }
+    return ok;
+}
