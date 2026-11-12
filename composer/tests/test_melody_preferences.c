@@ -28,6 +28,8 @@
  */
 
 #define SEEDS 8
+#define MEASURED_CLOSING 8 /* of 8 seeds; the defaults' 6/8 sentence already ends on a note 2 or more times the mean */
+#define MEASURED_FIRST 4
 #define CHORDS 9
 
 static Motive load_motive(void) {
@@ -110,6 +112,84 @@ static uint64_t melody_hash(const PiecePlan *plan, size_t *notes_out) {
     return hash;
 }
 
+
+/*
+ * Closure (phase L4, R-478): the last melody note over the mean note value of the notes before it, from the start of the
+ * plan, which is the phrase's mean for a theme of one phrase.
+ */
+static double final_over_mean(const PiecePlan *plan) {
+    double last_onset = -1;
+    double last_duration = 0;
+    size_t count = 0;
+    for (NodeId node = 1; node <= plan_node_count(plan); node++) {
+        LaneSpanId span;
+        if (!plan_melody_span_of(plan, node, &span)) {
+            continue;
+        }
+        double start = (double)plan_lane_span_span(plan, span).start.num / (double)plan_lane_span_span(plan, span).start.den;
+        const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            double onset = start + (double)notes->notes[n].offset.num / (double)notes->notes[n].offset.den;
+            count++;
+            if (onset > last_onset) {
+                last_onset = onset;
+                last_duration = (double)notes->notes[n].duration.num / (double)notes->notes[n].duration.den;
+            }
+        }
+    }
+    assert(count > 1);
+    return last_duration / (last_onset / (double)(count - 1));
+}
+
+/* The duration of the last note of the antecedent of a period, in whole notes. */
+static double antecedent_last_note(const PiecePlan *plan) {
+    NodeId antecedent = PLAN_NODE_NONE;
+    for (NodeId node = 1; node <= plan_node_count(plan); node++) {
+        const char *name = plan_node_name(plan, node);
+        if (name && strcmp(name, "antecedent") == 0) {
+            antecedent = node;
+        }
+    }
+    assert(antecedent != PLAN_NODE_NONE);
+    LaneSpanId melodies[8];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, antecedent), melodies, 8);
+    assert(found > 0);
+    const PlanNotes *notes = &plan_lane_span_payload(plan, melodies[found - 1])->notes;
+    return (double)notes->notes[notes->note_count - 1].duration.num / (double)notes->notes[notes->note_count - 1].duration.den;
+}
+
+/* The period of test_grow_period (C major 4/4, an antecedent and a consequent, 8 bars) with a melody setting. */
+static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *melody) {
+    Motive motive;
+    MotiveOptions options;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter.beats_per_bar = 4;
+    options.meter.beat_unit = 4;
+    assert(motive_from_notes_text("E4:q G4:e F4:e D4:q C4:q", &options, &motive, NULL) == MOTIVE_OK);
+    GrowRequest request;
+    memset(&request, 0, sizeof(request));
+    request.motive = &motive;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    request.bars = 8;
+    request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
+    request.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    PiecePlan *plan = NULL;
+    GrowOutcome outcome;
+    GrowConfig config;
+    memset(&config, 0, sizeof(config));
+    config.seed = seed;
+    config.melody = melody;
+    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    GrowResult result = grow_run(plan, &config, &outcome);
+    assert(result == GROW_OK && !outcome.stuck);
+    grow_outcome_destroy(&outcome);
+    return plan;
+}
+
 int main(void) {
     Motive motive = load_motive();
     MelodyFillParams defaults = melody_fill_params_default();
@@ -146,5 +226,54 @@ int main(void) {
     assert(melody_hash(first, &first_notes) == melody_hash(second, &second_notes) && first_notes == second_notes);
     plan_destroy(first);
     plan_destroy(second);
+
+    /* Closure on the last cadence (R-478): the settled final note is longer against the phrase's own note values. */
+    MelodyFillParams closing = melody_fill_params_default();
+    MelodyFillParams written_zero = melody_fill_params_default();
+    closing.closure_final = 20;
+    written_zero.closure_final = 0;
+    written_zero.closure_first = 0;
+    int long_default = 0;
+    int long_closing = 0;
+    int closing_differs = 0;
+    double ratio_default = 0;
+    double ratio_closing = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        size_t absent_notes;
+        size_t zero_notes;
+        size_t closing_notes;
+        PiecePlan *absent = compose(&motive, seed, NULL);
+        PiecePlan *zero = compose(&motive, seed, &written_zero);
+        PiecePlan *with_closure = compose(&motive, seed, &closing);
+        uint64_t absent_hash = melody_hash(absent, &absent_notes);
+        assert(melody_hash(zero, &zero_notes) == absent_hash && zero_notes == absent_notes);
+        closing_differs += melody_hash(with_closure, &closing_notes) != absent_hash;
+        ratio_default += final_over_mean(absent);
+        ratio_closing += final_over_mean(with_closure);
+        long_default += final_over_mean(absent) >= 2.0 - 1e-9;
+        long_closing += final_over_mean(with_closure) >= 2.0 - 1e-9;
+        plan_destroy(absent);
+        plan_destroy(zero);
+        plan_destroy(with_closure);
+    }
+    printf("test_melody_preferences: closure_final 20: a final note of 2 or more times the mean in %d of %d seeds "
+           "(defaults %d), mean ratio %.2f (defaults %.2f), %d melodies differ\n",
+           long_closing, SEEDS, long_default, ratio_closing / SEEDS, ratio_default / SEEDS, closing_differs);
+    assert(long_closing >= MEASURED_CLOSING && closing_differs >= 1);
+
+    /* Closure on an earlier cadence: the antecedent of a period ends on a longer note. */
+    MelodyFillParams first_closing = melody_fill_params_default();
+    first_closing.closure_first = 20;
+    int antecedent_longer = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        PiecePlan *without = compose_period(seed, &defaults);
+        PiecePlan *with_closure = compose_period(seed, &first_closing);
+        antecedent_longer += antecedent_last_note(with_closure) > antecedent_last_note(without) + 1e-9;
+        plan_destroy(without);
+        plan_destroy(with_closure);
+    }
+    printf("test_melody_preferences: closure_first 20: the antecedent's last note is longer in %d of %d seeds\n",
+           antecedent_longer, SEEDS);
+    assert(antecedent_longer >= MEASURED_FIRST);
     return 0;
 }
