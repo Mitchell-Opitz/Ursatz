@@ -119,12 +119,21 @@ typedef struct {
      * durations within the bar). 0 (the default) sets no cap and changes nothing.
      */
     unsigned rhythm_repeat_bars;
+    /*
+     * Line (phase L4, R-481): leap_weight scores a melody against leaps, counting each interval as the motif does
+     * (a step under 3 semitones, a skip of 3 or 4, a leap of 5 or more, as skips_per_motif and leaps_per_motif
+     * count) and twice when it lands on a strong beat; register_weight scores each idea for staying near the
+     * register of the one before. 0 (the default) leaves them out and draws no random number.
+     */
+    unsigned leap_weight;
+    unsigned register_weight;
 } MelodyFillParams;
 
 /*
  * The defaults: MIDI 60 to 84 (C4 to C6, the melody voice), start_cell 0, passing and neighbor tones only, the
  * motive's rhythm after the motive (density 0), the climax 667 thousandths of the way through, climax_rise 4,
- * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final, closure_first and rhythm_repeat_bars 0.
+ * climax_slack 150, second_nearest 1/3, attempts 48, keep 6, every weight 1 and closure_final, closure_first, rhythm_repeat_bars,
+ * leap_weight and register_weight 0.
  */
 MelodyFillParams melody_fill_params_default(void);
 

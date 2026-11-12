@@ -389,6 +389,28 @@ static bool read_idea_chords(const PiecePlan *plan, MelodyContext *context) {
     return rational_cmp(position, context->length) >= 0;
 }
 
+/* The k-th smallest pitch (from 0) of a written span's notes, by counting, so it needs no storage. */
+static int kth_pitch(const PlanNotes *notes, size_t k) {
+    for (size_t i = 0; i < notes->note_count; i++) {
+        size_t below = 0;
+        size_t equal = 0;
+        for (size_t j = 0; j < notes->note_count; j++) {
+            below += notes->notes[j].midi < notes->notes[i].midi;
+            equal += notes->notes[j].midi == notes->notes[i].midi;
+        }
+        if (below <= k && k < below + equal) {
+            return notes->notes[i].midi;
+        }
+    }
+    return 0;
+}
+
+/* The median pitch of a written span's notes (the mean of the middle two for an even count); 0 for none. */
+static int median_pitch(const PlanNotes *notes) {
+    size_t count = notes->note_count;
+    return count == 0 ? 0 : (kth_pitch(notes, (count - 1) / 2) + kth_pitch(notes, count / 2)) / 2;
+}
+
 /* The pitches of the melody written right before the target, and the highest one written in its phrase. */
 static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, NodeId phrase) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
@@ -438,6 +460,8 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
                 context->lead_in[k] = notes->notes[notes->note_count - take + k].midi;
             }
             context->lead_in_count = take;
+            context->before_register = median_pitch(notes);
+            context->has_before_register = notes->note_count > 0;
         }
     }
     context->seam_bass = -1;

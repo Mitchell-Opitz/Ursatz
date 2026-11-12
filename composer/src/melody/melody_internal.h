@@ -117,6 +117,12 @@ typedef struct {
     size_t repeat_count;
     Rational repeat_onset[MELODY_BAR_NOTES];
     Rational repeat_duration[MELODY_BAR_NOTES];
+    /*
+     * Register (phase L4, R-481): the median pitch of every note of the written melody span that ends where the target
+     * starts (any phrase), for the register weight; has_before_register is false when no melody is written there.
+     */
+    bool has_before_register;
+    int before_register;
 } MelodyContext;
 
 #define MELODY_TONE_CHORD (-1)

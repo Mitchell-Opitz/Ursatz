@@ -824,6 +824,51 @@ static void check_closure(const MelodyCandidate *melody, PhraseVerdict *verdict)
     add_soft(verdict, weight, held, 2);
 }
 
+/* The median pitch of the candidate's notes (the mean of the middle two for an even count). */
+static int candidate_median(const MelodyCandidate *melody) {
+    int pitches[MELODY_MAX_NOTES];
+    size_t count = melody->count;
+    for (size_t i = 0; i < count; i++) {
+        int pitch = melody->notes[i].pitch;
+        size_t at = i;
+        while (at > 0 && pitches[at - 1] > pitch) {
+            pitches[at] = pitches[at - 1];
+            at--;
+        }
+        pitches[at] = pitch;
+    }
+    return (pitches[(count - 1) / 2] + pitches[count / 2]) / 2;
+}
+
+/*
+ * The line (phase L4, R-481). leap_weight: every interval of the candidate, and the one from the last written note
+ * before it, counts 1, or 2 when its second note is on a strong beat; it is held when under 5 semitones (a leap is
+ * 5 or more, as leaps_per_motif counts). register_weight: the candidate's median pitch is within 7 semitones of the
+ * median of the idea before it, and within 4. Both 0 add nothing.
+ */
+static void check_line(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+    const MelodyContext *context = &melody->context;
+    unsigned leap_weight = melody->params.leap_weight;
+    unsigned register_weight = melody->params.register_weight;
+    if (leap_weight > 0 && melody->count > 0) {
+        unsigned held = 0;
+        unsigned total = 0;
+        for (size_t i = context->lead_in_count > 0 ? 0 : 1; i < melody->count; i++) {
+            int from = i == 0 ? context->lead_in[context->lead_in_count - 1] : melody->notes[i - 1].pitch;
+            int move = melody->notes[i].pitch - from;
+            unsigned count = melody->notes[i].strong ? 2 : 1;
+            total += count;
+            held += (move < 5 && move > -5) ? count : 0;
+        }
+        add_soft(verdict, leap_weight, held, total);
+    }
+    if (register_weight > 0 && context->has_before_register && melody->count > 0) {
+        int away = candidate_median(melody) - context->before_register;
+        away = away < 0 ? -away : away;
+        add_soft(verdict, register_weight, (unsigned)(away <= 7) + (unsigned)(away <= 4), 2);
+    }
+}
+
 /*
  * A candidate that ends at the seam (R-171) is also scored by three of its rules: no parallel fifths or octaves between
  * bass and melody across it, a melody that moves by step (or a leap answered), and a leading tone that goes up. The
@@ -916,6 +961,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         add_soft(verdict, melody->params.weights.contour, held, total);
         check_shaping(melody, verdict);
         check_closure(melody, verdict);
+        check_line(melody, verdict);
         check_seam(melody, verdict);
     }
     return ok;
