@@ -1,8 +1,8 @@
-# Contrast distance
+# Contrast distance and new material
 
-A contrasting idea that is far from the basic idea instead of a copy of its rhythm (R-475, R-476; Michelle's listening request 18). Back to the [docs index](README.md); the ideas and their choices are in [grow.md](grow.md).
+A contrasting idea that is far from the basic idea instead of a copy of its rhythm, or made of new material (R-475 to R-477; Michelle's listening request 18). Back to the [docs index](README.md); the ideas and their choices are in [grow.md](grow.md).
 
-Off by default (R-422). `GrowContrast` (`grow.h`) has `distance`, the weights of `GROW_CONTRAST_SIMILAR` and `GROW_CONTRAST_DISTANT` (all 0 reads as similar 1), and `new_material` (B2). It is carried in `GrowContext.contrast`, `GrowSetup.contrast` and `GrowRequest.contrast` (NULL or zero for the defaults), with the motif vocabulary a drawn rhythm uses in `GrowContext.motif` and `GrowSetup.motif` (`MotiveRandomPreferences`, NULL for the defaults). Nothing sets them from the preferences document yet (B6). With every weight 0 no random number is drawn and every plan is the plan without them.
+Off by default (R-422). `GrowContrast` (`grow.h`) has `distance`, the weights of `GROW_CONTRAST_SIMILAR` and `GROW_CONTRAST_DISTANT` (all 0 reads as similar 1), and `new_material`, the weight of new material (see below). It is carried in `GrowContext.contrast`, `GrowSetup.contrast` and `GrowRequest.contrast` (NULL or zero for the defaults), with the motif vocabulary a drawn rhythm uses in `GrowContext.motif` and `GrowSetup.motif` (`MotiveRandomPreferences`, NULL for the defaults). Nothing sets them from the preferences document yet (B6). With every weight 0 no random number is drawn and every plan is the plan without them.
 
 ## Similar and distant
 
@@ -10,7 +10,7 @@ A similar contrast is today's: a development of the source (an inversion or an i
 
 ## How a distant contrast is made
 
-`grow_draw_distance` weighs the two (one random number, none when the distant weight is 0). For a distant one, `grow_make_distant` draws today's contrast step first, then up to 8 times:
+`grow_draw_contrast_kind` weighs similar and distant (one random number, none when the distant weight is 0 and new material is not drawn). For a distant one, `grow_make_distant` draws today's contrast step first, then up to 8 times:
 
 1. A rhythm from `motive_random` on its own seeded generator: one bar or two (the idea's), the theme's key, mode and meter, no pickup, no plan, the request's motif settings or the defaults. It is refused when it fails, is longer than the idea's room, or has the same onsets and durations as the source over their common length.
 2. The pitches of the developed source spread over the rhythm's notes (note j of k takes the developed note `(j(n-1) + (k-1)/2) / (k-1)`); a note equal to the one before moves one scale step toward the next different pitch.
@@ -18,9 +18,17 @@ A similar contrast is today's: a development of the source (an inversion or an i
 
 The first one whose last note lands on the cadence's tone is taken (the consequent's, as the similar contrast), else the first made. The result is the idea's own motive, `distant for m<k>`, a Realized material node restated exact, so the melody stage is as motive-driven as for any slot motive and fills nothing after it with the source's rhythm. The theme's developments name it `a distant variant` and its slot row has source `distant`. The derived motive nodes and the material take its bars.
 
+## New material
+
+`new_material` weighs a contrasting idea made of new material against the similar and distant weights: `grow_draw_contrast_kind(request, rng, new_allowed)` draws one of three kinds, with total = similar + distant + (new_allowed ? new_material : 0). It is allowed for the first contrasting idea of a theme with a contrasting slot (a period's antecedent or a compound basic idea) when no motive is given for the slot or the idea; a sentence has no contrasting slot and none is made. When only similar has weight no random number is drawn; with both distance weights 0 and `new_material` above 0, similar has no weight, so the draw is new material or, when none is made, similar.
+
+`grow_make_new_material` draws up to 8 times from `motive_random` as a distant rhythm is drawn (the idea's one or two bars, the key, the meter, no pickup, the request's motif settings or the defaults). A motive is refused when it is longer than the idea's room, keeps the basic idea's contour, or cannot be moved by whole octaves into MIDI 58 to 84. The first whose last note lands on the cadence's tone is taken (the antecedent's has no wanted tone), else the first made.
+
+The motive is the contrasting slot's source, recorded as the Realized material node `new material` (`GrowThemeSpec.has_new_material`, `GrowBuild.new_node`). The first contrasting idea is that motive as it is (the first idea of a slot, exact, as a given slot motive); the consequent's contrasting idea is made from it by today's contrast step, similar or distant by the weights, and is never the antecedent's. The theme's developments read `contrasting idea = new material, exact` and `consequent contrasting idea = new material, inverted ...`; the slot rows made from it have source `new`. The plan's material is sized for it (`GrowRequest.contrast.new_material`: a motive of up to two bars, as a distant one) and the derived motive nodes take its bars.
+
 ## Fallbacks
 
-- No rhythm passes, no pitches fit, or the draw for the idea fails: the similar contrast stands.
+- No rhythm passes, no pitches fit, or the draw for the idea fails: the similar contrast stands. Failed new material is the similar contrast, never a distant one.
 - A 4-bar 3/4 theme makes none: `motive_random` has no one-bar motive in 3/4, so a sentence's fragment 1 in 3/4 stays similar.
 
 ## Measure
@@ -41,3 +49,21 @@ The first one whose last note lands on the cadence's tone is taken (the conseque
 | Largest move of the mean pitch between two ideas | 6.7 to 12.1 | 6.6 to 13.7 |
 
 The distant contrast does what it is for: no period contrast or consequent contrast keeps the basic idea's rhythm, and runs of one rhythm shorten. Its cost is that the consequent's final note is longer than the mean in fewer periods (190 of 371 against 250 of 370): the cadence's tone is chosen in the pitches, not the rhythm, so B3's closure setting has the ending to do. Sentences in 3/4 keep a similar fragment 1. The baseline figures here are read with the same reader as the distant ones and differ from the phase table by a few themes (sentences 271 against 265, runs over 3: 604 against 584).
+
+### New material (B2)
+
+The same batches, periods only (a sentence has no contrasting slot and is unchanged), 8 batches off and 8 on with `new_material` 1 and distance {0, 0} through a local build (not committed: B6 makes it a setting).
+
+| Measure | Off | New material |
+|---|---|---|
+| Themes composed (8 batches) | 33 to 56 of 60, 370 | 33 to 56 of 60, 371 |
+| Contrasting idea with the basic idea's rhythm over their common length | 370 of 370 | 24 of 371 |
+| Consequent's contrasting idea with the consequent basic idea's rhythm | 370 of 370 | 23 of 371 |
+| Final note over the theme's mean note value, per batch | 1.06 to 1.89 | 1.05 to 1.29 |
+| Final note longer than the mean | 250 of 370 | 179 of 371 |
+| Longest run of bars of 2 or more notes with one rhythm | 8 per batch; over 3 in 303 of 370 | 2 to 8; over 3 in 24 of 371 |
+| Notes under a sixteenth | 0 | 0 |
+| Leaps (5 semitones or more) per theme, per batch | 2.5 to 6.8; on a downbeat 1.9 to 4.0 | 4.9 to 8.8; on a downbeat 2.0 to 4.6 |
+| Largest move of the mean pitch between two ideas | 6.7 to 8.9 | 5.9 to 8.1 |
+
+New material removes the shared rhythm of the contrasting ideas and the long runs of one rhythm, as a distant contrast does, and the contrast is a motive of its own rather than a variant. A new motive is not refused for sharing the basic idea's rhythm, so 24 of 371 still do. Its costs: the final note is longer than the mean in fewer periods (179 of 371, B3 has the ending to do) and the themes leap more (4.9 to 8.8 per theme against 2.5 to 6.8), a motive of its own having no contour kept from the basic idea; B5 has the leaps.
