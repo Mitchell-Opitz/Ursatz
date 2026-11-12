@@ -154,6 +154,7 @@ to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`
 | `attempts`, `keep` | 48, 6 | Melodies tried for each target, and kept (at most `MELODY_KEEP_MAX`, 16). |
 | `weights` | all 1 | `MelodyWeights`: how many times each group of soft rules counts in the score. |
 | `closure_final`, `closure_first` | 0, 0 | How many times the closure rules count for the target that ends the theme's last cadence, and for one that ends an earlier cadence (an antecedent's weak cadence); 0 leaves them out and draws no random number. Set from C only (R-478). |
+| `rhythm_repeat_bars` | 0 | The most bars in a row of 2 or more notes with one rhythm (onsets and durations within the bar); 0 sets no cap and changes nothing. Set from C only (R-479, R-483). |
 
 Each field is a setting of the [preferences](preferences.md) document, with its limits.
 
@@ -198,6 +199,12 @@ not, never a rejection, and is on for every caller of the checker (grow, fill, r
 With `closure_final` or `closure_first` above 0, a target that ends a cadence (the last of its section, or an earlier one) ranks an intentional ending by two more soft rules, counted by that weight: the last note is at least twice the phrase's mean note value, and no note of the last bar is shorter than the note before it. Half the layouts of such a target (one random number each, none at weight 0) are settled: the notes from the latest cell line that leaves twice the mean become one long last note, the bar before it merges a shorter note into the note before it, and a note of the motive is never merged. Why a layout draw: every candidate of a target had one rhythm, so `weights.ending_reduction` 20 could not move it (t7 s42). Both weights 0 change nothing.
 
 Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, both weights 20, set by a temporary hook): the final note over the theme's mean note value, batch means 1.06 to 2.05 for periods (1.06 to 1.89 at the defaults) with 275 of 370 longer than the mean (250), and 2.71 to 3.72 for sentences (1.52 to 3.07) with 363 of 365 (364). The same 33 to 56 of 60 compose per batch. On the Test Motif sentence the defaults already end on a note 2 or more times the mean in 8 of 8 seeds, so the rule shows only as 8 of 8 changed melodies (`test_melody_preferences`).
+
+#### Rhythm repetition (phase L4, R-479, R-483)
+
+With `rhythm_repeat_bars` above 0, a target that starts on a barline of its section (and has no pickup) counts the bars in a row of 2 or more notes that share one rhythm, the run carried in from the bars before it (`melody_context_read_repeats`). A bar that would pass the cap is varied after the layout and the settled ending (`limit_rhythm_repeats`): when neither of its last two notes carries the motive they merge (the earlier takes the later's time); else its last two neighbouring notes of different lengths trade lengths, so a realized motive keeps every note, its order and its pitches. The target's last note is never traded, so a cadence still arrives on it. When the bar that passes the cap cannot change, the latest earlier bar of the same run inside the target is varied instead, each bar once. No random number is drawn, and a run that cannot be broken is left. A target that starts inside a bar is left as it is.
+
+The cost: a theme whose presentation cannot hold the cap above the motive fidelity floor (R-355) does not compose, such as a 3/4 two-bar motif whose bars share one rhythm. Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, cap 3, set by a temporary hook): a run over 3 bars in 0 of 703 themes composed against 584 of 735 at 0; the final note longer than the mean in 259 of 370 periods against 240; 703 of 735 compose, the loss in the taste profile `uematsu-ff7` 3/4 sentences (23 of 37 and 20 of 33). On the Test Motif sentence the longest run is 3 against 6. Recorded, not asserted.
 
 `melody_check_lane(plan, span, key, params, &violation)` runs the same rules on a melody lane read from
 the plan, for tests and tools.
