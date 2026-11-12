@@ -20,6 +20,8 @@
     "theme_motive_categories",
     "theme_pools",
     "theme_bars",
+    "theme_bars_regular",
+    "theme_extensions",
     "theme_first_cadences",
     "theme_beginnings",
     "theme_endings",
@@ -141,6 +143,20 @@
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/choice"
+      }
+    },
+    "theme_bars_regular": {
+      "type": "array",
+      "description": "The lengths that need no construction.",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "theme_extensions": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "$ref": "#/$defs/choice_extension"
       }
     },
     "theme_first_cadences": {
@@ -1393,6 +1409,47 @@
         "plan_beat_max": {
           "type": "integer",
           "minimum": 1
+        }
+      }
+    },
+    "choice_extension": {
+      "type": "object",
+      "required": [
+        "value",
+        "label"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "enum": [
+            "repeat",
+            "stretch",
+            "addition",
+            "evaded"
+          ]
+        },
+        "label": {
+          "type": "string"
+        },
+        "ideas": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "basic idea",
+              "repetition",
+              "contrasting idea",
+              "consequent basic idea",
+              "consequent contrasting idea",
+              "fragment 1",
+              "fragment 2",
+              "cadential",
+              "cadential 1",
+              "cadential 2"
+            ]
+          }
+        },
+        "varied": {
+          "type": "boolean"
         }
       }
     }
