@@ -220,8 +220,8 @@ The operator proposes `GrowContext.candidates` (default 4) candidates, drawn fro
   differs from `m0`'s: a tonal inversion about a note within two semitones of the first, every interval widened or
   narrowed by one or two semitones, or one interval changed by one to four semitones. It must fit its idea and stay
   between MIDI 58 and 84. One is chosen at random among those that do; when the consequent's cadence is a PAC or an
-  IAC, among those whose last note is the cadence's tone (the tonic, or the third) when there are any, so the melody
-  can end where the cadence needs it. The consequent's is never the antecedent's.
+  IAC, among those ending on the cadence's tone (tonic or third) when there are any. The consequent's is never
+  the antecedent's. A distant weight (L4) may make it a distant contrast ([grow-contrast.md](grow-contrast.md)).
 - **Restated basic idea** (consequent). `restated`, as the repetition: the motive stage may keep it or transpose it.
   The melody says it again as the basic idea was said, from the first half, however far back it is (see below).
 - **Compound basic idea.** Its prolongation goes tonic to tonic or tonic to dominant.

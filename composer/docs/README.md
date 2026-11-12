@@ -67,6 +67,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-segments.md](grow-segments.md): segments of the motif as fragments and liquidation in a theme (P34).
 - [grow-development.md](grow-development.md): the theme `development` setting and its weight tables (P34).
 - [grow-continuation.md](grow-continuation.md): the accelerating continuation settings: fragments from every segment, cut, diminished, and a liquidated fragment 2 (L3).
+- [grow-contrast.md](grow-contrast.md): the contrast distance: a contrasting idea that is similar to the basic idea or distant from it, on a rhythm of its own (L4).
 - [grow-construction.md](grow-construction.md): a theme of any whole bars from 3 to 16 and ideas of any whole bars, given by a construction (P47).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.
