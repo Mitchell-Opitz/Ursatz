@@ -265,6 +265,83 @@ static size_t longest_rhythm_run(const PiecePlan *plan) {
     return longest;
 }
 
+/*
+ * Leaps and register (phase L4, R-481). leaps: the intervals of 5 semitones or more between neighbouring notes of the
+ * theme's melody (idea nodes only, in time order). register_move: the largest move of the median pitch between
+ * consecutive ideas, in semitones.
+ */
+typedef struct {
+    double onset;
+    int pitch;
+} PitchNote;
+
+static int compare_pitch_notes(const void *a, const void *b) {
+    double x = ((const PitchNote *)a)->onset;
+    double y = ((const PitchNote *)b)->onset;
+    return (x > y) - (x < y);
+}
+
+static int compare_ints(const void *a, const void *b) {
+    return *(const int *)a - *(const int *)b;
+}
+
+static size_t leaps_of(const PiecePlan *plan) {
+    static PitchNote list[MAX_MELODY_NOTES];
+    size_t count = 0;
+    for (NodeId node = 1; node <= plan_node_count(plan); node++) {
+        LaneSpanId span;
+        if (plan_node_kind(plan, node) != PLAN_NODE_IDEA || !plan_melody_span_of(plan, node, &span)) {
+            continue;
+        }
+        Rational start = plan_lane_span_span(plan, span).start;
+        const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            assert(count < MAX_MELODY_NOTES);
+            list[count].onset = (double)start.num / (double)start.den +
+                                (double)notes->notes[n].offset.num / (double)notes->notes[n].offset.den;
+            list[count].pitch = notes->notes[n].midi;
+            count++;
+        }
+    }
+    qsort(list, count, sizeof(list[0]), compare_pitch_notes);
+    size_t leaps = 0;
+    for (size_t i = 1; i < count; i++) {
+        int move = list[i].pitch - list[i - 1].pitch;
+        leaps += move >= 5 || move <= -5;
+    }
+    return leaps;
+}
+
+static int register_move(const PiecePlan *plan) {
+    PitchNote ideas[16];
+    size_t idea_count = 0;
+    for (NodeId node = 1; node <= plan_node_count(plan); node++) {
+        LaneSpanId span;
+        if (plan_node_kind(plan, node) != PLAN_NODE_IDEA || !plan_melody_span_of(plan, node, &span)) {
+            continue;
+        }
+        const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
+        int pitches[MAX_BAR_NOTES];
+        Rational start = plan_lane_span_span(plan, span).start;
+        assert(notes->note_count > 0 && notes->note_count <= MAX_BAR_NOTES && idea_count < 16);
+        for (size_t n = 0; n < notes->note_count; n++) {
+            pitches[n] = notes->notes[n].midi;
+        }
+        qsort(pitches, notes->note_count, sizeof(pitches[0]), compare_ints);
+        ideas[idea_count].onset = (double)start.num / (double)start.den;
+        ideas[idea_count].pitch = (pitches[(notes->note_count - 1) / 2] + pitches[notes->note_count / 2]) / 2;
+        idea_count++;
+    }
+    qsort(ideas, idea_count, sizeof(ideas[0]), compare_pitch_notes);
+    int largest = 0;
+    for (size_t i = 1; i < idea_count; i++) {
+        int move = ideas[i].pitch - ideas[i - 1].pitch;
+        move = move < 0 ? -move : move;
+        largest = move > largest ? move : largest;
+    }
+    return largest;
+}
+
 int main(void) {
     Motive motive = load_motive();
     MelodyFillParams defaults = melody_fill_params_default();
@@ -379,5 +456,54 @@ int main(void) {
     }
     printf("test_melody_preferences: rhythm_repeat_bars 3: the longest run of bars with one rhythm is %zu (0: %zu)\n",
            longest_on, longest_off);
+
+    /* Leaps (R-481): leap_weight 20 leaves fewer leaps over the melody; 0 is the defaults. */
+    MelodyFillParams leap_on = melody_fill_params_default();
+    MelodyFillParams leap_off = melody_fill_params_default();
+    leap_on.leap_weight = 20;
+    leap_off.leap_weight = 0;
+    size_t leaps_default = 0;
+    size_t leaps_weighted = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        size_t absent_notes;
+        size_t zero_notes;
+        PiecePlan *absent = compose(&motive, seed, NULL);
+        PiecePlan *zero = compose(&motive, seed, &leap_off);
+        PiecePlan *weighted = compose(&motive, seed, &leap_on);
+        assert(melody_hash(zero, &zero_notes) == melody_hash(absent, &absent_notes) && zero_notes == absent_notes);
+        leaps_default += leaps_of(absent);
+        leaps_weighted += leaps_of(weighted);
+        plan_destroy(absent);
+        plan_destroy(zero);
+        plan_destroy(weighted);
+    }
+    printf("test_melody_preferences: leap_weight 20: %zu leaps over seeds 1 to 8 (defaults %zu)\n", leaps_weighted,
+           leaps_default);
+    assert(leaps_weighted < leaps_default);
+
+    /* Register (R-481): register_weight 20 keeps each idea nearer the one before; 0 is the defaults. */
+    MelodyFillParams register_on = melody_fill_params_default();
+    MelodyFillParams register_off = melody_fill_params_default();
+    register_on.register_weight = 20;
+    register_off.register_weight = 0;
+    int moves_default = 0;
+    int moves_weighted = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        size_t absent_notes;
+        size_t zero_notes;
+        PiecePlan *absent = compose_period(seed, NULL);
+        PiecePlan *zero = compose_period(seed, &register_off);
+        PiecePlan *weighted = compose_period(seed, &register_on);
+        assert(melody_hash(zero, &zero_notes) == melody_hash(absent, &absent_notes) && zero_notes == absent_notes);
+        moves_default += register_move(absent);
+        moves_weighted += register_move(weighted);
+        plan_destroy(absent);
+        plan_destroy(zero);
+        plan_destroy(weighted);
+    }
+    printf("test_melody_preferences: register_weight 20: the largest move of the median pitch between ideas sums to %d "
+           "over seeds 1 to 8 (defaults %d)\n",
+           moves_weighted, moves_default);
+    assert(moves_weighted < moves_default);
     return 0;
 }
