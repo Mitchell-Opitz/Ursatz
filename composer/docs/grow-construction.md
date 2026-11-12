@@ -51,3 +51,18 @@ A request with `bars` other than 4 or 8 and no `construction` gets the one `grow
 So 6 bars make a 3+3 period (2,1 | 2,1), 10 bars a 4+6 period (2,2 | 2,2 and a varied repeat of 2) or a 4+6 sentence (2,2 | 1,1,2 and an evaded cadence of 2), 9 bars a 4+5 sentence (a sequential repeat of fragment 2), and a 3-bar motif a 5+5 period in 10 bars or a 6+6 period in 12.
 
 `grow_construction_describe` writes the reason as one sentence, bars counted from 1: `4+5 sentence: the section is 9 bars, so fragment 2 is repeated a step lower (bar 7).`, `5+5 period: the motif is 3 bars, so the basic idea is 3 bars and each phrase 5.`, `4+6 sentence ... as given` for a given construction with its extensions named. `GrowOutcome.construction_text` and `ComposeHeard.construction_text` (192 characters) carry it for the theme section, `""` without a construction. Tested by `test_grow_construction`.
+
+## Measured through the API
+
+With the `theme` command (API 1.18), one theme from each start seed 1 to 20 (a seed counts when the theme comes from that seed, not from a later one), a motif of 1 bar (`1:q 3:e 5:e 1':h`, `1:q 3:e 5:e 1':q` in 3/4) or of 3 bars, no construction given, so each theme's is the chosen one (`reason` `length` or `motive`):
+
+| Request | C major 4/4 | A minor 3/4 |
+| --- | --- | --- |
+| 6-bar period (3+3) | 20 of 20 | 20 of 20 |
+| 9-bar sentence (4+5, a repeat of fragment 2) | 20 of 20 | 20 of 20 |
+| 10-bar period (4+6, a varied repeat) | 20 of 20 | 20 of 20 |
+| 10-bar sentence (4+6, an evaded cadence) | 20 of 20 | 20 of 20 |
+| 10-bar period from a 3-bar motif (5+5) | 20 of 20 | 20 of 20 |
+| 12-bar period from a 3-bar motif (6+6) | 20 of 20 | 20 of 20 |
+
+The three requests of `test_api_theme` (`uneven-period.json`, `uneven-sentence.json`, `evaded-sentence.json`) are the 10-bar period, the 9-bar sentence and the 10-bar sentence rows; each composes at seed 1. The 4 and 8-bar rates of `test_grow_compose_rates` and of [grow.md](grow.md) are unchanged (rerun, not re-recorded). The measured rows live here because `grow.md` is at its size limit.

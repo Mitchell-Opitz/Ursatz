@@ -27,7 +27,8 @@ request is an error (`the request must have "schema_version": 2`). Back to the [
 | --- | --- |
 | `into`, `hybrid` | `sentence`, `period` or `hybrid`; with `hybrid`, the pairing as `--hybrid` writes it (`antecedent+continuation`). |
 | `key`, `mode` | The tonic (or a key like `"D minor"`) and `minor`, `major` or `style`. `style` takes the mode from the style's `mode` category and needs a `style`. |
-| `meter`, `bars` | `2/4`, `3/4`, `4/4` or `6/8`; 4 or 8 bars (default 8). |
+| `meter`, `bars` | `2/4`, `3/4`, `4/4` or `6/8`; 3 to 16 bars (default 8; with a `construction` and no `bars`, the construction's). 4 and 8 bars are built as they always were; any other length gets a construction chosen from the motif or the length ([grow-construction.md](grow-construction.md#choosing-a-construction)) and is refused at `/bars` when none fits (`no construction makes a 15-bar sentence from this motif`). |
+| `construction` | API 1.18, `null` (default) or `{"ideas": {"<idea name>": bars, ...}, "extensions": [{"kind", "idea", "bars", "varied"}]}`: the bars of each idea of the theme (the idea names of `ideas`: `basic idea`, `repetition`, `contrasting idea`, ...) and up to 3 extensions (`kind` `repeat`, `stretch`, `addition` or `evaded`; `idea` is required for a repeat and a stretch; `bars` 0 to 4, 0 for the default; `varied` for a repeat). The ideas and the extensions must add up to `bars`. The construction is `given` ([grow-construction.md](grow-construction.md)). |
 | `cadence`, `first_cadence` | As the options of [grow](cli-grow.md): PAC (default), IAC or HC; the weak cadence of an antecedent. |
 | `development` | `melody`, `balanced` (default) or `theme` (ch. XI, API 1.9): how far the presentation and the continuation stray from the motif. `melody` keeps them close (exact repetitions, a segment `a` and the next segment, liquidation of one step at most); `theme` develops it (sequences, segment `b`, fragment 2 always a sequence, liquidation of two steps or more). The weights are in [grow-development.md](grow-development.md). The brief of the result and the explanation name it. |
 | `accompaniment` | `null`, `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `{"pattern": "motive", "motive": {"degrees", "pickup", "form", "role": "accompaniment"}}`, a saved accompaniment motive as the pattern. |
@@ -123,7 +124,8 @@ before it seeds; Compose gives the same message and path. One refusal is given, 
 
 | Path | Refused when |
 |---|---|
-| `/bars` or `/hybrid` | the pairing cannot be built in the meter or the bar count |
+| `/bars` or `/hybrid` | the pairing cannot be built in the meter or the bar count, or no construction makes the bars from the motif |
+| `/construction`, `/construction/ideas`, `/construction/ideas/<idea>`, `/construction/extensions/<k>`, `/construction/extensions/<k>/<member>` | the construction is not an object, names an unknown idea or kind, gives an idea the pairing has not or gives none it has, an extension that cannot follow its idea (`a stretch cannot follow the fragment 1`), or ideas and extensions that do not add up to the bars (`the ideas are 9 bars; the theme has 8`) |
 | `/cadence` | the cadence is not a PAC, an IAC or an HC |
 | `/development` | it is not `melody`, `balanced` or `theme` |
 | `/first_cadence` | an antecedent's cadence is not weaker than the theme's, or has no room |
