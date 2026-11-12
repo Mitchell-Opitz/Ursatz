@@ -41,6 +41,13 @@ bool piece_seam_body_start(const PiecePlan *plan, Rational *out);
 /* Gives the seam a copy of the written lane spans of the bar that starts at body_start; plan_give_section's results. */
 GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, Rational body_start);
 
+/*
+ * Writes the connective of a held section that has a CONNECTIVE constraint (R-486): its last bar ends with a stepwise
+ * line into the first melody note of the section after it, and the constraint's `written` is set. When the line cannot be
+ * written within the melodic rules nothing changes and `written` stays false (PIECE_OK either way).
+ */
+PieceResult piece_connective_write(PiecePlan *plan, NodeId section);
+
 /* Adds a constraint to a node of the plan being built. */
 static inline PieceResult piece_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
     return piece_result_of_plan(plan_node_add_constraint(plan, id, constraint));

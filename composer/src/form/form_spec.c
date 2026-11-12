@@ -583,7 +583,7 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
                          const char *path, FormSectionSpec *out) {
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
                                           "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
-                                          "pedal",   "construction"};
+                                          "pedal",   "construction", "leads_in", "connective"};
     char text[FORM_SPEC_CADENCE_NAME_MAX];
     char at[64];
     if (!cJSON_IsObject(json)) {
@@ -766,7 +766,52 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         }
         out->pedal = 5;
     }
+    /* leads_in and connective (R-486): the rules that look at other sections are checked once the size is read */
+    if (!read_bool(reader, json, path, "leads_in", &out->leads_in)) {
+        return false;
+    }
+    if (out->leads_in && out->returns != FORM_SPEC_NO_RETURN) {
+        join(at, sizeof(at), path, "leads_in");
+        return fail(reader, at, "a section that returns another cannot lead in");
+    }
+    if (cJSON_GetObjectItemCaseSensitive(json, "connective")) {
+        static const char *const CONNECTIVE_NAMES[] = {"sometimes", "always"};
+        int choice = -1;
+        join(at, sizeof(at), path, "connective");
+        if (!read_choice(reader, json, path, "connective", CONNECTIVE_NAMES, 2, &choice)) {
+            return false;
+        }
+        if (!out->leads_in) {
+            return fail(reader, at, "a connective needs leads_in");
+        }
+        out->connective = choice == 0 ? FORM_CONNECTIVE_SOMETIMES : FORM_CONNECTIVE_ALWAYS;
+    }
     return read_layers(reader, json, path, &out->layers);
+}
+
+/* leads_in across the sections of a size: not on the last, not on two in a row, not on one another section returns. */
+static bool check_lead_ins(Reader *reader, const FormSpecSize *size, const char *sections_at) {
+    char section_at[64];
+    char at[64];
+    for (size_t s = 0; s < size->section_count; s++) {
+        if (!size->sections[s].leads_in) {
+            continue;
+        }
+        join_index(section_at, sizeof(section_at), sections_at, s);
+        join(at, sizeof(at), section_at, "leads_in");
+        if (s + 1 == size->section_count) {
+            return fail(reader, at, "the last section of a size has no section to lead into");
+        }
+        if (size->sections[s + 1].leads_in) {
+            return fail(reader, at, "the next section also leads in");
+        }
+        for (size_t other = 0; other < size->section_count; other++) {
+            if (size->sections[other].returns == s) {
+                return fail(reader, at, "a section that another section returns cannot lead in");
+            }
+        }
+    }
+    return true;
 }
 
 /* ------------------------------------------------------------- a form whose sections the request gives */
@@ -1010,6 +1055,9 @@ static bool read_sizes(Reader *reader, const cJSON *root, FormSpec *form) {
             }
             size->section_count = s + 1;
             total += size->sections[s].bars;
+        }
+        if (!check_lead_ins(reader, size, sections_at)) {
+            return false;
         }
         /* A size whose sections are given in bars adds up; a section in beats is checked against the meter at build. */
         bool all_bars = true;

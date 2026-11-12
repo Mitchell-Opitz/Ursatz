@@ -45,7 +45,8 @@ typedef enum {
     PLAN_CONSTRAINT_SEAM,           /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
     PLAN_CONSTRAINT_MOTIVE_TONES,   /* on a motive node: its base harmony and the tone role of each note (R-215) */
     PLAN_CONSTRAINT_PEDAL,          /* on a section node: its presentation is written over a pedal on `degree` (R-446) */
-    PLAN_CONSTRAINT_CONSTRUCTION    /* on a section node: the bars of each idea of its theme, its extensions, and why (R-468) */
+    PLAN_CONSTRAINT_CONSTRUCTION,   /* on a section node: the bars of each idea of its theme, its extensions, and why (R-468) */
+    PLAN_CONSTRAINT_CONNECTIVE      /* on a held section: its last bar ends with a connective into the next section (R-486) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -354,6 +355,15 @@ typedef struct {
     PlanConstructionReason reason;
 } PlanConstruction;
 
+/*
+ * A connective (R-486): the last bar of a held section ends with a short stepwise line into the first note of the next
+ * section. written is false until the seam stage has written it, and stays false when the line could not be written
+ * within the melodic rules.
+ */
+typedef struct {
+    bool written;
+} PlanConnective;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -379,6 +389,7 @@ typedef struct {
         PlanMotiveTones motive_tones;
         PlanPedal pedal;
         PlanConstruction construction;
+        PlanConnective connective;
     } params;
 } PlanConstraint;
 

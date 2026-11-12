@@ -841,13 +841,14 @@ static bool release_hold(PiecePlan *plan, NodeId section) {
  * left as it is), then the held sections are given their structure, motives, harmony, bass, melody and texture, with
  * the copy after them. A seam that cannot be copied (the first bar is not written) leaves the held sections to be
  * filled without it. The held sections keep their HOLD constraint.
+ *
+ * A sized form's section that leads into the next (R-486) is held too, and a plan with no seam section is filled the
+ * same way, without the copy, against the sections after the held one (the operators read the Given chords and the first
+ * Given note after a target). A plan with no held section and no seam does nothing.
  */
 static PieceResult run_seam(Run *run) {
     PiecePlan *plan = run->plan;
     NodeId seam = piece_seam_find(plan);
-    if (seam == PLAN_NODE_NONE) {
-        return PIECE_OK;
-    }
     NodeId *held = calloc(run->theme_count + 1, sizeof(NodeId));
     if (!held) {
         return PIECE_ERR_ALLOC;
@@ -858,11 +859,17 @@ static PieceResult run_seam(Run *run) {
             held[held_count++] = run->themes[t];
         }
     }
-    Rational body_start;
-    if (plan_node_lane_spans(plan, seam, NULL, 0) == 0 && piece_seam_body_start(plan, &body_start)) {
-        piece_seam_give(plan, seam, body_start);
+    if (seam == PLAN_NODE_NONE && held_count == 0) {
+        free(held);
+        return PIECE_OK;
     }
-    run->outcome->seam_planned = plan_node_lane_spans(plan, seam, NULL, 0) > 0;
+    if (seam != PLAN_NODE_NONE) {
+        Rational body_start;
+        if (plan_node_lane_spans(plan, seam, NULL, 0) == 0 && piece_seam_body_start(plan, &body_start)) {
+            piece_seam_give(plan, seam, body_start);
+        }
+        run->outcome->seam_planned = plan_node_lane_spans(plan, seam, NULL, 0) > 0;
+    }
     PieceResult result = PIECE_OK;
     size_t released = 0;
     while (released < held_count && release_hold(plan, held[released])) {
@@ -873,6 +880,14 @@ static PieceResult run_seam(Run *run) {
     run->seam = held_count > 0 && released == held_count;
     for (size_t s = 0; run->seam && result == PIECE_OK && s < sizeof(STAGES) / sizeof(STAGES[0]); s++) {
         result = run_stage(run, STAGES[s], false);
+        /* A held section that asks for a connective gets it once its melody is written, before the texture reads it. */
+        if (result == PIECE_OK && STAGES[s] == COMPOSE_STAGE_MELODY) {
+            for (size_t i = 0; result == PIECE_OK && i < released; i++) {
+                if (plan_node_has_constraint(plan, held[i], PLAN_CONSTRAINT_CONNECTIVE)) {
+                    result = piece_connective_write(plan, held[i]);
+                }
+            }
+        }
     }
     if (result == PIECE_ERR_STUCK && !run->outcome->cancelled) {
         run->outcome->stuck = true;

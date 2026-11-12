@@ -216,6 +216,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.harmony_shape.pedal == b->params.harmony_shape.pedal;
     case PLAN_CONSTRAINT_PEDAL:
         return a->params.pedal.degree == b->params.pedal.degree;
+    case PLAN_CONSTRAINT_CONNECTIVE:
+        return a->params.connective.written == b->params.connective.written;
     case PLAN_CONSTRAINT_CONSTRUCTION: {
         const PlanConstruction *x = &a->params.construction;
         const PlanConstruction *y = &b->params.construction;
@@ -505,6 +507,87 @@ static void test_pedal(void) {
     plan_destroy(plain);
     plan_destroy(plan);
     plan_destroy(parsed);
+}
+
+/*
+ * The connective (R-486): a section's connective constraint, written or not, round-trips byte for byte, a plan without
+ * it is written as it always was, it is refused on anything but a section, and a file whose constraint has no `written`
+ * (or one that is not a boolean) is refused when the plan is read.
+ */
+static void test_connective(void) {
+    PlanJsonError error;
+    PiecePlan *plain = build_sentence_plan();
+    char *plain_text = plan_to_json(plain, &error);
+    assert(plain_text && strstr(plain_text, "connective") == NULL);
+
+    PiecePlan *plan = build_sentence_plan();
+    NodeId section = PLAN_NODE_NONE;
+    NodeId idea = PLAN_NODE_NONE;
+    for (NodeId id = 1; id < 40; id++) {
+        if (plan_has_node(plan, id) && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
+            if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section == PLAN_NODE_NONE) {
+                section = id;
+            }
+            if (plan_node_kind(plan, id) == PLAN_NODE_IDEA && idea == PLAN_NODE_NONE) {
+                idea = id;
+            }
+        }
+    }
+    assert(section != PLAN_NODE_NONE);
+    PlanConstraint connective = {PLAN_CONSTRAINT_CONNECTIVE, {0}};
+    /* Only a section has one. */
+    if (idea != PLAN_NODE_NONE) {
+        assert(plan_node_add_constraint(plan, idea, &connective) == PLAN_ERR_BAD_PAYLOAD);
+    }
+    assert(plan_node_add_constraint(plan, section, &connective) == PLAN_OK);
+
+    char *text = plan_to_json(plan, &error);
+    assert(text && strstr(text, "\"kind\": \"connective\"") != NULL && strstr(text, "\"written\": false") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+
+    /* Written true: the constraint is replaced, and the text round-trips again. */
+    assert(plan_node_remove_constraint(plan, section, plan_node_constraint_count(plan, section) - 1) == PLAN_OK);
+    connective.params.connective.written = true;
+    assert(plan_node_add_constraint(plan, section, &connective) == PLAN_OK);
+    char *written_text = plan_to_json(plan, &error);
+    assert(written_text && strstr(written_text, "\"written\": true") != NULL);
+    PiecePlan *written_parsed = NULL;
+    expect_ok(plan_from_json(written_text, &written_parsed, &error), &error);
+    assert(plans_equal(plan, written_parsed));
+    char *written_again = plan_to_json(written_parsed, &error);
+    assert(written_again && strcmp(written_text, written_again) == 0);
+    const PlanConstraint *read = plan_node_find_constraint(written_parsed, section, PLAN_CONSTRAINT_CONNECTIVE);
+    assert(read && read->params.connective.written);
+
+    /* `written` is required, and a boolean. */
+    char *missing = strdup(text);
+    char *at = missing ? strstr(missing, "\"written\"") : NULL;
+    assert(at);
+    memcpy(at, "\"writtex\"", 9);
+    PiecePlan *refused = (PiecePlan *)0x1;
+    assert(plan_from_json(missing, &refused, &error) != PLAN_OK && refused == NULL);
+    char *wrong = strdup(text);
+    at = wrong ? strstr(wrong, "false") : NULL;
+    assert(at);
+    memcpy(at, "\"no\" ", 5);
+    refused = (PiecePlan *)0x1;
+    assert(plan_from_json(wrong, &refused, &error) != PLAN_OK && refused == NULL);
+
+    free(plain_text);
+    free(text);
+    free(again);
+    free(written_text);
+    free(written_again);
+    free(missing);
+    free(wrong);
+    plan_destroy(plain);
+    plan_destroy(plan);
+    plan_destroy(parsed);
+    plan_destroy(written_parsed);
 }
 
 /*
@@ -1253,6 +1336,7 @@ int main(void) {
     test_old_transforms();
     test_motive_tones();
     test_pedal();
+    test_connective();
     test_section_constraints();
     test_empty_plan();
     test_malformed_input();

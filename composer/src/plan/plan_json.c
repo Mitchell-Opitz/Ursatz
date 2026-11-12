@@ -34,7 +34,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 #define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective"};
 static const char *const EXTENSION_KIND_NAMES[] = {"repeat", "stretch", "addition", "evaded"};
 static const char *const CONSTRUCTION_REASON_NAMES[] = {"given", "motive", "length"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
@@ -329,6 +329,9 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         }
         break;
     }
+    case PLAN_CONSTRAINT_CONNECTIVE:
+        ok = ok && plan_json_add(object, "written", cJSON_CreateBool(constraint->params.connective.written));
+        break;
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
@@ -1647,6 +1650,19 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         return true;
     case PLAN_CONSTRAINT_CONSTRUCTION:
         return read_construction(reader, item, path, &out->params.construction);
+    case PLAN_CONSTRAINT_CONNECTIVE: {
+        const cJSON *written = plan_json_member(reader, item, path, "written", true);
+        if (!written) {
+            return false;
+        }
+        if (!cJSON_IsBool(written)) {
+            char at[PLAN_JSON_PATH_MAX];
+            json_child_path(at, path, "written");
+            return json_bad_format(reader, at, "expected true or false");
+        }
+        out->params.connective.written = cJSON_IsTrue(written);
+        return true;
+    }
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:

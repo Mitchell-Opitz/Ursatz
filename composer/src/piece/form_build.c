@@ -93,10 +93,16 @@ static bool piece_accompaniment(const FormSpec *form, const PieceRequest *reques
     return false;
 }
 
-/* One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. */
+/* The offset of the request's seed that draws which sections get a "sometimes" connective (R-486); the keys' stream is untouched. */
+#define FORM_CONNECTIVE_SEED_OFFSET 7UL
+
+/*
+ * One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. A section
+ * that leads in is held (R-486), and a connective is asked for when `connective` (a "sometimes" is drawn by the caller).
+ */
 static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormSectionSpec *section,
                                const PlanConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
-                               const PlanAccompaniment *accompaniment, NodeId *out) {
+                               const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
     if (result == PIECE_OK) {
@@ -164,6 +170,16 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
         constraint.params.construction = *construction;
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
+    if (result == PIECE_OK && section->leads_in) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_HOLD;
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
+    if (result == PIECE_OK && section->leads_in && connective) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_CONNECTIVE;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     return result;
@@ -410,10 +426,15 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     }
     /* The sections in order, then the material; the sections' motive references name m0, so they come last. */
     Rational start = {0, 1};
+    FillRng connective_rng;
+    fill_rng_seed(&connective_rng, request->seed + FORM_CONNECTIVE_SEED_OFFSET);
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
         PlanSpan span = {start, bars_of(bar, size->sections[i].bars)};
+        int wants = size->sections[i].leads_in ? size->sections[i].connective : FORM_CONNECTIVE_NONE;
+        bool connective = wants == FORM_CONNECTIVE_ALWAYS ||
+                          (wants == FORM_CONNECTIVE_SOMETIMES && fill_rng_below(&connective_rng, 2) == 0);
         result = add_section(plan, request, &size->sections[i], has_construction[i] ? &constructions[i] : NULL, span, form_id,
-                             sections, accompanied ? &accompaniment : NULL, &sections[i]);
+                             sections, accompanied ? &accompaniment : NULL, connective, &sections[i]);
         if (result == PIECE_OK) {
             result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
         }

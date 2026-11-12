@@ -162,6 +162,8 @@
           ]
         },
         "pedal": { "enum": ["dominant"], "description": "The presentation is written over a dominant pedal; needs a presentation beginning." },
+        "leads_in": { "type": "boolean", "description": "The section is held until the sections after it are written, then filled against them; not on the last section, a returning section, a section another returns, or two in a row." },
+        "connective": { "enum": ["sometimes", "always"], "description": "The held section ends with a short stepwise connective into the next section's first note; needs leads_in." },
         "construction": {
           "description": "The section is a theme of 3 to 16 whole bars: \"auto\" (chosen from the bars and the piece's motive) or the bars of each idea and its extensions. A theme-like section of bars other than 4 or 8 needs it; a returning section keeps its source's.",
           "oneOf": [
