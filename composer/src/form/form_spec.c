@@ -9,6 +9,8 @@
 
 #include <ursatz_composer/theme_shape.h>
 
+#include "grow/grow_internal.h"
+
 /* ------------------------------------------------------------- the vocabularies the document names */
 
 typedef struct {
@@ -418,11 +420,167 @@ static bool read_cadence(Reader *reader, const cJSON *object, const char *path, 
     return true;
 }
 
+/* ------------------------------------------------------------- a section's construction */
+
+static const char *const EXTENSION_KINDS[] = {"repeat", "stretch", "addition", "evaded"};
+
+/* One whole number member of an object, 0 to max, into *out; the default when the member is absent. */
+static bool read_small(Reader *reader, const cJSON *object, const char *path, const char *key, long max, long *out) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+    char at[96];
+    if (!item) {
+        return true;
+    }
+    join(at, sizeof(at), path, key);
+    if (!cJSON_IsNumber(item) || item->valuedouble != (double)(long)item->valuedouble || item->valuedouble < 0 ||
+        item->valuedouble > (double)max) {
+        return fail(reader, at, "must be a whole number from 0 to %ld", max);
+    }
+    *out = (long)item->valuedouble;
+    return true;
+}
+
+static bool read_extension(Reader *reader, const cJSON *item, const char *path, PlanExtension *out) {
+    static const char *const ALLOWED[] = {"kind", "idea", "bars", "varied"};
+    char at[96];
+    long bars = 0;
+    memset(out, 0, sizeof(*out));
+    if (!cJSON_IsObject(item)) {
+        return fail(reader, path, "must be {\"kind\", \"idea\", \"bars\", \"varied\"}");
+    }
+    if (!members(reader, item, path, ALLOWED, 4)) {
+        return false;
+    }
+    const cJSON *kind = member_of(reader, item, path, "kind", true);
+    if (!kind) {
+        return false;
+    }
+    join(at, sizeof(at), path, "kind");
+    int found = -1;
+    for (int k = 0; cJSON_IsString(kind) && kind->valuestring && k < 4; k++) {
+        found = strcmp(kind->valuestring, EXTENSION_KINDS[k]) == 0 ? k : found;
+    }
+    if (found < 0) {
+        return fail(reader, at, "must be repeat, stretch, addition or evaded");
+    }
+    out->kind = (PlanExtensionKind)found;
+    const cJSON *idea = cJSON_GetObjectItemCaseSensitive(item, "idea");
+    join(at, sizeof(at), path, "idea");
+    if (idea && !cJSON_IsNull(idea)) {
+        const ThemeShapeIdea *row = cJSON_IsString(idea) && idea->valuestring ? theme_shape_idea_find(idea->valuestring) : NULL;
+        if (!row) {
+            return fail(reader, at, "must be the name of an idea");
+        }
+        out->idea = (unsigned char)row->idea;
+    } else if (out->kind == PLAN_EXTENSION_REPEAT || out->kind == PLAN_EXTENSION_STRETCH) {
+        return fail(reader, at, "a %s needs the idea it follows", EXTENSION_KINDS[found]);
+    }
+    if (!read_small(reader, item, path, "bars", 4, &bars)) {
+        return false;
+    }
+    out->bars = (unsigned char)bars;
+    const cJSON *varied = cJSON_GetObjectItemCaseSensitive(item, "varied");
+    if (varied) {
+        join(at, sizeof(at), path, "varied");
+        if (!cJSON_IsBool(varied)) {
+            return fail(reader, at, "must be true or false");
+        }
+        out->varied = cJSON_IsTrue(varied);
+    }
+    return true;
+}
+
+/*
+ * The construction member (R-468, R-469): "auto", or {"ideas": {"<idea name>": bars}, "extensions": [{"kind", "idea",
+ * "bars", "varied"}]}. Whether the ideas fit the pairing is checked when the form is built (it needs the meter); the
+ * bars they add up to are checked here against the section's.
+ */
+static bool read_construction(Reader *reader, const cJSON *item, const char *path, FormSectionSpec *out) {
+    static const char *const ALLOWED[] = {"ideas", "extensions"};
+    char at[96];
+    out->has_construction = true;
+    if (cJSON_IsString(item) && item->valuestring && strcmp(item->valuestring, "auto") == 0) {
+        out->construction_auto = true;
+        return true;
+    }
+    if (!cJSON_IsObject(item)) {
+        return fail(reader, path, "must be \"auto\" or {\"ideas\": {...}, \"extensions\": [...]}");
+    }
+    if (!members(reader, item, path, ALLOWED, 2)) {
+        return false;
+    }
+    PlanConstruction *construction = &out->construction;
+    memset(construction, 0, sizeof(*construction));
+    construction->reason = PLAN_CONSTRUCTION_GIVEN;
+    const cJSON *ideas = member_of(reader, item, path, "ideas", true);
+    if (!ideas) {
+        return false;
+    }
+    join(at, sizeof(at), path, "ideas");
+    if (!cJSON_IsObject(ideas)) {
+        return fail(reader, at, "must be an object of idea names and bars, for example {\"basic idea\": 2}");
+    }
+    for (const cJSON *member = ideas->child; member; member = member->next) {
+        char idea_at[128];
+        join(idea_at, sizeof(idea_at), at, member->string ? member->string : "");
+        const ThemeShapeIdea *row = member->string ? theme_shape_idea_find(member->string) : NULL;
+        if (!row) {
+            return fail(reader, idea_at, "unknown idea");
+        }
+        if (!cJSON_IsNumber(member) || member->valuedouble != (double)(int)member->valuedouble || member->valuedouble < 0 ||
+            member->valuedouble > 16) {
+            return fail(reader, idea_at, "must be a whole number of bars from 0 to 16");
+        }
+        construction->idea_bars[row->idea] = (unsigned char)member->valuedouble;
+    }
+    const cJSON *extensions = cJSON_GetObjectItemCaseSensitive(item, "extensions");
+    if (extensions) {
+        join(at, sizeof(at), path, "extensions");
+        if (!cJSON_IsArray(extensions)) {
+            return fail(reader, at, "must be a list");
+        }
+        if (cJSON_GetArraySize(extensions) > PLAN_CONSTRUCTION_EXTENSIONS) {
+            return fail(reader, at, "at most %d extensions", PLAN_CONSTRUCTION_EXTENSIONS);
+        }
+        for (int k = 0; k < cJSON_GetArraySize(extensions); k++) {
+            char extension_at[128];
+            join_index(extension_at, sizeof(extension_at), at, (size_t)k);
+            if (!read_extension(reader, cJSON_GetArrayItem(extensions, k), extension_at, &construction->extensions[k])) {
+                return false;
+            }
+            construction->extension_count = (size_t)k + 1;
+        }
+    }
+    return true;
+}
+
+/* Whether two sections' constructions are the same: both none, both "auto", or both the same ideas and extensions. */
+static bool same_construction(const FormSectionSpec *a, const FormSectionSpec *b) {
+    if (a->has_construction != b->has_construction || a->construction_auto != b->construction_auto) {
+        return false;
+    }
+    if (!a->has_construction || a->construction_auto) {
+        return true;
+    }
+    if (memcmp(a->construction.idea_bars, b->construction.idea_bars, sizeof(a->construction.idea_bars)) != 0 ||
+        a->construction.extension_count != b->construction.extension_count) {
+        return false;
+    }
+    for (size_t k = 0; k < a->construction.extension_count; k++) {
+        const PlanExtension *x = &a->construction.extensions[k];
+        const PlanExtension *y = &b->construction.extensions[k];
+        if (x->kind != y->kind || x->idea != y->idea || x->bars != y->bars || x->varied != y->varied) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSize *size, const cJSON *json,
                          const char *path, FormSectionSpec *out) {
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
                                           "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
-                                          "pedal"};
+                                          "pedal",   "construction"};
     char text[FORM_SPEC_CADENCE_NAME_MAX];
     char at[64];
     if (!cJSON_IsObject(json)) {
@@ -490,6 +648,37 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
     }
     out->pairing.beginning = (PlanThemeBeginning)beginning->value;
     out->pairing.ending = (PlanThemeEnding)ending->value;
+    /* construction: a theme of any whole bars from 3 to 16 (R-468); a theme-like section of other bars than 4 or 8 needs it */
+    const cJSON *construction = member_of(reader, json, path, "construction", false);
+    if (construction) {
+        join(at, sizeof(at), path, "construction");
+        if (!form_role_is_theme(out->role)) {
+            return fail(reader, at, "only a theme-like section has a construction");
+        }
+        if (!bars) {
+            return fail(reader, at, "a construction needs bars, not beats");
+        }
+        if (!read_construction(reader, construction, at, out)) {
+            return false;
+        }
+        if (out->bars < 3 || out->bars > 16) {
+            join(at, sizeof(at), path, "bars");
+            return fail(reader, at, "a section with a construction is 3 to 16 bars");
+        }
+        if (!out->construction_auto) {
+            size_t total = grow_construction_extra_bars(&out->pairing, &out->construction);
+            for (int idea = 0; idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
+                total += out->construction.idea_bars[idea];
+            }
+            if (total != out->bars) {
+                join(at, sizeof(at), path, "construction");
+                return fail(reader, at, "the construction adds up to %zu bars but the section is %zu", total, out->bars);
+            }
+        }
+    } else if (bars && form_role_is_theme(out->role) && out->bars != 4 && out->bars != 8) {
+        join(at, sizeof(at), path, "bars");
+        return fail(reader, at, "a theme-like section of %zu bars needs a construction; only 4 or 8 bars have none", out->bars);
+    }
     /* cadence: a name of the standard-harmony vocabulary whose core is PAC, IAC or HC */
     if (!read_cadence(reader, json, path, "cadence", true, &out->cadence, out->cadence_name, sizeof(out->cadence_name))) {
         return false;
@@ -541,6 +730,11 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         }
         if (!found) {
             return fail(reader, at, "\"%s\" is not an earlier section of the size", returns->valuestring);
+        }
+        /* A return copies its source, so it keeps the source's construction. */
+        if (!same_construction(out, &size->sections[out->returns])) {
+            join(at, sizeof(at), path, "construction");
+            return fail(reader, at, "a return keeps the construction of %s", size->sections[out->returns].name);
         }
     }
     if (has_variation) {

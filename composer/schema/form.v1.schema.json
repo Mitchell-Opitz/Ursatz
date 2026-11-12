@@ -153,7 +153,36 @@
             { "type": "array", "minItems": 1, "items": { "enum": ["bass", "inner_voice", "melody"] } }
           ]
         },
-        "pedal": { "enum": ["dominant"], "description": "The presentation is written over a dominant pedal; needs a presentation beginning." }
+        "pedal": { "enum": ["dominant"], "description": "The presentation is written over a dominant pedal; needs a presentation beginning." },
+        "construction": {
+          "description": "The section is a theme of 3 to 16 whole bars: \"auto\" (chosen from the bars and the piece's motive) or the bars of each idea and its extensions. A theme-like section of bars other than 4 or 8 needs it; a returning section keeps its source's.",
+          "oneOf": [
+            { "const": "auto" },
+            {
+              "type": "object",
+              "required": ["ideas"],
+              "additionalProperties": false,
+              "properties": {
+                "ideas": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 16 }, "description": "Idea name to whole bars; the bars of the ideas and the extensions add up to the section's." },
+                "extensions": {
+                  "type": "array",
+                  "maxItems": 3,
+                  "items": {
+                    "type": "object",
+                    "required": ["kind"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": { "enum": ["repeat", "stretch", "addition", "evaded"] },
+                      "idea": { "type": ["string", "null"], "description": "The idea a repeat or a stretch follows." },
+                      "bars": { "type": "integer", "minimum": 0, "maximum": 4 },
+                      "varied": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
       }
     }
   }
