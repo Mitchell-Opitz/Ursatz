@@ -193,6 +193,56 @@ static void test_chord_refusals(void) {
     }
 }
 
+/* A construction is read and checked by validate as compose does, without growing, at its own paths (B5 of P47). */
+static void test_construction(void) {
+    const char *const ideas = "\"ideas\": {\"basic idea\": 2, \"contrasting idea\": 2, \"consequent basic idea\": 2, "
+                             "\"consequent contrasting idea\": 4}";
+    char construction[512];
+    snprintf(construction, sizeof construction, "{%s}", ideas);
+    {
+        /* With no bars the theme is as long as its construction; with them they must be the same. */
+        const char *const edits[][2] = {{"bars", NULL}, {"construction", construction}};
+        expect_valid(THEME("period-contrast.json"), edits, 2);
+        const char *const same[][2] = {{"bars", "10"}, {"construction", construction}};
+        expect_valid(THEME("period-contrast.json"), same, 2);
+    }
+    {
+        const char *const edits[][2] = {{"bars", "8"}, {"construction", construction}};
+        expect_refused(THEME("period-contrast.json"), edits, 2, "/construction/ideas", "the ideas are 10 bars; the theme has 8");
+    }
+    {
+        const char *const edits[][2] = {{"bars", "9"}, {"construction", "{\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"contrasting idea\": 1, "
+                                                                         "\"fragment 1\": 1, \"fragment 2\": 1, \"cadential\": 2}}"}};
+        expect_refused(THEME("one-motive.json"), edits, 2, "/construction/ideas", "has no contrasting idea");
+    }
+    {
+        const char *const edits[][2] = {{"construction", "{\"ideas\": {\"basic idea\": 2, \"bogus\": 1}}"}};
+        expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), edits, 1, "/construction/ideas/bogus", "unknown idea");
+    }
+    {
+        const char *const edits[][2] = {{"construction", "[]"}};
+        expect_refused_as(COMPOSER_ERR_REQUEST, THEME("one-motive.json"), edits, 1, "/construction", "must be null or");
+    }
+    {
+        const char *const edits[][2] = {{"bars", NULL},
+                                        {"construction", "{\"ideas\": {\"basic idea\": 2, \"contrasting idea\": 2, \"consequent basic idea\": 2, "
+                                                         "\"consequent contrasting idea\": 2}, \"extensions\": [{\"kind\": \"repeat\"}]}"}};
+        expect_refused_as(COMPOSER_ERR_REQUEST, THEME("period-contrast.json"), edits, 2, "/construction/extensions/0/idea",
+                          "needs the idea it follows");
+    }
+    {
+        const char *const edits[][2] = {{"bars", NULL},
+                                        {"construction", "{\"ideas\": {\"basic idea\": 2, \"contrasting idea\": 2, \"consequent basic idea\": 2, "
+                                                         "\"consequent contrasting idea\": 2}, \"extensions\": [{\"kind\": \"stretch\", "
+                                                         "\"idea\": \"basic idea\", \"bars\": 1}]}"}};
+        expect_refused(THEME("period-contrast.json"), edits, 2, "/construction/extensions/0", "cannot follow the basic idea");
+    }
+    {
+        const char *const edits[][2] = {{"bars", "2"}, {"construction", NULL}};
+        expect_refused_as(COMPOSER_ERR_REQUEST, THEME("period-contrast.json"), edits, 2, "/bars", "bars must be 3 to 16");
+    }
+}
+
 /* A bad "preferences" member is refused by validate, and by compose, with its path under /preferences (B3 of P43). */
 static void test_preferences(void) {
     const char *const keep[][2] = {{"preferences", "{\"melody\": {\"keep\": 17}}"}};
@@ -239,6 +289,7 @@ int main(void) {
     test_piece_of_a_form();
     test_plan_refusals();
     test_chord_refusals();
+    test_construction();
     test_preferences();
     printf("test_api_validate: ok\n");
     return 0;
