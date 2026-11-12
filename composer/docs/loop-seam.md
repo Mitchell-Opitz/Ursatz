@@ -25,7 +25,7 @@ after its end. The seam is not a theme section, so no stage targets it; it has t
 
 ## The seam stage
 
-`COMPOSE_STAGE_SEAM` (name `seam`) follows the returns stage. It does not run when the plan has no seam section.
+`COMPOSE_STAGE_SEAM` (name `seam`) follows the returns stage. It runs when the plan has a seam section or a held section: a sized form's section that leads into the next (`leads_in`, [form-performance.md](form-performance.md)) is held and filled here too, against the sections after it, with no seam to copy. A plan with no held section and no seam section does nothing.
 
 1. The body's first bar is copied into the seam section as Given: every written lane span of harmony, bass, melody and
    the inner voices that sounds in the bar from the first body section's start, cut to the bar, moved to the seam and
@@ -33,10 +33,11 @@ after its end. The seam is not a theme section, so no stage targets it; it has t
    section that holds the cut spans, so the seam ends Realized with Given spans. A seam that already has lane spans (a run
    on a plan that was composed before) is not copied again. A first bar that is not written leaves the seam empty
    (`seam_planned` false); the held sections are then filled without it.
-2. The HOLD constraint is taken off the held sections, and structure, motives, harmony, bass, melody and texture run for
+2. The HOLD constraint is taken off the held sections (a plan with no seam section starts here), and structure, motives, harmony, bass, melody and texture run for
    them; the HOLD constraint goes back on. The stages are seeded seed + 12 to + 15 for harmony, bass, melody and texture
    and seed + 16 and + 17 for structure and motives. Their records are kept together under `records[COMPOSE_STAGE_SEAM]`,
-   in the order the stages ran.
+   in the order the stages ran. A held section with a `connective` constraint gets its connective written between the melody
+   and texture stages ([form-performance.md](form-performance.md)).
 
 The harmony operators already read the Given chords that follow a target, so the held section's last chord joins the
 copy's first. The melody operator already reads the first Given note that follows a target, so the last note leads to it by

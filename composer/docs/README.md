@@ -75,6 +75,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [small-ternary.md](small-ternary.md): the built-in ternary form after Schoenberg ch. XIII (P46): A, B over a pedal or in the away region, A1 varied, and what was measured.
 - [piece-structure.md](piece-structure.md): the game loop, a game track as data: intro, body, turnaround and ending.
 - [loop-seam.md](loop-seam.md): how the end of a loop leads back into its start.
+- [form-performance.md](form-performance.md): a section that leads into the next and its connective (P48); repeats and parts as they are added.
 - [regenerate.md](regenerate.md): locking and regenerating nodes of a plan.
 - [form-hear.md](form-hear.md): hearing the phrase form of a plan.
 - [testing/span-hearing.md](testing/span-hearing.md): the Composer baselines heard on harmonic spans, for P41.
