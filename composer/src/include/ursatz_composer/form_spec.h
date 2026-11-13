@@ -181,6 +181,7 @@ typedef struct {
     char label[FORM_SPEC_LABEL_MAX];
     char plan_name[FORM_SPEC_NAME_MAX]; /* the plan's form node name: `name` unless the document says otherwise */
     bool closing;                       /* the piece ends with a cadence: the cadences across the sections are planned */
+    bool modulates;                     /* the key plan leaves home whether or not the request asks for modulate (R-493) */
     bool accompaniment_required;        /* every section has an accompaniment (pattern ANY when the request has none) */
     FormRegion regions[FORM_SPEC_MAX_REGIONS];
     size_t region_count;
