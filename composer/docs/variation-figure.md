@@ -4,7 +4,7 @@ A variation that keeps the theme's course and gives each variation a figure of i
 
 ## The return
 
-A section with a `return` of variation `figurate` and a `figure` constraint is a return of the theme (R-070): the copy of its phrases, ideas, harmony, bass and inner voices, so the course of events, the number and order of segments and their proportions are the theme's. form-return makes the copy and keeps the melody as it is (when the figure's harmony is `reharmonized` it reopens the harmony as a reharmonization does, and the melody must fit the chords the harmony operators write). compose_run then writes the figure, after the harmony is final (`form_figure_write`, `src/piece/form_figure.c`). A figurate section whose keys differ from the theme's is not a copy: it is grown afresh.
+A section with a `return` of variation `figurate` and a `figure` constraint is a return of the theme (R-070): the copy of its phrases, ideas, harmony, bass and inner voices, so the course of events, the number and order of segments and their proportions are the theme's. form-return makes the copy and keeps the melody as it is (when the figure's harmony is `reharmonized` it reopens the harmony as a reharmonization does, and the melody must fit the chords the harmony operators write). compose_run then writes the figure, after the harmony is final (`form_figure_write`, `src/piece/form_figure.c`). A figurate section whose keys differ from the theme's by a transposition is a copy as well, moved by the difference; one whose keys are the theme's tonics in the other mode is a copy mapped degree by degree (below); any other is grown afresh.
 
 ## The skeleton
 
@@ -31,6 +31,15 @@ The scale is the key's major or natural minor; in minor, over a chord that holds
 ## The kept cadence bars
 
 The last bar of each half (the last bar of the section and the last bar of its first half) keeps the theme's notes: the figure gives way at the cadences. A note that sounds into a kept cell from a cell before it starts again at the cell, and a note ends where the next cell that is not kept begins.
+
+## The parallel mode
+
+A section with `"mode": "parallel"` (a figurate variation only, R-499) is in the home key's parallel key: the same tonic, the other mode. Its key lane span and `key` constraint are that key (`draw_keys` sets it without a draw, so no other form's draws move), and a change of mode on one tonic is not a modulation:
+
+- No pivot. `grow_read_keys` does not read a start change when the span before is on the same tonic, so no pivot anchor is asked for.
+- The key check. `related_to_home` accepts a key on the home tonic, and `piece_check_keys` skips a change between two spans on one tonic: it is neither counted nor classified. The planned key is not asserted against the heard one (R-493): a C minor variation may be heard as C major.
+
+The copy is mapped degree by degree (`return_copy_change_mode`), moved by 0: into minor every melody and inner voice pitch 4 or 9 semitones over the tonic (degrees 3 and 6 of the major key) is lowered a semitone; into major every pitch 3 or 8 over it is raised a semitone and 10 is raised to 11; the leading tone is kept. The `key` constraints of the copy take the target's mode. A section in the other mode always reharmonizes (its figure's `harmony` is `reharmonized`; `kept` is refused), because the chords of the theme are not chords of the other mode: the harmony operators write them again over the mapped melody, and a reopened chord shape keeps no chord within a bar when the target is minor (the minor phrase model has one predominant, so a half-cadence phrase of four bars deals a chord over two bars). The skeleton reads the returned melody mapped the same way (`form_figure_skeleton`).
 
 ## The reharmonized figure and the root change
 
@@ -61,3 +70,12 @@ The return's relation is heard on the skeletons: for a section with a figure and
 | C major 6/8 | 10 of 10 | 3 | 0 | 30 of 30 |
 
 In each composed plan every figure keeps to its kind, every phrase and idea of a variation has the theme's name and length at the same offset, V1's chords are the theme's, V2's melody fits its chords, every cell start holds a tone of its chord, and the plan round-trips through plan JSON. V3 is raised when its figure and the theme's melody leave room in the range. The root change at bar 3 is asked for in the first half of the attempts and rarely survives to the plan: it is recorded, not asserted.
+
+`tests/test_form_figure.c parallel` composes [parallel-form.json](../tests/fixtures/forms/parallel-form.json) (a theme, V1 in the parallel mode with a scale in eighths, V2 at home with a neighbor figure in sixteenths; 24 bars), invented motive, seeds 1 to 10, at P50 B3 (13 s in all, `slow`). V1's key is the home tonic in the other mode, V1 is copied, its figure and melody fit, every melody note of V1 is in its key's scale (natural and harmonic minor in minor), the key check passes and counts no change, and the plan round-trips through plan JSON.
+
+| Key, meter | Composed |
+| --- | --- |
+| C major 2/4 (V1 in C minor) | 10 of 10 |
+| A minor 2/4 (V1 in A major) | 10 of 10 |
+| C major 6/8 (V1 in C minor) | 10 of 10 |
+| A minor 3/4 (V1 in A major) | 10 of 10 |
