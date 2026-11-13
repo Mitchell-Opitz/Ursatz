@@ -41,6 +41,7 @@ sections given by the piece request ([The game loop](#the-game-loop)). The docum
 | `label` | A name for people. | required |
 | `plan_name` | The plan's form node name when it is not `name`. | `name` |
 | `closing` | The piece ends with a cadence. With `modulate`, the cadences across the sections are planned (`piece_plan_cadences`) and checked (`piece_check_cadences`). | `false` |
+| `modulates` | The key plan leaves home whatever the request says (R-493): `draw_keys` makes its home draw and does not stay. Needs `regions`; refused in a form whose sections the request gives. | `false` |
 | `accompaniment` | `"optional"`, or `"required"`: every section has an accompaniment, pattern `any` when the request has none (layered). | `"optional"` |
 | `regions` | The keys a piece may move to: a `name` and the `major` and `minor` degrees of the home key a key is drawn from (`harmony_related_key_of`), 1 to 7, up to 8 of each. At most 4 regions. A region is not named `home`. | `[]` |
 | `checks` | Which of the compose run's checks run: `"sections"` (each theme section heard as its shape), `"returns"`, `"keys"`, `"cadences"`, `"seam"`. | every check |
@@ -61,7 +62,7 @@ sections given by the piece request ([The game loop](#the-game-loop)). The docum
 | --- | --- | --- |
 | `name` | The section node's name, unique in the size, 1 to 31 characters. | required |
 | `letter` | Its form letter, 1 to 3 characters. | required |
-| `role` | One of `theme`, `contrast`, `return`, `variation`, `layer`, `intro`, `body`, `turnaround`, `ending` (the role table in `form_spec.c`; later phases add rows). | required |
+| `role` | One of `theme`, `contrast`, `return`, `variation`, `layer`, `pattern`, `sequence`, `episode`, `codetta` (theme-like rows, built as the others are; the names are for the rows and the GUI), `intro`, `body`, `turnaround`, `ending` (the role table in `form_spec.c`; later phases add rows). | required |
 | `bars` or `beats` | Its length, whole bars or whole beats of the meter: exactly one. A section of a sized form must be a theme grow-theme builds: a theme-like role of 4 or 8 whole bars, or of 3 to 16 whole bars with a `construction`; a theme-like section of other bars than 4 or 8 is refused at `bars` without one. Any other section is `PIECE_ERR_BAD_REQUEST` at build. | required |
 | `beginning`, `ending` | The theme shape, by the plan names: `presentation`, `antecedent`, `compound_basic_idea`; `continuation`, `consequent`, `cadential` ([grow.md](grow.md)). | required |
 | `cadence` | A name of the standard-harmony cadence vocabulary (`harmony_cadence_kind_find`). The plan holds its core type, which must be a PAC, an IAC or an HC. | required |
