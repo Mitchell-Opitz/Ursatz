@@ -506,7 +506,11 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
     const size = PiecesModel.sizeOf(form, state.bars, state.count);
     return [
       ["Size", size ? PiecesModel.sizeLabel(size) : "not found"],
-      ...(form.settings && form.settings.modulate === true ? [["Modulate", state.modulate ? "yes" : "no"]] : []),
+      ...(PiecesModel.isModulating(form)
+        ? [["Modulate", "always"]]
+        : form.settings && form.settings.modulate === true
+          ? [["Modulate", state.modulate ? "yes" : "no"]]
+          : []),
       ...PiecesModel.sectionsOf(form, state.bars, state.count).map((section) => [
         `${section.role ? section.role.label : ""} ${section.letter}`,
         `${Number.isFinite(section.bars) ? `${section.bars} bars` : `${section.beats} beats`}${section.cadence ? `, cadence ${section.cadence.core}` : ""}`,
