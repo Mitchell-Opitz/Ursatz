@@ -377,10 +377,16 @@ static void toward_cell(unsigned scale, int tone, int target, size_t per, int *o
     }
 }
 
-static void broken_cell(unsigned mask, int tone, int direction, size_t per, int *out) {
+/* The chord's tones from the tone, up or down; a tone outside the range turns the line back (six sixteenths are past two octaves). */
+static void broken_cell(unsigned mask, int tone, int direction, size_t per, const MelodyFillParams *range, int *out) {
     out[0] = tone;
     for (size_t i = 1; i < per; i++) {
-        out[i] = next_tone(mask, out[i - 1], direction);
+        int next = next_tone(mask, out[i - 1], direction);
+        if (next < range->range_low || next > range->range_high) {
+            direction = -direction;
+            next = next_tone(mask, out[i - 1], direction);
+        }
+        out[i] = next;
     }
 }
 
@@ -429,7 +435,7 @@ static bool figure_cell(const Reading *reading, size_t cell, const PlanFigure *f
             }
             made = true;
         } else {
-            broken_cell(reading->mask[cell], tone, draw * turn, per, out);
+            broken_cell(reading->mask[cell], tone, draw * turn, per, range, out);
             made = true;
         }
         if (made && within(out, per, range)) {

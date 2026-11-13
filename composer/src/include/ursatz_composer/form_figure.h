@@ -54,7 +54,7 @@ bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *o
  *                 first note of a kept cell), turning back once it is reached; toward the same tone, up or down as drawn
  *                 once for the section, half of the notes away and the rest back.
  *   broken-chord  the tones of the chord over the cell from the tone, up or down as drawn once for the section, past the
- *                 octave as needed.
+ *                 octave as needed; a tone outside the range turns the line back.
  * The scale is the key's major or natural minor; in minor, over a chord that holds the leading tone (V, vii), the harmonic
  * minor. A cell with a note outside range->range_low to range->range_high is made again the other way (the other side,
  * the other direction); if that is outside too, the write fails. With the climax, the whole melody is then moved an octave
