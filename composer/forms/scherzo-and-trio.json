@@ -1,0 +1,19 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "scherzo-and-trio",
+  "label": "Scherzo and trio",
+  "closing": true,
+  "meters": ["3/4"],
+  "tempo": 176,
+  "regions": [{"name": "trio", "major": [1, 4, 6], "minor": [1, 3, 6]}],
+  "parts": [
+    {"name": "Scherzo", "form": "scherzo"},
+    {"name": "Trio", "form": "trio", "key": "trio", "motive": "new", "bars": 24},
+    {"name": "Scherzo da capo", "again": "Scherzo", "repeats": false}
+  ],
+  "sizes": [
+    {"bars": 44, "default": true},
+    {"bars": 60}
+  ]
+}
