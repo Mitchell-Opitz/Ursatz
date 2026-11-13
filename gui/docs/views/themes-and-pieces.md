@@ -111,10 +111,13 @@ A piece's detail holds the piece editor (`pieces-view.js`; the helpers are in
 composes (see [Piece bodies and version files](../storage.md#piece-bodies-and-version-files)) and reuses the Themes view's
 builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
 
-- Header: form (the Composer's forms by label: Binary, Rounded binary, Ternary, Theme and variations, Loop, Layered, Game
-  loop; `GET /api/composer/forms`, loaded with the vocabulary, so the GUI keeps no form or part table; a body that names no
+- Header: form (the Composer's forms by label: Binary, Rounded binary, Ternary, Theme and variations, Loop, Layered, Minuet,
+  Trio, Minuet and trio, Game loop; `GET /api/composer/forms`, loaded with the vocabulary, so the GUI keeps no form or part table; a body that names no
   form is the game loop), key, mode (major, minor, From the brief), meter and tempo (blank
-  takes the brief's). The Composer reads the piece while it is edited (400 ms after the last change,
+  takes the brief's). The meter list follows the form: a form that fixes its meters lists only those (the minuet, the trio
+  and the minuet and trio: 3/4), any other lists every meter; the meter kept is the chosen one when the new list has it,
+  else the first. The tempo field says `from the form (112)` when the form gives a tempo and the field is empty (the minuet
+  forms are at 112 quarters a minute unless the brief or the field gives one), else `from the brief`. The Composer reads the piece while it is edited (400 ms after the last change,
   `POST /api/materials/items/validate`): the key, meter, tempo, seed, pickups, numerals and sizes it refuses show its
   message, as given, and mark the header or the strip its request path names. Nothing of that blocks Save as new
   version; only a missing brief for the mode From the brief, the loop body, the order of the parts and a theme of
@@ -171,10 +174,19 @@ score, the seam rules that held, the Analyzer check and the style
 distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
 per version (`<name>.musicxml`), with playback served by the
 backend from `<name>.mid` (`GET .../versions/<n>/playback?file=<name>`). A read-only version of a sized form
-names its form, size and the sections the Composer plans. The strip of a sized form shows the halves of a section with a
+names its form, size and the sections the Composer plans. A form the Composer composes once and performs in order
+(R-485: written-out repeats or parts, the three minuet forms) lists the performed sections, and its table gains a Part
+column (the minuet, the trio, the minuet da capo, for a compound form), Upbeat (the chord that leads into the next section,
+such as `V to I`) and Connective (`yes` when the stepwise link was written, `no` when it was not, empty for a section with
+none) after Harmony, and Repeat of (the section a row plays again) after Returns. The strip of a compound form lists the
+sections of each part under a heading that says its form, its key and its repeats; a part that plays another again has
+none. The strip of a sized form shows the halves of a section with a
 construction in its block (`4+6`) and its reason in a Construction column of the table (no built-in form has one yet).
 
-On the current version each section of the first version (the loop version of a game loop, `piece` of any other form)
+On the current version of a performed form no Regenerate or Variations is offered: the page says they are Later (the
+Composer refuses them for a form written out in order, R-485).
+
+On the current version of any other form each section of the first version (the loop version of a game loop, `piece` of any other form)
 has Regenerate (lane: all
 lanes, harmony, bass, melody or inner; seed) and Variations (lane, count 1 to
 8, seed). A regenerate becomes the next version. Variations show side by side
