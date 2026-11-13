@@ -108,6 +108,11 @@ typedef struct {
     /* A form with repeats or parts (form_spec_performed): the plan performed in order, what is rendered and answered (R-485). */
     PiecePerformance performance;
     bool performed;
+    /*
+     * A compound form (R-485): the composed parts the performance is made of, which the piece (PieceMade) owns. The version's
+     * plan is NULL and its outcome empty (composed is true); the rows read each part's plan and outcome. NULL for any other form.
+     */
+    const PieceParts *parts;
 } PieceVersion;
 
 /* The plan a version is rendered and written out from: its performance when it is performed, else its plan. */
@@ -121,6 +126,7 @@ typedef struct {
     PieceVersion versions[API_PIECE_VERSIONS_MAX];
     size_t version_count;
     unsigned long seed;
+    PieceParts parts; /* a compound form: its parts composed (versions[0].parts points here) */
 } PieceMade;
 
 void api_piece_version_destroy(PieceVersion *version);

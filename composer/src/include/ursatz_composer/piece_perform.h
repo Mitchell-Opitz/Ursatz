@@ -79,6 +79,17 @@ typedef struct {
 /* Frees the plans and the outcomes; safe on a zeroed or already destroyed set. */
 void piece_parts_destroy(PieceParts *parts);
 
+/* The index of the composed part the part at `index` of a compound form is: itself, or the part an again part performs again. */
+size_t piece_parts_source(const FormSpec *form, size_t index);
+
+/*
+ * The performance of the composed parts of a compound form in order (piece_perform with a part for each of the form's
+ * parts: an again part is {its source's form, size and plan, the part's repeats, the part's name}), the plan named for the
+ * compound form's plan_name. `bars` and `count` pick the compound form's size as form_spec_size does.
+ */
+PieceResult piece_perform_compound(const FormSpec *form, size_t bars, size_t count, const PieceParts *parts,
+                                   PiecePerformance *out);
+
 /*
  * Composes the parts of a compound form (R-485), into *out (zeroed first). The keys are drawn first, from
  * fill_rng_seed(request->seed): one piece_region_key draw for each part whose key is a region, in part order; a part with

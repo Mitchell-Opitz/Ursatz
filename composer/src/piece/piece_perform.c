@@ -228,7 +228,7 @@ PieceResult piece_compose_parts(const FormSpec *form, const PieceRequest *reques
     return result;
 }
 
-PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, PiecePerformance *out) {
+static PieceResult perform(const PiecePerformPart *parts, size_t part_count, const char *plan_name, PiecePerformance *out) {
     if (!parts || part_count == 0 || !out) {
         return PIECE_ERR_NULL;
     }
@@ -269,7 +269,7 @@ PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, Piec
     PlanLanePayload payload;
     LaneSpanId lane;
     PieceResult result = piece_result_of_plan(
-        plan_add_node(performed, PLAN_NODE_NONE, PLAN_NODE_FORM, whole, parts[0].form->plan_name, &form_id));
+        plan_add_node(performed, PLAN_NODE_NONE, PLAN_NODE_FORM, whole, plan_name, &form_id));
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.meter = meter;
@@ -313,4 +313,36 @@ PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, Piec
     }
     out->plan = performed;
     return PIECE_OK;
+}
+
+PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, PiecePerformance *out) {
+    return perform(parts, part_count, parts && part_count > 0 && parts[0].form ? parts[0].form->plan_name : NULL, out);
+}
+
+size_t piece_parts_source(const FormSpec *form, size_t index) {
+    return form->parts[index].again == FORM_SPEC_NO_RETURN ? index : form->parts[index].again;
+}
+
+PieceResult piece_perform_compound(const FormSpec *form, size_t bars, size_t count, const PieceParts *parts,
+                                   PiecePerformance *out) {
+    if (!form || !parts || !out) {
+        return PIECE_ERR_NULL;
+    }
+    const FormSpecSize *size = form_spec_size(form, bars, count);
+    PiecePerformPart performed[FORM_SPEC_MAX_PARTS_OF];
+    if (!size || form->part_count == 0 || parts->count != form->part_count) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    for (size_t i = 0; i < form->part_count; i++) {
+        size_t source = piece_parts_source(form, i);
+        if (!parts->forms[source] || !parts->plans[source]) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+        performed[i].form = parts->forms[source];
+        performed[i].size = form_spec_size(parts->forms[source], size->bars, 0);
+        performed[i].plan = parts->plans[source];
+        performed[i].repeats = form->parts[i].repeats;
+        performed[i].name = form->parts[i].name;
+    }
+    return perform(performed, form->part_count, form->plan_name, out);
 }
