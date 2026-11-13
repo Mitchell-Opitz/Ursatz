@@ -264,6 +264,10 @@ static bool related_to_home(AnalysisKey home, AnalysisKey key) {
     if (analysis_key_equals(&home, &key)) {
         return true;
     }
+    /* The home key's parallel key, on the same tonic (R-499). */
+    if (analysis_key_tonic_pitch_class(&home) == analysis_key_tonic_pitch_class(&key)) {
+        return true;
+    }
     int semitone = ((analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey related;
@@ -383,7 +387,9 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         }
     }
     for (size_t k = 1; k < lane.count; k++) {
-        if (analysis_key_equals(&lane.key[k], &lane.key[k - 1])) {
+        /* A change of mode on one tonic is neither counted nor classified (R-499). */
+        if (analysis_key_equals(&lane.key[k], &lane.key[k - 1]) ||
+            analysis_key_tonic_pitch_class(&lane.key[k]) == analysis_key_tonic_pitch_class(&lane.key[k - 1])) {
             continue;
         }
         out->changes++;
