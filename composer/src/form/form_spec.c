@@ -905,7 +905,7 @@ static _Thread_local unsigned part_depth;
 
 /* parts (R-485): the parts of a compound form, each a piece of a built-in form with sizes, or an earlier part again. */
 static bool read_parts(Reader *reader, const cJSON *root, FormSpec *form) {
-    static const char *const ALLOWED[] = {"name", "form", "key", "motive", "again", "repeats"};
+    static const char *const ALLOWED[] = {"name", "form", "key", "motive", "again", "repeats", "bars"};
     char at[64];
     const cJSON *list = array_member(reader, root, "", "parts", false, at, sizeof(at));
     if (reader->failed || !list) {
@@ -964,8 +964,8 @@ static bool read_parts(Reader *reader, const cJSON *root, FormSpec *form) {
             if (form->parts[part->again].again != FORM_SPEC_NO_RETURN) {
                 return fail(reader, member_at, "\"%s\" is itself an again part", again->valuestring);
             }
-            static const char *const NOT_WITH_AGAIN[] = {"form", "key", "motive"};
-            for (size_t m = 0; m < 3; m++) {
+            static const char *const NOT_WITH_AGAIN[] = {"form", "key", "motive", "bars"};
+            for (size_t m = 0; m < 4; m++) {
                 if (cJSON_GetObjectItemCaseSensitive(json, NOT_WITH_AGAIN[m])) {
                     join(member_at, sizeof(member_at), item, NOT_WITH_AGAIN[m]);
                     return fail(reader, member_at, "a part that performs another again takes no %s", NOT_WITH_AGAIN[m]);
@@ -992,7 +992,22 @@ static bool read_parts(Reader *reader, const cJSON *root, FormSpec *form) {
                 form_spec_destroy(sub);
                 return fail(reader, member_at, "\"%s\" is not a form with sizes that is not itself compound", part->form);
             }
-            for (size_t z = 0; z < form->size_count; z++) {
+            const cJSON *own_bars = member_of(reader, json, item, "bars", false);
+            if (own_bars) {
+                long bars;
+                char bars_at[64];
+                join(bars_at, sizeof(bars_at), item, "bars");
+                if (!whole(reader, own_bars, bars_at, 1, 4096, &bars)) {
+                    form_spec_destroy(sub);
+                    return false;
+                }
+                if (!form_spec_size(sub, (size_t)bars, 0)) {
+                    form_spec_destroy(sub);
+                    return fail(reader, bars_at, "\"%s\" has no size of %ld bars", part->form, bars);
+                }
+                part->bars = (size_t)bars;
+            }
+            for (size_t z = 0; z < form->size_count && !part->bars; z++) {
                 if (!form_spec_size(sub, form->sizes[z].bars, 0)) {
                     form_spec_destroy(sub);
                     return fail(reader, member_at, "\"%s\" has no size of %zu bars", part->form, form->sizes[z].bars);
