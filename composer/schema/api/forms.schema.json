@@ -477,6 +477,7 @@
         "name",
         "label",
         "closing",
+        "modulates",
         "sections",
         "versions",
         "settings",
@@ -503,6 +504,10 @@
         },
         "closing": {
           "type": "boolean"
+        },
+        "modulates": {
+          "type": "boolean",
+          "description": "The form's key plan always leaves home, whatever the request says (R-493): the modulate choice is not offered for it."
         },
         "sections": {
           "enum": [
@@ -605,7 +610,8 @@
                   "key",
                   "motive",
                   "again",
-                  "repeats"
+                  "repeats",
+                  "bars"
                 ],
                 "additionalProperties": false,
                 "properties": {
@@ -644,6 +650,14 @@
                   "repeats": {
                     "type": "boolean",
                     "description": "Its repeats are written out."
+                  },
+                  "bars": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "description": "The size of the part's form it is composed at (R-495); null: the compound size's bars."
                   }
                 }
               }

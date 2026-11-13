@@ -119,7 +119,7 @@ static void test_rounded_binary(void) {
     assert(strcmp(text(cJSON_GetArrayItem(versions, 0), "label"), "Piece") == 0);
     assert(!flag(cJSON_GetArrayItem(versions, 0), "loop"));
     const cJSON *settings = member(form, "settings");
-    assert(flag(settings, "modulate"));
+    assert(flag(settings, "modulate") && !flag(form, "modulates"));
     assert(strcmp(text(settings, "accompaniment"), "optional") == 0);
     assert(!flag(settings, "voicing") && !flag(settings, "section_fills"));
     assert(cJSON_GetArraySize(member(form, "roles")) == 0 && cJSON_GetArraySize(member(form, "loop_roles")) == 0);
@@ -257,6 +257,8 @@ static void test_minuet(void) {
     const char *const three_four[] = {"3/4"};
     assert_strings(member(minuet, "meters"), three_four, 1);
     assert(number(minuet, "tempo") == 112 && flag(minuet, "performed") && cJSON_IsNull(member(minuet, "parts")));
+    /* The minuet leaves home only when the request asks: it does not modulate by itself (R-493). */
+    assert(!flag(minuet, "modulates") && flag(member(minuet, "settings"), "modulate"));
     const cJSON *groups = member(minuet, "repeats");
     const char *const first_group[] = {"A"};
     const char *const second_group[] = {"B", "A return"};
@@ -280,6 +282,10 @@ static void test_minuet(void) {
     assert(strcmp(text(trio, "name"), "Trio") == 0 && strcmp(text(member(trio, "form"), "value"), "trio") == 0 &&
            strcmp(text(member(trio, "form"), "label"), "Trio") == 0 && strcmp(text(trio, "key"), "trio") == 0 &&
            strcmp(text(trio, "motive"), "new") == 0 && cJSON_IsNull(member(trio, "again")) && flag(trio, "repeats"));
+    /* No part of the minuet and trio gives its own bars. */
+    for (int i = 0; i < 3; i++) {
+        assert(cJSON_IsNull(member(cJSON_GetArrayItem(parts, i), "bars")));
+    }
     const cJSON *again = cJSON_GetArrayItem(parts, 2);
     assert(cJSON_IsNull(member(again, "form")) && strcmp(text(again, "again"), "Minuet") == 0 && !flag(again, "repeats"));
     assert(strcmp(text(both, "label"), "Minuet and trio") == 0);
@@ -302,6 +308,8 @@ static void test_scherzo(void) {
     const char *const meters[] = {"3/4", "2/4", "6/8"};
     assert_strings(member(scherzo, "meters"), meters, 3);
     assert(number(scherzo, "tempo") == 176 && flag(scherzo, "performed") && cJSON_IsNull(member(scherzo, "parts")));
+    /* The scherzo always modulates (R-493): it has regions, and the modulate choice is not offered for it. */
+    assert(flag(scherzo, "modulates") && !flag(member(scherzo, "settings"), "modulate"));
     const cJSON *groups = member(scherzo, "repeats");
     const char *const first_group[] = {"A"};
     const char *const second_group[] = {"P", "S1", "S2", "L", "A return"};
@@ -363,6 +371,10 @@ static void test_scherzo(void) {
            flag(trio, "repeats"));
     const cJSON *again = cJSON_GetArrayItem(parts, 2);
     assert(cJSON_IsNull(member(again, "form")) && strcmp(text(again, "again"), "Scherzo") == 0 && !flag(again, "repeats"));
+    /* The trio part gives its own 24 bars (R-495); the others take the compound's. The compound form does not modulate by itself:
+       each part decides, and the region the trio's key is drawn from is a choice the request still has. */
+    assert(number(trio, "bars") == 24 && cJSON_IsNull(member(first, "bars")) && cJSON_IsNull(member(again, "bars")));
+    assert(!flag(both, "modulates") && flag(member(both, "settings"), "modulate"));
 }
 
 static void test_game_loop(void) {
