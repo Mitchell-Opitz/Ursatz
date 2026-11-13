@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/compose.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
@@ -58,5 +59,38 @@ PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, Piec
 
 /* Frees the plan; safe on a zeroed or already destroyed performance. */
 void piece_performance_destroy(PiecePerformance *performance);
+
+/* The seed of the part at `index` of a compound form is the request's seed plus this much for each part before it. */
+#define PIECE_PART_SEED_STRIDE 40UL
+
+/*
+ * The parts of a compound form composed (piece_compose_parts): per part its composed plan, what composing reported and
+ * its home key. An again part has no plan and no outcome of its own (plans[i] NULL, outcomes[i] zeroed): it is its
+ * source's, and keys[i] is its source's key.
+ */
+typedef struct {
+    PiecePlan *plans[FORM_SPEC_MAX_PARTS_OF];
+    ComposeOutcome outcomes[FORM_SPEC_MAX_PARTS_OF];
+    AnalysisKey keys[FORM_SPEC_MAX_PARTS_OF];
+    FormSpec *forms[FORM_SPEC_MAX_PARTS_OF]; /* owned: the built-in form each part is a piece of (an again part has none) */
+    size_t count;
+} PieceParts;
+
+/* Frees the plans and the outcomes; safe on a zeroed or already destroyed set. */
+void piece_parts_destroy(PieceParts *parts);
+
+/*
+ * Composes the parts of a compound form (R-485), into *out (zeroed first). The keys are drawn first, from
+ * fill_rng_seed(request->seed): one piece_region_key draw for each part whose key is a region, in part order; a part with
+ * the home key is in request->key. Then each part that is not an again part, in order, is built (piece_build_plan) and
+ * composed (compose_run) as a piece of its own form at the size of the compound form's bars (request->bars and
+ * request->count pick the compound form's size; 0 for the default): the request with the part's form, bars, key and
+ * seed (request->seed + PIECE_PART_SEED_STRIDE * the part's index), and the request's motive, or none (invented) for a
+ * part with a motive of its own; config is copied with that seed, and with no basic motive for a part with its own.
+ * A part that fails fails the call with its result and leaves *out empty. PIECE_ERR_BAD_SIZE when the form has no such
+ * size, PIECE_ERR_BAD_REQUEST for a form that is not compound or a region with no key for the home key.
+ */
+PieceResult piece_compose_parts(const FormSpec *form, const PieceRequest *request, const ComposeConfig *config,
+                                PieceParts *out);
 
 #endif
