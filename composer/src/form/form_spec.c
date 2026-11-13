@@ -583,17 +583,18 @@ static bool same_construction(const FormSectionSpec *a, const FormSectionSpec *b
 
 /*
  * A figure (R-497, R-498): {"kind", "rhythm", "harmony", "change_at", "climax"}. kind and rhythm are required; harmony is
- * "kept" (default) or "reharmonized"; change_at is a bar of the section from 1, before its last, and needs the harmony
+ * "kept" (default; "reharmonized" in the parallel mode, which refuses "kept", R-499) or "reharmonized"; change_at is a bar of the section from 1, before its last, and needs the harmony
  * reharmonized; climax is a bool, false by default.
  */
-static bool read_figure(Reader *reader, const cJSON *figure, const char *path, size_t bars, PlanFigure *out) {
+static bool read_figure(Reader *reader, const cJSON *figure, const char *path, size_t bars, bool parallel,
+                        PlanFigure *out) {
     static const char *const MEMBERS[] = {"kind", "rhythm", "harmony", "change_at", "climax"};
     static const char *const KIND_NAMES[] = {"neighbor", "scale", "broken-chord"};
     static const char *const RHYTHM_NAMES[] = {"eighths", "sixteenths"};
     static const char *const HARMONY_NAMES[] = {"kept", "reharmonized"};
     int kind = -1;
     int rhythm = -1;
-    int harmony = 0;
+    int harmony = parallel ? 1 : 0;
     char at[64];
     memset(out, 0, sizeof(*out));
     if (!cJSON_IsObject(figure)) {
@@ -610,6 +611,10 @@ static bool read_figure(Reader *reader, const cJSON *figure, const char *path, s
     out->kind = (PlanFigureKind)kind;
     out->rhythm = (PlanFigureRhythm)rhythm;
     out->reharmonize = harmony == 1;
+    if (parallel && !out->reharmonize) {
+        join(at, sizeof(at), path, "harmony");
+        return fail(reader, at, "a variation in the other mode is reharmonized");
+    }
     const cJSON *change_at = member_of(reader, figure, path, "change_at", false);
     if (change_at) {
         long bar;
@@ -632,7 +637,7 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
                          const char *path, FormSectionSpec *out) {
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
                                           "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
-                                          "pedal",   "construction", "leads_in", "connective", "figure"};
+                                          "pedal",   "construction", "leads_in", "connective", "figure", "mode"};
     char text[FORM_SPEC_CADENCE_NAME_MAX];
     char at[64];
     if (!cJSON_IsObject(json)) {
@@ -826,9 +831,26 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
             return fail(reader, at, "unknown variation \"%s\"", variation->valuestring);
         }
     }
+    /* mode (R-499): "parallel", the section is in the home key's parallel key; only a figurate variation, with no keys */
+    const cJSON *mode = member_of(reader, json, path, "mode", false);
+    const bool figurate = returns && out->variation == PLAN_RETURN_FIGURATE;
+    if (mode) {
+        static const char *const MODE_NAMES[] = {"parallel"};
+        int value = -1;
+        join(at, sizeof(at), path, "mode");
+        if (!read_choice(reader, json, path, "mode", MODE_NAMES, 1, &value)) {
+            return false;
+        }
+        if (keys) {
+            return fail(reader, at, "a section in the parallel mode has no keys");
+        }
+        if (!figurate) {
+            return fail(reader, at, "the parallel mode needs a figurate variation");
+        }
+        out->parallel = true;
+    }
     /* figure (R-497): the motive of a figurate return, and only of one */
     const cJSON *figure = member_of(reader, json, path, "figure", false);
-    const bool figurate = returns && out->variation == PLAN_RETURN_FIGURATE;
     if (figure) {
         join(at, sizeof(at), path, "figure");
         if (!figurate) {
@@ -837,7 +859,7 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         if (!bars) {
             return fail(reader, at, "a figure needs bars");
         }
-        if (!read_figure(reader, figure, at, out->bars, &out->figure)) {
+        if (!read_figure(reader, figure, at, out->bars, out->parallel, &out->figure)) {
             return false;
         }
         out->has_figure = true;
