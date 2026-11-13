@@ -23,7 +23,6 @@
 #include <ursatz_composer/lanes.h>
 
 #include "form/form_internal.h"
-#include "grow/grow_internal.h"
 
 /* The most themes read across a plan: nine sections, each with a few themes. */
 #define MAX_THEMES 64
@@ -268,13 +267,12 @@ typedef struct {
 
 /*
  * The melody of a section reduced to one note per cell of the meter: the note sounding at the cell's start, lasting the
- * cell (a cell with no note sounding is left out). The cells are those the harmony operators place chords on, from the
- * start of the section. False on allocation failure or a meter without cells.
+ * cell (a cell with no note sounding is left out). The cells are the beats the figure is made on (form_figure.h), from the
+ * start of the section: a quarter, a dotted quarter in 6/8. False on allocation failure or a meter without cells.
  */
 static bool read_skeleton(const PiecePlan *plan, NodeId section, int **pitches, Rational **durations, size_t *count) {
     PlanSpan span = plan_node_span(plan, section);
     PlanMeter meter;
-    size_t cells;
     Rational cell;
     Rational end;
     LaneSpanId meter_id;
@@ -285,10 +283,12 @@ static bool read_skeleton(const PiecePlan *plan, NodeId section, int **pitches, 
         return false;
     }
     meter = plan_lane_span_payload(plan, meter_id)->meter;
-    if (!grow_cells_per_bar(&meter, &cells) || cells == 0 ||
-        rational_div_int(grow_bar_length(&meter), (long long)cells, &cell) != RATIONAL_OK || plan_span_end(span, &end) != PLAN_OK) {
+    bool compound = meter.beat_unit == 8 && meter.beats_per_bar == 6;
+    if ((!compound && meter.beat_unit != 4) || rational_make(compound ? 3 : 1, compound ? 8 : 4, &cell) != RATIONAL_OK ||
+        plan_span_end(span, &end) != PLAN_OK) {
         return false;
     }
+    size_t cells = (size_t)(compound ? 2 : (meter.beats_per_bar > 0 ? meter.beats_per_bar : 1));
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
     LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
     size_t total = 0;

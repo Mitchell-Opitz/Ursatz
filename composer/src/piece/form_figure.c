@@ -97,12 +97,31 @@ static bool nearest_chord_tone(unsigned mask, int pitch, int *out) {
     return found;
 }
 
+/*
+ * The cell of the figure: a beat of the meter, a quarter in 2/4, 3/4 and 4/4 and a dotted quarter in 6/8. The harmony
+ * operators' own cell is longer in 2/4, 3/4 and 4/4 (a bar in 2/4 and 3/4, a half in 4/4): a chord covers whole cells of
+ * the figure.
+ */
+static bool figure_cell_length(const PlanMeter *meter, Rational *cell, size_t *per_bar) {
+    if (meter->beat_unit == 8 && meter->beats_per_bar == 6) {
+        *per_bar = 2;
+        return rational_make(3, 8, cell) == RATIONAL_OK;
+    }
+    if (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) {
+        *per_bar = (size_t)meter->beats_per_bar;
+        return rational_make(1, 4, cell) == RATIONAL_OK;
+    }
+    return false;
+}
+
 /* A section as the figure reads it: its key, chords and cells, the returned melody, and the skeleton. */
 typedef struct {
     AnalysisKey key;
     PhraseChord chords[HARMONY_MAX_CHORDS];
     size_t chord_count;
     PhraseMetre metre;
+    Rational cell_length;             /* the cell of the figure: a beat (a quarter, a dotted quarter in 6/8), from the section's start */
+    size_t cells_per_bar;
     unsigned mask[FORM_SKELETON_MAX]; /* the pitch classes of the chord over each cell */
     SourceNote *notes;                /* the returned melody, moved, in order of onset */
     size_t note_count;
@@ -117,8 +136,8 @@ static void reading_free(Reading *reading) {
 }
 
 static bool cell_bounds(const Reading *reading, size_t cell, Rational *start, Rational *end) {
-    return rational_mul_int(reading->metre.cell_length, (long long)cell, start) == RATIONAL_OK &&
-           rational_add(*start, reading->metre.cell_length, end) == RATIONAL_OK;
+    return rational_mul_int(reading->cell_length, (long long)cell, start) == RATIONAL_OK &&
+           rational_add(*start, reading->cell_length, end) == RATIONAL_OK;
 }
 
 static Reading *read_section(const PiecePlan *plan, NodeId section) {
@@ -136,7 +155,8 @@ static Reading *read_section(const PiecePlan *plan, NodeId section) {
     if (!section_key(plan, span, &reading->key) ||
         !harmony_read_lane(plan, span, reading->key.mode, reading->chords, &reading->chord_count, metre) ||
         !rational_is_zero(metre->lead) || !rational_is_zero(metre->tail) || !rational_is_zero(metre->offset) ||
-        metre->cells == 0 || metre->cells > FORM_SKELETON_MAX || metre->cells_per_bar == 0 ||
+        metre->cells == 0 || metre->cells_per_bar == 0 || !figure_cell_length(&metre->meter, &reading->cell_length, &reading->cells_per_bar) ||
+        metre->bars * reading->cells_per_bar > FORM_SKELETON_MAX ||
         !return_key_shift(plan, plan_node_span(plan, ret.section), plan, span, &shift)) {
         reading_free(reading);
         return NULL;
@@ -146,24 +166,29 @@ static Reading *read_section(const PiecePlan *plan, NodeId section) {
         reading_free(reading);
         return NULL;
     }
-    /* The chord each cell is under. */
+    /* The chord each cell of the harmony is under, and the cells of the figure. */
     size_t chord_of[FORM_SKELETON_MAX];
-    size_t cell = 0;
+    size_t harmony_cell = 0;
     for (size_t c = 0; c < reading->chord_count; c++) {
-        for (size_t k = 0; k < reading->chords[c].cells && cell < FORM_SKELETON_MAX; k++) {
-            chord_of[cell++] = c;
+        for (size_t k = 0; k < reading->chords[c].cells && harmony_cell < FORM_SKELETON_MAX; k++) {
+            chord_of[harmony_cell++] = c;
         }
     }
-    bool ok = cell == metre->cells;
+    size_t cells = metre->bars * reading->cells_per_bar;
+    bool ok = harmony_cell == metre->cells && cells > 0;
     size_t half = metre->bars / 2;
     FormSkeleton *skeleton = &reading->skeleton;
-    skeleton->count = metre->cells;
-    for (size_t k = 0; ok && k < metre->cells; k++) {
+    skeleton->count = cells;
+    for (size_t k = 0; ok && k < cells; k++) {
         Rational start;
         Rational end;
+        Rational in_harmony;
+        long long harmony_index;
         unsigned seventh;
-        ok = cell_bounds(reading, k, &start, &end) &&
-             melody_chord_mask(&reading->key, &reading->chords[chord_of[k]], &reading->mask[k], &seventh);
+        ok = cell_bounds(reading, k, &start, &end) && rational_div(start, metre->cell_length, &in_harmony) == RATIONAL_OK &&
+             rational_floor(in_harmony, &harmony_index) == RATIONAL_OK && harmony_index >= 0 &&
+             (size_t)harmony_index < metre->cells &&
+             melody_chord_mask(&reading->key, &reading->chords[chord_of[harmony_index]], &reading->mask[k], &seventh);
         if (!ok) {
             break;
         }
@@ -191,7 +216,7 @@ static Reading *read_section(const PiecePlan *plan, NodeId section) {
             const SourceNote *reference = sounding ? sounding : before;
             ok = reference && nearest_chord_tone(mask, reference->pitch, &pitch);
         }
-        size_t bar = k / metre->cells_per_bar;
+        size_t bar = k / reading->cells_per_bar;
         skeleton->pitch[k] = pitch;
         skeleton->onset[k] = start;
         skeleton->kept[k] = bar + 1 == metre->bars || (half > 0 && bar + 1 == half);
@@ -237,7 +262,7 @@ static bool find_figure(const PiecePlan *plan, NodeId section, PlanFigure *out) 
 static size_t notes_per_cell(const Reading *reading, PlanFigureRhythm rhythm, Rational *length) {
     Rational per;
     if (rational_make(1, rhythm == PLAN_FIGURE_EIGHTHS ? 8 : 16, length) != RATIONAL_OK ||
-        rational_div(reading->metre.cell_length, *length, &per) != RATIONAL_OK || per.den != 1 || per.num < 2 || per.num > 8) {
+        rational_div(reading->cell_length, *length, &per) != RATIONAL_OK || per.den != 1 || per.num < 2 || per.num > 8) {
         return 0;
     }
     return (size_t)per.num;

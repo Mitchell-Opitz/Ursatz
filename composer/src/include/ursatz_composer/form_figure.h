@@ -14,8 +14,9 @@
  * The motive of variation (R-497): a section that returns another with the variation FIGURATE keeps the course of the
  * returned one and rewrites its melody from a skeleton of it, each cell of the meter circumscribed by one figure.
  *
- * The skeleton has one principal tone per cell of the meter (the cell the harmony operators place chords on: a quarter
- * in 2/4, 3/4 and 4/4, a dotted quarter in 6/8), a tone of the chord over the cell.
+ * The skeleton has one principal tone per cell of the meter, a tone of the chord over the cell. The cell is a beat: a
+ * quarter in 2/4, 3/4 and 4/4, a dotted quarter in 6/8. (The harmony operators' cell is longer in 2/4, 3/4 and 4/4: a
+ * chord covers whole cells of the figure.)
  */
 
 /* The most cells a skeleton holds. */
