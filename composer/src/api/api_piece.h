@@ -15,6 +15,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
+#include <ursatz_composer/piece_perform.h>
 #include <ursatz_composer/style.h>
 
 /*
@@ -104,7 +105,13 @@ typedef struct {
     PiecePlan *plan;
     ComposeOutcome outcome;
     bool composed;
+    /* A form with repeats or parts (form_spec_performed): the plan performed in order, what is rendered and answered (R-485). */
+    PiecePerformance performance;
+    bool performed;
 } PieceVersion;
+
+/* The plan a version is rendered and written out from: its performance when it is performed, else its plan. */
+const PiecePlan *api_piece_version_output_plan(const PieceVersion *version);
 
 /* The most versions a piece has: the loop and the ending of a game loop (api_piece_version_names). */
 #define API_PIECE_VERSIONS_MAX 2
@@ -117,6 +124,12 @@ typedef struct {
 } PieceMade;
 
 void api_piece_version_destroy(PieceVersion *version);
+
+/*
+ * A performed form is composed whole (R-485): regenerating a section and varying one are Later. COMPOSER_ERR_REQUEST at
+ * /request/form when the request's form is performed (form_spec_performed), else COMPOSER_OK.
+ */
+ComposerStatus api_piece_refuse_performed(const PieceSpec *request, ComposerError *error);
 void api_piece_made_destroy(PieceMade *piece);
 
 /* The lanes of a section to write again; none means the whole section. */

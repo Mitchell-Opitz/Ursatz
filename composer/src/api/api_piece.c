@@ -60,8 +60,21 @@ void api_piece_version_destroy(PieceVersion *version) {
     if (version->composed) {
         compose_outcome_destroy(&version->outcome);
     }
+    piece_performance_destroy(&version->performance);
     plan_destroy(version->plan);
     memset(version, 0, sizeof(*version));
+}
+
+ComposerStatus api_piece_refuse_performed(const PieceSpec *request, ComposerError *error) {
+    if (request->form && form_spec_performed(request->form)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/request/form",
+                        "regenerate and variations of the %s form are Later: it is composed whole", request->form->label);
+    }
+    return COMPOSER_OK;
+}
+
+const PiecePlan *api_piece_version_output_plan(const PieceVersion *version) {
+    return version->performed ? version->performance.plan : version->plan;
 }
 
 void api_piece_made_destroy(PieceMade *piece) {
@@ -130,6 +143,14 @@ static PieceResult compose_piece(PieceSpec *request, bool check, unsigned long s
     PieceResult result = piece_build_plan(&request->request, &piece->versions[0].plan);
     if (result == PIECE_OK) {
         result = compose_version(request, check, seed, &piece->versions[0]);
+    }
+    /* A form with repeats is composed once and performed in order; the performance is what is rendered (R-485). */
+    if (result == PIECE_OK && !request->form->request_sections && form_spec_performed(request->form)) {
+        PieceVersion *version = &piece->versions[0];
+        PiecePerformPart part = {request->form, form_spec_size(request->form, request->request.bars, request->request.count),
+                                 version->plan, true, NULL};
+        result = piece_perform(&part, 1, &version->performance);
+        version->performed = result == PIECE_OK;
     }
     if (result == PIECE_OK && piece->version_count == 2) {
         result = api_piece_compose_ending(request, check, seed, piece);
@@ -586,7 +607,7 @@ static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational st
 }
 
 /* The sections of the size a form with sizes was asked for, each matched to the plan's section of its name, in order. */
-static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
+static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
     const FormSpecSize *size = form_spec_size(request->form, request->request.bars, request->request.count);
     const PiecePlan *plan = version->plan;
@@ -630,6 +651,35 @@ static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *ve
     }
     free(keys);
     return count;
+}
+
+/*
+ * The rows of a form with sizes. A performed version has one row for each performed section: its start and length from the
+ * performed plan, every other member from the source section in the composed plan, so a repeat's row is its source's at its
+ * own start.
+ */
+static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
+    size_t count = collect_composed_rows(request, version, rows);
+    if (!version->performed) {
+        return count;
+    }
+    Row composed[PIECE_ROWS_MAX];
+    memcpy(composed, rows, count * sizeof(Row));
+    const PiecePerformance *performance = &version->performance;
+    size_t performed = 0;
+    for (size_t i = 0; i < performance->section_count && performed < PIECE_ROWS_MAX; i++) {
+        for (size_t j = 0; j < count; j++) {
+            if (composed[j].node == performance->sections[i].source) {
+                PlanSpan span = plan_node_span(performance->plan, performance->sections[i].node);
+                rows[performed] = composed[j];
+                rows[performed].start = span.start;
+                rows[performed].length = span.length;
+                performed++;
+                break;
+            }
+        }
+    }
+    return performed;
 }
 
 /* The sections of a version in time order, with the cadence each planned and, with a check, the one heard. */
@@ -1026,14 +1076,15 @@ static ComposerStatus render_loop(const PieceSpec *request, const PieceMade *pie
     PlanExportOptions loop_options = request->export_options;
     Rational start;
     Rational end;
-    if (api_piece_loop_region(piece->versions[0].plan, &start, &end)) {
+    const PiecePlan *output = api_piece_version_output_plan(&piece->versions[0]);
+    if (api_piece_loop_region(output, &start, &end)) {
         loop_options.loop_markers = true;
         loop_options.loop_start = start;
         loop_options.loop_end = end;
     }
     RenderedPlan rendered;
     PlanExportError detail;
-    if (plan_export_render(piece->versions[0].plan, &rendered, &detail) != PLAN_EXPORT_OK) {
+    if (plan_export_render(output, &rendered, &detail) != PLAN_EXPORT_OK) {
         return api_fail(&out->error, COMPOSER_ERR_REQUEST, outputs->midi ? "/midi" : "/musicxml", "cannot render the plan");
     }
     ComposerStatus status = COMPOSER_OK;
@@ -1074,7 +1125,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
     cJSON *plans = cJSON_CreateObject();
     bool plans_ok = plans != NULL;
     for (size_t i = 0; plans_ok && i < piece->version_count; i++) {
-        plans_ok = api_add(plans, version_name(request, i), api_piece_plan_object(piece->versions[i].plan));
+        plans_ok = api_add(plans, version_name(request, i), api_piece_plan_object(api_piece_version_output_plan(&piece->versions[i])));
     }
     if (!plans_ok || !api_add(document, "plans", plans)) {
         cJSON_Delete(plans);
@@ -1092,7 +1143,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
         cJSON *musicxml = cJSON_CreateObject();
         for (size_t i = 1; musicxml && i < piece->version_count; i++) {
             char *text = NULL;
-            ComposerStatus status = api_piece_musicxml(request, piece->versions[i].plan, &text, &out->error);
+            ComposerStatus status = api_piece_musicxml(request, api_piece_version_output_plan(&piece->versions[i]), &text, &out->error);
             if (status != COMPOSER_OK) {
                 cJSON_Delete(musicxml);
                 return status;
@@ -1110,7 +1161,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
     }
     if (outputs->ending_musicxml) {
         char *text = NULL;
-        ComposerStatus status = api_piece_musicxml(request, piece->versions[1].plan, &text, &out->error);
+        ComposerStatus status = api_piece_musicxml(request, api_piece_version_output_plan(&piece->versions[1]), &text, &out->error);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -1121,7 +1172,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
         }
     }
     PlanJsonError detail;
-    out->plan_json = plan_to_json(piece->versions[0].plan, &detail);
+    out->plan_json = plan_to_json(api_piece_version_output_plan(&piece->versions[0]), &detail);
     if (!out->plan_json) {
         return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the plan: %s", detail.message);
     }
@@ -1276,6 +1327,9 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
     if (status == COMPOSER_OK) {
         status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
                                         job, &out->error);
+    }
+    if (status == COMPOSER_OK && edit.text) {
+        status = api_piece_refuse_performed(request, &out->error);
     }
     if (status == COMPOSER_OK && outputs.ending_musicxml && version_count(request) < 2) {
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/ending_musicxml", "the %s form has no ending version",

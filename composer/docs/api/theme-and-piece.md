@@ -72,6 +72,8 @@ complete loop plan has no open theme section, so only a plan with open sections 
 version is `composer_api_export` of `plans.ending`; its MusicXML comes with `ending_musicxml` because the `xml:id` of
 its notes carry the span ids of the plan in memory, which a plan file renumbers.
 
+A form with `repeats` (R-485, [form-performance.md](../form-performance.md)) is composed once and performed in order, written out: its `plans` member, plan file, MIDI file and MusicXML are the performed plan (A A B A1 B A1), and the hearing members are the composed plan's. A row of a performed version is one for each performed section, its `start` and `beats` the performed section's and every other member its source's, so a repeat's row is its source's at its own start. `from` (regenerate) and the variations entry refuse such a form with `COMPOSER_ERR_REQUEST` at `/request/form`: `regenerate and variations of the <label> form are Later: it is composed whole`. A form with no `repeats` answers as before.
+
 Progress is reported once for each seed tried (`"seed"`) and for each compose stage of each section; a cancel is
 `COMPOSER_ERR_CANCELLED` with no document and no plan. Refusals have the path of the member at fault (`/request/key`,
 `/request/sections/<i>/beats`, `/regenerate/section`, `/regenerate/lanes`, `/from`, `/seed`). A piece no seed can compose,

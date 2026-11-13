@@ -1178,6 +1178,61 @@ static void lead_document(char *out, size_t cap, const char *a, const char *b, c
     document(out, cap, "", sizes);
 }
 
+/* The member repeats (R-485): what it reads as, and each refusal with the path of the member at fault. */
+static void test_repeats(void) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/forms/repeat-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    const char *original = "\"repeats\": [[\"A\"], [\"B\", \"A'\"]]";
+    FormSpec *form = NULL;
+    FormSpecError error;
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form_spec_performed(form) && form->repeat_count == 2);
+    assert(form->repeats[0].first == 0 && form->repeats[0].count == 1 && form->repeats[1].first == 1 &&
+           form->repeats[1].count == 2);
+    form_spec_destroy(form);
+    char *plain = replaced_in(text, original, "\"checks\": [\"sections\"]");
+    assert(form_spec_parse(plain, &form, &error) == FORM_SPEC_OK && !form_spec_performed(form) && form->repeat_count == 0);
+    form_spec_destroy(form);
+    free(plain);
+    /* Groups may be single, adjacent and cover every section. */
+    char *all = replaced_in(text, original, "\"repeats\": [[\"A\", \"B\", \"A'\"]]");
+    assert(form_spec_parse(all, &form, &error) == FORM_SPEC_OK && form->repeat_count == 1 && form->repeats[0].count == 3);
+    form_spec_destroy(form);
+    free(all);
+    static const struct {
+        const char *repeats;
+        const char *path;
+    } REFUSED[] = {
+        {"\"repeats\": []", "/repeats"},
+        {"\"repeats\": \"A\"", "/repeats"},
+        {"\"repeats\": [[]]", "/repeats/0"},
+        {"\"repeats\": [\"A\"]", "/repeats/0"},
+        {"\"repeats\": [[\"A\"], [\"C\"]]", "/repeats/1/0"},
+        {"\"repeats\": [[1]]", "/repeats/0/0"},
+        {"\"repeats\": [[\"A\", \"A'\"]]", "/repeats/0/1"},
+        {"\"repeats\": [[\"B\", \"A\"]]", "/repeats/0/1"},
+        {"\"repeats\": [[\"A\", \"B\"], [\"B\"]]", "/repeats/1/0"},
+        {"\"repeats\": [[\"B\"], [\"A\"]]", "/repeats/1/0"},
+    };
+    for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+        char *document = replaced_in(text, original, REFUSED[i].repeats);
+        refused(document, REFUSED[i].path);
+        free(document);
+    }
+    /* A name every size must have: a second size with no A' refuses the group that names it. */
+    char *sizes = replaced_in(text, "]}\n  ]", "]},\n    {\"bars\": 8, \"sections\": [\n"
+        "      {\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 4, \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\"},\n"
+        "      {\"name\": \"B\", \"letter\": \"B\", \"role\": \"contrast\", \"bars\": 4, \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"half\"}\n"
+        "    ]}\n  ]");
+    refused(sizes, "/repeats/1/1");
+    free(sizes);
+    /* A form whose sections the request gives has no repeats. */
+    refused("{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"x\", \"label\": \"X\", \"sections\": \"request\", "
+            "\"repeats\": [[\"A\"]]}",
+            "/repeats");
+    free(text);
+}
+
 /* The members lead_in and connective: what they read as, and each refusal with the path of the member at fault. */
 static void test_lead_ins(void) {
     char text[4096];
@@ -1517,6 +1572,7 @@ int main(int argc, char **argv) {
     test_sizes();
     test_pedal();
     test_lead_ins();
+    test_repeats();
     test_construction();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
