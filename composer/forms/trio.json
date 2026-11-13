@@ -1,0 +1,23 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "trio",
+  "label": "Trio",
+  "closing": true,
+  "meters": ["3/4"],
+  "tempo": 112,
+  "regions": [{"name": "away", "major": [5, 3], "minor": [3, 5]}],
+  "repeats": [["A"], ["B", "A return"]],
+  "sizes": [
+    {"bars": 12, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"end": "away"}},
+      {"name": "B", "letter": "B", "role": "contrast", "bars": 4, "beginning": "presentation", "ending": "continuation", "cadence": "half", "keys": {"start": "away"}, "motive": "invert tonal=1", "pedal": "dominant", "leads_in": true, "connective": "sometimes"},
+      {"name": "A return", "letter": "A", "role": "return", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "returns": "A", "variation": "varied"}
+    ]},
+    {"bars": 24, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"end": "away"}},
+      {"name": "B", "letter": "B", "role": "contrast", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "keys": {"start": "away"}, "motive": "invert tonal=1", "pedal": "dominant", "leads_in": true, "connective": "sometimes"},
+      {"name": "A return", "letter": "A", "role": "return", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "returns": "A", "variation": "varied"}
+    ]}
+  ]
+}

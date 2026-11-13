@@ -90,16 +90,18 @@ static void assert_choice(const cJSON *object, const char *name, const char *val
 }
 
 static void test_registry_order(void) {
-    const char *const names[] = {"binary", "rounded-binary", "ternary", "variations", "loop", "layered", "game-loop"};
+    const char *const names[] = {"binary", "rounded-binary", "ternary", "variations", "loop", "layered",
+                                 "minuet", "trio", "minuet-and-trio", "game-loop"};
     const cJSON *list = member(forms, "forms");
-    assert(cJSON_GetArraySize(list) == 7);
-    for (int i = 0; i < 7; i++) {
+    assert(cJSON_GetArraySize(list) == 10);
+    for (int i = 0; i < 10; i++) {
         const cJSON *form = cJSON_GetArrayItem(list, i);
         assert(strcmp(text(form, "name"), names[i]) == 0);
         assert(*text(form, "label"));
-        bool game_loop = i == 6;
+        bool game_loop = i == 9;
         assert(strcmp(text(form, "sections"), game_loop ? "request" : "sizes") == 0);
-        assert(flag(form, "closing") == (i < 4)); /* the four with sections that end in the home key close */
+        /* The four with sections that end in the home key close, and so do the minuet, the trio and the two together. */
+        assert(flag(form, "closing") == (i < 4 || (i >= 6 && i < 9)));
         assert((cJSON_GetArraySize(member(form, "sizes")) == 0) == game_loop);
     }
 }
@@ -202,18 +204,21 @@ static void test_layered(void) {
     assert_strings(member(cJSON_GetArrayItem(sections, 3), "layers"), all, 3);
 }
 
-/* Ternary's B is written over a dominant pedal at both sizes (R-446); no other section of any form names one. */
+/* The B of the ternary, the minuet and the trio is written over a dominant pedal at both sizes (R-446, R-487); no other
+ * section of any form names one. */
 static void test_pedal(void) {
     const cJSON *list = member(forms, "forms");
     const cJSON *form = NULL;
     size_t pedals = 0;
     cJSON_ArrayForEach(form, list) {
+        const char *name = text(form, "name");
+        bool pedal_form = strcmp(name, "ternary") == 0 || strcmp(name, "minuet") == 0 || strcmp(name, "trio") == 0;
         const cJSON *size = NULL;
         cJSON_ArrayForEach(size, member(form, "sizes")) {
             const cJSON *section = NULL;
             cJSON_ArrayForEach(section, member(size, "sections")) {
                 const cJSON *pedal = member(section, "pedal");
-                if (strcmp(text(form, "name"), "ternary") == 0 && strcmp(text(section, "name"), "B") == 0) {
+                if (pedal_form && strcmp(text(section, "name"), "B") == 0) {
                     assert_choice(section, "pedal", "dominant", "Dominant pedal");
                     pedals++;
                 } else {
@@ -222,7 +227,37 @@ static void test_pedal(void) {
             }
         }
     }
-    assert((int)pedals == cJSON_GetArraySize(member(form_named("ternary"), "sizes")) && pedals >= 2);
+    size_t sizes = (size_t)(cJSON_GetArraySize(member(form_named("ternary"), "sizes")) +
+                            cJSON_GetArraySize(member(form_named("minuet"), "sizes")) +
+                            cJSON_GetArraySize(member(form_named("trio"), "sizes")));
+    assert(pedals == sizes && pedals >= 6);
+}
+
+/* The minuet, the trio and the minuet and trio (R-487): two sizes each, 24 bars the default, a region each; the minuet and
+ * the trio have the ternary's three sections, the compound form has none of its own. */
+static void test_minuet(void) {
+    const char *const dance[] = {"minuet", "trio"};
+    for (int i = 0; i < 2; i++) {
+        const cJSON *form = form_named(dance[i]);
+        assert(cJSON_GetArraySize(member(form, "sizes")) == 2 && number(default_size(form), "bars") == 24);
+        assert(number(size_with_bars(form, 12), "bars") == 12);
+        const char *const regions[] = {"away"};
+        assert_strings(member(form, "regions"), regions, 1);
+        const cJSON *sections = member(default_size(form), "sections");
+        assert(cJSON_GetArraySize(sections) == 3);
+        assert(strcmp(text(cJSON_GetArrayItem(sections, 0), "name"), "A") == 0 &&
+               strcmp(text(cJSON_GetArrayItem(sections, 1), "name"), "B") == 0 &&
+               strcmp(text(cJSON_GetArrayItem(sections, 2), "name"), "A return") == 0);
+        assert(number(cJSON_GetArrayItem(sections, 0), "bars") == 8);
+    }
+    assert(strcmp(text(form_named("minuet"), "label"), "Minuet") == 0 && strcmp(text(form_named("trio"), "label"), "Trio") == 0);
+    const cJSON *both = form_named("minuet-and-trio");
+    assert(strcmp(text(both, "label"), "Minuet and trio") == 0);
+    assert(cJSON_GetArraySize(member(both, "sizes")) == 2 && number(default_size(both), "bars") == 24 &&
+           number(size_with_bars(both, 12), "bars") == 12);
+    const char *const trio_region[] = {"trio"};
+    assert_strings(member(both, "regions"), trio_region, 1);
+    assert(cJSON_GetArraySize(member(default_size(both), "sections")) == 0);
 }
 
 static void test_game_loop(void) {
@@ -281,6 +316,7 @@ int main(void) {
     test_variations();
     test_layered();
     test_pedal();
+    test_minuet();
     test_game_loop();
     cJSON_Delete(forms);
     printf("test_api_forms: ok\n");

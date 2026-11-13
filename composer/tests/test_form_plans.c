@@ -21,7 +21,9 @@
  * The plans every form template makes (R-417): each template at each size in C major 4/4 and A minor 3/4, with an
  * invented motive, once without modulate and with modulate and seeds 1 to 5, serialized with plan_to_json (plan
  * metadata is empty here, so the text is stable) and compared by a 64-bit FNV-1a hash with
- * tests/fixtures/forms/template-plans.txt, one line each: form, bars, count, key, meter, modulate, seed, hash.
+ * tests/fixtures/forms/template-plans.txt, one line each: form, bars, count, key, meter, modulate, seed, hash. A form
+ * that lists meters (the minuet and the trio) is recorded in its first meter, 3/4 in both keys; a compound form
+ * (minuet-and-trio) is not hashed: each of its parts is a form of its own that is.
  *
  *   test_form_plans                 compares every plan with the file
  *   test_form_plans record          writes the file
@@ -79,9 +81,19 @@ static size_t sizes_of(Size *out) {
     for (size_t count = 2; count <= 4; count++) {
         out[n++] = (Size){"layered", 0, count};
     }
+    static const size_t MINUET[] = {12, 24};
+    for (size_t i = 0; i < 2; i++) {
+        out[n++] = (Size){"minuet", MINUET[i], 0};
+    }
+    for (size_t i = 0; i < 2; i++) {
+        out[n++] = (Size){"trio", MINUET[i], 0};
+    }
+    for (size_t i = 0; i < 2; i++) {
+        out[n++] = (Size){"minuet-and-trio", MINUET[i], 0};
+    }
     return n;
 }
-#define MAX_SIZES 24
+#define MAX_SIZES 32
 
 static uint64_t fnv1a(const char *text) {
     uint64_t hash = 14695981039346656037ULL;
@@ -105,12 +117,12 @@ static uint64_t fnv1a_plan(char *json) {
 }
 
 /* The hash of the plan the request makes. */
-static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modulate, unsigned long seed) {
+static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats, bool modulate, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = size->kind;
     request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
-    request.meter.beats_per_bar = scenario->beats;
+    request.meter.beats_per_bar = beats;
     request.meter.beat_unit = 4;
     request.bars = size->bars;
     request.count = size->count;
@@ -135,10 +147,23 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, bool modul
     return hash;
 }
 
-static void line(char *out, size_t cap, const Size *size, const Scenario *scenario, bool modulate, unsigned long seed,
-                 uint64_t hash) {
+static void line(char *out, size_t cap, const Size *size, const Scenario *scenario, int beats, bool modulate,
+                 unsigned long seed, uint64_t hash) {
     snprintf(out, cap, "%s %zu %zu %s %d/4 %d %lu %016llx", size->kind, size->bars, size->count,
-             scenario->name, scenario->beats, modulate ? 1 : 0, seed, (unsigned long long)hash);
+             scenario->name, beats, modulate ? 1 : 0, seed, (unsigned long long)hash);
+}
+
+/* The beats a bar of the form's piece has in the scenario: the scenario's, or the form's first meter when it lists
+ * meters. -1 for a compound form, which is not hashed. */
+static int beats_of(const Size *size, const Scenario *scenario) {
+    FormSpec *form = NULL;
+    if (form_spec_builtin(size->kind, &form) != FORM_SPEC_OK) {
+        fprintf(stderr, "no built-in form %s\n", size->kind);
+        exit(1);
+    }
+    int beats = form->part_count > 0 ? -1 : form->meter_count > 0 ? form->meters[0].beats_per_bar : scenario->beats;
+    form_spec_destroy(form);
+    return beats;
 }
 
 /* Calls each(line) for every plan in file order; stops at the first nonzero. */
@@ -149,12 +174,16 @@ static int every_plan(Each each, void *state) {
     size_t count = sizes_of(sizes);
     for (size_t z = 0; z < count; z++) {
         for (size_t s = 0; s < SCENARIO_COUNT; s++) {
+            int beats = beats_of(&sizes[z], &SCENARIOS[s]);
+            if (beats < 0) {
+                continue;
+            }
             for (unsigned long mode = 0; mode <= SEEDS; mode++) {
                 bool modulate = mode != 0;
                 unsigned long seed = mode;
                 char text[256];
-                line(text, sizeof(text), &sizes[z], &SCENARIOS[s], modulate, seed,
-                     plan_hash(&sizes[z], &SCENARIOS[s], modulate, seed));
+                line(text, sizeof(text), &sizes[z], &SCENARIOS[s], beats, modulate, seed,
+                     plan_hash(&sizes[z], &SCENARIOS[s], beats, modulate, seed));
                 int stop = each(text, state);
                 if (stop) {
                     return stop;
