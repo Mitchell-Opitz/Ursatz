@@ -452,7 +452,8 @@ bool return_vary(ReturnPayload *payload, FillRng *rng) {
     case PLAN_RETURN_REREGISTER:
         return payload->octave != 0 && reregister(payload);
     case PLAN_RETURN_FIGURATE:
-        return false; /* not offered: variation_offered refuses it until the figurate operator exists (R-497) */
+        /* The copy keeps its melody: compose_run writes the figure (form_figure_write) once the harmony is final (R-497). */
+        return payload->reharmonize ? reharmonize(payload) : true;
     }
     return false;
 }
@@ -713,6 +714,17 @@ static void check_varied(const ReturnPayload *payload, FillCheck *out) {
     out->score_numerator = 1;
 }
 
+/* A figurate return before its figure is written: the returned section's melody as it is, over its own harmony or a reharmonized one. */
+static void check_figurate(const ReturnPayload *payload, FillCheck *out) {
+    if (payload->reharmonize) {
+        check_reharmonize(payload, out);
+    } else if (!return_result_matches(payload, NULL)) {
+        reject(out, "figurate return is not the returned section");
+    } else {
+        out->score_numerator = 1;
+    }
+}
+
 static void check_reregister(const ReturnPayload *payload, FillCheck *out) {
     ReturnAllow allow = {0, (1u << PLAN_LANE_MELODY) | (1u << PLAN_LANE_INNER_VOICE), payload->octave};
     if (payload->octave != 12 && payload->octave != -12) {
@@ -749,8 +761,10 @@ void return_vary_check(const ReturnPayload *payload, FillCheck *out) {
     case PLAN_RETURN_REREGISTER:
         check_reregister(payload, out);
         break;
-    case PLAN_RETURN_EXACT:
     case PLAN_RETURN_FIGURATE:
+        check_figurate(payload, out);
+        break;
+    case PLAN_RETURN_EXACT:
         break;
     }
 }

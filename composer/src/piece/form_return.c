@@ -380,10 +380,11 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
     return true;
 }
 
-/* The variations the operator makes: all of them but figurate, which is grown afresh until its operator exists (R-497). */
+/* The variations the operator makes: all of them (figurate keeps the melody here; compose_run writes its figure, R-497). */
 static bool variation_offered(PlanReturnVariation variation) {
     return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
-           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED;
+           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED ||
+           variation == PLAN_RETURN_FIGURATE;
 }
 
 /* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
@@ -699,6 +700,12 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
         return NULL;
     }
     payload->key = pieces[0].key;
+    if (variation == PLAN_RETURN_FIGURATE) {
+        for (size_t i = 0; i < plan_node_constraint_count(plan, target); i++) {
+            const PlanConstraint *constraint = plan_node_constraint_at(plan, target, i);
+            payload->reharmonize = payload->reharmonize || (constraint->kind == PLAN_CONSTRAINT_FIGURE && constraint->params.figure.reharmonize);
+        }
+    }
     if (!return_copy_read(plan, source, &payload->source) || !return_copy_clone(&payload->source, &payload->result) ||
         !return_copy_move(&payload->result, from.start, payload->span.start, payload->transpose)) {
         return_payload_destroy(payload);
@@ -765,6 +772,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         }
         const char *label = variation == PLAN_RETURN_EXACT       ? "exact"
                             : variation == PLAN_RETURN_REHARMONIZE ? "reharmonize"
+                            : variation == PLAN_RETURN_FIGURATE    ? "figurate"
                             : i == 0                              ? "octave up"
                                                                   : "octave down";
         if (!add_payload(out, label, payload)) {

@@ -63,6 +63,7 @@ typedef struct {
     int octave;          /* REREGISTER: 12 or -12, else 0 */
     int range_low;       /* the melody range a re-registered melody keeps to */
     int range_high;
+    bool reharmonize;    /* FIGURATE: the figure sits over a reharmonized copy (the FIGURE constraint says so) */
     ReturnCopy source;   /* the returned section, as read */
     ReturnCopy result;   /* the target's, after the variation */
 } ReturnPayload;
