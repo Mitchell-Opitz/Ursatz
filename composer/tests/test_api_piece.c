@@ -839,6 +839,8 @@ static void expect_one_version(const cJSON *document, const char *const *ids, co
     }
 }
 
+static void expect_figure_rows(const cJSON *document);
+
 static void test_composed_forms(char **rounded_plan) {
     static const char *const RB_IDS[] = {"A", "B", "A'"};
     static const char *const RB_ROLES[] = {"theme", "contrast", "return"};
@@ -877,6 +879,7 @@ static void test_composed_forms(char **rounded_plan) {
     printed = form_request("variations.json", NULL, FV_EDITS_56, 3, false);
     document = composed_document(printed, &response);
     expect_one_version(document, FV_IDS_56, FV_ROLES_56, 8);
+    expect_figure_rows(document);
     write_pair("piece", "figured-variations-56", printed, &response);
     cJSON_Delete(document);
     composer_response_destroy(&response);
@@ -1036,6 +1039,55 @@ static const char *row_text(const cJSON *row, const char *member) {
 }
 
 /*
+ * The figure of each row of the figured variations (R-501): kind and rhythm of V1 to V5, V3 in the parallel mode (key C minor),
+ * V4's root change at bar 3, a skeleton of 16 tones (8 bars of 2 cells in 2/4) with the tones named as the API names pitches,
+ * and no figure on the theme or the codettas. A figurate return's changes text names the skeleton, not the notes added.
+ */
+static void expect_figure_rows(const cJSON *document) {
+    static const char *const IDS[] = {"variation 1", "variation 2", "variation 3", "variation 4", "variation 5"};
+    static const char *const KINDS[] = {"neighbor", "neighbor", "scale", "scale", "broken-chord"};
+    static const char *const RHYTHMS[] = {"eighths", "sixteenths", "eighths", "sixteenths", "sixteenths"};
+    for (int i = 0; i < 5; i++) {
+        const cJSON *row = row_named(document, IDS[i]);
+        const cJSON *figure = cJSON_GetObjectItemCaseSensitive(row, "figure");
+        assert(cJSON_IsObject(figure));
+        assert(strcmp(row_text(figure, "kind"), KINDS[i]) == 0 && strcmp(row_text(figure, "rhythm"), RHYTHMS[i]) == 0);
+        assert(strcmp(row_text(figure, "harmony"), i == 3 ? "reharmonized" : "kept") == 0 || i == 2);
+        const cJSON *skeleton = cJSON_GetObjectItemCaseSensitive(figure, "skeleton");
+        assert(cJSON_IsArray(skeleton) && cJSON_GetArraySize(skeleton) == 16);
+        const cJSON *tone = NULL;
+        cJSON_ArrayForEach(tone, skeleton) {
+            assert(cJSON_IsString(tone) && tone->valuestring[0] >= 'A' && tone->valuestring[0] <= 'G' &&
+                   tone->valuestring[strlen(tone->valuestring) - 1] >= '0' && tone->valuestring[strlen(tone->valuestring) - 1] <= '9');
+        }
+        const char *text = row_text(figure, "text");
+        assert(text && strstr(text, " over the skeleton ") && strstr(text, cJSON_GetArrayItem(skeleton, 0)->valuestring) &&
+               strstr(text, " ..."));
+        assert(cJSON_IsBool(cJSON_GetObjectItemCaseSensitive(figure, "climax")) && cJSON_IsBool(cJSON_GetObjectItemCaseSensitive(figure, "raised")));
+        assert(strstr(row_text(cJSON_GetObjectItemCaseSensitive(row, "changes"), "text"), "melody: figured over the skeleton") != NULL);
+        assert(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(figure, "climax")) == (i == 4));
+        assert(!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(figure, "raised")) || i == 4);
+        /* The climax variation names its octave in the text exactly when it was raised. */
+        assert((strstr(text, "an octave up") != NULL) == cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(figure, "raised")));
+        /* Only V3 is in the parallel mode, and only V4 asks for a root change. */
+        assert((row_text(figure, "mode") != NULL && strcmp(row_text(figure, "mode"), "parallel") == 0) == (i == 2));
+        const cJSON *change_at = cJSON_GetObjectItemCaseSensitive(figure, "change_at");
+        assert(i == 3 ? (cJSON_IsNumber(change_at) && change_at->valuedouble == 3) : cJSON_IsNull(change_at));
+        assert(strstr(text, "root changed at bar 3") != NULL ? i == 3 : true);
+    }
+    assert(strcmp(row_text(row_named(document, "variation 3"), "key"), "C minor") == 0);
+    assert(strcmp(row_text(row_named(document, "variation 1"), "key"), "C major") == 0);
+    assert(strstr(row_text(cJSON_GetObjectItemCaseSensitive(row_named(document, "variation 3"), "figure"), "text"), ", in the parallel mode") != NULL);
+    assert(strstr(row_text(cJSON_GetObjectItemCaseSensitive(row_named(document, "variation 4"), "figure"), "text"), ", root changed at bar 3") != NULL);
+    assert(strstr(row_text(cJSON_GetObjectItemCaseSensitive(row_named(document, "variation 1"), "figure"), "text"), "neighbor tones in eighths over the skeleton ") ==
+           row_text(cJSON_GetObjectItemCaseSensitive(row_named(document, "variation 1"), "figure"), "text"));
+    static const char *const NONE[] = {"theme", "C1", "C2"};
+    for (int i = 0; i < 3; i++) {
+        assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(row_named(document, NONE[i]), "figure")));
+    }
+}
+
+/*
  * The rows of a small ternary (R-449): what the Analyzer heard (B's half cadence, the key at A's start), B's dominant pedal as
  * written, and how A return differs from A: a varied copy with melody added, or, with modulate and keys that move, a section
  * composed anew.
@@ -1058,6 +1110,9 @@ static void test_ternary_rows(void) {
     assert(row_text(b, "pedal") && strcmp(row_text(b, "pedal"), "dominant") == 0);
     assert(row_text(a, "pedal") == NULL && row_text(back, "pedal") == NULL);
     assert(row_text(a, "changes") == NULL && row_text(b, "changes") == NULL);
+    /* No row of a ternary has a figure (R-501). */
+    assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(a, "figure")) && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(b, "figure")) &&
+           cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(back, "figure")));
     /* A form that is not performed has no part, no repeat, no upbeat and no connective, and no performed document. */
     const cJSON *plain_rows = cJSON_GetObjectItemCaseSensitive(
         cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "piece"), "sections");

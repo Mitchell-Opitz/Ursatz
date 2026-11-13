@@ -460,6 +460,7 @@
         "key",
         "pedal",
         "changes",
+        "figure",
         "part",
         "repeat_of",
         "upbeat",
@@ -561,6 +562,17 @@
           ],
           "description": "How a section that returns another differs from it; null for a section that returns none."
         },
+        "figure": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/figure"
+            }
+          ],
+          "description": "The figure and skeleton of a figurate return (R-501); null for any other section."
+        },
         "part": {
           "type": [
             "string",
@@ -610,6 +622,81 @@
         }
       },
       "description": "A section of the size of a form with sizes."
+    },
+    "figure": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rhythm",
+        "harmony",
+        "change_at",
+        "climax",
+        "raised",
+        "mode",
+        "skeleton",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "neighbor",
+            "scale",
+            "broken-chord"
+          ],
+          "description": "The motive of variation: neighbor tones, a scale line toward the next skeleton tone, or a broken chord of the chord over the cell."
+        },
+        "rhythm": {
+          "enum": [
+            "eighths",
+            "sixteenths"
+          ],
+          "description": "The note value the figure is held in."
+        },
+        "harmony": {
+          "enum": [
+            "kept",
+            "reharmonized"
+          ],
+          "description": "Whether the figure sits over the theme's chords or over a reharmonized copy."
+        },
+        "change_at": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "description": "The bar at which the reharmonized copy's root must change; null for none."
+        },
+        "climax": {
+          "type": "boolean",
+          "description": "The variation asks for the octave above when it fits the melody range."
+        },
+        "raised": {
+          "type": "boolean",
+          "description": "The climax octave was applied."
+        },
+        "mode": {
+          "enum": [
+            "parallel",
+            null
+          ],
+          "description": "\"parallel\" for a variation in the home key's parallel mode; null for the home mode."
+        },
+        "skeleton": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-G][#b]?-?[0-9]+$"
+          },
+          "description": "The principal tone of each cell of the meter, as a note name and octave (C4 = middle C), spelled in the section's key."
+        },
+        "text": {
+          "type": "string",
+          "description": "One sentence: the figure, what changes with it and the first eight tones of the skeleton."
+        }
+      },
+      "description": "The figure of a figurate return and the skeleton it is made over (R-501)."
     },
     "changes": {
       "type": "object",

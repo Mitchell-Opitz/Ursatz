@@ -220,6 +220,57 @@ static void test_figured_variations(void) {
     const cJSON *small = size_with_bars(form, 40);
     assert(number(small, "count") == 3 && cJSON_GetArraySize(member(small, "sections")) == 6);
     assert(strcmp(text(cJSON_GetArrayItem(member(small, "sections"), 3), "variation"), "figurate") == 0);
+    /* The figure and the mode of each section (R-501). */
+    const char *const kinds[] = {"neighbor", "neighbor", "scale", "scale", "broken-chord"};
+    const char *const rhythms[] = {"eighths", "sixteenths", "eighths", "sixteenths", "sixteenths"};
+    for (int i = 0; i < 8; i++) {
+        const cJSON *section = cJSON_GetArrayItem(sections, i);
+        const cJSON *figure = member(section, "figure");
+        if (i < 1 || i > 5) {
+            assert(cJSON_IsNull(figure));
+        } else {
+            assert(cJSON_IsObject(figure) && strcmp(text(figure, "kind"), kinds[i - 1]) == 0 &&
+                   strcmp(text(figure, "rhythm"), rhythms[i - 1]) == 0);
+            assert(strcmp(text(figure, "harmony"), i == 4 ? "reharmonized" : "kept") == 0 || i == 3);
+            assert(i == 4 ? number(figure, "change_at") == 3 : cJSON_IsNull(member(figure, "change_at")));
+            assert(flag(figure, "climax") == (i == 5));
+        }
+        const cJSON *mode = member(section, "mode");
+        assert(i == 3 ? (cJSON_IsString(mode) && strcmp(mode->valuestring, "parallel") == 0) : cJSON_IsNull(mode));
+    }
+    const cJSON *small_sections = member(small, "sections");
+    assert(strcmp(text(member(cJSON_GetArrayItem(small_sections, 2), "figure"), "kind"), "scale") == 0 &&
+           strcmp(text(cJSON_GetArrayItem(small_sections, 2), "mode"), "parallel") == 0);
+    assert(flag(member(cJSON_GetArrayItem(small_sections, 3), "figure"), "climax"));
+    /* The old variations form has no figure and no mode. */
+    const cJSON *old = member(default_size(form_named("variations")), "sections");
+    for (int i = 0; i < cJSON_GetArraySize(old); i++) {
+        assert(cJSON_IsNull(member(cJSON_GetArrayItem(old, i), "figure")) && cJSON_IsNull(member(cJSON_GetArrayItem(old, i), "mode")));
+    }
+}
+
+/* No section of any other form has a figure or a mode (R-501); the scherzo's sections in particular. */
+static void test_no_figure_elsewhere(void) {
+    const cJSON *form = NULL;
+    size_t checked = 0;
+    cJSON_ArrayForEach(form, member(forms, "forms")) {
+        if (strcmp(text(form, "name"), "figured-variations") == 0) {
+            continue;
+        }
+        const cJSON *size = NULL;
+        cJSON_ArrayForEach(size, member(form, "sizes")) {
+            const cJSON *section = NULL;
+            cJSON_ArrayForEach(section, member(size, "sections")) {
+                assert(cJSON_IsNull(member(section, "figure")) && cJSON_IsNull(member(section, "mode")));
+                checked++;
+            }
+        }
+    }
+    assert(checked > 0);
+    const cJSON *scherzo = member(default_size(form_named("scherzo")), "sections");
+    for (int i = 0; i < cJSON_GetArraySize(scherzo); i++) {
+        assert(cJSON_IsNull(member(cJSON_GetArrayItem(scherzo, i), "figure")) && cJSON_IsNull(member(cJSON_GetArrayItem(scherzo, i), "mode")));
+    }
 }
 
 static void test_layered(void) {
@@ -462,6 +513,7 @@ int main(void) {
     test_rounded_binary();
     test_variations();
     test_figured_variations();
+    test_no_figure_elsewhere();
     test_layered();
     test_pedal();
     test_minuet();
