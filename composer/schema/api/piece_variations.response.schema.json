@@ -410,6 +410,7 @@
         "returns",
         "motive",
         "key_heard",
+        "key",
         "pedal",
         "changes",
         "part",
@@ -482,6 +483,13 @@
             "null"
           ],
           "description": "The key the Analyzer heard at the section's start over the whole piece, as \"C major\"; null when none was heard."
+        },
+        "key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The key the plan gives the section's start, as \"G major\" (the key lane's span under it, R-493); null when the plan has none. It is the planned key: the key the Analyzer hears (key_heard) often differs."
         },
         "pedal": {
           "enum": [

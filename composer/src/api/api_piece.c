@@ -525,7 +525,8 @@ typedef struct {
     const PiecePlan *plan; /* a form with sizes: the plan and the section's node, for the pedal and the changes */
     NodeId node;
     char key_heard[16]; /* the key the Analyzer heard at the section's start over the whole piece, "" when none */
-    bool pedal;         /* a harmony span in the section's first half was written over a pedal */
+    char key[16];       /* the key the plan gives the section's start (R-493), "" when the plan has none */
+    bool pedal;        /* a harmony span in the section's first half was written over a pedal */
     bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
     const char *part;      /* a performed compound form: the name of the part the section is in, else NULL */
     const char *repeat_of; /* a performed section that writes another out again: the first time's name, else NULL */
@@ -636,6 +637,36 @@ static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational st
     }
 }
 
+/* The key the plan's key lane gives at the start of a span, as "C major"; "" when the lane has none there. */
+static void planned_key_at(const PiecePlan *plan, PlanSpan section, char *out, size_t size) {
+    PlanSpan up_to = {{0, 1}, {0, 1}};
+    Rational start = section.start;
+    Rational end_of_section;
+    out[0] = '\0';
+    if (plan_span_end(section, &end_of_section) != PLAN_OK ||
+        rational_make(end_of_section.num, end_of_section.den, &up_to.length) != RATIONAL_OK) {
+        return;
+    }
+    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, up_to, NULL, 0);
+    LaneSpanId *ids = found ? calloc(found, sizeof(*ids)) : NULL;
+    if (!ids) {
+        return;
+    }
+    plan_lane_find(plan, PLAN_LANE_KEY, 0, up_to, ids, found);
+    const PlanLanePayload *at = NULL;
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        Rational end;
+        if (rational_cmp(span.start, start) <= 0 && plan_span_end(span, &end) == PLAN_OK && rational_cmp(start, end) < 0) {
+            at = plan_lane_span_payload(plan, ids[i]);
+        }
+    }
+    if (at) {
+        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.mode == KEY_STRUCTURE_MODE_MINOR, out, size);
+    }
+    free(ids);
+}
+
 /* The sections of a size of a form with sizes, each matched to the plan's section of its name, in order. */
 static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion *version, const FormSpecSize *size, Row *rows) {
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
@@ -682,6 +713,7 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
                               form_return_edge_numerals(plan, next, row->upbeat_next, ignored, sizeof row->upbeat_next);
         }
         key_heard_at(keys, key_count, row->start, row->key_heard, sizeof row->key_heard);
+        planned_key_at(plan, plan_node_span(plan, id), row->key, sizeof row->key);
         if (cadence) {
             row->heard = heard_cadence(check, next_item++);
         }
@@ -993,7 +1025,7 @@ static cJSON *upbeat_json(const Row *row) {
     return object;
 }
 
-/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, pedal, changes, part, repeat_of, upbeat, connective, [construction_text]}. */
+/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, key, pedal, changes, part, repeat_of, upbeat, connective, [construction_text]}. */
 static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
     const FormSectionSpec *spec = row->spec;
     char motive[96];
@@ -1009,6 +1041,7 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
               api_add(entry, "returns", string_or_null(returns ? row->size->sections[spec->returns].name : NULL)) &&
               api_add(entry, "motive", string_or_null(has_motive ? motive : NULL)) &&
               api_add(entry, "key_heard", string_or_null(row->key_heard[0] ? row->key_heard : NULL)) &&
+              api_add(entry, "key", string_or_null(row->key[0] ? row->key : NULL)) &&
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
               api_add(entry, "changes", changes_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&
               api_add(entry, "repeat_of", string_or_null(row->repeat_of)) && api_add(entry, "upbeat", upbeat_json(row)) &&

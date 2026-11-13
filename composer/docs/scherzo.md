@@ -32,6 +32,10 @@ A section that ends away from home closes in a PAC whatever its document says, s
 
 Sections as short as these leave little room: with P, S1 and S2 of 8 bars (A 16, size 72) 0 of 10 composed in C major 3/4, and with C1 and C2 of 8 bars (size 68) 0 of 10, so the sizes are 44 and 60 and the sections are 4 bars. A of 16 bars needs the explicit construction (`"auto"` composed 0 of 10 at 10, 12 and 16 bars).
 
+## What the rows say (API 1.21)
+
+Each piece row has `key`, the planned key of the section: the key lane's span under its start, as "G major", so P, S1 and S2 of a scherzo in C major are G major, F major and C major whatever the seed (a performed row takes its composed section's, the trio's rows the trio's key). It is the plan's key, not the heard one: `key_heard` is what the Analyzer hears, and it often differs (the last column of the tables). The forms entry serves `modulates` (true for the scherzo, so `settings.modulate` is false and the choice is not offered) and the part `bars` (24 for the Trio of the scherzo and trio, `null` for the others).
+
 ## Composed, not heard
 
 The sequences, the pedal, the upbeat chord and the episode are composed and recorded in the plan. The keys are planned, not heard (R-408): the Analyzer hears the planned key under P, S1 and E in a share of the pieces only (the last column of the tables). The liquidation is not heard as a form (its row has `heard` null). The checks of a piece read the plan: P's key is the key of V (minor v), S1's and E's of IV (iv), S2, L and A return's the home key; L's last chord is V or V7 and A return's first is I or i.

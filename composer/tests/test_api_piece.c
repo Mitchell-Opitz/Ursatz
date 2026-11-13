@@ -1030,6 +1030,10 @@ static void test_ternary_rows(void) {
     const cJSON *back = row_named(document, "A return");
     assert(row_text(b, "heard") && strcmp(row_text(b, "heard"), "HC") == 0);
     assert(row_text(a, "key_heard") && strcmp(row_text(a, "key_heard"), "C major") == 0);
+    /* The planned key (R-493): the key lane's key under the section's start, home for every section of a ternary. */
+    assert(row_text(a, "key") && strcmp(row_text(a, "key"), "C major") == 0);
+    assert(row_text(b, "key") && strcmp(row_text(b, "key"), "C major") == 0);
+    assert(row_text(back, "key") && strcmp(row_text(back, "key"), "C major") == 0);
     assert(row_text(b, "pedal") && strcmp(row_text(b, "pedal"), "dominant") == 0);
     assert(row_text(a, "pedal") == NULL && row_text(back, "pedal") == NULL);
     assert(row_text(a, "changes") == NULL && row_text(b, "changes") == NULL);
@@ -1190,6 +1194,14 @@ static void test_minuet_and_trio(void) {
     const char *trio_key = row_text(trio_a, "key_heard");
     assert(trio_key && strcmp(trio_key, "C major") != 0);
     assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
+    /* The planned key of a performed row is its composed section's: the minuet's rows are home, the trio's are the trio's. */
+    const char *trio_planned = row_text(trio_a, "key");
+    assert(trio_planned && strcmp(trio_planned, "C major") != 0);
+    for (int i = 6; i < 12; i++) {
+        assert(row_text(cJSON_GetArrayItem(sections, i), "key") && strcmp(row_text(cJSON_GetArrayItem(sections, i), "key"), trio_planned) == 0);
+    }
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key"), "C major") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 12), "key"), "C major") == 0);
     assert(response.plan_json && strstr(response.plan_json, "Trio A") && strstr(response.plan_json, "Minuet da capo A"));
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "brief"), "tempo");
     assert(tempo && cJSON_GetObjectItemCaseSensitive(tempo, "qpm")->valuedouble == 112);
@@ -1229,6 +1241,13 @@ static void test_scherzo(void) {
     assert(total == 76 * 3);
     assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "performed"), "bars")->valuedouble == 76);
     assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
+    /* The planned key: the modulation plan home, V, IV, home (R-492), whatever the Analyzer hears; every seed modulates. */
+    static const char *const KEYS[] = {"C major", "C major", "G major", "F major", "C major", "C major", "C major", "G major",
+                                       "F major", "C major", "C major", "C major", "F major", "C major", "C major"};
+    for (int i = 0; i < 15; i++) {
+        const char *key = row_text(cJSON_GetArrayItem(sections, i), "key");
+        assert(key && strcmp(key, KEYS[i]) == 0);
+    }
     /* The second A and each written-out repeat name what they repeat; the first time names none. */
     assert(row_text(cJSON_GetArrayItem(sections, 0), "repeat_of") == NULL && strcmp(row_text(cJSON_GetArrayItem(sections, 1), "repeat_of"), "A") == 0);
     assert(row_text(cJSON_GetArrayItem(sections, 2), "repeat_of") == NULL && strcmp(row_text(cJSON_GetArrayItem(sections, 7), "repeat_of"), "P") == 0);
@@ -1267,6 +1286,14 @@ static void test_scherzo(void) {
     const char *trio_key = row_text(cJSON_GetArrayItem(sections, 15), "key_heard");
     assert(trio_key && strcmp(trio_key, "C major") != 0);
     assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
+    /* The scherzo's rows keep their planned keys in the compound, the da capo's too; the trio's are its own key. */
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 2), "key"), "G major") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 3), "key"), "F major") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 4), "key"), "C major") == 0);
+    const char *trio_planned = row_text(cJSON_GetArrayItem(sections, 15), "key");
+    assert(trio_planned && strcmp(trio_planned, "C major") != 0 && strcmp(row_text(cJSON_GetArrayItem(sections, 20), "key"), trio_planned) == 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 22), "key"), "G major") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 23), "key"), "F major") == 0);
     assert(response.plan_json && strstr(response.plan_json, "Trio A") && strstr(response.plan_json, "Scherzo da capo A"));
     write_pair("piece", "scherzo-and-trio", printed, &response);
     cJSON *request = api_request(form_piece("rounded-binary.json", NULL, BOTH, 2), 1);

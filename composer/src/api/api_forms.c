@@ -285,7 +285,7 @@ static bool add_versions(cJSON *form_json, const FormSpec *form) {
 
 static bool add_settings(cJSON *form_json, const FormSpec *form) {
     cJSON *settings = cJSON_CreateObject();
-    if (!settings || !cJSON_AddBoolToObject(settings, "modulate", form->region_count > 0) ||
+    if (!settings || !cJSON_AddBoolToObject(settings, "modulate", form->region_count > 0 && !form->modulates) ||
         !cJSON_AddStringToObject(settings, "accompaniment", form->accompaniment_required ? "required" : "optional") ||
         !cJSON_AddBoolToObject(settings, "voicing", form->request_sections) ||
         !cJSON_AddBoolToObject(settings, "section_fills", form->request_sections)) {
@@ -328,7 +328,7 @@ static bool add_repeats(cJSON *form_json, const FormSpec *form) {
     return groups != NULL;
 }
 
-/* The parts of a compound form: null, or [{name, form {value, label} or null, key, motive, again, repeats}]. */
+/* The parts of a compound form: null, or [{name, form {value, label} or null, key, motive, again, repeats, bars}]. */
 static bool add_parts(cJSON *form_json, const FormSpec *form) {
     if (form->part_count == 0) {
         return api_add(form_json, "parts", cJSON_CreateNull());
@@ -352,7 +352,8 @@ static bool add_parts(cJSON *form_json, const FormSpec *form) {
         if (!ok || !cJSON_AddStringToObject(entry, "key", key_name(form, part->key)) ||
             !cJSON_AddStringToObject(entry, "motive", part->new_motive ? "new" : "piece") ||
             !add_string_or_null(entry, "again", again ? form->parts[part->again].name : NULL) ||
-            !cJSON_AddBoolToObject(entry, "repeats", part->repeats)) {
+            !cJSON_AddBoolToObject(entry, "repeats", part->repeats) ||
+            !api_add(entry, "bars", part->bars > 0 ? cJSON_CreateNumber((double)part->bars) : cJSON_CreateNull())) {
             return false;
         }
     }
@@ -376,7 +377,7 @@ static bool add_form(cJSON *list, const FormSpec *form) {
         return false;
     }
     return cJSON_AddStringToObject(entry, "name", form->name) && cJSON_AddStringToObject(entry, "label", form->label) &&
-           cJSON_AddBoolToObject(entry, "closing", form->closing) &&
+           cJSON_AddBoolToObject(entry, "closing", form->closing) && cJSON_AddBoolToObject(entry, "modulates", form->modulates) &&
            cJSON_AddStringToObject(entry, "sections", form->request_sections ? "request" : "sizes") &&
            add_versions(entry, form) && add_settings(entry, form) && add_regions(entry, form) && add_meters_and_tempo(entry, form) &&
            add_repeats(entry, form) && add_parts(entry, form) && cJSON_AddBoolToObject(entry, "performed", form_spec_performed(form)) &&
