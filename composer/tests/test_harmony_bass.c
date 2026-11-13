@@ -499,11 +499,49 @@ static void test_octave_needs_a_scale(void) {
     }
 }
 
+/*
+ * G major 3/4, I IV ii V a bar each, the end of a half cadence: from G3 (nearest the middle of the range) every line
+ * leaps or outlines a seventh into V's only D in range (D3), so the operator draws the first octave again and writes
+ * a line from G2.
+ */
+static void test_first_octave_fallback(void) {
+    static const char *const romans[] = {"I", "IV", "ii", "V"};
+    for (unsigned long seed = 1; seed <= 10; seed++) {
+        Scenario scenario = {3, 4, KEY_STRUCTURE_MODE_MAJOR, 7, 4, CADENCE_TYPE_HALF, seed};
+        Fixture fixture = build(&scenario, false);
+        PlanLanePayload payload;
+        memset(&payload, 0, sizeof(payload));
+        strcpy(payload.harmony.roman_numeral, romans[0]);
+        PlanSpan bar = {fraction(0, 1), fixture.bar_length};
+        assert(plan_lane_span_write(fixture.plan, fixture.target, &payload) == PLAN_OK);
+        assert(plan_lane_span_resize(fixture.plan, fixture.target, fixture.bar_length) == PLAN_OK);
+        assert(plan_lane_span_set_state(fixture.plan, fixture.target, PLAN_STATE_REALIZED) == PLAN_OK);
+        for (int i = 1; i < 4; i++) {
+            LaneSpanId id;
+            bar.start = time_plus(bar.start, fixture.bar_length);
+            strcpy(payload.harmony.roman_numeral, romans[i]);
+            assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, bar, &payload, &id) == PLAN_OK);
+            assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
+        }
+        add_bass_target(&fixture);
+        FillOutcome outcome = run(&fixture, seed, false, false, true, NULL, false);
+        assert(outcome.status == FILL_STATUS_COMPLETE);
+        HarmonyBassParams defaults = harmony_bass_params_default();
+        check_bass(&fixture, &scenario, &defaults);
+        LaneSpanId ids[MAX_CHORDS];
+        assert(plan_lane_find(fixture.plan, PLAN_LANE_BASS, 0, fixture.span, ids, MAX_CHORDS) == 4);
+        assert(plan_lane_span_payload(fixture.plan, ids[0])->notes.notes[0].midi == 43);
+        fill_outcome_destroy(&outcome);
+        plan_destroy(fixture.plan);
+    }
+}
+
 int main(void) {
     test_sweep();
     test_subdivision_and_stepwise();
     test_unsatisfiable_range();
     test_random_octaves();
+    test_first_octave_fallback();
     test_rule_of_the_octave();
     test_octave_needs_a_scale();
     return 0;
