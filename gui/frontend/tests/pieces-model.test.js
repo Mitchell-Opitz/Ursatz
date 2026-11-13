@@ -346,6 +346,20 @@ check(
   "the rows of a ternary result are as before",
 );
 
+/* the scherzo (P49): a form that always modulates, and the planned key of each row */
+const scherzoForm = P.formOf("scherzo");
+check(P.isModulating(scherzoForm) && !P.isModulating(P.formOf("minuet")) && !P.isModulating(null), "the scherzo always modulates and the minuet does not");
+check(scherzoForm.settings.modulate === false && P.withForm(P.emptyState("pce-5"), "scherzo").modulate === false, "the scherzo offers no modulate choice and its state does not send one");
+check(P.roleLabel(scherzoForm, "liquidation") === "Liquidation" && P.roleLabel(scherzoForm, "pattern") === "Pattern" && P.roleLabel(scherzoForm, "codetta") === "Codetta", "the scherzo's new roles have their labels");
+const scherzoSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "scherzo-summary.json"), "utf8"));
+const scherzoRows = P.resultView({ seed: 1, summary: scherzoSummary }, { form: "scherzo", bars: 44, count: 0 }).versions[0].view.rows;
+check(
+  scherzoRows.length === 15 && scherzoRows[2].id === "P" && scherzoRows[2].plannedKey === "G major" && scherzoRows[3].id === "S1" && scherzoRows[3].plannedKey === "F major" && scherzoRows[4].plannedKey === "C major",
+  "a scherzo result gives the planned key of each row",
+);
+check(scherzoRows[5].partLabel === "Liquidation" && scherzoRows[12].partLabel === "Episode", "a scherzo row names its role");
+check(ternaryRows.every((row) => row.plannedKey === "") && minuetRows.every((row) => row.plannedKey === ""), "a row without key has no planned key");
+
 if (failures > 0) {
   console.error(`${failures} failure(s)`);
   process.exit(1);
