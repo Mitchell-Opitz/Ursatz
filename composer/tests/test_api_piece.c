@@ -1206,6 +1206,79 @@ static void test_minuet_and_trio(void) {
     free(printed);
 }
 
+/*
+ * The scherzo (R-492, R-493): A A P S1 S2 L A1 P S1 S2 L A1 E C1 C2, 15 rows over 76 bars of 3/4 at 176; the request does
+ * not ask to modulate and the key lane still leaves home. The scherzo and trio (R-495): the scherzo, the trio of 24 bars in a
+ * key of its own, the scherzo again without repeats, 30 rows over 168 bars. Regenerating a performed form is refused.
+ */
+static void test_scherzo(void) {
+    static const char *const EDITS[][2] = {{"form", "\"scherzo\""}, {"meter", "\"3/4\""}};
+    static const char *const IDS[] = {"A", "A", "P", "S1", "S2", "L", "A return", "P", "S1", "S2", "L", "A return", "E", "C1", "C2"};
+    static const char *const ROLES[] = {"theme", "theme", "pattern", "sequence", "sequence", "liquidation", "return", "pattern",
+                                        "sequence", "sequence", "liquidation", "return", "episode", "codetta", "codetta"};
+    ComposerResponse response;
+    char *printed = form_request("rounded-binary.json", NULL, EDITS, 2, true);
+    cJSON *document = composed_document(printed, &response);
+    expect_one_version(document, IDS, ROLES, 15);
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "piece"), "sections");
+    double total = 0;
+    for (int i = 0; i < 15; i++) {
+        total += cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, i), "beats")->valuedouble;
+    }
+    assert(total == 76 * 3);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "performed"), "bars")->valuedouble == 76);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
+    /* The second A and each written-out repeat name what they repeat; the first time names none. */
+    assert(row_text(cJSON_GetArrayItem(sections, 0), "repeat_of") == NULL && strcmp(row_text(cJSON_GetArrayItem(sections, 1), "repeat_of"), "A") == 0);
+    assert(row_text(cJSON_GetArrayItem(sections, 2), "repeat_of") == NULL && strcmp(row_text(cJSON_GetArrayItem(sections, 7), "repeat_of"), "P") == 0);
+    const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "brief"), "tempo");
+    assert(tempo && cJSON_GetObjectItemCaseSensitive(tempo, "qpm")->valuedouble == 176 &&
+           strcmp(cJSON_GetObjectItemCaseSensitive(tempo, "from")->valuestring, "form") == 0);
+    assert(response.midi && memcmp(response.midi, "MThd", 4) == 0 && midi_tempo(response.midi, response.midi_size) == 176);
+    assert(response.plan_json && strstr(response.plan_json, "P (repeat)") && strstr(response.plan_json, "A return (repeat)"));
+    write_pair("piece", "scherzo", printed, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+
+    static const char *const BOTH[][2] = {{"form", "\"scherzo-and-trio\""}, {"meter", "\"3/4\""}};
+    printed = form_request("rounded-binary.json", NULL, BOTH, 2, true);
+    document = composed_document(printed, &response);
+    sections = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "piece"), "sections");
+    assert(cJSON_GetArraySize(sections) == 30);
+    total = 0;
+    for (int i = 0; i < 30; i++) {
+        total += cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, i), "beats")->valuedouble;
+    }
+    assert(total == 168 * 3);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "performed"), "bars")->valuedouble == 168);
+    /* 15 rows of the scherzo, 6 of the trio, 9 of the scherzo da capo (its repeats not played). */
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "part"), "Scherzo") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 14), "part"), "Scherzo") == 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 15), "part"), "Trio") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 20), "part"), "Trio") == 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 21), "part"), "Scherzo da capo") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 29), "part"), "Scherzo da capo") == 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 21), "id"), "A") == 0 && strcmp(row_text(cJSON_GetArrayItem(sections, 29), "id"), "C2") == 0);
+    /* The trio's bars are its own 24, 8 to a row of A and B. */
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, 15), "beats")->valuedouble == 8 * 3);
+    const char *trio_key = row_text(cJSON_GetArrayItem(sections, 15), "key_heard");
+    assert(trio_key && strcmp(trio_key, "C major") != 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
+    assert(response.plan_json && strstr(response.plan_json, "Trio A") && strstr(response.plan_json, "Scherzo da capo A"));
+    write_pair("piece", "scherzo-and-trio", printed, &response);
+    cJSON *request = api_request(form_piece("rounded-binary.json", NULL, BOTH, 2), 1);
+    add_edit(request, response.plan_json, "A", "melody");
+    char *edit = print(request);
+    expect_refusal(edit, false, COMPOSER_ERR_REQUEST, "/request/form", "are Later: it is composed whole");
+    free(edit);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+}
+
 /* Pieces of the other forms: composed, written again in a section, varied, and the refusals that need a plan. */
 static void test_any_form(const char *plan) {
     char *rounded_plan = NULL;
@@ -1214,6 +1287,7 @@ static void test_any_form(const char *plan) {
     test_ternary_rows();
     test_minuet();
     test_minuet_and_trio();
+    test_scherzo();
     test_game_loop_version_two(plan);
     test_refused_form_edit(rounded_plan);
     free(rounded_plan);

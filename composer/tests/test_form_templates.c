@@ -64,6 +64,7 @@ typedef struct {
 #define CBI PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA
 #define CONT PLAN_THEME_ENDING_CONTINUATION
 #define CONS PLAN_THEME_ENDING_CONSEQUENT
+#define CAD PLAN_THEME_ENDING_CADENTIAL
 #define NONE FORM_SPEC_NO_RETURN
 
 /* What a section of the table must be. */
@@ -75,6 +76,8 @@ typedef struct {
     CadenceType cadence;
     size_t returns;
     unsigned layers;
+    bool liquidation; /* a liquidation section: a LIQUIDATION constraint, no pairing and no archetype (R-494) */
+    int key_offset;   /* the section's key above the home key, in semitones: the scherzo's planned keys (R-493) */
 } Expected;
 
 #define MAX_EXPECTED FORM_SPEC_MAX_SECTIONS
@@ -93,6 +96,8 @@ static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning
     e->cadence = cadence;
     e->returns = returns;
     e->layers = layers;
+    e->liquidation = false;
+    e->key_offset = 0;
 }
 
 #define IS(name) (strcmp(kind, name) == 0)
@@ -139,6 +144,25 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n++], "A", third, beginning, ending, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "B", third, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         set(&out[n++], "A", third, beginning, ending, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
+    } else if (IS("scherzo")) {
+        /* A, then P and its sequences S1 (IV) and S2 (home), the liquidation, A return, the episode in IV and two codettas.
+           The planned keys of the pattern, S1 and the episode are V, IV and IV: 7, 5 and 5 semitones above home. A section
+           that ends away from home closes with a PAC whatever its document says (piece_plan_cadences), so the plan has a
+           PAC for P, S1 and E, and the document's IAC for S2 (home, not closed). */
+        size_t theme = size.bars == 60 ? 16 : 8;
+        set(&out[n++], "A", theme, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n], "B", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].key_offset = 7;
+        set(&out[n], "B", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, 1, 0);
+        out[n++].key_offset = 5;
+        set(&out[n++], "B", 4, AN, CONS, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 1, 0);
+        set(&out[n], "B", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].liquidation = true;
+        set(&out[n++], "A", theme, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
+        set(&out[n], "E", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].key_offset = 5;
+        set(&out[n++], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "C", 4, CBI, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -176,6 +200,9 @@ static size_t sizes_of(const char *kind, Size *out) {
         for (size_t count = 2; count <= 4; count++) {
             out[n++] = (Size){8 * count, count};
         }
+    } else if (IS("scherzo")) {
+        out[n++] = (Size){44, 0};
+        out[n++] = (Size){60, 0};
     }
     return n;
 }
@@ -273,18 +300,24 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         const PlanConstraint *pairing = find(plan, section, PLAN_CONSTRAINT_THEME_PAIRING, 0);
         const PlanConstraint *cadence = find(plan, section, PLAN_CONSTRAINT_CADENCE, 0);
         const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_KEY, 0);
+        const PlanConstraint *liquidation = find(plan, section, PLAN_CONSTRAINT_LIQUIDATION, 0);
         const PlanConstraint *back = find(plan, section, PLAN_CONSTRAINT_RETURN, 0);
         const PlanConstraint *layers = find(plan, section, PLAN_CONSTRAINT_LAYERS, 0);
         assert(letter && strcmp(letter->params.letter, expected[i].letter) == 0);
-        assert(pairing && pairing->params.theme_pairing.beginning == expected[i].beginning &&
-               pairing->params.theme_pairing.ending == expected[i].ending);
-        assert(find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) != NULL);
+        if (expected[i].liquidation) {
+            assert(liquidation && !pairing && find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) == NULL);
+        } else {
+            assert(!liquidation && pairing && pairing->params.theme_pairing.beginning == expected[i].beginning &&
+                   pairing->params.theme_pairing.ending == expected[i].ending);
+            assert(find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) != NULL);
+        }
         assert(cadence && cadence->params.cadence == expected[i].cadence);
         /* An antecedent's weak cadence comes second. */
         const PlanConstraint *weak = find(plan, section, PLAN_CONSTRAINT_CADENCE, 1);
         assert((expected[i].beginning == AN) == (weak != NULL));
         assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
-        assert(key && analysis_key_tonic_pitch_class(&key->params.key) == scenario->tonic && key->params.key.mode == scenario->mode);
+        assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + expected[i].key_offset) % 12 &&
+               key->params.key.mode == scenario->mode);
         if (expected[i].returns == NONE) {
             assert(back == NULL);
         } else {
@@ -303,7 +336,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
             const char *name = plan_node_name(plan, motive->params.motive.motive);
             assert(name && strcmp(name, "m0") == 0);
         }
-        if (strcmp(expected[i].letter, "B") == 0) {
+        if (strcmp(expected[i].letter, "B") == 0 && !IS("scherzo")) {
             assert(motive && motive->params.motive.has_step && motive->params.motive.step.kind == MOTIVE_RELATION_INVERT &&
                    motive->params.motive.step.value[1] != 0);
         }
@@ -481,6 +514,9 @@ static void compose_all(const char *kind, Tally *total) {
  * trio (P48 B5, R-487) run in C major and A minor 3/4 and were measured at 35, 105, 30 and 36, 108, 45: the given D minor
  * motive in A minor 24 bars is the weak scenario (1 of 5 and 2 of 5 compose, stuck at the returns and the seam stages), the
  * invented one composes 5 of 5; the 12-bar forms have sections of 4 bars, so none is heard as requested (as for the ternary).
+ * The scherzo (P49 B4, R-492) runs in C major and A minor 3/4 at 44 and 60 bars and was measured at 34, 272, 28: the
+ * invented motive gets stuck at the returns stage 5 times and at structure once, the given one composes 20 of 20; the
+ * 60-bar sizes have themes of 16 bars and 4-bar sections, so none is heard as requested, and the liquidation is not heard.
  */
 typedef struct {
     const char *kind;
@@ -494,6 +530,7 @@ static const Baseline BASELINES[] = {
     {"ternary", 39, 117, 51},    {"variations", 60, 220, 184},
     {"loop", 40, 60, 32},       {"layered", 60, 180, 74},
     {"minuet", 35, 105, 30},     {"trio", 36, 108, 45},
+    {"scherzo", 34, 272, 28},
 };
 
 static const Baseline *baseline_of(const char *kind) {
@@ -544,6 +581,11 @@ static int test_smoke(const char *kind) {
     Motive motive = scenario_motive(&SCENARIOS[0]);
     Expected expected[MAX_EXPECTED];
     size_t count = expected_sections(kind, smallest, expected);
+    /* A liquidation is composed and recorded, not heard as a form (R-494). */
+    size_t to_hear = count;
+    for (size_t i = 0; i < count; i++) {
+        to_hear -= expected[i].liquidation ? 1 : 0;
+    }
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         PieceRequest request = scenario_request(&SCENARIOS[0], kind, smallest, &motive);
         PiecePlan *plan = NULL;
@@ -562,7 +604,7 @@ static int test_smoke(const char *kind) {
         }
         compose_outcome_destroy(&outcome);
         plan_destroy(plan);
-        if (ran == PIECE_OK && heard == count) {
+        if (ran == PIECE_OK && heard == to_hear) {
             printf("%s: %zu bars composed with seed %lu, %zu sections heard\n", kind,
                    smallest.bars, seed, heard);
             return 0;
@@ -583,7 +625,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: test_form_templates structure|compose|heard|smoke <template>\n");
         return 2;
     }
-    if (IS("minuet") || IS("trio")) {
+    if (IS("minuet") || IS("trio") || IS("scherzo")) {
         SCENARIOS = SCENARIOS_THREE_FOUR;
         SCENARIO_COUNT = sizeof(SCENARIOS_THREE_FOUR) / sizeof(SCENARIOS_THREE_FOUR[0]);
     }
