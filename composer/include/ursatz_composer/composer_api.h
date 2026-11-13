@@ -19,10 +19,12 @@
  * 1.16 adds the section hearing, pedal and changes of piece rows and the forms entry's pedal.
  * 1.17 adds the L3 settings to the preferences document: syncopation, skips, a given chord plan and the continuation
  * settings, with their limits in the vocabulary.
+ * 1.20 adds the performed piece (written-out repeats, parts), its rows' part, repeat_of, upbeat and connective, and the
+ * forms entry's meters, tempo, repeats, parts and lead-in members.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 19
+#define COMPOSER_API_VERSION_MINOR 20
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

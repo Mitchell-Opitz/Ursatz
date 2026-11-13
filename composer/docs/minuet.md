@@ -20,6 +20,10 @@ The trio is composed as a piece of its own form in its own home key, with its ow
 
 The pedal, the region, the upbeat chord and the connective are composed and recorded in the plan; the hearing does not find them (R-408). B's last chord is the dominant (V or V7) and A return opens on the tonic: the join is read from the plan's chords, and from the Analyzer only as the half cadence heard at the end of B. The connective is a constraint with `written`; it is written when B's last bar can keep its downbeat note and walk by steps to the first note of A return (the rules are in [form-performance.md](form-performance.md#the-connective)).
 
+## What the rows say (R-485, R-486, API 1.20)
+
+The piece response lists one row for each performed section, and each row carries the checks of this page: `key_heard` (the trio's rows are heard in another key than the home key), `upbeat` (B's last chord, V or V7, and A return's first, I or i), `connective` (whether B's stepwise link was written), `repeat_of` (`A (repeat)` plays `A` again, `Minuet da capo A` plays `A` again) and `part` (`Minuet`, `Trio`, `Minuet da capo`), and `performed.bars` the length of the whole (48 for a minuet, 120 for a minuet and trio at 24). The forms entry serves the same members before a piece is composed: `meters`, `tempo`, `repeats`, `parts`, `performed`, and for each section `leads_in` and `connective`. A form that is not performed has `null` for `part` and `repeat_of` on every row.
+
 ## Later (R-488)
 
 - An artificial dominant upbeat chord when the harmony of B does not end on V.
@@ -97,6 +101,6 @@ Every row composes 10 of 10. 12 bars have sections of 4 bars: no return is heard
 | `test_form_spec` | The three rows of the built-in table (sizes, meters, tempo, repeats, parts) and their parse asserts: sections, keys, pedal, lead-in and connective, the minuet's sentence against the trio's period, the parts of the compound form. |
 | `test_form_plans_templates` | The plans of the minuet and the trio at both sizes in C major and A minor 3/4 (a form with meters is recorded in its first meter; a compound form is not hashed, its parts are). |
 | `test_form_templates_minuet*`, `test_form_templates_trio*` | The structure table, the smoke run in C major 3/4, and the compose and heard baselines (35, 105, 30 and 36, 108, 45; `slow`). |
-| `test_api_forms` | The forms list has 10 names in registry order; the minuet, the trio and the minuet and trio entries. |
-| `test_api_piece` | A minuet request (version 2, C major 3/4, seed 1) answers 6 rows over 48 bars with tempo 112 in the brief and the MIDI file; in 4/4 it is refused at `/request/meter`; a `minuet-and-trio` request answers 15 rows over 120 bars, the trio's first row not in the home key; regenerate of a performed form is refused. |
+| `test_api_forms` | The minuet's `meters`, `tempo`, `repeats`, `performed`, B's `leads_in` and `connective`, the ternary's empty ones and the minuet and trio's `parts`; the forms list has 10 names in registry order; the minuet, the trio and the minuet and trio entries. |
+| `test_api_piece` | The rows' `part`, `repeat_of`, `upbeat`, `connective` and `performed.bars` (minuet 48, minuet and trio 120, ternary all null). A minuet request (version 2, C major 3/4, seed 1) answers 6 rows over 48 bars with tempo 112 in the brief and the MIDI file; in 4/4 it is refused at `/request/meter`; a `minuet-and-trio` request answers 15 rows over 120 bars, the trio's first row not in the home key; regenerate of a performed form is refused. |
 | `test_piece_keys_minuet`, `test_piece_keys_trio` | The key plans and the composed runs in 3/4 (20 of 20 complete; `slow`). |

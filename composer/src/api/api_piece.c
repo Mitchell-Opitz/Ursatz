@@ -527,6 +527,12 @@ typedef struct {
     char key_heard[16]; /* the key the Analyzer heard at the section's start over the whole piece, "" when none */
     bool pedal;         /* a harmony span in the section's first half was written over a pedal */
     bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
+    const char *part;      /* a performed compound form: the name of the part the section is in, else NULL */
+    const char *repeat_of; /* a performed section that writes another out again: the first time's name, else NULL */
+    bool has_upbeat;       /* the section leads into the next: its last chord and the next section's first (R-486) */
+    char upbeat_chord[PLAN_ROMAN_NUMERAL_MAX];
+    char upbeat_next[PLAN_ROMAN_NUMERAL_MAX];
+    int connective;        /* -1 the section has no CONNECTIVE constraint, else whether it was written */
 } Row;
 
 /* The cadence heard for the next cadence the plan has, from the Analyzer check; NULL without a check. */
@@ -648,12 +654,15 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
             continue;
         }
         const PlanConstraint *cadence = NULL;
+        const PlanConstraint *connective = NULL;
         for (size_t c = 0; c < plan_node_constraint_count(plan, id); c++) {
             const PlanConstraint *constraint = plan_node_constraint_at(plan, id, c);
             cadence = constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence ? constraint : cadence;
+            connective = constraint->kind == PLAN_CONSTRAINT_CONNECTIVE && !connective ? constraint : connective;
         }
         Row *row = &rows[count++];
         memset(row, 0, sizeof(*row));
+        row->connective = -1;
         row->spec = &size->sections[i];
         row->size = size;
         row->start = plan_node_span(plan, id).start;
@@ -664,6 +673,14 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         row->plan = plan;
         row->node = id;
         row->pedal = section_pedal(plan, plan_node_span(plan, id));
+        row->connective = connective ? (connective->params.connective.written ? 1 : 0) : -1;
+        if (size->sections[i].leads_in && i + 1 < size->section_count) {
+            NodeId next = sized_section_find(plan, size->sections[i + 1].name);
+            char ignored[PLAN_ROMAN_NUMERAL_MAX];
+            row->has_upbeat = next != PLAN_NODE_NONE &&
+                              form_return_edge_numerals(plan, id, ignored, row->upbeat_chord, sizeof row->upbeat_chord) &&
+                              form_return_edge_numerals(plan, next, row->upbeat_next, ignored, sizeof row->upbeat_next);
+        }
         key_heard_at(keys, key_count, row->start, row->key_heard, sizeof row->key_heard);
         if (cadence) {
             row->heard = heard_cadence(check, next_item++);
@@ -717,6 +734,17 @@ static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *ve
                 rows[performed] = composed[part][j];
                 rows[performed].start = span.start;
                 rows[performed].length = span.length;
+                if (parts && request->form->part_count > 0) {
+                    rows[performed].part = request->form->parts[performance->sections[i].part].name;
+                }
+                /* The first time the same section of the same composed part was performed. */
+                for (size_t earlier = 0; earlier < i; earlier++) {
+                    size_t earlier_part = parts ? piece_parts_source(request->form, performance->sections[earlier].part) : 0;
+                    if (earlier_part == part && performance->sections[earlier].source == performance->sections[i].source) {
+                        rows[performed].repeat_of = performance->sections[earlier].name;
+                        break;
+                    }
+                }
                 performed++;
                 break;
             }
@@ -950,7 +978,21 @@ static cJSON *changes_json(const Row *row) {
     return entry;
 }
 
-/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, pedal, changes, [construction_text]}. */
+/* {"chord", "next"} of a section that leads into the next, else null. */
+static cJSON *upbeat_json(const Row *row) {
+    if (!row->has_upbeat) {
+        return cJSON_CreateNull();
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!object || !cJSON_AddStringToObject(object, "chord", row->upbeat_chord) ||
+        !cJSON_AddStringToObject(object, "next", row->upbeat_next)) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, pedal, changes, part, repeat_of, upbeat, connective, [construction_text]}. */
 static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
     const FormSectionSpec *spec = row->spec;
     char motive[96];
@@ -967,7 +1009,10 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
               api_add(entry, "motive", string_or_null(has_motive ? motive : NULL)) &&
               api_add(entry, "key_heard", string_or_null(row->key_heard[0] ? row->key_heard : NULL)) &&
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
-              api_add(entry, "changes", changes_json(row)) && add_construction_text(entry, row);
+              api_add(entry, "changes", changes_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&
+              api_add(entry, "repeat_of", string_or_null(row->repeat_of)) && api_add(entry, "upbeat", upbeat_json(row)) &&
+              api_add(entry, "connective", row->connective < 0 ? cJSON_CreateNull() : cJSON_CreateBool(row->connective > 0)) &&
+              add_construction_text(entry, row);
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;
@@ -1066,8 +1111,23 @@ static char *explanation_text(const PieceSpec *request, const PieceMade *piece, 
     return joined;
 }
 
+/* {"bars": n} of the performed piece (R-485), or null for a piece of a form with sizes that is not performed. */
+static cJSON *performed_json(const PieceSpec *request, const PieceMade *piece) {
+    const PieceVersion *version = &piece->versions[0];
+    if (!version->performed || !version->performance.plan || request->request.meter.beats_per_bar <= 0) {
+        return cJSON_CreateNull();
+    }
+    PlanSpan span = plan_node_span(version->performance.plan, plan_root(version->performance.plan));
+    cJSON *object = cJSON_CreateObject();
+    if (!object || !cJSON_AddNumberToObject(object, "bars", span_beats(request, span.length) / request->request.meter.beats_per_bar)) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /*
- * The result document: {schema, seed, key, meter, brief, loop, [regenerated,] versions: {<name>: ...}}, the versions named as
+ * The result document: {schema, seed, key, meter, brief, loop, performed, [regenerated,] versions: {<name>: ...}}, the versions named as
  * api_piece_version_names has them ("loop" and "ending", or "piece"), as the command prints it, with no plan paths (the plans
  * are in "plans") and no files.
  */
@@ -1085,7 +1145,9 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
     bool ok = document && cJSON_AddStringToObject(document, "schema", "ursatz-piece") &&
               cJSON_AddNumberToObject(document, "seed", (double)piece->seed) && cJSON_AddStringToObject(document, "key", key) &&
               cJSON_AddStringToObject(document, "meter", meter) && api_add(document, "brief", api_brief_json(&brief)) &&
-              api_add(document, "loop", loop_region ? loop_region : cJSON_CreateNull());
+              api_add(document, "loop", loop_region ? loop_region : cJSON_CreateNull()) &&
+              /* The game loop's document is as it was: only a form with sizes says whether it is performed. */
+              (request->form->request_sections || api_add(document, "performed", performed_json(request, piece)));
     if (ok && from) {
         cJSON *regenerated = cJSON_CreateNull();
         if (regenerate_section) {
