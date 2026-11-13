@@ -10,6 +10,7 @@
 
 #include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/analyzer_check.h>
+#include <ursatz_composer/form_figure.h>
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/harmony_bass.h>
@@ -752,13 +753,39 @@ static bool returns_pending(const PiecePlan *plan, const NodeId *themes, size_t 
     return false;
 }
 
-/* The theme sections to be returned with a reharmonization (a REHARMONIZE or a VARIED return). */
+/* The FIGURE constraint of a section, when it has one. */
+static bool figure_of(const PiecePlan *plan, NodeId section, PlanFigure *out) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_FIGURE) {
+            *out = constraint->params.figure;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The theme sections to be returned with a reharmonization (a REHARMONIZE or a VARIED return, or a FIGURATE one whose figure sits over a reharmonized copy). */
 static size_t reharmonized(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
     size_t count = 0;
     for (size_t t = 0; t < theme_count; t++) {
         PlanReturnVariation variation;
+        PlanFigure figure;
         if (form_return_source(plan, themes[t], NULL, &variation) &&
-            (variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_VARIED)) {
+            (variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_VARIED ||
+             (variation == PLAN_RETURN_FIGURATE && figure_of(plan, themes[t], &figure) && figure.reharmonize))) {
+            out[count++] = themes[t];
+        }
+    }
+    return count;
+}
+
+/* The theme sections to be returned as a figurate variation (R-497): their figure is written after the returns. */
+static size_t figurate(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
+    size_t count = 0;
+    for (size_t t = 0; t < theme_count; t++) {
+        PlanReturnVariation variation;
+        if (form_return_source(plan, themes[t], NULL, &variation) && variation == PLAN_RETURN_FIGURATE) {
             out[count++] = themes[t];
         }
     }
@@ -777,10 +804,17 @@ static PieceResult run_returns(Run *run) {
     if (!pending) {
         return PIECE_ERR_ALLOC;
     }
+    NodeId *figured = calloc(run->theme_count + 1, sizeof(NodeId));
+    if (!figured) {
+        free(pending);
+        return PIECE_ERR_ALLOC;
+    }
     size_t pending_count = reharmonized(plan, run->themes, run->theme_count, pending);
-    char *snapshot = pending_count ? plan_to_json(plan, NULL) : NULL;
-    size_t attempts = pending_count ? COMPOSE_RETURN_ATTEMPTS : 1;
-    PieceResult result = pending_count && !snapshot ? PIECE_ERR_ALLOC : PIECE_OK;
+    size_t figured_count = figurate(plan, run->themes, run->theme_count, figured);
+    bool again = pending_count > 0 || figured_count > 0;
+    char *snapshot = again ? plan_to_json(plan, NULL) : NULL;
+    size_t attempts = again ? COMPOSE_RETURN_ATTEMPTS : 1;
+    PieceResult result = again && !snapshot ? PIECE_ERR_ALLOC : PIECE_OK;
     for (size_t attempt = 0; result == PIECE_OK && attempt < attempts; attempt++) {
         if (attempt > 0) {
             PiecePlan *fresh = NULL;
@@ -803,13 +837,30 @@ static PieceResult run_returns(Run *run) {
             size_t total = 0;
             bool cadence = false;
             PlanReturnVariation variation = PLAN_RETURN_REHARMONIZE;
+            PlanFigure figure = {0};
             fits = fits && form_return_melody_fits(plan, pending[i]);
             form_return_source(plan, pending[i], NULL, &variation);
             if (attempt < attempts / 2 && variation == PLAN_RETURN_VARIED) {
                 fits = fits && form_return_cadence_changed(plan, pending[i], &cadence) && cadence;
+            } else if (attempt < attempts / 2 && figure_of(plan, pending[i], &figure) && figure.change_at > 0) {
+                /* The root changes at the bar the figure asks for. */
+                fits = fits && form_return_bar_changed(plan, pending[i], figure.change_at, &cadence) && cadence;
             } else if (attempt < attempts / 2) {
                 fits = fits && form_return_chords_changed(plan, pending[i], &changed, &total) && changed > 0;
             }
+        }
+        /* Everything fits: the figures are written over the harmony that is final. */
+        const MelodyFillParams defaults = melody_fill_params_default();
+        const MelodyFillParams *range = run->config->melody ? run->config->melody : &defaults;
+        for (size_t i = 0; result == PIECE_OK && fits && i < figured_count; i++) {
+            size_t index = 0;
+            FillRng rng;
+            while (index < run->theme_count && run->themes[index] != figured[i]) {
+                index++;
+            }
+            fill_rng_seed(&rng, run->config->seed + run->offset + COMPOSE_RETURN_STRIDE * (unsigned long)attempt +
+                                    7919UL * (unsigned long)index);
+            fits = !form_return_copies(plan, figured[i]) || form_figure_write(plan, figured[i], range, &rng);
         }
         if (result == PIECE_OK && !fits) {
             run->outcome->stuck = true;
@@ -826,6 +877,7 @@ static PieceResult run_returns(Run *run) {
     }
     free(snapshot);
     free(pending);
+    free(figured);
     return result;
 }
 
