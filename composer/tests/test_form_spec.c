@@ -1233,6 +1233,84 @@ static void test_repeats(void) {
     free(text);
 }
 
+/* The member parts (R-485): what it reads as, and each refusal with the path of the member at fault. */
+static void test_parts(void) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/forms/parts-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form_spec_performed(form) && form->part_count == 3);
+    assert(form->repeat_count == 0 && form->size_count == 1 && form->sizes[0].bars == 16 && form->sizes[0].section_count == 0);
+    assert(strcmp(form->parts[0].name, "First") == 0 && strcmp(form->parts[0].form, "binary") == 0 &&
+           form->parts[0].key == FORM_SPEC_HOME && !form->parts[0].new_motive && form->parts[0].again == FORM_SPEC_NO_RETURN &&
+           form->parts[0].repeats);
+    assert(strcmp(form->parts[1].name, "Second") == 0 && form->parts[1].key == 0 && form->parts[1].new_motive &&
+           form->parts[1].repeats);
+    assert(strcmp(form->parts[2].name, "First again") == 0 && form->parts[2].form[0] == '\0' && form->parts[2].again == 0 &&
+           !form->parts[2].repeats);
+    form_spec_destroy(form);
+    /* repeats says whether a part's repeats are written out, an again part's too. */
+    char *flags = replaced_in(text, "{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\", \"form\": \"binary\", \"repeats\": false}");
+    assert(form_spec_parse(flags, &form, &error) == FORM_SPEC_OK && !form->parts[0].repeats);
+    form_spec_destroy(form);
+    free(flags);
+    flags = replaced_in(text, "\"again\": \"First\"}", "\"again\": \"First\", \"repeats\": true}");
+    assert(form_spec_parse(flags, &form, &error) == FORM_SPEC_OK && form->parts[2].repeats);
+    form_spec_destroy(form);
+    free(flags);
+    /* A part of the piece's own motive and the home key may name them. */
+    flags = replaced_in(text, "\"motive\": \"new\"", "\"motive\": \"piece\", \"key\": \"other\"");
+    refused(flags, "/parts/1/key");
+    free(flags);
+    flags = replaced_in(text, "\"key\": \"other\", \"motive\": \"new\"", "\"key\": \"home\", \"motive\": \"piece\"");
+    assert(form_spec_parse(flags, &form, &error) == FORM_SPEC_OK && form->parts[1].key == FORM_SPEC_HOME && !form->parts[1].new_motive);
+    form_spec_destroy(form);
+    free(flags);
+    static const struct {
+        const char *from;
+        const char *to;
+        const char *path;
+    } REFUSED[] = {
+        {"\"sizes\": [{\"bars\": 16, \"default\": true}]", "\"sizes\": [{\"bars\": 16, \"default\": true, \"sections\": []}]", "/sizes/0/sections"},
+        {"\"sizes\": [{\"bars\": 16, \"default\": true}]", "\"sizes\": [{\"bars\": 16, \"default\": true, \"count\": 2}]", "/sizes/0/count"},
+        {"\"sizes\": [{\"bars\": 16, \"default\": true}]", "\"sizes\": [{\"bars\": 16, \"default\": true}, {\"bars\": 16}]", "/sizes/1"},
+        {"\"parts\": [", "\"repeats\": [[\"A\"]], \"parts\": [", "/repeats"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\", \"form\": \"binary\", \"flavor\": 1}", "/parts/0/flavor"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"form\": \"binary\"}", "/parts/0/name"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\"}", "/parts/0/form"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\", \"form\": \"Binary\"}", "/parts/0/form"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\", \"form\": \"nothing\"}", "/parts/0/form"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\", \"form\": \"parts-form\"}", "/parts/0/form"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\", \"form\": \"game-loop\"}", "/parts/0/form"},
+        {"{\"name\": \"First\", \"form\": \"binary\"}", "{\"name\": \"First\", \"form\": \"binary\", \"key\": \"away\"}", "/parts/0/key"},
+        {"\"motive\": \"new\"", "\"motive\": \"old\"", "/parts/1/motive"},
+        {"\"motive\": \"new\"", "\"motive\": 1", "/parts/1/motive"},
+        {"\"name\": \"Second\"", "\"name\": \"First\"", "/parts/1/name"},
+        {"\"again\": \"First\"", "\"again\": \"Third\"", "/parts/2/again"},
+        {"\"again\": \"First\"", "\"again\": \"First again\"", "/parts/2/again"},
+        {"\"again\": \"First\"", "\"again\": 1", "/parts/2/again"},
+        {"\"again\": \"First\"", "\"again\": \"First\", \"form\": \"binary\"", "/parts/2/form"},
+        {"\"again\": \"First\"", "\"again\": \"First\", \"key\": \"home\"", "/parts/2/key"},
+        {"\"again\": \"First\"", "\"again\": \"First\", \"motive\": \"new\"", "/parts/2/motive"},
+        {"\"again\": \"First\"}", "\"again\": \"First\"}, {\"name\": \"Third again\", \"again\": \"First again\"}", "/parts/3/again"},
+        {"\"again\": \"First\"}", "\"again\": \"First\"}, {\"name\": \"Fourth\", \"again\": \"First\"}, {\"name\": \"Fifth\", \"again\": \"First\"}", "/parts"},
+        {"\"bars\": 16", "\"bars\": 100", "/parts/0/form"},
+        {"\"bars\": 16", "\"bars\": 0", "/sizes/0/bars"},
+    };
+    for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+        char *document = replaced_in(text, REFUSED[i].from, REFUSED[i].to);
+        refused(document, REFUSED[i].path);
+        free(document);
+    }
+    refused("{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"x\", \"label\": \"X\", \"parts\": [], \"sizes\": [{\"bars\": 16, \"default\": true}]}",
+            "/parts");
+    refused("{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"x\", \"label\": \"X\", \"sections\": \"request\", "
+            "\"parts\": [{\"name\": \"A\", \"form\": \"binary\"}]}",
+            "/parts");
+    free(text);
+}
+
 /* The members lead_in and connective: what they read as, and each refusal with the path of the member at fault. */
 static void test_lead_ins(void) {
     char text[4096];
@@ -1573,6 +1651,7 @@ int main(int argc, char **argv) {
     test_pedal();
     test_lead_ins();
     test_repeats();
+    test_parts();
     test_construction();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;

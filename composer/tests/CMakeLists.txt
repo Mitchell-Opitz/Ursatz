@@ -415,6 +415,8 @@ target_compile_options(test_piece_perform PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_piece_perform PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # A composed piece performed in order (R-485): tests/fixtures/forms/repeat-form.json, repeats written out in place.
 add_test(NAME test_piece_perform COMMAND test_piece_perform)
+# A compound form (R-485): tests/fixtures/forms/parts-form.json, its parts composed on their own and performed in order.
+add_test(NAME test_piece_perform_parts COMMAND test_piece_perform parts)
 
 add_executable(test_piece_keys test_piece_keys.c)
 target_link_libraries(test_piece_keys PRIVATE ursatz_composer)
