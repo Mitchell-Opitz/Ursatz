@@ -1292,6 +1292,70 @@ static void test_modulating_reader(void) {
     }
 }
 
+/* ------------------------------------------------------------- the liquidation section (R-494) */
+
+static void test_liquidation_reader(void) {
+    static const char *const SECTION =
+        "{\"name\": \"L\", \"letter\": \"L\", \"role\": \"liquidation\", \"bars\": 4, \"cadence\": \"half\"%s}";
+    static const struct {
+        const char *extra;
+        const char *path;
+    } REFUSED[] = {{", \"beginning\": \"presentation\"", "/sizes/0/sections/0/beginning"},
+                   {", \"ending\": \"continuation\"", "/sizes/0/sections/0/ending"},
+                   {", \"construction\": \"auto\"", "/sizes/0/sections/0/construction"},
+                   {", \"motive\": \"invert tonal=1\"", "/sizes/0/sections/0/motive"},
+                   {", \"pedal\": \"dominant\"", "/sizes/0/sections/0/pedal"},
+                   {", \"layers\": \"all\"", "/sizes/0/sections/0/layers"},
+                   {", \"leads_in\": true", "/sizes/0/sections/0/leads_in"},
+                   {", \"returns\": \"L\"", "/sizes/0/sections/0/returns"},
+                   {", \"beats\": 12", "/sizes/0/sections/0/beats"}};
+    char text[4096];
+    char sizes[2048];
+    char section[1024];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    FormRole role;
+    assert(form_role_find("liquidation", &role) && role == FORM_ROLE_LIQUIDATION && form_role_is_theme(role));
+    assert(strcmp(form_role_name(role), "liquidation") == 0 && strcmp(form_role_label(role), "Liquidation") == 0);
+
+    snprintf(section, sizeof(section), SECTION, "");
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 4, \"default\": true, \"sections\": [%s]}", section);
+    document(text, sizeof(text), "", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    const FormSectionSpec *spec = &form->sizes[0].sections[0];
+    assert(spec->role == FORM_ROLE_LIQUIDATION && spec->bars == 4 && spec->pairing.beginning == 0 && spec->pairing.ending == 0 &&
+           spec->returns == FORM_SPEC_NO_RETURN && !spec->has_construction && spec->pedal == 0);
+    form_spec_destroy(form);
+
+    for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+        snprintf(section, sizeof(section), SECTION, REFUSED[i].extra);
+        snprintf(sizes, sizeof(sizes), "{\"bars\": 4, \"default\": true, \"sections\": [%s]}", section);
+        document(text, sizeof(text), "", sizes);
+        refused(text, REFUSED[i].path);
+    }
+    /* Only 4 bars, and only the half cadence. */
+    snprintf(sizes, sizeof(sizes),
+             "{\"bars\": 8, \"default\": true, \"sections\": [{\"name\": \"L\", \"letter\": \"L\", \"role\": \"liquidation\", "
+             "\"bars\": 8, \"cadence\": \"half\"}]}");
+    document(text, sizeof(text), "", sizes);
+    refused(text, "/sizes/0/sections/0/bars");
+    snprintf(sizes, sizeof(sizes),
+             "{\"bars\": 4, \"default\": true, \"sections\": [{\"name\": \"L\", \"letter\": \"L\", \"role\": \"liquidation\", "
+             "\"bars\": 4, \"cadence\": \"perfect-authentic\"}]}");
+    document(text, sizeof(text), "", sizes);
+    refused(text, "/sizes/0/sections/0/cadence");
+    /* No built-in form has one. */
+    for (size_t f = 0; f < form_spec_builtin_count(); f++) {
+        FormSpec *built = builtin(form_spec_builtin_name(f));
+        for (size_t z = 0; z < built->size_count; z++) {
+            for (size_t k = 0; k < built->sizes[z].section_count; k++) {
+                assert(built->sizes[z].sections[k].role != FORM_ROLE_LIQUIDATION);
+            }
+        }
+        form_spec_destroy(built);
+    }
+}
+
 /* ------------------------------------------------------------- a section that leads into the next (R-486) */
 
 #define LEAD_SEEDS 10
@@ -1867,6 +1931,7 @@ int main(int argc, char **argv) {
     test_parts();
     test_construction();
     test_modulating_reader();
+    test_liquidation_reader();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }

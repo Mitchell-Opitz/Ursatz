@@ -289,6 +289,19 @@ PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpe
 /* The checker's verdict on a free phrase candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *total);
 
+/*
+ * Liquidations (R-494): a section with a LIQUIDATION constraint is 4 bars at home over a dominant pedal, the pattern
+ * liquidated (grow_liquidate.c). grow-theme builds it when no ARCHETYPE and THEME_PAIRING are on the section.
+ */
+#define GROW_LIQUIDATE_MAGIC 0x474C5131UL
+typedef struct GrowLiquidateSpec GrowLiquidateSpec;
+bool grow_liquidate_applies(const PiecePlan *plan, FillTarget target);
+bool grow_liquidate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+                             FillCandidateList *out);
+PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLiquidateSpec *spec);
+/* The checker's verdict on a liquidation candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
+const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, unsigned *total);
+
 /* The ARCHETYPE (PlanArchetype) a pairing is, or -1 for a pairing standard-form does not know. */
 int grow_pairing_archetype(const PlanThemePairing *pairing);
 /*

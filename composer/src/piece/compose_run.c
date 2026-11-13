@@ -115,11 +115,12 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
 
 /* ------------------------------------------------------------- the plan */
 
-/* A section grow-theme builds: a theme (an archetype and a pairing) or a free phrase of a piece structure (R-170). */
+/* A section grow-theme builds: a theme (an archetype and a pairing), a free phrase of a piece structure (R-170) or a liquidation (R-494). */
 static bool is_theme_section(const PiecePlan *plan, NodeId id) {
     bool archetype = false;
     bool pairing = false;
     bool free_phrase = false;
+    bool liquidation = false;
     if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
         return false;
     }
@@ -128,8 +129,9 @@ static bool is_theme_section(const PiecePlan *plan, NodeId id) {
         archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
         pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
         free_phrase = free_phrase || kind == PLAN_CONSTRAINT_FREE_PHRASE;
+        liquidation = liquidation || kind == PLAN_CONSTRAINT_LIQUIDATION;
     }
-    return (archetype && pairing) || free_phrase;
+    return (archetype && pairing) || free_phrase || liquidation;
 }
 
 /* Whether a lane span in the section (a lane span reopened by plan_regenerate) is still open. */
@@ -507,7 +509,8 @@ static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *
     unsigned long denominator = 0;
     for (size_t t = 0; (checks & FORM_CHECK_SECTIONS) && t < theme_count; t++) {
         ComposeHeard *heard = &outcome->sections[t];
-        if (!heard->in_scope) {
+        if (!heard->in_scope || plan_node_has_constraint(plan, themes[t], PLAN_CONSTRAINT_LIQUIDATION)) {
+            /* A liquidation (R-494) is no theme shape: nothing to hear it as, and it adds nothing to the score. */
             continue;
         }
         hear_section(hearing, plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);

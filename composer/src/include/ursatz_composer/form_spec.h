@@ -41,7 +41,7 @@
 
 /*
  * What a section is in the form. The theme-like rows of the role table (theme, contrast, return, variation, layer,
- * pattern, sequence, episode, codetta) are the sections grow-theme builds; the others (intro, body, turnaround, ending) are for forms whose sections are free phrases
+ * pattern, sequence, episode, codetta, liquidation) are the sections grow-theme builds; the others (intro, body, turnaround, ending) are for forms whose sections are free phrases
  * (P46 to P53 add rows).
  */
 typedef enum {
@@ -54,19 +54,20 @@ typedef enum {
     FORM_ROLE_SEQUENCE,
     FORM_ROLE_EPISODE,
     FORM_ROLE_CODETTA,
+    FORM_ROLE_LIQUIDATION,
     FORM_ROLE_INTRO,
     FORM_ROLE_BODY,
     FORM_ROLE_TURNAROUND,
     FORM_ROLE_ENDING
 } FormRole;
 
-#define FORM_ROLE_COUNT 13
+#define FORM_ROLE_COUNT 14
 
-/* "theme", "contrast", "return", "variation", "layer", "pattern", "sequence", "episode", "codetta", "intro", "body",
- * "turnaround", "ending"; NULL for an invalid role. */
+/* "theme", "contrast", "return", "variation", "layer", "pattern", "sequence", "episode", "codetta", "liquidation", "intro",
+ * "body", "turnaround", "ending"; NULL for an invalid role. */
 const char *form_role_name(FormRole role);
 /* The label of a role: "Theme", "Contrast", "Return", "Variation", "Layer", "Pattern", "Sequence", "Episode", "Codetta",
- * "Intro", "Loop body", "Turnaround", "Ending" (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
+ * "Liquidation", "Intro", "Loop body", "Turnaround", "Ending" (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
 const char *form_role_label(FormRole role);
 /* False for a name that is none of these. */
 bool form_role_find(const char *name, FormRole *out);

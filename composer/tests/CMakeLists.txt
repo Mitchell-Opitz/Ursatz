@@ -1047,6 +1047,14 @@ target_compile_definitions(test_grow_liquidated_residue PRIVATE COMPOSER_FIXTURE
 target_compile_options(test_grow_liquidated_residue PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_liquidated_residue COMMAND test_grow_liquidated_residue)
 
+add_executable(test_grow_liquidate test_grow_liquidate.c)
+target_link_libraries(test_grow_liquidate PRIVATE ursatz_composer composer_test_support)
+target_include_directories(test_grow_liquidate PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_grow_liquidate PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_options(test_grow_liquidate PRIVATE -Wall -Wextra -Wpedantic)
+# The liquidation section (R-494): tests/fixtures/forms/liquidation-form.json composes in four rows of key and meter.
+add_test(NAME test_grow_liquidate COMMAND test_grow_liquidate)
+
 add_executable(test_grow_development test_grow_development.c)
 target_link_libraries(test_grow_development PRIVATE ursatz_composer cjson)
 target_compile_options(test_grow_development PRIVATE -Wall -Wextra -Wpedantic)

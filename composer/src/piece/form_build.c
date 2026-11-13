@@ -104,14 +104,21 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
                                const PlanConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
+    /* A liquidation (R-494) is no theme: it has no archetype or pairing, and the liquidation constraint in their place. */
+    const bool liquidation = section->role == FORM_ROLE_LIQUIDATION;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
-    if (result == PIECE_OK) {
+    if (result == PIECE_OK && liquidation) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_LIQUIDATION;
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
+    if (result == PIECE_OK && !liquidation) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
         constraint.params.archetype = (PlanArchetype)grow_pairing_archetype(&section->pairing);
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK) {
+    if (result == PIECE_OK && !liquidation) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
         constraint.params.theme_pairing = section->pairing;
@@ -123,7 +130,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.params.cadence = section->cadence;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+    if (result == PIECE_OK && !liquidation && section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = ANTECEDENT_CADENCE;
@@ -290,7 +297,12 @@ static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter, con
         if (section->beats != 0 || !form_role_is_theme(section->role)) {
             return false;
         }
-        if (!section->has_construction) {
+        if (section->role == FORM_ROLE_LIQUIDATION) {
+            /* The operator lays out its own 4 bars (the reader refuses any other); it has no theme to be buildable. */
+            if (section->bars != 4) {
+                return false;
+            }
+        } else if (!section->has_construction) {
             if (!grow_theme_buildable(meter, section->bars, &section->pairing, section->cadence, ANTECEDENT_CADENCE)) {
                 return false;
             }

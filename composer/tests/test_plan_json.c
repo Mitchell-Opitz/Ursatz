@@ -218,6 +218,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.pedal.degree == b->params.pedal.degree;
     case PLAN_CONSTRAINT_CONNECTIVE:
         return a->params.connective.written == b->params.connective.written;
+    case PLAN_CONSTRAINT_LIQUIDATION:
+        return true;
     case PLAN_CONSTRAINT_CONSTRUCTION: {
         const PlanConstruction *x = &a->params.construction;
         const PlanConstruction *y = &b->params.construction;
@@ -588,6 +590,43 @@ static void test_connective(void) {
     plan_destroy(plan);
     plan_destroy(parsed);
     plan_destroy(written_parsed);
+}
+
+/*
+ * The liquidation (R-494): a section's liquidation constraint has no members, round-trips byte for byte, a plan without it
+ * is written as it always was, and the kind is refused with a member it does not have.
+ */
+static void test_liquidation(void) {
+    PlanJsonError error;
+    PiecePlan *plain = build_sentence_plan();
+    char *plain_text = plan_to_json(plain, &error);
+    assert(plain_text && strstr(plain_text, "liquidation") == NULL);
+
+    PiecePlan *plan = build_sentence_plan();
+    NodeId section = PLAN_NODE_NONE;
+    for (NodeId id = 1; id < 40 && section == PLAN_NODE_NONE; id++) {
+        if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
+            section = id;
+        }
+    }
+    assert(section != PLAN_NODE_NONE);
+    PlanConstraint liquidation = {PLAN_CONSTRAINT_LIQUIDATION, {0}};
+    assert(plan_node_add_constraint(plan, section, &liquidation) == PLAN_OK);
+    char *text = plan_to_json(plan, &error);
+    assert(text && strstr(text, "\"kind\": \"liquidation\"") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    assert(plan_node_find_constraint(parsed, section, PLAN_CONSTRAINT_LIQUIDATION));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+
+    free(plain_text);
+    free(text);
+    free(again);
+    plan_destroy(plain);
+    plan_destroy(plan);
+    plan_destroy(parsed);
 }
 
 /*
@@ -1337,6 +1376,7 @@ int main(void) {
     test_motive_tones();
     test_pedal();
     test_connective();
+    test_liquidation();
     test_section_constraints();
     test_empty_plan();
     test_malformed_input();
