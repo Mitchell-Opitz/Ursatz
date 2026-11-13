@@ -192,7 +192,7 @@
         },
         "motive": { "type": "string", "description": "How the section's motive is made from m0, as motive_relation_step_text writes it." },
         "returns": { "type": "string", "description": "The name of an earlier section of the size." },
-        "variation": { "enum": ["exact", "ornament", "reharmonize", "reregister", "varied"], "description": "Needs returns." },
+        "variation": { "enum": ["exact", "ornament", "reharmonize", "reregister", "varied", "figurate"], "description": "Needs returns. figurate needs a figure." },
         "layers": {
           "oneOf": [
             { "const": "all" },
@@ -202,6 +202,19 @@
         "pedal": { "enum": ["dominant"], "description": "The presentation is written over a dominant pedal; needs a presentation beginning." },
         "leads_in": { "type": "boolean", "description": "The section is held until the sections after it are written, then filled against them; not on the last section, a returning section, a section another returns, or two in a row." },
         "connective": { "enum": ["sometimes", "always"], "description": "The held section ends with a short stepwise connective into the next section's first note; needs leads_in." },
+        "figure": {
+          "type": "object",
+          "required": ["kind", "rhythm"],
+          "additionalProperties": false,
+          "description": "The motive of variation of a figurate return (R-497); needs variation figurate and bars.",
+          "properties": {
+            "kind": { "enum": ["neighbor", "scale", "broken-chord"] },
+            "rhythm": { "enum": ["eighths", "sixteenths"] },
+            "harmony": { "enum": ["kept", "reharmonized"], "description": "Default kept; reharmonized puts the figure over a reharmonized copy." },
+            "change_at": { "type": "integer", "minimum": 1, "description": "A bar of the section before its last at which the root must change; needs harmony reharmonized." },
+            "climax": { "type": "boolean", "description": "An octave higher when it fits the melody range; default false." }
+          }
+        },
         "construction": {
           "description": "The section is a theme of 3 to 16 whole bars: \"auto\" (chosen from the bars and the piece's motive) or the bars of each idea and its extensions. A theme-like section of bars other than 4 or 8 needs it; a returning section keeps its source's.",
           "oneOf": [

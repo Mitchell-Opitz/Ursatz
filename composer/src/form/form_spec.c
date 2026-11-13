@@ -581,11 +581,58 @@ static bool same_construction(const FormSectionSpec *a, const FormSectionSpec *b
     return true;
 }
 
+/*
+ * A figure (R-497, R-498): {"kind", "rhythm", "harmony", "change_at", "climax"}. kind and rhythm are required; harmony is
+ * "kept" (default) or "reharmonized"; change_at is a bar of the section from 1, before its last, and needs the harmony
+ * reharmonized; climax is a bool, false by default.
+ */
+static bool read_figure(Reader *reader, const cJSON *figure, const char *path, size_t bars, PlanFigure *out) {
+    static const char *const MEMBERS[] = {"kind", "rhythm", "harmony", "change_at", "climax"};
+    static const char *const KIND_NAMES[] = {"neighbor", "scale", "broken-chord"};
+    static const char *const RHYTHM_NAMES[] = {"eighths", "sixteenths"};
+    static const char *const HARMONY_NAMES[] = {"kept", "reharmonized"};
+    int kind = -1;
+    int rhythm = -1;
+    int harmony = 0;
+    char at[64];
+    memset(out, 0, sizeof(*out));
+    if (!cJSON_IsObject(figure)) {
+        return fail(reader, path, "must be an object");
+    }
+    if (!members(reader, figure, path, MEMBERS, sizeof(MEMBERS) / sizeof(MEMBERS[0])) ||
+        !member_of(reader, figure, path, "kind", true) || !member_of(reader, figure, path, "rhythm", true) ||
+        !read_choice(reader, figure, path, "kind", KIND_NAMES, 3, &kind) ||
+        !read_choice(reader, figure, path, "rhythm", RHYTHM_NAMES, 2, &rhythm) ||
+        !read_choice(reader, figure, path, "harmony", HARMONY_NAMES, 2, &harmony) ||
+        !read_bool(reader, figure, path, "climax", &out->climax)) {
+        return false;
+    }
+    out->kind = (PlanFigureKind)kind;
+    out->rhythm = (PlanFigureRhythm)rhythm;
+    out->reharmonize = harmony == 1;
+    const cJSON *change_at = member_of(reader, figure, path, "change_at", false);
+    if (change_at) {
+        long bar;
+        join(at, sizeof(at), path, "change_at");
+        if (!whole(reader, change_at, at, -4096, 4096, &bar)) {
+            return false;
+        }
+        if (!out->reharmonize) {
+            return fail(reader, at, "a root change needs the harmony reharmonized");
+        }
+        if (bar < 1 || (size_t)bar >= bars) {
+            return fail(reader, at, "change_at must be a bar of the section before its last");
+        }
+        out->change_at = (unsigned)bar;
+    }
+    return true;
+}
+
 static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSize *size, const cJSON *json,
                          const char *path, FormSectionSpec *out) {
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
                                           "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
-                                          "pedal",   "construction", "leads_in", "connective"};
+                                          "pedal",   "construction", "leads_in", "connective", "figure"};
     char text[FORM_SPEC_CADENCE_NAME_MAX];
     char at[64];
     if (!cJSON_IsObject(json)) {
@@ -620,7 +667,8 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
     const bool liquidation = out->role == FORM_ROLE_LIQUIDATION;
     if (liquidation) {
         static const char *const REFUSED[] = {"beginning", "ending",  "construction", "motive", "returns", "variation",
-                                              "pedal",     "leads_in", "connective",   "layers", "beats"};
+                                              "pedal",     "leads_in", "connective",   "layers", "beats",
+                                              "figure"};
         for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
             if (cJSON_GetObjectItemCaseSensitive(json, REFUSED[i])) {
                 join(at, sizeof(at), path, REFUSED[i]);
@@ -777,6 +825,25 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         if (!plan_return_variation_from_name(variation->valuestring, &out->variation)) {
             return fail(reader, at, "unknown variation \"%s\"", variation->valuestring);
         }
+    }
+    /* figure (R-497): the motive of a figurate return, and only of one */
+    const cJSON *figure = member_of(reader, json, path, "figure", false);
+    const bool figurate = returns && out->variation == PLAN_RETURN_FIGURATE;
+    if (figure) {
+        join(at, sizeof(at), path, "figure");
+        if (!figurate) {
+            return fail(reader, at, "a figure needs the variation figurate");
+        }
+        if (!bars) {
+            return fail(reader, at, "a figure needs bars");
+        }
+        if (!read_figure(reader, figure, at, out->bars, &out->figure)) {
+            return false;
+        }
+        out->has_figure = true;
+    } else if (figurate) {
+        join(at, sizeof(at), path, "variation");
+        return fail(reader, at, "a figurate variation needs a figure");
     }
     /* pedal: only "dominant", and only under a presentation */
     if (cJSON_GetObjectItemCaseSensitive(json, "pedal")) {

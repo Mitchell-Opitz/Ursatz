@@ -161,6 +161,12 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.params.section_return.variation = section->variation;
         result = piece_add_constraint(plan, *out, &constraint);
     }
+    if (result == PIECE_OK && section->has_figure) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_FIGURE;
+        constraint.params.figure = section->figure;
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
     if (result == PIECE_OK && section->layers != 0) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_LAYERS;
