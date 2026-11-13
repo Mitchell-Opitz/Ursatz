@@ -140,6 +140,23 @@ static bool add_connective(cJSON *section, int connective) {
     return api_add(section, "connective", cJSON_CreateNull());
 }
 
+/* The motive of variation of a figurate return (R-497): null for no figure, else {"kind", "rhythm", "harmony", "change_at", "climax"}. */
+static bool add_figure(cJSON *section, const FormSectionSpec *spec) {
+    if (!spec->has_figure) {
+        return api_add(section, "figure", cJSON_CreateNull());
+    }
+    cJSON *figure = cJSON_CreateObject();
+    if (!figure || !cJSON_AddStringToObject(figure, "kind", plan_figure_kind_name(spec->figure.kind)) ||
+        !cJSON_AddStringToObject(figure, "rhythm", plan_figure_rhythm_name(spec->figure.rhythm)) ||
+        !cJSON_AddStringToObject(figure, "harmony", spec->figure.reharmonize ? "reharmonized" : "kept") ||
+        !api_add(figure, "change_at", spec->figure.change_at > 0 ? cJSON_CreateNumber((double)spec->figure.change_at) : cJSON_CreateNull()) ||
+        !cJSON_AddBoolToObject(figure, "climax", spec->figure.climax)) {
+        cJSON_Delete(figure);
+        return false;
+    }
+    return api_add(section, "figure", figure);
+}
+
 static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *size, const FormSectionSpec *spec) {
     cJSON *section = cJSON_CreateObject();
     if (!section || !cJSON_AddItemToArray(list, section)) {
@@ -171,7 +188,8 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            add_string_or_null(section, "variation", returns ? plan_return_variation_name(spec->variation) : NULL) &&
            add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
            add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
-           add_connective(section, spec->connective);
+           add_connective(section, spec->connective) && add_figure(section, spec) &&
+           add_string_or_null(section, "mode", spec->parallel ? "parallel" : NULL);
 }
 
 static bool add_sizes(cJSON *form_json, const FormSpec *form) {
