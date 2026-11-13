@@ -129,6 +129,17 @@ static bool add_construction(cJSON *section, const FormSectionSpec *spec) {
     return api_add(section, "construction", api_grow_construction_json(&spec->construction, &spec->pairing, text));
 }
 
+/* How a section that leads into the next ends (R-486): null for no connective, else {"value", "label"}. */
+static bool add_connective(cJSON *section, int connective) {
+    if (connective == FORM_CONNECTIVE_SOMETIMES) {
+        return add_choice_member(section, "connective", "sometimes", "Sometimes");
+    }
+    if (connective == FORM_CONNECTIVE_ALWAYS) {
+        return add_choice_member(section, "connective", "always", "Always");
+    }
+    return api_add(section, "connective", cJSON_CreateNull());
+}
+
 static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *size, const FormSectionSpec *spec) {
     cJSON *section = cJSON_CreateObject();
     if (!section || !cJSON_AddItemToArray(list, section)) {
@@ -159,7 +170,8 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            add_string_or_null(section, "returns", returns ? size->sections[spec->returns].name : NULL) &&
            add_string_or_null(section, "variation", returns ? plan_return_variation_name(spec->variation) : NULL) &&
            add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
-           add_construction(section, spec);
+           add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
+           add_connective(section, spec->connective);
 }
 
 static bool add_sizes(cJSON *form_json, const FormSpec *form) {
@@ -283,6 +295,70 @@ static bool add_settings(cJSON *form_json, const FormSpec *form) {
     return api_add(form_json, "settings", settings);
 }
 
+/* The meters a piece of the form may be in, as "3/4" ([] for any), and its tempo (null for none). */
+static bool add_meters_and_tempo(cJSON *form_json, const FormSpec *form) {
+    cJSON *meters = cJSON_AddArrayToObject(form_json, "meters");
+    for (size_t i = 0; meters && i < form->meter_count; i++) {
+        char text[24];
+        snprintf(text, sizeof text, "%d/%d", form->meters[i].beats_per_bar, form->meters[i].beat_unit);
+        if (!append_string(meters, text)) {
+            return false;
+        }
+    }
+    return meters && api_add(form_json, "tempo", form->tempo > 0 ? cJSON_CreateNumber((double)form->tempo) : cJSON_CreateNull());
+}
+
+/* The groups of sections a form writes out twice, by name (the sections are the same in every size). */
+static bool add_repeats(cJSON *form_json, const FormSpec *form) {
+    cJSON *groups = cJSON_AddArrayToObject(form_json, "repeats");
+    const FormSpecSize *size = form->size_count > 0 ? &form->sizes[0] : NULL;
+    for (size_t i = 0; groups && i < form->repeat_count; i++) {
+        cJSON *group = cJSON_CreateArray();
+        if (!group || !cJSON_AddItemToArray(groups, group)) {
+            cJSON_Delete(group);
+            return false;
+        }
+        for (size_t k = 0; size && k < form->repeats[i].count; k++) {
+            size_t index = form->repeats[i].first + k;
+            if (index >= size->section_count || !append_string(group, size->sections[index].name)) {
+                return false;
+            }
+        }
+    }
+    return groups != NULL;
+}
+
+/* The parts of a compound form: null, or [{name, form {value, label} or null, key, motive, again, repeats}]. */
+static bool add_parts(cJSON *form_json, const FormSpec *form) {
+    if (form->part_count == 0) {
+        return api_add(form_json, "parts", cJSON_CreateNull());
+    }
+    cJSON *parts = cJSON_AddArrayToObject(form_json, "parts");
+    for (size_t i = 0; parts && i < form->part_count; i++) {
+        const FormPart *part = &form->parts[i];
+        cJSON *entry = cJSON_CreateObject();
+        if (!entry || !cJSON_AddItemToArray(parts, entry)) {
+            cJSON_Delete(entry);
+            return false;
+        }
+        if (!cJSON_AddStringToObject(entry, "name", part->name)) {
+            return false;
+        }
+        FormSpec *built = NULL;
+        bool has_form = part->form[0] != '\0' && form_spec_builtin(part->form, &built) == FORM_SPEC_OK;
+        bool ok = has_form ? add_choice_member(entry, "form", part->form, built->label) : api_add(entry, "form", cJSON_CreateNull());
+        form_spec_destroy(built);
+        bool again = part->again != FORM_SPEC_NO_RETURN && part->again < form->part_count;
+        if (!ok || !cJSON_AddStringToObject(entry, "key", key_name(form, part->key)) ||
+            !cJSON_AddStringToObject(entry, "motive", part->new_motive ? "new" : "piece") ||
+            !add_string_or_null(entry, "again", again ? form->parts[part->again].name : NULL) ||
+            !cJSON_AddBoolToObject(entry, "repeats", part->repeats)) {
+            return false;
+        }
+    }
+    return parts != NULL;
+}
+
 static bool add_regions(cJSON *form_json, const FormSpec *form) {
     cJSON *regions = cJSON_AddArrayToObject(form_json, "regions");
     for (size_t i = 0; regions && i < form->region_count; i++) {
@@ -302,8 +378,9 @@ static bool add_form(cJSON *list, const FormSpec *form) {
     return cJSON_AddStringToObject(entry, "name", form->name) && cJSON_AddStringToObject(entry, "label", form->label) &&
            cJSON_AddBoolToObject(entry, "closing", form->closing) &&
            cJSON_AddStringToObject(entry, "sections", form->request_sections ? "request" : "sizes") &&
-           add_versions(entry, form) && add_settings(entry, form) && add_regions(entry, form) && add_sizes(entry, form) &&
-           add_request_members(entry, form);
+           add_versions(entry, form) && add_settings(entry, form) && add_regions(entry, form) && add_meters_and_tempo(entry, form) &&
+           add_repeats(entry, form) && add_parts(entry, form) && cJSON_AddBoolToObject(entry, "performed", form_spec_performed(form)) &&
+           add_sizes(entry, form) && add_request_members(entry, form);
 }
 
 ComposerStatus composer_api_forms(ComposerResponse *out) {
