@@ -44,6 +44,13 @@ typedef struct {
 } PieceKeyPlan;
 
 /*
+ * The key of a region of the form for a home key (R-485): one draw of rng picks one of the region's degrees for the home
+ * key's mode. Degree 1 is the home key's parallel key (the other mode, the same tonic); any other degree is the closely
+ * related key of standard-harmony on it. False when the degree names no closely related key.
+ */
+bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out);
+
+/*
  * Plans the keys of the plan made by form_build_plan from the form's size before its form is Given: adds the Given key lane spans to the
  * form, over the sections and the material, and sets the KEY constraint of a section that ends in another key to the
  * key it ends in. The home key is the KEY constraint of the first section. rng NULL plans no modulation (one span, the
