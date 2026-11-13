@@ -279,6 +279,10 @@ bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, KeyStructureMod
         ReturnSpan *span = &copy->spans[i];
         for (size_t c = 0; c < span->constraint_count; c++) {
             map_key(&span->constraints[c], to);
+            /* The minor phrase model has one predominant: a half-cadence phrase of four bars deals a chord over two bars. */
+            if (to == KEY_STRUCTURE_MODE_MINOR && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
+                span->constraints[c].params.harmony_shape.split_at_bars = false;
+            }
         }
         if (span->lane == PLAN_LANE_MELODY || span->lane == PLAN_LANE_INNER_VOICE) {
             for (size_t n = 0; n < span->note_count; n++) {
