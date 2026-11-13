@@ -155,6 +155,22 @@ typedef struct {
     size_t count;
 } FormRepeat;
 
+/* The most parts a compound form has. */
+#define FORM_SPEC_MAX_PARTS_OF 4
+
+/*
+ * One part of a compound form (R-485): a piece of a built-in form with sizes, composed on its own and performed in order,
+ * or (again) an earlier part performed once more.
+ */
+typedef struct {
+    char name[FORM_SPEC_SECTION_NAME_MAX]; /* "Minuet", "Trio", "Minuet da capo": the prefix of its sections' names after the first part */
+    char form[FORM_SPEC_NAME_MAX];         /* the built-in form it is a piece of; empty for an again part */
+    int key;                               /* FORM_SPEC_HOME, or the index of the region its home key is drawn from */
+    bool new_motive;                       /* it has a motive of its own, invented; else it has the piece's motive */
+    size_t again;                          /* FORM_SPEC_NO_RETURN, or the index of the earlier part it performs again */
+    bool repeats;                          /* its repeats are written out (true by default, false for an again part) */
+} FormPart;
+
 typedef struct {
     char name[FORM_SPEC_NAME_MAX];
     char label[FORM_SPEC_LABEL_MAX];
@@ -170,6 +186,12 @@ typedef struct {
     bool request_sections;              /* the piece request gives the sections (no sizes) */
     FormRepeat repeats[FORM_SPEC_MAX_SECTIONS]; /* the groups performed twice in place, in order (R-485) */
     size_t repeat_count;
+    /*
+     * A compound form (R-485): its parts, composed each as a piece of its own form at the size of the form's bars and
+     * performed in order. Its sizes have bars and no sections. 0 parts: not compound.
+     */
+    FormPart parts[FORM_SPEC_MAX_PARTS_OF];
+    size_t part_count;
     /*
      * The members of a form whose sections the request gives (the game loop, R-419); all empty for any other. The roles a
      * section may have, in order (until P45: intro, body, turnaround and ending); the roles that are the loop (the body
@@ -229,7 +251,7 @@ bool form_spec_role_in_loop(const FormSpec *form, FormRole role);
 /* Whether a piece of the form may be in the meter: true when the form lists no meters or lists this one. */
 bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter);
 
-/* Whether a piece of the form is performed: its composed plan is not what it renders (R-485): the form has repeats. */
+/* Whether a piece of the form is performed: its composed plan is not what it renders (R-485): the form has repeats or parts. */
 bool form_spec_performed(const FormSpec *form);
 
 /* The index of the region with that name, or -1. */

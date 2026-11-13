@@ -81,6 +81,7 @@ void api_piece_made_destroy(PieceMade *piece) {
     for (size_t i = 0; i < API_PIECE_VERSIONS_MAX; i++) {
         api_piece_version_destroy(&piece->versions[i]);
     }
+    piece_parts_destroy(&piece->parts);
 }
 
 /* How many versions the form of the request has, and the name of one in the document: "loop" and "ending", or "piece". */
@@ -140,6 +141,24 @@ static PieceResult compose_piece(PieceSpec *request, bool check, unsigned long s
     if (!request->form->request_sections) {
         request->request.seed = seed;
     }
+    /*
+     * A compound form composes each part as a piece of its own and performs them in order. The version has no plan and no
+     * outcome of its own: the rows read the parts (R-485).
+     */
+    if (!request->form->request_sections && request->form->part_count > 0) {
+        PieceVersion *version = &piece->versions[0];
+        ComposeConfig config;
+        make_config(request, check, seed, &config);
+        PieceResult composed = piece_compose_parts(request->form, &request->request, &config, &piece->parts);
+        if (composed == PIECE_OK) {
+            version->composed = true;
+            version->parts = &piece->parts;
+            composed = piece_perform_compound(request->form, request->request.bars, request->request.count, &piece->parts,
+                                              &version->performance);
+            version->performed = composed == PIECE_OK;
+        }
+        return composed;
+    }
     PieceResult result = piece_build_plan(&request->request, &piece->versions[0].plan);
     if (result == PIECE_OK) {
         result = compose_version(request, check, seed, &piece->versions[0]);
@@ -159,6 +178,11 @@ static PieceResult compose_piece(PieceSpec *request, bool check, unsigned long s
 }
 
 static bool piece_cancelled(const PieceMade *piece) {
+    for (size_t i = 0; i < piece->parts.count; i++) {
+        if (piece->parts.outcomes[i].cancelled) {
+            return true;
+        }
+    }
     for (size_t i = 0; i < piece->version_count; i++) {
         if (piece->versions[i].composed && piece->versions[i].outcome.cancelled) {
             return true;
@@ -606,10 +630,9 @@ static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational st
     }
 }
 
-/* The sections of the size a form with sizes was asked for, each matched to the plan's section of its name, in order. */
-static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
+/* The sections of a size of a form with sizes, each matched to the plan's section of its name, in order. */
+static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion *version, const FormSpecSize *size, Row *rows) {
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
-    const FormSpecSize *size = form_spec_size(request->form, request->request.bars, request->request.count);
     const PiecePlan *plan = version->plan;
     size_t next_item = 0;
     size_t count = 0;
@@ -656,22 +679,42 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
 /*
  * The rows of a form with sizes. A performed version has one row for each performed section: its start and length from the
  * performed plan, every other member from the source section in the composed plan, so a repeat's row is its source's at its
- * own start.
+ * own start. A compound form's rows come from the part each performed section belongs to: its composed plan, its outcome
+ * and the size of its form (an again part from the part it performs again).
  */
 static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *version, Row *rows) {
-    size_t count = collect_composed_rows(request, version, rows);
     if (!version->performed) {
-        return count;
+        return collect_composed_rows(request, version, form_spec_size(request->form, request->request.bars, request->request.count), rows);
     }
-    Row composed[PIECE_ROWS_MAX];
-    memcpy(composed, rows, count * sizeof(Row));
+    const PieceParts *parts = version->parts;
+    const FormSpecSize *whole = form_spec_size(request->form, request->request.bars, request->request.count);
+    Row composed[FORM_SPEC_MAX_PARTS_OF][PIECE_ROWS_MAX];
+    size_t composed_count[FORM_SPEC_MAX_PARTS_OF] = {0};
+    if (parts && whole) {
+        for (size_t i = 0; i < request->form->part_count; i++) {
+            if (request->form->parts[i].again != FORM_SPEC_NO_RETURN || !parts->forms[i] || !parts->plans[i]) {
+                continue;
+            }
+            PieceVersion view;
+            memset(&view, 0, sizeof(view));
+            view.plan = parts->plans[i];
+            view.outcome = parts->outcomes[i]; /* a shallow copy for reading: never destroyed */
+            view.composed = true;
+            composed_count[i] = collect_composed_rows(request, &view, form_spec_size(parts->forms[i], whole->bars, 0), composed[i]);
+        }
+    } else if (!parts) {
+        composed_count[0] = collect_composed_rows(request, version, whole, composed[0]);
+    } else {
+        return 0;
+    }
     const PiecePerformance *performance = &version->performance;
     size_t performed = 0;
     for (size_t i = 0; i < performance->section_count && performed < PIECE_ROWS_MAX; i++) {
-        for (size_t j = 0; j < count; j++) {
-            if (composed[j].node == performance->sections[i].source) {
+        size_t part = parts ? piece_parts_source(request->form, performance->sections[i].part) : 0;
+        for (size_t j = 0; j < composed_count[part]; j++) {
+            if (composed[part][j].node == performance->sections[i].source) {
                 PlanSpan span = plan_node_span(performance->plan, performance->sections[i].node);
-                rows[performed] = composed[j];
+                rows[performed] = composed[part][j];
                 rows[performed].start = span.start;
                 rows[performed].length = span.length;
                 performed++;
@@ -988,7 +1031,10 @@ static char *explanation_text(const PieceSpec *request, const PieceMade *piece, 
     char *joined = NULL;
     bool ok = true;
     for (size_t i = 0; ok && i < piece->version_count; i++) {
-        ok = explain_build(piece->versions[i].plan, &piece->versions[i].outcome, &explanations[i]) == EXPLAIN_OK;
+        /* A compound form is explained from its first composed part. */
+        const PieceParts *parts = piece->versions[i].parts;
+        ok = (parts ? explain_build(parts->plans[0], &parts->outcomes[0], &explanations[i])
+                    : explain_build(piece->versions[i].plan, &piece->versions[i].outcome, &explanations[i])) == EXPLAIN_OK;
         if (ok) {
             built++;
             texts[i] = json ? explain_to_json(&explanations[i]) : explain_to_text(&explanations[i]);

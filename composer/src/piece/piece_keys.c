@@ -29,15 +29,24 @@ static HarmonyMode mode_of(KeyStructureMode mode) {
 }
 
 /*
- * The closely related key of the home key on one of the degrees, drawn from the list. False when the draw is not a
- * key standard-harmony calls closely related.
+ * The key of a region of the home key (R-485): one of the region's degrees for the home key's mode, drawn from the list
+ * (one draw of rng whatever the degree is). Degree 1 is the home key's parallel key, the other mode on the same tonic;
+ * any other is the closely related key of standard-harmony on that degree. False when the draw is not a key
+ * standard-harmony calls closely related.
  */
-static bool pick_away(AnalysisKey home, const int *degrees, size_t count, FillRng *rng, AnalysisKey *out) {
+bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
+    bool minor = home.mode == KEY_STRUCTURE_MODE_MINOR;
+    const int *degrees = minor ? region->minor : region->major;
+    size_t count = minor ? region->minor_count : region->major_count;
     HarmonyMode home_mode = mode_of(home.mode);
     HarmonyRelatedKey related;
     int semitone;
-    if (!harmony_related_key_of(home_mode, degrees[fill_rng_below(rng, count)], &related) ||
-        !harmony_key_is_closely_related(home_mode, &related)) {
+    int degree = degrees[fill_rng_below(rng, count)];
+    if (degree == 1) {
+        *out = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home), minor ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR);
+        return true;
+    }
+    if (!harmony_related_key_of(home_mode, degree, &related) || !harmony_key_is_closely_related(home_mode, &related)) {
         return false;
     }
     semitone = harmony_related_key_semitone(home_mode, &related);
@@ -46,6 +55,18 @@ static bool pick_away(AnalysisKey home, const int *degrees, size_t count, FillRn
     }
     *out = plan_key_of_pitch_class((analysis_key_tonic_pitch_class(&home) + semitone) % 12, related.mode == HARMONY_MODE_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
     return true;
+}
+
+/* A region a section's keys name has no degree 1: the parallel key is for the parts of a compound form. */
+static bool region_has_degree_one(const FormRegion *region, bool minor) {
+    const int *degrees = minor ? region->minor : region->major;
+    size_t count = minor ? region->minor_count : region->major_count;
+    for (size_t i = 0; i < count; i++) {
+        if (degrees[i] == 1) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /*
@@ -68,9 +89,7 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
     }
     for (size_t r = 0; r < form->region_count; r++) {
         const FormRegion *region = &form->regions[r];
-        bool minor = home.mode == KEY_STRUCTURE_MODE_MINOR;
-        if (!pick_away(home, minor ? region->minor : region->major, minor ? region->minor_count : region->major_count, rng,
-                       &away[r])) {
+        if (region_has_degree_one(region, home.mode == KEY_STRUCTURE_MODE_MINOR) || !piece_region_key(home, region, rng, &away[r])) {
             return false;
         }
     }

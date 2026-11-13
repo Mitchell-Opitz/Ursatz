@@ -1,0 +1,13 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "parts-form",
+  "label": "Parts form",
+  "regions": [{"name": "other", "major": [6], "minor": [3]}],
+  "parts": [
+    {"name": "First", "form": "binary"},
+    {"name": "Second", "form": "binary", "key": "other", "motive": "new"},
+    {"name": "First again", "again": "First"}
+  ],
+  "sizes": [{"bars": 16, "default": true}]
+}

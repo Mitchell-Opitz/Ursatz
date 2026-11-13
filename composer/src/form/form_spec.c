@@ -873,8 +873,130 @@ static bool read_repeats(Reader *reader, const cJSON *root, FormSpec *form) {
     return true;
 }
 
+/* ------------------------------------------------------------- parts */
+
+/* How deep a built-in form is being read for the part of another: a part's form is not itself compound. */
+static _Thread_local unsigned part_depth;
+
+/* parts (R-485): the parts of a compound form, each a piece of a built-in form with sizes, or an earlier part again. */
+static bool read_parts(Reader *reader, const cJSON *root, FormSpec *form) {
+    static const char *const ALLOWED[] = {"name", "form", "key", "motive", "again", "repeats"};
+    char at[64];
+    const cJSON *list = array_member(reader, root, "", "parts", false, at, sizeof(at));
+    if (reader->failed || !list) {
+        return !reader->failed;
+    }
+    if (form->request_sections) {
+        return fail(reader, at, "only a form with sizes has this member");
+    }
+    if (part_depth > 0) {
+        return fail(reader, at, "a part's form is not itself compound");
+    }
+    size_t n = (size_t)cJSON_GetArraySize(list);
+    if (n < 1) {
+        return fail(reader, at, "must hold at least one part");
+    }
+    if (n > FORM_SPEC_MAX_PARTS_OF) {
+        return fail(reader, at, "at most %d parts", FORM_SPEC_MAX_PARTS_OF);
+    }
+    for (size_t i = 0; i < n; i++) {
+        char item[64];
+        char member_at[64];
+        const cJSON *json = cJSON_GetArrayItem(list, (int)i);
+        FormPart *part = &form->parts[i];
+        join_index(item, sizeof(item), at, i);
+        if (!cJSON_IsObject(json)) {
+            return fail(reader, item, "must be an object");
+        }
+        memset(part, 0, sizeof(*part));
+        part->key = FORM_SPEC_HOME;
+        part->again = FORM_SPEC_NO_RETURN;
+        part->repeats = true;
+        if (!members(reader, json, item, ALLOWED, sizeof(ALLOWED) / sizeof(ALLOWED[0])) ||
+            !read_text(reader, json, item, "name", true, part->name, sizeof(part->name), NULL)) {
+            return false;
+        }
+        for (size_t other = 0; other < i; other++) {
+            if (strcmp(form->parts[other].name, part->name) == 0) {
+                join(member_at, sizeof(member_at), item, "name");
+                return fail(reader, member_at, "part name \"%s\" repeated", part->name);
+            }
+        }
+        const cJSON *again = member_of(reader, json, item, "again", false);
+        if (again) {
+            join(member_at, sizeof(member_at), item, "again");
+            if (!cJSON_IsString(again) || !again->valuestring) {
+                return fail(reader, member_at, "must be the name of an earlier part");
+            }
+            for (size_t other = 0; other < i; other++) {
+                if (strcmp(form->parts[other].name, again->valuestring) == 0) {
+                    part->again = other;
+                }
+            }
+            if (part->again == FORM_SPEC_NO_RETURN) {
+                return fail(reader, member_at, "\"%s\" is not an earlier part", again->valuestring);
+            }
+            if (form->parts[part->again].again != FORM_SPEC_NO_RETURN) {
+                return fail(reader, member_at, "\"%s\" is itself an again part", again->valuestring);
+            }
+            static const char *const NOT_WITH_AGAIN[] = {"form", "key", "motive"};
+            for (size_t m = 0; m < 3; m++) {
+                if (cJSON_GetObjectItemCaseSensitive(json, NOT_WITH_AGAIN[m])) {
+                    join(member_at, sizeof(member_at), item, NOT_WITH_AGAIN[m]);
+                    return fail(reader, member_at, "a part that performs another again takes no %s", NOT_WITH_AGAIN[m]);
+                }
+            }
+            part->repeats = false;
+        } else {
+            FormSpec *sub = NULL;
+            bool known = true;
+            if (!read_name(reader, json, item, "form", true, part->form, sizeof(part->form), &known)) {
+                return false;
+            }
+            join(member_at, sizeof(member_at), item, "form");
+            if (strcmp(part->form, form->name) == 0) {
+                return fail(reader, member_at, "a part's form is not itself compound");
+            }
+            part_depth++;
+            FormSpecResult found = form_spec_builtin(part->form, &sub);
+            part_depth--;
+            if (found == FORM_SPEC_ERR_UNKNOWN) {
+                return fail(reader, member_at, "\"%s\" is not a built-in form", part->form);
+            }
+            if (found != FORM_SPEC_OK || sub->request_sections || sub->size_count == 0) {
+                form_spec_destroy(sub);
+                return fail(reader, member_at, "\"%s\" is not a form with sizes that is not itself compound", part->form);
+            }
+            for (size_t z = 0; z < form->size_count; z++) {
+                if (!form_spec_size(sub, form->sizes[z].bars, 0)) {
+                    form_spec_destroy(sub);
+                    return fail(reader, member_at, "\"%s\" has no size of %zu bars", part->form, form->sizes[z].bars);
+                }
+            }
+            form_spec_destroy(sub);
+            if (!read_key(reader, form, json, item, "key", &part->key)) {
+                return false;
+            }
+            const cJSON *motive = member_of(reader, json, item, "motive", false);
+            if (motive) {
+                join(member_at, sizeof(member_at), item, "motive");
+                if (!cJSON_IsString(motive) || !motive->valuestring ||
+                    (strcmp(motive->valuestring, "piece") != 0 && strcmp(motive->valuestring, "new") != 0)) {
+                    return fail(reader, member_at, "must be \"piece\" or \"new\"");
+                }
+                part->new_motive = strcmp(motive->valuestring, "new") == 0;
+            }
+        }
+        if (!read_bool(reader, json, item, "repeats", &part->repeats)) {
+            return false;
+        }
+        form->part_count = i + 1;
+    }
+    return true;
+}
+
 bool form_spec_performed(const FormSpec *form) {
-    return form && form->repeat_count > 0;
+    return form && (form->repeat_count > 0 || form->part_count > 0);
 }
 
 /* ------------------------------------------------------------- a form whose sections the request gives */
@@ -1044,8 +1166,9 @@ static bool read_request_members(Reader *reader, const cJSON *root, FormSpec *fo
 
 /* ------------------------------------------------------------- sizes */
 
-static bool read_sizes(Reader *reader, const cJSON *root, FormSpec *form) {
+static bool read_sizes(Reader *reader, const cJSON *root, FormSpec *form, bool compound) {
     static const char *const ALLOWED[] = {"bars", "count", "default", "sections"};
+    static const char *const COMPOUND_ALLOWED[] = {"bars", "default", "sections"};
     char at[64];
     const cJSON *list = array_member(reader, root, "", "sizes", false, at, sizeof(at));
     if (reader->failed) {
@@ -1076,7 +1199,11 @@ static bool read_sizes(Reader *reader, const cJSON *root, FormSpec *form) {
         if (!cJSON_IsObject(json)) {
             return fail(reader, item, "must be an object");
         }
-        if (!members(reader, json, item, ALLOWED, 4)) {
+        if (compound && cJSON_GetObjectItemCaseSensitive(json, "sections")) {
+            join(sections_at, sizeof(sections_at), item, "sections");
+            return fail(reader, sections_at, "a compound form's sizes have bars and no sections");
+        }
+        if (!members(reader, json, item, compound ? COMPOUND_ALLOWED : ALLOWED, compound ? 3 : 4)) {
             return false;
         }
         long bars;
@@ -1086,7 +1213,7 @@ static bool read_sizes(Reader *reader, const cJSON *root, FormSpec *form) {
         if (!bars_item || !whole(reader, bars_item, sections_at, 1, 4096, &bars)) {
             return false;
         }
-        const cJSON *count_item = member_of(reader, json, item, "count", false);
+        const cJSON *count_item = compound ? NULL : member_of(reader, json, item, "count", false);
         if (count_item) {
             join(sections_at, sizeof(sections_at), item, "count");
             if (!whole(reader, count_item, sections_at, 1, 64, &count)) {
@@ -1097,6 +1224,15 @@ static bool read_sizes(Reader *reader, const cJSON *root, FormSpec *form) {
         size->count = (size_t)count;
         if (!read_bool(reader, json, item, "default", &size->is_default)) {
             return false;
+        }
+        if (compound) {
+            for (size_t other = 0; other < i; other++) {
+                if (form->sizes[other].bars == size->bars) {
+                    return fail(reader, item, "a size with these bars is already listed");
+                }
+            }
+            form->size_count = i + 1;
+            continue;
         }
         const cJSON *sections = array_member(reader, json, item, "sections", true, sections_at, sizeof(sections_at));
         if (!sections) {
@@ -1243,7 +1379,7 @@ bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter) {
 static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
     static const char *const ALLOWED[] = {"schema", "version", "name",    "label",  "plan_name", "closing", "accompaniment",
                                           "regions", "checks", "sizes", "sections", "roles",   "loop",    "cadences",
-                                          "default_ending", "meters", "tempo", "repeats"};
+                                          "default_ending", "meters", "tempo", "repeats", "parts"};
     static const char *const REQUEST_ONLY[] = {"roles", "loop", "cadences", "default_ending"};
     char text[FORM_SPEC_NAME_MAX];
     bool present;
@@ -1301,8 +1437,12 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
         }
         form->request_sections = true;
     }
-    if (!read_meters_and_tempo(reader, root, form) || !read_sizes(reader, root, form) ||
-        !read_repeats(reader, root, form)) {
+    bool compound = cJSON_GetObjectItemCaseSensitive(root, "parts") != NULL;
+    if (compound && cJSON_GetObjectItemCaseSensitive(root, "repeats")) {
+        return fail(reader, "/repeats", "a compound form has parts, not repeats");
+    }
+    if (!read_meters_and_tempo(reader, root, form) || !read_sizes(reader, root, form, compound) ||
+        !read_repeats(reader, root, form) || !read_parts(reader, root, form)) {
         return false;
     }
     if (form->request_sections) {

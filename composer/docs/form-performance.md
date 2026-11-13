@@ -1,7 +1,7 @@
 # Form performance
 
 How a form's piece is led, repeated and performed: a section that leads into the next with a connective (R-486, P48 B2),
-written-out repeats (R-485, P48 B3) and, as the later branch of P48 adds it, the parts of a compound form. Back to the
+written-out repeats (R-485, P48 B3) and the parts of a compound form (R-485, P48 B4). Back to the
 [docs index](README.md).
 
 ## Composed once, performed in order
@@ -22,7 +22,7 @@ the plan JSON, the MIDI file and the MusicXML. A form with neither member compos
   and idea nodes. Every node is Realized and the form node Given. The material, the motive nodes and the seam are not
   performed.
 
-A performance has at most `PIECE_PERFORMED_MAX` (32) sections. `PiecePerformPart` is a part's form, size, composed plan, whether its repeats
+A performance has at most `PIECE_PERFORMED_MAX` (32) sections. `piece_perform_compound` is `piece_perform` for a compound form: it makes a part for each of the form's parts and names the form node for the compound form (`plan_name`). `PiecePerformPart` is a part's form, size, composed plan, whether its repeats
 are written out, and its name (the first part is not prefixed; a later part's sections are `Trio A`).
 
 ## Repeats
@@ -32,6 +32,42 @@ are written out, and its name (the first part is not prefixed; a later part's se
 24-bar plan. Each section's melody, harmony, bass and inner voice spans are the source's moved, and repeats do not change
 composing: the composed plan is the plan of the same form without `repeats`. Repeat signs in the MusicXML are Later; the
 repeats are written out.
+
+## Parts
+
+A compound form (`parts` in the form document, [forms.md](forms.md)) is made of parts, each a piece of a built-in form with
+sizes. A part is composed on its own, as the piece of that form at the size of the compound form's bars, and the parts are
+performed in order. The trio of a minuet is a part in its own key with its own motive. A form with parts has no sections of
+its own: its sizes have `bars` and no `sections`.
+
+`piece_compose_parts` (`piece_perform.h`) composes the parts into a `PieceParts` (a plan, a compose outcome, a home key and
+the built-in form of each part; an `again` part has none of its own: it is its source's):
+
+- **Keys.** They are drawn first, from `fill_rng_seed(request->seed)`, one `piece_region_key` draw for each part whose key is a
+  region, in part order; a part with the home key is in the request's key. So a part's key does not depend on how another
+  part composed. `piece_region_key` takes the region's degrees for the home key's mode, draws one, and answers its key:
+  degree 1 is the home key's parallel key (C major: C minor, A minor: A major), any other degree is the closely related key
+  of standard-harmony on it (6 of C major: A minor, 3 of A minor: C major). `piece_plan_keys` draws a form's keys with the
+  same function and the same draws, so no existing plan moves; it still refuses a region with degree 1 for a section's keys.
+- **Seeds.** The part at index `i` is composed from the request's seed plus `PIECE_PART_SEED_STRIDE` (40) times `i`, so no
+  part repeats another's draws. A part composed with a motive of its own (`motive` `"new"`) gets no motive from the request
+  and the compose run compares with none: the motive is invented.
+- **Failing.** A part that fails fails the whole call with its result; `PIECE_ERR_BAD_SIZE` is a size the compound form
+  does not have. The piece entry tries the next seed (`PIECE_SEED_TRIES`), so a retry composes the whole compound piece again.
+- **Again.** An `again` part performs the composed plan of its source, with its own `repeats` (none by default: the da
+  capo is played without repeats). Its sections are named `<part name> <section name>` (`Minuet da capo A`), the notes are
+  the source's moved, and its key is the source's.
+
+The sections of the performance are named as the form names them for the first part, and `<part name> <section name>` for a
+later part (`Second A`, `First again B`). Each section's lanes are the source's moved, and the key lane has a span over each
+performed section, in its part's key.
+
+`parts-form.json` (First and Second, binary pieces of 16 bars, Second in the region `other` with a motive of its own, then
+First again) composes in C major 4/4: the keys are C major, A minor and C major, and the performance is 48 bars of A, B,
+Second A, Second B, First again A and First again B, 10 of 10 seeds. The piece entry answers with the performed plan as for
+repeats; the version's own plan and compose outcome are empty (`composed` is true), its rows are one for each performed
+section, each from its part's composed plan and outcome (a part's `key_heard` is heard over that part's plan), and the
+explanation is the first part's. Regenerate and variations of a compound form are Later, as for repeats.
 
 ## What the piece version answers
 

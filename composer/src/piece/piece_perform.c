@@ -3,9 +3,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "piece/piece_internal.h"
@@ -152,7 +155,80 @@ void piece_performance_destroy(PiecePerformance *performance) {
     }
 }
 
-PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, PiecePerformance *out) {
+void piece_parts_destroy(PieceParts *parts) {
+    if (!parts) {
+        return;
+    }
+    for (size_t i = 0; i < FORM_SPEC_MAX_PARTS_OF; i++) {
+        plan_destroy(parts->plans[i]);
+        compose_outcome_destroy(&parts->outcomes[i]);
+        form_spec_destroy(parts->forms[i]);
+    }
+    memset(parts, 0, sizeof(*parts));
+}
+
+PieceResult piece_compose_parts(const FormSpec *form, const PieceRequest *request, const ComposeConfig *config,
+                                PieceParts *out) {
+    if (!form || !request || !config || !out) {
+        return PIECE_ERR_NULL;
+    }
+    memset(out, 0, sizeof(*out));
+    if (form->part_count == 0) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    const FormSpecSize *size = form_spec_size(form, request->bars, request->count);
+    if (!size) {
+        return PIECE_ERR_BAD_SIZE;
+    }
+    /* The keys first, so that a part's key does not depend on how another part composed. */
+    FillRng rng;
+    fill_rng_seed(&rng, request->seed);
+    for (size_t i = 0; i < form->part_count; i++) {
+        const FormPart *part = &form->parts[i];
+        if (part->again != FORM_SPEC_NO_RETURN) {
+            out->keys[i] = out->keys[part->again];
+        } else if (part->key == FORM_SPEC_HOME) {
+            out->keys[i] = request->key;
+        } else if (!piece_region_key(request->key, &form->regions[part->key], &rng, &out->keys[i])) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+    }
+    out->count = form->part_count;
+    PieceResult result = PIECE_OK;
+    for (size_t i = 0; result == PIECE_OK && i < form->part_count; i++) {
+        const FormPart *part = &form->parts[i];
+        if (part->again != FORM_SPEC_NO_RETURN) {
+            continue;
+        }
+        PieceRequest made = *request;
+        ComposeConfig composing = *config;
+        made.form = part->form;
+        made.bars = size->bars;
+        made.count = 0;
+        made.key = out->keys[i];
+        made.seed = request->seed + PIECE_PART_SEED_STRIDE * (unsigned long)i;
+        composing.seed = made.seed;
+        if (part->new_motive) {
+            made.motive = NULL;
+            made.source = NULL;
+            composing.basic = NULL;
+        }
+        if (form_spec_builtin(part->form, &out->forms[i]) != FORM_SPEC_OK) {
+            result = PIECE_ERR_BAD_REQUEST;
+            break;
+        }
+        result = piece_build_plan(&made, &out->plans[i]);
+        if (result == PIECE_OK) {
+            result = compose_run(out->plans[i], &composing, &out->outcomes[i]);
+        }
+    }
+    if (result != PIECE_OK) {
+        piece_parts_destroy(out);
+    }
+    return result;
+}
+
+static PieceResult perform(const PiecePerformPart *parts, size_t part_count, const char *plan_name, PiecePerformance *out) {
     if (!parts || part_count == 0 || !out) {
         return PIECE_ERR_NULL;
     }
@@ -193,7 +269,7 @@ PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, Piec
     PlanLanePayload payload;
     LaneSpanId lane;
     PieceResult result = piece_result_of_plan(
-        plan_add_node(performed, PLAN_NODE_NONE, PLAN_NODE_FORM, whole, parts[0].form->plan_name, &form_id));
+        plan_add_node(performed, PLAN_NODE_NONE, PLAN_NODE_FORM, whole, plan_name, &form_id));
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.meter = meter;
@@ -237,4 +313,36 @@ PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, Piec
     }
     out->plan = performed;
     return PIECE_OK;
+}
+
+PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, PiecePerformance *out) {
+    return perform(parts, part_count, parts && part_count > 0 && parts[0].form ? parts[0].form->plan_name : NULL, out);
+}
+
+size_t piece_parts_source(const FormSpec *form, size_t index) {
+    return form->parts[index].again == FORM_SPEC_NO_RETURN ? index : form->parts[index].again;
+}
+
+PieceResult piece_perform_compound(const FormSpec *form, size_t bars, size_t count, const PieceParts *parts,
+                                   PiecePerformance *out) {
+    if (!form || !parts || !out) {
+        return PIECE_ERR_NULL;
+    }
+    const FormSpecSize *size = form_spec_size(form, bars, count);
+    PiecePerformPart performed[FORM_SPEC_MAX_PARTS_OF];
+    if (!size || form->part_count == 0 || parts->count != form->part_count) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    for (size_t i = 0; i < form->part_count; i++) {
+        size_t source = piece_parts_source(form, i);
+        if (!parts->forms[source] || !parts->plans[source]) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+        performed[i].form = parts->forms[source];
+        performed[i].size = form_spec_size(parts->forms[source], size->bars, 0);
+        performed[i].plan = parts->plans[source];
+        performed[i].repeats = form->parts[i].repeats;
+        performed[i].name = form->parts[i].name;
+    }
+    return perform(performed, form->part_count, form->plan_name, out);
 }
