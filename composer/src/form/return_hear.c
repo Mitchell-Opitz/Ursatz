@@ -23,6 +23,7 @@
 #include <ursatz_composer/lanes.h>
 
 #include "form/form_internal.h"
+#include "grow/grow_internal.h"
 
 /* The most themes read across a plan: nine sections, each with a few themes. */
 #define MAX_THEMES 64
@@ -54,6 +55,8 @@ typedef struct {
     RhythmicPattern *rhythm;
     MotifWindow window;
     bool usable;
+    /* A section with a FIGURE and the section it returns, each heard on its skeleton: the figured section. Else PLAN_NODE_NONE. */
+    NodeId reduced_for;
 } Theme;
 
 static void theme_destroy(Theme *theme) {
@@ -241,6 +244,135 @@ static ReturnHearResult read_section(ComposerHearing *hearing, const PiecePlan *
     return status;
 }
 
+/* The section a section with a FIGURE returns (R-497); false for a section with no FIGURE or no RETURN. */
+static bool figured_return(const PiecePlan *plan, NodeId section, NodeId *source) {
+    bool figure = false;
+    bool found = false;
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        figure = figure || constraint->kind == PLAN_CONSTRAINT_FIGURE;
+        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
+            *source = constraint->params.section_return.section;
+            found = true;
+        }
+    }
+    return figure && found && plan_has_node(plan, *source) && plan_node_kind(plan, *source) == PLAN_NODE_SECTION;
+}
+
+/* A melody note: where it starts and ends, from the start of the plan, and its pitch. */
+typedef struct {
+    Rational onset;
+    Rational end;
+    int pitch;
+} HeardNote;
+
+/*
+ * The melody of a section reduced to one note per cell of the meter: the note sounding at the cell's start, lasting the
+ * cell (a cell with no note sounding is left out). The cells are those the harmony operators place chords on, from the
+ * start of the section. False on allocation failure or a meter without cells.
+ */
+static bool read_skeleton(const PiecePlan *plan, NodeId section, int **pitches, Rational **durations, size_t *count) {
+    PlanSpan span = plan_node_span(plan, section);
+    PlanMeter meter;
+    size_t cells;
+    Rational cell;
+    Rational end;
+    LaneSpanId meter_id;
+    *pitches = NULL;
+    *durations = NULL;
+    *count = 0;
+    if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &meter_id, 1) < 1) {
+        return false;
+    }
+    meter = plan_lane_span_payload(plan, meter_id)->meter;
+    if (!grow_cells_per_bar(&meter, &cells) || cells == 0 ||
+        rational_div_int(grow_bar_length(&meter), (long long)cells, &cell) != RATIONAL_OK || plan_span_end(span, &end) != PLAN_OK) {
+        return false;
+    }
+    size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
+    LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
+    size_t total = 0;
+    if (spans && !ids) {
+        return false;
+    }
+    plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, spans);
+    for (size_t s = 0; s < spans; s++) {
+        total += plan_lane_span_payload(plan, ids[s])->notes.note_count;
+    }
+    HeardNote *notes = total ? calloc(total, sizeof(HeardNote)) : NULL;
+    size_t used = 0;
+    for (size_t s = 0; notes && s < spans; s++) {
+        PlanSpan lane_span = plan_lane_span_span(plan, ids[s]);
+        const PlanNotes *held = &plan_lane_span_payload(plan, ids[s])->notes;
+        for (size_t n = 0; n < held->note_count; n++) {
+            HeardNote *note = &notes[used];
+            if (rational_add(lane_span.start, held->notes[n].offset, &note->onset) == RATIONAL_OK &&
+                rational_add(note->onset, held->notes[n].duration, &note->end) == RATIONAL_OK) {
+                note->pitch = held->notes[n].midi;
+                used++;
+            }
+        }
+    }
+    free(ids);
+    size_t capacity = (size_t)(span.length.num * (long long)cells / (span.length.den ? span.length.den : 1)) + cells + 1;
+    *pitches = calloc(capacity, sizeof(int));
+    *durations = calloc(capacity, sizeof(Rational));
+    bool ok = (total == 0 || notes) && *pitches && *durations;
+    Rational start = span.start;
+    for (size_t k = 0; ok; k++) {
+        if (rational_cmp(start, end) >= 0) {
+            break;
+        }
+        for (size_t n = 0; n < used && *count < capacity; n++) {
+            if (rational_cmp(notes[n].onset, start) <= 0 && rational_cmp(start, notes[n].end) < 0) {
+                (*pitches)[*count] = notes[n].pitch;
+                (*durations)[*count] = cell;
+                (*count)++;
+                break;
+            }
+        }
+        ok = rational_add(start, cell, &start) == RATIONAL_OK;
+    }
+    free(notes);
+    if (!ok) {
+        free(*pitches);
+        free(*durations);
+        *pitches = NULL;
+        *durations = NULL;
+        *count = 0;
+    }
+    return ok;
+}
+
+/* Adds the skeleton of a section to themes, heard for the figured section; the skeleton is one window of the whole section. */
+static ReturnHearResult add_skeleton(const PiecePlan *plan, NodeId section, NodeId figured, Theme *themes, size_t *count) {
+    int *pitches;
+    Rational *durations;
+    size_t notes;
+    char value[ID_SIZE];
+    if (*count >= MAX_THEMES) {
+        return RETURN_HEAR_OK;
+    }
+    if (!read_skeleton(plan, section, &pitches, &durations, &notes)) {
+        return RETURN_HEAR_ERR_ANALYSIS;
+    }
+    Theme *theme = &themes[*count];
+    ReturnHearResult status = RETURN_HEAR_OK;
+    snprintf(value, sizeof(value), "theme-occurrence-%zu", *count);
+    theme->section = section;
+    theme->reduced_for = figured;
+    if (entity_id_create(value, &theme->id) != ENTITY_ID_OK) {
+        status = RETURN_HEAR_ERR_ALLOC;
+    } else if (notes >= THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH) {
+        theme->usable = make_window(theme, pitches, durations, notes);
+        status = theme->usable ? RETURN_HEAR_OK : RETURN_HEAR_ERR_ALLOC;
+    }
+    (*count)++;
+    free(pitches);
+    free(durations);
+    return status;
+}
+
 /* The index of the theme whose id is the entity's. */
 static bool theme_of(const Theme *themes, size_t count, const EntityID *id, size_t *out) {
     for (size_t i = 0; i < count; i++) {
@@ -310,6 +442,14 @@ ReturnHearResult return_hear_in(ComposerHearing *hearing, const PiecePlan *plan,
             status = read_section(hearing, plan, id, themes, &theme_count);
         }
     }
+    /* A section with a FIGURE is heard against the section it returns on their skeletons (R-497). */
+    for (NodeId id = 1; status == RETURN_HEAR_OK && id <= plan_node_count(plan); id++) {
+        NodeId source;
+        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && figured_return(plan, id, &source)) {
+            status = add_skeleton(plan, source, id, themes, &theme_count);
+            status = status == RETURN_HEAR_OK ? add_skeleton(plan, id, id, themes, &theme_count) : status;
+        }
+    }
     for (size_t t = 0; status == RETURN_HEAR_OK && t < theme_count; t++) {
         if (themes[t].usable) {
             entries[entry_count].theme_occurrence_id = themes[t].id;
@@ -340,6 +480,14 @@ ReturnHearResult return_hear_in(ComposerHearing *hearing, const PiecePlan *plan,
         }
         ReturnHeardPair pair = {themes[earlier].section, themes[later].section, evidence->contour_score,
                                 evidence->rhythm_score, evidence->similarity};
+        /* A skeleton is heard only against the skeleton of its own figured section; the figured section's pair with the
+           section it returns is the skeletons', not the notes'. */
+        NodeId source;
+        bool replaced = themes[earlier].reduced_for == PLAN_NODE_NONE && themes[later].reduced_for == PLAN_NODE_NONE &&
+                        figured_return(plan, pair.later, &source) && source == pair.earlier;
+        if (themes[earlier].reduced_for != themes[later].reduced_for || replaced) {
+            continue;
+        }
         if (pair.earlier != pair.later && !add_pair(out, &capacity, &pair)) {
             status = RETURN_HEAR_ERR_ALLOC;
         }
