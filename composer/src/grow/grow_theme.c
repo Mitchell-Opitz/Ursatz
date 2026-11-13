@@ -71,7 +71,10 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
         return false;
     }
     request->key = plan_lane_span_payload(plan, spans[at])->key;
-    if (at > 0 && rational_cmp(first.start, request->span.start) == 0) {
+    /* A change of mode on one tonic is not a modulation: no pivot (R-499). */
+    if (at > 0 && rational_cmp(first.start, request->span.start) == 0 &&
+        analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, spans[at - 1])->key) !=
+            analysis_key_tonic_pitch_class(&request->key)) {
         request->has_start_change = true;
         request->from_key = plan_lane_span_payload(plan, spans[at - 1])->key;
     }

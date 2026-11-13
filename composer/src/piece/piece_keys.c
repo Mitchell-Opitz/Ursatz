@@ -84,6 +84,13 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
         keys[i].start = home;
         keys[i].end = home;
         can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
+        /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
+        if (size->sections[i].parallel) {
+            keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home),
+                                                    home.mode == KEY_STRUCTURE_MODE_MINOR ? KEY_STRUCTURE_MODE_MAJOR
+                                                                                          : KEY_STRUCTURE_MODE_MINOR);
+            keys[i].end = keys[i].start;
+        }
     }
     if (!rng || !can) {
         return true;
