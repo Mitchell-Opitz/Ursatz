@@ -1,0 +1,14 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "figure-form",
+  "label": "Figure form",
+  "sizes": [
+    {"bars": 32, "count": 3, "default": true, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "returns": "theme", "variation": "figurate", "figure": {"kind": "neighbor", "rhythm": "eighths"}},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "returns": "theme", "variation": "figurate", "figure": {"kind": "scale", "rhythm": "sixteenths", "harmony": "reharmonized", "change_at": 3}},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "returns": "theme", "variation": "figurate", "figure": {"kind": "broken-chord", "rhythm": "sixteenths", "climax": true}}
+    ]}
+  ]
+}
