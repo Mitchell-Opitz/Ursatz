@@ -34,7 +34,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 #define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective", "liquidation"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure"};
 static const char *const EXTENSION_KIND_NAMES[] = {"repeat", "stretch", "addition", "evaded"};
 static const char *const CONSTRUCTION_REASON_NAMES[] = {"given", "motive", "length"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
@@ -332,6 +332,15 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_CONNECTIVE:
         ok = ok && plan_json_add(object, "written", cJSON_CreateBool(constraint->params.connective.written));
         break;
+    case PLAN_CONSTRAINT_FIGURE: {
+        const PlanFigure *figure = &constraint->params.figure;
+        ok = ok && plan_json_add(object, "figure", cJSON_CreateString(plan_figure_kind_name(figure->kind))) &&
+             plan_json_add(object, "rhythm", cJSON_CreateString(plan_figure_rhythm_name(figure->rhythm))) &&
+             plan_json_add(object, "harmony", cJSON_CreateString(figure->reharmonize ? "reharmonized" : "kept")) &&
+             plan_json_add(object, "change_at", figure->change_at ? json_number((long)figure->change_at) : cJSON_CreateNull()) &&
+             plan_json_add(object, "climax", cJSON_CreateBool(figure->climax));
+        break;
+    }
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
@@ -1298,6 +1307,59 @@ static bool read_function(JsonReader *reader, const cJSON *object, const char *p
     return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
 }
 
+/* A figure constraint: every member required; change_at is a bar from 1 or null for none. */
+static bool read_figure(JsonReader *reader, const cJSON *item, const char *path, PlanFigure *out) {
+    const cJSON *kind = plan_json_member(reader, item, path, "figure", true);
+    const cJSON *rhythm = kind ? plan_json_member(reader, item, path, "rhythm", true) : NULL;
+    const cJSON *harmony = rhythm ? plan_json_member(reader, item, path, "harmony", true) : NULL;
+    const cJSON *change_at = harmony ? plan_json_member(reader, item, path, "change_at", true) : NULL;
+    const cJSON *climax = change_at ? plan_json_member(reader, item, path, "climax", true) : NULL;
+    if (!climax) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "figure");
+    if (!cJSON_IsString(kind)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    if (!plan_figure_kind_from_name(kind->valuestring, &out->kind)) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", kind->valuestring);
+    }
+    json_child_path(at, path, "rhythm");
+    if (!cJSON_IsString(rhythm)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    if (!plan_figure_rhythm_from_name(rhythm->valuestring, &out->rhythm)) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", rhythm->valuestring);
+    }
+    json_child_path(at, path, "harmony");
+    if (!cJSON_IsString(harmony)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    if (strcmp(harmony->valuestring, "kept") == 0) {
+        out->reharmonize = false;
+    } else if (strcmp(harmony->valuestring, "reharmonized") == 0) {
+        out->reharmonize = true;
+    } else {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", harmony->valuestring);
+    }
+    json_child_path(at, path, "change_at");
+    out->change_at = 0;
+    if (!cJSON_IsNull(change_at)) {
+        long value;
+        if (!json_read_long(reader, change_at, at, 1, TIME_LIMIT, &value)) {
+            return false;
+        }
+        out->change_at = (unsigned)value;
+    }
+    json_child_path(at, path, "climax");
+    if (!cJSON_IsBool(climax)) {
+        return json_bad_format(reader, at, "expected true or false");
+    }
+    out->climax = cJSON_IsTrue(climax);
+    return true;
+}
+
 static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object");
@@ -1664,6 +1726,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         out->params.connective.written = cJSON_IsTrue(written);
         return true;
     }
+    case PLAN_CONSTRAINT_FIGURE:
+        return read_figure(reader, item, path, &out->params.figure);
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:

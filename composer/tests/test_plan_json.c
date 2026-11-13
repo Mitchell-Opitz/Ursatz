@@ -11,7 +11,9 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/export.h>
+#include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
@@ -220,6 +222,10 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.connective.written == b->params.connective.written;
     case PLAN_CONSTRAINT_LIQUIDATION:
         return true;
+    case PLAN_CONSTRAINT_FIGURE:
+        return a->params.figure.kind == b->params.figure.kind && a->params.figure.rhythm == b->params.figure.rhythm &&
+               a->params.figure.reharmonize == b->params.figure.reharmonize &&
+               a->params.figure.change_at == b->params.figure.change_at && a->params.figure.climax == b->params.figure.climax;
     case PLAN_CONSTRAINT_CONSTRUCTION: {
         const PlanConstruction *x = &a->params.construction;
         const PlanConstruction *y = &b->params.construction;
@@ -627,6 +633,121 @@ static void test_liquidation(void) {
     plan_destroy(plain);
     plan_destroy(plan);
     plan_destroy(parsed);
+}
+
+/*
+ * The figure of a figurate return (R-497): the plan built from tests/fixtures/forms/figure-form.json (C major 2/4) holds
+ * a RETURN of variation FIGURATE and a FIGURE on each variation and none on the theme, and writes and reads back byte for
+ * byte; a plan with no figure is written as it always was; a figure missing a member, or with a root change over kept
+ * harmony, is refused with its path.
+ */
+static char *read_whole(const char *path) {
+    FILE *file = fopen(path, "rb");
+    assert(file);
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *text = malloc((size_t)length + 1);
+    assert(text && fread(text, 1, (size_t)length, file) == (size_t)length);
+    text[length] = '\0';
+    fclose(file);
+    return text;
+}
+
+static void test_figure(void) {
+    PlanJsonError error;
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/figure-form.json", COMPOSER_FIXTURE_DIR);
+    char *document = read_whole(path);
+    FormSpec *form = NULL;
+    FormSpecError form_error;
+    assert(form_spec_parse(document, &form, &form_error) == FORM_SPEC_OK && form);
+    free(document);
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = form->name;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = 2;
+    request.meter.beat_unit = 4;
+    PiecePlan *plan = NULL;
+    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+
+    NodeId root = plan_root(plan);
+    size_t sections = 0;
+    NodeId variations[3];
+    for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+        NodeId child = plan_node_child_at(plan, root, i);
+        if (plan_node_kind(plan, child) != PLAN_NODE_SECTION || plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+            continue;
+        }
+        const PlanConstraint *returned = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_RETURN);
+        const PlanConstraint *figure = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_FIGURE);
+        if (sections == 0) {
+            assert(!returned && !figure);
+        } else {
+            assert(returned && returned->params.section_return.variation == PLAN_RETURN_FIGURATE && figure);
+            variations[sections - 1] = child;
+        }
+        sections++;
+    }
+    assert(sections == 4);
+    const PlanFigure *first = &plan_node_find_constraint(plan, variations[0], PLAN_CONSTRAINT_FIGURE)->params.figure;
+    const PlanFigure *second = &plan_node_find_constraint(plan, variations[1], PLAN_CONSTRAINT_FIGURE)->params.figure;
+    const PlanFigure *third = &plan_node_find_constraint(plan, variations[2], PLAN_CONSTRAINT_FIGURE)->params.figure;
+    assert(first->kind == PLAN_FIGURE_NEIGHBOR && first->rhythm == PLAN_FIGURE_EIGHTHS && !first->reharmonize &&
+           first->change_at == 0 && !first->climax);
+    assert(second->kind == PLAN_FIGURE_SCALE && second->rhythm == PLAN_FIGURE_SIXTEENTHS && second->reharmonize &&
+           second->change_at == 3 && !second->climax);
+    assert(third->kind == PLAN_FIGURE_BROKEN_CHORD && third->rhythm == PLAN_FIGURE_SIXTEENTHS && !third->reharmonize &&
+           third->change_at == 0 && third->climax);
+
+    char *text = plan_to_json(plan, &error);
+    assert(text && strstr(text, "\"variation\": \"figurate\"") != NULL && strstr(text, "\"kind\": \"figure\"") != NULL);
+    assert(strstr(text, "\"figure\": \"broken-chord\"") != NULL && strstr(text, "\"harmony\": \"reharmonized\"") != NULL &&
+           strstr(text, "\"change_at\": 3") != NULL && strstr(text, "\"change_at\": null") != NULL &&
+           strstr(text, "\"climax\": true") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+
+    /* A plan with no figure is written as it always was. */
+    PiecePlan *plain = build_sentence_plan();
+    char *plain_text = plan_to_json(plain, &error);
+    assert(plain_text && strstr(plain_text, "\"figure\"") == NULL);
+
+    /* A figure with a member missing, or with a root change over kept harmony, is refused. */
+    static const struct {
+        const char *from;
+        const char *to;
+    } BAD[] = {{"\"rhythm\": \"eighths\"", "\"rhythmx\": \"eighths\""},
+               {"\"climax\": true", "\"climax\": 1"},
+               {"\"figure\": \"scale\"", "\"figure\": \"run\""},
+               {"\"harmony\": \"reharmonized\"", "\"harmony\": \"kept\""}};
+    for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++) {
+        const char *at = strstr(text, BAD[i].from);
+        assert(at);
+        size_t head = (size_t)(at - text);
+        size_t tail = strlen(at + strlen(BAD[i].from));
+        char *broken = malloc(head + strlen(BAD[i].to) + tail + 1);
+        assert(broken);
+        memcpy(broken, text, head);
+        strcpy(broken + head, BAD[i].to);
+        strcpy(broken + head + strlen(BAD[i].to), at + strlen(BAD[i].from));
+        PiecePlan *refused = NULL;
+        assert(plan_from_json(broken, &refused, &error) != PLAN_OK && refused == NULL);
+        assert(strstr(error.path, "constraints") != NULL);
+        free(broken);
+    }
+
+    free(text);
+    free(again);
+    free(plain_text);
+    plan_destroy(plan);
+    plan_destroy(parsed);
+    plan_destroy(plain);
+    form_spec_destroy(form);
 }
 
 /*
@@ -1377,6 +1498,7 @@ int main(void) {
     test_pedal();
     test_connective();
     test_liquidation();
+    test_figure();
     test_section_constraints();
     test_empty_plan();
     test_malformed_input();

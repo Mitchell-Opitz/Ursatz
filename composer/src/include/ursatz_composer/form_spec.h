@@ -126,6 +126,8 @@ typedef struct {
     bool has_construction;                /* the section is a theme of `bars` bars of any length, 3 to 16, with a construction (R-468) */
     bool construction_auto;                /* the construction is chosen at build from the bars and the motive (R-469); else `construction` */
     PlanConstruction construction;         /* the bars of each idea and the extensions, reason GIVEN; read when has_construction and not auto */
+    bool has_figure;                       /* the motive of variation of a figurate return (R-497) */
+    PlanFigure figure;                     /* read when has_figure */
 } FormSectionSpec;
 
 /* One size of a form. */

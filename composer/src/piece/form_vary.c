@@ -451,6 +451,8 @@ bool return_vary(ReturnPayload *payload, FillRng *rng) {
         return reharmonize(payload);
     case PLAN_RETURN_REREGISTER:
         return payload->octave != 0 && reregister(payload);
+    case PLAN_RETURN_FIGURATE:
+        return false; /* not offered: variation_offered refuses it until the figurate operator exists (R-497) */
     }
     return false;
 }
@@ -748,6 +750,7 @@ void return_vary_check(const ReturnPayload *payload, FillCheck *out) {
         check_reregister(payload, out);
         break;
     case PLAN_RETURN_EXACT:
+    case PLAN_RETURN_FIGURATE:
         break;
     }
 }

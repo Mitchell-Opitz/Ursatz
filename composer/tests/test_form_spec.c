@@ -20,6 +20,7 @@
  *   test_form_spec            the reader and the built-in forms (fast):
  *                               every built-in parses and is what docs/forms.md says of it;
  *                               a section's construction (B6 of P47): "auto", the ideas and extensions, the refusals;
+ *                               a section's figure (B1 of P50, tests/fixtures/forms/figure-form.json): what it reads as, each refusal;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
@@ -1379,6 +1380,131 @@ static void test_modulating_reader(void) {
     }
 }
 
+/* ------------------------------------------------------------- the figure of a figurate return (R-497) */
+
+/* A size of a theme and a variation of 8 bars each; `variation` and `figure` are the variation's members (with a leading comma). */
+static void figure_document(char *out, size_t cap, const char *variation, const char *figure) {
+    snprintf(out, cap,
+             "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sizes\": [{\"bars\": 16, "
+             "\"default\": true, \"sections\": ["
+             "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true}, "
+             "{\"name\": \"V1\", \"letter\": \"V1\", \"role\": \"variation\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true, \"returns\": \"T\"%s%s}]}]}",
+             variation, figure);
+}
+
+#define FIGURATE ", \"variation\": \"figurate\""
+#define FIGURE_PATH "/sizes/0/sections/1/figure"
+
+/* tests/fixtures/forms/figure-form.json: three figurate variations; every other form has no figure; each refusal at its path. */
+static void test_figure_reader(void) {
+    char path[1024];
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    snprintf(path, sizeof(path), "%s/forms/figure-form.json", COMPOSER_FIXTURE_DIR);
+    char *fixture = read_file(path);
+    assert(form_spec_parse(fixture, &form, &error) == FORM_SPEC_OK && form);
+    free(fixture);
+    assert(strcmp(form->name, "figure-form") == 0 && form->size_count == 1 && form->sizes[0].bars == 32 &&
+           form->sizes[0].count == 3 && form->sizes[0].section_count == 4);
+    const FormSectionSpec *sections = form->sizes[0].sections;
+    assert(!sections[0].has_figure && sections[0].returns == FORM_SPEC_NO_RETURN);
+    for (size_t i = 1; i < 4; i++) {
+        assert(sections[i].has_figure && sections[i].returns == 0 && sections[i].variation == PLAN_RETURN_FIGURATE);
+    }
+    assert(sections[1].figure.kind == PLAN_FIGURE_NEIGHBOR && sections[1].figure.rhythm == PLAN_FIGURE_EIGHTHS &&
+           !sections[1].figure.reharmonize && sections[1].figure.change_at == 0 && !sections[1].figure.climax);
+    assert(sections[2].figure.kind == PLAN_FIGURE_SCALE && sections[2].figure.rhythm == PLAN_FIGURE_SIXTEENTHS &&
+           sections[2].figure.reharmonize && sections[2].figure.change_at == 3 && !sections[2].figure.climax);
+    assert(sections[3].figure.kind == PLAN_FIGURE_BROKEN_CHORD && sections[3].figure.rhythm == PLAN_FIGURE_SIXTEENTHS &&
+           !sections[3].figure.reharmonize && sections[3].figure.change_at == 0 && sections[3].figure.climax);
+    form_spec_destroy(form);
+
+    /* The names the constraint, the form and the plan share. */
+    PlanFigureKind kind;
+    PlanFigureRhythm rhythm;
+    assert(plan_figure_kind_from_name("broken-chord", &kind) && kind == PLAN_FIGURE_BROKEN_CHORD &&
+           strcmp(plan_figure_kind_name(PLAN_FIGURE_SCALE), "scale") == 0 && !plan_figure_kind_from_name("run", &kind));
+    assert(plan_figure_rhythm_from_name("sixteenths", &rhythm) && rhythm == PLAN_FIGURE_SIXTEENTHS &&
+           strcmp(plan_figure_rhythm_name(PLAN_FIGURE_EIGHTHS), "eighths") == 0 && !plan_figure_rhythm_from_name("triplets", &rhythm));
+    assert(plan_figure_kind_name((PlanFigureKind)9) == NULL && plan_figure_rhythm_name((PlanFigureRhythm)9) == NULL);
+
+    /* A figure with only its two required members reads with the defaults. */
+    figure_document(text, sizeof(text), FIGURATE, ", \"figure\": {\"kind\": \"neighbor\", \"rhythm\": \"eighths\"}");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].has_figure &&
+           !form->sizes[0].sections[1].figure.reharmonize && form->sizes[0].sections[1].figure.change_at == 0 &&
+           !form->sizes[0].sections[1].figure.climax);
+    form_spec_destroy(form);
+    /* The last bar the root change may be at is the one before the section's last. */
+    figure_document(text, sizeof(text), FIGURATE,
+                    ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"reharmonized\", \"change_at\": 7}");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].figure.change_at == 7);
+    form_spec_destroy(form);
+
+    static const struct {
+        const char *variation;
+        const char *figure;
+        const char *path;
+    } REFUSED[] = {
+        /* a figure needs the variation figurate; a figurate variation needs a figure */
+        {"", ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}", FIGURE_PATH},
+        {", \"variation\": \"ornament\"", ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}", FIGURE_PATH},
+        {FIGURATE, "", "/sizes/0/sections/1/variation"},
+        /* a root change needs the harmony reharmonized, and a bar of the section before its last */
+        {FIGURATE, ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"change_at\": 3}", FIGURE_PATH "/change_at"},
+        {FIGURATE,
+         ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"kept\", \"change_at\": 3}",
+         FIGURE_PATH "/change_at"},
+        {FIGURATE,
+         ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"reharmonized\", \"change_at\": 0}",
+         FIGURE_PATH "/change_at"},
+        {FIGURATE,
+         ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"reharmonized\", \"change_at\": 8}",
+         FIGURE_PATH "/change_at"},
+        {FIGURATE,
+         ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"reharmonized\", \"change_at\": 2.5}",
+         FIGURE_PATH "/change_at"},
+        /* the members of the figure */
+        {FIGURATE, ", \"figure\": []", FIGURE_PATH},
+        {FIGURATE, ", \"figure\": {\"rhythm\": \"eighths\"}", FIGURE_PATH "/kind"},
+        {FIGURATE, ", \"figure\": {\"kind\": \"scale\"}", FIGURE_PATH "/rhythm"},
+        {FIGURATE, ", \"figure\": {\"kind\": \"run\", \"rhythm\": \"eighths\"}", FIGURE_PATH "/kind"},
+        {FIGURATE, ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"triplets\"}", FIGURE_PATH "/rhythm"},
+        {FIGURATE, ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"changed\"}", FIGURE_PATH "/harmony"},
+        {FIGURATE, ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"climax\": 1}", FIGURE_PATH "/climax"},
+        {FIGURATE, ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"shape\": \"x\"}", FIGURE_PATH "/shape"},
+    };
+    for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+        figure_document(text, sizeof(text), REFUSED[i].variation, REFUSED[i].figure);
+        refused(text, REFUSED[i].path);
+    }
+
+    /* A section given in beats has no bars to hold a figure. */
+    snprintf(text, sizeof(text),
+             "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sizes\": [{\"bars\": 16, "
+             "\"default\": true, \"sections\": ["
+             "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true}, "
+             "{\"name\": \"V1\", \"letter\": \"V1\", \"role\": \"variation\", \"beats\": 32, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true, \"returns\": \"T\"%s"
+             ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}}]}]}",
+             FIGURATE);
+    refused(text, FIGURE_PATH);
+
+    /* No built-in form has a figure. */
+    for (size_t i = 0; i < form_spec_builtin_count(); i++) {
+        FormSpec *built = builtin(form_spec_builtin_name(i));
+        for (size_t z = 0; z < built->size_count; z++) {
+            for (size_t k = 0; k < built->sizes[z].section_count; k++) {
+                assert(!built->sizes[z].sections[k].has_figure && built->sizes[z].sections[k].variation != PLAN_RETURN_FIGURATE);
+            }
+        }
+        form_spec_destroy(built);
+    }
+}
+
 /* ------------------------------------------------------------- the liquidation section (R-494) */
 
 static void test_liquidation_reader(void) {
@@ -1395,7 +1521,8 @@ static void test_liquidation_reader(void) {
                    {", \"layers\": \"all\"", "/sizes/0/sections/0/layers"},
                    {", \"leads_in\": true", "/sizes/0/sections/0/leads_in"},
                    {", \"returns\": \"L\"", "/sizes/0/sections/0/returns"},
-                   {", \"beats\": 12", "/sizes/0/sections/0/beats"}};
+                   {", \"beats\": 12", "/sizes/0/sections/0/beats"},
+                   {", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}", "/sizes/0/sections/0/figure"}};
     char text[4096];
     char sizes[2048];
     char section[1024];
@@ -2061,6 +2188,7 @@ int main(int argc, char **argv) {
     test_construction();
     test_modulating_reader();
     test_liquidation_reader();
+    test_figure_reader();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }
