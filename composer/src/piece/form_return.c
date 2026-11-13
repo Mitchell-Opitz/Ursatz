@@ -654,6 +654,19 @@ bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *f
            cadence_numerals(plan, ret.section, from, size) && cadence_numerals(plan, section, to, size);
 }
 
+bool form_return_edge_numerals(const PiecePlan *plan, NodeId section, char *first, char *last, size_t size) {
+    size_t count;
+    ChordAt *chords = plan_has_node(plan, section) && size >= PLAN_ROMAN_NUMERAL_MAX ? read_chords(plan, section, &count) : NULL;
+    if (!chords || count == 0) {
+        free(chords);
+        return false;
+    }
+    snprintf(first, size, "%s", chords[0].roman);
+    snprintf(last, size, "%s", chords[count - 1].roman);
+    free(chords);
+    return true;
+}
+
 /* ------------------------------------------------------------- the operator */
 
 static bool return_applies(const PiecePlan *plan, FillTarget target, void *context) {

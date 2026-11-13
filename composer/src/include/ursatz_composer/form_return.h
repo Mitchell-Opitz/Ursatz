@@ -86,6 +86,12 @@ bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *ch
 bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *from, char *to, size_t size);
 
 /*
+ * The numerals of the first and of the last chord of a section's harmony lane (R-486: an upbeat chord and the chord it
+ * leads to). False when the section has no readable harmony or size is below PLAN_ROMAN_NUMERAL_MAX.
+ */
+bool form_return_edge_numerals(const PiecePlan *plan, NodeId section, char *first, char *last, size_t size);
+
+/*
  * Whether the section holds a copy of the section it returns, in any state: the RETURN names another section of the
  * piece (not the material) as long as the section, in the same meter and in keys of the same shape. False for a section
  * grown afresh because its keys differ from the other's.
