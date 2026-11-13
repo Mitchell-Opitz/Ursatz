@@ -63,7 +63,9 @@ typedef struct {
     int octave;          /* REREGISTER: 12 or -12, else 0 */
     int range_low;       /* the melody range a re-registered melody keeps to */
     int range_high;
-    bool reharmonize;    /* FIGURATE: the figure sits over a reharmonized copy (the FIGURE constraint says so) */
+    bool reharmonize;    /* FIGURATE: the figure sits over a reharmonized copy (the FIGURE constraint says so; always, with mode_change) */
+    bool mode_change;    /* FIGURATE: the target is the source's tonic in the other mode (R-499): the copy is mapped degree by degree */
+    KeyStructureMode to_mode; /* the target's mode; read when mode_change */
     ReturnCopy source;   /* the returned section, as read */
     ReturnCopy result;   /* the target's, after the variation */
 } ReturnPayload;
@@ -74,6 +76,16 @@ bool return_copy_clone(const ReturnCopy *from, ReturnCopy *out);
 void return_copy_destroy(ReturnCopy *copy);
 /* Moves the copy from a section starting at from to one starting at to, its pitches by transpose semitones. */
 bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpose);
+/*
+ * Maps the copy, already moved, from the other mode of home's tonic into `to` (R-499): into minor every melody and inner
+ * voice pitch 4 or 9 semitones over the tonic is lowered a semitone; into major every pitch 3 or 8 over it is raised a
+ * semitone and 10 is raised to 11 (the leading tone is kept). The KEY constraints of the nodes and spans take the mode.
+ */
+bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, KeyStructureMode to);
+/* The pitch moved from the other mode of the tonic (a pitch class) into `to`, as return_copy_change_mode maps it. */
+int return_map_pitch(int tonic, KeyStructureMode to, int pitch);
+/* The pitch a source pitch (after the move) has in the result: mapped by the mode change of the payload, else as it is. */
+int return_mode_pitch(const ReturnPayload *payload, int pitch);
 /* Adds the copy to the plan under section: its nodes, then its lane spans. */
 PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy);
 
@@ -85,6 +97,12 @@ void return_payload_destroy(void *payload);
  */
 bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
                       int *shift);
+/*
+ * Whether the key lanes of the two sections have the same shape and every target span is on the same tonic as the
+ * source's at the same place in the other mode (R-499); *to_mode is the target's mode. A copy across modes is moved by 0.
+ */
+bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+                       int *to_mode);
 /* The RETURN of a section that form_return_copies holds (the returned section, the variation); false otherwise. */
 bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret);
 /* The meter lane span that holds the span whole; false when none does. */
