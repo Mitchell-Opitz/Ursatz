@@ -408,6 +408,14 @@ add_test(NAME test_form_spec_pedal COMMAND test_form_spec pedal)
 # (tests/fixtures/forms/lead-form.json).
 add_test(NAME test_form_spec_leads COMMAND test_form_spec leads)
 
+add_executable(test_piece_perform test_piece_perform.c)
+target_link_libraries(test_piece_perform PRIVATE ursatz_composer)
+target_include_directories(test_piece_perform PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_piece_perform PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_piece_perform PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+# A composed piece performed in order (R-485): tests/fixtures/forms/repeat-form.json, repeats written out in place.
+add_test(NAME test_piece_perform COMMAND test_piece_perform)
+
 add_executable(test_piece_keys test_piece_keys.c)
 target_link_libraries(test_piece_keys PRIVATE ursatz_composer)
 target_compile_options(test_piece_keys PRIVATE -Wall -Wextra -Wpedantic)
