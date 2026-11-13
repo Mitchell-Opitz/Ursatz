@@ -90,18 +90,19 @@ static void assert_choice(const cJSON *object, const char *name, const char *val
 }
 
 static void test_registry_order(void) {
-    const char *const names[] = {"binary", "rounded-binary", "ternary", "variations", "loop", "layered",
-                                 "minuet", "trio", "minuet-and-trio", "game-loop"};
+    const char *const names[] = {"binary", "rounded-binary", "ternary", "variations", "loop", "layered", "minuet",
+                                 "trio", "minuet-and-trio", "scherzo", "scherzo-and-trio", "game-loop"};
     const cJSON *list = member(forms, "forms");
-    assert(cJSON_GetArraySize(list) == 10);
-    for (int i = 0; i < 10; i++) {
+    assert(cJSON_GetArraySize(list) == 12);
+    for (int i = 0; i < 12; i++) {
         const cJSON *form = cJSON_GetArrayItem(list, i);
         assert(strcmp(text(form, "name"), names[i]) == 0);
         assert(*text(form, "label"));
-        bool game_loop = i == 9;
+        bool game_loop = i == 11;
         assert(strcmp(text(form, "sections"), game_loop ? "request" : "sizes") == 0);
-        /* The four with sections that end in the home key close, and so do the minuet, the trio and the two together. */
-        assert(flag(form, "closing") == (i < 4 || (i >= 6 && i < 9)));
+        /* The four with sections that end in the home key close, and so do the minuet, the trio, the scherzo and the
+           forms that put two together. */
+        assert(flag(form, "closing") == (i < 4 || (i >= 6 && i < 11)));
         assert((cJSON_GetArraySize(member(form, "sizes")) == 0) == game_loop);
     }
 }
@@ -289,6 +290,81 @@ static void test_minuet(void) {
     assert(cJSON_GetArraySize(member(default_size(both), "sections")) == 0);
 }
 
+/* The scherzo and the scherzo and trio (R-492, R-495): 44 bars the default and 60, 176 quarters a minute, nine sections at
+ * both sizes with the liquidation the fifth, the regions of the planned keys, the repeats of the minuet's shape; the
+ * compound form puts the scherzo, a trio and the scherzo again. */
+static void test_scherzo(void) {
+    const cJSON *scherzo = form_named("scherzo");
+    assert(strcmp(text(scherzo, "label"), "Scherzo") == 0 && cJSON_GetArraySize(member(scherzo, "sizes")) == 2);
+    assert(number(default_size(scherzo), "bars") == 44 && number(size_with_bars(scherzo, 60), "bars") == 60);
+    const char *const regions[] = {"pattern", "sequence", "episode"};
+    assert_strings(member(scherzo, "regions"), regions, 3);
+    const char *const meters[] = {"3/4", "2/4", "6/8"};
+    assert_strings(member(scherzo, "meters"), meters, 3);
+    assert(number(scherzo, "tempo") == 176 && flag(scherzo, "performed") && cJSON_IsNull(member(scherzo, "parts")));
+    const cJSON *groups = member(scherzo, "repeats");
+    const char *const first_group[] = {"A"};
+    const char *const second_group[] = {"P", "S1", "S2", "L", "A return"};
+    assert(cJSON_GetArraySize(groups) == 2);
+    assert_strings(cJSON_GetArrayItem(groups, 0), first_group, 1);
+    assert_strings(cJSON_GetArrayItem(groups, 1), second_group, 5);
+    static const struct {
+        const char *name;
+        const char *role;
+        int bars;
+        const char *start;
+        const char *end;
+    } SECTIONS[] = {
+        {"A", "theme", 8, "home", "home"},          {"P", "pattern", 4, "pattern", "pattern"},
+        {"S1", "sequence", 4, "sequence", "sequence"}, {"S2", "sequence", 4, "home", "home"},
+        {"L", "liquidation", 4, "home", "home"},    {"A return", "return", 8, "home", "home"},
+        {"E", "episode", 4, "episode", "episode"},  {"C1", "codetta", 4, "home", "home"},
+        {"C2", "codetta", 4, "home", "home"},
+    };
+    for (int z = 0; z < 2; z++) {
+        const cJSON *size = z == 0 ? default_size(scherzo) : size_with_bars(scherzo, 60);
+        const cJSON *sections = member(size, "sections");
+        assert(cJSON_GetArraySize(sections) == 9);
+        int total = 0;
+        for (int i = 0; i < 9; i++) {
+            const cJSON *section = cJSON_GetArrayItem(sections, i);
+            int bars = z == 1 && (i == 0 || i == 5) ? 16 : SECTIONS[i].bars;
+            assert(strcmp(text(section, "name"), SECTIONS[i].name) == 0 && strcmp(text(member(section, "role"), "value"), SECTIONS[i].role) == 0);
+            assert(number(section, "bars") == bars);
+            assert(strcmp(text(member(section, "keys"), "start"), SECTIONS[i].start) == 0 &&
+                   strcmp(text(member(section, "keys"), "end"), SECTIONS[i].end) == 0);
+            /* Only the 16-bar themes of the larger size spell their construction out. */
+            assert((cJSON_GetObjectItemCaseSensitive(section, "construction") != NULL) == (z == 1 && (i == 0 || i == 5)));
+            total += bars;
+        }
+        assert(total == number(size, "bars"));
+        const cJSON *later = cJSON_GetArrayItem(sections, 2);
+        assert(strcmp(text(later, "returns"), "P") == 0 && strcmp(text(later, "variation"), "exact") == 0);
+        assert(strcmp(text(cJSON_GetArrayItem(sections, 5), "returns"), "A") == 0 &&
+               strcmp(text(cJSON_GetArrayItem(sections, 5), "variation"), "varied") == 0);
+        assert(strcmp(text(cJSON_GetArrayItem(sections, 4), "letter"), "B") == 0);
+    }
+    const cJSON *both = form_named("scherzo-and-trio");
+    assert(strcmp(text(both, "label"), "Scherzo and trio") == 0 && flag(both, "performed") && number(both, "tempo") == 176);
+    const char *const three_four[] = {"3/4"};
+    assert_strings(member(both, "meters"), three_four, 1);
+    const char *const trio_region[] = {"trio"};
+    assert_strings(member(both, "regions"), trio_region, 1);
+    assert(cJSON_GetArraySize(member(both, "sizes")) == 2 && number(default_size(both), "bars") == 44 &&
+           number(size_with_bars(both, 60), "bars") == 60 && cJSON_GetArraySize(member(default_size(both), "sections")) == 0);
+    const cJSON *parts = member(both, "parts");
+    assert(cJSON_GetArraySize(parts) == 3);
+    const cJSON *first = cJSON_GetArrayItem(parts, 0);
+    assert(strcmp(text(first, "name"), "Scherzo") == 0 && strcmp(text(member(first, "form"), "value"), "scherzo") == 0 &&
+           strcmp(text(member(first, "form"), "label"), "Scherzo") == 0 && strcmp(text(first, "key"), "home") == 0 && flag(first, "repeats"));
+    const cJSON *trio = cJSON_GetArrayItem(parts, 1);
+    assert(strcmp(text(trio, "name"), "Trio") == 0 && strcmp(text(member(trio, "form"), "value"), "trio") == 0 &&
+           strcmp(text(trio, "key"), "trio") == 0 && strcmp(text(trio, "motive"), "new") == 0 && cJSON_IsNull(member(trio, "again")) &&
+           flag(trio, "repeats"));
+    const cJSON *again = cJSON_GetArrayItem(parts, 2);
+    assert(cJSON_IsNull(member(again, "form")) && strcmp(text(again, "again"), "Scherzo") == 0 && !flag(again, "repeats"));
+}
+
 static void test_game_loop(void) {
     const cJSON *form = form_named("game-loop");
     assert(strcmp(text(form, "sections"), "request") == 0 && !flag(form, "closing"));
@@ -346,6 +422,7 @@ int main(void) {
     test_layered();
     test_pedal();
     test_minuet();
+    test_scherzo();
     test_game_loop();
     cJSON_Delete(forms);
     printf("test_api_forms: ok\n");

@@ -161,6 +161,10 @@ static const FormRow FORMS[] = {
      {{8, 0, false}, {16, 0, false}, {36, 0, false}, {0, 3, false}, {12, 1, false}}, 5, 1, 112, 2, 0},
     {"minuet-and-trio", true, false, 1, {{12, 0, false}, {24, 0, true}}, 2,
      {{8, 0, false}, {16, 0, false}, {36, 0, false}, {0, 3, false}, {12, 1, false}}, 5, 1, 112, 0, 3},
+    {"scherzo", true, false, 3, {{44, 0, true}, {60, 0, false}}, 2,
+     {{8, 0, false}, {24, 0, false}, {48, 0, false}, {0, 3, false}, {44, 1, false}}, 5, 3, 176, 2, 0},
+    {"scherzo-and-trio", true, false, 1, {{44, 0, true}, {60, 0, false}}, 2,
+     {{8, 0, false}, {24, 0, false}, {48, 0, false}, {0, 3, false}, {44, 1, false}}, 5, 1, 176, 0, 3},
 };
 #define FORM_COUNT (sizeof(FORMS) / sizeof(FORMS[0]))
 
@@ -347,6 +351,84 @@ static void test_builtin_details(void) {
         assert(form->sizes[z].section_count == 0);
     }
     assert(form_spec_performed(form));
+    assert(form->parts[0].bars == 0 && form->parts[1].bars == 0 && form->parts[2].bars == 0);
+    form_spec_destroy(form);
+
+    /* The scherzo and trio: the scherzo, a trio of 24 bars in its own key with a motive of its own, the scherzo da capo
+       without repeats, at 44 or 60 bars (R-495); it does not modulate always, each part decides. */
+    form = builtin("scherzo-and-trio");
+    assert(form->closing && !form->modulates && form->region_count == 1 && strcmp(form->regions[0].name, "trio") == 0 &&
+           form->regions[0].major_count == 3 && form->regions[0].minor_count == 3);
+    assert(form->part_count == 3 && form->repeat_count == 0 && form->meter_count == 1 && form->tempo == 176 && form_spec_performed(form));
+    assert(strcmp(form->parts[0].name, "Scherzo") == 0 && strcmp(form->parts[0].form, "scherzo") == 0 &&
+           form->parts[0].key == FORM_SPEC_HOME && !form->parts[0].new_motive && form->parts[0].bars == 0 &&
+           form->parts[0].again == FORM_SPEC_NO_RETURN && form->parts[0].repeats);
+    assert(strcmp(form->parts[1].name, "Trio") == 0 && strcmp(form->parts[1].form, "trio") == 0 && form->parts[1].key == 0 &&
+           form->parts[1].new_motive && form->parts[1].bars == 24 && form->parts[1].again == FORM_SPEC_NO_RETURN &&
+           form->parts[1].repeats);
+    assert(strcmp(form->parts[2].name, "Scherzo da capo") == 0 && form->parts[2].form[0] == '\0' && form->parts[2].bars == 0 &&
+           form->parts[2].again == 0 && !form->parts[2].repeats);
+    for (size_t z = 0; z < form->size_count; z++) {
+        assert(form->sizes[z].section_count == 0);
+    }
+    form_spec_destroy(form);
+
+    /* The scherzo (R-492, R-493): a ternary with a modulating middle, nine sections at both sizes, three regions for the
+       key of each pattern, its sequences and the episode, repeats A then P to A return. */
+    form = builtin("scherzo");
+    assert(form->closing && form->modulates && form->region_count == 3 && form->part_count == 0 && form->repeat_count == 2);
+    assert(strcmp(form->regions[0].name, "pattern") == 0 && form->regions[0].major_count == 1 && form->regions[0].major[0] == 5 &&
+           form->regions[0].minor_count == 1 && form->regions[0].minor[0] == 5);
+    assert(strcmp(form->regions[1].name, "sequence") == 0 && form->regions[1].major_count == 1 && form->regions[1].major[0] == 4 &&
+           form->regions[1].minor_count == 1 && form->regions[1].minor[0] == 4);
+    assert(strcmp(form->regions[2].name, "episode") == 0 && form->regions[2].major_count == 1 && form->regions[2].major[0] == 4 &&
+           form->regions[2].minor_count == 1 && form->regions[2].minor[0] == 4);
+    assert(form->meters[0].beats_per_bar == 3 && form->meters[1].beats_per_bar == 2 && form->meters[2].beats_per_bar == 6 &&
+           form->meters[2].beat_unit == 8);
+    static const struct {
+        const char *name;
+        const char *letter;
+        FormRole role;
+        size_t bars;
+        PlanThemeBeginning beginning;
+        PlanThemeEnding ending;
+        CadenceType cadence;
+        int key;
+        size_t returns;
+        bool closed;
+    } SCHERZO[] = {
+        {"A", "A", FORM_ROLE_THEME, 8, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, true},
+        {"P", "B", FORM_ROLE_PATTERN, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 0, FORM_SPEC_NO_RETURN, false},
+        {"S1", "B", FORM_ROLE_SEQUENCE, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 1, 1, false},
+        {"S2", "B", FORM_ROLE_SEQUENCE, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, FORM_SPEC_HOME, 1, false},
+        {"L", "B", FORM_ROLE_LIQUIDATION, 4, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, false},
+        {"A return", "A", FORM_ROLE_RETURN, 8, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, 0, true},
+        {"E", "E", FORM_ROLE_EPISODE, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 2, FORM_SPEC_NO_RETURN, false},
+        {"C1", "C", FORM_ROLE_CODETTA, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CADENTIAL, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, true},
+        {"C2", "C", FORM_ROLE_CODETTA, 4, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, PLAN_THEME_ENDING_CADENTIAL, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, false},
+    };
+    for (size_t z = 0; z < form->size_count; z++) {
+        const FormSpecSize *size = &form->sizes[z];
+        size_t long_theme = size->bars == 60 ? 16 : 8;
+        assert(size->section_count == 9 && (size->bars == 44 || size->bars == 60));
+        for (size_t i = 0; i < 9; i++) {
+            const FormSectionSpec *section = &size->sections[i];
+            size_t bars = (i == 0 || i == 5) ? long_theme : SCHERZO[i].bars;
+            assert(strcmp(section->name, SCHERZO[i].name) == 0 && strcmp(section->letter, SCHERZO[i].letter) == 0);
+            assert(section->role == SCHERZO[i].role && section->bars == bars && section->cadence == SCHERZO[i].cadence);
+            assert(section->closed == SCHERZO[i].closed && section->returns == SCHERZO[i].returns);
+            assert(section->key_start == SCHERZO[i].key && section->key_end == SCHERZO[i].key);
+            if (section->role != FORM_ROLE_LIQUIDATION) {
+                assert(section->pairing.beginning == SCHERZO[i].beginning && section->pairing.ending == SCHERZO[i].ending);
+            }
+            /* Only the two long themes of the larger size have a construction, and the return keeps the first's. */
+            assert(section->has_construction == (size->bars == 60 && (i == 0 || i == 5)) && !section->construction_auto);
+            assert(section->pedal == 0 && !section->leads_in && !section->has_motive);
+        }
+        assert(size->sections[2].variation == PLAN_RETURN_EXACT && size->sections[3].variation == PLAN_RETURN_EXACT &&
+               size->sections[5].variation == PLAN_RETURN_VARIED);
+    }
+    assert(form_spec_size(form, 0, 0)->bars == 44 && form_spec_size(form, 60, 0)->sections[0].construction.idea_bars[0] != 0);
     form_spec_destroy(form);
 }
 
@@ -574,15 +656,20 @@ static void test_meters_and_tempo(void) {
     refused_edit("game-loop", "\"closing\"", "\"meters\": [\"4/4\"], \"closing\"", "/meters");
     refused_edit("game-loop", "\"closing\"", "\"tempo\": 120, \"closing\"", "/tempo");
 
-    /* The minuet, the trio and the minuet and trio are in 3/4 at 112 and allow no other meter; every other built-in lists
-       no meters, gives no tempo and allows any meter (R-487). */
+    /* The minuet, the trio and the minuet and trio are in 3/4 at 112 and allow no other meter; the scherzo is at 176 in 3/4,
+       2/4 and 6/8 and the scherzo and trio in 3/4 only; every other built-in lists no meters, gives no tempo and allows any
+       meter (R-487, R-492). */
     for (size_t i = 0; i < form_spec_builtin_count(); i++) {
         FormSpec *builtin_form = builtin(form_spec_builtin_name(i));
         bool dance = strcmp(builtin_form->name, "minuet") == 0 || strcmp(builtin_form->name, "trio") == 0 ||
                      strcmp(builtin_form->name, "minuet-and-trio") == 0;
-        assert(builtin_form->meter_count == (dance ? 1u : 0u) && builtin_form->tempo == (dance ? 112u : 0u));
+        bool scherzo = strcmp(builtin_form->name, "scherzo") == 0;
+        bool scherzo_trio = strcmp(builtin_form->name, "scherzo-and-trio") == 0;
+        size_t meters = dance || scherzo_trio ? 1u : scherzo ? 3u : 0u;
+        unsigned tempo = dance ? 112u : (scherzo || scherzo_trio) ? 176u : 0u;
+        assert(builtin_form->meter_count == meters && builtin_form->tempo == tempo);
         assert(form_spec_meter_allowed(builtin_form, &three_four));
-        assert(form_spec_meter_allowed(builtin_form, &six_eight) == !dance);
+        assert(form_spec_meter_allowed(builtin_form, &six_eight) == !(dance || scherzo_trio));
         form_spec_destroy(builtin_form);
     }
 }
@@ -1284,10 +1371,10 @@ static void test_modulating_reader(void) {
     document(text, sizeof(text), ", \"modulates\": true", sizes);
     refused(text, "/modulates");
     refused_edit("game-loop", "\"closing\"", "\"modulates\": true, \"closing\"", "/modulates");
-    /* No built-in form modulates always. */
+    /* Only the scherzo modulates always; the scherzo and trio leaves it to its parts (R-492, R-495). */
     for (size_t f = 0; f < form_spec_builtin_count(); f++) {
         FormSpec *built = builtin(form_spec_builtin_name(f));
-        assert(!built->modulates);
+        assert(built->modulates == (strcmp(built->name, "scherzo") == 0));
         form_spec_destroy(built);
     }
 }
@@ -1344,12 +1431,13 @@ static void test_liquidation_reader(void) {
              "\"bars\": 4, \"cadence\": \"perfect-authentic\"}]}");
     document(text, sizeof(text), "", sizes);
     refused(text, "/sizes/0/sections/0/cadence");
-    /* No built-in form has one. */
+    /* Only the scherzo has one, the fifth of its nine sections at both sizes. */
     for (size_t f = 0; f < form_spec_builtin_count(); f++) {
         FormSpec *built = builtin(form_spec_builtin_name(f));
+        bool scherzo = strcmp(built->name, "scherzo") == 0;
         for (size_t z = 0; z < built->size_count; z++) {
             for (size_t k = 0; k < built->sizes[z].section_count; k++) {
-                assert(built->sizes[z].sections[k].role != FORM_ROLE_LIQUIDATION);
+                assert((built->sizes[z].sections[k].role == FORM_ROLE_LIQUIDATION) == (scherzo && k == 4));
             }
         }
         form_spec_destroy(built);

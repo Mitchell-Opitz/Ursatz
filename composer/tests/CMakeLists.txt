@@ -369,7 +369,7 @@ target_compile_options(test_form_templates PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_templates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Four tests for each template: the plan's structure, a quick compose run, the compose sweep, and the share heard as
 # requested.
-set(FORM_TEMPLATES binary rounded-binary ternary variations loop layered minuet trio)
+set(FORM_TEMPLATES binary rounded-binary ternary variations loop layered minuet trio scherzo)
 foreach(template ${FORM_TEMPLATES})
     add_test(NAME test_form_templates_${template} COMMAND test_form_templates structure ${template})
     add_test(NAME test_form_templates_${template}_smoke COMMAND test_form_templates smoke ${template})

@@ -17,11 +17,12 @@
 
 /*
  * Piece plans that change key follow standard-harmony's key-change rules (R-069). Every template, in C major and A
- * minor 4/4 (3/4 for the forms that list it, the minuet and the trio) with an invented motive, seeds 1 to 10, asking to modulate:
+ * minor 4/4 (3/4 for the forms that list it, the minuet, the trio and the scherzo) with an invented motive, seeds 1 to 10, asking to modulate:
  *
  *   plan <>            the plans only: the key lane tiles the piece, every key is closely related to the home key, a
  *                      section's KEY constraint is the key it ends in, the cadences pass piece_check_cadences, and a
- *                      template that does not modulate (loop, layered) keeps one key span
+ *                      template that does not modulate (loop, layered) keeps one key span; a form that modulates always
+ *                      (the scherzo) changes key without the request
  *   compose <template> the composed runs: of those that complete, every key change is opened by a pivot chord
  *                      standard-harmony calls valid, every planned modulation is a modulation confirmed by an
  *                      authentic cadence heard inside the new key, and the last cadence is the strongest. The share
@@ -195,6 +196,15 @@ static bool has_sizes(const char *name) {
     return sized;
 }
 
+/* Whether the built-in form leaves home whether or not the request asks for modulate (R-493). */
+static bool always_modulates(const char *name) {
+    FormSpec *form = NULL;
+    assert(form_spec_builtin(name, &form) == FORM_SPEC_OK);
+    bool always = form->modulates;
+    form_spec_destroy(form);
+    return always;
+}
+
 static int test_plans(void) {
     size_t plans = 0;
     size_t modulating = 0;
@@ -212,10 +222,16 @@ static int test_plans(void) {
                 check_plan(plan, &SCENARIOS[s], k);
                 modulated += read_lane(plan).count > 1;
                 plan_destroy(plan);
-                /* Without the request to modulate there is one key and the template's cadences. */
+                /* Without the request to modulate there is one key and the template's cadences, except that a form that
+                   modulates always (the scherzo, R-493) leaves home as if it were asked to, and every key check passes. */
                 request.modulate = false;
                 assert(piece_build_plan(&request, &plan) == PIECE_OK);
-                assert(read_lane(plan).count == 1);
+                if (always_modulates(k)) {
+                    assert(read_lane(plan).count > 1);
+                    check_plan(plan, &SCENARIOS[s], k);
+                } else {
+                    assert(read_lane(plan).count == 1);
+                }
                 plan_destroy(plan);
                 plans++;
             }
@@ -314,8 +330,12 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
     size_t changes = 0;
     for (size_t k = 1; k < lane.count; k++) {
         changes++;
-        /* Opened by a pivot chord standard-harmony calls valid. */
-        assert(opens_with_pivot(plan, lane.key[k - 1], lane.key[k], lane.span[k].start));
+        /* Opened by a pivot chord standard-harmony calls valid. Two keys that are not closely related to each other (the
+           scherzo's V to IV, a sequence of its pattern, R-492) have no pivot between them: each is related to home. */
+        HarmonyRelatedKey adjacent;
+        if (related(lane.key[k - 1], lane.key[k], &adjacent)) {
+            assert(opens_with_pivot(plan, lane.key[k - 1], lane.key[k], lane.span[k].start));
+        }
         /* A modulation: an authentic cadence arrives inside the new key's span, before the piece ends. */
         Rational end;
         assert(plan_span_end(lane.span[k], &end) == PLAN_OK);
@@ -412,12 +432,42 @@ static int test_smoke(void) {
     return 1;
 }
 
+/* A form that modulates always composes without the request to modulate, changes key, and passes every key check. */
+static int test_smoke_always(void) {
+    for (unsigned long seed = 1; seed <= 5; seed++) {
+        PieceRequest request = request_of(&SCENARIOS[0], "scherzo", seed);
+        request.modulate = false;
+        PiecePlan *plan = NULL;
+        assert(piece_build_plan(&request, &plan) == PIECE_OK);
+        ComposeConfig config;
+        ComposeOutcome outcome;
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        PieceResult ran = compose_run(plan, &config, &outcome);
+        bool changes = false;
+        if (ran == PIECE_OK) {
+            changes = read_lane(plan).count > 1;
+            check_piece(plan, "scherzo");
+            PieceKeyCheck keys;
+            assert(piece_check_keys(plan, &keys) && keys.ok && keys.changes > 0);
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+        if (ran == PIECE_OK && changes) {
+            printf("scherzo: seed %lu composes without modulate, changes key, and passes the checks\n", seed);
+            return 0;
+        }
+    }
+    printf("scherzo: no seed of 1 to 5 composes a piece that changes key\n");
+    return 1;
+}
+
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "plan") == 0) {
         return test_plans();
     }
     if (argc == 2 && strcmp(argv[1], "smoke") == 0) {
-        return test_smoke();
+        return test_smoke() | test_smoke_always();
     }
     for (size_t form = 0; argc == 3 && strcmp(argv[1], "compose") == 0 && form < form_spec_builtin_count(); form++) {
         if (strcmp(argv[2], form_spec_builtin_name(form)) == 0) {
