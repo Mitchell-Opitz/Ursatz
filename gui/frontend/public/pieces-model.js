@@ -139,6 +139,14 @@
         return found.role.label;
       }
     }
+    /* A compound form lists no sections of its own: its rows are the sections of its parts' forms. */
+    for (const part of performedParts(form)) {
+      const partForm = part.form ? formOf(part.form) : null;
+      const label = partForm ? roleLabel(partForm, value) : value;
+      if (label !== value) {
+        return label;
+      }
+    }
     return value;
   }
 
