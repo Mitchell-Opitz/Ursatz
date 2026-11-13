@@ -22,10 +22,11 @@
  * 1.20 adds the performed piece (written-out repeats, parts), its rows' part, repeat_of, upbeat and connective, and the
  * forms entry's meters, tempo, repeats, parts and lead-in members.
  * 1.21 adds the planned key of each section's row, and the forms entry's modulates and a part's bars.
+ * 1.22 adds each section's figure and skeleton to the rows, and a section's figure and mode to the forms entry.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 21
+#define COMPOSER_API_VERSION_MINOR 22
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
