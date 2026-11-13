@@ -22,7 +22,8 @@
  *   plan <>            the plans only: the key lane tiles the piece, every key is closely related to the home key, a
  *                      section's KEY constraint is the key it ends in, the cadences pass piece_check_cadences, and a
  *                      template that does not modulate (loop, layered) keeps one key span; a form that modulates always
- *                      (the scherzo) changes key without the request
+ *                      (the scherzo) changes key without the request; a span in the home tonic's other mode (the figured
+ *                      variations' V3, R-499) is not a change of key: it is related to home, has no pivot and is not counted
  *   compose <template> the composed runs: of those that complete, every key change is opened by a pivot chord
  *                      standard-harmony calls valid, every planned modulation is a modulation confirmed by an
  *                      authentic cadence heard inside the new key, and the last cadence is the strongest. The share
@@ -88,6 +89,11 @@ static bool same_key(AnalysisKey a, AnalysisKey b) {
     return analysis_key_tonic_pitch_class(&a) == analysis_key_tonic_pitch_class(&b) && a.mode == b.mode;
 }
 
+/* The same tonic in the other mode: a change of mode on one tonic is not a modulation (R-499). */
+static bool same_tonic(AnalysisKey a, AnalysisKey b) {
+    return analysis_key_tonic_pitch_class(&a) == analysis_key_tonic_pitch_class(&b);
+}
+
 typedef struct {
     PlanSpan span[32];
     AnalysisKey key[32];
@@ -119,6 +125,15 @@ static void check_lane_tiles(const PiecePlan *plan, const KeyLane *lane) {
     Rational form_end;
     assert(plan_span_end(plan_node_span(plan, plan_root(plan)), &form_end) == PLAN_OK);
     assert(rational_cmp(at, form_end) == 0);
+}
+
+/* How many times the lane changes tonic: a span in the parallel mode is not a change of key. */
+static size_t tonic_changes(const KeyLane *lane) {
+    size_t changes = 0;
+    for (size_t k = 1; k < lane->count; k++) {
+        changes += !same_tonic(lane->key[k], lane->key[k - 1]);
+    }
+    return changes;
 }
 
 static AnalysisKey key_at(const KeyLane *lane, Rational time) {
@@ -164,7 +179,7 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, const ch
     assert(same_key(lane.key[0], home));
     for (size_t i = 0; i < lane.count; i++) {
         HarmonyRelatedKey unused;
-        assert(same_key(lane.key[i], home) || related(home, lane.key[i], &unused));
+        assert(same_key(lane.key[i], home) || same_tonic(lane.key[i], home) || related(home, lane.key[i], &unused));
     }
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
@@ -196,6 +211,28 @@ static bool has_sizes(const char *name) {
     return sized;
 }
 
+/* Whether the built-in form has regions to leave home for (the loop, the layered form and the figured variations have none). */
+static bool has_regions(const char *name) {
+    FormSpec *form = NULL;
+    assert(form_spec_builtin(name, &form) == FORM_SPEC_OK);
+    bool regions = form->region_count > 0;
+    form_spec_destroy(form);
+    return regions;
+}
+
+/* How many sections of the form's default size are in the home tonic's other mode (R-499). */
+static size_t parallel_sections(const char *name) {
+    FormSpec *form = NULL;
+    assert(form_spec_builtin(name, &form) == FORM_SPEC_OK);
+    const FormSpecSize *size = form_spec_default_size(form);
+    size_t parallel = 0;
+    for (size_t i = 0; size && i < size->section_count; i++) {
+        parallel += size->sections[i].parallel;
+    }
+    form_spec_destroy(form);
+    return parallel;
+}
+
 /* Whether the built-in form leaves home whether or not the request asks for modulate (R-493). */
 static bool always_modulates(const char *name) {
     FormSpec *form = NULL;
@@ -220,24 +257,28 @@ static int test_plans(void) {
                 PiecePlan *plan = NULL;
                 assert(piece_build_plan(&request, &plan) == PIECE_OK);
                 check_plan(plan, &SCENARIOS[s], k);
-                modulated += read_lane(plan).count > 1;
+                KeyLane planned = read_lane(plan);
+                modulated += tonic_changes(&planned) > 0;
                 plan_destroy(plan);
                 /* Without the request to modulate there is one key and the template's cadences, except that a form that
                    modulates always (the scherzo, R-493) leaves home as if it were asked to, and every key check passes. */
                 request.modulate = false;
                 assert(piece_build_plan(&request, &plan) == PIECE_OK);
+                KeyLane unasked = read_lane(plan);
                 if (always_modulates(k)) {
-                    assert(read_lane(plan).count > 1);
+                    assert(tonic_changes(&unasked) > 0);
                     check_plan(plan, &SCENARIOS[s], k);
                 } else {
-                    assert(read_lane(plan).count == 1);
+                    /* One key, or home and the parallel mode of the sections that are in it: the figured variations'
+                       V3 is a span of its own between two home spans (R-499). */
+                    assert(tonic_changes(&unasked) == 0 && unasked.count == (parallel_sections(k) > 0 ? 3u : 1u));
                 }
                 plan_destroy(plan);
                 plans++;
             }
             printf("%s, %s: %zu of %d plans change key\n", k, SCENARIOS[s].name,
                    modulated, SEEDS);
-            bool can = strcmp(k, "loop") != 0 && strcmp(k, "layered") != 0;
+            bool can = has_regions(k);
             assert(can ? modulated > 0 : modulated == 0);
             modulating += modulated;
         }
@@ -329,6 +370,10 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
     assert(plan_span_end(plan_node_span(plan, sections[count - 1]), &piece_end) == PLAN_OK);
     size_t changes = 0;
     for (size_t k = 1; k < lane.count; k++) {
+        /* A change of mode on one tonic has no pivot and is no modulation: the key check neither counts nor classifies it. */
+        if (same_tonic(lane.key[k], lane.key[k - 1])) {
+            continue;
+        }
         changes++;
         /* Opened by a pivot chord standard-harmony calls valid. Two keys that are not closely related to each other (the
            scherzo's V to IV, a sequence of its pattern, R-492) have no pivot between them: each is related to home. */
@@ -383,7 +428,8 @@ static bool compose_one(const Scenario *scenario, const char *kind, unsigned lon
     bool done = ran == PIECE_OK;
     if (done) {
         tally->completed++;
-        tally->changing += read_lane(plan).count > 1;
+        KeyLane composed = read_lane(plan);
+        tally->changing += tonic_changes(&composed) > 0;
         check_piece(plan, kind);
     } else {
         assert(ran == PIECE_ERR_STUCK);

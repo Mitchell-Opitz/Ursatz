@@ -69,11 +69,12 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-continuation.md](grow-continuation.md): the accelerating continuation settings: fragments from every segment, cut, diminished, and a liquidated fragment 2 (L3).
 - [grow-contrast.md](grow-contrast.md): the contrast distance and new material: a contrasting idea that is similar to the basic idea, distant from it on a rhythm of its own, or a new motif (L4).
 - [grow-liquidation.md](grow-liquidation.md): the liquidation section: 4 bars over a dominant pedal that take the pattern apart, a scale line and a broken chord of V ending the half cadence (P49).
+- [figured-variations.md](figured-variations.md): the built-in figured variations form after Schoenberg ch. XVII (P50): the theme, five variations each with a figure, the minore, the root change, the climax and a coda, and what was measured.
 - [variation-figure.md](variation-figure.md): the motive of variation: a figurate return rewrites the theme's melody from a skeleton, one figure to a cell, the cadence bars kept (P50).
 - [grow-construction.md](grow-construction.md): a theme of any whole bars from 3 to 16 and ideas of any whole bars, given by a construction (P47).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.
-- [forms.md](forms.md): forms as JSON documents (P44): the members, the eleven built-in forms and the game loop, how to add one.
+- [forms.md](forms.md): forms as JSON documents (P44): the members, the twelve built-in forms and the game loop, how to add one.
 - [small-ternary.md](small-ternary.md): the built-in ternary form after Schoenberg ch. XIII (P46): A, B over a pedal or in the away region, A1 varied, and what was measured.
 - [minuet.md](minuet.md): the built-in minuet, trio and minuet and trio forms after Schoenberg ch. XV (P48): 3/4 at 112, written-out repeats, B leading into A1, the trio in its own key, and what was measured.
 - [scherzo.md](scherzo.md): the built-in scherzo and scherzo and trio forms after Schoenberg ch. XVI (P49): a ternary with a modulating middle, sequences of a pattern, a liquidation and an extended return, the planned keys, and what was measured.

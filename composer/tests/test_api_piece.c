@@ -867,6 +867,27 @@ static void test_composed_forms(char **rounded_plan) {
     cJSON_Delete(document);
     composer_response_destroy(&response);
     free(printed);
+    /* The figured variations (R-500) in 2/4: the theme, five figurate variations and two codettas at 56 bars, three variations at 40. */
+    static const char *const FV_IDS_56[] = {"theme", "variation 1", "variation 2", "variation 3", "variation 4", "variation 5", "C1", "C2"};
+    static const char *const FV_ROLES_56[] = {"theme", "variation", "variation", "variation", "variation", "variation", "codetta", "codetta"};
+    static const char *const FV_IDS_40[] = {"theme", "variation 1", "variation 2", "variation 3", "C1", "C2"};
+    static const char *const FV_ROLES_40[] = {"theme", "variation", "variation", "variation", "codetta", "codetta"};
+    static const char *const FV_EDITS_56[][2] = {{"form", "\"figured-variations\""}, {"meter", "\"2/4\""}, {"count", "5"}};
+    static const char *const FV_EDITS_40[][2] = {{"form", "\"figured-variations\""}, {"meter", "\"2/4\""}, {"count", "3"}};
+    printed = form_request("variations.json", NULL, FV_EDITS_56, 3, false);
+    document = composed_document(printed, &response);
+    expect_one_version(document, FV_IDS_56, FV_ROLES_56, 8);
+    write_pair("piece", "figured-variations-56", printed, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+    printed = form_request("variations.json", NULL, FV_EDITS_40, 3, false);
+    document = composed_document(printed, &response);
+    expect_one_version(document, FV_IDS_40, FV_ROLES_40, 6);
+    write_pair("piece", "figured-variations-40", printed, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
     /* A modulating rounded binary of 24 bars in A minor, 3/4 (R-429: 10 of 10 seeds compose). */
     static const char *const EDITS[][2] = {{"key", "\"A\""}, {"mode", "\"minor\""}, {"meter", "\"3/4\""}, {"bars", "24"}, {"modulate", "true"}};
     printed = form_request("rounded-binary.json", NULL, EDITS, 5, false);

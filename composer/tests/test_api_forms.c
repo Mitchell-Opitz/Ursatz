@@ -91,18 +91,18 @@ static void assert_choice(const cJSON *object, const char *name, const char *val
 
 static void test_registry_order(void) {
     const char *const names[] = {"binary", "rounded-binary", "ternary", "variations", "loop", "layered", "minuet",
-                                 "trio", "minuet-and-trio", "scherzo", "scherzo-and-trio", "game-loop"};
+                                 "trio", "minuet-and-trio", "scherzo", "scherzo-and-trio", "figured-variations", "game-loop"};
     const cJSON *list = member(forms, "forms");
-    assert(cJSON_GetArraySize(list) == 12);
-    for (int i = 0; i < 12; i++) {
+    assert(cJSON_GetArraySize(list) == 13);
+    for (int i = 0; i < 13; i++) {
         const cJSON *form = cJSON_GetArrayItem(list, i);
         assert(strcmp(text(form, "name"), names[i]) == 0);
         assert(*text(form, "label"));
-        bool game_loop = i == 11;
+        bool game_loop = i == 12;
         assert(strcmp(text(form, "sections"), game_loop ? "request" : "sizes") == 0);
-        /* The four with sections that end in the home key close, and so do the minuet, the trio, the scherzo and the
-           forms that put two together. */
-        assert(flag(form, "closing") == (i < 4 || (i >= 6 && i < 11)));
+        /* The four with sections that end in the home key close, and so do the minuet, the trio, the scherzo, the
+           forms that put two together and the figured variations. */
+        assert(flag(form, "closing") == (i < 4 || (i >= 6 && i < 12)));
         assert((cJSON_GetArraySize(member(form, "sizes")) == 0) == game_loop);
     }
 }
@@ -190,6 +190,36 @@ static void test_variations(void) {
     assert(strcmp(text(cJSON_GetArrayItem(sections, 1), "variation"), "ornament") == 0);
     assert(strcmp(text(cJSON_GetArrayItem(sections, 2), "variation"), "reharmonize") == 0);
     assert(cJSON_GetArraySize(member(form, "sizes")) > 3);
+}
+
+/* The figured variations (R-500): 40 and 56 bars, 2/4 first of four meters, the theme, five figurate variations, the coda. */
+static void test_figured_variations(void) {
+    const cJSON *form = form_named("figured-variations");
+    assert(strcmp(text(form, "label"), "Figured variations") == 0 && strcmp(text(form, "sections"), "sizes") == 0 && flag(form, "closing"));
+    const char *const meters[] = {"2/4", "3/4", "4/4", "6/8"};
+    assert_strings(member(form, "meters"), meters, 4);
+    assert(cJSON_GetArraySize(member(form, "regions")) == 0 && cJSON_IsNull(member(form, "tempo")));
+    assert(cJSON_GetArraySize(member(form, "sizes")) == 2);
+    const cJSON *size = default_size(form);
+    assert(number(size, "bars") == 56 && number(size, "count") == 5);
+    const cJSON *sections = member(size, "sections");
+    const char *const names[] = {"theme", "variation 1", "variation 2", "variation 3", "variation 4", "variation 5", "C1", "C2"};
+    assert(cJSON_GetArraySize(sections) == 8);
+    for (int i = 0; i < 8; i++) {
+        const cJSON *section = cJSON_GetArrayItem(sections, i);
+        assert(strcmp(text(section, "name"), names[i]) == 0);
+        assert(number(section, "bars") == (i < 6 ? 8 : 4));
+        const bool variation = i >= 1 && i <= 5;
+        assert_choice(section, "role", i == 0 ? "theme" : variation ? "variation" : "codetta", i == 0 ? "Theme" : variation ? "Variation" : "Codetta");
+        if (variation) {
+            assert(strcmp(text(section, "returns"), "theme") == 0 && strcmp(text(section, "variation"), "figurate") == 0);
+        } else {
+            assert(cJSON_IsNull(member(section, "returns")) && cJSON_IsNull(member(section, "variation")));
+        }
+    }
+    const cJSON *small = size_with_bars(form, 40);
+    assert(number(small, "count") == 3 && cJSON_GetArraySize(member(small, "sections")) == 6);
+    assert(strcmp(text(cJSON_GetArrayItem(member(small, "sections"), 3), "variation"), "figurate") == 0);
 }
 
 static void test_layered(void) {
@@ -431,6 +461,7 @@ int main(void) {
     test_registry_order();
     test_rounded_binary();
     test_variations();
+    test_figured_variations();
     test_layered();
     test_pedal();
     test_minuet();

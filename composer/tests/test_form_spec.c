@@ -19,6 +19,7 @@
  *
  *   test_form_spec            the reader and the built-in forms (fast):
  *                               every built-in parses and is what docs/forms.md says of it;
+ *                               the figured variations (B4 of P50, R-500): sections, figures, the parallel V3, the meters;
  *                               a section's construction (B6 of P47): "auto", the ideas and extensions, the refusals;
  *                               a section's figure (B1 of P50, tests/fixtures/forms/figure-form.json): what it reads as, each refusal;
  *                               a section in the parallel mode (B3 of P50, tests/fixtures/forms/parallel-form.json): what it reads as, each refusal;
@@ -167,6 +168,8 @@ static const FormRow FORMS[] = {
      {{8, 0, false}, {24, 0, false}, {48, 0, false}, {0, 3, false}, {44, 1, false}}, 5, 3, 176, 2, 0},
     {"scherzo-and-trio", true, false, 1, {{44, 0, true}, {60, 0, false}}, 2,
      {{8, 0, false}, {24, 0, false}, {48, 0, false}, {0, 3, false}, {44, 1, false}}, 5, 1, 176, 0, 3},
+    {"figured-variations", true, false, 0, {{40, 3, false}, {56, 5, true}}, 2,
+     {{8, 0, false}, {32, 0, false}, {48, 0, false}, {0, 1, false}, {0, 4, false}, {40, 5, false}}, 6, 4, 0, 0, 0},
 };
 #define FORM_COUNT (sizeof(FORMS) / sizeof(FORMS[0]))
 
@@ -185,7 +188,9 @@ static void test_builtin_forms(void) {
         assert(form->size_count == row->size_count);
         assert(form->meter_count == row->meters && form->tempo == row->tempo && form->repeat_count == row->repeats &&
                form->part_count == row->parts);
-        assert(row->meters == 0 || (form->meters[0].beats_per_bar == 3 && form->meters[0].beat_unit == 4));
+        /* The first meter is 3/4 where a form lists some, and 2/4 for the figured variations (R-500). */
+        const bool figured = strcmp(row->name, "figured-variations") == 0;
+        assert(row->meters == 0 || (form->meters[0].beats_per_bar == (figured ? 2 : 3) && form->meters[0].beat_unit == 4));
         for (size_t z = 0; z < row->size_count; z++) {
             const FormSpecSize *size = &form->sizes[z];
             size_t sum = 0;
@@ -434,6 +439,78 @@ static void test_builtin_details(void) {
     form_spec_destroy(form);
 }
 
+/* forms/figured-variations.json (R-500): the theme, the variations with their figures, the minore, the coda; sizes 40 and 56. */
+static void test_figured_variations(void) {
+    FormSpec *form = builtin("figured-variations");
+    assert(form->closing && form->region_count == 0 && form->tempo == 0 && form->part_count == 0 && form->repeat_count == 0);
+    assert(strcmp(form->label, "Figured variations") == 0 && form->meter_count == 4);
+    static const struct {
+        int beats_per_bar;
+        int beat_unit;
+    } METERS[] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
+    for (size_t m = 0; m < 4; m++) {
+        assert(form->meters[m].beats_per_bar == METERS[m].beats_per_bar && form->meters[m].beat_unit == METERS[m].beat_unit);
+    }
+    typedef struct {
+        PlanFigureKind kind;
+        PlanFigureRhythm rhythm;
+        bool reharmonize;
+        unsigned change_at;
+        bool climax;
+        bool parallel;
+    } FigureRow;
+    static const FigureRow V1 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_EIGHTHS, false, 0, false, false};
+    static const FigureRow V2 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_SIXTEENTHS, false, 0, false, false};
+    static const FigureRow V3 = {PLAN_FIGURE_SCALE, PLAN_FIGURE_EIGHTHS, true, 0, false, true};
+    static const FigureRow V4 = {PLAN_FIGURE_SCALE, PLAN_FIGURE_SIXTEENTHS, true, 3, false, false};
+    static const FigureRow V5 = {PLAN_FIGURE_BROKEN_CHORD, PLAN_FIGURE_SIXTEENTHS, false, 0, true, false};
+    const FigureRow *const at56[] = {&V1, &V2, &V3, &V4, &V5};
+    const FigureRow *const at40[] = {&V1, &V3, &V5};
+    for (size_t z = 0; z < form->size_count; z++) {
+        const FormSpecSize *size = &form->sizes[z];
+        const bool large = size->bars == 56;
+        const size_t variations = large ? 5u : 3u;
+        const FigureRow *const *figures = large ? at56 : at40;
+        assert((large || size->bars == 40) && size->count == variations && size->is_default == large);
+        assert(size->section_count == variations + 3);
+        /* The theme: an eight-bar period, closed, home. */
+        const FormSectionSpec *theme = &size->sections[0];
+        assert(strcmp(theme->name, "theme") == 0 && strcmp(theme->letter, "T") == 0 && theme->role == FORM_ROLE_THEME &&
+               theme->bars == 8 && theme->closed && theme->returns == FORM_SPEC_NO_RETURN && !theme->has_figure && !theme->parallel &&
+               theme->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT && theme->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT &&
+               theme->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+        for (size_t v = 0; v < variations; v++) {
+            const FormSectionSpec *section = &size->sections[v + 1];
+            char letter[32];
+            snprintf(letter, sizeof(letter), "V%zu", v + 1);
+            assert(strcmp(section->letter, letter) == 0 && section->role == FORM_ROLE_VARIATION && section->bars == 8 &&
+                   section->closed && section->returns == 0 && section->variation == PLAN_RETURN_FIGURATE &&
+                   section->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && !section->has_motive && !section->has_construction);
+            assert(section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT && section->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT);
+            assert(section->has_figure && section->figure.kind == figures[v]->kind && section->figure.rhythm == figures[v]->rhythm &&
+                   section->figure.reharmonize == figures[v]->reharmonize && section->figure.change_at == figures[v]->change_at &&
+                   section->figure.climax == figures[v]->climax && section->parallel == figures[v]->parallel);
+            /* No keys: the parallel mode is not a key lane, and every other variation is home. */
+            assert(section->key_start == FORM_SPEC_HOME && section->key_end == FORM_SPEC_HOME);
+        }
+        /* The coda: two codettas, the second a compound basic idea that is not closed. */
+        const FormSectionSpec *c1 = &size->sections[variations + 1];
+        const FormSectionSpec *c2 = &size->sections[variations + 2];
+        assert(strcmp(c1->name, "C1") == 0 && strcmp(c1->letter, "C") == 0 && c1->role == FORM_ROLE_CODETTA && c1->bars == 4 &&
+               c1->closed && c1->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT && c1->pairing.ending == PLAN_THEME_ENDING_CADENTIAL);
+        assert(strcmp(c2->name, "C2") == 0 && strcmp(c2->letter, "C") == 0 && c2->role == FORM_ROLE_CODETTA && c2->bars == 4 &&
+               !c2->closed && c2->pairing.beginning == PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA &&
+               c2->pairing.ending == PLAN_THEME_ENDING_CADENTIAL && c1->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC &&
+               c2->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+        assert(!c1->has_figure && !c2->has_figure && c1->returns == FORM_SPEC_NO_RETURN && c2->returns == FORM_SPEC_NO_RETURN);
+    }
+    assert(form_spec_size(form, 0, 0)->bars == 56 && form_spec_size(form, 0, 3)->bars == 40 && form_spec_size(form, 56, 0)->count == 5);
+    /* Eight sections at 56 bars and six at 40, under the limit. */
+    assert(form_spec_size(form, 56, 0)->section_count == 8 && form_spec_size(form, 40, 0)->section_count == 6 &&
+           form_spec_size(form, 56, 0)->section_count < FORM_SPEC_MAX_SECTIONS);
+    form_spec_destroy(form);
+}
+
 /* A plan made from each built-in is named for the form, and the form is found again from it. */
 static void test_for_plan(void) {
     for (size_t f = 0; f < FORM_COUNT; f++) {
@@ -667,7 +744,7 @@ static void test_meters_and_tempo(void) {
                      strcmp(builtin_form->name, "minuet-and-trio") == 0;
         bool scherzo = strcmp(builtin_form->name, "scherzo") == 0;
         bool scherzo_trio = strcmp(builtin_form->name, "scherzo-and-trio") == 0;
-        size_t meters = dance || scherzo_trio ? 1u : scherzo ? 3u : 0u;
+        size_t meters = dance || scherzo_trio ? 1u : scherzo ? 3u : strcmp(builtin_form->name, "figured-variations") == 0 ? 4u : 0u;
         unsigned tempo = dance ? 112u : (scherzo || scherzo_trio) ? 176u : 0u;
         assert(builtin_form->meter_count == meters && builtin_form->tempo == tempo);
         assert(form_spec_meter_allowed(builtin_form, &three_four));
@@ -1528,12 +1605,15 @@ static void test_figure_reader(void) {
              FIGURATE);
     refused(text, FIGURE_PATH);
 
-    /* No built-in form has a figure. */
+    /* No built-in form has a figure but the figured variations (B4 of P50). */
     for (size_t i = 0; i < form_spec_builtin_count(); i++) {
         FormSpec *built = builtin(form_spec_builtin_name(i));
+        const bool figured = strcmp(built->name, "figured-variations") == 0;
         for (size_t z = 0; z < built->size_count; z++) {
             for (size_t k = 0; k < built->sizes[z].section_count; k++) {
-                assert(!built->sizes[z].sections[k].has_figure && built->sizes[z].sections[k].variation != PLAN_RETURN_FIGURATE);
+                const FormSectionSpec *section = &built->sizes[z].sections[k];
+                assert(section->has_figure == (figured && section->role == FORM_ROLE_VARIATION) &&
+                       (section->variation == PLAN_RETURN_FIGURATE) == section->has_figure);
             }
         }
         form_spec_destroy(built);
@@ -2209,6 +2289,7 @@ int main(int argc, char **argv) {
     }
     test_builtin_forms();
     test_builtin_details();
+    test_figured_variations();
     test_for_plan();
     test_refusals();
     test_game_loop();
