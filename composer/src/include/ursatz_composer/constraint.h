@@ -47,7 +47,8 @@ typedef enum {
     PLAN_CONSTRAINT_PEDAL,          /* on a section node: its presentation is written over a pedal on `degree` (R-446) */
     PLAN_CONSTRAINT_CONSTRUCTION,   /* on a section node: the bars of each idea of its theme, its extensions, and why (R-468) */
     PLAN_CONSTRAINT_CONNECTIVE,     /* on a held section: its last bar ends with a connective into the next section (R-486) */
-    PLAN_CONSTRAINT_LIQUIDATION     /* no parameters: on a section node, the pattern liquidated over a dominant pedal (R-494) */
+    PLAN_CONSTRAINT_LIQUIDATION,    /* no parameters: on a section node, the pattern liquidated over a dominant pedal (R-494) */
+    PLAN_CONSTRAINT_FIGURE          /* on a section node with a RETURN of variation FIGURATE: its motive of variation (R-497) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -201,7 +202,8 @@ typedef enum {
     PLAN_RETURN_ORNAMENT,
     PLAN_RETURN_REHARMONIZE,
     PLAN_RETURN_REREGISTER,
-    PLAN_RETURN_VARIED /* a moderately varied repetition (Schoenberg's A1): a few ornaments and a reharmonized ending */
+    PLAN_RETURN_VARIED, /* a moderately varied repetition (Schoenberg's A1): a few ornaments and a reharmonized ending */
+    PLAN_RETURN_FIGURATE /* the melody rewritten as a motive of variation over a skeleton of the returned one (R-497) */
 } PlanReturnVariation;
 
 typedef struct {
@@ -213,6 +215,38 @@ typedef struct {
 const char *plan_return_variation_name(PlanReturnVariation variation);
 /* The variation a name stands for; false (out untouched) for an unknown name. */
 bool plan_return_variation_from_name(const char *name, PlanReturnVariation *out);
+
+/*
+ * The motive of variation of a figurate return (R-497, R-498): one figure of one cell held in one rhythm through the
+ * variation. reharmonize puts the figure over a reharmonized copy; change_at, when not 0, is the bar of the section
+ * (from 1) at which that copy's root must change, and needs reharmonize; climax puts the variation an octave higher
+ * when it fits the melody range.
+ */
+typedef enum {
+    PLAN_FIGURE_NEIGHBOR,
+    PLAN_FIGURE_SCALE,
+    PLAN_FIGURE_BROKEN_CHORD
+} PlanFigureKind;
+
+typedef enum {
+    PLAN_FIGURE_EIGHTHS,
+    PLAN_FIGURE_SIXTEENTHS
+} PlanFigureRhythm;
+
+typedef struct {
+    PlanFigureKind kind;
+    PlanFigureRhythm rhythm;
+    bool reharmonize;
+    unsigned change_at;
+    bool climax;
+} PlanFigure;
+
+/* The names of a figure's kind and rhythm as plans and forms write them; NULL for a value out of range. */
+const char *plan_figure_kind_name(PlanFigureKind kind);
+const char *plan_figure_rhythm_name(PlanFigureRhythm rhythm);
+/* The kind or rhythm a name stands for; false (out untouched) for an unknown name. */
+bool plan_figure_kind_from_name(const char *name, PlanFigureKind *out);
+bool plan_figure_rhythm_from_name(const char *name, PlanFigureRhythm *out);
 
 /*
  * The lanes that sound in a layer section: bit (1u << lane) for each PlanLaneKind. A layer section is grown in
@@ -391,6 +425,7 @@ typedef struct {
         PlanPedal pedal;
         PlanConstruction construction;
         PlanConnective connective;
+        PlanFigure figure;
     } params;
 } PlanConstraint;
 

@@ -169,7 +169,7 @@
           "enum": ["length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema", "material",
                    "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint", "return", "layers",
                    "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold",
-                   "seam", "motive_tones", "pedal", "construction", "connective", "liquidation"]
+                   "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure"]
         }
       },
       "allOf": [
@@ -247,6 +247,19 @@
         {
           "if": { "properties": { "kind": { "const": "connective" } } },
           "then": { "required": ["written"], "properties": { "written": { "type": "boolean" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "figure" } } },
+          "then": {
+            "required": ["figure", "rhythm", "harmony", "change_at", "climax"],
+            "properties": {
+              "figure": { "enum": ["neighbor", "scale", "broken-chord"] },
+              "rhythm": { "enum": ["eighths", "sixteenths"] },
+              "harmony": { "enum": ["kept", "reharmonized"] },
+              "change_at": { "type": ["integer", "null"], "minimum": 1 },
+              "climax": { "type": "boolean" }
+            }
+          }
         },
         {
           "if": { "properties": { "kind": { "const": "section_letter" } } },
