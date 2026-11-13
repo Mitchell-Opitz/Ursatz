@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
@@ -380,10 +381,11 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
     return true;
 }
 
-/* The variations the operator makes: all of them but figurate, which is grown afresh until its operator exists (R-497). */
+/* The variations the operator makes: all of them (figurate keeps the melody here; compose_run writes its figure, R-497). */
 static bool variation_offered(PlanReturnVariation variation) {
     return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
-           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED;
+           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED ||
+           variation == PLAN_RETURN_FIGURATE;
 }
 
 /* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
@@ -404,6 +406,10 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
     return rational_cmp(from.length, to.length) == 0 && return_meter_over(plan, from, &source_meter) &&
            return_meter_over(plan, to, &target_meter) && source_meter.beats_per_bar == target_meter.beats_per_bar &&
            source_meter.beat_unit == target_meter.beat_unit && return_key_shift(plan, from, plan, to, &shift);
+}
+
+bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
+    return return_geometry(plan, section, ret);
 }
 
 bool form_return_copies(const PiecePlan *plan, NodeId section) {
@@ -627,6 +633,39 @@ bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *ch
     return ok;
 }
 
+bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed) {
+    PlanReturn ret;
+    PlanMeter meter;
+    size_t count;
+    size_t source_count;
+    if (bar < 1 || !plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section) ||
+        !return_meter_over(plan, plan_node_span(plan, section), &meter)) {
+        return false;
+    }
+    Rational from;
+    Rational to;
+    Rational length = grow_bar_length(&meter);
+    if (rational_mul_int(length, (long long)bar - 1, &from) != RATIONAL_OK || rational_add(from, length, &to) != RATIONAL_OK) {
+        return false;
+    }
+    ChordAt *chords = read_chords(plan, section, &count);
+    ChordAt *source = read_chords(plan, ret.section, &source_count);
+    bool ok = chords && source;
+    bool different = false;
+    for (size_t i = 0; ok && i < count; i++) {
+        /* A chord that starts inside the bar. */
+        if (rational_cmp(chords[i].from, from) >= 0 && rational_cmp(chords[i].from, to) < 0) {
+            different = different || !chord_in_source(&chords[i], source, source_count);
+        }
+    }
+    if (ok) {
+        *changed = different;
+    }
+    free(chords);
+    free(source);
+    return ok;
+}
+
 /* The numerals of the chords that start in the last quarter of the section, space separated. */
 static bool cadence_numerals(const PiecePlan *plan, NodeId section, char *out, size_t size) {
     size_t count;
@@ -695,6 +734,12 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
         return NULL;
     }
     payload->key = pieces[0].key;
+    if (variation == PLAN_RETURN_FIGURATE) {
+        for (size_t i = 0; i < plan_node_constraint_count(plan, target); i++) {
+            const PlanConstraint *constraint = plan_node_constraint_at(plan, target, i);
+            payload->reharmonize = payload->reharmonize || (constraint->kind == PLAN_CONSTRAINT_FIGURE && constraint->params.figure.reharmonize);
+        }
+    }
     if (!return_copy_read(plan, source, &payload->source) || !return_copy_clone(&payload->source, &payload->result) ||
         !return_copy_move(&payload->result, from.start, payload->span.start, payload->transpose)) {
         return_payload_destroy(payload);
@@ -761,6 +806,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         }
         const char *label = variation == PLAN_RETURN_EXACT       ? "exact"
                             : variation == PLAN_RETURN_REHARMONIZE ? "reharmonize"
+                            : variation == PLAN_RETURN_FIGURATE    ? "figurate"
                             : i == 0                              ? "octave up"
                                                                   : "octave down";
         if (!add_payload(out, label, payload)) {

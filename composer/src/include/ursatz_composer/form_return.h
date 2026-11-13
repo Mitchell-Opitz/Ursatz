@@ -19,7 +19,8 @@
  *   - the meter lane is the same over both, and the key lane has the same shape over both: the same number of key
  *     spans, cut at the same bars, each in the same mode, the key of the target's differing from the other's by one
  *     amount throughout (the target is then transposed by it);
- *   - the variation the constraint names is one the operator makes: EXACT, ORNAMENT, REHARMONIZE or REREGISTER.
+ *   - the variation the constraint names is one the operator makes: EXACT, ORNAMENT, REHARMONIZE, REREGISTER, VARIED or
+ *     FIGURATE.
  * It applies once the returned section is Realized with every lane span under it written (the harmony, bass, melody
  * and inner voice lanes). Anything else, the operator does not apply to; grow-theme leaves a section the operator can
  * return alone (form_return_handles), and grows the others afresh from their motive.
@@ -40,6 +41,9 @@
  *                strong-beat melody note is a tone of the chord under it (form_return_melody_fits), else tries again.
  *   REREGISTER   the melody, and the inner voices with it, an octave up or down; one candidate for each that keeps the
  *                melody inside its range, none when neither does, and the section stays open.
+ *   FIGURATE     the copy is the returned section as it is (reopened as REHARMONIZE does when its FIGURE constraint says
+ *                the harmony is reharmonized). compose_run then writes the melody as a motive of variation over a
+ *                skeleton of the returned one (form_figure_write, form_figure.h) once the harmony is final.
  *
  * The checker (form_return_checker) holds each candidate to its variation's rules.
  */
@@ -77,6 +81,13 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
  * read.
  */
 bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed);
+
+/*
+ * Whether the root changes at a fixed bar of a section that returns another: a chord that starts inside bar `bar` of the
+ * section (from 1) is not a chord of the returned section at the same place, as form_return_chords_changed compares
+ * them (R-498). False when the section has no RETURN, either harmony lane cannot be read, or the meter cannot be read.
+ */
+bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed);
 
 /*
  * The numerals of the chords of a section that returns another (a RETURN constraint) that start in the last quarter of
