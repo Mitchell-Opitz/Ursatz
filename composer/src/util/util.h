@@ -29,6 +29,9 @@ void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size);
  */
 void util_key_name(int tonic_pitch_class, bool minor, char *out, size_t size);
 
+/* Whether the key's signature has flats (the key is spelled with flats): the tonic's pitch class is taken mod 12. */
+bool util_key_prefers_flats(int tonic_pitch_class, bool minor);
+
 /*
  * The major scale (or the natural minor) on a tonic, read by standard-tonality: a 12-bit mask over pitch classes, and
  * the degree (1 to 7) a pitch is read as with its alteration from that degree (0 for a note of the scale). The pitch

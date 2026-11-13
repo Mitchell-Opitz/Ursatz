@@ -70,6 +70,14 @@ void util_key_name(int tonic_pitch_class, bool minor, char *out, size_t size) {
     snprintf(out, size, "%s %s", tonic, minor ? "minor" : "major");
 }
 
+bool util_key_prefers_flats(int tonic_pitch_class, bool minor) {
+    PitchLetter letter;
+    int accidental;
+    int fifths = 0;
+    return standard_tonality_key_tonic_of_pitch_class(util_pitch_class(tonic_pitch_class), minor, &letter, &accidental) &&
+           standard_tonality_key_fifths(letter, accidental, minor, &fifths) && fifths < 0;
+}
+
 char *util_copy_string(const char *text) {
     size_t size = text ? strlen(text) + 1 : 1;
     char *out = malloc(size);
