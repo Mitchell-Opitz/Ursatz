@@ -33,8 +33,25 @@ function pieceLane(part, entries, total, state, selected, onSelect, onAdd) {
 /* The read-only strip of a sized form at its size: a block per section wide by its bars, then a table of what the Composer
  * plans for each section (role, length, beginning and ending, cadence, keys, what it returns to, the slots and their ideas). */
 function pieceSizedStrip(form, bars, count) {
+  const parts = PiecesModel.performedParts(form);
+  if (parts.length === 0) {
+    return pieceSectionStrip(PiecesModel.sectionsOf(form, bars, count));
+  }
+  /* A compound form (R-485): the sections of each part under a heading; a part that plays another again has none. */
   const box = materialsElement("div");
-  const sections = PiecesModel.sectionsOf(form, bars, count);
+  for (const part of parts) {
+    box.appendChild(materialsElement("h3", "section-title", `${part.name}: ${part.text}`));
+    const partForm = part.form ? PiecesModel.formOf(part.form) : null;
+    if (partForm) {
+      box.appendChild(pieceSectionStrip(PiecesModel.sectionsOf(partForm, bars, count)));
+    }
+  }
+  return box;
+}
+
+/* The blocks and the table of the Composer's planned sections of a sized form (or of one part of a compound form). */
+function pieceSectionStrip(sections) {
+  const box = materialsElement("div");
   if (sections.length === 0) {
     box.appendChild(materialsElement("div", "piece-list-status", "The Composer has no sections for this size."));
     return box;
@@ -223,18 +240,52 @@ function pieceTable(headers, rows) {
 }
 
 /* One version of a piece result: its section rows, seam rules, score, Analyzer check and style distance. */
-function pieceVersionTables(view, heading, check, sized) {
+function pieceVersionTables(view, heading, check, sized, performed) {
   const box = materialsElement("div", "piece-version");
   box.appendChild(materialsElement("h3", "section-title", heading));
   /* The Construction column is there only when a section has one (P47). */
   const withConstruction = view.rows.some((row) => row.construction !== "");
   const extraHead = withConstruction ? ["Construction"] : [];
   const extra = (row) => (withConstruction ? [row.construction] : []);
+  /* A performed form (R-485) adds its part, what a row plays again, the upbeat chord and the connective. */
+  const withPart = performed && view.rows.some((row) => row.partName !== "");
   box.appendChild(
     sized
       ? pieceTable(
-          ["Section", "Role", "Letter", "Start", "Length", "Cadence", "Heard", "Key heard", "Harmony", "Returns", "How it differs", ...extraHead],
-          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.keyHeard, row.pedal, row.returns, row.changes, ...extra(row)]),
+          [
+            ...(withPart ? ["Part"] : []),
+            "Section",
+            "Role",
+            "Letter",
+            "Start",
+            "Length",
+            "Cadence",
+            "Heard",
+            "Key heard",
+            "Harmony",
+            ...(performed ? ["Upbeat", "Connective"] : []),
+            "Returns",
+            ...(performed ? ["Repeat of"] : []),
+            "How it differs",
+            ...extraHead,
+          ],
+          view.rows.map((row) => [
+            ...(withPart ? [row.partName] : []),
+            row.id,
+            row.partLabel,
+            row.letter,
+            row.start,
+            row.length,
+            row.cadence,
+            row.heard,
+            row.keyHeard,
+            row.pedal,
+            ...(performed ? [row.upbeat, row.connective] : []),
+            row.returns,
+            ...(performed ? [row.repeatOf] : []),
+            row.changes,
+            ...extra(row),
+          ]),
         )
       : pieceTable(
           ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source", ...extraHead],
@@ -260,6 +311,11 @@ function pieceVersionTables(view, heading, check, sized) {
 function buildPieceActions(ctx, state, rows) {
   const box = materialsElement("div", "piece-actions");
   box.appendChild(materialsElement("h3", "section-title", "Regenerate and variations"));
+  /* A performed form is composed once and performed in order: the Composer refuses regenerate and variations (R-485). */
+  if (PiecesModel.isPerformed(PiecesModel.formOf(state.form))) {
+    box.appendChild(materialsElement("div", "piece-list-status", "Regenerate and variations of a written-out form are Later."));
+    return box;
+  }
   const results = materialsElement("div", "composer-variation-grid");
   const buttons = [];
 
@@ -384,7 +440,9 @@ function buildPieceResult(ctx) {
     ]),
   );
   for (const version of view.versions) {
-    section.appendChild(pieceVersionTables(version.view, version.label, ctx.piece.check === true, PiecesModel.isSized(PiecesModel.formOf(state.form))));
+    section.appendChild(
+      pieceVersionTables(version.view, version.label, ctx.piece.check === true, PiecesModel.isSized(PiecesModel.formOf(state.form)), PiecesModel.isPerformed(PiecesModel.formOf(state.form))),
+    );
   }
   const downloads = materialsElement("div", "upload-controls");
   for (const version of view.versions) {
