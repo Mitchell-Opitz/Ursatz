@@ -36,8 +36,9 @@ repeats are written out.
 ## Parts
 
 A compound form (`parts` in the form document, [forms.md](forms.md)) is made of parts, each a piece of a built-in form with
-sizes. A part is composed on its own, as the piece of that form at the size of the compound form's bars, and the parts are
-performed in order. The trio of a minuet is a part in its own key with its own motive. A form with parts has no sections of
+sizes. A part is composed on its own, as the piece of that form at the size of the compound form's bars (or at its own `bars`,
+R-495: a trio of 12 bars in a compound of 24, `FormPart.bars`, 0 for the compound's), and the parts are
+performed in order. An `again` part performs its source at the source's bars. The trio of a minuet is a part in its own key with its own motive. A form with parts has no sections of
 its own: its sizes have `bars` and no `sections`.
 
 `piece_compose_parts` (`piece_perform.h`) composes the parts into a `PieceParts` (a plan, a compose outcome, a home key and

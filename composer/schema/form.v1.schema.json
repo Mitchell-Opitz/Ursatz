@@ -144,7 +144,7 @@
       "additionalProperties": false,
       "oneOf": [
         { "required": ["form"], "not": { "required": ["again"] } },
-        { "required": ["again"], "not": { "anyOf": [{ "required": ["form"] }, { "required": ["key"] }, { "required": ["motive"] }] } }
+        { "required": ["again"], "not": { "anyOf": [{ "required": ["form"] }, { "required": ["key"] }, { "required": ["motive"] }, { "required": ["bars"] }] } }
       ],
       "properties": {
         "name": { "type": "string", "minLength": 1, "maxLength": 31, "description": "Unique among the parts; the prefix of its sections' names after the first part." },
@@ -152,7 +152,8 @@
         "key": { "type": "string", "default": "home", "description": "\"home\" or the name of a region of the form: the key the part is in." },
         "motive": { "enum": ["piece", "new"], "default": "piece", "description": "The piece's motive, or one of its own, invented." },
         "again": { "type": "string", "description": "The name of an earlier part that is not an again part: this part performs it once more." },
-        "repeats": { "type": "boolean", "description": "Whether the part's repeats are written out; true, and false for an again part." }
+        "repeats": { "type": "boolean", "description": "Whether the part's repeats are written out; true, and false for an again part." },
+        "bars": { "type": "integer", "minimum": 1, "description": "The size of the part's form it is composed at, in place of the compound size's bars; the form has a size of these bars. Not with again." }
       }
     },
     "size": {

@@ -420,6 +420,8 @@ target_compile_definitions(test_piece_perform PRIVATE COMPOSER_FIXTURE_DIR="${CM
 add_test(NAME test_piece_perform COMMAND test_piece_perform)
 # A compound form (R-485): tests/fixtures/forms/parts-form.json, its parts composed on their own and performed in order.
 add_test(NAME test_piece_perform_parts COMMAND test_piece_perform parts)
+# A part with its own bars (R-495): tests/fixtures/forms/part-bars-form.json at sizes 24 and 12, its Trio always 12 bars.
+add_test(NAME test_piece_perform_part_bars COMMAND test_piece_perform part-bars)
 
 add_executable(test_piece_keys test_piece_keys.c)
 target_link_libraries(test_piece_keys PRIVATE ursatz_composer)

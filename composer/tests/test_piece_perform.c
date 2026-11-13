@@ -27,6 +27,11 @@
  *                              performance is 48 bars of the sections A, B, Second A, Second B, First again A and First
  *                              again B; the third part's notes are the first's moved; Second's m0 is not First's.
  *                              piece_region_key with degree 1 is the parallel key.
+ *
+ *   test_piece_perform part-bars   a part with its own bars (R-495, tests/fixtures/forms/part-bars-form.json: First a minuet
+ *                              of the compound's size, Trio a trio of 12 bars in the region "other", then First again) at
+ *                              sizes 24 and 12 in C major 3/4, seeds 1 to 5, all compose: the Trio is 12 bars at both sizes
+ *                              (six sections of 4 bars with its repeats), the first part and its return are the size's.
  */
 
 #define SEEDS 5
@@ -364,12 +369,87 @@ static int test_parts(void) {
     return 0;
 }
 
+/* A length of bars in 3/4, in whole notes. */
+static Rational in_bars(size_t bars) {
+    return rational_ratio((long long)bars * 3, 4);
+}
+
+/* The performed bars of the sections of a part. */
+static void check_part_bars_performance(const FormSpec *form, size_t bars, const PieceParts *parts) {
+    PiecePerformance performance;
+    assert(piece_perform_compound(form, bars, 0, parts, &performance) == PIECE_OK && performance.plan);
+    /* First and its return are the size's bars, the Trio is 12 whatever the size: A A B A1 B A1, 6 sections each. */
+    const size_t first = bars / 3;
+    size_t in_part[3] = {0, 0, 0};
+    for (size_t i = 0; i < performance.section_count; i++) {
+        const PiecePerformedSection *section = &performance.sections[i];
+        assert(section->part < 3);
+        in_part[section->part]++;
+        assert(rational_cmp(plan_node_span(performance.plan, section->node).length, in_bars(section->part == 1 ? 4 : first)) == 0);
+        /* Its source in the part's own plan is as long: the Trio's plan is composed at 12 bars, the others at the size's. */
+        const PiecePlan *source_plan = parts->plans[section->part == 2 ? 0 : section->part];
+        assert(rational_cmp(plan_node_span(source_plan, section->source).length, in_bars(section->part == 1 ? 4 : first)) == 0);
+    }
+    assert(in_part[0] == 6 && in_part[1] == 6 && in_part[2] == 3);
+    assert(performance.section_count == 15);
+    Rational end;
+    size_t sections;
+    render_count(performance.plan, &end, &sections);
+    assert(rational_cmp(end, in_bars(2 * bars + 24 + bars)) == 0 && sections == 15);
+    piece_performance_destroy(&performance);
+}
+
+static int test_part_bars(void) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/forms/part-bars-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form_spec_performed(form) && form->part_count == 3);
+    static const size_t SIZES[2] = {24, 12};
+    for (size_t z = 0; z < 2; z++) {
+        int composed = 0;
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            PieceRequest request;
+            memset(&request, 0, sizeof(request));
+            request.form = form->name;
+            request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+            request.meter.beats_per_bar = 3;
+            request.meter.beat_unit = 4;
+            request.bars = SIZES[z];
+            request.seed = seed;
+            ComposeConfig config;
+            memset(&config, 0, sizeof(config));
+            config.seed = seed;
+            PieceParts parts;
+            PieceResult ran = piece_compose_parts(form, &request, &config, &parts);
+            if (ran != PIECE_OK) {
+                printf("  %zu bars, seed %lu: %s\n", SIZES[z], seed, piece_result_name(ran));
+                continue;
+            }
+            composed++;
+            assert(parts.count == 3 && parts.plans[0] && parts.plans[1] && parts.plans[2] == NULL);
+            check_part_bars_performance(form, SIZES[z], &parts);
+            piece_parts_destroy(&parts);
+        }
+        printf("part-bars-form at %zu bars in C major 3/4: %d of %d seeds compose, the Trio at 12 bars\n", SIZES[z], composed,
+               SEEDS);
+        assert(composed == SEEDS);
+    }
+    form_spec_destroy(form);
+    free(text);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "parts") == 0) {
         return test_parts();
     }
+    if (argc == 2 && strcmp(argv[1], "part-bars") == 0) {
+        return test_part_bars();
+    }
     if (argc != 1) {
-        fprintf(stderr, "usage: test_piece_perform [parts]\n");
+        fprintf(stderr, "usage: test_piece_perform [parts|part-bars]\n");
         return 2;
     }
     char path[512];

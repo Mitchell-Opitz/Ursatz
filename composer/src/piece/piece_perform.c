@@ -203,7 +203,7 @@ PieceResult piece_compose_parts(const FormSpec *form, const PieceRequest *reques
         PieceRequest made = *request;
         ComposeConfig composing = *config;
         made.form = part->form;
-        made.bars = size->bars;
+        made.bars = part->bars ? part->bars : size->bars;
         made.count = 0;
         made.key = out->keys[i];
         made.seed = request->seed + PIECE_PART_SEED_STRIDE * (unsigned long)i;
@@ -339,7 +339,8 @@ PieceResult piece_perform_compound(const FormSpec *form, size_t bars, size_t cou
             return PIECE_ERR_BAD_REQUEST;
         }
         performed[i].form = parts->forms[source];
-        performed[i].size = form_spec_size(parts->forms[source], size->bars, 0);
+        performed[i].size =
+            form_spec_size(parts->forms[source], form->parts[source].bars ? form->parts[source].bars : size->bars, 0);
         performed[i].plan = parts->plans[source];
         performed[i].repeats = form->parts[i].repeats;
         performed[i].name = form->parts[i].name;

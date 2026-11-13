@@ -173,6 +173,7 @@ typedef struct {
     char form[FORM_SPEC_NAME_MAX];         /* the built-in form it is a piece of; empty for an again part */
     int key;                               /* FORM_SPEC_HOME, or the index of the region its home key is drawn from */
     bool new_motive;                       /* it has a motive of its own, invented; else it has the piece's motive */
+    size_t bars;                           /* the size of the part's form it is composed at; 0: the compound size's bars (R-495) */
     size_t again;                          /* FORM_SPEC_NO_RETURN, or the index of the earlier part it performs again */
     bool repeats;                          /* its repeats are written out (true by default, false for an again part) */
 } FormPart;
