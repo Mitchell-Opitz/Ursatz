@@ -122,6 +122,14 @@ when its section has the `pedal` constraint and starts in the home key (the plan
 start and no Given material in its first half; the presentation then never repeats its basic idea in sequence, which would
 write the chords I and ii whole. Anywhere else the constraint is ignored and the presentation is built as before.
 
+The bass operator starts its lines at the octave nearest the middle of its range (MIDI 50), and when none of its 48
+attempts passes the melodic rules it makes 48 more with the first chord's octave drawn from every pitch of its member in
+range (R-491). In G major the first note from the middle is G3, and a continuation of I IV ii V into the half cadence
+must then reach the dominant's only D in range, D3: every line leaps or outlines a seventh, so the span had no
+candidate, and the B of the ternary (and of the minuet) did not compose over a dominant pedal in G major or F# major.
+From the low octave G2 steps through (43 48 45 50). A span that has a line from the middle never reaches the second round,
+so its candidates and draws are as before; the skeleton's `harmony_bass_build` keeps the middle start.
+
 `harmony-phrase-model` reads an optional `phrase_model` or `cadential` shape. `max_cells_per_chord` caps every chord
 but the last, which always takes the cells from the last downbeat (the whole last bar of a span of bars) so the cadence
 arrives on a downbeat; `split_at_bars` keeps every

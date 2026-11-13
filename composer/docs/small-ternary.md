@@ -56,4 +56,6 @@ Seeds 1 to 10, invented motive, up to 16 attempts each (the piece entry's loop: 
 
 At 12 bars A1 is 4 bars and its last quarter is one bar, and the hearing finds no return in a piece that short; the same held for the old ternary.
 
+Every key (P48 B5, R-491): the ternary 24 composes 4 of 4 seeds (`compose_run`, seeds 1 to 4, no modulate) in all 24 keys, 12 major and 12 minor, in 3/4 and in 4/4. G major and F# major were 0 of 4 before the bass operator's fallback (stuck at the bass stage: from G3 every line into the dominant's only D at D3 leaps or outlines a seventh; [grow-harmony.md](grow-harmony.md)).
+
 The regression baselines for the form are in `tests/test_form_templates.c` (`BASELINES`) and `tests/test_return_heard.c`, and the plans are pinned by `tests/fixtures/forms/template-plans.txt`.
