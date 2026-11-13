@@ -177,7 +177,9 @@
         "pedal",
         "slots",
         "leads_in",
-        "connective"
+        "connective",
+        "figure",
+        "mode"
       ],
       "properties": {
         "name": {
@@ -341,6 +343,63 @@
             }
           ],
           "description": "Whether a section that leads into the next ends with a connective: \"sometimes\" or \"always\"; null for none."
+        },
+        "figure": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "rhythm",
+                "harmony",
+                "change_at",
+                "climax"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "neighbor",
+                    "scale",
+                    "broken-chord"
+                  ]
+                },
+                "rhythm": {
+                  "enum": [
+                    "eighths",
+                    "sixteenths"
+                  ]
+                },
+                "harmony": {
+                  "enum": [
+                    "kept",
+                    "reharmonized"
+                  ]
+                },
+                "change_at": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1
+                },
+                "climax": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ],
+          "description": "The motive of variation of a figurate return (R-501): null for a section with none."
+        },
+        "mode": {
+          "enum": [
+            "parallel",
+            null
+          ],
+          "description": "\"parallel\" for a section in the home key's parallel mode (R-499); null for any other."
         }
       },
       "additionalProperties": false
