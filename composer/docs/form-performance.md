@@ -1,8 +1,49 @@
 # Form performance
 
 How a form's piece is led, repeated and performed: a section that leads into the next with a connective (R-486, P48 B2),
-and, as the later branches of P48 add them, written-out repeats and the parts of a compound form (R-485). Back to the
+written-out repeats (R-485, P48 B3) and, as the later branch of P48 adds it, the parts of a compound form. Back to the
 [docs index](README.md).
+
+## Composed once, performed in order
+
+A form is composed once. What is played can be longer: a form with `repeats` plays each repeated group twice in place
+(A A B A1 B A1), and a compound form with `parts` (B4) plays its parts in order. The composed plan, with its compose outcome,
+gives the hearing: the Analyzer's check, the cadences, the score, the explanation. The performed plan is what is rendered:
+the plan JSON, the MIDI file and the MusicXML. A form with neither member composes and answers exactly as before.
+
+`piece_perform` (`piece_perform.h`) builds the performed plan from the composed plan of each part and its size:
+
+- a form node named the first part's `plan_name` over the whole performance, with the meter Given over it (the parts'
+  meter, which must be one: `PIECE_ERR_BAD_REQUEST` otherwise);
+- one section node for each performed section, at its performed start, named as the form names it (`A`, then `A (repeat)`
+  its second time), holding the source's letter, cadences and key, and the key lane over the source section cut to it and
+  moved;
+- the section's lanes Given from the source (`plan_give_section`): harmony, bass, melody and inner voices, with its phrase
+  and idea nodes. Every node is Realized and the form node Given. The material, the motive nodes and the seam are not
+  performed.
+
+A performance has at most `PIECE_PERFORMED_MAX` (32) sections. `PiecePerformPart` is a part's form, size, composed plan, whether its repeats
+are written out, and its name (the first part is not prefixed; a later part's sections are `Trio A`).
+
+## Repeats
+
+`repeats` in the form document ([forms.md](forms.md)) lists the groups. `repeat-form.json` (A, B and A' of 4 bars with
+`[["A"], ["B", "A'"]]`) performs as A, A (repeat), B, A', B (repeat), A' (repeat), at bars 0, 4, 8, 12, 16 and 20 of a
+24-bar plan. Each section's melody, harmony, bass and inner voice spans are the source's moved, and repeats do not change
+composing: the composed plan is the plan of the same form without `repeats`. Repeat signs in the MusicXML are Later; the
+repeats are written out.
+
+## What the piece version answers
+
+For a performed form the piece entry answers with the performed plan: the `plans` member, the plan JSON, the MIDI file and
+the MusicXML. The hearing members still come from the composed plan and its outcome. A row of the version's sections is
+one for each performed section: its `start` and `length` from the performed plan, every other member from the source
+section in the composed plan, so a repeat's row is its source's at its own start (`repeat_of` and `part` come in B6).
+
+## Regenerate and variations are Later
+
+A performed form is composed whole. The piece entry with `from` (regenerate) and the piece variations entry answer
+`COMPOSER_ERR_REQUEST` at `/request/form`: `regenerate and variations of the <label> form are Later: it is composed whole`.
 
 ## Leading into a section
 
