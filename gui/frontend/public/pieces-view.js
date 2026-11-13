@@ -240,7 +240,7 @@ function pieceTable(headers, rows) {
 }
 
 /* One version of a piece result: its section rows, seam rules, score, Analyzer check and style distance. */
-function pieceVersionTables(view, heading, check, sized, performed) {
+function pieceVersionTables(view, heading, check, sized, performed, modulating) {
   const box = materialsElement("div", "piece-version");
   box.appendChild(materialsElement("h3", "section-title", heading));
   /* The Construction column is there only when a section has one (P47). */
@@ -261,6 +261,7 @@ function pieceVersionTables(view, heading, check, sized, performed) {
             "Length",
             "Cadence",
             "Heard",
+            ...(modulating ? ["Key"] : []),
             "Key heard",
             "Harmony",
             ...(performed ? ["Upbeat", "Connective"] : []),
@@ -278,6 +279,7 @@ function pieceVersionTables(view, heading, check, sized, performed) {
             row.length,
             row.cadence,
             row.heard,
+            ...(modulating ? [row.plannedKey] : []),
             row.keyHeard,
             row.pedal,
             ...(performed ? [row.upbeat, row.connective] : []),
@@ -441,7 +443,7 @@ function buildPieceResult(ctx) {
   );
   for (const version of view.versions) {
     section.appendChild(
-      pieceVersionTables(version.view, version.label, ctx.piece.check === true, PiecesModel.isSized(PiecesModel.formOf(state.form)), PiecesModel.isPerformed(PiecesModel.formOf(state.form))),
+      pieceVersionTables(version.view, version.label, ctx.piece.check === true, PiecesModel.isSized(PiecesModel.formOf(state.form)), PiecesModel.isPerformed(PiecesModel.formOf(state.form)), PiecesModel.isModulating(PiecesModel.formOf(state.form))),
     );
   }
   const downloads = materialsElement("div", "upload-controls");
@@ -504,7 +506,11 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
     const size = PiecesModel.sizeOf(form, state.bars, state.count);
     return [
       ["Size", size ? PiecesModel.sizeLabel(size) : "not found"],
-      ...(form.settings && form.settings.modulate === true ? [["Modulate", state.modulate ? "yes" : "no"]] : []),
+      ...(PiecesModel.isModulating(form)
+        ? [["Modulate", "always"]]
+        : form.settings && form.settings.modulate === true
+          ? [["Modulate", state.modulate ? "yes" : "no"]]
+          : []),
       ...PiecesModel.sectionsOf(form, state.bars, state.count).map((section) => [
         `${section.role ? section.role.label : ""} ${section.letter}`,
         `${Number.isFinite(section.bars) ? `${section.bars} bars` : `${section.beats} beats`}${section.cadence ? `, cadence ${section.cadence.core}` : ""}`,

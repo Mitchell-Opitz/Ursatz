@@ -112,7 +112,7 @@ composes (see [Piece bodies and version files](../storage.md#piece-bodies-and-ve
 builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
 
 - Header: form (the Composer's forms by label: Binary, Rounded binary, Ternary, Theme and variations, Loop, Layered, Minuet,
-  Trio, Minuet and trio, Game loop; `GET /api/composer/forms`, loaded with the vocabulary, so the GUI keeps no form or part table; a body that names no
+  Trio, Minuet and trio, Scherzo, Scherzo and trio, Game loop; `GET /api/composer/forms`, loaded with the vocabulary, so the GUI keeps no form or part table; a body that names no
   form is the game loop), key, mode (major, minor, From the brief), meter and tempo (blank
   takes the brief's). The meter list follows the form: a form that fixes its meters lists only those (the minuet, the trio
   and the minuet and trio: 3/4), any other lists every meter; the meter kept is the chosen one when the new list has it,
@@ -123,7 +123,8 @@ builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
   version; only a missing brief for the mode From the brief, the loop body, the order of the parts and a theme of
   another length do.
 - Structure of a sized form (every form but the game loop): a Size select (each size of the form, such as "16 bars", or
-  "3 variations, 32 bars" for one with a count) and, for a form that can modulate, a Modulate checkbox. The sections are
+  "3 variations, 32 bars" for one with a count) and, for a form that can modulate, a Modulate checkbox (a form that always modulates, the scherzo, has no checkbox and
+  its structure table says `Modulate: always`; its request sends no `modulate`). The sections are
   the Composer's and cannot be edited: a strip of blocks as wide as their bars and a table of each section's letter, role,
   length, beginning and ending, cadence, keys, harmony (the pedal the section is written over, such as "Dominant
   pedal"), the section it returns to (with its variation, such as "A (varied)") and its slots with their ideas. The body is
@@ -167,7 +168,8 @@ versions list (read-only), shows the seed, key, loop region, brief and, for
 each version of the form (the game loop has a loop version and an ending
 version, any other form one version, `piece`), a row for each section (section,
 part by its role label, letter, start, length, cadence planned and heard, fill, source; for a sized form: section,
-role, letter, start, length, cadence, heard, the key heard, harmony (the pedal label of the form's section), the
+role, letter, start, length, cadence, heard, the key planned (Key, for a form that always modulates only: the Composer's
+`key` of the row, such as `G major` for the scherzo's pattern), the key heard, harmony (the pedal label of the form's section), the
 section it returns and how it differs, in the Composer's own text; either table gains a Construction column, the
 Composer's `construction_text`, when a section has one), the
 score, the seam rules that held, the Analyzer check and the style
@@ -181,7 +183,7 @@ such as `V to I`) and Connective (`yes` when the stepwise link was written, `no`
 none) after Harmony, and Repeat of (the section a row plays again) after Returns. The strip of a compound form lists the
 sections of each part under a heading that says its form, its key and its repeats; a part that plays another again has
 none. The strip of a sized form shows the halves of a section with a
-construction in its block (`4+6`) and its reason in a Construction column of the table (no built-in form has one yet).
+construction in its block (`4+6`; the scherzo's roles Pattern, Sequence, Liquidation, Episode and Codetta are the forms entry's labels) and its reason in a Construction column of the table (no built-in form has one yet).
 
 On the current version of a performed form no Regenerate or Variations is offered: the page says they are Later (the
 Composer refuses them for a form written out in order, R-485).

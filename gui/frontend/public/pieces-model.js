@@ -84,6 +84,11 @@
     return Boolean(form) && form.sections === "sizes";
   }
 
+  /* True for a form that always modulates (the Composer's `modulates`, R-493): its key plan is not a choice. */
+  function isModulating(form) {
+    return Boolean(form) && form.modulates === true;
+  }
+
   /* The meters a form is composed in: its entry's meters when it lists any, else every meter. */
   function meterChoices(form) {
     return form && Array.isArray(form.meters) && form.meters.length > 0 ? form.meters.slice() : Themes.METERS.slice();
@@ -933,6 +938,7 @@
         heard: section.heard || "",
         fill: FILL_TEXT[section.fill] || section.fill || "",
         source: sourceText(section.source, options && options.sourceNames),
+        plannedKey: section.key || "",
         keyHeard: section.key_heard || "",
         pedal: entry && entry.pedal && entry.pedal.label ? entry.pedal.label : "",
         returns: section.returns || "",
@@ -1086,6 +1092,7 @@
     meterChoices,
     formTempo,
     isPerformed,
+    isModulating,
     performedParts,
     rolesOf,
     roleLabel,
