@@ -134,8 +134,12 @@ static int choose_pitch(const int *options, size_t count, int previous, const Ha
     return within_count ? options[within[draw % within_count]] : options[best];
 }
 
-bool harmony_bass_build(const BassContext *context, const HarmonyBassParams *params, FillRng *rng,
-                        BassCandidate *out) {
+/*
+ * One bass line over the chords. With free_first the first chord's octave is drawn from every pitch of its member in
+ * range instead of taken nearest the middle of the range: the fallback when no line from the middle passes.
+ */
+static bool build_line(const BassContext *context, const HarmonyBassParams *params, FillRng *rng, bool free_first,
+                       BassCandidate *out) {
     unsigned subdivision = chance_of(params->subdivision);
     unsigned stepwise = chance_of(params->stepwise);
     int previous = -1;
@@ -170,7 +174,8 @@ bool harmony_bass_build(const BassContext *context, const HarmonyBassParams *par
             lengths[fill_rng_below(rng, parts)]++;
         }
 
-        int pitch = choose_pitch(options, option_count, previous, params, stepwise, rng);
+        int pitch = free_first && i == 0 ? options[fill_rng_below(rng, option_count)]
+                                         : choose_pitch(options, option_count, previous, params, stepwise, rng);
         for (size_t k = 0; k < parts; k++) {
             if (k > 0) {
                 /* A later note repeats the pitch or moves it an octave, to another pitch of the chord's member. */
@@ -197,6 +202,11 @@ bool harmony_bass_build(const BassContext *context, const HarmonyBassParams *par
         previous = pitch;
     }
     return true;
+}
+
+bool harmony_bass_build(const BassContext *context, const HarmonyBassParams *params, FillRng *rng,
+                        BassCandidate *out) {
+    return build_line(context, params, rng, false, out);
 }
 
 static bool same_line(const BassCandidate *a, const BassCandidate *b) {
@@ -243,9 +253,19 @@ static bool bass_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         return false;
     }
     bool ok = true;
-    for (size_t attempt = 0; ok && attempt < BASS_ATTEMPTS && kept_count < BASS_KEEP; attempt++) {
+    /*
+     * The lines start nearest the middle of the range. When none of them passes, the attempts are made again with the
+     * first octave drawn: a line from the middle can have no way on (in G major, G3 over I IV ii V with the dominant's
+     * only D at D3 leaps or outlines a seventh), while one from the low octave steps through. A span that has lines
+     * from the middle never reaches the second round, so its candidates are as they were.
+     */
+    for (size_t attempt = 0; ok && attempt < 2 * BASS_ATTEMPTS && kept_count < BASS_KEEP; attempt++) {
         PhraseVerdict verdict;
-        if (!harmony_bass_build(&read, params, rng, scratch)) {
+        bool free_first = attempt >= BASS_ATTEMPTS;
+        if (free_first && kept_count > 0) {
+            break;
+        }
+        if (!build_line(&read, params, rng, free_first, scratch)) {
             break;
         }
         /* Only lines that pass the melodic rules are proposed; none passing leaves the span open. */
