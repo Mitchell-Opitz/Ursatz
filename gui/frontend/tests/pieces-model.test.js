@@ -360,6 +360,40 @@ check(
 check(scherzoRows[5].partLabel === "Liquidation" && scherzoRows[12].partLabel === "Episode", "a scherzo row names its role");
 check(ternaryRows.every((row) => row.plannedKey === "") && minuetRows.every((row) => row.plannedKey === ""), "a row without key has no planned key");
 
+/* figured variations (P50): the figure of each variation in the structure table and the result rows */
+const figuredEntry = P.formOf("figured-variations");
+const figuredSections = figuredEntry.sizes.find((size) => size.bars === 56).sections;
+check(
+  same(figuredSections.map((entry) => P.figureLabel(entry)), [
+    "",
+    "neighbor tones in eighths",
+    "neighbor tones in sixteenths",
+    "scale line in eighths, reharmonized, parallel mode",
+    "scale line in sixteenths, reharmonized, root changed at bar 3",
+    "broken chord in sixteenths, climax",
+    "",
+    "",
+  ]),
+  "the figure of each variation of the figured variations reads in words and its theme and codettas have none",
+);
+check(
+  P.formOf("minuet").sizes.every((size) => size.sections.every((entry) => P.figureLabel(entry) === "")) && P.figureLabel(null) === "" && P.figureLabel({}) === "",
+  "a section with no figure has no label",
+);
+const figuredSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "figured-variations-summary.json"), "utf8"));
+const figuredRows = P.resultView({ seed: 1, summary: figuredSummary }, { form: "figured-variations", bars: 56, count: 5 }).versions[0].view.rows;
+check(
+  figuredRows.length === 8 &&
+    figuredRows.slice(1, 6).every((row) => row.figure.includes("over the skeleton") && row.skeleton.split(" ").length === 16) &&
+    figuredRows[1].figure.startsWith("neighbor tones in eighths") &&
+    figuredRows[3].figure.includes("parallel mode") &&
+    figuredRows[0].figure === "" &&
+    figuredRows[0].skeleton === "" &&
+    figuredRows.slice(6).every((row) => row.figure === "" && row.skeleton === ""),
+  "a figured variations result gives the figure and skeleton of V1 to V5 and none for the theme and codettas",
+);
+check(minuetRows.every((row) => row.figure === "" && row.skeleton === ""), "a row without a figure has none");
+
 if (failures > 0) {
   console.error(`${failures} failure(s)`);
   process.exit(1);
