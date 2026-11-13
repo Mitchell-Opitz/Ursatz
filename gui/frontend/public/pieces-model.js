@@ -945,6 +945,10 @@
         changes: (section.changes && section.changes.text) || "",
         /* A section with a construction (P47) carries the sentence that says why it is as long as it is; no other has the member. */
         construction: typeof section.construction_text === "string" ? section.construction_text : "",
+        /* A figurate variation (P50, R-501) carries its figure's sentence and the skeleton tones it is built on; "" for a row
+         * that has none. */
+        figure: (section.figure && section.figure.text) || "",
+        skeleton: section.figure && Array.isArray(section.figure.skeleton) ? section.figure.skeleton.join(" ") : "",
       };
     });
     const seam = v.seam && typeof v.seam === "object" ? v.seam : null;

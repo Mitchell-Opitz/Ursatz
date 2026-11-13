@@ -245,8 +245,11 @@ function pieceVersionTables(view, heading, check, sized, performed, modulating) 
   box.appendChild(materialsElement("h3", "section-title", heading));
   /* The Construction column is there only when a section has one (P47). */
   const withConstruction = view.rows.some((row) => row.construction !== "");
-  const extraHead = withConstruction ? ["Construction"] : [];
-  const extra = (row) => (withConstruction ? [row.construction] : []);
+  /* The Figure column (P50) is there only when a row has a figure: its sentence and the skeleton it is built on. */
+  const withFigure = view.rows.some((row) => row.figure !== "");
+  const figureText = (row) => (row.skeleton ? `${row.figure} (skeleton ${row.skeleton})` : row.figure);
+  const extraHead = [...(withFigure ? ["Figure"] : []), ...(withConstruction ? ["Construction"] : [])];
+  const extra = (row) => [...(withFigure ? [figureText(row)] : []), ...(withConstruction ? [row.construction] : [])];
   /* A performed form (R-485) adds its part, what a row plays again, the upbeat chord and the connective. */
   const withPart = performed && view.rows.some((row) => row.partName !== "");
   box.appendChild(
