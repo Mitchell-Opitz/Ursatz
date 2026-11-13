@@ -307,6 +307,45 @@ check(P.sectionConstruction({ construction: "auto" }).text === "Chosen by the Co
 const rowView = P.resultView({ seed: 1, summary: { meter: "4/4", versions: { loop: { sections: [{ id: "s0", part: "body", start: "0", beats: 24, construction_text: "A 6-bar sentence." }, { id: "s1", part: "ending", start: "6", beats: 8 }] } } } }).versions[0].view;
 check(rowView.rows[0].construction === "A 6-bar sentence." && rowView.rows[1].construction === "", "a section row with construction_text shows it and one without shows nothing");
 
+/* The minuet and the trio (R-485): the form's meters and tempo, the performed rows. */
+const minuetForm = P.formOf("minuet");
+const ternaryForm = P.formOf("ternary");
+check(same(P.meterChoices(minuetForm), ["3/4"]) && same(P.meterChoices(ternaryForm), P.METERS) && P.meterChoices(ternaryForm).length === 4, "a form that lists its meters offers those, any other offers every meter");
+check(same(P.meterChoices(null), P.METERS), "no form offers every meter");
+check(P.formTempo(minuetForm) === 112 && P.formTempo(ternaryForm) === null && P.formTempo(null) === null, "a form gives its tempo or none");
+check(P.isPerformed(minuetForm) && P.isPerformed(P.formOf("minuet-and-trio")) && !P.isPerformed(ternaryForm) && !P.isPerformed(P.formOf("game-loop")) && !P.isPerformed(null), "a form with written-out repeats or parts is performed");
+check(
+  same(P.performedParts(P.formOf("minuet-and-trio")).map((part) => part.name), ["Minuet", "Trio", "Minuet da capo"]) &&
+    same(P.performedParts(P.formOf("minuet-and-trio")).map((part) => part.form), ["minuet", "trio", ""]) &&
+    P.performedParts(P.formOf("minuet-and-trio"))[2].again === "Minuet" &&
+    P.performedParts(P.formOf("minuet-and-trio"))[1].text.includes("in the trio key") &&
+    P.performedParts(ternaryForm).length === 0,
+  "a compound form lists its parts and a form without parts lists none",
+);
+const minuetSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "minuet-summary.json"), "utf8"));
+const minuetRows = P.resultView({ seed: 1, summary: minuetSummary }, { form: "minuet-and-trio", bars: 24, count: 0 }).versions[0].view.rows;
+check(
+  minuetRows.length === 15 &&
+    same(minuetRows.map((row) => row.partName), [...Array(6).fill("Minuet"), ...Array(6).fill("Trio"), ...Array(3).fill("Minuet da capo")]) &&
+    minuetRows[0].repeatOf === "" &&
+    minuetRows[1].repeatOf === "A" &&
+    minuetRows[7].repeatOf === "Trio A" &&
+    minuetRows[2].upbeat === "V to I" &&
+    minuetRows[8].upbeat === "V to i" &&
+    minuetRows[0].upbeat === "",
+  "a minuet and trio result gives the part, what a row plays again and the upbeat chord of each row",
+);
+check(minuetRows[0].part === "theme" && minuetRows[0].partLabel === "Theme" && minuetRows[3].part === "return", "a performed row still names its role");
+const connectiveRows = P.resultView(
+  { seed: 1, summary: { meter: "3/4", versions: { piece: { sections: [{ id: "A", role: "theme", start: "0/1", beats: 24, connective: null }, { id: "B", role: "contrast", start: "8/1", beats: 24, connective: true }, { id: "C", role: "contrast", start: "16/1", beats: 24, connective: false }] } } } },
+  { form: "minuet" },
+).versions[0].view.rows;
+check(connectiveRows[0].connective === "" && connectiveRows[1].connective === "yes" && connectiveRows[2].connective === "no", "the connective reads yes, no or nothing");
+check(
+  ternaryRows.every((row) => row.partName === "" && row.repeatOf === "" && row.upbeat === "" && row.connective === "") && ternaryRows[0].part === "theme" && ternaryRows[1].part === "contrast",
+  "the rows of a ternary result are as before",
+);
+
 if (failures > 0) {
   console.error(`${failures} failure(s)`);
   process.exit(1);
