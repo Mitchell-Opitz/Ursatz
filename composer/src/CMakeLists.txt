@@ -115,6 +115,7 @@ add_library(ursatz_composer STATIC
     grow/grow_beginning.c
     grow/grow_ending.c
     grow/grow_free.c
+    grow/grow_liquidate.c
     grow/grow_check.c
     grow/grow_form.c
     grow/grow_run.c
