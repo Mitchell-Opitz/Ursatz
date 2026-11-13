@@ -84,6 +84,8 @@ void return_payload_destroy(void *payload);
  */
 bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
                       int *shift);
+/* The RETURN of a section that form_return_copies holds (the returned section, the variation); false otherwise. */
+bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret);
 /* The meter lane span that holds the span whole; false when none does. */
 bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out);
 /* Whether the section is not Constrained and its harmony, bass and melody are all written. */

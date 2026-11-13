@@ -406,6 +406,10 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
            source_meter.beat_unit == target_meter.beat_unit && return_key_shift(plan, from, plan, to, &shift);
 }
 
+bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
+    return return_geometry(plan, section, ret);
+}
+
 bool form_return_copies(const PiecePlan *plan, NodeId section) {
     PlanReturn ret;
     return return_geometry(plan, section, &ret);
