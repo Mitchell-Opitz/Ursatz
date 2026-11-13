@@ -487,11 +487,11 @@ target_link_libraries(test_form_figure PRIVATE ursatz_composer)
 target_compile_options(test_form_figure PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_figure PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # The figurate return (form_figure.h): the smoke test is quick; the sweep composes 50 pieces.
-foreach(mode smoke sweep)
+foreach(mode smoke sweep parallel)
     add_test(NAME test_form_figure_${mode} COMMAND test_form_figure ${mode})
 endforeach()
-# The sweep composed 50 pieces in 22 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_form_figure_sweep PROPERTIES LABELS slow)
+# The sweep composed 50 pieces in 22 s of CPU and the parallel case 40 in 13 s, over the 10 s fast-set limit.
+set_tests_properties(test_form_figure_sweep test_form_figure_parallel PROPERTIES LABELS slow)
 
 add_executable(test_return_heard test_return_heard.c)
 target_link_libraries(test_return_heard PRIVATE ursatz_composer)
