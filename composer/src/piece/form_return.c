@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
@@ -621,6 +622,39 @@ bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *ch
         ok = rational_div(chords[i].from, length, &share) == RATIONAL_OK;
         /* A chord that starts in the last quarter of the section. */
         if (ok && rational_cmp(share, (Rational){3, 4}) >= 0) {
+            different = different || !chord_in_source(&chords[i], source, source_count);
+        }
+    }
+    if (ok) {
+        *changed = different;
+    }
+    free(chords);
+    free(source);
+    return ok;
+}
+
+bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed) {
+    PlanReturn ret;
+    PlanMeter meter;
+    size_t count;
+    size_t source_count;
+    if (bar < 1 || !plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section) ||
+        !return_meter_over(plan, plan_node_span(plan, section), &meter)) {
+        return false;
+    }
+    Rational from;
+    Rational to;
+    Rational length = grow_bar_length(&meter);
+    if (rational_mul_int(length, (long long)bar - 1, &from) != RATIONAL_OK || rational_add(from, length, &to) != RATIONAL_OK) {
+        return false;
+    }
+    ChordAt *chords = read_chords(plan, section, &count);
+    ChordAt *source = read_chords(plan, ret.section, &source_count);
+    bool ok = chords && source;
+    bool different = false;
+    for (size_t i = 0; ok && i < count; i++) {
+        /* A chord that starts inside the bar. */
+        if (rational_cmp(chords[i].from, from) >= 0 && rational_cmp(chords[i].from, to) < 0) {
             different = different || !chord_in_source(&chords[i], source, source_count);
         }
     }

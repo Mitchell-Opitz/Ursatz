@@ -83,6 +83,13 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
 bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed);
 
 /*
+ * Whether the root changes at a fixed bar of a section that returns another: a chord that starts inside bar `bar` of the
+ * section (from 1) is not a chord of the returned section at the same place, as form_return_chords_changed compares
+ * them (R-498). False when the section has no RETURN, either harmony lane cannot be read, or the meter cannot be read.
+ */
+bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed);
+
+/*
  * The numerals of the chords of a section that returns another (a RETURN constraint) that start in the last quarter of
  * the returned section (from) and of the section (to), each space separated ("IV V I"). False when the section has no
  * RETURN, either harmony lane cannot be read, or size is too small.
