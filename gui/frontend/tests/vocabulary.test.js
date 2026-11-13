@@ -37,7 +37,7 @@ async function main() {
   V.set(fixture, forms);
   check(V.forms().length === forms.forms.length && V.form("game-loop").label === "Game loop" && V.form("rounded-binary").sections === "sizes" && V.form("nothing") === null,
         "the forms are the Composer's, each by name");
-  check(same(V.forms().map((form) => form.name), ["binary", "rounded-binary", "ternary", "variations", "loop", "layered", "minuet", "trio", "minuet-and-trio", "game-loop"]), "the forms come in the Composer's order");
+  check(same(V.forms().map((form) => form.name), ["binary", "rounded-binary", "ternary", "variations", "loop", "layered", "minuet", "trio", "minuet-and-trio", "scherzo", "scherzo-and-trio", "game-loop"]), "the forms come in the Composer's order");
   await V.load(async (url) => ({ status: 200, json: async () => (url === "/api/composer/forms" ? { forms: forms.forms.slice(0, 2) } : fixture) }));
   check(V.forms().length === 2, "load keeps the forms the route gave");
   let formsFailed = false;
