@@ -84,6 +84,36 @@
     return Boolean(form) && form.sections === "sizes";
   }
 
+  /* The meters a form is composed in: its entry's meters when it lists any, else every meter. */
+  function meterChoices(form) {
+    return form && Array.isArray(form.meters) && form.meters.length > 0 ? form.meters.slice() : Themes.METERS.slice();
+  }
+
+  /* The tempo a form gives (quarters a minute), or null. */
+  function formTempo(form) {
+    return form && Number.isFinite(form.tempo) ? form.tempo : null;
+  }
+
+  /* True for a form the Composer composes once and performs in order (written-out repeats or parts, R-485). */
+  function isPerformed(form) {
+    return Boolean(form) && form.performed === true;
+  }
+
+  /* The parts of a compound form as [{name, text, form, again}], else []: text says what the part is (its form, its key,
+   * whether its repeats are written out, or the part it plays again). */
+  function performedParts(form) {
+    if (!form || !Array.isArray(form.parts)) {
+      return [];
+    }
+    return form.parts.map((part) => {
+      const kept = part.repeats === true ? ", repeats written out" : "";
+      const text = part.again
+        ? `the ${part.again} again${kept}`
+        : `${part.form ? part.form.label : ""}${part.key && part.key !== "home" ? `, in the ${part.key} key` : ""}${part.motive === "new" ? ", with a motive of its own" : ""}${kept}`;
+      return { name: part.name, text, form: part.form ? part.form.value : "", again: part.again || "" };
+    });
+  }
+
   /* The roles a request-listed form allows, in order: [{value, label, required}]. */
   function rolesOf(form) {
     return form && Array.isArray(form.roles) ? form.roles : [];
@@ -107,6 +137,14 @@
       const found = size.sections.find((section) => section.role && section.role.value === value);
       if (found) {
         return found.role.label;
+      }
+    }
+    /* A compound form lists no sections of its own: its rows are the sections of its parts' forms. */
+    for (const part of performedParts(form)) {
+      const partForm = part.form ? formOf(part.form) : null;
+      const label = partForm ? roleLabel(partForm, value) : value;
+      if (label !== value) {
+        return label;
       }
     }
     return value;
@@ -874,12 +912,18 @@
     const planned = options && options.form && isSized(options.form) ? sectionsOf(options.form, options.bars, options.count) : [];
     const rows = (Array.isArray(v.sections) ? v.sections : []).map((section) => {
       const beats = beatsOfTime(section.start, meter);
-      const part = section.part || section.role || "";
+      const part = section.role || section.part || "";
       const entry = planned.find((item) => item.name === section.id);
       return {
         id: section.id,
         part,
         partLabel: roleLabel(options && options.form, part),
+        /* A performed form (R-485): the compound part a row belongs to, the section it plays again, the upbeat chord that
+         * leads into the next section and whether the stepwise link was written; "" for a row that has none. */
+        partName: section.role ? section.part || "" : "",
+        repeatOf: section.repeat_of || "",
+        upbeat: section.upbeat ? `${section.upbeat.chord} to ${section.upbeat.next}` : "",
+        connective: section.connective === true ? "yes" : section.connective === false ? "no" : "",
         letter: section.letter || "",
         start: positionLabel(beats, meter),
         startBeats: beats,
@@ -1039,6 +1083,10 @@
     DEFAULT_FORM,
     formOf,
     isSized,
+    meterChoices,
+    formTempo,
+    isPerformed,
+    performedParts,
     rolesOf,
     roleLabel,
     defaultRole,
