@@ -40,8 +40,8 @@
 #define FORM_SPEC_MAX_METERS 4
 
 /*
- * What a section is in the form. The theme-like roles (theme, contrast, return, variation, layer) are the sections
- * grow-theme builds; the others (intro, body, turnaround, ending) are for forms whose sections are free phrases
+ * What a section is in the form. The theme-like rows of the role table (theme, contrast, return, variation, layer,
+ * pattern, sequence, episode, codetta) are the sections grow-theme builds; the others (intro, body, turnaround, ending) are for forms whose sections are free phrases
  * (P46 to P53 add rows).
  */
 typedef enum {
@@ -50,22 +50,27 @@ typedef enum {
     FORM_ROLE_RETURN,
     FORM_ROLE_VARIATION,
     FORM_ROLE_LAYER,
+    FORM_ROLE_PATTERN,
+    FORM_ROLE_SEQUENCE,
+    FORM_ROLE_EPISODE,
+    FORM_ROLE_CODETTA,
     FORM_ROLE_INTRO,
     FORM_ROLE_BODY,
     FORM_ROLE_TURNAROUND,
     FORM_ROLE_ENDING
 } FormRole;
 
-#define FORM_ROLE_COUNT 9
+#define FORM_ROLE_COUNT 13
 
-/* "theme", "contrast", "return", "variation", "layer", "intro", "body", "turnaround", "ending"; NULL for an invalid role. */
+/* "theme", "contrast", "return", "variation", "layer", "pattern", "sequence", "episode", "codetta", "intro", "body",
+ * "turnaround", "ending"; NULL for an invalid role. */
 const char *form_role_name(FormRole role);
-/* The label of a role: "Theme", "Contrast", "Return", "Variation", "Layer", "Intro", "Loop body", "Turnaround", "Ending"
- * (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
+/* The label of a role: "Theme", "Contrast", "Return", "Variation", "Layer", "Pattern", "Sequence", "Episode", "Codetta",
+ * "Intro", "Loop body", "Turnaround", "Ending" (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
 const char *form_role_label(FormRole role);
 /* False for a name that is none of these. */
 bool form_role_find(const char *name, FormRole *out);
-/* True for the roles of a section grow-theme builds (the first five). */
+/* True for the roles of a section grow-theme builds (the theme-like rows of the role table). */
 bool form_role_is_theme(FormRole role);
 
 /* The checks of a compose run a form may switch off; a form that names none runs every one. */
