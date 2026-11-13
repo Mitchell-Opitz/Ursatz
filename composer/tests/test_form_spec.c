@@ -129,23 +129,34 @@ typedef struct {
     /* Sizes that are not in the form. */
     SizeRow bad[8];
     size_t bad_count;
+    /* What the form says of its meters, tempo, repeats and parts (R-487); all zero for the forms that say none. */
+    size_t meters;
+    unsigned tempo;
+    size_t repeats;
+    size_t parts;
 } FormRow;
 
 /* Written out here so the test does not read it from the documents it checks. */
 static const FormRow FORMS[] = {
     {"binary", true, false, 1, {{8, 0, false}, {16, 0, true}}, 2,
-     {{4, 0, false}, {12, 0, false}, {20, 0, false}, {32, 0, false}, {16, 2, false}, {0, 1, false}}, 6},
+     {{4, 0, false}, {12, 0, false}, {20, 0, false}, {32, 0, false}, {16, 2, false}, {0, 1, false}}, 6, 0, 0, 0, 0},
     {"rounded-binary", true, false, 1, {{16, 0, true}, {24, 0, false}}, 2,
-     {{8, 0, false}, {12, 0, false}, {32, 0, false}, {24, 1, false}}, 4},
+     {{8, 0, false}, {12, 0, false}, {32, 0, false}, {24, 1, false}}, 4, 0, 0, 0, 0},
     {"ternary", true, false, 1, {{12, 0, false}, {24, 0, true}}, 2,
-     {{8, 0, false}, {16, 0, false}, {36, 0, false}, {0, 3, false}}, 4},
+     {{8, 0, false}, {16, 0, false}, {36, 0, false}, {0, 3, false}}, 4, 0, 0, 0, 0},
     {"variations", true, false, 1,
      {{16, 1, false}, {24, 2, false}, {32, 3, true}, {40, 4, false}, {48, 5, false}, {56, 6, false}, {64, 7, false}, {72, 8, false}},
-     8, {{8, 0, false}, {12, 0, false}, {80, 0, false}, {0, 9, false}, {24, 3, false}, {20, 0, false}}, 6},
+     8, {{8, 0, false}, {12, 0, false}, {80, 0, false}, {0, 9, false}, {24, 3, false}, {20, 0, false}}, 6, 0, 0, 0, 0},
     {"loop", false, false, 0, {{8, 0, true}, {16, 0, false}}, 2,
-     {{4, 0, false}, {12, 0, false}, {24, 0, false}, {8, 1, false}}, 4},
+     {{4, 0, false}, {12, 0, false}, {24, 0, false}, {8, 1, false}}, 4, 0, 0, 0, 0},
     {"layered", false, true, 0, {{16, 2, false}, {24, 3, false}, {32, 4, true}}, 3,
-     {{8, 0, false}, {40, 0, false}, {0, 1, false}, {0, 5, false}, {24, 2, false}, {12, 0, false}}, 6},
+     {{8, 0, false}, {40, 0, false}, {0, 1, false}, {0, 5, false}, {24, 2, false}, {12, 0, false}}, 6, 0, 0, 0, 0},
+    {"minuet", true, false, 1, {{12, 0, false}, {24, 0, true}}, 2,
+     {{8, 0, false}, {16, 0, false}, {36, 0, false}, {0, 3, false}, {12, 1, false}}, 5, 1, 112, 2, 0},
+    {"trio", true, false, 1, {{12, 0, false}, {24, 0, true}}, 2,
+     {{8, 0, false}, {16, 0, false}, {36, 0, false}, {0, 3, false}, {12, 1, false}}, 5, 1, 112, 2, 0},
+    {"minuet-and-trio", true, false, 1, {{12, 0, false}, {24, 0, true}}, 2,
+     {{8, 0, false}, {16, 0, false}, {36, 0, false}, {0, 3, false}, {12, 1, false}}, 5, 1, 112, 0, 3},
 };
 #define FORM_COUNT (sizeof(FORMS) / sizeof(FORMS[0]))
 
@@ -162,6 +173,9 @@ static void test_builtin_forms(void) {
         assert(form->closing == row->closing && form->accompaniment_required == row->accompaniment_required);
         assert(form->region_count == row->regions && !form->request_sections && form->checks == FORM_CHECK_ALL);
         assert(form->size_count == row->size_count);
+        assert(form->meter_count == row->meters && form->tempo == row->tempo && form->repeat_count == row->repeats &&
+               form->part_count == row->parts);
+        assert(row->meters == 0 || (form->meters[0].beats_per_bar == 3 && form->meters[0].beat_unit == 4));
         for (size_t z = 0; z < row->size_count; z++) {
             const FormSpecSize *size = &form->sizes[z];
             size_t sum = 0;
@@ -173,11 +187,14 @@ static void test_builtin_forms(void) {
                 assert(section->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || section->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
                        section->cadence == CADENCE_TYPE_HALF);
                 assert(section->returns == FORM_SPEC_NO_RETURN || section->returns < i);
-                /* Only the ternary's B asks for a pedal (R-446, R-445). */
-                assert(section->pedal == (strcmp(row->name, "ternary") == 0 && i == 1 ? 5 : 0));
+                /* Only the B of the ternary, the minuet and the trio asks for a pedal (R-446, R-445, R-487). */
+                bool b_pedal = (strcmp(row->name, "ternary") == 0 || strcmp(row->name, "minuet") == 0 ||
+                                strcmp(row->name, "trio") == 0) && i == 1;
+                assert(section->pedal == (b_pedal ? 5 : 0));
                 sum += section->bars;
             }
-            assert(sum == size->bars);
+            /* A compound form's sizes have bars and no sections: its parts have them. */
+            assert(row->parts > 0 ? size->section_count == 0 : sum == size->bars);
         }
         form_spec_destroy(form);
     }
@@ -271,16 +288,77 @@ static void test_builtin_details(void) {
     assert(form_spec_size(form, 16, 0)->sections[0].cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
            form_spec_size(form, 16, 0)->sections[1].cadence == CADENCE_TYPE_HALF);
     form_spec_destroy(form);
+
+    /* Minuet and trio (R-487): ternary's keys and returns, B over a dominant pedal leading into A return, the groups
+       A and B A return written out; the minuet's A and A return a sentence, the trio's a period. */
+    for (int trio = 0; trio < 2; trio++) {
+        form = builtin(trio ? "trio" : "minuet");
+        assert(form->closing && form->region_count == 1 && strcmp(form->regions[0].name, "away") == 0 &&
+               form->regions[0].major_count == 2 && form->regions[0].major[0] == 5 && form->regions[0].major[1] == 3 &&
+               form->regions[0].minor_count == 2 && form->regions[0].minor[0] == 3 && form->regions[0].minor[1] == 5);
+        assert(form->repeat_count == 2 && form->repeats[0].first == 0 && form->repeats[0].count == 1 &&
+               form->repeats[1].first == 1 && form->repeats[1].count == 2);
+        for (size_t z = 0; z < form->size_count; z++) {
+            const FormSpecSize *size = &form->sizes[z];
+            assert(size->section_count == 3 && size->bars == (z == 0 ? 12u : 24u));
+            for (size_t i = 0; i < 3; i++) {
+                assert(size->sections[i].bars == size->bars / 3);
+            }
+            assert(size->sections[0].closed && !size->sections[1].closed && !size->sections[2].closed);
+            assert(size->sections[0].key_start == FORM_SPEC_HOME && size->sections[0].key_end == 0 &&
+                   size->sections[1].key_start == 0 && size->sections[1].key_end == FORM_SPEC_HOME);
+            assert(size->sections[0].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC &&
+                   size->sections[1].cadence == CADENCE_TYPE_HALF && size->sections[2].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+            assert(size->sections[1].has_motive && size->sections[1].motive.kind == MOTIVE_RELATION_INVERT &&
+                   size->sections[1].pedal == 5 && size->sections[1].leads_in &&
+                   size->sections[1].connective == FORM_CONNECTIVE_SOMETIMES);
+            assert(size->sections[2].returns == 0 && size->sections[2].variation == PLAN_RETURN_VARIED &&
+                   strcmp(size->sections[2].name, "A return") == 0 && !size->sections[2].leads_in);
+            PlanThemeBeginning beginning = trio ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
+            PlanThemeEnding ending = trio ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
+            assert(size->sections[0].pairing.beginning == beginning && size->sections[0].pairing.ending == ending &&
+                   size->sections[2].pairing.beginning == beginning && size->sections[2].pairing.ending == ending &&
+                   size->sections[1].pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
+                   size->sections[1].pairing.ending == PLAN_THEME_ENDING_CONTINUATION);
+        }
+        form_spec_destroy(form);
+    }
+
+    /* The minuet and trio: the minuet, the trio in a region of its own with a motive of its own, the minuet da capo
+       without repeats; its sizes carry bars alone. */
+    form = builtin("minuet-and-trio");
+    assert(form->closing && form->region_count == 1 && strcmp(form->regions[0].name, "trio") == 0 &&
+           form->regions[0].major_count == 3 && form->regions[0].major[0] == 1 && form->regions[0].major[1] == 4 &&
+           form->regions[0].major[2] == 6 && form->regions[0].minor_count == 3 && form->regions[0].minor[0] == 1 &&
+           form->regions[0].minor[1] == 3 && form->regions[0].minor[2] == 6);
+    assert(form->part_count == 3 && form->repeat_count == 0 && !form->request_sections);
+    assert(strcmp(form->parts[0].name, "Minuet") == 0 && strcmp(form->parts[0].form, "minuet") == 0 &&
+           form->parts[0].key == FORM_SPEC_HOME && !form->parts[0].new_motive && form->parts[0].again == FORM_SPEC_NO_RETURN &&
+           form->parts[0].repeats);
+    assert(strcmp(form->parts[1].name, "Trio") == 0 && strcmp(form->parts[1].form, "trio") == 0 && form->parts[1].key == 0 &&
+           form->parts[1].new_motive && form->parts[1].again == FORM_SPEC_NO_RETURN && form->parts[1].repeats);
+    assert(strcmp(form->parts[2].name, "Minuet da capo") == 0 && form->parts[2].form[0] == '\0' && form->parts[2].again == 0 &&
+           !form->parts[2].repeats);
+    for (size_t z = 0; z < form->size_count; z++) {
+        assert(form->sizes[z].section_count == 0);
+    }
+    assert(form_spec_performed(form));
+    form_spec_destroy(form);
 }
 
 /* A plan made from each built-in is named for the form, and the form is found again from it. */
 static void test_for_plan(void) {
     for (size_t f = 0; f < FORM_COUNT; f++) {
+        /* A compound form has no plan of its own: each of its parts is a form that has (the performed plan is named for the
+           form by piece_perform_compound, which test_piece_perform and test_api_piece read). */
+        if (FORMS[f].parts > 0) {
+            continue;
+        }
         PieceRequest request;
         memset(&request, 0, sizeof(request));
         request.form = FORMS[f].name;
         request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
-        request.meter.beats_per_bar = 4;
+        request.meter.beats_per_bar = FORMS[f].meters > 0 ? 3 : 4;
         request.meter.beat_unit = 4;
         PiecePlan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
@@ -492,10 +570,15 @@ static void test_meters_and_tempo(void) {
     refused_edit("game-loop", "\"closing\"", "\"meters\": [\"4/4\"], \"closing\"", "/meters");
     refused_edit("game-loop", "\"closing\"", "\"tempo\": 120, \"closing\"", "/tempo");
 
-    /* Every built-in lists no meters and gives no tempo (until B5), and allows any meter. */
+    /* The minuet, the trio and the minuet and trio are in 3/4 at 112 and allow no other meter; every other built-in lists
+       no meters, gives no tempo and allows any meter (R-487). */
     for (size_t i = 0; i < form_spec_builtin_count(); i++) {
         FormSpec *builtin_form = builtin(form_spec_builtin_name(i));
-        assert(builtin_form->meter_count == 0 && builtin_form->tempo == 0 && form_spec_meter_allowed(builtin_form, &six_eight));
+        bool dance = strcmp(builtin_form->name, "minuet") == 0 || strcmp(builtin_form->name, "trio") == 0 ||
+                     strcmp(builtin_form->name, "minuet-and-trio") == 0;
+        assert(builtin_form->meter_count == (dance ? 1u : 0u) && builtin_form->tempo == (dance ? 112u : 0u));
+        assert(form_spec_meter_allowed(builtin_form, &three_four));
+        assert(form_spec_meter_allowed(builtin_form, &six_eight) == !dance);
         form_spec_destroy(builtin_form);
     }
 }
@@ -1360,12 +1443,15 @@ static void test_lead_ins(void) {
     lead_document(text, sizeof(text), "", ", \"leads_in\": \"yes\"", "");
     refused(text, "/sizes/0/sections/1/leads_in");
 
-    /* No built-in form leads in (until B5). */
+    /* Only the B of the minuet and the trio leads in, with a connective on some seeds (R-486, R-487). */
     for (size_t i = 0; i < form_spec_builtin_count(); i++) {
         FormSpec *built = builtin(form_spec_builtin_name(i));
+        bool dance = strcmp(built->name, "minuet") == 0 || strcmp(built->name, "trio") == 0;
         for (size_t s = 0; s < built->size_count; s++) {
             for (size_t k = 0; k < built->sizes[s].section_count; k++) {
-                assert(!built->sizes[s].sections[k].leads_in && built->sizes[s].sections[k].connective == FORM_CONNECTIVE_NONE);
+                bool lead = dance && k == 1;
+                assert(built->sizes[s].sections[k].leads_in == lead &&
+                       built->sizes[s].sections[k].connective == (lead ? FORM_CONNECTIVE_SOMETIMES : FORM_CONNECTIVE_NONE));
             }
         }
         form_spec_destroy(built);

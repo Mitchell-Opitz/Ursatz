@@ -17,7 +17,7 @@
 
 /*
  * Piece plans that change key follow standard-harmony's key-change rules (R-069). Every template, in C major and A
- * minor 4/4 with an invented motive, seeds 1 to 10, asking to modulate:
+ * minor 4/4 (3/4 for the forms that list it, the minuet and the trio) with an invented motive, seeds 1 to 10, asking to modulate:
  *
  *   plan <>            the plans only: the key lane tiles the piece, every key is closely related to the home key, a
  *                      section's KEY constraint is the key it ends in, the cadences pass piece_check_cadences, and a
@@ -42,12 +42,22 @@ typedef struct {
 static const Scenario SCENARIOS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
+/* The beats of a bar the template's pieces are written in: 4/4, or the form's first meter when it lists meters (the
+ * minuet and the trio are in 3/4, R-487). */
+static int beats_of(const char *kind) {
+    FormSpec *form = NULL;
+    assert(form_spec_builtin(kind, &form) == FORM_SPEC_OK);
+    int beats = form->meter_count > 0 ? form->meters[0].beats_per_bar : 4;
+    form_spec_destroy(form);
+    return beats;
+}
+
 static PieceRequest request_of(const Scenario *scenario, const char *kind, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = kind;
     request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
-    request.meter.beats_per_bar = 4;
+    request.meter.beats_per_bar = beats_of(kind);
     request.meter.beat_unit = 4;
     request.modulate = true;
     request.seed = seed;
@@ -175,11 +185,12 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, const ch
     }
 }
 
-/* Whether the built-in form comes in sizes: the game loop's sections are the request's (P44 B5). */
+/* Whether the built-in form comes in sizes with a plan of its own: the game loop's sections are the request's (P44 B5), and
+ * a compound form's parts are forms of their own (R-485). */
 static bool has_sizes(const char *name) {
     FormSpec *form = NULL;
     assert(form_spec_builtin(name, &form) == FORM_SPEC_OK);
-    bool sized = !form->request_sections;
+    bool sized = !form->request_sections && form->part_count == 0;
     form_spec_destroy(form);
     return sized;
 }

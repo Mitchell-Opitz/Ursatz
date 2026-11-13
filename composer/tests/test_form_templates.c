@@ -13,13 +13,15 @@
 
 /*
  * Form templates, every template and size, in C major 4/4 and A minor 3/4, with a motive invented and with the given
- * one (tests/fixtures/motive_d_minor.json; in 3/4 its last note ends on the barline).
+ * one (tests/fixtures/motive_d_minor.json; in 3/4 its last note ends on the barline). The minuet and the trio are in
+ * 3/4 alone (R-487), so they run in C major and A minor 3/4.
  *
  *   structure <template>  the plan tiles the form with the table's sections in order (letters, bars, pairings,
  *                         cadences, the section each return names, the layers), and sizes not in the table are refused
  *   compose <template>    seeds 1 to 5: how many runs complete and how many theme sections form_hear runs on; neither
  *                         is below its baseline; the runs that do not complete are printed
- *   smoke <template>      the smallest size in C major 4/4, invented: one of seeds 1 to 5 composes and is heard (quick)
+ *   smoke <template>      the smallest size in C major 4/4 (3/4 for the minuet and the trio), invented: one of seeds 1 to 5
+ *                         composes and is heard (quick)
  *   heard <template>      seeds 1 to 5: how many sections are heard as the form they ask for is printed with grow's
  *                         measured shares (docs/grow.md) and is not below its baseline
  */
@@ -34,13 +36,22 @@ typedef struct {
     bool given;
 } Scenario;
 
-static const Scenario SCENARIOS[] = {
+static const Scenario SCENARIOS_ANY[] = {
     {"C major 4/4, invented", 0, KEY_STRUCTURE_MODE_MAJOR, 4, false},
     {"A minor 3/4, invented", 9, KEY_STRUCTURE_MODE_MINOR, 3, false},
     {"C major 4/4, given", 0, KEY_STRUCTURE_MODE_MAJOR, 4, true},
     {"A minor 3/4, given", 9, KEY_STRUCTURE_MODE_MINOR, 3, true},
 };
-#define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
+/* The forms that list 3/4 as their only meter. */
+static const Scenario SCENARIOS_THREE_FOUR[] = {
+    {"C major 3/4, invented", 0, KEY_STRUCTURE_MODE_MAJOR, 3, false},
+    {"A minor 3/4, invented", 9, KEY_STRUCTURE_MODE_MINOR, 3, false},
+    {"C major 3/4, given", 0, KEY_STRUCTURE_MODE_MAJOR, 3, true},
+    {"A minor 3/4, given", 9, KEY_STRUCTURE_MODE_MINOR, 3, true},
+};
+/* The scenarios of the template being run (set in main). */
+static const Scenario *SCENARIOS = SCENARIOS_ANY;
+static size_t SCENARIO_COUNT = sizeof(SCENARIOS_ANY) / sizeof(SCENARIOS_ANY[0]);
 
 /* A size of a template: bars, or the count of variations or layers. */
 typedef struct {
@@ -120,6 +131,14 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
             set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, NONE, 0);
             set(&out[n++], "B", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         }
+    } else if (IS("minuet") || IS("trio")) {
+        /* The ternary's A, B, A, with B over a pedal leading into A return: the minuet's A a sentence, the trio's a period. */
+        size_t third = size.bars / 3;
+        PlanThemeBeginning beginning = IS("trio") ? AN : P;
+        PlanThemeEnding ending = IS("trio") ? CONS : CONT;
+        set(&out[n++], "A", third, beginning, ending, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "B", third, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        set(&out[n++], "A", third, beginning, ending, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -143,7 +162,7 @@ static size_t sizes_of(const char *kind, Size *out) {
     } else if (IS("rounded-binary")) {
         out[n++] = (Size){16, 0};
         out[n++] = (Size){24, 0};
-    } else if (IS("ternary")) {
+    } else if (IS("ternary") || IS("minuet") || IS("trio")) {
         out[n++] = (Size){24, 0};
         out[n++] = (Size){12, 0};
     } else if (IS("variations")) {
@@ -458,7 +477,10 @@ static void compose_all(const char *kind, Tally *total) {
  * below grow's are in docs/piece.md. The rounded binary one was 28, 84, 20 until the presentation drew its repetition by
  * weight and a sequence wrote its chords whole (P34 B1); it was 25, 75, 19 until P44 B6 gave minor half cadences chords
  * and heard key changes inside a section in their new key (R-418), and is 40, 120, 58. The ternary one was 30, 90, 35
- * until it became the small ternary (R-445: B over a pedal ending on V, A1 varied), and is 39, 117, 51.
+ * until it became the small ternary (R-445: B over a pedal ending on V, A1 varied), and is 39, 117, 51. The minuet and the
+ * trio (P48 B5, R-487) run in C major and A minor 3/4 and were measured at 35, 105, 30 and 36, 108, 45: the given D minor
+ * motive in A minor 24 bars is the weak scenario (1 of 5 and 2 of 5 compose, stuck at the returns and the seam stages), the
+ * invented one composes 5 of 5; the 12-bar forms have sections of 4 bars, so none is heard as requested (as for the ternary).
  */
 typedef struct {
     const char *kind;
@@ -471,6 +493,7 @@ static const Baseline BASELINES[] = {
     {"binary", 30, 60, 20},     {"rounded-binary", 40, 120, 58},
     {"ternary", 39, 117, 51},    {"variations", 60, 220, 184},
     {"loop", 40, 60, 32},       {"layered", 60, 180, 74},
+    {"minuet", 35, 105, 30},     {"trio", 36, 108, 45},
 };
 
 static const Baseline *baseline_of(const char *kind) {
@@ -559,6 +582,10 @@ int main(int argc, char **argv) {
     if (!kind) {
         fprintf(stderr, "usage: test_form_templates structure|compose|heard|smoke <template>\n");
         return 2;
+    }
+    if (IS("minuet") || IS("trio")) {
+        SCENARIOS = SCENARIOS_THREE_FOUR;
+        SCENARIO_COUNT = sizeof(SCENARIOS_THREE_FOUR) / sizeof(SCENARIOS_THREE_FOUR[0]);
     }
     if (strcmp(argv[1], "structure") == 0) {
         test_structure(kind);

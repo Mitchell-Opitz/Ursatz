@@ -1060,12 +1060,126 @@ static void test_ternary_rows(void) {
     assert(anew);
 }
 
+/* The tempo of the first tempo event of a MIDI file, in quarter notes a minute (rounded); 0 when it has none. */
+static long midi_tempo(const unsigned char *data, size_t size) {
+    for (size_t i = 0; i + 6 <= size; i++) {
+        if (data[i] == 0xFF && data[i + 1] == 0x51 && data[i + 2] == 0x03) {
+            long micros = ((long)data[i + 3] << 16) | ((long)data[i + 4] << 8) | (long)data[i + 5];
+            return (60000000L + micros / 2) / micros;
+        }
+    }
+    return 0;
+}
+
+/* The text of a member that holds a number of whole notes as "n/d", or a number. */
+static double row_whole_notes(const cJSON *row, const char *member) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(row, member);
+    assert(item);
+    if (cJSON_IsNumber(item)) {
+        return item->valuedouble;
+    }
+    long num = 0;
+    long den = 1;
+    assert(cJSON_IsString(item) && sscanf(item->valuestring, "%ld/%ld", &num, &den) >= 1 && den > 0);
+    return (double)num / (double)den;
+}
+
+/*
+ * The minuet (R-485, R-487): composed once and performed in order, so the version's rows are one for each performed section
+ * (A A B A1 B A1, 8 bars each, 48 bars in 3/4), the plan is the performed plan with the repeats named, the brief and the MIDI
+ * file carry the form's tempo (112), and the same request in 4/4 is refused at the meter.
+ */
+static void test_minuet(void) {
+    static const char *const EDITS[][2] = {{"form", "\"minuet\""}, {"meter", "\"3/4\""}};
+    static const char *const IDS[] = {"A", "A", "B", "A return", "B", "A return"};
+    ComposerResponse response;
+    char *printed = form_request("rounded-binary.json", NULL, EDITS, 2, true);
+    cJSON *document = composed_document(printed, &response);
+    expect_one_version(document, IDS, NULL, 6);
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "piece"), "sections");
+    double total = 0;
+    for (int i = 0; i < 6; i++) {
+        const cJSON *row = cJSON_GetArrayItem(sections, i);
+        assert(cJSON_GetObjectItemCaseSensitive(row, "beats")->valuedouble == 24);
+        /* Each row starts where the one before it ends: 8 bars of 3/4 are 6 whole notes. */
+        assert(row_whole_notes(row, "start") == 6.0 * i);
+        total += cJSON_GetObjectItemCaseSensitive(row, "beats")->valuedouble;
+    }
+    assert(total == 48 * 3);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 2), "heard"), "HC") == 0);
+    /* The plan is the performed one: the repeats are named, and the form's tempo is the brief's. */
+    assert(response.plan_json && strstr(response.plan_json, "A (repeat)") && strstr(response.plan_json, "B (repeat)") &&
+           strstr(response.plan_json, "A return (repeat)"));
+    const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "brief"), "tempo");
+    assert(tempo && cJSON_GetObjectItemCaseSensitive(tempo, "qpm")->valuedouble == 112 &&
+           strcmp(cJSON_GetObjectItemCaseSensitive(tempo, "from")->valuestring, "form") == 0);
+    assert(response.midi && memcmp(response.midi, "MThd", 4) == 0 && midi_tempo(response.midi, response.midi_size) == 112);
+    write_pair("piece", "minuet", printed, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+
+    /* In 4/4 the request is refused at the meter, and a regenerate of a performed form is Later. */
+    static const char *const FOUR_FOUR[][2] = {{"form", "\"minuet\""}, {"meter", "\"4/4\""}};
+    expect_form_refusal("rounded-binary.json", NULL, FOUR_FOUR, 2, "/request/meter", "the Minuet form is in 3/4");
+    static const char *const NO_METER[][2] = {{"form", "\"minuet-and-trio\""}, {"meter", "\"4/4\""}};
+    expect_form_refusal("rounded-binary.json", NULL, NO_METER, 2, "/request/meter", "the Minuet and trio form is in 3/4");
+}
+
+/*
+ * The minuet and trio: the minuet, the trio in a key of its own, the minuet again without repeats; 15 rows over
+ * 120 bars. The trio's first row is heard in a key other than the home key. Regenerating it is refused.
+ */
+static void test_minuet_and_trio(void) {
+    static const char *const EDITS[][2] = {{"form", "\"minuet-and-trio\""}, {"meter", "\"3/4\""}};
+    ComposerResponse response;
+    char *printed = form_request("rounded-binary.json", NULL, EDITS, 2, true);
+    cJSON *document = composed_document(printed, &response);
+    const cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
+    assert(cJSON_GetArraySize(versions) == 1);
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(versions, "piece"), "sections");
+    assert(cJSON_GetArraySize(sections) == 15);
+    double total = 0;
+    int trio_rows = 0;
+    for (int i = 0; i < 15; i++) {
+        const cJSON *row = cJSON_GetArrayItem(sections, i);
+        total += cJSON_GetObjectItemCaseSensitive(row, "beats")->valuedouble;
+        /* The minuet is 6 rows, the trio 6, the minuet da capo 3 (its repeats not played). */
+        if (i >= 6 && i < 12) {
+            trio_rows++;
+        }
+    }
+    assert(total == 120 * 3 && trio_rows == 6);
+    const cJSON *trio_a = cJSON_GetArrayItem(sections, 6);
+    const char *trio_key = row_text(trio_a, "key_heard");
+    assert(trio_key && strcmp(trio_key, "C major") != 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
+    assert(response.plan_json && strstr(response.plan_json, "Trio A") && strstr(response.plan_json, "Minuet da capo A"));
+    const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "brief"), "tempo");
+    assert(tempo && cJSON_GetObjectItemCaseSensitive(tempo, "qpm")->valuedouble == 112);
+    assert(response.midi && memcmp(response.midi, "MThd", 4) == 0 && midi_tempo(response.midi, response.midi_size) == 112);
+    write_pair("piece", "minuet-and-trio", printed, &response);
+    /* A regenerate of a performed form is Later: it is composed whole. */
+    cJSON *request = api_request(form_piece("rounded-binary.json", NULL, EDITS, 2), 1);
+    add_edit(request, response.plan_json, "A", "melody");
+    char *edit = print(request);
+    expect_refusal(edit, false, COMPOSER_ERR_REQUEST, "/request/form", "are Later: it is composed whole");
+    free(edit);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(printed);
+}
+
 /* Pieces of the other forms: composed, written again in a section, varied, and the refusals that need a plan. */
 static void test_any_form(const char *plan) {
     char *rounded_plan = NULL;
     test_composed_forms(&rounded_plan);
     test_edited_forms(rounded_plan);
     test_ternary_rows();
+    test_minuet();
+    test_minuet_and_trio();
     test_game_loop_version_two(plan);
     test_refused_form_edit(rounded_plan);
     free(rounded_plan);
