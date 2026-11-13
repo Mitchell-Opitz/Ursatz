@@ -184,7 +184,7 @@ static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate,
 
 /*
  * Whether the plan fixes the form of the section: a theme pairing constraint says how it begins and ends. A free phrase
- * (R-170) has no form of a theme to prefer, so the style leaves it alone.
+ * (R-170) and a liquidation (R-494) have no form of a theme to prefer, so the style leaves them alone.
  */
 static bool form_fixed(const PiecePlan *plan, FillTarget target) {
     if (target.kind != FILL_TARGET_NODE) {
@@ -192,7 +192,7 @@ static bool form_fixed(const PiecePlan *plan, FillTarget target) {
     }
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
         PlanConstraintKind kind = plan_node_constraint_at(plan, target.id, i)->kind;
-        if (kind == PLAN_CONSTRAINT_THEME_PAIRING || kind == PLAN_CONSTRAINT_FREE_PHRASE) {
+        if (kind == PLAN_CONSTRAINT_THEME_PAIRING || kind == PLAN_CONSTRAINT_FREE_PHRASE || kind == PLAN_CONSTRAINT_LIQUIDATION) {
             return true;
         }
     }

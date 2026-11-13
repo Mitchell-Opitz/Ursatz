@@ -616,6 +616,19 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         join(at, sizeof(at), path, "role");
         return fail(reader, at, "unknown role \"%s\"", text);
     }
+    /* a liquidation (R-494) is the pattern liquidated over a dominant pedal: its shape is the operator's, not the form's */
+    const bool liquidation = out->role == FORM_ROLE_LIQUIDATION;
+    if (liquidation) {
+        static const char *const REFUSED[] = {"beginning", "ending",  "construction", "motive", "returns", "variation",
+                                              "pedal",     "leads_in", "connective",   "layers", "beats"};
+        for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+            if (cJSON_GetObjectItemCaseSensitive(json, REFUSED[i])) {
+                join(at, sizeof(at), path, REFUSED[i]);
+                return i < 2 ? fail(reader, at, "a liquidation has no beginning or ending")
+                             : fail(reader, at, "a liquidation has no %s", REFUSED[i]);
+            }
+        }
+    }
     /* bars or beats, exactly one */
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(json, "bars");
     const cJSON *beats = cJSON_GetObjectItemCaseSensitive(json, "beats");
@@ -632,27 +645,33 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
     } else {
         out->beats = (size_t)length;
     }
-    /* beginning and ending: the theme shape's plan names */
-    const ThemeShapeHalf *beginning;
-    const ThemeShapeHalf *ending;
-    if (!read_text(reader, json, path, "beginning", true, text, sizeof(text), NULL)) {
-        return false;
+    if (liquidation && out->bars != 4) {
+        join(at, sizeof(at), path, "bars");
+        return fail(reader, at, "a liquidation is 4 bars");
     }
-    beginning = theme_shape_half_find(true, text);
-    if (!beginning) {
-        join(at, sizeof(at), path, "beginning");
-        return fail(reader, at, "unknown beginning \"%s\"", text);
+    /* beginning and ending: the theme shape's plan names (a liquidation has none: its pairing stays zero) */
+    if (!liquidation) {
+        const ThemeShapeHalf *beginning;
+        const ThemeShapeHalf *ending;
+        if (!read_text(reader, json, path, "beginning", true, text, sizeof(text), NULL)) {
+            return false;
+        }
+        beginning = theme_shape_half_find(true, text);
+        if (!beginning) {
+            join(at, sizeof(at), path, "beginning");
+            return fail(reader, at, "unknown beginning \"%s\"", text);
+        }
+        if (!read_text(reader, json, path, "ending", true, text, sizeof(text), NULL)) {
+            return false;
+        }
+        ending = theme_shape_half_find(false, text);
+        if (!ending) {
+            join(at, sizeof(at), path, "ending");
+            return fail(reader, at, "unknown ending \"%s\"", text);
+        }
+        out->pairing.beginning = (PlanThemeBeginning)beginning->value;
+        out->pairing.ending = (PlanThemeEnding)ending->value;
     }
-    if (!read_text(reader, json, path, "ending", true, text, sizeof(text), NULL)) {
-        return false;
-    }
-    ending = theme_shape_half_find(false, text);
-    if (!ending) {
-        join(at, sizeof(at), path, "ending");
-        return fail(reader, at, "unknown ending \"%s\"", text);
-    }
-    out->pairing.beginning = (PlanThemeBeginning)beginning->value;
-    out->pairing.ending = (PlanThemeEnding)ending->value;
     /* construction: a theme of any whole bars from 3 to 16 (R-468); a theme-like section of other bars than 4 or 8 needs it */
     const cJSON *construction = member_of(reader, json, path, "construction", false);
     if (construction) {
@@ -687,6 +706,10 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
     /* cadence: a name of the standard-harmony vocabulary whose core is PAC, IAC or HC */
     if (!read_cadence(reader, json, path, "cadence", true, &out->cadence, out->cadence_name, sizeof(out->cadence_name))) {
         return false;
+    }
+    if (liquidation && out->cadence != CADENCE_TYPE_HALF) {
+        join(at, sizeof(at), path, "cadence");
+        return fail(reader, at, "a liquidation ends in a half cadence");
     }
     if (!read_bool(reader, json, path, "closed", &out->closed)) {
         return false;
