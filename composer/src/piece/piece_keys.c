@@ -72,7 +72,8 @@ static bool region_has_degree_one(const FormRegion *region, bool minor) {
 /*
  * Draws the keys each section starts and ends in; every section is home when keys is left as set. A form that can leave
  * home (a section of the size starts or ends in a region) modulates in two pieces of three, as the templates always did:
- * the draw is fill_rng_below(rng, 3), 0 staying home, then one pick per region in the order the form lists them.
+ * the draw is fill_rng_below(rng, 3), 0 staying home unless the form always modulates (R-493), then one pick per
+ * region in the order the form lists them.
  */
 static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKey home, FillRng *rng, PieceSectionKeys *keys,
                       bool *modulates) {
@@ -84,7 +85,12 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
         keys[i].end = home;
         can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
     }
-    if (!rng || !can || fill_rng_below(rng, 3) == 0) {
+    if (!rng || !can) {
+        return true;
+    }
+    /* The draw is made for every form, so the region draws after it are the same; a form that modulates does not stay. */
+    bool stay = fill_rng_below(rng, 3) == 0;
+    if (stay && !form->modulates) {
         return true;
     }
     for (size_t r = 0; r < form->region_count; r++) {
