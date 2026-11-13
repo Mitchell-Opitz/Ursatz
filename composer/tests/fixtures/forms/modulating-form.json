@@ -1,0 +1,16 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "modulating-form",
+  "label": "Modulating form",
+  "modulates": true,
+  "regions": [{"name": "pattern", "major": [5], "minor": [5]}],
+  "sizes": [
+    {"bars": 24, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "P", "letter": "P", "role": "pattern", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "pattern", "end": "pattern"}},
+      {"name": "S", "letter": "S", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "returns": "P", "variation": "exact"},
+      {"name": "A return", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "returns": "A", "variation": "varied"}
+    ]}
+  ]
+}
