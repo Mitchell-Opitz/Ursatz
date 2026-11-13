@@ -717,7 +717,8 @@ static size_t collect_size_rows(const PieceSpec *request, const PieceVersion *ve
             view.plan = parts->plans[i];
             view.outcome = parts->outcomes[i]; /* a shallow copy for reading: never destroyed */
             view.composed = true;
-            composed_count[i] = collect_composed_rows(request, &view, form_spec_size(parts->forms[i], whole->bars, 0), composed[i]);
+            const size_t part_bars = request->form->parts[i].bars ? request->form->parts[i].bars : whole->bars;
+            composed_count[i] = collect_composed_rows(request, &view, form_spec_size(parts->forms[i], part_bars, 0), composed[i]);
         }
     } else if (!parts) {
         composed_count[0] = collect_composed_rows(request, version, whole, composed[0]);
