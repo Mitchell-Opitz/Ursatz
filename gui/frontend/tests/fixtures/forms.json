@@ -88,7 +88,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -145,7 +147,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -209,7 +213,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -266,7 +272,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -364,7 +372,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -426,7 +436,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A'",
@@ -483,7 +495,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -547,7 +561,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -609,7 +625,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A'",
@@ -666,7 +684,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -758,7 +778,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -818,7 +840,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -869,7 +893,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -927,7 +953,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -987,7 +1015,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -1038,7 +1068,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -1130,7 +1162,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -1181,7 +1215,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -1239,7 +1275,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -1290,7 +1328,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 2",
@@ -1341,7 +1381,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -1399,7 +1441,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -1450,7 +1494,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 2",
@@ -1501,7 +1547,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 3",
@@ -1552,7 +1600,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -1610,7 +1660,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -1661,7 +1713,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 2",
@@ -1712,7 +1766,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 3",
@@ -1763,7 +1819,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 4",
@@ -1814,7 +1872,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -1872,7 +1932,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -1923,7 +1985,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 2",
@@ -1974,7 +2038,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 3",
@@ -2025,7 +2091,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 4",
@@ -2076,7 +2144,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 5",
@@ -2127,7 +2197,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -2185,7 +2257,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -2236,7 +2310,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 2",
@@ -2287,7 +2363,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 3",
@@ -2338,7 +2416,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 4",
@@ -2389,7 +2469,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 5",
@@ -2440,7 +2522,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 6",
@@ -2491,7 +2575,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -2549,7 +2635,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -2600,7 +2688,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 2",
@@ -2651,7 +2741,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 3",
@@ -2702,7 +2794,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 4",
@@ -2753,7 +2847,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 5",
@@ -2804,7 +2900,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 6",
@@ -2855,7 +2953,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 7",
@@ -2906,7 +3006,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -2964,7 +3066,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 1",
@@ -3015,7 +3119,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 2",
@@ -3066,7 +3172,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 3",
@@ -3117,7 +3225,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 4",
@@ -3168,7 +3278,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 5",
@@ -3219,7 +3331,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 6",
@@ -3270,7 +3384,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 7",
@@ -3321,7 +3437,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "variation 8",
@@ -3372,7 +3490,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -3468,7 +3588,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -3532,7 +3654,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -3589,7 +3713,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -3687,7 +3813,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "layer 2",
@@ -3748,7 +3876,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -3814,7 +3944,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "layer 2",
@@ -3874,7 +4006,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "layer 3",
@@ -3935,7 +4069,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -4001,7 +4137,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "layer 2",
@@ -4061,7 +4199,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "layer 3",
@@ -4122,7 +4262,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "layer 4",
@@ -4183,7 +4325,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -4291,7 +4435,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -4354,7 +4500,9 @@
        "connective": {
         "value": "sometimes",
         "label": "Sometimes"
-       }
+       },
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -4411,7 +4559,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -4475,7 +4625,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -4538,7 +4690,9 @@
        "connective": {
         "value": "sometimes",
         "label": "Sometimes"
-       }
+       },
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -4595,7 +4749,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -4697,7 +4853,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -4760,7 +4918,9 @@
        "connective": {
         "value": "sometimes",
         "label": "Sometimes"
-       }
+       },
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -4811,7 +4971,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -4869,7 +5031,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "B",
@@ -4932,7 +5096,9 @@
        "connective": {
         "value": "sometimes",
         "label": "Sometimes"
-       }
+       },
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -4983,7 +5149,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -5180,7 +5348,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "P",
@@ -5231,7 +5401,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "S1",
@@ -5282,7 +5454,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "S2",
@@ -5333,7 +5507,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "L",
@@ -5390,7 +5566,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -5447,7 +5625,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "E",
@@ -5498,7 +5678,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "C1",
@@ -5554,7 +5736,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "C2",
@@ -5610,7 +5794,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     },
@@ -5710,7 +5896,9 @@
         "text": "8+8 sentence as given."
        },
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "P",
@@ -5761,7 +5949,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "S1",
@@ -5812,7 +6002,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "S2",
@@ -5863,7 +6055,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "L",
@@ -5920,7 +6114,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "A return",
@@ -6013,7 +6209,9 @@
         "text": "8+8 sentence as given."
        },
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "E",
@@ -6064,7 +6262,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "C1",
@@ -6120,7 +6320,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       },
       {
        "name": "C2",
@@ -6176,7 +6378,9 @@
         }
        ],
        "leads_in": false,
-       "connective": null
+       "connective": null,
+       "figure": null,
+       "mode": null
       }
      ]
     }
@@ -6261,6 +6465,867 @@
      "count": 0,
      "default": false,
      "sections": []
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "figured-variations",
+   "label": "Figured variations",
+   "closing": true,
+   "modulates": false,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [],
+   "meters": [
+    "2/4",
+    "3/4",
+    "4/4",
+    "6/8"
+   ],
+   "tempo": null,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 40,
+     "count": 3,
+     "default": false,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "neighbor",
+        "rhythm": "eighths",
+        "harmony": "kept",
+        "change_at": null,
+        "climax": false
+       },
+       "mode": null
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "scale",
+        "rhythm": "eighths",
+        "harmony": "reharmonized",
+        "change_at": null,
+        "climax": false
+       },
+       "mode": "parallel"
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "broken-chord",
+        "rhythm": "sixteenths",
+        "harmony": "kept",
+        "change_at": null,
+        "climax": true
+       },
+       "mode": null
+      },
+      {
+       "name": "C1",
+       "letter": "C",
+       "role": {
+        "value": "codetta",
+        "label": "Codetta"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "cadential",
+        "label": "Cadential"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential 1",
+          "cadential 2"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null
+      },
+      {
+       "name": "C2",
+       "letter": "C",
+       "role": {
+        "value": "codetta",
+        "label": "Codetta"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "compound_basic_idea",
+        "label": "Compound basic idea"
+       },
+       "ending": {
+        "value": "cadential",
+        "label": "Cadential"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential 1",
+          "cadential 2"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null
+      }
+     ]
+    },
+    {
+     "bars": 56,
+     "count": 5,
+     "default": true,
+     "sections": [
+      {
+       "name": "theme",
+       "letter": "T",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null
+      },
+      {
+       "name": "variation 1",
+       "letter": "V1",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "neighbor",
+        "rhythm": "eighths",
+        "harmony": "kept",
+        "change_at": null,
+        "climax": false
+       },
+       "mode": null
+      },
+      {
+       "name": "variation 2",
+       "letter": "V2",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "neighbor",
+        "rhythm": "sixteenths",
+        "harmony": "kept",
+        "change_at": null,
+        "climax": false
+       },
+       "mode": null
+      },
+      {
+       "name": "variation 3",
+       "letter": "V3",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "scale",
+        "rhythm": "eighths",
+        "harmony": "reharmonized",
+        "change_at": null,
+        "climax": false
+       },
+       "mode": "parallel"
+      },
+      {
+       "name": "variation 4",
+       "letter": "V4",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "scale",
+        "rhythm": "sixteenths",
+        "harmony": "reharmonized",
+        "change_at": 3,
+        "climax": false
+       },
+       "mode": null
+      },
+      {
+       "name": "variation 5",
+       "letter": "V5",
+       "role": {
+        "value": "variation",
+        "label": "Variation"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "theme",
+       "variation": "figurate",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": {
+        "kind": "broken-chord",
+        "rhythm": "sixteenths",
+        "harmony": "kept",
+        "change_at": null,
+        "climax": true
+       },
+       "mode": null
+      },
+      {
+       "name": "C1",
+       "letter": "C",
+       "role": {
+        "value": "codetta",
+        "label": "Codetta"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "cadential",
+        "label": "Cadential"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential 1",
+          "cadential 2"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null
+      },
+      {
+       "name": "C2",
+       "letter": "C",
+       "role": {
+        "value": "codetta",
+        "label": "Codetta"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "compound_basic_idea",
+        "label": "Compound basic idea"
+       },
+       "ending": {
+        "value": "cadential",
+        "label": "Cadential"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential 1",
+          "cadential 2"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null
+      }
+     ]
     }
    ],
    "roles": [],
