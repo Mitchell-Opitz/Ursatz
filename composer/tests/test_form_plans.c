@@ -22,7 +22,7 @@
  * invented motive, once without modulate and with modulate and seeds 1 to 5, serialized with plan_to_json (plan
  * metadata is empty here, so the text is stable) and compared by a 64-bit FNV-1a hash with
  * tests/fixtures/forms/template-plans.txt, one line each: form, bars, count, key, meter, modulate, seed, hash. A form
- * that lists meters (the minuet, the trio and the scherzo) is recorded in its first meter, 3/4 in both keys; a compound form
+ * that lists meters (the minuet, the trio and the scherzo, 3/4; the figured variations, 2/4) is recorded in its first meter in both keys; a compound form
  * (minuet-and-trio, scherzo-and-trio) is not hashed: each of its parts is a form of its own that is.
  *
  *   test_form_plans                 compares every plan with the file
@@ -96,6 +96,9 @@ static size_t sizes_of(Size *out) {
     for (size_t i = 0; i < 2; i++) {
         out[n++] = (Size){"scherzo", SCHERZO[i], 0};
     }
+    /* The figured variations (B4 of P50) in its first meter, 2/4, in both keys: 40 bars (3 variations) and 56 (5). */
+    out[n++] = (Size){"figured-variations", 0, 3};
+    out[n++] = (Size){"figured-variations", 0, 5};
     return n;
 }
 #define MAX_SIZES 32

@@ -78,6 +78,9 @@ typedef struct {
     unsigned layers;
     bool liquidation; /* a liquidation section: a LIQUIDATION constraint, no pairing and no archetype (R-494) */
     int key_offset;   /* the section's key above the home key, in semitones: the scherzo's planned keys (R-493) */
+    bool parallel;    /* the section is in the home tonic's other mode (R-499): the figured variations' V3 */
+    bool has_figure;  /* a figurate return with a FIGURE constraint (R-497): the figured variations' variations */
+    PlanFigure figure;
 } Expected;
 
 #define MAX_EXPECTED FORM_SPEC_MAX_SECTIONS
@@ -98,6 +101,9 @@ static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning
     e->layers = layers;
     e->liquidation = false;
     e->key_offset = 0;
+    e->parallel = false;
+    e->has_figure = false;
+    memset(&e->figure, 0, sizeof(e->figure));
 }
 
 #define IS(name) (strcmp(kind, name) == 0)
@@ -163,6 +169,32 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         out[n++].key_offset = 5;
         set(&out[n++], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "C", 4, CBI, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+    } else if (IS("figured-variations")) {
+        /* The theme, then variations that return it with a figure each (R-500): V1 and V2 neighbor tones in eighths and
+           sixteenths, V3 a scale line in eighths in the parallel mode, V4 a scale line in sixteenths over a reharmonized
+           copy with the root changed at bar 3, V5 a broken chord in sixteenths at the climax (the three of the size of 40
+           are V1, V3 as the parallel one and V5); then the two codettas. */
+        static const PlanFigure NEIGHBOR_8 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_EIGHTHS, false, 0, false};
+        static const PlanFigure NEIGHBOR_16 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_SIXTEENTHS, false, 0, false};
+        static const PlanFigure SCALE_8_PARALLEL = {PLAN_FIGURE_SCALE, PLAN_FIGURE_EIGHTHS, true, 0, false};
+        static const PlanFigure SCALE_16_CHANGED = {PLAN_FIGURE_SCALE, PLAN_FIGURE_SIXTEENTHS, true, 3, false};
+        static const PlanFigure BROKEN_16_CLIMAX = {PLAN_FIGURE_BROKEN_CHORD, PLAN_FIGURE_SIXTEENTHS, false, 0, true};
+        const PlanFigure *const AT_56[] = {&NEIGHBOR_8, &NEIGHBOR_16, &SCALE_8_PARALLEL, &SCALE_16_CHANGED, &BROKEN_16_CLIMAX};
+        const PlanFigure *const AT_40[] = {&NEIGHBOR_8, &SCALE_8_PARALLEL, &BROKEN_16_CLIMAX};
+        const PlanFigure *const *figures = size.count == 5 ? AT_56 : AT_40;
+        set(&out[n++], "T", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        for (size_t k = 1; k <= size.count; k++) {
+            letters[n][0] = 'V';
+            letters[n][1] = (char)('0' + k);
+            letters[n][2] = '\0';
+            set(&out[n], letters[n], 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
+            out[n].has_figure = true;
+            out[n].figure = *figures[k - 1];
+            out[n].parallel = figures[k - 1] == &SCALE_8_PARALLEL;
+            n++;
+        }
+        set(&out[n++], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "C", 4, CBI, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -203,6 +235,9 @@ static size_t sizes_of(const char *kind, Size *out) {
     } else if (IS("scherzo")) {
         out[n++] = (Size){44, 0};
         out[n++] = (Size){60, 0};
+    } else if (IS("figured-variations")) {
+        out[n++] = (Size){56, 5};
+        out[n++] = (Size){40, 3};
     }
     return n;
 }
@@ -316,8 +351,22 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         const PlanConstraint *weak = find(plan, section, PLAN_CONSTRAINT_CADENCE, 1);
         assert((expected[i].beginning == AN) == (weak != NULL));
         assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
+        /* A section in the parallel mode is on the home tonic in the other mode. */
+        const KeyStructureMode mode = expected[i].parallel ? (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? KEY_STRUCTURE_MODE_MINOR
+                                                                                                          : KEY_STRUCTURE_MODE_MAJOR)
+                                                           : scenario->mode;
         assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + expected[i].key_offset) % 12 &&
-               key->params.key.mode == scenario->mode);
+               key->params.key.mode == mode);
+        /* A figure rides on a figurate return and only there (R-497). */
+        const PlanConstraint *figure = find(plan, section, PLAN_CONSTRAINT_FIGURE, 0);
+        assert((figure != NULL) == expected[i].has_figure);
+        if (figure) {
+            assert(back && back->params.section_return.variation == PLAN_RETURN_FIGURATE);
+            assert(figure->params.figure.kind == expected[i].figure.kind && figure->params.figure.rhythm == expected[i].figure.rhythm &&
+                   figure->params.figure.reharmonize == expected[i].figure.reharmonize &&
+                   figure->params.figure.change_at == expected[i].figure.change_at &&
+                   figure->params.figure.climax == expected[i].figure.climax);
+        }
         if (expected[i].returns == NONE) {
             assert(back == NULL);
         } else {
@@ -340,7 +389,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
             assert(motive && motive->params.motive.has_step && motive->params.motive.step.kind == MOTIVE_RELATION_INVERT &&
                    motive->params.motive.step.value[1] != 0);
         }
-        if (expected[i].letter[0] == 'V') {
+        if (expected[i].letter[0] == 'V' && !IS("figured-variations")) {
             int k = atoi(expected[i].letter + 1);
             assert(motive && motive->params.motive.has_step &&
                    motive->params.motive.step.kind ==
@@ -374,10 +423,12 @@ static void check_refused(const char *kind, const Scenario *scenario, const Moti
     static const Size FIXED_BAD[] = {{4, 0}, {12, 0}, {20, 0}, {32, 0}, {16, 2}};
     static const Size VARIATIONS_BAD[] = {{8, 0}, {12, 0}, {80, 0}, {0, 9}, {24, 3}, {20, 0}};
     static const Size LAYERED_BAD[] = {{8, 0}, {40, 0}, {0, 1}, {0, 5}, {24, 2}, {12, 0}};
-    const Size *bad = IS("variations") ? VARIATIONS_BAD : IS("layered") ? LAYERED_BAD : FIXED_BAD;
-    size_t count = IS("variations") ? sizeof(VARIATIONS_BAD) / sizeof(Size)
-                   : IS("layered")  ? sizeof(LAYERED_BAD) / sizeof(Size)
-                                    : sizeof(FIXED_BAD) / sizeof(Size);
+    static const Size FIGURED_BAD[] = {{8, 0}, {32, 0}, {48, 0}, {0, 1}, {0, 4}, {40, 5}, {56, 3}};
+    const Size *bad = IS("variations") ? VARIATIONS_BAD : IS("layered") ? LAYERED_BAD : IS("figured-variations") ? FIGURED_BAD : FIXED_BAD;
+    size_t count = IS("variations")          ? sizeof(VARIATIONS_BAD) / sizeof(Size)
+                   : IS("layered")           ? sizeof(LAYERED_BAD) / sizeof(Size)
+                   : IS("figured-variations") ? sizeof(FIGURED_BAD) / sizeof(Size)
+                                              : sizeof(FIXED_BAD) / sizeof(Size);
     for (size_t i = 0; i < count; i++) {
         Size size = bad[i];
         bool in_table = false;
@@ -517,6 +568,10 @@ static void compose_all(const char *kind, Tally *total) {
  * The scherzo (P49 B4, R-492) runs in C major and A minor 3/4 at 44 and 60 bars and was measured at 34, 272, 28: the
  * invented motive gets stuck at the returns stage 5 times and at structure once, the given one composes 20 of 20; the
  * 60-bar sizes have themes of 16 bars and 4-bar sections, so none is heard as requested, and the liquidation is not heard.
+ * The figured variations (P50 B4, R-500) run in C major 4/4 and A minor 3/4 at 56 and 40 bars and were measured at 39, 272, 126:
+ * the invented motive in C major 4/4 at 56 bars is stuck at the returns stage once (4 of 5), the rest compose 35 of 35. The
+ * variations are heard as returns, not as the theme they copy, so the shares are well under the period's; the sweeps in the
+ * parallel mode and the figure are in docs/figured-variations.md.
  */
 typedef struct {
     const char *kind;
@@ -531,6 +586,7 @@ static const Baseline BASELINES[] = {
     {"loop", 40, 60, 32},       {"layered", 60, 180, 74},
     {"minuet", 35, 105, 30},     {"trio", 36, 108, 45},
     {"scherzo", 34, 272, 28},
+    {"figured-variations", 39, 272, 126},
 };
 
 static const Baseline *baseline_of(const char *kind) {
