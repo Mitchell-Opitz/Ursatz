@@ -1,0 +1,36 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "scherzo",
+  "label": "Scherzo",
+  "closing": true,
+  "modulates": true,
+  "meters": ["3/4", "2/4", "6/8"],
+  "tempo": 176,
+  "regions": [{"name": "pattern", "major": [5], "minor": [5]}, {"name": "sequence", "major": [4], "minor": [4]}, {"name": "episode", "major": [4], "minor": [4]}],
+  "repeats": [["A"], ["P", "S1", "S2", "L", "A return"]],
+  "sizes": [
+    {"bars": 44, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "P", "letter": "B", "role": "pattern", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "pattern", "end": "pattern"}},
+      {"name": "S1", "letter": "B", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "sequence", "end": "sequence"}, "returns": "P", "variation": "exact"},
+      {"name": "S2", "letter": "B", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "returns": "P", "variation": "exact"},
+      {"name": "L", "letter": "B", "role": "liquidation", "bars": 4, "cadence": "half"},
+      {"name": "A return", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "returns": "A", "variation": "varied", "closed": true},
+      {"name": "E", "letter": "E", "role": "episode", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "episode", "end": "episode"}},
+      {"name": "C1", "letter": "C", "role": "codetta", "bars": 4, "beginning": "antecedent", "ending": "cadential", "cadence": "perfect-authentic", "closed": true},
+      {"name": "C2", "letter": "C", "role": "codetta", "bars": 4, "beginning": "compound_basic_idea", "ending": "cadential", "cadence": "perfect-authentic"}
+    ]},
+    {"bars": 60, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 16, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "construction": {"ideas": {"basic idea": 4, "repetition": 4, "fragment 1": 2, "fragment 2": 2, "cadential": 4}, "extensions": []}},
+      {"name": "P", "letter": "B", "role": "pattern", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "pattern", "end": "pattern"}},
+      {"name": "S1", "letter": "B", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "sequence", "end": "sequence"}, "returns": "P", "variation": "exact"},
+      {"name": "S2", "letter": "B", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "returns": "P", "variation": "exact"},
+      {"name": "L", "letter": "B", "role": "liquidation", "bars": 4, "cadence": "half"},
+      {"name": "A return", "letter": "A", "role": "return", "bars": 16, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "returns": "A", "variation": "varied", "closed": true, "construction": {"ideas": {"basic idea": 4, "repetition": 4, "fragment 1": 2, "fragment 2": 2, "cadential": 4}, "extensions": []}},
+      {"name": "E", "letter": "E", "role": "episode", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "episode", "end": "episode"}},
+      {"name": "C1", "letter": "C", "role": "codetta", "bars": 4, "beginning": "antecedent", "ending": "cadential", "cadence": "perfect-authentic", "closed": true},
+      {"name": "C2", "letter": "C", "role": "codetta", "bars": 4, "beginning": "compound_basic_idea", "ending": "cadential", "cadence": "perfect-authentic"}
+    ]}
+  ]
+}
