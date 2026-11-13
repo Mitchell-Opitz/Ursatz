@@ -407,6 +407,9 @@ add_test(NAME test_form_spec_pedal COMMAND test_form_spec pedal)
 # A form whose B leads into A return (held, then filled against it) composes, and the connective is written in most seeds
 # (tests/fixtures/forms/lead-form.json).
 add_test(NAME test_form_spec_leads COMMAND test_form_spec leads)
+# A form that always modulates plans its key lane away from home whatever the request says, and composes
+# (tests/fixtures/forms/modulating-form.json).
+add_test(NAME test_form_spec_modulates COMMAND test_form_spec modulates)
 
 add_executable(test_piece_perform test_piece_perform.c)
 target_link_libraries(test_piece_perform PRIVATE ursatz_composer)

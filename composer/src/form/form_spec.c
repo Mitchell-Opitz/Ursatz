@@ -24,9 +24,11 @@ typedef struct {
 
 /* The role table: P46 to P53 add rows. */
 static const RoleRow ROLES[FORM_ROLE_COUNT] = {
-    {"theme", "Theme", true},        {"contrast", "Contrast", true}, {"return", "Return", true},
-    {"variation", "Variation", true}, {"layer", "Layer", true},       {"intro", "Intro", false},
-    {"body", "Loop body", false},    {"turnaround", "Turnaround", false}, {"ending", "Ending", false}};
+    {"theme", "Theme", true},         {"contrast", "Contrast", true},   {"return", "Return", true},
+    {"variation", "Variation", true}, {"layer", "Layer", true},         {"pattern", "Pattern", true},
+    {"sequence", "Sequence", true},   {"episode", "Episode", true},    {"codetta", "Codetta", true},
+    {"intro", "Intro", false},        {"body", "Loop body", false},     {"turnaround", "Turnaround", false},
+    {"ending", "Ending", false}};
 
 const char *form_role_name(FormRole role) {
     return role >= 0 && role < FORM_ROLE_COUNT ? ROLES[role].name : NULL;
@@ -1379,7 +1381,7 @@ bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter) {
 static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
     static const char *const ALLOWED[] = {"schema", "version", "name",    "label",  "plan_name", "closing", "accompaniment",
                                           "regions", "checks", "sizes", "sections", "roles",   "loop",    "cadences",
-                                          "default_ending", "meters", "tempo", "repeats", "parts"};
+                                          "default_ending", "meters", "tempo", "repeats", "parts", "modulates"};
     static const char *const REQUEST_ONLY[] = {"roles", "loop", "cadences", "default_ending"};
     char text[FORM_SPEC_NAME_MAX];
     bool present;
@@ -1414,7 +1416,8 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
         snprintf(form->plan_name, sizeof(form->plan_name), "%s", form->name);
     }
     form->checks = FORM_CHECK_ALL;
-    if (!read_bool(reader, root, "", "closing", &form->closing)) {
+    if (!read_bool(reader, root, "", "closing", &form->closing) ||
+        !read_bool(reader, root, "", "modulates", &form->modulates)) {
         return false;
     }
     if (member_of(reader, root, "", "accompaniment", false)) {
@@ -1436,6 +1439,12 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
             return fail(reader, "/sections", "must be \"request\"");
         }
         form->request_sections = true;
+    }
+    if (form->modulates && form->request_sections) {
+        return fail(reader, "/modulates", "a form whose sections the request gives cannot always modulate");
+    }
+    if (form->modulates && form->region_count == 0) {
+        return fail(reader, "/modulates", "a form that always modulates needs regions");
     }
     bool compound = cJSON_GetObjectItemCaseSensitive(root, "parts") != NULL;
     if (compound && cJSON_GetObjectItemCaseSensitive(root, "repeats")) {

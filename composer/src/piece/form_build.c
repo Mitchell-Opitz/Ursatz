@@ -452,14 +452,15 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         style.params.style = request->style;
         result = piece_result_of_plan(plan_node_add_constraint(plan, form_id, &style));
     }
-    /* The keys and the cadences across them are planned from the request's seed, home only unless it asks to modulate;
-   then the form is Given. */
+    /* The keys and the cadences across them are planned from the request's seed, home only unless it asks to modulate
+   or the form always does; then the form is Given. */
     if (result == PIECE_OK) {
         PieceKeyPlan keys;
         FillRng rng;
+        bool modulate = request->modulate || form->modulates;
         fill_rng_seed(&rng, request->seed);
-        result = piece_plan_keys(plan, form, size, request->modulate ? &rng : NULL, &keys);
-        result = result == PIECE_OK && request->modulate ? piece_plan_cadences(plan, form, size, &keys) : result;
+        result = piece_plan_keys(plan, form, size, modulate ? &rng : NULL, &keys);
+        result = result == PIECE_OK && modulate ? piece_plan_cadences(plan, form, size, &keys) : result;
     }
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));

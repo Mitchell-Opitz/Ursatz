@@ -13,6 +13,7 @@
     "label": { "type": "string", "minLength": 1, "maxLength": 63 },
     "plan_name": { "$ref": "#/$defs/name" },
     "closing": { "type": "boolean", "default": false },
+    "modulates": { "type": "boolean", "default": false },
     "accompaniment": { "enum": ["optional", "required"], "default": "optional" },
     "regions": {
       "type": "array",

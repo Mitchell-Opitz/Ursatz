@@ -30,6 +30,10 @@
  *                             opens on the tonic, and in at least 6 the connective is written (B's downbeat note kept, four
  *                             eighths in the scale, the last a step from A return's first note); a "sometimes" connective
  *                             is asked for on some seeds and not others. The reader's lead-in refusals are in the fast run
+ *   test_form_spec modulates  a form that always modulates (tests/fixtures/forms/modulating-form.json, R-493) composes with
+ *                             the request not asking to modulate: seeds 1 to 10 in C major and A minor 3/4, at least 9
+ *                             compose in each, and in each P is in the key of V (v in minor) and S is home. The reader's
+ *                             modulates and role tests are in the fast run
  *   test_form_spec meters     a form document that lists 3/4 and a tempo (tests/fixtures/forms/meter-form.json) builds in
  *                             3/4 and is refused in 4/4 (R-487); the reader's meters and tempo refusals are in the fast run
  *   test_form_spec custom     a form added as a document alone (tests/fixtures/forms/bar-form.json) composes: seeds 1
@@ -1235,6 +1239,59 @@ static int test_pedal_form(void) {
     return 0;
 }
 
+/* ------------------------------------------------------------- the pattern roles and a form that always modulates (R-493) */
+
+static void test_modulating_reader(void) {
+    static const struct {
+        const char *role;
+        size_t bars;
+        const char *extra;
+    } ROLES_OK[] = {{"pattern", 4, ""}, {"sequence", 4, ""}, {"episode", 8, ""}, {"codetta", 6, ", \"construction\": \"auto\""}};
+    char text[4096];
+    char sizes[2048];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    for (size_t i = 0; i < sizeof(ROLES_OK) / sizeof(ROLES_OK[0]); i++) {
+        FormRole role;
+        assert(form_role_find(ROLES_OK[i].role, &role) && form_role_is_theme(role));
+        assert(strcmp(form_role_name(role), ROLES_OK[i].role) == 0 && form_role_label(role) != NULL);
+        snprintf(sizes, sizeof(sizes),
+                 "{\"bars\": %zu, \"default\": true, \"sections\": [{\"name\": \"A\", \"letter\": \"A\", \"role\": \"%s\", "
+                 "\"bars\": %zu, \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": "
+                 "\"perfect-authentic\"%s}]}",
+                 ROLES_OK[i].bars, ROLES_OK[i].role, ROLES_OK[i].bars, ROLES_OK[i].extra);
+        document(text, sizeof(text), "", sizes);
+        assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].role == role);
+        form_spec_destroy(form);
+    }
+    /* A codetta of 6 bars needs a construction. */
+    snprintf(sizes, sizeof(sizes),
+             "{\"bars\": 6, \"default\": true, \"sections\": [{\"name\": \"A\", \"letter\": \"A\", \"role\": \"codetta\", "
+             "\"bars\": 6, \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\"}]}");
+    document(text, sizeof(text), "", sizes);
+    refused(text, "/sizes/0/sections/0/bars");
+
+    /* modulates: true parses with regions, false is the default, a non-boolean and the two refusals. */
+    snprintf(sizes, sizeof(sizes), "{\"bars\": 8, \"default\": true, \"sections\": [" SECTION_A "]}");
+    document(text, sizeof(text), ", \"regions\": [{\"name\": \"away\", \"major\": [5], \"minor\": [5]}], \"modulates\": true", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->modulates);
+    form_spec_destroy(form);
+    document(text, sizeof(text), ", \"regions\": [{\"name\": \"away\", \"major\": [5], \"minor\": [5]}], \"modulates\": false", sizes);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && !form->modulates);
+    form_spec_destroy(form);
+    document(text, sizeof(text), ", \"regions\": [{\"name\": \"away\", \"major\": [5], \"minor\": [5]}], \"modulates\": 1", sizes);
+    refused(text, "/modulates");
+    document(text, sizeof(text), ", \"modulates\": true", sizes);
+    refused(text, "/modulates");
+    refused_edit("game-loop", "\"closing\"", "\"modulates\": true, \"closing\"", "/modulates");
+    /* No built-in form modulates always. */
+    for (size_t f = 0; f < form_spec_builtin_count(); f++) {
+        FormSpec *built = builtin(form_spec_builtin_name(f));
+        assert(!built->modulates);
+        form_spec_destroy(built);
+    }
+}
+
 /* ------------------------------------------------------------- a section that leads into the next (R-486) */
 
 #define LEAD_SEEDS 10
@@ -1709,7 +1766,77 @@ static int test_leads(void) {
     return status;
 }
 
+/* ------------------------------------------------------------- the compose run of a form that always modulates */
+
+#define MODULATES_SEEDS 10
+#define MODULATES_COMPOSED_LEAST 9
+
+/* The key on the key lane at the start of section `section`. */
+static AnalysisKey key_at_start(const PiecePlan *plan, NodeId section) {
+    LaneSpanId id = PLAN_LANE_SPAN_NONE;
+    PlanSpan range = {plan_node_span(plan, section).start, {1, 4096}};
+    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, range, &id, 1) == 1);
+    return plan_lane_span_payload(plan, id)->key;
+}
+
+static int test_modulates(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/modulating-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
+        return 2;
+    }
+    free(text);
+    assert(strcmp(form->name, "modulating-form") == 0 && form->modulates && form->sizes[0].section_count == 4 &&
+           form->sizes[0].sections[1].role == FORM_ROLE_PATTERN && form->sizes[0].sections[2].role == FORM_ROLE_SEQUENCE);
+    static const struct {
+        const char *name;
+        int pitch_class;
+        KeyStructureMode mode;
+    } KEYS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
+    int status = 0;
+    for (size_t k = 0; k < sizeof(KEYS) / sizeof(KEYS[0]); k++) {
+        int composed = 0;
+        for (unsigned long seed = 1; seed <= MODULATES_SEEDS; seed++) {
+            ComposeOutcome outcome;
+            PieceResult ran;
+            /* The request does not ask to modulate (compose_lead leaves it false). */
+            PiecePlan *plan = compose_lead(form, seed, KEYS[k].pitch_class, KEYS[k].mode, &outcome, &ran);
+            if (ran == PIECE_OK) {
+                NodeId sections[FORM_SPEC_MAX_SECTIONS];
+                assert(piece_sections(plan, sections) == 4);
+                AnalysisKey home = plan_key_of_pitch_class(KEYS[k].pitch_class, KEYS[k].mode);
+                AnalysisKey fifth = plan_key_of_pitch_class(KEYS[k].pitch_class + 7, KEYS[k].mode);
+                AnalysisKey p = key_at_start(plan, sections[1]);
+                AnalysisKey s = key_at_start(plan, sections[2]);
+                assert(analysis_key_equals(&p, &fifth));
+                assert(analysis_key_equals(&s, &home));
+                composed++;
+            } else {
+                printf("  seed %lu: %s at %s\n", seed, piece_result_name(ran), compose_stage_name(outcome.stuck_stage));
+            }
+            compose_outcome_destroy(&outcome);
+            plan_destroy(plan);
+        }
+        printf("modulating-form in %s 3/4: %d of %d seeds compose, P in the fifth key and S home in each\n", KEYS[k].name,
+               composed, MODULATES_SEEDS);
+        if (composed < MODULATES_COMPOSED_LEAST) {
+            fprintf(stderr, "modulating-form in %s: %d composed, at least %d expected\n", KEYS[k].name, composed,
+                    MODULATES_COMPOSED_LEAST);
+            status = 1;
+        }
+    }
+    form_spec_destroy(form);
+    return status;
+}
+
 int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "modulates") == 0) {
+        return test_modulates();
+    }
     if (argc == 2 && strcmp(argv[1], "leads") == 0) {
         return test_leads();
     }
@@ -1723,7 +1850,7 @@ int main(int argc, char **argv) {
         return test_meters();
     }
     if (argc != 1) {
-        fprintf(stderr, "usage: test_form_spec [custom|leads|meters|pedal]\n");
+        fprintf(stderr, "usage: test_form_spec [custom|leads|meters|modulates|pedal]\n");
         return 2;
     }
     test_builtin_forms();
@@ -1739,6 +1866,7 @@ int main(int argc, char **argv) {
     test_repeats();
     test_parts();
     test_construction();
+    test_modulating_reader();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }
