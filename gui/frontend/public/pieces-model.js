@@ -209,6 +209,34 @@
     return { halves: Themes.constructionHalves(construction), text: typeof construction.text === "string" ? construction.text : "" };
   }
 
+  const FIGURE_KINDS = { neighbor: "neighbor tones", scale: "scale line", "broken-chord": "broken chord" };
+  const FIGURE_RHYTHMS = { eighths: "in eighths", sixteenths: "in sixteenths" };
+
+  /* The figure of a sized form's section (P50, R-501) in words: the kind and the rhythm, then reharmonized, the root
+   * change at a bar and the climax as they apply, and the parallel mode when the section is in it; "" for a section with
+   * no figure. */
+  function figureLabel(section) {
+    const figure = section && section.figure;
+    if (!figure || typeof figure !== "object") {
+      return "";
+    }
+    const words = [FIGURE_KINDS[figure.kind] || figure.kind, FIGURE_RHYTHMS[figure.rhythm] || (figure.rhythm ? `in ${figure.rhythm}` : "")].filter((word) => word);
+    const parts = [words.join(" ")];
+    if (figure.harmony === "reharmonized") {
+      parts.push("reharmonized");
+    }
+    if (Number.isInteger(figure.change_at)) {
+      parts.push(`root changed at bar ${figure.change_at}`);
+    }
+    if (figure.climax === true) {
+      parts.push("climax");
+    }
+    if (section.mode === "parallel") {
+      parts.push("parallel mode");
+    }
+    return parts.join(", ");
+  }
+
   /* A state on another form: a request-listed form starts with one section of its first required role, a sized form
    * with its default size and no sections. */
   function withForm(state, name) {
@@ -945,6 +973,10 @@
         changes: (section.changes && section.changes.text) || "",
         /* A section with a construction (P47) carries the sentence that says why it is as long as it is; no other has the member. */
         construction: typeof section.construction_text === "string" ? section.construction_text : "",
+        /* A figurate variation (P50, R-501) carries its figure's sentence and the skeleton tones it is built on; "" for a row
+         * that has none. */
+        figure: (section.figure && section.figure.text) || "",
+        skeleton: section.figure && Array.isArray(section.figure.skeleton) ? section.figure.skeleton.join(" ") : "",
       };
     });
     const seam = v.seam && typeof v.seam === "object" ? v.seam : null;
@@ -1102,6 +1134,7 @@
     sizeOf,
     sectionsOf,
     sectionConstruction,
+    figureLabel,
     withForm,
     get CADENCES() {
       return cadences();

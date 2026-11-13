@@ -170,7 +170,9 @@ version, any other form one version, `piece`), a row for each section (section,
 part by its role label, letter, start, length, cadence planned and heard, fill, source; for a sized form: section,
 role, letter, start, length, cadence, heard, the key planned (Key, for a form that always modulates only: the Composer's
 `key` of the row, such as `G major` for the scherzo's pattern), the key heard, harmony (the pedal label of the form's section), the
-section it returns and how it differs, in the Composer's own text; either table gains a Construction column, the
+section it returns and how it differs, in the Composer's own text; either table gains a Figure column (P50, the row's
+`figure.text`: the kind, rhythm and harmony of a figured variation and the skeleton tones it is built on) before the
+Construction column when a section has a figure, and a Construction column, the
 Composer's `construction_text`, when a section has one), the
 score, the seam rules that held, the Analyzer check and the style
 distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
@@ -183,7 +185,11 @@ such as `V to I`) and Connective (`yes` when the stepwise link was written, `no`
 none) after Harmony, and Repeat of (the section a row plays again) after Returns. The strip of a compound form lists the
 sections of each part under a heading that says its form, its key and its repeats; a part that plays another again has
 none. The strip of a sized form shows the halves of a section with a
-construction in its block (`4+6`; the scherzo's roles Pattern, Sequence, Liquidation, Episode and Codetta are the forms entry's labels) and its reason in a Construction column of the table (no built-in form has one yet).
+construction in its block (`4+6`; the scherzo's roles Pattern, Sequence, Liquidation, Episode and Codetta are the forms entry's labels) and its reason in a Construction column of the table (no built-in form has one yet). The strip's table of a form with a
+figure (`figured-variations`) gains a Figure column from the forms entry's `figure` and `mode`: `neighbor tones in
+eighths`, `scale line in sixteenths, reharmonized, root changed at bar 3`, `broken chord in sixteenths, climax`, with
+`, parallel mode` for the variation in the parallel key; a section with none leaves it empty, and a form with none has no
+column. The climax is a request the Composer may not be able to honor, so the label does not say the variation is audibly higher.
 
 On the current version of a performed form no Regenerate or Variations is offered: the page says they are Later (the
 Composer refuses them for a form written out in order, R-485).

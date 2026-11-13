@@ -73,9 +73,12 @@ function pieceSectionStrip(sections) {
   /* The Construction column is there only when a section has one. */
   const constructions = sections.map((section) => PiecesModel.sectionConstruction(section).text);
   const withConstruction = constructions.some((text) => text !== "");
+  /* The Figure column (P50) is there only when a section has a figure. */
+  const figures = sections.map((section) => PiecesModel.figureLabel(section));
+  const withFigure = figures.some((text) => text !== "");
   box.appendChild(
     pieceTable(
-      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots", ...(withConstruction ? ["Construction"] : [])],
+      ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots", ...(withFigure ? ["Figure"] : []), ...(withConstruction ? ["Construction"] : [])],
       sections.map((section, at) => [
         section.letter,
         section.role ? section.role.label : "",
@@ -87,6 +90,7 @@ function pieceSectionStrip(sections) {
         section.pedal ? section.pedal.label : "",
         section.returns ? (section.variation ? `${section.returns} (${section.variation})` : section.returns) : "",
         (Array.isArray(section.slots) ? section.slots : []).map((slot) => `${slot.slot}: ${slot.ideas.join(", ")}`).join("; "),
+        ...(withFigure ? [figures[at]] : []),
         ...(withConstruction ? [constructions[at]] : []),
       ]),
     ),
@@ -245,8 +249,10 @@ function pieceVersionTables(view, heading, check, sized, performed, modulating) 
   box.appendChild(materialsElement("h3", "section-title", heading));
   /* The Construction column is there only when a section has one (P47). */
   const withConstruction = view.rows.some((row) => row.construction !== "");
-  const extraHead = withConstruction ? ["Construction"] : [];
-  const extra = (row) => (withConstruction ? [row.construction] : []);
+  /* The Figure column (P50) is there only when a row has a figure: the Composer's sentence, which names the skeleton. */
+  const withFigure = view.rows.some((row) => row.figure !== "");
+  const extraHead = [...(withFigure ? ["Figure"] : []), ...(withConstruction ? ["Construction"] : [])];
+  const extra = (row) => [...(withFigure ? [row.figure] : []), ...(withConstruction ? [row.construction] : [])];
   /* A performed form (R-485) adds its part, what a row plays again, the upbeat chord and the connective. */
   const withPart = performed && view.rows.some((row) => row.partName !== "");
   box.appendChild(
