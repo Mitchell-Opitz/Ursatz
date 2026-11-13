@@ -252,6 +252,52 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
     return true;
 }
 
+/* The pitch moved from the other mode of the tonic into `to` (R-499). */
+int return_map_pitch(int tonic, KeyStructureMode to, int pitch) {
+    int degree = ((pitch - tonic) % 12 + 12) % 12;
+    if (to == KEY_STRUCTURE_MODE_MINOR) {
+        return degree == 4 || degree == 9 ? pitch - 1 : pitch;
+    }
+    return degree == 3 || degree == 8 || degree == 10 ? pitch + 1 : pitch;
+}
+
+static void map_key(PlanConstraint *constraint, KeyStructureMode to) {
+    if (constraint->kind == PLAN_CONSTRAINT_KEY) {
+        AnalysisKey *key = &constraint->params.key;
+        *key = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(key), to);
+    }
+}
+
+bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, KeyStructureMode to) {
+    int tonic = analysis_key_tonic_pitch_class(&home);
+    for (size_t i = 0; i < copy->node_count; i++) {
+        for (size_t c = 0; c < copy->nodes[i].constraint_count; c++) {
+            map_key(&copy->nodes[i].constraints[c], to);
+        }
+    }
+    for (size_t i = 0; i < copy->span_count; i++) {
+        ReturnSpan *span = &copy->spans[i];
+        for (size_t c = 0; c < span->constraint_count; c++) {
+            map_key(&span->constraints[c], to);
+            /* The minor phrase model has one predominant: a half-cadence phrase of four bars deals a chord over two bars. */
+            if (to == KEY_STRUCTURE_MODE_MINOR && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
+                span->constraints[c].params.harmony_shape.split_at_bars = false;
+            }
+        }
+        if (span->lane == PLAN_LANE_MELODY || span->lane == PLAN_LANE_INNER_VOICE) {
+            for (size_t n = 0; n < span->note_count; n++) {
+                span->notes[n].midi = return_map_pitch(tonic, to, span->notes[n].midi);
+                span->notes[n].spelled = false;
+            }
+        }
+    }
+    return true;
+}
+
+int return_mode_pitch(const ReturnPayload *payload, int pitch) {
+    return payload->mode_change ? return_map_pitch(analysis_key_tonic_pitch_class(&payload->key), payload->to_mode, pitch) : pitch;
+}
+
 PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy) {
     NodeId *ids = calloc(copy->node_count + 1, sizeof(NodeId));
     if (!ids) {
@@ -381,6 +427,26 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
     return true;
 }
 
+bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+                       int *to_mode) {
+    KeyPiece a[MAX_KEY_PIECES];
+    KeyPiece b[MAX_KEY_PIECES];
+    size_t na;
+    size_t nb;
+    if (!key_pieces(source_plan, source, a, &na) || !key_pieces(target_plan, target, b, &nb) || na != nb) {
+        return false;
+    }
+    for (size_t i = 0; i < na; i++) {
+        if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
+            analysis_key_tonic_pitch_class(&a[i].key) != analysis_key_tonic_pitch_class(&b[i].key) ||
+            a[i].key.mode == b[i].key.mode) {
+            return false;
+        }
+    }
+    *to_mode = (int)b[0].key.mode;
+    return true;
+}
+
 /* The variations the operator makes: all of them (figurate keeps the melody here; compose_run writes its figure, R-497). */
 static bool variation_offered(PlanReturnVariation variation) {
     return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
@@ -403,9 +469,12 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
     }
     PlanSpan from = plan_node_span(plan, ret->section);
     PlanSpan to = plan_node_span(plan, section);
+    int to_mode;
     return rational_cmp(from.length, to.length) == 0 && return_meter_over(plan, from, &source_meter) &&
            return_meter_over(plan, to, &target_meter) && source_meter.beats_per_bar == target_meter.beats_per_bar &&
-           source_meter.beat_unit == target_meter.beat_unit && return_key_shift(plan, from, plan, to, &shift);
+           source_meter.beat_unit == target_meter.beat_unit &&
+           (return_key_shift(plan, from, plan, to, &shift) ||
+            (ret->variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, to, &to_mode)));
 }
 
 bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
@@ -728,10 +797,20 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     payload->variation = variation;
     payload->from_start = from.start;
     payload->span = plan_node_span(plan, target);
-    if (!key_pieces(plan, payload->span, pieces, &count) || !return_meter_over(plan, payload->span, &payload->meter) ||
-        !return_key_shift(plan, from, plan, payload->span, &payload->transpose)) {
+    int to_mode;
+    if (!key_pieces(plan, payload->span, pieces, &count) || !return_meter_over(plan, payload->span, &payload->meter)) {
         free(payload);
         return NULL;
+    }
+    if (!return_key_shift(plan, from, plan, payload->span, &payload->transpose)) {
+        /* A figurate return in the other mode of the same tonic (R-499): moved by 0, mapped, always reharmonized. */
+        if (variation != PLAN_RETURN_FIGURATE || !return_mode_shift(plan, from, plan, payload->span, &to_mode)) {
+            free(payload);
+            return NULL;
+        }
+        payload->transpose = 0;
+        payload->mode_change = true;
+        payload->to_mode = (KeyStructureMode)to_mode;
     }
     payload->key = pieces[0].key;
     if (variation == PLAN_RETURN_FIGURATE) {
@@ -739,9 +818,11 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
             const PlanConstraint *constraint = plan_node_constraint_at(plan, target, i);
             payload->reharmonize = payload->reharmonize || (constraint->kind == PLAN_CONSTRAINT_FIGURE && constraint->params.figure.reharmonize);
         }
+        payload->reharmonize = payload->reharmonize || payload->mode_change;
     }
     if (!return_copy_read(plan, source, &payload->source) || !return_copy_clone(&payload->source, &payload->result) ||
-        !return_copy_move(&payload->result, from.start, payload->span.start, payload->transpose)) {
+        !return_copy_move(&payload->result, from.start, payload->span.start, payload->transpose) ||
+        (payload->mode_change && !return_copy_change_mode(&payload->result, payload->key, payload->to_mode))) {
         return_payload_destroy(payload);
         return NULL;
     }

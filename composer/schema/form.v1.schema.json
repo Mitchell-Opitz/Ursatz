@@ -202,6 +202,7 @@
         "pedal": { "enum": ["dominant"], "description": "The presentation is written over a dominant pedal; needs a presentation beginning." },
         "leads_in": { "type": "boolean", "description": "The section is held until the sections after it are written, then filled against them; not on the last section, a returning section, a section another returns, or two in a row." },
         "connective": { "enum": ["sometimes", "always"], "description": "The held section ends with a short stepwise connective into the next section's first note; needs leads_in." },
+        "mode": { "enum": ["parallel"], "description": "The section is in the home key's parallel key (R-499); needs variation figurate, no keys; its figure is reharmonized." },
         "figure": {
           "type": "object",
           "required": ["kind", "rhythm"],
@@ -210,7 +211,7 @@
           "properties": {
             "kind": { "enum": ["neighbor", "scale", "broken-chord"] },
             "rhythm": { "enum": ["eighths", "sixteenths"] },
-            "harmony": { "enum": ["kept", "reharmonized"], "description": "Default kept; reharmonized puts the figure over a reharmonized copy." },
+            "harmony": { "enum": ["kept", "reharmonized"], "description": "Default kept (reharmonized in the parallel mode, which refuses kept); reharmonized puts the figure over a reharmonized copy." },
             "change_at": { "type": "integer", "minimum": 1, "description": "A bar of the section before its last at which the root must change; needs harmony reharmonized." },
             "climax": { "type": "boolean", "description": "An octave higher when it fits the melody range; default false." }
           }

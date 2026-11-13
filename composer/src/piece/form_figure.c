@@ -26,7 +26,8 @@ static int compare_notes(const void *a, const void *b) {
 }
 
 /* The melody of the section the target returns, read as SourceNote, in order of onset. NULL when it holds no note. */
-static SourceNote *read_source_melody(const PiecePlan *plan, NodeId source, int shift, size_t *count) {
+static SourceNote *read_source_melody(const PiecePlan *plan, NodeId source, int shift, bool mode_change, int tonic,
+                                      KeyStructureMode to_mode, size_t *count) {
     PlanSpan span = plan_node_span(plan, source);
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
     LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
@@ -53,7 +54,8 @@ static SourceNote *read_source_melody(const PiecePlan *plan, NodeId source, int 
                  rational_sub(at, span.start, &onset) == RATIONAL_OK &&
                  rational_add(onset, held->notes[n].duration, &notes[used].end) == RATIONAL_OK;
             notes[used].onset = onset;
-            notes[used].pitch = held->notes[n].midi + shift;
+            notes[used].pitch = mode_change ? return_map_pitch(tonic, to_mode, held->notes[n].midi + shift)
+                                            : held->notes[n].midi + shift;
             used++;
         }
     }
@@ -156,12 +158,22 @@ static Reading *read_section(const PiecePlan *plan, NodeId section) {
         !harmony_read_lane(plan, span, reading->key.mode, reading->chords, &reading->chord_count, metre) ||
         !rational_is_zero(metre->lead) || !rational_is_zero(metre->tail) || !rational_is_zero(metre->offset) ||
         metre->cells == 0 || metre->cells_per_bar == 0 || !figure_cell_length(&metre->meter, &reading->cell_length, &reading->cells_per_bar) ||
-        metre->bars * reading->cells_per_bar > FORM_SKELETON_MAX ||
-        !return_key_shift(plan, plan_node_span(plan, ret.section), plan, span, &shift)) {
+        metre->bars * reading->cells_per_bar > FORM_SKELETON_MAX) {
         reading_free(reading);
         return NULL;
     }
-    reading->notes = read_source_melody(plan, ret.section, shift, &reading->note_count);
+    /* A copy across modes (R-499) is moved by 0 and mapped degree by degree, as form-return maps it. */
+    bool mode_change = !return_key_shift(plan, plan_node_span(plan, ret.section), plan, span, &shift);
+    int to_mode = 0;
+    if (mode_change) {
+        shift = 0;
+        if (!return_mode_shift(plan, plan_node_span(plan, ret.section), plan, span, &to_mode)) {
+            reading_free(reading);
+            return NULL;
+        }
+    }
+    reading->notes = read_source_melody(plan, ret.section, shift, mode_change, analysis_key_tonic_pitch_class(&reading->key),
+                                        (KeyStructureMode)to_mode, &reading->note_count);
     if (!reading->notes) {
         reading_free(reading);
         return NULL;
@@ -566,7 +578,7 @@ bool form_figure_check(const PiecePlan *plan, NodeId section, char *reason, size
     PlanFigure figure;
     Reading *reading = plan && find_figure(plan, section, &figure) ? read_section(plan, section) : NULL;
     size_t own_count = 0;
-    SourceNote *own = reading ? read_source_melody(plan, section, 0, &own_count) : NULL;
+    SourceNote *own = reading ? read_source_melody(plan, section, 0, false, 0, KEY_STRUCTURE_MODE_MAJOR, &own_count) : NULL;
     if (!reading || !own) {
         free(own);
         reading_free(reading);

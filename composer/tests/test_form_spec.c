@@ -21,6 +21,7 @@
  *                               every built-in parses and is what docs/forms.md says of it;
  *                               a section's construction (B6 of P47): "auto", the ideas and extensions, the refusals;
  *                               a section's figure (B1 of P50, tests/fixtures/forms/figure-form.json): what it reads as, each refusal;
+ *                               a section in the parallel mode (B3 of P50, tests/fixtures/forms/parallel-form.json): what it reads as, each refusal;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
@@ -1479,6 +1480,40 @@ static void test_figure_reader(void) {
     for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
         figure_document(text, sizeof(text), REFUSED[i].variation, REFUSED[i].figure);
         refused(text, REFUSED[i].path);
+    }
+
+    /* The parallel mode (R-499): tests/fixtures/forms/parallel-form.json; each refusal at its path. */
+    snprintf(path, sizeof(path), "%s/forms/parallel-form.json", COMPOSER_FIXTURE_DIR);
+    fixture = read_file(path);
+    assert(form_spec_parse(fixture, &form, &error) == FORM_SPEC_OK && form->sizes[0].section_count == 3);
+    free(fixture);
+    assert(form->sizes[0].sections[1].parallel && form->sizes[0].sections[1].figure.reharmonize &&
+           form->sizes[0].sections[1].has_figure && !form->sizes[0].sections[0].parallel &&
+           !form->sizes[0].sections[2].parallel);
+    form_spec_destroy(form);
+    figure_document(text, sizeof(text), FIGURATE ", \"mode\": \"parallel\"",
+                    ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"reharmonized\"}");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].parallel);
+    form_spec_destroy(form);
+    static const struct {
+        const char *variation;
+        const char *figure;
+        const char *path;
+    } PARALLEL_REFUSED[] = {
+        /* the parallel mode needs a figurate variation, has no keys, and reharmonizes */
+        {", \"mode\": \"parallel\"", "", "/sizes/0/sections/1/mode"},
+        {", \"variation\": \"ornament\", \"mode\": \"parallel\"", "", "/sizes/0/sections/1/mode"},
+        {FIGURATE ", \"mode\": \"relative\"", ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}",
+         "/sizes/0/sections/1/mode"},
+        {FIGURATE ", \"mode\": \"parallel\", \"keys\": {\"start\": \"home\"}",
+         ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}", "/sizes/0/sections/1/mode"},
+        {FIGURATE ", \"mode\": \"parallel\"",
+         ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"kept\"}",
+         FIGURE_PATH "/harmony"},
+    };
+    for (size_t i = 0; i < sizeof(PARALLEL_REFUSED) / sizeof(PARALLEL_REFUSED[0]); i++) {
+        figure_document(text, sizeof(text), PARALLEL_REFUSED[i].variation, PARALLEL_REFUSED[i].figure);
+        refused(text, PARALLEL_REFUSED[i].path);
     }
 
     /* A section given in beats has no bars to hold a figure. */

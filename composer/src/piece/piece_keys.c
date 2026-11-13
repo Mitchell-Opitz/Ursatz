@@ -84,6 +84,13 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
         keys[i].start = home;
         keys[i].end = home;
         can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
+        /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
+        if (size->sections[i].parallel) {
+            keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home),
+                                                    home.mode == KEY_STRUCTURE_MODE_MINOR ? KEY_STRUCTURE_MODE_MAJOR
+                                                                                          : KEY_STRUCTURE_MODE_MINOR);
+            keys[i].end = keys[i].start;
+        }
     }
     if (!rng || !can) {
         return true;
@@ -257,6 +264,10 @@ static bool related_to_home(AnalysisKey home, AnalysisKey key) {
     if (analysis_key_equals(&home, &key)) {
         return true;
     }
+    /* The home key's parallel key, on the same tonic (R-499). */
+    if (analysis_key_tonic_pitch_class(&home) == analysis_key_tonic_pitch_class(&key)) {
+        return true;
+    }
     int semitone = ((analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey related;
@@ -376,7 +387,9 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         }
     }
     for (size_t k = 1; k < lane.count; k++) {
-        if (analysis_key_equals(&lane.key[k], &lane.key[k - 1])) {
+        /* A change of mode on one tonic is neither counted nor classified (R-499). */
+        if (analysis_key_equals(&lane.key[k], &lane.key[k - 1]) ||
+            analysis_key_tonic_pitch_class(&lane.key[k]) == analysis_key_tonic_pitch_class(&lane.key[k - 1])) {
             continue;
         }
         out->changes++;
