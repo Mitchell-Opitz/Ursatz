@@ -84,6 +84,16 @@
     return Boolean(form) && form.sections === "sizes";
   }
 
+  /* The meters a form is composed in: its entry's meters when it lists any, else every meter. */
+  function meterChoices(form) {
+    return form && Array.isArray(form.meters) && form.meters.length > 0 ? form.meters.slice() : Themes.METERS.slice();
+  }
+
+  /* The tempo a form gives (quarters a minute), or null. */
+  function formTempo(form) {
+    return form && Number.isFinite(form.tempo) ? form.tempo : null;
+  }
+
   /* The roles a request-listed form allows, in order: [{value, label, required}]. */
   function rolesOf(form) {
     return form && Array.isArray(form.roles) ? form.roles : [];
@@ -1039,6 +1049,8 @@
     DEFAULT_FORM,
     formOf,
     isSized,
+    meterChoices,
+    formTempo,
     rolesOf,
     roleLabel,
     defaultRole,

@@ -538,8 +538,26 @@ function buildPieceEditor(ctx) {
   );
   const key = themeField(header, "Key", themeInput("D or Bb", state.key));
   const mode = themeField(header, "Mode", themeSelect(PiecesModel.MODES, state.mode));
-  const meter = themeField(header, "Meter", themeSelect(PiecesModel.METERS, state.meter));
+  const meter = themeField(header, "Meter", themeSelect(PiecesModel.meterChoices(PiecesModel.formOf(state.form)), state.meter));
   const tempo = themeField(header, "Tempo", themeInput("from the brief", state.tempo));
+  /* The meter list and the tempo hint follow the form (R-485): a form that fixes its meters lists only those, and one that
+   * gives a tempo says so. The chosen meter stays when the new list has it, else the first one is taken. */
+  function drawMeterAndTempo() {
+    const form = PiecesModel.formOf(state.form);
+    const choices = PiecesModel.meterChoices(form);
+    if (JSON.stringify(Array.from(meter.options, (option) => option.value)) !== JSON.stringify(choices)) {
+      meter.innerHTML = "";
+      for (const choice of choices) {
+        const option = materialsElement("option", "", choice);
+        option.value = choice;
+        meter.appendChild(option);
+      }
+    }
+    state.meter = choices.includes(state.meter) ? state.meter : choices[0];
+    meter.value = state.meter;
+    const formTempo = PiecesModel.formTempo(form);
+    tempo.placeholder = formTempo !== null && String(state.tempo || "").trim() === "" ? `from the form (${formTempo})` : "from the brief";
+  }
   function syncHeader() {
     state.key = key.value;
     state.mode = mode.value;
@@ -608,6 +626,7 @@ function buildPieceEditor(ctx) {
     stripEl.innerHTML = "";
     const form = PiecesModel.formOf(state.form);
     drawSizeControls();
+    drawMeterAndTempo();
     if (PiecesModel.isSized(form)) {
       stripEl.appendChild(pieceSizedStrip(form, state.bars, state.count));
       return;
