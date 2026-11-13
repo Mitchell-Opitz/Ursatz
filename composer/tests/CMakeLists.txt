@@ -490,6 +490,8 @@ target_compile_definitions(test_form_figure PRIVATE COMPOSER_FIXTURE_DIR="${CMAK
 foreach(mode smoke sweep)
     add_test(NAME test_form_figure_${mode} COMMAND test_form_figure ${mode})
 endforeach()
+# The sweep composed 50 pieces in 22 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_form_figure_sweep PROPERTIES LABELS slow)
 
 add_executable(test_return_heard test_return_heard.c)
 target_link_libraries(test_return_heard PRIVATE ursatz_composer)
