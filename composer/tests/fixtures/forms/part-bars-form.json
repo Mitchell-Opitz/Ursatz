@@ -1,0 +1,13 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "part-bars-form",
+  "label": "Part bars form",
+  "regions": [{"name": "other", "major": [6], "minor": [3]}],
+  "parts": [
+    {"name": "First", "form": "minuet"},
+    {"name": "Trio", "form": "trio", "key": "other", "motive": "new", "bars": 12},
+    {"name": "First again", "again": "First"}
+  ],
+  "sizes": [{"bars": 24, "default": true}, {"bars": 12}]
+}

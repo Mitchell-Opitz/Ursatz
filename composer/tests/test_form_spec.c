@@ -1515,6 +1515,46 @@ static void test_parts(void) {
     free(text);
 }
 
+/* The part member bars (R-495): the size of the part's form it is composed at, and each refusal with its path. */
+static void test_part_bars(void) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/forms/part-bars-form.json", COMPOSER_FIXTURE_DIR);
+    char *text = read_file(path);
+    FormSpec *form = NULL;
+    FormSpecError error;
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->part_count == 3 && form->size_count == 2);
+    assert(form->sizes[0].bars == 24 && form->sizes[1].bars == 12);
+    assert(form->parts[0].bars == 0 && form->parts[1].bars == 12 && form->parts[2].bars == 0);
+    form_spec_destroy(form);
+    static const struct {
+        const char *from;
+        const char *to;
+        const char *path;
+    } REFUSED[] = {
+        {"\"again\": \"First\"", "\"again\": \"First\", \"bars\": 12", "/parts/2/bars"},
+        {"\"bars\": 12}", "\"bars\": 10}", "/parts/1/bars"},
+        {"\"bars\": 12}", "\"bars\": 0}", "/parts/1/bars"},
+        {"\"bars\": 12}", "\"bars\": 12.5}", "/parts/1/bars"},
+        {"\"bars\": 12}", "\"bars\": \"12\"}", "/parts/1/bars"},
+    };
+    for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+        char *document = replaced_in(text, REFUSED[i].from, REFUSED[i].to);
+        refused(document, REFUSED[i].path);
+        free(document);
+    }
+    /* A part with bars needs no size of the compound's bars in its form: trio has no size of 100 bars. */
+    const char *own =
+        "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"x\", \"label\": \"X\", "
+        "\"parts\": [{\"name\": \"Trio\", \"form\": \"trio\", \"bars\": 12}], \"sizes\": [{\"bars\": 100, \"default\": true}]}";
+    assert(form_spec_parse(own, &form, &error) == FORM_SPEC_OK && form->parts[0].bars == 12 && form->sizes[0].bars == 100);
+    form_spec_destroy(form);
+    /* Without bars it does: the same compound with no bars is refused at the part's form. */
+    char *without = replaced_in(own, ", \"bars\": 12}", "}");
+    refused(without, "/parts/0/form");
+    free(without);
+    free(text);
+}
+
 /* The members lead_in and connective: what they read as, and each refusal with the path of the member at fault. */
 static void test_lead_ins(void) {
     char text[4096];
@@ -1929,6 +1969,7 @@ int main(int argc, char **argv) {
     test_lead_ins();
     test_repeats();
     test_parts();
+    test_part_bars();
     test_construction();
     test_modulating_reader();
     test_liquidation_reader();
