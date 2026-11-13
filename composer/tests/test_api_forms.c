@@ -251,7 +251,36 @@ static void test_minuet(void) {
         assert(number(cJSON_GetArrayItem(sections, 0), "bars") == 8);
     }
     assert(strcmp(text(form_named("minuet"), "label"), "Minuet") == 0 && strcmp(text(form_named("trio"), "label"), "Trio") == 0);
+    /* The minuet: 3/4 at 112, A and B repeated, performed; B leads into A return with a connective on some seeds. */
+    const cJSON *minuet = form_named("minuet");
+    const char *const three_four[] = {"3/4"};
+    assert_strings(member(minuet, "meters"), three_four, 1);
+    assert(number(minuet, "tempo") == 112 && flag(minuet, "performed") && cJSON_IsNull(member(minuet, "parts")));
+    const cJSON *groups = member(minuet, "repeats");
+    const char *const first_group[] = {"A"};
+    const char *const second_group[] = {"B", "A return"};
+    assert(cJSON_GetArraySize(groups) == 2);
+    assert_strings(cJSON_GetArrayItem(groups, 0), first_group, 1);
+    assert_strings(cJSON_GetArrayItem(groups, 1), second_group, 2);
+    const cJSON *minuet_sections = member(default_size(minuet), "sections");
+    const cJSON *held = cJSON_GetArrayItem(minuet_sections, 1);
+    assert(flag(held, "leads_in") && strcmp(text(member(held, "connective"), "value"), "sometimes") == 0 &&
+           strcmp(text(member(held, "connective"), "label"), "Sometimes") == 0);
+    assert(!flag(cJSON_GetArrayItem(minuet_sections, 0), "leads_in") && cJSON_IsNull(member(cJSON_GetArrayItem(minuet_sections, 0), "connective")));
+    /* A form with none of them: any meter, no tempo, not performed. */
+    const cJSON *ternary = form_named("ternary");
+    assert(cJSON_GetArraySize(member(ternary, "meters")) == 0 && cJSON_IsNull(member(ternary, "tempo")) &&
+           !flag(ternary, "performed") && cJSON_GetArraySize(member(ternary, "repeats")) == 0 && cJSON_IsNull(member(ternary, "parts")));
     const cJSON *both = form_named("minuet-and-trio");
+    assert(flag(both, "performed") && number(both, "tempo") == 112);
+    const cJSON *parts = member(both, "parts");
+    assert(cJSON_GetArraySize(parts) == 3);
+    const cJSON *trio = cJSON_GetArrayItem(parts, 1);
+    assert(strcmp(text(trio, "name"), "Trio") == 0 && strcmp(text(member(trio, "form"), "value"), "trio") == 0 &&
+           strcmp(text(member(trio, "form"), "label"), "Trio") == 0 && strcmp(text(trio, "key"), "trio") == 0 &&
+           strcmp(text(trio, "motive"), "new") == 0 && cJSON_IsNull(member(trio, "again")) && flag(trio, "repeats"));
+    const cJSON *again = cJSON_GetArrayItem(parts, 2);
+    assert(cJSON_IsNull(member(again, "form")) && strcmp(text(again, "again"), "Minuet") == 0 && !flag(again, "repeats"));
     assert(strcmp(text(both, "label"), "Minuet and trio") == 0);
     assert(cJSON_GetArraySize(member(both, "sizes")) == 2 && number(default_size(both), "bars") == 24 &&
            number(size_with_bars(both, 12), "bars") == 12);

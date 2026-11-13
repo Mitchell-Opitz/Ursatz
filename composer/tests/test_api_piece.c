@@ -1033,6 +1033,16 @@ static void test_ternary_rows(void) {
     assert(row_text(b, "pedal") && strcmp(row_text(b, "pedal"), "dominant") == 0);
     assert(row_text(a, "pedal") == NULL && row_text(back, "pedal") == NULL);
     assert(row_text(a, "changes") == NULL && row_text(b, "changes") == NULL);
+    /* A form that is not performed has no part, no repeat, no upbeat and no connective, and no performed document. */
+    const cJSON *plain_rows = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "versions"), "piece"), "sections");
+    for (int i = 0; i < cJSON_GetArraySize(plain_rows); i++) {
+        const cJSON *row = cJSON_GetArrayItem(plain_rows, i);
+        assert(row_text(row, "part") == NULL && row_text(row, "repeat_of") == NULL);
+        assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(row, "upbeat")));
+        assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(row, "connective")));
+    }
+    assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(document, "performed")));
     const cJSON *changes = cJSON_GetObjectItemCaseSensitive(back, "changes");
     assert(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(changes, "copied")));
     assert(strcmp(row_text(changes, "variation"), "varied") == 0);
@@ -1109,6 +1119,22 @@ static void test_minuet(void) {
     assert(total == 48 * 3);
     assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "key_heard"), "C major") == 0);
     assert(strcmp(row_text(cJSON_GetArrayItem(sections, 2), "heard"), "HC") == 0);
+    /* A written-out repeat names the section it repeats; the first time and a form with no parts name none. */
+    static const char *const REPEAT_OF[] = {NULL, "A", NULL, NULL, "B", "A return"};
+    for (int i = 0; i < 6; i++) {
+        const cJSON *row = cJSON_GetArrayItem(sections, i);
+        const char *repeat_of = row_text(row, "repeat_of");
+        assert(REPEAT_OF[i] ? repeat_of && strcmp(repeat_of, REPEAT_OF[i]) == 0 : repeat_of == NULL);
+        assert(row_text(row, "part") == NULL);
+    }
+    /* B leads into A return: it ends on the dominant, A return begins on the tonic, and its connective is a bool. */
+    const cJSON *held = cJSON_GetArrayItem(sections, 2);
+    const cJSON *upbeat = cJSON_GetObjectItemCaseSensitive(held, "upbeat");
+    assert(cJSON_IsObject(upbeat) && strncmp(row_text(upbeat, "chord"), "V", 1) == 0 && strcmp(row_text(upbeat, "next"), "I") == 0);
+    assert(cJSON_IsBool(cJSON_GetObjectItemCaseSensitive(held, "connective")));
+    assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, 0), "upbeat")));
+    assert(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, 0), "connective")));
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "performed"), "bars")->valuedouble == 48);
     /* The plan is the performed one: the repeats are named, and the form's tempo is the brief's. */
     assert(response.plan_json && strstr(response.plan_json, "A (repeat)") && strstr(response.plan_json, "B (repeat)") &&
            strstr(response.plan_json, "A return (repeat)"));
@@ -1152,6 +1178,14 @@ static void test_minuet_and_trio(void) {
         }
     }
     assert(total == 120 * 3 && trio_rows == 6);
+    assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "performed"), "bars")->valuedouble == 120);
+    /* Each row names its part; Trio B is the trio's third row, the da capo's first row repeats the minuet's A. */
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 0), "part"), "Minuet") == 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 8), "part"), "Trio") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 8), "id"), "B") == 0);
+    assert(strcmp(row_text(cJSON_GetArrayItem(sections, 12), "part"), "Minuet da capo") == 0 &&
+           strcmp(row_text(cJSON_GetArrayItem(sections, 12), "repeat_of"), "A") == 0);
+    assert(row_text(cJSON_GetArrayItem(sections, 6), "repeat_of") == NULL && row_text(cJSON_GetArrayItem(sections, 7), "repeat_of") != NULL);
     const cJSON *trio_a = cJSON_GetArrayItem(sections, 6);
     const char *trio_key = row_text(trio_a, "key_heard");
     assert(trio_key && strcmp(trio_key, "C major") != 0);

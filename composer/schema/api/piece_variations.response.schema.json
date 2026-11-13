@@ -411,7 +411,11 @@
         "motive",
         "key_heard",
         "pedal",
-        "changes"
+        "changes",
+        "part",
+        "repeat_of",
+        "upbeat",
+        "connective"
       ],
       "additionalProperties": false,
       "properties": {
@@ -496,6 +500,53 @@
             }
           ],
           "description": "How a section that returns another differs from it; null for a section that returns none."
+        },
+        "part": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The name of the part of a compound form the section is in (\"Minuet\", \"Trio\"); null for any other form."
+        },
+        "repeat_of": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The name of the performed section this one writes out again (\"A\" for \"A (repeat)\"); null for the first time."
+        },
+        "upbeat": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "chord",
+                "next"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "chord": {
+                  "type": "string",
+                  "description": "The numeral of the section's last chord."
+                },
+                "next": {
+                  "type": "string",
+                  "description": "The numeral of the next section's first chord."
+                }
+              }
+            }
+          ],
+          "description": "For a section that leads into the next (R-486): its last chord and the first chord it leads to; null for any other."
+        },
+        "connective": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "For a section with a connective: whether it was written; null for any other."
         }
       },
       "description": "A section of the size of a form with sizes."
