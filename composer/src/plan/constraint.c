@@ -126,6 +126,7 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
     case PLAN_CONSTRAINT_CONNECTIVE:
+    case PLAN_CONSTRAINT_LIQUIDATION:
         return true;
     case PLAN_CONSTRAINT_MOTIVE_TONES: {
         const PlanMotiveTones *tones = &constraint->params.motive_tones;

@@ -34,7 +34,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 #define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective", "liquidation"};
 static const char *const EXTENSION_KIND_NAMES[] = {"repeat", "stretch", "addition", "evaded"};
 static const char *const CONSTRUCTION_REASON_NAMES[] = {"given", "motive", "length"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
@@ -335,6 +335,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
+    case PLAN_CONSTRAINT_LIQUIDATION:
         break;
     }
     if (!ok) {
@@ -1666,6 +1667,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
+    case PLAN_CONSTRAINT_LIQUIDATION:
         return true;
     }
     return false;

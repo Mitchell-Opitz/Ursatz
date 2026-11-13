@@ -27,8 +27,8 @@ static const RoleRow ROLES[FORM_ROLE_COUNT] = {
     {"theme", "Theme", true},         {"contrast", "Contrast", true},   {"return", "Return", true},
     {"variation", "Variation", true}, {"layer", "Layer", true},         {"pattern", "Pattern", true},
     {"sequence", "Sequence", true},   {"episode", "Episode", true},    {"codetta", "Codetta", true},
-    {"intro", "Intro", false},        {"body", "Loop body", false},     {"turnaround", "Turnaround", false},
-    {"ending", "Ending", false}};
+    {"liquidation", "Liquidation", true}, {"intro", "Intro", false},   {"body", "Loop body", false},
+    {"turnaround", "Turnaround", false},  {"ending", "Ending", false}};
 
 const char *form_role_name(FormRole role) {
     return role >= 0 && role < FORM_ROLE_COUNT ? ROLES[role].name : NULL;

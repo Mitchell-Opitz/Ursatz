@@ -46,7 +46,8 @@ typedef enum {
     PLAN_CONSTRAINT_MOTIVE_TONES,   /* on a motive node: its base harmony and the tone role of each note (R-215) */
     PLAN_CONSTRAINT_PEDAL,          /* on a section node: its presentation is written over a pedal on `degree` (R-446) */
     PLAN_CONSTRAINT_CONSTRUCTION,   /* on a section node: the bars of each idea of its theme, its extensions, and why (R-468) */
-    PLAN_CONSTRAINT_CONNECTIVE      /* on a held section: its last bar ends with a connective into the next section (R-486) */
+    PLAN_CONSTRAINT_CONNECTIVE,     /* on a held section: its last bar ends with a connective into the next section (R-486) */
+    PLAN_CONSTRAINT_LIQUIDATION     /* no parameters: on a section node, the pattern liquidated over a dominant pedal (R-494) */
 } PlanConstraintKind;
 
 typedef enum {
