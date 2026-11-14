@@ -134,10 +134,10 @@ only in the second half of a section (a continuation or a consequent) and at the
 or a compound basic idea never opens a key, and the planner never asks them to.
 
 `piece_plan_cadences` sets each section's cadence in a closing form (binary, rounded binary, ternary, variations): the
-last section PAC; a section that ends in another key PAC; a binary A that stays home HC, since it would otherwise close
+last section PAC; a section that ends in another key PAC, except a transition, which ends on the new key's V in a half cadence (R-503, R-512); a binary A that stays home HC, since it would otherwise close
 in the home key before the piece does; every other section the form's. A form that does not close (`closing` false: loop
 and layered) ends open by design and keeps its document's cadences. `piece_check_cadences` checks the plan against `harmony_cadence_strength`: the last
-cadence is a PAC, so the strongest; a section ending in another key ends in a PAC or IAC; no section before the last
+cadence is a PAC, so the strongest; a section ending in another key ends in a PAC or IAC (a transition: a half cadence); no section before the last
 closes in the home key with a PAC unless it is `closed` (ternary A, rounded binary A, the theme and every variation).
 
 After a complete run, `compose_run` of a plan with several key spans runs `piece_check_keys`: every key is closely
