@@ -297,7 +297,7 @@ static void test_done_when(void) {
     assert(marker_tick("loop.mid", "loopEnd") == (long)(16 * WHOLE_TICKS));
     assert(marker_tick("ending.mid", "loopStart") < 0 && marker_tick("ending.mid", "loopEnd") < 0);
     /* The ending is the version after the body: the default ending of 2 bars, closing in a PAC. */
-    assert(strstr(shown, "\"part\":\"ending\",\"letter\":\"E\",\"start\":\"14/1\",\"beats\":8,\"cadence\":\"PAC\""));
+    assert(strstr(shown, "\"part\":\"ending\",\"function\":null,\"letter\":\"E\",\"start\":\"14/1\",\"beats\":8,\"cadence\":\"PAC\""));
     assert(strstr(shown, "\"mode\":{\"mode\":\"minor\",\"from\":\"style\"}"));
 
     /* The Analyzer check passes on both: five items each (a cadence for each of the four sections, the key). */
@@ -417,7 +417,7 @@ static void test_theme_fill(void) {
     free(cwd);
     write_request(PIECE("theme-fill.json"), "theme_request.json", "@THEME@", absolute);
     char *shown = piece_output("theme_request.json --seed 1 --format json --out theme_loop.json");
-    assert(strstr(shown, "\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"start\":\"2/1\",\"beats\":32,\"cadence\":"));
+    assert(strstr(shown, "\"id\":\"a\",\"part\":\"body\",\"function\":null,\"letter\":\"A\",\"start\":\"2/1\",\"beats\":32,\"cadence\":"));
     assert(strstr(shown, "\"fill\":\"theme\",\"source\":\""));
     free(shown);
 
