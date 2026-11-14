@@ -120,3 +120,9 @@ Each phrase has the PAC and its own chord targets, and its last idea is a melody
 | D minor 6/8 | 10 of 10 |
 
 In all 80 runs K carries the coda function and no archetype, has three phrases of 4, 2 and 2 bars, each phrase ends on V or V7 to a root-position tonic with the dominant and then the tonic in the bass, the last melody note is the tonic, and the plan round-trips through plan JSON byte for byte. `grow_coda_applies` is true on K and false for a section that is no coda, a coda of 4 bars, a coda that follows another region (a start change) and a source of 2 bars. m0 is checked only once it is made: a plan before its motive is composed applies, as the liquidation's does.
+
+## The game loop
+
+A section of a game loop request may be a transition or a coda (R-508, B6): `PieceSection.function`, `PIECE_FUNCTION_TRANSITION` on any body or intro section that is a theme section with a half cadence, `PIECE_FUNCTION_CODA` on the ending's 8 bars with a perfect authentic cadence. The rules are in [piece-structure.md](piece-structure.md). A request without `function` builds the same plan as before. The retransition and the subordinate theme are not offered to a game loop.
+
+`tests/test_piece_structure.c` case `functions`: a loop in C major 4/4 and in A minor 3/4 (intro 4 bars, body A 8 bars, T 8 bars a transition, B 8 bars with a motive of its own, turnaround 4 bars, ending K 8 bars a coda), seeds 1 to 10. The loop composed 10 of 10 and the ending (built from the composed loop, seed + 20) 10 of 10 in both rows. In every run T ends on V or V7 and its `fragment 2` is a liquidation (the motive node its melody span names has `steps` 1 or more and a segment, R-512), and K has three phrases of 4, 2 and 2 bars and no archetype. Each refusal is `PIECE_ERR_BAD_REQUEST`.
