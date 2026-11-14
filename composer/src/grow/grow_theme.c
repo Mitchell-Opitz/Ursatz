@@ -154,6 +154,9 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
             request.motive_ref = constraint->params.motive;
         } else if (constraint->kind == PLAN_CONSTRAINT_PEDAL) {
             request.pedal = true;
+        } else if (constraint->kind == PLAN_CONSTRAINT_SECTION_FUNCTION &&
+                   constraint->params.section_function.function == PLAN_FUNCTION_TRANSITION) {
+            request.transition = true;
         } else if (constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION && !request.has_construction) {
             request.has_construction = true;
             request.construction = constraint->params.construction;
@@ -1303,6 +1306,10 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         request.basic_as_written = shared->basic_as_written;
         request.contrast = shared->contrast;
         request.motif = shared->motif;
+    }
+    if (request.transition) {
+        /* A transition liquidates its continuation (R-504); on the request copy only, so the context stays (R-405). */
+        request.continuation.liquidate = true;
     }
     size_t wanted = shared && shared->candidates > 0 ? shared->candidates : GROW_DEFAULT_CANDIDATES;
     GrowThemeSpec *kept[16];
