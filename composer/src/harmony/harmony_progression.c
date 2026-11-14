@@ -9,8 +9,8 @@
 
 /* Candidates tried per call; ones that repeat an earlier one are dropped. */
 #define CANDIDATE_ATTEMPTS 8
-/* Tb, two PD, D, and the Te and IV of a plagal cadence. */
-#define MAX_BEFORE_FINAL 6
+/* Tb (or a pivot and the new key's V and I), two PD, D, and the Te and IV of a plagal cadence. */
+#define MAX_BEFORE_FINAL 8
 #define MAX_CHORDS (MAX_BEFORE_FINAL + 1)
 /* The most chords a deal holds: a dominant opened on the cadential six-four adds one. */
 #define MAX_DEALT (MAX_CHORDS + 1)
@@ -145,9 +145,10 @@ bool harmony_shape_keeps_in(const PlanHarmonyShape *shape, const size_t *cells, 
  * cells left over are dealt out to the other chords at random. In a plagal
  * cadence the tonic that ends the authentic cadence also lands on a downbeat. A request that opens a new key starts
  * on a pivot chord, the degree given, in the place of the opening tonic; a predominant pivot is the phrase's
- * predominant (only ii may follow IV).
+ * predominant (only ii may follow IV). With `confirm`, a predominant pivot goes on to the new key's V7 and I, which
+ * confirm the key, and the phrase's predominant follows the I as after an opening tonic.
  */
-static bool deal_progression(const PhraseRequest *request, FillRng *rng, int pivot, PhraseProgression *out) {
+static bool deal_progression(const PhraseRequest *request, FillRng *rng, int pivot, bool confirm, PhraseProgression *out) {
     bool half = request->cadence == CADENCE_TYPE_HALF;
     bool plagal = request->cadence == CADENCE_TYPE_PLAGAL;
     /* A cadential progression has no opening tonic. */
@@ -155,7 +156,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     size_t cap = request->has_shape && request->shape.max_cells_per_chord > 0
                      ? (size_t)request->shape.max_cells_per_chord
                      : 0;
-    size_t fixed = (opening_tonic ? 1 : 0) + (half ? 0 : 1) + (plagal ? 2 : 0);
+    size_t fixed = (opening_tonic ? 1 : 0) + (confirm ? 2 : 0) + (half ? 0 : 1) + (plagal ? 2 : 0);
     size_t last_cell = harmony_metre_last_cell(&request->metre);
     size_t last_cells = request->cells - last_cell;
     size_t room = last_cell;
@@ -170,7 +171,10 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     const PredominantRun *runs = request->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_PREDOMINANTS : MAJOR_PREDOMINANTS;
     size_t run_count = request->mode == KEY_STRUCTURE_MODE_MINOR ? sizeof(MINOR_PREDOMINANTS) / sizeof(MINOR_PREDOMINANTS[0])
                                                         : sizeof(MAJOR_PREDOMINANTS) / sizeof(MAJOR_PREDOMINANTS[0]);
-    if (pivot_predominant) {
+    if (confirm && !pivot_predominant) {
+        return false;
+    }
+    if (pivot_predominant && !confirm) {
         runs = AFTER_IV;
         run_count = pivot == 4 && request->mode == KEY_STRUCTURE_MODE_MAJOR ? 1 : 0;
     }
@@ -189,6 +193,10 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     size_t before_count = 0;
     if (opening_tonic) {
         before[before_count++] = opening;
+    }
+    if (confirm) {
+        before[before_count++] = (ChordSpec){5, true};
+        before[before_count++] = (ChordSpec){1, false};
     }
     for (size_t i = 0; run && i < run->count; i++) {
         before[before_count++] = (ChordSpec){run->degrees[i], false};
@@ -271,10 +279,11 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     return true;
 }
 
-static bool build_progression(const PhraseRequest *request, FillRng *rng, int pivot, PhraseProgression *out) {
+static bool build_progression(const PhraseRequest *request, FillRng *rng, int pivot, bool confirm,
+                              PhraseProgression *out) {
     size_t attempts = request->has_given ? GIVEN_DEAL_ATTEMPTS : (request->has_shape ? SHAPED_DEAL_ATTEMPTS : DEAL_ATTEMPTS);
     for (size_t attempt = 0; attempt < attempts; attempt++) {
-        if (deal_progression(request, rng, pivot, out)) {
+        if (deal_progression(request, rng, pivot, confirm, out)) {
             return true;
         }
     }
@@ -310,6 +319,33 @@ void harmony_progression_label(const PhraseProgression *progression, char *label
     }
 }
 
+typedef enum { KEEP_ADDED, KEEP_REPEAT, KEEP_NO_MEMORY, KEEP_FAILED } KeepResult;
+
+/* Adds the progression to the candidates unless an earlier one is the same (its chords are then freed). */
+static KeepResult keep_progression(PhraseProgression *progression, PhraseProgression **kept, size_t *kept_count,
+                                   FillCandidateList *out) {
+    for (size_t i = 0; i < *kept_count; i++) {
+        if (harmony_same_progression(kept[i], progression)) {
+            free(progression->chords);
+            return KEEP_REPEAT;
+        }
+    }
+    PhraseProgression *payload = malloc(sizeof(*payload));
+    if (!payload) {
+        free(progression->chords);
+        return KEEP_NO_MEMORY;
+    }
+    *payload = *progression;
+    char label[FILL_LABEL_MAX];
+    harmony_progression_label(payload, label, sizeof(label));
+    if (!fill_candidates_add(out, label, payload, harmony_progression_destroy)) {
+        /* fill_candidates_add destroyed the payload. */
+        return KEEP_FAILED;
+    }
+    kept[(*kept_count)++] = payload;
+    return KEEP_ADDED;
+}
+
 bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCandidateList *out) {
     PhraseProgression *kept[CANDIDATE_ATTEMPTS];
     size_t kept_count = 0;
@@ -317,34 +353,37 @@ bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCand
         PhraseProgression progression;
         /* The first candidate opens on the best pivot, the others on the other pivots in turn. */
         int pivot = request->pivot ? request->pivot_degrees[attempt % request->pivot_count] : 0;
-        if (!build_progression(request, rng, pivot, &progression)) {
+        if (!build_progression(request, rng, pivot, false, &progression)) {
             /* A pivot that leaves too few chords for the shape is passed over; without a pivot, none fits. */
             if (request->pivot) {
                 continue;
             }
             break;
         }
-        bool repeat = false;
-        for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || harmony_same_progression(kept[i], &progression);
-        }
-        if (repeat) {
-            free(progression.chords);
-            continue;
-        }
-        PhraseProgression *payload = malloc(sizeof(*payload));
-        if (!payload) {
-            free(progression.chords);
-            break;
-        }
-        *payload = progression;
-        char label[FILL_LABEL_MAX];
-        harmony_progression_label(payload, label, sizeof(label));
-        if (!fill_candidates_add(out, label, payload, harmony_progression_destroy)) {
-            /* fill_candidates_add destroyed the payload. */
+        KeepResult kept_result = keep_progression(&progression, kept, &kept_count, out);
+        if (kept_result == KEEP_FAILED) {
             return false;
         }
-        kept[kept_count++] = payload;
+        if (kept_result == KEEP_NO_MEMORY) {
+            return true;
+        }
+    }
+    /* When no pivot opens a phrase that fits (into V of a major key the pivots are its IV and ii, which leave a half
+       cadence two chords at most), the predominant pivots go on to the new key's V7 and I (R-512). */
+    bool confirm = request->pivot && kept_count == 0;
+    for (size_t attempt = 0; confirm && attempt < CANDIDATE_ATTEMPTS; attempt++) {
+        PhraseProgression progression;
+        int pivot = request->pivot_degrees[attempt % request->pivot_count];
+        if (!build_progression(request, rng, pivot, true, &progression)) {
+            continue;
+        }
+        KeepResult kept_result = keep_progression(&progression, kept, &kept_count, out);
+        if (kept_result == KEEP_FAILED) {
+            return false;
+        }
+        if (kept_result == KEEP_NO_MEMORY) {
+            return true;
+        }
     }
     return true;
 }
