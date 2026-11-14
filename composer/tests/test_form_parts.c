@@ -12,7 +12,12 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "support/test_support.h"
 #include "util/plan_util.h"
+
+#ifndef COMPOSER_FIXTURE_DIR
+#error "COMPOSER_FIXTURE_DIR is not defined"
+#endif
 
 /*
  * The parts of larger forms (P51, R-503 to R-509), one case per branch. Each composes a 32-bar form built here in the eight
@@ -29,6 +34,11 @@
  * independent (B3, R-504): the same form with T `independent`. In every composed run T's `basic idea` melody differs from A's,
  * the material holds two invented motives (m0 and `independent T`, each of two notes or more), T's motive reference names the
  * second, and the composed plan round-trips through plan JSON byte for byte, as the plan built before it does.
+ *
+ * retransition (B4, R-505): tests/fixtures/forms/parts-of-forms.json with the coda K replaced by a codetta of 8 (so no coda
+ * is grown yet), 48 bars. In every composed run R carries the retransition function and no archetype, is in the home key,
+ * its bass is the dominant throughout and its last chord V or V7, its `basic idea` asks for a motive with fewer notes than
+ * m0, and its `cadential` melody keeps the intervals of the main theme head (the leading notes of m0) it asks for.
  */
 
 #define SEEDS 10
@@ -68,6 +78,35 @@ static const char *const INDEPENDENT =
 static const char *const TRANSITION =
     "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"transition\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"half\", \"keys\": {\"end\": \"subordinate\"}}";
+
+/* The fixture's text with the coda K replaced by a codetta of 8 (a retransition's case has no coda yet). */
+static char *fixture_without_coda(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
+    char *text = test_read_file(path, NULL);
+    assert(text);
+    static const char *const CODA = "\"role\": \"coda\", \"bars\": 8, \"cadence\": \"perfect-authentic\"";
+    static const char *const CODETTA = "\"role\": \"codetta\", \"bars\": 8, \"beginning\": \"presentation\", "
+                                       "\"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true";
+    char *at = strstr(text, CODA);
+    assert(at);
+    size_t size = strlen(text) + strlen(CODETTA) + 1;
+    char *out = malloc(size);
+    assert(out);
+    snprintf(out, size, "%.*s%s%s", (int)(at - text), text, CODETTA, at + strlen(CODA));
+    free(text);
+    return out;
+}
+
+static FormSpec *parse_form(const char *text) {
+    FormSpec *form = NULL;
+    FormSpecError error;
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "form: %s: %s\n", error.path, error.message);
+        exit(2);
+    }
+    return form;
+}
 
 static FormSpec *load_form(const char *transition) {
     size_t size = strlen(FORM_HEAD) + strlen(transition) + strlen(FORM_TAIL) + 1;
@@ -299,6 +338,111 @@ static void check_independent(const PiecePlan *plan, const Row *row, unsigned lo
     check_round_trip(plan, row, seed);
 }
 
+/* The motive node an idea's melody span asks for (the made motive node the idea's span names), or PLAN_NODE_NONE. */
+static NodeId asked_motive(const PiecePlan *plan, NodeId idea) {
+    LaneSpanId melody;
+    if (idea == PLAN_NODE_NONE || !plan_melody_span_of(plan, idea, &melody)) {
+        return PLAN_NODE_NONE;
+    }
+    const PlanConstraint *span_ref = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
+    return span_ref ? span_ref->params.motive.motive : PLAN_NODE_NONE;
+}
+
+/* The notes of a motive node's own melody span, 0 when it has none. */
+static size_t node_pitches(const PiecePlan *plan, NodeId node, int *out, size_t room) {
+    LaneSpanId melody;
+    if (node == PLAN_NODE_NONE || !plan_melody_span_of(plan, node, &melody)) {
+        return 0;
+    }
+    const PlanLanePayload *payload = plan_lane_span_payload(plan, melody);
+    size_t count = payload->notes.note_count < room ? payload->notes.note_count : room;
+    for (size_t i = 0; i < count; i++) {
+        out[i] = payload->notes.notes[i].midi;
+    }
+    return count;
+}
+
+static bool is_dominant(const char *numeral) {
+    return strcmp(numeral, "V") == 0 || strcmp(numeral, "V7") == 0 || strcmp(numeral, "V6") == 0 ||
+           strcmp(numeral, "V65") == 0 || strcmp(numeral, "V6/5") == 0 || strcmp(numeral, "V4/3") == 0 ||
+           strcmp(numeral, "V43") == 0 || strcmp(numeral, "V4/2") == 0 || strcmp(numeral, "V42") == 0;
+}
+
+/* One composed run of the retransition case: R is sections[4] of A, T, S, C, R, A return, K. */
+static void check_retransition(const PiecePlan *plan, const Row *row, unsigned long seed) {
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    assert(piece_sections(plan, sections) == 7);
+    NodeId r = sections[4];
+    PlanSectionFunction function;
+    assert(plan_section_function_of(plan, r, &function) && function.function == PLAN_FUNCTION_RETRANSITION);
+    assert(!plan_node_find_constraint(plan, r, PLAN_CONSTRAINT_ARCHETYPE));
+    PlanSpan span = plan_node_span(plan, r);
+
+    /* In the home key, from its first bar: every key span that touches R is the home key's. */
+    LaneSpanId ids[32];
+    size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 32);
+    assert(found > 0 && found <= 32);
+    for (size_t i = 0; i < found; i++) {
+        if (analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, ids[i])->key) != row->tonic) {
+            fprintf(stderr, "%s seed %lu: R is not in the home key\n", row->name, seed);
+            assert(false);
+        }
+    }
+
+    /* The bass is the dominant throughout and the last chord is V or V7. */
+    int dominant = (row->tonic + 7) % 12;
+    found = plan_lane_find(plan, PLAN_LANE_BASS, 0, span, ids, 32);
+    assert(found > 0 && found <= 32);
+    for (size_t i = 0; i < found; i++) {
+        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
+        for (size_t n = 0; n < notes->note_count; n++) {
+            if (((notes->notes[n].midi % 12) + 12) % 12 != dominant) {
+                fprintf(stderr, "%s seed %lu: R's bass leaves the dominant\n", row->name, seed);
+                assert(false);
+            }
+        }
+    }
+    found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, 32);
+    assert(found > 0 && found <= 32);
+    LaneSpanId last = ids[0];
+    for (size_t i = 0; i < found; i++) {
+        assert(is_dominant(plan_lane_span_payload(plan, ids[i])->harmony.roman_numeral));
+        if (rational_cmp(plan_lane_span_span(plan, ids[i]).start, plan_lane_span_span(plan, last).start) > 0) {
+            last = ids[i];
+        }
+    }
+    const char *numeral = plan_lane_span_payload(plan, last)->harmony.roman_numeral;
+    assert(strcmp(numeral, "V") == 0 || strcmp(numeral, "V7") == 0);
+
+    /* The basic idea asks for a residue with fewer notes than m0. */
+    NodeId m0;
+    assert(invented_motive(plan, "m0", &m0));
+    int notes[64];
+    size_t m0_count = node_pitches(plan, m0, notes, 64);
+    int residue[64];
+    NodeId basic = find_named(plan, r, "basic idea");
+    size_t residue_count = node_pitches(plan, asked_motive(plan, basic), residue, 64);
+    if (residue_count == 0 || residue_count >= m0_count) {
+        fprintf(stderr, "%s seed %lu: R's basic idea asks for %zu notes, m0 has %zu\n", row->name, seed, residue_count, m0_count);
+    }
+    assert(residue_count > 0 && residue_count < m0_count);
+
+    /* The cadential idea is the main theme head: the head motive it asks for is m0's first notes, and the melody keeps its
+       intervals. */
+    NodeId cadential = find_named(plan, r, "cadential");
+    int head[64];
+    size_t head_count = node_pitches(plan, asked_motive(plan, cadential), head, 64);
+    int heard[64];
+    size_t heard_count = idea_pitches(plan, cadential, heard, 64);
+    assert(head_count >= 2 && head_count <= 3 && head_count <= m0_count && heard_count >= head_count);
+    for (size_t i = 1; i < head_count; i++) {
+        if (head[i] - head[i - 1] != notes[i] - notes[i - 1] || heard[i] - heard[i - 1] != notes[i] - notes[i - 1]) {
+            fprintf(stderr, "%s seed %lu: R's cadential idea leaves m0's head (interval %zu)\n", row->name, seed, i);
+            assert(false);
+        }
+    }
+}
+
 static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long)) {
     int status = 0;
     for (size_t r = 0; r < ROW_COUNT; r++) {
@@ -331,6 +475,11 @@ int main(void) {
     form_spec_destroy(form);
     form = load_form(INDEPENDENT);
     status |= run_rows("independent", form, check_independent);
+    form_spec_destroy(form);
+    char *fixture = fixture_without_coda();
+    form = parse_form(fixture);
+    free(fixture);
+    status |= run_rows("retransition", form, check_retransition);
     form_spec_destroy(form);
     if (status == 0) {
         printf("test_form_parts: ok\n");

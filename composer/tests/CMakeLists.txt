@@ -1071,6 +1071,7 @@ add_test(NAME test_grow_liquidate COMMAND test_grow_liquidate)
 add_executable(test_form_parts test_form_parts.c)
 target_link_libraries(test_form_parts PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_form_parts PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_form_parts PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 target_compile_options(test_form_parts PRIVATE -Wall -Wextra -Wpedantic)
 # The parts of larger forms (R-503 to R-509): a 32-bar form composes in eight rows of key and meter, one case per part.
 add_test(NAME test_form_parts COMMAND test_form_parts)
