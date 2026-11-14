@@ -192,6 +192,7 @@ typedef struct {
     bool has_start_change;         /* the key before the section is another, which the section opens */
     bool pedal;                    /* the presentation is written over a dominant pedal (R-446); kept only in the home key */
     bool transition;               /* the section is a transition (R-504): its continuation liquidates to the upbeat chord */
+    bool independent;              /* its motive is a motive of its own in the material (R-504): not m0, not made from it */
     AnalysisKey from_key;              /* that key; read only with has_start_change */
     bool has_end_change;           /* the second half of the section is in another key, which it opens */
     AnalysisKey end_key;               /* that key; read only with has_end_change */

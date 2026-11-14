@@ -188,6 +188,18 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         }
     }
     request.source = request.has_motive_ref ? request.motive_ref.motive : grow_find_source(plan);
+    /*
+     * A reference with no step to another motive of the material (an independent transition's, R-504) names the motive
+     * the section is made from as it is: the ideas, fragments and liquidation come from it, and m0 is not asked for.
+     */
+    if (request.has_motive_ref && !request.motive_ref.has_step) {
+        NodeId m0 = grow_find_source(plan);
+        if (m0 != PLAN_NODE_NONE && request.source != m0 && plan_node_kind(plan, request.source) == PLAN_NODE_MOTIVE &&
+            plan_node_parent(plan, request.source) == plan_node_parent(plan, m0)) {
+            request.independent = true;
+            request.has_motive_ref = false;
+        }
+    }
     if (request.source == PLAN_NODE_NONE || !grow_cells_per_bar(&request.meter, &request.cells_per_bar) ||
         request.bar.num == 0) {
         return false;
@@ -1073,7 +1085,9 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
     spec->continuation = request->continuation;
     spec->has_construction = request->has_construction;
     spec->basic_as_written = request->basic_as_written;
-    spec->basic_has_chords = shared && shared->basic && shared->basic->chord_count > 0;
+    /* The context's basic motive is m0's: an independent motive's notes are not its. */
+    const GrowContext *basics = request->independent ? NULL : shared;
+    spec->basic_has_chords = basics && basics->basic && basics->basic->chord_count > 0;
     if (!grow_read_motive(plan, request->source, &request->meter, &request->key, &spec->source) ||
         spec->source.note_count < 2) {
         return false;
@@ -1114,8 +1128,8 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
         }
         spec->has_idea_source[place] = true;
     }
-    draw_segments(shared, spec);
-    draw_liquid_base(shared, spec);
+    draw_segments(basics, spec);
+    draw_liquid_base(basics, spec);
     spec->segment_room = material_has_room(plan, request, spec);
     spec->basic_cells = spec->layout.basic_bars * request->cells_per_bar;
     return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec) &&

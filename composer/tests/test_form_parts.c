@@ -9,6 +9,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
+#include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "util/plan_util.h"
@@ -24,6 +25,10 @@
  * liquidation steps on a segment (1 step or more) and its `cadential` idea by at least as many; the codetta's `fragment 2` has
  * none, so only the transition liquidates. The liquidation is read from the plan, not counted in notes: a residue is regrown to
  * fill its bar (grow-continuation.md), so its span often holds as many notes as fragment 1 or more (R-512).
+ *
+ * independent (B3, R-504): the same form with T `independent`. In every composed run T's `basic idea` melody differs from A's,
+ * the material holds two invented motives (m0 and `independent T`, each of two notes or more), T's motive reference names the
+ * second, and the composed plan round-trips through plan JSON byte for byte, as the plan built before it does.
  */
 
 #define SEEDS 10
@@ -57,6 +62,9 @@ static const char *const FORM_TAIL =
     "{\"name\": \"C\", \"letter\": \"C\", \"role\": \"codetta\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"keys\": {\"start\": \"subordinate\","
     " \"end\": \"subordinate\"}}]}]}";
+static const char *const INDEPENDENT =
+    "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"transition\", \"bars\": 8, \"beginning\": \"presentation\","
+    " \"ending\": \"continuation\", \"cadence\": \"half\", \"independent\": true, \"keys\": {\"end\": \"subordinate\"}}";
 static const char *const TRANSITION =
     "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"transition\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"half\", \"keys\": {\"end\": \"subordinate\"}}";
@@ -223,6 +231,74 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
     assert(idea_steps(plan, find_named(plan, sections[3], "fragment 2")) == 0);
 }
 
+/* The pitches of an idea's melody span, in order; the count, 0 when the idea has none. */
+static size_t idea_pitches(const PiecePlan *plan, NodeId idea, int *out, size_t room) {
+    LaneSpanId melody;
+    if (idea == PLAN_NODE_NONE || !plan_melody_span_of(plan, idea, &melody)) {
+        return 0;
+    }
+    const PlanLanePayload *payload = plan_lane_span_payload(plan, melody);
+    size_t count = payload->notes.note_count < room ? payload->notes.note_count : room;
+    for (size_t i = 0; i < count; i++) {
+        out[i] = payload->notes.notes[i].midi;
+    }
+    return count;
+}
+
+/* The motive node of the material with this name, or PLAN_NODE_NONE, and its invented notes (2 or more). */
+static bool invented_motive(const PiecePlan *plan, const char *name, NodeId *node) {
+    *node = find_named(plan, plan_root(plan), name);
+    LaneSpanId melody;
+    return *node != PLAN_NODE_NONE && plan_node_kind(plan, *node) == PLAN_NODE_MOTIVE && plan_melody_span_of(plan, *node, &melody) &&
+           plan_lane_span_payload(plan, melody)->notes.note_count >= 2;
+}
+
+static void check_round_trip(const PiecePlan *plan, const Row *row, unsigned long seed) {
+    PlanJsonError error;
+    char *text = plan_to_json(plan, &error);
+    assert(text);
+    PiecePlan *again = NULL;
+    assert(plan_from_json(text, &again, &error) == PLAN_OK);
+    char *second = plan_to_json(again, &error);
+    assert(second);
+    if (strcmp(text, second) != 0) {
+        fprintf(stderr, "%s seed %lu: the plan does not round-trip\n", row->name, seed);
+        assert(false);
+    }
+    free(second);
+    free(text);
+    plan_destroy(again);
+}
+
+/* One composed run of the independent case. */
+static void check_independent(const PiecePlan *plan, const Row *row, unsigned long seed) {
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    assert(piece_sections(plan, sections) == 4);
+    NodeId own;
+    NodeId m0;
+    assert(invented_motive(plan, "m0", &m0) && invented_motive(plan, "independent T", &own));
+
+    /* T's section asks for the motive of its own, as it is. */
+    const PlanConstraint *ref = plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_MOTIVE_REF);
+    assert(ref && ref->params.motive.motive == own && !ref->params.motive.has_step);
+    assert(!plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_MOTIVE_REF));
+
+    /* T's basic idea is not A's. */
+    int a[64];
+    int t[64];
+    size_t a_count = idea_pitches(plan, find_named(plan, sections[0], "basic idea"), a, 64);
+    size_t t_count = idea_pitches(plan, find_named(plan, sections[1], "basic idea"), t, 64);
+    bool same = a_count == t_count;
+    for (size_t i = 0; same && i < a_count; i++) {
+        same = a[i] == t[i];
+    }
+    if (a_count == 0 || t_count == 0 || same) {
+        fprintf(stderr, "%s seed %lu: T's basic idea is A's (%zu and %zu notes)\n", row->name, seed, a_count, t_count);
+    }
+    assert(a_count > 0 && t_count > 0 && !same);
+    check_round_trip(plan, row, seed);
+}
+
 static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long)) {
     int status = 0;
     for (size_t r = 0; r < ROW_COUNT; r++) {
@@ -252,6 +328,9 @@ static int run_rows(const char *label, const FormSpec *form, void (*check)(const
 int main(void) {
     FormSpec *form = load_form(TRANSITION);
     int status = run_rows("transition", form, check_transition);
+    form_spec_destroy(form);
+    form = load_form(INDEPENDENT);
+    status |= run_rows("independent", form, check_independent);
     form_spec_destroy(form);
     if (status == 0) {
         printf("test_form_parts: ok\n");

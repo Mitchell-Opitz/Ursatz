@@ -1,5 +1,6 @@
 #include <ursatz_composer/piece.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include <ursatz_composer/fill_rng.h>
@@ -265,6 +266,53 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
     return result;
 }
 
+/*
+ * An independent transition's motive (R-504): an open motive node of its own in the material's idea, at `bar_index` bars
+ * from the material's start, named for the section, with the invent stage's melody span as m0's has.
+ */
+static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index,
+                                          const FormSectionSpec *section, NodeId *out) {
+    char name[64];
+    PlanSpan span = {{0, 1}, bar};
+    NodeId node = PLAN_NODE_NONE;
+    LaneSpanId melody;
+    PlanLanePayload payload;
+    PlanNote note;
+    PlanConstraint constraint;
+    snprintf(name, sizeof(name), "independent %s", section->name);
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, bars_of(bar, bar_index), &span.start)));
+    if (result == PIECE_OK) {
+        result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, name, &node));
+    }
+    memset(&payload, 0, sizeof(payload));
+    note.midi = INVENT_PLACEHOLDER;
+    note.spelled = false;
+    note.offset = (Rational){0, 1};
+    note.duration = span.length;
+    payload.notes.notes = &note;
+    payload.notes.note_count = 1;
+    if (result == PIECE_OK) {
+        result = piece_result_of_plan(plan_add_lane_span(plan, node, PLAN_LANE_MELODY, 0, span, &payload, &melody));
+    }
+    if (result == PIECE_OK) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_INVENT_MOTIVE;
+        result = piece_result_of_plan(plan_lane_span_add_constraint(plan, melody, &constraint));
+    }
+    *out = node;
+    return result;
+}
+
+/* An independent transition asks for its own motive as a MOTIVE_REF with no step: the motive itself, not m0 made over. */
+static PieceResult add_independent_ref(PiecePlan *plan, NodeId id, NodeId motive) {
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
+    constraint.params.motive.motive = motive;
+    constraint.params.motive.has_step = false;
+    return piece_add_constraint(plan, id, &constraint);
+}
+
 /* The material section, its phrase and its idea, Realized, with m0 in it; the source node in *out. */
 PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
                                PlanSpan material, Rational bar, NodeId *out) {
@@ -438,13 +486,18 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
     size_t motive_bars = request->motive ? grow_motive_layout_bars(request->motive, bar) : 1;
+    /* An independent transition has a motive of its own, one bar, in the material (R-504). */
+    size_t independent_count = 0;
+    for (size_t i = 0; i < size->section_count; i++) {
+        independent_count += size->sections[i].independent ? 1 : 0;
+    }
 
     PiecePlan *plan = plan_create();
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
     PlanSpan piece = {{0, 1}, bars_of(bar, size->bars)};
-    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies)};
+    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies + independent_count)};
     PlanSpan extent = {{0, 1}, {0, 1}};
     PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(piece.length, material.length, &extent.length)));
     NodeId form_id = PLAN_NODE_NONE;
@@ -481,8 +534,19 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     if (result == PIECE_OK) {
         result = piece_add_material(plan, request->motive, request->source, form_id, material, bar, &source);
     }
+    /* Each independent transition's motive, at the first bars after m0's layout and the extensions; its section names it. */
+    NodeId independent[FORM_SPEC_MAX_SECTIONS];
+    size_t independent_at = motive_bars + extension_bars;
+    for (size_t i = 0; i < size->section_count; i++) {
+        independent[i] = PLAN_NODE_NONE;
+        if (result == PIECE_OK && size->sections[i].independent) {
+            result = add_independent_motive(plan, plan_node_parent(plan, source), material, bar, independent_at++,
+                                            &size->sections[i], &independent[i]);
+        }
+    }
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
-        result = add_section_motive(plan, size, i, sections[i], source);
+        result = independent[i] != PLAN_NODE_NONE ? add_independent_ref(plan, sections[i], independent[i])
+                                                  : add_section_motive(plan, size, i, sections[i], source);
     }
     if (result == PIECE_OK && request->has_style) {
         PlanConstraint style;

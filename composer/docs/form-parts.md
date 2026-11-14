@@ -8,7 +8,7 @@ A form document names a part as the role of a section (`transition`, `subordinat
 
 | Part | In the form document | In the plan | Grown |
 | --- | --- | --- | --- |
-| Transition | A theme-like section: `beginning` `presentation` or `compound_basic_idea`, `ending` `continuation`, `cadence` `half`; 8 bars when it modulates (`keys.end` is not its start), else 4 or 8, or 3 to 16 with a `construction`. No `returns`, `variation`, `figure`, `mode` or `pedal`. `independent` (default false) gives it a motive of its own (R-504), so it has no `motive`. | `archetype`, `theme_pairing`, `section_function` (`transition`) | As a theme, with its continuation liquidated to the upbeat chord (below); B3 gives an independent one its own motive |
+| Transition | A theme-like section: `beginning` `presentation` or `compound_basic_idea`, `ending` `continuation`, `cadence` `half`; 8 bars when it modulates (`keys.end` is not its start), else 4 or 8, or 3 to 16 with a `construction`. No `returns`, `variation`, `figure`, `mode` or `pedal`. `independent` (default false) gives it a motive of its own (R-504), so it has no `motive`. | `archetype`, `theme_pairing`, `section_function` (`transition`) | As a theme, with its continuation liquidated to the upbeat chord (below); an independent one is made from a motive of its own (below) |
 | Subordinate theme | Any pairing, cadence, keys and construction a theme-like section takes. `lyric` (default false): a period whose motive is m0 augmented (R-506); a lyric theme has no `motive` or `returns`, and the reader sets its motive to `augment` with an open ratio. | `archetype`, `theme_pairing`, `section_function` (`subordinate`), and for a lyric theme a `motive_ref` of `augment` | As a theme today; the open ratio is drawn as any section's motive is (the first usual ratio the meter writes, else an interval change) |
 | Retransition | 4 bars, `cadence` `half`, nothing else: no `beginning` or `ending` and none of the members of a theme. | `section_function` (`retransition`), no `archetype` or `theme_pairing` | By its own operator in B4 (R-505); until then a plan with one stops at the structure stage |
 | Coda | 8 bars, `cadence` `perfect-authentic`, nothing else. | `section_function` (`coda`), no `archetype` or `theme_pairing` | By its own operator in B5 (R-509); until then a plan with one stops at the structure stage |
@@ -29,6 +29,10 @@ A transition that modulates is 8 bars and its second half is in the new key (`ke
 
 Only the liquidation is the transition's own: the pivot rule serves any half-cadence phrase that opens a key.
 
+### An independent transition
+
+`"independent": true` makes the transition from a motive of its own, invented as m0 is (R-504); only such a section changes. `form_build_plan` holds one bar more of material for each and adds an open motive node `independent <section name>` to the material's idea, one bar at the first bar after m0's layout and the extensions, with an `INVENT_MOTIVE` melody span that the invent stage writes as it writes m0. The section's `MOTIVE_REF` names that node with no step (it is not m0 made over). Grow-theme reads a reference with no step to a motive of the material other than m0 as the motive the section is made from as it is: the ideas, the fragments and the liquidation come from it, and the compose run's basic motive, which is m0's, is not used for its chords, features or segments. A form with no independent transition builds the plan it built before.
+
 ### What was measured
 
 `tests/test_form_parts.c` case `transition` (`slow`, about 25 s): a 32-bar form built in the test (A theme 8 bars, PAC, closed; T transition 8 bars, HC, `keys.end` `subordinate`; S subordinate 8 bars, antecedent and consequent, PAC, in `subordinate`; C codetta 8 bars, presentation and continuation, PAC, in `subordinate`; region major [5], minor [3]), `modulate` on, seeds 1 to 10, eight rows. At least 9 of 10 must compose in each row.
@@ -46,3 +50,19 @@ Only the liquidation is the transition's own: the pivot rule serves any half-cad
 
 In all 80 runs T carries the transition function, its second half is in the region's key (a key lane span starts at the half: V in major, III in minor), its last chord is V or V7, its `fragment 2` idea is a liquidation by 1 step or more on a segment, its cadential idea has at least as many steps, and the codetta's `fragment 2` has none. The liquidation is read from the plan, not counted in notes: a residue is regrown to fill its bar, so `fragment 2` often holds as many melody notes as `fragment 1` or more. Without the pivot rule the four major rows composed 0 of 10 (stuck at harmony); `tests/test_harmony_phrase.c` `test_pivot_into_the_dominant` holds the rule on its own.
 
+### The independent transition
+
+`tests/test_form_parts.c` case `independent`: the same 32-bar form with T `independent`, `modulate` on, seeds 1 to 10, eight rows. At least 9 of 10 must compose in each row.
+
+| Row | Composed |
+|---|---|
+| C major 4/4 | 10 of 10 |
+| A minor 4/4 | 10 of 10 |
+| C major 3/4 | 10 of 10 |
+| A minor 3/4 | 10 of 10 |
+| G major 2/4 | 10 of 10 |
+| D minor 2/4 | 10 of 10 |
+| C major 6/8 | 10 of 10 |
+| D minor 6/8 | 10 of 10 |
+
+In all 80 runs the material holds two invented motives (m0 and `independent T`, two notes or more each), T's `MOTIVE_REF` names the second with no step, T's `basic idea` melody differs from A's, and the composed plan round-trips through plan JSON byte for byte.
