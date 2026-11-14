@@ -1306,6 +1306,10 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
         if (!is_string_or_null(section, "cadence") || (cJSON_IsString(cadence) && strlen(cadence->valuestring) > PIECE_WORD_MAX)) {
             return invalid_body(error, error_size, "a section cadence must be null or text");
         }
+        const cJSON *function = cJSON_GetObjectItemCaseSensitive(section, "function");
+        if (!is_string_or_null(section, "function") || (cJSON_IsString(function) && strlen(function->valuestring) > PIECE_WORD_MAX)) {
+            return invalid_body(error, error_size, "a section function must be null or text");
+        }
         UrsatzGuiMaterialResult filled = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(section, "fill"), error, error_size);
         if (filled != URSATZ_GUI_MATERIAL_OK) {
             return filled;

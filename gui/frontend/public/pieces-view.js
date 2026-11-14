@@ -776,6 +776,17 @@ function buildPieceEditor(ctx) {
       cadence.options[0].textContent = shown ? `Default (${shown})` : "Default";
     };
     showDefaultCadence();
+    /* The Function select (P51, R-510) is there only for a part with a function to offer: a body section may be a transition,
+     * the ending a coda. */
+    const functions = PiecesModel.functionsFor(section.part);
+    const functionSelect =
+      functions.length > 0
+        ? themeField(
+            controls,
+            "Function",
+            themeSelect([{ value: "", label: "None" }, ...functions.map((entry) => ({ value: entry.name, label: entry.label }))], section.function || ""),
+          )
+        : null;
     let drawInto = () => {};
     function syncSection() {
       section.letter = letter.value;
@@ -785,6 +796,7 @@ function buildPieceEditor(ctx) {
       lengthEl.textContent = PiecesModel.beatsLabel(section.beats, state.meter);
       section.pickup = pickup.value.trim() === "" ? "0" : pickup.value;
       section.cadence = cadence.value || null;
+      section.function = functionSelect ? functionSelect.value : "";
       showDefaultCadence();
       drawStrip();
       drawInto();
@@ -796,7 +808,7 @@ function buildPieceEditor(ctx) {
       extra.value = String(beats % per);
       syncSection();
     }
-    for (const control of [letter, bars, extra, pickup, cadence]) {
+    for (const control of [letter, bars, extra, pickup, cadence, ...(functionSelect ? [functionSelect] : [])]) {
       control.addEventListener("input", syncSection);
     }
     controls.append(lengthEl, list);
