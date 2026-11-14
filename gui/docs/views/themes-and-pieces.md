@@ -140,6 +140,8 @@ builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
   when the structure changes; the GUI computes none, so the label reads plain Default until the reply is in), Move left and Move right
   within the part, and Remove section. A piece has at least one section in the
   loop body (the Composer holds the largest number of sections and beats).
+- Function (P51, R-510): None or a name `piece_functions` lists for the section's part (a body or intro section a
+  Transition, the ending a Coda); the select is there only for a part with one, and None saves no `function` member.
 - Fill: Empty, Motif, Theme or Progression. Any fill may be left empty and
   saved; one that names nothing is saved as empty. A motif fill has a motif
   picker and, at 4 or 8 whole bars without a pickup, into sentence, period or
@@ -173,7 +175,8 @@ role, letter, start, length, cadence, heard, the key planned (Key, for a form th
 section it returns and how it differs, in the Composer's own text; either table gains a Figure column (P50, the row's
 `figure.text`: the kind, rhythm and harmony of a figured variation and the skeleton tones it is built on) before the
 Construction column when a section has a figure, and a Construction column, the
-Composer's `construction_text`, when a section has one), the
+Composer's `construction_text`, when a section has one; a Function column (P51, the row's `function.text`: a transition,
+retransition, subordinate theme or coda) after Figure, or after Fill in a loop table, when a section has one), the
 score, the seam rules that held, the Analyzer check and the style
 distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
 per version (`<name>.musicxml`), with playback served by the
@@ -189,7 +192,7 @@ construction in its block (`4+6`; the scherzo's roles Pattern, Sequence, Liquida
 figure (`figured-variations`) gains a Figure column from the forms entry's `figure` and `mode`: `neighbor tones in
 eighths`, `scale line in sixteenths, reharmonized, root changed at bar 3`, `broken chord in sixteenths, climax`, with
 `, parallel mode` for the variation in the parallel key; a section with none leaves it empty, and a form with none has no
-column. The climax is a request the Composer may not be able to honor, so the label does not say the variation is audibly higher.
+column. The Role column adds ` (independent)` for an independent transition and ` (lyric)` for a lyric theme. The climax is a request the Composer may not be able to honor, so the label does not say the variation is audibly higher.
 
 On the current version of a performed form no Regenerate or Variations is offered: the page says they are Later (the
 Composer refuses them for a form written out in order, R-485).
