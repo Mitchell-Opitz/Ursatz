@@ -23,6 +23,7 @@
  *                               a section's construction (B6 of P47): "auto", the ideas and extensions, the refusals;
  *                               a section's figure (B1 of P50, tests/fixtures/forms/figure-form.json): what it reads as, each refusal;
  *                               a section in the parallel mode (B3 of P50, tests/fixtures/forms/parallel-form.json): what it reads as, each refusal;
+ *                               the parts of larger forms (B1 of P51, tests/fixtures/forms/parts-of-forms.json): the four roles, independent and lyric, each refusal, the plan's section functions;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
@@ -1686,6 +1687,200 @@ static void test_liquidation_reader(void) {
     }
 }
 
+/* ------------------------------------------------------------- the parts of larger forms (R-503) */
+
+/* A document of one size whose one section X is `role` of `bars` bars with `extra` members after them (a leading comma). */
+static void part_document(char *out, size_t cap, const char *role, size_t bars, const char *extra) {
+    char sizes[2048];
+    snprintf(sizes, sizeof(sizes),
+             "{\"bars\": %zu, \"default\": true, \"sections\": [{\"name\": \"X\", \"letter\": \"X\", \"role\": \"%s\", "
+             "\"bars\": %zu%s}]}",
+             bars, role, bars, extra);
+    document(out, cap, ", \"regions\": [{\"name\": \"away\", \"major\": [5], \"minor\": [3]}], \"modulates\": true", sizes);
+}
+
+/* tests/fixtures/forms/parts-of-forms.json: the four roles read with their members; each refusal of the reader at its path; the
+   plan the form builds carries the section function of each part and no archetype on a retransition or a coda. */
+static void test_parts_reader(void) {
+#define TRANSITION_OK ", \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"half\""
+#define SUBORDINATE_OK ", \"beginning\": \"antecedent\", \"ending\": \"consequent\", \"cadence\": \"perfect-authentic\""
+    static const struct {
+        const char *role;
+        const char *label;
+    } ROLES_NEW[] = {{"transition", "Transition"},
+                     {"retransition", "Retransition"},
+                     {"subordinate", "Subordinate theme"},
+                     {"coda", "Coda"}};
+    static const struct {
+        const char *role;
+        size_t bars;
+        const char *extra;
+        const char *path;
+    } REFUSED[] = {
+        /* a retransition: no beginning or ending, none of the members of a theme, 4 bars, a half cadence */
+        {"retransition", 4, ", \"cadence\": \"half\", \"beginning\": \"presentation\"", "/sizes/0/sections/0/beginning"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"ending\": \"continuation\"", "/sizes/0/sections/0/ending"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"construction\": \"auto\"", "/sizes/0/sections/0/construction"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"motive\": \"invert tonal=1\"", "/sizes/0/sections/0/motive"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"returns\": \"X\"", "/sizes/0/sections/0/returns"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"variation\": \"exact\"", "/sizes/0/sections/0/variation"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"pedal\": \"dominant\"", "/sizes/0/sections/0/pedal"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"leads_in\": true", "/sizes/0/sections/0/leads_in"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"connective\": \"always\"", "/sizes/0/sections/0/connective"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"layers\": \"all\"", "/sizes/0/sections/0/layers"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}", "/sizes/0/sections/0/figure"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"mode\": \"parallel\"", "/sizes/0/sections/0/mode"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"keys\": {\"end\": \"away\"}", "/sizes/0/sections/0/keys"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"independent\": true", "/sizes/0/sections/0/independent"},
+        {"retransition", 4, ", \"cadence\": \"half\", \"lyric\": true", "/sizes/0/sections/0/lyric"},
+        {"retransition", 8, ", \"cadence\": \"half\"", "/sizes/0/sections/0/bars"},
+        {"retransition", 4, ", \"cadence\": \"perfect-authentic\"", "/sizes/0/sections/0/cadence"},
+        /* a coda: the same, 8 bars, a perfect authentic cadence */
+        {"coda", 8, ", \"cadence\": \"perfect-authentic\", \"beginning\": \"presentation\"", "/sizes/0/sections/0/beginning"},
+        {"coda", 8, ", \"cadence\": \"perfect-authentic\", \"ending\": \"continuation\"", "/sizes/0/sections/0/ending"},
+        {"coda", 8, ", \"cadence\": \"perfect-authentic\", \"construction\": \"auto\"", "/sizes/0/sections/0/construction"},
+        {"coda", 8, ", \"cadence\": \"perfect-authentic\", \"motive\": \"invert tonal=1\"", "/sizes/0/sections/0/motive"},
+        {"coda", 8, ", \"cadence\": \"perfect-authentic\", \"keys\": {\"end\": \"away\"}", "/sizes/0/sections/0/keys"},
+        {"coda", 8, ", \"cadence\": \"perfect-authentic\", \"independent\": true", "/sizes/0/sections/0/independent"},
+        {"coda", 8, ", \"cadence\": \"perfect-authentic\", \"lyric\": true", "/sizes/0/sections/0/lyric"},
+        {"coda", 4, ", \"cadence\": \"perfect-authentic\"", "/sizes/0/sections/0/bars"},
+        {"coda", 8, ", \"cadence\": \"half\"", "/sizes/0/sections/0/cadence"},
+        /* a transition: a presentation or a compound basic idea, a continuation, a half cadence */
+        {"transition", 8, ", \"beginning\": \"antecedent\", \"ending\": \"continuation\", \"cadence\": \"half\"", "/sizes/0/sections/0/beginning"},
+        {"transition", 8, ", \"beginning\": \"presentation\", \"ending\": \"consequent\", \"cadence\": \"half\"", "/sizes/0/sections/0/ending"},
+        {"transition", 8, ", \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\"", "/sizes/0/sections/0/cadence"},
+        {"transition", 8, TRANSITION_OK ", \"returns\": \"X\"", "/sizes/0/sections/0/returns"},
+        {"transition", 8, TRANSITION_OK ", \"variation\": \"exact\"", "/sizes/0/sections/0/variation"},
+        {"transition", 8, TRANSITION_OK ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}", "/sizes/0/sections/0/figure"},
+        {"transition", 8, TRANSITION_OK ", \"mode\": \"parallel\"", "/sizes/0/sections/0/mode"},
+        {"transition", 8, TRANSITION_OK ", \"pedal\": \"dominant\"", "/sizes/0/sections/0/pedal"},
+        {"transition", 4, TRANSITION_OK ", \"keys\": {\"end\": \"away\"}", "/sizes/0/sections/0/bars"},
+        {"transition", 8, TRANSITION_OK ", \"independent\": true, \"motive\": \"invert tonal=1\"", "/sizes/0/sections/0/motive"},
+        {"transition", 8, TRANSITION_OK ", \"independent\": 1", "/sizes/0/sections/0/independent"},
+        {"transition", 8, TRANSITION_OK ", \"lyric\": true", "/sizes/0/sections/0/lyric"},
+        /* only a transition is independent, only a subordinate theme is lyric */
+        {"theme", 8, SUBORDINATE_OK ", \"independent\": true", "/sizes/0/sections/0/independent"},
+        {"theme", 8, SUBORDINATE_OK ", \"lyric\": true", "/sizes/0/sections/0/lyric"},
+        {"subordinate", 8, SUBORDINATE_OK ", \"independent\": true", "/sizes/0/sections/0/independent"},
+        /* a lyric theme: no motive, no returns, a period */
+        {"subordinate", 8, SUBORDINATE_OK ", \"lyric\": true, \"motive\": \"invert tonal=1\"", "/sizes/0/sections/0/motive"},
+        {"subordinate", 8, SUBORDINATE_OK ", \"lyric\": true, \"returns\": \"X\"", "/sizes/0/sections/0/returns"},
+        {"subordinate", 8, ", \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"half\", \"lyric\": true", "/sizes/0/sections/0/beginning"},
+        {"subordinate", 8, ", \"beginning\": \"antecedent\", \"ending\": \"cadential\", \"cadence\": \"half\", \"lyric\": true", "/sizes/0/sections/0/beginning"},
+    };
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+
+    /* The roles: a theme-like row each, with its name and label. */
+    for (size_t i = 0; i < 4; i++) {
+        FormRole role;
+        assert(form_role_find(ROLES_NEW[i].role, &role) && form_role_is_theme(role));
+        assert(strcmp(form_role_name(role), ROLES_NEW[i].role) == 0 && strcmp(form_role_label(role), ROLES_NEW[i].label) == 0);
+    }
+    assert(FORM_ROLE_COUNT == 18);
+
+    /* One section of each new role parses with its members set. */
+    part_document(text, sizeof(text), "transition", 8, TRANSITION_OK ", \"independent\": true");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    assert(form->sizes[0].sections[0].role == FORM_ROLE_TRANSITION && form->sizes[0].sections[0].independent &&
+           !form->sizes[0].sections[0].lyric && !form->sizes[0].sections[0].has_motive);
+    form_spec_destroy(form);
+    part_document(text, sizeof(text), "transition", 4,
+                  ", \"beginning\": \"compound_basic_idea\", \"ending\": \"continuation\", \"cadence\": \"half\"");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && !form->sizes[0].sections[0].independent &&
+           form->sizes[0].sections[0].pairing.beginning == PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA);
+    form_spec_destroy(form);
+    part_document(text, sizeof(text), "transition", 8, TRANSITION_OK ", \"keys\": {\"end\": \"away\"}");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].key_end == 0);
+    form_spec_destroy(form);
+    part_document(text, sizeof(text), "retransition", 4, ", \"cadence\": \"half\"");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    assert(form->sizes[0].sections[0].role == FORM_ROLE_RETRANSITION && form->sizes[0].sections[0].bars == 4 &&
+           form->sizes[0].sections[0].pairing.beginning == 0 && form->sizes[0].sections[0].pairing.ending == 0 &&
+           form->sizes[0].sections[0].cadence == CADENCE_TYPE_HALF);
+    form_spec_destroy(form);
+    part_document(text, sizeof(text), "subordinate", 8, SUBORDINATE_OK ", \"lyric\": true");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    assert(form->sizes[0].sections[0].role == FORM_ROLE_SUBORDINATE && form->sizes[0].sections[0].lyric &&
+           form->sizes[0].sections[0].has_motive && form->sizes[0].sections[0].motive.kind == MOTIVE_RELATION_AUGMENT &&
+           form->sizes[0].sections[0].motive.value[0] == 0);
+    form_spec_destroy(form);
+    part_document(text, sizeof(text), "subordinate", 8, ", \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"half\"");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && !form->sizes[0].sections[0].lyric &&
+           !form->sizes[0].sections[0].has_motive);
+    form_spec_destroy(form);
+    part_document(text, sizeof(text), "coda", 8, ", \"cadence\": \"perfect-authentic\"");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    assert(form->sizes[0].sections[0].role == FORM_ROLE_CODA && form->sizes[0].sections[0].bars == 8 &&
+           form->sizes[0].sections[0].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    form_spec_destroy(form);
+
+    /* Each refusal at its path. */
+    for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+        part_document(text, sizeof(text), REFUSED[i].role, REFUSED[i].bars, REFUSED[i].extra);
+        refused(text, REFUSED[i].path);
+    }
+
+    /* The form of the four parts: 48 bars in C major 4/4; T, S, R and K carry their function, R and K have no archetype. */
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
+    char *fixture = read_file(path);
+    assert(form_spec_parse(fixture, &form, &error) == FORM_SPEC_OK && form);
+    free(fixture);
+    assert(strcmp(form->name, "parts-of-forms") == 0 && form->size_count == 1 && form->sizes[0].bars == 48 &&
+           form->sizes[0].section_count == 7 && form->modulates);
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = form->name;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    PiecePlan *plan = NULL;
+    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+    static const struct {
+        const char *name;
+        PlanFunctionKind function;
+        bool independent;
+        bool lyric;
+        bool archetype;
+    } PARTS[] = {{"T", PLAN_FUNCTION_TRANSITION, false, false, true},
+                 {"S", PLAN_FUNCTION_SUBORDINATE, false, true, true},
+                 {"R", PLAN_FUNCTION_RETRANSITION, false, false, false},
+                 {"K", PLAN_FUNCTION_CODA, false, false, false}};
+    size_t found = 0;
+    size_t with_function = 0;
+    for (size_t i = 0; i < plan_node_child_count(plan, plan_root(plan)); i++) {
+        NodeId child = plan_node_child_at(plan, plan_root(plan), i);
+        const char *name = plan_node_name(plan, child);
+        const PlanConstraint *function = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SECTION_FUNCTION);
+        with_function += function != NULL;
+        for (size_t p = 0; p < sizeof(PARTS) / sizeof(PARTS[0]); p++) {
+            if (plan_node_kind(plan, child) != PLAN_NODE_SECTION || !name || strcmp(name, PARTS[p].name) != 0) {
+                continue;
+            }
+            found++;
+            assert(function && function->params.section_function.function == PARTS[p].function &&
+                   function->params.section_function.independent == PARTS[p].independent &&
+                   function->params.section_function.lyric == PARTS[p].lyric);
+            assert((plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_ARCHETYPE) != NULL) == PARTS[p].archetype);
+            assert((plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_THEME_PAIRING) != NULL) == PARTS[p].archetype);
+            const PlanConstraint *motive = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MOTIVE_REF);
+            if (PARTS[p].lyric) {
+                assert(motive && motive->params.motive.has_step && motive->params.motive.step.kind == MOTIVE_RELATION_AUGMENT &&
+                       motive->params.motive.step.value[0] == 0);
+            } else {
+                assert(!motive);
+            }
+        }
+    }
+    assert(found == 4 && with_function == 4);
+    plan_destroy(plan);
+    form_spec_destroy(form);
+#undef TRANSITION_OK
+#undef SUBORDINATE_OK
+}
+
 /* ------------------------------------------------------------- a section that leads into the next (R-486) */
 
 #define LEAD_SEEDS 10
@@ -2305,6 +2500,7 @@ int main(int argc, char **argv) {
     test_modulating_reader();
     test_liquidation_reader();
     test_figure_reader();
+    test_parts_reader();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }
