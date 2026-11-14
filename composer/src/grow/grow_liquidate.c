@@ -25,7 +25,7 @@
  * A retransition (R-505) is the same four bars and five ideas laid out the other way, for the section that leads home from
  * another region: the basic idea is the residue (m0 liquidated), the repetition the residue one note further, the first
  * fragment a scale line of eighths filling a bar, the second a broken chord of V in half a bar, and the cadential idea the
- * main theme's head (m0's leading notes that fit half a bar) on the half cadence. It may open the home key from any region:
+ * main theme's head (m0's leading notes that fit half a bar, written as they are) on the half cadence. It may open the home key from any region:
  * the prolongation of V over the pedal is the arrival. All five ideas have a motive node in the material.
  */
 
@@ -586,6 +586,10 @@ PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLi
             /* The scale line is written as it is: over the pedal its notes are not all tones of V, which the melody stage
                would move to chord tones. */
             result = grow_add_melody_written(&build, idea, &ref, &spec->scale);
+        } else if (result == PLAN_OK && retransition && i + 1 == IDEAS) {
+            /* The head is written as it is too: a melody target is made again under the cadence's rules and would not keep
+               m0's intervals, which are the hint of the main theme. */
+            result = grow_add_melody_written(&build, idea, &ref, &spec->head);
         } else if (result == PLAN_OK) {
             result = grow_add_melody_target(&build, idea, &ref, i + 1 == IDEAS ? &build.cadence : NULL);
         }
