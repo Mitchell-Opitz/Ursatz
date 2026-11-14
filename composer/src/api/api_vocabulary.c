@@ -271,13 +271,60 @@ static bool add_pickups(cJSON *root) {
     return pickups != NULL;
 }
 
+/* The functions a game loop section can be (R-510): the name a request gives, its label and the parts it can be in. */
+typedef struct {
+    PieceFunction function;
+    const char *label;
+    const PiecePart *parts;
+    size_t part_count;
+} FunctionChoice;
+
+static const PiecePart TRANSITION_PARTS[] = {PIECE_PART_INTRO, PIECE_PART_BODY};
+static const PiecePart CODA_PARTS[] = {PIECE_PART_ENDING};
+static const FunctionChoice FUNCTION_CHOICES[] = {
+    {PIECE_FUNCTION_TRANSITION, "Transition", TRANSITION_PARTS, 2},
+    {PIECE_FUNCTION_CODA, "Coda", CODA_PARTS, 1},
+};
+
+static bool add_piece_functions(cJSON *root) {
+    cJSON *list = add_list(root, "piece_functions");
+    for (size_t i = 0; list && i < sizeof FUNCTION_CHOICES / sizeof *FUNCTION_CHOICES; i++) {
+        const FunctionChoice *choice = &FUNCTION_CHOICES[i];
+        cJSON *entry = cJSON_CreateObject();
+        cJSON *parts = cJSON_CreateArray();
+        bool ok = entry && parts && cJSON_AddStringToObject(entry, "name", piece_function_name(choice->function)) &&
+                  cJSON_AddStringToObject(entry, "label", choice->label);
+        for (size_t p = 0; ok && p < choice->part_count; p++) {
+            cJSON *name = cJSON_CreateString(piece_part_name(choice->parts[p]));
+            ok = name && cJSON_AddItemToArray(parts, name);
+            if (!ok) {
+                cJSON_Delete(name);
+            }
+        }
+        ok = ok && cJSON_AddItemToObject(entry, "parts", parts);
+        if (ok) {
+            parts = NULL;
+            ok = cJSON_AddItemToArray(list, entry);
+        }
+        if (!ok) {
+            cJSON_Delete(parts);
+            cJSON_Delete(entry);
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 static bool add_library_lists(cJSON *root) {
     cJSON *forms = add_list(root, "motive_forms");
     cJSON *strategies = add_list(root, "random_motive_strategies");
     cJSON *roles = add_list(root, "roles");
     cJSON *parts = add_list(root, "piece_parts");
+    if (!forms || !strategies || !roles || !parts || !add_piece_functions(root)) {
+        return false;
+    }
     cJSON *fills = add_list(root, "fill_kinds");
-    if (!forms || !strategies || !roles || !parts || !fills) {
+    if (!fills) {
         return false;
     }
     for (int form = MOTIVE_SKETCH_FORM_FULL; form <= MOTIVE_SKETCH_FORM_CONTOUR; form++) {

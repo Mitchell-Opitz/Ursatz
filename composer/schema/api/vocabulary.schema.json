@@ -28,6 +28,7 @@
     "style_weights",
     "accompaniment_patterns",
     "piece_parts",
+    "piece_functions",
     "piece_intos",
     "fill_kinds",
     "pitch_class_names",
@@ -200,6 +201,43 @@
       "items": {
         "$ref": "#/$defs/choice"
       }
+    },
+    "piece_functions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "parts"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "enum": [
+              "transition",
+              "coda"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "intro",
+                "body",
+                "turnaround",
+                "ending"
+              ]
+            }
+          }
+        }
+      },
+      "description": "The functions a game loop section can be (R-510) and the parts each can be in."
     },
     "piece_intos": {
       "type": "array",

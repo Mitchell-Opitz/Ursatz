@@ -243,6 +243,7 @@ static ComposerStatus read_section(PieceSpec *request, size_t index, const cJSON
     const char *letter = NULL;
     const char *cadence = NULL;
     const char *pickup = NULL;
+    const char *function = NULL;
     char pickup_text[32];
     char path[128];
     if (!cJSON_IsObject(item)) {
@@ -251,6 +252,7 @@ static ComposerStatus read_section(PieceSpec *request, size_t index, const cJSON
     if (!api_request_string(item, base, "id", true, &id, error) || !api_request_string(item, base, "part", true, &part, error) ||
         !api_request_string(item, base, "letter", false, &letter, error) ||
         !api_request_string(item, base, "cadence", false, &cadence, error) ||
+        !api_request_string(item, base, "function", false, &function, error) ||
         !api_request_pickup(item, base, pickup_text, sizeof(pickup_text), &pickup, error)) {
         return COMPOSER_ERR_REQUEST;
     }
@@ -264,6 +266,12 @@ static ComposerStatus read_section(PieceSpec *request, size_t index, const cJSON
         snprintf(path, sizeof path, "%s/part", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the part must be intro, body, turnaround or ending, not '%s'",
                         id, part);
+    }
+    section->function = PIECE_FUNCTION_NONE;
+    if (function && !piece_function_from_name(function, &section->function)) {
+        snprintf(path, sizeof path, "%s/function", base);
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the function must be transition or coda, not '%s'", id,
+                        function);
     }
     if (letter) {
         snprintf(section->letter, sizeof(section->letter), "%s", letter);

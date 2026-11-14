@@ -45,6 +45,7 @@ The body is required; the others may be left out, and a request without an endin
 | `beats` | The length: a whole number of beats of the meter, 1 or more. |
 | `pickup` | Beats of anacrusis before the section, as a string or number (`"0"`, `"1"`, `"1/2"`); shorter than a bar. It is not part of `beats`. |
 | `cadence` | `null` for the default (an HC for the last section of the intro and of the loop, a PAC for the last of the ending, an IAC for the others), or `PAC`, `IAC`, `HC`, `DC` or `PC`. |
+| `function` | Optional, `null` or left out for none (API 1.23, R-508, R-510): `"transition"` (a body section but not the turnaround or the ending: a theme section of 4 or 8 whole bars with a half cadence, grown as the main theme's liquidating transition) or `"coda"` (the ending: 8 whole bars, a perfect authentic cadence, three phrases of 4, 2 and 2 bars). Any other value is refused at `/request/sections/<i>/function` (`the function must be transition or coda, not '<value>'`); a transition or coda the structure does not allow is the bad-request failure ([form-parts.md](form-parts.md#the-game-loop)). The vocabulary's `piece_functions` lists the values and the parts each can be in. The rows of the result name it. |
 | `fill` | What fills the section: see below. `null` or left out is `{"kind": "empty"}`. |
 
 A section of whole bars needs room for its cadence and a last chord of a whole bar: 2 bars at least. A section of one bar

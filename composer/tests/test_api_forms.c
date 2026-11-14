@@ -273,6 +273,37 @@ static void test_no_figure_elsewhere(void) {
     }
 }
 
+/* independent and lyric on every section (R-510): S2 of the main and subordinate themes is lyric, no other section of any form is, and none is independent. */
+static void test_independent_and_lyric(void) {
+    const cJSON *sections = member(default_size(form_named("main-and-subordinate")), "sections");
+    size_t lyric = 0;
+    for (int i = 0; i < cJSON_GetArraySize(sections); i++) {
+        const cJSON *section = cJSON_GetArrayItem(sections, i);
+        assert(!flag(section, "independent"));
+        assert(flag(section, "lyric") == (strcmp(text(section, "name"), "S2") == 0));
+        lyric += flag(section, "lyric") ? 1 : 0;
+    }
+    assert(lyric == 1);
+    const cJSON *form = NULL;
+    cJSON_ArrayForEach(form, member(forms, "forms")) {
+        if (strcmp(text(form, "name"), "main-and-subordinate") == 0) {
+            continue;
+        }
+        const cJSON *size = NULL;
+        cJSON_ArrayForEach(size, member(form, "sizes")) {
+            const cJSON *section = NULL;
+            cJSON_ArrayForEach(section, member(size, "sections")) {
+                assert(!flag(section, "independent") && !flag(section, "lyric"));
+            }
+        }
+    }
+    const cJSON *scherzo = member(default_size(form_named("scherzo")), "sections");
+    assert(cJSON_GetArraySize(scherzo) > 0);
+    for (int i = 0; i < cJSON_GetArraySize(scherzo); i++) {
+        assert(!flag(cJSON_GetArrayItem(scherzo, i), "independent") && !flag(cJSON_GetArrayItem(scherzo, i), "lyric"));
+    }
+}
+
 static void test_layered(void) {
     const cJSON *form = form_named("layered");
     assert(strcmp(text(member(form, "settings"), "accompaniment"), "required") == 0);
@@ -514,6 +545,7 @@ int main(void) {
     test_variations();
     test_figured_variations();
     test_no_figure_elsewhere();
+    test_independent_and_lyric();
     test_layered();
     test_pedal();
     test_minuet();

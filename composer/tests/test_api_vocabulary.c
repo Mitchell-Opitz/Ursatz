@@ -142,6 +142,24 @@ static void test_lists(void) {
     assert(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups")));
     assert(cJSON_GetObjectItemCaseSensitive(vocabulary, "variant_operations"));
 
+    /* The functions a game loop section can be (R-510): transition on intro and body, coda on ending. */
+    static const char *const FUNCTION_NAMES[] = {"transition", "coda"};
+    static const char *const FUNCTION_LABELS[] = {"Transition", "Coda"};
+    static const char *const FUNCTION_PARTS[][2] = {{"intro", "body"}, {"ending", NULL}};
+    static const int FUNCTION_PART_COUNT[] = {2, 1};
+    const cJSON *functions = list("piece_functions");
+    assert(cJSON_GetArraySize(functions) == 2);
+    for (int f = 0; f < 2; f++) {
+        const cJSON *function = cJSON_GetArrayItem(functions, f);
+        const cJSON *parts = cJSON_GetObjectItemCaseSensitive(function, "parts");
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(function, "name")->valuestring, FUNCTION_NAMES[f]) == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(function, "label")->valuestring, FUNCTION_LABELS[f]) == 0);
+        assert(cJSON_IsArray(parts) && cJSON_GetArraySize(parts) == FUNCTION_PART_COUNT[f]);
+        for (int p = 0; p < FUNCTION_PART_COUNT[f]; p++) {
+            assert(strcmp(cJSON_GetArrayItem(parts, p)->valuestring, FUNCTION_PARTS[f][p]) == 0);
+        }
+    }
+
     /* The limits the command line shows are the library's. */
     const cJSON *limits = cJSON_GetObjectItemCaseSensitive(vocabulary, "limits");
     assert(cJSON_IsObject(limits));
@@ -759,7 +777,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.22") == 0);
+    assert(strcmp(composer_api_version(), "1.23") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

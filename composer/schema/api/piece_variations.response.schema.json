@@ -330,11 +330,44 @@
         }
       }
     },
+    "section_function": {
+      "type": "object",
+      "required": [
+        "kind",
+        "independent",
+        "lyric",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "transition",
+            "retransition",
+            "subordinate",
+            "coda"
+          ]
+        },
+        "independent": {
+          "type": "boolean",
+          "description": "A transition made from a motive of its own (R-504)."
+        },
+        "lyric": {
+          "type": "boolean",
+          "description": "A subordinate theme whose motive is the main theme's, augmented (R-506)."
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "description": "The part of a larger form a section is (R-503, R-510)."
+    },
     "loop_row": {
       "type": "object",
       "required": [
         "id",
         "part",
+        "function",
         "letter",
         "start",
         "beats",
@@ -355,6 +388,17 @@
             "turnaround",
             "ending"
           ]
+        },
+        "function": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/section_function"
+            }
+          ],
+          "description": "The part of a larger form the section is (transition, retransition, subordinate theme, coda); null for any other section."
         },
         "letter": {
           "type": "string"
@@ -393,6 +437,10 @@
         },
         "source": {
           "type": "string"
+        },
+        "construction_text": {
+          "type": "string",
+          "description": "Present for a theme section with a construction: why it is as long as it is (R-469)."
         }
       },
       "description": "A section of a form whose sections the request gives (the game loop)."
@@ -414,6 +462,7 @@
         "pedal",
         "changes",
         "figure",
+        "function",
         "part",
         "repeat_of",
         "upbeat",
@@ -521,6 +570,17 @@
           ],
           "description": "The figure and skeleton of a figurate return (R-501); null for any other section."
         },
+        "function": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/section_function"
+            }
+          ],
+          "description": "The part of a larger form the section is (transition, retransition, subordinate theme, coda); null for any other section."
+        },
         "part": {
           "type": [
             "string",
@@ -567,6 +627,10 @@
             "null"
           ],
           "description": "For a section with a connective: whether it was written; null for any other."
+        },
+        "construction_text": {
+          "type": "string",
+          "description": "Present for a theme section with a construction: why it is as long as it is (R-469)."
         }
       },
       "description": "A section of the size of a form with sizes."

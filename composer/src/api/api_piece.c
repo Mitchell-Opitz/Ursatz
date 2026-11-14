@@ -911,11 +911,70 @@ static bool add_construction_text(cJSON *entry, const Row *row) {
            cJSON_AddStringToObject(entry, "construction_text", text) != NULL;
 }
 
-/* A row of a form whose sections the request gives: {id, part, letter, start, beats, cadence, heard, [in_scope], fill, source, [construction_text]}. */
+/* The key the plan's key lane gives near the end of a section, as "C major"; "" when the lane has none there. */
+static void planned_key_near_end(const PiecePlan *plan, PlanSpan section, char *out, size_t size) {
+    Rational offset;
+    Rational at;
+    PlanSpan last = section;
+    bool flats = false;
+    out[0] = '\0';
+    if (rational_make(section.length.num * 3, section.length.den * 4, &offset) != RATIONAL_OK ||
+        rational_add(section.start, offset, &at) != RATIONAL_OK || rational_sub(section.length, offset, &last.length) != RATIONAL_OK) {
+        return;
+    }
+    last.start = at;
+    planned_key_at(plan, last, out, size, &flats);
+}
+
+/*
+ * The function of a row (R-510): {kind, independent, lyric, text}, null for a section with no SECTION_FUNCTION. A performed row
+ * has the plan and node of the section it performs, so it takes that section's function.
+ */
+static cJSON *function_json(const Row *row) {
+    PlanSectionFunction function;
+    if (!row->plan || !plan_section_function_of(row->plan, row->node, &function)) {
+        return cJSON_CreateNull();
+    }
+    char text[192];
+    switch (function.function) {
+    case PLAN_FUNCTION_TRANSITION: {
+        char start[16];
+        char end[16];
+        bool flats;
+        planned_key_at(row->plan, plan_node_span(row->plan, row->node), start, sizeof start, &flats);
+        planned_key_near_end(row->plan, plan_node_span(row->plan, row->node), end, sizeof end);
+        const bool modulates = start[0] && end[0] && strcmp(start, end) != 0;
+        snprintf(text, sizeof text, "%s%s%s, liquidating to the upbeat chord",
+                 function.independent ? "an independent transition with its own motif" : "a transition grown from the main theme",
+                 modulates ? ", modulating to " : "", modulates ? end : "");
+        break;
+    }
+    case PLAN_FUNCTION_RETRANSITION:
+        snprintf(text, sizeof text, "a retransition over the dominant pedal, ending on the main theme's head");
+        break;
+    case PLAN_FUNCTION_SUBORDINATE:
+        snprintf(text, sizeof text, "a subordinate theme%s", function.lyric ? ", lyric" : "");
+        break;
+    default:
+        snprintf(text, sizeof text, "a coda of 4, 2 and 2 bars, each closing on the tonic");
+        break;
+    }
+    cJSON *entry = cJSON_CreateObject();
+    if (!entry || !cJSON_AddStringToObject(entry, "kind", plan_function_kind_name(function.function)) ||
+        !cJSON_AddBoolToObject(entry, "independent", function.independent) || !cJSON_AddBoolToObject(entry, "lyric", function.lyric) ||
+        !cJSON_AddStringToObject(entry, "text", text)) {
+        cJSON_Delete(entry);
+        return NULL;
+    }
+    return entry;
+}
+
+/* A row of a form whose sections the request gives: {id, part, function, letter, start, beats, cadence, heard, [in_scope], fill, source, [construction_text]}. */
 static cJSON *loop_row_json(const Row *row) {
     cJSON *entry = cJSON_CreateObject();
     bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->id) &&
               cJSON_AddStringToObject(entry, "part", piece_part_name(row->section->part)) &&
+              api_add(entry, "function", function_json(row)) &&
               cJSON_AddStringToObject(entry, "letter", row->section->letter) && api_add(entry, "start", time_json(row->start)) &&
               cJSON_AddNumberToObject(entry, "beats", (double)row->section->beats) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
@@ -1132,7 +1191,7 @@ static cJSON *upbeat_json(const Row *row) {
     return object;
 }
 
-/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, key, pedal, changes, figure, part, repeat_of, upbeat, connective, [construction_text]}. */
+/* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, key, pedal, changes, figure, function, part, repeat_of, upbeat, connective, [construction_text]}. */
 static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
     const FormSectionSpec *spec = row->spec;
     char motive[96];
@@ -1151,7 +1210,7 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
               api_add(entry, "key", string_or_null(row->key[0] ? row->key : NULL)) &&
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
               api_add(entry, "changes", changes_json(row)) && api_add(entry, "figure", figure_json(row)) &&
-              api_add(entry, "part", string_or_null(row->part)) &&
+              api_add(entry, "function", function_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&
               api_add(entry, "repeat_of", string_or_null(row->repeat_of)) && api_add(entry, "upbeat", upbeat_json(row)) &&
               api_add(entry, "connective", row->connective < 0 ? cJSON_CreateNull() : cJSON_CreateBool(row->connective > 0)) &&
               add_construction_text(entry, row);
