@@ -189,7 +189,8 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
            add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
            add_connective(section, spec->connective) && add_figure(section, spec) &&
-           add_string_or_null(section, "mode", spec->parallel ? "parallel" : NULL);
+           add_string_or_null(section, "mode", spec->parallel ? "parallel" : NULL) &&
+           cJSON_AddBoolToObject(section, "independent", spec->independent) && cJSON_AddBoolToObject(section, "lyric", spec->lyric);
 }
 
 static bool add_sizes(cJSON *form_json, const FormSpec *form) {
