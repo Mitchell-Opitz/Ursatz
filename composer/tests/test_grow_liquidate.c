@@ -23,7 +23,7 @@
 
 /*
  * The liquidation section (B2 of P49, R-494). tests/fixtures/forms/liquidation-form.json in C major 3/4, A minor 3/4,
- * C major 2/4 and C major 6/8, seeds 1 to 10, an invented motive: every composed run has five ideas of 1, 1, 1, 1/2 and
+ * C major 2/4, C major 6/8 and (B4 of P51, R-505) C major 4/4, seeds 1 to 10, an invented motive: every composed run has five ideas of 1, 1, 1, 1/2 and
  * 1/2 bars, V (or V7) in the bass throughout, a last chord V or V7, a last melody note that is a tone of V, a liquidated
  * idea with fewer notes than the basic idea, a stepwise scale line and an ascending broken chord; at least 9 of 10 compose
  * in each row. Then the plan round-trips through plan JSON, and the applies rule is false off its cases.
@@ -43,7 +43,8 @@ typedef struct {
 static const Row ROWS[] = {{"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4},
                            {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4},
                            {"C major 2/4", 0, KEY_STRUCTURE_MODE_MAJOR, 2, 4},
-                           {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8}};
+                           {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8},
+                           {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4}};
 
 static FormSpec *load_form(void) {
     char path[1024];

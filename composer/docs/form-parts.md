@@ -10,7 +10,7 @@ A form document names a part as the role of a section (`transition`, `subordinat
 | --- | --- | --- | --- |
 | Transition | A theme-like section: `beginning` `presentation` or `compound_basic_idea`, `ending` `continuation`, `cadence` `half`; 8 bars when it modulates (`keys.end` is not its start), else 4 or 8, or 3 to 16 with a `construction`. No `returns`, `variation`, `figure`, `mode` or `pedal`. `independent` (default false) gives it a motive of its own (R-504), so it has no `motive`. | `archetype`, `theme_pairing`, `section_function` (`transition`) | As a theme, with its continuation liquidated to the upbeat chord (below); an independent one is made from a motive of its own (below) |
 | Subordinate theme | Any pairing, cadence, keys and construction a theme-like section takes. `lyric` (default false): a period whose motive is m0 augmented (R-506); a lyric theme has no `motive` or `returns`, and the reader sets its motive to `augment` with an open ratio. | `archetype`, `theme_pairing`, `section_function` (`subordinate`), and for a lyric theme a `motive_ref` of `augment` | As a theme today; the open ratio is drawn as any section's motive is (the first usual ratio the meter writes, else an interval change) |
-| Retransition | 4 bars, `cadence` `half`, nothing else: no `beginning` or `ending` and none of the members of a theme. | `section_function` (`retransition`), no `archetype` or `theme_pairing` | By its own operator in B4 (R-505); until then a plan with one stops at the structure stage |
+| Retransition | 4 bars, `cadence` `half`, nothing else: no `beginning` or `ending` and none of the members of a theme. | `section_function` (`retransition`), no `archetype` or `theme_pairing` | By the liquidation operator's second layout (R-505, below) |
 | Coda | 8 bars, `cadence` `perfect-authentic`, nothing else. | `section_function` (`coda`), no `archetype` or `theme_pairing` | By its own operator in B5 (R-509); until then a plan with one stops at the structure stage |
 
 A retransition and a coda count as theme sections in a compose run and are skipped when the form is heard (they have no theme shape to be heard as), and the style leaves their form alone, as it does a liquidation's.
@@ -66,3 +66,28 @@ In all 80 runs T carries the transition function, its second half is in the regi
 | D minor 6/8 | 10 of 10 |
 
 In all 80 runs the material holds two invented motives (m0 and `independent T`, two notes or more each), T's `MOTIVE_REF` names the second with no step, T's `basic idea` melody differs from A's, and the composed plan round-trips through plan JSON byte for byte.
+
+## The retransition
+
+A retransition is 4 bars at home over a dominant pedal, ending in a half cadence (R-505). `grow_liquidate.c` grows a Constrained, childless section with the `retransition` function as its second layout: five ideas of 1, 1, 1, 1/2 and 1/2 bars over one prolongation of V with the pedal. The `basic idea` is the residue (m0 liquidated, 1 to half its notes dropped), the `repetition` the residue one note further, `fragment 1` a scale line of eighths filling a bar, `fragment 2` a broken chord of V in half a bar, and the `cadential` idea the main theme head (m0's leading notes that fit half a bar, written as they are) on the half cadence. The layout is in [grow-liquidation.md](grow-liquidation.md#the-retransition).
+
+It opens the home key straight from any region: the key before it may be the subordinate region's, and the prolongation of V is the arrival, so there is no pivot. The return home is at the retransition's start, never inside a section (a key change back home at a section's half failed in minor at main, R-505). The liquidation operator accepts 4/4 for both layouts (a half bar of 4 eighths); the scherzo's liquidation in 3/4, 2/4 and 6/8 is unchanged, byte for byte. Not built, Later: a retransition of 8 bars, one over a tonic or another pedal, one that quotes more than the head.
+
+### The retransition measure
+
+`tests/test_form_parts.c` case `retransition` (`slow`): [parts-of-forms.json](../tests/fixtures/forms/parts-of-forms.json) with the coda K replaced by a codetta of 8 (presentation and continuation, PAC, closed), so no coda is grown yet; 48 bars (A, T, S lyric, C codetta of 4, R, A return exact, K), `modulate` on, seeds 1 to 10, eight rows. At least 9 of 10 must compose in each row.
+
+| Row | Composed |
+|---|---|
+| C major 4/4 | 10 of 10 |
+| A minor 4/4 | 10 of 10 |
+| C major 3/4 | 10 of 10 |
+| A minor 3/4 | 10 of 10 |
+| G major 2/4 | 10 of 10 |
+| D minor 2/4 | 10 of 10 |
+| C major 6/8 | 10 of 10 |
+| D minor 6/8 | 10 of 10 |
+
+In all 80 runs R carries the retransition function and no archetype, is in the home key, has the dominant in the bass throughout and a last chord V or V7, its `basic idea` asks for a residue with fewer notes than m0, and its `cadential` melody keeps the intervals of the main theme head, which are the first intervals of m0. `test_grow_liquidate` composes the liquidation fixture in C major 4/4, 10 of 10 (the other rows unchanged).
+
+Two things the measure found. A broken chord of four eighths over V (5, 7, 2, 4) ended on the seventh, so in four eighths it is 5, 7, 2, 5. A melody target for the head was made again under the cadence's rules and did not keep m0's intervals (seed 2 in C major 4/4), so the head is written as it is.
