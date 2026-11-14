@@ -31,6 +31,7 @@
 #include "piece/piece_internal.h"
 #include "plan/plan_internal.h"
 #include "style/style_internal.h"
+#include "util/plan_util.h"
 
 /* How many times the melody stage is run before it is given up on, and how far apart the seeds of the runs are. */
 #define COMPOSE_MELODY_ATTEMPTS 6
@@ -116,14 +117,21 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
 
 /* ------------------------------------------------------------- the plan */
 
-/* A section grow-theme builds: a theme (an archetype and a pairing), a free phrase of a piece structure (R-170) or a liquidation (R-494). */
+/*
+ * A section grow-theme builds: a theme (an archetype and a pairing), a free phrase of a piece structure (R-170), a liquidation
+ * (R-494), or a retransition or a coda (R-503), which an operator grows.
+ */
 static bool is_theme_section(const PiecePlan *plan, NodeId id) {
     bool archetype = false;
     bool pairing = false;
     bool free_phrase = false;
     bool liquidation = false;
+    PlanSectionFunction function;
     if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
         return false;
+    }
+    if (plan_section_function_of(plan, id, &function)) {
+        liquidation = function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA;
     }
     for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
         PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
@@ -510,8 +518,11 @@ static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *
     unsigned long denominator = 0;
     for (size_t t = 0; (checks & FORM_CHECK_SECTIONS) && t < theme_count; t++) {
         ComposeHeard *heard = &outcome->sections[t];
-        if (!heard->in_scope || plan_node_has_constraint(plan, themes[t], PLAN_CONSTRAINT_LIQUIDATION)) {
-            /* A liquidation (R-494) is no theme shape: nothing to hear it as, and it adds nothing to the score. */
+        PlanSectionFunction function;
+        const bool operator_part = plan_section_function_of(plan, themes[t], &function) &&
+                                   (function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA);
+        if (!heard->in_scope || operator_part || plan_node_has_constraint(plan, themes[t], PLAN_CONSTRAINT_LIQUIDATION)) {
+            /* A liquidation (R-494), a retransition or a coda (R-503) is no theme shape: nothing to hear it as, and it adds nothing to the score. */
             continue;
         }
         hear_section(hearing, plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);

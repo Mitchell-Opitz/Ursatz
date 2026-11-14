@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
@@ -21,6 +22,9 @@ bool plan_in_subtree(const PiecePlan *plan, NodeId node, NodeId root);
 
 /* The first melody lane span (voice 0) of node that is Given or Realized. */
 bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out);
+
+/* The part of a larger form a section node is (its section function constraint, R-503); false when it has none. */
+bool plan_section_function_of(const PiecePlan *plan, NodeId node, PlanSectionFunction *out);
 
 /* The piece result of a plan result: OK, an allocation failure, else a bad request. */
 PieceResult piece_result_of_plan(PlanResult result);

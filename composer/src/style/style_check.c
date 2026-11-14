@@ -21,6 +21,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
+#include "util/plan_util.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "texture/texture_internal.h"
@@ -184,10 +185,15 @@ static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate,
 
 /*
  * Whether the plan fixes the form of the section: a theme pairing constraint says how it begins and ends. A free phrase
- * (R-170) and a liquidation (R-494) have no form of a theme to prefer, so the style leaves them alone.
+ * (R-170), a liquidation (R-494), a retransition and a coda (R-503) have no form of a theme to prefer, so the style leaves them alone.
  */
 static bool form_fixed(const PiecePlan *plan, FillTarget target) {
     if (target.kind != FILL_TARGET_NODE) {
+        return true;
+    }
+    PlanSectionFunction function;
+    if (plan_section_function_of(plan, target.id, &function) &&
+        (function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA)) {
         return true;
     }
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {

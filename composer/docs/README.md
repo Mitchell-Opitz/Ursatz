@@ -71,6 +71,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-liquidation.md](grow-liquidation.md): the liquidation section: 4 bars over a dominant pedal that take the pattern apart, a scale line and a broken chord of V ending the half cadence (P49).
 - [figured-variations.md](figured-variations.md): the built-in figured variations form after Schoenberg ch. XVII (P50): the theme, five variations each with a figure, the minore, the root change, the climax and a coda, and what was measured.
 - [variation-figure.md](variation-figure.md): the motive of variation: a figurate return rewrites the theme's melody from a skeleton, one figure to a cell, the cadence bars kept (P50).
+- [form-parts.md](form-parts.md): the parts of larger forms after Schoenberg ch. XVIII: the transition, the subordinate theme, the retransition and the coda as form roles and a plan constraint (P51).
 - [grow-construction.md](grow-construction.md): a theme of any whole bars from 3 to 16 and ideas of any whole bars, given by a construction (P47).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.

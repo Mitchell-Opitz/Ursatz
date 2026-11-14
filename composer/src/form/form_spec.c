@@ -27,8 +27,9 @@ static const RoleRow ROLES[FORM_ROLE_COUNT] = {
     {"theme", "Theme", true},         {"contrast", "Contrast", true},   {"return", "Return", true},
     {"variation", "Variation", true}, {"layer", "Layer", true},         {"pattern", "Pattern", true},
     {"sequence", "Sequence", true},   {"episode", "Episode", true},    {"codetta", "Codetta", true},
-    {"liquidation", "Liquidation", true}, {"intro", "Intro", false},   {"body", "Loop body", false},
-    {"turnaround", "Turnaround", false},  {"ending", "Ending", false}};
+    {"liquidation", "Liquidation", true}, {"transition", "Transition", true}, {"retransition", "Retransition", true},
+    {"subordinate", "Subordinate theme", true}, {"coda", "Coda", true}, {"intro", "Intro", false},
+    {"body", "Loop body", false}, {"turnaround", "Turnaround", false},  {"ending", "Ending", false}};
 
 const char *form_role_name(FormRole role) {
     return role >= 0 && role < FORM_ROLE_COUNT ? ROLES[role].name : NULL;
@@ -637,7 +638,8 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
                          const char *path, FormSectionSpec *out) {
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
                                           "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
-                                          "pedal",   "construction", "leads_in", "connective", "figure", "mode"};
+                                          "pedal",   "construction", "leads_in", "connective", "figure", "mode",
+                                          "independent", "lyric"};
     char text[FORM_SPEC_CADENCE_NAME_MAX];
     char at[64];
     if (!cJSON_IsObject(json)) {
@@ -668,8 +670,13 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         join(at, sizeof(at), path, "role");
         return fail(reader, at, "unknown role \"%s\"", text);
     }
-    /* a liquidation (R-494) is the pattern liquidated over a dominant pedal: its shape is the operator's, not the form's */
+    /* a liquidation (R-494) is the pattern liquidated over a dominant pedal, a retransition (R-505) and a coda (R-509) are
+     * grown by an operator of their own: their shape is the operator's, not the form's */
     const bool liquidation = out->role == FORM_ROLE_LIQUIDATION;
+    const bool retransition = out->role == FORM_ROLE_RETRANSITION;
+    const bool coda = out->role == FORM_ROLE_CODA;
+    const bool operator_section = liquidation || retransition || coda;
+    const bool transition = out->role == FORM_ROLE_TRANSITION;
     if (liquidation) {
         static const char *const REFUSED[] = {"beginning", "ending",  "construction", "motive", "returns", "variation",
                                               "pedal",     "leads_in", "connective",   "layers", "beats",
@@ -680,6 +687,54 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
                 return i < 2 ? fail(reader, at, "a liquidation has no beginning or ending")
                              : fail(reader, at, "a liquidation has no %s", REFUSED[i]);
             }
+        }
+    }
+    if (retransition || coda) {
+        static const char *const REFUSED[] = {"beginning", "ending",  "construction", "motive", "returns", "variation",
+                                              "pedal",     "leads_in", "connective",   "layers", "beats",
+                                              "figure",    "mode",     "keys",         "independent", "lyric"};
+        const char *noun = retransition ? "retransition" : "coda";
+        for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+            if (cJSON_GetObjectItemCaseSensitive(json, REFUSED[i])) {
+                join(at, sizeof(at), path, REFUSED[i]);
+                return i < 2 ? fail(reader, at, "a %s has no beginning or ending", noun)
+                             : fail(reader, at, "a %s has no %s", noun, REFUSED[i]);
+            }
+        }
+    }
+    if (transition) {
+        static const char *const REFUSED[] = {"returns", "variation", "figure", "mode", "pedal"};
+        for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
+            if (cJSON_GetObjectItemCaseSensitive(json, REFUSED[i])) {
+                join(at, sizeof(at), path, REFUSED[i]);
+                return fail(reader, at, "a transition has no %s", REFUSED[i]);
+            }
+        }
+    }
+    /* independent (R-504) and lyric (R-506) */
+    if (!transition && cJSON_GetObjectItemCaseSensitive(json, "independent")) {
+        join(at, sizeof(at), path, "independent");
+        return fail(reader, at, "only a transition is independent");
+    }
+    if (out->role != FORM_ROLE_SUBORDINATE && cJSON_GetObjectItemCaseSensitive(json, "lyric")) {
+        join(at, sizeof(at), path, "lyric");
+        return fail(reader, at, "only a subordinate theme is lyric");
+    }
+    if (!read_bool(reader, json, path, "independent", &out->independent) || !read_bool(reader, json, path, "lyric", &out->lyric)) {
+        return false;
+    }
+    if (out->independent && cJSON_GetObjectItemCaseSensitive(json, "motive")) {
+        join(at, sizeof(at), path, "motive");
+        return fail(reader, at, "an independent transition has its own motive");
+    }
+    if (out->lyric) {
+        if (cJSON_GetObjectItemCaseSensitive(json, "motive")) {
+            join(at, sizeof(at), path, "motive");
+            return fail(reader, at, "a lyric theme's motive is m0 augmented");
+        }
+        if (cJSON_GetObjectItemCaseSensitive(json, "returns")) {
+            join(at, sizeof(at), path, "returns");
+            return fail(reader, at, "a lyric theme returns nothing");
         }
     }
     /* bars or beats, exactly one */
@@ -702,8 +757,16 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         join(at, sizeof(at), path, "bars");
         return fail(reader, at, "a liquidation is 4 bars");
     }
-    /* beginning and ending: the theme shape's plan names (a liquidation has none: its pairing stays zero) */
-    if (!liquidation) {
+    if (retransition && out->bars != 4) {
+        join(at, sizeof(at), path, "bars");
+        return fail(reader, at, "a retransition is 4 bars");
+    }
+    if (coda && out->bars != 8) {
+        join(at, sizeof(at), path, "bars");
+        return fail(reader, at, "a coda is 8 bars");
+    }
+    /* beginning and ending: the theme shape's plan names (a liquidation, retransition or coda has none: its pairing stays zero) */
+    if (!operator_section) {
         const ThemeShapeHalf *beginning;
         const ThemeShapeHalf *ending;
         if (!read_text(reader, json, path, "beginning", true, text, sizeof(text), NULL)) {
@@ -724,6 +787,20 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         }
         out->pairing.beginning = (PlanThemeBeginning)beginning->value;
         out->pairing.ending = (PlanThemeEnding)ending->value;
+        if (transition && out->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION &&
+            out->pairing.beginning != PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA) {
+            join(at, sizeof(at), path, "beginning");
+            return fail(reader, at, "a transition begins with a presentation or a compound basic idea");
+        }
+        if (transition && out->pairing.ending != PLAN_THEME_ENDING_CONTINUATION) {
+            join(at, sizeof(at), path, "ending");
+            return fail(reader, at, "a transition ends with a continuation");
+        }
+        if (out->lyric && (out->pairing.beginning != PLAN_THEME_BEGINNING_ANTECEDENT ||
+                           out->pairing.ending != PLAN_THEME_ENDING_CONSEQUENT)) {
+            join(at, sizeof(at), path, "beginning");
+            return fail(reader, at, "a lyric theme is a period");
+        }
     }
     /* construction: a theme of any whole bars from 3 to 16 (R-468); a theme-like section of other bars than 4 or 8 needs it */
     const cJSON *construction = member_of(reader, json, path, "construction", false);
@@ -764,6 +841,14 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         join(at, sizeof(at), path, "cadence");
         return fail(reader, at, "a liquidation ends in a half cadence");
     }
+    if ((retransition || transition) && out->cadence != CADENCE_TYPE_HALF) {
+        join(at, sizeof(at), path, "cadence");
+        return fail(reader, at, retransition ? "a retransition ends in a half cadence" : "a transition ends in a half cadence");
+    }
+    if (coda && out->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC) {
+        join(at, sizeof(at), path, "cadence");
+        return fail(reader, at, "a coda ends in a perfect authentic cadence");
+    }
     if (!read_bool(reader, json, path, "closed", &out->closed)) {
         return false;
     }
@@ -782,6 +867,10 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
             return false;
         }
     }
+    if (transition && out->key_end != out->key_start && out->bars != 8) {
+        join(at, sizeof(at), path, "bars");
+        return fail(reader, at, "a transition that modulates is 8 bars");
+    }
     /* motive: as motive_relation_step_text writes it */
     const cJSON *motive = member_of(reader, json, path, "motive", false);
     if (motive) {
@@ -792,6 +881,11 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         if (!motive_relation_step_parse(motive->valuestring, &out->motive)) {
             return fail(reader, at, "not a motive relation: \"%s\"", motive->valuestring);
         }
+        out->has_motive = true;
+    }
+    /* a lyric theme's motive is m0 augmented, the open ratio the builder fills (R-506) */
+    if (out->lyric) {
+        out->motive.kind = MOTIVE_RELATION_AUGMENT;
         out->has_motive = true;
     }
     /* returns and variation */

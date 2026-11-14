@@ -222,6 +222,10 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.connective.written == b->params.connective.written;
     case PLAN_CONSTRAINT_LIQUIDATION:
         return true;
+    case PLAN_CONSTRAINT_SECTION_FUNCTION:
+        return a->params.section_function.function == b->params.section_function.function &&
+               a->params.section_function.independent == b->params.section_function.independent &&
+               a->params.section_function.lyric == b->params.section_function.lyric;
     case PLAN_CONSTRAINT_FIGURE:
         return a->params.figure.kind == b->params.figure.kind && a->params.figure.rhythm == b->params.figure.rhythm &&
                a->params.figure.reharmonize == b->params.figure.reharmonize &&
@@ -725,6 +729,86 @@ static void test_figure(void) {
                {"\"climax\": true", "\"climax\": 1"},
                {"\"figure\": \"scale\"", "\"figure\": \"run\""},
                {"\"harmony\": \"reharmonized\"", "\"harmony\": \"kept\""}};
+    for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++) {
+        const char *at = strstr(text, BAD[i].from);
+        assert(at);
+        size_t head = (size_t)(at - text);
+        size_t tail = strlen(at + strlen(BAD[i].from));
+        char *broken = malloc(head + strlen(BAD[i].to) + tail + 1);
+        assert(broken);
+        memcpy(broken, text, head);
+        strcpy(broken + head, BAD[i].to);
+        strcpy(broken + head + strlen(BAD[i].to), at + strlen(BAD[i].from));
+        PiecePlan *refused = NULL;
+        assert(plan_from_json(broken, &refused, &error) != PLAN_OK && refused == NULL);
+        assert(strstr(error.path, "constraints") != NULL);
+        free(broken);
+    }
+
+    free(text);
+    free(again);
+    free(plain_text);
+    plan_destroy(plan);
+    plan_destroy(parsed);
+    plan_destroy(plain);
+    form_spec_destroy(form);
+}
+
+/*
+ * The section function of the parts of a larger form (R-503): the plan built from tests/fixtures/forms/parts-of-forms.json
+ * (C major 4/4) holds a transition, a subordinate theme, a retransition and a coda, writes with each as
+ * {"kind": "section_function", "function", "independent", "lyric"} and reads back byte for byte; a plan with none is written as
+ * it always was; an unknown function, a missing member and a flag on a function that has none are refused with the path.
+ */
+static void test_section_function(void) {
+    PlanJsonError error;
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
+    char *document = read_whole(path);
+    FormSpec *form = NULL;
+    FormSpecError form_error;
+    assert(form_spec_parse(document, &form, &form_error) == FORM_SPEC_OK && form);
+    free(document);
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = form->name;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    PiecePlan *plan = NULL;
+    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+
+    char *text = plan_to_json(plan, &error);
+    assert(text);
+    static const char *const FUNCTIONS[] = {"transition", "retransition", "subordinate", "coda"};
+    for (size_t i = 0; i < 4; i++) {
+        char member[64];
+        snprintf(member, sizeof(member), "\"function\": \"%s\"", FUNCTIONS[i]);
+        assert(strstr(text, member) != NULL);
+    }
+    assert(strstr(text, "\"kind\": \"section_function\"") != NULL && strstr(text, "\"independent\": false") != NULL &&
+           strstr(text, "\"lyric\": true") != NULL && strstr(text, "\"lyric\": false") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+
+    /* A plan with none is written as it always was. */
+    PiecePlan *plain = build_sentence_plan();
+    char *plain_text = plan_to_json(plain, &error);
+    assert(plain_text && strstr(plain_text, "section_function") == NULL);
+
+    /* An unknown function, a missing member, a member of the wrong type, a flag on a function that has none. */
+    static const struct {
+        const char *from;
+        const char *to;
+    } BAD[] = {{"\"function\": \"coda\"", "\"function\": \"bridge\""},
+               {"\"function\": \"coda\"", "\"function\": 1"},
+               {"\"function\": \"coda\"", "\"functionx\": \"coda\""},
+               {"\"lyric\": true", "\"lyric\": 1"},
+               {"\"independent\": false", "\"independent\": 0"},
+               {"\"lyric\": false", "\"lyric\": true"}}; /* the transition's own lyric flag is the first */
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++) {
         const char *at = strstr(text, BAD[i].from);
         assert(at);
@@ -1499,6 +1583,7 @@ int main(void) {
     test_connective();
     test_liquidation();
     test_figure();
+    test_section_function();
     test_section_constraints();
     test_empty_plan();
     test_malformed_input();
