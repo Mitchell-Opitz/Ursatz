@@ -204,7 +204,8 @@ typedef enum {
     PLAN_RETURN_REHARMONIZE,
     PLAN_RETURN_REREGISTER,
     PLAN_RETURN_VARIED, /* a moderately varied repetition (Schoenberg's A1): a few ornaments and a reharmonized ending */
-    PLAN_RETURN_FIGURATE /* the melody rewritten as a motive of variation over a skeleton of the returned one (R-497) */
+    PLAN_RETURN_FIGURATE, /* the melody rewritten as a motive of variation over a skeleton of the returned one (R-497) */
+    PLAN_RETURN_EMBELLISH /* the ornament melody, eighth notes split into sixteenths when no longer note can be (R-516) */
 } PlanReturnVariation;
 
 typedef struct {
