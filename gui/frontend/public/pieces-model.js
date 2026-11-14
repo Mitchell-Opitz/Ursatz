@@ -977,6 +977,8 @@
          * that has none. */
         figure: (section.figure && section.figure.text) || "",
         skeleton: section.figure && Array.isArray(section.figure.skeleton) ? section.figure.skeleton.join(" ") : "",
+        /* The part of a larger form a section is (P51, R-510): the Composer's sentence; "" for a row that has none. */
+        function: (section.function && section.function.text) || "",
       };
     });
     const seam = v.seam && typeof v.seam === "object" ? v.seam : null;

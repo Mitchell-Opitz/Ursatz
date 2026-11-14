@@ -251,8 +251,11 @@ function pieceVersionTables(view, heading, check, sized, performed, modulating) 
   const withConstruction = view.rows.some((row) => row.construction !== "");
   /* The Figure column (P50) is there only when a row has a figure: the Composer's sentence, which names the skeleton. */
   const withFigure = view.rows.some((row) => row.figure !== "");
-  const extraHead = [...(withFigure ? ["Figure"] : []), ...(withConstruction ? ["Construction"] : [])];
-  const extra = (row) => [...(withFigure ? [row.figure] : []), ...(withConstruction ? [row.construction] : [])];
+  /* The Function column (P51) is there only when a row has a function: the Composer's sentence. A sized row shows it after the
+   * Figure column, a loop row after its fill. */
+  const withFunction = view.rows.some((row) => row.function !== "");
+  const extraHead = [...(withFigure ? ["Figure"] : []), ...(withFunction && sized ? ["Function"] : []), ...(withConstruction ? ["Construction"] : [])];
+  const extra = (row) => [...(withFigure ? [row.figure] : []), ...(withFunction && sized ? [row.function] : []), ...(withConstruction ? [row.construction] : [])];
   /* A performed form (R-485) adds its part, what a row plays again, the upbeat chord and the connective. */
   const withPart = performed && view.rows.some((row) => row.partName !== "");
   box.appendChild(
@@ -296,8 +299,8 @@ function pieceVersionTables(view, heading, check, sized, performed, modulating) 
           ]),
         )
       : pieceTable(
-          ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", "Source", ...extraHead],
-          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, row.source, ...extra(row)]),
+          ["Section", "Part", "Letter", "Start", "Length", "Cadence", "Heard", "Fill", ...(withFunction ? ["Function"] : []), "Source", ...extraHead],
+          view.rows.map((row) => [row.id, row.partLabel, row.letter, row.start, row.length, row.cadence, row.heard, row.fill, ...(withFunction ? [row.function] : []), row.source, ...extra(row)]),
         ),
   );
   box.appendChild(
