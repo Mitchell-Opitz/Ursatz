@@ -17,8 +17,8 @@
 
 #define FORM_SPEC_MAX_REGIONS 4
 #define FORM_SPEC_MAX_SIZES 8
-/* The most sections a size has: a theme and eight variations. */
-#define FORM_SPEC_MAX_SECTIONS 9
+/* The API's API_MAX_SECTIONS; the large and sonata rondos have 13 and 14, R-515. */
+#define FORM_SPEC_MAX_SECTIONS 16
 #define FORM_SPEC_MAX_DEGREES 8
 /* A name is [a-z0-9-], 1 to FORM_SPEC_NAME_MAX - 1 characters. */
 #define FORM_SPEC_NAME_MAX 32
