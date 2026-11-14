@@ -90,7 +90,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -149,7 +151,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -215,7 +219,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -274,7 +280,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -374,7 +382,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -438,7 +448,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A'",
@@ -497,7 +509,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -563,7 +577,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -627,7 +643,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A'",
@@ -686,7 +704,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -780,7 +800,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -842,7 +864,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -895,7 +919,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -955,7 +981,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -1017,7 +1045,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -1070,7 +1100,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -1164,7 +1196,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -1217,7 +1251,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -1277,7 +1313,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -1330,7 +1368,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -1383,7 +1423,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -1443,7 +1485,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -1496,7 +1540,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -1549,7 +1595,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -1602,7 +1650,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -1662,7 +1712,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -1715,7 +1767,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -1768,7 +1822,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -1821,7 +1877,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 4",
@@ -1874,7 +1932,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -1934,7 +1994,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -1987,7 +2049,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -2040,7 +2104,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -2093,7 +2159,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 4",
@@ -2146,7 +2214,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 5",
@@ -2199,7 +2269,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -2259,7 +2331,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -2312,7 +2386,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -2365,7 +2441,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -2418,7 +2496,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 4",
@@ -2471,7 +2551,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 5",
@@ -2524,7 +2606,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 6",
@@ -2577,7 +2661,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -2637,7 +2723,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -2690,7 +2778,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -2743,7 +2833,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -2796,7 +2888,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 4",
@@ -2849,7 +2943,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 5",
@@ -2902,7 +2998,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 6",
@@ -2955,7 +3053,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 7",
@@ -3008,7 +3108,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -3068,7 +3170,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -3121,7 +3225,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -3174,7 +3280,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -3227,7 +3335,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 4",
@@ -3280,7 +3390,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 5",
@@ -3333,7 +3445,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 6",
@@ -3386,7 +3500,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 7",
@@ -3439,7 +3555,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 8",
@@ -3492,7 +3610,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -3590,7 +3710,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -3656,7 +3778,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -3715,7 +3839,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -3815,7 +3941,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "layer 2",
@@ -3878,7 +4006,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -3946,7 +4076,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "layer 2",
@@ -4008,7 +4140,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "layer 3",
@@ -4071,7 +4205,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -4139,7 +4275,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "layer 2",
@@ -4201,7 +4339,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "layer 3",
@@ -4264,7 +4404,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "layer 4",
@@ -4327,7 +4469,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -4437,7 +4581,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -4502,7 +4648,9 @@
         "label": "Sometimes"
        },
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -4561,7 +4709,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -4627,7 +4777,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -4692,7 +4844,9 @@
         "label": "Sometimes"
        },
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -4751,7 +4905,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -4855,7 +5011,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -4920,7 +5078,9 @@
         "label": "Sometimes"
        },
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -4973,7 +5133,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -5033,7 +5195,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "B",
@@ -5098,7 +5262,9 @@
         "label": "Sometimes"
        },
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -5151,7 +5317,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -5350,7 +5518,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "P",
@@ -5403,7 +5573,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "S1",
@@ -5456,7 +5628,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "S2",
@@ -5509,7 +5683,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "L",
@@ -5568,7 +5744,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -5627,7 +5805,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "E",
@@ -5680,7 +5860,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C1",
@@ -5738,7 +5920,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C2",
@@ -5796,7 +5980,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -5898,7 +6084,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "P",
@@ -5951,7 +6139,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "S1",
@@ -6004,7 +6194,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "S2",
@@ -6057,7 +6249,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "L",
@@ -6116,7 +6310,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "A return",
@@ -6211,7 +6407,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "E",
@@ -6264,7 +6462,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C1",
@@ -6322,7 +6522,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C2",
@@ -6380,7 +6582,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
@@ -6559,7 +6763,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -6618,7 +6824,9 @@
         "change_at": null,
         "climax": false
        },
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -6677,7 +6885,9 @@
         "change_at": null,
         "climax": false
        },
-       "mode": "parallel"
+       "mode": "parallel",
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -6736,7 +6946,9 @@
         "change_at": null,
         "climax": true
        },
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C1",
@@ -6794,7 +7006,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C2",
@@ -6852,7 +7066,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     },
@@ -6912,7 +7128,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 1",
@@ -6971,7 +7189,9 @@
         "change_at": null,
         "climax": false
        },
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 2",
@@ -7030,7 +7250,9 @@
         "change_at": null,
         "climax": false
        },
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 3",
@@ -7089,7 +7311,9 @@
         "change_at": null,
         "climax": false
        },
-       "mode": "parallel"
+       "mode": "parallel",
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 4",
@@ -7148,7 +7372,9 @@
         "change_at": 3,
         "climax": false
        },
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "variation 5",
@@ -7207,7 +7433,9 @@
         "change_at": null,
         "climax": true
        },
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C1",
@@ -7265,7 +7493,9 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
       },
       {
        "name": "C2",
@@ -7323,7 +7553,1008 @@
        "leads_in": false,
        "connective": null,
        "figure": null,
-       "mode": null
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "main-and-subordinate",
+   "label": "Main and subordinate themes",
+   "closing": true,
+   "modulates": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "subordinate"
+   ],
+   "meters": [],
+   "tempo": null,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 48,
+     "count": 0,
+     "default": false,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "S1",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "C",
+       "letter": "C",
+       "role": {
+        "value": "codetta",
+        "label": "Codetta"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "cadential",
+        "label": "Cadential"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential 1",
+          "cadential 2"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A return",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "exact",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    },
+    {
+     "bars": 57,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "S1",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 9,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "construction": {
+        "halves": [
+         4,
+         5
+        ],
+        "ideas": [
+         {
+          "idea": "basic idea",
+          "bars": 2,
+          "first_bar": 1
+         },
+         {
+          "idea": "repetition",
+          "bars": 2,
+          "first_bar": 3
+         },
+         {
+          "idea": "fragment 1",
+          "bars": 1,
+          "first_bar": 5
+         },
+         {
+          "idea": "fragment 2",
+          "bars": 1,
+          "first_bar": 6
+         },
+         {
+          "idea": "cadential",
+          "bars": 2,
+          "first_bar": 8
+         }
+        ],
+        "extensions": [
+         {
+          "kind": "repeat",
+          "idea": "fragment 2",
+          "bars": 1,
+          "first_bar": 7,
+          "varied": false
+         }
+        ],
+        "reason": "given",
+        "text": "4+5 sentence as given: fragment 2 is repeated a step lower (bar 7)."
+       },
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "S2",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "augment",
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": true
+      },
+      {
+       "name": "C",
+       "letter": "C",
+       "role": {
+        "value": "codetta",
+        "label": "Codetta"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "cadential",
+        "label": "Cadential"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential 1",
+          "cadential 2"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A return",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "exact",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
       }
      ]
     }
