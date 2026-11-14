@@ -65,6 +65,17 @@ bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
     return false;
 }
 
+bool plan_section_function_of(const PiecePlan *plan, NodeId node, PlanSectionFunction *out) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+        if (constraint->kind == PLAN_CONSTRAINT_SECTION_FUNCTION) {
+            *out = constraint->params.section_function;
+            return true;
+        }
+    }
+    return false;
+}
+
 PieceResult piece_result_of_plan(PlanResult result) {
     return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
 }

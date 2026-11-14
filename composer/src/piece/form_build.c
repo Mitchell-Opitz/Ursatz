@@ -104,21 +104,27 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
                                const PlanConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
-    /* A liquidation (R-494) is no theme: it has no archetype or pairing, and the liquidation constraint in their place. */
+    /*
+     * A liquidation (R-494), a retransition (R-505) and a coda (R-509) are no theme: an operator section has no archetype,
+     * pairing or antecedent cadence. A liquidation has the liquidation constraint in their place; a transition, retransition,
+     * subordinate theme and coda have the section function constraint (R-503).
+     */
     const bool liquidation = section->role == FORM_ROLE_LIQUIDATION;
+    const bool operator_section =
+        liquidation || section->role == FORM_ROLE_RETRANSITION || section->role == FORM_ROLE_CODA;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
     if (result == PIECE_OK && liquidation) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_LIQUIDATION;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && !liquidation) {
+    if (result == PIECE_OK && !operator_section) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
         constraint.params.archetype = (PlanArchetype)grow_pairing_archetype(&section->pairing);
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && !liquidation) {
+    if (result == PIECE_OK && !operator_section) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
         constraint.params.theme_pairing = section->pairing;
@@ -130,7 +136,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.params.cadence = section->cadence;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && !liquidation && section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+    if (result == PIECE_OK && !operator_section && section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = ANTECEDENT_CADENCE;
@@ -152,6 +158,16 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_SECTION_LETTER;
         memcpy(constraint.params.letter, section->letter, sizeof(constraint.params.letter));
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
+    if (result == PIECE_OK && section->role >= FORM_ROLE_TRANSITION && section->role <= FORM_ROLE_CODA) {
+        static const PlanFunctionKind FUNCTIONS[] = {PLAN_FUNCTION_TRANSITION, PLAN_FUNCTION_RETRANSITION,
+                                                     PLAN_FUNCTION_SUBORDINATE, PLAN_FUNCTION_CODA};
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_SECTION_FUNCTION;
+        constraint.params.section_function.function = FUNCTIONS[section->role - FORM_ROLE_TRANSITION];
+        constraint.params.section_function.independent = section->independent;
+        constraint.params.section_function.lyric = section->lyric;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && section->returns != FORM_SPEC_NO_RETURN) {
@@ -303,9 +319,14 @@ static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter, con
         if (section->beats != 0 || !form_role_is_theme(section->role)) {
             return false;
         }
-        if (section->role == FORM_ROLE_LIQUIDATION) {
+        if (section->role == FORM_ROLE_LIQUIDATION || section->role == FORM_ROLE_RETRANSITION) {
             /* The operator lays out its own 4 bars (the reader refuses any other); it has no theme to be buildable. */
             if (section->bars != 4) {
+                return false;
+            }
+        } else if (section->role == FORM_ROLE_CODA) {
+            /* The coda operator lays out its own 8 bars (the reader refuses any other). */
+            if (section->bars != 8) {
                 return false;
             }
         } else if (!section->has_construction) {
