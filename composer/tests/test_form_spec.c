@@ -762,6 +762,21 @@ static void test_refusals(void) {
     snprintf(text, sizeof(text), "{\"bars\": %d, \"default\": true, \"sections\": [%s]}", 4 * (FORM_SPEC_MAX_SECTIONS + 1), list);
     document(big, 1 << 17, "", text);
     refused(big, "/sizes/0/sections");
+    /* Exactly the most sections the form holds parses (R-515). */
+    list[0] = '\0';
+    for (int i = 0; i < FORM_SPEC_MAX_SECTIONS; i++) {
+        char section[256];
+        snprintf(section, sizeof(section),
+                 "%s{\"name\": \"S%d\", \"letter\": \"S\", \"role\": \"theme\", \"bars\": 4, \"beginning\": \"presentation\", "
+                 "\"ending\": \"continuation\", \"cadence\": \"half\"}",
+                 i ? ", " : "", i);
+        strcat(list, section);
+    }
+    snprintf(text, sizeof(text), "{\"bars\": %d, \"default\": true, \"sections\": [%s]}", 4 * FORM_SPEC_MAX_SECTIONS, list);
+    document(big, 1 << 17, "", text);
+    assert(form_spec_parse(big, &form, &error) == FORM_SPEC_OK && form);
+    assert(form->size_count == 1 && form->sizes[0].section_count == FORM_SPEC_MAX_SECTIONS && form->sizes[0].bars == 64);
+    form_spec_destroy(form);
     free(big);
     free(list);
 }
