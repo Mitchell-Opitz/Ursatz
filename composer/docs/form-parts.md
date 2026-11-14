@@ -4,7 +4,7 @@ The section kinds a larger form is made of, after Schoenberg ch. XVIII: the tran
 
 ## The four parts
 
-A form document names a part as the role of a section (`transition`, `subordinate`, `retransition`, `coda`), and `form_build_plan` gives the section a `section_function` constraint with the function, `independent` and `lyric` (all three always written). Any form may use them. No built-in form does yet, so every output is unchanged.
+A form document names a part as the role of a section (`transition`, `subordinate`, `retransition`, `coda`), and `form_build_plan` gives the section a `section_function` constraint with the function, `independent` and `lyric` (all three always written). Any form may use them. The built-in [main-and-subordinate](main-and-subordinate.md) form uses all four (R-509); no other built-in form does, so every other output is unchanged.
 
 | Part | In the form document | In the plan | Grown |
 | --- | --- | --- | --- |
@@ -17,7 +17,7 @@ A retransition and a coda count as theme sections in a compose run and are skipp
 
 ## What is composed and what is not heard
 
-The parts are composed to the plan and recorded in it; the hearing does not find them (R-408). The checks read the plan: the function of each section, its key and its cadence. B2 to B7 add what each part's section is made of and what was measured.
+The parts are composed to the plan and recorded in it; the hearing does not find them (R-408). The checks read the plan: the function of each section, its key and its cadence. B2 to B6 add what each part's section is made of and what was measured; the form that uses them, measured in the eight rows, is [main-and-subordinate.md](main-and-subordinate.md) (B7).
 
 The test form is [parts-of-forms.json](../tests/fixtures/forms/parts-of-forms.json): 48 bars with the parts in the order of a sonata-like ternary (A, T, S, a codetta, R, A return, K). `test_form_spec` reads it and checks the plan it builds in C major 4/4; `test_plan_json` writes and reads the plan back byte for byte.
 

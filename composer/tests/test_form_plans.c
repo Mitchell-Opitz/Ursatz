@@ -99,6 +99,9 @@ static size_t sizes_of(Size *out) {
     /* The figured variations (B4 of P50) in its first meter, 2/4, in both keys: 40 bars (3 variations) and 56 (5). */
     out[n++] = (Size){"figured-variations", 0, 3};
     out[n++] = (Size){"figured-variations", 0, 5};
+    /* The main and subordinate themes (P51 B7): 48 and 57 bars in both keys, 4/4 (the form lists no meters). */
+    out[n++] = (Size){"main-and-subordinate", 48, 0};
+    out[n++] = (Size){"main-and-subordinate", 57, 0};
     return n;
 }
 #define MAX_SIZES 32
