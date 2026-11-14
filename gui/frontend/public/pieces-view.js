@@ -81,7 +81,7 @@ function pieceSectionStrip(sections) {
       ["Section", "Role", "Length", "Beginning", "Ending", "Cadence", "Keys", "Harmony", "Returns", "Slots", ...(withFigure ? ["Figure"] : []), ...(withConstruction ? ["Construction"] : [])],
       sections.map((section, at) => [
         section.letter,
-        section.role ? section.role.label : "",
+        PiecesModel.sectionRoleLabel(section),
         lengthOf(section),
         section.beginning ? section.beginning.label : "",
         section.ending ? section.ending.label : "",

@@ -155,6 +155,14 @@
     return value;
   }
 
+  /* The label of a forms entry section's role, then " (independent)" for an independent transition and " (lyric)" for a lyric
+   * subordinate theme (P51, R-510). Not roleLabel: that one looks a role value up in a form. */
+  function sectionRoleLabel(entrySection) {
+    const section = entrySection && typeof entrySection === "object" ? entrySection : {};
+    const base = section.role ? section.role.label : "";
+    return `${base}${section.independent === true ? " (independent)" : ""}${section.lyric === true ? " (lyric)" : ""}`;
+  }
+
   /* "3 variations, 32 bars" for a size with a count (the noun is the role of its last section), else "16 bars". */
   function sizeLabel(size) {
     const last = size.sections.length > 0 ? size.sections[size.sections.length - 1].role : null;
@@ -1130,6 +1138,7 @@
     performedParts,
     rolesOf,
     roleLabel,
+    sectionRoleLabel,
     defaultRole,
     sizeOptions,
     sizeLabel,
