@@ -30,8 +30,8 @@
 #define IDEAS 5
 /* The motive bars the ideas take in the material: the repetition, the liquidation, the scale line and the broken chord. */
 #define MOTIVE_BARS 4
-/* Eighths in a half bar: 3 in 3/4 and 6/8, 2 in 2/4. */
-#define MAX_RUN 3
+/* Eighths in a half bar: 4 in 4/4, 3 in 3/4 and 6/8, 2 in 2/4 (R-505). */
+#define MAX_RUN 4
 
 struct GrowLiquidateSpec {
     unsigned long magic;
@@ -124,7 +124,7 @@ static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRe
             return false;
         }
     }
-    /* The eighths a half bar holds: 3 in 3/4 and 6/8, 2 in 2/4. */
+    /* The eighths a half bar holds: 4 in 4/4, 3 in 3/4 and 6/8, 2 in 2/4. */
     Rational eighths;
     if (rational_div(half, (Rational){1, 8}, &eighths) != RATIONAL_OK || eighths.den != 1 || eighths.num < 2 ||
         eighths.num > MAX_RUN) {
