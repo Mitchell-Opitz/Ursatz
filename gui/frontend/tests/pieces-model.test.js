@@ -394,6 +394,54 @@ check(
 );
 check(minuetRows.every((row) => row.figure === "" && row.skeleton === ""), "a row without a figure has none");
 
+/* The parts of larger forms (P51, R-510): the structure table's role label, the function a game loop section may have and the
+ * function column of a result. */
+const partsEntry = P.formOf("main-and-subordinate");
+const partsSections = partsEntry.sizes.find((size) => size.bars === 57).sections;
+check(
+  same(partsSections.map((entrySection) => P.sectionRoleLabel(entrySection)), ["Theme", "Transition", "Subordinate theme", "Subordinate theme (lyric)", "Codetta", "Retransition", "Return", "Coda"]),
+  "the structure table's role label names a lyric theme and the other roles by their label",
+);
+check(
+  P.sectionRoleLabel({ role: { value: "transition", label: "Transition" }, independent: true, lyric: false }) === "Transition (independent)" && P.sectionRoleLabel(null) === "",
+  "an independent transition is named in the role label",
+);
+check(
+  same(P.functionsFor("body").map((entry) => entry.name), ["transition"]) &&
+    same(P.functionsFor("intro").map((entry) => entry.name), ["transition"]) &&
+    same(P.functionsFor("ending").map((entry) => entry.name), ["coda"]) &&
+    P.functionsFor("turnaround").length === 0,
+  "a game loop part offers the section functions the vocabulary allows it",
+);
+const functionState = filled();
+functionState.sections[1].function = "transition";
+functionState.sections[2].function = "coda";
+const functionBody = P.bodyFromState(functionState);
+check(
+  functionBody.piece.structure.sections[1].function === "transition" && !("function" in functionBody.piece.structure.sections[2]) && !("function" in functionBody.piece.structure.sections[0]),
+  "a section with a function writes it, a section without one or with one its part may not have writes none",
+);
+const functionBack = P.stateFromBody(functionBody, "pce-1");
+check(
+  functionBack.sections[1].function === "transition" && functionBack.sections[0].function === "" && same(P.bodyFromState(functionBack), functionBody),
+  "a game loop state with a transition body section round trips",
+);
+const unknownFunction = JSON.parse(JSON.stringify(functionBody));
+unknownFunction.piece.structure.sections[1].function = "bridge";
+unknownFunction.piece.structure.sections[4].function = "transition";
+const unknownBack = P.stateFromBody(unknownFunction, "pce-1");
+check(unknownBack.sections[1].function === "" && unknownBack.sections[4].function === "", "a function the vocabulary lacks or the part may not have is dropped");
+check(P.newSection(functionState, "body").function === "", "a new section has no function");
+const partsSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "main-and-subordinate-summary.json"), "utf8"));
+const partsRows = P.resultView({ seed: 1, summary: partsSummary }, { form: "main-and-subordinate", bars: 57, count: 0 }).versions[0].view.rows;
+check(
+  same(partsRows.map((row) => row.letter), ["A", "T", "B", "B", "C", "R", "A", "K"]) &&
+    same(partsRows.map((row) => row.function !== ""), [false, true, true, true, false, true, false, true]) &&
+    partsRows[1].function.includes("transition") && partsRows[5].function.includes("retransition") && partsRows[7].function.includes("coda") && partsRows[3].function.includes("lyric"),
+  "a main and subordinate result gives the function of T, S1, S2, R and K and none for A, C and the return",
+);
+check(minuetRows.every((row) => row.function === ""), "a row without a function has none");
+
 if (failures > 0) {
   console.error(`${failures} failure(s)`);
   process.exit(1);

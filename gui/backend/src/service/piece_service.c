@@ -129,7 +129,7 @@ static cJSON *section_json(const cJSON *section, cJSON *fill) {
     bool ok = object && ursatz_gui_json_add_copy_or_null(object, section, "id") && ursatz_gui_json_add_copy_or_null(object, section, "part") &&
               ursatz_gui_json_add_copy_if(object, section, "letter") && ursatz_gui_json_add_copy_or_null(object, section, "beats") &&
               ursatz_gui_json_attach(object, "pickup", cJSON_IsString(pickup) ? cJSON_Duplicate(pickup, 1) : cJSON_CreateString("0")) &&
-              ursatz_gui_json_add_copy_or_null(object, section, "cadence");
+              ursatz_gui_json_add_copy_or_null(object, section, "cadence") && ursatz_gui_json_add_copy_if(object, section, "function");
     ok = ursatz_gui_json_attach(object, "fill", fill) && ok;
     if (!ok) {
         cJSON_Delete(object);

@@ -452,6 +452,9 @@ static void test_body_validation(void) {
         {"\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"progression\",\"numerals\":5}", INVALID, "numerals that are not text"},
         {"\"pickup\":\"0\",\"cadence\":7,\"fill\":null", INVALID, "a cadence that is not text"},
         {"\"pickup\":\"x\",\"cadence\":null,\"fill\":null", INVALID, "a pickup that is not beats"},
+        {"\"pickup\":\"0\",\"cadence\":null,\"function\":\"transition\",\"fill\":null", OK, "a section function that is text"},
+        {"\"pickup\":\"0\",\"cadence\":null,\"function\":null,\"fill\":null", OK, "a section function that is null"},
+        {"\"pickup\":\"0\",\"cadence\":null,\"function\":7,\"fill\":null", INVALID, "a section function that is not text"},
     };
     for (size_t i = 0; i < sizeof(sections) / sizeof(sections[0]); i++) {
         char text[512];

@@ -155,6 +155,14 @@
     return value;
   }
 
+  /* The label of a forms entry section's role, then " (independent)" for an independent transition and " (lyric)" for a lyric
+   * subordinate theme (P51, R-510). Not roleLabel: that one looks a role value up in a form. */
+  function sectionRoleLabel(entrySection) {
+    const section = entrySection && typeof entrySection === "object" ? entrySection : {};
+    const base = section.role ? section.role.label : "";
+    return `${base}${section.independent === true ? " (independent)" : ""}${section.lyric === true ? " (lyric)" : ""}`;
+  }
+
   /* "3 variations, 32 bars" for a size with a count (the noun is the role of its last section), else "16 bars". */
   function sizeLabel(size) {
     const last = size.sections.length > 0 ? size.sections[size.sections.length - 1].role : null;
@@ -316,6 +324,17 @@
     return "S";
   }
 
+  /* The section functions a game loop section of a part may have (P51, R-510): the vocabulary's piece_functions entries
+   * ({name, label, parts}) whose parts hold the part. */
+  function functionsFor(part) {
+    return Vocab.list("piece_functions").filter((entry) => Array.isArray(entry.parts) && entry.parts.includes(part));
+  }
+
+  /* A function name kept for a part: "" for one the vocabulary does not list or does not allow for the part. */
+  function functionKept(name, part) {
+    return typeof name === "string" && functionsFor(part).some((entry) => entry.name === name) ? name : "";
+  }
+
   /* A new section for a part, after the last section of that part. The default is 8 bars of the meter. */
   function newSection(state, part) {
     const sections = Array.isArray(state.sections) ? state.sections : [];
@@ -327,6 +346,7 @@
       pickup: "0",
       cadence: null,
       fill: emptyFill(),
+      function: "",
     };
   }
 
@@ -443,7 +463,7 @@
   }
 
   function sectionFromState(section, meter) {
-    return {
+    const out = {
       id: section.id,
       part: section.part,
       letter: text(section.letter) || null,
@@ -452,6 +472,12 @@
       cadence: cadences().includes(section.cadence) ? section.cadence : null,
       fill: fillFromState(section.fill, motifIsFree(section, meter)),
     };
+    /* A section without a function has no member, so a piece saved before P51 is unchanged (R-510). */
+    const kept = functionKept(section.function, section.part);
+    if (kept !== "") {
+      out.function = kept;
+    }
+    return out;
   }
 
   /* The version body of a form state: {uses, piece}. The result is left out; the backend fills the uses of the motif
@@ -517,6 +543,7 @@
         pickup: typeof section.pickup === "string" ? section.pickup : "0",
         cadence: cadences().includes(section.cadence) ? section.cadence : null,
         fill: fillFromBody(section.fill),
+        function: functionKept(section.function, section.part),
       }));
     if (piece.motive && typeof piece.motive === "object" && text(piece.motive.item_id)) {
       state.motive = { item_id: piece.motive.item_id, version: Number(piece.motive.version) };
@@ -977,6 +1004,8 @@
          * that has none. */
         figure: (section.figure && section.figure.text) || "",
         skeleton: section.figure && Array.isArray(section.figure.skeleton) ? section.figure.skeleton.join(" ") : "",
+        /* The part of a larger form a section is (P51, R-510): the Composer's sentence; "" for a row that has none. */
+        function: (section.function && section.function.text) || "",
       };
     });
     const seam = v.seam && typeof v.seam === "object" ? v.seam : null;
@@ -1128,6 +1157,8 @@
     performedParts,
     rolesOf,
     roleLabel,
+    sectionRoleLabel,
+    functionsFor,
     defaultRole,
     sizeOptions,
     sizeLabel,

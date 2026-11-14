@@ -871,6 +871,22 @@ static void test_compose(const Items *m) {
             strcmp(string_of(section_named(request, "s1"), "cadence"), "HC") == 0,
         "a pickup and a cadence pass");
   check(cJSON_IsNull(member(request, "motive")), "no motive is a null motive");
+  check(!member(section_named(request, "s0"), "function") && !member(section_named(request, "s1"), "function"),
+        "a section without a function sends none");
+  cJSON_Delete(request);
+  free(piece);
+  /* A section's function (P51, R-510) reaches the Composer request as it is, and only on the section that has one. */
+  char sentence_fill[500];
+  char with_function[2000];
+  motif_fill_of(sentence_fill, sizeof(sentence_fill), m->a, 1, ",\"into\":\"sentence\"");
+  snprintf(s[0], sizeof(s[0]), "{\"id\":\"s0\",\"part\":\"body\",\"letter\":\"A\",\"beats\":32,\"pickup\":\"0\",\"cadence\":null,\"function\":\"transition\",\"fill\":%s}", sentence_fill);
+  snprintf(with_function, sizeof(with_function), "[%s,%s]", s[0], s[1]);
+  create_piece("Function", with_function, "", &piece);
+  free(compose(piece, "{}", &status));
+  request = last_request();
+  check(status == 200 && strcmp(string_of(section_named(request, "s0"), "function"), "transition") == 0 &&
+            !member(section_named(request, "s1"), "function"),
+        "a section's function passes to the Composer request");
   cJSON_Delete(request);
   free(piece);
   create_piece("Pool approved", two, ",\"pool\":\"approved\"", &piece);
