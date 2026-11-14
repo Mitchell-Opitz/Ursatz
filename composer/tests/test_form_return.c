@@ -29,6 +29,9 @@
  *                at least 9 compose; the return keeps every note of A at its place, adds notes (at most one a bar), has a
  *                melody its chords fit, and in at least 7 runs a chord of its last 2 bars is not A's; the built-in ternary
  *                (24 bars, seeds 1 to 5) returns A varied the same way
+ *   embellish    the stand-in form of R-516 (A, T, B, R, A1 returning A embellish, K; 44 bars, modulating), G major and
+ *                D minor 2/4, seeds 1 to 10: at least 9 of 10 compose in each; A1 keeps every melody note of A at its
+ *                place and pitch and has more notes; with A1 ornament the form composes at most 2 of 10 in G major
  *   reregister   rounded binary with A' re-registered, with and without an accompaniment: the melody and the inner
  *                voices are an octave from A's and inside the range; with the default range a run completes only when
  *                one octave fits, else it is stuck at the returns
@@ -511,6 +514,138 @@ static int test_varied(void) {
     return 0;
 }
 
+/* ------------------------------------------------------------ embellish */
+
+#define EMBELLISH_SEEDS 10
+#define EMBELLISH_COMPOSED_LEAST 9
+#define EMBELLISH_ORNAMENT_MOST 2
+
+/* The stand-in form of R-516: A, T, B, R, A1 and K, 44 bars, with A1 returning A with the variation %s. */
+static const char EMBELLISH_FORM[] =
+    "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"embellish-form\",\"label\":\"Embellish form\",\"modulates\":true,"
+    "\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
+    "\"sizes\":[{\"bars\":44,\"default\":true,\"sections\":["
+    "{\"name\":\"A\",\"letter\":\"A\",\"role\":\"theme\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"closed\":true},"
+    "{\"name\":\"T\",\"letter\":\"T\",\"role\":\"transition\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"half\",\"keys\":{\"end\":\"subordinate\"}},"
+    "{\"name\":\"B\",\"letter\":\"B\",\"role\":\"subordinate\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"keys\":{\"start\":\"subordinate\",\"end\":\"subordinate\"},\"motive\":\"invert tonal=1\"},"
+    "{\"name\":\"R\",\"letter\":\"R\",\"role\":\"retransition\",\"bars\":4,\"cadence\":\"half\"},"
+    "{\"name\":\"A1\",\"letter\":\"A\",\"role\":\"return\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"closed\":true,\"returns\":\"A\",\"variation\":\"%s\"},"
+    "{\"name\":\"K\",\"letter\":\"K\",\"role\":\"coda\",\"bars\":8,\"cadence\":\"perfect-authentic\"}]}]}";
+
+typedef struct {
+    const char *name;
+    int pitch_class;
+    KeyStructureMode mode;
+} EmbellishRow;
+
+/* A1 keeps every melody note of A at its place and pitch and has more notes; returns the notes it adds. */
+static size_t check_embellish(const PiecePlan *plan, NodeId source, NodeId section) {
+    static Event a[MAX_EVENTS];
+    static Event b[MAX_EVENTS];
+    size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
+    size_t bn = events(plan, section, PLAN_LANE_MELODY, 0, b);
+    assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
+    for (size_t i = 0; i < an; i++) {
+        bool found = false;
+        for (size_t j = 0; j < bn && !found; j++) {
+            found = equal(a[i].at, b[j].at) && a[i].pitch == b[j].pitch;
+        }
+        assert(found);
+    }
+    assert(bn > an);
+    return bn - an;
+}
+
+/* How many of the seeds compose the form in a row; with check, the embellished returns are checked. */
+static size_t embellish_row(const FormSpec *form, const EmbellishRow *row, bool check, size_t *added) {
+    size_t composed = 0;
+    for (unsigned long seed = 1; seed <= EMBELLISH_SEEDS; seed++) {
+        PieceRequest request;
+        PiecePlan *plan = NULL;
+        ComposeOutcome outcome;
+        ComposeConfig config;
+        memset(&request, 0, sizeof(request));
+        request.form = form->name;
+        request.key = plan_key_of_pitch_class(row->pitch_class, row->mode);
+        request.meter.beats_per_bar = 2;
+        request.meter.beat_unit = 4;
+        request.modulate = true;
+        assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        config.form = form;
+        if (compose_run(plan, &config, &outcome) == PIECE_OK) {
+            composed++;
+            if (check) {
+                NodeId sections[FORM_SPEC_MAX_SECTIONS];
+                size_t count = 0;
+                NodeId root = plan_root(plan);
+                for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+                    NodeId child = plan_node_child_at(plan, root, i);
+                    if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                        sections[count++] = child;
+                    }
+                }
+                const PlanConstraint *back = return_of(plan, sections[4]);
+                assert(count == 6 && back && back->params.section_return.variation == PLAN_RETURN_EMBELLISH);
+                *added += check_embellish(plan, back->params.section_return.section, sections[4]);
+            }
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    return composed;
+}
+
+static FormSpec *embellish_form(const char *variation) {
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    snprintf(text, sizeof(text), EMBELLISH_FORM, variation);
+    if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "embellish form: %s: %s\n", error.path, error.message);
+        exit(2);
+    }
+    return form;
+}
+
+static int test_embellish(void) {
+    static const EmbellishRow ROWS[] = {
+        {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR},
+        {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR},
+    };
+    FormSpec *form = embellish_form("embellish");
+    int failed = 0;
+    size_t added = 0;
+    for (size_t r = 0; r < sizeof(ROWS) / sizeof(ROWS[0]); r++) {
+        size_t composed = embellish_row(form, &ROWS[r], true, &added);
+        printf("%s: %zu of %d seeds compose, A1 embellished\n", ROWS[r].name, composed, EMBELLISH_SEEDS);
+        if (composed < EMBELLISH_COMPOSED_LEAST) {
+            fprintf(stderr, "%s: at least %d of %d seeds should compose\n", ROWS[r].name, EMBELLISH_COMPOSED_LEAST,
+                    EMBELLISH_SEEDS);
+            failed = 1;
+        }
+    }
+    form_spec_destroy(form);
+    /* The same form with A1 ornament has no note to split in 2/4 (R-516): embellish is what lets it compose. */
+    FormSpec *plain = embellish_form("ornament");
+    size_t none = 0;
+    size_t ornament = embellish_row(plain, &ROWS[0], false, &none);
+    printf("G major 2/4 with A1 ornament: %zu of %d seeds compose, %zu notes added with embellish\n", ornament,
+           EMBELLISH_SEEDS, added);
+    form_spec_destroy(plain);
+    if (ornament > EMBELLISH_ORNAMENT_MOST) {
+        fprintf(stderr, "ornament composes %zu of %d, at most %d expected\n", ornament, EMBELLISH_SEEDS,
+                EMBELLISH_ORNAMENT_MOST);
+        failed = 1;
+    }
+    return failed;
+}
+
 /* ------------------------------------------------------------ reregister */
 
 static void make_reregister(PiecePlan *plan) {
@@ -606,9 +741,12 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "varied") == 0) {
         return test_varied();
     }
+    if (strcmp(mode, "embellish") == 0) {
+        return test_embellish();
+    }
     if (strcmp(mode, "reregister") == 0) {
         return test_reregister();
     }
-    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|varied|reregister\n");
+    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|varied|embellish|reregister\n");
     return 2;
 }
