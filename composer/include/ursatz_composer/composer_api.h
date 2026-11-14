@@ -23,10 +23,12 @@
  * forms entry's meters, tempo, repeats, parts and lead-in members.
  * 1.21 adds the planned key of each section's row, and the forms entry's modulates and a part's bars.
  * 1.22 adds each section's figure and skeleton to the rows, and a section's figure and mode to the forms entry.
+ * 1.23 adds each section's function to the rows, independent and lyric to the forms entry, piece_functions to the vocabulary and a
+ * section's function to the game loop request.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 22
+#define COMPOSER_API_VERSION_MINOR 23
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
