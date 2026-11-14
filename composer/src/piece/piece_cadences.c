@@ -78,6 +78,12 @@ static bool section_key(const PiecePlan *plan, NodeId section, AnalysisKey *out)
     return false;
 }
 
+/* Whether the section is a transition: it ends on the new key's V in a half cadence, not a PAC (R-503, R-512). */
+static bool is_transition(const PiecePlan *plan, NodeId section) {
+    PlanSectionFunction function;
+    return plan_section_function_of(plan, section, &function) && function.function == PLAN_FUNCTION_TRANSITION;
+}
+
 /* The CADENCE constraints of the section, replaced by these. */
 static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const CadenceType *cadences, size_t count) {
     for (size_t i = plan_node_constraint_count(plan, section); i > 0; i--) {
@@ -121,6 +127,9 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const For
             return PIECE_ERR_BAD_REQUEST;
         }
         CadenceType wanted = cadences[0];
+        if (is_transition(plan, sections[i]) && i + 1 < count) {
+            continue; /* a transition keeps its half cadence in the key it modulates to */
+        }
         if (i + 1 == count || !analysis_key_equals(&keys->sections[i].end, &home)) {
             wanted = CADENCE_TYPE_PERFECT_AUTHENTIC;
         } else if (wanted == CADENCE_TYPE_PERFECT_AUTHENTIC && !size->sections[i].closed) {
@@ -188,7 +197,8 @@ static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCad
             return false;
         }
         bool away = !analysis_key_equals(&ends_in, &home);
-        if (away && cadences[0] != CADENCE_TYPE_PERFECT_AUTHENTIC && cadences[0] != CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
+        if (away && cadences[0] != CADENCE_TYPE_PERFECT_AUTHENTIC && cadences[0] != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
+            !is_transition(plan, sections[i])) {
             fail(out, "a section ends in another key without an authentic cadence", i);
         } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !size->sections[i].closed) {
             fail(out, "a section closes in the home key before the piece ends", i);
