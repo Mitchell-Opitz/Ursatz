@@ -440,9 +440,10 @@ endforeach()
 
 add_executable(test_piece_structure test_piece_structure.c)
 target_link_libraries(test_piece_structure PRIVATE ursatz_composer)
+target_include_directories(test_piece_structure PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_piece_structure PRIVATE -Wall -Wextra -Wpedantic)
-# The checks and the plans, then the composed runs (seeds 1 to 10 each): a structure, a pickup, free phrases.
-foreach(mode checks plan compose pickup free minor_half_free)
+# The checks and the plans, then the composed runs (seeds 1 to 10 each): a structure, a pickup, free phrases, the transition and the coda.
+foreach(mode checks plan compose pickup free minor_half_free functions)
     add_test(NAME test_piece_structure_${mode} COMMAND test_piece_structure ${mode})
 endforeach()
 

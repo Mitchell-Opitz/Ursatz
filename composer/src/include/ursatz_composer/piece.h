@@ -47,6 +47,14 @@ const char *piece_part_name(PiecePart part);
 /* False for a name that is none of these. */
 bool piece_part_from_name(const char *name, PiecePart *out);
 
+/* The part of a larger form a section is, when it is one (R-508): a transition (any body section but the ending) or a coda (the ending's). */
+typedef enum { PIECE_FUNCTION_NONE, PIECE_FUNCTION_TRANSITION, PIECE_FUNCTION_CODA } PieceFunction;
+
+/* "none", "transition", "coda"; "unknown" for a value that is none of them. */
+const char *piece_function_name(PieceFunction function);
+/* False for a name that is none of "transition" and "coda"; "none" is not a name a request gives. */
+bool piece_function_from_name(const char *name, PieceFunction *out);
+
 /*
  * What fills a section (R-170): nothing of its own (empty, made from the piece's basic motive), a motive (a theme
  * section at 4 or 8 bars or with a construction, else a free phrase), a composed theme's realized lanes (Given), or a progression.
@@ -68,6 +76,7 @@ typedef struct {
     char id[PIECE_SECTION_ID_MAX];
     char letter[PLAN_SECTION_LETTER_MAX];
     PiecePart part;
+    PieceFunction function;      /* none by default; a transition or a coda (R-508) */
     size_t beats;                /* the length, in beats of the meter; at least 1 */
     Rational pickup;             /* the anacrusis before the section; 0 for none */
     bool has_cadence;            /* false: piece_default_cadences decides */

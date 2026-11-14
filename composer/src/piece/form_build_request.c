@@ -43,6 +43,33 @@ bool piece_part_from_name(const char *name, PiecePart *out) {
     return false;
 }
 
+const char *piece_function_name(PieceFunction function) {
+    switch (function) {
+    case PIECE_FUNCTION_NONE:
+        return "none";
+    case PIECE_FUNCTION_TRANSITION:
+        return "transition";
+    case PIECE_FUNCTION_CODA:
+        return "coda";
+    }
+    return "unknown";
+}
+
+bool piece_function_from_name(const char *name, PieceFunction *out) {
+    PieceFunction function;
+    if (name && strcmp(name, "transition") == 0) {
+        function = PIECE_FUNCTION_TRANSITION;
+    } else if (name && strcmp(name, "coda") == 0) {
+        function = PIECE_FUNCTION_CODA;
+    } else {
+        return false;
+    }
+    if (out) {
+        *out = function;
+    }
+    return true;
+}
+
 const char *piece_fill_name(PieceFillKind fill) {
     return fill >= PIECE_FILL_EMPTY && fill <= PIECE_FILL_PROGRESSION ? FILL_NAMES[fill] : "unknown";
 }
@@ -126,7 +153,12 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
         if (section->id[0] == '\0' || strnlen(section->id, PIECE_SECTION_ID_MAX) == PIECE_SECTION_ID_MAX ||
             section->part < PIECE_PART_INTRO || section->part > PIECE_PART_ENDING || (int)section->part < last_part ||
             !form_spec_has_role(form, role_of(section->part)) || section->beats < 1 || !pickup_valid(section->pickup, bar) ||
-            section->fill < PIECE_FILL_EMPTY || section->fill > PIECE_FILL_PROGRESSION) {
+            section->fill < PIECE_FILL_EMPTY || section->fill > PIECE_FILL_PROGRESSION ||
+            section->function < PIECE_FUNCTION_NONE || section->function > PIECE_FUNCTION_CODA ||
+            /* A transition leads on to the next section: not the turnaround (it leads back) or the ending. A coda closes. */
+            (section->function == PIECE_FUNCTION_TRANSITION &&
+             (section->part == PIECE_PART_TURNAROUND || section->part == PIECE_PART_ENDING)) ||
+            (section->function == PIECE_FUNCTION_CODA && section->part != PIECE_PART_ENDING)) {
             return PIECE_ERR_BAD_REQUEST;
         }
         for (size_t other = 0; other < i; other++) {
@@ -171,6 +203,10 @@ void piece_default_cadences(const FormSpec *form, PieceRequest *request) {
         }
         section->has_cadence = true;
         section->cadence = form->default_cadence;
+        if (section->function == PIECE_FUNCTION_TRANSITION) {
+            section->cadence = CADENCE_TYPE_HALF;
+            continue;
+        }
         /* The first rule whose roles hold the last section of one of them. */
         for (size_t r = 0; r < form->last_cadence_count; r++) {
             const FormCadenceRule *rule = &form->last_cadences[r];
@@ -430,8 +466,31 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         return PIECE_ERR_BAD_REQUEST;
     }
     bool theme = constructed || (given == PLAN_NODE_NONE && is_theme_section(request, section, start_beats, &pairing));
+    const bool transition = section->function == PIECE_FUNCTION_TRANSITION;
+    const bool coda = section->function == PIECE_FUNCTION_CODA;
+    if (transition || coda) {
+        /* A function is the section's own growing (R-508): empty or motif fill, and no given theme. */
+        if (given != PLAN_NODE_NONE || (section->fill != PIECE_FILL_EMPTY && section->fill != PIECE_FILL_MOTIF) ||
+            section->has_construction) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+    }
+    if (transition && (!theme || (section->has_into && section->into != PLAN_ARCHETYPE_SENTENCE) ||
+                       section->cadence != CADENCE_TYPE_HALF)) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    if (coda) {
+        /* A coda is 8 whole bars from a barline, no pickup, closing on a perfect authentic cadence. */
+        size_t per_bar = (size_t)request->meter.beats_per_bar;
+        if (section->pickup.num != 0 || start_beats % per_bar != 0 || section->beats != 8 * per_bar ||
+            section->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+    }
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
-    if (result == PIECE_OK && given != PLAN_NODE_NONE) {
+    if (result == PIECE_OK && coda) {
+        /* No archetype, theme pairing or free phrase: grow-coda lays the section out (R-509). */
+    } else if (result == PIECE_OK && given != PLAN_NODE_NONE) {
         result = add_theme_constraints(plan, *out, theme_plan, given);
     } else if (result == PIECE_OK && theme) {
         memset(&constraint, 0, sizeof(constraint));
@@ -466,6 +525,12 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = ANTECEDENT_CADENCE;
+        result = piece_add_constraint(plan, *out, &constraint);
+    }
+    if (result == PIECE_OK && (transition || coda)) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_SECTION_FUNCTION;
+        constraint.params.section_function.function = transition ? PLAN_FUNCTION_TRANSITION : PLAN_FUNCTION_CODA;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {

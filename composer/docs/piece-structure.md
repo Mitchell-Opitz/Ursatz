@@ -45,6 +45,7 @@ A section is:
 | --- | --- |
 | `id`, `letter` | The section's id (unique, 1 to 15 characters) and its form letter (1 to 3). |
 | `part` | `PIECE_PART_INTRO`, `_BODY`, `_TURNAROUND` or `_ENDING`: the form's role of that name. |
+| `function` | `PIECE_FUNCTION_NONE` (default), `_TRANSITION` or `_CODA`: the part of a larger form the section is (R-508, see [Functions](#functions)). |
 | `beats` | The length in beats of the meter: any whole number, 1 or more. |
 | `pickup` | The anacrusis before the section: a multiple of 1/32 of a whole note and shorter than a bar; 0 for none. It is the section's own, not part of `beats`. |
 | `has_cadence`, `cadence` | The cadence the section ends in; without one `piece_default_cadences` decides. |
@@ -57,6 +58,15 @@ A section is:
 request with no body section, parts out of order, ids that repeat, more than 32 sections or 512 bars, a length under one
 beat, a pickup that is not a multiple of 1/32 or not shorter than a bar, a meter or key that is not supported, or an
 accompaniment and a voicing together.
+
+## Functions
+
+A body or intro section may be a transition and the ending's section a coda (R-508, [form-parts.md](form-parts.md)). `function` is `none` unless the request says so; a request without it builds the same plan as before, byte for byte. The request's API name is `"transition"` or `"coda"` (`piece_function_name`, `piece_function_from_name`).
+
+- A transition is not on the turnaround or the ending. It is a theme section (4 or 8 whole bars on a barline, no pickup, `into` none or sentence, fill empty or motif, no construction) with the cadence half; without a cadence it gets half (`piece_default_cadences`). It gets the `section_function` constraint `transition` after its theme constraints, and grows as the transition of a form does (its continuation liquidated).
+- A coda is on the ending only: 8 whole bars from a barline, no pickup, fill empty or motif, cadence perfect authentic. It gets the `section_function` constraint `coda` and its cadence, and no `archetype`, `theme_pairing` or `free_phrase`; it grows as three phrases of 4, 2 and 2 bars. `piece_build_ending` builds the ending with it.
+
+Every other case is `PIECE_ERR_BAD_REQUEST`: a transition on the turnaround or the ending, a coda on any other part, and a function section that does not meet its rules.
 
 ## Fills
 

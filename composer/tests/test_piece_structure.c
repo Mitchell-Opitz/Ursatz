@@ -10,6 +10,8 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
 
+#include "util/plan_util.h"
+
 /*
  * Piece structures (R-169, R-170): the checks, the default cadences, and the plans and composed runs of structures
  * laid out in beats (4/4, C major, seeds 1 to 10).
@@ -21,6 +23,9 @@
  *             written and the cadences are heard as planned in at least 8 of the 10 seeds
  *   pickup    a body section with a quarter-note pickup composes and keeps its pickup
  *   free      a free phrase of 3 bars and one of 10 beats: their ideas and their cadences
+ *   functions  a game loop with a transition body section and a coda ending (P51 B6, R-508), C major 4/4 and A minor 3/4:
+ *             the loop and the ending each compose 9 of 10 or more; T ends on V and its `fragment 2` is a liquidation as
+ *             B2's measure reads it; K has three phrases of 4, 2 and 2 bars; each refusal is PIECE_ERR_BAD_REQUEST
  *   minor_half_free  a game loop in D minor in 4/4 whose body ends in a free phrase of 20 beats ending in a half cadence
  *             builds and composes, every section written (P44 B6, R-418); the same loop was stuck at the seam stage
  */
@@ -461,6 +466,245 @@ static void test_minor_half_free(void) {
     printf("D minor 4/4 loop, B a free phrase of 20 beats ending HC: composed, every section written\n");
 }
 
+
+/* ------------------------------------------------------------- the transition and the coda (P51 B6, R-508) */
+
+typedef struct {
+    const char *name;
+    int tonic;
+    KeyStructureMode mode;
+    int beats;
+    Motive motive;
+} FunctionRow;
+
+/* Intro 4 bars; body A 8 bars, T 8 bars (transition), B 8 bars with a motive of its own; turnaround 4 bars; ending K 8 bars (coda). */
+static void function_structure(Fixture *fixture, FunctionRow *row) {
+    fixture_init(fixture);
+    fixture->request.key = plan_key_of_pitch_class(row->tonic, row->mode);
+    fixture->request.meter.beats_per_bar = row->beats;
+    size_t bar = (size_t)row->beats;
+    MotiveOptions options;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter = fixture->request.meter;
+    options.has_key = true;
+    options.key = fixture->request.key;
+    assert(motive_from_degrees_text(row->beats == 4 ? "1:q 3:e 2:e 5:h" : "1:q 3:e 2:e 5:q", &options, &row->motive, NULL) ==
+           MOTIVE_OK);
+    add_section(fixture, "intro", "I", PIECE_PART_INTRO, 4 * bar, PIECE_FILL_EMPTY);
+    add_section(fixture, "a", "A", PIECE_PART_BODY, 8 * bar, PIECE_FILL_MOTIF);
+    PieceSection *t = add_section(fixture, "t", "T", PIECE_PART_BODY, 8 * bar, PIECE_FILL_MOTIF);
+    t->function = PIECE_FUNCTION_TRANSITION;
+    PieceSection *b = add_section(fixture, "b", "B", PIECE_PART_BODY, 8 * bar, PIECE_FILL_MOTIF);
+    b->motive = &row->motive;
+    add_section(fixture, "turn", "R", PIECE_PART_TURNAROUND, 4 * bar, PIECE_FILL_EMPTY);
+    PieceSection *k = add_section(fixture, "k", "K", PIECE_PART_ENDING, 8 * bar, PIECE_FILL_MOTIF);
+    k->function = PIECE_FUNCTION_CODA;
+}
+
+/* The first node under `node` (any depth) with this name, or PLAN_NODE_NONE. */
+static NodeId find_named(const PiecePlan *plan, NodeId node, const char *name) {
+    for (size_t i = 0; i < plan_node_child_count(plan, node); i++) {
+        NodeId child = plan_node_child_at(plan, node, i);
+        if (strcmp(plan_node_name(plan, child), name) == 0) {
+            return child;
+        }
+        NodeId inner = find_named(plan, child, name);
+        if (inner != PLAN_NODE_NONE) {
+            return inner;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* The motive reference of the motive node an idea's melody span names, or NULL (R-512: the plan, not the notes). */
+static const PlanMotiveRef *idea_motive_ref(const PiecePlan *plan, NodeId idea) {
+    LaneSpanId melody;
+    if (idea == PLAN_NODE_NONE || !plan_melody_span_of(plan, idea, &melody)) {
+        return NULL;
+    }
+    const PlanConstraint *span_ref = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
+    if (!span_ref) {
+        return NULL;
+    }
+    const PlanConstraint *node_ref = plan_node_find_constraint(plan, span_ref->params.motive.motive, PLAN_CONSTRAINT_MOTIVE_REF);
+    return node_ref ? &node_ref->params.motive : NULL;
+}
+
+/* The harmony span of a section that starts latest. */
+static LaneSpanId last_chord(const PiecePlan *plan, NodeId section) {
+    LaneSpanId ids[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, section), ids, 64);
+    assert(found > 0 && found <= 64);
+    LaneSpanId last = ids[0];
+    for (size_t i = 1; i < found; i++) {
+        if (rational_cmp(plan_lane_span_span(plan, ids[i]).start, plan_lane_span_span(plan, last).start) > 0) {
+            last = ids[i];
+        }
+    }
+    return last;
+}
+
+/* T of the loop version: a transition ending on V or V7, its continuation liquidated (fragment 2 by 1 step or more on a segment). */
+static bool transition_ok(const PiecePlan *plan, NodeId t) {
+    const PlanConstraint *function = node_constraint(plan, t, PLAN_CONSTRAINT_SECTION_FUNCTION);
+    if (!function || function->params.section_function.function != PLAN_FUNCTION_TRANSITION) {
+        return false;
+    }
+    const char *numeral = plan_lane_span_payload(plan, last_chord(plan, t))->harmony.roman_numeral;
+    const PlanMotiveRef *residue = idea_motive_ref(plan, find_named(plan, t, "fragment 2"));
+    return (strcmp(numeral, "V") == 0 || strcmp(numeral, "V7") == 0) && residue && residue->steps >= 1 &&
+           residue->segment[0] != '\0';
+}
+
+/* K of the ending version: the coda function, three phrases of 4, 2 and 2 bars, no archetype. */
+static bool coda_ok(const PiecePlan *plan, NodeId k) {
+    const PlanConstraint *function = node_constraint(plan, k, PLAN_CONSTRAINT_SECTION_FUNCTION);
+    if (!function || function->params.section_function.function != PLAN_FUNCTION_CODA ||
+        node_constraint(plan, k, PLAN_CONSTRAINT_ARCHETYPE) || plan_node_child_count(plan, k) != 3) {
+        return false;
+    }
+    PlanSpan whole = plan_node_span(plan, k);
+    Rational bar;
+    assert(rational_div(whole.length, (Rational){8, 1}, &bar) == RATIONAL_OK);
+    static const long BARS[3] = {4, 2, 2};
+    Rational expected = whole.start;
+    for (size_t p = 0; p < 3; p++) {
+        PlanSpan span = plan_node_span(plan, plan_node_child_at(plan, k, p));
+        Rational length;
+        assert(rational_mul_int(bar, BARS[p], &length) == RATIONAL_OK);
+        if (rational_cmp(span.start, expected) != 0 || rational_cmp(span.length, length) != 0) {
+            return false;
+        }
+        assert(rational_add(span.start, span.length, &expected) == RATIONAL_OK);
+    }
+    return true;
+}
+
+static void function_refusals(const FunctionRow *row, const PiecePlan *loop_plan) {
+    Fixture fixture;
+    FunctionRow copy = *row;
+    PiecePlan *plan = NULL;
+    size_t bar = (size_t)row->beats;
+    static const size_t T = 2, B = 3, TURN = 4, K = 5;
+
+    /* A transition on the turnaround or the ending, a coda on any part but the ending. */
+    function_structure(&fixture, &copy);
+    fixture.sections[TURN].function = PIECE_FUNCTION_TRANSITION;
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    function_structure(&fixture, &copy);
+    fixture.sections[K].function = PIECE_FUNCTION_TRANSITION;
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    function_structure(&fixture, &copy);
+    fixture.sections[B].function = PIECE_FUNCTION_CODA;
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    function_structure(&fixture, &copy);
+    fixture.sections[TURN].function = PIECE_FUNCTION_CODA;
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    function_structure(&fixture, &copy);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(strcmp(piece_function_name(PIECE_FUNCTION_TRANSITION), "transition") == 0 &&
+           strcmp(piece_function_name(PIECE_FUNCTION_CODA), "coda") == 0);
+    PieceFunction named;
+    assert(piece_function_from_name("coda", &named) && named == PIECE_FUNCTION_CODA);
+    assert(!piece_function_from_name("none", &named) && !piece_function_from_name("retransition", &named));
+
+    /* A transition that is no sentence-or-motif theme section with a half cadence: a perfect cadence, a period, a theme fill, a
+       construction, a length that is no theme's. */
+    function_structure(&fixture, &copy);
+    fixture.sections[T].has_cadence = true;
+    fixture.sections[T].cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
+    function_structure(&fixture, &copy);
+    fixture.sections[T].has_into = true;
+    fixture.sections[T].into = PLAN_ARCHETYPE_PERIOD;
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
+    function_structure(&fixture, &copy);
+    fixture.sections[T].fill = PIECE_FILL_PROGRESSION;
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
+    function_structure(&fixture, &copy);
+    fixture.sections[T].has_construction = true;
+    fixture.sections[T].construction_auto = true;
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
+    function_structure(&fixture, &copy);
+    fixture.sections[T].beats = 6 * bar + 1;
+    assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
+
+    /* A coda that is not 8 whole bars with no pickup, a perfect authentic cadence and an empty or motif fill. */
+    PiecePlan *ending = NULL;
+    function_structure(&fixture, &copy);
+    fixture.sections[K].beats = 4 * bar;
+    assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
+    function_structure(&fixture, &copy);
+    assert(rational_make(1, 4, &fixture.sections[K].pickup) == RATIONAL_OK);
+    assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
+    function_structure(&fixture, &copy);
+    fixture.sections[K].has_cadence = true;
+    fixture.sections[K].cadence = CADENCE_TYPE_HALF;
+    assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
+    function_structure(&fixture, &copy);
+    fixture.sections[K].fill = PIECE_FILL_PROGRESSION;
+    assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
+}
+
+static void test_functions(void) {
+    static FunctionRow rows[2];
+    rows[0] = (FunctionRow){.name = "C major 4/4", .tonic = 0, .mode = KEY_STRUCTURE_MODE_MAJOR, .beats = 4};
+    rows[1] = (FunctionRow){.name = "A minor 3/4", .tonic = 9, .mode = KEY_STRUCTURE_MODE_MINOR, .beats = 3};
+    for (size_t r = 0; r < 2; r++) {
+        FunctionRow *row = &rows[r];
+        Fixture fixture;
+        function_structure(&fixture, row);
+        assert(piece_request_check(&fixture.request) == PIECE_OK);
+        size_t loops = 0;
+        size_t endings = 0;
+        PiecePlan *kept = NULL;
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            PiecePlan *loop_plan = NULL;
+            PiecePlan *ending = NULL;
+            ComposeConfig config;
+            ComposeOutcome outcome;
+            memset(&config, 0, sizeof(config));
+            config.seed = seed;
+            assert(piece_build_plan(&fixture.request, &loop_plan) == PIECE_OK);
+            PieceResult ran = compose_run(loop_plan, &config, &outcome);
+            compose_outcome_destroy(&outcome);
+            if (ran != PIECE_OK) {
+                fprintf(stderr, "%s seed %lu: the loop does not compose\n", row->name, seed);
+                plan_destroy(loop_plan);
+                continue;
+            }
+            NodeId sections[PIECE_STRUCTURE_MAX_SECTIONS];
+            size_t count = piece_sections(loop_plan, sections, PIECE_STRUCTURE_MAX_SECTIONS);
+            assert(count == 5);
+            assert(transition_ok(loop_plan, sections[2]));
+            assert(!node_constraint(loop_plan, sections[1], PLAN_CONSTRAINT_SECTION_FUNCTION));
+            loops++;
+            assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_OK);
+            config.seed = seed + 20;
+            ran = compose_run(ending, &config, &outcome);
+            compose_outcome_destroy(&outcome);
+            if (ran == PIECE_OK) {
+                count = piece_sections(ending, sections, PIECE_STRUCTURE_MAX_SECTIONS);
+                assert(count == 5 && coda_ok(ending, sections[count - 1]));
+                endings++;
+            } else {
+                fprintf(stderr, "%s seed %lu: the ending does not compose\n", row->name, seed);
+            }
+            plan_destroy(ending);
+            if (kept) {
+                plan_destroy(loop_plan);
+            } else {
+                kept = loop_plan;
+            }
+        }
+        printf("%s: the loop composed %zu of %d, the ending %zu of %d\n", row->name, loops, SEEDS, endings, SEEDS);
+        assert(loops >= 9 && endings >= 9);
+        function_refusals(row, kept);
+        plan_destroy(kept);
+    }
+}
+
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "checks") == 0) {
         test_checks();
@@ -487,6 +731,10 @@ int main(int argc, char **argv) {
         test_minor_half_free();
         return 0;
     }
-    fprintf(stderr, "usage: test_piece_structure checks|plan|compose|pickup|free|minor_half_free\n");
+    if (argc == 2 && strcmp(argv[1], "functions") == 0) {
+        test_functions();
+        return 0;
+    }
+    fprintf(stderr, "usage: test_piece_structure checks|plan|compose|pickup|free|minor_half_free|functions\n");
     return 2;
 }
