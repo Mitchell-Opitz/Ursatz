@@ -123,7 +123,11 @@ A key opens where a span starts after another. The harmony target that starts th
 (`PLAN_HARMONY_ANCHOR_PIVOT`): `harmony-phrase-model` writes a pivot chord first, one `harmony_pivot_find` gives between
 the two keys, as its numeral in the new key. The candidates are the pivots by `harmony_pivot_rank` (best first), without
 a dominant, a diminished triad, or in minor the minor v; the first candidate opens on the best, the others on the
-others. A predominant pivot is the phrase's predominant (only ii may follow IV). `harmony_phrase_checker` rejects a
+others. A predominant pivot is the phrase's predominant (only ii may follow IV). When no pivot deals a phrase that fits
+(into V of a major key the pivots are its IV, ii and vi, all predominants, which leave a half cadence two chords at most,
+too few for four bars of at most 2 cells a chord with no barline crossed), the predominant pivots are dealt again going on to
+the new key's V7 and I and then the predominant run and the cadence, which confirms the new key before the half cadence
+(R-512); a phrase that dealt before is dealt the same. `harmony_phrase_checker` rejects a
 candidate whose first chord is not `harmony_pivot_valid` and does not ask for an opening tonic. Because the target is in
 the new key, the cadence the checker hears is heard in it. Only a phrase model has a pivot, so grow-theme opens a key
 only in the second half of a section (a continuation or a consequent) and at the start of an antecedent; a presentation
