@@ -483,6 +483,68 @@ static void test_given_tonic_downbeats(void) {
     }
 }
 
+
+/*
+ * A half-cadence phrase that opens the dominant key on a pivot (R-512): from C major into G major the pivots are G's IV,
+ * ii and vi, all predominants, which alone leave two chords at most before the V, too few for four bars of 4/4 with no chord over two cells
+ * or a barline. The pivot goes on to G's V7 and I, then the predominant and the V.
+ */
+static void test_pivot_into_the_dominant(void) {
+    for (unsigned long seed = 0; seed < 8; seed++) {
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 7, 4, CADENCE_TYPE_HALF, seed};
+        PiecePlan *plan = plan_create();
+        Rational bar = fraction(1, 1);
+        PlanSpan whole = {fraction(0, 1), fraction(8, 1)};
+        PlanSpan first = {fraction(0, 1), fraction(4, 1)};
+        PlanSpan second = {fraction(4, 1), fraction(4, 1)};
+        NodeId owner;
+        assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, whole, NULL, &owner) == PLAN_OK);
+        assert(plan_node_set_state(plan, owner, PLAN_STATE_GIVEN) == PLAN_OK);
+        PlanLanePayload payload;
+        LaneSpanId id;
+        memset(&payload, 0, sizeof(payload));
+        payload.meter.beats_per_bar = 4;
+        payload.meter.beat_unit = 4;
+        assert(plan_add_lane_span(plan, owner, PLAN_LANE_METER, 0, whole, &payload, &id) == PLAN_OK);
+        assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+        for (int k = 0; k < 2; k++) {
+            memset(&payload, 0, sizeof(payload));
+            payload.key = plan_key_of_pitch_class(k == 0 ? 0 : 7, KEY_STRUCTURE_MODE_MAJOR);
+            assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, k == 0 ? first : second, &payload, &id) == PLAN_OK);
+            assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+        }
+        memset(&payload, 0, sizeof(payload));
+        strcpy(payload.harmony.roman_numeral, "I");
+        Fixture fixture = {plan, owner, 0, second, bar};
+        assert(plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, second, &payload, &fixture.target) == PLAN_OK);
+        PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
+        cadence.params.cadence = CADENCE_TYPE_HALF;
+        assert(plan_lane_span_add_constraint(plan, fixture.target, &cadence) == PLAN_OK);
+        PlanHarmonyShape shape;
+        memset(&shape, 0, sizeof(shape));
+        shape.kind = PLAN_HARMONY_SHAPE_PHRASE_MODEL;
+        shape.starts_on = PLAN_HARMONY_ANCHOR_PIVOT;
+        shape.max_cells_per_chord = 2;
+        shape.split_at_bars = true;
+        FillOutcome outcome = run_shaped(&fixture, shape, seed);
+        assert(outcome.status == FILL_STATUS_COMPLETE);
+        LaneSpanId ids[MAX_CHORDS];
+        size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, second, ids, MAX_CHORDS);
+        assert(count >= 4);
+        const char *opening = plan_lane_span_payload(plan, ids[0])->harmony.roman_numeral;
+        /* G's IV, ii or vi: the chords C major and G major share that are not a dominant, all predominants in G. */
+        assert(strcmp(opening, "IV") == 0 || strcmp(opening, "ii") == 0 || strcmp(opening, "vi") == 0);
+        assert(plan_lane_span_payload(plan, ids[0])->harmony.function == HARMONIC_FUNCTION_PREDOMINANT);
+        assert(strcmp(plan_lane_span_payload(plan, ids[1])->harmony.roman_numeral, "V7") == 0);
+        assert(strcmp(plan_lane_span_payload(plan, ids[2])->harmony.roman_numeral, "I") == 0);
+        const char *last = plan_lane_span_payload(plan, ids[count - 1])->harmony.roman_numeral;
+        assert(strcmp(last, "V") == 0 || strcmp(last, "V7") == 0);
+        (void)scenario;
+        fill_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+}
+
 int main(void) {
     test_sweep();
     test_phrase_model_shape();
@@ -491,5 +553,6 @@ int main(void) {
     test_no_cadence_is_not_applicable();
     test_cadence_on_owner();
     test_given_tonic_downbeats();
+    test_pivot_into_the_dominant();
     return 0;
 }
