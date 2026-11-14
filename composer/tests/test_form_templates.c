@@ -81,6 +81,9 @@ typedef struct {
     bool parallel;    /* the section is in the home tonic's other mode (R-499): the figured variations' V3 */
     bool has_figure;  /* a figurate return with a FIGURE constraint (R-497): the figured variations' variations */
     PlanFigure figure;
+    bool region;      /* the section ends in the form's region (V in major, III in minor): the main and subordinate themes (R-509) */
+    int function;     /* a SECTION_FUNCTION constraint of this PlanFunctionKind (R-503), or -1 for none */
+    bool lyric;       /* a lyric subordinate theme: m0 augmented (R-506) */
 } Expected;
 
 #define MAX_EXPECTED FORM_SPEC_MAX_SECTIONS
@@ -104,6 +107,14 @@ static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning
     e->parallel = false;
     e->has_figure = false;
     memset(&e->figure, 0, sizeof(e->figure));
+    e->region = false;
+    e->function = -1;
+    e->lyric = false;
+}
+
+/* A retransition or a coda is an operator section like the liquidation: no pairing and no archetype (R-503). */
+static bool is_operator(const Expected *e) {
+    return e->liquidation || e->function == PLAN_FUNCTION_RETRANSITION || e->function == PLAN_FUNCTION_CODA;
 }
 
 #define IS(name) (strcmp(kind, name) == 0)
@@ -195,6 +206,30 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         }
         set(&out[n++], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "C", 4, CBI, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+    } else if (IS("main-and-subordinate")) {
+        /* A main theme, the transition to the subordinate region (V, or III in minor; the KEY constraint is the key a section
+           ends in), the subordinate theme (S1, and at 57 bars S2 the lyric one), the codetta, the retransition home, the
+           return of A and the coda (R-509). The retransition and the coda are operator sections. */
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        set(&out[n], "B", size.bars == 57 ? 9 : 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        if (size.bars == 57) {
+            set(&out[n], "B", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+            out[n].region = true;
+            out[n].function = PLAN_FUNCTION_SUBORDINATE;
+            out[n++].lyric = true;
+        }
+        set(&out[n], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].region = true;
+        set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
+        set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_CODA;
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -238,6 +273,9 @@ static size_t sizes_of(const char *kind, Size *out) {
     } else if (IS("figured-variations")) {
         out[n++] = (Size){56, 5};
         out[n++] = (Size){40, 3};
+    } else if (IS("main-and-subordinate")) {
+        out[n++] = (Size){57, 0};
+        out[n++] = (Size){48, 0};
     }
     return n;
 }
@@ -336,11 +374,20 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         const PlanConstraint *cadence = find(plan, section, PLAN_CONSTRAINT_CADENCE, 0);
         const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_KEY, 0);
         const PlanConstraint *liquidation = find(plan, section, PLAN_CONSTRAINT_LIQUIDATION, 0);
+        const PlanConstraint *function = find(plan, section, PLAN_CONSTRAINT_SECTION_FUNCTION, 0);
         const PlanConstraint *back = find(plan, section, PLAN_CONSTRAINT_RETURN, 0);
         const PlanConstraint *layers = find(plan, section, PLAN_CONSTRAINT_LAYERS, 0);
         assert(letter && strcmp(letter->params.letter, expected[i].letter) == 0);
-        if (expected[i].liquidation) {
-            assert(liquidation && !pairing && find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) == NULL);
+        /* The part of a larger form a section is, and only that (R-503). */
+        assert((function != NULL) == (expected[i].function >= 0));
+        if (function) {
+            assert((int)function->params.section_function.function == expected[i].function &&
+                   function->params.section_function.lyric == expected[i].lyric &&
+                   !function->params.section_function.independent);
+        }
+        if (is_operator(&expected[i])) {
+            assert((liquidation != NULL) == expected[i].liquidation);
+            assert(!pairing && find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) == NULL);
         } else {
             assert(!liquidation && pairing && pairing->params.theme_pairing.beginning == expected[i].beginning &&
                    pairing->params.theme_pairing.ending == expected[i].ending);
@@ -352,10 +399,13 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         assert((expected[i].beginning == AN) == (weak != NULL));
         assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
         /* A section in the parallel mode is on the home tonic in the other mode. */
-        const KeyStructureMode mode = expected[i].parallel ? (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? KEY_STRUCTURE_MODE_MINOR
+        /* The region of the main and subordinate themes is V in major and III in minor, which is a major key. */
+        const KeyStructureMode mode = expected[i].parallel || (expected[i].region && scenario->mode == KEY_STRUCTURE_MODE_MINOR) ? (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? KEY_STRUCTURE_MODE_MINOR
                                                                                                           : KEY_STRUCTURE_MODE_MAJOR)
                                                            : scenario->mode;
-        assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + expected[i].key_offset) % 12 &&
+        const int region_offset = scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? 7 : 3; /* V in major, III in minor */
+        const int offset = expected[i].region ? region_offset : expected[i].key_offset;
+        assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
                key->params.key.mode == mode);
         /* A figure rides on a figurate return and only there (R-497). */
         const PlanConstraint *figure = find(plan, section, PLAN_CONSTRAINT_FIGURE, 0);
@@ -385,7 +435,10 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
             const char *name = plan_node_name(plan, motive->params.motive.motive);
             assert(name && strcmp(name, "m0") == 0);
         }
-        if (strcmp(expected[i].letter, "B") == 0 && !IS("scherzo")) {
+        if (expected[i].lyric) {
+            /* A lyric theme is m0 augmented (R-506): the open ratio the builder fills. */
+            assert(motive && motive->params.motive.has_step && motive->params.motive.step.kind == MOTIVE_RELATION_AUGMENT);
+        } else if (strcmp(expected[i].letter, "B") == 0 && !IS("scherzo")) {
             assert(motive && motive->params.motive.has_step && motive->params.motive.step.kind == MOTIVE_RELATION_INVERT &&
                    motive->params.motive.step.value[1] != 0);
         }
@@ -572,6 +625,9 @@ static void compose_all(const char *kind, Tally *total) {
  * the invented motive in C major 4/4 at 56 bars is stuck at the returns stage once (4 of 5), the rest compose 35 of 35. The
  * variations are heard as returns, not as the theme they copy, so the shares are well under the period's; the sweeps in the
  * parallel mode and the figure are in docs/figured-variations.md.
+ * The main and subordinate themes (P51 B7, R-509) run in C major 4/4 and A minor 3/4 at 57 and 48 bars and were measured at
+ * 40, 220, 58: all 40 runs compose. The retransition and the coda are composed and recorded, not heard as a form (R-503), so 80
+ * of the 300 sections are not heard; the rows of key and meter are in docs/main-and-subordinate.md.
  */
 typedef struct {
     const char *kind;
@@ -587,6 +643,7 @@ static const Baseline BASELINES[] = {
     {"minuet", 35, 105, 30},     {"trio", 36, 108, 45},
     {"scherzo", 34, 272, 28},
     {"figured-variations", 39, 272, 126},
+    {"main-and-subordinate", 40, 220, 58},
 };
 
 static const Baseline *baseline_of(const char *kind) {
@@ -637,10 +694,10 @@ static int test_smoke(const char *kind) {
     Motive motive = scenario_motive(&SCENARIOS[0]);
     Expected expected[MAX_EXPECTED];
     size_t count = expected_sections(kind, smallest, expected);
-    /* A liquidation is composed and recorded, not heard as a form (R-494). */
+    /* A liquidation, a retransition and a coda are composed and recorded, not heard as a form (R-494, R-503). */
     size_t to_hear = count;
     for (size_t i = 0; i < count; i++) {
-        to_hear -= expected[i].liquidation ? 1 : 0;
+        to_hear -= is_operator(&expected[i]) ? 1 : 0;
     }
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         PieceRequest request = scenario_request(&SCENARIOS[0], kind, smallest, &motive);

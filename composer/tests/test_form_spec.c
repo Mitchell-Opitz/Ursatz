@@ -171,6 +171,8 @@ static const FormRow FORMS[] = {
      {{8, 0, false}, {24, 0, false}, {48, 0, false}, {0, 3, false}, {44, 1, false}}, 5, 1, 176, 0, 3},
     {"figured-variations", true, false, 0, {{40, 3, false}, {56, 5, true}}, 2,
      {{8, 0, false}, {32, 0, false}, {48, 0, false}, {0, 1, false}, {0, 4, false}, {40, 5, false}}, 6, 4, 0, 0, 0},
+    {"main-and-subordinate", true, false, 1, {{48, 0, false}, {57, 0, true}}, 2,
+     {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {57, 1, false}}, 5, 0, 0, 0, 0},
 };
 #define FORM_COUNT (sizeof(FORMS) / sizeof(FORMS[0]))
 
@@ -437,6 +439,82 @@ static void test_builtin_details(void) {
                size->sections[5].variation == PLAN_RETURN_VARIED);
     }
     assert(form_spec_size(form, 0, 0)->bars == 44 && form_spec_size(form, 60, 0)->sections[0].construction.idea_bars[0] != 0);
+    form_spec_destroy(form);
+}
+
+/* forms/main-and-subordinate.json (R-509): a main theme, the transition, the subordinate theme (and at 57 bars the lyric one),
+   a codetta, the retransition, the return of A and the coda; sizes 48 and 57, one region (V in major, III in minor). */
+static void test_main_and_subordinate(void) {
+    FormSpec *form = builtin("main-and-subordinate");
+    assert(form->closing && form->modulates && form->region_count == 1 && form->tempo == 0 && form->meter_count == 0 &&
+           form->part_count == 0 && form->repeat_count == 0);
+    assert(strcmp(form->label, "Main and subordinate themes") == 0 && strcmp(form->regions[0].name, "subordinate") == 0);
+    assert(form->regions[0].major_count == 1 && form->regions[0].major[0] == 5 && form->regions[0].minor_count == 1 &&
+           form->regions[0].minor[0] == 3);
+    typedef struct {
+        const char *name;
+        const char *letter;
+        FormRole role;
+        size_t bars;
+        PlanThemeBeginning beginning;
+        PlanThemeEnding ending;
+        CadenceType cadence;
+        int key_start;
+        int key_end;
+        size_t returns;
+        bool closed;
+    } Row;
+    const PlanThemeBeginning PRES = PLAN_THEME_BEGINNING_PRESENTATION;
+    const PlanThemeBeginning ANT = PLAN_THEME_BEGINNING_ANTECEDENT;
+    const PlanThemeEnding CONTINUATION = PLAN_THEME_ENDING_CONTINUATION;
+    const PlanThemeEnding CONSEQUENT = PLAN_THEME_ENDING_CONSEQUENT;
+    const CadenceType PAC = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    const size_t NO = FORM_SPEC_NO_RETURN;
+    const Row A = {"A", "A", FORM_ROLE_THEME, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, true};
+    const Row T = {"T", "T", FORM_ROLE_TRANSITION, 8, PRES, CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, 0, NO, false};
+    const Row S1_57 = {"S1", "B", FORM_ROLE_SUBORDINATE, 9, PRES, CONTINUATION, PAC, 0, 0, NO, false};
+    const Row S1_48 = {"S1", "B", FORM_ROLE_SUBORDINATE, 8, PRES, CONTINUATION, PAC, 0, 0, NO, false};
+    const Row S2 = {"S2", "B", FORM_ROLE_SUBORDINATE, 8, ANT, CONSEQUENT, PAC, 0, 0, NO, false};
+    const Row C = {"C", "C", FORM_ROLE_CODETTA, 4, ANT, PLAN_THEME_ENDING_CADENTIAL, PAC, 0, 0, NO, false};
+    const Row R = {"R", "R", FORM_ROLE_RETRANSITION, 4, PRES, CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, false};
+    const Row AR = {"A return", "A", FORM_ROLE_RETURN, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, 0, true};
+    const Row K = {"K", "K", FORM_ROLE_CODA, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, true};
+    const Row AT_57[] = {A, T, S1_57, S2, C, R, AR, K};
+    const Row AT_48[] = {A, T, S1_48, C, R, AR, K};
+    assert(form->size_count == 2 && form_spec_default_size(form)->bars == 57);
+    for (size_t z = 0; z < form->size_count; z++) {
+        const FormSpecSize *size = &form->sizes[z];
+        const bool large = size->bars == 57;
+        const Row *rows = large ? AT_57 : AT_48;
+        assert(size->count == 0 && size->section_count == (large ? 8u : 7u) && (large || size->bars == 48));
+        for (size_t i = 0; i < size->section_count; i++) {
+            const FormSectionSpec *section = &size->sections[i];
+            assert(strcmp(section->name, rows[i].name) == 0 && strcmp(section->letter, rows[i].letter) == 0);
+            assert(section->role == rows[i].role && section->bars == rows[i].bars && section->cadence == rows[i].cadence);
+            assert(section->key_start == rows[i].key_start && section->key_end == rows[i].key_end);
+            assert(section->returns == rows[i].returns && section->closed == rows[i].closed);
+            /* The retransition and the coda have no pairing: they are made by operators (R-503). */
+            if (section->role != FORM_ROLE_RETRANSITION && section->role != FORM_ROLE_CODA) {
+                assert(section->pairing.beginning == rows[i].beginning && section->pairing.ending == rows[i].ending);
+            }
+            assert(section->pedal == 0 && !section->leads_in && !section->has_figure && !section->parallel);
+            /* The transition is not independent, and only S2 is lyric (which reads its motive as m0 augmented). */
+            const bool lyric = large && i == 3;
+            assert(!section->independent && section->lyric == lyric);
+            assert(section->has_motive == (i == 2 || lyric));
+            if (i == 2) {
+                assert(section->motive.kind == MOTIVE_RELATION_INVERT && section->motive.value[0] == -1 && section->motive.value[1] == 1);
+            }
+            if (lyric) {
+                assert(section->motive.kind == MOTIVE_RELATION_AUGMENT && section->motive.value[0] == 0);
+            }
+            /* Only S1 at 57 bars has a construction: nine bars with the fragment 2 repeated. */
+            assert(section->has_construction == (large && i == 2) && !section->construction_auto);
+        }
+        assert(size->sections[size->section_count - 2].variation == PLAN_RETURN_EXACT);
+    }
+    const PlanConstruction *s1 = &form_spec_size(form, 57, 0)->sections[2].construction;
+    assert(s1->extension_count == 1 && s1->extensions[0].kind == PLAN_EXTENSION_REPEAT);
     form_spec_destroy(form);
 }
 
@@ -1451,10 +1529,11 @@ static void test_modulating_reader(void) {
     document(text, sizeof(text), ", \"modulates\": true", sizes);
     refused(text, "/modulates");
     refused_edit("game-loop", "\"closing\"", "\"modulates\": true, \"closing\"", "/modulates");
-    /* Only the scherzo modulates always; the scherzo and trio leaves it to its parts (R-492, R-495). */
+    /* Only the scherzo and the main and subordinate themes modulate always; the scherzo and trio leaves it to its parts (R-492,
+       R-495, R-509). */
     for (size_t f = 0; f < form_spec_builtin_count(); f++) {
         FormSpec *built = builtin(form_spec_builtin_name(f));
-        assert(built->modulates == (strcmp(built->name, "scherzo") == 0));
+        assert(built->modulates == (strcmp(built->name, "scherzo") == 0 || strcmp(built->name, "main-and-subordinate") == 0));
         form_spec_destroy(built);
     }
 }
@@ -2485,6 +2564,7 @@ int main(int argc, char **argv) {
     test_builtin_forms();
     test_builtin_details();
     test_figured_variations();
+    test_main_and_subordinate();
     test_for_plan();
     test_refusals();
     test_game_loop();
