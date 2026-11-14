@@ -334,6 +334,23 @@
    "label": "Ending"
   }
  ],
+ "piece_functions": [
+  {
+   "name": "transition",
+   "label": "Transition",
+   "parts": [
+    "intro",
+    "body"
+   ]
+  },
+  {
+   "name": "coda",
+   "label": "Coda",
+   "parts": [
+    "ending"
+   ]
+  }
+ ],
  "fill_kinds": [
   {
    "value": "empty",
