@@ -144,10 +144,10 @@ static bool read_coda(const PiecePlan *plan, FillTarget target, CodaRequest *out
         rational_div(offset, theme->bar, &bars_in) != RATIONAL_OK || bars_in.den != 1) {
         return false;
     }
-    /* m0: two notes or more, at most a bar, in range. */
+    /* m0 (when it is made yet; the draw reads it again): two notes or more, at most a bar, in range. */
     Motive source;
-    if (!grow_read_motive(plan, theme->source, &theme->meter, &theme->key, &source) || source.note_count < 2 ||
-        rational_cmp(source.length, theme->bar) > 0 || !in_range(&source)) {
+    if (grow_read_motive(plan, theme->source, &theme->meter, &theme->key, &source) &&
+        (source.note_count < 2 || rational_cmp(source.length, theme->bar) > 0 || !in_range(&source))) {
         return false;
     }
     for (size_t i = 0; i < IDEAS; i++) {
