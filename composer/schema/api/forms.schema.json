@@ -179,7 +179,9 @@
         "leads_in",
         "connective",
         "figure",
-        "mode"
+        "mode",
+        "independent",
+        "lyric"
       ],
       "properties": {
         "name": {
@@ -400,6 +402,14 @@
             null
           ],
           "description": "\"parallel\" for a section in the home key's parallel mode (R-499); null for any other."
+        },
+        "independent": {
+          "type": "boolean",
+          "description": "A transition made from a motive of its own (R-504)."
+        },
+        "lyric": {
+          "type": "boolean",
+          "description": "A subordinate theme whose motive is the main theme's, augmented (R-506)."
         }
       },
       "additionalProperties": false

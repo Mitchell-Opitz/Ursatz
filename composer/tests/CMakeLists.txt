@@ -878,6 +878,12 @@ target_compile_definitions(test_api_piece PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE
 add_test(NAME test_api_piece COMMAND test_api_piece WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(test_api_piece PROPERTIES FIXTURES_SETUP api_responses_written)
 
+add_executable(test_api_parts test_api_parts.c)
+target_link_libraries(test_api_parts PRIVATE ursatz_composer composer_test_support cjson)
+target_compile_options(test_api_parts PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_api_parts COMMAND test_api_parts WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+set_tests_properties(test_api_parts PROPERTIES FIXTURES_SETUP api_responses_written)
+
 add_executable(test_api_plan_workflow test_api_plan_workflow.c)
 target_link_libraries(test_api_plan_workflow PRIVATE ursatz_composer composer_test_support cjson)
 target_compile_options(test_api_plan_workflow PRIVATE -Wall -Wextra -Wpedantic)
@@ -970,7 +976,7 @@ endif()
 # Each API test writes its requests and responses in the build directory under names no other test uses, and its valgrind run
 # writes the same names again, so a test and its valgrind run share a lock. test_api_schema reads every one of them.
 set(API_FILE_LOCKS "")
-foreach(api_test core motive variants theme piece plan_workflow material vocabulary)
+foreach(api_test core motive variants theme piece parts plan_workflow material vocabulary)
     list(APPEND API_FILE_LOCKS api_${api_test}_files)
     foreach(variant test_api_${api_test} test_api_${api_test}_valgrind)
         if(TEST ${variant})

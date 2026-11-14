@@ -188,6 +188,14 @@
                   null
                 ]
               },
+              "function": {
+                "enum": [
+                  "transition",
+                  "coda",
+                  null
+                ],
+                "description": "The part of a larger form the section is (R-508): a transition on any body section but the ending, a coda on the ending; absent or null for none."
+              },
               "fill": {
                 "oneOf": [
                   {
