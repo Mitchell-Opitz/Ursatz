@@ -130,8 +130,11 @@ static bool contiguous(const PlanNote *notes, size_t i) {
            to_ticks(notes[i + 1].offset, &next) && end == next;
 }
 
-/* per_bar: at most this many ornaments are kept in a bar (0: no limit). */
-static bool ornament_melody(ReturnPayload *payload, FillRng *rng, size_t per_bar) {
+/*
+ * per_bar: at most this many ornaments are kept in a bar (0: no limit). short_notes (R-516): when no note of the
+ * first scan can be split, eighth notes on a cell start are split into sixteenths.
+ */
+static bool ornament_melody(ReturnPayload *payload, FillRng *rng, size_t per_bar, bool short_notes) {
     ReturnCopy *copy = &payload->result;
     long cell = cell_ticks(&payload->meter);
     size_t capacity = 0;
@@ -165,6 +168,28 @@ static bool ornament_melody(ReturnPayload *payload, FillRng *rng, size_t per_bar
             }
             long first = split_at(onset, duration, cell);
             if (first == 0 ||
+                !choose_tone(payload->key, span->notes[n].midi, span->notes[n + 1].midi, rng, &pitch)) {
+                continue;
+            }
+            found[count++] = (Ornament){s, n, first, pitch, onset + first};
+        }
+    }
+    /* Embellish: no longer note could be split, so an eighth note on a cell start gives a sixteenth to the tone. */
+    for (size_t s = 0; short_notes && count == 0 && s < copy->span_count; s++) {
+        const ReturnSpan *span = &copy->spans[s];
+        if (span->lane != PLAN_LANE_MELODY || span->voice != 0) {
+            continue;
+        }
+        for (size_t n = 0; n + 1 < span->note_count; n++) {
+            long onset;
+            long duration;
+            int pitch;
+            if (!note_onset(payload, span, &span->notes[n], &onset) || !to_ticks(span->notes[n].duration, &duration) ||
+                onset % cell != 0 || duration != EIGHTH || !contiguous(span->notes, n)) {
+                continue;
+            }
+            long first = EIGHTH / 2;
+            if ((onset + first) % cell == 0 ||
                 !choose_tone(payload->key, span->notes[n].midi, span->notes[n + 1].midi, rng, &pitch)) {
                 continue;
             }
@@ -444,9 +469,11 @@ bool return_vary(ReturnPayload *payload, FillRng *rng) {
     case PLAN_RETURN_EXACT:
         return true;
     case PLAN_RETURN_ORNAMENT:
-        return ornament_melody(payload, rng, 0);
+        return ornament_melody(payload, rng, 0, false);
+    case PLAN_RETURN_EMBELLISH:
+        return ornament_melody(payload, rng, 0, true);
     case PLAN_RETURN_VARIED:
-        return ornament_melody(payload, rng, 1) && reharmonize(payload);
+        return ornament_melody(payload, rng, 1, false) && reharmonize(payload);
     case PLAN_RETURN_REHARMONIZE:
         return reharmonize(payload);
     case PLAN_RETURN_REREGISTER:
@@ -750,6 +777,7 @@ static void check_reregister(const ReturnPayload *payload, FillCheck *out) {
 void return_vary_check(const ReturnPayload *payload, FillCheck *out) {
     switch (payload->variation) {
     case PLAN_RETURN_ORNAMENT:
+    case PLAN_RETURN_EMBELLISH:
         check_ornament(payload, out);
         break;
     case PLAN_RETURN_REHARMONIZE:

@@ -451,7 +451,7 @@ bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const Piec
 static bool variation_offered(PlanReturnVariation variation) {
     return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
            variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED ||
-           variation == PLAN_RETURN_FIGURATE;
+           variation == PLAN_RETURN_FIGURATE || variation == PLAN_RETURN_EMBELLISH;
 }
 
 /* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
@@ -848,7 +848,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     if (!range) {
         range = &defaults;
     }
-    if (variation == PLAN_RETURN_ORNAMENT || variation == PLAN_RETURN_VARIED) {
+    if (variation == PLAN_RETURN_ORNAMENT || variation == PLAN_RETURN_VARIED || variation == PLAN_RETURN_EMBELLISH) {
         ReturnPayload *kept[ORNAMENT_CANDIDATES];
         size_t kept_count = 0;
         for (size_t draw = 0; draw < 2 * ORNAMENT_CANDIDATES && kept_count < ORNAMENT_CANDIDATES; draw++) {
@@ -865,7 +865,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
                 continue;
             }
             kept[kept_count++] = payload;
-            if (!add_payload(out, variation == PLAN_RETURN_VARIED ? "varied" : "ornament", payload)) {
+            if (!add_payload(out, variation == PLAN_RETURN_VARIED ? "varied" : (variation == PLAN_RETURN_EMBELLISH ? "embellish" : "ornament"), payload)) {
                 return false;
             }
         }
