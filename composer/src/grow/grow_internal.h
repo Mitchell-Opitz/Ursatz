@@ -304,6 +304,22 @@ PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLi
 /* The checker's verdict on a liquidation candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, unsigned *total);
 
+/*
+ * Codas (R-507): a section whose function is a coda is 8 bars at home in three phrases of 4, 2 and 2 bars, each ending in a
+ * perfect authentic cadence: the main theme quoted, then liquidated, then its head and a held tonic (grow_coda.c).
+ * grow-theme builds it when no ARCHETYPE and THEME_PAIRING are on the section.
+ */
+#define GROW_CODA_MAGIC 0x47434F31UL
+typedef struct GrowCodaSpec GrowCodaSpec;
+bool grow_coda_applies(const PiecePlan *plan, FillTarget target);
+bool grow_coda_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+                        FillCandidateList *out);
+PlanResult grow_coda_apply(PiecePlan *plan, FillTarget target, const GrowCodaSpec *spec);
+/* The checker's verdict on a coda candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
+const char *grow_coda_judge(const GrowCodaSpec *spec, unsigned *held, unsigned *total);
+/* The main theme head: m0's leading notes that fit `half` (a half bar), 3 at most and 2 at least, as a literal motive with V for its own harmony. */
+bool grow_main_theme_head(const Motive *source, Rational half, Motive *out);
+
 /* The ARCHETYPE (PlanArchetype) a pairing is, or -1 for a pairing standard-form does not know. */
 int grow_pairing_archetype(const PlanThemePairing *pairing);
 /*

@@ -8,10 +8,12 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "util/plan_util.h"
 
@@ -39,6 +41,11 @@
  * is grown yet), 48 bars. In every composed run R carries the retransition function and no archetype, is in the home key,
  * its bass is the dominant throughout and its last chord V or V7, its `basic idea` asks for a motive with fewer notes than
  * m0, and its `cadential` melody keeps the intervals of the main theme head (the leading notes of m0) it asks for.
+ *
+ * coda (B5, R-507): tests/fixtures/forms/parts-of-forms.json as it is, 48 bars. In every composed run K carries the coda
+ * function, has three phrases of 4, 2 and 2 bars, each ends on V or V7 in root position to a root-position tonic, the last
+ * melody note is the tonic, and the plan round-trips through plan JSON. `grow_coda_applies` is true on K and false for a coda
+ * of 4 bars, for a coda that follows another region (a start change) and for a source of 2 bars.
  */
 
 #define SEEDS 10
@@ -443,6 +450,226 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
     }
 }
 
+/* The harmony spans over [span], in time order. */
+static size_t harmony_in(const PiecePlan *plan, PlanSpan span, LaneSpanId *out, size_t room) {
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, out, room);
+    assert(found <= room);
+    for (size_t i = 1; i < found; i++) {
+        for (size_t j = i; j > 0 && rational_cmp(plan_lane_span_span(plan, out[j]).start, plan_lane_span_span(plan, out[j - 1]).start) < 0; j--) {
+            LaneSpanId swap = out[j];
+            out[j] = out[j - 1];
+            out[j - 1] = swap;
+        }
+    }
+    return found;
+}
+
+/* A numeral in root position: no figure after the letters (V, V7, I, i; not V6 or V65). */
+static bool root_position(const char *numeral, bool seventh_allowed) {
+    size_t letters = 0;
+    while (numeral[letters] == 'I' || numeral[letters] == 'V' || numeral[letters] == 'i' || numeral[letters] == 'v') {
+        letters++;
+    }
+    return letters > 0 && (numeral[letters] == '\0' || (seventh_allowed && strcmp(numeral + letters, "7") == 0));
+}
+
+/* The lowest pitch class of the bass over `span`'s last chord: the bass span that starts latest within it. */
+static int bass_pitch_class_at_end(const PiecePlan *plan, PlanSpan span) {
+    LaneSpanId ids[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_BASS, 0, span, ids, 64);
+    assert(found > 0 && found <= 64);
+    LaneSpanId last = ids[0];
+    for (size_t i = 1; i < found; i++) {
+        if (rational_cmp(plan_lane_span_span(plan, ids[i]).start, plan_lane_span_span(plan, last).start) > 0) {
+            last = ids[i];
+        }
+    }
+    const PlanNotes *notes = &plan_lane_span_payload(plan, last)->notes;
+    assert(notes->note_count > 0);
+    return ((notes->notes[notes->note_count - 1].midi % 12) + 12) % 12;
+}
+
+/* One composed run of the coda case: K is sections[6] of A, T, S, C, R, A return, K. */
+static void check_coda(const PiecePlan *plan, const Row *row, unsigned long seed) {
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    assert(piece_sections(plan, sections) == 7);
+    NodeId k = sections[6];
+    PlanSectionFunction function;
+    assert(plan_section_function_of(plan, k, &function) && function.function == PLAN_FUNCTION_CODA);
+    assert(!plan_node_find_constraint(plan, k, PLAN_CONSTRAINT_ARCHETYPE));
+
+    /* Three phrases of 4, 2 and 2 bars. */
+    PlanSpan whole = plan_node_span(plan, k);
+    Rational bar;
+    assert(rational_div(whole.length, (Rational){8, 1}, &bar) == RATIONAL_OK);
+    static const long BARS[3] = {4, 2, 2};
+    assert(plan_node_child_count(plan, k) == 3);
+    Rational expected = whole.start;
+    for (size_t p = 0; p < 3; p++) {
+        NodeId phrase = plan_node_child_at(plan, k, p);
+        PlanSpan span = plan_node_span(plan, phrase);
+        Rational length;
+        assert(rational_mul_int(bar, BARS[p], &length) == RATIONAL_OK);
+        if (rational_cmp(span.start, expected) != 0 || rational_cmp(span.length, length) != 0) {
+            fprintf(stderr, "%s seed %lu: K's phrase %zu is not %ld bars from bar %zu\n", row->name, seed, p + 1, BARS[p], p);
+            assert(false);
+        }
+        expected = add_time(span.start, span.length);
+
+        /* Each ends on V or V7 to I, all in root position, with the bass on the dominant and then the tonic. */
+        LaneSpanId chords[64];
+        size_t count = harmony_in(plan, span, chords, 64);
+        assert(count >= 2);
+        const char *last = plan_lane_span_payload(plan, chords[count - 1])->harmony.roman_numeral;
+        const char *before = plan_lane_span_payload(plan, chords[count - 2])->harmony.roman_numeral;
+        if (!root_position(last, false) || (last[0] != 'I' && last[0] != 'i') || !root_position(before, true) || before[0] != 'V') {
+            fprintf(stderr, "%s seed %lu: K's phrase %zu ends %s to %s\n", row->name, seed, p + 1, before, last);
+            assert(false);
+        }
+        assert(bass_pitch_class_at_end(plan, span) == row->tonic);
+    }
+
+    /* The last melody note is the tonic. */
+    LaneSpanId ids[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, whole, ids, 64);
+    assert(found > 0 && found <= 64);
+    LaneSpanId last = ids[0];
+    for (size_t i = 1; i < found; i++) {
+        if (rational_cmp(plan_lane_span_span(plan, ids[i]).start, plan_lane_span_span(plan, last).start) > 0) {
+            last = ids[i];
+        }
+    }
+    const PlanNotes *notes = &plan_lane_span_payload(plan, last)->notes;
+    assert(notes->note_count > 0);
+    if (((notes->notes[notes->note_count - 1].midi % 12) + 12) % 12 != row->tonic) {
+        fprintf(stderr, "%s seed %lu: K's last melody note is not the tonic\n", row->name, seed);
+        assert(false);
+    }
+    check_round_trip(plan, row, seed);
+}
+
+static PiecePlan *plan_only(const FormSpec *form, const Motive *motive, PieceResult *result) {
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = form->name;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.meter.beats_per_bar = motive ? 3 : 4;
+    request.meter.beat_unit = 4;
+    request.seed = 1;
+    request.motive = motive;
+    request.modulate = true;
+    PiecePlan *plan = NULL;
+    *result = form_build_plan(form, &request, &plan);
+    return plan;
+}
+
+static const char *const CODA_AFTER_REGION =
+    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"coda-after-region\", \"label\": \"Coda after a region\","
+    " \"modulates\": true, \"regions\": [{\"name\": \"subordinate\", \"major\": [5], \"minor\": [3]}],"
+    " \"sizes\": [{\"bars\": 32, \"default\": true, \"sections\": ["
+    "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
+    " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},"
+    "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"transition\", \"bars\": 8, \"beginning\": \"presentation\","
+    " \"ending\": \"continuation\", \"cadence\": \"half\", \"keys\": {\"end\": \"subordinate\"}},"
+    "{\"name\": \"S\", \"letter\": \"S\", \"role\": \"subordinate\", \"bars\": 8, \"beginning\": \"antecedent\","
+    " \"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"keys\": {\"start\": \"subordinate\","
+    " \"end\": \"subordinate\"}},"
+    "{\"name\": \"K\", \"letter\": \"K\", \"role\": \"coda\", \"bars\": 8, \"cadence\": \"perfect-authentic\"}]}]}";
+
+/* A theme and a coda, every section 8 bars: a motive of 2 bars fits it. */
+static const char *const THEME_AND_CODA =
+    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"theme-and-coda\", \"label\": \"Theme and coda\","
+    " \"sizes\": [{\"bars\": 16, \"default\": true, \"sections\": ["
+    "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
+    " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},"
+    "{\"name\": \"K\", \"letter\": \"K\", \"role\": \"coda\", \"bars\": 8, \"cadence\": \"perfect-authentic\"}]}]}";
+
+/*
+ * grow_coda_applies is true on the fixture's K and false off its cases: a section that is no coda, a coda of 4 bars (the
+ * same section on a node of half the length; the form reader refuses it, so the plan is edited), a coda after another
+ * region (its key lane then starts a change) and a source of 2 bars.
+ */
+static void test_applies(void) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
+    char *text = test_read_file(path, NULL);
+    assert(text);
+    FormSpec *form = parse_form(text);
+    free(text);
+    PieceResult result;
+    PiecePlan *plan = plan_only(form, NULL, &result);
+    assert(result == PIECE_OK);
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    assert(piece_sections(plan, sections) == 7);
+    FillTarget coda = {FILL_TARGET_NODE, sections[6]};
+    assert(grow_coda_applies(plan, coda));
+    FillTarget other = {FILL_TARGET_NODE, sections[1]};
+    assert(!grow_coda_applies(plan, other));
+    FillTarget retransition = {FILL_TARGET_NODE, sections[4]};
+    assert(!grow_coda_applies(plan, retransition));
+
+    /* The same section as a node of 8 bars (the control) and of 4. */
+    PlanSpan span = plan_node_span(plan, sections[6]);
+    PlanConstraint constraints[16];
+    size_t count = plan_node_constraint_count(plan, sections[6]);
+    assert(count > 0 && count <= 16);
+    for (size_t i = 0; i < count; i++) {
+        constraints[i] = *plan_node_constraint_at(plan, sections[6], i);
+    }
+    assert(plan_remove_subtree(plan, sections[6]) == PLAN_OK);
+    for (int bars = 8; bars >= 4; bars -= 4) {
+        PlanSpan edited = span;
+        Rational length = {0, 1};
+        assert(rational_mul_int(span.length, bars, &length) == RATIONAL_OK);
+        assert(rational_div(length, (Rational){8, 1}, &edited.length) == RATIONAL_OK);
+        NodeId node;
+        assert(plan_add_node(plan, plan_root(plan), PLAN_NODE_SECTION, edited, "K", &node) == PLAN_OK);
+        for (size_t i = 0; i < count; i++) {
+            assert(plan_node_add_constraint(plan, node, &constraints[i]) == PLAN_OK);
+        }
+        assert(plan_node_set_state(plan, node, PLAN_STATE_CONSTRAINED) == PLAN_OK);
+        FillTarget edited_target = {FILL_TARGET_NODE, node};
+        if (bars == 8) {
+            assert(grow_coda_applies(plan, edited_target));
+            assert(plan_remove_subtree(plan, node) == PLAN_OK);
+        } else {
+            assert(!grow_coda_applies(plan, edited_target));
+        }
+    }
+    plan_destroy(plan);
+
+    /* A coda after the subordinate region opens its home key from there: a start change. */
+    FormSpec *after = parse_form(CODA_AFTER_REGION);
+    plan = plan_only(after, NULL, &result);
+    assert(result == PIECE_OK);
+    assert(piece_sections(plan, sections) == 4);
+    FillTarget moving = {FILL_TARGET_NODE, sections[3]};
+    assert(!grow_coda_applies(plan, moving));
+    plan_destroy(plan);
+    form_spec_destroy(after);
+
+    /* A source of 2 bars (3/4): the plan is built, the coda is not grown. */
+    snprintf(path, sizeof(path), "%s/rates/two-bar-3-4.json", COMPOSER_FIXTURE_DIR);
+    char *motive_text = test_read_file(path, NULL);
+    Motive motive;
+    assert(motive_text && motive_from_json(motive_text, NULL, &motive, NULL) == MOTIVE_OK);
+    free(motive_text);
+    FormSpec *plain = parse_form(THEME_AND_CODA);
+    plan = plan_only(plain, NULL, &result);
+    assert(result == PIECE_OK && piece_sections(plan, sections) == 2);
+    FillTarget plain_coda = {FILL_TARGET_NODE, sections[1]};
+    assert(grow_coda_applies(plan, plain_coda));
+    plan_destroy(plan);
+    plan = plan_only(plain, &motive, &result);
+    assert(result == PIECE_OK);
+    assert(piece_sections(plan, sections) == 2);
+    FillTarget long_source = {FILL_TARGET_NODE, sections[1]};
+    assert(!grow_coda_applies(plan, long_source));
+    plan_destroy(plan);
+    form_spec_destroy(plain);
+    form_spec_destroy(form);
+}
+
 static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long)) {
     int status = 0;
     for (size_t r = 0; r < ROW_COUNT; r++) {
@@ -481,6 +708,18 @@ int main(void) {
     free(fixture);
     status |= run_rows("retransition", form, check_retransition);
     form_spec_destroy(form);
+    char *with_coda = NULL;
+    {
+        char path[1024];
+        snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
+        with_coda = test_read_file(path, NULL);
+        assert(with_coda);
+    }
+    form = parse_form(with_coda);
+    free(with_coda);
+    status |= run_rows("coda", form, check_coda);
+    form_spec_destroy(form);
+    test_applies();
     if (status == 0) {
         printf("test_form_parts: ok\n");
     }
