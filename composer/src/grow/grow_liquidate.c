@@ -282,10 +282,10 @@ static bool in_range(const Motive *motive) {
 }
 
 /*
- * The main theme head (R-505): m0's leading notes that fit half a bar, three at most and two at least, as a literal motive
+ * The main theme head (R-505, and the coda's, R-507): m0's leading notes that fit half a bar, three at most and two at least, as a literal motive
  * (m0 cut to them, V for its own harmony). When the two leading notes do not fit, their onsets and durations are halved, once.
  */
-static bool make_head(const Motive *source, Rational half, Motive *out) {
+bool grow_main_theme_head(const Motive *source, Rational half, Motive *out) {
     for (int halved = 0; halved < 2; halved++) {
         Motive made = *source;
         size_t count = 0;
@@ -354,7 +354,7 @@ static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, Gro
     spec->down = fill_rng_below(rng, 2) == 0;
     spec->first_degree = fill_rng_below(rng, 2) == 0 ? 2 : 4;
     Rational half;
-    if (rational_make(theme->bar.num, theme->bar.den * 2, &half) != RATIONAL_OK || !make_head(&spec->source, half, &spec->head) ||
+    if (rational_make(theme->bar.num, theme->bar.den * 2, &half) != RATIONAL_OK || !grow_main_theme_head(&spec->source, half, &spec->head) ||
         !in_range(&spec->head)) {
         return false;
     }

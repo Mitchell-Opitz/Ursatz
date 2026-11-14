@@ -243,7 +243,8 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
 static bool grow_applies(const PiecePlan *plan, FillTarget target, void *context) {
     ThemeRequest request;
     (void)context;
-    return read_request(plan, target, &request) || grow_free_applies(plan, target) || grow_liquidate_applies(plan, target);
+    return read_request(plan, target, &request) || grow_free_applies(plan, target) || grow_liquidate_applies(plan, target) ||
+           grow_coda_applies(plan, target);
 }
 
 /* ------------------------------------------------------------ the spec */
@@ -1312,6 +1313,9 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         if (grow_liquidate_applies(plan, target)) {
             return grow_liquidate_generate(plan, target, rng, shared, out);
         }
+        if (grow_coda_applies(plan, target)) {
+            return grow_coda_generate(plan, target, rng, shared, out);
+        }
         return grow_free_applies(plan, target) ? grow_free_generate(plan, target, rng, shared, out) : true;
     }
     request.development = shared ? shared->development : GROW_DEVELOP_BALANCED;
@@ -1840,6 +1844,9 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     }
     if (spec && spec->magic == GROW_LIQUIDATE_MAGIC) {
         return grow_liquidate_apply(plan, target, (const GrowLiquidateSpec *)candidate->payload);
+    }
+    if (spec && spec->magic == GROW_CODA_MAGIC) {
+        return grow_coda_apply(plan, target, (const GrowCodaSpec *)candidate->payload);
     }
     if (!spec || spec->magic != GROW_PAYLOAD_MAGIC) {
         return PLAN_ERR_BAD_PAYLOAD;
