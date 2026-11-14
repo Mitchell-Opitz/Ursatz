@@ -212,14 +212,14 @@ static void own_harmony_v(Motive *made) {
  * tone labels and V for its own harmony, the pitches the steps of the key's scale `from`, `from + gap`, ... A run outside MIDI FORM_LOW to
  * FORM_HIGH is shifted an octave; false when it cannot be placed.
  */
-static bool make_run(const Motive *base, const AnalysisKey *key, size_t count, long from, long gap, Motive *out) {
+static bool make_line(const Motive *base, const AnalysisKey *key, size_t count, long from, const long *offsets, Motive *out) {
     for (int shift = 0; shift < 3; shift++) {
         long octave = shift == 0 ? 0 : (shift == 1 ? -7 : 7);
         Motive made = *base;
         bool fits = true;
         made.note_count = count;
         for (size_t i = 0; i < count; i++) {
-            made.notes[i].pitch = step_pitch(key, from + octave + gap * (long)i);
+            made.notes[i].pitch = step_pitch(key, from + octave + offsets[i]);
             made.notes[i].onset = position_mul((Rational){1, 8}, (long long)i);
             made.notes[i].duration = (Rational){1, 8};
             fits = fits && made.notes[i].pitch >= FORM_LOW && made.notes[i].pitch <= FORM_HIGH;
@@ -236,6 +236,26 @@ static bool make_run(const Motive *base, const AnalysisKey *key, size_t count, l
     return false;
 }
 
+static bool make_run(const Motive *base, const AnalysisKey *key, size_t count, long from, long gap, Motive *out) {
+    long offsets[MOTIVE_MAX_NOTES];
+    for (size_t i = 0; i < count && i < MOTIVE_MAX_NOTES; i++) {
+        offsets[i] = gap * (long)i;
+    }
+    return make_line(base, key, count, from, offsets, out);
+}
+
+/*
+ * The broken chord of V: every other step up from the degree 5 (5, 7, 2), and in a run of four eighths (4/4) the root again an
+ * octave up (5, 7, 2, 5), so the last note is always a tone of V (the seventh, 4, would end on a dissonance).
+ */
+static bool make_broken(const Motive *base, const AnalysisKey *key, size_t count, long from, Motive *out) {
+    long offsets[MOTIVE_MAX_NOTES];
+    for (size_t i = 0; i < count && i < MOTIVE_MAX_NOTES; i++) {
+        offsets[i] = i < 3 ? 2 * (long)i : 7;
+    }
+    return make_line(base, key, count, from, offsets, out);
+}
+
 /* The scale line (`scale_run` eighths), then the broken chord of V (`run` eighths) from the degree 5 nearest the line's last note. */
 static bool make_runs(GrowLiquidateSpec *spec, const AnalysisKey *key, size_t run, size_t scale_run) {
     /* The line goes on from the idea before it: the liquidated idea, or the retransition's second residue. */
@@ -246,8 +266,8 @@ static bool make_runs(GrowLiquidateSpec *spec, const AnalysisKey *key, size_t ru
         return false;
     }
     long fifth = nearest_step(key, 5, motive_pitch(&spec->scale, spec->scale.note_count - 1));
-    /* Degrees 5, 7, 2: every other step up, the last a tone of V (2 or 7). */
-    return make_run(&spec->source, key, run, fifth, 2, &spec->broken);
+    /* Degrees 5, 7, 2 (and 5 again in four eighths): the last a tone of V (2, 7 or 5). */
+    return make_broken(&spec->source, key, run, fifth, &spec->broken);
 }
 
 /* ------------------------------------------------------------- candidates */
