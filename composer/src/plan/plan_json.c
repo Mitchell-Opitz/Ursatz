@@ -34,7 +34,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 #define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure", "section_function"};
 static const char *const EXTENSION_KIND_NAMES[] = {"repeat", "stretch", "addition", "evaded"};
 static const char *const CONSTRUCTION_REASON_NAMES[] = {"given", "motive", "length"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
@@ -339,6 +339,13 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
              plan_json_add(object, "harmony", cJSON_CreateString(figure->reharmonize ? "reharmonized" : "kept")) &&
              plan_json_add(object, "change_at", figure->change_at ? json_number((long)figure->change_at) : cJSON_CreateNull()) &&
              plan_json_add(object, "climax", cJSON_CreateBool(figure->climax));
+        break;
+    }
+    case PLAN_CONSTRAINT_SECTION_FUNCTION: {
+        const PlanSectionFunction *function = &constraint->params.section_function;
+        ok = ok && plan_json_add(object, "function", cJSON_CreateString(plan_function_kind_name(function->function))) &&
+             plan_json_add(object, "independent", cJSON_CreateBool(function->independent)) &&
+             plan_json_add(object, "lyric", cJSON_CreateBool(function->lyric));
         break;
     }
     case PLAN_CONSTRAINT_FREE_PHRASE:
@@ -1360,6 +1367,35 @@ static bool read_figure(JsonReader *reader, const cJSON *item, const char *path,
     return true;
 }
 
+/* A section function constraint: function, independent and lyric, all required. */
+static bool read_section_function(JsonReader *reader, const cJSON *item, const char *path, PlanSectionFunction *out) {
+    const cJSON *function = plan_json_member(reader, item, path, "function", true);
+    const cJSON *independent = function ? plan_json_member(reader, item, path, "independent", true) : NULL;
+    const cJSON *lyric = independent ? plan_json_member(reader, item, path, "lyric", true) : NULL;
+    if (!lyric) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "function");
+    if (!cJSON_IsString(function)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    if (!plan_function_kind_from_name(function->valuestring, &out->function)) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", function->valuestring);
+    }
+    json_child_path(at, path, "independent");
+    if (!cJSON_IsBool(independent)) {
+        return json_bad_format(reader, at, "expected true or false");
+    }
+    out->independent = cJSON_IsTrue(independent);
+    json_child_path(at, path, "lyric");
+    if (!cJSON_IsBool(lyric)) {
+        return json_bad_format(reader, at, "expected true or false");
+    }
+    out->lyric = cJSON_IsTrue(lyric);
+    return true;
+}
+
 static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object");
@@ -1728,6 +1764,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     }
     case PLAN_CONSTRAINT_FIGURE:
         return read_figure(reader, item, path, &out->params.figure);
+    case PLAN_CONSTRAINT_SECTION_FUNCTION:
+        return read_section_function(reader, item, path, &out->params.section_function);
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:

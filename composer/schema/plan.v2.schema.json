@@ -169,7 +169,7 @@
           "enum": ["length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema", "material",
                    "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint", "return", "layers",
                    "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold",
-                   "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure"]
+                   "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure", "section_function"]
         }
       },
       "allOf": [
@@ -258,6 +258,17 @@
               "harmony": { "enum": ["kept", "reharmonized"] },
               "change_at": { "type": ["integer", "null"], "minimum": 1 },
               "climax": { "type": "boolean" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "section_function" } } },
+          "then": {
+            "required": ["function", "independent", "lyric"],
+            "properties": {
+              "function": { "enum": ["transition", "retransition", "subordinate", "coda"] },
+              "independent": { "type": "boolean" },
+              "lyric": { "type": "boolean" }
             }
           }
         },

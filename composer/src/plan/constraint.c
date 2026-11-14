@@ -156,6 +156,12 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                figure->rhythm >= PLAN_FIGURE_EIGHTHS && figure->rhythm <= PLAN_FIGURE_SIXTEENTHS &&
                (figure->change_at == 0 || figure->reharmonize);
     }
+    case PLAN_CONSTRAINT_SECTION_FUNCTION: {
+        const PlanSectionFunction *function = &constraint->params.section_function;
+        return function->function >= PLAN_FUNCTION_TRANSITION && function->function <= PLAN_FUNCTION_CODA &&
+               (!function->independent || function->function == PLAN_FUNCTION_TRANSITION) &&
+               (!function->lyric || function->function == PLAN_FUNCTION_SUBORDINATE);
+    }
     case PLAN_CONSTRAINT_PEDAL:
         return constraint->params.pedal.degree == 5;
     case PLAN_CONSTRAINT_CONSTRUCTION: {
@@ -315,6 +321,7 @@ const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, Lane
 static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister", "varied", "figurate"};
 static const char *const FIGURE_KIND_NAMES[] = {"neighbor", "scale", "broken-chord"};
 static const char *const FIGURE_RHYTHM_NAMES[] = {"eighths", "sixteenths"};
+static const char *const FUNCTION_KIND_NAMES[] = {"transition", "retransition", "subordinate", "coda"};
 
 const char *plan_return_variation_name(PlanReturnVariation variation) {
     if ((int)variation < 0 || (size_t)variation >= sizeof(RETURN_VARIATION_NAMES) / sizeof(RETURN_VARIATION_NAMES[0])) {
@@ -374,6 +381,26 @@ bool plan_figure_rhythm_from_name(const char *name, PlanFigureRhythm *out) {
     for (size_t i = 0; i < sizeof(FIGURE_RHYTHM_NAMES) / sizeof(FIGURE_RHYTHM_NAMES[0]); i++) {
         if (strcmp(name, FIGURE_RHYTHM_NAMES[i]) == 0) {
             *out = (PlanFigureRhythm)i;
+            return true;
+        }
+    }
+    return false;
+}
+
+const char *plan_function_kind_name(PlanFunctionKind kind) {
+    if ((int)kind < 0 || (size_t)kind >= sizeof(FUNCTION_KIND_NAMES) / sizeof(FUNCTION_KIND_NAMES[0])) {
+        return NULL;
+    }
+    return FUNCTION_KIND_NAMES[kind];
+}
+
+bool plan_function_kind_from_name(const char *name, PlanFunctionKind *out) {
+    if (!name) {
+        return false;
+    }
+    for (size_t i = 0; i < sizeof(FUNCTION_KIND_NAMES) / sizeof(FUNCTION_KIND_NAMES[0]); i++) {
+        if (strcmp(name, FUNCTION_KIND_NAMES[i]) == 0) {
+            *out = (PlanFunctionKind)i;
             return true;
         }
     }

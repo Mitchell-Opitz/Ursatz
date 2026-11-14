@@ -48,7 +48,8 @@ typedef enum {
     PLAN_CONSTRAINT_CONSTRUCTION,   /* on a section node: the bars of each idea of its theme, its extensions, and why (R-468) */
     PLAN_CONSTRAINT_CONNECTIVE,     /* on a held section: its last bar ends with a connective into the next section (R-486) */
     PLAN_CONSTRAINT_LIQUIDATION,    /* no parameters: on a section node, the pattern liquidated over a dominant pedal (R-494) */
-    PLAN_CONSTRAINT_FIGURE          /* on a section node with a RETURN of variation FIGURATE: its motive of variation (R-497) */
+    PLAN_CONSTRAINT_FIGURE,         /* on a section node with a RETURN of variation FIGURATE: its motive of variation (R-497) */
+    PLAN_CONSTRAINT_SECTION_FUNCTION /* on a section node: the part of a larger form it is (R-503) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -248,6 +249,26 @@ const char *plan_figure_rhythm_name(PlanFigureRhythm rhythm);
 bool plan_figure_kind_from_name(const char *name, PlanFigureKind *out);
 bool plan_figure_rhythm_from_name(const char *name, PlanFigureRhythm *out);
 
+/* The part of a larger form a section is (R-503). */
+typedef enum {
+    PLAN_FUNCTION_TRANSITION,
+    PLAN_FUNCTION_RETRANSITION,
+    PLAN_FUNCTION_SUBORDINATE,
+    PLAN_FUNCTION_CODA
+} PlanFunctionKind;
+
+/* independent: a transition made from a motive of its own (R-504); lyric: a subordinate theme whose motive is m0 augmented (R-506). */
+typedef struct {
+    PlanFunctionKind function;
+    bool independent;
+    bool lyric;
+} PlanSectionFunction;
+
+/* "transition", "retransition", "subordinate", "coda"; NULL for a value out of range. */
+const char *plan_function_kind_name(PlanFunctionKind kind);
+/* The function a name stands for; false (out untouched) for an unknown name. */
+bool plan_function_kind_from_name(const char *name, PlanFunctionKind *out);
+
 /*
  * The lanes that sound in a layer section: bit (1u << lane) for each PlanLaneKind. A layer section is grown in
  * full; the mask decides only what is rendered. At least one bit, none past PLAN_LANE_INNER_VOICE.
@@ -426,6 +447,7 @@ typedef struct {
         PlanConstruction construction;
         PlanConnective connective;
         PlanFigure figure;
+        PlanSectionFunction section_function;
     } params;
 } PlanConstraint;
 
