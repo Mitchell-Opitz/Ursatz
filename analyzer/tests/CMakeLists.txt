@@ -305,11 +305,11 @@ add_test(NAME test_rhythm_constructed COMMAND test_rhythm constructed)
 add_test(NAME test_rhythm_field5_target COMMAND test_rhythm field5-target)
 set_tests_properties(test_rhythm_field5_target PROPERTIES WILL_FAIL TRUE)
 
-add_executable(test_texture test_texture.c)
-target_link_libraries(test_texture PRIVATE ursatz_analyzer)
-target_compile_definitions(test_texture PRIVATE
+add_executable(test_analyzer_texture test_texture.c)
+target_link_libraries(test_analyzer_texture PRIVATE ursatz_analyzer)
+target_compile_definitions(test_analyzer_texture PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_texture COMMAND test_texture)
+add_test(NAME test_analyzer_texture COMMAND test_analyzer_texture)
 
 add_executable(test_voice_leading test_voice_leading.c)
 target_link_libraries(test_voice_leading PRIVATE ursatz_analyzer)
@@ -427,17 +427,17 @@ file(COPY ${chorale_scores} DESTINATION ${URSATZ_CORPORA_DIR}/chorales)
 file(COPY "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid" "${URSATZ_REFERENCE_FIXTURES}/Mozart 545.mid"
      DESTINATION ${URSATZ_CORPORA_DIR}/sonatinas)
 
-add_executable(test_corpus test_corpus.c)
-target_link_libraries(test_corpus PRIVATE ursatz_analyzer cjson)
-target_compile_definitions(test_corpus PRIVATE
+add_executable(test_analyzer_corpus test_corpus.c)
+target_link_libraries(test_analyzer_corpus PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_analyzer_corpus PRIVATE
     URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_corpus COMMAND test_corpus)
+add_test(NAME test_analyzer_corpus COMMAND test_analyzer_corpus)
 # Over 10 s in the fast set (about 122 s of CPU measured): runs nightly.
-set_tests_properties(test_corpus PROPERTIES LABELS slow)
+set_tests_properties(test_analyzer_corpus PROPERTIES LABELS slow)
 # Tests sharing a work directory take a RESOURCE_LOCK named after it, so parallel runs do not collide.
-set_tests_properties(test_corpus PROPERTIES RESOURCE_LOCK corpus_work)
+set_tests_properties(test_analyzer_corpus PROPERTIES RESOURCE_LOCK corpus_work)
 
 add_test(NAME test_cli_corpus
          COMMAND ${CMAKE_COMMAND}
@@ -461,9 +461,9 @@ add_test(NAME test_corpus_index_schema
 set_tests_properties(test_corpus_index_schema PROPERTIES LABELS slow)
 set_tests_properties(test_corpus_index_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
 
-add_executable(test_style_labels test_style_labels.c)
-target_link_libraries(test_style_labels PRIVATE ursatz_analyzer)
-add_test(NAME test_style_labels COMMAND test_style_labels)
+add_executable(test_analyzer_style_labels test_style_labels.c)
+target_link_libraries(test_analyzer_style_labels PRIVATE ursatz_analyzer)
+add_test(NAME test_analyzer_style_labels COMMAND test_analyzer_style_labels)
 
 add_executable(test_style_profile test_style_profile.c)
 target_link_libraries(test_style_profile PRIVATE ursatz_analyzer analyzer_test_support cjson)
@@ -618,9 +618,9 @@ if(VALGRIND_PROGRAM)
     set_tests_properties(test_staleness_valgrind PROPERTIES LABELS slow)
 endif()
 
-add_executable(test_version test_version.c)
-target_link_libraries(test_version PRIVATE ursatz_analyzer)
-add_test(NAME test_version COMMAND test_version)
+add_executable(test_analyzer_version test_version.c)
+target_link_libraries(test_analyzer_version PRIVATE ursatz_analyzer)
+add_test(NAME test_analyzer_version COMMAND test_analyzer_version)
 
 # Consumer isolation (A20261104-31): a target linking only ursatz_analyzer cannot include a chain or framework header; one
 # linking ursatz_analyzer::chain reads the chain. The leak targets must fail to compile, so they are left out of the default
