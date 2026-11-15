@@ -1,0 +1,29 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "sonatina",
+  "label": "Sonatina",
+  "closing": true,
+  "modulates": true,
+  "tempo": 132,
+  "regions": [{"name": "subordinate", "major": [5], "minor": [3]}, {"name": "elaboration", "major": [4], "minor": [6]}, {"name": "development", "major": [6], "minor": [4]}, {"name": "sequence", "major": [2], "minor": [5]}],
+  "sizes": [
+    {"bars": 92, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "T", "letter": "T", "role": "transition", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "keys": {"end": "subordinate"}},
+      {"name": "B", "letter": "B", "role": "subordinate", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "keys": {"start": "subordinate", "end": "subordinate"}, "motive": "invert tonal=1"},
+      {"name": "C1", "letter": "C", "role": "codetta", "bars": 4, "beginning": "antecedent", "ending": "cadential", "cadence": "perfect-authentic", "keys": {"start": "subordinate", "end": "subordinate"}},
+      {"name": "C2", "letter": "C", "role": "codetta", "bars": 4, "beginning": "compound_basic_idea", "ending": "cadential", "cadence": "perfect-authentic", "keys": {"start": "subordinate", "end": "subordinate"}},
+      {"name": "E", "letter": "B", "role": "elaboration", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "keys": {"start": "elaboration", "end": "elaboration"}, "returns": "B", "variation": "embellish"},
+      {"name": "P", "letter": "D", "role": "pattern", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "development", "end": "development"}},
+      {"name": "S", "letter": "D", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "sequence", "end": "sequence"}, "returns": "P", "variation": "exact"},
+      {"name": "R", "letter": "R", "role": "retransition", "bars": 4, "cadence": "half"},
+      {"name": "A1", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "exact"},
+      {"name": "T1", "letter": "T", "role": "transition", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half"},
+      {"name": "B1", "letter": "B", "role": "subordinate", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "returns": "B", "variation": "reharmonize", "mode": "home"},
+      {"name": "C3", "letter": "C", "role": "codetta", "bars": 4, "beginning": "antecedent", "ending": "cadential", "cadence": "perfect-authentic", "returns": "C1", "variation": "reharmonize", "mode": "home"},
+      {"name": "C4", "letter": "C", "role": "codetta", "bars": 4, "beginning": "compound_basic_idea", "ending": "cadential", "cadence": "perfect-authentic"},
+      {"name": "K", "letter": "K", "role": "coda", "bars": 8, "cadence": "perfect-authentic", "closed": true}
+    ]}
+  ]
+}
