@@ -27,10 +27,11 @@
  * section's function to the game loop request.
  * 1.24 adds each section's setting and the tonic major mode to the forms entry, the setting to the rows' changes, and the embellish and
  * setting variations.
+ * 1.25 adds the home mode and the elaboration role to the forms entry, and the mode of a copy across modes to the rows' changes.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 24
+#define COMPOSER_API_VERSION_MINOR 25
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

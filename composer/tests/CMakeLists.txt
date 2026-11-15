@@ -894,6 +894,12 @@ target_compile_options(test_api_rondo PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_api_rondo COMMAND test_api_rondo WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(test_api_rondo PROPERTIES LABELS slow)
 
+add_executable(test_api_sonata test_api_sonata.c)
+target_link_libraries(test_api_sonata PRIVATE ursatz_composer composer_test_support cjson)
+target_compile_options(test_api_sonata PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_api_sonata COMMAND test_api_sonata WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+set_tests_properties(test_api_sonata PROPERTIES LABELS slow)
+
 add_executable(test_api_plan_workflow test_api_plan_workflow.c)
 target_link_libraries(test_api_plan_workflow PRIVATE ursatz_composer composer_test_support cjson)
 target_compile_options(test_api_plan_workflow PRIVATE -Wall -Wextra -Wpedantic)

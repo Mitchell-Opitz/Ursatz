@@ -417,9 +417,10 @@
           "enum": [
             "parallel",
             "major",
+            "home",
             null
           ],
-          "description": "\"parallel\" for a section in the home key's parallel mode (R-499), \"major\" for a return in the home tonic's major key (R-517); null for any other."
+          "description": "\"parallel\" for a section in the home key's parallel mode (R-499), \"major\" for a return in the home tonic's major key (R-517), \"home\" for a returning section at home in the home mode, its source copied across modes when it is in the other (R-524); null for any other."
         },
         "independent": {
           "type": "boolean",

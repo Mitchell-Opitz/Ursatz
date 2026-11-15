@@ -265,7 +265,7 @@ static void test_no_figure_elsewhere(void) {
             cJSON_ArrayForEach(section, member(size, "sections")) {
                 const cJSON *mode = member(section, "mode");
                 assert(cJSON_IsNull(member(section, "figure")));
-                assert(cJSON_IsNull(mode) || (strcmp(mode->valuestring, "major") == 0 && cJSON_IsString(member(section, "returns"))));
+                assert(cJSON_IsNull(mode) || ((strcmp(mode->valuestring, "major") == 0 || strcmp(mode->valuestring, "home") == 0) && cJSON_IsString(member(section, "returns"))));
                 checked++;
             }
         }
@@ -291,6 +291,32 @@ static void test_setting_and_major(void) {
     for (int i = 0; i < cJSON_GetArraySize(main_sections); i++) {
         assert(cJSON_IsNull(member(cJSON_GetArrayItem(main_sections, i), "setting")));
     }
+}
+
+static const cJSON *section_named(const cJSON *sections, const char *name) {
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, sections) {
+        if (strcmp(text(section, "name"), name) == 0) {
+            return section;
+        }
+    }
+    fprintf(stderr, "no section %s\n", name);
+    assert(0);
+    return NULL;
+}
+
+/* The sonatinas (P53 B3, R-525): B1 and C3 of `sonatina` are in the home mode, B1 of `sonatina-tonic-major` in the tonic major, E is an elaboration. */
+static void test_sonatina_forms(void) {
+    const cJSON *sections = member(default_size(form_named("sonatina")), "sections");
+    assert(strcmp(text(section_named(sections, "B1"), "mode"), "home") == 0);
+    assert(strcmp(text(section_named(sections, "C3"), "mode"), "home") == 0);
+    assert(cJSON_IsNull(member(section_named(sections, "B"), "mode")));
+    assert(cJSON_IsNull(member(section_named(sections, "A1"), "mode")));
+    assert_choice(section_named(sections, "E"), "role", "elaboration", "Elaboration");
+    const cJSON *major = member(default_size(form_named("sonatina-tonic-major")), "sections");
+    assert(strcmp(text(section_named(major, "B1"), "mode"), "major") == 0);
+    assert(strcmp(text(section_named(major, "C3"), "mode"), "major") == 0);
+    assert_choice(section_named(major, "E"), "role", "elaboration", "Elaboration");
 }
 
 /* independent and lyric on every section (R-510): S2 of the main and subordinate themes is lyric, no other section of any form is, and none is independent. */
@@ -566,6 +592,7 @@ int main(void) {
     test_figured_variations();
     test_no_figure_elsewhere();
     test_setting_and_major();
+    test_sonatina_forms();
     test_independent_and_lyric();
     test_layered();
     test_pedal();
