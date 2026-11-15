@@ -186,10 +186,12 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            add_keys(section, form, spec) && add_string_or_null(section, "motive", has_motive ? motive : NULL) &&
            add_string_or_null(section, "returns", returns ? size->sections[spec->returns].name : NULL) &&
            add_string_or_null(section, "variation", returns ? plan_return_variation_name(spec->variation) : NULL) &&
+           add_string_or_null(section, "setting",
+                              returns && spec->variation == PLAN_RETURN_SETTING ? api_accompaniment_name(spec->setting) : NULL) &&
            add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
            add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
            add_connective(section, spec->connective) && add_figure(section, spec) &&
-           add_string_or_null(section, "mode", spec->parallel ? "parallel" : NULL) &&
+           add_string_or_null(section, "mode", spec->parallel ? "parallel" : (spec->tonic_major ? "major" : NULL)) &&
            cJSON_AddBoolToObject(section, "independent", spec->independent) && cJSON_AddBoolToObject(section, "lyric", spec->lyric);
 }
 

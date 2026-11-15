@@ -771,6 +771,7 @@
       "required": [
         "copied",
         "variation",
+        "setting",
         "melody_added",
         "chords_changed",
         "chords",
@@ -785,7 +786,26 @@
           "description": "The section holds a copy of the section it returns (same length, meter and key-lane shape); false when it was composed anew."
         },
         "variation": {
-          "type": "string"
+          "enum": [
+            "exact",
+            "ornament",
+            "reharmonize",
+            "reregister",
+            "varied",
+            "figurate",
+            "embellish",
+            "setting"
+          ]
+        },
+        "setting": {
+          "enum": [
+            "block",
+            "arpeggiated",
+            "alberti",
+            "oom-pah",
+            null
+          ],
+          "description": "The pattern of the new accompaniment of a setting return (R-518); null for any other variation."
         },
         "melody_added": {
           "type": [
