@@ -152,7 +152,7 @@ add_library(ursatz_composer STATIC
 )
 # The forms built in (R-416): forms/<name>.json, embedded as C byte arrays at build time. Adding a form is a file in
 # forms/ and a line here, in registry order.
-set(COMPOSER_FORMS binary rounded-binary ternary variations loop layered minuet trio minuet-and-trio scherzo scherzo-and-trio figured-variations main-and-subordinate andante-aba andante-abab small-rondo-ababa small-rondo-abaca game-loop)
+set(COMPOSER_FORMS binary rounded-binary ternary variations loop layered minuet trio minuet-and-trio scherzo scherzo-and-trio figured-variations main-and-subordinate andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo game-loop)
 set(COMPOSER_FORM_FILES)
 foreach(form ${COMPOSER_FORMS})
     list(APPEND COMPOSER_FORM_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../forms/${form}.json)

@@ -379,6 +379,21 @@ static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, si
     return false;
 }
 
+/* Whether a sequence starts at `at`: a section that returns the one just before it, moved into another key, opens that key
+   with its pattern's own first chord and no pivot (the sonata rondo's S after P, vi to ii, R-520). */
+static bool opens_sequence(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
+    for (size_t s = 0; s < count; s++) {
+        const PlanConstraint *back = find(plan, sections[s], PLAN_CONSTRAINT_RETURN);
+        Rational source_end;
+        if (back && rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0 &&
+            plan_span_end(plan_node_span(plan, back->params.section_return.section), &source_end) == PLAN_OK &&
+            rational_cmp(source_end, at) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void check_piece(const PiecePlan *plan, const char *kind) {
     KeyLane lane = read_lane(plan);
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -392,10 +407,11 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
             continue;
         }
         changes++;
-        /* Opened by a pivot chord standard-harmony calls valid, except a retransition home (R-505). Two keys that are not closely related to each other (the
+        /* Opened by a pivot chord standard-harmony calls valid, except a retransition home (R-505) or a sequence (R-492). Two keys that are not closely related to each other (the
            scherzo's V to IV, a sequence of its pattern, R-492) have no pivot between them: each is related to home. */
         HarmonyRelatedKey adjacent;
-        if (related(lane.key[k - 1], lane.key[k], &adjacent) && !opens_retransition(plan, sections, count, lane.span[k].start)) {
+        if (related(lane.key[k - 1], lane.key[k], &adjacent) && !opens_retransition(plan, sections, count, lane.span[k].start) &&
+            !opens_sequence(plan, sections, count, lane.span[k].start)) {
             assert(opens_with_pivot(plan, lane.key[k - 1], lane.key[k], lane.span[k].start));
         }
         /* A modulation: an authentic cadence arrives inside the new key's span, before the piece ends. */

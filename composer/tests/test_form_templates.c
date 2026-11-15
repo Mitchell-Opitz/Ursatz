@@ -66,6 +66,9 @@ typedef struct {
 #define CONS PLAN_THEME_ENDING_CONSEQUENT
 #define CAD PLAN_THEME_ENDING_CADENTIAL
 #define NONE FORM_SPEC_NO_RETURN
+/* The sonata rondo's P and S sit on the region degree of the piece's mode: vi or iv, ii or v (R-520). */
+#define DEVELOPMENT 1
+#define SEQUENCE 2
 
 /* What a section of the table must be. */
 typedef struct {
@@ -85,7 +88,8 @@ typedef struct {
     int function;     /* a SECTION_FUNCTION constraint of this PlanFunctionKind (R-503), or -1 for none */
     bool lyric;       /* a lyric subordinate theme: m0 augmented (R-506) */
     bool tonic_major; /* the section is in the home tonic's major key (R-517): the rondos' B1 */
-    bool second;      /* the section is in the second region (vi or IV in major, VI or iv in minor): the small rondo's C (R-520) */
+    bool second;      /* the section is in the second region (vi or IV in major, VI or iv in minor): the rondos' C (R-520) */
+    int region_key;   /* the section is in the key of one degree of its region, in semitones above home (the sonata rondo's P and S, R-520), or -1 */
 } Expected;
 
 #define MAX_EXPECTED FORM_SPEC_MAX_SECTIONS
@@ -114,6 +118,7 @@ static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning
     e->lyric = false;
     e->tonic_major = false;
     e->second = false;
+    e->region_key = -1;
 }
 
 /* A retransition or a coda is an operator section like the liquidation: no pairing and no archetype (R-503). */
@@ -270,6 +275,46 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         }
         set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n++].function = PLAN_FUNCTION_CODA;
+    } else if (IS("large-rondo") || IS("sonata-rondo")) {
+        /* The large rondo and sonata rondo (P52 B6, R-520): A, T, B, R, A1 (`embellish`), then C in the trio (large) or P and S
+           (sonata: P in the development, S its sequence in another key), R1, A2 (reharmonized), T1, B1 (B in the tonic major),
+           R2, A3 (A returned as a `setting`) and K. P and S end away from home, so they plan a PAC. */
+        const bool sonata = IS("sonata-rondo");
+        size_t a = n;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        size_t b = n;
+        set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
+        if (sonata) {
+            size_t pattern = n;
+            set(&out[n], "C", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+            out[n++].region_key = DEVELOPMENT;
+            set(&out[n], "C", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, pattern, 0);
+            out[n++].region_key = SEQUENCE;
+        } else {
+            set(&out[n], "C", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+            out[n++].second = true;
+        }
+        set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
+        set(&out[n], "T", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, b, 0);
+        out[n].tonic_major = true;
+        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
+        set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_CODA;
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -324,6 +369,8 @@ static size_t sizes_of(const char *kind, Size *out) {
         out[n++] = (Size){68, 0};
     } else if (IS("small-rondo-abaca")) {
         out[n++] = (Size){64, 0};
+    } else if (IS("large-rondo") || IS("sonata-rondo")) {
+        out[n++] = (Size){88, 0};
     }
     return n;
 }
@@ -467,6 +514,12 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
             const bool major = scenario->mode == KEY_STRUCTURE_MODE_MAJOR;
             assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && key->params.key.mode == (major ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR)) ||
                            (pc == (scenario->tonic + 5) % 12 && key->params.key.mode == scenario->mode)));
+        } else if (expected[i].region_key >= 0) {
+            /* The development is vi in major and iv in minor; the sequence is ii in major and v in minor; all minor keys (R-520). */
+            const bool major = scenario->mode == KEY_STRUCTURE_MODE_MAJOR;
+            const int up = expected[i].region_key == DEVELOPMENT ? (major ? 9 : 5) : (major ? 2 : 7);
+            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + up) % 12 &&
+                   key->params.key.mode == KEY_STRUCTURE_MODE_MINOR);
         } else {
             assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
                    key->params.key.mode == mode);
@@ -696,6 +749,9 @@ static void compose_all(const char *kind, Tally *total) {
  * bars) and were measured at 20, 80, 36 (ABA), 20, 120, 43 (ABAB), 20, 140, 46 (ABABA) and 20, 120, 46 (ABACA): every run
  * composes. The retransitions and the coda are composed and recorded, not heard as a form (R-503); the rows of key and meter
  * are in docs/rondo.md.
+ * The large rondo and sonata rondo (P52 B6, R-520) run in the same two scenarios at 88 bars and were measured at 20, 180, 116 (large) and 15, 150, 75 (sonata): the given motive in C major 4/4 is stuck 5 times in the
+ * sonata rondo (motives, melody and texture), the other 15 runs compose; the invented one composes 10 of 10. The retransitions and the coda are composed and
+ * recorded, not heard as a form (R-503).
  */
 typedef struct {
     const char *kind;
@@ -716,6 +772,8 @@ static const Baseline BASELINES[] = {
     {"andante-abab", 20, 120, 43},
     {"small-rondo-ababa", 20, 140, 46},
     {"small-rondo-abaca", 20, 120, 46},
+    {"large-rondo", 20, 180, 116},
+    {"sonata-rondo", 15, 150, 75},
 };
 
 static const Baseline *baseline_of(const char *kind) {

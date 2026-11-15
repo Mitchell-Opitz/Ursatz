@@ -128,7 +128,7 @@ written: the key check only rejects a finished run. With a check off, its result
 
 `forms/<name>.json`, embedded into the library at build time by `cmake/EmbedForms.cmake` (one byte array for each file in
 `COMPOSER_FORM_DOCUMENTS`). `form_spec_builtin_count`, `form_spec_builtin_name`, `form_spec_builtin_document` and
-`form_spec_builtin` list and read them in registry order, which is the order of `COMPOSER_FORMS` in `src/CMakeLists.txt`.
+`form_spec_builtin` list and read them in registry order, which is the order of `COMPOSER_FORMS` in `src/CMakeLists.txt` (the last before `game-loop` are `large-rondo` and `sonata-rondo`, 20 forms in all).
 No built-in names `checks`, so each runs every check. The game loop is the last, and the only one whose sections the
 request gives. The minuet, the trio and the minuet and trio come before it (P48, R-487), the scherzo and the scherzo and trio after them (P49, R-492, R-495), the figured variations after those (P50, R-500) the main and subordinate themes after them (P51, R-509) and the Andante and small rondo forms after those (P52, R-520).
 
@@ -151,6 +151,8 @@ request gives. The minuet, the trio and the minuet and trio come before it (P48,
 | `andante-abab` | **56** | The Andante form ABAB, tempo 72: A T B R A1 as `andante-aba`, then T1 (a transition, 4 bars at home, HC), B1 (returns B `exact`, in the tonic major, `"mode": "major"`) and K | `subordinate` as above; B1 is in the tonic major (the home key in major, the parallel major in minor) and K is at home. `modulates` and closing. |
 | `small-rondo-ababa` | **68** | The small rondo ABABA, tempo 88: A T B R A1 T1 B1 as `andante-abab`, then R1 (a retransition, 4 bars), A2 (returns A `setting` `arpeggiated`, closed) and K | `subordinate`, B1 in the tonic major as `andante-abab`; R1, A2 and K are at home. `modulates` and closing. |
 | `small-rondo-abaca` | **64** | The small rondo ABACA, tempo 88: A T B R A1 as `andante-aba`, then C (a contrast, 8 bars, antecedent + consequent, PAC, motive `interval-change`), R1, A2 (returns A `setting` `arpeggiated`, closed) and K | `subordinate` as above and `second` vi or IV (major), VI or iv (minor), which C starts and ends in; A, R, A1, R1, A2 and K are at home. `modulates` and closing. |
+| `large-rondo` | **88** | The large rondo ABA-C-ABA after Schoenberg ch. XIX ([rondo.md](rondo.md)), tempo 132: A T B R A1 as `andante-aba`, then C (a trio, 8 bars, antecedent + consequent, PAC, motive `interval-change`), R1, A2 (returns A `reharmonize`, closed), T1, B1 (as `andante-abab`), R2 (a retransition, 4 bars), A3 (returns A `setting` `arpeggiated`, closed) and K | `subordinate` as above and `trio` vi or IV (major), VI or iv (minor), which C starts and ends in; A, R, A1, R1, A2, T1, R2, A3 and K are at home. `modulates` and closing. |
+| `sonata-rondo` | **88** | The sonata rondo, tempo 132: as `large-rondo` with P (a pattern, 4 bars, antecedent + consequent, IAC) and S (a sequence, 4 bars, returns P `exact`) in place of C | `subordinate` as above, `development` vi (major), iv (minor) for P and `sequence` ii (major), v (minor) for S, each started and ended in; the rest at home as `large-rondo`. `modulates` and closing. |
 | `game-loop` | none: the request gives the sections | Intro, body, turnaround and ending sections of any length in beats ([The game loop](#the-game-loop)); `plan_name` is `structure` | None. Not closing. |
 
 ## Adding a form
