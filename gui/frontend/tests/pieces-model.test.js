@@ -470,6 +470,29 @@ const rondoSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures",
 const rondoRows = P.resultView({ seed: 1, summary: rondoSummary }, { form: "small-rondo-ababa", bars: 68, count: 0 }).versions[0].view.rows;
 check(rondoRows[8].letter === "A" && rondoRows[8].changes.includes("new setting"), "the second return of A in a small rondo says its new setting");
 
+/* The sonatina labels (P53, R-525). */
+const sonatinaForms = require("./fixtures/forms.json").forms;
+const sonatinaSections = sonatinaForms.find((form) => form.name === "sonatina").sizes[0].sections;
+const sonatinaSection = (name) => sonatinaSections.find((section) => section.name === name);
+check(
+  P.sectionKeysLabel(sonatinaSection("B1")) === "home to home (home mode)" &&
+    P.sectionKeysLabel(sonatinaSection("E")) === "elaboration to elaboration" &&
+    P.sectionReturnLabel(sonatinaSection("B1")) === "B (reharmonize)" &&
+    P.sectionReturnLabel(sonatinaSection("E")) === "B (embellish)",
+  "a sonatina section in the home mode says so, the elaboration shows its keys and returns of B",
+);
+const sonatinaMajorSections = sonatinaForms.find((form) => form.name === "sonatina-tonic-major").sizes[0].sections;
+check(
+  P.sectionKeysLabel(sonatinaMajorSections.find((section) => section.name === "B1")).endsWith(" (tonic major)"),
+  "a sonatina-tonic-major section in the tonic major says so",
+);
+const sonatinaSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "sonatina-summary.json"), "utf8"));
+const sonatinaRows = P.resultView({ seed: 1, summary: sonatinaSummary }, { form: "sonatina", bars: 92, count: 0 }).versions[0].view.rows;
+check(
+  sonatinaRows[11].letter === "B" && sonatinaRows[11].returns === "B" && sonatinaRows[11].changes.includes("mode: mapped into minor") && !sonatinaRows[5].changes.includes("mode:"),
+  "the home mode return of B in a sonatina says it was mapped into minor and the elaboration says no mode",
+);
+
 if (failures > 0) {
   console.error(`${failures} failure(s)`);
   process.exit(1);
