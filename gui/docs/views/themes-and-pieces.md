@@ -126,8 +126,9 @@ builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
   "3 variations, 32 bars" for one with a count) and, for a form that can modulate, a Modulate checkbox (a form that always modulates, the scherzo, has no checkbox and
   its structure table says `Modulate: always`; its request sends no `modulate`). The sections are
   the Composer's and cannot be edited: a strip of blocks as wide as their bars and a table of each section's letter, role,
-  length, beginning and ending, cadence, keys, harmony (the pedal the section is written over, such as "Dominant
-  pedal"), the section it returns to (with its variation, such as "A (varied)") and its slots with their ideas. The body is
+  length, beginning and ending, cadence, keys (`home to home (tonic major)` for a section in the tonic major, P52), harmony
+  (the pedal the section is written over, such as "Dominant pedal"), the section it returns to (with its variation: `A (embellish)`,
+  `A (setting: arpeggiated)`) and its slots with their ideas. The body is
   `{form, key, mode, meter, bars, count, modulate}` with no sections; the piece's motive, pool, accompaniment and brief are
   as below. Per-section fills are not offered (the Composer does not take them for these forms yet). A refusal of the size
   or of Modulate marks that control. Changing the form starts it at its default size.
