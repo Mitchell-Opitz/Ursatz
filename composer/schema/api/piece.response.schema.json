@@ -536,6 +536,7 @@
             "retransition",
             "subordinate",
             "coda",
+            "elaboration",
             "intro",
             "body",
             "turnaround",
@@ -772,6 +773,7 @@
         "copied",
         "variation",
         "setting",
+        "mode",
         "melody_added",
         "chords_changed",
         "chords",
@@ -806,6 +808,14 @@
             null
           ],
           "description": "The pattern of the new accompaniment of a setting return (R-518); null for any other variation."
+        },
+        "mode": {
+          "enum": [
+            "major",
+            "minor",
+            null
+          ],
+          "description": "The mode a copy across modes is mapped into (R-524, R-499); null for a copy in keys of the same mode and for a section composed anew."
         },
         "melody_added": {
           "type": [
