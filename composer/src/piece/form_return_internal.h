@@ -99,8 +99,15 @@ void return_payload_destroy(void *payload);
 bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
                       int *shift);
 /*
- * Whether the key lanes of the two sections have the same shape and every target span is on the same tonic as the
- * source's at the same place in the other mode (R-499); *to_mode is the target's mode. A copy across modes is moved by 0.
+ * Whether the key lanes of the two sections have the same shape, every target span is in the other mode from the
+ * source's at the same place, all target spans are in one mode, and the tonic moves by one step throughout (R-524);
+ * *shift is that step in semitones, from -5 to 6, and *to_mode the target's mode.
+ */
+bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+                          int *shift, int *to_mode);
+/*
+ * return_mode_shift_by with the shift required to be 0: every target span is on the same tonic as the source's at the
+ * same place in the other mode (R-499). A copy across modes of a figurate return is moved by 0.
  */
 bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
                        int *to_mode);
