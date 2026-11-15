@@ -187,6 +187,10 @@ static const FormRow FORMS[] = {
      {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {88, 1, false}}, 5, 0, 132, 0, 0},
     {"sonata-rondo", true, false, 3, {{88, 0, true}}, 1,
      {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {88, 1, false}}, 5, 0, 132, 0, 0},
+    {"sonatina", true, false, 4, {{92, 0, true}}, 1,
+     {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {88, 1, false}}, 5, 0, 132, 0, 0},
+    {"sonatina-tonic-major", true, false, 4, {{92, 0, true}}, 1,
+     {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {88, 1, false}}, 5, 0, 132, 0, 0},
 };
 #define FORM_COUNT (sizeof(FORMS) / sizeof(FORMS[0]))
 
@@ -855,7 +859,8 @@ static void test_meters_and_tempo(void) {
         size_t meters = dance || scherzo_trio ? 1u : scherzo ? 3u : strcmp(builtin_form->name, "figured-variations") == 0 ? 4u : 0u;
         unsigned tempo = dance ? 112u : (scherzo || scherzo_trio) ? 176u : strncmp(builtin_form->name, "andante-", 8) == 0 ? 72u
                          : strncmp(builtin_form->name, "small-rondo-", 12) == 0 ? 88u
-                         : (strcmp(builtin_form->name, "large-rondo") == 0 || strcmp(builtin_form->name, "sonata-rondo") == 0) ? 132u : 0u;
+                         : (strcmp(builtin_form->name, "large-rondo") == 0 || strcmp(builtin_form->name, "sonata-rondo") == 0 ||
+                            strncmp(builtin_form->name, "sonatina", 8) == 0) ? 132u : 0u;
         assert(builtin_form->meter_count == meters && builtin_form->tempo == tempo);
         assert(form_spec_meter_allowed(builtin_form, &three_four));
         assert(form_spec_meter_allowed(builtin_form, &six_eight) == !(dance || scherzo_trio));
@@ -1566,7 +1571,8 @@ static void test_modulating_reader(void) {
         FormSpec *built = builtin(form_spec_builtin_name(f));
         assert(built->modulates == (strcmp(built->name, "scherzo") == 0 || strcmp(built->name, "main-and-subordinate") == 0 ||
                                     strncmp(built->name, "andante-", 8) == 0 || strncmp(built->name, "small-rondo-", 12) == 0 ||
-                                    strcmp(built->name, "large-rondo") == 0 || strcmp(built->name, "sonata-rondo") == 0));
+                                    strcmp(built->name, "large-rondo") == 0 || strcmp(built->name, "sonata-rondo") == 0 ||
+                                    strncmp(built->name, "sonatina", 8) == 0));
         form_spec_destroy(built);
     }
 }
@@ -1926,6 +1932,21 @@ static void part_document(char *out, size_t cap, const char *role, size_t bars, 
     document(out, cap, ", \"regions\": [{\"name\": \"away\", \"major\": [5], \"minor\": [3]}], \"modulates\": true", sizes);
 }
 
+/* The elaboration role (R-523): read with its label, theme-like, with no rules of its own. */
+static void test_elaboration_role(void) {
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    FormRole role;
+    assert(form_role_find("elaboration", &role) && role == FORM_ROLE_ELABORATION && form_role_is_theme(role));
+    assert(strcmp(form_role_name(role), "elaboration") == 0 && strcmp(form_role_label(role), "Elaboration") == 0);
+    part_document(text, sizeof(text), "elaboration", 8,
+                  ", \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\"");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    assert(form->sizes[0].sections[0].role == FORM_ROLE_ELABORATION);
+    form_spec_destroy(form);
+}
+
 /* tests/fixtures/forms/parts-of-forms.json: the four roles read with their members; each refusal of the reader at its path; the
    plan the form builds carries the section function of each part and no archetype on a retransition or a coda. */
 static void test_parts_reader(void) {
@@ -2005,7 +2026,7 @@ static void test_parts_reader(void) {
         assert(form_role_find(ROLES_NEW[i].role, &role) && form_role_is_theme(role));
         assert(strcmp(form_role_name(role), ROLES_NEW[i].role) == 0 && strcmp(form_role_label(role), ROLES_NEW[i].label) == 0);
     }
-    assert(FORM_ROLE_COUNT == 18);
+    assert(FORM_ROLE_COUNT == 19);
 
     /* One section of each new role parses with its members set. */
     part_document(text, sizeof(text), "transition", 8, TRANSITION_OK ", \"independent\": true");
@@ -2732,6 +2753,7 @@ int main(int argc, char **argv) {
     test_home_mode_reader();
     test_setting_reader();
     test_parts_reader();
+    test_elaboration_role();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }

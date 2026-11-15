@@ -110,6 +110,9 @@ static size_t sizes_of(Size *out) {
     /* The large rondo and sonata rondo (P52 B6): one size each, in both keys, 4/4. */
     out[n++] = (Size){"large-rondo", 88, 0};
     out[n++] = (Size){"sonata-rondo", 88, 0};
+    /* The sonatina forms (P53 B2): one size each, in both keys, 4/4. */
+    out[n++] = (Size){"sonatina", 92, 0};
+    out[n++] = (Size){"sonatina-tonic-major", 92, 0};
     return n;
 }
 #define MAX_SIZES 48
