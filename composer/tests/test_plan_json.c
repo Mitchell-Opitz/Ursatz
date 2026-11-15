@@ -260,7 +260,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.counterpoint.above == b->params.counterpoint.above;
     case PLAN_CONSTRAINT_RETURN:
         return a->params.section_return.section == b->params.section_return.section &&
-               a->params.section_return.variation == b->params.section_return.variation;
+               a->params.section_return.variation == b->params.section_return.variation &&
+               a->params.section_return.setting == b->params.section_return.setting;
     case PLAN_CONSTRAINT_LAYERS:
         return a->params.layers.lanes == b->params.layers.lanes;
     case PLAN_CONSTRAINT_SECTION_LETTER:
@@ -990,6 +991,56 @@ static void test_section_constraints(void) {
     plan_destroy(plan);
 }
 
+static char *replace_all(const char *text, const char *from, const char *to);
+
+/* A return of variation setting (R-518) round-trips byte for byte with its pattern; the member is required by it and refused by any other. */
+static void test_setting_return(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "setting");
+    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
+    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
+    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
+    back.params.section_return.section = a;
+    back.params.section_return.variation = PLAN_RETURN_SETTING;
+    back.params.section_return.setting = PLAN_ACCOMPANIMENT_ANY;
+    /* a setting return needs one of the four patterns */
+    assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
+    back.params.section_return.setting = PLAN_ACCOMPANIMENT_MOTIVE;
+    assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
+    back.params.section_return.setting = PLAN_ACCOMPANIMENT_OOM_PAH;
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
+    assert(strcmp(plan_return_variation_name(PLAN_RETURN_SETTING), "setting") == 0);
+    PlanJsonError error;
+    char *text = plan_to_json(plan, &error);
+    assert(text != NULL && strstr(text, "\"variation\": \"setting\"") != NULL && strstr(text, "\"setting\": \"oom-pah\"") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+    free(again);
+    plan_destroy(parsed);
+    /* a setting return without the member, and the member on an exact return, are refused */
+    char *without = replace_all(text, "\"setting\": \"oom-pah\"", "\"spare\": \"oom-pah\"");
+    PiecePlan *refused = NULL;
+    assert(without && plan_from_json(without, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    assert(strstr(error.message, "a setting return names its setting") != NULL && strstr(error.path, ".constraints[0].setting") != NULL);
+    free(without);
+    char *exact = replace_all(text, "\"variation\": \"setting\"", "\"variation\": \"exact\"");
+    assert(exact && plan_from_json(exact, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    assert(strstr(error.message, "only a setting return has a setting") != NULL);
+    free(exact);
+    /* an exact return writes no setting member */
+    back.params.section_return.variation = PLAN_RETURN_EXACT;
+    assert(plan_node_remove_constraint(plan, a2, plan_node_constraint_count(plan, a2) - 1) == PLAN_OK);
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
+    char *plain = plan_to_json(plan, &error);
+    assert(plain && strstr(plain, "\"setting\":") == NULL);
+    free(plain);
+    free(text);
+    plan_destroy(plan);
+}
+
 /* A return of variation embellish (R-516) round-trips byte for byte. */
 static void test_embellish_return(void) {
     PiecePlan *plan = plan_create();
@@ -1611,6 +1662,7 @@ int main(void) {
     test_section_function();
     test_section_constraints();
     test_embellish_return();
+    test_setting_return();
     test_empty_plan();
     test_malformed_input();
     test_plan_files();

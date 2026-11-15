@@ -1760,6 +1760,44 @@ static void test_tonic_major_reader(void) {
            strcmp(error.message, "a figurate variation takes the parallel mode, not the tonic major") == 0);
 }
 
+/* A setting return (R-518) names its pattern: it reads as the section's setting; each refusal at its path. */
+static void test_setting_reader(void) {
+    static const struct {
+        const char *name;
+        PlanAccompanimentPattern pattern;
+    } PATTERNS[] = {{"block", PLAN_ACCOMPANIMENT_BLOCK},
+                    {"arpeggiated", PLAN_ACCOMPANIMENT_ARPEGGIATED},
+                    {"alberti", PLAN_ACCOMPANIMENT_ALBERTI},
+                    {"oom-pah", PLAN_ACCOMPANIMENT_OOM_PAH}};
+    char member[128];
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    for (size_t i = 0; i < sizeof(PATTERNS) / sizeof(PATTERNS[0]); i++) {
+        snprintf(member, sizeof(member), ", \"setting\": \"%s\"", PATTERNS[i].name);
+        figure_document(text, sizeof(text), ", \"variation\": \"setting\"", member);
+        assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].variation == PLAN_RETURN_SETTING &&
+               form->sizes[0].sections[1].setting == PATTERNS[i].pattern && form->sizes[0].sections[0].setting == 0);
+        form_spec_destroy(form);
+    }
+    /* an unknown setting, a setting return without one, and a setting with any other variation */
+    figure_document(text, sizeof(text), ", \"variation\": \"setting\"", ", \"setting\": \"waltz\"");
+    refused(text, "/sizes/0/sections/1/setting");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK && strcmp(error.message, "unknown setting \"waltz\"") == 0);
+    figure_document(text, sizeof(text), ", \"variation\": \"setting\"", ", \"setting\": \"motive\"");
+    refused(text, "/sizes/0/sections/1/setting");
+    figure_document(text, sizeof(text), ", \"variation\": \"setting\"", "");
+    refused(text, "/sizes/0/sections/1/variation");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK &&
+           strcmp(error.message, "a setting return names its setting") == 0);
+    figure_document(text, sizeof(text), ", \"variation\": \"exact\"", ", \"setting\": \"block\"");
+    refused(text, "/sizes/0/sections/1/setting");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK &&
+           strcmp(error.message, "only a setting return has a setting") == 0);
+    figure_document(text, sizeof(text), "", ", \"setting\": \"block\"");
+    refused(text, "/sizes/0/sections/1/setting");
+}
+
 /* ------------------------------------------------------------- the liquidation section (R-494) */
 
 static void test_liquidation_reader(void) {
@@ -2641,6 +2679,7 @@ int main(int argc, char **argv) {
     test_liquidation_reader();
     test_figure_reader();
     test_tonic_major_reader();
+    test_setting_reader();
     test_parts_reader();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
