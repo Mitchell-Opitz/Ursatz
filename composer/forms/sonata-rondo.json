@@ -1,0 +1,28 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "sonata-rondo",
+  "label": "Sonata rondo (ABA-C-ABA)",
+  "closing": true,
+  "modulates": true,
+  "tempo": 132,
+  "regions": [{"name": "subordinate", "major": [5], "minor": [3]}, {"name": "development", "major": [6], "minor": [4]}, {"name": "sequence", "major": [2], "minor": [5]}],
+  "sizes": [
+    {"bars": 88, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "T", "letter": "T", "role": "transition", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "keys": {"end": "subordinate"}},
+      {"name": "B", "letter": "B", "role": "subordinate", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "keys": {"start": "subordinate", "end": "subordinate"}, "motive": "invert tonal=1"},
+      {"name": "R", "letter": "R", "role": "retransition", "bars": 4, "cadence": "half"},
+      {"name": "A1", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "embellish"},
+      {"name": "P", "letter": "C", "role": "pattern", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "development", "end": "development"}},
+      {"name": "S", "letter": "C", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic", "keys": {"start": "sequence", "end": "sequence"}, "returns": "P", "variation": "exact"},
+      {"name": "R1", "letter": "R", "role": "retransition", "bars": 4, "cadence": "half"},
+      {"name": "A2", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "reharmonize"},
+      {"name": "T1", "letter": "T", "role": "transition", "bars": 4, "beginning": "presentation", "ending": "continuation", "cadence": "half"},
+      {"name": "B1", "letter": "B", "role": "subordinate", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "returns": "B", "variation": "exact", "mode": "major"},
+      {"name": "R2", "letter": "R", "role": "retransition", "bars": 4, "cadence": "half"},
+      {"name": "A3", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "setting", "setting": "arpeggiated"},
+      {"name": "K", "letter": "K", "role": "coda", "bars": 8, "cadence": "perfect-authentic", "closed": true}
+    ]}
+  ]
+}
