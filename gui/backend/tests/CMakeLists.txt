@@ -15,7 +15,7 @@ set_tests_properties(analyzer_route PROPERTIES LABELS slow)
 # working directory (pieces/ and cli/ are created there).
 add_dependencies(test_analyzer_route ursatz-analyzer)
 target_compile_definitions(test_analyzer_route PRIVATE
-  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
+  URSATZ_GUI_TEST_URSATZ_DIR="${URSATZ_GUI_LIBRARY_DIR}"
   URSATZ_GUI_TEST_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>"
 )
 
@@ -36,7 +36,7 @@ ursatz_gui_add_test(composer_route test_composer_route.c ${CMAKE_CURRENT_BINARY_
 # The test asks the linked Composer for its versions and its vocabulary (which it compares with the frontend's fixture),
 # in its own working directory.
 target_compile_definitions(test_composer_route PRIVATE
-  URSATZ_GUI_TEST_VOCABULARY_FIXTURE="${CMAKE_SOURCE_DIR}/frontend/tests/fixtures/vocabulary.json"
+  URSATZ_GUI_TEST_VOCABULARY_FIXTURE="${PROJECT_SOURCE_DIR}/frontend/tests/fixtures/vocabulary.json"
 )
 
 ursatz_gui_add_test(styles_route test_styles_route.c ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
@@ -45,7 +45,7 @@ set_tests_properties(styles_route PROPERTIES LABELS slow)
 # The test builds styles from the reference pieces; it creates pieces/, collections/ and styles/ in its own
 # working directory.
 target_compile_definitions(test_styles_route PRIVATE
-  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
+  URSATZ_GUI_TEST_URSATZ_DIR="${URSATZ_GUI_LIBRARY_DIR}"
 )
 
 ursatz_gui_add_test(material_service test_material_service.c ${CMAKE_CURRENT_BINARY_DIR}/material_service)
@@ -70,7 +70,7 @@ target_compile_definitions(test_materials_route PRIVATE
 ursatz_gui_add_test(subjects_route test_subjects_route.c ${CMAKE_CURRENT_BINARY_DIR}/subjects_route)
 # The test creates materials/, subjects/ and pieces/ in its own working directory.
 target_compile_definitions(test_subjects_route PRIVATE
-  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
+  URSATZ_GUI_TEST_URSATZ_DIR="${URSATZ_GUI_LIBRARY_DIR}"
 )
 
 ursatz_gui_add_test(link_service test_link_service.c ${CMAKE_CURRENT_BINARY_DIR}/link_service)
@@ -109,14 +109,14 @@ ursatz_gui_add_test(piece_snapshot test_piece_snapshot.c ${CMAKE_CURRENT_BINARY_
 # The test compares the detail note ids, score and playback replies of three pieces with fixtures/pieces; it creates
 # pieces/ in its own working directory. URSATZ_GUI_SNAPSHOT_CAPTURE=1 rewrites the snapshot.
 target_compile_definitions(test_piece_snapshot PRIVATE
-  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
+  URSATZ_GUI_TEST_URSATZ_DIR="${URSATZ_GUI_LIBRARY_DIR}"
   URSATZ_GUI_TEST_PIECE_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/pieces"
 )
 
 ursatz_gui_add_test(piece_lock test_piece_lock.c ${CMAKE_CURRENT_BINARY_DIR}/piece_lock)
 # The test makes pieces/ in its own working directory and uploads this MusicXML file as the piece.
 target_compile_definitions(test_piece_lock PRIVATE
-  URSATZ_GUI_TEST_SOURCE="${CMAKE_SOURCE_DIR}/external/ursatz/tests/fixtures/musicxml/chords_backup.musicxml"
+  URSATZ_GUI_TEST_SOURCE="${URSATZ_GUI_LIBRARY_DIR}/tests/fixtures/musicxml/chords_backup.musicxml"
 )
 
 ursatz_gui_add_test(stale_analysis test_stale_analysis.c ${CMAKE_CURRENT_BINARY_DIR}/stale_analysis)

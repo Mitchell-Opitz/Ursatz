@@ -52,7 +52,7 @@ if(WIN32)
 endif()
 
 target_compile_definitions(ursatz_gui_core PUBLIC
-  URSATZ_GUI_FRONTEND_DIR="${CMAKE_SOURCE_DIR}/frontend/public"
+  URSATZ_GUI_FRONTEND_DIR="${PROJECT_SOURCE_DIR}/frontend/public"
 )
 
 add_executable(ursatz-gui-backend src/main.c)
