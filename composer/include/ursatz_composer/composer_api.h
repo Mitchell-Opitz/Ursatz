@@ -25,10 +25,12 @@
  * 1.22 adds each section's figure and skeleton to the rows, and a section's figure and mode to the forms entry.
  * 1.23 adds each section's function to the rows, independent and lyric to the forms entry, piece_functions to the vocabulary and a
  * section's function to the game loop request.
+ * 1.24 adds each section's setting and the tonic major mode to the forms entry, the setting to the rows' changes, and the embellish and
+ * setting variations.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 23
+#define COMPOSER_API_VERSION_MINOR 24
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
