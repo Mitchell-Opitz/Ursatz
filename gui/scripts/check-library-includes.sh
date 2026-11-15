@@ -5,9 +5,9 @@
 # offending line. Run after the build; the build directory is the first argument (it must exist).
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
-build="${1:-build}"
+build="${1:-../build}"
 if [ ! -d "$build" ]; then
     echo "FAIL $build not found (build first)" >&2
     exit 2
@@ -38,7 +38,7 @@ while IFS=: read -r file line text; do
         fi
     done
     [ "$local_found" = 1 ] && continue
-    if submodule_has external/ursatz-composer "$name"; then
+    if submodule_has ../composer "$name"; then
         case "$name" in
             *_internal.h) report "$file" "$line" "$name" "internal header of the Composer" ;;
             ursatz_composer/composer_api.h) ;;
@@ -46,7 +46,7 @@ while IFS=: read -r file line text; do
         esac
         continue
     fi
-    if submodule_has external/ursatz-analyzer "$name"; then
+    if submodule_has ../analyzer "$name"; then
         case "$name" in
             *_internal.h) report "$file" "$line" "$name" "internal header of the Analyzer" ;;
             ursatz_analyzer/*) ;;
@@ -54,7 +54,7 @@ while IFS=: read -r file line text; do
         esac
         continue
     fi
-    if submodule_has external/ursatz "$name"; then
+    if submodule_has ../library "$name"; then
         case "$name" in
             *_internal.h) report "$file" "$line" "$name" "internal header of Ursatz" ;;
             persistence/persistence.h)

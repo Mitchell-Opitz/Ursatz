@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Fails when src/ or include/ includes an Ursatz header that is not under a staged public root of the build, names a
 # *_internal.h of Ursatz, or when a CMake file reads SOURCE_DIR of an Ursatz target or a path under
-# external/ursatz/tests, or when a public Analyzer header other than result_chain.h includes a chain or framework header
+# ../library/tests, or when a public Analyzer header other than result_chain.h includes a chain or framework header
 # (the chain reaches only consumers that link ursatz_analyzer::chain). Prints each offending line. Run after the build; the build directory is the first argument.
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
-build="${1:-build}"
-manifest="$build/external/ursatz/public/manifest.txt"
+build="${1:-../build}"
+manifest="$build/library/public/manifest.txt"
 if [ ! -f "$manifest" ]; then
     echo "FAIL $manifest not found (build first)" >&2
     exit 2
@@ -27,10 +27,10 @@ report() {
 }
 
 ursatz_has() {
-    # True when external/ursatz holds a file whose path ends with the include name.
+    # True when ../library holds a file whose path ends with the include name.
     local name="$1" base
     base="$(basename "$name")"
-    find external/ursatz -name "$base" -not -path '*/.git/*' -not -path 'external/ursatz/external/*' 2>/dev/null |
+    find ../library -name "$base" -not -path '*/.git/*' -not -path '../library/external/*' 2>/dev/null |
         grep -q "/$name\$"
 }
 
@@ -65,15 +65,15 @@ done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' src inclu
 
 while IFS=: read -r file line text; do
     report "$file" "$line" "$(printf '%s' "$text" | sed -E 's/^[[:space:]]+//')" "reads Ursatz sources"
-done < <(grep -rnE 'SOURCE_DIR|external/ursatz/tests' --include=CMakeLists.txt --include='*.cmake' . \
+done < <(grep -rnE 'SOURCE_DIR|../library/tests' --include=CMakeLists.txt --include='*.cmake' . \
     --exclude-dir=external --exclude-dir=build --exclude-dir='build-*' |
-    grep -E 'get_target_property|external/ursatz/tests' | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#' || true)
+    grep -E 'get_target_property|../library/tests' | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#' || true)
 
 # A public header exposes the kernel only: a chain or framework header belongs to result_chain.h alone.
 while IFS=: read -r file line text; do
     [ "$file" = "include/ursatz_analyzer/result_chain.h" ] && continue
     name="$(printf '%s' "$text" | sed -E 's/^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]([^">]+)[">].*/\1/')"
-    if [ -e "external/ursatz/chain/$name" ] || [ -e "external/ursatz/frameworks/$name" ]; then
+    if [ -e "../library/chain/$name" ] || [ -e "../library/frameworks/$name" ]; then
         report "$file" "$line" "$name" "chain or framework header in a public Analyzer header"
     fi
 done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' include || true)

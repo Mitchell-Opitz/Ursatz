@@ -15,13 +15,13 @@ if(URSATZ_ANALYZER_BUILD_TESTS)
     enable_testing()
 endif()
 
-# Ursatz submodule commit, recorded in every analysis document's metadata.
+# Library commit, recorded in every analysis document's metadata.
 set(URSATZ_ANALYZER_URSATZ_COMMIT "unknown")
 find_package(Git QUIET)
 if(GIT_FOUND)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/external/ursatz
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../library
         RESULT_VARIABLE ursatz_commit_result
         OUTPUT_VARIABLE ursatz_commit_output
         OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -32,9 +32,9 @@ if(GIT_FOUND)
     endif()
 endif()
 
-# A parent project that already provides Ursatz supplies the ursatz target itself.
+# The repo root adds the library first; on its own the Analyzer adds its sibling.
 if(NOT TARGET ursatz)
-    add_subdirectory(external/ursatz)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/../library ${PROJECT_BINARY_DIR}/library)
 endif()
 # A parent project that vendors cJSON supplies the cjson target itself.
 if(NOT TARGET cjson)

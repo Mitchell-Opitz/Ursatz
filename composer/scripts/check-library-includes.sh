@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Fails when src/, include/ or cli/ includes an Ursatz header that is not under a staged public root of the build, an
-# Analyzer header outside external/ursatz-analyzer/include/ursatz_analyzer/, or any *_internal.h of either, or when the
+# Analyzer header outside ../analyzer/include/ursatz_analyzer/, or any *_internal.h of either, or when the
 # public include directory holds anything but composer_api.h, composer_api.h includes a non-standard header, or
 # src/CMakeLists.txt links a library PUBLIC (a consumer must see no Ursatz or Analyzer header through the Composer), or when a
-# CMake file reads SOURCE_DIR of an Ursatz or Analyzer target or a path under external/ursatz/tests or
-# external/ursatz-analyzer/src. Prints each offending line. Run after the build; the build directory is the first argument.
+# CMake file reads SOURCE_DIR of an Ursatz or Analyzer target or a path under ../library/tests or
+# ../analyzer/src. Prints each offending line. Run after the build; the build directory is the first argument.
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
-build="${1:-build}"
-manifest="$build/external/ursatz/public/manifest.txt"
+build="${1:-../build}"
+manifest="$build/library/public/manifest.txt"
 if [ ! -f "$manifest" ]; then
     echo "FAIL $manifest not found (build first)" >&2
     exit 2
@@ -29,18 +29,18 @@ report() {
 }
 
 ursatz_has() {
-    # True when external/ursatz holds a file whose path ends with the include name.
+    # True when ../library holds a file whose path ends with the include name.
     local name="$1" base
     base="$(basename "$name")"
-    find external/ursatz -name "$base" -not -path '*/.git/*' -not -path 'external/ursatz/external/*' 2>/dev/null |
+    find ../library -name "$base" -not -path '*/.git/*' -not -path '../library/external/*' 2>/dev/null |
         grep -q "/$name\$"
 }
 
 analyzer_has() {
-    # True when external/ursatz-analyzer holds a file whose path ends with the include name.
+    # True when ../analyzer holds a file whose path ends with the include name.
     local name="$1" base
     base="$(basename "$name")"
-    find external/ursatz-analyzer -name "$base" -not -path '*/.git/*' -not -path 'external/ursatz-analyzer/external/*' 2>/dev/null |
+    find ../analyzer -name "$base" -not -path '*/.git/*' -not -path '../analyzer/external/*' 2>/dev/null |
         grep -q "/$name\$"
 }
 
@@ -71,7 +71,7 @@ while IFS=: read -r file line text; do
     if analyzer_has "$name"; then
         case "$name" in
             *_internal.h) report "$file" "$line" "$name" "internal header of the Analyzer" ;;
-            ursatz_analyzer/*) [ -e "external/ursatz-analyzer/include/$name" ] || report "$file" "$line" "$name" "not a public Analyzer header" ;;
+            ursatz_analyzer/*) [ -e "../analyzer/include/$name" ] || report "$file" "$line" "$name" "not a public Analyzer header" ;;
             *) report "$file" "$line" "$name" "Analyzer header outside include/ursatz_analyzer" ;;
         esac
         continue
@@ -97,9 +97,9 @@ done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' src inclu
 
 while IFS=: read -r file line text; do
     report "$file" "$line" "$(printf '%s' "$text" | sed -E 's/^[[:space:]]+//')" "reads Ursatz sources"
-done < <(grep -rnE 'SOURCE_DIR|external/ursatz/tests|external/ursatz-analyzer/src' --include=CMakeLists.txt --include='*.cmake' . \
+done < <(grep -rnE 'SOURCE_DIR|../library/tests|../analyzer/src' --include=CMakeLists.txt --include='*.cmake' . \
     --exclude-dir=external --exclude-dir=build --exclude-dir='build-*' |
-    grep -E 'get_target_property|external/ursatz/tests|external/ursatz-analyzer/src' | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#' || true)
+    grep -E 'get_target_property|../library/tests|../analyzer/src' | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#' || true)
 
 if [ "$failed" = 1 ]; then
     exit 1

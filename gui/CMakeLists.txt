@@ -10,38 +10,31 @@ endif()
 
 include(FetchContent)
 
-# --- Ursatz library dependency -------------------------------------------
+# --- Library, Analyzer and Composer ------------------------------------------
 #
-# Same cross-repo pattern as ursatz-analyzer: Ursatz is vendored as a git
-# submodule under external/ursatz and pulled in directly with
-# add_subdirectory. Ursatz's own CMakeLists.txt guards its test suite with
-# `if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)` so it doesn't
-# try to build its tests when consumed this way.
-set(URSATZ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-# Only the staged public headers reach the GUI (R-218); the library's source directories stay off the include path.
-set(URSATZ_LEGACY_INCLUDE_DIRS OFF CACHE BOOL "" FORCE)
-# The GUI vendors cJSON. It comes first so the Analyzer reuses this target
-# instead of adding its own.
-add_subdirectory(external/cjson)
-add_subdirectory(external/ursatz)
-
-# --- Ursatz Analyzer dependency ------------------------------------------
-#
-# The Analyzer is the only analysis path (R-084). It skips its own
-# add_subdirectory(external/ursatz) because the ursatz target already
-# exists here.
-set(URSATZ_ANALYZER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-add_subdirectory(external/ursatz-analyzer)
-
-# --- Ursatz Composer (linked) ----------------------------------------------
-#
-# Every Composer request calls the Composer API in process (R-219): the quick
-# ones on request threads, the long runs on the job queue's workers. The
-# Composer reuses the cJSON, Ursatz and Analyzer targets above; the command is
-# not built.
-set(URSATZ_COMPOSER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(URSATZ_COMPOSER_BUILD_CLI OFF CACHE BOOL "" FORCE)
-add_subdirectory(external/ursatz-composer)
+# The repo root adds cJSON, the library, the Analyzer and the Composer first and the GUI reuses those targets; on its
+# own the GUI adds its siblings without their tests or command. cJSON comes first so the Analyzer reuses it, the
+# library before the Analyzer and the Analyzer before the Composer for the same reason. The Analyzer is the only
+# analysis path (R-084); every Composer request calls the Composer API in process (R-219): the quick ones on request
+# threads, the long runs on the job queue's workers.
+set(URSATZ_BUILD_TESTS OFF)
+set(URSATZ_ANALYZER_BUILD_TESTS OFF)
+set(URSATZ_COMPOSER_BUILD_TESTS OFF)
+set(URSATZ_COMPOSER_BUILD_CLI OFF)
+if(NOT TARGET cjson)
+  add_subdirectory(external/cjson)
+endif()
+if(NOT TARGET ursatz)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/../library ${PROJECT_BINARY_DIR}/library)
+endif()
+if(NOT TARGET ursatz_analyzer)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/../analyzer ${PROJECT_BINARY_DIR}/analyzer)
+endif()
+if(NOT TARGET ursatz_composer)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/../composer ${PROJECT_BINARY_DIR}/composer)
+endif()
+# The library checkout, for tests that read its fixtures.
+set(URSATZ_GUI_LIBRARY_DIR ${PROJECT_SOURCE_DIR}/../library)
 
 # --- civetweb (HTTP server library) ---------------------------------------
 set(CIVETWEB_ENABLE_CXX OFF CACHE BOOL "" FORCE)
