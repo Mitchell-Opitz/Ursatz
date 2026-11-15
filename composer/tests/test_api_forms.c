@@ -251,7 +251,7 @@ static void test_figured_variations(void) {
     }
 }
 
-/* No section of any other form has a figure or a mode (R-501); the scherzo's sections in particular. */
+/* No section of any other form has a figure or a parallel mode (R-501); the scherzo's sections in particular. The tonic major (R-517) is only a return's. */
 static void test_no_figure_elsewhere(void) {
     const cJSON *form = NULL;
     size_t checked = 0;
@@ -263,7 +263,9 @@ static void test_no_figure_elsewhere(void) {
         cJSON_ArrayForEach(size, member(form, "sizes")) {
             const cJSON *section = NULL;
             cJSON_ArrayForEach(section, member(size, "sections")) {
-                assert(cJSON_IsNull(member(section, "figure")) && cJSON_IsNull(member(section, "mode")));
+                const cJSON *mode = member(section, "mode");
+                assert(cJSON_IsNull(member(section, "figure")));
+                assert(cJSON_IsNull(mode) || (strcmp(mode->valuestring, "major") == 0 && cJSON_IsString(member(section, "returns"))));
                 checked++;
             }
         }
@@ -272,6 +274,22 @@ static void test_no_figure_elsewhere(void) {
     const cJSON *scherzo = member(default_size(form_named("scherzo")), "sections");
     for (int i = 0; i < cJSON_GetArraySize(scherzo); i++) {
         assert(cJSON_IsNull(member(cJSON_GetArrayItem(scherzo, i), "figure")) && cJSON_IsNull(member(cJSON_GetArrayItem(scherzo, i), "mode")));
+    }
+}
+
+/* Each section's setting and the tonic major mode (R-521): the small rondo's A1 is an embellish return, A2 a setting return in arpeggiated, B1 is in the tonic major, and the main and subordinate sections have no setting. */
+static void test_setting_and_major(void) {
+    const cJSON *sections = member(default_size(form_named("small-rondo-ababa")), "sections");
+    assert(cJSON_GetArraySize(sections) == 10);
+    const cJSON *a1 = cJSON_GetArrayItem(sections, 4);
+    const cJSON *b1 = cJSON_GetArrayItem(sections, 6);
+    const cJSON *a2 = cJSON_GetArrayItem(sections, 8);
+    assert(strcmp(text(a1, "name"), "A1") == 0 && strcmp(text(a1, "variation"), "embellish") == 0 && cJSON_IsNull(member(a1, "setting")));
+    assert(strcmp(text(a2, "name"), "A2") == 0 && strcmp(text(a2, "variation"), "setting") == 0 && strcmp(text(a2, "setting"), "arpeggiated") == 0);
+    assert(strcmp(text(b1, "name"), "B1") == 0 && strcmp(text(b1, "mode"), "major") == 0 && cJSON_IsNull(member(b1, "setting")));
+    const cJSON *main_sections = member(default_size(form_named("main-and-subordinate")), "sections");
+    for (int i = 0; i < cJSON_GetArraySize(main_sections); i++) {
+        assert(cJSON_IsNull(member(cJSON_GetArrayItem(main_sections, i), "setting")));
     }
 }
 
@@ -547,6 +565,7 @@ int main(void) {
     test_variations();
     test_figured_variations();
     test_no_figure_elsewhere();
+    test_setting_and_major();
     test_independent_and_lyric();
     test_layered();
     test_pedal();

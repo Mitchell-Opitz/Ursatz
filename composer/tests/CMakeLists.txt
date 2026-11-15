@@ -887,6 +887,12 @@ target_compile_options(test_api_parts PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_api_parts COMMAND test_api_parts WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(test_api_parts PROPERTIES FIXTURES_SETUP api_responses_written)
 
+add_executable(test_api_rondo test_api_rondo.c)
+target_link_libraries(test_api_rondo PRIVATE ursatz_composer composer_test_support cjson)
+target_compile_options(test_api_rondo PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_api_rondo COMMAND test_api_rondo WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+set_tests_properties(test_api_rondo PROPERTIES LABELS slow)
+
 add_executable(test_api_plan_workflow test_api_plan_workflow.c)
 target_link_libraries(test_api_plan_workflow PRIVATE ursatz_composer composer_test_support cjson)
 target_compile_options(test_api_plan_workflow PRIVATE -Wall -Wextra -Wpedantic)
