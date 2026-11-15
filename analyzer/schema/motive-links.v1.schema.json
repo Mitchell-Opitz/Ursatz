@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/motive-links.v1.schema.json",
+  "title": "Ursatz-Analyzer motive links",
+  "description": "The motive families of a set of pieces that are variants of one another: each link names a chain of relations from one family's prototype to the other's, and the groups join linked families.",
+  "type": "object",
+  "required": ["schema", "schema_version", "pieces", "pairs", "compared", "cached", "cache_reset", "links", "groups"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "ursatz-motive-links" },
+    "schema_version": { "const": 1 },
+    "pieces": { "type": "integer", "minimum": 0 },
+    "pairs": { "type": "integer", "minimum": 0, "description": "Pairs considered." },
+    "compared": { "type": "integer", "minimum": 0, "description": "Pairs run through the recognizer now." },
+    "cached": { "type": "integer", "minimum": 0, "description": "Pairs taken from the cache." },
+    "cache_reset": { "type": "boolean", "description": "The cache was for another Ursatz commit, analyzer version or set of link options and was emptied." },
+    "links": { "type": "array", "items": { "$ref": "#/$defs/link" } },
+    "groups": {
+      "description": "Families joined by links, largest group first, members in scope order.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["members"],
+        "additionalProperties": false,
+        "properties": {
+          "members": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": ["piece", "family"],
+              "additionalProperties": false,
+              "properties": {
+                "piece": { "type": "string" },
+                "family": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "end": {
+      "type": "object",
+      "required": ["piece", "family", "measures", "beat", "degrees"],
+      "additionalProperties": false,
+      "properties": {
+        "piece": { "type": "string" },
+        "family": { "type": "integer", "minimum": 0, "description": "The family's index in its piece's motives." },
+        "measures": {
+          "type": "object",
+          "required": ["first", "last"],
+          "additionalProperties": false,
+          "properties": { "first": { "type": "integer" }, "last": { "type": "integer" } }
+        },
+        "beat": { "type": "number" },
+        "degrees": { "type": "string", "description": "The prototype's degrees against the tonic's major scale, joined by spaces." }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": ["a", "b", "reversed", "steps", "distance", "similarity"],
+      "additionalProperties": false,
+      "properties": {
+        "a": { "$ref": "#/$defs/end" },
+        "b": { "$ref": "#/$defs/end" },
+        "reversed": { "type": "boolean", "description": "The chain runs from b to a, else from a to b." },
+        "steps": {
+          "description": "The relations in the order they apply, as text, to the prototypes moved to the key of C.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "maxItems": 6
+        },
+        "distance": {
+          "type": "object",
+          "required": ["fraction", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "fraction": { "type": "string", "pattern": "^[0-9]+/[1-9][0-9]*$" },
+            "value": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "similarity": {
+          "type": "object",
+          "required": ["rhythm", "intervals", "contour", "harmony"],
+          "additionalProperties": false,
+          "properties": {
+            "rhythm": { "type": "number", "minimum": 0, "maximum": 1 },
+            "intervals": { "type": "number", "minimum": 0, "maximum": 1 },
+            "contour": { "type": "number", "minimum": 0, "maximum": 1 },
+            "harmony": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

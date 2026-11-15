@@ -1,0 +1,540 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/analysis-document.v6.schema.json",
+  "title": "Ursatz-Analyzer analysis document",
+  "description": "Structured analysis of one piece. One top-level section per analysis area; unfilled sections are empty arrays, or null for singular sections.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "metadata",
+    "meter",
+    "keys",
+    "tonicizations",
+    "modulations",
+    "pivot_chords",
+    "chords",
+    "non_chord_tones",
+    "outer_voices",
+    "cadences",
+    "phrases",
+    "form",
+    "motives",
+    "melody",
+    "rhythm",
+    "texture",
+    "voice_leading",
+    "schemas",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 6
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "meter": {
+      "$ref": "#/$defs/meter_claim"
+    },
+    "keys": {
+      "$ref": "#/$defs/keys"
+    },
+    "tonicizations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tonicization_claim" }
+    },
+    "modulations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/modulation_claim" }
+    },
+    "pivot_chords": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pivot_chord_claim" }
+    },
+    "chords": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/chord_claim" }
+    },
+    "non_chord_tones": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/non_chord_tone_claim" }
+    },
+    "outer_voices": {
+      "$ref": "#/$defs/outer_voices"
+    },
+    "cadences": { "type": "array" },
+    "phrases": { "type": "array" },
+    "form": {
+      "type": ["object", "null"]
+    },
+    "motives": { "type": "array" },
+    "melody": { "type": "array" },
+    "rhythm": { "type": "array" },
+    "texture": { "type": "array" },
+    "voice_leading": { "type": "array" },
+    "schemas": { "type": "array" },
+    "notes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/note" }
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "source_file",
+        "analyzer_version",
+        "ursatz_commit",
+        "note_count",
+        "ticks_per_quarter",
+        "input",
+        "key_found",
+        "key_signatures"
+      ],
+      "properties": {
+        "source_file": { "type": "string" },
+        "analyzer_version": { "type": "string" },
+        "ursatz_commit": { "type": "string" },
+        "note_count": { "type": "integer", "minimum": 0 },
+        "ticks_per_quarter": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "input": { "$ref": "#/$defs/input" },
+        "key_found": { "type": "boolean" },
+        "key_signatures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/key_signature" }
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "required": ["format", "source_type", "meter", "key", "spelling", "parts", "tempo", "dynamics_count", "warning_count"],
+      "properties": {
+        "format": { "enum": ["midi", "musicxml"] },
+        "source_type": { "enum": ["performance", "score"] },
+        "meter": { "enum": ["notated", "embedded", "inferred"] },
+        "key": { "enum": ["notated", "embedded", "inferred"] },
+        "spelling": { "enum": ["notated", "rule"] },
+        "parts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "staff_count", "note_count"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "staff_count": { "type": "integer", "minimum": 1 },
+              "note_count": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "tempo": {
+          "type": "object",
+          "required": ["declared", "quarters_per_minute", "marking_count"],
+          "properties": {
+            "declared": { "type": "boolean" },
+            "quarters_per_minute": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+            "marking_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "dynamics_count": { "type": "integer", "minimum": 0 },
+        "warning_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "key_signature": {
+      "type": "object",
+      "required": ["start", "location", "sharps_flats", "mode_hint", "major_key", "minor_key"],
+      "properties": {
+        "start": { "$ref": "#/$defs/rational" },
+        "location": { "$ref": "#/$defs/position" },
+        "sharps_flats": { "type": "integer", "minimum": -7, "maximum": 7 },
+        "mode_hint": { "enum": ["major", "minor", "unknown"] },
+        "major_key": { "type": "string" },
+        "minor_key": { "type": "string" }
+      }
+    },
+    "rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "type": "integer" },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/rational" },
+        "end": { "$ref": "#/$defs/rational" }
+      }
+    },
+    "position": {
+      "type": ["object", "null"],
+      "required": ["measure", "beat", "subdivision"],
+      "properties": {
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "integer", "minimum": 1 },
+        "subdivision": { "$ref": "#/$defs/rational" }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "required": ["framework", "span", "location", "note_ids", "label", "uncertainty"],
+      "properties": {
+        "framework": { "type": "string" },
+        "span": { "$ref": "#/$defs/span" },
+        "location": { "$ref": "#/$defs/location" },
+        "note_ids": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "label": { "type": "string" },
+        "uncertainty": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "time_signature": {
+      "type": "object",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": { "type": "integer", "minimum": 1 },
+        "denominator": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "meter_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["source", "time_signature", "measure_count", "last_measure", "pickup", "changes"],
+          "properties": {
+            "source": { "enum": ["file", "notated", "inferred"] },
+            "time_signature": { "$ref": "#/$defs/time_signature" },
+            "measure_count": { "type": "integer", "minimum": 0 },
+            "last_measure": { "type": ["integer", "null"] },
+            "pickup": {
+              "type": ["object", "null"],
+              "required": ["length", "beats"],
+              "properties": {
+                "length": { "$ref": "#/$defs/rational" },
+                "beats": {
+                  "oneOf": [{ "$ref": "#/$defs/rational" }, { "type": "null" }]
+                }
+              }
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["measure", "start", "time_signature", "inferred"],
+                "properties": {
+                  "measure": { "type": "integer" },
+                  "start": { "$ref": "#/$defs/rational" },
+                  "time_signature": { "$ref": "#/$defs/time_signature" },
+                  "inferred": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "key_region": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["index", "tonic", "mode", "measures", "source"],
+          "properties": {
+            "index": { "type": "integer", "minimum": 0 },
+            "tonic": { "type": "string" },
+            "mode": { "enum": ["major", "minor"] },
+            "measures": {
+              "type": "object",
+              "required": ["first", "last"],
+              "properties": {
+                "first": { "type": "integer" },
+                "last": { "type": "integer" }
+              }
+            },
+            "source": { "enum": ["profile", "key_signature"] }
+          }
+        }
+      ]
+    },
+    "keys": {
+      "type": "object",
+      "required": ["regions", "home_key", "opening_region", "closing_region"],
+      "properties": {
+        "regions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/key_region" }
+        },
+        "home_key": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["rule", "label", "region_indices", "duration"],
+              "properties": {
+                "rule": { "enum": ["longest_total_duration"] },
+                "label": { "type": "string" },
+                "region_indices": {
+                  "type": "array",
+                  "items": { "type": "integer", "minimum": 0 }
+                },
+                "duration": { "$ref": "#/$defs/rational" }
+              }
+            }
+          ]
+        },
+        "opening_region": { "type": ["integer", "null"], "minimum": 0 },
+        "closing_region": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "tonicization_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["extent", "from_region", "target_region", "from_key", "to_key"],
+          "properties": {
+            "extent": { "enum": ["tonicization", "extended-tonicization"] },
+            "from_region": { "type": "integer", "minimum": 0 },
+            "target_region": { "type": "integer", "minimum": 0 },
+            "from_key": { "type": "string" },
+            "to_key": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "modulation_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["extent", "from_region", "to_region", "from_key", "to_key", "type", "is_return", "pivot_chord_index"],
+          "properties": {
+            "extent": { "enum": ["weak-modulation", "modulation"] },
+            "from_region": { "type": "integer", "minimum": 0 },
+            "to_region": { "type": "integer", "minimum": 0 },
+            "from_key": { "type": "string" },
+            "to_key": { "type": "string" },
+            "type": { "enum": ["pivot", "direct"] },
+            "is_return": { "type": "boolean" },
+            "pivot_chord_index": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "pivot_chord_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["modulation_index", "chord_index", "root", "quality", "bass", "inversion", "from_key", "to_key"],
+          "properties": {
+            "modulation_index": { "type": "integer", "minimum": 0 },
+            "chord_index": { "type": "integer", "minimum": 0 },
+            "root": { "type": "string" },
+            "quality": { "type": "string" },
+            "bass": { "type": "string" },
+            "inversion": { "type": ["integer", "null"], "minimum": 0, "maximum": 3 },
+            "from_key": { "type": "string" },
+            "to_key": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "note": {
+      "type": "object",
+      "required": ["kind", "scope", "signature_index", "region_index", "notated", "detected", "message"],
+      "properties": {
+        "kind": { "enum": ["key_signature_disagreement"] },
+        "scope": { "enum": ["region_at_signature", "home_key"] },
+        "signature_index": { "type": ["integer", "null"], "minimum": 0 },
+        "region_index": { "type": "integer", "minimum": 0 },
+        "notated": { "type": ["string", "null"] },
+        "detected": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "non_chord_tone_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["type", "classified", "chord_index", "chord_label"],
+          "properties": {
+            "type": { "type": ["string", "null"] },
+            "classified": { "type": "boolean" },
+            "chord_index": { "type": "integer", "minimum": 0 },
+            "chord_label": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "outer_voices": {
+      "type": "object",
+      "required": ["soprano", "bass"],
+      "properties": {
+        "soprano": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/outer_voice_note" }
+        },
+        "bass": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/outer_voice_note" }
+        }
+      }
+    },
+    "outer_voice_note": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": [
+            "chord_index",
+            "status",
+            "key_label",
+            "note_id",
+            "pitch",
+            "degree",
+            "held",
+            "onset",
+            "duration"
+          ],
+          "properties": {
+            "chord_index": { "type": "integer", "minimum": 0 },
+            "status": { "$ref": "#/$defs/outer_status" },
+            "key_label": { "type": "string" },
+            "note_id": { "type": ["integer", "null"], "minimum": 0 },
+            "pitch": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "required": ["name", "midi"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "midi": { "type": "integer", "minimum": 0, "maximum": 127 }
+                  }
+                }
+              ]
+            },
+            "degree": { "type": ["string", "null"] },
+            "held": { "type": ["boolean", "null"] },
+            "onset": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "required": ["time", "location"],
+                  "properties": {
+                    "time": { "$ref": "#/$defs/rational" },
+                    "location": { "$ref": "#/$defs/position" }
+                  }
+                }
+              ]
+            },
+            "duration": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "required": ["whole_notes", "beats"],
+                  "properties": {
+                    "whole_notes": { "$ref": "#/$defs/rational" },
+                    "beats": {
+                      "oneOf": [{ "$ref": "#/$defs/rational" }, { "type": "null" }]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "outer_status": {
+      "enum": ["present", "absent", "bridged", "guarded"]
+    },
+    "chord_outer_voice": {
+      "type": "object",
+      "required": ["status", "note_id", "pitch", "degree", "uncertainty"],
+      "properties": {
+        "status": { "$ref": "#/$defs/outer_status" },
+        "note_id": { "type": ["integer", "null"], "minimum": 0 },
+        "pitch": { "type": ["string", "null"] },
+        "degree": { "type": ["string", "null"] },
+        "uncertainty": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+      }
+    },
+    "chord_outer_voices": {
+      "type": "object",
+      "required": ["soprano", "bass"],
+      "properties": {
+        "soprano": { "$ref": "#/$defs/chord_outer_voice" },
+        "bass": { "$ref": "#/$defs/chord_outer_voice" }
+      }
+    },
+    "chord_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["key_label", "outer", "root", "quality", "bass", "inversion", "duration", "score", "runner_up"],
+          "properties": {
+            "key_label": { "type": "string" },
+            "outer": { "$ref": "#/$defs/chord_outer_voices" },
+            "root": { "type": ["string", "null"] },
+            "quality": { "type": ["string", "null"] },
+            "bass": { "type": ["string", "null"] },
+            "inversion": { "type": ["integer", "null"], "minimum": 0, "maximum": 3 },
+            "duration": {
+              "type": "object",
+              "required": ["whole_notes", "beats"],
+              "properties": {
+                "whole_notes": { "$ref": "#/$defs/rational" },
+                "beats": {
+                  "oneOf": [{ "$ref": "#/$defs/rational" }, { "type": "null" }]
+                }
+              }
+            },
+            "score": { "type": ["number", "null"] },
+            "runner_up": {
+              "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "required": ["label", "root", "quality", "score", "uncertainty"],
+                  "properties": {
+                    "label": { "type": "string" },
+                    "root": { "type": "string" },
+                    "quality": { "type": "string" },
+                    "score": { "type": "number" },
+                    "uncertainty": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

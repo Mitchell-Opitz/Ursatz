@@ -1,0 +1,90 @@
+# Ursatz export v2: theme
+name: Opening theme
+id: theme-3
+version: 2
+form: A A'
+chords: bar 1: i
+slots: 2
+notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
+
+## theme
+key: C minor | meter: 4/4 | tempo: not declared | measures: 1-8
+
+m1 4/4
+ P1 S1 V1: Eb4 @1 e, G4 @1.5 e, C5 @2 e, G4 @2.5 e, C4 @3 e, Eb4 @3.5 e, G4 @4 e, C5 @4.5 e
+ P2 S1 V1: C3 @1 h, C4 @3 h
+ key C minor c=0.03 (m1-m8)
+ chord Cm i @1 c=0.00
+ phrase 1 m1-m8 c=0.02 | form A
+ form A m1-m8 c=0.02
+ motive a m1 @3-@4.5
+
+m2
+ P1 S1 V1: G4 @1 h, D5 @3 h
+ P2 S1 V1: B3 @1 h, B2 @3 h
+ chord G/B V6 @1 c=0.73
+
+m3
+ P1 S1 V1: G4 @1 e, B4 @1.5 e, D5 @2 e, B4 @2.5 e, G4 @3 e, B4 @3.5 e, D5 @4 e, D5 @4.5 e
+ P2 S1 V1: B2 @1 w
+ chord G/B V6 @1 c=0.88
+ motive a m3 @1-@2.5
+ motive b m3 @2-@3.5
+ motive a m3 @3-@4.5
+
+m4
+ P1 S1 V1: C5 @1 h, Eb5 @3 h
+ P2 S1 V1: C3 @1 h, C4 @3 h
+ chord Cm i @1 c=0.00
+
+m5
+ P1 S1 V1: Eb4 @1 s, F4 @1.25 s, G4 @1.5 s, F4 @1.75 s, Eb4 @2 s, F4 @2.25 s, G4 @2.5 e, C4 @3 h
+ P2 S1 V1: C3 @1 w
+ chord Cm i @1 c=0.80
+ motive c m5 @1-@1.75
+ motive c m5 @2-@3
+
+m6
+ P1 S1 V1: C5 @1 t, D5 @1.125 t, Eb5 @1.25 t, D5 @1.375 t, C5 @1.5 e, C5 @2 q, F5 @3 h
+ P2 S1 V1: F3 @1 w
+ chord Ddim/F iio6 @1 c=0.92
+
+m7
+ P1 S1 V1: D5 @1 e, B4 @1.5 e, G4 @2 e, F4 @2.5 e, G4 @3 e, G4 @3.5 e, D4 @4 e, D4 @4.5 e
+ P2 S1 V1: G3 @1 w
+ chord G V @1 c=0.00
+ cadence AC m8 @1 c=0.02
+ motive b m7 @1-@2.5
+
+m8
+ P1 S1 V1: Eb4 @1 h, C4 @3 h
+ P2 S1 V1: C4 @1 w
+ chord Cm i @1 c=0.00
+
+## slot 1: Rising arch v1
+key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
+
+m1 4/4
+ P1 S1 V1: C4 @1 q, E4 @2 q, G4 @3 q, E4 @4 q
+ key C major c=0.27 (m1-m2)
+ chord C I @1 c=0.00
+ phrase 1 m1-m2 c=0.75 | form A
+ form A m1-m2 c=0.75
+
+m2
+ P1 S1 V1: F4 @1 q, A4 @2 q, G4 @3 h
+ chord G7/F V4/2 @1 c=0.93
+
+## slot 2: Falling arch v2
+key: C major | meter: 4/4 | tempo: not declared | measures: 1-2
+
+m1 4/4
+ P1 S1 V1: C4 @1 q, E4 @2 q, G4 @3 q, C5 @4 q
+ key C major c=0.12 (m1-m2)
+ chord C I @1 c=0.00
+ phrase 1 m1-m2 c=0.75 | form A
+ form A m1-m2 c=0.75
+
+m2
+ P1 S1 V1: B4 @1 q, G4 @2 q, C5 @3 h
+ chord Cmaj7/G I4/2 @1 c=0.76

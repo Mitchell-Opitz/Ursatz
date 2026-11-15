@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/analysis-document.v2.schema.json",
+  "title": "Ursatz-Analyzer analysis document",
+  "description": "Structured analysis of one piece. One top-level section per analysis area; unfilled sections are empty arrays, or null for singular sections.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "metadata",
+    "meter",
+    "keys",
+    "chords",
+    "cadences",
+    "phrases",
+    "form",
+    "motives",
+    "melody",
+    "rhythm",
+    "texture",
+    "voice_leading",
+    "schemas"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
+    "meter": {
+      "$ref": "#/$defs/meter_claim"
+    },
+    "keys": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/key_claim" }
+    },
+    "chords": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/chord_claim" }
+    },
+    "cadences": { "type": "array" },
+    "phrases": { "type": "array" },
+    "form": {
+      "type": ["object", "null"]
+    },
+    "motives": { "type": "array" },
+    "melody": { "type": "array" },
+    "rhythm": { "type": "array" },
+    "texture": { "type": "array" },
+    "voice_leading": { "type": "array" },
+    "schemas": { "type": "array" }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "source_file",
+        "analyzer_version",
+        "ursatz_commit",
+        "note_count",
+        "ticks_per_quarter",
+        "key_found"
+      ],
+      "properties": {
+        "source_file": { "type": "string" },
+        "analyzer_version": { "type": "string" },
+        "ursatz_commit": { "type": "string" },
+        "note_count": { "type": "integer", "minimum": 0 },
+        "ticks_per_quarter": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "key_found": { "type": "boolean" }
+      }
+    },
+    "rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "type": "integer" },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/rational" },
+        "end": { "$ref": "#/$defs/rational" }
+      }
+    },
+    "position": {
+      "type": ["object", "null"],
+      "required": ["measure", "beat", "subdivision"],
+      "properties": {
+        "measure": { "type": "integer", "minimum": 0 },
+        "beat": { "type": "integer", "minimum": 1 },
+        "subdivision": { "$ref": "#/$defs/rational" }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "required": ["framework", "span", "location", "note_ids", "label", "uncertainty"],
+      "properties": {
+        "framework": { "type": "string" },
+        "span": { "$ref": "#/$defs/span" },
+        "location": { "$ref": "#/$defs/location" },
+        "note_ids": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "label": { "type": "string" },
+        "uncertainty": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "time_signature": {
+      "type": "object",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": { "type": "integer", "minimum": 1 },
+        "denominator": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "meter_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["source", "time_signature", "measure_count", "last_measure", "pickup", "changes"],
+          "properties": {
+            "source": { "enum": ["file", "inferred"] },
+            "time_signature": { "$ref": "#/$defs/time_signature" },
+            "measure_count": { "type": "integer", "minimum": 0 },
+            "last_measure": { "type": ["integer", "null"] },
+            "pickup": {
+              "type": ["object", "null"],
+              "required": ["length", "beats"],
+              "properties": {
+                "length": { "$ref": "#/$defs/rational" },
+                "beats": {
+                  "oneOf": [{ "$ref": "#/$defs/rational" }, { "type": "null" }]
+                }
+              }
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["measure", "start", "time_signature", "inferred"],
+                "properties": {
+                  "measure": { "type": "integer" },
+                  "start": { "$ref": "#/$defs/rational" },
+                  "time_signature": { "$ref": "#/$defs/time_signature" },
+                  "inferred": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "key_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["method"],
+          "properties": {
+            "method": {
+              "enum": ["key_signature", "bass_fallback", "pitch_class_scan"]
+            }
+          }
+        }
+      ]
+    },
+    "chord_claim": {
+      "allOf": [
+        { "$ref": "#/$defs/claim" },
+        {
+          "type": "object",
+          "required": ["key_label"],
+          "properties": {
+            "key_label": { "type": "string" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,60 @@
+#ifndef URSATZ_ANALYZER_CHORD_PIPELINE_H
+#define URSATZ_ANALYZER_CHORD_PIPELINE_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <ursatz_analyzer/analysis_report.h>
+
+#include "pipeline/segmentation.h"
+
+/*
+ * What the library's weighted identification established for one
+ * segment: the best chord and the runner-up, each as an
+ * AnalysisChordReading (label NULL when absent). found is true when a
+ * best chord was identified.
+ */
+typedef struct {
+    bool found;
+    AnalysisChordReading best;
+    AnalysisChordReading runner_up;
+    CommonPracticeContextReading context; /* where the library took the reading from; valid only when found */
+    AnalysisNonChordTone *tones; /* owned; the segment's non-chord tones, chord_index unset */
+    size_t tone_count;
+    bool in_region; /* the segment lies in a key region */
+    size_t region;  /* index of that region; valid only when in_region */
+    CommonPracticeWeightedResult result; /* borrowed from the chain; the library's own result, zeroed outside every region */
+} ChordEstimate;
+
+/*
+ * Reads the chord of every segment from the library chain's weighted identification (analysis_chain_chords: one result
+ * per segment, each read in the key and mode of the region it starts in, a minor region in the minor vocabulary, the
+ * segments of one region identified together so the library can read a sparse or arpeggiated segment from its
+ * neighbours, the leftover tones classified by the kernel's owner). On success *out is an array of
+ * segmentation->segment_count estimates, owned by the caller (release with chord_estimates_destroy); each estimate's
+ * result is the chain's own and is not released with it. Returns false only on allocation failure.
+ *
+ * A segment in no region is left unmatched. A segment whose best score is below the library's minimum coverage is
+ * likewise unmatched.
+ *
+ * The library's leftover tones for each matched segment become the estimate's non-chord tones: each with the library's
+ * name for its type, or no type when the library left it unclassified.
+ *
+ * Root, quality and the runner-up are read from the library's ranked candidates and the chord tones it reports for
+ * them. The only work here is naming them (a pitch class name, a triad's quality name) and finding the position of the
+ * segment's bass among the chord's tones.
+ */
+bool collect_chords(const Segmentation *segmentation, const CommonPracticeWeightedResult *results,
+                    const AnalysisKeyRegion *regions, size_t region_count, ChordEstimate **out);
+
+/*
+ * Fills the pivot reading of every key change that has a pivot chord: the pivot segment's best chord
+ * read in the OLD key (the change's from-region) and its mode, as the library found the pivot. Leaves the reading empty when the library
+ * names no chord there. Returns false only on allocation failure.
+ */
+bool identify_pivot_chords(const Segmentation *segmentation, const AnalysisKeyRegion *regions,
+                           AnalysisKeyChange *changes, size_t change_count);
+
+void chord_estimates_destroy(ChordEstimate *estimates, size_t count);
+
+#endif

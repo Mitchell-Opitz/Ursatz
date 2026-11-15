@@ -1,0 +1,70 @@
+# Hand-annotated motive families in Mozart, Piano Sonata in C major K. 545, first movement, the exposition (measures 1-28), for the
+# motive analysis (standard-form's motive adapter, run on the soprano: the highest sounding note at each attack).
+#
+# SOURCE: the Neue Mozart-Ausgabe (IX/25/2) and the IMSLP scan of the first edition. Neither was available when this file was written, so
+# the edition is the one to check against.
+# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. A hand reading of tests/fixtures/framework-v1-corpus/"Mozart 545.mid" (the top
+# line of each measure, dumped by attack with its beat), listing the figures that recur in plain sight: the scale sequence of measures 5-8,
+# the repeated gestures of measures 14-17, the descending sequence of measures 18-21, and the octave echo of measures 26-27. It was NOT
+# derived from the output of the motive adapter. A human should confirm it against an edition before it is relied on. Motives the reading
+# was not sure of (for example in the development-like passages of measures 9-13 and 22-25) are left out; the lack of a family here is not
+# an annotation that there is none.
+#
+# The reading follows standard-form's vocabulary: a motive is a short recurring figure; it recurs EXACTLY, in REAL transposition (the same
+# semitone intervals from another pitch) or in TONAL transposition (the same steps of the scale, so other semitones: a diatonic
+# sequence). Each family lists the occurrences by measure and beat; the first is the prototype and is "exact".
+#
+# FORMAT, one per line (lines starting with # and blank lines are ignored):
+#   meter <beats per measure> <beat length as a fraction of a whole note>
+#   range <first measure> <last measure>
+#   family <name>
+#   occurrence <measure> <beat> <exact|real|tonal>     of the family above; the beat is 1-based, and may be fractional (2.5 is the
+#                                                      second half of beat 2)
+#
+# A family is found when the adapter has a family with an occurrence starting within one beat of the family's first occurrence; an
+# occurrence is found when the adapter has an occurrence within one beat of it of the kind written here.
+
+meter 4 1/4
+range 1 28
+
+# the scale up from the tonic of each measure (eight notes, an eighth and then sixteenths), a sequence descending by step through the bars
+family scale-up
+occurrence 5 1 exact
+occurrence 6 1 tonal
+occurrence 7 1 tonal
+occurrence 8 1 tonal
+
+# and the scale down from the top of it (eight sixteenths)
+family scale-down
+occurrence 5 3 exact
+occurrence 6 3 tonal
+occurrence 7 3 tonal
+occurrence 8 3 tonal
+
+# the falling arpeggio D-B-G that opens measures 14 and 16
+family falling-arpeggio
+occurrence 14 1 exact
+occurrence 16 1 exact
+
+# the turn figure on A, G, F-sharp that opens measures 15 and 17
+family turn-figure
+occurrence 15 1 exact
+occurrence 17 1 exact
+
+# the five-note figure that starts on the second beat of measures 18-21: a sequence descending by step
+family sequence-figure
+occurrence 18 2 exact
+occurrence 19 2 tonal
+occurrence 20 2 tonal
+occurrence 21 2 tonal
+
+# the broken-chord figure on the last beat of measures 18-20
+family broken-chord
+occurrence 18 4 exact
+occurrence 19 4 tonal
+occurrence 20 4 tonal
+
+# the figure of measure 26 (second beat) echoed an octave lower in measure 27
+family octave-echo
+occurrence 26 2 exact
+occurrence 27 2 real
