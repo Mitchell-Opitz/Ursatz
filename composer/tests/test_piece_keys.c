@@ -29,6 +29,10 @@
  *                      authentic cadence heard inside the new key, and the last cadence is the strongest. The share
  *                      of seeds that complete is printed, each tried up to 16 times from the next seeds as the piece
  *                      entry does; below 100% the test fails (WILL_FAIL, docs/piece.md)
+ *   tonic-major        the stand-in form of R-517 (B1 returns B exact in the tonic major; 56 bars), A minor and C major 4/4,
+ *                      seeds 1 to 10: the plan's key lane gives B1 A major in A minor and C major in C major, and the
+ *                      sections after it home; at least 9 of 10 compose in each; B1's melody is B's moved by the semitones the
+ *                      return operator gives, and the section after B1 is in the home key
  *   smoke              the first of seeds 1 to 5 of binary in C major that composes
  */
 
@@ -508,9 +512,142 @@ static int test_smoke_always(void) {
     return 1;
 }
 
+/* ------------------------------------------------------------- a returning section in the tonic major (R-517) */
+
+#define MAJOR_SEEDS 10
+#define MAJOR_COMPOSED_LEAST 9
+#define MAJOR_MELODY_MAX 512
+
+/* The stand-in form of R-517: A, T, B, R, A1, T1, B1 and K, 56 bars, B1 returning B exact in the tonic major. */
+static const char TONIC_MAJOR_FORM[] =
+    "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"tonic-major-form\",\"label\":\"Tonic major form\",\"modulates\":true,"
+    "\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
+    "\"sizes\":[{\"bars\":56,\"default\":true,\"sections\":["
+    "{\"name\":\"A\",\"letter\":\"A\",\"role\":\"theme\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"closed\":true},"
+    "{\"name\":\"T\",\"letter\":\"T\",\"role\":\"transition\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"half\",\"keys\":{\"end\":\"subordinate\"}},"
+    "{\"name\":\"B\",\"letter\":\"B\",\"role\":\"subordinate\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"keys\":{\"start\":\"subordinate\",\"end\":\"subordinate\"},\"motive\":\"invert tonal=1\"},"
+    "{\"name\":\"R\",\"letter\":\"R\",\"role\":\"retransition\",\"bars\":4,\"cadence\":\"half\"},"
+    "{\"name\":\"A1\",\"letter\":\"A\",\"role\":\"return\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"closed\":true,\"returns\":\"A\",\"variation\":\"ornament\"},"
+    "{\"name\":\"T1\",\"letter\":\"T\",\"role\":\"transition\",\"bars\":4,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"half\"},"
+    "{\"name\":\"B1\",\"letter\":\"B\",\"role\":\"subordinate\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"returns\":\"B\",\"variation\":\"exact\",\"mode\":\"major\"},"
+    "{\"name\":\"K\",\"letter\":\"K\",\"role\":\"coda\",\"bars\":8,\"cadence\":\"perfect-authentic\"}]}]}";
+
+typedef struct {
+    Rational at;
+    Rational length;
+    int pitch;
+} Note;
+
+/* The melody notes of a section, voice 0, with their offsets from the section's start. */
+static size_t melody_of(const PiecePlan *plan, NodeId section, Note *out) {
+    PlanSpan span = plan_node_span(plan, section);
+    LaneSpanId ids[MAJOR_MELODY_MAX];
+    size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, MAJOR_MELODY_MAX);
+    size_t count = 0;
+    for (size_t i = 0; i < spans; i++) {
+        PlanSpan lane_span = plan_lane_span_span(plan, ids[i]);
+        const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
+        Rational from;
+        assert(rational_sub(lane_span.start, span.start, &from) == RATIONAL_OK);
+        for (size_t n = 0; n < payload->notes.note_count; n++) {
+            assert(count < MAJOR_MELODY_MAX);
+            out[count].length = payload->notes.notes[n].duration;
+            out[count].pitch = payload->notes.notes[n].midi;
+            assert(rational_add(from, payload->notes.notes[n].offset, &out[count].at) == RATIONAL_OK);
+            count++;
+        }
+    }
+    return count;
+}
+
+/* The key difference in semitones from -5 to 6 a section returned in another key is moved by (return_key_shift). */
+static int shift_between(AnalysisKey from, AnalysisKey to) {
+    int step = ((analysis_key_tonic_pitch_class(&to) - analysis_key_tonic_pitch_class(&from)) % 12 + 12) % 12;
+    return step > 6 ? step - 12 : step;
+}
+
+static int test_tonic_major(void) {
+    FormSpec *form = NULL;
+    FormSpecError error;
+    int failed = 0;
+    if (form_spec_parse(TONIC_MAJOR_FORM, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "tonic major form: %s: %s\n", error.path, error.message);
+        return 2;
+    }
+    for (size_t s = 0; s < SCENARIO_COUNT; s++) {
+        const AnalysisKey home = plan_key_of_pitch_class(SCENARIOS[s].tonic, SCENARIOS[s].mode);
+        const bool minor = SCENARIOS[s].mode == KEY_STRUCTURE_MODE_MINOR;
+        const AnalysisKey major = plan_key_of_pitch_class(SCENARIOS[s].tonic, KEY_STRUCTURE_MODE_MAJOR);
+        size_t composed = 0;
+        for (unsigned long seed = 1; seed <= MAJOR_SEEDS; seed++) {
+            PieceRequest request;
+            PiecePlan *plan = NULL;
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            memset(&request, 0, sizeof(request));
+            request.form = form->name;
+            request.key = home;
+            request.meter.beats_per_bar = 4;
+            request.meter.beat_unit = 4;
+            request.modulate = true;
+            request.seed = seed;
+            assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+            assert(sections_of(plan, sections) == 8);
+            /* The plan's key lane: B returns B1 in the tonic major (A major in A minor, home in C major), K and A1 are home. */
+            KeyLane lane = read_lane(plan);
+            check_lane_tiles(plan, &lane);
+            const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, sections[2]).start);
+            const AnalysisKey at_b1 = key_at(&lane, plan_node_span(plan, sections[6]).start);
+            assert(same_key(at_b1, minor ? major : home));
+            assert(same_key(key_at(&lane, plan_node_span(plan, sections[7]).start), home));
+            assert(same_key(key_at(&lane, plan_node_span(plan, sections[4]).start), home));
+            assert(!same_key(at_b, home));
+            ComposeConfig config;
+            ComposeOutcome outcome;
+            memset(&config, 0, sizeof(config));
+            config.seed = seed;
+            config.form = form;
+            if (compose_run(plan, &config, &outcome) == PIECE_OK) {
+                static Note b[MAJOR_MELODY_MAX];
+                static Note b1[MAJOR_MELODY_MAX];
+                composed++;
+                size_t bn = melody_of(plan, sections[2], b);
+                size_t b1n = melody_of(plan, sections[6], b1);
+                const int shift = shift_between(at_b, at_b1);
+                assert(bn > 0 && bn == b1n);
+                for (size_t i = 0; i < bn; i++) {
+                    assert(rational_cmp(b[i].at, b1[i].at) == 0 && rational_cmp(b[i].length, b1[i].length) == 0 &&
+                           b[i].pitch + shift == b1[i].pitch);
+                }
+                /* The section after B1 is in the home key again, with a change of mode on one tonic and no pivot. */
+                KeyLane composed_lane = read_lane(plan);
+                assert(same_key(key_at(&composed_lane, plan_node_span(plan, sections[7]).start), home));
+            }
+            compose_outcome_destroy(&outcome);
+            plan_destroy(plan);
+        }
+        printf("%s 4/4: %zu of %d seeds compose, B1 in %s\n", SCENARIOS[s].name, composed, MAJOR_SEEDS,
+               minor ? "the tonic major" : "the home key");
+        if (composed < MAJOR_COMPOSED_LEAST) {
+            fprintf(stderr, "%s: at least %d of %d seeds should compose\n", SCENARIOS[s].name, MAJOR_COMPOSED_LEAST, MAJOR_SEEDS);
+            failed = 1;
+        }
+    }
+    form_spec_destroy(form);
+    return failed;
+}
+
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "plan") == 0) {
         return test_plans();
+    }
+    if (argc == 2 && strcmp(argv[1], "tonic-major") == 0) {
+        return test_tonic_major();
     }
     if (argc == 2 && strcmp(argv[1], "smoke") == 0) {
         return test_smoke() | test_smoke_always();
@@ -520,6 +657,6 @@ int main(int argc, char **argv) {
             return test_compose(form_spec_builtin_name(form));
         }
     }
-    fprintf(stderr, "usage: test_piece_keys plan|smoke|compose <template>\n");
+    fprintf(stderr, "usage: test_piece_keys plan|smoke|tonic-major|compose <template>\n");
     return 2;
 }

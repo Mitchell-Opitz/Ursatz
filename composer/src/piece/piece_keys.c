@@ -91,6 +91,12 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
                                                                                           : KEY_STRUCTURE_MODE_MINOR);
             keys[i].end = keys[i].start;
         }
+        /* A section in the tonic major (R-517) is on the home tonic in its major key: home in a major piece, the parallel major in a
+         * minor one. No draw, so the draws after it are unchanged. */
+        if (size->sections[i].tonic_major && home.mode == KEY_STRUCTURE_MODE_MINOR) {
+            keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home), KEY_STRUCTURE_MODE_MAJOR);
+            keys[i].end = keys[i].start;
+        }
     }
     if (!rng || !can) {
         return true;

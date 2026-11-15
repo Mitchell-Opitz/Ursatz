@@ -925,23 +925,37 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
             return fail(reader, at, "unknown variation \"%s\"", variation->valuestring);
         }
     }
-    /* mode (R-499): "parallel", the section is in the home key's parallel key; only a figurate variation, with no keys */
+    /* mode: "parallel" (R-499), the section is in the home key's parallel key, only a figurate variation, with no keys;
+     * "major" (R-517), the section is in the home tonic's major key, only a return, with no keys, not figurate */
     const cJSON *mode = member_of(reader, json, path, "mode", false);
     const bool figurate = returns && out->variation == PLAN_RETURN_FIGURATE;
     if (mode) {
-        static const char *const MODE_NAMES[] = {"parallel"};
+        static const char *const MODE_NAMES[] = {"parallel", "major"};
         int value = -1;
         join(at, sizeof(at), path, "mode");
-        if (!read_choice(reader, json, path, "mode", MODE_NAMES, 1, &value)) {
+        if (!read_choice(reader, json, path, "mode", MODE_NAMES, 2, &value)) {
             return false;
         }
-        if (keys) {
-            return fail(reader, at, "a section in the parallel mode has no keys");
+        if (value == 0) {
+            if (keys) {
+                return fail(reader, at, "a section in the parallel mode has no keys");
+            }
+            if (!figurate) {
+                return fail(reader, at, "the parallel mode needs a figurate variation");
+            }
+            out->parallel = true;
+        } else {
+            if (keys) {
+                return fail(reader, at, "a section in the tonic major has no keys");
+            }
+            if (!returns) {
+                return fail(reader, at, "the tonic major is for a returning section");
+            }
+            if (figurate) {
+                return fail(reader, at, "a figurate variation takes the parallel mode, not the tonic major");
+            }
+            out->tonic_major = true;
         }
-        if (!figurate) {
-            return fail(reader, at, "the parallel mode needs a figurate variation");
-        }
-        out->parallel = true;
     }
     /* figure (R-497): the motive of a figurate return, and only of one */
     const cJSON *figure = member_of(reader, json, path, "figure", false);

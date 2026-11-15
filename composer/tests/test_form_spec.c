@@ -24,6 +24,7 @@
  *                               a section's figure (B1 of P50, tests/fixtures/forms/figure-form.json): what it reads as, each refusal;
  *                               a section in the parallel mode (B3 of P50, tests/fixtures/forms/parallel-form.json): what it reads as, each refusal;
  *                               the parts of larger forms (B1 of P51, tests/fixtures/forms/parts-of-forms.json): the four roles, independent and lyric, each refusal, the plan's section functions;
+ *                               a returning section in the tonic major (B3 of P52, R-517): what it reads as, each refusal;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
@@ -1715,6 +1716,50 @@ static void test_figure_reader(void) {
     }
 }
 
+/* ------------------------------------------------------------- the tonic major of a return (R-517) */
+
+/* A returning section may be in the home tonic's major key: it reads as tonic_major, not parallel; each refusal at /mode. */
+static void test_tonic_major_reader(void) {
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    const char *const MAJOR = ", \"variation\": \"exact\", \"mode\": \"major\"";
+    figure_document(text, sizeof(text), MAJOR, "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].section_count == 2);
+    assert(form->sizes[0].sections[1].tonic_major && !form->sizes[0].sections[1].parallel &&
+           !form->sizes[0].sections[0].tonic_major);
+    form_spec_destroy(form);
+    /* "parallel" reads as before and is not the tonic major. */
+    figure_document(text, sizeof(text), FIGURATE ", \"mode\": \"parallel\"",
+                    ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\", \"harmony\": \"reharmonized\"}");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].parallel &&
+           !form->sizes[0].sections[1].tonic_major);
+    form_spec_destroy(form);
+    /* a section in the tonic major has no keys, is a returning section, and is not figurate */
+    figure_document(text, sizeof(text), ", \"variation\": \"exact\", \"mode\": \"major\", \"keys\": {\"start\": \"home\"}", "");
+    refused(text, "/sizes/0/sections/1/mode");
+    snprintf(text, sizeof(text),
+             "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sizes\": [{\"bars\": 16, "
+             "\"default\": true, \"sections\": ["
+             "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true, \"mode\": \"major\"}, "
+             "{\"name\": \"V1\", \"letter\": \"V1\", \"role\": \"variation\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true, \"returns\": \"T\"}]}]}");
+    refused(text, "/sizes/0/sections/0/mode");
+    figure_document(text, sizeof(text), FIGURATE ", \"mode\": \"major\"",
+                    ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}");
+    refused(text, "/sizes/0/sections/1/mode");
+    /* a mode that is neither */
+    figure_document(text, sizeof(text), ", \"variation\": \"exact\", \"mode\": \"minor\"", "");
+    refused(text, "/sizes/0/sections/1/mode");
+    /* the refusals name the messages of R-517 */
+    figure_document(text, sizeof(text), ", \"variation\": \"exact\", \"mode\": \"major\", \"keys\": {\"start\": \"home\"}", "");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK && strcmp(error.message, "a section in the tonic major has no keys") == 0);
+    figure_document(text, sizeof(text), FIGURATE ", \"mode\": \"major\"", ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK &&
+           strcmp(error.message, "a figurate variation takes the parallel mode, not the tonic major") == 0);
+}
+
 /* ------------------------------------------------------------- the liquidation section (R-494) */
 
 static void test_liquidation_reader(void) {
@@ -2595,6 +2640,7 @@ int main(int argc, char **argv) {
     test_modulating_reader();
     test_liquidation_reader();
     test_figure_reader();
+    test_tonic_major_reader();
     test_parts_reader();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
