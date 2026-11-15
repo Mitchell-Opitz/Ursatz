@@ -175,7 +175,7 @@
       "properties": {
         "name": { "type": "string", "minLength": 1, "maxLength": 31, "description": "Unique in its size." },
         "letter": { "type": "string", "minLength": 1, "maxLength": 3 },
-        "role": { "enum": ["theme", "contrast", "return", "variation", "layer", "transition", "retransition", "subordinate", "coda", "intro", "body", "turnaround", "ending"] },
+        "role": { "enum": ["theme", "contrast", "return", "variation", "layer", "transition", "retransition", "subordinate", "coda", "elaboration", "intro", "body", "turnaround", "ending"] },
         "bars": { "type": "integer", "minimum": 1 },
         "beats": { "type": "integer", "minimum": 1 },
         "beginning": { "enum": ["presentation", "antecedent", "compound_basic_idea"] },

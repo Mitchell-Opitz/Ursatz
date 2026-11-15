@@ -41,9 +41,9 @@
 
 /*
  * What a section is in the form. The theme-like rows of the role table (theme, contrast, return, variation, layer,
- * pattern, sequence, episode, codetta, liquidation, transition, retransition, subordinate, coda) are the sections grow-theme builds; the others
+ * pattern, sequence, episode, codetta, liquidation, transition, retransition, subordinate, coda, elaboration) are the sections grow-theme builds; the others
  * (intro, body, turnaround, ending) are for forms whose sections are free phrases (P46 to P53 add rows). The transition, retransition, subordinate
- * theme and coda are the parts of a larger form (R-503).
+ * theme and coda are the parts of a larger form (R-503); the elaboration is the sonata-allegro's middle section (R-523), a theme-like role with no rules of its own.
  */
 typedef enum {
     FORM_ROLE_THEME,
@@ -60,19 +60,20 @@ typedef enum {
     FORM_ROLE_RETRANSITION,
     FORM_ROLE_SUBORDINATE,
     FORM_ROLE_CODA,
+    FORM_ROLE_ELABORATION,
     FORM_ROLE_INTRO,
     FORM_ROLE_BODY,
     FORM_ROLE_TURNAROUND,
     FORM_ROLE_ENDING
 } FormRole;
 
-#define FORM_ROLE_COUNT 18
+#define FORM_ROLE_COUNT 19
 
 /* "theme", "contrast", "return", "variation", "layer", "pattern", "sequence", "episode", "codetta", "liquidation", "transition",
- * "retransition", "subordinate", "coda", "intro", "body", "turnaround", "ending"; NULL for an invalid role. */
+ * "retransition", "subordinate", "coda", "elaboration", "intro", "body", "turnaround", "ending"; NULL for an invalid role. */
 const char *form_role_name(FormRole role);
 /* The label of a role: "Theme", "Contrast", "Return", "Variation", "Layer", "Pattern", "Sequence", "Episode", "Codetta",
- * "Liquidation", "Transition", "Retransition", "Subordinate theme", "Coda", "Intro", "Loop body", "Turnaround", "Ending" (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
+ * "Liquidation", "Transition", "Retransition", "Subordinate theme", "Coda", "Elaboration", "Intro", "Loop body", "Turnaround", "Ending" (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
 const char *form_role_label(FormRole role);
 /* False for a name that is none of these. */
 bool form_role_find(const char *name, FormRole *out);
