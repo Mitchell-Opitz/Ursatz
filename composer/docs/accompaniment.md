@@ -17,6 +17,8 @@ a voice the pattern does not use and has an open span is written empty (a span w
 allows only for an inner voice). Any other span in voice 2 or 3 over the time makes the target one the operator does
 not apply to.
 
+A returning section may be given its accompaniment by a setting (R-518): a return of the variation `setting` keeps the returned section's harmony, bass and melody, drops its inner voices, and opens new targets of this shape over the harmony targets, voice 1 carrying an `accompaniment` constraint of the pattern the return names. The texture stage writes them as for any other target. See [piece.md](piece.md).
+
 ## The constraint
 
 | Member | Meaning |

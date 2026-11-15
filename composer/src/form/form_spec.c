@@ -639,7 +639,7 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
     static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
                                           "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
                                           "pedal",   "construction", "leads_in", "connective", "figure", "mode",
-                                          "independent", "lyric"};
+                                          "independent", "lyric", "setting"};
     char text[FORM_SPEC_CADENCE_NAME_MAX];
     char at[64];
     if (!cJSON_IsObject(json)) {
@@ -924,6 +924,23 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         if (!plan_return_variation_from_name(variation->valuestring, &out->variation)) {
             return fail(reader, at, "unknown variation \"%s\"", variation->valuestring);
         }
+    }
+    /* setting (R-518): the pattern of a setting return's new accompaniment, required by that variation and only for it */
+    const bool setting_return = returns && out->variation == PLAN_RETURN_SETTING;
+    if (cJSON_GetObjectItemCaseSensitive(json, "setting")) {
+        static const char *const SETTING_NAMES[] = {"block", "arpeggiated", "alberti", "oom-pah"};
+        int setting = -1;
+        join(at, sizeof(at), path, "setting");
+        if (!read_choice(reader, json, path, "setting", SETTING_NAMES, 4, &setting)) {
+            return false;
+        }
+        if (!setting_return) {
+            return fail(reader, at, "only a setting return has a setting");
+        }
+        out->setting = (PlanAccompanimentPattern)(PLAN_ACCOMPANIMENT_BLOCK + setting);
+    } else if (setting_return) {
+        join(at, sizeof(at), path, "variation");
+        return fail(reader, at, "a setting return names its setting");
     }
     /* mode: "parallel" (R-499), the section is in the home key's parallel key, only a figurate variation, with no keys;
      * "major" (R-517), the section is in the home tonic's major key, only a return, with no keys, not figurate */

@@ -122,6 +122,7 @@ typedef struct {
     int key_end;                           /* FORM_SPEC_HOME, or the index of the region it ends in */
     size_t returns;                        /* the index of the section it returns, or FORM_SPEC_NO_RETURN */
     PlanReturnVariation variation;         /* how it varies the section it returns; read only when it returns one */
+    PlanAccompanimentPattern setting;      /* the pattern of a setting return's new accompaniment (R-518): block, arpeggiated, alberti or oom-pah */
     bool has_motive;                       /* its motive is made from m0 by `motive`; false for m0 itself */
     MotiveRelationStep motive;             /* how its motive is made from m0 (open parameters are drawn) */
     unsigned layers;                       /* the LAYERS mask (PlanLayers) in a layered form; 0 for none */

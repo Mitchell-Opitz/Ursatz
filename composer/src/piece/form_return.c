@@ -451,7 +451,7 @@ bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const Piec
 static bool variation_offered(PlanReturnVariation variation) {
     return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
            variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED ||
-           variation == PLAN_RETURN_FIGURATE || variation == PLAN_RETURN_EMBELLISH;
+           variation == PLAN_RETURN_FIGURATE || variation == PLAN_RETURN_EMBELLISH || variation == PLAN_RETURN_SETTING;
 }
 
 /* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
@@ -795,6 +795,10 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     PlanSpan from = plan_node_span(plan, source);
     payload->magic = RETURN_PAYLOAD_MAGIC;
     payload->variation = variation;
+    PlanReturn ret;
+    if (find_return(plan, target, &ret)) {
+        payload->setting = ret.setting;
+    }
     payload->from_start = from.start;
     payload->span = plan_node_span(plan, target);
     int to_mode;
@@ -888,6 +892,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         const char *label = variation == PLAN_RETURN_EXACT       ? "exact"
                             : variation == PLAN_RETURN_REHARMONIZE ? "reharmonize"
                             : variation == PLAN_RETURN_FIGURATE    ? "figurate"
+                            : variation == PLAN_RETURN_SETTING     ? "setting"
                             : i == 0                              ? "octave up"
                                                                   : "octave down";
         if (!add_payload(out, label, payload)) {
@@ -953,6 +958,14 @@ static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
     return true;
 }
 
+/* The index of the next span at or after i that the comparison counts; the count when there is none. */
+static size_t next_counted(const ReturnCopy *copy, size_t i, const ReturnAllow *allow) {
+    while (i < copy->span_count && allow && (allow->ignored & (1u << (unsigned)copy->spans[i].lane))) {
+        i++;
+    }
+    return i;
+}
+
 bool return_result_matches(const ReturnPayload *payload, const ReturnAllow *allow) {
     ReturnCopy moved;
     bool same = false;
@@ -960,7 +973,7 @@ bool return_result_matches(const ReturnPayload *payload, const ReturnAllow *allo
         return false;
     }
     if (return_copy_move(&moved, payload->from_start, payload->span.start, payload->transpose) &&
-        moved.node_count == payload->result.node_count && moved.span_count == payload->result.span_count) {
+        moved.node_count == payload->result.node_count && (allow || moved.span_count == payload->result.span_count)) {
         same = true;
         for (size_t i = 0; same && i < moved.node_count; i++) {
             const ReturnNode *a = &moved.nodes[i];
@@ -968,9 +981,13 @@ bool return_result_matches(const ReturnPayload *payload, const ReturnAllow *allo
             same = a->kind == b->kind && a->parent == b->parent && same_span(a->span, b->span) &&
                    strcmp(a->name, b->name) == 0 && a->state == b->state && a->constraint_count == b->constraint_count;
         }
-        for (size_t i = 0; same && i < moved.span_count; i++) {
+        /* The spans are paired in order, those of an ignored lane left out on both sides. */
+        size_t i = next_counted(&moved, 0, allow);
+        size_t j = next_counted(&payload->result, 0, allow);
+        for (; same && i < moved.span_count && j < payload->result.span_count;
+             i = next_counted(&moved, i + 1, allow), j = next_counted(&payload->result, j + 1, allow)) {
             const ReturnSpan *a = &moved.spans[i];
-            const ReturnSpan *b = &payload->result.spans[i];
+            const ReturnSpan *b = &payload->result.spans[j];
             unsigned bit = 1u << (unsigned)a->lane;
             same = a->lane == b->lane && a->voice == b->voice && a->owner == b->owner && same_span(a->span, b->span) &&
                    a->state == b->state && a->constraint_count == b->constraint_count &&
@@ -979,6 +996,7 @@ bool return_result_matches(const ReturnPayload *payload, const ReturnAllow *allo
                 same = same_notes(a, b, allow && (allow->shifted & bit) ? allow->shift : 0);
             }
         }
+        same = same && i >= moved.span_count && j >= payload->result.span_count;
     }
     return_copy_destroy(&moved);
     return same;

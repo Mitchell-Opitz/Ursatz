@@ -200,6 +200,10 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && plan_json_add(object, "section", json_number((long)plan_node_rank(plan, constraint->params.section_return.section))) &&
              plan_json_add(object, "variation",
                       cJSON_CreateString(plan_return_variation_name(constraint->params.section_return.variation)));
+        if (ok && constraint->params.section_return.variation == PLAN_RETURN_SETTING) {
+            ok = plan_json_add(object, "setting",
+                               cJSON_CreateString(ACCOMPANIMENT_NAMES[constraint->params.section_return.setting]));
+        }
         break;
     case PLAN_CONSTRAINT_LAYERS: {
         cJSON *lanes = cJSON_CreateArray();
@@ -793,6 +797,28 @@ static bool read_return_variation(JsonReader *reader, const cJSON *object, const
     if (!plan_return_variation_from_name(item->valuestring, out)) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
     }
+    return true;
+}
+
+/* A return's setting (R-518): required for a setting return, refused for any other. */
+static bool read_return_setting(JsonReader *reader, const cJSON *object, const char *path, PlanReturn *out) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "setting");
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "setting");
+    if (out->variation != PLAN_RETURN_SETTING) {
+        return item ? json_bad_format(reader, at, "only a setting return has a setting") : true;
+    }
+    int value;
+    if (!item) {
+        return json_bad_format(reader, at, "a setting return names its setting");
+    }
+    if (!read_enum_member(reader, object, path, "setting", ACCOMPANIMENT_NAMES, COUNT_OF(ACCOMPANIMENT_NAMES), &value)) {
+        return false;
+    }
+    if (value < (int)PLAN_ACCOMPANIMENT_BLOCK || value > (int)PLAN_ACCOMPANIMENT_OOM_PAH) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", ACCOMPANIMENT_NAMES[value]);
+    }
+    out->setting = (PlanAccompanimentPattern)value;
     return true;
 }
 
@@ -1550,7 +1576,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
             return false;
         }
         out->params.section_return.section = (NodeId)number_value;
-        return true;
+        return read_return_setting(reader, item, path, &out->params.section_return);
     case PLAN_CONSTRAINT_LAYERS: {
         const cJSON *lanes = plan_json_member(reader, item, path, "lanes", true);
         if (!lanes) {

@@ -32,6 +32,11 @@
  *   embellish    the stand-in form of R-516 (A, T, B, R, A1 returning A embellish, K; 44 bars, modulating), G major and
  *                D minor 2/4, seeds 1 to 10: at least 9 of 10 compose in each; A1 keeps every melody note of A at its
  *                place and pitch and has more notes; with A1 ornament the form composes at most 2 of 10 in G major
+ *   setting      the stand-in form of R-516 with A1 returning A setting arpeggiated (R-518), C major and A minor in 4/4 and
+ *                3/4, G major and D minor in 2/4, C major and D minor in 6/8, seeds 1 to 10: at least 9 of 10 compose in
+ *                each; A1's harmony, bass and melody are A's and its inner voice 1 has notes where A's has none; with a
+ *                request accompaniment of arpeggiated A1's return is set in alberti, and an alberti setting in 6/8 is
+ *                built as oom-pah
  *   reregister   rounded binary with A' re-registered, with and without an accompaniment: the melody and the inner
  *                voices are an octave from A's and inside the range; with the default range a run completes only when
  *                one octave fits, else it is stuck at the returns
@@ -520,7 +525,7 @@ static int test_varied(void) {
 #define EMBELLISH_COMPOSED_LEAST 9
 #define EMBELLISH_ORNAMENT_MOST 2
 
-/* The stand-in form of R-516: A, T, B, R, A1 and K, 44 bars, with A1 returning A with the variation %s. */
+/* The stand-in form of R-516: A, T, B, R, A1 and K, 44 bars, with A1 returning A with the variation %s and the members %s. */
 static const char EMBELLISH_FORM[] =
     "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"embellish-form\",\"label\":\"Embellish form\",\"modulates\":true,"
     "\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
@@ -533,7 +538,7 @@ static const char EMBELLISH_FORM[] =
     "\"cadence\":\"perfect-authentic\",\"keys\":{\"start\":\"subordinate\",\"end\":\"subordinate\"},\"motive\":\"invert tonal=1\"},"
     "{\"name\":\"R\",\"letter\":\"R\",\"role\":\"retransition\",\"bars\":4,\"cadence\":\"half\"},"
     "{\"name\":\"A1\",\"letter\":\"A\",\"role\":\"return\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
-    "\"cadence\":\"perfect-authentic\",\"closed\":true,\"returns\":\"A\",\"variation\":\"%s\"},"
+    "\"cadence\":\"perfect-authentic\",\"closed\":true,\"returns\":\"A\",\"variation\":\"%s\"%s},"
     "{\"name\":\"K\",\"letter\":\"K\",\"role\":\"coda\",\"bars\":8,\"cadence\":\"perfect-authentic\"}]}]}";
 
 typedef struct {
@@ -601,16 +606,20 @@ static size_t embellish_row(const FormSpec *form, const EmbellishRow *row, bool 
     return composed;
 }
 
-static FormSpec *embellish_form(const char *variation) {
+static FormSpec *stand_in_form(const char *variation, const char *members) {
     char text[4096];
     FormSpec *form = NULL;
     FormSpecError error;
-    snprintf(text, sizeof(text), EMBELLISH_FORM, variation);
+    snprintf(text, sizeof(text), EMBELLISH_FORM, variation, members);
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
-        fprintf(stderr, "embellish form: %s: %s\n", error.path, error.message);
+        fprintf(stderr, "stand-in form: %s: %s\n", error.path, error.message);
         exit(2);
     }
     return form;
+}
+
+static FormSpec *embellish_form(const char *variation) {
+    return stand_in_form(variation, "");
 }
 
 static int test_embellish(void) {
@@ -643,6 +652,154 @@ static int test_embellish(void) {
                 EMBELLISH_ORNAMENT_MOST);
         failed = 1;
     }
+    return failed;
+}
+
+/* ------------------------------------------------------------ setting */
+
+#define SETTING_SEEDS 10
+#define SETTING_COMPOSED_LEAST 9
+#define SETTING_ACCOMPANIED_SEEDS 5
+
+typedef struct {
+    const char *name;
+    int pitch_class;
+    KeyStructureMode mode;
+    int beats;
+    int unit;
+} SettingRow;
+
+static PieceRequest setting_request(const SettingRow *row) {
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = "embellish-form";
+    request.key = plan_key_of_pitch_class(row->pitch_class, row->mode);
+    request.meter.beats_per_bar = (unsigned)row->beats;
+    request.meter.beat_unit = (unsigned)row->unit;
+    request.modulate = true;
+    return request;
+}
+
+/* A1 has A's harmony, bass and melody, and an inner voice 1 with notes where A has none (the request has no accompaniment). */
+static void check_setting(const PiecePlan *plan, NodeId source, NodeId section) {
+    static Event a[MAX_EVENTS];
+    static Event b[MAX_EVENTS];
+    static const PlanLaneKind LANES[] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY};
+    assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
+    for (size_t l = 0; l < sizeof(LANES) / sizeof(LANES[0]); l++) {
+        size_t an = events(plan, source, LANES[l], 0, a);
+        size_t bn = events(plan, section, LANES[l], 0, b);
+        assert(an > 0 && same_events(a, an, b, bn, 0));
+    }
+    assert(events(plan, source, PLAN_LANE_INNER_VOICE, 1, a) == 0);
+    assert(events(plan, section, PLAN_LANE_INNER_VOICE, 1, b) > 0);
+}
+
+/* How many of the seeds compose the form in a row, A1's setting checked in each. */
+static size_t setting_row(const FormSpec *form, const SettingRow *row) {
+    size_t composed = 0;
+    for (unsigned long seed = 1; seed <= SETTING_SEEDS; seed++) {
+        PieceRequest request = setting_request(row);
+        PiecePlan *plan = NULL;
+        ComposeOutcome outcome;
+        ComposeConfig config;
+        assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        config.form = form;
+        if (compose_run(plan, &config, &outcome) == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            size_t count = sections_of(plan, sections);
+            const PlanConstraint *back = return_of(plan, sections[4]);
+            assert(count == 6 && back && back->params.section_return.variation == PLAN_RETURN_SETTING &&
+                   back->params.section_return.setting == PLAN_ACCOMPANIMENT_ARPEGGIATED);
+            check_setting(plan, back->params.section_return.section, sections[4]);
+            composed++;
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    return composed;
+}
+
+/* The pattern A1's return is built with, for a form whose setting is `pattern` and a request accompaniment (or none). */
+static PlanAccompanimentPattern built_setting(const char *pattern, const SettingRow *row, int accompaniment) {
+    char members[64];
+    snprintf(members, sizeof(members), ",\"setting\":\"%s\"", pattern);
+    FormSpec *form = stand_in_form("setting", members);
+    PieceRequest request = setting_request(row);
+    PiecePlan *plan = NULL;
+    if (accompaniment >= 0) {
+        request.has_accompaniment = true;
+        request.accompaniment.pattern = (PlanAccompanimentPattern)accompaniment;
+        request.accompaniment.texture = -1;
+    }
+    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    sections_of(plan, sections);
+    const PlanConstraint *back = return_of(plan, sections[4]);
+    assert(back && back->params.section_return.variation == PLAN_RETURN_SETTING);
+    PlanAccompanimentPattern out = back->params.section_return.setting;
+    plan_destroy(plan);
+    form_spec_destroy(form);
+    return out;
+}
+
+static int test_setting(void) {
+    static const SettingRow ROWS[] = {
+        {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4}, {"A minor 4/4", 9, KEY_STRUCTURE_MODE_MINOR, 4, 4},
+        {"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4}, {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4},
+        {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR, 2, 4},
+        {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8}, {"D minor 6/8", 2, KEY_STRUCTURE_MODE_MINOR, 6, 8},
+    };
+    FormSpec *form = stand_in_form("setting", ",\"setting\":\"arpeggiated\"");
+    int failed = 0;
+    for (size_t r = 0; r < sizeof(ROWS) / sizeof(ROWS[0]); r++) {
+        size_t composed = setting_row(form, &ROWS[r]);
+        printf("%s: %zu of %d seeds compose, A1 set in arpeggiated\n", ROWS[r].name, composed, SETTING_SEEDS);
+        if (composed < SETTING_COMPOSED_LEAST) {
+            fprintf(stderr, "%s: at least %d of %d seeds should compose\n", ROWS[r].name, SETTING_COMPOSED_LEAST,
+                    SETTING_SEEDS);
+            failed = 1;
+        }
+    }
+    form_spec_destroy(form);
+    /* The piece's own pattern is not the setting: arpeggiated over an arpeggiated piece is set in the next, alberti. */
+    assert(built_setting("arpeggiated", &ROWS[0], PLAN_ACCOMPANIMENT_ARPEGGIATED) == PLAN_ACCOMPANIMENT_ALBERTI);
+    FormSpec *accompanied = stand_in_form("setting", ",\"setting\":\"arpeggiated\"");
+    size_t alberti = 0;
+    for (unsigned long seed = 1; seed <= SETTING_ACCOMPANIED_SEEDS; seed++) {
+        PieceRequest request = setting_request(&ROWS[0]);
+        PiecePlan *plan = NULL;
+        ComposeOutcome outcome;
+        ComposeConfig config;
+        request.has_accompaniment = true;
+        request.accompaniment.pattern = PLAN_ACCOMPANIMENT_ARPEGGIATED;
+        request.accompaniment.texture = -1;
+        assert(form_build_plan(accompanied, &request, &plan) == PIECE_OK && plan);
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        config.form = accompanied;
+        if (compose_run(plan, &config, &outcome) == PIECE_OK) {
+            NodeId sections[FORM_SPEC_MAX_SECTIONS];
+            sections_of(plan, sections);
+            const PlanConstraint *back = return_of(plan, sections[4]);
+            assert(back && back->params.section_return.setting == PLAN_ACCOMPANIMENT_ALBERTI);
+            assert(plan_node_state(plan, sections[4]) == PLAN_STATE_REALIZED);
+            alberti++;
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    printf("C major 4/4 with an arpeggiated accompaniment: %zu of %d seeds compose, A1 set in alberti\n", alberti,
+           SETTING_ACCOMPANIED_SEEDS);
+    form_spec_destroy(accompanied);
+    if (alberti == 0) {
+        failed = 1;
+    }
+    /* Alberti has no compound meter: it is built as oom-pah in 6/8. */
+    printf("C major 6/8, setting alberti: A1 is set in oom-pah\n");
+    assert(built_setting("alberti", &ROWS[6], -1) == PLAN_ACCOMPANIMENT_OOM_PAH);
     return failed;
 }
 
@@ -744,9 +901,12 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "embellish") == 0) {
         return test_embellish();
     }
+    if (strcmp(mode, "setting") == 0) {
+        return test_setting();
+    }
     if (strcmp(mode, "reregister") == 0) {
         return test_reregister();
     }
-    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|varied|embellish|reregister\n");
+    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|varied|embellish|setting|reregister\n");
     return 2;
 }

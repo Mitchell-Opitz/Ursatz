@@ -75,7 +75,9 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         const PlanReturn *section_return = &constraint->params.section_return;
         return plan_has_node(plan, section_return->section) &&
                plan_node_kind(plan, section_return->section) == PLAN_NODE_SECTION &&
-               section_return->variation >= PLAN_RETURN_EXACT && section_return->variation <= PLAN_RETURN_EMBELLISH;
+               section_return->variation >= PLAN_RETURN_EXACT && section_return->variation <= PLAN_RETURN_SETTING &&
+               (section_return->variation != PLAN_RETURN_SETTING ||
+                (section_return->setting >= PLAN_ACCOMPANIMENT_BLOCK && section_return->setting <= PLAN_ACCOMPANIMENT_OOM_PAH));
     }
     case PLAN_CONSTRAINT_LAYERS:
         return constraint->params.layers.lanes != 0 && (constraint->params.layers.lanes & ~PLAN_LAYERS_ALL) == 0;
@@ -318,7 +320,7 @@ const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, Lane
     return NULL;
 }
 
-static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister", "varied", "figurate", "embellish"};
+static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister", "varied", "figurate", "embellish", "setting"};
 static const char *const FIGURE_KIND_NAMES[] = {"neighbor", "scale", "broken-chord"};
 static const char *const FIGURE_RHYTHM_NAMES[] = {"eighths", "sixteenths"};
 static const char *const FUNCTION_KIND_NAMES[] = {"transition", "retransition", "subordinate", "coda"};

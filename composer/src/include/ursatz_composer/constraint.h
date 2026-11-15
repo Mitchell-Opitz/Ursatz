@@ -205,12 +205,14 @@ typedef enum {
     PLAN_RETURN_REREGISTER,
     PLAN_RETURN_VARIED, /* a moderately varied repetition (Schoenberg's A1): a few ornaments and a reharmonized ending */
     PLAN_RETURN_FIGURATE, /* the melody rewritten as a motive of variation over a skeleton of the returned one (R-497) */
-    PLAN_RETURN_EMBELLISH /* the ornament melody, eighth notes split into sixteenths when no longer note can be (R-516) */
+    PLAN_RETURN_EMBELLISH, /* the ornament melody, eighth notes split into sixteenths when no longer note can be (R-516) */
+    PLAN_RETURN_SETTING /* the harmony, bass and melody kept, the accompaniment written anew in `setting` (R-518) */
 } PlanReturnVariation;
 
 typedef struct {
     NodeId section;
     PlanReturnVariation variation;
+    PlanAccompanimentPattern setting; /* SETTING: the pattern of the new accompaniment: block, arpeggiated, alberti or oom-pah */
 } PlanReturn;
 
 /* The name of a return variation as plans, forms and the API write it; NULL for a value out of range. */
