@@ -1,0 +1,23 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "small-rondo-abaca",
+  "label": "Small rondo (ABACA)",
+  "closing": true,
+  "modulates": true,
+  "tempo": 88,
+  "regions": [{"name": "subordinate", "major": [5], "minor": [3]}, {"name": "second", "major": [6, 4], "minor": [6, 4]}],
+  "sizes": [
+    {"bars": 64, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "T", "letter": "T", "role": "transition", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "keys": {"end": "subordinate"}},
+      {"name": "B", "letter": "B", "role": "subordinate", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "keys": {"start": "subordinate", "end": "subordinate"}, "motive": "invert tonal=1"},
+      {"name": "R", "letter": "R", "role": "retransition", "bars": 4, "cadence": "half"},
+      {"name": "A1", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "embellish"},
+      {"name": "C", "letter": "C", "role": "contrast", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "keys": {"start": "second", "end": "second"}, "motive": "interval-change"},
+      {"name": "R1", "letter": "R", "role": "retransition", "bars": 4, "cadence": "half"},
+      {"name": "A2", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "setting", "setting": "arpeggiated"},
+      {"name": "K", "letter": "K", "role": "coda", "bars": 8, "cadence": "perfect-authentic", "closed": true}
+    ]}
+  ]
+}

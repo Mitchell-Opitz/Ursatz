@@ -1,0 +1,20 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "andante-aba",
+  "label": "Andante form (ABA)",
+  "closing": true,
+  "modulates": true,
+  "tempo": 72,
+  "regions": [{"name": "subordinate", "major": [5], "minor": [3]}],
+  "sizes": [
+    {"bars": 44, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "T", "letter": "T", "role": "transition", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "keys": {"end": "subordinate"}},
+      {"name": "B", "letter": "B", "role": "subordinate", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "keys": {"start": "subordinate", "end": "subordinate"}, "motive": "invert tonal=1"},
+      {"name": "R", "letter": "R", "role": "retransition", "bars": 4, "cadence": "half"},
+      {"name": "A1", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "embellish"},
+      {"name": "K", "letter": "K", "role": "coda", "bars": 8, "cadence": "perfect-authentic", "closed": true}
+    ]}
+  ]
+}
