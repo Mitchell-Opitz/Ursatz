@@ -163,6 +163,32 @@
     return `${base}${section.independent === true ? " (independent)" : ""}${section.lyric === true ? " (lyric)" : ""}`;
   }
 
+  /* The Returns cell of a forms entry section (P52, R-521): "" with no `returns`, else the returned name, then " (<variation>)"
+   * when it has a variation, written " (setting: <setting>)" for a setting return: "A (embellish)", "A (setting: arpeggiated)". */
+  function sectionReturnLabel(entrySection) {
+    const section = entrySection && typeof entrySection === "object" ? entrySection : {};
+    if (!section.returns) {
+      return "";
+    }
+    if (!section.variation) {
+      return section.returns;
+    }
+    if (section.variation === "setting" && section.setting) {
+      return `${section.returns} (setting: ${section.setting})`;
+    }
+    return `${section.returns} (${section.variation})`;
+  }
+
+  /* The Keys cell of a forms entry section (P52, R-521): "" with no `keys`, else "<start> to <end>", then " (tonic major)" for a
+   * section in the tonic major. */
+  function sectionKeysLabel(entrySection) {
+    const section = entrySection && typeof entrySection === "object" ? entrySection : {};
+    if (!section.keys) {
+      return "";
+    }
+    return `${section.keys.start} to ${section.keys.end}${section.mode === "major" ? " (tonic major)" : ""}`;
+  }
+
   /* "3 variations, 32 bars" for a size with a count (the noun is the role of its last section), else "16 bars". */
   function sizeLabel(size) {
     const last = size.sections.length > 0 ? size.sections[size.sections.length - 1].role : null;
@@ -1158,6 +1184,8 @@
     rolesOf,
     roleLabel,
     sectionRoleLabel,
+    sectionReturnLabel,
+    sectionKeysLabel,
     functionsFor,
     defaultRole,
     sizeOptions,

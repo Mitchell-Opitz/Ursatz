@@ -442,6 +442,34 @@ check(
 );
 check(minuetRows.every((row) => row.function === ""), "a row without a function has none");
 
+/* The rondo labels (P52, R-521). */
+const rondoSections = require("./fixtures/forms.json").forms.find((form) => form.name === "small-rondo-ababa").sizes[0].sections;
+const rondoSection = (name) => rondoSections.find((section) => section.name === name);
+check(
+  P.sectionReturnLabel(rondoSection("A1")) === "A (embellish)" &&
+    P.sectionReturnLabel(rondoSection("B1")) === "B (exact)" &&
+    P.sectionReturnLabel(rondoSection("A2")) === "A (setting: arpeggiated)" &&
+    P.sectionReturnLabel(rondoSection("A")) === "" &&
+    P.sectionReturnLabel(null) === "",
+  "a return names its variation, and its setting for a setting return",
+);
+check(
+  P.sectionKeysLabel(rondoSection("B1")).endsWith(" (tonic major)") &&
+    P.sectionKeysLabel(rondoSection("B")) === "subordinate to subordinate" &&
+    P.sectionKeysLabel(rondoSection("A1")) === "home to home" &&
+    P.sectionKeysLabel(null) === "",
+  "a section in the tonic major says so and any other shows its keys alone",
+);
+const mainSections = require("./fixtures/forms.json").forms.find((form) => form.name === "main-and-subordinate").sizes[0].sections;
+const mainReturn = mainSections.find((section) => section.returns);
+check(
+  P.sectionReturnLabel(mainReturn) === `${mainReturn.returns} (${mainReturn.variation})` && P.sectionReturnLabel(mainReturn) === "A (exact)" && P.sectionKeysLabel(mainSections.find((section) => section.name === "T")) === "home to subordinate",
+  "a main and subordinate section's labels are as the inline text gave",
+);
+const rondoSummary = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "small-rondo-ababa-summary.json"), "utf8"));
+const rondoRows = P.resultView({ seed: 1, summary: rondoSummary }, { form: "small-rondo-ababa", bars: 68, count: 0 }).versions[0].view.rows;
+check(rondoRows[8].letter === "A" && rondoRows[8].changes.includes("new setting"), "the second return of A in a small rondo says its new setting");
+
 if (failures > 0) {
   console.error(`${failures} failure(s)`);
   process.exit(1);
