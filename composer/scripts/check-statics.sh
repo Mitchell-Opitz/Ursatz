@@ -3,7 +3,7 @@
 # counts as mutable: write "static const T *const name"). Prints each offending file and line.
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
 failed=0
 while IFS= read -r hit; do

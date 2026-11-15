@@ -3,7 +3,7 @@
 # stage inputs through the analysis_chain_* accessors and never builds them again. Prints each offending line.
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
 failed=0
 while IFS= read -r hit; do

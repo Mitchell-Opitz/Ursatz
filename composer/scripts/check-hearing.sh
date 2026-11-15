@@ -6,7 +6,7 @@
 # Prints each offending file and line.
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
 detectors='standard_form_segment_phrases|standard_form_segment_ideas|standard_form_identify_themes|phrase_boundary_detection_|standard_texture_analysis_|analyzer_analyze_fragment|analyzer_fragment_'
 render='plan_render(_range)?[[:space:]]*\('

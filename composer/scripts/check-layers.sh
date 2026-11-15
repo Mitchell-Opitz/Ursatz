@@ -3,7 +3,7 @@
 # its job through util/job.h; API internals stay inside the API layer.
 set -euo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
 failed=0
 while IFS= read -r hit; do
