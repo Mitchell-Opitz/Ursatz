@@ -316,12 +316,14 @@ static bool inside(const Target *target, const ReturnSpan *span) {
            rational_cmp(span->span.start, target->span.start) >= 0 && rational_cmp(span->span.start, end) < 0;
 }
 
-static bool reharmonize(ReturnPayload *payload) {
-    ReturnCopy *copy = &payload->result;
+/*
+ * The harmony targets of a copy, as the source was written: a harmony span with a shape, or of a new owner, starts one;
+ * it runs to the end of the last chord of that owner before the next. NULL on allocation failure or when there is none.
+ */
+static Target *read_targets(const ReturnCopy *copy, size_t *count) {
     Target *targets = calloc(copy->span_count + 1, sizeof(Target));
     size_t target_count = 0;
     bool ok = targets != NULL;
-    /* The targets: a harmony span with a shape starts one, the spans after it with none are its chords. */
     for (size_t i = 0; ok && i < copy->span_count; i++) {
         const ReturnSpan *span = &copy->spans[i];
         if (span->lane != PLAN_LANE_HARMONY) {
@@ -335,7 +337,19 @@ static bool reharmonize(ReturnPayload *payload) {
         }
         ok = span_end(span->span, &end) && rational_sub(end, current->span.start, &current->span.length) == RATIONAL_OK;
     }
-    ok = ok && target_count > 0;
+    if (!ok || target_count == 0) {
+        free(targets);
+        return NULL;
+    }
+    *count = target_count;
+    return targets;
+}
+
+static bool reharmonize(ReturnPayload *payload) {
+    ReturnCopy *copy = &payload->result;
+    size_t target_count = 0;
+    Target *targets = read_targets(copy, &target_count);
+    bool ok = targets != NULL;
 
     ReturnSpan *spans = ok ? calloc(copy->span_count, sizeof(ReturnSpan)) : NULL;
     size_t used = 0;
@@ -440,6 +454,75 @@ static bool reharmonize(ReturnPayload *payload) {
     return true;
 }
 
+/* ------------------------------------------------------------- setting */
+
+/*
+ * The copy's accompaniment written anew in `pattern` (R-518): its inner voice spans are dropped, and over each harmony
+ * target open ones are added as grow-theme opens them (add_accompaniment_targets): voice 1 with the ACCOMPANIMENT
+ * constraint, and voices 2 and 3 for a block or an oom-pah. The texture stage writes them once the returns are done.
+ */
+static bool set_accompaniment(ReturnPayload *payload, PlanAccompanimentPattern pattern) {
+    ReturnCopy *copy = &payload->result;
+    if (pattern < PLAN_ACCOMPANIMENT_BLOCK || pattern > PLAN_ACCOMPANIMENT_OOM_PAH) {
+        return false;
+    }
+    const int voices = pattern == PLAN_ACCOMPANIMENT_ARPEGGIATED || pattern == PLAN_ACCOMPANIMENT_ALBERTI ? 1 : 3;
+    size_t target_count = 0;
+    Target *targets = read_targets(copy, &target_count);
+    ReturnSpan *spans = targets ? calloc(copy->span_count + target_count * (size_t)voices, sizeof(ReturnSpan)) : NULL;
+    size_t used = 0;
+    bool ok = spans != NULL;
+    for (size_t i = 0; i < copy->span_count; i++) {
+        ReturnSpan *span = &copy->spans[i];
+        if (ok && span->lane != PLAN_LANE_INNER_VOICE) {
+            spans[used++] = *span;
+        } else {
+            free(span->notes);
+            free(span->constraints);
+        }
+    }
+    for (size_t t = 0; ok && t < target_count; t++) {
+        for (int voice = 1; ok && voice <= voices; voice++) {
+            ReturnSpan *out = &spans[used];
+            out->lane = PLAN_LANE_INNER_VOICE;
+            out->voice = voice;
+            out->owner = targets[t].owner;
+            out->span = targets[t].span;
+            ok = open_notes(out, INNER_PLACEHOLDER);
+            if (ok && voice == 1) {
+                out->constraints = calloc(1, sizeof(PlanConstraint));
+                ok = out->constraints != NULL;
+                if (ok) {
+                    out->constraints[0].kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
+                    out->constraints[0].params.accompaniment.pattern = pattern;
+                    out->constraints[0].params.accompaniment.texture = -1;
+                    out->constraint_count = 1;
+                }
+            }
+            used++;
+        }
+    }
+    free(targets);
+    if (!ok) {
+        /* The old list's spans were freed or moved: keep it empty so the copy can be destroyed. */
+        for (size_t i = 0; spans && i < used; i++) {
+            free(spans[i].notes);
+            free(spans[i].constraints);
+        }
+        free(spans);
+        free(copy->spans);
+        copy->spans = NULL;
+        copy->span_count = 0;
+        copy->span_capacity = 0;
+        return false;
+    }
+    free(copy->spans);
+    copy->spans = spans;
+    copy->span_count = used;
+    copy->span_capacity = used;
+    return true;
+}
+
 /* ------------------------------------------------------------- reregister */
 
 static bool reregister(ReturnPayload *payload) {
@@ -481,6 +564,8 @@ bool return_vary(ReturnPayload *payload, FillRng *rng) {
     case PLAN_RETURN_FIGURATE:
         /* The copy keeps its melody: compose_run writes the figure (form_figure_write) once the harmony is final (R-497). */
         return payload->reharmonize ? reharmonize(payload) : true;
+    case PLAN_RETURN_SETTING:
+        return set_accompaniment(payload, payload->setting);
     }
     return false;
 }
@@ -554,7 +639,7 @@ static bool is_original(const ReturnSpan *kept, const ReturnSpan *span, size_t n
 
 /* The ornamented melody keeps every note of the returned one and adds only passing and neighbor tones off the strong beats. */
 static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
-    ReturnAllow allow = {1u << PLAN_LANE_MELODY, 0, 0};
+    ReturnAllow allow = {1u << PLAN_LANE_MELODY, 0, 0, 0};
     long cell = cell_ticks(&payload->meter);
     size_t added_total = 0;
     if (!return_result_matches(payload, &allow) || cell == 0) {
@@ -753,7 +838,7 @@ static void check_figurate(const ReturnPayload *payload, FillCheck *out) {
 }
 
 static void check_reregister(const ReturnPayload *payload, FillCheck *out) {
-    ReturnAllow allow = {0, (1u << PLAN_LANE_MELODY) | (1u << PLAN_LANE_INNER_VOICE), payload->octave};
+    ReturnAllow allow = {0, (1u << PLAN_LANE_MELODY) | (1u << PLAN_LANE_INNER_VOICE), payload->octave, 0};
     if (payload->octave != 12 && payload->octave != -12) {
         reject(out, "re-registration is not an octave");
         return;
@@ -770,6 +855,40 @@ static void check_reregister(const ReturnPayload *payload, FillCheck *out) {
                 return;
             }
         }
+    }
+    out->score_numerator = 1;
+}
+
+/*
+ * A setting return (R-518): the copy is the returned section moved, in every node and in every harmony, bass and melody
+ * span (notes included); its inner voice spans are open, voice 1 carrying the ACCOMPANIMENT of the setting's pattern.
+ */
+static void check_setting(const ReturnPayload *payload, FillCheck *out) {
+    ReturnAllow allow = {0, 0, 0, 1u << PLAN_LANE_INNER_VOICE};
+    size_t first_voices = 0;
+    if (!return_result_matches(payload, &allow)) {
+        reject(out, "setting changes more than the accompaniment");
+        return;
+    }
+    for (size_t i = 0; i < payload->result.span_count; i++) {
+        const ReturnSpan *span = &payload->result.spans[i];
+        if (span->lane != PLAN_LANE_INNER_VOICE) {
+            continue;
+        }
+        bool marked = false;
+        for (size_t c = 0; c < span->constraint_count; c++) {
+            marked = marked || (span->constraints[c].kind == PLAN_CONSTRAINT_ACCOMPANIMENT &&
+                                span->constraints[c].params.accompaniment.pattern == payload->setting);
+        }
+        if (span->state != PLAN_STATE_CONSTRAINED || (span->voice == 1) != marked) {
+            reject(out, "setting changes more than the accompaniment");
+            return;
+        }
+        first_voices += span->voice == 1 ? 1 : 0;
+    }
+    if (first_voices == 0) {
+        reject(out, "setting changes more than the accompaniment");
+        return;
     }
     out->score_numerator = 1;
 }
@@ -791,6 +910,9 @@ void return_vary_check(const ReturnPayload *payload, FillCheck *out) {
         break;
     case PLAN_RETURN_FIGURATE:
         check_figurate(payload, out);
+        break;
+    case PLAN_RETURN_SETTING:
+        check_setting(payload, out);
         break;
     case PLAN_RETURN_EXACT:
         break;

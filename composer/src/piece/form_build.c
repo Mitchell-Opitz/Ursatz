@@ -79,6 +79,26 @@ const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t cou
     return NULL;
 }
 
+/*
+ * The pattern a setting return is written in (R-518): the form's, unless it is the piece's own accompaniment or alberti in a
+ * compound meter; then the next of block, arpeggiated, alberti and oom-pah after it, wrapping, skipping those two.
+ */
+static PlanAccompanimentPattern setting_pattern(const FormSectionSpec *section, const PieceRequest *request,
+                                                const PlanAccompaniment *accompaniment) {
+    PlanAccompanimentPattern pattern = section->setting;
+    for (int tried = 0; tried < 4; tried++) {
+        PlanAccompaniment candidate;
+        memset(&candidate, 0, sizeof(candidate));
+        candidate.pattern = pattern;
+        candidate.texture = -1;
+        if ((!accompaniment || accompaniment->pattern != pattern) && grow_accompaniment_valid(&request->meter, &candidate)) {
+            return pattern;
+        }
+        pattern = pattern == PLAN_ACCOMPANIMENT_OOM_PAH ? PLAN_ACCOMPANIMENT_BLOCK : (PlanAccompanimentPattern)(pattern + 1);
+    }
+    return section->setting;
+}
+
 /* The accompaniment the sections ask for: the request's, or for a form that requires one, any pattern when it has none. */
 static bool piece_accompaniment(const FormSpec *form, const PieceRequest *request, PlanAccompaniment *out) {
     if (request->has_accompaniment) {
@@ -176,6 +196,9 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.kind = PLAN_CONSTRAINT_RETURN;
         constraint.params.section_return.section = sections[section->returns];
         constraint.params.section_return.variation = section->variation;
+        if (section->variation == PLAN_RETURN_SETTING) {
+            constraint.params.section_return.setting = setting_pattern(section, request, accompaniment);
+        }
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && section->has_figure) {

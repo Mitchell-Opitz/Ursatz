@@ -66,6 +66,7 @@ typedef struct {
     bool reharmonize;    /* FIGURATE: the figure sits over a reharmonized copy (the FIGURE constraint says so; always, with mode_change) */
     bool mode_change;    /* FIGURATE: the target is the source's tonic in the other mode (R-499): the copy is mapped degree by degree */
     KeyStructureMode to_mode; /* the target's mode; read when mode_change */
+    PlanAccompanimentPattern setting; /* SETTING: the pattern of the new accompaniment (R-518) */
     ReturnCopy source;   /* the returned section, as read */
     ReturnCopy result;   /* the target's, after the variation */
 } ReturnPayload;
@@ -115,6 +116,7 @@ typedef struct {
     unsigned skip_notes; /* bits (1u << lane) of the lanes whose notes are not compared */
     unsigned shifted;    /* bits of the lanes whose pitches are shift semitones from the returned section's */
     int shift;
+    unsigned ignored;    /* bits of the lanes whose spans are left out of the comparison, on both sides */
 } ReturnAllow;
 
 /* Whether payload->result is payload->source moved onto the target, but for what allow lets differ. */
