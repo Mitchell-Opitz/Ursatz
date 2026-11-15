@@ -429,6 +429,9 @@ target_compile_options(test_piece_keys PRIVATE -Wall -Wextra -Wpedantic)
 # The plans and a quick compose run, and for each template the compose sweep (seeds 1 to 10, C major and A minor).
 add_test(NAME test_piece_keys_plan COMMAND test_piece_keys plan)
 add_test(NAME test_piece_keys_smoke COMMAND test_piece_keys smoke)
+add_test(NAME test_piece_keys_tonic_major COMMAND test_piece_keys tonic-major)
+# The tonic major case composes 20 pieces of 56 bars in 16 s of CPU, over the 10 s fast-set limit.
+set_tests_properties(test_piece_keys_tonic_major PROPERTIES LABELS slow)
 foreach(template ${FORM_TEMPLATES})
     add_test(NAME test_piece_keys_${template} COMMAND test_piece_keys compose ${template})
     # The sweeps are slow: CI leaves them out (ctest -LE slow).
