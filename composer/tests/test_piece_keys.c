@@ -366,6 +366,19 @@ static bool authentic_inside(const PiecePlan *plan, const KeyLane *lane, const N
     return false;
 }
 
+/* Whether a retransition starts at `at`: it opens the home key straight from any region, over the arrival on V, with no
+   pivot chord (R-505); V is one in the main and subordinate themes' V region and none in the small rondo's IV or vi. */
+static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
+    for (size_t s = 0; s < count; s++) {
+        const PlanConstraint *function = find(plan, sections[s], PLAN_CONSTRAINT_SECTION_FUNCTION);
+        if (function && function->params.section_function.function == PLAN_FUNCTION_RETRANSITION &&
+            rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void check_piece(const PiecePlan *plan, const char *kind) {
     KeyLane lane = read_lane(plan);
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -379,10 +392,10 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
             continue;
         }
         changes++;
-        /* Opened by a pivot chord standard-harmony calls valid. Two keys that are not closely related to each other (the
+        /* Opened by a pivot chord standard-harmony calls valid, except a retransition home (R-505). Two keys that are not closely related to each other (the
            scherzo's V to IV, a sequence of its pattern, R-492) have no pivot between them: each is related to home. */
         HarmonyRelatedKey adjacent;
-        if (related(lane.key[k - 1], lane.key[k], &adjacent)) {
+        if (related(lane.key[k - 1], lane.key[k], &adjacent) && !opens_retransition(plan, sections, count, lane.span[k].start)) {
             assert(opens_with_pivot(plan, lane.key[k - 1], lane.key[k], lane.span[k].start));
         }
         /* A modulation: an authentic cadence arrives inside the new key's span, before the piece ends. */
