@@ -174,6 +174,14 @@ static const FormRow FORMS[] = {
      {{8, 0, false}, {32, 0, false}, {48, 0, false}, {0, 1, false}, {0, 4, false}, {40, 5, false}}, 6, 4, 0, 0, 0},
     {"main-and-subordinate", true, false, 1, {{48, 0, false}, {57, 0, true}}, 2,
      {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {57, 1, false}}, 5, 0, 0, 0, 0},
+    {"andante-aba", true, false, 1, {{44, 0, true}}, 1,
+     {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {44, 1, false}}, 5, 0, 72, 0, 0},
+    {"andante-abab", true, false, 1, {{56, 0, true}}, 1,
+     {{8, 0, false}, {32, 0, false}, {44, 0, false}, {0, 1, false}, {56, 1, false}}, 5, 0, 72, 0, 0},
+    {"small-rondo-ababa", true, false, 1, {{68, 0, true}}, 1,
+     {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {68, 1, false}}, 5, 0, 88, 0, 0},
+    {"small-rondo-abaca", true, false, 2, {{64, 0, true}}, 1,
+     {{8, 0, false}, {32, 0, false}, {56, 0, false}, {0, 1, false}, {64, 1, false}}, 5, 0, 88, 0, 0},
 };
 #define FORM_COUNT (sizeof(FORMS) / sizeof(FORMS[0]))
 
@@ -831,8 +839,8 @@ static void test_meters_and_tempo(void) {
     refused_edit("game-loop", "\"closing\"", "\"tempo\": 120, \"closing\"", "/tempo");
 
     /* The minuet, the trio and the minuet and trio are in 3/4 at 112 and allow no other meter; the scherzo is at 176 in 3/4,
-       2/4 and 6/8 and the scherzo and trio in 3/4 only; every other built-in lists no meters, gives no tempo and allows any
-       meter (R-487, R-492). */
+       2/4 and 6/8 and the scherzo and trio in 3/4 only; the Andante forms are at 72 and the small rondos at 88 with no meters; every other built-in lists no meters, gives no
+       tempo and allows any meter (R-487, R-492, R-520). */
     for (size_t i = 0; i < form_spec_builtin_count(); i++) {
         FormSpec *builtin_form = builtin(form_spec_builtin_name(i));
         bool dance = strcmp(builtin_form->name, "minuet") == 0 || strcmp(builtin_form->name, "trio") == 0 ||
@@ -840,7 +848,8 @@ static void test_meters_and_tempo(void) {
         bool scherzo = strcmp(builtin_form->name, "scherzo") == 0;
         bool scherzo_trio = strcmp(builtin_form->name, "scherzo-and-trio") == 0;
         size_t meters = dance || scherzo_trio ? 1u : scherzo ? 3u : strcmp(builtin_form->name, "figured-variations") == 0 ? 4u : 0u;
-        unsigned tempo = dance ? 112u : (scherzo || scherzo_trio) ? 176u : 0u;
+        unsigned tempo = dance ? 112u : (scherzo || scherzo_trio) ? 176u : strncmp(builtin_form->name, "andante-", 8) == 0 ? 72u
+                         : strncmp(builtin_form->name, "small-rondo-", 12) == 0 ? 88u : 0u;
         assert(builtin_form->meter_count == meters && builtin_form->tempo == tempo);
         assert(form_spec_meter_allowed(builtin_form, &three_four));
         assert(form_spec_meter_allowed(builtin_form, &six_eight) == !(dance || scherzo_trio));
@@ -1545,11 +1554,12 @@ static void test_modulating_reader(void) {
     document(text, sizeof(text), ", \"modulates\": true", sizes);
     refused(text, "/modulates");
     refused_edit("game-loop", "\"closing\"", "\"modulates\": true, \"closing\"", "/modulates");
-    /* Only the scherzo and the main and subordinate themes modulate always; the scherzo and trio leaves it to its parts (R-492,
+    /* Only the scherzo, the main and subordinate themes, the Andante forms and the small rondos modulate always; the scherzo and trio leaves it to its parts (R-492,
        R-495, R-509). */
     for (size_t f = 0; f < form_spec_builtin_count(); f++) {
         FormSpec *built = builtin(form_spec_builtin_name(f));
-        assert(built->modulates == (strcmp(built->name, "scherzo") == 0 || strcmp(built->name, "main-and-subordinate") == 0));
+        assert(built->modulates == (strcmp(built->name, "scherzo") == 0 || strcmp(built->name, "main-and-subordinate") == 0 ||
+                                    strncmp(built->name, "andante-", 8) == 0 || strncmp(built->name, "small-rondo-", 12) == 0));
         form_spec_destroy(built);
     }
 }

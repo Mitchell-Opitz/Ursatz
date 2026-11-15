@@ -72,6 +72,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [figured-variations.md](figured-variations.md): the built-in figured variations form after Schoenberg ch. XVII (P50): the theme, five variations each with a figure, the minore, the root change, the climax and a coda, and what was measured.
 - [variation-figure.md](variation-figure.md): the motive of variation: a figurate return rewrites the theme's melody from a skeleton, one figure to a cell, the cadence bars kept (P50).
 - [main-and-subordinate.md](main-and-subordinate.md): the built-in main and subordinate themes form after Schoenberg ch. XVIII (P51): the main theme, a modulating transition, a subordinate theme and a lyric one, a codetta, the retransition, the return and the coda, the keys and cadences, and what was measured.
+- [rondo.md](rondo.md): the built-in Andante and small rondo forms after Schoenberg ch. XIX (P52): the classification, A's returns varied, B in the tonic major and its changed transition, the contrast, the keys and cadences, and what was measured.
 - [form-parts.md](form-parts.md): the parts of larger forms after Schoenberg ch. XVIII: the transition, the subordinate theme, the retransition and the coda as form roles and a plan constraint (P51).
 - [grow-construction.md](grow-construction.md): a theme of any whole bars from 3 to 16 and ideas of any whole bars, given by a construction (P47).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
