@@ -84,6 +84,8 @@ typedef struct {
     bool region;      /* the section ends in the form's region (V in major, III in minor): the main and subordinate themes (R-509) */
     int function;     /* a SECTION_FUNCTION constraint of this PlanFunctionKind (R-503), or -1 for none */
     bool lyric;       /* a lyric subordinate theme: m0 augmented (R-506) */
+    bool tonic_major; /* the section is in the home tonic's major key (R-517): the rondos' B1 */
+    bool second;      /* the section is in the second region (vi or IV in major, VI or iv in minor): the small rondo's C (R-520) */
 } Expected;
 
 #define MAX_EXPECTED FORM_SPEC_MAX_SECTIONS
@@ -110,6 +112,8 @@ static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning
     e->region = false;
     e->function = -1;
     e->lyric = false;
+    e->tonic_major = false;
+    e->second = false;
 }
 
 /* A retransition or a coda is an operator section like the liquidation: no pairing and no archetype (R-503). */
@@ -230,6 +234,42 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
         set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n++].function = PLAN_FUNCTION_CODA;
+    } else if (IS("andante-aba") || IS("andante-abab") || IS("small-rondo-ababa") || IS("small-rondo-abaca")) {
+        /* The Andante and small rondo forms (P52 B5, R-520): A, the transition T to the subordinate region (V, or III in
+           minor), B there, the retransition R home, A1 (A returned as `embellish`), then per form: the coda K; T1, B1
+           (B returned in the tonic major), K; T1, B1, R1, A2 (A returned as a `setting`), K; or C in the second region,
+           R1, A2, K. The retransitions and the coda are operator sections. */
+        const bool abab = IS("andante-abab") || IS("small-rondo-ababa");
+        const bool rondo = IS("small-rondo-ababa") || IS("small-rondo-abaca");
+        size_t a = n;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        size_t b = n;
+        set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
+        if (abab) {
+            set(&out[n], "T", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+            out[n++].function = PLAN_FUNCTION_TRANSITION;
+            set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, b, 0);
+            out[n].tonic_major = true;
+            out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        } else if (IS("small-rondo-abaca")) {
+            set(&out[n], "C", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+            out[n++].second = true;
+        }
+        if (rondo) {
+            set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+            out[n++].function = PLAN_FUNCTION_RETRANSITION;
+            set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
+        }
+        set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_CODA;
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -276,6 +316,14 @@ static size_t sizes_of(const char *kind, Size *out) {
     } else if (IS("main-and-subordinate")) {
         out[n++] = (Size){57, 0};
         out[n++] = (Size){48, 0};
+    } else if (IS("andante-aba")) {
+        out[n++] = (Size){44, 0};
+    } else if (IS("andante-abab")) {
+        out[n++] = (Size){56, 0};
+    } else if (IS("small-rondo-ababa")) {
+        out[n++] = (Size){68, 0};
+    } else if (IS("small-rondo-abaca")) {
+        out[n++] = (Size){64, 0};
     }
     return n;
 }
@@ -393,7 +441,11 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
                    pairing->params.theme_pairing.ending == expected[i].ending);
             assert(find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) != NULL);
         }
-        assert(cadence && cadence->params.cadence == expected[i].cadence);
+        /* B1 is not closed: in a major piece the tonic major is the home key, and a closing form plans a PAC there that is not
+           closed as a half cadence; in a minor piece it is the parallel major and keeps its PAC (R-517, piece_cadences.c). */
+        const CadenceType want = expected[i].tonic_major && scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? CADENCE_TYPE_HALF
+                                                                                                       : expected[i].cadence;
+        assert(cadence && cadence->params.cadence == want);
         /* An antecedent's weak cadence comes second. */
         const PlanConstraint *weak = find(plan, section, PLAN_CONSTRAINT_CADENCE, 1);
         assert((expected[i].beginning == AN) == (weak != NULL));
@@ -405,8 +457,20 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
                                                            : scenario->mode;
         const int region_offset = scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? 7 : 3; /* V in major, III in minor */
         const int offset = expected[i].region ? region_offset : expected[i].key_offset;
-        assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
-               key->params.key.mode == mode);
+        if (expected[i].tonic_major) {
+            /* The home tonic's major key: the home key in a major piece, the parallel major in a minor one (R-517). */
+            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == scenario->tonic &&
+                   key->params.key.mode == KEY_STRUCTURE_MODE_MAJOR);
+        } else if (expected[i].second) {
+            /* One of the second region's keys: vi or IV in major, VI or iv in minor (R-520). */
+            const int pc = analysis_key_tonic_pitch_class(&key->params.key);
+            const bool major = scenario->mode == KEY_STRUCTURE_MODE_MAJOR;
+            assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && key->params.key.mode == (major ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR)) ||
+                           (pc == (scenario->tonic + 5) % 12 && key->params.key.mode == scenario->mode)));
+        } else {
+            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
+                   key->params.key.mode == mode);
+        }
         /* A figure rides on a figurate return and only there (R-497). */
         const PlanConstraint *figure = find(plan, section, PLAN_CONSTRAINT_FIGURE, 0);
         assert((figure != NULL) == expected[i].has_figure);
@@ -628,6 +692,10 @@ static void compose_all(const char *kind, Tally *total) {
  * The main and subordinate themes (P51 B7, R-509) run in C major 4/4 and A minor 3/4 at 57 and 48 bars and were measured at
  * 40, 220, 58: all 40 runs compose. The retransition and the coda are composed and recorded, not heard as a form (R-503), so 80
  * of the 300 sections are not heard; the rows of key and meter are in docs/main-and-subordinate.md.
+ * The Andante and small rondo forms (P52 B5, R-520) run in C major 4/4 and A minor 3/4 at one size each (44, 56, 68 and 64
+ * bars) and were measured at 20, 80, 36 (ABA), 20, 120, 43 (ABAB), 20, 140, 46 (ABABA) and 20, 120, 46 (ABACA): every run
+ * composes. The retransitions and the coda are composed and recorded, not heard as a form (R-503); the rows of key and meter
+ * are in docs/rondo.md.
  */
 typedef struct {
     const char *kind;
@@ -644,6 +712,10 @@ static const Baseline BASELINES[] = {
     {"scherzo", 34, 272, 28},
     {"figured-variations", 39, 272, 126},
     {"main-and-subordinate", 40, 220, 58},
+    {"andante-aba", 20, 80, 36},
+    {"andante-abab", 20, 120, 43},
+    {"small-rondo-ababa", 20, 140, 46},
+    {"small-rondo-abaca", 20, 120, 46},
 };
 
 static const Baseline *baseline_of(const char *kind) {

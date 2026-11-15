@@ -102,9 +102,14 @@ static size_t sizes_of(Size *out) {
     /* The main and subordinate themes (P51 B7): 48 and 57 bars in both keys, 4/4 (the form lists no meters). */
     out[n++] = (Size){"main-and-subordinate", 48, 0};
     out[n++] = (Size){"main-and-subordinate", 57, 0};
+    /* The Andante and small rondo forms (P52 B5): one size each, in both keys, 4/4. */
+    out[n++] = (Size){"andante-aba", 44, 0};
+    out[n++] = (Size){"andante-abab", 56, 0};
+    out[n++] = (Size){"small-rondo-ababa", 68, 0};
+    out[n++] = (Size){"small-rondo-abaca", 64, 0};
     return n;
 }
-#define MAX_SIZES 32
+#define MAX_SIZES 48
 
 static uint64_t fnv1a(const char *text) {
     uint64_t hash = 14695981039346656037ULL;
