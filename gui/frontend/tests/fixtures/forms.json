@@ -63,6 +63,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -124,6 +125,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -192,6 +194,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -253,6 +256,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -355,6 +359,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -416,6 +421,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -482,6 +488,7 @@
        "motive": null,
        "returns": "A",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -550,6 +557,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -611,6 +619,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -677,6 +686,7 @@
        "motive": null,
        "returns": "A",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -779,6 +789,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -834,6 +845,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": {
         "value": "dominant",
@@ -898,6 +910,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -960,6 +973,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1015,6 +1029,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": {
         "value": "dominant",
@@ -1079,6 +1094,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1175,6 +1191,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1230,6 +1247,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1292,6 +1310,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1347,6 +1366,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1402,6 +1422,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1464,6 +1485,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1519,6 +1541,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1574,6 +1597,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1629,6 +1653,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1691,6 +1716,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1746,6 +1772,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1801,6 +1828,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1856,6 +1884,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1911,6 +1940,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -1973,6 +2003,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2028,6 +2059,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2083,6 +2115,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2138,6 +2171,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2193,6 +2227,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2248,6 +2283,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2310,6 +2346,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2365,6 +2402,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2420,6 +2458,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2475,6 +2514,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2530,6 +2570,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2585,6 +2626,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2640,6 +2682,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2702,6 +2745,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2757,6 +2801,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2812,6 +2857,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2867,6 +2913,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2922,6 +2969,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -2977,6 +3025,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3032,6 +3081,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3087,6 +3137,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3149,6 +3200,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3204,6 +3256,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3259,6 +3312,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3314,6 +3368,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3369,6 +3424,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3424,6 +3480,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3479,6 +3536,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3534,6 +3592,7 @@
        "motive": "diminish",
        "returns": "theme",
        "variation": "ornament",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3589,6 +3648,7 @@
        "motive": "interval-change",
        "returns": "theme",
        "variation": "reharmonize",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3683,6 +3743,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3751,6 +3812,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3812,6 +3874,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -3912,6 +3975,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": [
         "bass"
        ],
@@ -3975,6 +4039,7 @@
        "motive": null,
        "returns": "layer 1",
        "variation": "exact",
+       "setting": null,
        "layers": [
         "bass",
         "inner_voice",
@@ -4047,6 +4112,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": [
         "bass"
        ],
@@ -4110,6 +4176,7 @@
        "motive": null,
        "returns": "layer 1",
        "variation": "exact",
+       "setting": null,
        "layers": [
         "bass",
         "inner_voice"
@@ -4174,6 +4241,7 @@
        "motive": null,
        "returns": "layer 1",
        "variation": "exact",
+       "setting": null,
        "layers": [
         "bass",
         "inner_voice",
@@ -4246,6 +4314,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": [
         "bass"
        ],
@@ -4309,6 +4378,7 @@
        "motive": null,
        "returns": "layer 1",
        "variation": "exact",
+       "setting": null,
        "layers": [
         "bass",
         "inner_voice"
@@ -4373,6 +4443,7 @@
        "motive": null,
        "returns": "layer 1",
        "variation": "exact",
+       "setting": null,
        "layers": [
         "bass",
         "inner_voice",
@@ -4438,6 +4509,7 @@
        "motive": null,
        "returns": "layer 1",
        "variation": "exact",
+       "setting": null,
        "layers": [
         "bass",
         "inner_voice",
@@ -4554,6 +4626,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -4615,6 +4688,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": {
         "value": "dominant",
@@ -4682,6 +4756,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -4750,6 +4825,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -4811,6 +4887,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": {
         "value": "dominant",
@@ -4878,6 +4955,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -4990,6 +5068,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5045,6 +5124,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": {
         "value": "dominant",
@@ -5112,6 +5192,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5174,6 +5255,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5229,6 +5311,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": {
         "value": "dominant",
@@ -5296,6 +5379,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5491,6 +5575,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5552,6 +5637,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5607,6 +5693,7 @@
        "motive": null,
        "returns": "P",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5662,6 +5749,7 @@
        "motive": null,
        "returns": "P",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5717,6 +5805,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5778,6 +5867,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5839,6 +5929,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5894,6 +5985,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -5954,6 +6046,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6021,6 +6114,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6118,6 +6212,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6173,6 +6268,7 @@
        "motive": null,
        "returns": "P",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6228,6 +6324,7 @@
        "motive": null,
        "returns": "P",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6283,6 +6380,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6344,6 +6442,7 @@
        "motive": null,
        "returns": "A",
        "variation": "varied",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6441,6 +6540,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6496,6 +6596,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6556,6 +6657,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6742,6 +6844,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6797,6 +6900,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6858,6 +6962,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6919,6 +7024,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -6980,6 +7086,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7040,6 +7147,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7107,6 +7215,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7162,6 +7271,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7223,6 +7333,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7284,6 +7395,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7345,6 +7457,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7406,6 +7519,7 @@
        "motive": null,
        "returns": "theme",
        "variation": "figurate",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7467,6 +7581,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7527,6 +7642,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7628,6 +7744,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7689,6 +7806,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7750,6 +7868,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7811,6 +7930,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7871,6 +7991,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7932,6 +8053,7 @@
        "motive": null,
        "returns": "A",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -7993,6 +8115,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8061,6 +8184,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8122,6 +8246,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8183,6 +8308,7 @@
        "motive": "invert tonal=1",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8288,6 +8414,7 @@
        "motive": "augment",
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8343,6 +8470,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8403,6 +8531,7 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8464,6 +8593,7 @@
        "motive": null,
        "returns": "A",
        "variation": "exact",
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
@@ -8525,6 +8655,3953 @@
        "motive": null,
        "returns": null,
        "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "andante-aba",
+   "label": "Andante form (ABA)",
+   "closing": true,
+   "modulates": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "subordinate"
+   ],
+   "meters": [],
+   "tempo": 72,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 44,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A1",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "embellish",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "andante-abab",
+   "label": "Andante form (ABAB)",
+   "closing": true,
+   "modulates": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "subordinate"
+   ],
+   "meters": [],
+   "tempo": 72,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 56,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A1",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "embellish",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T1",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B1",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "B",
+       "variation": "exact",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": "major",
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "small-rondo-ababa",
+   "label": "Small rondo (ABABA)",
+   "closing": true,
+   "modulates": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "subordinate"
+   ],
+   "meters": [],
+   "tempo": 88,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 68,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A1",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "embellish",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T1",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B1",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "B",
+       "variation": "exact",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": "major",
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R1",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A2",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "setting",
+       "setting": "arpeggiated",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "small-rondo-abaca",
+   "label": "Small rondo (ABACA)",
+   "closing": true,
+   "modulates": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "subordinate",
+    "second"
+   ],
+   "meters": [],
+   "tempo": 88,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 64,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A1",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "embellish",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "C",
+       "letter": "C",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "second",
+        "end": "second"
+       },
+       "motive": "interval-change",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R1",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A2",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "setting",
+       "setting": "arpeggiated",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "large-rondo",
+   "label": "Large rondo (ABA-C-ABA)",
+   "closing": true,
+   "modulates": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "subordinate",
+    "trio"
+   ],
+   "meters": [],
+   "tempo": 132,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 88,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A1",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "embellish",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "C",
+       "letter": "C",
+       "role": {
+        "value": "contrast",
+        "label": "Contrast"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "trio",
+        "end": "trio"
+       },
+       "motive": "interval-change",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R1",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A2",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "reharmonize",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T1",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B1",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "B",
+       "variation": "exact",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": "major",
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R2",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A3",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "setting",
+       "setting": "arpeggiated",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      }
+     ]
+    }
+   ],
+   "roles": [],
+   "loop_roles": [],
+   "cadences": null,
+   "default_ending": null
+  },
+  {
+   "name": "sonata-rondo",
+   "label": "Sonata rondo (ABA-C-ABA)",
+   "closing": true,
+   "modulates": true,
+   "sections": "sizes",
+   "versions": [
+    {
+     "value": "piece",
+     "label": "Piece",
+     "loop": false
+    }
+   ],
+   "settings": {
+    "modulate": false,
+    "accompaniment": "optional",
+    "voicing": false,
+    "section_fills": false
+   },
+   "regions": [
+    "subordinate",
+    "development",
+    "sequence"
+   ],
+   "meters": [],
+   "tempo": 132,
+   "repeats": [],
+   "parts": null,
+   "performed": false,
+   "sizes": [
+    {
+     "bars": 88,
+     "count": 0,
+     "default": true,
+     "sections": [
+      {
+       "name": "A",
+       "letter": "A",
+       "role": {
+        "value": "theme",
+        "label": "Theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "subordinate"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "subordinate",
+        "end": "subordinate"
+       },
+       "motive": "invert tonal=1",
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A1",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "embellish",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "P",
+       "letter": "C",
+       "role": {
+        "value": "pattern",
+        "label": "Pattern"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "imperfect-authentic",
+        "label": "imperfect authentic",
+        "core": "IAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "development",
+        "end": "development"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "S",
+       "letter": "C",
+       "role": {
+        "value": "sequence",
+        "label": "Sequence"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "antecedent",
+        "label": "Antecedent"
+       },
+       "ending": {
+        "value": "consequent",
+        "label": "Consequent"
+       },
+       "cadence": {
+        "value": "imperfect-authentic",
+        "label": "imperfect authentic",
+        "core": "IAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "sequence",
+        "end": "sequence"
+       },
+       "motive": null,
+       "returns": "P",
+       "variation": "exact",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "consequent basic idea"
+         ]
+        },
+        {
+         "slot": "contrasting",
+         "ideas": [
+          "contrasting idea",
+          "consequent contrasting idea"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R1",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A2",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "reharmonize",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "T1",
+       "letter": "T",
+       "role": {
+        "value": "transition",
+        "label": "Transition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "B1",
+       "letter": "B",
+       "role": {
+        "value": "subordinate",
+        "label": "Subordinate theme"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "B",
+       "variation": "exact",
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": "major",
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "R2",
+       "letter": "R",
+       "role": {
+        "value": "retransition",
+        "label": "Retransition"
+       },
+       "bars": 4,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "half",
+        "label": "half",
+        "core": "HC"
+       },
+       "closed": false,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "A3",
+       "letter": "A",
+       "role": {
+        "value": "return",
+        "label": "Return"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": "A",
+       "variation": "setting",
+       "setting": "arpeggiated",
+       "layers": "all",
+       "pedal": null,
+       "slots": [
+        {
+         "slot": "basic",
+         "ideas": [
+          "basic idea",
+          "repetition"
+         ]
+        },
+        {
+         "slot": "continuation",
+         "ideas": [
+          "fragment 1",
+          "fragment 2"
+         ]
+        },
+        {
+         "slot": "cadential",
+         "ideas": [
+          "cadential"
+         ]
+        }
+       ],
+       "leads_in": false,
+       "connective": null,
+       "figure": null,
+       "mode": null,
+       "independent": false,
+       "lyric": false
+      },
+      {
+       "name": "K",
+       "letter": "K",
+       "role": {
+        "value": "coda",
+        "label": "Coda"
+       },
+       "bars": 8,
+       "beats": null,
+       "beginning": {
+        "value": "presentation",
+        "label": "Presentation"
+       },
+       "ending": {
+        "value": "continuation",
+        "label": "Continuation"
+       },
+       "cadence": {
+        "value": "perfect-authentic",
+        "label": "perfect authentic",
+        "core": "PAC"
+       },
+       "closed": true,
+       "keys": {
+        "start": "home",
+        "end": "home"
+       },
+       "motive": null,
+       "returns": null,
+       "variation": null,
+       "setting": null,
        "layers": "all",
        "pedal": null,
        "slots": [
