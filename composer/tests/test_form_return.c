@@ -37,6 +37,11 @@
  *                each; A1's harmony, bass and melody are A's and its inner voice 1 has notes where A's has none; with a
  *                request accompaniment of arpeggiated A1's return is set in alberti, and an alberti setting in 6/8 is
  *                built as oom-pah
+ *   home         the stand-in of R-524 (andante-abab with B1 returning B reharmonized in the home mode; 56 bars,
+ *                modulating), C major and A minor in 4/4, G major and D minor in 2/4, seeds 1 to 10, each seed tried
+ *                again from the next seeds up to 16 times as the piece entry does (PIECE_SEED_TRIES): at least 9 of 10
+ *                compose in each; B1's key lane is the home key throughout, its RETURN has across_modes, its melody has
+ *                B's onsets and durations and B's pitches moved by the tonic step (in minor also mapped into the minor)
  *   reregister   rounded binary with A' re-registered, with and without an accompaniment: the melody and the inner
  *                voices are an octave from A's and inside the range; with the default range a run completes only when
  *                one octave fits, else it is stuck at the returns
@@ -881,6 +886,139 @@ static int test_reregister(void) {
     return 0;
 }
 
+/* ------------------------------------------------------------ home */
+
+#define HOME_SEEDS 10
+#define HOME_SEED_TRIES 16
+#define HOME_COMPOSED_LEAST 9
+
+/* The stand-in form of R-524: andante-abab (56 bars, modulating) with B1 returning B reharmonized in the home mode. */
+static const char HOME_FORM[] =
+    "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"home-form\",\"label\":\"Home form\",\"closing\":true,"
+    "\"modulates\":true,\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
+    "\"sizes\":[{\"bars\":56,\"default\":true,\"sections\":["
+    "{\"name\":\"A\",\"letter\":\"A\",\"role\":\"theme\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"closed\":true},"
+    "{\"name\":\"T\",\"letter\":\"T\",\"role\":\"transition\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"half\",\"keys\":{\"end\":\"subordinate\"}},"
+    "{\"name\":\"B\",\"letter\":\"B\",\"role\":\"subordinate\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"keys\":{\"start\":\"subordinate\",\"end\":\"subordinate\"},\"motive\":\"invert tonal=1\"},"
+    "{\"name\":\"R\",\"letter\":\"R\",\"role\":\"retransition\",\"bars\":4,\"cadence\":\"half\"},"
+    "{\"name\":\"A1\",\"letter\":\"A\",\"role\":\"return\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"closed\":true,\"returns\":\"A\",\"variation\":\"embellish\"},"
+    "{\"name\":\"T1\",\"letter\":\"T\",\"role\":\"transition\",\"bars\":4,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"half\"},"
+    "{\"name\":\"B1\",\"letter\":\"B\",\"role\":\"subordinate\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
+    "\"cadence\":\"perfect-authentic\",\"returns\":\"B\",\"variation\":\"reharmonize\",\"mode\":\"home\"},"
+    "{\"name\":\"K\",\"letter\":\"K\",\"role\":\"coda\",\"bars\":8,\"cadence\":\"perfect-authentic\",\"closed\":true}]}]}";
+
+typedef struct {
+    const char *name;
+    int pitch_class;
+    KeyStructureMode mode;
+    int beats;
+    int unit;
+} HomeRow;
+
+/* The keys of the key lane under a section; every one must be the home key. */
+static size_t keys_under(const PiecePlan *plan, NodeId section, AnalysisKey *out, size_t capacity) {
+    LaneSpanId ids[32];
+    size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 32);
+    assert(count >= 1 && count <= capacity);
+    for (size_t i = 0; i < count; i++) {
+        out[i] = plan_lane_span_payload(plan, ids[i])->key;
+    }
+    return count;
+}
+
+/* B1 against B: the key lane is home, the return has across_modes, the melody is B's moved by the tonic step (R-524). */
+static void check_home(const PiecePlan *plan, NodeId source, NodeId section, const HomeRow *row) {
+    static Event a[MAX_EVENTS];
+    static Event b[MAX_EVENTS];
+    AnalysisKey source_key;
+    AnalysisKey keys[32];
+    const PlanConstraint *back = return_of(plan, section);
+    assert(back && back->params.section_return.section == source &&
+           back->params.section_return.variation == PLAN_RETURN_REHARMONIZE && back->params.section_return.across_modes);
+    assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
+    assert(keys_under(plan, source, &source_key, 1) == 1);
+    size_t key_count = keys_under(plan, section, keys, 32);
+    for (size_t i = 0; i < key_count; i++) {
+        assert(analysis_key_tonic_pitch_class(&keys[i]) == row->pitch_class && keys[i].mode == row->mode);
+    }
+    int step = ((row->pitch_class - analysis_key_tonic_pitch_class(&source_key)) % 12 + 12) % 12;
+    int shift = step > 6 ? step - 12 : step;
+    size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
+    size_t bn = events(plan, section, PLAN_LANE_MELODY, 0, b);
+    assert(an == bn && an > 0);
+    for (size_t i = 0; i < an; i++) {
+        int pitch = a[i].pitch + shift;
+        if (row->mode == KEY_STRUCTURE_MODE_MINOR) {
+            int degree = ((pitch - row->pitch_class) % 12 + 12) % 12;
+            pitch -= degree == 4 || degree == 9 ? 1 : 0;
+        }
+        assert(equal(a[i].at, b[i].at) && equal(a[i].length, b[i].length) && b[i].pitch == pitch);
+    }
+}
+
+static int test_home(void) {
+    static const HomeRow ROWS[] = {
+        {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4},
+        {"A minor 4/4", 9, KEY_STRUCTURE_MODE_MINOR, 4, 4},
+        {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR, 2, 4},
+        {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR, 2, 4},
+    };
+    FormSpec *form = NULL;
+    FormSpecError error;
+    int failed = 0;
+    if (form_spec_parse(HOME_FORM, &form, &error) != FORM_SPEC_OK) {
+        fprintf(stderr, "home form: %s: %s\n", error.path, error.message);
+        return 2;
+    }
+    for (size_t r = 0; r < sizeof(ROWS) / sizeof(ROWS[0]); r++) {
+        size_t composed = 0;
+        size_t first = 0;
+        for (unsigned long seed = 1; seed <= HOME_SEEDS; seed++) {
+            bool done = false;
+            for (unsigned long extra = 0; extra < HOME_SEED_TRIES && !done; extra++) {
+                PieceRequest request;
+                PiecePlan *plan = NULL;
+                ComposeOutcome outcome;
+                ComposeConfig config;
+                memset(&request, 0, sizeof(request));
+                request.form = form->name;
+                request.key = plan_key_of_pitch_class(ROWS[r].pitch_class, ROWS[r].mode);
+                request.meter.beats_per_bar = ROWS[r].beats;
+                request.meter.beat_unit = ROWS[r].unit;
+                request.modulate = true;
+                assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
+                memset(&config, 0, sizeof(config));
+                config.seed = seed + extra;
+                config.form = form;
+                done = compose_run(plan, &config, &outcome) == PIECE_OK;
+                if (done) {
+                    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+                    size_t count = sections_of(plan, sections);
+                    assert(count == 8);
+                    check_home(plan, sections[2], sections[6], &ROWS[r]);
+                    first += extra == 0;
+                }
+                compose_outcome_destroy(&outcome);
+                plan_destroy(plan);
+            }
+            composed += done;
+        }
+        printf("%s: %zu of %d seeds compose (%zu on the first seed alone), B1 returned in the home mode\n", ROWS[r].name,
+               composed, HOME_SEEDS, first);
+        if (composed < HOME_COMPOSED_LEAST) {
+            fprintf(stderr, "%s: at least %d of %d seeds should compose\n", ROWS[r].name, HOME_COMPOSED_LEAST, HOME_SEEDS);
+            failed = 1;
+        }
+    }
+    form_spec_destroy(form);
+    return failed;
+}
+
 int main(int argc, char **argv) {
     const char *mode = argc > 1 ? argv[1] : "";
     if (strcmp(mode, "smoke") == 0) {
@@ -907,6 +1045,9 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "reregister") == 0) {
         return test_reregister();
     }
-    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|varied|embellish|setting|reregister\n");
+    if (strcmp(mode, "home") == 0) {
+        return test_home();
+    }
+    fprintf(stderr, "usage: test_form_return smoke|exact|ornament|reharmonize|varied|embellish|setting|reregister|home\n");
     return 2;
 }

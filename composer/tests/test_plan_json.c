@@ -261,7 +261,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     case PLAN_CONSTRAINT_RETURN:
         return a->params.section_return.section == b->params.section_return.section &&
                a->params.section_return.variation == b->params.section_return.variation &&
-               a->params.section_return.setting == b->params.section_return.setting;
+               a->params.section_return.setting == b->params.section_return.setting &&
+               a->params.section_return.across_modes == b->params.section_return.across_modes;
     case PLAN_CONSTRAINT_LAYERS:
         return a->params.layers.lanes == b->params.layers.lanes;
     case PLAN_CONSTRAINT_SECTION_LETTER:
@@ -993,6 +994,49 @@ static void test_section_constraints(void) {
 
 static char *replace_all(const char *text, const char *from, const char *to);
 
+/* A reharmonized return across modes (R-524) round-trips byte for byte; the member is written only when set and refused on any other variation. */
+static void test_across_modes_return(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "across");
+    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
+    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
+    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
+    back.params.section_return.section = a;
+    back.params.section_return.variation = PLAN_RETURN_EXACT;
+    back.params.section_return.across_modes = true;
+    /* only a reharmonized return crosses modes */
+    assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
+    back.params.section_return.variation = PLAN_RETURN_REHARMONIZE;
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
+    PlanJsonError error;
+    char *text = plan_to_json(plan, &error);
+    assert(text != NULL && strstr(text, "\"variation\": \"reharmonize\"") != NULL &&
+           strstr(text, "\"across_modes\": true") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+    free(again);
+    plan_destroy(parsed);
+    /* across_modes on an exact return is refused at its path */
+    char *exact = replace_all(text, "\"variation\": \"reharmonize\"", "\"variation\": \"exact\"");
+    PiecePlan *refused = NULL;
+    assert(exact && plan_from_json(exact, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    assert(strstr(error.message, "only a reharmonized return crosses modes") != NULL &&
+           strstr(error.path, ".constraints[0].across_modes") != NULL);
+    free(exact);
+    /* a reharmonized return that does not cross modes writes no member */
+    back.params.section_return.across_modes = false;
+    assert(plan_node_remove_constraint(plan, a2, plan_node_constraint_count(plan, a2) - 1) == PLAN_OK);
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
+    char *plain = plan_to_json(plan, &error);
+    assert(plain && strstr(plain, "across_modes") == NULL);
+    free(plain);
+    free(text);
+    plan_destroy(plan);
+}
+
 /* A return of variation setting (R-518) round-trips byte for byte with its pattern; the member is required by it and refused by any other. */
 static void test_setting_return(void) {
     PiecePlan *plan = plan_create();
@@ -1663,6 +1707,7 @@ int main(void) {
     test_section_constraints();
     test_embellish_return();
     test_setting_return();
+    test_across_modes_return();
     test_empty_plan();
     test_malformed_input();
     test_plan_files();
