@@ -1039,10 +1039,13 @@ static cJSON *changes_json(const Row *row) {
     bool copied = form_return_copies(row->plan, row->node);
     cJSON *entry = cJSON_CreateObject();
     const char *setting = return_setting_name(row);
+    KeyStructureMode to_mode = KEY_STRUCTURE_MODE_MAJOR;
+    bool mapped = form_return_mode_change(row->plan, row->node, &to_mode);
+    const char *mode = mapped ? (to_mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major") : NULL;
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
               cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation)) &&
-              api_add(entry, "setting", string_or_null(setting));
-    char text[192] = "";
+              api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "mode", string_or_null(mode));
+    char text[256] = "";
     size_t changed = 0;
     size_t chords = 0;
     size_t added = 0;
@@ -1063,6 +1066,10 @@ static cJSON *changes_json(const Row *row) {
         }
         if (setting) {
             snprintf(part, sizeof part, "accompaniment: %s (new setting)", setting);
+            append_part(text, sizeof text, part);
+        }
+        if (mode) {
+            snprintf(part, sizeof part, "mode: mapped into %s", mode);
             append_part(text, sizeof text, part);
         }
         if (changed > 0) {

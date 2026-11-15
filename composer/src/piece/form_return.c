@@ -499,6 +499,22 @@ bool form_return_copies(const PiecePlan *plan, NodeId section) {
     return return_geometry(plan, section, &ret);
 }
 
+bool form_return_mode_change(const PiecePlan *plan, NodeId section, KeyStructureMode *to) {
+    PlanReturn ret;
+    int shift;
+    int to_mode;
+    if (!return_geometry(plan, section, &ret)) {
+        return false;
+    }
+    PlanSpan from = plan_node_span(plan, ret.section);
+    PlanSpan target = plan_node_span(plan, section);
+    if (return_key_shift(plan, from, plan, target, &shift) || !return_mode_shift_by(plan, from, plan, target, &shift, &to_mode)) {
+        return false;
+    }
+    *to = (KeyStructureMode)to_mode;
+    return true;
+}
+
 bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation) {
     PlanReturn ret;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
