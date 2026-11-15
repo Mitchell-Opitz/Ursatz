@@ -1,0 +1,111 @@
+#include "server.h"
+
+#include <civetweb.h>
+
+#include "routes/analyzer.h"
+#include "routes/composer.h"
+#include "routes/corpus.h"
+#include "routes/health.h"
+#include "routes/jobs.h"
+#include "routes/links.h"
+#include "routes/materials.h"
+#include "routes/styles.h"
+#include "service/collection_service.h"
+#include "service/job_queue.h"
+#include "service/link_service.h"
+#include "service/material_service.h"
+#include "service/subject_service.h"
+
+static const char *kCollectionsDir = "collections";
+static const char *kMaterialsDir = "materials";
+static const char *kSubjectsDir = "subjects";
+static const char *kLinksDir = "links";
+static const char *kLegacyCorpusDbPath = "data/corpus.db";
+
+struct mg_context *ursatz_gui_server_start(const char *listen_port,
+                                            const char *frontend_dir) {
+  const char *options[] = {
+      "listening_ports", listen_port,
+      "document_root", frontend_dir,
+      "num_threads", "4",
+      NULL,
+  };
+
+  /* Collections are files under collections/ (see
+   * service/collection_service.h); the store is prepared once here. */
+  if (!ursatz_gui_collection_service_init(kCollectionsDir, kLegacyCorpusDbPath)) {
+    return NULL;
+  }
+
+  /* Materials and subjects are files too (service/material_service.h,
+   * service/subject_service.h), prepared beside collections. */
+  if (!ursatz_gui_material_service_init(kMaterialsDir)) {
+    ursatz_gui_collection_service_shutdown();
+    return NULL;
+  }
+  if (!ursatz_gui_subject_service_init(kSubjectsDir)) {
+    ursatz_gui_material_service_shutdown();
+    ursatz_gui_collection_service_shutdown();
+    return NULL;
+  }
+
+  /* Motive link runs and their cache are files too (service/link_service.h). */
+  if (!ursatz_gui_link_service_init(kLinksDir)) {
+    ursatz_gui_subject_service_shutdown();
+    ursatz_gui_material_service_shutdown();
+    ursatz_gui_collection_service_shutdown();
+    return NULL;
+  }
+
+  /* Long Composer runs go to worker threads (service/job_queue.h); the workers are up before any route. */
+  if (!ursatz_gui_jobs_start(0)) {
+    ursatz_gui_link_service_shutdown();
+    ursatz_gui_subject_service_shutdown();
+    ursatz_gui_material_service_shutdown();
+    ursatz_gui_collection_service_shutdown();
+    return NULL;
+  }
+
+  /* Motifs analyzed before tone labels existed are analyzed again, once (R-204). */
+  ursatz_gui_material_migrate_tones(kMaterialsDir);
+
+  /* Motifs without segments are given a proposal, once (R-312). */
+  ursatz_gui_material_migrate_segments(kMaterialsDir);
+
+  /* Themes of the old body are deleted, once (R-205). */
+  ursatz_gui_material_clear_themes(kMaterialsDir);
+
+  struct mg_context *ctx = mg_start(NULL, NULL, options);
+  if (!ctx) {
+    ursatz_gui_jobs_stop();
+    ursatz_gui_link_service_shutdown();
+    ursatz_gui_subject_service_shutdown();
+    ursatz_gui_material_service_shutdown();
+    ursatz_gui_collection_service_shutdown();
+    return NULL;
+  }
+
+  /* Route registration: each tool module registers itself here. This is
+   * the only place that wires tool routes into the running server. */
+  ursatz_gui_health_register(ctx);
+  ursatz_gui_analyzer_register(ctx);
+  ursatz_gui_corpus_register(ctx);
+  ursatz_gui_composer_register(ctx);
+  ursatz_gui_styles_register(ctx);
+  ursatz_gui_materials_register(ctx);
+  ursatz_gui_links_register(ctx);
+  ursatz_gui_jobs_register(ctx);
+
+  return ctx;
+}
+
+void ursatz_gui_server_stop(struct mg_context *ctx) {
+  if (ctx) {
+    mg_stop(ctx);
+  }
+  ursatz_gui_jobs_stop(); /* cancels what runs and joins the workers, after the last request is answered */
+  ursatz_gui_link_service_shutdown();
+  ursatz_gui_subject_service_shutdown();
+  ursatz_gui_material_service_shutdown();
+  ursatz_gui_collection_service_shutdown();
+}

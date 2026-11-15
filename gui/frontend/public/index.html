@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ursatz</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="brand-name">URSATZ</span>
+      <span class="brand-version">0.1.0-dev</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <section id="materials-projects" class="materials-projects">
+        <div class="sidebar-label">Project</div>
+        <select id="materials-project-select" class="materials-project-select" aria-label="Project"></select>
+        <div class="materials-project-actions">
+          <button id="materials-project-new" type="button">New</button>
+          <button id="materials-project-rename" type="button">Rename</button>
+          <button id="materials-project-delete" type="button">Delete</button>
+        </div>
+        <div id="materials-projects-status" class="materials-status" role="status"></div>
+      </section>
+      <div class="sidebar-label">Tools</div>
+      <ul id="tool-list" class="tool-list"></ul>
+      <section id="tags-panel" class="sidebar-groups">
+        <div class="sidebar-label">Tags</div>
+        <div id="tags-panel-style-prompt"></div>
+        <div id="tags-panel-style-result" class="style-result" role="status"></div>
+      </section>
+      <section id="subjects-panel" class="sidebar-groups">
+        <div class="sidebar-label">Subjects</div>
+      </section>
+    </nav>
+
+    <main class="content" id="content"></main>
+  </div>
+
+  <script src="vendor/opensheetmusicdisplay/opensheetmusicdisplay.min.js"></script>
+  <script src="motive-links-model.js"></script>
+  <script src="analysis-tabs.js"></script>
+  <script src="export-control.js"></script>
+  <script src="score-layers.js"></script>
+  <script src="inspector-model.js"></script>
+  <script src="inspector-view.js"></script>
+  <script src="score-geometry.js"></script>
+  <script src="score-overlay.js"></script>
+  <script src="score-notes.js"></script>
+  <script src="workspace-state.js"></script>
+  <script src="instruments.js"></script>
+  <script src="sound-sources.js"></script>
+  <script src="playback-engine.js"></script>
+  <script src="reverb.js"></script>
+  <script src="score-workspace.js"></script>
+  <script src="upload-queue.js"></script>
+  <script src="piece-metadata.js"></script>
+  <script src="tags-panel.js"></script>
+  <script src="style-view.js"></script>
+  <script src="notation-panel.js"></script>
+  <script src="request.js"></script>
+  <script src="subjects-panel.js"></script>
+  <script src="vocabulary.js"></script>
+  <script src="backend-jobs.js"></script>
+  <script src="materials-model.js"></script>
+  <script src="themes-model.js"></script>
+  <script src="variant-tree.js"></script>
+  <script src="variant-tree-view.js"></script>
+  <script src="motif-compare-view.js"></script>
+  <script src="motif-detail-view.js"></script>
+  <script src="theme-detail-view.js"></script>
+  <script src="materials-view.js"></script>
+  <script src="themes-view.js"></script>
+  <script src="pieces-model.js"></script>
+  <script src="pieces-view.js"></script>
+  <script src="subjects-view.js"></script>
+  <script src="motive-links-view.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

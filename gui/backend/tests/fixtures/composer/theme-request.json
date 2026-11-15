@@ -1,0 +1,41 @@
+{
+	"schema":	"ursatz-theme-request",
+	"schema_version":	2,
+	"key":	"C",
+	"into":	"sentence",
+	"mode":	"minor",
+	"meter":	"4/4",
+	"bars":	8,
+	"cadence":	"PAC",
+	"motives":	[{
+			"id":	"M1",
+			"form":	"full",
+			"degrees":	"1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+			"pickup":	"0",
+			"harmony":	"I",
+			"features":	[],
+			"role":	"melodic"
+		}],
+	"slots":	{
+		"basic":	"M1",
+		"cadential":	"M1",
+		"contrasting":	null,
+		"continuation":	null
+	},
+	"ideas":	{
+	},
+	"chords":	[],
+	"accompaniment":	{
+		"pattern":	"motive",
+		"motive":	{
+			"form":	"full",
+			"degrees":	"1,:q 5,:q 3,:q 5,:q",
+			"pickup":	"0",
+			"harmony":	null,
+			"features":	[],
+			"role":	"accompaniment"
+		}
+	},
+	"voicing":	null,
+	"tempo":	null
+}

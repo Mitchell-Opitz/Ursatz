@@ -1,0 +1,5 @@
+build/
+*.db
+*_log.txt
+materials_*/
+subjects_*/

@@ -1,0 +1,234 @@
+# Theme and piece views
+
+The Themes view, the Pieces view and item references in the GUI. [Docs index](../README.md).
+
+## Themes view
+
+A theme's detail is a page in four tabs at the full width (`theme-detail-view.js`,
+`ThemeDetailView`; the editor is in `themes-view.js`, the helpers in
+`themes-model.js`, global `ThemesModel`). The open tab is remembered. It edits
+the theme body the backend composes (see [Theme bodies and version files](../storage.md#theme-bodies-and-version-files)).
+
+- Theme tab: subjects, mode (major, minor, From the brief; the first basic
+  motif sets it to that motif's mode unless it was changed by hand), meter and
+  tempo (blank takes the brief's). An Advanced section, closed by default,
+  holds the accompaniment, the brief, the switches, weight, Check with the
+  Analyzer and Seed. Below is the composed theme (Result).
+- Structure tab: form: into (sentence, period, hybrid with its pairing, and the
+  first cadence for a period or hybrid), bars (3 to 16, `theme_bars`) and cadence, all from the Composer's
+  vocabulary. A Construction block (P47, R-468) shows under the form when the bars are not 4 or 8
+  (`theme_bars_regular`) or the construction is given, and can be opened by hand. "Bars set by" is "Chosen by the
+  Composer" (the default: the body's `form.construction` is `null`) or "Given": the bars of each idea of the form's
+  pairing (from `theme_ideas`) and up to 3 extensions, each a kind (`theme_extensions`: repeat, stretch, addition,
+  evaded), the idea it follows (only the ideas of that kind the form has), bars (0 takes the Composer's default) and,
+  for a repeat, Varied. The ideas and extensions must add up to the bars: the Composer checks it with the rest of the
+  form, at `/construction`, and a refusal marks the block. The body keeps `form.construction` as
+  `{ideas: {<idea>: bars}, extensions: [{kind, idea, bars, varied}]}` and sent as the request's `construction`; a body
+  without it reads as chosen. The same block is the game loop section editor's "Theme, given". Development (Melody, Balanced, Theme; Balanced by default) says
+  how far the theme strays from the motif: Melody repeats, Theme develops
+  (Schoenberg ch. XI). It is the body's `form.development`, sent to the
+  Composer as the request's `development`; a body saved without it reads as
+  Balanced. A theme is always in C: there is no key. The slots are below.
+- The Save row (version note, Save, Compose) and the status line sit above the tabs, so they show on Theme,
+  Structure, Used by and Other. Saves, errors and progress show in that one line whatever tab is open. After Save or
+  Compose the page opens again on the tab that was open.
+- Used by tab: the items that use the theme. Other tab: the versions with their
+  notes (View opens one read only) and Derived from.
+- Slots: the slots, the required one and the largest number a theme may have come from the Composer vocabulary
+  (`theme_slots`), and an archetype's beginning and ending from `piece_intos`. Only the slots the form has are shown. Basic idea (required) is always
+  there; Contrasting idea comes with an antecedent or cbi beginning or a
+  consequent ending, Continuation with a continuation ending, Cadential with a
+  continuation or cadential ending. Each is a motif picker: a project select, a
+  name search, the motif and its version (current by default). Only a full
+  melodic motif is accepted. The picker shows the motif's degrees and a Play
+  button (the render route). Beside it a Use select takes the motif itself or
+  one of its saved variants (rejected ones left out; the derivation is the
+  option title); a variant stores its own item id and version. The same motif
+  or variant may fill several slots.
+- More slots (closed by default): every idea of the form but the basic idea,
+  each "From <slot>" until it gets a motif (and Use) of its own. Ideas are kept
+  in the body's `ideas`; those the form does not have are dropped on save. The
+  result table says "From its own motif" for them.
+- Chords: under the slots, one text field per bar of the theme (`Bar 1` to `Bar 16`),
+  placeholder `Composer`. Roman numerals in C, at most 2 a bar, `@` the beat a
+  chord starts on from 0. The Composer writes chords on the cells of the meter
+  only: a second chord at `@2` in 4/4, `@3` in 6/8, none in 2/4 and 3/4 (the
+  hint under the row follows the meter). The Composer checks the chords, like the
+  other values of the theme (meter, bars, hybrid, tempo, seed), while the form is edited
+  (`POST /api/materials/items/validate`, 400 ms after the last change): its message shows in the
+  Save row and the status line, as given, and the field its request path names is marked: a form field, the row of a
+  slot (`/slots/<slot>`) or of an idea (`/ideas/<name>`), or the chord row and the bar of the chord at `/chords/<index>`.
+  When that field is on a tab that is not open, the status line names the tab (`on Structure: ...`). It does not block the form: a
+  draft the Composer refuses still saves, and Compose refuses it with the same path. Only what the
+  form lacks to be a request (the basic motif, a motif for an idea, the accompaniment motif, a brief
+  for the mode From the brief) stops Save and Compose. The Composer reads a chord as a numeral with
+  onsets that rise, are whole or half beats, fall inside the bar and on a cell
+  of the meter; its message names the bar. Fewer bars clear the chords of the bars the theme
+  no longer has, with a status line. The body keeps `chords` as `[{bar, text}]` (bar from 0)
+  for filled bars only; the result lists them as Given chords. A Composer
+  refusal naming a bar shows in the status line.
+- Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
+  or a motif with the role accompaniment.
+- Brief: collections, composer / source / tag filters, subjects, projects,
+  single pieces and styles, listed as chips with Remove. An empty brief means
+  no style. Four checkboxes ("Use the brief's motive degrees, intervals,
+  rhythm, non-chord figures") are all on by default; an unchecked one goes to
+  `without`. Weight is Light (1/4), Normal (1/2) or Strong (1). Check with the
+  Analyzer and Seed (blank draws one).
+
+Save is the one save of the page: a changed name or project goes through the
+item update, a changed form writes a version without `result` with the note
+("What changed? (required)"), and nothing changed says "Nothing to save."
+Compose saves first when the form changed (the note is required), then calls the compose route with the buttons disabled
+and a spinner; a refusal shows the backend's message, which carries the
+Composer's message. A slot or accompaniment motif with a newer version shows
+"Source updated: <name> v<n>" with Update and compose (the compose route's
+`update_uses`) and Keep.
+
+The Result panel of the current version, and of any version opened from the
+versions list (read-only), has a row for each idea (idea, slot, motif, source,
+chain, connection), the brief's tempo, mode and note density, the motive
+categories read without, the style distance, the form heard, its construction (the sentence of the theme's `construction.text` that says why the theme is as long as
+it is, shown for a theme that has one) and the Analyzer
+check. A Development list names each composed idea's development in the
+Composer's summary line and, when the idea comes from one of the motif's
+segments, that segment's label; a version composed before the summary line
+shows the development text. An idea the Composer measured (Composer API 1.10)
+shows two lines, "intended:" (the summary) and "heard:" (what the Composer's
+recognizer hears in the idea's notes), then the score as a percentage with its
+minimum, "82% (min 75%)". The idea is marked "mismatch" (the item takes
+`theme-development-mismatch`, drawn in the warning colour) when the Composer
+reports `heard_agrees` false or the score is under the minimum. The GUI only
+shows these members; it computes none of them. A version composed before API
+1.10 has no `heard` and keeps the single line, never marked. Below it are the score of `theme.musicxml` in the score workspace and a
+MIDI download. Playback is served by the backend, built by the Analyzer from
+`theme.mid` (`GET .../versions/<n>/playback?file=theme`).
+
+## Pieces view
+
+A piece's detail holds the piece editor (`pieces-view.js`; the helpers are in
+`pieces-model.js`, global `PiecesModel`). It edits the piece body the backend
+composes (see [Piece bodies and version files](../storage.md#piece-bodies-and-version-files)) and reuses the Themes view's
+builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
+
+- Header: form (the Composer's forms by label: Binary, Rounded binary, Ternary, Theme and variations, Loop, Layered, Minuet,
+  Trio, Minuet and trio, Scherzo, Scherzo and trio, Game loop; `GET /api/composer/forms`, loaded with the vocabulary, so the GUI keeps no form or part table; a body that names no
+  form is the game loop), key, mode (major, minor, From the brief), meter and tempo (blank
+  takes the brief's). The meter list follows the form: a form that fixes its meters lists only those (the minuet, the trio
+  and the minuet and trio: 3/4), any other lists every meter; the meter kept is the chosen one when the new list has it,
+  else the first. The tempo field says `from the form (112)` when the form gives a tempo and the field is empty (the minuet
+  forms are at 112 quarters a minute unless the brief or the field gives one), else `from the brief`. The Composer reads the piece while it is edited (400 ms after the last change,
+  `POST /api/materials/items/validate`): the key, meter, tempo, seed, pickups, numerals and sizes it refuses show its
+  message, as given, and mark the header or the strip its request path names. Nothing of that blocks Save as new
+  version; only a missing brief for the mode From the brief, the loop body, the order of the parts and a theme of
+  another length do.
+- Structure of a sized form (every form but the game loop): a Size select (each size of the form, such as "16 bars", or
+  "3 variations, 32 bars" for one with a count) and, for a form that can modulate, a Modulate checkbox (a form that always modulates, the scherzo, has no checkbox and
+  its structure table says `Modulate: always`; its request sends no `modulate`). The sections are
+  the Composer's and cannot be edited: a strip of blocks as wide as their bars and a table of each section's letter, role,
+  length, beginning and ending, cadence, keys (`home to home (tonic major)` in the tonic major, P52; `(home mode)` in the home mode, P53), harmony
+  (the pedal the section is written over, such as "Dominant pedal"), the section it returns to (with its variation: `A (embellish)`,
+  `A (setting: arpeggiated)`) and its slots with their ideas. The body is
+  `{form, key, mode, meter, bars, count, modulate}` with no sections; the piece's motive, pool, accompaniment and brief are
+  as below. Per-section fills are not offered (the Composer does not take them for these forms yet). A refusal of the size
+  or of Modulate marks that control. Changing the form starts it at its default size.
+- Structure strip of the game loop: four lanes, the form's roles (Intro, Loop body, Turnaround and Ending), each a
+  row of section blocks as wide as their beats. Add section puts a section at
+  the end of its lane. Selecting a block opens its editor: letter, length (a
+  bars and a beats input, giving beats), pickup (beats of anacrusis, `0` for
+  none, or `n` or `n/d` such as `1` and `1/2`; the choices are the Composer's for the meter, 2/4 has no `2`), cadence
+  (Default shows the cadence the Composer gives a section that has none, from the validate reply and asked again
+  when the structure changes; the GUI computes none, so the label reads plain Default until the reply is in), Move left and Move right
+  within the part, and Remove section. A piece has at least one section in the
+  loop body (the Composer holds the largest number of sections and beats).
+- Function (P51, R-510): None or a name `piece_functions` lists for the section's part (a body or intro section a
+  Transition, the ending a Coda); the select is there only for a part with one, and None saves no `function` member.
+- Fill: Empty, Motif, Theme or Progression. Any fill may be left empty and
+  saved; one that names nothing is saved as empty. A motif fill has a motif
+  picker and, at 4 or 8 whole bars without a pickup, into sentence, period or
+  hybrid (with its pairing); any other length shows "Free phrase: a theme needs 4 or 8 bars, or a construction, and no
+  pickup." A section of 3 to 16 whole bars with no pickup also has an "As" choice (P47, R-468): Free phrase (Theme at 4
+  or 8 bars; no `construction` member, as before), "Theme, chosen" (`fill.construction` is `"auto"`: the Composer
+  chooses it) or "Theme, given" (the Theme editor's Construction block, `fill.construction` is `{ideas, extensions}`).
+  A construction keeps `into` for any such length. A saved piece without the member opens and is sent as before. A theme
+  fill picks a composed theme version (a theme with no composed version asks
+  to be composed first), shows its form and key and sets the section's length
+  from the theme; a section whose length differs from the theme's is a
+  problem. A progression fill is numerals (such as `I vi IV V`) and cells per
+  chord; it does not change the section's cadence.
+- Basic motive (optional), Pool, Accompaniment (none or a pattern; a piece has
+  no accompaniment motif) and Brief (chips, the four motive switches, weight,
+  seed, Check with the Analyzer) are the Themes view's.
+
+Save as new version writes a version without `result`. Compose saves first
+when the form changed, then calls the compose route with the buttons disabled
+and a spinner; a refusal shows the backend's message and the Composer's. A
+motif or theme with a newer version shows "Source updated: <name> v<n>" with
+Update and compose and Keep.
+
+The Result panel of the current version, and of any version opened from the
+versions list (read-only), shows the seed, key, loop region, brief and, for
+each version of the form (the game loop has a loop version and an ending
+version, any other form one version, `piece`), a row for each section (section,
+part by its role label, letter, start, length, cadence planned and heard, fill, source; for a sized form: section,
+role, letter, start, length, cadence, heard, the key planned (Key, for a form that always modulates only: the Composer's
+`key` of the row, such as `G major` for the scherzo's pattern), the key heard, harmony (the pedal label of the form's section), the
+section it returns and how it differs, in the Composer's own text; either table gains a Figure column (P50, the row's
+`figure.text`: the kind, rhythm and harmony of a figured variation and the skeleton tones it is built on) before the
+Construction column when a section has a figure, and a Construction column, the
+Composer's `construction_text`, when a section has one; a Function column (P51, the row's `function.text`: a transition,
+retransition, subordinate theme or coda) after Figure, or after Fill in a loop table, when a section has one), the
+score, the seam rules that held, the Analyzer check and the style
+distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
+per version (`<name>.musicxml`), with playback served by the
+backend from `<name>.mid` (`GET .../versions/<n>/playback?file=<name>`). A read-only version of a sized form
+names its form, size and the sections the Composer plans. A form the Composer composes once and performs in order
+(R-485: written-out repeats or parts, the three minuet forms) lists the performed sections, and its table gains a Part
+column (the minuet, the trio, the minuet da capo, for a compound form), Upbeat (the chord that leads into the next section,
+such as `V to I`) and Connective (`yes` when the stepwise link was written, `no` when it was not, empty for a section with
+none) after Harmony, and Repeat of (the section a row plays again) after Returns. The strip of a compound form lists the
+sections of each part under a heading that says its form, its key and its repeats; a part that plays another again has
+none. The strip of a sized form shows the halves of a section with a
+construction in its block (`4+6`; the scherzo's roles Pattern, Sequence, Liquidation, Episode and Codetta are the forms entry's labels) and its reason in a Construction column of the table (no built-in form has one yet). The strip's table of a form with a
+figure (`figured-variations`) gains a Figure column from the forms entry's `figure` and `mode`: `neighbor tones in
+eighths`, `scale line in sixteenths, reharmonized, root changed at bar 3`, `broken chord in sixteenths, climax`, with
+`, parallel mode` for the variation in the parallel key; a section with none leaves it empty, and a form with none has no
+column. The Role column adds ` (independent)` for an independent transition and ` (lyric)` for a lyric theme. The climax is a request the Composer may not be able to honor, so the label does not say the variation is audibly higher.
+
+On the current version of a performed form no Regenerate or Variations is offered: the page says they are Later (the
+Composer refuses them for a form written out in order, R-485).
+
+On the current version of any other form each section of the first version (the loop version of a game loop, `piece` of any other form)
+has Regenerate (lane: all
+lanes, harmony, bass, melody or inner; seed) and Variations (lane, count 1 to
+8, seed). A regenerate becomes the next version. Variations show side by side
+as small scores with Choose, which makes one the next version. A section
+filled with a theme offers harmony and bass only; a section that is not in the first version (a game loop's ending
+sections) offers
+neither. Harmonize is Variations on harmony.
+
+## Export
+
+Export sits at the top of a theme's page and in a piece's header, and again on each older piece version opened read
+only (the control of the Analysis view, without the measure range). It fetches `GET /api/materials/items/<id>/export?version=<n>`
+once and then shows Copy and Download .txt (the file is the item name as a slug, `.txt`). A theme exports its form,
+chords, slots, its composed score and a section for each slot motif; a piece exports its structure and its loop and
+ending scores. A theme or piece that was not composed still exports its facts, and each score reads `not composed`.
+An error shows beside the buttons.
+
+## Item references in the GUI
+
+An item's detail has a Uses section (Derived from on a motif, in its Other tab): each use shows the source's name, type,
+project and the version used, with Remove. Add use picks from the items of
+every project (search by name, filter by type and project, the item itself and
+its current uses left out); the use points at the source's current version.
+Adding or removing a use writes a new version of the item with a note. A use
+whose source has a newer version reads "source updated to v<n>" with Update
+(moves the use to the current version, as a new version) and Compare (the used
+and current versions side by side, read only). A use whose source was deleted
+reads "source deleted"; its copy is kept. Used by lists the items that use
+this one, each opening its detail (a table on a motif). In the Motifs, Themes and Pieces lists a
+row gets an "uses updated" badge when any of its uses has a newer source.
+Delete asks to confirm; when other items use the item it names them and asks
+again, and confirming deletes with `?force=1` (their copies stay and their
+uses report the source as deleted).
