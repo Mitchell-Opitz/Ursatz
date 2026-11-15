@@ -92,19 +92,19 @@ static void assert_choice(const cJSON *object, const char *name, const char *val
 static void test_registry_order(void) {
     const char *const names[] = {"binary", "rounded-binary", "ternary", "variations", "loop", "layered", "minuet",
                                  "trio", "minuet-and-trio", "scherzo", "scherzo-and-trio", "figured-variations", "main-and-subordinate", "andante-aba", "andante-abab",
-                                 "small-rondo-ababa", "small-rondo-abaca", "large-rondo", "sonata-rondo", "game-loop"};
+                                 "small-rondo-ababa", "small-rondo-abaca", "large-rondo", "sonata-rondo", "sonatina", "sonatina-tonic-major", "game-loop"};
     const cJSON *list = member(forms, "forms");
-    assert(cJSON_GetArraySize(list) == 20);
-    for (int i = 0; i < 20; i++) {
+    assert(cJSON_GetArraySize(list) == 22);
+    for (int i = 0; i < 22; i++) {
         const cJSON *form = cJSON_GetArrayItem(list, i);
         assert(strcmp(text(form, "name"), names[i]) == 0);
         assert(*text(form, "label"));
-        bool game_loop = i == 19;
+        bool game_loop = i == 21;
         assert(strcmp(text(form, "sections"), game_loop ? "request" : "sizes") == 0);
         /* The four with sections that end in the home key close, and so do the minuet, the trio, the scherzo, the
-           forms that put two together, the figured variations, the main and subordinate themes, the Andante forms and the
-           rondos. */
-        assert(flag(form, "closing") == (i < 4 || (i >= 6 && i < 19)));
+           forms that put two together, the figured variations, the main and subordinate themes, the Andante forms, the
+           rondos and the sonatinas. */
+        assert(flag(form, "closing") == (i < 4 || (i >= 6 && i < 21)));
         assert((cJSON_GetArraySize(member(form, "sizes")) == 0) == game_loop);
     }
 }

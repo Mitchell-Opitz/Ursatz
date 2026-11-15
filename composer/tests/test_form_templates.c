@@ -69,6 +69,8 @@ typedef struct {
 /* The sonata rondo's P and S sit on the region degree of the piece's mode: vi or iv, ii or v (R-520). */
 #define DEVELOPMENT 1
 #define SEQUENCE 2
+/* The sonatina's E sits on IV in major and VI in minor, a major key (R-523). */
+#define ELABORATION 3
 
 /* What a section of the table must be. */
 typedef struct {
@@ -89,7 +91,7 @@ typedef struct {
     bool lyric;       /* a lyric subordinate theme: m0 augmented (R-506) */
     bool tonic_major; /* the section is in the home tonic's major key (R-517): the rondos' B1 */
     bool second;      /* the section is in the second region (vi or IV in major, VI or iv in minor): the rondos' C (R-520) */
-    int region_key;   /* the section is in the key of one degree of its region, in semitones above home (the sonata rondo's P and S, R-520), or -1 */
+    int region_key;   /* the section is in the key of one degree of its region, in semitones above home (the sonata rondo's P and S, R-520; the sonatina's E, R-523), or -1 */
 } Expected;
 
 #define MAX_EXPECTED FORM_SPEC_MAX_SECTIONS
@@ -315,6 +317,48 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
         set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n++].function = PLAN_FUNCTION_CODA;
+    } else if (IS("sonatina") || IS("sonatina-tonic-major")) {
+        /* The sonatina forms (P53 B2, R-523): the exposition A, T, B and the codettas C1 and C2 in the subordinate region; the
+           elaboration E (B returned as `embellish` in IV or VI) with P and S as in the sonata rondo and the retransition R; the
+           recapitulation A1 (A returned), T1, B1 and C3 (B and C1 returned: at home in `sonatina`, in the tonic major in
+           `sonatina-tonic-major`), C4 and the coda K. B1, C3 and C4 close in the home key and are not closed, so a major piece
+           plans them a half cadence; in the tonic major of a minor piece B1 and C3 keep their PAC. P and S plan a PAC. */
+        const bool major_recap = IS("sonatina-tonic-major");
+        size_t a = n;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        size_t b = n;
+        set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n].region = true;
+        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        size_t c1 = n;
+        set(&out[n], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].region = true;
+        set(&out[n], "C", 4, CBI, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].region = true;
+        set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, b, 0);
+        out[n++].region_key = ELABORATION;
+        size_t pattern = n;
+        set(&out[n], "D", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].region_key = DEVELOPMENT;
+        set(&out[n], "D", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, pattern, 0);
+        out[n++].region_key = SEQUENCE;
+        set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
+        set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        set(&out[n], "B", 8, P, CONT, major_recap ? CADENCE_TYPE_PERFECT_AUTHENTIC : CADENCE_TYPE_HALF, b, 0);
+        out[n].tonic_major = major_recap;
+        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        set(&out[n], "C", 4, AN, CAD, major_recap ? CADENCE_TYPE_PERFECT_AUTHENTIC : CADENCE_TYPE_HALF, c1, 0);
+        out[n++].tonic_major = major_recap;
+        set(&out[n], "C", 4, CBI, CAD, CADENCE_TYPE_HALF, NONE, 0);
+        n++;
+        set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        out[n++].function = PLAN_FUNCTION_CODA;
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -371,6 +415,8 @@ static size_t sizes_of(const char *kind, Size *out) {
         out[n++] = (Size){64, 0};
     } else if (IS("large-rondo") || IS("sonata-rondo")) {
         out[n++] = (Size){88, 0};
+    } else if (IS("sonatina") || IS("sonatina-tonic-major")) {
+        out[n++] = (Size){92, 0};
     }
     return n;
 }
@@ -515,11 +561,13 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
             assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && key->params.key.mode == (major ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR)) ||
                            (pc == (scenario->tonic + 5) % 12 && key->params.key.mode == scenario->mode)));
         } else if (expected[i].region_key >= 0) {
-            /* The development is vi in major and iv in minor; the sequence is ii in major and v in minor; all minor keys (R-520). */
+            /* The development is vi in major and iv in minor; the sequence is ii in major and v in minor; all minor keys (R-520). The
+               elaboration is IV in major and VI in minor, both major keys (R-523). */
             const bool major = scenario->mode == KEY_STRUCTURE_MODE_MAJOR;
-            const int up = expected[i].region_key == DEVELOPMENT ? (major ? 9 : 5) : (major ? 2 : 7);
+            const bool elaboration = expected[i].region_key == ELABORATION;
+            const int up = elaboration ? (major ? 5 : 8) : expected[i].region_key == DEVELOPMENT ? (major ? 9 : 5) : (major ? 2 : 7);
             assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + up) % 12 &&
-                   key->params.key.mode == KEY_STRUCTURE_MODE_MINOR);
+                   key->params.key.mode == (elaboration ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR));
         } else {
             assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
                    key->params.key.mode == mode);
@@ -752,6 +800,9 @@ static void compose_all(const char *kind, Tally *total) {
  * The large rondo and sonata rondo (P52 B6, R-520) run in the same two scenarios at 88 bars and were measured at 20, 180, 116 (large) and 15, 150, 75 (sonata): the given motive in C major 4/4 is stuck 5 times in the
  * sonata rondo (motives, melody and texture), the other 15 runs compose; the invented one composes 10 of 10. The retransitions and the coda are composed and
  * recorded, not heard as a form (R-503).
+ * The sonatina forms (P53 B2, R-523) run in the same two scenarios at 92 bars and were measured at 13, 169, 46 (sonatina) and 15, 195, 51 (sonatina-tonic-major): the given
+ * motive in C major 4/4 composes 0 of 5 in both (stuck), the invented one 3 of 5 (sonatina) and 5 of 5 (tonic major); the other two scenarios compose 5 of 5. The
+ * retransition and the coda are composed and recorded, not heard as a form (R-503).
  */
 typedef struct {
     const char *kind;
@@ -774,6 +825,8 @@ static const Baseline BASELINES[] = {
     {"small-rondo-abaca", 20, 120, 46},
     {"large-rondo", 20, 180, 116},
     {"sonata-rondo", 15, 150, 75},
+    {"sonatina", 13, 169, 46},
+    {"sonatina-tonic-major", 15, 195, 51},
 };
 
 static const Baseline *baseline_of(const char *kind) {
