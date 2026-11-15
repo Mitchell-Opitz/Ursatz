@@ -1,0 +1,17 @@
+{
+	"schema": "ursatz-style-model",
+	"schema_version": 1,
+	"style_name": "step-up-motives",
+	"training_corpus": "hand-written",
+	"model_version": "0.1.0",
+	"pieces": 1,
+	"statistics": [
+		{
+			"dimension": "melody",
+			"category": "motive-degrees",
+			"label": "4 6 5 3 2",
+			"count": 1,
+			"total": 1
+		}
+	]
+}

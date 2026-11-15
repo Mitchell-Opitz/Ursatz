@@ -1,0 +1,12 @@
+{
+  "meter": {"beats_per_bar": 4, "beat_unit": 4},
+  "key": {"tonic_pitch_class": 2, "mode": "minor"},
+  "notes": [
+    {"midi_pitch": 62, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}},
+    {"midi_pitch": 65, "offset": {"num": 1, "den": 4}, "duration": {"num": 1, "den": 8}},
+    {"midi_pitch": 69, "offset": {"num": 3, "den": 8}, "duration": {"num": 1, "den": 8}},
+    {"midi_pitch": 74, "offset": {"num": 1, "den": 2}, "duration": {"num": 1, "den": 2}}
+  ],
+  "harmony": "I V@2",
+  "features": [{"label": "a", "first": 0, "last": 3}]
+}

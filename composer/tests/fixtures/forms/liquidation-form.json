@@ -1,0 +1,14 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "liquidation-form",
+  "label": "Liquidation form",
+  "sizes": [
+    {"bars": 24, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "S", "letter": "S", "role": "sequence", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "imperfect-authentic"},
+      {"name": "L", "letter": "L", "role": "liquidation", "bars": 4, "cadence": "half"},
+      {"name": "A return", "letter": "A", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "returns": "A", "variation": "exact"}
+    ]}
+  ]
+}

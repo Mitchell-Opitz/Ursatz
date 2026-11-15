@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/lock.request.schema.json",
+  "title": "composer_api_lock request",
+  "description": "A node of a plan, or one lane of it, locked as Given.",
+  "type": "object",
+  "required": [
+    "plan"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "plan": {
+      "type": "object"
+    },
+    "node": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "section": {
+      "type": "string"
+    },
+    "lane": {
+      "enum": [
+        "harmony",
+        "bass",
+        "melody",
+        "inner"
+      ]
+    }
+  }
+}

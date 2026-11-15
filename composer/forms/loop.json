@@ -1,0 +1,15 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "loop",
+  "label": "Loop",
+  "sizes": [
+    {"bars": 8, "default": true, "sections": [
+      {"name": "loop", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half"}
+    ]},
+    {"bars": 16, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "imperfect-authentic"},
+      {"name": "B", "letter": "B", "role": "contrast", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "half", "motive": "invert tonal=1"}
+    ]}
+  ]
+}

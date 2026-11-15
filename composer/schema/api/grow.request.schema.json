@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/grow.request.schema.json",
+  "title": "composer_api_grow request",
+  "description": "A theme grown from a motive (or a corpus passage): the motive request with the brief of the command.",
+  "type": "object",
+  "required": [
+    "into",
+    "key",
+    "meter"
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "form": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "pickup": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "harmony": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "role": {
+      "enum": [
+        "melodic",
+        "accompaniment"
+      ]
+    },
+    "tones": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "midi": {
+      "type": "boolean"
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "tempo": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "plans": {
+      "type": "boolean"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "corpus": {
+      "type": "string"
+    },
+    "like": {
+      "type": "string"
+    },
+    "into": {
+      "enum": [
+        "sentence",
+        "period",
+        "hybrid"
+      ]
+    },
+    "hybrid": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string"
+    },
+    "bars": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "construction": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "The bars of each idea of the theme and its extensions (R-468); null for none, then a theme of 4 or 8 bars is as it always was and any other length gets a construction chosen from the motif or the length (R-469).",
+      "required": [
+        "ideas"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ideas": {
+          "type": "object",
+          "description": "Bars of each idea by name; an idea the pairing does not have is left out or 0.",
+          "propertyNames": {
+            "enum": [
+              "basic idea",
+              "repetition",
+              "contrasting idea",
+              "consequent basic idea",
+              "consequent contrasting idea",
+              "fragment 1",
+              "fragment 2",
+              "cadential",
+              "cadential 1",
+              "cadential 2"
+            ]
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 16
+          }
+        },
+        "extensions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "repeat",
+                  "stretch",
+                  "addition",
+                  "evaded"
+                ]
+              },
+              "idea": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Required for a repeat and a stretch."
+              },
+              "bars": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 4
+              },
+              "varied": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "cadence": {
+      "type": "string"
+    },
+    "first_cadence": {
+      "type": "string"
+    },
+    "accompaniment": {
+      "type": "string"
+    },
+    "accompaniment_motive": {
+      "type": "object"
+    },
+    "texture": {
+      "type": "string"
+    },
+    "voicing": {
+      "type": "boolean"
+    },
+    "check": {
+      "type": "boolean"
+    },
+    "style": {
+      "type": "string"
+    },
+    "style_weight": {
+      "type": "string"
+    },
+    "style_without": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string"
+      }
+    },
+    "blend": {
+      "type": "string"
+    },
+    "blend_weight": {
+      "type": "string"
+    },
+    "blend_weights": {
+      "type": "string"
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "suggest": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "explain": {
+      "enum": [
+        "text",
+        "json"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

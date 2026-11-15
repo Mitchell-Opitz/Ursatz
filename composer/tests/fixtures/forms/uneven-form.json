@@ -1,0 +1,16 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "uneven-form",
+  "label": "Uneven form",
+  "sizes": [
+    {"bars": 20, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 10, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true,
+       "construction": {"ideas": {"basic idea": 2, "contrasting idea": 2, "consequent basic idea": 2, "consequent contrasting idea": 2},
+                        "extensions": [{"kind": "repeat", "idea": "consequent contrasting idea", "bars": 2, "varied": true}]}},
+      {"name": "B", "letter": "B", "role": "contrast", "bars": 10, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "motive": "invert tonal=1",
+       "construction": {"ideas": {"basic idea": 2, "repetition": 2, "fragment 1": 1, "fragment 2": 1, "cadential": 2},
+                        "extensions": [{"kind": "evaded", "bars": 0}]}}
+    ]}
+  ]
+}

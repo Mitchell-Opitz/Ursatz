@@ -1,0 +1,15 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "meter-form",
+  "label": "Meter form",
+  "meters": ["3/4"],
+  "tempo": 112,
+  "sizes": [
+    {"bars": 24, "default": true, "sections": [
+      {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},
+      {"name": "A'", "letter": "A'", "role": "return", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true, "returns": "A", "variation": "exact"},
+      {"name": "B", "letter": "B", "role": "contrast", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "motive": "invert tonal=1"}
+    ]}
+  ]
+}

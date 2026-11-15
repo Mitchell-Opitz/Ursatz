@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/regenerate.request.schema.json",
+  "title": "composer_api_regenerate request",
+  "description": "One node of a filled plan written again.",
+  "type": "object",
+  "required": [
+    "plan"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "plan": {
+      "type": "object"
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "node": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "section": {
+      "type": "string"
+    },
+    "lane": {
+      "enum": [
+        "harmony",
+        "bass",
+        "melody",
+        "inner"
+      ]
+    },
+    "midi": {
+      "type": "boolean"
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "tempo": {
+      "type": [
+        "integer",
+        "number",
+        "string"
+      ]
+    }
+  }
+}

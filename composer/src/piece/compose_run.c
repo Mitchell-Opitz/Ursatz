@@ -1,0 +1,1279 @@
+#include <ursatz_composer/compose.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <standard-form/phrase_level_form.h>
+
+#include "util/job.h"
+
+#include <ursatz_composer/accompaniment.h>
+#include <ursatz_composer/analyzer_check.h>
+#include <ursatz_composer/form_figure.h>
+#include <ursatz_composer/form_return.h>
+#include <ursatz_composer/grow_form.h>
+#include <ursatz_composer/harmony_bass.h>
+#include <ursatz_composer/harmony_motive.h>
+#include <ursatz_composer/harmony_phrase.h>
+#include <ursatz_composer/harmony_prolong.h>
+#include <ursatz_composer/motive_connect.h>
+#include <ursatz_composer/motive_develop.h>
+#include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/regenerate.h>
+#include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/texture_check.h>
+#include <ursatz_composer/voicing.h>
+
+#include "check/hearing.h"
+#include "form/form_internal.h"
+#include "grow/grow_internal.h"
+#include "piece/piece_internal.h"
+#include "plan/plan_internal.h"
+#include "style/style_internal.h"
+#include "util/plan_util.h"
+
+/* How many times the melody stage is run before it is given up on, and how far apart the seeds of the runs are. */
+#define COMPOSE_MELODY_ATTEMPTS 6
+#define COMPOSE_ATTEMPT_STRIDE 1000UL
+/*
+ * Where in its phrase the melody's climax is asked for, by attempt (thousandths). The first attempt keeps what the
+ * configuration says; a piece with a theme other than a sentence, whose climax can fall on an idea that cannot carry
+ * it (a restated idea, an idea that ends in the cadence's tone and leaves no note above the rest), is written again
+ * with the climax elsewhere.
+ */
+static const unsigned CLIMAX_RETRIES[COMPOSE_MELODY_ATTEMPTS] = {0, 250, 833, 400, 950, 560};
+/*
+ * How many times the returns are made before a reharmonized return, whose chords the harmony operators write without
+ * the melody it keeps, is given up on, and how far apart the seeds of the attempts are.
+ */
+#define COMPOSE_RETURN_ATTEMPTS 12
+#define COMPOSE_RETURN_STRIDE 10000UL
+/* How many runs, from the plan as given, before a stuck run is given up on, and how far apart their seeds are. */
+#define COMPOSE_RUN_ROUNDS 12
+#define COMPOSE_ROUND_STRIDE 100000UL
+
+const char *compose_stage_name(ComposeStage stage) {
+    static const char *const NAMES[COMPOSE_STAGE_COUNT] = {"invent", "structure", "motives", "harmony", "bass",
+                                                           "melody", "texture",   "returns", "seam"};
+    return stage >= 0 && stage < COMPOSE_STAGE_COUNT ? NAMES[stage] : "unknown";
+}
+
+/*
+ * What a stage's seed adds to the configuration's: grow's stages keep grow's seeds (0 to 5), invention comes after them
+ * (6), then the returns (7) and the stages that write what the returns reopened, run again (8 to 11). The stages of the
+ * seam follow: harmony, bass, melody and texture (12 to 15), then the structure and the motives of the held sections
+ * (16, 17).
+ */
+static unsigned long stage_seed(ComposeStage stage, bool again, bool seam) {
+    if (seam) {
+        unsigned long base = (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 7);
+        if (stage == COMPOSE_STAGE_STRUCTURE || stage == COMPOSE_STAGE_MOTIVES) {
+            return base + 4 + (unsigned long)(stage - COMPOSE_STAGE_STRUCTURE);
+        }
+        return base + (unsigned long)(stage - COMPOSE_STAGE_HARMONY);
+    }
+    if (again) {
+        return (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 3 + (stage - COMPOSE_STAGE_HARMONY));
+    }
+    if (stage == COMPOSE_STAGE_INVENT) {
+        return (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 1);
+    }
+    if (stage == COMPOSE_STAGE_RETURNS) {
+        return (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 2);
+    }
+    return (unsigned long)(stage - COMPOSE_STAGE_STRUCTURE);
+}
+
+void compose_rejections_free(ComposeRejection *rejections, size_t count) {
+    for (size_t i = 0; rejections && i < count; i++) {
+        free(rejections[i].items);
+    }
+    free(rejections);
+}
+
+void compose_outcome_destroy(ComposeOutcome *outcome) {
+    if (!outcome) {
+        return;
+    }
+    for (int stage = 0; stage < COMPOSE_STAGE_COUNT; stage++) {
+        fill_record_destroy(outcome->records[stage]);
+    }
+    for (size_t i = 0; outcome->sections && i < outcome->section_count; i++) {
+        form_heard_destroy(&outcome->sections[i].heard);
+    }
+    free(outcome->sections);
+    return_heard_destroy(&outcome->returns);
+    for (size_t i = 0; outcome->analyzer_checks && i < outcome->analyzer_check_count; i++) {
+        analyzer_check_destroy(&outcome->analyzer_checks[i]);
+    }
+    free(outcome->analyzer_checks);
+    if (outcome->style_measured) {
+        style_comparison_destroy(&outcome->style_distance);
+    }
+    compose_rejections_free(outcome->rejections, outcome->rejection_count);
+    memset(outcome, 0, sizeof(*outcome));
+}
+
+/* ------------------------------------------------------------- the plan */
+
+/*
+ * A section grow-theme builds: a theme (an archetype and a pairing), a free phrase of a piece structure (R-170), a liquidation
+ * (R-494), or a retransition or a coda (R-503), which an operator grows.
+ */
+static bool is_theme_section(const PiecePlan *plan, NodeId id) {
+    bool archetype = false;
+    bool pairing = false;
+    bool free_phrase = false;
+    bool liquidation = false;
+    PlanSectionFunction function;
+    if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
+        return false;
+    }
+    if (plan_section_function_of(plan, id, &function)) {
+        liquidation = function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA;
+    }
+    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
+        PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
+        archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
+        pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
+        free_phrase = free_phrase || kind == PLAN_CONSTRAINT_FREE_PHRASE;
+        liquidation = liquidation || kind == PLAN_CONSTRAINT_LIQUIDATION;
+    }
+    return (archetype && pairing) || free_phrase || liquidation;
+}
+
+/* Whether a lane span in the section (a lane span reopened by plan_regenerate) is still open. */
+static bool has_open_span(const PiecePlan *plan, NodeId section) {
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED &&
+            plan_section_of(plan, plan_lane_span_owner(plan, id)) == section) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * An open theme section: one not yet grown (Constrained), or one grown whose lane spans are partly open again. Given
+ * sections are never open.
+ */
+static bool is_open_theme(const PiecePlan *plan, NodeId id) {
+    PlanState state = plan_node_state(plan, id);
+    return is_theme_section(plan, id) &&
+           (state == PLAN_STATE_CONSTRAINED || (state == PLAN_STATE_REALIZED && has_open_span(plan, id)));
+}
+
+/* The open theme sections, in node order, into a new array; false when out of memory. */
+static bool find_themes(const PiecePlan *plan, NodeId **out, size_t *count) {
+    size_t found = 0;
+    *out = NULL;
+    *count = 0;
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        found += is_open_theme(plan, id);
+    }
+    if (found == 0) {
+        return true;
+    }
+    *out = calloc(found, sizeof(NodeId));
+    if (!*out) {
+        return false;
+    }
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        if (is_open_theme(plan, id)) {
+            (*out)[(*count)++] = id;
+        }
+    }
+    return true;
+}
+
+/* The spans of a lane and voice over span, into a new array; NULL with *count 0 when there are none. */
+static LaneSpanId *find_spans(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, size_t *count) {
+    *count = plan_lane_find(plan, lane, voice, span, NULL, 0);
+    LaneSpanId *ids = *count ? calloc(*count, sizeof(LaneSpanId)) : NULL;
+    if (ids) {
+        plan_lane_find(plan, lane, voice, span, ids, *count);
+    } else {
+        *count = 0;
+    }
+    return ids;
+}
+
+/* Whether every lane span of the lane and voice over the span is written; with required, there must be one. */
+static bool lane_written(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, bool required) {
+    size_t count;
+    LaneSpanId *ids = find_spans(plan, lane, voice, span, &count);
+    bool written = !required || count > 0;
+    for (size_t i = 0; written && i < count; i++) {
+        written = plan_lane_span_state(plan, ids[i]) != PLAN_STATE_CONSTRAINED;
+    }
+    free(ids);
+    return written;
+}
+
+/* Whether the section asks for a voicing that writes the soprano, which is then the melody. */
+static bool soprano_voiced(const PiecePlan *plan, NodeId section) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_VOICING && constraint->params.voicing.write_soprano) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool has_archetype(const PiecePlan *plan, NodeId section, PlanArchetype archetype) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE && constraint->params.archetype == archetype) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Whether a melody span that motive-invent is to write is still open. */
+static bool invention_open(const PiecePlan *plan) {
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_lane_span_lane(plan, id) != PLAN_LANE_MELODY ||
+            plan_lane_span_state(plan, id) != PLAN_STATE_CONSTRAINED) {
+            continue;
+        }
+        for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
+            if (plan_lane_span_constraint_at(plan, id, i)->kind == PLAN_CONSTRAINT_INVENT_MOTIVE) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* The melody of one section is written (a voiced soprano is the texture stage's). */
+static bool melody_done(const PiecePlan *plan, NodeId section) {
+    return soprano_voiced(plan, section) ||
+           lane_written(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, section), true);
+}
+
+/* What a stage was to do, read from the plan: its own targets are all filled, in every section. */
+static bool stage_done(const PiecePlan *plan, ComposeStage stage, const NodeId *themes, size_t theme_count) {
+    if (stage == COMPOSE_STAGE_INVENT) {
+        return !invention_open(plan);
+    }
+    if (stage == COMPOSE_STAGE_MOTIVES) {
+        for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+            if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && plan_node_state(plan, id) == PLAN_STATE_CONSTRAINED) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (stage == COMPOSE_STAGE_RETURNS) {
+        for (size_t t = 0; t < theme_count; t++) {
+            if (form_return_handles(plan, themes[t])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    for (size_t t = 0; t < theme_count; t++) {
+        NodeId section = themes[t];
+        PlanSpan span = plan_node_span(plan, section);
+        bool done = false;
+        /* A section that returns an earlier one has nothing yet: the returns stage gives it its material. A held
+           section is left for the seam stage. */
+        if (form_return_handles(plan, section) || plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_HOLD)) {
+            continue;
+        }
+        switch (stage) {
+        case COMPOSE_STAGE_STRUCTURE:
+            done = plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED;
+            break;
+        case COMPOSE_STAGE_HARMONY:
+            done = lane_written(plan, PLAN_LANE_HARMONY, 0, span, true);
+            break;
+        case COMPOSE_STAGE_BASS:
+            done = lane_written(plan, PLAN_LANE_BASS, 0, span, true);
+            break;
+        case COMPOSE_STAGE_MELODY:
+            done = melody_done(plan, section);
+            break;
+        case COMPOSE_STAGE_TEXTURE:
+            /* No inner voice span over the section is still open (there may be none: nothing was asked for). */
+            done = (!soprano_voiced(plan, section) || lane_written(plan, PLAN_LANE_MELODY, 0, span, true));
+            for (int voice = 1; done && voice <= 3; voice++) {
+                done = lane_written(plan, PLAN_LANE_INNER_VOICE, voice, span, false);
+            }
+            break;
+        default:
+            break;
+        }
+        if (!done) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The harmony stage's checker context when the motif has harmony of its own: the chords development gave are held (R-348). */
+static const bool HOLD_MOTIVE_CHORDS = true;
+
+/* Whether the run's basic motive has harmony of its own: only then are the chords of its developed motives the motif's. */
+static bool motif_has_harmony(const MotiveDevelopContext *motives) {
+    return motives && motives->basic && motives->basic->chord_count > 0;
+}
+
+static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage stage, const GrowContext *grow,
+                                 const MotiveDevelopContext *motives, const MelodyFillParams *melody,
+                                 const AccompanimentParams *accompaniment, const VoicingParams *voicing) {
+    FillResult result = FILL_OK;
+    switch (stage) {
+    case COMPOSE_STAGE_INVENT:
+        return motive_invent_register(registry, motives);
+    case COMPOSE_STAGE_STRUCTURE:
+        return grow_register(registry, grow);
+    case COMPOSE_STAGE_MOTIVES:
+        /* The motive-forms first: a slot they have no form for is left to the P13 operators. */
+        result = grow_form_register(registry, motives);
+        return result == FILL_OK ? motive_develop_register(registry, motives) : result;
+    case COMPOSE_STAGE_HARMONY:
+        /* The harmony operators write chords that stand on a Given bass, carry a Given melody and join Given chords. */
+        /* A motif with no harmony of its own gets chords proposed from its notes: those are not held, the stage writes the
+           chords as it does for a phrase without motives. */
+        result = motif_has_harmony(motives) ? harmony_motive_register(registry) : FILL_OK;
+        result = result == FILL_OK ? harmony_prolong_register_given(registry) : result;
+        return result == FILL_OK ? harmony_phrase_register_given(registry) : result;
+    case COMPOSE_STAGE_BASS:
+        return harmony_bass_register(registry, NULL);
+    case COMPOSE_STAGE_MELODY:
+        return melody_fill_register(registry, melody);
+    case COMPOSE_STAGE_TEXTURE:
+        result = accompaniment_register(registry, accompaniment);
+        return result == FILL_OK ? voicing_register(registry, voicing) : result;
+    case COMPOSE_STAGE_RETURNS:
+        return form_return_register(registry, melody);
+    case COMPOSE_STAGE_SEAM: /* run as the stages above, for the held sections */
+    case COMPOSE_STAGE_COUNT:
+        break;
+    }
+    return FILL_ERR_BAD_OPERATOR;
+}
+
+static FillCheckerFn checker_of(ComposeStage stage) {
+    switch (stage) {
+    case COMPOSE_STAGE_INVENT:
+        return motive_invent_checker;
+    case COMPOSE_STAGE_STRUCTURE:
+        return grow_checker;
+    case COMPOSE_STAGE_MOTIVES:
+        return grow_motives_checker;
+    case COMPOSE_STAGE_HARMONY:
+        return harmony_prolong_checker;
+    case COMPOSE_STAGE_BASS:
+        return harmony_phrase_checker;
+    case COMPOSE_STAGE_MELODY:
+        return melody_fill_checker;
+    case COMPOSE_STAGE_TEXTURE:
+        return texture_checker;
+    case COMPOSE_STAGE_RETURNS:
+        return form_return_checker;
+    case COMPOSE_STAGE_SEAM:
+    case COMPOSE_STAGE_COUNT:
+        break;
+    }
+    return NULL;
+}
+
+/* ------------------------------------------------------------- hearing */
+
+static int form_of(PlanArchetype archetype) {
+    switch (archetype) {
+    case PLAN_ARCHETYPE_SENTENCE:
+        return PHRASE_LEVEL_FORM_SENTENCE;
+    case PLAN_ARCHETYPE_PERIOD:
+        return PHRASE_LEVEL_FORM_PERIOD;
+    case PLAN_ARCHETYPE_HYBRID:
+        return PHRASE_LEVEL_FORM_HYBRID;
+    }
+    return -1;
+}
+
+/* The score grow-theme's checker gave the structure it applied to the section. */
+static bool structure_score(const FillRecord *record, NodeId section, GrowScore *out) {
+    for (size_t s = 0; record && s < record->step_count; s++) {
+        const FillStep *step = &record->steps[s];
+        if (step->outcome == FILL_STEP_APPLIED && step->chosen >= 0 && step->target.kind == FILL_TARGET_NODE &&
+            step->target.id == section) {
+            out->numerator = step->considered[step->chosen].score_numerator;
+            out->denominator =
+                step->considered[step->chosen].score_denominator ? step->considered[step->chosen].score_denominator : 1;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Hears one finished section. */
+/* The part and the id a piece structure gave the section, if it did. */
+static void read_part(const PiecePlan *plan, NodeId section, ComposeHeard *out) {
+    out->has_part = false;
+    grow_section_describe(plan, section, out->construction_text, sizeof(out->construction_text));
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART) {
+            out->has_part = true;
+            out->part = constraint->params.piece_part.part;
+            memcpy(out->id, constraint->params.piece_part.id, sizeof(out->id));
+            return;
+        }
+    }
+}
+
+static void hear_section(ComposerHearing *hearing, const PiecePlan *plan, NodeId section, const FillRecord *structure, ComposeHeard *out) {
+    PlanSpan span = plan_node_span(plan, section);
+    out->section = section;
+    read_part(plan, section, out);
+    out->heard_form = -1;
+    out->requested_form = -1;
+    out->requested_beginning = -1;
+    out->requested_ending = -1;
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
+            out->requested_form = form_of(constraint->params.archetype);
+        } else if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
+            out->requested_beginning = grow_phrase_beginning(constraint->params.theme_pairing.beginning);
+            out->requested_ending = grow_phrase_ending(constraint->params.theme_pairing.ending);
+        }
+    }
+    out->heard_result = form_hear_in(hearing, plan, span, &out->heard);
+    if (out->heard_result == FORM_HEAR_OK && out->heard.count > 0) {
+        out->heard_form = out->heard.themes[0].form;
+    }
+    /* A hybrid is heard as requested only with the beginning and the ending asked for. */
+    out->heard_as_requested = out->heard_form >= 0 && out->heard_form == out->requested_form &&
+                              (out->requested_form != PHRASE_LEVEL_FORM_HYBRID ||
+                               (out->heard.themes[0].beginning == out->requested_beginning &&
+                                out->heard.themes[0].ending == out->requested_ending));
+    if (!structure_score(structure, section, &out->structure)) {
+        out->structure.numerator = 0;
+        out->structure.denominator = 1;
+    }
+}
+
+/* The section a theme section returns, if it has a RETURN constraint. */
+static NodeId returned_section(const PiecePlan *plan, NodeId section) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
+            return constraint->params.section_return.section;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* Hears the returns the plan asks for. A return that cannot be heard counts as not heard. */
+static void hear_returns(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
+    bool heard_ok = false;
+    for (size_t t = 0; t < theme_count; t++) {
+        outcome->returns_planned += returned_section(plan, themes[t]) != PLAN_NODE_NONE;
+    }
+    if (outcome->returns_planned > 0) {
+        heard_ok = return_hear_in(hearing, plan, &outcome->returns) == RETURN_HEAR_OK;
+    }
+    for (size_t t = 0; heard_ok && t < theme_count; t++) {
+        NodeId source = returned_section(plan, themes[t]);
+        outcome->returns_heard += source != PLAN_NODE_NONE && return_heard_find(&outcome->returns, source, themes[t]);
+    }
+    outcome->returns_heard_as_planned = outcome->returns_heard == outcome->returns_planned;
+}
+
+/* The seam rules over the finished plan: 4 more in the score's denominator, and the ones held in its numerator. */
+static void hear_seam(const PiecePlan *plan, ComposeOutcome *outcome) {
+    NodeId seam = outcome->seam_planned ? piece_seam_find(plan) : PLAN_NODE_NONE;
+    outcome->seam_planned = false;
+    if (seam != PLAN_NODE_NONE && seam_hear(plan, seam, &outcome->seam) == SEAM_HEAR_OK) {
+        outcome->seam_planned = true;
+        outcome->score.numerator += outcome->seam.held;
+        outcome->score.denominator += SEAM_RULE_COUNT;
+    }
+}
+
+/* Whether a theme section is heard and checked in this run: every one without a scope. */
+static bool section_in_scope(const ComposeConfig *config, NodeId section) {
+    if (!config->scope) {
+        return true;
+    }
+    for (size_t i = 0; i < config->scope_count; i++) {
+        if (config->scope[i] == section) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Hears what the form's checks ask for: each theme section as its shape (FORM_CHECK_SECTIONS), the returns (FORM_CHECK_RETURNS). */
+static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *themes, size_t theme_count, unsigned checks,
+                 ComposeOutcome *outcome) {
+    unsigned long numerator = 0;
+    unsigned long denominator = 0;
+    for (size_t t = 0; (checks & FORM_CHECK_SECTIONS) && t < theme_count; t++) {
+        ComposeHeard *heard = &outcome->sections[t];
+        PlanSectionFunction function;
+        const bool operator_part = plan_section_function_of(plan, themes[t], &function) &&
+                                   (function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA);
+        if (!heard->in_scope || operator_part || plan_node_has_constraint(plan, themes[t], PLAN_CONSTRAINT_LIQUIDATION)) {
+            /* A liquidation (R-494), a retransition or a coda (R-503) is no theme shape: nothing to hear it as, and it adds nothing to the score. */
+            continue;
+        }
+        hear_section(hearing, plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);
+        outcome->heard_as_requested += heard->heard_as_requested;
+        numerator += heard->structure.numerator + (heard->heard_as_requested ? 1 : 0);
+        /* A free phrase asks for no form to be heard as: only its structure's score counts. */
+        denominator += heard->structure.denominator + (heard->requested_form >= 0 ? 1 : 0);
+    }
+    if (checks & FORM_CHECK_RETURNS) {
+        hear_returns(hearing, plan, themes, theme_count, outcome);
+    }
+    numerator += outcome->returns_heard;
+    denominator += outcome->returns_planned;
+    outcome->score.numerator = numerator;
+    outcome->score.denominator = denominator ? denominator : 1;
+}
+
+/* ------------------------------------------------------------- running */
+
+/*
+ * Puts the melody of every section the stage left unwritten back to open, so it can be run again: the spans that were
+ * open when the stage began (open_at_start), not the ones written before it, which a regenerated plan holds (R-072).
+ */
+static bool reopen_melody(PiecePlan *plan, const NodeId *themes, size_t theme_count, const LaneSpanId *open_at_start,
+                          size_t open_count) {
+    for (size_t t = 0; t < theme_count; t++) {
+        if (melody_done(plan, themes[t])) {
+            continue;
+        }
+        size_t count;
+        LaneSpanId *ids = find_spans(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, themes[t]), &count);
+        for (size_t i = 0; i < count; i++) {
+            bool was_open = false;
+            for (size_t k = 0; k < open_count && !was_open; k++) {
+                was_open = open_at_start[k] == ids[i];
+            }
+            if (was_open && plan_lane_span_set_state(plan, ids[i], PLAN_STATE_CONSTRAINED) != PLAN_OK) {
+                free(ids);
+                return false;
+            }
+        }
+        free(ids);
+    }
+    return true;
+}
+
+/* The melody spans that are open now, into a new array (NULL when there are none). */
+static LaneSpanId *open_melody_spans(const PiecePlan *plan, size_t *count) {
+    size_t found = 0;
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        found += plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_MELODY &&
+                 plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED;
+    }
+    LaneSpanId *ids = found ? calloc(found, sizeof(LaneSpanId)) : NULL;
+    *count = 0;
+    for (LaneSpanId id = 1; ids && id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_MELODY &&
+            plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED) {
+            ids[(*count)++] = id;
+        }
+    }
+    return ids;
+}
+
+static void outcome_reset(ComposeOutcome *outcome) {
+    compose_outcome_destroy(outcome);
+}
+
+/* What the stages of one run share. */
+typedef struct {
+    PiecePlan *plan;
+    const ComposeConfig *config;
+    unsigned long offset;
+    const NodeId *themes;
+    size_t theme_count;
+    bool sentences;
+    size_t attempt; /* the attempt at the returns, which moves the seeds of the stages they run */
+    bool seam;      /* the stages are the seam's: their records are kept under the seam stage */
+    MotiveDevelopContext motives;
+    AccompanimentParams accompaniment;
+    VoicingParams voicing;
+    ComposeOutcome *outcome;
+} Run;
+
+/* Adds the steps of a record to the one the seam stage keeps, and frees it; false when out of memory. */
+static bool record_keep(FillRecord **kept, FillRecord *record) {
+    if (!record) {
+        return true;
+    }
+    if (!*kept) {
+        *kept = record;
+        return true;
+    }
+    FillStep *steps = realloc((*kept)->steps, ((*kept)->step_count + record->step_count) * sizeof(FillStep));
+    if (!steps && (*kept)->step_count + record->step_count > 0) {
+        fill_record_destroy(record);
+        return false;
+    }
+    memcpy(steps + (*kept)->step_count, record->steps, record->step_count * sizeof(FillStep));
+    (*kept)->steps = steps;
+    (*kept)->step_count += record->step_count;
+    (*kept)->iterations += record->iterations;
+    (*kept)->status = record->status;
+    record->step_count = 0;
+    fill_record_destroy(record);
+    return true;
+}
+
+/*
+ * One stage. again marks a stage run a second time, after the returns: it writes what a return reopened, with seeds
+ * of its own, and keeps no record.
+ */
+static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
+    PiecePlan *plan = run->plan;
+    const ComposeConfig *config = run->config;
+    ComposeOutcome *outcome = run->outcome;
+    /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
+       climax, so a melody that gets stuck is written again, from the next seed, a few times. */
+    size_t attempts = stage == COMPOSE_STAGE_MELODY ? COMPOSE_MELODY_ATTEMPTS : 1;
+    if (job_step(config->job, compose_stage_name(stage), (unsigned)stage, (unsigned)COMPOSE_STAGE_COUNT)) {
+        outcome->cancelled = true;
+        return PIECE_ERR_STUCK;
+    }
+    size_t open_count = 0;
+    LaneSpanId *open_at_start = stage == COMPOSE_STAGE_MELODY ? open_melody_spans(plan, &open_count) : NULL;
+    for (size_t attempt = 0; attempt < attempts; attempt++) {
+        FillOperatorRegistry *registry = fill_registry_create();
+        FillConfig fill;
+        FillOutcome fill_outcome;
+        if (!registry) {
+            free(open_at_start);
+            return PIECE_ERR_ALLOC;
+        }
+        memset(&fill, 0, sizeof(fill));
+        fill.seed = config->seed + run->offset + stage_seed(stage, again, run->seam) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt +
+                    COMPOSE_RETURN_STRIDE * (unsigned long)run->attempt;
+        fill.job = config->job;
+        fill.checker = checker_of(stage);
+        fill.checker_context =
+            stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_INVENT ? (void *)&run->motives : NULL;
+        if (stage == COMPOSE_STAGE_HARMONY && motif_has_harmony(&run->motives)) {
+            fill.checker_context = (void *)&HOLD_MOTIVE_CHORDS;
+        }
+        /* With a style, the harmony and melody checkers also prefer what is closer to it, the structure checker the
+           form (where the plan leaves it open) and the motives checker the motives (motive categories only). */
+        StyleCheckContext style_context;
+        if (config->style &&
+            (stage == COMPOSE_STAGE_STRUCTURE || stage == COMPOSE_STAGE_HARMONY || stage == COMPOSE_STAGE_MELODY ||
+             stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_TEXTURE)) {
+            style_context.texture = stage == COMPOSE_STAGE_TEXTURE;
+            style_context.inner = fill.checker;
+            style_context.inner_context = fill.checker_context;
+            style_context.style = config->style;
+            style_context.weight = config->style_weight;
+            if (style_context.weight.denominator == 0) {
+                style_context.weight.numerator = 1;
+                style_context.weight.denominator = 1;
+            }
+            fill.checker = style_stage_checker;
+            fill.checker_context = &style_context;
+        }
+        /* The melody stage's candidates are also ranked and refused by how faithful each idea is to its motive (R-355); the
+           cache of measurements lives as long as this attempt. */
+        GrowFidelityContext fidelity_context;
+        GrowFidelityCache *fidelity_cache = NULL;
+        if (stage == COMPOSE_STAGE_MELODY) {
+            fidelity_cache = calloc(1, sizeof(*fidelity_cache));
+            fidelity_context.development = config->context.development;
+            fidelity_context.basic = run->motives.basic;
+            fidelity_context.inner = fill.checker;
+            fidelity_context.inner_context = fill.checker_context;
+            fidelity_context.cache = fidelity_cache;
+            fidelity_context.minimum = NULL;
+            fidelity_context.table = config->fidelity;
+            fill.checker = grow_fidelity_checker;
+            fill.checker_context = &fidelity_context;
+        }
+        FillRecord *seam_record = NULL;
+        FillRecord **record = run->seam ? &seam_record : (again ? NULL : &outcome->records[stage]);
+        if (record && !run->seam) {
+            fill_record_destroy(*record);
+            *record = NULL;
+        }
+        MelodyFillParams melody = config->melody ? *config->melody : melody_fill_params_default();
+        /* The style's note density, where the run set none: a cell is a beat, so that many notes to a cell. A melody
+           of even notes is found by chance and the rules of the melody can leave none, so the last attempt gives the
+           motive's own rhythm back rather than leave the stage open. */
+        ComposerRatio density;
+        if (melody.density == 0 && attempt + 1 < attempts && config->style &&
+            composer_style_density(config->style, &density)) {
+            unsigned long notes = (density.numerator + density.denominator / 2) / density.denominator;
+            melody.density = notes < 1 ? 1 : notes > 4 ? 4 : (unsigned)notes;
+        }
+        /* The first attempt uses the climax_position of the params (the preferences' melody group); the retries use CLIMAX_RETRIES. */
+        if (attempt > 0 && !run->sentences) {
+            melody.climax_position = CLIMAX_RETRIES[attempt];
+        }
+        /* The structure stage reads the basic motive's features (the segments of a theme); the context outlives the registry. */
+        GrowContext grow = config->context;
+        grow.basic = run->motives.basic;
+        FillResult registered = register_stage(registry, stage, &grow, &run->motives, &melody, &run->accompaniment,
+                                               &run->voicing);
+        FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;
+        fill_registry_destroy(registry);
+        free(fidelity_cache);
+        if (run->seam && !record_keep(&outcome->records[COMPOSE_STAGE_SEAM], seam_record)) {
+            free(open_at_start);
+            return PIECE_ERR_ALLOC;
+        }
+        if (ran != FILL_OK) {
+            free(open_at_start);
+            outcome->cancelled = registered == FILL_OK && fill_outcome.cancelled;
+            return ran == FILL_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_STUCK;
+        }
+        fill_outcome_destroy(&fill_outcome);
+        if (stage_done(plan, stage, run->themes, run->theme_count)) {
+            free(open_at_start);
+            return PIECE_OK;
+        }
+        if (attempt + 1 == attempts ||
+            !reopen_melody(plan, run->themes, run->theme_count, open_at_start, open_count)) {
+            outcome->stuck = true;
+            outcome->stuck_stage = stage;
+            free(open_at_start);
+            return PIECE_ERR_STUCK;
+        }
+    }
+    free(open_at_start);
+    return PIECE_OK;
+}
+
+/* Whether a theme section is still to be given the material of the one it returns. */
+static bool returns_pending(const PiecePlan *plan, const NodeId *themes, size_t theme_count) {
+    for (size_t t = 0; t < theme_count; t++) {
+        if (form_return_handles(plan, themes[t])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The FIGURE constraint of a section, when it has one. */
+static bool figure_of(const PiecePlan *plan, NodeId section, PlanFigure *out) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_FIGURE) {
+            *out = constraint->params.figure;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* The theme sections to be returned with a reharmonization (a REHARMONIZE or a VARIED return, or a FIGURATE one whose figure sits over a reharmonized copy). */
+static size_t reharmonized(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
+    size_t count = 0;
+    for (size_t t = 0; t < theme_count; t++) {
+        PlanReturnVariation variation;
+        PlanFigure figure;
+        if (form_return_source(plan, themes[t], NULL, &variation) &&
+            (variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_VARIED ||
+             (variation == PLAN_RETURN_FIGURATE && figure_of(plan, themes[t], &figure) && figure.reharmonize))) {
+            out[count++] = themes[t];
+        }
+    }
+    return count;
+}
+
+/* The theme sections to be returned as a figurate variation (R-497): their figure is written after the returns. */
+static size_t figurate(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
+    size_t count = 0;
+    for (size_t t = 0; t < theme_count; t++) {
+        PlanReturnVariation variation;
+        if (form_return_source(plan, themes[t], NULL, &variation) && variation == PLAN_RETURN_FIGURATE) {
+            out[count++] = themes[t];
+        }
+    }
+    return count;
+}
+
+/*
+ * The returns, then the stages that write what they reopened. The chords of a reharmonization are the harmony
+ * operators', which know nothing of the melody the return keeps: when a strong-beat note of it is not a tone of the
+ * chord now under it, or (in the first half of the attempts) no chord differs from the returned one (for a varied
+ * return: none in its last quarter), the returns are made again from the plan as it was, with other seeds, a few times.
+ */
+static PieceResult run_returns(Run *run) {
+    PiecePlan *plan = run->plan;
+    NodeId *pending = calloc(run->theme_count + 1, sizeof(NodeId));
+    if (!pending) {
+        return PIECE_ERR_ALLOC;
+    }
+    NodeId *figured = calloc(run->theme_count + 1, sizeof(NodeId));
+    if (!figured) {
+        free(pending);
+        return PIECE_ERR_ALLOC;
+    }
+    size_t pending_count = reharmonized(plan, run->themes, run->theme_count, pending);
+    size_t figured_count = figurate(plan, run->themes, run->theme_count, figured);
+    bool again = pending_count > 0 || figured_count > 0;
+    char *snapshot = again ? plan_to_json(plan, NULL) : NULL;
+    size_t attempts = again ? COMPOSE_RETURN_ATTEMPTS : 1;
+    PieceResult result = again && !snapshot ? PIECE_ERR_ALLOC : PIECE_OK;
+    for (size_t attempt = 0; result == PIECE_OK && attempt < attempts; attempt++) {
+        if (attempt > 0) {
+            PiecePlan *fresh = NULL;
+            if (plan_from_json(snapshot, &fresh, NULL) != PLAN_OK) {
+                result = PIECE_ERR_ALLOC;
+                break;
+            }
+            plan_replace_contents(plan, fresh);
+        }
+        run->attempt = attempt;
+        run->outcome->stuck = false;
+        result = run_stage(run, COMPOSE_STAGE_RETURNS, false);
+        for (ComposeStage stage = COMPOSE_STAGE_HARMONY; result == PIECE_OK && stage <= COMPOSE_STAGE_TEXTURE; stage++) {
+            result = run_stage(run, stage, true);
+        }
+        /* The melody fits the chords, and (for the first half of the attempts) the chords are not all the returned ones. */
+        bool fits = true;
+        for (size_t i = 0; result == PIECE_OK && i < pending_count; i++) {
+            size_t changed = 0;
+            size_t total = 0;
+            bool cadence = false;
+            PlanReturnVariation variation = PLAN_RETURN_REHARMONIZE;
+            PlanFigure figure = {0};
+            fits = fits && form_return_melody_fits(plan, pending[i]);
+            form_return_source(plan, pending[i], NULL, &variation);
+            if (attempt < attempts / 2 && variation == PLAN_RETURN_VARIED) {
+                fits = fits && form_return_cadence_changed(plan, pending[i], &cadence) && cadence;
+            } else if (attempt < attempts / 2 && figure_of(plan, pending[i], &figure) && figure.change_at > 0) {
+                /* The root changes at the bar the figure asks for. */
+                fits = fits && form_return_bar_changed(plan, pending[i], figure.change_at, &cadence) && cadence;
+            } else if (attempt < attempts / 2) {
+                fits = fits && form_return_chords_changed(plan, pending[i], &changed, &total) && changed > 0;
+            }
+        }
+        /* Everything fits: the figures are written over the harmony that is final. */
+        const MelodyFillParams defaults = melody_fill_params_default();
+        const MelodyFillParams *range = run->config->melody ? run->config->melody : &defaults;
+        for (size_t i = 0; result == PIECE_OK && fits && i < figured_count; i++) {
+            size_t index = 0;
+            FillRng rng;
+            while (index < run->theme_count && run->themes[index] != figured[i]) {
+                index++;
+            }
+            fill_rng_seed(&rng, run->config->seed + run->offset + COMPOSE_RETURN_STRIDE * (unsigned long)attempt +
+                                    7919UL * (unsigned long)index);
+            fits = !form_return_copies(plan, figured[i]) || form_figure_write(plan, figured[i], range, &rng);
+        }
+        if (result == PIECE_OK && !fits) {
+            run->outcome->stuck = true;
+            run->outcome->stuck_stage = COMPOSE_STAGE_RETURNS;
+            result = PIECE_ERR_STUCK;
+        }
+        if (result == PIECE_OK || result == PIECE_ERR_ALLOC || run->outcome->cancelled) {
+            break;
+        }
+        if (attempt + 1 < attempts) {
+            result = PIECE_OK; /* another attempt */
+            continue;
+        }
+    }
+    free(snapshot);
+    free(pending);
+    free(figured);
+    return result;
+}
+
+/* Takes the HOLD constraint off a section, so the stages can target it; false when it has none or the plan refuses. */
+static bool release_hold(PiecePlan *plan, NodeId section) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_HOLD) {
+            return plan_node_remove_constraint(plan, section, i) == PLAN_OK;
+        }
+    }
+    return false;
+}
+
+/*
+ * The seam (R-171). The body's first bar is copied into the seam section as Given (once: a plan that has the copy is
+ * left as it is), then the held sections are given their structure, motives, harmony, bass, melody and texture, with
+ * the copy after them. A seam that cannot be copied (the first bar is not written) leaves the held sections to be
+ * filled without it. The held sections keep their HOLD constraint.
+ *
+ * A sized form's section that leads into the next (R-486) is held too, and a plan with no seam section is filled the
+ * same way, without the copy, against the sections after the held one (the operators read the Given chords and the first
+ * Given note after a target). A plan with no held section and no seam does nothing.
+ */
+static PieceResult run_seam(Run *run) {
+    PiecePlan *plan = run->plan;
+    NodeId seam = piece_seam_find(plan);
+    NodeId *held = calloc(run->theme_count + 1, sizeof(NodeId));
+    if (!held) {
+        return PIECE_ERR_ALLOC;
+    }
+    size_t held_count = 0;
+    for (size_t t = 0; t < run->theme_count; t++) {
+        if (plan_node_has_constraint(plan, run->themes[t], PLAN_CONSTRAINT_HOLD)) {
+            held[held_count++] = run->themes[t];
+        }
+    }
+    if (seam == PLAN_NODE_NONE && held_count == 0) {
+        free(held);
+        return PIECE_OK;
+    }
+    if (seam != PLAN_NODE_NONE) {
+        Rational body_start;
+        if (plan_node_lane_spans(plan, seam, NULL, 0) == 0 && piece_seam_body_start(plan, &body_start)) {
+            piece_seam_give(plan, seam, body_start);
+        }
+        run->outcome->seam_planned = plan_node_lane_spans(plan, seam, NULL, 0) > 0;
+    }
+    PieceResult result = PIECE_OK;
+    size_t released = 0;
+    while (released < held_count && release_hold(plan, held[released])) {
+        released++;
+    }
+    static const ComposeStage STAGES[] = {COMPOSE_STAGE_STRUCTURE, COMPOSE_STAGE_MOTIVES, COMPOSE_STAGE_HARMONY,
+                                          COMPOSE_STAGE_BASS,      COMPOSE_STAGE_MELODY,  COMPOSE_STAGE_TEXTURE};
+    run->seam = held_count > 0 && released == held_count;
+    for (size_t s = 0; run->seam && result == PIECE_OK && s < sizeof(STAGES) / sizeof(STAGES[0]); s++) {
+        result = run_stage(run, STAGES[s], false);
+        /* A held section that asks for a connective gets it once its melody is written, before the texture reads it. */
+        if (result == PIECE_OK && STAGES[s] == COMPOSE_STAGE_MELODY) {
+            for (size_t i = 0; result == PIECE_OK && i < released; i++) {
+                if (plan_node_has_constraint(plan, held[i], PLAN_CONSTRAINT_CONNECTIVE)) {
+                    result = piece_connective_write(plan, held[i]);
+                }
+            }
+        }
+    }
+    if (result == PIECE_ERR_STUCK && !run->outcome->cancelled) {
+        run->outcome->stuck = true;
+        run->outcome->stuck_stage = COMPOSE_STAGE_SEAM;
+    }
+    run->seam = false;
+    PlanConstraint hold;
+    memset(&hold, 0, sizeof(hold));
+    hold.kind = PLAN_CONSTRAINT_HOLD;
+    for (size_t i = 0; i < released; i++) {
+        if (plan_node_add_constraint(plan, held[i], &hold) != PLAN_OK && result == PIECE_OK) {
+            result = PIECE_ERR_ALLOC;
+        }
+    }
+    free(held);
+    return result;
+}
+
+/* One run of the stages. offset is added to every seed. A run that ends OK leaves *hearing, the one hearing of the
+   finished plan that every check of the run reads; the caller destroys it. */
+static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsigned checks, unsigned long offset,
+                            ComposeOutcome *outcome, ComposerHearing **hearing) {
+    NodeId *themes;
+    size_t theme_count;
+    outcome_reset(outcome);
+    if (!find_themes(plan, &themes, &theme_count)) {
+        return PIECE_ERR_ALLOC;
+    }
+    if (theme_count == 0) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    outcome->sections = calloc(theme_count, sizeof(ComposeHeard));
+    if (!outcome->sections) {
+        free(themes);
+        return PIECE_ERR_ALLOC;
+    }
+    outcome->section_count = theme_count;
+    for (size_t t = 0; t < theme_count; t++) {
+        outcome->sections[t].section = themes[t];
+        outcome->sections[t].in_scope = section_in_scope(config, themes[t]);
+        read_part(plan, themes[t], &outcome->sections[t]);
+        outcome->sections[t].heard_result = FORM_HEAR_ERR_NOT_WRITTEN;
+        outcome->sections[t].heard_form = -1;
+        outcome->sections[t].requested_form = -1;
+        outcome->sections[t].requested_beginning = -1;
+        outcome->sections[t].requested_ending = -1;
+        outcome->sections[t].structure.denominator = 1;
+    }
+    Run run;
+    memset(&run, 0, sizeof(run));
+    run.plan = plan;
+    run.config = config;
+    run.offset = offset;
+    run.themes = themes;
+    run.theme_count = theme_count;
+    run.outcome = outcome;
+    /* A piece of sentences keeps the climax it is asked for: their fragments always have room for one. */
+    run.sentences = true;
+    for (size_t t = 0; t < theme_count; t++) {
+        run.sentences = run.sentences && has_archetype(plan, themes[t], PLAN_ARCHETYPE_SENTENCE);
+    }
+    /* Fragments of one note are allowed: grow-theme shortens a fragment to fit its idea. */
+    motive_develop_context_default(&run.motives);
+    run.motives.min_length = 1;
+    run.motives.basic = config->basic;
+    run.motives.pool = config->pool;
+    run.motives.pool_count = config->pool_count;
+    /* At a fast tempo the motive-forms stay closer to the basic idea (R-163). */
+    if (config->tempo.denominator > 0 &&
+        config->tempo.numerator >= (unsigned long)MOTIVE_FAST_TEMPO_QPM * config->tempo.denominator) {
+        run.motives.remoteness_limit.numerator = 1;
+        run.motives.remoteness_limit.denominator = 2;
+    }
+    run.accompaniment = accompaniment_params_default();
+    run.voicing = voicing_params_default();
+    PieceResult result = PIECE_OK;
+
+    for (ComposeStage stage = COMPOSE_STAGE_INVENT; result == PIECE_OK && stage <= COMPOSE_STAGE_TEXTURE; stage++) {
+        if (stage == COMPOSE_STAGE_INVENT && !invention_open(plan)) {
+            continue;
+        }
+        result = run_stage(&run, stage, false);
+    }
+    /* The sections that return an earlier one are given its material now it is written, then what they reopened is. */
+    if (result == PIECE_OK && returns_pending(plan, themes, theme_count)) {
+        result = run_returns(&run);
+    }
+    /* The loop's end, held until now, is filled against the bar it leads into. */
+    if (result == PIECE_OK) {
+        result = run_seam(&run);
+    }
+    if (result == PIECE_OK) {
+        /* The plan is written: it is rendered once, and the form, the returns and every later check hear that render. */
+        HearingResult made = hearing_create(plan, hearing);
+        result = made == HEARING_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_OK;
+        if (result == PIECE_OK) {
+            hear(*hearing, plan, themes, theme_count, checks, outcome);
+            if (checks & FORM_CHECK_SEAM) {
+                hear_seam(plan, outcome);
+            }
+        }
+    }
+    free(themes);
+    return result;
+}
+
+/* Whether the plan changes key: its key lane has more than one span. */
+static bool has_key_changes(const PiecePlan *plan) {
+    PlanSpan everything = {{0, 1}, {1000000, 1}};
+    return plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, NULL, 0) > 1;
+}
+
+/* The checks of a plan with several keys; PIECE_ERR_STUCK, marked in the outcome, when it fails them. */
+static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, const FormSpec *form, unsigned checks,
+                              ComposeOutcome *outcome) {
+    /* A check the form does not name is not run: its result stays as the outcome was cleared, ok. */
+    outcome->key_check.ok = true;
+    outcome->cadence_check.ok = true;
+    bool read = (!(checks & FORM_CHECK_KEYS) || piece_check_keys_in(hearing, plan, &outcome->key_check)) &&
+                (!(checks & FORM_CHECK_CADENCES) || piece_check_cadences(plan, form, &outcome->cadence_check));
+    if (read && outcome->key_check.ok && outcome->cadence_check.ok) {
+        return PIECE_OK;
+    }
+    if (!read) {
+        outcome->key_check.ok = false;
+        snprintf(outcome->key_check.reason, sizeof(outcome->key_check.reason), "the keys could not be read");
+    }
+    outcome->stuck = true;
+    outcome->stuck_stage = COMPOSE_STAGE_TEXTURE;
+    outcome->key_rejected = true;
+    return PIECE_ERR_STUCK;
+}
+
+/*
+ * The Analyzer's check of a piece structure plan (R-172): the whole of it in one check, analyzer_check_piece, kept as
+ * the only member of outcome->analyzer_checks. A plan it cannot read is left out, as a section is.
+ */
+static PieceResult check_analyzer_piece(ComposerHearing *hearing, ComposeOutcome *outcome) {
+    outcome->analyzer_checks = calloc(1, sizeof(AnalyzerCheck));
+    if (!outcome->analyzer_checks) {
+        return PIECE_ERR_ALLOC;
+    }
+    outcome->analyzer_check_count = 1;
+    AnalyzerCheckResult result = analyzer_check_piece_in(hearing, &outcome->analyzer_checks[0]);
+    if (result == ANALYZER_CHECK_ERR_ALLOC) {
+        return PIECE_ERR_ALLOC;
+    }
+    if (result != ANALYZER_CHECK_OK) {
+        return PIECE_OK;
+    }
+    outcome->analyzer_planned = outcome->analyzer_checks[0].planned;
+    outcome->analyzer_agreed = outcome->analyzer_checks[0].agreed;
+    outcome->score.numerator += outcome->analyzer_agreed;
+    outcome->score.denominator += outcome->analyzer_planned;
+    if (!outcome->analyzer_checks[0].contradicts) {
+        return PIECE_OK;
+    }
+    outcome->stuck = true;
+    outcome->stuck_stage = COMPOSE_STAGE_TEXTURE;
+    outcome->analyzer_rejected = true;
+    return PIECE_ERR_STUCK;
+}
+
+/*
+ * The Analyzer's check of every theme section (R-080). PIECE_ERR_STUCK, marked in the outcome, when some section's
+ * analysis contradicts the plan; the score takes in what was planned and what was heard. A section the check cannot read
+ * is left out of it.
+ */
+static PieceResult check_analyzer(ComposerHearing *hearing, const PiecePlan *plan, ComposeOutcome *outcome) {
+    if (piece_is_structure_plan(plan)) {
+        return check_analyzer_piece(hearing, outcome);
+    }
+    outcome->analyzer_checks = calloc(outcome->section_count ? outcome->section_count : 1, sizeof(AnalyzerCheck));
+    if (!outcome->analyzer_checks) {
+        return PIECE_ERR_ALLOC;
+    }
+    outcome->analyzer_check_count = outcome->section_count;
+    bool contradicts = false;
+    for (size_t i = 0; i < outcome->section_count; i++) {
+        AnalyzerCheck *check = &outcome->analyzer_checks[i];
+        if (!outcome->sections[i].in_scope) {
+            continue;
+        }
+        AnalyzerCheckResult result = analyzer_check_section_in(hearing, outcome->sections[i].section, check);
+        if (result == ANALYZER_CHECK_ERR_ALLOC) {
+            return PIECE_ERR_ALLOC;
+        }
+        if (result != ANALYZER_CHECK_OK) {
+            continue;
+        }
+        outcome->analyzer_planned += check->planned;
+        outcome->analyzer_agreed += check->agreed;
+        contradicts = contradicts || check->contradicts;
+    }
+    outcome->score.numerator += outcome->analyzer_agreed;
+    outcome->score.denominator += outcome->analyzer_planned;
+    if (!contradicts) {
+        return PIECE_OK;
+    }
+    outcome->stuck = true;
+    outcome->stuck_stage = COMPOSE_STAGE_TEXTURE;
+    outcome->analyzer_rejected = true;
+    return PIECE_ERR_STUCK;
+}
+
+/*
+ * The Analyzer's measure of how far the finished plan is from the style. A plan the Analyzer cannot read is left
+ * unmeasured: the measure is a report, it never rejects a run.
+ */
+static PieceResult measure_style(ComposerHearing *hearing, const ComposeConfig *config, ComposeOutcome *outcome) {
+    ComposerMeasureResult measured = composer_style_measure_in(hearing, config->style, &outcome->style_distance);
+    if (measured == COMPOSER_MEASURE_ERR_ALLOC) {
+        return PIECE_ERR_ALLOC;
+    }
+    outcome->style_measured = measured == COMPOSER_MEASURE_OK;
+    return PIECE_OK;
+}
+
+/*
+ * Keeps the run that just ended stuck as a rejection, with the reason the run's own marks give; a failed allocation
+ * leaves the run out of the list. A fill error that marked no stage (outcome->stuck false) has an empty stage.
+ */
+static void add_rejection(ComposeRejection **list, size_t *count, const PiecePlan *plan, const ComposeOutcome *outcome,
+                          size_t round, unsigned long seed) {
+    ComposeRejection *grown = realloc(*list, (*count + 1) * sizeof(ComposeRejection));
+    if (!grown) {
+        return;
+    }
+    *list = grown;
+    ComposeRejection *rejection = &grown[*count];
+    memset(rejection, 0, sizeof(*rejection));
+    rejection->round = round;
+    rejection->seed = seed;
+    snprintf(rejection->stage, sizeof(rejection->stage), "%s", outcome->stuck ? compose_stage_name(outcome->stuck_stage) : "");
+    if (outcome->analyzer_rejected) {
+        snprintf(rejection->reason, sizeof(rejection->reason), "analyzer");
+        for (size_t s = 0; s < outcome->analyzer_check_count; s++) {
+            const AnalyzerCheck *check = &outcome->analyzer_checks[s];
+            for (size_t i = 0; i < check->item_count; i++) {
+                if (check->items[i].agreed) {
+                    continue;
+                }
+                ComposeRejectionItem *items = realloc(rejection->items, (rejection->item_count + 1) * sizeof(*items));
+                if (!items) {
+                    break;
+                }
+                rejection->items = items;
+                memset(&items[rejection->item_count], 0, sizeof(*items));
+                const char *name = piece_is_structure_plan(plan)
+                                       ? "piece"
+                                       : (s < outcome->section_count ? plan_node_name(plan, outcome->sections[s].section) : NULL);
+                snprintf(items[rejection->item_count].section, sizeof(items[0].section), "%s", name ? name : "");
+                items[rejection->item_count].item = check->items[i];
+                rejection->item_count++;
+            }
+        }
+    } else if (outcome->key_rejected) {
+        bool keys = !outcome->key_check.ok;
+        snprintf(rejection->reason, sizeof(rejection->reason), "%s", keys ? "key" : "cadence");
+        snprintf(rejection->detail, sizeof(rejection->detail), "%s",
+                 keys ? outcome->key_check.reason : outcome->cadence_check.reason);
+    } else {
+        snprintf(rejection->reason, sizeof(rejection->reason), "stuck");
+    }
+    (*count)++;
+}
+
+PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
+    if (!plan || !config || !outcome) {
+        return PIECE_ERR_NULL;
+    }
+    memset(outcome, 0, sizeof(*outcome));
+    /*
+     * A run can be stuck for a reason no later choice can mend: a melody that no chord progression written before
+     * it lets fit. The plan as it was given is kept, and a run that is stuck starts again from it with other seeds,
+     * a few times; the first run is always the one with the seeds the configuration names.
+     */
+    /* The checks the plan's form names (form_spec.h): the config's form, else the built-in the plan is named for; a plan
+       of no known form runs every check it has the parts for. */
+    FormSpec *owned = NULL;
+    const FormSpec *form = config->form;
+    if (!form && form_spec_builtin_for_plan(plan, &owned) == FORM_SPEC_OK) {
+        form = owned;
+    }
+    unsigned checks = form ? form->checks : FORM_CHECK_ALL;
+    char *snapshot = plan_to_json(plan, NULL);
+    PieceResult result = PIECE_ERR_ALLOC;
+    ComposeRejection *rejections = NULL;
+    size_t rejection_count = 0;
+    for (size_t round = 0; snapshot && round < COMPOSE_RUN_ROUNDS; round++) {
+        if (round > 0) {
+            PiecePlan *fresh = NULL;
+            if (plan_from_json(snapshot, &fresh, NULL) != PLAN_OK) {
+                result = PIECE_ERR_ALLOC;
+                break;
+            }
+            plan_replace_contents(plan, fresh);
+        }
+        ComposerHearing *hearing = NULL;
+        result = run_once(plan, config, checks, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome, &hearing);
+        if (result == PIECE_OK && has_key_changes(plan)) {
+            result = check_keys(hearing, plan, form, checks, outcome);
+        }
+        if (result == PIECE_OK && config->analyzer_check) {
+            result = check_analyzer(hearing, plan, outcome);
+        }
+        if (result == PIECE_OK && config->style) {
+            result = measure_style(hearing, config, outcome);
+        }
+        hearing_destroy(hearing);
+        if (result != PIECE_ERR_STUCK || outcome->cancelled) {
+            break;
+        }
+        add_rejection(&rejections, &rejection_count, plan, outcome, round,
+                      config->seed + COMPOSE_ROUND_STRIDE * (unsigned long)round);
+    }
+    free(snapshot);
+    form_spec_destroy(owned);
+    /* Kept apart until now: each run starts by clearing the outcome. */
+    outcome->rejections = rejections;
+    outcome->rejection_count = rejection_count;
+    return result;
+}

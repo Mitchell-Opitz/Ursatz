@@ -1,0 +1,151 @@
+# The theme request
+
+The JSON file `ursatz-composer theme` reads ([cli-theme.md](cli-theme.md), R-166, R-206). It holds up to 16 motives, the slot
+of the theme and the single ideas each one gives, and the brief. Schema `ursatz-theme-request`, version 2: a version 1
+request is an error (`the request must have "schema_version": 2`). Back to the [docs index](README.md).
+
+```json
+{"schema": "ursatz-theme-request", "schema_version": 2,
+ "into": "sentence", "hybrid": null, "key": "D", "mode": "minor", "meter": "4/4", "bars": 8,
+ "cadence": "PAC", "first_cadence": null, "development": "balanced",
+ "motives": [{"id": "A", "form": "full", "degrees": "1:q b3:e 5:e 1':h", "pickup": "0", "harmony": null,
+              "features": [{"label": "a", "first": 0, "last": 1}], "role": "melodic"},
+             {"id": "R", "form": "full", "degrees": "5:e 4:e 3:e 2:e 1:h", "pickup": "0", "harmony": null,
+              "features": [], "role": "melodic"}],
+ "slots": {"basic": "A", "contrasting": null, "continuation": null, "cadential": null},
+ "ideas": {"repetition": "R"},
+ "chords": [{"bar": 0, "text": "I"}, {"bar": 1, "text": "IV V@2"}],
+ "accompaniment": null,
+ "voicing": null,
+ "style": "/abs/path/style.json", "style_weight": "1/2", "without": ["motive-nct-figure"],
+ "tempo": null}
+```
+
+## The brief
+
+| Member | Meaning |
+| --- | --- |
+| `into`, `hybrid` | `sentence`, `period` or `hybrid`; with `hybrid`, the pairing as `--hybrid` writes it (`antecedent+continuation`). |
+| `key`, `mode` | The tonic (or a key like `"D minor"`) and `minor`, `major` or `style`. `style` takes the mode from the style's `mode` category and needs a `style`. |
+| `meter`, `bars` | `2/4`, `3/4`, `4/4` or `6/8`; 3 to 16 bars (default 8; with a `construction` and no `bars`, the construction's). 4 and 8 bars are built as they always were; any other length gets a construction chosen from the motif or the length ([grow-construction.md](grow-construction.md#choosing-a-construction)) and is refused at `/bars` when none fits (`no construction makes a 15-bar sentence from this motif`). |
+| `construction` | API 1.18, `null` (default) or `{"ideas": {"<idea name>": bars, ...}, "extensions": [{"kind", "idea", "bars", "varied"}]}`: the bars of each idea of the theme (the idea names of `ideas`: `basic idea`, `repetition`, `contrasting idea`, ...) and up to 3 extensions (`kind` `repeat`, `stretch`, `addition` or `evaded`; `idea` is required for a repeat and a stretch; `bars` 0 to 4, 0 for the default; `varied` for a repeat). The ideas and the extensions must add up to `bars`. The construction is `given` ([grow-construction.md](grow-construction.md)). |
+| `cadence`, `first_cadence` | As the options of [grow](cli-grow.md): PAC (default), IAC or HC; the weak cadence of an antecedent. |
+| `development` | `melody`, `balanced` (default) or `theme` (ch. XI, API 1.9): how far the presentation and the continuation stray from the motif. `melody` keeps them close (exact repetitions, a segment `a` and the next segment, liquidation of one step at most); `theme` develops it (sequences, segment `b`, fragment 2 always a sequence, liquidation of two steps or more). The weights are in [grow-development.md](grow-development.md). The brief of the result and the explanation name it. |
+| `accompaniment` | `null`, `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `{"pattern": "motive", "motive": {"degrees", "pickup", "form", "role": "accompaniment"}}`, a saved accompaniment motive as the pattern. |
+| `voicing` | `null`, `"satb"` (alto and tenor under the grown melody) or `"chorale"` (four parts, the melody written too). Not with an accompaniment. |
+| `style`, `style_weight`, `without` | An absolute path to a style model file, how strongly it is preferred, and the categories to read it without (the per-item switch for the motive categories, R-162). `style_weight` and `without` are read only with a `style`. A style gives the mode (`mode: "style"`), the tempo and the note density (R-163). |
+| `tempo` | `null`, or quarter notes per minute as a string or number. It wins over the style's. |
+
+## Motives
+
+`motives` has 1 to 16 entries, each with a unique `id`. A motive is a degree list (R-135) read in the key and mode of the
+request, with a `pickup` in beats, its own `harmony` as Roman numerals (or `null`), `features` (`label`, `first` and `last` note
+indices) and a `role`. Only `form: "full"` is read. A slot or an idea takes a melodic motive; the accompaniment motive is of the
+accompaniment role.
+
+The `features` are the segments the theme's continuation uses (ch. VIII): fragment 1 is one of them, fragment 2 is that
+segment one step down or the next, and the cadential idea liquidates them ([grow.md](grow.md#choices)). A motive without
+features gets the Composer's proposed segments for the run, which are not written back. A segment of fewer than two notes
+is not used, and a segment that is the whole motif is not a fragment.
+
+A motive may also have `tone_overrides`, `{"<n>": "<role>"}`: the role of note `<n>` (1 from the first), `chord` or a non-chord tone
+(`passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`,
+`changing-tone`, `pedal`), as the `motive` command's `--tone` writes it. It replaces the role the motive's base harmony gives the
+note, and the plan keeps the result as the motive's tones ([melody-fill.md](melody-fill.md#tone-roles)). A note out of range, a
+role that is not one, or a motive with no key and pitches to label exits 1, naming the motive (`motive 'A': tone_overrides "9":
+...`). A piece request's motives read it too.
+
+`forms` is not read (R-207): a motive with a `forms` member is an error (exit 1, `saved forms are no longer read; leave "forms"
+out`). The forms of the ideas are invented by the motives stage.
+
+## Slots
+
+`slots` names a motive for each slot by its `id`. `basic` is required. A motive may be in several slots, and a motive in none
+gives nothing.
+
+| Slot | Ideas it gives |
+| --- | --- |
+| `basic` | the basic idea, the repetition of a presentation, the consequent's basic idea |
+| `contrasting` | the contrasting idea of an antecedent or a compound basic idea, the consequent's contrasting idea |
+| `continuation` | fragment 1 and fragment 2 |
+| `cadential` | the cadential idea of a continuation, cadential 1 and cadential 2 |
+
+A motive with triplets, sixteenths or compound figures (the dotted-eighth, sixteenth, eighth of 6/8) keeps them through development: a theme that augments or diminishes it passes over a ratio whose result has no triplets when the motive has them, and the fragments, the basic idea and the repetition keep the figure (R-435, R-442). Themes in 9/8 and 12/8 stay refused.
+
+A slot the pairing has no idea for (a contrasting slot in a sentence) cannot be grown (exit 2). The motive of a slot other
+than `basic` must be a full motive of two notes or more, in the key and meter, and no longer than the idea it begins: two bars
+of eight for the contrasting idea and the cadential idea, one for fragment 1. A motif as long as its idea is that idea, placed
+as written; a shorter one is grown to the idea ([grow.md](grow.md#how-a-motif-fills-its-idea)). The basic motif may be as long
+as the basic idea: 2 bars of an 8-bar theme, 1 of a 4-bar one. It may also be as long as the first part, the presentation of a
+sentence or the antecedent of a period (4 bars of an 8-bar theme, 2 of a 4-bar one): that part is then the motif, placed as
+written, with no repetition or contrasting idea, and a `contrasting` slot or a motive for the `repetition` or `contrasting
+idea` idea is refused at `/slots/contrasting` or `/ideas/<name>` with "the basic motif fills the whole presentation; leave the
+contrasting idea out" (or "antecedent"). A compound basic idea has no such part. Any other longer motif is refused at
+`/slots/basic` with "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or
+antecedent" (for a 4-bar theme, up to 1 bar or 2).
+
+## Ideas
+
+`ideas` gives a single idea a motive of its own: an object from the idea's name to a motive `id` (or `null` for none). The
+names are `basic idea`, `repetition`, `contrasting idea`, `consequent basic idea`, `consequent contrasting idea`,
+`fragment 1`, `fragment 2`, `cadential`, `cadential 1` and `cadential 2`. The idea is made from its motive exactly, in place of
+the slot's motive for that one idea; the other ideas of the slot are made as before. An idea with no entry is made from the
+motive of its slot. The same motive may be given to several ideas and slots.
+
+An unknown idea name, an id the request does not have, or an idea the pairing has not (a `repetition` in a period) is an error
+(exit 1) naming it. The basic idea is the basic slot's: `basic idea` may be named only with the motive of the basic slot.
+The motive of an idea must fit it as a slot motive does (exit 2 when it does not).
+
+## Chords
+
+`chords` gives chords of the theme (R-208): a list of `{"bar", "text"}`, at most one entry for a bar. `bar` counts from 0 inside
+the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](cli-motive.md)) relative to the bar: Roman
+numerals in the theme's key separated by spaces, each with an optional `@<beats>` onset from the start of the bar in beats of
+the beat unit (`I V@2`). At most 2 chords; the first is at 0 unless it is written with an onset, the onsets rise, each is a
+multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. The
+numerals are diatonic (no `b` or `#`).
+
+The chords are Given: the harmony stage fills only what they leave open, the bass and the melody are written over them, and
+none of them is changed. The harmony and bass operators write chords on the cells of the meter (one for a bar of 2/4 or 3/4,
+two for 4/4 or 6/8), so an onset must fall on one: in 4/4 a second chord starts at `@2`, in 6/8 at `@3`, and a bar of 2/4 or
+3/4 takes one chord. Any other onset, such as the "and" of beat 2 (`@3/2`), is an error (exit 1), not shifted to a cell.
+
+A bad `bar`, text, onset or count exits 1 naming the bar (`chords bar 2: ...`). A chord in a bar the cadence fixes
+that cannot arrive it (a last bar `V` under a perfect cadence) exits 2 before any seed is tried, see
+[Refusals before composing](#refusals-before-composing). Chords that leave a stage with a target it cannot write while
+seeding (a gap between two Given chords nothing connects) exit 2 with `the given chords in bar <n> do not allow the <cadence>`
+(path `/chords` in the API), `<n>` counted from 0 as `bar` is. The JSON output has a `chords` member, the
+list as read.
+
+## Refusals before composing
+
+`composer_api_validate("theme", ...)` builds the plan of the request without seeding and refuses what Compose would refuse
+before it seeds; Compose gives the same message and path. One refusal is given, the first in this order:
+
+| Path | Refused when |
+|---|---|
+| `/bars` or `/hybrid` | the pairing cannot be built in the meter or the bar count, or no construction makes the bars from the motif |
+| `/construction`, `/construction/ideas`, `/construction/ideas/<idea>`, `/construction/extensions/<k>`, `/construction/extensions/<k>/<member>` | the construction is not an object, names an unknown idea or kind, gives an idea the pairing has not or gives none it has, an extension that cannot follow its idea (`a stretch cannot follow the fragment 1`), or ideas and extensions that do not add up to the bars (`the ideas are 9 bars; the theme has 8`) |
+| `/cadence` | the cadence is not a PAC, an IAC or an HC |
+| `/development` | it is not `melody`, `balanced` or `theme` |
+| `/first_cadence` | an antecedent's cadence is not weaker than the theme's, or has no room |
+| `/slots/basic` | the basic motif has fewer than two notes, or is longer than its idea ("the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent") |
+| `/slots/<slot>` | a slot has no place in the pairing, or its motif has fewer than two notes, another meter or key, or is longer than its idea |
+| `/ideas/<name>` | the same for the motif of an idea |
+| `/slots/contrasting`, `/ideas/<name>` | given beside a part-length basic motif |
+| `/accompaniment`, `/voicing` | the accompaniment is not valid, or a voicing is given with one |
+| `/chords/<n>` | the chord of entry `n` of `chords` is in the last bar of the theme (or of an antecedent) and cannot arrive its cadence: `chords bar 7: V cannot end a PAC; the cadence needs a tonic chord in root position`. A PAC needs a root-position tonic, an IAC a tonic, an HC the dominant |
+
+What fails only while seeding (a theme no seed can write) is not found by validation.
+
+## In the API
+
+[`composer_api_theme`](api/theme-and-piece.md#composer_api_themerequest_json-job-out) reads this request as a JSON text. The motives are inline:
+each motive object carries its content in `degrees`, and a motive that names a file (`path`, `file`) is refused with the path
+`/motives/<n>/path`. The `theme` command reads the same request from a file; the file holds the motives inline too, so a
+request file is the request text of the API. The options of the command (`--seed`, `--suggest`, `--check`, `--out`, `--midi`,
+`--musicxml`, `--plain-midi`, `--explain`) are members of the API request (`seed`, `suggest`, `check`, `midi`, `musicxml`,
+`plain_midi`, `explain`), and the command writes the files from the response. `blend`, `blend_weight` and `blend_weights`
+take the second style model of `grow`'s `--blend`.
+
+`preferences` (API 1.12; its `motif` group gained the L2 members in API 1.15 and the L3 members in API 1.17) is an optional member: the settings document of [preferences.md](preferences.md). The `melody` group and the `development` group apply to the theme: the fidelity minimums, from API 1.17 the `continuation` settings and `basic_as_written`, which reach the grow run ([grow-continuation.md](grow-continuation.md)), and from API 1.19 the L4 settings: `melody.closure`, `rhythm_repeat_bars`, `leaps` and `register`, and `development.contrast` (`distance`, `new_material`); a request without `preferences` composes as before, and so does one that leaves every member at its default. The `motif` group is echoed in the response and, from API 1.19, shapes a theme's drawn rhythms (a distant contrast) and its new material, and nothing else, because a theme's motives come from the request, not from the motif generator. A bad member is refused before composing with its path under `/preferences` (`composer_api_validate` too). The `theme` command reads it from the request file; no option sets it.

@@ -1,0 +1,197 @@
+#ifndef URSATZ_COMPOSER_MOTIVE_RANDOM_H
+#define URSATZ_COMPOSER_MOTIVE_RANDOM_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <ursatz_composer/motive.h>
+#include <ursatz_composer/piece_plan.h>
+#include <ursatz_composer/style.h>
+
+/*
+ * Random motives. The caller names a mode and a meter, and optionally a key, a form and a style; the motive's length,
+ * pickup, number of notes, rhythm and range are not options (R-120). They are drawn inside the defaults named at the top
+ * of motive_random.c (DRAWN) and motive_random_segments.c (SEGMENTS), which are meant to be tuned there.
+ *
+ * Every motive keeps standard-counterpoint's hard melodic rules, the ones motive invention keeps. The same options and
+ * seed give the same motives: all the random numbers come from one FillRng seeded with `seed`.
+ *
+ * Key. Without a key the motive is made and sounded in C major (major) or A minor (minor) and carries that key, marked
+ * MOTIVE_SKETCH_KEY_GIVEN, so it can be stored. A key must be of the mode asked for.
+ *
+ * Form. A full motive is pitches and rhythm. A rhythm motive is the rhythm of a full one, and a contour motive its
+ * contour, read back as motive_from_rhythm_text and motive_from_contour_text read them (a contour has no pickup).
+ *
+ * Style. With a style, 8 candidates are made for each motive asked for and the one closest to the style is kept (ties
+ * broken by the seed): composer_style_closeness on the candidate's melody labels, only the labels the form keeps
+ * (duration for a rhythm, contour for a contour).
+ */
+
+#define MOTIVE_RANDOM_MAX_COUNT 16
+
+/*
+ * Strategy. SEGMENTS (the zero value, so the default) builds a motive from a harmony plan and segments, the way a motive is
+ * made: a rhythm cell, a repeat of it on the next chord, a contrasting cell, an ending that slows down. DRAWN is the
+ * earlier strategy: a rhythm drawn note by note over a frame of chord tones of I.
+ */
+typedef enum {
+    MOTIVE_RANDOM_STRATEGY_SEGMENTS = 0,
+    MOTIVE_RANDOM_STRATEGY_DRAWN
+} MotiveRandomStrategy;
+
+/* "segments" or "drawn". */
+const char *motive_random_strategy_name(MotiveRandomStrategy strategy);
+
+/* Reads "segments" or "drawn" (as written, any case). False for any other text. */
+bool motive_random_strategy_parse(const char *name, MotiveRandomStrategy *out);
+
+typedef enum {
+    MOTIVE_RANDOM_OK = 0,
+    MOTIVE_RANDOM_ERR_NULL,
+    MOTIVE_RANDOM_ERR_ARGUMENT,      /* a mode, form or count that is not allowed */
+    MOTIVE_RANDOM_ERR_METER,         /* beats per bar from 1 to 64 over a beat unit of 1, 2, 4, 8 or 16 */
+    MOTIVE_RANDOM_ERR_KEY,           /* a key that is not of the mode asked for */
+    MOTIVE_RANDOM_ERR_UNSATISFIABLE, /* no motive passed the melodic rules in the attempts allowed */
+    MOTIVE_RANDOM_ERR_ALLOC,
+    MOTIVE_RANDOM_ERR_PLAN           /* a given plan that does not fit the meter, the bars, the shapes or the endings allowed */
+} MotiveRandomResult;
+
+/*
+ * What shapes a SEGMENTS motive (R-411). Every weighted list is whole numbers; a list whose entries sum to 0 draws its
+ * first entry, with no random number. The defaults are the values the generator was tuned to; with them (or with no
+ * preferences) a seed gives the motives it always gave. The DRAWN strategy does not read these.
+ *
+ *   bars              a motive of one bar, of two bars (one bar only in a meter of an even number of beats, four or more)
+ *   pickup_one_in     a pickup (half a beat or a beat) in one motive of this many; 0 never draws one
+ *   shapes_one_bar    a a' (repeat), a b (contrast), for a one-bar motive
+ *   shapes_two_bars   a a', a b, a a' b (repeat_contrast), for a two-bar motive (the third only with an even meter)
+ *   plans_two         the chords of a two-segment motive: I-V, I-IV, I-I; not drawn when a plan is given
+ *   plans_three       the chords of a three-segment motive: I-V-I, I-IV-I; not drawn when a plan is given
+ *   features          the distinctive feature of segment a: dotted figure, leap, repeated note
+ *   leap_low/high     the size of a leap, in semitones (a fourth to a sixth)
+ *   rung_moves        a walk on the chord tones moves one rung (step) or two (skip)
+ *   decorations       a note between frame notes: chord tone, passing, neighbor, appoggiatura, escape
+ *   durations         half beat, beat, two beats, then five figures, each off (0) by default: quarter_beats (two notes of a
+ *                     quarter beat, anywhere a half beat may start), long_short (a note of three quarters of a beat and one
+ *                     of a quarter, on a beat; in a compound grid two thirds and a third), short_long (the reverse),
+ *                     triplet (three notes of a third of a beat, on a beat) and triplet_two_beats (three notes of two
+ *                     thirds of a beat, on a beat); the triplets are drawn on the simple grid only
+ *   accented_one_in   an accented non-chord tone (on a beat, resolving to the next note) in one eligible note of this many; 0 never
+ *   accented_types    which one: appoggiatura, passing, suspension (a suspension only where the chord changes)
+ *   avoid_repeats     no repeated note: a decoration that finds no figure tries the other kinds before a chord tone, and no
+ *                     two adjacent notes share a pitch unless the second is a suspension or the repeat feature's pair
+ *   leaps_per_motif   the most leaps (intervals of 5 semitones or more, a 4th or larger) in a motive (11 never rejects)
+ *   skips_per_motif   the most skips (intervals of 3 or 4 semitones, a 3rd) in a motive (11 never rejects); a step (1 or 2)
+ *                     and a repeated note are neither; both limits count every interval: pickup, non-chord tones and
+ *                     segment joins
+ *   leap_recovery     a leap is followed by a move of 1 or 2 semitones the other way
+ *   pickup_from_accent a pickup is one chord tone below segment a's first note and no longer than it, and a motive with
+ *                     no pickup does not open with the upbeat that implies one
+ *   contrast_fidelity_min  the least recognizability of a contrasting segment against segment a (a ratio; 0 never rejects)
+ *   long_on_weak      the two-beat note is this much more likely on a weak beat (weight times 1 plus this)
+ *   final_long        the last note of the last segment is longer than every other note in it
+ *   compound_beats    in 6/8, 9/8 and 12/8 the beat is the dotted quarter: cells are tiled in beats of three eighths, the
+ *                     dotted feature is a dotted eighth, sixteenth and eighth, and a run of eighths between two frame
+ *                     notes is filled by step; no effect in any other meter
+ *   endings           how the last segment ends: free (as drawn), closed (the last note is long, on the strongest beat
+ *                     available, the root or third of the chord, one or two semitones from the note before), open (the last
+ *                     note is degree 2, 5 or 7 of the key) or lead_in (the last two notes are short and the last is off the
+ *                     beat); a motive that ends on IV cannot end open; final_long never passes with a lead_in
+ *   long_nct_one_in   a long non-chord tone (on a beat, a beat or longer, resolving to the next note) in one segment of
+ *                     this many; 0 never, and no random number is drawn
+ *   long_nct_types    which kind: appoggiatura, suspension, retardation, passing, neighbor (a suspension or retardation
+ *                     only where the chord changes)
+ *   long_nct_intervals the tone's interval above the chord root: second, fourth, sixth, seventh
+ *   long_nct_beats    where the note sits: downbeat, middle of the bar, other beat
+ *   long_nct_lengths  how long the note is: a beat, a dotted beat, two beats or more
+ *   syncopation_one_in a syncopation in one cell, and at one segment boundary, of this many; 0 never, and no random
+ *                     number is drawn; simple meters only (not 6, 9 or 12 beats a bar), never the motive's last note
+ *   syncopation_types which figure: off_beat (an off-beat note held across the beat: e q e or e q., s e s or s e.),
+ *                     tie_beat (3+3+2: the middle note tied across the beat), tie_bar (the last note before a barline
+ *                     held across it, the next note entering late; a chord tone of both chords), anticipation (a
+ *                     segment's first note arriving early, off the beat, on the new chord's tone and held into it;
+ *                     only where the chord changes)
+ *   syncopation_levels at which level: eighth (the short note a half beat), sixteenth (a quarter beat)
+ *   plan              a given chord plan, written as drawn from nothing: plan_count (0 draws the plan from plans_two and
+ *                     plans_three) chords of 1 to MOTIVE_RANDOM_PLAN_MAX, each the diatonic triad on a degree of the key (1
+ *                     to 7; in minor V's third is raised). Without places (bar 0) the chords go one to each segment, in
+ *                     order, so the count (1 to 3) fixes the shape (2: a a' or a b, 3: a a' b; 1 holds one chord throughout);
+ *                     with places the first chord is at 1:1 and holds the pickup, and each later chord starts at its bar (1
+ *                     or 2) and beat, the shape drawn as usual. No progression logic: the Composer draws no chord of its
+ *                     own. A plan that cannot fit the meter, the bars, the shapes or the endings allowed is refused
+ *                     (MOTIVE_RANDOM_ERR_PLAN) before anything is drawn
+ */
+#define MOTIVE_RANDOM_PLAN_MAX 4
+
+typedef struct {
+    int degree;    /* 1 to 7 */
+    unsigned bar;  /* 0 when the chord falls on its segment, else 1 or 2, counted from the first downbeat */
+    unsigned beat; /* 1 to the bar's beats, when bar is not 0 */
+} MotiveRandomPlanChord;
+
+typedef struct {
+    unsigned long bars[2];
+    unsigned pickup_one_in;
+    unsigned long shapes_one_bar[2];
+    unsigned long shapes_two_bars[3];
+    unsigned long plans_two[3];
+    unsigned long plans_three[2];
+    unsigned long features[3];
+    int leap_low, leap_high;
+    unsigned long rung_moves[2];
+    unsigned long decorations[5];
+    unsigned long durations[8];
+    unsigned accented_one_in;
+    unsigned long accented_types[3];
+    bool avoid_repeats;
+    unsigned leaps_per_motif;
+    bool leap_recovery;
+    bool pickup_from_accent;
+    ComposerRatio contrast_fidelity_min;
+    unsigned long long_on_weak;
+    bool final_long;
+    bool compound_beats;
+    unsigned long endings[4];
+    unsigned long_nct_one_in;
+    unsigned long long_nct_types[5];
+    unsigned long long_nct_intervals[4];
+    unsigned long long_nct_beats[3];
+    unsigned long long_nct_lengths[3];
+    unsigned syncopation_one_in;
+    unsigned long syncopation_types[4];
+    unsigned long syncopation_levels[2];
+    unsigned skips_per_motif;
+    size_t plan_count;
+    MotiveRandomPlanChord plan[MOTIVE_RANDOM_PLAN_MAX];
+} MotiveRandomPreferences;
+
+/* The defaults. */
+void motive_random_preferences_default(MotiveRandomPreferences *out);
+
+typedef struct {
+    KeyStructureMode mode;
+    PlanMeter meter;
+    bool has_key;
+    AnalysisKey key;
+    MotiveSketchForm form;
+    /* NULL for no style. Not owned. */
+    const ComposerStyle *style;
+    /* How the motive is made; the zero value is SEGMENTS. */
+    MotiveRandomStrategy strategy;
+    /* How many motives, 1 to MOTIVE_RANDOM_MAX_COUNT. */
+    size_t count;
+    unsigned long seed;
+    /* The SEGMENTS strategy's settings. NULL for the defaults; not owned. */
+    const MotiveRandomPreferences *preferences;
+} MotiveRandomOptions;
+
+/* "ok", "meter" and so on. */
+const char *motive_random_result_name(MotiveRandomResult result);
+
+/*
+ * Makes options->count different motives into out, which holds at least that many, and writes how many to *out_count
+ * (all of them on success, 0 on failure).
+ */
+MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out, size_t *out_count);
+
+#endif

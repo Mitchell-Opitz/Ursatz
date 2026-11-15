@@ -1,0 +1,19 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "minuet-and-trio",
+  "label": "Minuet and trio",
+  "closing": true,
+  "meters": ["3/4"],
+  "tempo": 112,
+  "regions": [{"name": "trio", "major": [1, 4, 6], "minor": [1, 3, 6]}],
+  "parts": [
+    {"name": "Minuet", "form": "minuet"},
+    {"name": "Trio", "form": "trio", "key": "trio", "motive": "new"},
+    {"name": "Minuet da capo", "again": "Minuet", "repeats": false}
+  ],
+  "sizes": [
+    {"bars": 12},
+    {"bars": 24, "default": true}
+  ]
+}

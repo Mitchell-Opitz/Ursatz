@@ -1,0 +1,28 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "figured-variations",
+  "label": "Figured variations",
+  "closing": true,
+  "meters": ["2/4", "3/4", "4/4", "6/8"],
+  "sizes": [
+    {"bars": 40, "count": 3, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "figure": {"kind": "neighbor", "rhythm": "eighths"}, "returns": "theme", "variation": "figurate"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "mode": "parallel", "figure": {"kind": "scale", "rhythm": "eighths"}, "returns": "theme", "variation": "figurate"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "figure": {"kind": "broken-chord", "rhythm": "sixteenths", "climax": true}, "returns": "theme", "variation": "figurate"},
+      {"name": "C1", "letter": "C", "role": "codetta", "bars": 4, "beginning": "antecedent", "ending": "cadential", "cadence": "perfect-authentic", "closed": true},
+      {"name": "C2", "letter": "C", "role": "codetta", "bars": 4, "beginning": "compound_basic_idea", "ending": "cadential", "cadence": "perfect-authentic"}
+    ]},
+    {"bars": 56, "count": 5, "default": true, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "figure": {"kind": "neighbor", "rhythm": "eighths"}, "returns": "theme", "variation": "figurate"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "figure": {"kind": "neighbor", "rhythm": "sixteenths"}, "returns": "theme", "variation": "figurate"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "mode": "parallel", "figure": {"kind": "scale", "rhythm": "eighths"}, "returns": "theme", "variation": "figurate"},
+      {"name": "variation 4", "letter": "V4", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "figure": {"kind": "scale", "rhythm": "sixteenths", "harmony": "reharmonized", "change_at": 3}, "returns": "theme", "variation": "figurate"},
+      {"name": "variation 5", "letter": "V5", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "figure": {"kind": "broken-chord", "rhythm": "sixteenths", "climax": true}, "returns": "theme", "variation": "figurate"},
+      {"name": "C1", "letter": "C", "role": "codetta", "bars": 4, "beginning": "antecedent", "ending": "cadential", "cadence": "perfect-authentic", "closed": true},
+      {"name": "C2", "letter": "C", "role": "codetta", "bars": 4, "beginning": "compound_basic_idea", "ending": "cadential", "cadence": "perfect-authentic"}
+    ]}
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "source_file": "small.mid",
+    "analyzer_version": "0.1.0",
+    "ursatz_commit": "unknown",
+    "note_count": 4,
+    "ticks_per_quarter": 480,
+    "key_found": true
+  },
+  "meter": null,
+  "keys": [
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": { "start": { "num": 0, "den": 1 }, "end": { "num": 2, "den": 1 } },
+      "note_ids": [0, 1, 2, 3],
+      "label": "C major",
+      "uncertainty": null,
+      "method": "key_signature"
+    }
+  ],
+  "chords": [
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": { "start": { "num": 0, "den": 1 }, "end": { "num": 1, "den": 2 } },
+      "note_ids": [0],
+      "label": "I",
+      "uncertainty": null,
+      "key_label": "C major"
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": { "start": { "num": 1, "den": 2 }, "end": { "num": 3, "den": 2 } },
+      "note_ids": [1],
+      "label": "V",
+      "uncertainty": null,
+      "key_label": "C major"
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": { "start": { "num": 1, "den": 1 }, "end": { "num": 3, "den": 2 } },
+      "note_ids": [2],
+      "label": "I",
+      "uncertainty": null,
+      "key_label": "C major"
+    },
+    {
+      "framework": "common-practice-minimal-v1",
+      "span": { "start": { "num": 3, "den": 2 }, "end": { "num": 2, "den": 1 } },
+      "note_ids": [3],
+      "label": "no match",
+      "uncertainty": null,
+      "key_label": "C major"
+    }
+  ],
+  "cadences": [],
+  "phrases": [{ "label": "phrase 1" }],
+  "form": null,
+  "motives": [],
+  "melody": [],
+  "rhythm": [],
+  "texture": [],
+  "voice_leading": [],
+  "schemas": []
+}

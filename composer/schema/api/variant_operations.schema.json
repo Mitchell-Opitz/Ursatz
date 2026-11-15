@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variant_operations.schema.json",
+  "title": "composer_api_variant_operations response",
+  "description": "The operation registry: what `variants --list-ops --json` prints.",
+  "type": "object",
+  "required": [
+    "operations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "category",
+          "citation",
+          "params",
+          "forms"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "citation": {
+            "type": "string"
+          },
+          "relation": {
+            "type": "string"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "kind",
+                "description"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "min": {
+                  "type": "integer"
+                },
+                "max": {
+                  "type": "integer"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "optional": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "forms": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "full",
+                "rhythm",
+                "contour"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

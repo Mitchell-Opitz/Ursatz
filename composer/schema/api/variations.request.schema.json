@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variations.request.schema.json",
+  "title": "composer_api_variations and composer_api_harmonize request",
+  "description": "Several distinct versions of a node (harmonize: of the harmony of a section whose melody is given).",
+  "type": "object",
+  "required": [
+    "plan",
+    "count"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "plan": {
+      "type": "object"
+    },
+    "count": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "node": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "section": {
+      "type": "string"
+    },
+    "lane": {
+      "enum": [
+        "harmony",
+        "bass",
+        "melody",
+        "inner"
+      ]
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "tempo": {
+      "type": [
+        "integer",
+        "number",
+        "string"
+      ]
+    }
+  }
+}

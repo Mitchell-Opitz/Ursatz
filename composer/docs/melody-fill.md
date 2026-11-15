@@ -1,0 +1,215 @@
+# The melody operator
+
+A Fill operator for the melody lane. Given a written harmony lane, a written bass lane and a motive, it
+writes the melody over them in two jobs (R-326): it **realizes** the motive, whose notes it keeps and bends only as the chords ask,
+and it **generates** the notes after the motive, chord tones on the strong beats with passing and neighbor tones between. It is a library operator (`melody_fill_register`); the CLI has no
+command for it. Back to the [docs index](README.md).
+
+Header: `<ursatz_composer/melody_fill.h>`.
+
+Times inside the operator are `Rational` positions in whole notes from the start of the target, not ticks, so the
+operator reads a span whose times are not a multiple of any grid. The shortest note it writes is a 128th: a `density`
+that would divide a cell into shorter notes keeps the cell.
+
+## The target
+
+A Constrained melody lane span (voice 0) that stands for the phrase, holding one placeholder note. It
+must:
+
+- cover exactly the chord spans of the harmony lane, none of them open, with bass spans that tile it;
+- lie inside one meter lane span and have a key lane span or key constraint over it;
+- carry a `motive_ref` constraint, on the span or its owner, naming a motive node whose melody lane span
+  is Given or Realized.
+
+The motive is the **original** when that melody span is Given and a **development** (`motive_develop.h`)
+when it is Realized. The candidate's label begins `original` or `developed`, so the fill record says
+which. The loop never offers a Given span, so Given melody is never overwritten; the harmony and bass
+lanes are never touched. The result is one Realized span over the phrase.
+
+## Idea targets
+
+A melody span whose owner is an **idea** or a **subphrase** stands for that part of a phrase, not for the
+whole of it. The enclosing phrase node's span is the phrase. A phrase is then written idea by idea:
+
+- **Time order.** The operator applies to an idea target only when every melody span of the same phrase
+  before it is written. A later idea is refused (`FILL_STUCK_NO_OPERATOR` for that step) until the ones before
+  it are there.
+- **Chords and bass.** The harmony and bass lanes are read over the target only: the chord and bass spans that
+  overlap it, the first and the last clipped to it. A chord may begin before the idea or end after it, and an
+  idea may begin inside a cell (a half bar of 3/4); the strong beats are the cell lines of the meter, not the
+  idea's own start.
+- **Joins.** The last notes of the written melody span right before the target are read with the target's
+  notes as one line by standard-counterpoint's melodic rules: no forbidden leap or outline across the join,
+  and the first note is a leap the rules allow from the last. A leap into the target is answered by a step
+  the other way, where the chord allows. The moves the Composer draws are judged by
+  `standard_counterpoint_melodic_semitones_allowed` and `standard_counterpoint_is_step`: the tritone is refused, as is a
+  seventh, and a sixth is allowed only as the ascending minor one.
+- **Climax.** The climax position (`climax_position`, thousandths of the phrase) falls in one target. That
+  target writes the phrase's single highest note, higher than every melody note before it in the phrase
+  (a hard rule where the target generates notes, strict only); a target before it keeps its generated notes at or below `range_high - 3`, and stays in the lower half
+  of the range where its motive allows; a target after it keeps its generated notes below the climax note.
+- **End tone.** The end tone rule applies only to a target with a cadence constraint, on the span or its
+  owner. A target without one has no end-tone rule, and its last note needs only to be a chord tone.
+- **After a residue.** A target whose motive is a liquidated residue (its motive node's `motive_ref` has `steps`,
+  `MelodyContext.liquidated`, R-345) has no even-note filler: the time after the residue repeats the residue's rhythm
+  from its first note, as many whole times as fit before the last chord (with a cadence) or the span's end, the last
+  note held up to there, and a note from the last chord to the end takes the cadence tone, so the cadence arrives with
+  its chord (`layout_residue` in `src/melody/melody_place.c`). Its strict round keeps the figures the framework labels
+  on every attempt, so the residue's head interval is what sounds.
+- **Exact restatement.** A target whose `motive_ref` is `restated` takes the whole melody of the written span it
+  restates for its motive and says it again, choosing the nearest chord tone each time. The span restated is the
+  latest written one, before the target and as long, that asks for the motive the target's own motive is a
+  restatement of (a basic idea, however far back, as a consequent restates its antecedent's); failing that, the one
+  right before the target if it is as long. Two ideas of a presentation made so are heard by standard-form as a
+  repetition.
+
+## What it writes
+
+- **Realize** (`melody_realize`, no random numbers). The motive starts at `start_cell`, keeping its rhythm. Each note is aimed at
+  its own pitch moved by one octave for the whole idea (the shift: of 0, -12, 12, -24, 24 those that put every note in the range,
+  ranked: for the phrase's climax target the top at or up to 2 semitones above the phrase's top first, then the smaller shift,
+  then the lower; R-334). In order: a note that is a tone of every chord it sounds through stays; every other note is labeled by
+  the NonChordTone framework (`melody_nct_types`) and a clash it classifies as a figure of any type, escape tones and retardations
+  included, is kept and its type allowed in the melody (R-336); an unclassified one moves, first to a pitch within 2 semitones that
+  re-forms its own tone role, else to the nearest tone of its chords (ties: the pitch whose intervals to its neighbours are nearest
+  the motive's, then the one farther from the note before); labeling and moving repeat until nothing moves; the last note of an idea
+  with a cadence moves to the nearest cadence tone. A note moves only for its chords (R-338): never for a melodic, bass or climax
+  rule. The octave and the figures are chosen per attempt: of 48 attempts the shifts cycle, the first 24 keep labeled figures and
+  the last 24 move every clash.
+- **Generate.** The notes after the motive are placed as before: the anchors, then the notes between, under the arch below.
+- **Strong beats** (the start of a cell, where a chord may start) carry chord tones, as do notes as long
+  as a cell and notes held into the next chord.
+- **Between chord tones**, notes are chord tones or non-chord tones of the figures in `nct_types`,
+  approached and left as the NonChordTone framework defines them. After the motive the rhythm is the
+  motive's again (`density` 0) or an even subdivision of the cell.
+- **Contour.** The generated notes make one climax, `climax_position` thousandths of the way through, approached from below and
+  left downward, with no other generated note as high; the realized notes keep their pitches anywhere in the range. Leaps of a
+  fourth or more are followed by a step the other way where the chord allows. Notes stay inside the range.
+- **Cadence.** The last note is the cadence's stable tone: the tonic for a PAC or PC, the third of the
+  tonic for an IAC (the soprano the harmony operators' recognizer is told).
+
+## Tone roles
+
+A motive made from a request carries its **tones** in the plan (`motive_tones` on its node, [plan-constraints.md](plan-constraints.md#constraints)):
+the role of every note against the motive's base harmony, its own harmony or the one proposed from the notes
+(`ursatz-composer motive` shows them; the request's `tone_overrides` change them, [theme-request.md](theme-request.md#motives)).
+A developed motive (a `motive_ref` that keeps the notes: transposed, inverted, augmented, diminished, restated, interval changed;
+a retrograde reads the labels in reverse) takes the tones of the motive it was made from. A motive whose tones are not there, or
+whose label count is not its note count, is placed as it always was. An exact restatement keeps the tones of the notes of the
+motive; the notes after them have none.
+
+The tones name the figure a clash is moved to: a note whose role is a non-chord tone type moves first to a pitch within 2 semitones
+that the labeler gives that same type, else to a chord tone. A figure the labeler classifies is kept whatever its role. A motive
+whose tones are not there is bent by the labeler alone.
+
+## Strict and relaxed (R-338)
+
+A motive's notes are fixed, so the generated notes may have no pitch the strict rules allow. `melody_generate` runs its 48 attempts
+strict; when none passes and the target has motive notes it runs 48 more **relaxed** (`MelodyCandidate.relaxed`), never otherwise.
+A relaxed melody is held to the melodic rules only over its generated runs (each run with the realized note either side, by the
+framework's check); the other melodic rules, parallel fifths and octaves against the bass, a chord tone dissonant over the bass, an
+unresolved leading tone or seventh and a climax not above the phrase before it score with the soft rules; voice crossing, figures,
+strong-beat chord tones and the cadence tone stay hard. Its generated notes fall back past the arch and the bass checks when no
+option passes, and the fill search starts at the nearest motive note and tries again without the bass checks.
+`melody_check_lane` judges a written lane with motive notes strict, then relaxed. Realized notes are not held to the rules the motive
+itself breaks (`motive_waived`), nor is the join to the idea before or after it.
+
+## Spans on beats
+
+The melody reads the same cell grid as the harmony (`harmony_cells_of_span`): the places a chord may start are
+anchored to the barlines of the meter span, and a span that starts or ends between two of them has part cells at
+its ends. Strong beats are the barline grid's, so in 4/4 a span starting on beat 3 starts on a strong beat and one
+starting on beat 2 does not. Chord starts are read from the cell list, part cells included. On a span that does not
+run from a barline over whole bars the climax stays in the motive when no chord tone is within a fifth above the
+last anchor of the motive, since few anchors follow it. Whole-bar spans are written as before.
+
+## Pickups
+
+A `pickup` constraint (see [plan-format.md](plan-format.md)) on a melody span makes its first `length` an
+anacrusis. The phrase, the harmony and the key are read from the end of the pickup. The pickup is written as 1 to 4
+notes of equal beats (the first takes what is left over when there are more than four): the last is a step from the
+first downbeat note or a chord tone of the chord before (the harmony span sounding under the pickup; none at the
+start of a plan, where it is a step), and the others come by step toward it. The pickup is held to the range and
+the melodic rules only, never to the chord-tone rule. A pickup of a bar or more is not one the operator applies to.
+A pickup takes no accompaniment.
+
+A motive that cannot be placed (too long for the phrase, wider than the range, no chord tone near enough
+to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`.
+
+## Parameters
+
+`MelodyFillParams`, passed to `melody_fill_register` (the registry keeps the pointer). The defaults are
+`melody_fill_params_default()`.
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `range_low`, `range_high` | 60, 84 | MIDI range of the melody voice (C4 to C6), both included (R-327). |
+| `start_cell` | 0 | Cell of the phrase the motive starts on; the time before it is a rest. |
+| `nct_types` | passing, neighbor | `MELODY_NCT_` bits: `PASSING`, `NEIGHBOR`, `APPOGGIATURA`, `SUSPENSION`, `ANTICIPATION`; a realized motive adds `RETARDATION`, `ESCAPE`, `DOUBLE_NEIGHBOR`, `CHANGING_TONE` for its own figures. 0 writes chord tones only. |
+| `density` | 0 | Notes to a cell after the motive; 0 repeats the motive's rhythm. |
+| `climax_position` | 667 | Where the climax falls, in thousandths of the phrase. |
+| `plain_shaping` | false | True leaves out the four shaping rules below, for tests and comparisons; there is no CLI option. |
+| `climax_rise`, `climax_slack` | 4, 150 | How far above the motive the climax may be drawn, and how far from `climax_position` it still scores as in place. |
+| `second_nearest` | 1/3 | The share of draws that take the second-nearest chord tone. |
+| `attempts`, `keep` | 48, 6 | Melodies tried for each target, and kept (at most `MELODY_KEEP_MAX`, 16). |
+| `weights` | all 1 | `MelodyWeights`: how many times each group of soft rules counts in the score. |
+| `closure_final`, `closure_first` | 0, 0 | How many times the closure rules count for the target that ends the theme's last cadence, and for one that ends an earlier cadence (an antecedent's weak cadence); 0 leaves them out and draws no random number. Set from C only (R-478). |
+| `rhythm_repeat_bars` | 0 | The most bars in a row of 2 or more notes with one rhythm (onsets and durations within the bar); 0 sets no cap and changes nothing. Set from C only (R-479, R-483). |
+| `leap_weight`, `register_weight` | 0, 0 | How many times the leap rule and the register rules count in the score (R-481): see Leaps and register. Set from C only. |
+
+Each field is a setting of the [preferences](preferences.md) document, with its limits.
+
+Appoggiaturas, suspensions and anticipations are off unless asked for. Appoggiaturas and anticipations
+are written on weak beats; a suspension is a chord tone held into a chord it is not a tone of.
+
+## The checker
+
+`melody_fill_checker` goes in `FillConfig.checker`. It calls the frameworks and does not write their
+rules again. Hard rules reject a candidate; soft rules give the score, the share that hold.
+
+| Framework | Hard | Soft |
+| --- | --- | --- |
+| NonChordTone (common-practice-minimal's labeler) | A melody note outside its chord that is no allowed figure | |
+| standard-counterpoint, melodic | Forbidden leaps and outlines | Repeated notes, leap density, pitch occurrences, climax rules |
+| standard-counterpoint, harmonic (melody over bass) | Voice crossing, parallel fifths and octaves, a dissonance against the bass outside a non-chord tone or the chord's seventh | Direct perfects, interior unisons, imperfect consonances on strong beats |
+| standard-harmony | The leading tone and a chord's seventh resolve from chord to chord | |
+
+The strict-species rules for the first interval, the last interval, the largest gap and the last note
+approached by step are not asked of a tonal melody. The one climax, its place, recovered leaps and few
+repeated notes also score.
+
+### The fidelity checker
+
+The compose run's melody stage does not pass `melody_fill_checker` alone: `grow_fidelity_checker` wraps it (and the style checker, when a style is set). A candidate for an idea that is made from a motive, and has a role, is refused when its motive notes sound too little like the motive and is otherwise ranked by whether the motive is heard as the plan intended it, then by how close it is, then by the rules above. `melody_candidate_realized` gives the notes of a candidate that carry the motive. See [grow-development.md](grow-development.md#ranking-and-refusing-by-fidelity). `melody_fill_checker` on its own is unchanged.
+
+### The shaping rules
+
+Four more soft rules, from Schoenberg's *Fundamentals of Musical Composition* (R-164). Each is one rule that holds or
+not, never a rejection, and is on for every caller of the checker (grow, fill, regenerate, variations) unless
+`plain_shaping` is set. They read the candidate's own notes, so an idea reads its own and not its phrase.
+
+| Rule (chapter) | Holds when |
+| --- | --- |
+| `ending-reduction` (II) | An idea that ends the phrase in a cadence has no more attacks per beat than the mean of the phrase before it, and ends on its longest note. Any other target holds. |
+| `waves` (XI) | A candidate of 8 or more notes has at least 2 local high points (a note higher than the notes either side, repeated notes read as one) at or before its climax. |
+| `central-range` (XI) | At least 3/4 of the notes lie within 6 semitones of the median pitch. |
+| `monotony` (XII) | No three consecutive bars of two or more notes have the same rhythm and the same intervals. |
+
+#### Closure (phase L4, R-478)
+
+With `closure_final` or `closure_first` above 0, a target that ends a cadence (the last of its section, or an earlier one) ranks an intentional ending by two more soft rules, counted by that weight: the last note is at least twice the phrase's mean note value, and no note of the last bar is shorter than the note before it. Half the layouts of such a target (one random number each, none at weight 0) are settled: the notes from the latest cell line that leaves twice the mean become one long last note, the bar before it merges a shorter note into the note before it, and a note of the motive is never merged. Why a layout draw: every candidate of a target had one rhythm, so `weights.ending_reduction` 20 could not move it (t7 s42). Both weights 0 change nothing.
+
+Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, both weights 20, set by a temporary hook): the final note over the theme's mean note value, batch means 1.06 to 2.05 for periods (1.06 to 1.89 at the defaults) with 275 of 370 longer than the mean (250), and 2.71 to 3.72 for sentences (1.52 to 3.07) with 363 of 365 (364). The same 33 to 56 of 60 compose per batch. On the Test Motif sentence the defaults already end on a note 2 or more times the mean in 8 of 8 seeds, so the rule shows only as 8 of 8 changed melodies (`test_melody_preferences`).
+
+#### Rhythm repetition (phase L4, R-479, R-483)
+
+With `rhythm_repeat_bars` above 0, a target that starts on a barline of its section (and has no pickup) counts the bars in a row of 2 or more notes that share one rhythm, the run carried in from the bars before it (`melody_context_read_repeats`). A bar that would pass the cap is varied after the layout and the settled ending (`limit_rhythm_repeats`): when neither of its last two notes carries the motive they merge (the earlier takes the later's time); else its last two neighbouring notes of different lengths trade lengths, so a realized motive keeps every note, its order and its pitches. The target's last note is never traded, so a cadence still arrives on it. When the bar that passes the cap cannot change, the latest earlier bar of the same run inside the target is varied instead, each bar once. No random number is drawn, and a run that cannot be broken is left. A target that starts inside a bar is left as it is.
+
+The cost: a theme whose presentation cannot hold the cap above the motive fidelity floor (R-355) does not compose, such as a 3/4 two-bar motif whose bars share one rhythm. Measured against the phase's baseline (735 themes, `--count 60 --seed 500`, cap 3, set by a temporary hook): a run over 3 bars in 0 of 703 themes composed against 584 of 735 at 0; the final note longer than the mean in 259 of 370 periods against 240; 703 of 735 compose, the loss in the taste profile `uematsu-ff7` 3/4 sentences (23 of 37 and 20 of 33). On the Test Motif sentence the longest run is 3 against 6. Recorded, not asserted.
+
+#### Leaps and register (phase L4, R-481)
+
+With `leap_weight` above 0, each interval of a candidate (and the one from the last written note before it) counts once, twice when it lands on a strong beat, and holds when under 5 semitones (a leap is 5 or more, as `leaps_per_motif` counts). With `register_weight` above 0 and melody written right before the target, two rules hold when the candidate's median pitch is within 7 and within 4 semitones of that melody's median. Both rank among the `keep` candidates, so a round may raise `keep`; `assign` is not steered, so the effect is small. 0 adds nothing and draws no random number. Measured on the baseline (735 themes, both weights 20): leaps per theme 2.2 to 8.3 (2.5 to 9.8), on a downbeat 1.4 to 4.2 (1.9 to 5.0), largest move of the mean pitch between ideas 4.3 to 7.8 (6.7 to 12.2); 33 to 56 of 60 compose as before.
+
+`melody_check_lane(plan, span, key, params, &violation)` runs the same rules on a melody lane read from
+the plan, for tests and tools.

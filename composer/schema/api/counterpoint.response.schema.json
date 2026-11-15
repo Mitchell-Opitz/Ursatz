@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/counterpoint.response.schema.json",
+  "title": "composer_api_counterpoint response",
+  "description": "What `counterpoint --format json` prints, without the files.",
+  "type": "object",
+  "required": [
+    "species",
+    "position",
+    "key",
+    "meter",
+    "results"
+  ],
+  "properties": {
+    "species": {
+      "type": "integer"
+    },
+    "position": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "seed",
+          "line",
+          "counter_melody",
+          "groups"
+        ],
+        "properties": {
+          "seed": {
+            "type": "integer"
+          },
+          "line": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "midi_pitch",
+                "offset",
+                "duration"
+              ],
+              "properties": {
+                "midi_pitch": {
+                  "type": "integer"
+                },
+                "offset": {
+                  "type": "object",
+                  "required": [
+                    "num",
+                    "den"
+                  ],
+                  "properties": {
+                    "num": {
+                      "type": "integer"
+                    },
+                    "den": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "duration": {
+                  "type": "object",
+                  "required": [
+                    "num",
+                    "den"
+                  ],
+                  "properties": {
+                    "num": {
+                      "type": "integer"
+                    },
+                    "den": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "counter_melody": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "midi_pitch",
+                "offset",
+                "duration"
+              ],
+              "properties": {
+                "midi_pitch": {
+                  "type": "integer"
+                },
+                "offset": {
+                  "type": "object",
+                  "required": [
+                    "num",
+                    "den"
+                  ],
+                  "properties": {
+                    "num": {
+                      "type": "integer"
+                    },
+                    "den": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "duration": {
+                  "type": "object",
+                  "required": [
+                    "num",
+                    "den"
+                  ],
+                  "properties": {
+                    "num": {
+                      "type": "integer"
+                    },
+                    "den": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "hard_held",
+                "soft_held"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "hard_held": {
+                  "type": "boolean"
+                },
+                "soft_held": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "plan": {
+            "type": "object"
+          },
+          "musicxml": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notices": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

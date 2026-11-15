@@ -1,0 +1,1 @@
+Error: cannot write 'no-such-directory/theme.plan.json': could not write 'no-such-directory/theme.plan.json.tmp'

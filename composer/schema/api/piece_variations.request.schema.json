@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece_variations.request.schema.json",
+  "title": "composer_api_piece_variations request",
+  "description": "The piece request, the plan to vary, and the section, lanes and count of the variations.",
+  "type": "object",
+  "required": [
+    "request",
+    "from",
+    "variations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "request": {
+      "$ref": "#/$defs/piece_request"
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "check": {
+      "type": "boolean"
+    },
+    "style": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "from": {
+      "$ref": "#/$defs/plan"
+    },
+    "variations": {
+      "type": "object",
+      "required": [
+        "section",
+        "count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "section": {
+          "type": "string"
+        },
+        "lanes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "harmony",
+              "bass",
+              "melody",
+              "inner",
+              "all"
+            ]
+          }
+        },
+        "count": {
+          "type": [
+            "integer",
+            "string"
+          ],
+          "minimum": 1,
+          "maximum": 8
+        }
+      }
+    },
+    "musicxml": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "plan": {
+      "type": "object",
+      "required": [
+        "format"
+      ],
+      "properties": {
+        "format": {
+          "type": "string"
+        }
+      },
+      "description": "A plan object (docs/plan-format.md, schema/plan.v2.schema.json)."
+    },
+    "piece_request": {
+      "type": "object",
+      "required": [
+        "schema",
+        "schema_version",
+        "key",
+        "mode",
+        "meter"
+      ],
+      "properties": {
+        "schema": {
+          "const": "ursatz-piece-request"
+        },
+        "schema_version": {
+          "enum": [
+            1,
+            2
+          ],
+          "description": "1 is the game loop; 2 names a form in \"form\"."
+        },
+        "form": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Schema version 2: the name of a built-in form (composer_api_forms). Absent for version 1, the game loop."
+        },
+        "key": {
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "major",
+            "minor",
+            "style"
+          ]
+        },
+        "meter": {
+          "type": "string"
+        },
+        "motive": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "part",
+              "beats"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "part": {
+                "enum": [
+                  "intro",
+                  "body",
+                  "turnaround",
+                  "ending"
+                ]
+              },
+              "letter": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "beats": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "pickup": {
+                "type": [
+                  "string",
+                  "number",
+                  "null"
+                ]
+              },
+              "cadence": {
+                "enum": [
+                  "PAC",
+                  "IAC",
+                  "HC",
+                  "DC",
+                  "PC",
+                  null
+                ]
+              },
+              "fill": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "empty",
+                          "motif",
+                          "theme",
+                          "progression"
+                        ]
+                      },
+                      "plan": {
+                        "$ref": "#/$defs/plan",
+                        "description": "theme: the plan object of the theme"
+                      },
+                      "source": {
+                        "type": "string",
+                        "description": "theme: the name shown as the section's source"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "accompaniment": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "voicing": {
+          "enum": [
+            "satb",
+            "chorale",
+            null
+          ]
+        },
+        "style": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style_weight": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "without": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "tempo": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "bars": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 512,
+          "description": "A form with sizes: the size in bars; 0 or absent for the default."
+        },
+        "count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 64,
+          "description": "A form with sizes: the variations or layers; 0 or absent for the size bars gives."
+        },
+        "modulate": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "A form with regions: plan the keys of the sections from the seed."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": 1
+              }
+            },
+            "required": [
+              "schema_version"
+            ]
+          },
+          "then": {
+            "required": [
+              "sections"
+            ],
+            "properties": {
+              "form": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": 2
+              }
+            },
+            "required": [
+              "schema_version"
+            ]
+          },
+          "then": {
+            "required": [
+              "form"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

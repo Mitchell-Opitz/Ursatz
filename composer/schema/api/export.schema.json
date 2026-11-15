@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/export.schema.json",
+  "title": "composer_api_export response",
+  "description": "The lane spans the render left out. The MIDI and MusicXML are in the ComposerResponse, not in the JSON.",
+  "type": "object",
+  "required": ["skipped"],
+  "additionalProperties": false,
+  "properties": {
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["span", "lane", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "span": { "type": "integer", "minimum": 1 },
+          "lane": { "enum": ["meter", "key", "harmony", "bass", "melody", "inner_voice"] },
+          "reason": {
+            "enum": ["not Given or Realized", "source material", "not in the layer", "seam", "lane is not rendered yet"]
+          }
+        }
+      }
+    }
+  }
+}

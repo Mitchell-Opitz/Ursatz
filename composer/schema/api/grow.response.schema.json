@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/grow.response.schema.json",
+  "title": "composer_api_grow response",
+  "description": "What `grow --format json` prints, without the files.",
+  "type": "object",
+  "required": [
+    "key",
+    "meter",
+    "bars",
+    "into",
+    "pairing",
+    "cadence",
+    "tempo",
+    "themes"
+  ],
+  "properties": {
+    "key": {
+      "type": "string"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "bars": {
+      "type": "integer",
+      "minimum": 3,
+      "maximum": 16
+    },
+    "into": {
+      "type": "string"
+    },
+    "pairing": {
+      "type": "string"
+    },
+    "cadence": {
+      "type": "string"
+    },
+    "first_cadence": {
+      "type": "string"
+    },
+    "accompaniment": {
+      "type": "string"
+    },
+    "texture": {
+      "type": "string"
+    },
+    "voicing": {
+      "type": "string"
+    },
+    "tempo": {
+      "type": "object"
+    },
+    "brief": {
+      "type": "object"
+    },
+    "source": {
+      "type": "object"
+    },
+    "themes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "seed",
+          "structure",
+          "construction",
+          "chords",
+          "developments",
+          "score",
+          "requested",
+          "heard",
+          "heard_as_requested",
+          "heard_text"
+        ],
+        "properties": {
+          "seed": {
+            "type": "integer"
+          },
+          "structure": {
+            "type": "array"
+          },
+          "construction": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The construction of the theme as built (R-468), null for a theme without one.",
+            "required": [
+              "halves",
+              "ideas",
+              "extensions",
+              "reason",
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "halves": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "ideas": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "idea",
+                    "bars",
+                    "first_bar"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "idea": {
+                      "enum": [
+                        "basic idea",
+                        "repetition",
+                        "contrasting idea",
+                        "consequent basic idea",
+                        "consequent contrasting idea",
+                        "fragment 1",
+                        "fragment 2",
+                        "cadential",
+                        "cadential 1",
+                        "cadential 2"
+                      ]
+                    },
+                    "bars": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "first_bar": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              },
+              "extensions": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "idea",
+                    "bars",
+                    "first_bar",
+                    "varied"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "repeat",
+                        "stretch",
+                        "addition",
+                        "evaded"
+                      ]
+                    },
+                    "idea": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "bars": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "first_bar": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "varied": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "reason": {
+                "enum": [
+                  "given",
+                  "motive",
+                  "length"
+                ]
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          },
+          "chords": {
+            "type": "array"
+          },
+          "developments": {
+            "type": "array"
+          },
+          "slots": {
+            "type": "array"
+          },
+          "score": {
+            "type": "object"
+          },
+          "requested": {
+            "type": "string"
+          },
+          "heard": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "heard_as_requested": {
+            "type": "boolean"
+          },
+          "heard_text": {
+            "type": "string"
+          },
+          "style_distance": {
+            "type": "object"
+          },
+          "plan": {
+            "type": "object"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "musicxml": {
+            "type": "string"
+          },
+          "analyzer": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "notices": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "construction": {
+      "type": "object",
+      "description": "The construction as the request gave it.",
+      "required": [
+        "ideas",
+        "extensions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ideas": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "basic idea",
+              "repetition",
+              "contrasting idea",
+              "consequent basic idea",
+              "consequent contrasting idea",
+              "fragment 1",
+              "fragment 2",
+              "cadential",
+              "cadential 1",
+              "cadential 2"
+            ]
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "extensions": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "idea",
+              "bars",
+              "varied"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "repeat",
+                  "stretch",
+                  "addition",
+                  "evaded"
+                ]
+              },
+              "idea": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "bars": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "varied": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

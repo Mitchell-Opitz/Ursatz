@@ -1,0 +1,863 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece.response.schema.json",
+  "title": "composer_api_piece response",
+  "description": "What `piece --format json` prints (without the files it wrote), with the plans of the versions (\"loop\" and \"ending\" of the game loop, \"piece\" of another form), and the explanation, the ending version's MusicXML and the MusicXML of the later versions when asked.",
+  "type": "object",
+  "required": [
+    "schema",
+    "seed",
+    "key",
+    "meter",
+    "brief",
+    "loop",
+    "versions",
+    "plans"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "ursatz-piece"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "key": {
+      "type": "string"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "brief": {
+      "type": "object",
+      "required": [
+        "tempo",
+        "mode",
+        "density",
+        "without"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tempo": {
+          "type": "object",
+          "required": [
+            "qpm",
+            "from"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "qpm": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "from": {
+              "enum": [
+                "option",
+                "style",
+                "form",
+                "none"
+              ]
+            }
+          }
+        },
+        "mode": {
+          "type": "object",
+          "required": [
+            "mode",
+            "from"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "major",
+                "minor"
+              ]
+            },
+            "from": {
+              "enum": [
+                "request",
+                "style"
+              ]
+            }
+          }
+        },
+        "density": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "without": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "loop": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "start": {
+              "type": "string",
+              "pattern": "^[0-9]+/[0-9]+$"
+            },
+            "end": {
+              "type": "string",
+              "pattern": "^[0-9]+/[0-9]+$"
+            }
+          }
+        }
+      ]
+    },
+    "performed": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "bars"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "bars": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      ],
+      "description": "The bars of a performed piece (written-out repeats, parts); null for another form with sizes; absent for the game loop."
+    },
+    "regenerated": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "section",
+            "lane"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "section": {
+              "type": "string"
+            },
+            "lane": {
+              "type": "string",
+              "description": "all, a lane, or lanes joined with +"
+            }
+          }
+        }
+      ]
+    },
+    "versions": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 2,
+      "additionalProperties": {
+        "$ref": "#/$defs/version"
+      },
+      "description": "The versions by name: loop and ending, or piece."
+    },
+    "plans": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 2,
+      "additionalProperties": {
+        "$ref": "#/$defs/plan"
+      },
+      "description": "The plan of each version, by the same names."
+    },
+    "explanation": {
+      "type": "string"
+    },
+    "ending_musicxml": {
+      "type": "string"
+    },
+    "musicxml_versions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "The MusicXML of every version after the first, by name; {} for a form with one version."
+    }
+  },
+  "$defs": {
+    "plan": {
+      "type": "object",
+      "required": [
+        "format"
+      ],
+      "properties": {
+        "format": {
+          "type": "string"
+        }
+      },
+      "description": "A plan object (docs/plan-format.md, schema/plan.v2.schema.json)."
+    },
+    "version": {
+      "type": "object",
+      "required": [
+        "plan",
+        "sections",
+        "score",
+        "seam",
+        "analyzer_check",
+        "style_distance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "plan": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "The plan object (variations), else null: the plans of a piece are in \"plans\"."
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/loop_row"
+              },
+              {
+                "$ref": "#/$defs/size_row"
+              }
+            ]
+          }
+        },
+        "score": {
+          "type": "object",
+          "required": [
+            "numerator",
+            "denominator"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "numerator": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "denominator": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "seam": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "progression",
+                "no_parallels",
+                "step",
+                "leading_tone",
+                "held"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "progression": {
+                  "type": "boolean"
+                },
+                "no_parallels": {
+                  "type": "boolean"
+                },
+                "step": {
+                  "type": "boolean"
+                },
+                "leading_tone": {
+                  "type": "boolean"
+                },
+                "held": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          ]
+        },
+        "analyzer_check": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "planned",
+                "agreed",
+                "contradicts",
+                "items"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "planned": {
+                  "type": "integer"
+                },
+                "agreed": {
+                  "type": "integer"
+                },
+                "contradicts": {
+                  "type": "boolean"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "bar",
+                      "planned",
+                      "heard",
+                      "agreed"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "cadence",
+                          "key",
+                          "violation"
+                        ]
+                      },
+                      "bar": {
+                        "type": "integer"
+                      },
+                      "planned": {
+                        "type": "string"
+                      },
+                      "heard": {
+                        "type": "string"
+                      },
+                      "agreed": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "style_distance": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "section_function": {
+      "type": "object",
+      "required": [
+        "kind",
+        "independent",
+        "lyric",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "transition",
+            "retransition",
+            "subordinate",
+            "coda"
+          ]
+        },
+        "independent": {
+          "type": "boolean",
+          "description": "A transition made from a motive of its own (R-504)."
+        },
+        "lyric": {
+          "type": "boolean",
+          "description": "A subordinate theme whose motive is the main theme's, augmented (R-506)."
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "description": "The part of a larger form a section is (R-503, R-510)."
+    },
+    "loop_row": {
+      "type": "object",
+      "required": [
+        "id",
+        "part",
+        "function",
+        "letter",
+        "start",
+        "beats",
+        "cadence",
+        "heard",
+        "fill",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "part": {
+          "enum": [
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        "function": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/section_function"
+            }
+          ],
+          "description": "The part of a larger form the section is (transition, retransition, subordinate theme, coda); null for any other section."
+        },
+        "letter": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "pattern": "^[0-9]+/[0-9]+$"
+        },
+        "beats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cadence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "heard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "in_scope": {
+          "const": false,
+          "description": "Present when a regenerate left the section as it was."
+        },
+        "fill": {
+          "enum": [
+            "empty",
+            "motif",
+            "theme",
+            "progression"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "construction_text": {
+          "type": "string",
+          "description": "Present for a theme section with a construction: why it is as long as it is (R-469)."
+        }
+      },
+      "description": "A section of a form whose sections the request gives (the game loop)."
+    },
+    "size_row": {
+      "type": "object",
+      "required": [
+        "id",
+        "role",
+        "letter",
+        "start",
+        "beats",
+        "cadence",
+        "heard",
+        "returns",
+        "motive",
+        "key_heard",
+        "key",
+        "pedal",
+        "changes",
+        "figure",
+        "function",
+        "part",
+        "repeat_of",
+        "upbeat",
+        "connective"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "theme",
+            "contrast",
+            "return",
+            "variation",
+            "layer",
+            "pattern",
+            "sequence",
+            "episode",
+            "codetta",
+            "liquidation",
+            "transition",
+            "retransition",
+            "subordinate",
+            "coda",
+            "elaboration",
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        "letter": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "pattern": "^[0-9]+/[0-9]+$"
+        },
+        "beats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cadence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "heard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "in_scope": {
+          "const": false,
+          "description": "Present when a regenerate left the section as it was."
+        },
+        "returns": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The name of the section it returns."
+        },
+        "motive": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "How its motive is made from the first, as the form's document writes it."
+        },
+        "key_heard": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The key the Analyzer heard at the section's start over the whole piece, as \"C major\"; null when none was heard."
+        },
+        "key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The key the plan gives the section's start, as \"G major\" (the key lane's span under it, R-493); null when the plan has none. It is the planned key: the key the Analyzer hears (key_heard) often differs."
+        },
+        "pedal": {
+          "enum": [
+            "dominant",
+            null
+          ],
+          "description": "\"dominant\" when the section's first half was written over a dominant pedal."
+        },
+        "changes": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/changes"
+            }
+          ],
+          "description": "How a section that returns another differs from it; null for a section that returns none."
+        },
+        "figure": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/figure"
+            }
+          ],
+          "description": "The figure and skeleton of a figurate return (R-501); null for any other section."
+        },
+        "function": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/section_function"
+            }
+          ],
+          "description": "The part of a larger form the section is (transition, retransition, subordinate theme, coda); null for any other section."
+        },
+        "part": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The name of the part of a compound form the section is in (\"Minuet\", \"Trio\"); null for any other form."
+        },
+        "repeat_of": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The name of the performed section this one writes out again (\"A\" for \"A (repeat)\"); null for the first time."
+        },
+        "upbeat": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "chord",
+                "next"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "chord": {
+                  "type": "string",
+                  "description": "The numeral of the section's last chord."
+                },
+                "next": {
+                  "type": "string",
+                  "description": "The numeral of the next section's first chord."
+                }
+              }
+            }
+          ],
+          "description": "For a section that leads into the next (R-486): its last chord and the first chord it leads to; null for any other."
+        },
+        "connective": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "For a section with a connective: whether it was written; null for any other."
+        },
+        "construction_text": {
+          "type": "string",
+          "description": "Present for a theme section with a construction: why it is as long as it is (R-469)."
+        }
+      },
+      "description": "A section of the size of a form with sizes."
+    },
+    "figure": {
+      "type": "object",
+      "required": [
+        "kind",
+        "rhythm",
+        "harmony",
+        "change_at",
+        "climax",
+        "raised",
+        "mode",
+        "skeleton",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "neighbor",
+            "scale",
+            "broken-chord"
+          ],
+          "description": "The motive of variation: neighbor tones, a scale line toward the next skeleton tone, or a broken chord of the chord over the cell."
+        },
+        "rhythm": {
+          "enum": [
+            "eighths",
+            "sixteenths"
+          ],
+          "description": "The note value the figure is held in."
+        },
+        "harmony": {
+          "enum": [
+            "kept",
+            "reharmonized"
+          ],
+          "description": "Whether the figure sits over the theme's chords or over a reharmonized copy."
+        },
+        "change_at": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "description": "The bar at which the reharmonized copy's root must change; null for none."
+        },
+        "climax": {
+          "type": "boolean",
+          "description": "The variation asks for the octave above when it fits the melody range."
+        },
+        "raised": {
+          "type": "boolean",
+          "description": "The climax octave was applied."
+        },
+        "mode": {
+          "enum": [
+            "parallel",
+            null
+          ],
+          "description": "\"parallel\" for a variation in the home key's parallel mode; null for the home mode."
+        },
+        "skeleton": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-G][#b]?-?[0-9]+$"
+          },
+          "description": "The principal tone of each cell of the meter, as a note name and octave (C4 = middle C), spelled in the section's key."
+        },
+        "text": {
+          "type": "string",
+          "description": "One sentence: the figure, what changes with it and the first eight tones of the skeleton."
+        }
+      },
+      "description": "The figure of a figurate return and the skeleton it is made over (R-501)."
+    },
+    "changes": {
+      "type": "object",
+      "required": [
+        "copied",
+        "variation",
+        "setting",
+        "mode",
+        "melody_added",
+        "chords_changed",
+        "chords",
+        "cadence_from",
+        "cadence_to",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "copied": {
+          "type": "boolean",
+          "description": "The section holds a copy of the section it returns (same length, meter and key-lane shape); false when it was composed anew."
+        },
+        "variation": {
+          "enum": [
+            "exact",
+            "ornament",
+            "reharmonize",
+            "reregister",
+            "varied",
+            "figurate",
+            "embellish",
+            "setting"
+          ]
+        },
+        "setting": {
+          "enum": [
+            "block",
+            "arpeggiated",
+            "alberti",
+            "oom-pah",
+            null
+          ],
+          "description": "The pattern of the new accompaniment of a setting return (R-518); null for any other variation."
+        },
+        "mode": {
+          "enum": [
+            "major",
+            "minor",
+            null
+          ],
+          "description": "The mode a copy across modes is mapped into (R-524, R-499); null for a copy in keys of the same mode and for a section composed anew."
+        },
+        "melody_added": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "chords_changed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "chords": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cadence_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The numerals of the returned section's last quarter."
+        },
+        "cadence_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The numerals of the section's last quarter."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "description": "How a returned section differs from its source."
+    }
+  }
+}

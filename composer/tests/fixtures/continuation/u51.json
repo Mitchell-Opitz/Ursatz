@@ -1,0 +1,90 @@
+{
+  "meter": {
+    "beats_per_bar": 4,
+    "beat_unit": 4
+  },
+  "key": {
+    "tonic_pitch_class": 0,
+    "mode": "minor"
+  },
+  "notes": [
+    {
+      "midi_pitch": 67,
+      "offset": {
+        "num": 0,
+        "den": 1
+      },
+      "duration": {
+        "num": 3,
+        "den": 8
+      }
+    },
+    {
+      "midi_pitch": 62,
+      "offset": {
+        "num": 3,
+        "den": 8
+      },
+      "duration": {
+        "num": 1,
+        "den": 8
+      }
+    },
+    {
+      "midi_pitch": 60,
+      "offset": {
+        "num": 1,
+        "den": 2
+      },
+      "duration": {
+        "num": 1,
+        "den": 2
+      }
+    },
+    {
+      "midi_pitch": 65,
+      "offset": {
+        "num": 1,
+        "den": 1
+      },
+      "duration": {
+        "num": 3,
+        "den": 8
+      }
+    },
+    {
+      "midi_pitch": 63,
+      "offset": {
+        "num": 11,
+        "den": 8
+      },
+      "duration": {
+        "num": 1,
+        "den": 8
+      }
+    },
+    {
+      "midi_pitch": 62,
+      "offset": {
+        "num": 3,
+        "den": 2
+      },
+      "duration": {
+        "num": 1,
+        "den": 2
+      }
+    }
+  ],
+  "features": [
+    {
+      "label": "a",
+      "first": 0,
+      "last": 2
+    },
+    {
+      "label": "b",
+      "first": 3,
+      "last": 5
+    }
+  ]
+}

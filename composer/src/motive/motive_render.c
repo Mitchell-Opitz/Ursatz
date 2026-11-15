@@ -1,0 +1,66 @@
+#include <ursatz_composer/motive_render.h>
+
+#include <stdio.h>
+#include <string.h>
+
+#include <ursatz_composer/lanes.h>
+#include <ursatz_composer/plan_state.h>
+#include "motive/motive_internal.h"
+#include "util/plan_util.h"
+
+static bool add_given_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
+    LaneSpanId id;
+    return plan_add_lane_span(plan, owner, lane, 0, span, payload, &id) == PLAN_OK &&
+           plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
+}
+
+PiecePlan *motive_render_plan(const Motive *motive) {
+    if (!motive || motive->note_count == 0) {
+        return NULL;
+    }
+    PiecePlan *plan = plan_create();
+    if (!plan) {
+        return NULL;
+    }
+    PlanSpan all = {{0, 1}, motive->length};
+    NodeId form;
+    NodeId section;
+    NodeId phrase;
+    NodeId idea;
+    bool ok = plan_add_given_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, &form) &&
+              plan_add_given_node(plan, form, PLAN_NODE_SECTION, all, &section) &&
+              plan_add_given_node(plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
+              plan_add_given_node(plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
+              motive_attach(plan, idea, (Rational){0, 1}, motive, "motive", NULL, NULL) == PLAN_OK;
+
+    PlanLanePayload payload;
+    memset(&payload, 0, sizeof(payload));
+    bool has_pickup = rational_cmp(motive->pickup, (Rational){0, 1}) > 0;
+    if (ok && has_pickup && rational_cmp(motive->pickup, motive->length) < 0) {
+        PlanSpan lead = {{0, 1}, motive->pickup};
+        Rational rest_length = motive_time_minus(motive->length, motive->pickup);
+        payload.meter.beats_per_bar = (int)motive->pickup.num;
+        payload.meter.beat_unit = (int)motive->pickup.den;
+        ok = add_given_span(plan, idea, PLAN_LANE_METER, lead, &payload);
+        PlanSpan rest = {motive->pickup, rest_length};
+        payload.meter = motive_meter(motive);
+        ok = ok && add_given_span(plan, idea, PLAN_LANE_METER, rest, &payload);
+    } else if (ok) {
+        payload.meter = motive_meter(motive);
+        if (has_pickup) {
+            payload.meter.beats_per_bar = (int)motive->pickup.num;
+            payload.meter.beat_unit = (int)motive->pickup.den;
+        }
+        ok = add_given_span(plan, idea, PLAN_LANE_METER, all, &payload);
+    }
+    if (ok && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
+        memset(&payload, 0, sizeof(payload));
+        payload.key = motive_key(motive);
+        ok = add_given_span(plan, idea, PLAN_LANE_KEY, all, &payload);
+    }
+    if (!ok) {
+        plan_destroy(plan);
+        return NULL;
+    }
+    return plan;
+}

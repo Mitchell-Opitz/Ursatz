@@ -1,0 +1,185 @@
+add_library(ursatz_composer STATIC
+    composer.c
+    util/request_parse.c
+    api/api_internal.c
+    api/api_versions.c
+    api/api_export.c
+    api/api_motive_request.c
+    api/api_motive.c
+    api/api_variants.c
+    api/api_random.c
+    api/api_grow.c
+    api/api_theme.c
+    api/api_target.c
+    api/api_workflow.c
+    api/api_plan.c
+    api/api_fill.c
+    api/api_regenerate.c
+    api/api_variations.c
+    api/api_piece_request.c
+    api/api_piece.c
+    api/api_piece_variations.c
+    api/api_progression.c
+    api/api_counterpoint.c
+    api/api_develop.c
+    api/api_grow_request.c
+    api/api_vocabulary.c
+    api/api_forms.c
+    api/api_validate.c
+    util/job.c
+    util/util.c
+    util/plan_util.c
+    style/style.c
+    style/style_blend.c
+    style/style_labels.c
+    style/style_check.c
+    style/style_measure.c
+    style/corpus_seed.c
+    plan/piece_plan.c
+    plan/lanes.c
+    plan/plan_state.c
+    plan/constraint.c
+    plan/plan_json.c
+    plan/analysis_load.c
+    check/analyzer_check.c
+    check/hearing.c
+    check/explain.c
+    render/render.c
+    render/export.c
+    fill/fill_target.c
+    fill/fill_operator.c
+    fill/fill_loop.c
+    fill/fill_rng.c
+    fill/fill_record.c
+    fill/fill_suggest.c
+    fill/variations.c
+    harmony/harmony_roman.c
+    harmony/harmony_rhythm.c
+    harmony/harmony_request.c
+    harmony/harmony_progression.c
+    harmony/harmony_hear.c
+    harmony/harmony_check.c
+    harmony/harmony_phrase.c
+    harmony/harmony_prolong.c
+    harmony/harmony_context.c
+    harmony/harmony_given.c
+    harmony/harmony_motive.c
+    harmony/harmony_templates.c
+    harmony/harmony_embellish.c
+    harmony/harmony_bass.c
+    harmony/harmony_bass_check.c
+    harmony/harmony_octave.c
+    harmony/harmony_skeleton.c
+    harmony/harmony_schema.c
+    harmony/harmony_sequence.c
+    motive/motive.c
+    motive/motive_notes.c
+    motive/motive_text.c
+    motive/motive_render.c
+    motive/motive_import.c
+    motive/motive_analysis.c
+    motive/motive_segments.c
+    motive/motive_develop.c
+    motive/motive_develop_operator.c
+    motive/motive_recognizability.c
+    motive/motive_fidelity.c
+    motive/motive_invent.c
+    motive/motive_random.c
+    motive/motive_random_common.c
+    motive/motive_random_segments.c
+    motive/variant_registry.c
+    motive/variant_chain.c
+    motive/variant_functions.c
+    motive/variant_recognize.c
+    motive/motive_tones.c
+    motive/motive_connect.c
+    melody/melody_check.c
+    melody/melody_context.c
+    melody/melody_contour.c
+    melody/melody_nct.c
+    melody/melody_place.c
+    melody/melody_realize.c
+    melody/melody_fill.c
+    preferences/preferences.c
+    form/form_hear.c
+    form/form_spec.c
+    form/form_builtin.c
+    form/return_hear.c
+    grow/grow_request.c
+    grow/grow_theme.c
+    grow/grow_layout.c
+    grow/theme_shape.c
+    grow/grow_develop.c
+    grow/grow_fidelity.c
+    grow/grow_segments.c
+    grow/grow_beginning.c
+    grow/grow_ending.c
+    grow/grow_free.c
+    grow/grow_liquidate.c
+    grow/grow_coda.c
+    grow/grow_check.c
+    grow/grow_form.c
+    grow/grow_run.c
+    piece/form_return.c
+    piece/given.c
+    piece/seam.c
+    piece/piece_reopen.c
+    piece/seam_hear.c
+    piece/connective.c
+    piece/piece_perform.c
+    piece/form_vary.c
+    piece/form_figure.c
+    piece/form_build.c
+    piece/form_build_request.c
+    piece/piece_keys.c
+    piece/piece_cadences.c
+    piece/compose_run.c
+    piece/compose_candidates.c
+    piece/lock.c
+    piece/depend.c
+    piece/regenerate.c
+    texture/accompaniment.c
+    texture/accompaniment_pattern.c
+    texture/accompaniment_hear.c
+    texture/voicing.c
+    texture/voicing_check.c
+    texture/voicing_search.c
+    texture/voice_hear.c
+    texture/texture_check.c
+    counterpoint/counterpoint_write.c
+    counterpoint/counterpoint_species.c
+    counterpoint/counterpoint_check.c
+)
+# The forms built in (R-416): forms/<name>.json, embedded as C byte arrays at build time. Adding a form is a file in
+# forms/ and a line here, in registry order.
+set(COMPOSER_FORMS binary rounded-binary ternary variations loop layered minuet trio minuet-and-trio scherzo scherzo-and-trio figured-variations main-and-subordinate andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo sonatina sonatina-tonic-major game-loop)
+set(COMPOSER_FORM_FILES)
+foreach(form ${COMPOSER_FORMS})
+    list(APPEND COMPOSER_FORM_FILES ${CMAKE_CURRENT_SOURCE_DIR}/../forms/${form}.json)
+endforeach()
+set(COMPOSER_FORM_DATA ${CMAKE_CURRENT_BINARY_DIR}/form/form_builtin_data.c)
+add_custom_command(
+    OUTPUT ${COMPOSER_FORM_DATA}
+    COMMAND ${CMAKE_COMMAND} -DOUTPUT=${COMPOSER_FORM_DATA} "-DFILES=${COMPOSER_FORM_FILES}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/EmbedForms.cmake
+    DEPENDS ${COMPOSER_FORM_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/EmbedForms.cmake
+    COMMENT "Embedding the form documents"
+    VERBATIM)
+target_sources(ursatz_composer PRIVATE ${COMPOSER_FORM_DATA})
+target_include_directories(ursatz_composer
+    PUBLIC ${PROJECT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_link_libraries(ursatz_composer
+    PRIVATE ursatz ursatz_analyzer ursatz_analyzer::chain standard_harmony galant_schemas scale_harmonization common_practice_minimal standard_counterpoint standard_form standard_meter standard_tonality standard_voicing cjson
+)
+# The tests reach the internal headers and the libraries the sources use; no consumer does.
+add_library(ursatz_composer_internal INTERFACE)
+target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(ursatz_composer_internal INTERFACE
+    ursatz ursatz_analyzer ursatz_analyzer::chain standard_harmony galant_schemas scale_harmonization common_practice_minimal standard_counterpoint standard_form standard_meter standard_tonality standard_voicing cjson
+)
+target_compile_definitions(ursatz_composer PRIVATE
+    URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"
+)
+target_compile_options(ursatz_composer PRIVATE -Wall -Wextra -Wpedantic)

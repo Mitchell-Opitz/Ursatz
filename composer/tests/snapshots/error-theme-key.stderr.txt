@@ -1,0 +1,1 @@
+Error: unknown key 'H'; write a tonic letter A-G with an optional # or b, then major or minor, for example "D minor"

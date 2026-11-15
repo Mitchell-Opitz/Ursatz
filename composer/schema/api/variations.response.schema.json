@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variations.response.schema.json",
+  "title": "composer_api_variations and composer_api_harmonize response",
+  "description": "The versions kept, each with its plan; a version's MIDI file is composer_api_export of its plan.",
+  "type": "object",
+  "required": [
+    "variations",
+    "kept",
+    "requested",
+    "seeds_tried"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "variations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "seed",
+          "plan",
+          "sections"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "plan": {
+            "type": "object"
+          },
+          "musicxml": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "letter",
+                "heard",
+                "heard_as_requested",
+                "cadences"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "letter": {
+                  "type": "string"
+                },
+                "heard": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "in_scope": {
+                  "const": false
+                },
+                "heard_as_requested": {
+                  "type": "boolean"
+                },
+                "cadences": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "kept": {
+      "type": "integer"
+    },
+    "requested": {
+      "type": "integer"
+    },
+    "seeds_tried": {
+      "type": "integer"
+    }
+  }
+}

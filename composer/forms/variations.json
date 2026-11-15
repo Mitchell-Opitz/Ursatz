@@ -1,0 +1,70 @@
+{
+  "schema": "ursatz-form",
+  "version": 1,
+  "name": "variations",
+  "label": "Theme and variations",
+  "closing": true,
+  "regions": [{"name": "away", "major": [6], "minor": [3]}],
+  "sizes": [
+    {"bars": 16, "count": 1, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"}
+    ]},
+    {"bars": 24, "count": 2, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"}
+    ]},
+    {"bars": 32, "count": 3, "default": true, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"start": "away", "end": "away"}, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"}
+    ]},
+    {"bars": 40, "count": 4, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"start": "away", "end": "away"}, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 4", "letter": "V4", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"}
+    ]},
+    {"bars": 48, "count": 5, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"start": "away", "end": "away"}, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 4", "letter": "V4", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 5", "letter": "V5", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"}
+    ]},
+    {"bars": 56, "count": 6, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"start": "away", "end": "away"}, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 4", "letter": "V4", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 5", "letter": "V5", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 6", "letter": "V6", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"}
+    ]},
+    {"bars": 64, "count": 7, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 4", "letter": "V4", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"start": "away", "end": "away"}, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 5", "letter": "V5", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 6", "letter": "V6", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 7", "letter": "V7", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"}
+    ]},
+    {"bars": 72, "count": 8, "sections": [
+      {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},
+      {"name": "variation 1", "letter": "V1", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 2", "letter": "V2", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 3", "letter": "V3", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 4", "letter": "V4", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"start": "away", "end": "away"}, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 5", "letter": "V5", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 6", "letter": "V6", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"},
+      {"name": "variation 7", "letter": "V7", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "diminish", "returns": "theme", "variation": "ornament"},
+      {"name": "variation 8", "letter": "V8", "role": "variation", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "motive": "interval-change", "returns": "theme", "variation": "reharmonize"}
+    ]}
+  ]
+}

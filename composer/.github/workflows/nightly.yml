@@ -1,0 +1,38 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '11 8 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.URSATZ_SUBMODULE_TOKEN }}@github.com/Mitchell-Opitz/Ursatz".insteadOf "https://github.com/Mitchell-Opitz/Ursatz"
+          git submodule update --init --recursive
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev pkg-config
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache
+      - name: Configure
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: cmake -S . -B build
+      - name: Build
+        run: cmake --build build -j
+      - name: Test (full suite)
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc)
+      - name: Ten slowest tests
+        if: always()
+        run: scripts/slowest-tests.sh build
