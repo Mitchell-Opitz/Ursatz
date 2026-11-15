@@ -990,6 +990,31 @@ static void test_section_constraints(void) {
     plan_destroy(plan);
 }
 
+/* A return of variation embellish (R-516) round-trips byte for byte. */
+static void test_embellish_return(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "embellish");
+    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
+    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
+    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
+    back.params.section_return.section = a;
+    back.params.section_return.variation = PLAN_RETURN_EMBELLISH;
+    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
+    assert(strcmp(plan_return_variation_name(PLAN_RETURN_EMBELLISH), "embellish") == 0);
+    PlanJsonError error;
+    char *text = plan_to_json(plan, &error);
+    assert(text != NULL && strstr(text, "\"variation\": \"embellish\"") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+    free(text);
+    free(again);
+    plan_destroy(parsed);
+    plan_destroy(plan);
+}
+
 /*
  * Plan files saved before relation steps write a motive ref as "transform" and the members it uses (docs/plan-format.md).
  * Each old name reads to the step of the table in docs/modules/motive-relations.md, and is written as "step"; an
@@ -1585,6 +1610,7 @@ int main(void) {
     test_figure();
     test_section_function();
     test_section_constraints();
+    test_embellish_return();
     test_empty_plan();
     test_malformed_input();
     test_plan_files();
