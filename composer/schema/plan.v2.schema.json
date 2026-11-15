@@ -209,6 +209,14 @@
           "then": { "required": ["length"], "properties": { "length": { "$ref": "#/$defs/time" } } }
         },
         {
+          "if": { "properties": { "kind": { "const": "return" } } },
+          "then": {
+            "properties": {
+              "setting": { "enum": ["block", "arpeggiated", "alberti", "oom-pah"], "description": "The pattern of the new accompaniment (R-518); required by, and only for, a setting return." }
+            }
+          }
+        },
+        {
           "if": { "properties": { "kind": { "const": "pedal" } } },
           "then": { "required": ["degree"], "properties": { "degree": { "const": 5 } } }
         },
