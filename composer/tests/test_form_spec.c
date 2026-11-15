@@ -25,6 +25,7 @@
  *                               a section in the parallel mode (B3 of P50, tests/fixtures/forms/parallel-form.json): what it reads as, each refusal;
  *                               the parts of larger forms (B1 of P51, tests/fixtures/forms/parts-of-forms.json): the four roles, independent and lyric, each refusal, the plan's section functions;
  *                               a returning section in the tonic major (B3 of P52, R-517): what it reads as, each refusal;
+ *                               a returning section in the home mode (B1 of P53, R-524): what it reads as, each refusal;
  *                               each refusal of the reader, with the path of the member at fault;
  *                               form_spec_size for every size, count and bad size of each built-in
  *   test_form_spec pedal      a form with a dominant pedal in its B (tests/fixtures/forms/pedal-form.json) composes: seeds
@@ -1776,6 +1777,39 @@ static void test_tonic_major_reader(void) {
            strcmp(error.message, "a figurate variation takes the parallel mode, not the tonic major") == 0);
 }
 
+/* A returning section may be at home in the home mode (R-524): it reads as home_mode, with no other mode; each refusal at /mode. */
+static void test_home_mode_reader(void) {
+    char text[4096];
+    FormSpec *form = NULL;
+    FormSpecError error;
+    figure_document(text, sizeof(text), ", \"variation\": \"reharmonize\", \"mode\": \"home\"", "");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].section_count == 2);
+    assert(form->sizes[0].sections[1].home_mode && !form->sizes[0].sections[1].parallel &&
+           !form->sizes[0].sections[1].tonic_major && !form->sizes[0].sections[0].home_mode);
+    form_spec_destroy(form);
+    /* a section in the home mode has no keys */
+    figure_document(text, sizeof(text), ", \"variation\": \"reharmonize\", \"mode\": \"home\", \"keys\": {\"start\": \"home\"}", "");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK && strcmp(error.path, "/sizes/0/sections/1/mode") == 0 &&
+           strcmp(error.message, "a section in the home mode has no keys") == 0);
+    /* it is a returning section */
+    snprintf(text, sizeof(text),
+             "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"t\", \"label\": \"T\", \"sizes\": [{\"bars\": 16, "
+             "\"default\": true, \"sections\": ["
+             "{\"name\": \"T\", \"letter\": \"T\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true, \"mode\": \"home\"}, "
+             "{\"name\": \"V1\", \"letter\": \"V1\", \"role\": \"variation\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true, \"returns\": \"T\"}]}]}");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK && strcmp(error.path, "/sizes/0/sections/0/mode") == 0 &&
+           strcmp(error.message, "the home mode is for a returning section") == 0);
+    /* and it is reharmonized */
+    figure_document(text, sizeof(text), ", \"variation\": \"exact\", \"mode\": \"home\"", "");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK && strcmp(error.path, "/sizes/0/sections/1/mode") == 0 &&
+           strcmp(error.message, "a return in the home mode is reharmonized") == 0);
+    figure_document(text, sizeof(text), FIGURATE ", \"mode\": \"home\"", ", \"figure\": {\"kind\": \"scale\", \"rhythm\": \"eighths\"}");
+    assert(form_spec_parse(text, &form, &error) != FORM_SPEC_OK && strcmp(error.path, "/sizes/0/sections/1/mode") == 0 &&
+           strcmp(error.message, "a return in the home mode is reharmonized") == 0);
+}
+
 /* A setting return (R-518) names its pattern: it reads as the section's setting; each refusal at its path. */
 static void test_setting_reader(void) {
     static const struct {
@@ -2695,6 +2729,7 @@ int main(int argc, char **argv) {
     test_liquidation_reader();
     test_figure_reader();
     test_tonic_major_reader();
+    test_home_mode_reader();
     test_setting_reader();
     test_parts_reader();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);

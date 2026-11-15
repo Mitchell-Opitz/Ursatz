@@ -212,7 +212,8 @@
           "if": { "properties": { "kind": { "const": "return" } } },
           "then": {
             "properties": {
-              "setting": { "enum": ["block", "arpeggiated", "alberti", "oom-pah"], "description": "The pattern of the new accompaniment (R-518); required by, and only for, a setting return." }
+              "setting": { "enum": ["block", "arpeggiated", "alberti", "oom-pah"], "description": "The pattern of the new accompaniment (R-518); required by, and only for, a setting return." },
+              "across_modes": { "type": "boolean", "description": "Only for a reharmonize return: a source in the other mode is moved by the tonic step and mapped into the target's mode (R-524). Written only when true." }
             }
           }
         },

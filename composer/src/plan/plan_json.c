@@ -204,6 +204,9 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
             ok = plan_json_add(object, "setting",
                                cJSON_CreateString(ACCOMPANIMENT_NAMES[constraint->params.section_return.setting]));
         }
+        if (ok && constraint->params.section_return.across_modes) {
+            ok = plan_json_add(object, "across_modes", cJSON_CreateBool(true));
+        }
         break;
     case PLAN_CONSTRAINT_LAYERS: {
         cJSON *lanes = cJSON_CreateArray();
@@ -1003,6 +1006,19 @@ static bool read_optional_bool(JsonReader *reader, const cJSON *object, const ch
     return true;
 }
 
+/* The optional across_modes of a reharmonized return (R-524); true on any other variation is refused. */
+static bool read_return_across_modes(JsonReader *reader, const cJSON *object, const char *path, PlanReturn *out) {
+    if (!read_optional_bool(reader, object, path, "across_modes", &out->across_modes)) {
+        return false;
+    }
+    if (out->across_modes && out->variation != PLAN_RETURN_REHARMONIZE) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "across_modes");
+        return json_bad_format(reader, at, "only a reharmonized return crosses modes");
+    }
+    return true;
+}
+
 /* An optional integer member; absent is 0. */
 static bool read_optional_int(JsonReader *reader, const cJSON *object, const char *path, const char *key, long min,
                               long max, int *out) {
@@ -1576,7 +1592,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
             return false;
         }
         out->params.section_return.section = (NodeId)number_value;
-        return read_return_setting(reader, item, path, &out->params.section_return);
+        return read_return_setting(reader, item, path, &out->params.section_return) &&
+               read_return_across_modes(reader, item, path, &out->params.section_return);
     case PLAN_CONSTRAINT_LAYERS: {
         const cJSON *lanes = plan_json_member(reader, item, path, "lanes", true);
         if (!lanes) {

@@ -943,17 +943,30 @@ static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSiz
         return fail(reader, at, "a setting return names its setting");
     }
     /* mode: "parallel" (R-499), the section is in the home key's parallel key, only a figurate variation, with no keys;
-     * "major" (R-517), the section is in the home tonic's major key, only a return, with no keys, not figurate */
+     * "major" (R-517), the section is in the home tonic's major key, only a return, with no keys, not figurate;
+     * "home" (R-524), the section is at home in the home mode, its source copied across modes when it is in the other,
+     * only a reharmonize return, with no keys */
     const cJSON *mode = member_of(reader, json, path, "mode", false);
     const bool figurate = returns && out->variation == PLAN_RETURN_FIGURATE;
     if (mode) {
-        static const char *const MODE_NAMES[] = {"parallel", "major"};
+        static const char *const MODE_NAMES[] = {"parallel", "major", "home"};
         int value = -1;
         join(at, sizeof(at), path, "mode");
-        if (!read_choice(reader, json, path, "mode", MODE_NAMES, 2, &value)) {
+        if (!read_choice(reader, json, path, "mode", MODE_NAMES, 3, &value)) {
             return false;
         }
-        if (value == 0) {
+        if (value == 2) {
+            if (keys) {
+                return fail(reader, at, "a section in the home mode has no keys");
+            }
+            if (!returns) {
+                return fail(reader, at, "the home mode is for a returning section");
+            }
+            if (out->variation != PLAN_RETURN_REHARMONIZE) {
+                return fail(reader, at, "a return in the home mode is reharmonized");
+            }
+            out->home_mode = true;
+        } else if (value == 0) {
             if (keys) {
                 return fail(reader, at, "a section in the parallel mode has no keys");
             }

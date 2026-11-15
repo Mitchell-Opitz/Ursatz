@@ -196,6 +196,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.kind = PLAN_CONSTRAINT_RETURN;
         constraint.params.section_return.section = sections[section->returns];
         constraint.params.section_return.variation = section->variation;
+        constraint.params.section_return.across_modes = section->home_mode;
         if (section->variation == PLAN_RETURN_SETTING) {
             constraint.params.section_return.setting = setting_pattern(section, request, accompaniment);
         }

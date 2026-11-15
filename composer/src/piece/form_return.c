@@ -427,24 +427,34 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
     return true;
 }
 
-bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
-                       int *to_mode) {
+bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+                          int *shift, int *to_mode) {
     KeyPiece a[MAX_KEY_PIECES];
     KeyPiece b[MAX_KEY_PIECES];
     size_t na;
     size_t nb;
+    int difference = -1;
     if (!key_pieces(source_plan, source, a, &na) || !key_pieces(target_plan, target, b, &nb) || na != nb) {
         return false;
     }
     for (size_t i = 0; i < na; i++) {
+        int step = ((analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key)) % 12 + 12) % 12;
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
-            analysis_key_tonic_pitch_class(&a[i].key) != analysis_key_tonic_pitch_class(&b[i].key) ||
-            a[i].key.mode == b[i].key.mode) {
+            a[i].key.mode == b[i].key.mode || b[i].key.mode != b[0].key.mode || (difference >= 0 && difference != step)) {
             return false;
         }
+        difference = step;
     }
+    *shift = difference > 6 ? difference - 12 : difference;
     *to_mode = (int)b[0].key.mode;
     return true;
+}
+
+/* The copy across modes on one tonic (a figurate return, R-499): the shift must be 0. */
+bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+                       int *to_mode) {
+    int shift;
+    return return_mode_shift_by(source_plan, source, target_plan, target, &shift, to_mode) && shift == 0;
 }
 
 /* The variations the operator makes: all of them (figurate keeps the melody here; compose_run writes its figure, R-497). */
@@ -474,7 +484,10 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
            return_meter_over(plan, to, &target_meter) && source_meter.beats_per_bar == target_meter.beats_per_bar &&
            source_meter.beat_unit == target_meter.beat_unit &&
            (return_key_shift(plan, from, plan, to, &shift) ||
-            (ret->variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, to, &to_mode)));
+            (ret->variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, to, &to_mode)) ||
+            /* A reharmonized return in the home mode (R-524): moved by the tonic step and mapped into the target's mode. */
+            (ret->variation == PLAN_RETURN_REHARMONIZE && ret->across_modes &&
+             return_mode_shift_by(plan, from, plan, to, &shift, &to_mode)));
 }
 
 bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
@@ -795,7 +808,7 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     PlanSpan from = plan_node_span(plan, source);
     payload->magic = RETURN_PAYLOAD_MAGIC;
     payload->variation = variation;
-    PlanReturn ret;
+    PlanReturn ret = {0};
     if (find_return(plan, target, &ret)) {
         payload->setting = ret.setting;
     }
@@ -807,12 +820,15 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
         return NULL;
     }
     if (!return_key_shift(plan, from, plan, payload->span, &payload->transpose)) {
-        /* A figurate return in the other mode of the same tonic (R-499): moved by 0, mapped, always reharmonized. */
-        if (variation != PLAN_RETURN_FIGURATE || !return_mode_shift(plan, from, plan, payload->span, &to_mode)) {
+        /* A figurate return in the other mode of the same tonic (R-499): moved by 0, mapped, always reharmonized. A
+         * reharmonized return with across_modes (R-524): moved by the tonic step, then mapped into the target's mode. */
+        if (variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, payload->span, &to_mode)) {
+            payload->transpose = 0;
+        } else if (variation != PLAN_RETURN_REHARMONIZE || !ret.across_modes ||
+                   !return_mode_shift_by(plan, from, plan, payload->span, &payload->transpose, &to_mode)) {
             free(payload);
             return NULL;
         }
-        payload->transpose = 0;
         payload->mode_change = true;
         payload->to_mode = (KeyStructureMode)to_mode;
     }
