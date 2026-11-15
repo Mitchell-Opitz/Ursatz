@@ -136,6 +136,7 @@ typedef struct {
     PlanFigure figure;                     /* read when has_figure */
     bool parallel;                         /* the section is in the home key's parallel key (R-499); only a figurate variation */
     bool tonic_major;                      /* the section is in the home tonic's major key (R-517): home in a major piece, its parallel key in a minor one; only a return */
+    bool home_mode;                        /* the section is at home in the home mode, its source copied across modes when it is in the other (R-524); only a reharmonize return */
     bool independent;                      /* a transition made from a motive of its own (R-504); only a transition */
     bool lyric;                            /* a subordinate theme whose motive is m0 augmented (R-506); only a subordinate theme */
 } FormSectionSpec;

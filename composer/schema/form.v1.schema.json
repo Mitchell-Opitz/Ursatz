@@ -205,7 +205,7 @@
         "connective": { "enum": ["sometimes", "always"], "description": "The held section ends with a short stepwise connective into the next section's first note; needs leads_in." },
         "independent": { "type": "boolean", "description": "A transition made from a motive of its own (R-504); only a transition, with no motive." },
         "lyric": { "type": "boolean", "description": "A subordinate theme whose motive is m0 augmented (R-506); only a subordinate theme, a period, with no motive or returns." },
-        "mode": { "enum": ["parallel", "major"], "description": "parallel: the section is in the home key's parallel key (R-499); needs variation figurate, no keys; its figure is reharmonized. major: the section is in the home tonic's major key (R-517), home in a major piece and the parallel key in a minor one; needs returns, no keys, not figurate." },
+        "mode": { "enum": ["parallel", "major", "home"], "description": "parallel: the section is in the home key's parallel key (R-499); needs variation figurate, no keys; its figure is reharmonized. major: the section is in the home tonic's major key (R-517), home in a major piece and the parallel key in a minor one; needs returns, no keys, not figurate. home: the section is at home in the home mode (R-524), its source copied across modes when it is in the other (a minor piece's subordinate theme in III returns in the tonic minor); needs returns, variation reharmonize, no keys." },
         "figure": {
           "type": "object",
           "required": ["kind", "rhythm"],
