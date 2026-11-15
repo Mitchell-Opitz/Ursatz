@@ -179,14 +179,15 @@
     return `${section.returns} (${section.variation})`;
   }
 
-  /* The Keys cell of a forms entry section (P52, R-521): "" with no `keys`, else "<start> to <end>", then " (tonic major)" for a
-   * section in the tonic major. */
+  /* The Keys cell of a forms entry section (P52, R-521; P53, R-525): "" with no `keys`, else "<start> to <end>", then " (tonic major)" for
+   * a section in the tonic major and " (home mode)" for a section in the home mode. */
   function sectionKeysLabel(entrySection) {
     const section = entrySection && typeof entrySection === "object" ? entrySection : {};
     if (!section.keys) {
       return "";
     }
-    return `${section.keys.start} to ${section.keys.end}${section.mode === "major" ? " (tonic major)" : ""}`;
+    const modeNote = section.mode === "major" ? " (tonic major)" : section.mode === "home" ? " (home mode)" : "";
+    return `${section.keys.start} to ${section.keys.end}${modeNote}`;
   }
 
   /* "3 variations, 32 bars" for a size with a count (the noun is the role of its last section), else "16 bars". */
