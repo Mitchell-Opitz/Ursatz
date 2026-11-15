@@ -634,7 +634,7 @@ foreach(leak leak_framework leak_chain)
     target_link_libraries(analyzer_consumer_${leak} PRIVATE ursatz_analyzer)
 endforeach()
 add_test(NAME test_consumer_isolation
-         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${PROJECT_BINARY_DIR}
+         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
 
 add_executable(test_score_text_reader test_score_text_reader.c)
