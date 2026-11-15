@@ -37,6 +37,10 @@ The subordinate group (B1 and C3) returns in the tonic, and in a minor piece it 
 
 B1, C3 and C4 close in the home key and are not closed, so a major piece plans them a half cadence (`piece_cadences.c`: a section that ends at home before the last one and is not `closed` has no PAC); K carries the piece's last PAC. In the tonic major of a minor piece B1 and C3 end away from the home key and keep their PAC (as the rondos' B1, [rondo.md](rondo.md)).
 
+## What the rows and the forms entry say
+
+The forms entry (API 1.25, R-525) gives B1 and C3 of `sonatina` `"mode": "home"`, B1 and C3 of `sonatina-tonic-major` `"mode": "major"`, and E the role `elaboration` (label `Elaboration`). A row whose copy crosses modes names it: in a minor piece B1 and C3 of `sonatina` have `changes.mode` `"minor"` and `text` with the part `mode: mapped into minor` before the harmony part; in a major piece the copy keeps the mode and `changes.mode` is `null`. The tonic major recapitulation's rows say `null` too: that copy is exact in the keys of its own mode.
+
 ## What is heard and what is only composed
 
 The themes (A, B, E's embellished B, the codettas) are composed and heard back as the form they were asked for in a share of the runs (the baselines below, as for every form, R-408); the keys, the retransition, the coda and the returns are composed to the plan and recorded in it, not heard as a form. The checks read the plan.
