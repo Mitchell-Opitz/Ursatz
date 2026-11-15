@@ -70,6 +70,10 @@ A trio that is itself ternary, a trio in the tonic minor and the great sonata ro
 
 Each section's KEY constraint is the key it ends in. A retransition opens the home key straight from the key before it, over the dominant, with no pivot chord (R-505): that is a pivot only when the region is V, so `test_piece_keys` does not ask a retransition for one (the small rondo's C is in IV or vi, whose pivot chords V is not).
 
+## What the rows say
+
+The forms entry (API 1.24, R-521) gives each section a `setting`: `"arpeggiated"` for A2 (A3 in the large rondo and the sonata rondo), `null` for every other, and a `mode` of `"major"` for B1. The rows of a piece name them in `changes`: A1's `variation` is `embellish` and its text `melody: N notes added` (the sixteenths split from eighths); A2's `setting` is `arpeggiated` and its text `accompaniment: arpeggiated (new setting)`, then the harmony part, `the same as A` when nothing else changed; B1's `key` is the tonic major (`C major` in C major, `A major` in A minor) and R1's the home key. `setting` is the pattern the plan's RETURN carries, so a piece in 6/8 or one asked for arpeggiated names the pattern the build put in its place (alberti in a compound meter becomes oom-pah). `tests/test_api_rondo.c` (`slow`) checks both rows in C major and A minor 4/4.
+
 ## What is heard and what is only composed
 
 The themes are composed and heard back as the form they were asked for in a share of the runs (the table below, as for every form, R-408); the keys, the retransitions, the coda and the returns are composed to the plan and recorded in it, not heard as a form. The checks read the plan.
