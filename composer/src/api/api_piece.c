@@ -1014,6 +1014,19 @@ static void append_part(char *text, size_t size, const char *part) {
     snprintf(text + used, size - used, "%s%s", used ? "; " : "", part);
 }
 
+/* The pattern of the new accompaniment of a section whose RETURN is a setting (R-518, after the plan's substitution); NULL otherwise. */
+static const char *return_setting_name(const Row *row) {
+    for (size_t i = 0; i < plan_node_constraint_count(row->plan, row->node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(row->plan, row->node, i);
+        if (constraint && constraint->kind == PLAN_CONSTRAINT_RETURN) {
+            return constraint->params.section_return.variation == PLAN_RETURN_SETTING
+                       ? api_accompaniment_name(constraint->params.section_return.setting)
+                       : NULL;
+        }
+    }
+    return NULL;
+}
+
 /* How a section that returns another differs from it: null for a section that returns none. */
 static cJSON *changes_json(const Row *row) {
     const FormSectionSpec *spec = row->spec;
@@ -1025,8 +1038,10 @@ static cJSON *changes_json(const Row *row) {
     const char *name = row->size->sections[spec->returns].name;
     bool copied = form_return_copies(row->plan, row->node);
     cJSON *entry = cJSON_CreateObject();
+    const char *setting = return_setting_name(row);
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
-              cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation));
+              cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation)) &&
+              api_add(entry, "setting", string_or_null(setting));
     char text[192] = "";
     size_t changed = 0;
     size_t chords = 0;
@@ -1044,6 +1059,10 @@ static cJSON *changes_json(const Row *row) {
             append_part(text, sizeof text, "melody: figured over the skeleton");
         } else if (added > 0) {
             snprintf(part, sizeof part, "melody: %zu note%s added", added, added == 1 ? "" : "s");
+            append_part(text, sizeof text, part);
+        }
+        if (setting) {
+            snprintf(part, sizeof part, "accompaniment: %s (new setting)", setting);
             append_part(text, sizeof text, part);
         }
         if (changed > 0) {
