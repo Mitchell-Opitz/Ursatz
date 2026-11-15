@@ -369,7 +369,7 @@ target_compile_options(test_form_templates PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_templates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Four tests for each template: the plan's structure, a quick compose run, the compose sweep, and the share heard as
 # requested.
-set(FORM_TEMPLATES binary rounded-binary ternary variations loop layered minuet trio scherzo figured-variations main-and-subordinate andante-aba andante-abab small-rondo-ababa small-rondo-abaca)
+set(FORM_TEMPLATES binary rounded-binary ternary variations loop layered minuet trio scherzo figured-variations main-and-subordinate andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo)
 foreach(template ${FORM_TEMPLATES})
     add_test(NAME test_form_templates_${template} COMMAND test_form_templates structure ${template})
     add_test(NAME test_form_templates_${template}_smoke COMMAND test_form_templates smoke ${template})
@@ -1090,9 +1090,9 @@ set_tests_properties(test_form_parts PROPERTIES LABELS slow)
 add_executable(test_rondo_forms test_rondo_forms.c)
 target_link_libraries(test_rondo_forms PRIVATE ursatz_composer)
 target_compile_options(test_rondo_forms PRIVATE -Wall -Wextra -Wpedantic)
-# The Andante and small rondo forms (R-520): eight rows of key and meter, seeds 1 to 10 each tried up to 16 times; one test
+# The Andante, small, large and sonata rondo forms (R-520): eight rows of key and meter, seeds 1 to 10 each tried up to 16 times; one test
 # per form, all slow.
-foreach(form andante-aba andante-abab small-rondo-ababa small-rondo-abaca)
+foreach(form andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo)
     add_test(NAME test_rondo_forms_${form} COMMAND test_rondo_forms ${form})
     set_tests_properties(test_rondo_forms_${form} PROPERTIES LABELS slow)
 endforeach()

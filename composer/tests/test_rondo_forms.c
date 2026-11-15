@@ -13,9 +13,9 @@
 #include <ursatz_composer/plan_state.h>
 
 /*
- * The Andante and small rondo forms (P52 B5, R-520), one test per form:
+ * The Andante and rondo forms (P52 B5 and B6, R-520), one test per form:
  *
- *   test_rondo_forms andante-aba | andante-abab | small-rondo-ababa | small-rondo-abaca
+ *   test_rondo_forms andante-aba | andante-abab | small-rondo-ababa | small-rondo-abaca | large-rondo | sonata-rondo
  *
  * Eight rows of key and meter (C major, A minor 4/4 and 3/4, G major and D minor 2/4, C major and D minor 6/8), seeds 1 to
  * 10, each seed tried again from the next seeds, up to 16 times, as the piece entry does (PIECE_SEED_TRIES): at least 9 of
@@ -25,8 +25,13 @@
  *   - A1 keeps every melody note of A at its place and pitch and has more notes (embellish, R-516);
  *   - B1 (ABAB, ABABA) is in the tonic major (home in a major piece, the parallel major in a minor one, R-517); its
  *     melody is B's moved by the key difference; the section after it starts in the home key;
- *   - A2 (ABABA, ABACA) has A's harmony, bass and melody, and an inner voice 1 with notes where A's has none (R-518);
- *   - C (ABACA) is in one of the second region's keys throughout (vi or IV in major, VI or iv in minor);
+ *   - the section set as a `setting` (A2 in ABABA and ABACA, A3 in the large and sonata rondos) has A's harmony, bass and
+ *     melody, and an inner voice 1 with notes where A's has none (R-518);
+ *   - A2 of the large and sonata rondos is A reharmonized: it keeps A's melody;
+ *   - C (ABACA, large rondo) is in one of the second region's keys throughout (vi or IV in major, VI or iv in minor);
+ *   - P of the sonata rondo is in the development key throughout (vi in major, iv in minor) and S in the sequence key (ii in
+ *     major, v in minor), S's melody P's moved by the key difference;
+ *   - R2 starts in the home key;
  *   - K ends on the tonic.
  * The counts of each row, with the first seed alone and with the tries, and the seconds a seed are printed; docs/rondo.md
  * records them. The tests are slow (CMake LABELS slow).
@@ -54,18 +59,21 @@ static const Row ROWS[] = {
 };
 #define ROW_COUNT (sizeof(ROWS) / sizeof(ROWS[0]))
 
-/* Where each part is in a form's sections, in order; NONE where the form has none. */
+/* Where each part is in a form's sections, in order; NONE where the form has none. `set` is the section returned as a
+   `setting` (A2 in the small rondos, A3 in the large and sonata), `reh` the one returned reharmonized (A2 in those). */
 typedef struct {
     const char *name;
     size_t count;
-    size_t a, t, b, r, a1, t1, b1, r1, a2, c, k;
+    size_t a, b, r, a1, b1, r1, r2, set, reh, c, p, s, k;
 } Layout;
 
 static const Layout LAYOUTS[] = {
-    {"andante-aba", 6, 0, 1, 2, 3, 4, NONE, NONE, NONE, NONE, NONE, 5},
-    {"andante-abab", 8, 0, 1, 2, 3, 4, 5, 6, NONE, NONE, NONE, 7},
-    {"small-rondo-ababa", 10, 0, 1, 2, 3, 4, 5, 6, 7, 8, NONE, 9},
-    {"small-rondo-abaca", 9, 0, 1, 2, 3, 4, NONE, NONE, 6, 7, 5, 8},
+    {"andante-aba", 6, 0, 2, 3, 4, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, 5},
+    {"andante-abab", 8, 0, 2, 3, 4, 6, NONE, NONE, NONE, NONE, NONE, NONE, NONE, 7},
+    {"small-rondo-ababa", 10, 0, 2, 3, 4, 6, 7, NONE, 8, NONE, NONE, NONE, NONE, 9},
+    {"small-rondo-abaca", 9, 0, 2, 3, 4, NONE, 6, NONE, 7, NONE, 5, NONE, NONE, 8},
+    {"large-rondo", 13, 0, 2, 3, 4, 9, 6, 10, 11, 7, 5, NONE, NONE, 12},
+    {"sonata-rondo", 14, 0, 2, 3, 4, 10, 7, 11, 12, 8, NONE, 5, 6, 13},
 };
 
 typedef struct {
@@ -260,6 +268,21 @@ static void check_second(const PiecePlan *plan, const KeyLane *lane, NodeId sect
     }
 }
 
+/* P or S: one key throughout, the given one. */
+static void check_one_key(const PiecePlan *plan, const KeyLane *lane, NodeId section, int tonic, KeyStructureMode mode) {
+    PlanSpan span = plan_node_span(plan, section);
+    Rational end;
+    assert(plan_span_end(span, &end) == PLAN_OK);
+    assert(is_key(key_at(lane, span.start), tonic, mode));
+    for (size_t i = 0; i < lane->count; i++) {
+        Rational lane_end;
+        assert(plan_span_end(lane->span[i], &lane_end) == PLAN_OK);
+        if (rational_cmp(lane->span[i].start, end) < 0 && rational_cmp(lane_end, span.start) > 0) {
+            assert(is_key(lane->key[i], tonic, mode));
+        }
+    }
+}
+
 /* K ends on the tonic: its last bass note and its last chord. */
 static void check_ends_on_tonic(const PiecePlan *plan, NodeId section, const Row *row) {
     static Event bass[MAX_EVENTS];
@@ -287,6 +310,9 @@ static void check_piece(const PiecePlan *plan, const Layout *layout, const Row *
     if (layout->r1 != NONE) {
         assert(is_key(key_at(&lane, plan_node_span(plan, sections[layout->r1]).start), row->tonic, row->mode));
     }
+    if (layout->r2 != NONE) {
+        assert(is_key(key_at(&lane, plan_node_span(plan, sections[layout->r2]).start), row->tonic, row->mode));
+    }
     /* A1 keeps every melody note of A and has more. */
     const PlanConstraint *back = return_of(plan, sections[layout->a1]);
     assert(back && back->params.section_return.variation == PLAN_RETURN_EMBELLISH &&
@@ -299,16 +325,35 @@ static void check_piece(const PiecePlan *plan, const Layout *layout, const Row *
         check_moved(plan, sections[layout->b], sections[layout->b1], shift_between(at_b, at_b1));
         assert(is_key(key_at(&lane, plan_node_span(plan, sections[layout->b1 + 1]).start), row->tonic, row->mode));
     }
-    /* A2 is A set in a new accompaniment. */
-    if (layout->a2 != NONE) {
-        const PlanConstraint *setting = return_of(plan, sections[layout->a2]);
+    /* A2 of the large and sonata rondos is A reharmonized: its melody is A's. */
+    if (layout->reh != NONE) {
+        const PlanConstraint *again = return_of(plan, sections[layout->reh]);
+        assert(again && again->params.section_return.variation == PLAN_RETURN_REHARMONIZE &&
+               again->params.section_return.section == sections[layout->a]);
+        assert(plan_node_state(plan, sections[layout->reh]) == PLAN_STATE_REALIZED);
+        check_moved(plan, sections[layout->a], sections[layout->reh],
+                    shift_between(key_at(&lane, plan_node_span(plan, sections[layout->a]).start),
+                                  key_at(&lane, plan_node_span(plan, sections[layout->reh]).start)));
+    }
+    /* The section set in a new accompaniment is A set. */
+    if (layout->set != NONE) {
+        const PlanConstraint *setting = return_of(plan, sections[layout->set]);
         assert(setting && setting->params.section_return.variation == PLAN_RETURN_SETTING &&
                setting->params.section_return.setting == PLAN_ACCOMPANIMENT_ARPEGGIATED &&
                setting->params.section_return.section == sections[layout->a]);
-        check_setting(plan, sections[layout->a], sections[layout->a2]);
+        check_setting(plan, sections[layout->a], sections[layout->set]);
     }
     if (layout->c != NONE) {
         check_second(plan, &lane, sections[layout->c], row);
+    }
+    /* The sonata rondo's P is in the development key and S in the sequence key; S's melody is P's moved. */
+    if (layout->p != NONE) {
+        const bool major = row->mode == KEY_STRUCTURE_MODE_MAJOR;
+        check_one_key(plan, &lane, sections[layout->p], row->tonic + (major ? 9 : 5), KEY_STRUCTURE_MODE_MINOR);
+        check_one_key(plan, &lane, sections[layout->s], row->tonic + (major ? 2 : 7), KEY_STRUCTURE_MODE_MINOR);
+        check_moved(plan, sections[layout->p], sections[layout->s],
+                    shift_between(key_at(&lane, plan_node_span(plan, sections[layout->p]).start),
+                                  key_at(&lane, plan_node_span(plan, sections[layout->s]).start)));
     }
     check_ends_on_tonic(plan, sections[layout->k], row);
 }
@@ -374,6 +419,6 @@ int main(int argc, char **argv) {
             return test_form(&LAYOUTS[i]);
         }
     }
-    fprintf(stderr, "usage: test_rondo_forms andante-aba|andante-abab|small-rondo-ababa|small-rondo-abaca\n");
+    fprintf(stderr, "usage: test_rondo_forms andante-aba|andante-abab|small-rondo-ababa|small-rondo-abaca|large-rondo|sonata-rondo\n");
     return 2;
 }

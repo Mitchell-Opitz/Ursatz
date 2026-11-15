@@ -107,6 +107,9 @@ static size_t sizes_of(Size *out) {
     out[n++] = (Size){"andante-abab", 56, 0};
     out[n++] = (Size){"small-rondo-ababa", 68, 0};
     out[n++] = (Size){"small-rondo-abaca", 64, 0};
+    /* The large rondo and sonata rondo (P52 B6): one size each, in both keys, 4/4. */
+    out[n++] = (Size){"large-rondo", 88, 0};
+    out[n++] = (Size){"sonata-rondo", 88, 0};
     return n;
 }
 #define MAX_SIZES 48
