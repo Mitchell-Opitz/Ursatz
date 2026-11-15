@@ -77,7 +77,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                plan_node_kind(plan, section_return->section) == PLAN_NODE_SECTION &&
                section_return->variation >= PLAN_RETURN_EXACT && section_return->variation <= PLAN_RETURN_SETTING &&
                (section_return->variation != PLAN_RETURN_SETTING ||
-                (section_return->setting >= PLAN_ACCOMPANIMENT_BLOCK && section_return->setting <= PLAN_ACCOMPANIMENT_OOM_PAH));
+                (section_return->setting >= PLAN_ACCOMPANIMENT_BLOCK && section_return->setting <= PLAN_ACCOMPANIMENT_OOM_PAH)) &&
+               (!section_return->across_modes || section_return->variation == PLAN_RETURN_REHARMONIZE);
     }
     case PLAN_CONSTRAINT_LAYERS:
         return constraint->params.layers.lanes != 0 && (constraint->params.layers.lanes & ~PLAN_LAYERS_ALL) == 0;

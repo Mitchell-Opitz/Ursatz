@@ -213,6 +213,7 @@ typedef struct {
     NodeId section;
     PlanReturnVariation variation;
     PlanAccompanimentPattern setting; /* SETTING: the pattern of the new accompaniment: block, arpeggiated, alberti or oom-pah */
+    bool across_modes; /* REHARMONIZE: a source in the other mode is moved by the tonic step and mapped into the target's mode (R-524) */
 } PlanReturn;
 
 /* The name of a return variation as plans, forms and the API write it; NULL for a value out of range. */
