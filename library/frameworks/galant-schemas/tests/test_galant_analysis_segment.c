@@ -58,45 +58,10 @@ static void test_segment(void) {
 static void test_key(void) {
     GalantSegment galant;
     memset(&galant, 0, sizeof(galant));
-    AnalysisKey home = {"home", PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
-
-    AnalysisKey same = {"home", PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
-    assert(galant_segment_set_analysis_key(&galant, &same, &home));
-    assert(strcmp(galant.key_id, "home") == 0);
-    assert(galant.key.degree == 1 && galant.key.alteration == 0);
-
-    AnalysisKey dominant = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR};
-    assert(galant_segment_set_analysis_key(&galant, &dominant, &home));
-    assert(strcmp(galant.key_id, "key-7") == 0);
-    assert(galant.key.degree == 5 && galant.key.alteration == 0);
-
-    AnalysisKey relative = {NULL, PITCH_LETTER_A, 0, KEY_STRUCTURE_MODE_MINOR};
-    assert(galant_segment_set_analysis_key(&galant, &relative, &home));
-    assert(strcmp(galant.key_id, "key-9m") == 0);
-    assert(galant.key.degree == 6 && galant.key.alteration == 0);
-
-    AnalysisKey flat_mediant = {NULL, PITCH_LETTER_E, -1, KEY_STRUCTURE_MODE_MAJOR};
-    assert(galant_segment_set_analysis_key(&galant, &flat_mediant, &home));
-    assert(galant.key.degree == 3 && galant.key.alteration == -1);
-
-    /* The degree is read from the home tonic, not from C. */
-    AnalysisKey d_home = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MAJOR};
-    AnalysisKey a_key = {NULL, PITCH_LETTER_A, 0, KEY_STRUCTURE_MODE_MAJOR};
-    assert(galant_segment_set_analysis_key(&galant, &a_key, &d_home));
-    assert(galant.key.degree == 5 && galant.key.alteration == 0);
-    AnalysisKey g_key = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR};
-    assert(galant_segment_set_analysis_key(&galant, &g_key, &d_home));
-    assert(galant.key.degree == 4 && galant.key.alteration == 0);
 
     char long_id[GALANT_ANALYSIS_ID_MAX + 8];
     memset(long_id, 'k', sizeof(long_id));
     long_id[sizeof(long_id) - 1] = '\0';
-    AnalysisKey too_long = {long_id, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
-    assert(!galant_segment_set_analysis_key(&galant, &too_long, &home));
-    assert(!galant_segment_set_analysis_key(&galant, NULL, &home));
-    assert(!galant_segment_set_analysis_key(&galant, &same, NULL));
-    assert(!galant_segment_set_analysis_key(NULL, &same, &home));
-    assert(galant.key.degree == 4);
 }
 
 int main(void) {

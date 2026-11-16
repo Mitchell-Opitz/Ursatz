@@ -83,11 +83,6 @@ GalantAnalysisStatus galant_segments_add(GalantSegmentList *list, const GalantSe
    or too long id, or a NULL span. */
 bool galant_segment_set_analysis_segment(GalantSegment *segment, const AnalysisSegment *analysis);
 
-/* Sets the key id and the key degree of `segment`: the id is the AnalysisKey's, or "key-<pitch class>" with an "m" after it for minor when
-   it has none; the degree is the key's tonic read from the tonic of `home`, as a chromatic degree (C major from C: 1; an Eb: 3 flat; an F#:
-   4 sharp). False for a NULL argument or an id too long. */
-bool galant_segment_set_analysis_key(GalantSegment *segment, const AnalysisKey *key, const AnalysisKey *home);
-
 void galant_segments_destroy(GalantSegmentList *list);
 
 /*

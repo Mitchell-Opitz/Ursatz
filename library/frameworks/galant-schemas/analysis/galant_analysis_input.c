@@ -111,21 +111,3 @@ bool galant_segment_set_analysis_segment(GalantSegment *segment, const AnalysisS
     return true;
 }
 
-bool galant_segment_set_analysis_key(GalantSegment *segment, const AnalysisKey *key, const AnalysisKey *home) {
-    if (segment == NULL || key == NULL || home == NULL) {
-        return false;
-    }
-    char id[GALANT_ANALYSIS_ID_MAX];
-    if (key->id != NULL) {
-        if (strlen(key->id) >= sizeof(id)) {
-            return false;
-        }
-        strcpy(id, key->id);
-    } else {
-        snprintf(id, sizeof(id), "key-%d%s", analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR ? "m" : "");
-    }
-    int offset = analysis_key_tonic_pitch_class(key) - analysis_key_tonic_pitch_class(home);
-    strcpy(segment->key_id, id);
-    segment->key = galant_degree_of_semitones(offset);
-    return true;
-}

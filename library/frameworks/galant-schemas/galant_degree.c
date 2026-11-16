@@ -55,17 +55,3 @@ bool galant_degree_allows(const GalantDegree *wanted, const GalantPitchDegree *a
     }
 }
 
-const char *galant_alteration_name(GalantAlteration alteration) {
-    switch (alteration) {
-        case GALANT_ALTERATION_NATURAL:
-            return "natural";
-        case GALANT_ALTERATION_LOWERED:
-            return "lowered";
-        case GALANT_ALTERATION_EITHER:
-            return "either";
-        case GALANT_ALTERATION_RAISED:
-            return "raised";
-        default:
-            return NULL;
-    }
-}

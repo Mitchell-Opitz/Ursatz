@@ -4,28 +4,11 @@
 #include "standard-counterpoint/counterpoint_interval.h"
 #include "standard-counterpoint/counterpoint_pitch.h"
 
-static const char *const NAMES[GALANT_MATCH_RULE_COUNT] = {"stage-count", "meter",      "melody",
-                                                           "bass-defining", "bass-usual", "tenths"};
-
 static bool table_is_hard(int which) {
     return which <= GALANT_MATCH_BASS_DEFINING;
 }
 
-static GalantRulePair g_pairs[GALANT_MATCH_RULE_COUNT];
-static UrsatzOnce g_built[GALANT_MATCH_RULE_COUNT];
-static const GalantRuleTable TABLE = {"matching", NAMES, GALANT_MATCH_RULE_COUNT, table_is_hard, g_pairs, g_built};
-
-const Rule *galant_matching_rule(GalantMatchRule which) {
-    return galant_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *galant_matching_constraint(GalantMatchRule which) {
-    return galant_rule_table_constraint(&TABLE, (int)which);
-}
-
-const char *galant_matching_rule_name(GalantMatchRule which) {
-    return galant_rule_table_name(&TABLE, (int)which);
-}
+static const GalantRuleTable TABLE = {GALANT_MATCH_RULE_COUNT, table_is_hard};
 
 bool galant_match_valid(const GalantMatch *match) {
     return match != NULL && match->prototype != NULL && galant_exemplar_valid(match->exemplar) &&
