@@ -155,7 +155,7 @@ function(ursatz_add_public_header_tests)
         file(GENERATE OUTPUT "${source}" CONTENT "${text}")
         add_library(public_headers_compile_${name} OBJECT EXCLUDE_FROM_ALL "${source}")
         set_source_files_properties("${source}" PROPERTIES GENERATED TRUE)
-        # only the staged roots (no source directory); system headers (sqlite3.h) come with the compiler
+        # only the staged roots (no source directory); system headers come with the compiler
         target_include_directories(public_headers_compile_${name} PRIVATE ${roots})
         list(APPEND objects public_headers_compile_${name})
     endforeach()
