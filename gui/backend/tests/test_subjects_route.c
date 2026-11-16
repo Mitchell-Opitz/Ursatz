@@ -217,7 +217,7 @@ static char *upload_file(const char *path, const char *encoded_filename) {
 #include "server.h"
 
 #ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the external/ursatz checkout"
+#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
 #endif
 
 static const char *kMotifBody =

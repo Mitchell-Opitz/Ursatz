@@ -32,7 +32,7 @@ typedef int socket_t;
 #include "server.h"
 
 #ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the external/ursatz checkout"
+#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
 #endif
 #ifndef URSATZ_GUI_TEST_PIECE_FIXTURES
 #error "URSATZ_GUI_TEST_PIECE_FIXTURES must name fixtures/pieces"

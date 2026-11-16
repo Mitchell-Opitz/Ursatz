@@ -8,7 +8,7 @@
  *
  * Fixture: frontend/tests/fixtures/mozart545.analysis.json is the Analyzer
  * CLI's document (`ursatz-analyzer --json`, schema v11) for
- * external/ursatz/tests/fixtures/framework-v1-corpus/Mozart 545.mid, cut to
+ * library/tests/fixtures/framework-v1-corpus/Mozart 545.mid, cut to
  * its first 6 items per array (and 6 note_ids per claim) to stay small; the
  * structure is untouched.
  *
