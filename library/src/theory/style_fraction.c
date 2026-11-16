@@ -18,18 +18,6 @@ static StyleFraction reduced(unsigned long numerator, unsigned long denominator)
     return result;
 }
 
-StyleFractionResult style_fraction_reduce(const StyleFraction *fraction, StyleFraction *out) {
-    StyleFractionResult status = validate(fraction);
-    if (status != STYLE_FRACTION_OK) {
-        return status;
-    }
-    if (out == NULL) {
-        return STYLE_FRACTION_ERR_NULL_ARGUMENT;
-    }
-    *out = reduced(fraction->numerator, fraction->denominator);
-    return STYLE_FRACTION_OK;
-}
-
 StyleFractionResult style_fraction_add(const StyleFraction *a, const StyleFraction *b, StyleFraction *out) {
     StyleFractionResult status = validate(a);
     if (status == STYLE_FRACTION_OK) {

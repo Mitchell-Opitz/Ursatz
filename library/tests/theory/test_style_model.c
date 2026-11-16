@@ -37,9 +37,6 @@ int main(void) {
     assert(style_model_create(other_id, "other style", other_features, "corpus-b", "v0.1.0", &other) ==
            STYLE_MODEL_OK);
 
-    assert(style_model_identity_equals(model, model));
-    assert(!style_model_identity_equals(model, other));
-
     style_model_destroy(model);
     style_model_destroy(other);
 

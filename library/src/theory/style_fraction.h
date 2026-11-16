@@ -25,7 +25,6 @@ typedef enum {
     STYLE_FRACTION_ERR_OVERFLOW
 } StyleFractionResult;
 
-StyleFractionResult style_fraction_reduce(const StyleFraction *fraction, StyleFraction *out);
 StyleFractionResult style_fraction_add(const StyleFraction *a, const StyleFraction *b, StyleFraction *out);
 StyleFractionResult style_fraction_multiply(const StyleFraction *a, const StyleFraction *b, StyleFraction *out);
 

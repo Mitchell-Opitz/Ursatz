@@ -9,14 +9,11 @@
  * Construction test: a Framework holds identity and a name.
  *
  * Structural test: framework.h/.c include no header from rules/
- * (Rule/Constraint/Preference) or theory/heuristic.h,
- * theory/tendency.h, theory/statistical_model.h, theory/style_model.h
- * -- Framework is referenced BY those types, never the reverse. Those
- * headers do not exist yet in this pass, so the only enforceable check
- * right now is that Framework's own translation unit has no such
- * include; the directory-wide theory/rules architecture test
- * (test_architecture_theory.c, test_architecture_rules.c) is the
- * durable guard once the sibling types exist.
+ * (Rule/Constraint/Preference) or theory/style_model.h -- Framework is
+ * referenced BY that type, never the reverse. The only check here is that
+ * Framework's own translation unit has no such include; the directory-wide
+ * theory/rules architecture test (test_architecture_theory.c,
+ * test_architecture_rules.c) is the durable guard.
  */
 
 int main(void) {

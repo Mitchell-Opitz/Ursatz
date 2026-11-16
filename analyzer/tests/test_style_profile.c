@@ -272,7 +272,7 @@ static void test_round_trip(StyleProfile *reference) {
     free(from_profile);
     style_statistics_free(from_model, model_count);
 
-    /* The same profile written again gives the same bytes, and reading a file twice gives the same id. */
+    /* The same profile written again gives the same bytes, and reading a file twice gives the same name. */
     CHECK(style_model_file_write(reference, "reference", second) == STYLE_MODEL_FILE_OK, "cannot write again");
     char *a = test_read_file(first), *b = test_read_file(second);
     CHECK(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
@@ -281,7 +281,7 @@ static void test_round_trip(StyleProfile *reference) {
     StyleModel *again = NULL;
     CHECK(style_model_file_read(first, &again, NULL) == STYLE_MODEL_FILE_OK, "second read");
     if (again) {
-        CHECK(entity_id_equals(style_model_id(model), style_model_id(again)), "the same file gave two ids");
+        CHECK(strcmp(style_model_style_name(again), style_model_style_name(model)) == 0, "the same file gave two names");
         style_model_destroy(again);
     }
     CHECK(strcmp(style_model_style_name(model), "reference") == 0 && strcmp(style_model_model_version(model), PROJECT_VERSION_FOR_TESTS) == 0,

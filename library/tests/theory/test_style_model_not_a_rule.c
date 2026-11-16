@@ -10,15 +10,15 @@
 
 /*
  * A StyleModel built from corpus statistics cannot become a Rule or a
- * Constraint. Learned style is a Tendency -- observed frequency, never
- * must/must-not -- and there is no path from it to the rules/ types:
+ * Constraint. Learned style is an observed frequency, never
+ * must/must-not, and there is no path from it to the rules/ types:
  *
- *   - the code of every style header and of tendency.h (comments removed)
+ *   - the code of every style header (comments removed)
  *     names no Rule, Constraint, RuleResult, ConstraintResult or
  *     ConstraintEvalResult, includes nothing from rules/, so no function can
  *     accept or return one;
  *   - no .c file of the style model includes rules/ either;
- *   - what a built model offers is Tendencies, whose frequency is a
+ *   - what a built model offers is statistics, whose frequency is a
  *     fraction in [0, 1] and nothing else: a statistic's count can never
  *     exceed its total, so it can never state "required" (above 1) or a
  *     truth value.
@@ -83,7 +83,7 @@ static void assert_no_rules_vocabulary(const char *file) {
     const char *forbidden[] = {"Rule", "Constraint", "rules/", "rule_", "constraint_"};
     for (size_t i = 0; i < sizeof(forbidden) / sizeof(forbidden[0]); i++) {
         if (mentions(text, forbidden[i]) != 0) {
-            fprintf(stderr, "%s names \"%s\" in code: a StyleModel/Tendency must have no path to a Rule\n", file,
+            fprintf(stderr, "%s names \"%s\" in code: a StyleModel must have no path to a Rule\n", file,
                     forbidden[i]);
             abort();
         }
@@ -92,9 +92,9 @@ static void assert_no_rules_vocabulary(const char *file) {
 }
 
 static void test_no_path_to_a_rule(void) {
-    const char *files[] = {"tendency.h",          "tendency.c",          "style_model.h",       "style_model.c",
-                           "style_features.h",    "style_features.c",    "style_fraction.h",    "style_fraction.c",
-                           "style_model_build.h", "style_model_build.c", "style_model_blend.h", "style_model_blend.c"};
+    const char *files[] = {"style_model.h",       "style_model.c",       "style_features.h",    "style_features.c",
+                           "style_fraction.h",    "style_fraction.c",    "style_model_build.h", "style_model_build.c",
+                           "style_model_blend.h", "style_model_blend.c"};
     for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); i++) {
         assert_no_rules_vocabulary(files[i]);
     }
@@ -108,18 +108,18 @@ static void test_a_built_model_offers_only_frequencies(void) {
     assert(style_model_from_statistics(id, "frequencies", "corpus", "v1", statistics, 3, &model) ==
            STYLE_MODEL_BUILD_OK);
 
-    Tendency **tendencies = NULL;
+    StyleStatistic *read = NULL;
     size_t count = 0;
-    assert(style_model_tendencies(model, &tendencies, &count) == STYLE_TENDENCIES_OK && count == 3);
+    assert(style_features_decode(style_model_style_features(model), &read, &count) == STYLE_FEATURES_OK && count == 3);
     for (size_t i = 0; i < count; i++) {
         /* A frequency, never above 1: even a statistic seen every time is "4 of 4", not "required". */
-        assert(tendency_frequency_denominator(tendencies[i]) > 0);
-        assert(tendency_frequency_numerator(tendencies[i]) <= tendency_frequency_denominator(tendencies[i]));
+        assert(read[i].total > 0);
+        assert(read[i].count <= read[i].total);
     }
-    /* "never seen" is a frequency of 0, and is not "forbidden": it stays an ordinary Tendency. */
-    assert(strcmp(tendency_label(tendencies[1]), "never") == 0);
-    assert(tendency_frequency_numerator(tendencies[1]) == 0);
-    style_tendencies_free(tendencies, count);
+    /* "never seen" is a frequency of 0, and is not "forbidden": it stays an ordinary statistic. */
+    assert(strcmp(read[1].label, "never") == 0);
+    assert(read[1].count == 0);
+    style_statistics_free(read, count);
 
     /* A statistic that would claim more than "always" cannot be built, so it cannot be promoted by exceeding 1. */
     const StyleStatistic impossible[] = {{"c", "required", 5, 4}};

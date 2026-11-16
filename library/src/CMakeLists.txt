@@ -128,9 +128,6 @@ add_library(ursatz
     rules/preference_weight.c
     rules/preference_ranking.c
     rules/rule_evaluation.c
-    theory/heuristic.c
-    theory/tendency.c
-    theory/statistical_model.c
     theory/style_model.c
     theory/style_fraction.c
     theory/style_features.c
@@ -269,7 +266,6 @@ ursatz_public_headers(ursatz
         theory/style_model.h
         theory/style_model_blend.h
         theory/style_model_build.h
-        theory/tendency.h
         time/duration.h
         time/meter_arithmetic.h
         time/meter_map.h

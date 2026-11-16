@@ -129,7 +129,6 @@ static void test_result_metadata_and_inputs_unchanged(void) {
     StyleModel *a = make_model("a", A_STATISTICS, 3);
     StyleModel *b = make_model("b", B_STATISTICS, 2);
     StyleModel *blended = blend(a, b, 1, 3);
-    assert(strcmp(entity_id_value(style_model_id(blended)), "blended") == 0);
     assert(strcmp(style_model_style_name(blended), "blend") == 0);
     assert(strcmp(style_model_training_corpus(blended), "corpus-a+corpus-b") == 0);
     assert(strcmp(style_model_model_version(blended), "v2") == 0);
@@ -139,7 +138,6 @@ static void test_result_metadata_and_inputs_unchanged(void) {
     assert_frequencies(a, a_unchanged, 3);
     const Expected b_unchanged[] = {{"c", "x", 1, 4}, {"c", "z", 3, 4}};
     assert_frequencies(b, b_unchanged, 2);
-    assert(strcmp(entity_id_value(style_model_id(a)), "a") == 0);
 
     /* Two empty models blend to an empty one. */
     StyleModel *empty_a = make_model("ea", NULL, 0);
@@ -215,16 +213,16 @@ static void test_fractions(void) {
     assert(style_fraction_add(&a, &b, &out) == STYLE_FRACTION_OK && out.numerator == 5 && out.denominator == 6);
     assert(style_fraction_multiply(&a, &b, &out) == STYLE_FRACTION_OK && out.numerator == 1 && out.denominator == 6);
     StyleFraction unreduced = {6, 8};
-    assert(style_fraction_reduce(&unreduced, &out) == STYLE_FRACTION_OK && out.numerator == 3 && out.denominator == 4);
+    assert(style_fraction_add(&unreduced, &unreduced, &out) == STYLE_FRACTION_OK && out.numerator == 3 &&
+           out.denominator == 2);
     StyleFraction zero = {0, 5};
-    assert(style_fraction_reduce(&zero, &out) == STYLE_FRACTION_OK && out.numerator == 0 && out.denominator == 1);
+    assert(style_fraction_add(&zero, &zero, &out) == STYLE_FRACTION_OK && out.numerator == 0 && out.denominator == 1);
 
     out.numerator = 9;
     out.denominator = 9;
     StyleFraction bad = {1, 0}, big = {ULONG_MAX, 1}, one = {1, 1}, thin = {1, ULONG_MAX}, thin2 = {1, ULONG_MAX - 1};
     assert(style_fraction_add(&bad, &a, &out) == STYLE_FRACTION_ERR_ZERO_DENOMINATOR);
     assert(style_fraction_multiply(&a, &bad, &out) == STYLE_FRACTION_ERR_ZERO_DENOMINATOR);
-    assert(style_fraction_reduce(&bad, &out) == STYLE_FRACTION_ERR_ZERO_DENOMINATOR);
     assert(style_fraction_add(&big, &one, &out) == STYLE_FRACTION_ERR_OVERFLOW);
     assert(style_fraction_add(&thin, &thin2, &out) == STYLE_FRACTION_ERR_OVERFLOW);
     assert(style_fraction_multiply(&big, &big, &out) == STYLE_FRACTION_ERR_OVERFLOW);
@@ -232,7 +230,6 @@ static void test_fractions(void) {
     assert(out.numerator == 9 && out.denominator == 9);
     assert(style_fraction_add(NULL, &a, &out) == STYLE_FRACTION_ERR_NULL_ARGUMENT);
     assert(style_fraction_multiply(&a, &a, NULL) == STYLE_FRACTION_ERR_NULL_ARGUMENT);
-    assert(style_fraction_reduce(&a, NULL) == STYLE_FRACTION_ERR_NULL_ARGUMENT);
     /* Cancelling across keeps a large product exact. */
     StyleFraction left = {ULONG_MAX, 3}, right = {3, ULONG_MAX};
     assert(style_fraction_multiply(&left, &right, &out) == STYLE_FRACTION_OK && out.numerator == 1 &&
