@@ -184,10 +184,6 @@ static long cell_semitone(const VoiceGrid *build, size_t row, size_t voice) {
     return (long)pitch_numeric_value_position_numerator(cell_of(build, row, voice)->pitch);
 }
 
-static int pitch_class(long semitone) {
-    return pitch_class_of_midi((int)semitone);
-}
-
 /* Fills the doubling and spacing of one row; false when the row has fewer than three voices or is not a chord the harmony
    stage read. */
 static bool fill_chord(const VoiceGrid *build, const HarmonyStage *harmony, size_t row, AnalysisVoiceChord *chord) {
