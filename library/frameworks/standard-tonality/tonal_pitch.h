@@ -7,10 +7,10 @@
  * Pitch arithmetic for standard-tonality-v1.
  *
  * ASSUMPTION: twelve semitones to the octave (12-tone equal
- * temperament), the same layout standard-notation's semitone.h uses. It
+ * temperament). It
  * is a property of this framework, not of src/pitch/, which takes no
  * tuning assumptions. This module carries its own copy rather than
- * depending on standard-notation: framework modules do not depend on
+ * depending on another framework: framework modules do not depend on
  * each other.
  *
  * A pitch's semitone number is

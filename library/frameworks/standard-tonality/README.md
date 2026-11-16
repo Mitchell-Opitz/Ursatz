@@ -4,7 +4,7 @@ Theory Framework instance `standard-tonality-v1`: the tonal conventions
 of Western music. Path `frameworks/standard-tonality/`, tests in
 `frameworks/standard-tonality/tests/`. A Framework extension module
 physically separate from `src/theory/`, same shape as
-`frameworks/standard-notation/`. It does not depend on any other
+`frameworks/common-practice-minimal/`. It does not depend on any other
 framework module: pitch arithmetic it needs is its own.
 
 ## Scope
@@ -132,6 +132,5 @@ unified).
 
 ## 12-TET assumption
 
-`tonal_pitch.h` assumes twelve-tone equal temperament, as
-`frameworks/standard-notation/semitone.h` does. Both now call
+`tonal_pitch.h` assumes twelve-tone equal temperament. It calls
 `src/pitch/pitch_arithmetic.h`, which holds the one letter table.

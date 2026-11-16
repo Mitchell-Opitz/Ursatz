@@ -96,7 +96,7 @@ Framework overview: [frameworks/standard-tonality/README.md](../../frameworks/st
   names a semitone distance above the tonic ("1", "b2", ... "7").
 
 How accidentals are written and ordered in a key signature is notation
-and lives in `frameworks/standard-notation/`. Built on `KeySignature`
+and is not modeled in a framework. Built on `KeySignature`
 (`src/pitch/`), `Scale`, `ScaleDegree`, and `Key` stay the entity types;
 scale-degree vocabulary lives here, not in their opaque labels.
 

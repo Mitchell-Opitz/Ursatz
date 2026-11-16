@@ -18,7 +18,7 @@
  *           melody and then goes its own way
  *
  * Which answer a style expects, and how closely it is kept, is a convention
- * of a Framework (frameworks/sixteenth-century-style), not of this type.
+ * of a Framework, not of this type.
  */
 
 typedef enum {

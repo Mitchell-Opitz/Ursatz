@@ -7,7 +7,7 @@ Ursatz is organized into layered modules, each living under `src/<module>/` with
 ## Purpose
 
 Ursatz is the base library of the platform: a theory-neutral C11 representation of musical material (events, structures, relationships, interpretations, contexts, provenance) with exact time and pitch.
-Theory lives in 17 Theory Frameworks that produce interpretations under a named framework, and the analysis chain runs them over imported notes.
+Theory lives in 11 Theory Frameworks that produce interpretations under a named framework, and the analysis chain runs them over imported notes.
 The library imports MIDI and MusicXML, analyzes and exports MusicXML.
 It owns every analysis algorithm (R-217); the apps orchestrate and render.
 
@@ -20,7 +20,7 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 | Directory | What it holds | Doc |
 |---|---|---|
 | `src/<module>/` | Kernel modules L0 to L9, one folder each | [Layers](layers-and-dependency-rules.md#layers) and [module-status.md](module-status.md) |
-| `frameworks/<name>/` | 17 Theory Frameworks built on L7 | [frameworks/README.md](../frameworks/README.md) |
+| `frameworks/<name>/` | 11 Theory Frameworks built on L7 | [frameworks/README.md](../frameworks/README.md) |
 | `chain/` | The analysis chain `ursatz_chain` | [chain/README.md](../chain/README.md) |
 | `tests/` | Kernel tests mirrored by module, accuracy harness, integration tests | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
@@ -66,7 +66,7 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 | Name | File | Current value | Doc |
 |---|---|---|---|
 | `ursatz_version()` | `src/ursatz.h` | 0 | this page |
-| Framework ids (`<name>-v1`, one per framework) | `frameworks/<name>/framework.c` (the singleton init) | `-v1` for all 17 | [frameworks/README.md](../frameworks/README.md) |
+| Framework ids (`<name>-v1`, one per framework) | `frameworks/<name>/framework.c` (the singleton init) | `-v1` for all 11 | [frameworks/README.md](../frameworks/README.md) |
 | `SchemaVersion` (a value type for callers' schemas) | `src/identity/schema_version.h` | caller-supplied | [identity](modules/identity.md) |
 
 The library defines no file format version. The versions of the document formats the apps write are in the apps' own docs.

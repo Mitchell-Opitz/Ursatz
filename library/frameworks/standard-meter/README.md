@@ -4,9 +4,8 @@ Theory Framework instance `standard-meter-v1`: how Western staff
 notation organizes rhythm into meter. Path `frameworks/standard-meter/`,
 tests in `frameworks/standard-meter/tests/`. A Framework extension module
 physically separate from `src/theory/`, same shape as
-`frameworks/standard-rhythm/` and `frameworks/standard-notation/`. It
-depends on `time/` types (`NoteValue`, `Duration`, `TimeSignature`), not
-on standard-rhythm.
+`frameworks/common-practice-minimal/`. It
+depends on `time/` types (`NoteValue`, `Duration`, `TimeSignature`).
 
 ## Scope
 
@@ -84,8 +83,7 @@ the two numbers and nothing more; this framework reads them):
 - **Beat ties** (`beat_tie_rules.h`): a note starting off the beat that
   runs past the next beat is split and tied there to show the beat.
 
-Stem and flag direction for beamed and flagged notes are in
-`frameworks/standard-notation/`.
+Stem and flag direction for beamed and flagged notes are not modeled.
 
 Each rule has a backing `Rule`/`Constraint` pair referencing this
 Framework, plus a pure check function. `constraint_evaluate` is never

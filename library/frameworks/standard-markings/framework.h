@@ -9,9 +9,8 @@
  * articulations, tempo indications, and structural markers (fermata,
  * repeats, endings, D.C./D.S.). Built as a Framework extension module
  * physically outside src/theory/, the same shape as common-practice-
- * minimal and standard-notation; this module never modifies src/theory/
- * or src/rules/. Pitch placement (staff, clefs, accidentals) is
- * standard-notation-v1's job.
+ * minimal; this module never modifies src/theory/ or src/rules/. Pitch
+ * placement (staff, clefs, accidentals) is not modeled here.
  *
  * The marking types themselves (Dynamics, Articulation, TempoMarking,
  * StructuralMarker) carry opaque strings; this framework gives the Italian

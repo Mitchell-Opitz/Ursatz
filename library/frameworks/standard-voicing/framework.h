@@ -8,8 +8,7 @@
  * SATB style -- the six rules a four-part chord follows: stem direction,
  * chord construction, range, spacing, voice crossing, and doubling.
  * Built as a Framework extension module physically outside src/theory/,
- * the same shape as standard-tonality, standard-notation, and
- * standard-texture; this module never modifies src/theory/ or
+ * the same shape as standard-tonality and standard-texture; this module never modifies src/theory/ or
  * src/rules/, and does not depend on any other framework module.
  *
  * What chord a voicing realizes (its tones, its inversion, its leading

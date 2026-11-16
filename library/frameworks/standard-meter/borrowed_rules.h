@@ -59,7 +59,7 @@ bool standard_meter_tuplet_borrowed(const Tuplet *tuplet, MeterType type);
 
 /*
  * LEVEL: the metric level of a tuplet whose whole group spans `span`
- * (an exact Duration; standard-rhythm computes it from the written
+ * (an exact Duration, computed by the caller from the written
  * value), against the beat of the signature's meter class. False,
  * leaving *out untouched, when the signature is unclassified or the span
  * is zero or neither divides the beat evenly nor is a whole number of

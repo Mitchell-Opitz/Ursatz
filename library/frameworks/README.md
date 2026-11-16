@@ -14,18 +14,12 @@ catalog and the shared conventions.
 | Framework | Covers | Depends on |
 |---|---|---|
 | `common-practice-minimal` | 7 diatonic triads, 4 diatonic seventh qualities, major and natural-minor keys. The weighted chord identification and key regions the chain runs | standard-tonality (`tonal_key.h` only, the scale degree owner), ursatz |
-| `standard-notation` | Staff, clefs, ledger lines, stems, accidentals, half and whole steps | ursatz |
 | `standard-markings` | Dynamics order, articulation classes, tempo words, repeat and D.C./D.S. playback order | ursatz |
-| `western-periods` | The six conventional stylistic periods | ursatz |
-| `standard-rhythm` | Note values, dots, ties, rests, tuplets | ursatz |
 | `standard-meter` | Simple and compound meter, beaming, anacrusis, counting, hypermeter, syncopation | ursatz |
 | `standard-tonality` | Scales, modes, solfege, key signatures, circle of fifths, intervals, triads, sevenths, chord symbols, Roman numerals | ursatz |
 | `standard-texture` | Monophony, heterophony, homophony, polyphony | ursatz |
 | `standard-voicing` | Strict SATB voicing of one chord | ursatz |
 | `standard-counterpoint` | Species counterpoint, first through fifth | ursatz |
-| `sixteenth-century-style` | Palestrina-style imitative polyphony | standard-counterpoint, ursatz |
-| `high-baroque-fugue` | Fugal exposition | standard-counterpoint, ursatz |
-| `baroque-ground-bass` | Ground bass, chaconne, passacaglia | standard-counterpoint, ursatz |
 | `galant-schemas` | Gjerdingen's Galant schemas | standard-counterpoint, ursatz |
 | `scale-harmonization` | Rule of the octave, sequences over a bass scale | galant-schemas, standard-counterpoint, ursatz |
 | `standard-harmony` | Harmonic function, phrase model, cadences (two competing readings where the music has two: V to I6 as evaded cadence or prolongation, a dominant before a section start as half or authentic cadence, each with a share in thousandths), six-four chords, prolongation, tonicization, modulation | ursatz |

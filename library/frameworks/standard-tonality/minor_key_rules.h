@@ -32,7 +32,7 @@
  *
  * Signatures are conventional (standard_tonality_is_conventional_
  * signature, key_signature_rules.h); the order and staff placement of
- * minor signatures is the same as major and lives in standard-notation.
+ * minor signatures is the same as major and is not modeled here.
  */
 
 typedef enum {

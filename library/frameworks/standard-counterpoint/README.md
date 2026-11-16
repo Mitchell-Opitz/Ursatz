@@ -126,17 +126,17 @@ ratio is only that the two lines have the same number of notes. The overall shap
 beyond the melodic arch tendency. Choosing a counterpoint for a cantus
 firmus. The perfect fourth between two upper parts is consonant, but this
 framework has two parts only. Three or more parts and imitation in the style of
-16th-century choral polyphony are in `frameworks/sixteenth-century-style`.
+16th-century choral polyphony are not modeled.
 
 ## Vocabulary enums
 
 Owned here (moved from `src/semantics/`; type names and values unchanged):
 
 - `CounterpointSpecies` is a plain enum value naming one of the five species of strict counterpoint (first through fifth, ordered simplest to most elaborate), with a helper for the counterpoint notes against each cantus firmus note (1, 2, 4, 2, and 0 for the fifth, which mixes ratios). It carries no `EntityID`, rules, or framework claim. What each species requires of a line is a convention of `frameworks/standard-counterpoint`.
-- `ImitationAnswer` is a plain enum value naming how a later entry of a melody answers an earlier one in imitative writing: real (every interval kept at a fixed transposition), tonal (adjusted by a step to stay in the key), or free (keeps the rhythm and opening shape, then goes its own way). `imitation_answer_keeps_intervals` is true only for the real answer. It carries no `EntityID`, pitches, or framework claim. Which answer a style expects, and how closely it is kept, is a convention of a framework (`frameworks/sixteenth-century-style`).
+- `ImitationAnswer` is a plain enum value naming how a later entry of a melody answers an earlier one in imitative writing: real (every interval kept at a fixed transposition), tonal (adjusted by a step to stay in the key), or free (keeps the rhythm and opening shape, then goes its own way). `imitation_answer_keeps_intervals` is true only for the real answer. It carries no `EntityID`, pitches, or framework claim. Which answer a style expects, and how closely it is kept, is a convention of a framework.
 
 ## Neutral analysis input
 
-`StandardCounterpointVoiceCell` and `StandardCounterpointVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`), the same grid standard-harmony reads. `slot_note.h` defines `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult`, which the fugue, ground bass and sixteenth-century frameworks use as their note and result types.
+`StandardCounterpointVoiceCell` and `StandardCounterpointVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`), the same grid standard-harmony reads. `slot_note.h` defines `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult`, the note and result types of a counterpoint rule.
 
 `standard_counterpoint_melody_nct_labels_with` takes a `NonChordToneClassifier` (`semantics/tone_line.h`; the owner is `motive_tone_roles_line`) and relabels the notes that carry a `chord_pitch_classes` mask, run by run; `standard_counterpoint_melody_nct_labels` is the same with no classifier, the attached results as given.

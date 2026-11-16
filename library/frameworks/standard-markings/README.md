@@ -5,7 +5,7 @@ markings of Western staff notation other than pitch placement. Path
 `frameworks/standard-markings/`, tests in
 `frameworks/standard-markings/tests/`. A Framework extension module
 physically separate from `src/theory/`, same shape as
-`frameworks/common-practice-minimal/` and `frameworks/standard-notation/`.
+`frameworks/common-practice-minimal/`.
 
 ## Scope
 

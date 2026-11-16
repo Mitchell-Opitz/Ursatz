@@ -11,7 +11,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/placement-rule.md](placement-rule.md): Where an analysis algorithm lives: kernel, framework, chain or app.
 - [docs/vocabulary-enums.md](vocabulary-enums.md): Shared theory enums in src/semantics and when a new one is admitted.
 - [docs/module-status.md](module-status.md): Implementation status and doc of each kernel module.
-- [frameworks/README.md](../frameworks/README.md): Catalog of the 17 Theory Frameworks and their shared conventions.
+- [frameworks/README.md](../frameworks/README.md): Catalog of the 11 Theory Frameworks and their shared conventions.
 - [chain/README.md](../chain/README.md): The analysis chain: stages, owners and how to call it.
 
 ## Build and test
@@ -56,23 +56,17 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/standard-tonality-chords.md](modules/standard-tonality-chords.md): standard-tonality triad, seventh and chord symbol rules.
 - [docs/modules/standard-tonality-numerals-and-keys.md](modules/standard-tonality-numerals-and-keys.md): standard-tonality Roman numerals, adapter and key functions.
 - [docs/modules/common-practice-minimal-weighted.md](modules/common-practice-minimal-weighted.md): common-practice-minimal weighted identification and chords in context.
-- [frameworks/baroque-ground-bass/README.md](../frameworks/baroque-ground-bass/README.md): Ground bass, chaconne and passacaglia rules.
 - [frameworks/common-practice-minimal/README.md](../frameworks/common-practice-minimal/README.md): Diatonic triads and sevenths, major and minor keys, scope and boundaries.
 - [frameworks/galant-schemas/README.md](../frameworks/galant-schemas/README.md): Galant schema prototypes.
-- [frameworks/high-baroque-fugue/README.md](../frameworks/high-baroque-fugue/README.md): Fugal exposition rules.
 - [frameworks/scale-harmonization/README.md](../frameworks/scale-harmonization/README.md): Rule of the octave and sequences over a bass scale.
-- [frameworks/sixteenth-century-style/README.md](../frameworks/sixteenth-century-style/README.md): Palestrina-style imitative polyphony rules.
 - [frameworks/standard-counterpoint/README.md](../frameworks/standard-counterpoint/README.md): Species counterpoint framework: scope, adding a rule module, Fux conformance.
 - [frameworks/standard-form/README.md](../frameworks/standard-form/README.md): Form framework: hierarchy, motives, phrases, sentence, period.
 - [frameworks/standard-harmony/README.md](../frameworks/standard-harmony/README.md): Harmony framework: scope list and what is not covered.
 - [frameworks/standard-markings/README.md](../frameworks/standard-markings/README.md): Dynamics, articulation, tempo and repeat rules.
 - [frameworks/standard-meter/README.md](../frameworks/standard-meter/README.md): Meter framework: scope, accented beats, what is not covered.
-- [frameworks/standard-notation/README.md](../frameworks/standard-notation/README.md): Staff, clefs, stems, accidentals.
-- [frameworks/standard-rhythm/README.md](../frameworks/standard-rhythm/README.md): Note values, dots, ties, rests, tuplets.
 - [frameworks/standard-texture/README.md](../frameworks/standard-texture/README.md): Texture rules and classification.
 - [frameworks/standard-tonality/README.md](../frameworks/standard-tonality/README.md): Tonality framework: scales, modes, intervals, key functions.
 - [frameworks/standard-voicing/README.md](../frameworks/standard-voicing/README.md): SATB voicing of one chord.
-- [frameworks/western-periods/README.md](../frameworks/western-periods/README.md): The conventional stylistic periods.
 
 ## Formats and schemas
 

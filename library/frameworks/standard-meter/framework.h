@@ -8,15 +8,14 @@
  * organizes rhythm into meter -- beats, beat groupings, time signatures,
  * measures, pickups, counting, and beaming. Built as a Framework
  * extension module physically outside src/theory/, the same shape as
- * standard-rhythm and standard-notation; this module never modifies
+ * common-practice-minimal; this module never modifies
  * src/theory/ or src/rules/. Note and rest values themselves are
- * standard-rhythm-v1's job.
+ * not modeled here.
  *
  * The TimeSignature type (time/time_signature.h) carries only a beat
  * count and a beat unit; this framework gives it its meaning. This
- * module depends on time/ types (NoteValue, Duration, TimeSignature) and
- * not on standard-rhythm, so each framework stays independently
- * replaceable. See README.md for the full scope statement.
+ * module depends on time/ types (NoteValue, Duration, TimeSignature), so
+ * each framework stays independently replaceable. See README.md for the full scope statement.
  *
  * Dependency ceiling: same as Framework itself (theory/framework.h) --
  * canonical L0-L6 interfaces only. Enforced by

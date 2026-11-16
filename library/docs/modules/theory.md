@@ -25,7 +25,7 @@ The System Registry lists `Tendency`, `StatisticalModel`, and `StyleModel` as de
 ## Frameworks
 
 Concrete theory lives in Framework extension modules under `frameworks/<name>/`, built on
-`Framework`/`Rule`/`Constraint` without changing this module. Seventeen exist, from
+`Framework`/`Rule`/`Constraint` without changing this module. Eleven exist, from
 `common-practice-minimal` (the one the analyzers use) through species counterpoint
 (`standard-counterpoint`) and common-practice harmony (`standard-harmony`). The catalog, the
 shared conventions and the build note live in `frameworks/README.md`; each framework's own

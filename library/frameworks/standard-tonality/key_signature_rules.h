@@ -25,8 +25,8 @@
  *
  * A "conventional" signature is none, or n sharps (n <= 7) written in
  * the order F C G D A E B, or n flats written in the order B E A D G C
- * F. How signatures are written on a staff is notation, and lives in
- * standard-notation; this module keeps its own copy of the letter
+ * F. How signatures are written on a staff is notation, and is not modeled
+ * here; this module keeps its own copy of the letter
  * order, since framework modules do not depend on each other.
  */
 

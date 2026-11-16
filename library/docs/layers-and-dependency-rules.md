@@ -16,7 +16,7 @@ The layer table, the dependency rule that holds it together, and the open and re
 | L7 | `theory`, `rules` (`rules` depends on `theory`; `theory` never depends back) |
 | L8 | `analysis` |
 | L9 | `io` (MIDI import, MIDI key-signature scan), `export` (MusicXML), `query` |
-| Extensions | `frameworks/<name>/`: 17 Theory Frameworks built on L7 (see `frameworks/README.md`); `chain/`: the analysis chain (`ursatz_chain`), above the kernel and the frameworks |
+| Extensions | `frameworks/<name>/`: 11 Theory Frameworks built on L7 (see `frameworks/README.md`); `chain/`: the analysis chain (`ursatz_chain`), above the kernel and the frameworks |
 
 ## Dependency rule
 

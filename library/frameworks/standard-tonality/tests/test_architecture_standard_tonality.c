@@ -21,8 +21,8 @@
  * Scans every .h/.c file directly under frameworks/standard-tonality/ and under its analysis/
  * subdirectory (the L3 adapter; not its tests/ subdirectory) and flags any local include ("...")
  * that does not point into an allowed prefix. This also keeps the module
- * independent of the other framework modules: standard-notation's
- * headers are not on the allowed list. Directory-driven rather
+ * independent of the other framework modules: no other framework's
+ * headers are on the allowed list. Directory-driven rather
  * than a fixed file list, same pattern as
  * tests/rules/test_architecture_rules.c.
  */

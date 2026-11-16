@@ -18,8 +18,8 @@ function. `constraint_evaluate` is never called here.
 
 - **Stem direction** (`stem_rules.h`): soprano and alto on the treble
   staff, tenor and bass on the bass staff; soprano and tenor take up-stems,
-  alto and bass down-stems. This is a rule about voices and coexists with
-  standard-notation's position-based stem rules, which are unchanged.
+  alto and bass down-stems. This is a rule about voices, not about the note's
+  position on its staff.
 - **Chord construction** (`construction_rules.h`): the bass is the chord
   tone the inversion calls for, every chord tone sounds in some voice, and
   no voice sounds a note outside the chord. Notes are compared by letter

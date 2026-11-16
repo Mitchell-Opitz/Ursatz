@@ -5,7 +5,7 @@ density of and interaction between a work's voices. Path
 `frameworks/standard-texture/`, tests in
 `frameworks/standard-texture/tests/`. A Framework extension module
 physically separate from `src/theory/`, same shape as
-`frameworks/standard-tonality/` and `frameworks/standard-rhythm/`. It does
+`frameworks/standard-tonality/` and `frameworks/standard-meter/`. It does
 not depend on any other framework module.
 
 ## Scope

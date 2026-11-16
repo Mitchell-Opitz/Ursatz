@@ -6,8 +6,7 @@
 #include "pitch/pitch_spelling.h"
 
 /*
- * The slot types the counterpoint styles share (the fugue, ground bass and sixteenth-century frameworks already depend on
- * standard-counterpoint, so one definition serves all three).
+ * The slot types the counterpoint styles share (one definition, here).
  *
  * A note of a voice: the slot it begins on, the slots it lasts (ties included), and its pitch.
  *

@@ -10,8 +10,7 @@
 
 /*
  * Beat-boundary tie rules for standard-meter-v1. Ties join same-pitch
- * notes (that rule is standard-rhythm-v1's); here they also serve like
- * beams, to make the metrical structure visible within a measure:
+ * notes; here they also serve like beams, to make the metrical structure visible within a measure:
  *
  *   BEAT_SPLIT  a note that starts off the beat and runs past the next
  *               beat hides where that beat begins: a quarter note
