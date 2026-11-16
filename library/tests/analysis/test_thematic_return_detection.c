@@ -204,7 +204,6 @@ int main(void) {
     AnalysisResult *untouched = (AnalysisResult *)0x1;
     assert(thematic_return_detection_analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
     assert(untouched == (AnalysisResult *)0x1);
-    assert(strcmp(THEMATIC_RETURN_DETECTION_ANALYZER.name, "ThematicReturnDetection") == 0);
 
     /* Behavioral contract: 0 or 1 entries is valid and empty (no pair to compare). */
     ThematicReturnDetectionInput empty_input = {NULL, 0};

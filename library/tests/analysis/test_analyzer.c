@@ -106,7 +106,6 @@ int main(void) {
            ANALYSIS_RESULT_OK);
     assert(analysis_result_interpretation_count(empty_result) == 0);
     assert(analysis_result_evidence_count(empty_result) == 0);
-    assert(provenance_reference_state(analysis_result_provenance(empty_result)) == PROVENANCE_REFERENCE_ABSENT);
     analysis_result_destroy(empty_result);
 
     /* AnalysisResult rejects a NULL entry in a non-empty interpretation list. */
@@ -145,11 +144,6 @@ int main(void) {
     assert(*claim_content == 4);
 
     assert(analysis_result_evidence_count(result) == 1);
-    const Evidence *evidence = analysis_result_evidence_at(result, 0);
-    assert(strcmp(evidence_method(evidence), "mock-method") == 0);
-    assert(strcmp(evidence_source(evidence), "mock-source") == 0);
-    assert(evidence_strength_numerator(evidence) == 3);
-    assert(evidence_strength_denominator(evidence) == 4);
 
     analysis_result_destroy(result);
 

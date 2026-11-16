@@ -110,8 +110,6 @@ typedef struct {
 AnalyzerResult period_detection_analyze(const void *input, const Context *context, const Value *config,
                                          AnalysisResult **out);
 
-extern const Analyzer PERIOD_DETECTION_ANALYZER;
-
 typedef enum {
     PERIOD_DETECTION_REL_OK = 0,
     PERIOD_DETECTION_REL_ERR_NULL_ENTRIES,

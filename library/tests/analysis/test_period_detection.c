@@ -78,7 +78,6 @@ int main(void) {
     AnalysisResult *untouched = (AnalysisResult *)0x1;
     assert(period_detection_analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
     assert(untouched == (AnalysisResult *)0x1);
-    assert(strcmp(PERIOD_DETECTION_ANALYZER.name, "PeriodDetection") == 0);
 
     /* The ranking is required: a NULL rank is rejected without touching *out. */
     PeriodDetectionInput no_rank_input = {NULL, 0, NULL};

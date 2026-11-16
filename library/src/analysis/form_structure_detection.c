@@ -267,8 +267,6 @@ AnalyzerResult form_structure_detection_analyze(const void *input, const Context
     return ANALYZER_OK;
 }
 
-const Analyzer FORM_STRUCTURE_DETECTION_ANALYZER = {"FormStructureDetection", form_structure_detection_analyze};
-
 FormStructureDetectionSectionResult form_structure_detection_build_sections(
     const FormStructureDetectionEntry *entries, size_t entry_count, Section ***out_sections,
     size_t *out_section_count) {

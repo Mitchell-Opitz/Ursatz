@@ -102,8 +102,6 @@ typedef struct {
 AnalyzerResult form_structure_detection_analyze(const void *input, const Context *context, const Value *config,
                                                  AnalysisResult **out);
 
-extern const Analyzer FORM_STRUCTURE_DETECTION_ANALYZER;
-
 typedef enum {
     FORM_STRUCTURE_DETECTION_OK = 0,
     FORM_STRUCTURE_DETECTION_ERR_NULL_ENTRIES,

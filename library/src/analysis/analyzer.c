@@ -113,10 +113,6 @@ void analysis_result_destroy(AnalysisResult *result) {
     free(result);
 }
 
-const EntityID *analysis_result_id(const AnalysisResult *result) {
-    return result->id;
-}
-
 size_t analysis_result_interpretation_count(const AnalysisResult *result) {
     return result->interpretation_count;
 }
@@ -127,12 +123,4 @@ const Interpretation *analysis_result_interpretation_at(const AnalysisResult *re
 
 size_t analysis_result_evidence_count(const AnalysisResult *result) {
     return result->evidence_count;
-}
-
-const Evidence *analysis_result_evidence_at(const AnalysisResult *result, size_t index) {
-    return result->evidences[index];
-}
-
-const ProvenanceReference *analysis_result_provenance(const AnalysisResult *result) {
-    return result->provenance;
 }

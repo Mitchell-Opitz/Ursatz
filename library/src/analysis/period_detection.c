@@ -183,8 +183,6 @@ AnalyzerResult period_detection_analyze(const void *input, const Context *contex
     return ANALYZER_OK;
 }
 
-const Analyzer PERIOD_DETECTION_ANALYZER = {"PeriodDetection", period_detection_analyze};
-
 static void destroy_partial_relationships(Relationship **relationships, size_t count) {
     for (size_t i = 0; i < count; i++) {
         relationship_destroy(relationships[i]);

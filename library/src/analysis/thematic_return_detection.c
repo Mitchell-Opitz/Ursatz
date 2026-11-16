@@ -269,8 +269,6 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
     return ANALYZER_OK;
 }
 
-const Analyzer THEMATIC_RETURN_DETECTION_ANALYZER = {"ThematicReturnDetection", thematic_return_detection_analyze};
-
 ThematicReturnDetectionConfig thematic_return_detection_default_config(void) {
     ThematicReturnDetectionConfig config = {THEMATIC_RETURN_DETECTION_DEFAULT_WINDOW_LENGTH,
                                              THEMATIC_RETURN_DETECTION_DEFAULT_THRESHOLD};

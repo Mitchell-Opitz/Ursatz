@@ -164,8 +164,6 @@ typedef struct {
 AnalyzerResult thematic_return_detection_analyze(const void *input, const Context *context, const Value *config,
                                                   AnalysisResult **out);
 
-extern const Analyzer THEMATIC_RETURN_DETECTION_ANALYZER;
-
 typedef enum {
     THEMATIC_RETURN_DETECTION_REL_OK = 0,
     THEMATIC_RETURN_DETECTION_REL_ERR_NULL_ENTRIES,

@@ -54,7 +54,6 @@ int main(void) {
     AnalysisResult *untouched = (AnalysisResult *)0x1;
     assert(form_structure_detection_analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
     assert(untouched == (AnalysisResult *)0x1);
-    assert(strcmp(FORM_STRUCTURE_DETECTION_ANALYZER.name, "FormStructureDetection") == 0);
 
     /* Behavioral contract: 0 entries is valid and empty. */
     FormStructureDetectionInput empty_input = {NULL, 0};

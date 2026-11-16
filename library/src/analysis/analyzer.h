@@ -60,12 +60,9 @@ AnalysisResultResult analysis_result_create(EntityID *id, Interpretation **inter
                                              ProvenanceReference *provenance, AnalysisResult **out);
 void analysis_result_destroy(AnalysisResult *result);
 
-const EntityID *analysis_result_id(const AnalysisResult *result);
 size_t analysis_result_interpretation_count(const AnalysisResult *result);
 const Interpretation *analysis_result_interpretation_at(const AnalysisResult *result, size_t index);
 size_t analysis_result_evidence_count(const AnalysisResult *result);
-const Evidence *analysis_result_evidence_at(const AnalysisResult *result, size_t index);
-const ProvenanceReference *analysis_result_provenance(const AnalysisResult *result);
 
 /*
  * Analyzer (Interface, Registry #12): analyze(input, context, config)
