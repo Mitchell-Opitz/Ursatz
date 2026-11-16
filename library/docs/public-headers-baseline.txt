@@ -36,8 +36,6 @@ continuation_trait.h frameworks/standard-form/continuation_trait.h
 core/provenance_reference.h src/core/provenance_reference.h 
 core/value.h src/core/value.h 
 core/voice_reference.h src/core/voice_reference.h 
-corpus.h src/corpus/corpus.h 
-corpus/corpus_api.h src/corpus/corpus_api.h 
 counterpoint_limits.h frameworks/standard-counterpoint/counterpoint_limits.h 
 counterpoint_line.h frameworks/standard-counterpoint/counterpoint_line.h 
 counterpoint_pitch.h frameworks/standard-counterpoint/counterpoint_pitch.h 
@@ -111,7 +109,6 @@ metric_position_rules.h frameworks/standard-meter/metric_position_rules.h
 non_chord_tones.h frameworks/common-practice-minimal/non_chord_tones.h 
 outer_scale_degrees.h frameworks/common-practice-minimal/outer_scale_degrees.h 
 period_rules.h frameworks/standard-form/period_rules.h 
-persistence/persistence.h src/persistence/persistence.h 
 phrase_beginning.h frameworks/standard-form/phrase_beginning.h 
 phrase_ending.h frameworks/standard-form/phrase_ending.h 
 phrase_length_change.h frameworks/standard-form/phrase_length_change.h 

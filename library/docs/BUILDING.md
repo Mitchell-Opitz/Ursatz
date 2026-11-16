@@ -5,7 +5,6 @@
 ## Requirements
 - CMake 3.20+
 - A C11 compiler (gcc, clang, MSVC, or MinGW)
-- SQLite3, found through pkg-config (the only third-party dependency)
 - POSIX threads (`find_package(Threads)`; `core/once.h` uses `pthread_mutex_t`; the `ursatz` target links `Threads::Threads` publicly)
 - valgrind (optional; enables the `*_valgrind` tests and the helgrind run of `concurrent_first_use`)
 
@@ -22,7 +21,7 @@ ctest --test-dir build -C Debug --output-on-failure
 (Drop `-C Debug` if you're not using a multi-config generator like Visual Studio.)
 
 This runs every test from the root build: the kernel tests under `tests/`, the framework tests
-under `frameworks/*/tests/` and the chain tests under `chain/tests/` (726 in all with valgrind
+under `frameworks/*/tests/` and the chain tests under `chain/tests/` (697 in all with valgrind
 installed), including one architecture-guard test per module and per framework. Tests labeled
 `slow` can be skipped with `-LE slow`. CI runs configure, build and `ctest -LE slow` on Ubuntu,
 then the accuracy gate.

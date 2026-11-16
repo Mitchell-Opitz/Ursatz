@@ -58,7 +58,7 @@ cmake --build build -j
 ctest --test-dir build/gui
 ```
 
-Requires CMake 3.28 or newer, a C11 compiler, SQLite development headers and pkg-config. The GUI links the targets
+Requires CMake 3.28 or newer, a C11 compiler. The GUI links the targets
 the root adds before it: cJSON, civetweb (both in `third_party/`), the library, the Analyzer and the Composer library
 (without the command; see [Composer routes](docs/api/composer-routes.md#composer-routes)). `-DURSATZ_GUI=OFF` skips the
 GUI; `-DURSATZ_TESTS=OFF` skips every part's tests. The library's own tests are built with the rest.

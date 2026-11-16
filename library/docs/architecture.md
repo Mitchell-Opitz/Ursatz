@@ -8,7 +8,7 @@ Ursatz is organized into layered modules, each living under `src/<module>/` with
 
 Ursatz is the base library of the platform: a theory-neutral C11 representation of musical material (events, structures, relationships, interpretations, contexts, provenance) with exact time and pitch.
 Theory lives in 17 Theory Frameworks that produce interpretations under a named framework, and the analysis chain runs them over imported notes.
-The library imports MIDI and MusicXML, analyzes, stores to SQLite and exports MusicXML.
+The library imports MIDI and MusicXML, analyzes and exports MusicXML.
 It owns every analysis algorithm (R-217); the apps orchestrate and render.
 
 ## Where it sits
@@ -47,10 +47,8 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 | analysis | `analyzer.h`, `form_structure_detection.h` and 9 more | `Analyzer`, `motive_sketch`, `outer_voice_extract`, `voice_separate` | Kernel analyses: motives, voices, progressions, form. | [analysis](modules/analysis.md), [motive link](modules/motive-link.md) |
 | generation | `candidate.h`, `generation_record.h` and 1 more | `Generator`, `Candidate` | Candidate generation with a generation record. | [generation](modules/generation.md) |
 | io | `midi_importer.h`, `midi_key_signature.h` and 2 more | `midi_importer_import_complete`, `MusicXMLImporter`, `midi_key_signature_scan` | Import of MIDI and MusicXML into notes, meter, tempo and keys. | [io](modules/io.md), [MIDI](modules/io-midi.md), [MusicXML](modules/io-musicxml.md) |
-| export | `musicxml_export.h`, `score_quantize.h` and 1 more | `musicxml_export_write`, `score_quantize` | MusicXML export of a MeterMap and notes. | [export](modules/export.md) |
-| persistence | `persistence.h` | `persistence.h` | SQLite store and load. | [persistence](modules/persistence.md) |
-| corpus | `corpus.h`, `corpus_api.h` | `corpus.h`, `corpus_api.h` | Corpus storage. | [corpus](modules/corpus.md) |
-| query | `similarity_model.h`, `similarity_scoring.h` | `similarity_model.h` | Similarity scoring over stored material. | [query](modules/query.md) |
+| export | `musicxml_export.h`, `score_quantize.h` and 1 more | `musicxml_export_write_score`, `score_quantize` | MusicXML export of a MeterMap and notes. | [export](modules/export.md) |
+| query | `similarity_model.h`, `similarity_scoring.h` | `similarity_model.h` | Similarity scoring over sequences. | [query](modules/query.md) |
 | common-practice-minimal | `chord_vocabulary_seventh.h`, `framework.h` and 7 more | framework entry and rules | Weighted chord identification, key regions, non-chord tones. | [README](../frameworks/common-practice-minimal/README.md), [analysis detail](modules/common-practice-minimal-analysis.md) |
 | galant-schemas | `analysis/galant_analysis_input.h`, `analysis/galant_analysis_match.h` and 4 more | framework entry and rules | Galant schema prototypes and matching. | [README](../frameworks/galant-schemas/README.md) |
 | scale-harmonization | `analysis/scale_analysis_detect.h`, `scale_direction.h` and 3 more | framework entry and rules | Rule of the octave and sequence detection. | [README](../frameworks/scale-harmonization/README.md) |
@@ -70,14 +68,13 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 |---|---|---|---|
 | `ursatz_version()` | `src/ursatz.h` | 0 | this page |
 | Framework ids (`<name>-v1`, one per framework) | `frameworks/<name>/framework.c` (the singleton init) | `-v1` for all 17 | [frameworks/README.md](../frameworks/README.md) |
-| SQLite schema (`PERSISTENCE_SCHEMA`, created with `IF NOT EXISTS`, no version number) | `src/persistence/persistence.c` | unversioned | [persistence](modules/persistence.md) |
 | `SchemaVersion` (a value type for callers' schemas) | `src/identity/schema_version.h` | caller-supplied | [identity](modules/identity.md) |
 
 The library defines no file format version. The versions of the document formats the apps write are in the apps' own docs.
 
 ## What it calls below
 
-Nothing. Ursatz sits at the bottom of the stack; its only dependencies are SQLite and POSIX threads (see [BUILDING.md](BUILDING.md)) and the ezxml parser used by `io`, vendored in the repository's `third_party/ezxml/`.
+Nothing. Ursatz sits at the bottom of the stack; its only dependencies are POSIX threads (see [BUILDING.md](BUILDING.md)) and the ezxml parser used by `io`, vendored in the repository's `third_party/ezxml/`.
 
 ### Who calls it
 
@@ -85,7 +82,7 @@ Nothing. Ursatz sits at the bottom of the stack; its only dependencies are SQLit
 |---|---|---|
 | Analyzer | 157 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
 | Composer | 115 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, generation, io |
-| GUI | 4 | analysis (`analyzer.h`), corpus, persistence |
+| GUI | 1 | analysis (`analyzer.h`) |
 
 Made with `scripts/app_includes.sh <app checkout>...`; the combined list is in `docs/public-headers-baseline.txt`.
 
@@ -99,7 +96,7 @@ One file through the library:
 4. `analysis_chain_run` (`ursatz_chain/analysis_chain.h`) takes the notes and runs the stages in order: segments, key regions, weighted chords, Roman numerals, outer voices, cadences, phrase form and motives, meter, texture, voice leading, melody, schemas and sequences ([analytic-job-owners](analytic-job-owners.md)).
 5. Each stage builds its input with `chain_inputs.h` and calls the owner of its job: a framework (`frameworks/<name>/analysis/`) or the kernel's `analysis` module.
 6. Results are `Interpretation`s and framework result structs, owned by the `AnalysisChain` and read through its `analysis_chain_*` accessors.
-7. The caller reads the results, stores them with `persistence` or exports the notes with `export`.
+7. The caller reads the results, or exports the notes with `export`.
 
 ## Finding things
 

@@ -79,5 +79,4 @@ for a progression, `numerals <matched>/<length>`.
 ## Limits
 
 - Only the soprano and the chord roots are searched, not inner voices or bass lines.
-- It does not use Ursatz's `corpus_search_melodic`, which reads persisted claims; the Analyzer does not persist.
 - A window is as long as the query. A passage with an extra or a missing note in the middle does not match.

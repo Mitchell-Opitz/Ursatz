@@ -21,9 +21,6 @@ The implementation status and doc of each kernel module. [Docs index](README.md)
 | generation | L8 | Implemented (partial, see doc) | [generation](modules/generation.md) |
 | io | L9 | Implemented (partial, see doc) | [io](modules/io.md) |
 | export | L9 | Implemented (MusicXML from a MeterMap: parts, staves, key, tempo, dynamics; no MXL, repeats or articulations) | `src/export/musicxml_export.h` |
-| persistence | L9 | Implemented (partial, see doc) | [persistence](modules/persistence.md) |
-| corpus | L9 | Implemented | [corpus](modules/corpus.md) |
-| corpus_stats | L9 | Implemented (partial, see doc) | [corpus_stats](modules/corpus_stats.md) |
 | query | L9 | Implemented (partial, see doc) | [query](modules/query.md) |
 
 "Partial" means some types from the module's Registry row are implemented and some are explicitly deferred; the module's own doc lists which.

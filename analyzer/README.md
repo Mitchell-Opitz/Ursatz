@@ -10,7 +10,7 @@ thin consumer of the [Ursatz library](../library/README.md) in `library/` and it
 ## Build
 
 The Analyzer builds from the repository root with the other parts ([README](../README.md#build-and-test)); it needs
-CMake 3.28+, a C11 compiler and SQLite3 (for the library). cJSON 1.7.18 is vendored in `third_party/cjson`.
+CMake 3.28+ and a C11 compiler. cJSON 1.7.18 is vendored in `third_party/cjson`.
 
 ```sh
 cmake -S . -B build

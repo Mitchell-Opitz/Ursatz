@@ -27,7 +27,7 @@ ctest --test-dir build --output-on-failure -LE slow
 
 - `-LE slow` runs the fast set (what CI runs). `-L slow` runs the slow set; the nightly workflow runs every test.
 - `ctest --test-dir build/<part>` runs one part's tests. Each part builds only from the root.
-- Needs cmake 3.28+, a C11 compiler, pkg-config and the SQLite3 dev files.
+- Needs cmake 3.28+, and a C11 compiler.
 - The build type defaults to Debug. Never build Release: it compiles out the asserts the tests rely on.
 
 Options (both ON by default):

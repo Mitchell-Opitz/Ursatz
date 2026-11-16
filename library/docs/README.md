@@ -44,9 +44,6 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/generation.md](modules/generation.md): L8 generation: candidates and generation records.
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
 - [docs/modules/export.md](modules/export.md): L9 export: MusicXML writer.
-- [docs/modules/persistence.md](modules/persistence.md): L9 persistence: SQLite store and load.
-- [docs/modules/corpus.md](modules/corpus.md): L9 corpus: corpus storage.
-- [docs/modules/corpus_stats.md](modules/corpus_stats.md): L9 corpus_stats: statistics over a corpus.
 - [docs/modules/query.md](modules/query.md): L9 query: similarity scoring.
 - [docs/modules/motive-link.md](modules/motive-link.md): Motive links: chains of relations between motives, choosing and grouping.
 - [docs/modules/motive-relations.md](modules/motive-relations.md): Motive sketches and relations.
@@ -80,7 +77,6 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 
 ## Formats and schemas
 
-- [docs/modules/persistence.md](modules/persistence.md): The SQLite schema and what is stored.
 - [docs/modules/export.md](modules/export.md): The MusicXML output format and its limits.
 - [docs/modules/io-midi.md](modules/io-midi.md): The MIDI input format reading.
 - [docs/modules/io-musicxml.md](modules/io-musicxml.md): The MusicXML input subset.

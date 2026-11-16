@@ -13,7 +13,7 @@ Intents are structured (CLI flags or a JSON request), never natural language.
 ## Build
 
 The Composer builds from the repository root with the other parts ([README](../README.md#build-and-test)); it needs
-CMake 3.28+, a C11 compiler, pkg-config and SQLite3 (for the library).
+CMake 3.28+, and a C11 compiler.
 
 ```sh
 cmake -S . -B build

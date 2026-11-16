@@ -113,7 +113,7 @@ descending, then first occurrence. The section is empty when nothing recurs.
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `pattern` | array of strings | The base numerals, e.g. `["I", "IV", "V", "I"]`. |
-| `label` | string | The pattern joined with `" > "`, the separator Ursatz's `corpus_stats_chord_progressions` uses: `"I > IV > V > I"`. |
+| `label` | string | The pattern joined with `" > "`, the separator the Analyzer uses: `"I > IV > V > I"`. |
 | `length` | integer | 2 to 6. |
 | `count` | integer | How often the pattern occurs: at least 2. |
 | `occurrences` | array of occurrences | In time order; each is a claim. |

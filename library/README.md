@@ -7,7 +7,7 @@ and provenance. Interpretations (chord, key, cadence, form) are only ever produc
 explicit, named Theory Framework.
 
 - `src/`: the kernel, layers L0 through L9. L0 to L8 are implemented. L9 is partial: MIDI
-  import, MusicXML export, SQLite persistence, and corpus storage.
+  import, MusicXML export and similarity scoring.
 - `frameworks/`: 17 Theory Framework extension modules (tonality, harmony, counterpoint,
   form, meter, notation, and more). See [frameworks/README.md](frameworks/README.md).
 - `chain/`: the analysis chain `ursatz_chain`. See [chain/README.md](chain/README.md).

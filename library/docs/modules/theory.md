@@ -37,7 +37,7 @@ Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `co
 
 ## Style statistics and blending
 
-Corpus statistics reach `theory/` as plain values, never as a corpus type (the Theory -> Corpus open issue above stays open: `theory/` has no dependency on `corpus_stats/` or `corpus/`).
+Corpus statistics reach `theory/` as plain values, never as a corpus type (the Theory -> Corpus open issue above stays open: `theory/` has no dependency on any storage or corpus module).
 
 - `style_features.h`: the one format `style_features` is given, `style-tendencies-v1`: text, one statistic per line (`category`, `label`, `count`, `total`, tab-separated), sorted by category then label, no duplicates. `style_features_encode`/`_decode` pack and read it back. Counts and totals are unsigned integers; a frequency is `count/total`.
 - `style_model_build.h`: `style_model_from_statistics` builds a `StyleModel` from an array of `StyleStatistic`, validating each (non-empty names without tab or newline, `total > 0`, `count <= total`, no duplicates). `style_model_tendencies` reads the model back as `Tendency` objects (label, frequency `count/total` unreduced, and the category and training corpus as observed data), so each statistic is observed behavior and nothing stronger.

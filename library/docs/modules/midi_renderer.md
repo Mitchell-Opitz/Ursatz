@@ -34,4 +34,4 @@ The tests render four of the five framework-v1 reference pieces (Bach 114, Cleme
 
 ## Out of scope
 
-Velocity and dynamics, articulation, control and program events, sysex, SMPTE division, format 0 and 2, lyrics, cue points, MusicXML rehearsal marks, reading names or markers in the importer, MusicXML export, playback, persistence.
+Velocity and dynamics, articulation, control and program events, sysex, SMPTE division, format 0 and 2, lyrics, cue points, MusicXML rehearsal marks, reading names or markers in the importer, MusicXML export, playback.
