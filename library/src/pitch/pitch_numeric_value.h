@@ -68,9 +68,6 @@ const TuningSystem *pitch_numeric_value_tuning_system(const PitchNumericValue *v
 long pitch_numeric_value_position_numerator(const PitchNumericValue *value);
 unsigned long pitch_numeric_value_position_denominator(const PitchNumericValue *value);
 
-/* Value equality: same TuningSystem (by identity) AND same reduced position. */
-bool pitch_numeric_value_equals(const PitchNumericValue *a, const PitchNumericValue *b);
-
 typedef enum {
     PITCH_NUMERIC_VALUE_TO_IDENTITY_OK = 0,
     PITCH_NUMERIC_VALUE_TO_IDENTITY_ERR_NULL_VALUE,

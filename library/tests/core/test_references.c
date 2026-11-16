@@ -24,29 +24,6 @@ static void test_voice_reference_holds_target_id_only(void) {
     voice_reference_destroy(reference);
 }
 
-static void test_voice_reference_equals_on_target_id(void) {
-    EntityID *id_a = NULL;
-    entity_id_create("voice-1", &id_a);
-    EntityID *id_b = NULL;
-    entity_id_create("voice-1", &id_b);
-    EntityID *id_c = NULL;
-    entity_id_create("voice-2", &id_c);
-
-    VoiceReference *a = NULL;
-    voice_reference_create(id_a, &a);
-    VoiceReference *b = NULL;
-    voice_reference_create(id_b, &b);
-    VoiceReference *c = NULL;
-    voice_reference_create(id_c, &c);
-
-    assert(voice_reference_equals(a, b));
-    assert(!voice_reference_equals(a, c));
-
-    voice_reference_destroy(a);
-    voice_reference_destroy(b);
-    voice_reference_destroy(c);
-}
-
 static void test_framework_reference_rejects_null_target(void) {
     FrameworkReference *reference = NULL;
     FrameworkReferenceResult r = framework_reference_create(NULL, &reference);
@@ -86,60 +63,12 @@ static void test_provenance_reference_absent_has_no_target_id(void) {
     provenance_reference_destroy(reference);
 }
 
-static void test_provenance_reference_equals_present_same_target(void) {
-    EntityID *id_a = NULL;
-    entity_id_create("derivation-1", &id_a);
-    EntityID *id_b = NULL;
-    entity_id_create("derivation-1", &id_b);
-
-    ProvenanceReference *a = NULL;
-    provenance_reference_create_present(id_a, &a);
-    ProvenanceReference *b = NULL;
-    provenance_reference_create_present(id_b, &b);
-
-    assert(provenance_reference_equals(a, b));
-
-    provenance_reference_destroy(a);
-    provenance_reference_destroy(b);
-}
-
-static void test_provenance_reference_absent_equals_absent(void) {
-    ProvenanceReference *a = NULL;
-    provenance_reference_create_absent(&a);
-    ProvenanceReference *b = NULL;
-    provenance_reference_create_absent(&b);
-
-    assert(provenance_reference_equals(a, b));
-
-    provenance_reference_destroy(a);
-    provenance_reference_destroy(b);
-}
-
-static void test_provenance_reference_present_not_equal_to_absent(void) {
-    EntityID *target_id = NULL;
-    entity_id_create("derivation-1", &target_id);
-
-    ProvenanceReference *present = NULL;
-    provenance_reference_create_present(target_id, &present);
-    ProvenanceReference *absent = NULL;
-    provenance_reference_create_absent(&absent);
-
-    assert(!provenance_reference_equals(present, absent));
-
-    provenance_reference_destroy(present);
-    provenance_reference_destroy(absent);
-}
-
 int main(void) {
     test_voice_reference_rejects_null_target();
     test_voice_reference_holds_target_id_only();
-    test_voice_reference_equals_on_target_id();
     test_framework_reference_rejects_null_target();
     test_provenance_reference_present_rejects_null_target();
     test_provenance_reference_present_holds_target_id();
     test_provenance_reference_absent_has_no_target_id();
-    test_provenance_reference_equals_present_same_target();
-    test_provenance_reference_absent_equals_absent();
-    test_provenance_reference_present_not_equal_to_absent();
     return 0;
 }

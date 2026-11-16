@@ -1,6 +1,8 @@
 #include "ursatz_chain/chain_inputs.h"
 
 #include "chain_test_piece.h"
+#include "pitch/pitch_numeric_value.h"
+#include "pitch/tuning_system.h"
 #include "standard-harmony/harmony_cadence_rules.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "standard-meter/segmentation_beat_grid.h"
@@ -12,6 +14,14 @@
  * inputs (harmony, form, meter, texture, voice grid, melody, galant) are built from the results of a chain run over the same piece, and
  * checked against them.
  */
+
+/* Same tuning system (by identity) and the same position. */
+static bool same_pitch_value(const PitchNumericValue *a, const PitchNumericValue *b) {
+    return entity_id_equals(tuning_system_id(pitch_numeric_value_tuning_system(a)),
+                            tuning_system_id(pitch_numeric_value_tuning_system(b))) &&
+           pitch_numeric_value_position_numerator(a) == pitch_numeric_value_position_numerator(b) &&
+           pitch_numeric_value_position_denominator(a) == pitch_numeric_value_position_denominator(b);
+}
 
 /* The cell of a segment and voice, or NULL when either is out of range or the grid has no cells. */
 static const AnalysisVoiceCell *grid_cell(const AnalysisVoiceGrid *grid, size_t segment, size_t voice) {
@@ -465,7 +475,7 @@ static void test_segment_lines(TestPiece *piece) {
         assert(out.soprano[i].present && out.bass[i].present);
         assert(out.soprano[i].note_id != lines.soprano[v].note_id && out.soprano[i].pitch != lines.soprano[v].pitch); /* copies */
         assert(strcmp(entity_id_value(out.soprano[i].note_id), entity_id_value(lines.soprano[v].note_id)) == 0);
-        assert(pitch_numeric_value_equals(out.soprano[i].pitch, lines.soprano[v].pitch));
+        assert(same_pitch_value(out.soprano[i].pitch, lines.soprano[v].pitch));
         assert(strcmp(entity_id_value(out.bass[i].note_id), entity_id_value(lines.bass[v].note_id)) == 0);
     }
     assert(pitch_numeric_value_position_numerator(out.soprano[0].pitch) == 76); /* E5 */

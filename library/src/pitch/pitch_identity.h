@@ -39,10 +39,6 @@ typedef enum {
 PitchIdentityResult pitch_identity_create(const void *token, size_t token_size, PitchIdentity **out);
 void pitch_identity_destroy(PitchIdentity *identity);
 
-/* Strict identity equality: same token bytes. Final by design -- see
-   the theory layers for theory-relative equivalence. */
-bool pitch_identity_equals(const PitchIdentity *a, const PitchIdentity *b);
-
 const void *pitch_identity_token(const PitchIdentity *identity, size_t *out_size);
 
 #endif

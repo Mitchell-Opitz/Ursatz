@@ -27,6 +27,15 @@
  * separate test confirms clean, defined failure on a truncated file.
  */
 
+/* Same token bytes. */
+static bool same_pitch_identity(const PitchIdentity *a, const PitchIdentity *b) {
+    size_t a_size = 0;
+    size_t b_size = 0;
+    const void *a_token = pitch_identity_token(a, &a_size);
+    const void *b_token = pitch_identity_token(b, &b_size);
+    return a_size == b_size && memcmp(a_token, b_token, a_size) == 0;
+}
+
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
     memcpy(buf + *pos, bytes, len);
     *pos += len;
@@ -93,7 +102,7 @@ static void assert_duration(const NoteEvent *note, long numerator, unsigned long
 
 static void assert_pitch(const NoteEvent *note, uint8_t midi_note) {
     PitchIdentity *expected = make_expected_pitch(midi_note);
-    assert(pitch_identity_equals(note_event_pitch(note), expected));
+    assert(same_pitch_identity(note_event_pitch(note), expected));
     pitch_identity_destroy(expected);
 }
 
@@ -238,13 +247,13 @@ static void test_simultaneous_chord(void) {
         PitchIdentity *p60 = make_expected_pitch(0x3C);
         PitchIdentity *p64 = make_expected_pitch(0x40);
         PitchIdentity *p67 = make_expected_pitch(0x43);
-        if (pitch_identity_equals(note_event_pitch(events[i]), p60)) {
+        if (same_pitch_identity(note_event_pitch(events[i]), p60)) {
             seen_60 = 1;
             assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x3C);
-        } else if (pitch_identity_equals(note_event_pitch(events[i]), p64)) {
+        } else if (same_pitch_identity(note_event_pitch(events[i]), p64)) {
             seen_64 = 1;
             assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x40);
-        } else if (pitch_identity_equals(note_event_pitch(events[i]), p67)) {
+        } else if (same_pitch_identity(note_event_pitch(events[i]), p67)) {
             seen_67 = 1;
             assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x43);
         }
@@ -271,7 +280,7 @@ static const char *voice_id_of(const NoteEvent *note) {
 static const NoteEvent *find_by_pitch(NoteEvent **events, size_t count, uint8_t midi_note) {
     for (size_t i = 0; i < count; i++) {
         PitchIdentity *expected = make_expected_pitch(midi_note);
-        bool match = pitch_identity_equals(note_event_pitch(events[i]), expected);
+        bool match = same_pitch_identity(note_event_pitch(events[i]), expected);
         pitch_identity_destroy(expected);
         if (match) {
             return events[i];

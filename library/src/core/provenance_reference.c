@@ -52,16 +52,3 @@ ProvenanceReferenceState provenance_reference_state(const ProvenanceReference *r
 const EntityID *provenance_reference_target_id(const ProvenanceReference *reference) {
     return reference->target_id;
 }
-
-bool provenance_reference_equals(const ProvenanceReference *a, const ProvenanceReference *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    if (a->state != b->state) {
-        return false;
-    }
-    if (a->state == PROVENANCE_REFERENCE_ABSENT) {
-        return true;
-    }
-    return entity_id_equals(a->target_id, b->target_id);
-}

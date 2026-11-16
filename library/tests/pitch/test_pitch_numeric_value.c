@@ -1,6 +1,7 @@
 #include "pitch/pitch_numeric_value.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +23,15 @@
  * equal PitchIdentity tokens; this is one-directional only, there is no
  * decoder back (see pitch_numeric_value.h).
  */
+
+/* Same token bytes. */
+static bool same_pitch_identity(const PitchIdentity *a, const PitchIdentity *b) {
+    size_t a_size = 0;
+    size_t b_size = 0;
+    const void *a_token = pitch_identity_token(a, &a_size);
+    const void *b_token = pitch_identity_token(b, &b_size);
+    return a_size == b_size && memcmp(a_token, b_token, a_size) == 0;
+}
 
 static TuningSystem *make_tuning_system(const char *id_value, const char *name) {
     EntityID *id = NULL;
@@ -75,39 +85,6 @@ static void test_does_not_alias_tuning_system(void) {
     pitch_numeric_value_destroy(v);
 }
 
-static void test_equals_same_tuning_system_and_position(void) {
-    TuningSystem *tuning_system = make_tuning_system("tuning-12tet", "12-TET");
-
-    PitchNumericValue *a = NULL;
-    PitchNumericValue *b = NULL;
-    pitch_numeric_value_create(tuning_system, 60, 1, &a);
-    pitch_numeric_value_create(tuning_system, 120, 2, &b);
-
-    assert(a != b);
-    assert(pitch_numeric_value_equals(a, b));
-
-    pitch_numeric_value_destroy(a);
-    pitch_numeric_value_destroy(b);
-    tuning_system_destroy(tuning_system);
-}
-
-static void test_inequals_different_tuning_system(void) {
-    TuningSystem *tuning_a = make_tuning_system("tuning-12tet", "12-TET");
-    TuningSystem *tuning_b = make_tuning_system("tuning-24tet", "24-TET");
-
-    PitchNumericValue *a = NULL;
-    PitchNumericValue *b = NULL;
-    pitch_numeric_value_create(tuning_a, 60, 1, &a);
-    pitch_numeric_value_create(tuning_b, 60, 1, &b);
-
-    assert(!pitch_numeric_value_equals(a, b));
-
-    pitch_numeric_value_destroy(a);
-    pitch_numeric_value_destroy(b);
-    tuning_system_destroy(tuning_a);
-    tuning_system_destroy(tuning_b);
-}
-
 static void test_to_identity_is_deterministic_and_usable(void) {
     TuningSystem *tuning_system = make_tuning_system("tuning-12tet", "12-TET");
 
@@ -122,7 +99,7 @@ static void test_to_identity_is_deterministic_and_usable(void) {
     assert(pitch_numeric_value_to_identity(b, &identity_b) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK);
 
     /* Same reduced position under the same tuning system -> equal PitchIdentity tokens. */
-    assert(pitch_identity_equals(identity_a, identity_b));
+    assert(same_pitch_identity(identity_a, identity_b));
 
     pitch_identity_destroy(identity_a);
     pitch_identity_destroy(identity_b);
@@ -144,7 +121,7 @@ static void test_to_identity_differs_for_different_positions(void) {
     assert(pitch_numeric_value_to_identity(a, &identity_a) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK);
     assert(pitch_numeric_value_to_identity(b, &identity_b) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK);
 
-    assert(!pitch_identity_equals(identity_a, identity_b));
+    assert(!same_pitch_identity(identity_a, identity_b));
 
     pitch_identity_destroy(identity_a);
     pitch_identity_destroy(identity_b);
@@ -158,8 +135,6 @@ int main(void) {
     test_create_rejects_zero_denominator();
     test_create_reduces_to_lowest_terms_and_allows_negative();
     test_does_not_alias_tuning_system();
-    test_equals_same_tuning_system_and_position();
-    test_inequals_different_tuning_system();
     test_to_identity_is_deterministic_and_usable();
     test_to_identity_differs_for_different_positions();
     printf("test_pitch_numeric_value: ok\n");

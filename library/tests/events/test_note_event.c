@@ -217,36 +217,6 @@ static void test_id_stable_under_round_trip(void) {
     note_event_destroy(note_event);
 }
 
-static void test_equals_by_id_ignores_other_fields(void) {
-    NoteEvent *a = NULL;
-    note_event_create(make_id("note-1"), make_temporal_anchor(1, 4), make_duration(1, 4), make_pitch("pitch-a"),
-                       NULL, NULL, make_absent_provenance(), &a);
-    NoteEvent *b = NULL;
-    note_event_create(make_id("note-1"), make_temporal_anchor(3, 4), make_duration(1, 2), make_pitch("pitch-b"),
-                       NULL, NULL, make_absent_provenance(), &b);
-
-    assert(note_event_equals_by_id(a, b));
-    assert(!note_event_equals_by_value(a, b));
-
-    note_event_destroy(a);
-    note_event_destroy(b);
-}
-
-static void test_equals_by_value_ignores_id(void) {
-    NoteEvent *a = NULL;
-    note_event_create(make_id("note-1"), make_temporal_anchor(1, 4), make_duration(1, 4), make_pitch("pitch-a"),
-                       NULL, NULL, make_absent_provenance(), &a);
-    NoteEvent *b = NULL;
-    note_event_create(make_id("note-2"), make_temporal_anchor(1, 4), make_duration(1, 4), make_pitch("pitch-a"),
-                       NULL, NULL, make_absent_provenance(), &b);
-
-    assert(!note_event_equals_by_id(a, b));
-    assert(note_event_equals_by_value(a, b));
-
-    note_event_destroy(a);
-    note_event_destroy(b);
-}
-
 int main(void) {
     test_create_rejects_null_id();
     test_create_rejects_null_temporal_anchor();
@@ -258,7 +228,5 @@ int main(void) {
     test_duration_invariant_enforced_by_duration_type();
     test_optional_voice_exposes_only_opaque_reference();
     test_id_stable_under_round_trip();
-    test_equals_by_id_ignores_other_fields();
-    test_equals_by_value_ignores_id();
     return 0;
 }

@@ -88,16 +88,4 @@ const PitchSpelling *note_event_optional_pitch_spelling(const NoteEvent *note_ev
 const VoiceReference *note_event_optional_voice(const NoteEvent *note_event);
 const ProvenanceReference *note_event_provenance(const NoteEvent *note_event);
 
-/* IdentityEquality (primary): same id, regardless of every other field. */
-bool note_event_equals_by_id(const NoteEvent *a, const NoteEvent *b);
-
-/*
- * StructuralEquality: same temporal_anchor, duration, pitch,
- * optional_pitch_spelling, optional_voice, and provenance, independent
- * of id. Value-equal does NOT imply the same event --
- * two independently constructed NoteEvents can carry identical content
- * under different ids.
- */
-bool note_event_equals_by_value(const NoteEvent *a, const NoteEvent *b);
-
 #endif

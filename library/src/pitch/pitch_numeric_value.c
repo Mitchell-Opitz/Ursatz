@@ -89,16 +89,6 @@ unsigned long pitch_numeric_value_position_denominator(const PitchNumericValue *
     return value->denominator;
 }
 
-bool pitch_numeric_value_equals(const PitchNumericValue *a, const PitchNumericValue *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    if (!tuning_system_identity_equals(a->tuning_system, b->tuning_system)) {
-        return false;
-    }
-    return a->numerator == b->numerator && a->denominator == b->denominator;
-}
-
 PitchNumericValueToIdentityResult pitch_numeric_value_to_identity(const PitchNumericValue *value,
                                                                     PitchIdentity **out) {
     if (value == NULL) {

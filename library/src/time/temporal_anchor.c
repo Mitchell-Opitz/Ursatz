@@ -33,10 +33,3 @@ void temporal_anchor_destroy(TemporalAnchor *anchor) {
 const MusicalTime *temporal_anchor_position(const TemporalAnchor *anchor) {
     return anchor->position;
 }
-
-bool temporal_anchor_equals(const TemporalAnchor *a, const TemporalAnchor *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return musical_time_equals(a->position, b->position);
-}

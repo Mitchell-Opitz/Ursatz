@@ -39,42 +39,9 @@ static void test_token_is_opaque_not_entity_id(void) {
     pitch_identity_destroy(identity);
 }
 
-static void test_equality_independent_instances_same_token(void) {
-    const char token_a[] = "same-token";
-    const char token_b[] = "same-token";
-
-    PitchIdentity *a = NULL;
-    PitchIdentity *b = NULL;
-    pitch_identity_create(token_a, sizeof(token_a), &a);
-    pitch_identity_create(token_b, sizeof(token_b), &b);
-
-    assert(a != b);
-    assert(pitch_identity_equals(a, b));
-
-    pitch_identity_destroy(a);
-    pitch_identity_destroy(b);
-}
-
-static void test_inequality_different_token(void) {
-    const char token_a[] = "token-a";
-    const char token_b[] = "token-b";
-
-    PitchIdentity *a = NULL;
-    PitchIdentity *b = NULL;
-    pitch_identity_create(token_a, sizeof(token_a), &a);
-    pitch_identity_create(token_b, sizeof(token_b), &b);
-
-    assert(!pitch_identity_equals(a, b));
-
-    pitch_identity_destroy(a);
-    pitch_identity_destroy(b);
-}
-
 int main(void) {
     test_create_rejects_null_token();
     test_create_accepts_valid_token();
     test_token_is_opaque_not_entity_id();
-    test_equality_independent_instances_same_token();
-    test_inequality_different_token();
     return 0;
 }

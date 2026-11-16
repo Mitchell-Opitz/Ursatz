@@ -22,6 +22,5 @@ VoiceReferenceResult voice_reference_create(EntityID *target_id, VoiceReference 
 void voice_reference_destroy(VoiceReference *reference);
 
 const EntityID *voice_reference_target_id(const VoiceReference *reference);
-bool voice_reference_equals(const VoiceReference *a, const VoiceReference *b);
 
 #endif

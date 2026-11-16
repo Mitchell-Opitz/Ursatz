@@ -29,7 +29,4 @@ void temporal_anchor_destroy(TemporalAnchor *anchor);
 
 const MusicalTime *temporal_anchor_position(const TemporalAnchor *anchor);
 
-/* Value equality on the wrapped MusicalTime. */
-bool temporal_anchor_equals(const TemporalAnchor *a, const TemporalAnchor *b);
-
 #endif
