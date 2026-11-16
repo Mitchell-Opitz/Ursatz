@@ -109,25 +109,6 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode
                           CadenceType *heard, bool *at_end);
 
 /*
- * Checks the harmony lane over span against standard-harmony, reading only what is in the plan:
- * the same rules the checker applies (phrase model, explained chords, applied chords resolving,
- * the cadence's progression, and the cadence the recognizer hears, which must be the requested
- * one and end the phrase). A chord that carries a schema constraint (harmony_schema.h) needs no
- * reason of its own to be there. True when the lane could be read, with *violation NULL if nothing
- * is broken and otherwise the rule that is.
- */
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
-                        const char **violation);
-
-/*
- * The same check for a lane that need not end in a cadence nor explain every inverted chord, such
- * as the harmony under a bass: only the phrase model, the applied chords
- * resolving, and that every chord is readable are asked.
- */
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode,
-                                        const char **violation);
-
-/*
  * Roman numerals as this operator writes them: upper case for major chords
  * (V, IV, VI), lower case for minor ones (ii, vi, i), a degree sign for
  * diminished ones, then the figures for the inversion: none, 6 and 6/4 for a

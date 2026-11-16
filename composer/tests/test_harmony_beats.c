@@ -11,6 +11,7 @@
 #include <ursatz_composer/harmony_sequence.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_oracles.h"
 
 /*
  * Harmony and bass over spans that start and end on any beat (R-168), run through the fill loop with the checker. Beats

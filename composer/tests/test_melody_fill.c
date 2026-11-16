@@ -14,6 +14,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_oracles.h"
 
 /*
  * The melody operator, run through the fill loop after the harmony and bass operators, with the motive Given or

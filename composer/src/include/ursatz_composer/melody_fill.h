@@ -157,14 +157,6 @@ bool melody_fill_checker(const PiecePlan *plan, FillTarget target, const FillOpe
                          const FillCandidate *candidate, void *context, FillCheck *out);
 
 /*
- * Checks the melody lane over span, reading only what is in the plan: the harmony and bass lanes under it (which must
- * be written, and tile the span), in key, with params (NULL for the defaults). The same rules the checker applies.
- * True when the lane could be read, with *violation NULL if nothing is broken and otherwise the rule that is.
- */
-bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const MelodyFillParams *params,
-                       const char **violation);
-
-/*
  * The notes of a melody-fill candidate that carry the motive (the idea's realized notes, R-354), as melody_apply would
  * write them: onsets from the start of the target span, the pickup before them. *target is the span the candidate is for.
  * At most capacity notes are written and *count is how many. False for a candidate that is not a melody-fill payload, has

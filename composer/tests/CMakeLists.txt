@@ -2,7 +2,8 @@
 link_libraries(ursatz_composer_internal)
 
 # Helpers the tests share (tests/support).
-add_library(composer_test_support STATIC support/test_support.c support/test_composer.c)
+add_library(composer_test_support STATIC support/test_support.c support/test_composer.c support/test_oracles.c
+            support/voice_hear.c)
 target_link_libraries(composer_test_support PUBLIC ursatz_composer cjson)
 target_include_directories(composer_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(composer_test_support PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
@@ -90,7 +91,7 @@ target_compile_options(test_harmony_roman PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_roman COMMAND test_harmony_roman)
 
 add_executable(test_harmony_embellish test_harmony_embellish.c)
-target_link_libraries(test_harmony_embellish PRIVATE ursatz_composer)
+target_link_libraries(test_harmony_embellish PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_harmony_embellish PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_embellish COMMAND test_harmony_embellish)
 
@@ -100,7 +101,7 @@ target_compile_options(test_harmony_bass PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_bass COMMAND test_harmony_bass)
 
 add_executable(test_harmony_schema test_harmony_schema.c)
-target_link_libraries(test_harmony_schema PRIVATE ursatz_composer)
+target_link_libraries(test_harmony_schema PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_harmony_schema PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_schema COMMAND test_harmony_schema)
 
@@ -170,7 +171,7 @@ add_test(NAME test_develop_cli COMMAND test_develop_cli)
 endif()
 
 add_executable(test_melody_fill test_melody_fill.c)
-target_link_libraries(test_melody_fill PRIVATE ursatz_composer)
+target_link_libraries(test_melody_fill PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_melody_fill PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_melody_fill COMMAND test_melody_fill)
 
@@ -200,7 +201,7 @@ target_compile_definitions(test_form_hear PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_
 add_test(NAME test_form_hear COMMAND test_form_hear)
 
 add_executable(test_harmony_prolong test_harmony_prolong.c)
-target_link_libraries(test_harmony_prolong PRIVATE ursatz_composer)
+target_link_libraries(test_harmony_prolong PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_harmony_prolong PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_harmony_prolong PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_prolong COMMAND test_harmony_prolong)
@@ -330,7 +331,7 @@ target_compile_options(test_voicing PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_voicing COMMAND test_voicing)
 
 add_executable(test_voicing_heard test_voicing_heard.c)
-target_link_libraries(test_voicing_heard PRIVATE ursatz_composer)
+target_link_libraries(test_voicing_heard PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_voicing_heard PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_voicing_heard_chorale COMMAND test_voicing_heard chorale)
 add_test(NAME test_voicing_heard_voicing COMMAND test_voicing_heard voicing)
@@ -490,7 +491,7 @@ endforeach()
 set_tests_properties(test_form_return_embellish test_form_return_setting test_form_return_reregister test_form_return_home PROPERTIES LABELS slow)
 
 add_executable(test_form_figure test_form_figure.c)
-target_link_libraries(test_form_figure PRIVATE ursatz_composer)
+target_link_libraries(test_form_figure PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_form_figure PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_figure PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # The figurate return (form_figure.h): the smoke test is quick; the sweep composes 50 pieces.
@@ -825,12 +826,12 @@ add_test(NAME test_piece_cli COMMAND test_piece_cli WORKING_DIRECTORY ${CMAKE_CU
 endif()
 
 add_executable(test_harmony_beats test_harmony_beats.c)
-target_link_libraries(test_harmony_beats PRIVATE ursatz_composer)
+target_link_libraries(test_harmony_beats PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_harmony_beats PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_beats COMMAND test_harmony_beats)
 
 add_executable(test_melody_beats test_melody_beats.c)
-target_link_libraries(test_melody_beats PRIVATE ursatz_composer)
+target_link_libraries(test_melody_beats PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_melody_beats PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_melody_beats PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_melody_beats COMMAND test_melody_beats)

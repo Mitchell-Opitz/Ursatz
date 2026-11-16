@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_json.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "support/test_oracles.h"
 
 /*
  * The `progression` command, run as a process. What it wrote is read back from the files and judged by the same

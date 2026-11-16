@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
-#include <ursatz_composer/voice_hear.h>
+#include "support/voice_hear.h"
 
 /*
  * Themes grown in four parts, seeds 1 to 10, in C major 4/4, G major 3/4 and D minor 4/4. With the argument "chorale"

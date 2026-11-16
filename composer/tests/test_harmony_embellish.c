@@ -9,6 +9,7 @@
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_oracles.h"
 
 /*
  * The embellishment operator, run through the fill loop after the phrase-model operator wrote a plain

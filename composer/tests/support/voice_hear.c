@@ -3,7 +3,7 @@
  * inputs are built from the plan, not from a render, so it stays a framework call. What a listener finds in the
  * written music is heard through the Analyzer once per run (check/hearing.h).
  */
-#include <ursatz_composer/voice_hear.h>
+#include "voice_hear.h"
 
 #include <stdio.h>
 #include <stdlib.h>

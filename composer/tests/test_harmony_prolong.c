@@ -9,6 +9,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "support/test_oracles.h"
 
 /*
  * The prolongation harmony operator, run through the fill loop with its checker. Every plan is one idea over a

@@ -1,5 +1,5 @@
-#ifndef URSATZ_COMPOSER_VOICE_HEAR_H
-#define URSATZ_COMPOSER_VOICE_HEAR_H
+#ifndef URSATZ_COMPOSER_TEST_VOICE_HEAR_H
+#define URSATZ_COMPOSER_TEST_VOICE_HEAR_H
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -142,7 +142,6 @@ add_library(ursatz_composer STATIC
     texture/voicing.c
     texture/voicing_check.c
     texture/voicing_search.c
-    texture/voice_hear.c
     texture/texture_check.c
     counterpoint/counterpoint_write.c
     counterpoint/counterpoint_species.c

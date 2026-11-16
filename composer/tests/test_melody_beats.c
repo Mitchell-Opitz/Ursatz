@@ -13,6 +13,7 @@
 #include <ursatz_composer/voicing.h>
 
 #include "accompaniment_check.h"
+#include "support/test_oracles.h"
 
 /*
  * Melody, accompaniment and voicing over spans that start and end on any beat, and melody pickups (R-168). Everything
