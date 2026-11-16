@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 
-#include "minor_scale_rules.h"
 #include "pitch/key_signature.h"
 #include "pitch/pitch_spelling.h"
 #include "roman_numeral_analysis_rules.h"
@@ -33,33 +32,6 @@ typedef enum {
 int standard_tonality_degree_semitone(StandardTonalityMode mode, int degree);
 
 /*
- * The degree (1 to 7, by letter distance from the tonic) and alteration of
- * a note against the mode's scale. False (outputs untouched) for NULL
- * outputs, an invalid letter, or an invalid mode.
- */
-bool standard_tonality_degree_of(PitchLetter tonic_letter, int tonic_accidental,
-                                 StandardTonalityMode mode, PitchLetter note_letter,
-                                 int note_accidental, int *degree, int *alteration);
-
-/*
- * The note at `degree` (1 to 7) raised by `alteration` semitones. False
- * (outputs untouched) for NULL outputs, an invalid letter, mode, or
- * degree, or a spelling that would need more than a double accidental.
- */
-bool standard_tonality_spell_degree(PitchLetter tonic_letter, int tonic_accidental,
-                                    StandardTonalityMode mode, int degree, int alteration,
-                                    PitchLetter *letter, int *accidental);
-
-/*
- * The degree (1 to 7) of the note in the mode's scale on that tonic, 0 when the note is not in the
- * scale (letter and accidental must match) or the tonic has no such scale (a degree would need more
- * than a double accidental).
- */
-int standard_tonality_scale_degree_in_mode(PitchLetter tonic_letter, int tonic_accidental,
-                                           StandardTonalityMode mode, PitchLetter note_letter,
-                                           int note_accidental);
-
-/*
  * The signature of a key as sharps (positive) or flats (negative). The
  * tonic's place on the line of fifths, less 3 for a minor key. Harmonic and
  * melodic minor use the natural-minor signature. Imaginary keys (beyond
@@ -85,25 +57,6 @@ bool standard_tonality_key_tonic_of_pitch_class(int pitch_class, bool minor, Pit
 /* The label of the chromatic scale degree `semitones_above_tonic` (any integer, reduced mod 12): "1" "b2" "2"
  * "b3" "3" "4" "#4" "5" "b6" "6" "b7" "7". */
 const char *standard_tonality_chromatic_degree_label(int semitones_above_tonic);
-
-/* The relative key's tonic: a minor third down for a major key, up for a minor key. */
-bool standard_tonality_relative_key(PitchLetter tonic_letter, int tonic_accidental, bool minor,
-                                    PitchLetter *letter, int *accidental);
-
-/* The tonic `steps` places around the circle of fifths (positive clockwise, a fifth up). False for
- * NULL outputs or a tonic that would need more than a double accidental. */
-bool standard_tonality_circle_step(PitchLetter letter, int accidental, int steps,
-                                   PitchLetter *out_letter, int *out_accidental);
-
-/* The mode of a minor form (the descending melodic form is the natural minor). False for an invalid
- * form or NULL out. */
-bool standard_tonality_mode_of_minor_form(StandardTonalityMinorForm form,
-                                          StandardTonalityMode *out);
-
-/* The mode of a Roman numeral key mode: major, or the natural minor. False for an invalid value or
- * NULL out. */
-bool standard_tonality_mode_of_roman_key_mode(StandardTonalityRomanKeyMode mode,
-                                              StandardTonalityMode *out);
 
 /*
  * The scale of a mode on a tonic as a 12-bit mask over pitch classes (bit n is pitch class n), for a

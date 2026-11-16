@@ -11,10 +11,6 @@ static const StandardTonalityMode MODES[4] = {STANDARD_TONALITY_MODE_MAJOR, STAN
                                               STANDARD_TONALITY_MODE_HARMONIC_MINOR,
                                               STANDARD_TONALITY_MODE_MELODIC_MINOR};
 
-static bool mode_is_minor(StandardTonalityMode mode) {
-    return mode != STANDARD_TONALITY_MODE_MAJOR;
-}
-
 /* Tonic of the key with `fifths` sharps (flats negative), from -7 to 7. */
 static void tonic_of(int fifths, bool minor, PitchLetter *letter, int *accidental) {
     assert(standard_tonality_key_of_fifths(fifths, minor, letter, accidental));
@@ -33,114 +29,6 @@ static void test_degree_semitones(void) {
         assert(standard_tonality_degree_semitone(MODES[m], 8) == -1);
     }
     assert(standard_tonality_degree_semitone((StandardTonalityMode)9, 1) == -1);
-}
-
-static void test_spell_and_degree_in_every_key_and_mode(void) {
-    for (int m = 0; m < 4; m++) {
-        bool minor = mode_is_minor(MODES[m]);
-        for (int fifths = -7; fifths <= 7; fifths++) {
-            PitchLetter tonic_letter;
-            int tonic_accidental;
-            tonic_of(fifths, minor, &tonic_letter, &tonic_accidental);
-            for (int degree = 1; degree <= 7; degree++) {
-                PitchLetter letter;
-                int accidental;
-                assert(standard_tonality_spell_degree(tonic_letter, tonic_accidental, MODES[m], degree, 0, &letter,
-                                                      &accidental));
-                assert(letter == pitch_letter_offset(tonic_letter, degree - 1));
-                int pc = pitch_class_of_letter(letter, accidental);
-                int expected = (pitch_class_of_letter(tonic_letter, tonic_accidental) +
-                                standard_tonality_degree_semitone(MODES[m], degree)) % 12;
-                assert(pc == expected);
-
-                int found;
-                int alteration;
-                assert(standard_tonality_degree_of(tonic_letter, tonic_accidental, MODES[m], letter, accidental,
-                                                   &found, &alteration));
-                assert(found == degree && alteration == 0);
-                assert(standard_tonality_scale_degree_in_mode(tonic_letter, tonic_accidental, MODES[m], letter,
-                                                              accidental) == degree);
-
-                /* Raising by one semitone: the same letter, one more accidental. */
-                PitchLetter raised_letter;
-                int raised_accidental;
-                if (standard_tonality_spell_degree(tonic_letter, tonic_accidental, MODES[m], degree, 1,
-                                                   &raised_letter, &raised_accidental)) {
-                    assert(raised_letter == letter && raised_accidental == accidental + 1);
-                    assert(standard_tonality_degree_of(tonic_letter, tonic_accidental, MODES[m], raised_letter,
-                                                       raised_accidental, &found, &alteration));
-                    assert(found == degree && alteration == 1);
-                    assert(standard_tonality_scale_degree_in_mode(tonic_letter, tonic_accidental, MODES[m],
-                                                                  raised_letter, raised_accidental) == 0);
-                }
-            }
-        }
-    }
-}
-
-static void test_known_spellings(void) {
-    PitchLetter letter;
-    int accidental;
-    /* C major: F# is the raised fourth. */
-    assert(standard_tonality_degree_of(PITCH_LETTER_C, 0, STANDARD_TONALITY_MODE_MAJOR, PITCH_LETTER_F, 1, &(int){0},
-                                       &accidental));
-    assert(accidental == 1);
-    /* A minor: the seventh is G natural, G# in harmonic and melodic. */
-    assert(standard_tonality_spell_degree(PITCH_LETTER_A, 0, STANDARD_TONALITY_MODE_NATURAL_MINOR, 7, 0, &letter,
-                                          &accidental));
-    assert(letter == PITCH_LETTER_G && accidental == 0);
-    assert(standard_tonality_spell_degree(PITCH_LETTER_A, 0, STANDARD_TONALITY_MODE_HARMONIC_MINOR, 7, 0, &letter,
-                                          &accidental));
-    assert(letter == PITCH_LETTER_G && accidental == 1);
-    assert(standard_tonality_spell_degree(PITCH_LETTER_A, 0, STANDARD_TONALITY_MODE_HARMONIC_MINOR, 6, 0, &letter,
-                                          &accidental));
-    assert(letter == PITCH_LETTER_F && accidental == 0);
-    assert(standard_tonality_spell_degree(PITCH_LETTER_A, 0, STANDARD_TONALITY_MODE_MELODIC_MINOR, 6, 0, &letter,
-                                          &accidental));
-    assert(letter == PITCH_LETTER_F && accidental == 1);
-    assert(standard_tonality_spell_degree(PITCH_LETTER_A, 0, STANDARD_TONALITY_MODE_MELODIC_MINOR, 7, 0, &letter,
-                                          &accidental));
-    assert(letter == PITCH_LETTER_G && accidental == 1);
-    /* C minor harmonic: B natural. G# harmonic minor: F double sharp. */
-    assert(standard_tonality_spell_degree(PITCH_LETTER_C, 0, STANDARD_TONALITY_MODE_HARMONIC_MINOR, 7, 0, &letter,
-                                          &accidental));
-    assert(letter == PITCH_LETTER_B && accidental == 0);
-    assert(standard_tonality_spell_degree(PITCH_LETTER_G, 1, STANDARD_TONALITY_MODE_HARMONIC_MINOR, 7, 0, &letter,
-                                          &accidental));
-    assert(letter == PITCH_LETTER_F && accidental == 2);
-    /* An alteration by a chromatic step. */
-    int degree;
-    int alteration;
-    assert(standard_tonality_degree_of(PITCH_LETTER_B, -1, STANDARD_TONALITY_MODE_MAJOR, PITCH_LETTER_G, -1, &degree,
-                                       &alteration));
-    assert(degree == 6 && alteration == -1 + 0);
-    assert(standard_tonality_degree_of(PITCH_LETTER_B, 0, STANDARD_TONALITY_MODE_MAJOR, PITCH_LETTER_C, 0, &degree,
-                                       &alteration));
-    assert(degree == 2 && alteration == -1);
-}
-
-static void test_spell_rejects(void) {
-    PitchLetter letter = PITCH_LETTER_D;
-    int accidental = 5;
-    assert(!standard_tonality_spell_degree(PITCH_LETTER_C, 0, STANDARD_TONALITY_MODE_MAJOR, 0, 0, &letter,
-                                           &accidental));
-    assert(!standard_tonality_spell_degree(PITCH_LETTER_C, 0, STANDARD_TONALITY_MODE_MAJOR, 8, 0, &letter,
-                                           &accidental));
-    assert(!standard_tonality_spell_degree(PITCH_LETTER_C, 0, (StandardTonalityMode)7, 1, 0, &letter, &accidental));
-    assert(!standard_tonality_spell_degree((PitchLetter)42, 0, STANDARD_TONALITY_MODE_MAJOR, 1, 0, &letter,
-                                           &accidental));
-    assert(!standard_tonality_spell_degree(PITCH_LETTER_G, 2, STANDARD_TONALITY_MODE_MAJOR, 7, 0, &letter,
-                                           &accidental));
-    assert(!standard_tonality_spell_degree(PITCH_LETTER_C, 0, STANDARD_TONALITY_MODE_MAJOR, 1, 0, NULL, &accidental));
-    assert(letter == PITCH_LETTER_D && accidental == 5);
-    int degree;
-    assert(!standard_tonality_degree_of(PITCH_LETTER_C, 0, STANDARD_TONALITY_MODE_MAJOR, PITCH_LETTER_C, 0, &degree,
-                                        NULL));
-    assert(!standard_tonality_degree_of(PITCH_LETTER_C, 0, (StandardTonalityMode)7, PITCH_LETTER_C, 0, &degree,
-                                        &accidental));
-    /* G double sharp has no major scale: its seventh would need three sharps. */
-    assert(standard_tonality_scale_degree_in_mode(PITCH_LETTER_G, 2, STANDARD_TONALITY_MODE_MAJOR, PITCH_LETTER_G, 2) ==
-           0);
 }
 
 static void test_key_signatures_for_all_thirty_keys(void) {
@@ -216,54 +104,6 @@ static void test_key_of_fifths(void) {
     }
 }
 
-static void test_relative_keys(void) {
-    PitchLetter letter;
-    int accidental;
-    assert(standard_tonality_relative_key(PITCH_LETTER_C, 0, false, &letter, &accidental));
-    assert(letter == PITCH_LETTER_A && accidental == 0);
-    assert(standard_tonality_relative_key(PITCH_LETTER_A, 0, true, &letter, &accidental));
-    assert(letter == PITCH_LETTER_C && accidental == 0);
-    assert(standard_tonality_relative_key(PITCH_LETTER_E, -1, false, &letter, &accidental));
-    assert(letter == PITCH_LETTER_C && accidental == 0);
-    assert(standard_tonality_relative_key(PITCH_LETTER_C, 1, true, &letter, &accidental));
-    assert(letter == PITCH_LETTER_E && accidental == 0);
-    for (int fifths = -7; fifths <= 7; fifths++) {
-        PitchLetter major_letter;
-        int major_accidental;
-        PitchLetter minor_letter;
-        int minor_accidental;
-        tonic_of(fifths, false, &major_letter, &major_accidental);
-        assert(standard_tonality_relative_key(major_letter, major_accidental, false, &minor_letter, &minor_accidental));
-        int minor_fifths;
-        assert(standard_tonality_key_fifths(minor_letter, minor_accidental, true, &minor_fifths));
-        assert(minor_fifths == fifths);
-        PitchLetter back_letter;
-        int back_accidental;
-        assert(standard_tonality_relative_key(minor_letter, minor_accidental, true, &back_letter, &back_accidental));
-        assert(back_letter == major_letter && back_accidental == major_accidental);
-    }
-}
-
-static void test_circle_steps(void) {
-    PitchLetter letter;
-    int accidental;
-    assert(standard_tonality_circle_step(PITCH_LETTER_C, 0, 1, &letter, &accidental));
-    assert(letter == PITCH_LETTER_G && accidental == 0);
-    assert(standard_tonality_circle_step(PITCH_LETTER_C, 0, -1, &letter, &accidental));
-    assert(letter == PITCH_LETTER_F && accidental == 0);
-    assert(standard_tonality_circle_step(PITCH_LETTER_C, 0, 6, &letter, &accidental));
-    assert(letter == PITCH_LETTER_F && accidental == 1);
-    assert(standard_tonality_circle_step(PITCH_LETTER_C, 0, -6, &letter, &accidental));
-    assert(letter == PITCH_LETTER_G && accidental == -1);
-    assert(standard_tonality_circle_step(PITCH_LETTER_B, 0, 0, &letter, &accidental));
-    assert(letter == PITCH_LETTER_B && accidental == 0);
-    /* Twelve steps return to the same pitch class, spelled with one more sharp per seven steps. */
-    assert(standard_tonality_circle_step(PITCH_LETTER_C, 0, 12, &letter, &accidental));
-    assert(letter == PITCH_LETTER_B && accidental == 1);
-    assert(!standard_tonality_circle_step(PITCH_LETTER_C, 0, 40, &letter, &accidental));
-    assert(!standard_tonality_circle_step(PITCH_LETTER_C, 0, 1, NULL, &accidental));
-}
-
 static void test_enharmonic_keys(void) {
     static const int PAIRS[3][2] = {{5, -7}, {6, -6}, {7, -5}};
     for (int minor = 0; minor <= 1; minor++) {
@@ -286,37 +126,12 @@ static void test_enharmonic_keys(void) {
     }
 }
 
-static void test_mode_mappings(void) {
-    StandardTonalityMode mode;
-    assert(standard_tonality_mode_of_minor_form(STANDARD_TONALITY_MINOR_NATURAL, &mode) &&
-           mode == STANDARD_TONALITY_MODE_NATURAL_MINOR);
-    assert(standard_tonality_mode_of_minor_form(STANDARD_TONALITY_MINOR_HARMONIC, &mode) &&
-           mode == STANDARD_TONALITY_MODE_HARMONIC_MINOR);
-    assert(standard_tonality_mode_of_minor_form(STANDARD_TONALITY_MINOR_MELODIC_ASCENDING, &mode) &&
-           mode == STANDARD_TONALITY_MODE_MELODIC_MINOR);
-    assert(standard_tonality_mode_of_minor_form(STANDARD_TONALITY_MINOR_MELODIC_DESCENDING, &mode) &&
-           mode == STANDARD_TONALITY_MODE_NATURAL_MINOR);
-    assert(!standard_tonality_mode_of_minor_form(STANDARD_TONALITY_MINOR_FORM_COUNT, &mode));
-    assert(!standard_tonality_mode_of_minor_form(STANDARD_TONALITY_MINOR_NATURAL, NULL));
-    assert(standard_tonality_mode_of_roman_key_mode(STANDARD_TONALITY_ROMAN_KEY_MAJOR, &mode) &&
-           mode == STANDARD_TONALITY_MODE_MAJOR);
-    assert(standard_tonality_mode_of_roman_key_mode(STANDARD_TONALITY_ROMAN_KEY_MINOR, &mode) &&
-           mode == STANDARD_TONALITY_MODE_NATURAL_MINOR);
-    assert(!standard_tonality_mode_of_roman_key_mode((StandardTonalityRomanKeyMode)9, &mode));
-}
-
 int main(void) {
     test_degree_semitones();
-    test_spell_and_degree_in_every_key_and_mode();
-    test_known_spellings();
-    test_spell_rejects();
     test_key_signatures_for_all_thirty_keys();
     test_known_signatures();
     test_key_of_fifths();
-    test_relative_keys();
-    test_circle_steps();
     test_enharmonic_keys();
-    test_mode_mappings();
     printf("test_tonal_key: ok\n");
     return 0;
 }

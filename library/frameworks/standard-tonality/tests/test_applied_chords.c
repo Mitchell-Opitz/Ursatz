@@ -67,9 +67,6 @@ static void test_v_of_v_resolving_to_v_is_relabelled(void) {
 
     /* The resolution itself is the plain V and carries no link. */
     assert(strcmp(results[1].claim.label, "V") == 0 && results[1].resolves_to == NULL);
-
-    StandardTonalityRomanClaim claim;
-    assert(standard_tonality_roman_claim_read(results[0].interpretation, &claim) && claim.applied);
     standard_tonality_roman_results_destroy(results, 2);
 }
 

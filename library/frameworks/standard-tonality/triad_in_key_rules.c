@@ -2,19 +2,6 @@
 
 #include <stddef.h>
 
-#include "major_scale_rules.h"
-#include "minor_scale_rules.h"
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT] = {
-    "triad-in-key-major-key", "triad-in-key-minor-key", "triad-in-key-raised-leading-tone",
-    "triad-in-key-key-independent"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
-    NAMES, STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_tonality_triad_in_key, StandardTonalityTriadInKeyRule, STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT, g_table)
-
 #define MA STANDARD_TONALITY_TRIAD_MAJOR
 #define MI STANDARD_TONALITY_TRIAD_MINOR
 #define DIM STANDARD_TONALITY_TRIAD_DIMINISHED
@@ -39,55 +26,3 @@ bool standard_tonality_triad_quality_in_key(StandardTonalityTriadKey key, int de
     return true;
 }
 
-bool standard_tonality_spell_diatonic_triad(StandardTonalityTriadKey key, const PitchSpelling *tonic, int degree,
-                                            PitchSpelling *out[3]) {
-    if (!valid_key(key) || tonic == NULL || degree < 1 || degree > 7 || out == NULL) {
-        return false;
-    }
-
-    PitchSpelling *scale[8];
-    bool built;
-    switch (key) {
-        case STANDARD_TONALITY_TRIAD_KEY_MAJOR:
-            built = standard_tonality_build_major_scale(tonic, scale);
-            break;
-        case STANDARD_TONALITY_TRIAD_KEY_MINOR_NATURAL:
-            built = standard_tonality_build_minor_scale(STANDARD_TONALITY_MINOR_NATURAL, tonic, scale);
-            break;
-        default:
-            built = standard_tonality_build_minor_scale(STANDARD_TONALITY_MINOR_HARMONIC, tonic, scale);
-            break;
-    }
-    if (!built) {
-        return false;
-    }
-
-    /* Root, third, and fifth are the scale notes at the degree, two
-       above, and four above; the scale repeats an octave up. */
-    PitchSpelling *built_notes[3] = {NULL, NULL, NULL};
-    bool ok = true;
-    for (size_t i = 0; i < 3 && ok; i++) {
-        size_t index = (size_t)(degree - 1) + 2 * i;
-        const PitchSpelling *source = scale[index % 7];
-        int octave = pitch_spelling_octave(source) + (int)(index / 7);
-        ok = pitch_spelling_create(pitch_spelling_letter(source), pitch_spelling_accidental(source), octave,
-                                   &built_notes[i]) == PITCH_SPELLING_OK;
-    }
-
-    for (size_t i = 0; i < 8; i++) {
-        pitch_spelling_destroy(scale[i]);
-    }
-
-    if (!ok) {
-        for (size_t i = 0; i < 3; i++) {
-            if (built_notes[i] != NULL) {
-                pitch_spelling_destroy(built_notes[i]);
-            }
-        }
-        return false;
-    }
-    for (size_t i = 0; i < 3; i++) {
-        out[i] = built_notes[i];
-    }
-    return true;
-}

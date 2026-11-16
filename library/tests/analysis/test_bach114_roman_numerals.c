@@ -262,7 +262,7 @@ static void test_adapter_alone_matches_the_hand_analysis(void) {
         }
     }
     StandardTonalityRomanResult *results = NULL;
-    assert(standard_tonality_build_roman_numerals(inputs, p.segment_count, &results) == STANDARD_TONALITY_ROMAN_OK);
+    assert(standard_tonality_build_roman_numerals_with_config(inputs, p.segment_count, NULL, &results) == STANDARD_TONALITY_ROMAN_OK);
 
     size_t annotated = 0;
     size_t matched = 0;
@@ -368,7 +368,7 @@ static void test_whole_chain_against_the_hand_analysis(void) {
                                                 regions.region_count, &inputs, &input_count) ==
            STANDARD_TONALITY_CHORD_INPUT_OK);
     StandardTonalityRomanResult *results = NULL;
-    assert(standard_tonality_build_roman_numerals(inputs, input_count, &results) == STANDARD_TONALITY_ROMAN_OK);
+    assert(standard_tonality_build_roman_numerals_with_config(inputs, input_count, NULL, &results) == STANDARD_TONALITY_ROMAN_OK);
 
     size_t annotated = 0;
     size_t matched = 0;

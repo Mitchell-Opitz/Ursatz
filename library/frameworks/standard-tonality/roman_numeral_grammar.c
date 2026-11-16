@@ -315,40 +315,6 @@ bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *
     return true;
 }
 
-bool standard_tonality_numeral_base(const StandardTonalityNumeralText *numeral, StandardTonalityRomanNumeral *out) {
-    if (out == NULL || !valid_numeral(numeral)) {
-        return false;
-    }
-    StandardTonalitySeventhQuality seventh;
-    switch (numeral->quality) {
-        case STANDARD_TONALITY_NUMERAL_MAJOR:
-            return standard_tonality_roman_numeral_triad(numeral->degree, STANDARD_TONALITY_TRIAD_MAJOR, out);
-        case STANDARD_TONALITY_NUMERAL_MINOR:
-            return standard_tonality_roman_numeral_triad(numeral->degree, STANDARD_TONALITY_TRIAD_MINOR, out);
-        case STANDARD_TONALITY_NUMERAL_DIMINISHED:
-            return standard_tonality_roman_numeral_triad(numeral->degree, STANDARD_TONALITY_TRIAD_DIMINISHED, out);
-        case STANDARD_TONALITY_NUMERAL_AUGMENTED:
-            return standard_tonality_roman_numeral_triad(numeral->degree, STANDARD_TONALITY_TRIAD_AUGMENTED, out);
-        case STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH:
-            return standard_tonality_roman_numeral_inferred_seventh(numeral->degree, &seventh) &&
-                   standard_tonality_roman_numeral_seventh_chord(numeral->degree, seventh, out);
-        case STANDARD_TONALITY_NUMERAL_MAJOR_SEVENTH:
-            return standard_tonality_roman_numeral_seventh_chord(numeral->degree, STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR,
-                                                                 out);
-        case STANDARD_TONALITY_NUMERAL_MINOR_SEVENTH:
-            return standard_tonality_roman_numeral_seventh_chord(numeral->degree, STANDARD_TONALITY_SEVENTH_MINOR_MINOR,
-                                                                 out);
-        case STANDARD_TONALITY_NUMERAL_HALF_DIMINISHED_SEVENTH:
-            return standard_tonality_roman_numeral_seventh_chord(
-                numeral->degree, STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED, out);
-        case STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH:
-            return standard_tonality_roman_numeral_seventh_chord(
-                numeral->degree, STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED, out);
-        default:
-            return false;
-    }
-}
-
 bool standard_tonality_numeral_from_base(const StandardTonalityRomanNumeral *numeral,
                                          StandardTonalityNumeralText *out) {
     if (numeral == NULL || out == NULL || numeral->degree < 1 || numeral->degree > 7) {

@@ -111,21 +111,9 @@ typedef enum {
     STANDARD_TONALITY_ROMAN_ERR_ALLOC
 } StandardTonalityRomanStatus;
 
-/*
- * One result per input, in order. Each segment is first read in its local key; a segment with a reading is
- * then re-checked as an applied chord (applied_chords.h) with the default configuration. On OK, *out owns the
- * results, their Interpretations and Relationships (standard_tonality_roman_results_destroy); otherwise *out is
- * untouched.
- */
-StandardTonalityRomanStatus standard_tonality_build_roman_numerals(const StandardTonalityChordInput *inputs,
-                                                                   size_t count, StandardTonalityRomanResult **out);
-
 /* standard_tonality_build_roman_numerals_with_config, with the applied chord thresholds of a
    StandardTonalityAppliedConfig, is in applied_chords.h. */
 
 void standard_tonality_roman_results_destroy(StandardTonalityRomanResult *results, size_t count);
-
-/* Reads the structured fields back out of a Roman numeral Interpretation's claim. False if it is not one. */
-bool standard_tonality_roman_claim_read(const Interpretation *interpretation, StandardTonalityRomanClaim *out);
 
 #endif

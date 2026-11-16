@@ -4,16 +4,6 @@
 #include <string.h>
 
 #include "roman_numeral_grammar.h"
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT] = {
-    "roman-numeral-degrees", "roman-numeral-case", "roman-numeral-triad-symbols", "roman-numeral-seventh-symbols",
-    "roman-numeral-seventh-inference"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
-    NAMES, STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_tonality_roman_numeral, StandardTonalityRomanNumeralRule, STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT, g_table)
 
 static const char *const UPPERCASE[7] = {"I", "II", "III", "IV", "V", "VI", "VII"};
 static const char *const LOWERCASE[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
@@ -23,14 +13,6 @@ const char *standard_tonality_roman_numeral_degree(int degree, bool uppercase) {
         return NULL;
     }
     return uppercase ? UPPERCASE[degree - 1] : LOWERCASE[degree - 1];
-}
-
-bool standard_tonality_roman_numeral_triad_uppercase(StandardTonalityTriadQuality quality) {
-    return quality == STANDARD_TONALITY_TRIAD_MAJOR || quality == STANDARD_TONALITY_TRIAD_AUGMENTED;
-}
-
-bool standard_tonality_roman_numeral_seventh_uppercase(StandardTonalitySeventhQuality quality) {
-    return quality == STANDARD_TONALITY_SEVENTH_MAJOR_MAJOR || quality == STANDARD_TONALITY_SEVENTH_MAJOR_MINOR;
 }
 
 const char *standard_tonality_roman_numeral_triad_symbol(StandardTonalityTriadQuality quality) {
@@ -125,18 +107,3 @@ bool standard_tonality_roman_numeral_format(const StandardTonalityRomanNumeral *
            standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_DISPLAY, buffer, size);
 }
 
-bool standard_tonality_roman_numeral_parse(const char *text, StandardTonalityRomanNumeral *out) {
-    StandardTonalityNumeralText parsed;
-    /* The plain numeral has no place for an alteration, an inversion, or an applied target. */
-    return standard_tonality_numeral_parse(text, &parsed) && parsed.alteration == 0 && parsed.inversion == 0 &&
-           !parsed.has_target && standard_tonality_numeral_base(&parsed, out);
-}
-
-ChordResult standard_tonality_build_roman_numeral_chord(const StandardTonalityRomanNumeral *numeral,
-                                                        EntityID *target_id, Chord **out) {
-    char label[32];
-    if (!standard_tonality_roman_numeral_format(numeral, label, sizeof(label))) {
-        return CHORD_ERR_NULL_LABEL;
-    }
-    return standard_tonality_build_chord_from_label(label, "roman-numeral-vocabulary", target_id, out);
-}

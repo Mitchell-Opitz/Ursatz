@@ -98,13 +98,6 @@ bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *
                                              int *semitones);
 
 /*
- * The plain triad or seventh numeral (inversion, alteration and target dropped). A dominant seventh text on
- * degree 5 or 7 is the major-minor seventh and on any other degree the major-major seventh, as the existing
- * entry points read an uppercase numeral with a 7. False (output untouched) for an invalid value or NULL.
- */
-bool standard_tonality_numeral_base(const StandardTonalityNumeralText *numeral, StandardTonalityRomanNumeral *out);
-
-/*
  * The text of a plain numeral: root position, no alteration, no target. The major-major and major-minor sevenths
  * both become the dominant seventh text, since "7" after an uppercase numeral names either (see
  * standard_tonality_roman_numeral_inferred_seventh). False (output untouched) for an invalid numeral or NULL.

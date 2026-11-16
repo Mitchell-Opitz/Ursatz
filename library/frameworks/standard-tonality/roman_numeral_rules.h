@@ -4,11 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "chord_symbol_rules.h"
 #include "identity/entity_id.h"
 #include "interpretation/chord.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "seventh_rules.h"
 #include "triad_rules.h"
 
@@ -39,13 +36,13 @@
  *                  dominant sevenths and any other uppercase numeral
  *                  with a 7 as a major seventh chord
  *
- * Symbols are UTF-8, as in chord_symbol_rules.h: the degree sign (°) and
+ * Symbols are UTF-8: the degree sign (°) and
  * the empty set sign (∅). Superscript is presentation, so the 7 is plain
  * here. Parsing also takes "o" for the circle and the slashed letter ø
  * for the slashed circle.
  *
- * Absolute chord symbols (chord_symbol_rules.h) name a chord by its root;
- * these name it by its function in a key. Reading a numeral in a key is
+ * Absolute chord symbols name a chord by its root; these name it by its
+ * function in a key. Reading a numeral in a key is
  * roman_numeral_analysis_rules.h. common-practice-minimal's own key-
  * relative triad labels are unchanged.
  */
@@ -57,29 +54,9 @@ typedef struct {
     StandardTonalitySeventhQuality seventh_quality; /* the quality when seventh */
 } StandardTonalityRomanNumeral;
 
-typedef enum {
-    STANDARD_TONALITY_ROMAN_NUMERAL_RULE_DEGREES = 0,
-    STANDARD_TONALITY_ROMAN_NUMERAL_RULE_CASE,
-    STANDARD_TONALITY_ROMAN_NUMERAL_RULE_TRIAD_SYMBOLS,
-    STANDARD_TONALITY_ROMAN_NUMERAL_RULE_SEVENTH_SYMBOLS,
-    STANDARD_TONALITY_ROMAN_NUMERAL_RULE_SEVENTH_INFERENCE,
-    STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT
-} StandardTonalityRomanNumeralRule;
-
-const Rule *standard_tonality_roman_numeral_rule(StandardTonalityRomanNumeralRule which);
-const Constraint *standard_tonality_roman_numeral_constraint(StandardTonalityRomanNumeralRule which);
-
 /* DEGREES / CASE: "I" ... "VII" or "i" ... "vii" for degree 1..7; NULL
    outside that range. */
 const char *standard_tonality_roman_numeral_degree(int degree, bool uppercase);
-
-/* CASE: true for the qualities with a major third above the root (major
-   and augmented triads, major-major and major-minor sevenths), false for
-   a minor third (minor and diminished triads, minor-minor, half-
-   diminished, and fully diminished sevenths). False for an invalid
-   quality. */
-bool standard_tonality_roman_numeral_triad_uppercase(StandardTonalityTriadQuality quality);
-bool standard_tonality_roman_numeral_seventh_uppercase(StandardTonalitySeventhQuality quality);
 
 /* TRIAD_SYMBOLS: "" for major and minor, "°" (the degree sign)
    diminished, "+" augmented. NULL for an invalid quality. */
@@ -117,28 +94,5 @@ bool standard_tonality_roman_numeral_is_unambiguous(const StandardTonalityRomanN
  * buffer too small.
  */
 bool standard_tonality_roman_numeral_format(const StandardTonalityRomanNumeral *numeral, char *buffer, size_t size);
-
-/*
- * Reads a numeral. Uppercase with nothing, "+", or "7" is a major triad,
- * an augmented triad, or (SEVENTH_INFERENCE) a seventh chord; lowercase
- * with nothing, a circle, "7", a slashed circle and 7, or a circle and 7
- * is a minor triad, a diminished triad, a minor-minor seventh, a half-
- * diminished seventh, or a fully diminished seventh. False (output
- * untouched) for NULL, an empty or malformed numeral, mixed case, a mark
- * that does not go with the case (an uppercase numeral with a circle),
- * or trailing text.
- */
-bool standard_tonality_roman_numeral_parse(const char *text, StandardTonalityRomanNumeral *out);
-
-/*
- * Builds a real, populated Chord labeled with the numeral, claiming that
- * the thing named by target_id (a Sonority, say) is that chord under
- * standard-tonality-v1. Takes ownership of target_id on success
- * (destroyed with the Chord); on failure the caller still owns it. An
- * invalid numeral is CHORD_ERR_NULL_LABEL; other ChordResult errors as in
- * interpretation/chord.h.
- */
-ChordResult standard_tonality_build_roman_numeral_chord(const StandardTonalityRomanNumeral *numeral,
-                                                        EntityID *target_id, Chord **out);
 
 #endif

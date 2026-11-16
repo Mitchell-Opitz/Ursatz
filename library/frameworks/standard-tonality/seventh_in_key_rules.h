@@ -4,8 +4,6 @@
 #include <stdbool.h>
 
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "seventh_rules.h"
 
 /*
@@ -44,34 +42,10 @@ typedef enum {
     STANDARD_TONALITY_SEVENTH_KEY_COUNT
 } StandardTonalitySeventhKey;
 
-typedef enum {
-    STANDARD_TONALITY_SEVENTH_IN_KEY_RULE_MAJOR_KEY = 0,
-    STANDARD_TONALITY_SEVENTH_IN_KEY_RULE_MINOR_KEY,
-    STANDARD_TONALITY_SEVENTH_IN_KEY_RULE_RAISED_LEADING_TONE,
-    STANDARD_TONALITY_SEVENTH_IN_KEY_RULE_KEY_INDEPENDENT,
-    STANDARD_TONALITY_SEVENTH_IN_KEY_RULE_COUNT
-} StandardTonalitySeventhInKeyRule;
-
-const Rule *standard_tonality_seventh_in_key_rule(StandardTonalitySeventhInKeyRule which);
-const Constraint *standard_tonality_seventh_in_key_constraint(StandardTonalitySeventhInKeyRule which);
-
 /* The quality of the seventh chord on scale degree 1..7 of the kind of
    key. False (output untouched) for an invalid key kind or degree, or
    NULL output. */
 bool standard_tonality_seventh_quality_in_key(StandardTonalitySeventhKey key, int degree,
                                               StandardTonalitySeventhQuality *quality);
-
-/*
- * KEY_INDEPENDENT: spells the seventh chord on the given degree of the
- * key of `tonic`: the root is the scale note at the degree (the major
- * scale, the natural minor scale, or for the raised leading tone the
- * harmonic minor scale) and the chord is that note's seventh chord of
- * the table's quality. Fills out[0..3] (the caller provides 4 pointers
- * and destroys each with pitch_spelling_destroy). False, leaving out
- * untouched, for NULL, an invalid key kind or degree, allocation
- * failure, or a scale or chord needing more than a double accidental.
- */
-bool standard_tonality_spell_diatonic_seventh(StandardTonalitySeventhKey key, const PitchSpelling *tonic, int degree,
-                                              PitchSpelling *out[4]);
 
 #endif

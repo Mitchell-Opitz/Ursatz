@@ -190,7 +190,7 @@ static bool read_numerals(Run *r) {
     }
     if (standard_tonality_build_chord_inputs(r->segment_inputs, n, r->annotation_region_inputs, region_total,
                                              &r->annotation_inputs, &count) != STANDARD_TONALITY_CHORD_INPUT_OK ||
-        standard_tonality_build_roman_numerals(r->annotation_inputs, count, &r->annotation_romans) !=
+        standard_tonality_build_roman_numerals_with_config(r->annotation_inputs, count, NULL, &r->annotation_romans) !=
             STANDARD_TONALITY_ROMAN_OK) {
         return false;
     }

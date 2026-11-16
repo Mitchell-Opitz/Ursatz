@@ -4,8 +4,6 @@
 #include <stdbool.h>
 
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "triad_rules.h"
 
 /*
@@ -41,31 +39,9 @@ typedef enum {
     STANDARD_TONALITY_TRIAD_KEY_COUNT
 } StandardTonalityTriadKey;
 
-typedef enum {
-    STANDARD_TONALITY_TRIAD_IN_KEY_RULE_MAJOR_KEY = 0,
-    STANDARD_TONALITY_TRIAD_IN_KEY_RULE_MINOR_KEY,
-    STANDARD_TONALITY_TRIAD_IN_KEY_RULE_RAISED_LEADING_TONE,
-    STANDARD_TONALITY_TRIAD_IN_KEY_RULE_KEY_INDEPENDENT,
-    STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT
-} StandardTonalityTriadInKeyRule;
-
-const Rule *standard_tonality_triad_in_key_rule(StandardTonalityTriadInKeyRule which);
-const Constraint *standard_tonality_triad_in_key_constraint(StandardTonalityTriadInKeyRule which);
-
 /* The quality of the triad on scale degree 1..7 of the kind of key. False
    (output untouched) for an invalid key kind or degree, or NULL output. */
 bool standard_tonality_triad_quality_in_key(StandardTonalityTriadKey key, int degree,
                                             StandardTonalityTriadQuality *quality);
-
-/*
- * KEY_INDEPENDENT: spells the triad on the given degree of the key of
- * `tonic`, stacking thirds from the notes of the spelled scale (major,
- * natural minor, or harmonic minor), into out[0..2] (the caller provides
- * 3 pointers and destroys each with pitch_spelling_destroy). False,
- * leaving out untouched, for NULL, an invalid key kind or degree,
- * allocation failure, or a scale needing more than a double accidental.
- */
-bool standard_tonality_spell_diatonic_triad(StandardTonalityTriadKey key, const PitchSpelling *tonic, int degree,
-                                            PitchSpelling *out[3]);
 
 #endif

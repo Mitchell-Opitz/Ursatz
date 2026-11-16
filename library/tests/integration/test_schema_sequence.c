@@ -207,7 +207,7 @@ static void chain_run(Chain *chain, const WeightedPipeline *p, const MeterMap *m
     }
     assert(standard_tonality_build_chord_inputs(chain->segment_inputs, count, chain->region_inputs, chain->regions.region_count,
                                                 &chain->tonal_inputs, &chain->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
-    assert(standard_tonality_build_roman_numerals(chain->tonal_inputs, chain->tonal_count, &chain->romans) == STANDARD_TONALITY_ROMAN_OK);
+    assert(standard_tonality_build_roman_numerals_with_config(chain->tonal_inputs, chain->tonal_count, NULL, &chain->romans) == STANDARD_TONALITY_ROMAN_OK);
     assert(chain->tonal_count == count);
     chain->tonic_pc = (int *)calloc(count, sizeof(int));
     chain->minor = (bool *)calloc(count, sizeof(bool));

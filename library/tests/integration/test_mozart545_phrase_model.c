@@ -435,7 +435,7 @@ static void test_whole_chain(void) {
     assert(standard_tonality_build_chord_inputs(segment_inputs, count, region_inputs, regions.region_count,
                                                 &tonal_inputs, &tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
     StandardTonalityRomanResult *romans = NULL;
-    assert(standard_tonality_build_roman_numerals(tonal_inputs, tonal_count, &romans) == STANDARD_TONALITY_ROMAN_OK);
+    assert(standard_tonality_build_roman_numerals_with_config(tonal_inputs, tonal_count, NULL, &romans) == STANDARD_TONALITY_ROMAN_OK);
 
     OuterVoiceLines lines = {0};
     assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map,

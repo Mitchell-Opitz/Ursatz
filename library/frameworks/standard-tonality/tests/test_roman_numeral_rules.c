@@ -38,17 +38,6 @@ static void check_seventh(int degree, SeventhQuality quality, const char *expect
     assert(strcmp(buffer, expected) == 0);
 }
 
-static void test_rules_reference_framework(void) {
-    for (int i = 0; i < STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT; i++) {
-        const Rule *rule = standard_tonality_roman_numeral_rule((StandardTonalityRomanNumeralRule)i);
-        const Constraint *constraint = standard_tonality_roman_numeral_constraint((StandardTonalityRomanNumeralRule)i);
-        assert(rule != NULL && constraint != NULL);
-        assert(framework_identity_equals(rule_framework(rule), standard_tonality_framework()));
-        assert(constraint_type(constraint) == CONSTRAINT_TYPE_HARD);
-    }
-    assert(standard_tonality_roman_numeral_rule(STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT) == NULL);
-}
-
 /* Example 1: the numerals for the degrees. */
 static void test_degrees(void) {
     const char *upper[] = {"I", "II", "III", "IV", "V", "VI", "VII"};
@@ -59,22 +48,6 @@ static void test_degrees(void) {
     }
     assert(standard_tonality_roman_numeral_degree(0, true) == NULL);
     assert(standard_tonality_roman_numeral_degree(8, false) == NULL);
-}
-
-/* CASE: a major third above the root is uppercase, a minor third lowercase. */
-static void test_case(void) {
-    assert(standard_tonality_roman_numeral_triad_uppercase(MAJOR));
-    assert(standard_tonality_roman_numeral_triad_uppercase(AUGMENTED));
-    assert(!standard_tonality_roman_numeral_triad_uppercase(MINOR));
-    assert(!standard_tonality_roman_numeral_triad_uppercase(DIMINISHED));
-    assert(!standard_tonality_roman_numeral_triad_uppercase((TriadQuality)99));
-
-    assert(standard_tonality_roman_numeral_seventh_uppercase(MAMA));
-    assert(standard_tonality_roman_numeral_seventh_uppercase(MAMI));
-    assert(!standard_tonality_roman_numeral_seventh_uppercase(MIMI));
-    assert(!standard_tonality_roman_numeral_seventh_uppercase(HDIM));
-    assert(!standard_tonality_roman_numeral_seventh_uppercase(FDIM));
-    assert(!standard_tonality_roman_numeral_seventh_uppercase((SeventhQuality)99));
 }
 
 static void test_symbols(void) {
@@ -211,121 +184,8 @@ static void test_format_rejects_invalid_arguments(void) {
     assert(!standard_tonality_roman_numeral_format(&numeral, buffer, sizeof(buffer)));
 }
 
-static void check_parsed_triad(const char *text, int degree, TriadQuality quality) {
-    Numeral numeral;
-    assert(standard_tonality_roman_numeral_parse(text, &numeral));
-    assert(numeral.degree == degree && !numeral.seventh && numeral.triad == quality);
-}
-
-static void check_parsed_seventh(const char *text, int degree, SeventhQuality quality) {
-    Numeral numeral;
-    assert(standard_tonality_roman_numeral_parse(text, &numeral));
-    assert(numeral.degree == degree && numeral.seventh && numeral.seventh_quality == quality);
-}
-
-static void test_parse_examples(void) {
-    check_parsed_triad("V", 5, MAJOR);
-    check_parsed_triad("ii", 2, MINOR);
-    check_parsed_triad("V+", 5, AUGMENTED);
-    check_parsed_triad("vii\xC2\xB0", 7, DIMINISHED);
-    check_parsed_triad("VII", 7, MAJOR);
-    check_parsed_triad("vi", 6, MINOR);
-    check_parsed_triad("iv", 4, MINOR);
-    check_parsed_triad("III+", 3, AUGMENTED);
-
-    check_parsed_seventh("V7", 5, MAMI);
-    check_parsed_seventh("IV7", 4, MAMA);
-    check_parsed_seventh("VII7", 7, MAMI);
-    check_parsed_seventh("ii7", 2, MIMI);
-    check_parsed_seventh("ii\xE2\x88\x85" "7", 2, HDIM);
-    check_parsed_seventh("vii\xC2\xB0" "7", 7, FDIM);
-}
-
-/* Plain-letter forms: o and the slashed letter. */
-static void test_parse_plain_letters(void) {
-    check_parsed_triad("viio", 7, DIMINISHED);
-    check_parsed_seventh("viio7", 7, FDIM);
-    check_parsed_seventh("ii\xC3\xB8" "7", 2, HDIM);
-}
-
-/* Property: every unambiguous numeral parses back to what was formatted. */
-static void test_round_trip(void) {
-    int round_trips = 0;
-    for (int degree = 1; degree <= 7; degree++) {
-        for (int q = 0; q < STANDARD_TONALITY_TRIAD_QUALITY_COUNT; q++) {
-            Numeral numeral;
-            char buffer[32];
-            assert(standard_tonality_roman_numeral_triad(degree, (TriadQuality)q, &numeral));
-            assert(standard_tonality_roman_numeral_format(&numeral, buffer, sizeof(buffer)));
-            Numeral parsed;
-            assert(standard_tonality_roman_numeral_parse(buffer, &parsed));
-            assert(parsed.degree == degree && !parsed.seventh && parsed.triad == (TriadQuality)q);
-            round_trips++;
-        }
-        for (int q = 0; q < STANDARD_TONALITY_SEVENTH_QUALITY_COUNT; q++) {
-            Numeral numeral;
-            char buffer[32];
-            assert(standard_tonality_roman_numeral_seventh_chord(degree, (SeventhQuality)q, &numeral));
-            if (!standard_tonality_roman_numeral_is_unambiguous(&numeral)) {
-                continue;
-            }
-            assert(standard_tonality_roman_numeral_format(&numeral, buffer, sizeof(buffer)));
-            Numeral parsed;
-            assert(standard_tonality_roman_numeral_parse(buffer, &parsed));
-            assert(parsed.degree == degree && parsed.seventh && parsed.seventh_quality == (SeventhQuality)q);
-            round_trips++;
-        }
-    }
-    /* 7 * 4 triads and 7 * 5 sevenths, less the major-major sevenths on 5 and
-       7 and the major-minor sevenths on the other five degrees. */
-    assert(round_trips == 7 * 4 + 7 * 5 - 7);
-}
-
-static void test_parse_rejects_malformed_numerals(void) {
-    Numeral numeral = {42, true, (TriadQuality)42, (SeventhQuality)42};
-    const char *bad[] = {"",    "VIII", "Vi",   "iV",   "Vo",   "V\xC2\xB0", "v+",  "iv+",  "V7x", "V77",
-                         "vii\xE2\x88\x85", "VII\xE2\x88\x85" "7", "V\xC2\xB0" "7", "ii+7", "x",  " V", "V ", "i i", "IIII"};
-    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
-        assert(!standard_tonality_roman_numeral_parse(bad[i], &numeral));
-    }
-    assert(!standard_tonality_roman_numeral_parse(NULL, &numeral));
-    assert(!standard_tonality_roman_numeral_parse("V", NULL));
-    assert(numeral.degree == 42 && numeral.seventh && numeral.triad == (TriadQuality)42);
-}
-
-static void test_build_chord(void) {
-    EntityID *target;
-    assert(entity_id_create("sonority-test-roman", &target) == ENTITY_ID_OK);
-
-    Numeral numeral;
-    assert(standard_tonality_roman_numeral_seventh_chord(2, HDIM, &numeral));
-    Chord *chord = NULL;
-    assert(standard_tonality_build_roman_numeral_chord(&numeral, target, &chord) == CHORD_OK);
-    assert(strcmp(chord_label(chord), "ii\xE2\x88\x85" "7") == 0);
-
-    const Interpretation *interpretation = chord_interpretation(chord);
-    assert(interpretation_framework_reference(interpretation) != NULL);
-    assert(entity_id_equals(interpretation_target_id(interpretation), target));
-    assert(strcmp(interpretation_author(interpretation), "standard-tonality-v1") == 0);
-    chord_destroy(chord);
-}
-
-static void test_build_chord_rejects_invalid_numerals(void) {
-    EntityID *target;
-    assert(entity_id_create("sonority-test-roman-reject", &target) == ENTITY_ID_OK);
-    Numeral numeral = {9, false, MAJOR, MAMA};
-    Chord *chord = NULL;
-    assert(standard_tonality_build_roman_numeral_chord(&numeral, target, &chord) == CHORD_ERR_NULL_LABEL);
-    assert(standard_tonality_build_roman_numeral_chord(NULL, target, &chord) == CHORD_ERR_NULL_LABEL);
-    assert(chord == NULL);
-    /* The caller still owns the target on failure. */
-    entity_id_destroy(target);
-}
-
 int main(void) {
-    test_rules_reference_framework();
     test_degrees();
-    test_case();
     test_symbols();
     test_triad_examples();
     test_seventh_examples();
@@ -335,12 +195,6 @@ int main(void) {
     test_unambiguous();
     test_constructors_reject_invalid_arguments();
     test_format_rejects_invalid_arguments();
-    test_parse_examples();
-    test_parse_plain_letters();
-    test_round_trip();
-    test_parse_rejects_malformed_numerals();
-    test_build_chord();
-    test_build_chord_rejects_invalid_numerals();
     printf("test_roman_numeral_rules (standard-tonality): ok\n");
     return 0;
 }
