@@ -2,9 +2,6 @@
 #define URSATZ_FRAMEWORKS_STANDARD_TEXTURE_TEXTURE_CLASSIFICATION_RULES_H
 
 #include <stdbool.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "texture_rules.h"
 
 /*
@@ -61,16 +58,6 @@ typedef struct {
 typedef unsigned int StandardTextureSet;
 
 #define STANDARD_TEXTURE_BIT(texture) (1u << (unsigned int)(texture))
-
-typedef enum {
-    STANDARD_TEXTURE_CLASSIFICATION_RULE_FEATURES = 0,
-    STANDARD_TEXTURE_CLASSIFICATION_RULE_MATCHING,
-    STANDARD_TEXTURE_CLASSIFICATION_RULE_PRECEDENCE,
-    STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT
-} StandardTextureClassificationRule;
-
-const Rule *standard_texture_classification_rule(StandardTextureClassificationRule which);
-const Constraint *standard_texture_classification_constraint(StandardTextureClassificationRule which);
 
 /* FEATURES: true when the features describe a passage: at least one voice
    and none of the contradictions above. False for NULL. */

@@ -37,6 +37,11 @@ typedef struct {
     size_t change_count;
 } TextureAnnotation;
 
+static bool is_category(StandardTexture texture) {
+    return texture == STANDARD_TEXTURE_MONOPHONY || texture == STANDARD_TEXTURE_HETEROPHONY ||
+           texture == STANDARD_TEXTURE_HOMOPHONY || texture == STANDARD_TEXTURE_POLYPHONY;
+}
+
 static TextureAnnotation load_texture_annotation(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/field1_texture.txt", URSATZ_ANNOTATION_DIR);
@@ -56,7 +61,7 @@ static TextureAnnotation load_texture_annotation(void) {
             a.range_last = y;
         } else if (sscanf(line, "passage %d %d %31s", &x, &y, word) == 3) {
             StandardTexture category;
-            assert(standard_texture_from_name(word, &category) && standard_texture_is_category(category));
+            assert(standard_texture_from_name(word, &category) && is_category(category));
             a.passages[a.passage_count].first = x;
             a.passages[a.passage_count].last = y;
             a.passages[a.passage_count++].category = category;

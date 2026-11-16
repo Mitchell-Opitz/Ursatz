@@ -2,16 +2,6 @@
 
 #include <stddef.h>
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT] = {
-    "texture-classification-features", "texture-classification-matching", "texture-classification-precedence"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_texture_framework, "standard-texture",
-    NAMES, STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_texture_classification, StandardTextureClassificationRule, STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT, g_table)
-
 bool standard_texture_features_valid(const StandardTextureFeatures *features) {
     if (features == NULL || features->voice_count < 1) {
         return false;

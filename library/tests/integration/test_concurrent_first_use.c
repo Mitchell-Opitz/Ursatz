@@ -31,7 +31,6 @@
 
 #define RULES(X)                                                                                                       \
     X(standard_markings_articulation_rule)                                                                             \
-    X(standard_texture_mixed_rule)                                                                                     \
     X(standard_voicing_doubling_rule)
 
 /* The preference accessors the Composer calls (it counts the soft rules with them). */
