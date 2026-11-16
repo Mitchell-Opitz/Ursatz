@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L9 (`music-io`). Path `src/io/`, tests `tests/io/`. Depends on `identity`, `core`, `time`, `pitch`, and `events` only (and, for `MusicXMLImporter`, the vendored XML parser in `third_party/ezxml`, which nothing else may use). Must not depend on `containers` (L4) or anything above it, and must not depend on `theory`, `rules`, `transform`, `analysis`, `generation`, `frameworks/`, or `music-analysis`.
+Layer L9 (`music-io`). Path `src/io/`, tests `tests/io/`. Depends on `identity`, `core`, `time`, `pitch`, and `events` only (and, for `MusicXMLImporter`, the XML parser vendored in the repository's `third_party/ezxml/`, which nothing else may use). Must not depend on `containers` (L4) or anything above it, and must not depend on `theory`, `rules`, `transform`, `analysis`, `generation`, `frameworks/`, or `music-analysis`.
 
 ## Provides
 - `MIDIImporter`: parses an SMF type 0 or 1 buffer into time-ordered `NoteEvent`s (L3). `MIDIRenderer` (`midi_renderer.h`, `docs/modules/midi_renderer.md`) writes them back. MusicXML export is in `src/export/`. See [io-midi.md](io-midi.md).

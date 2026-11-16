@@ -25,7 +25,6 @@ Ursatz depends on no other repo. The Analyzer, the Composer and the GUI pin it a
 | `tests/` | Kernel tests mirrored by module, accuracy harness, integration tests | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
 | `cmake/`, `scripts/` | Public header staging, app include report, docs check | [Public surface](public-surface.md) |
-| `third_party/` | Vendored XML parser (ezxml), used only by `io` | [io-musicxml](modules/io-musicxml.md) |
 | `examples/` | Usage examples | [README](../README.md) |
 
 ## Public API
@@ -78,7 +77,7 @@ The library defines no file format version. The versions of the document formats
 
 ## What it calls below
 
-Nothing. Ursatz sits at the bottom of the stack; its only dependencies are SQLite and POSIX threads (see [BUILDING.md](BUILDING.md)) and the vendored ezxml parser used by `io`.
+Nothing. Ursatz sits at the bottom of the stack; its only dependencies are SQLite and POSIX threads (see [BUILDING.md](BUILDING.md)) and the ezxml parser used by `io`, vendored in the repository's `third_party/ezxml/`.
 
 ### Who calls it
 

@@ -41,7 +41,7 @@ typedef int socket_t;
 #include "service/style_service.h"
 
 #ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the external/ursatz checkout"
+#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
 #endif
 
 static void sleep_ms(int ms) {

@@ -43,7 +43,7 @@ typedef int socket_t;
 #include "service/subject_service.h"
 
 #ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the external/ursatz checkout"
+#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
 #endif
 #ifndef URSATZ_GUI_TEST_ANALYZER_CLI
 #error "URSATZ_GUI_TEST_ANALYZER_CLI must name the ursatz-analyzer executable"

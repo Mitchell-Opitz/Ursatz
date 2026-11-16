@@ -32,14 +32,6 @@ if(GIT_FOUND)
     endif()
 endif()
 
-# The repo root adds the library first; on its own the Analyzer adds its sibling.
-if(NOT TARGET ursatz)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/../library ${PROJECT_BINARY_DIR}/library)
-endif()
-# A parent project that vendors cJSON supplies the cjson target itself.
-if(NOT TARGET cjson)
-    add_subdirectory(external/cjson)
-endif()
 add_subdirectory(src)
 if(URSATZ_ANALYZER_BUILD_TESTS)
     add_subdirectory(tests)
