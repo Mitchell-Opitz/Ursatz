@@ -515,8 +515,7 @@
     return match ? match[1].toLowerCase() : "major";
   }
 
-  /* The editor's field values for a motif body (null for a new motif). legacyKey is the stored key when its tonic is
-   * not C (a motif written before motifs moved to C, R-179), else null. */
+  /* The editor's field values for a motif body (null for a new motif). */
   function motifFormValues(body) {
     const motif = body && body.motif ? body.motif : {};
     const storedKey = typeof motif.key === "string" ? motif.key.trim() : "";
@@ -526,7 +525,6 @@
       notes: typeof motif.notes === "string" ? motif.notes : "",
       meter: typeof motif.meter === "string" ? motif.meter : "4/4",
       mode: keyMode(storedKey),
-      legacyKey: storedKey !== "" && !/^C (major|minor)$/.test(storedKey) ? storedKey : null,
       pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
       harmony: typeof motif.harmony === "string" ? motif.harmony : "",
       toneOverrides: motif.tone_overrides && typeof motif.tone_overrides === "object" ? { ...motif.tone_overrides } : {},
@@ -564,26 +562,6 @@
     };
   }
 
-  /* The to-c POST for a stored motif body: its degrees written in C in the stored mode. Null when the motif holds no
-   * degrees (it was never analyzed). */
-  function toCRequest(body, mode) {
-    const motif = body && body.motif ? body.motif : {};
-    if (typeof motif.degrees !== "string" || motif.degrees === "") {
-      return null;
-    }
-    return Req.jsonRequest("POST", "/api/materials/motifs/to-c", {
-      degrees: motif.degrees,
-      mode: motifModes().includes(mode) ? mode : "major",
-      meter: typeof motif.meter === "string" ? motif.meter : "4/4",
-      pickup: typeof motif.pickup === "string" && motif.pickup !== "" ? motif.pickup : "0",
-    });
-  }
-
-  /* The notice for a motif stored on another tonic. */
-  function legacyNotice(legacyKey) {
-    return `Written in ${legacyKey} before motifs moved to C.`;
-  }
-
   /* The line under the upload for an import answer. */
   function importNotice(answer) {
     const a = answer || {};
@@ -597,9 +575,7 @@
    * sent. The Composer judges the values itself (notes, meter, pickup, harmony), through the validate route. */
   function motifFormProblems(values) {
     const problems = [];
-    if (values.legacyKey) {
-      problems.push({ field: "notes", message: "Rewrite the motif in C before saving." });
-    } else if (String(values.notes || "").trim() === "") {
+    if (String(values.notes || "").trim() === "") {
       problems.push({ field: "notes", message: "Enter at least one note." });
     }
     if (Array.from(String(values.harmony || "")).length > HARMONY_MAX_CHARS) {
@@ -792,12 +768,9 @@
 
   /* Saving a motif: a new item when id is empty, else a new version. */
   /* True when the editor's values differ from the stored version body: the body they build is compared with the body
-   * the stored values build, so fields the editor does not own do not count. Rewriting an older motif in C counts. */
+   * the stored values build, so fields the editor does not own do not count. */
   function motifBodyChanged(values, body) {
     const stored = motifFormValues(body);
-    if (stored.legacyKey && !values.legacyKey) {
-      return true;
-    }
     return JSON.stringify(buildMotifBody(values, body)) !== JSON.stringify(buildMotifBody(stored, body));
   }
 
@@ -993,8 +966,6 @@
     buildImportMidiRequest,
     importToFormValues,
     importNotice,
-    toCRequest,
-    legacyNotice,
     get MOTIF_MODES() {
       return motifModes();
     },

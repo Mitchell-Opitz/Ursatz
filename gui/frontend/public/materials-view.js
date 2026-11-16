@@ -699,7 +699,7 @@ function buildVersionsList(item, viewEl, statusEl, renderBody) {
 function buildMotifEditor(body, tabStatus) {
   const initial = MaterialsModel.motifFormValues(body);
   const el = materialsElement("section", "panel materials-editor");
-  /* On the motif tab the MIDI upload and the rewrite write to the tab's status area (tabStatus, a
+  /* On the motif tab the MIDI upload writes to the tab's status area (tabStatus, a
    * MaterialsModel.motifTabStatus writer). The new-motif page has none and keeps a status line at the end of the
    * panel. */
   let status = tabStatus;
@@ -854,43 +854,6 @@ function buildMotifEditor(body, tabStatus) {
     pickup.value = filled.pickup;
   }
 
-  let legacyKey = initial.legacyKey;
-  const legacyRow = materialsElement("div", "upload-controls");
-  const legacyText = materialsElement("span", "materials-hint");
-  const rewriteButton = materialsElement("button", "button-secondary", "Rewrite in C");
-  rewriteButton.type = "button";
-  legacyRow.append(legacyText, rewriteButton);
-  controlRow(legacyRow);
-  function showLegacy() {
-    legacyRow.hidden = !legacyKey;
-    legacyText.textContent = legacyKey ? MaterialsModel.legacyNotice(legacyKey) : "";
-  }
-  showLegacy();
-  rewriteButton.addEventListener("click", async () => {
-    status.clear();
-    if (form.value !== "full") {
-      legacyKey = null;
-      showLegacy();
-      return;
-    }
-    const request = MaterialsModel.toCRequest(body, mode.value);
-    if (!request) {
-      status.show("This version has no degrees to rewrite. Re-analyze it first.", true);
-      return;
-    }
-    rewriteButton.disabled = true;
-    status.show("Rewriting...");
-    const answer = await sendMaterialsRequest(request);
-    rewriteButton.disabled = false;
-    if (!answer.ok) {
-      status.show(MaterialsModel.errorText(answer.data, "Could not rewrite the motif in C"), true);
-      return;
-    }
-    notes.value = answer.data.notes_text;
-    legacyKey = null;
-    showLegacy();
-  });
-
   const meter = materialsElement("input");
   meter.type = "text";
   meter.value = initial.meter;
@@ -1005,7 +968,6 @@ function buildMotifEditor(body, tabStatus) {
       notes: notes.value,
       meter: meter.value,
       mode: mode.value,
-      legacyKey,
       pickup: pickup.value,
       harmony: harmony.value,
       toneOverrides: { ...toneOverrides },
