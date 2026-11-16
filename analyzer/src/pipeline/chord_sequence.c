@@ -7,7 +7,6 @@
 #include <cJSON.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/style_labels.h>
 
 #include "pipeline/chord_sequence_internal.h"
@@ -100,48 +99,6 @@ static void joiner_finish(Joiner *joiner, AnalyzerChord **out, size_t *count) {
     }
     *out = joiner->chords;
     *count = joiner->count;
-}
-
-/* ---- from a result ---- */
-
-AnalyzerStatus analyzer_chord_sequence(const AnalyzerResult *result, AnalyzerChord **out, size_t *count) {
-    if (!out || !count) {
-        return ANALYZER_ERR_ARGUMENT;
-    }
-    *out = NULL;
-    *count = 0;
-    if (!result) {
-        return ANALYZER_ERR_ARGUMENT;
-    }
-    const AnalysisReport *report = analyzer_result_report(result);
-    Joiner joiner;
-    joiner_init(&joiner, report->entry_count);
-    if (report->entry_count > 0) {
-        joiner.chords = malloc(report->entry_count * sizeof *joiner.chords);
-        if (!joiner.chords) {
-            return ANALYZER_ERR_ALLOC;
-        }
-    }
-    for (size_t i = 0; i < report->entry_count; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
-        if (!entry->roman.labelled || !(entry->in_region && entry->region < report->key_region_count)) {
-            joiner_skip(&joiner);
-            continue;
-        }
-        Rational start, end;
-        if (rational_make(entry->time_numerator, (long long)entry->time_denominator, &start) != RATIONAL_OK ||
-            rational_make(entry->end_numerator, (long long)entry->end_denominator, &end) != RATIONAL_OK) {
-            joiner_fail(&joiner);
-            return ANALYZER_ERR_ARGUMENT;
-        }
-        if (joiner_add(&joiner, i, entry->roman.base_numeral, entry->chord.root, (long)entry->region, start, end) !=
-            JOIN_OK) {
-            joiner_fail(&joiner);
-            return ANALYZER_ERR_ALLOC;
-        }
-    }
-    joiner_finish(&joiner, out, count);
-    return ANALYZER_OK;
 }
 
 /* ---- from a document ---- */
