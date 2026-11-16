@@ -125,17 +125,29 @@ static uint64_t fnv1a(const char *text) {
     return hash;
 }
 
-/* The plan text records the pinned Ursatz commit (metadata.ursatz_commit); a pin bump must not move a plan, so the
- * 40 hex digits are overwritten with zeros before the hash. */
-static uint64_t fnv1a_plan(char *json) {
-    char *field = strstr(json, "ursatz_commit");
-    if (field) {
-        char *quote = strchr(field + strlen("ursatz_commit") + 1, '"');
-        for (char *c = quote ? quote + 1 : NULL; c && *c && *c != '"'; c++) {
-            *c = '0';
-        }
+/* The plan text records the Analyzer's producer key (metadata.ursatz_commit); a source change must not move a plan, so
+ * the key, whatever its length, is replaced by 40 zeros before the hash (the width of the commit the goldens were
+ * captured with). */
+static uint64_t fnv1a_plan(const char *json) {
+    const char *field = strstr(json, "ursatz_commit");
+    const char *quote = field ? strchr(field + strlen("ursatz_commit") + 1, '"') : NULL;
+    const char *end = quote ? strchr(quote + 1, '"') : NULL;
+    if (!end) {
+        return fnv1a(json);
     }
-    return fnv1a(json);
+    size_t head = (size_t)(quote + 1 - json);
+    size_t tail = strlen(end);
+    char *blanked = malloc(head + 40 + tail + 1);
+    if (!blanked) {
+        fprintf(stderr, "out of memory\n");
+        exit(1);
+    }
+    memcpy(blanked, json, head);
+    memset(blanked + head, '0', 40);
+    memcpy(blanked + head + 40, end, tail + 1);
+    uint64_t hash = fnv1a(blanked);
+    free(blanked);
+    return hash;
 }
 
 /* The hash of the plan the request makes. */
