@@ -1,20 +1,7 @@
 #include "doubling_rules.h"
 
 #include "construction_rules.h"
-#include "rule_pair.h"
 #include "voicing_pitch.h"
-
-static const char *const NAMES[STANDARD_VOICING_DOUBLING_RULE_COUNT] = {
-    "doubling-bass-doubled", "doubling-leading-tone", "doubling-seventh", "doubling-seventh-chord"};
-
-static ConstraintType rule_type(size_t which) {
-    return which == STANDARD_VOICING_DOUBLING_BASS_DOUBLED ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD;
-}
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT_MIXED(standard_voicing_framework, "standard-voicing", NAMES,
-                                                          STANDARD_VOICING_DOUBLING_RULE_COUNT, rule_type);
-
-URSATZ_RULE_ACCESSORS(standard_voicing_doubling, StandardVoicingDoublingRule, STANDARD_VOICING_DOUBLING_RULE_COUNT, g_table)
 
 static bool chord_complete(const StandardVoicingChord *chord) {
     if (chord == NULL) {
@@ -86,17 +73,6 @@ bool standard_voicing_seventh_chord_undoubled(const StandardVoicingChord *chord,
         }
     }
     return true;
-}
-
-bool standard_voicing_bass_doubled(const StandardVoicingChord *chord, const PitchSpelling *const *tones,
-                                   size_t tone_count) {
-    if (!chord_complete(chord) || !valid_tones(tones, tone_count)) {
-        return false;
-    }
-    if (tone_count != STANDARD_VOICING_TRIAD_TONES) {
-        return true;
-    }
-    return standard_voicing_pitch_class_count(chord, chord->voice[VOICE_PART_BASS]) >= 2;
 }
 
 bool standard_voicing_doubling_valid(const StandardVoicingChord *chord, const PitchSpelling *const *tones,

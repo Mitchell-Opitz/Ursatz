@@ -108,44 +108,12 @@ static void test_invalid_input(void) {
            STANDARD_VOICING_CONSTRUCTION_INVALID_INPUT);
 }
 
-static void test_inversion_from_figure(void) {
-    int inversion = -1;
-
-    /* Triads. */
-    const char *root[] = {"", "5", "53"};
-    for (int i = 0; i < 3; i++) {
-        assert(standard_voicing_inversion_from_figure(root[i], 3, &inversion) && inversion == 0);
-    }
-    assert(standard_voicing_inversion_from_figure("6", 3, &inversion) && inversion == 1);
-    assert(standard_voicing_inversion_from_figure("63", 3, &inversion) && inversion == 1);
-    assert(standard_voicing_inversion_from_figure("64", 3, &inversion) && inversion == 2);
-
-    /* Seventh chords. */
-    assert(standard_voicing_inversion_from_figure("7", 4, &inversion) && inversion == 0);
-    assert(standard_voicing_inversion_from_figure("65", 4, &inversion) && inversion == 1);
-    assert(standard_voicing_inversion_from_figure("43", 4, &inversion) && inversion == 2);
-    assert(standard_voicing_inversion_from_figure("42", 4, &inversion) && inversion == 3);
-    assert(standard_voicing_inversion_from_figure("2", 4, &inversion) && inversion == 3);
-
-    /* A figure that does not belong to the chord size leaves the output alone. */
-    inversion = -1;
-    assert(!standard_voicing_inversion_from_figure("7", 3, &inversion));
-    assert(!standard_voicing_inversion_from_figure("64", 4, &inversion));
-    assert(!standard_voicing_inversion_from_figure("", 4, &inversion));
-    assert(!standard_voicing_inversion_from_figure("9", 3, &inversion));
-    assert(!standard_voicing_inversion_from_figure("6", 5, &inversion));
-    assert(!standard_voicing_inversion_from_figure(NULL, 3, &inversion));
-    assert(!standard_voicing_inversion_from_figure("6", 3, NULL));
-    assert(inversion == -1);
-}
-
 int main(void) {
     test_b_diminished_first_inversion();
     test_bass_must_match_inversion();
     test_no_tone_missing();
     test_seventh_chord();
     test_invalid_input();
-    test_inversion_from_figure();
     printf("test_construction_rules (standard-voicing): ok\n");
     return 0;
 }

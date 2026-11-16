@@ -36,29 +36,6 @@ static StandardVoicingInput input_for(const StandardVoicingChord *chord, const P
     return input;
 }
 
-static void test_rules_reference_framework(void) {
-    for (int i = 0; i < STANDARD_VOICING_RULE_COUNT; i++) {
-        const Rule *rule = standard_voicing_rule((StandardVoicingRule)i);
-        const Constraint *constraint = standard_voicing_constraint((StandardVoicingRule)i);
-        assert(rule != NULL && constraint != NULL);
-        assert(framework_identity_equals(rule_framework(rule), standard_voicing_framework()));
-        assert(constraint_type(constraint) == CONSTRAINT_TYPE_HARD);
-    }
-    assert(standard_voicing_rule(STANDARD_VOICING_RULE_COUNT) == NULL);
-    assert(standard_voicing_constraint(STANDARD_VOICING_RULE_COUNT) == NULL);
-}
-
-static void test_rule_names(void) {
-    assert(strcmp(standard_voicing_rule_name(STANDARD_VOICING_RULE_STEM_DIRECTION), "stem-direction") == 0);
-    assert(strcmp(standard_voicing_rule_name(STANDARD_VOICING_RULE_CHORD_CONSTRUCTION), "chord-construction") == 0);
-    assert(strcmp(standard_voicing_rule_name(STANDARD_VOICING_RULE_RANGE), "range") == 0);
-    assert(strcmp(standard_voicing_rule_name(STANDARD_VOICING_RULE_SPACING), "spacing") == 0);
-    assert(strcmp(standard_voicing_rule_name(STANDARD_VOICING_RULE_VOICE_CROSSING), "voice-crossing") == 0);
-    assert(strcmp(standard_voicing_rule_name(STANDARD_VOICING_RULE_DOUBLING), "doubling") == 0);
-    assert(standard_voicing_rule_name(STANDARD_VOICING_RULE_COUNT) == NULL);
-    assert(standard_voicing_rule_name((StandardVoicingRule)-1) == NULL);
-}
-
 static void test_valid_triad(void) {
     const PitchSpelling *tones[3];
     c_major(tones);
@@ -68,19 +45,9 @@ static void test_valid_triad(void) {
     unsigned violations = 99;
     assert(standard_voicing_check(&input, &violations));
     assert(violations == 0);
-    assert(standard_voicing_valid(&input));
 
     /* Stems are optional: an unengraved chord skips that rule. */
     input.stem_directions = NULL;
-    assert(standard_voicing_valid(&input));
-}
-
-static void test_valid_seventh_chord(void) {
-    const PitchSpelling *tones[4];
-    g7(tones);
-    StandardVoicingChord chord = make_chord(P(B, 0, 4), P(F, 0, 4), P(D, 0, 4), P(G, 0, 2));
-    StandardVoicingInput input = input_for(&chord, tones, 4, 0);
-    assert(standard_voicing_valid(&input));
 }
 
 static void test_each_rule_alone(void) {
@@ -98,7 +65,6 @@ static void test_each_rule_alone(void) {
         input.stem_directions = wrong;
         assert(standard_voicing_check(&input, &violations));
         assert(violations == BIT(STANDARD_VOICING_RULE_STEM_DIRECTION));
-        assert(!standard_voicing_valid(&input));
     }
 
     /* CHORD_CONSTRUCTION: the bass is the third in a chord called root position. */
@@ -144,7 +110,6 @@ static void test_each_rule_alone(void) {
 
         /* The same notes in a key with no leading tone in play are fine. */
         input.leading_tone = NULL;
-        assert(standard_voicing_valid(&input));
     }
 }
 
@@ -159,7 +124,6 @@ static void test_several_rules_at_once(void) {
     assert(standard_voicing_check(&input, &violations));
     assert((violations & BIT(STANDARD_VOICING_RULE_CHORD_CONSTRUCTION)) != 0);
     assert((violations & BIT(STANDARD_VOICING_RULE_DOUBLING)) != 0);
-    assert(!standard_voicing_valid(&input));
 }
 
 static void test_invalid_input(void) {
@@ -171,7 +135,6 @@ static void test_invalid_input(void) {
 
     assert(!standard_voicing_check(NULL, &violations));
     assert(!standard_voicing_check(&good, NULL));
-    assert(!standard_voicing_valid(NULL));
 
     StandardVoicingInput no_chord = good;
     no_chord.chord = NULL;
@@ -184,7 +147,6 @@ static void test_invalid_input(void) {
     StandardVoicingInput bad_inversion = good;
     bad_inversion.inversion = 5;
     assert(!standard_voicing_check(&bad_inversion, &violations));
-    assert(!standard_voicing_valid(&bad_inversion));
 
     StandardVoicingChord incomplete = make_chord(P(C, 0, 5), NULL, P(G, 0, 3), P(C, 0, 3));
     StandardVoicingInput null_voice = good;
@@ -195,10 +157,7 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_rule_names();
     test_valid_triad();
-    test_valid_seventh_chord();
     test_each_rule_alone();
     test_several_rules_at_once();
     test_invalid_input();

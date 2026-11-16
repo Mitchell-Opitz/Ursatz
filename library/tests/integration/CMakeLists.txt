@@ -102,7 +102,7 @@ target_compile_definitions(test_framework_v1_thematic_returns PRIVATE
     URSATZ_RETURNS_SUMMARY="${CMAKE_CURRENT_BINARY_DIR}/framework_v1_returns_summary.txt")
 add_test(NAME framework_v1_thematic_returns COMMAND test_framework_v1_thematic_returns)
 
-# Eight threads make the first call of every framework accessor and one rule accessor per framework together (core/once.h).
+# Eight threads make the first call of every framework accessor and every preference accessor an app calls together (core/once.h).
 # Under helgrind where valgrind is installed (memcheck as well), else plain.
 add_executable(test_concurrent_first_use test_concurrent_first_use.c)
 target_link_libraries(test_concurrent_first_use PRIVATE common_practice_minimal galant_schemas scale_harmonization

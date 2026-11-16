@@ -24,13 +24,6 @@
    (outputs untouched) for an invalid part or a NULL output. */
 bool standard_voicing_range_semitones(VoicePart part, int *lowest, int *highest);
 
-/* The lowest and highest notes of the part's range as spellings
-   (C natural, G natural, etc.), written into caller-owned storage: out
-   letters and octaves only, accidental 0. False for an invalid part or
-   NULL. */
-bool standard_voicing_range_bounds(VoicePart part, PitchLetter *lowest_letter, int *lowest_octave,
-                                   PitchLetter *highest_letter, int *highest_octave);
-
 /* True when the pitch is inside the part's range. False for NULL or an
    invalid part. */
 bool standard_voicing_in_range(VoicePart part, const PitchSpelling *pitch);

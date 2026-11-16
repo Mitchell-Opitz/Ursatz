@@ -42,13 +42,6 @@ typedef enum {
     STANDARD_VOICING_RULE_COUNT
 } StandardVoicingRule;
 
-const Rule *standard_voicing_rule(StandardVoicingRule which);
-const Constraint *standard_voicing_constraint(StandardVoicingRule which);
-
-/* "stem-direction" "chord-construction" "range" "spacing" "voice-crossing"
-   "doubling"; NULL for an invalid rule. */
-const char *standard_voicing_rule_name(StandardVoicingRule which);
-
 /*
  * Checking a whole voicing against the six rules. The input is the
  * voiced chord plus what the caller knows about the chord it realizes:
@@ -80,8 +73,5 @@ typedef struct {
    NULL, a voice that is NULL, a tone count that is not 3 or 4, an
    inversion out of range. */
 bool standard_voicing_check(const StandardVoicingInput *input, unsigned *violations);
-
-/* True when the voicing is valid input and breaks none of the six rules. */
-bool standard_voicing_valid(const StandardVoicingInput *input);
 
 #endif

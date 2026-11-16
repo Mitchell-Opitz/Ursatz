@@ -18,13 +18,7 @@
  * whatever the note's position on its staff.
  */
 
-typedef enum { STANDARD_VOICING_STAFF_TREBLE = 0, STANDARD_VOICING_STAFF_BASS } StandardVoicingStaff;
-
 typedef enum { STANDARD_VOICING_STEM_UP = 0, STANDARD_VOICING_STEM_DOWN } StandardVoicingStemDirection;
-
-/* The staff the part is written on. False (output untouched) for an
-   invalid part or a NULL output. */
-bool standard_voicing_staff_for_part(VoicePart part, StandardVoicingStaff *out);
 
 /* The stem direction the part takes. False (output untouched) for an
    invalid part or a NULL output. */

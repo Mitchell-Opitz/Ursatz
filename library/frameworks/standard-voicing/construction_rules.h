@@ -44,11 +44,4 @@ StandardVoicingConstruction standard_voicing_check_construction(const StandardVo
                                                                 const PitchSpelling *const *tones,
                                                                 size_t tone_count, int inversion);
 
-/* The inversion a Roman numeral figure indicates: a triad (chord_size 3)
-   "" or "5" or "53" is 0, "6" or "63" 1, "64" 2; a seventh chord
-   (chord_size 4) "7" is 0, "65" 1, "43" 2, "42" or "2" 3. False (output
-   untouched) for NULL, a size other than 3 or 4, or a figure that does
-   not belong to a chord of that size. */
-bool standard_voicing_inversion_from_figure(const char *figure, size_t chord_size, int *inversion);
-
 #endif

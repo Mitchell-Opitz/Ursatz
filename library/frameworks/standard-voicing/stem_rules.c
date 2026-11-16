@@ -2,15 +2,6 @@
 
 #include <stddef.h>
 
-bool standard_voicing_staff_for_part(VoicePart part, StandardVoicingStaff *out) {
-    if (out == NULL || !voice_part_valid(part)) {
-        return false;
-    }
-    *out = (part == VOICE_PART_SOPRANO || part == VOICE_PART_ALTO) ? STANDARD_VOICING_STAFF_TREBLE
-                                                                    : STANDARD_VOICING_STAFF_BASS;
-    return true;
-}
-
 bool standard_voicing_stem_direction_for_part(VoicePart part, StandardVoicingStemDirection *out) {
     if (out == NULL || !voice_part_valid(part)) {
         return false;

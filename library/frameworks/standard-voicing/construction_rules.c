@@ -74,20 +74,3 @@ typedef struct {
     int inversion;
 } FigureEntry;
 
-static const FigureEntry FIGURES[] = {
-    {"", 3, 0},   {"5", 3, 0},  {"53", 3, 0}, {"6", 3, 1},  {"63", 3, 1}, {"64", 3, 2},
-    {"7", 4, 0},  {"65", 4, 1}, {"43", 4, 2}, {"42", 4, 3}, {"2", 4, 3},
-};
-
-bool standard_voicing_inversion_from_figure(const char *figure, size_t chord_size, int *inversion) {
-    if (figure == NULL || inversion == NULL) {
-        return false;
-    }
-    for (size_t i = 0; i < sizeof(FIGURES) / sizeof(FIGURES[0]); i++) {
-        if (FIGURES[i].chord_size == chord_size && strcmp(FIGURES[i].figure, figure) == 0) {
-            *inversion = FIGURES[i].inversion;
-            return true;
-        }
-    }
-    return false;
-}

@@ -7,24 +7,7 @@
 #include "crossing_rules.h"
 #include "doubling_rules.h"
 #include "range_rules.h"
-#include "rule_pair.h"
 #include "spacing_rules.h"
-
-static const char *const NAMES[STANDARD_VOICING_RULE_COUNT] = {"stem-direction", "chord-construction", "range",
-                                                                "spacing",        "voice-crossing",     "doubling"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_voicing_framework, "standard-voicing",
-    NAMES, STANDARD_VOICING_RULE_COUNT);
-
-static bool valid_rule(StandardVoicingRule which) {
-    return which >= 0 && which < STANDARD_VOICING_RULE_COUNT;
-}
-
-URSATZ_RULE_ACCESSORS(standard_voicing, StandardVoicingRule, STANDARD_VOICING_RULE_COUNT, g_table)
-
-const char *standard_voicing_rule_name(StandardVoicingRule which) {
-    return valid_rule(which) ? NAMES[which] : NULL;
-}
 
 bool standard_voicing_check(const StandardVoicingInput *input, unsigned *violations) {
     if (input == NULL || violations == NULL || input->chord == NULL) {
@@ -60,7 +43,3 @@ bool standard_voicing_check(const StandardVoicingInput *input, unsigned *violati
     return true;
 }
 
-bool standard_voicing_valid(const StandardVoicingInput *input) {
-    unsigned violations;
-    return standard_voicing_check(input, &violations) && violations == 0;
-}
