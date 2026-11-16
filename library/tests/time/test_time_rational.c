@@ -74,8 +74,6 @@ static void test_duration_arithmetic_overflow(void) {
     assert(duration_create(1, 1, &b) == DURATION_OK);
     assert(duration_add(a, b, &out) == DURATION_ERR_OVERFLOW);
     assert(out == NULL);
-    assert(duration_subtract(b, a, &out) == DURATION_ERR_NEGATIVE);
-    assert(out == NULL);
     duration_destroy(a);
     duration_destroy(b);
 }

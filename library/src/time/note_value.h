@@ -12,12 +12,11 @@
  * further step halves the value again. The range is breve through
  * 1024th (exponent -1 to 10).
  *
- * A NoteValue is notation vocabulary, not a magnitude: it converts to a
- * Duration (note_value_duration) but a Duration does not convert back,
- * because many written values can have the same length (a half note is
- * a dotted quarter plus an eighth, tied or not). Names, flags, and
- * glyph conventions are not held here; they are
- * frameworks/standard-rhythm/.
+ * A NoteValue is notation vocabulary, not a magnitude: it does not
+ * convert to a Duration, and a Duration does not convert back, because
+ * many written values can have the same length (a half note is a dotted
+ * quarter plus an eighth, tied or not). Names, flags, and glyph
+ * conventions are not held here.
  *
  * A NoteValue may carry dots (up to NOTE_VALUE_MAX_DOTS). A dot adds
  * half the written value, and each further dot adds half the previous
@@ -48,9 +47,5 @@ void note_value_destroy(NoteValue *note_value);
 
 int note_value_exponent(const NoteValue *note_value);
 unsigned note_value_dots(const NoteValue *note_value);
-
-/* The exact length of this value: 2^-exponent of a whole note, times
-   (2 - 2^-dots) for the dots. */
-DurationResult note_value_duration(const NoteValue *note_value, Duration **out);
 
 #endif

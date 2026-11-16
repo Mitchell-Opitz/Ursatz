@@ -10,14 +10,12 @@
  * by `normal` notes of the same written value -- 3:2 is a triplet (three
  * in the time of two), 2:3 a duplet (two in the time of three), 5:4 a
  * quintuplet. A Tuplet is only the ratio; it holds no note value and no
- * position. Which written value it applies to is the caller's, and how a
- * ratio scales a Duration is tuplet_scale_duration (time/tuplet.h).
+ * position. Which written value it applies to is the caller's.
  *
  * Both counts are bounded (2 to 64 actual, 1 to 64 normal) to keep the
  * exact rationals small, and the two differ -- a ratio of equal counts
  * changes nothing and is not a tuplet. Names (triplet, duplet) and the
- * notation of the number above the group are
- * frameworks/standard-rhythm/; this type makes no claim about them.
+ * notation of the number above the group are not held here.
  *
  * Value type: immutable, value equality on (actual, normal). 6:4 and 3:2
  * are different Tuplets: the ratio is not reduced, because a sextuplet
@@ -45,21 +43,5 @@ unsigned tuplet_actual(const Tuplet *tuplet);
 
 /* How many notes of the same value they replace. */
 unsigned tuplet_normal(const Tuplet *tuplet);
-
-/*
- * The exact length of each note in the group, given the length the same
- * note would have outside it: nominal * normal / actual. Three eighth
- * notes in a triplet are 1/8 * 2/3 = 1/12 each. Leaves *out untouched on
- * failure.
- */
-DurationResult tuplet_note_duration(const Tuplet *tuplet, const Duration *nominal, Duration **out);
-
-/*
- * The exact length of the whole group: actual notes of the scaled length,
- * which is normal times the nominal length. A triplet of eighth notes
- * spans 2/8, one quarter note; a triplet of quarter notes spans one half
- * note. Leaves *out untouched on failure.
- */
-DurationResult tuplet_span(const Tuplet *tuplet, const Duration *nominal, Duration **out);
 
 #endif

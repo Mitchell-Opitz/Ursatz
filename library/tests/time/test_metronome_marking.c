@@ -42,43 +42,8 @@ static void test_accessors_reduce_to_lowest_terms(void) {
     metronome_marking_destroy(m);
 }
 
-/* Quarter = 60: sixty quarter notes in a minute, one per second. */
-static void test_quarter_equals_sixty_is_one_second(void) {
-    MetronomeMarking *m = marking(1, 4, 60, 1);
-    unsigned long n, d;
-
-    metronome_marking_seconds_per_beat_unit(m, &n, &d);
-    assert(n == 1 && d == 1);
-
-    metronome_marking_destroy(m);
-}
-
-static void test_other_beat_units_and_rates(void) {
-    unsigned long n, d;
-
-    /* Quarter = 120: half a second per quarter. */
-    MetronomeMarking *fast = marking(1, 4, 120, 1);
-    metronome_marking_seconds_per_beat_unit(fast, &n, &d);
-    assert(n == 1 && d == 2);
-    metronome_marking_destroy(fast);
-
-    /* Dotted quarter (3/8) = 60: a dotted quarter lasts one second. */
-    MetronomeMarking *dotted = marking(3, 8, 60, 1);
-    metronome_marking_seconds_per_beat_unit(dotted, &n, &d);
-    assert(n == 1 && d == 1);
-    metronome_marking_destroy(dotted);
-
-    /* A fractional rate is exact: quarter = 72.5 (145/2) -> 120/145 = 24/29 s per quarter. */
-    MetronomeMarking *fractional = marking(1, 4, 145, 2);
-    metronome_marking_seconds_per_beat_unit(fractional, &n, &d);
-    assert(n == 24 && d == 29);
-    metronome_marking_destroy(fractional);
-}
-
 int main(void) {
     test_create_rejects_invalid();
     test_accessors_reduce_to_lowest_terms();
-    test_quarter_equals_sixty_is_one_second();
-    test_other_beat_units_and_rates();
     return 0;
 }

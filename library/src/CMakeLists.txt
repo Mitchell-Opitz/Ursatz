@@ -54,7 +54,6 @@ add_library(ursatz
     semantics/motive_occurrence_kind.c
     semantics/applied_chord_kind.c
     semantics/key_change_extent.c
-    semantics/form_level.c
     semantics/analysis_note.c
     semantics/analysis_key.c
     relationship/relationship.c
@@ -63,7 +62,6 @@ add_library(ursatz
     interpretation/claim_interpretation.c
     interpretation/chord.c
     interpretation/key.c
-    interpretation/scale_degree.c
     interpretation/texture.c
     theory/framework.c
     theory/framework_singleton.c
@@ -142,7 +140,6 @@ ursatz_public_headers(ursatz
         interpretation/claim_interpretation.h
         interpretation/interpretation.h
         interpretation/key.h
-        interpretation/scale_degree.h
         interpretation/texture.h
         interpretation/uncertainty.h
         io/midi_importer.h
@@ -169,7 +166,6 @@ ursatz_public_headers(ursatz
         semantics/beat_strength.h
         semantics/cadence_type.h
         semantics/contour.h
-        semantics/form_level.h
         semantics/interval.h
         semantics/key_change_extent.h
         semantics/motive_occurrence_kind.h

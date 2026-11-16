@@ -88,13 +88,3 @@ unsigned long metronome_marking_bpm_numerator(const MetronomeMarking *marking) {
 unsigned long metronome_marking_bpm_denominator(const MetronomeMarking *marking) {
     return content_of(marking)->bpm_denominator;
 }
-
-void metronome_marking_seconds_per_beat_unit(const MetronomeMarking *marking, unsigned long *out_numerator,
-                                             unsigned long *out_denominator) {
-    const MetronomeMarkingContent *content = content_of(marking);
-    unsigned long numerator = 60UL * content->bpm_denominator;
-    unsigned long denominator = content->bpm_numerator;
-    reduce(&numerator, &denominator);
-    *out_numerator = numerator;
-    *out_denominator = denominator;
-}

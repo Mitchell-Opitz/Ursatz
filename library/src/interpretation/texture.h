@@ -10,7 +10,7 @@
  * independent lines).
  *
  * Texture embeds and owns an Interpretation (interpretation/
- * interpretation.h), the same shape Chord, Key, and ScaleDegree have.
+ * interpretation.h), the same shape Chord and Key have.
  * The underlying fact (which passage this Texture is about) is carried
  * by the embedded Interpretation's own target_id -- the caller sets
  * target_id to the passage's EntityID when building that

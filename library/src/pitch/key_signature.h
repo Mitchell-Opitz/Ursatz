@@ -64,7 +64,4 @@ size_t key_signature_entry_count(const KeySignature *key_signature);
 PitchLetter key_signature_letter_at(const KeySignature *key_signature, size_t index);
 int key_signature_accidental_at(const KeySignature *key_signature, size_t index);
 
-/* Value equality: same entries in the same order. */
-bool key_signature_equals(const KeySignature *a, const KeySignature *b);
-
 #endif

@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "semantics/cadence_type.h"
-#include "semantics/form_level.h"
 
 /*
  * Phrase rules for standard-form-v1. A phrase is a relatively complete thought that shows

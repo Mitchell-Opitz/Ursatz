@@ -46,8 +46,4 @@ unsigned long metronome_marking_beat_unit_denominator(const MetronomeMarking *ma
 unsigned long metronome_marking_bpm_numerator(const MetronomeMarking *marking);
 unsigned long metronome_marking_bpm_denominator(const MetronomeMarking *marking);
 
-/* Seconds one beat unit lasts, as an exact rational in lowest terms: 60/bpm. */
-void metronome_marking_seconds_per_beat_unit(const MetronomeMarking *marking, unsigned long *out_numerator,
-                                             unsigned long *out_denominator);
-
 #endif

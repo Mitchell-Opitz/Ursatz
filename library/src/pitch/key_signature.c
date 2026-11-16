@@ -63,18 +63,3 @@ PitchLetter key_signature_letter_at(const KeySignature *key_signature, size_t in
 int key_signature_accidental_at(const KeySignature *key_signature, size_t index) {
     return key_signature->entries[index].accidental;
 }
-
-bool key_signature_equals(const KeySignature *a, const KeySignature *b) {
-    if (a == NULL || b == NULL) {
-        return a == b;
-    }
-    if (a->entry_count != b->entry_count) {
-        return false;
-    }
-    for (size_t i = 0; i < a->entry_count; i++) {
-        if (a->entries[i].letter != b->entries[i].letter || a->entries[i].accidental != b->entries[i].accidental) {
-            return false;
-        }
-    }
-    return true;
-}

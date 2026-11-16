@@ -45,7 +45,7 @@
  *
  * framework is an optional FrameworkReference (core/framework_reference.h).
  * Optional because not every Interpretation is framework-relative --
- * ScaleDegree/Chord/Key, the Registry's framework-relative interpretation
+ * Chord/Key, the Registry's framework-relative interpretation
  * types, do not exist in this codebase yet, and every existing
  * Interpretation producer (the eight analyzers under music-analysis)
  * constructs framework-neutral claims today. Interpretation owns the

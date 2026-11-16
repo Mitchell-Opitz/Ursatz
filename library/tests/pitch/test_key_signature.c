@@ -60,40 +60,6 @@ static void test_entries_are_copied(void) {
     key_signature_destroy(key_signature);
 }
 
-static void test_equality(void) {
-    KeySignatureEntry fc[] = {{PITCH_LETTER_F, 1}, {PITCH_LETTER_C, 1}};
-    KeySignatureEntry cf[] = {{PITCH_LETTER_C, 1}, {PITCH_LETTER_F, 1}};
-    KeySignatureEntry flat_fc[] = {{PITCH_LETTER_F, -1}, {PITCH_LETTER_C, -1}};
-    KeySignature *a = NULL;
-    KeySignature *b = NULL;
-    KeySignature *reordered = NULL;
-    KeySignature *flats = NULL;
-    KeySignature *empty = NULL;
-    KeySignature *shorter = NULL;
-    assert(key_signature_create(fc, 2, &a) == KEY_SIGNATURE_OK);
-    assert(key_signature_create(fc, 2, &b) == KEY_SIGNATURE_OK);
-    assert(key_signature_create(cf, 2, &reordered) == KEY_SIGNATURE_OK);
-    assert(key_signature_create(flat_fc, 2, &flats) == KEY_SIGNATURE_OK);
-    assert(key_signature_create(NULL, 0, &empty) == KEY_SIGNATURE_OK);
-    assert(key_signature_create(fc, 1, &shorter) == KEY_SIGNATURE_OK);
-
-    assert(key_signature_equals(a, b));
-    assert(key_signature_equals(a, a));
-    assert(!key_signature_equals(a, reordered)); /* order matters */
-    assert(!key_signature_equals(a, flats));
-    assert(!key_signature_equals(a, shorter));
-    assert(!key_signature_equals(a, empty));
-    assert(key_signature_equals(NULL, NULL));
-    assert(!key_signature_equals(a, NULL));
-
-    key_signature_destroy(a);
-    key_signature_destroy(b);
-    key_signature_destroy(reordered);
-    key_signature_destroy(flats);
-    key_signature_destroy(empty);
-    key_signature_destroy(shorter);
-}
-
 /* The type carries no theory: mixed accidentals and a double sharp are
    representable; rules about them live in frameworks. */
 static void test_type_carries_no_theory(void) {
@@ -115,7 +81,6 @@ int main(void) {
     test_create_rejects_out_of_range_accidental();
     test_entries_keep_order();
     test_entries_are_copied();
-    test_equality();
     test_type_carries_no_theory();
     test_destroy_null_is_safe();
     return 0;
