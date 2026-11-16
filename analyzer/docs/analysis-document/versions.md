@@ -2,6 +2,11 @@
 
 Every `schema_version` of the analysis document and what changed. Back to the [docs index](../README.md) and the [analysis document](../analysis-document.md).
 
+- **12**: Removes the top-level `counterpoint_check` (the counterpoint check is gone) from `required` and
+  `properties`, and renames `metadata.ursatz_commit` to `metadata.producer_key` (the value was always the producer
+  key). A removed section and a renamed field are breaking changes under the rule above. A stored document of another
+  version reads as stale (`analyzer_document_status`), not as unreadable. The corpus index and the motive link cache
+  move to schema version 2 with the same rename; an older file reads as stale.
 - **11**: Adds the required top-level `repeats` after `form`: an array of repeat claims, one per repeat or return the
   library finds (R-400), each with `kind`, `earlier`, `later` and `transposition`. Empty when there are none. Adding a
   required section is a breaking change under the rule above; no existing field changed.

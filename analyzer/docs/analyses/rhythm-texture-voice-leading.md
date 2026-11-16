@@ -15,8 +15,7 @@ change. The document's `rhythm` is one flat list of claims labelled by kind:
   reading's barlines carry the harmony changes (on a downbeat, weight 2; on any beat, 1) and the cadence arrivals (on a
   downbeat, 3). It exists for a file whose meter does not fit its music, such as a 3/4 piece written in 4/4; the
   alternative is the `--meter`, `--value-scale` and `--pickup` that would read it. It is offered and never applied. A reading
-  applied with those options is the one checked, so a corrected piece offers nothing. The Markdown report prints one line
-  of it under `## Rhythm and meter`.
+  applied with those options is the one checked, so a corrected piece offers nothing.
 - **Density** per phrase, for all its notes and for each line: notes, attacks, attacks per beat, the mean distance
   between attacks, the share of attacks on the beat and a histogram of the notes' lengths. The recurring rhythm patterns
   are the motive families' rhythms (see [Motives](form-and-motive.md#motives)), not a second detector.
@@ -29,8 +28,6 @@ change. The document's `rhythm` is one flat list of claims labelled by kind:
 - **Tuplets**: runs of triplets (sextuplets included) and duplets, named borrowed or not and placed at a level by the
   library's rules. The importers carry no notated tuplets, so they are read from the notes' times alone, rounded to a grid
   of 96 to the whole note.
-
-The Markdown report has a `## Rhythm and meter` section with a subsection for each.
 
 Measured on the reference pieces (MIDI):
 
@@ -60,7 +57,7 @@ from the file, or the MusicXML part), the kernel's voice separation runs per str
 a confidence, and the library measures each measure, classifies it with its defaults and merges equal consecutive
 measures into passages. The document's `texture` has a claim per passage (texture, category, measures, confidence and
 the measured features) and one per change. The library names no accompaniment pattern, so the passage reports the
-repeated-pattern score only. The Markdown report's `## Texture` prints the passages and the changes.
+repeated-pattern score only.
 
 Measured on the reference pieces (MIDI), passages by texture:
 
@@ -99,8 +96,7 @@ pitch, otherwise the library derives it from the semitone. The document's `voice
   and bass).
 
 Doubling is counted, not judged: the chord members are found from the chord's interval set and the bass, and
-standard-voicing's doubling rules need chord spellings the analyzer does not build (R-018). The Markdown report's
-`## Voice leading` prints the motion table, the faults and a summary of the doubling.
+standard-voicing's doubling rules need chord spellings the analyzer does not build (R-018).
 
 Measured on the reference pieces (MIDI):
 
@@ -134,8 +130,6 @@ run unchanged. The document's `schemas` is one flat array with two kinds of clai
   with its kind, units, direction, transposition in diatonic steps and stages (bass, soprano and root degrees in the home
   key). The cycle of fifths has no rule in scale-harmonization yet, so the library reports it from the Roman numerals
   alone (`rule_backed` false).
-
-The Markdown report's `## Schemas and sequences` prints a table of each.
 
 Measured on the reference pieces (MIDI, the library's defaults): no piece has more than one schema.
 

@@ -36,9 +36,7 @@ everything in the document comes from the second pass. There is no further itera
 
 | `expansions` | array | Optional, absent with none. The expansions and contractions that concern the phrase (see "Themes"): each is a claim whose `label` is `"internal"`, `"external"` or `"contraction"` (the library's `ExpansionPlacement` and `PhraseLengthChange` names; its `StandardFormExpansionKind` has none of its own) with `index`, `change` (`"expansion"` or `"contraction"`), `theme` (index into `themes`, `null` for an external expansion of a phrase in no theme), `expected_length` and `actual_length` in measures, `measures_changed` (at least 1), `measures`, and `techniques` (the library's `"repetition"`, `"stretching"`, `"one-more-time"` and `"alternative-path"` it finds evidence for; the library detects only repetition and one-more-time, and none when it finds no evidence). An external one adds `external_kind` (`"post-cadential-extension"`, `"codetta"`, `"coda"` or `"prefix"`) and the booleans `suffix_length_typical` and `suffix_agrees_with_location`. |
 
-`subphrases`, `ideas`, `expansions` and the chord claims' `phrase_model` are additive. The Markdown report renders
-`## Phrases` from this array: a row per phrase (with an Expansion column), then a line per phrase with its ideas,
-subphrases and phrase model.
+`subphrases`, `ideas`, `expansions` and the chord claims' `phrase_model` are additive.
 
 ## Themes
 
@@ -70,8 +68,7 @@ is never identified (README, Known limits).
 
 The expansion and contraction claims are in the phrase they concern, in `expansions` (see "Phrases"): an ending longer
 or shorter than its beginning is an internal expansion or a contraction by the measures of the difference, and the
-extension after a phrase's cadence is an external expansion. The Markdown report renders `## Themes` from this array (a
-row per theme with its parts, each with the cadence that ends it, and its traits) and lists the compound periods.
+extension after a phrase's cadence is an external expansion.
 
 ## Form plan
 
@@ -131,9 +128,6 @@ earlier:
 | `earlier_section`, `later_section` | integer | Indices into the form's `sections`: the section holding each theme's first phrase. |
 | `earlier`, `later` | object | `{"first", "last"}`: the measures of the two themes. |
 | `similarity` | object | The kernel's evidence for the best stretch pair: `value` (the lower of `contour`, the share of equal up, down and same directions, and `rhythm`, the share of equal durations; at least 0.8), `window` (the notes compared), and `earlier_offset` and `later_offset` (where the stretches begin inside each theme, in notes). |
-
-The Markdown report renders `## Form plan` from this object: a row per section (letter, measures, key, phrases, closing
-cadence, the return that lettered it), the returns, and the tree as an indented outline.
 
 ## Repeats and returns
 

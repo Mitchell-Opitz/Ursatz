@@ -97,9 +97,6 @@ for. All the notes are one stream. The library names the ratio and places it (`b
 | `measure`, `beat` | number | Where the first note is attacked. |
 | `attacks` | integer | The attacks in the run, at least 2. |
 
-The Markdown report renders `## Rhythm and meter` from this section: `### Density` (a row per phrase and line),
-`### Syncopation`, `### Hemiola`, `### Hypermeter` and `### Tuplets and borrowed divisions`, after one `**Meter fit:**` line.
-
 ## Texture
 
 `texture` is one flat array of claims: the passages in time order (`label` `"passage"`), then the changes between

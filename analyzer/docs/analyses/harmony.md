@@ -22,11 +22,9 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's segm
   of incomplete segments inside one beat is read as one arpeggiated chord. The chord's `context` says
   where the reading came from: `none` (its own), `previous`, `next` or `arpeggio`.
 - **Runner-up.** The library also reports the best-scoring chord on a different root, with its
-  score. The analysis document always carries it. The report's Chords table shows it only when its
-  score is within 0.10 of the best chord's (`RUNNER_UP_MARGIN_THRESHOLD` in
-  `src/pipeline/markdown_report.c`): a close call is worth seeing, a clear win is not.
+  score. The analysis document always carries it.
 - **Non-chord tones.** Every note in a matched segment that is not a tone of the chord is listed in
-  `non_chord_tones` and in the report's Non-chord tones section, with the library's name for the
+  `non_chord_tones`, with the library's name for the
   figure (`passing`, `neighbor`, `suspension`, `anticipation`, `appoggiatura`, `escape-tone`,
   `pedal`, ...), the note, where it sounds, and the chord it is non-chordal against. A tone the
   library cannot place in one of its figures is listed as `unclassified`, not dropped.
@@ -166,8 +164,7 @@ a dominant toward its target), marks the cadential six-fours (`harmony_analysis_
 six-fours (`harmony_analysis_classify_six_fours`) and finds the prolongations
 (`harmony_analysis_find_prolongations`). A diatonic predominant is strong (IV, ii) or weak (iii, vi) by the
 library's `harmony_predominant_strength`. The chord claims carry `function` and `six_four`, and the new
-`prolongations` section lists the spans. The Markdown report's Chords table gains Function and Six-four columns,
-and a `## Prolongations` section follows the chord vocabulary. The phrase model labels the phrases' chords (see [Phrases](form-and-motive.md#phrases)).
+`prolongations` section lists the spans. The phrase model labels the phrases' chords (see [Phrases](form-and-motive.md#phrases)).
 
 ## Progressions and harmonic rhythm
 
@@ -178,10 +175,8 @@ Counted by the analyzer over the library's Roman numerals, key regions and caden
   numerals' base numerals. A held chord (the same base numeral again) counts once, and a run does not cross an
   unlabelled chord or a change of key region. Every run is counted; a pattern that occurs at least twice is kept,
   unless a longer pattern with the same number of occurrences contains it. They are ranked by count, then length, then
-  first occurrence. The document's `progressions` holds them all; the Markdown report's `## Progression patterns`
-  shows the top 10 with the measures of each occurrence.
+  first occurrence. The document's `progressions` holds them all.
 - **Harmonic rhythm.** A change is a chord whose base numeral or key region differs from the chord before it. The
   document's `harmonic_rhythm` has the changes in each measure, their mean, the mean per window of four measures, and
   for every cadence the mean changes per measure in the two measures before its arrival against the two before those
-  (`accelerates` when the approach is faster). The Markdown report's `## Harmonic rhythm` prints the per-measure
-  changes four measures to a row, the mean, and the approach to each cadence.
+  (`accelerates` when the approach is faster).

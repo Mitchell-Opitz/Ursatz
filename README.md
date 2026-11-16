@@ -9,7 +9,7 @@ Each part builds on the ones before it, in this order.
 | Folder | Part | Docs |
 |---|---|---|
 | `library/` | The music theory library (`libursatz`): a canonical representation of musical material | [README](library/README.md), [docs](library/docs/README.md) |
-| `analyzer/` | The Analyzer: a library and the `ursatz-analyzer` command that write a Markdown report and a JSON analysis document | [README](analyzer/README.md), [docs](analyzer/docs/README.md) |
+| `analyzer/` | The Analyzer: a library and the `ursatz-analyzer` command that write the JSON analysis document and its text export | [README](analyzer/README.md), [docs](analyzer/docs/README.md) |
 | `composer/` | The Composer: a seeded, reproducible composing partner and the `ursatz-composer` command | [README](composer/README.md), [docs](composer/docs/README.md) |
 | `gui/` | The GUI: a local web UI over the other parts (the `ursatz-gui-backend` server and its frontend) | [README](gui/README.md), [docs](gui/docs/README.md) |
 

@@ -62,11 +62,12 @@ Rules the counts follow:
 
 ## Label builders
 
-The Composer labels its own material with the same functions the profile uses, all in `style_labels.h`:
-`style_label_tempo` and `style_label_density` (the bands above), `style_label_degree` (`1 b2 2 b3 3 4 #4 5 b6 6 b7 7`
+The Composer labels its own material with the same functions the profile uses, in `style_labels.h`:
+`style_label_degree` (`1 b2 2 b3 3 4 #4 5 b6 6 b7 7`
 by the semitones above the tonic), `style_label_join` (the `motive-degrees` and `motive-rhythm` labels),
 `style_label_motive_intervals` (the `motive-intervals` label; no octave cap) and `style_label_nct_figure` (the
-`motive-nct-figure` label).
+`motive-nct-figure` label). `style_label_tempo` and `style_label_density` (the bands above) are internal to the
+Analyzer (`src/style/style_profile_internal.h`): the profile uses them and no other caller does.
 
 ## The style model file
 

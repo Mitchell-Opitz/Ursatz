@@ -47,8 +47,7 @@ carries the same summary in its `outer` field (see Chord claims).
 and bass scale degrees, the meter) and reports what comes back: types, arrivals, dominants and beat strengths are
 the library's. After the cadences are found, a dominant that ends the run before a section start becomes a half
 cadence of the earlier section (R-045, R-054; a section starts at each key region that returns to the home key
-after leaving it), and the key changes are confirmed (above). The cadence plan is this array in order; the
-Markdown report renders it from here.
+after leaving it), and the key changes are confirmed (above). The cadence plan is this array in order.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -79,11 +78,6 @@ cadence the claim stays `"subverted"` even when the prolongation is the likelier
 | `measure`, `beat` | integer or null | Where the alternative's arrival begins; `null` when the meter cannot place it. |
 | `share` | integer | Thousandths of the evidence for the alternative. |
 | `note_ids` | array of integer | The notes sounding in the alternative's arrival. |
-
-The Markdown report lists each cadence with an alternative under "Competing readings", the claim first, with
-percentages: `m23 b1 half cadence (60%), or perfect authentic cadence at m24 b1 (40%)` and
-`m4 b1 evaded cadence (55%), or tonic prolongation (45%)`. The report calls a `"subverted"` cadence "evaded"
-everywhere it names a cadence type; the document keeps the library's word.
 
 ## Prolongations
 

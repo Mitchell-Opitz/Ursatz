@@ -134,7 +134,6 @@ There is one tab per group of document sections, in this order:
 | Texture | `texture`, `voice_leading` |
 | Schemas | `schemas` |
 | Markings | `markings` |
-| Counterpoint | `counterpoint_check` |
 | Notes | `notes` |
 
 In the Motives tab each family shows its features (degrees, intervals, rhythm, non-chord tones by note) and a
@@ -148,8 +147,7 @@ Each item of an array section is one row: its name (the item's `label`, else
 its `numeral`, `type` or `key`), where it is (`m<measure> b<beat>` for the
 start and the end, `-` when the location is null), and a Fields toggle that
 shows the item's remaining fields as formatted JSON. An object section
-(`keys`, `form`, `meter`, `harmonic_rhythm`, `outer_voices`, `markings`,
-`counterpoint_check`) is shown as one JSON block, and the arrays of claims
+(`keys`, `form`, `meter`, `harmonic_rhythm`, `outer_voices`, `markings`) is shown as one JSON block, and the arrays of claims
 inside it (the key regions, the form's sections and returns, the soprano and
 bass lines) are rows. Choosing a row switches to Score mode and selects that
 claim there (see [Selecting claims](#selecting-claims-and-the-inspector)).

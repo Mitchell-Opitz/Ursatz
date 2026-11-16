@@ -1,6 +1,6 @@
 # Ursatz-Analyzer
 
-A small C11 command-line tool that turns a MIDI or MusicXML file into a Markdown report and a JSON analysis
+A small C11 command-line tool that turns a MIDI or MusicXML file into a JSON analysis
 document: the piece's time signature, measure count and pickup, its local keys over time (key
 regions, with the home key, tonicizations, modulations and pivot chords), and the most likely chord
 for each group of notes that start together, each located by measure and beat. It is a
@@ -39,28 +39,16 @@ tests and warns about fast-set tests over 10 s). Timeouts come from `cmake/TestT
 ## Usage
 
 ```sh
-ursatz-analyzer [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> [--cantus upper|lower]] [--meter <n/d>] [--value-scale <n or n/d>] [--pickup <n/d>] <input-file-path>
+ursatz-analyzer [--json] [--input-format midi|musicxml] [--meter <n/d>] [--value-scale <n or n/d>] [--pickup <n/d>] <input-file-path>
 ```
 
-Writes two files next to the input file:
+Writes one file next to the input file, `<stem>.analysis.json`: the analysis document. See
+[docs/analysis-document.md](docs/analysis-document.md) and the
+[schema](schema/analysis-document.v12.schema.json).
 
-- `<stem>.report.md`: the Markdown report.
-- `<stem>.analysis.json`: the analysis document. See
-  [docs/analysis-document.md](docs/analysis-document.md) and the
-  [schema](schema/analysis-document.v11.schema.json).
-
-`--markdown` writes only the report, `--json` writes only the analysis document. No flag, or both,
-writes both. `--input-format` forces the input format (see [Input formats](docs/input.md#input-formats)). Flags can come before or
+`--json` is the default and may be given. `--input-format` forces the input format (see [Input formats](docs/input.md#input-formats)). Flags can come before or
 after the path. Exits 1 with a message on an unknown flag, a
 missing path, bad input, allocation failure, or write failure.
-
-`--check-counterpoint <1-5>` also checks two-voice input against that species of Ursatz's
-standard-counterpoint (see `counterpoint_check` in
-[docs/analysis-document/voice-leading.md](docs/analysis-document/voice-leading.md#counterpoint-check)). `--cantus upper|lower` says which voice is
-the cantus firmus (default lower) and needs `--check-counterpoint`. The two voices are the input's
-two streams (MIDI tracks or MusicXML parts), or the two voices the kernel finds in a single stream.
-For any other input the rest of the analysis is written and the CLI exits 2 with "counterpoint
-check needs two voices".
 
 `--meter <n/d>`, `--value-scale <n or n/d>` and `--pickup <n/d>` read the notes as other notation
 than the file's before they are analyzed (see [Notation readings](docs/input.md#notation-readings)). They apply to one input file,
@@ -75,12 +63,12 @@ no file. `--measures` limits the export to a range of measure numbers as written
 [docs/text-export.md](docs/text-export.md).
 
 ```sh
-ursatz-analyzer --corpus <dir> [--out <dir>] [--resume] [--markdown]
+ursatz-analyzer --corpus <dir> [--out <dir>] [--resume]
 ```
 
 Corpus mode analyzes every MIDI and MusicXML file under a folder and writes one analysis document each, plus a
-corpus index. See [docs/corpus.md](docs/corpus.md) and the [index schema](schema/corpus-index.v1.schema.json).
-It cannot be combined with an input file, `--json`, `--check-counterpoint`, `--cantus`, `--input-format`, `--meter`, `--value-scale` or `--pickup`.
+corpus index. See [docs/corpus.md](docs/corpus.md) and the [index schema](schema/corpus-index.v2.schema.json).
+It cannot be combined with an input file, `--json`, `--input-format`, `--meter`, `--value-scale` or `--pickup`.
 
 ```sh
 ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]

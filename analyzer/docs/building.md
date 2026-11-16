@@ -22,9 +22,9 @@ check's own fraction stay until the library owns them.
 
 Tests:
 
-- `test_analysis_pipeline`, `test_report_output`: end-to-end pipeline and report file.
-- `test_analysis_result`: the claims of each area on the five reference pieces, targets and confidences, cancel and
-  partial stages, and the document and report of the result against the snapshots (`smoke` runs Bach 114, also under
+- `test_analysis_pipeline`: the end-to-end pipeline.
+- `test_analysis_result`: the claims of each area on the five reference pieces, targets and confidences,
+  partial stages, and the document of the result against the snapshots (`smoke` runs Bach 114, also under
   valgrind).
 - `test_corpus_key_estimation`: the home key of six reference pieces.
 - `test_key_regions_clementi_36`, `test_key_regions_mozart_545`: the key regions and principal
@@ -48,9 +48,9 @@ Tests:
   named `form`, `section`, `phrase`, `subphrase` and `idea`, the letters following from the returns, and the
   section and return counts and letters as the library gives them (see [Form plan](analyses/form-and-motive.md#form-plan)).
 - `test_long_labels`: labels past 31 characters render intact.
-- `test_report_snapshots` and `test_document_snapshots`: the Markdown report (MIDI and MusicXML) and the analysis
-  document (MIDI, without `analyzer_version`, `ursatz_commit` and `input`) of the five reference pieces, byte for byte
-  against `tests/snapshots/<piece>.report.md` and `<piece>.analysis.json`. Run a test with `UPDATE_SNAPSHOTS=1` (or
+- `test_document_snapshots`: the analysis
+  document (MIDI, without `analyzer_version`, `producer_key` and `input`) of the five reference pieces, byte for byte
+  against `tests/snapshots/<piece>.analysis.json`. Run a test with `UPDATE_SNAPSHOTS=1` (or
   `URSATZ_UPDATE_SNAPSHOTS=1`) to rewrite its files; a claim that moves is recaptured in its own commit.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
@@ -76,12 +76,9 @@ Tests:
 - `test_notation_reading`: the reading parsers, scaling that keeps note ids, the meter map a reading sets, a failed
   reading leaving the notes unchanged, and Bach 114 read in 3/4 at scale 2 (64 measures, its cadence arrivals on beat 1).
   `test_cli_notation_reading` checks the flags, the document and its schema.
-- `test_counterpoint_check`: the first and second species Fux exercises (`tests/counterpoint`, one valid and one
-  with a parallel fifth each), the document and the Markdown of a check, a shape error, and input that is not two
-  voices. `test_cli_counterpoint_check` checks the flags and the exit codes.
 - `test_corpus`: corpus mode on the `reference` and `mixed` corpora CMake builds in the build tree: the index
   against `tests/snapshots/corpus-index.reference.json`, each document byte for byte equal to a single-file run, and
-  the resume rules. `test_cli_corpus` checks the flags and exit codes. `test_corpus_index_schema` validates the index
+  the resume rules. `test_cli_corpus` checks the flags and exit codes (and that an index of schema version 1 is written again). `test_corpus_index_schema` validates the index
   against the schema (see below).
 - `test_style_profile`: the style labels on hand cases, the profile of the `reference` corpus against
   `tests/snapshots/style-model.reference.json`, the model file round trip, the distances between the `chorales` and

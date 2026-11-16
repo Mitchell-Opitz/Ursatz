@@ -33,7 +33,7 @@ most 8 tries.
 
 - `source.mid` or `source.musicxml`: the upload's bytes, written unchanged. A
   `.xml` or `.mxl` upload keeps its extension (`source.xml`, `source.mxl`).
-- `analysis.json`: the Analyzer's analysis document (schema v9).
+- `analysis.json`: the Analyzer's analysis document (schema v12).
 - `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
   (ISO 8601 UTC), "analyzer_version", "document_schema_version",
   "ursatz_commit"}` plus the
@@ -53,10 +53,10 @@ removes the directory. Re-running the analysis rewrites `analysis.json` and
 the three version fields of `meta.json`; the filename and `uploaded_at` stay.
 
 Staleness keys: a stored analysis is current only when its `schema_version`, `metadata.analyzer_version` and
-`metadata.ursatz_commit` (the Analyzer's producer key) all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
+`metadata.producer_key` (the Analyzer's producer key) all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
 `staleness.h`). `meta.json` holds the same three values as `document_schema_version`, `analyzer_version` and
 `ursatz_commit`, so the Library list reads the flag without opening a document. A `meta.json` from before
-`ursatz_commit` gets it from its document's `metadata.ursatz_commit` the first time the piece is opened (written back
+`ursatz_commit` gets it from its document's `metadata.producer_key` the first time the piece is opened (written back
 under the piece lock); with neither it is stale. A stale analysis is analyzed again once, under the piece lock, when
 the piece is opened, when a style is built from it and before a link run reads it (`ursatz_gui_analysis_ensure_current`);
 the link worker's re-analysis after a feature or format error stays as a fallback. If that analysis fails, the
