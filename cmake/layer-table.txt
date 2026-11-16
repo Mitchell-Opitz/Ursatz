@@ -105,13 +105,14 @@ uses gui           analyzer-api composer-api cjson civetweb
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
 
 # Tests: a test folder may include its module and what that module may include, plus the rows below.
+module test-support          tests/support prefix ursatz_test.h test_http.h
 module root-tests            tests
 module library-tests         library/tests          root library/tests library/tests/support
 module library-test-support  library/tests/support
 module tests-integration     library/tests/integration
 module tests-accuracy        library/tests/accuracy
-free root-tests library-tests library-test-support tests-integration tests-accuracy
-group test-helpers library-tests library-test-support
+free test-support root-tests library-tests library-test-support tests-integration tests-accuracy
+group test-helpers library-tests library-test-support test-support
 
 module tests-identity        library/tests/identity        root library/tests library/tests/support
 module tests-core            library/tests/core            root library/tests library/tests/support
@@ -218,8 +219,11 @@ module analyzer-consumer  analyzer/tests/consumer
 module composer-tests     composer/tests            root composer/tests composer/tests/support composer/src composer/src/include composer/include
 module composer-consumer  composer/tests/consumer
 module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src
+uses analyzer-tests test-support
 like analyzer-tests analyzer
+uses composer-tests test-support
 like composer-tests composer
+uses gui-tests test-support
 like gui-tests gui
 free analyzer-consumer composer-consumer -- consumer projects include what a consumer may not, to check that it fails
 
