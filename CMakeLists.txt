@@ -13,7 +13,6 @@ option(URSATZ_GUI "Build the GUI and its HTTP server" ON)
 option(URSATZ_TESTS "Build and register the tests of every part" ON)
 
 # Each part reads its own switch; the root sets them all from the two options above.
-set(URSATZ_COMPOSER_BUILD_TESTS ${URSATZ_TESTS})
 set(URSATZ_COMPOSER_BUILD_CLI ON)
 
 enable_testing()

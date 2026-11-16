@@ -642,10 +642,6 @@ ursatz_test(consumer_rejects_internals COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CM
     LABELS slow
     PROPERTIES DEPENDS consumer_build RESOURCE_LOCK consumer_build_dir)
 
-# Default timeouts by label (cmake/TestTimeouts.cmake), set last so every test above has its labels.
-include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
-ursatz_composer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
-
 ursatz_test(test_grow_motif_realized LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
