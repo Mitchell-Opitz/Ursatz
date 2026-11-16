@@ -1021,11 +1021,6 @@ set_tests_properties(consumer_build consumer_rejects_internals PROPERTIES LABELS
 
 # Default timeouts by label (cmake/TestTimeouts.cmake), set last so every test above has its labels.
 include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
-# These four take 12 to 21 s alone and pass inside the fast set's 30 s only on an idle machine: the one-tree fast set runs
-# them beside hundreds of other tests (`ctest -j$(nproc)`), where they timed out on the CI runner. They keep their place in the
-# fast set with a longer limit; a hung test still stops.
-set_tests_properties(test_melody_fill test_melody_preferences test_motif_preferences test_api_piece PROPERTIES TIMEOUT 120)
-
 ursatz_composer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(test_grow_motif_realized test_grow_motif_realized.c)

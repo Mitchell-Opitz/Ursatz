@@ -33,7 +33,7 @@ Tests are split by the `slow` label so a pull request run stays short.
 - The full run is both sets: `ctest --test-dir build/composer -j$(nproc)`. Run it before a push that changes behavior.
 - A fast-set test over 10 s is sped up or labeled `slow`. After a run, `tools/ci/slowest-tests.sh build/composer` (from the repository root) prints the ten
   slowest tests and warns about any fast-set test over 10 s.
-- Timeouts come from `cmake/TestTimeouts.cmake`: 30 s for a test in the fast set and 1800 s for a slow one, unless the test sets its own.
+- Timeouts come from `cmake/TestTimeouts.cmake`: 120 s for a test in the fast set (a hang guard: the one-tree fast set runs on a loaded 4 core CI runner, where tests of 20 s alone take over 30 s) and 1800 s for a slow one, unless the test sets its own.
 
 ## Usage
 

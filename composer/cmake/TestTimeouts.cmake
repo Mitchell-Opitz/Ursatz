@@ -1,4 +1,4 @@
-# Default test timeouts by label, so a local run and CI stop a hung test the same way: 30 s for a test in the fast set,
+# Default test timeouts by label, so a local run and CI stop a hung test the same way: 120 s for a test in the fast set,
 # 1800 s for a test labeled slow. A test that sets its own TIMEOUT keeps it.
 function(ursatz_composer_apply_test_timeouts dir)
     get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
@@ -12,7 +12,7 @@ function(ursatz_composer_apply_test_timeouts dir)
         if("slow" IN_LIST test_labels)
             set_tests_properties(${test_name} PROPERTIES TIMEOUT 1800)
         else()
-            set_tests_properties(${test_name} PROPERTIES TIMEOUT 30)
+            set_tests_properties(${test_name} PROPERTIES TIMEOUT 120)
         endif()
     endforeach()
     foreach(subdirectory IN LISTS subdirectories)
