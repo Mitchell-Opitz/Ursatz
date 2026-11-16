@@ -23,7 +23,7 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | `src/style/` | Style models, blending, style checks and seeding from a corpus. |
 | `src/api/` | The composer API behind `composer_api.h`: one file for each request kind. |
 | `src/util/` | Private helpers the sources share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
-| `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and `tools/ci/check-cli-api.sh` (CI runs it) fails on any other include. |
+| `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and the layer table (`cmake/layer-table.txt`) fails on any other include. |
 | `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share: file readers, the hearing wrappers, the check oracles the operators' rules define (`test_oracles.c`: the harmony, melody and figure lane checks, the cadence hearing) and the voice-leading hearing (`voice_hear.c`), none of which the library carries; `tests/snapshots/` holds the CLI snapshots. |
 | `schema/` | `plan.v2.schema.json`, the JSON Schema of the plan file, and `api/`, the JSON Schemas of the composer API requests and responses; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
 

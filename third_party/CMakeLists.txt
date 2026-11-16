@@ -1,7 +1,7 @@
 add_subdirectory(cjson)
 
 # Vendored third-party code. ezxml is a private static target used by one module only; see the README
-# next to it. library/tests/test_architecture_third_party.c checks that nothing else includes it.
+# next to it. the layer table (cmake/layer-table.txt) checks that nothing else includes it.
 add_library(ursatz_ezxml STATIC ezxml/ezxml.c)
 target_include_directories(ursatz_ezxml PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ezxml)
 target_compile_definitions(ursatz_ezxml PRIVATE EZXML_NOMMAP)

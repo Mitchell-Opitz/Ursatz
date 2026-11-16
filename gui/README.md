@@ -66,7 +66,7 @@ GUI; `-DURSATZ_TESTS=OFF` skips every part's tests. The library's own tests are 
 Boundary checks keep the GUI a client; CI runs them (the build is configured with `URSATZ_LEGACY_INCLUDE_DIRS` OFF, so
 only staged public headers are visible). Run them from anywhere in the repository after the build:
 
-- `tools/ci/check-library-includes-gui.sh build` fails when `backend/src`
+- The layer table (`cmake/layer-table.txt`, test `layer_table`) fails when `backend/src`
   includes an Ursatz header, an Analyzer header outside `ursatz_analyzer/`, a
   Composer header other than `ursatz_composer/composer_api.h`, or any `*_internal.h`.
 - `tools/ci/check-docs.sh gui` fails when a README is over 10 KB, another doc over 20 KB, a relative link or anchor does not resolve, or a file under `docs/` is missing from `docs/README.md`.

@@ -4,7 +4,7 @@
 
 ## Layer
 
-An extension above the numbered stack. It may include kernel L0 to L8 and the framework headers listed in `chain/tests/test_architecture_chain.c`. It never includes L9 (`io`, `export`, `query`). `architecture_chain` enforces this. The notes it reads (`semantics/analysis_note.h`) are made from an import by the caller (the library's tests use `tests/import_notes_test_util.h`).
+An extension above the numbered stack. It may include kernel L0 to L8 and the framework headers listed in the `chain` row of `cmake/layer-table.txt`. It never includes L9 (`io`, `export`, `query`). The test `layer_table` enforces this. The notes it reads (`semantics/analysis_note.h`) are made from an import by the caller (the library's tests use `tests/import_notes_test_util.h`).
 
 ## Contents
 

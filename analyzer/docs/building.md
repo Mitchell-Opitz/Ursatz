@@ -5,7 +5,7 @@ Build requirements, the test list and the checks CI runs beyond the configure, b
 
 Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
 `common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is off
-(Ursatz's default), so the build sees only the staged public headers. `tools/ci/check-library-includes-analyzer.sh` checks this
+(Ursatz's default), so the build sees only the staged public headers. the layer table checks this
 (see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the library's own test folders (see `tests/fixtures/README.md`).
 
 The Analyzer holds no arithmetic of its own on times, pitches, key signatures or numerals. Exact times are `Rational`
@@ -105,10 +105,10 @@ Tests:
 
 ## Library include check
 
-`tools/ci/check-library-includes-analyzer.sh <build dir>` (relative to the repository root) runs after the build and fails when `src/` or `include/` includes an
+The layer table (`cmake/layer-table.txt`, test `layer_table`, run with the fast set) fails when `src/` or `include/` includes an
 Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, when a CMake
 file reads `SOURCE_DIR` of an Ursatz target or a path under `library/tests`, or when a public header other than
-`result_chain.h` includes a chain or framework header. It prints each offending line. CI runs it after the build.
+`result_chain.h` includes a chain or framework header. It prints each offending line.
 `test_consumer_isolation` builds the targets of `tests/consumer`: one linking only `ursatz_analyzer` compiles every public
 header but `result_chain.h`, and cannot include a chain or framework header.
 

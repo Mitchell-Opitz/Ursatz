@@ -18,7 +18,7 @@ cells per beat, the answer to a leap, a chord's member degree) stays in the Comp
 
 Library headers are included by their staged public paths only: kernel headers as `<time/meter_map.h>`, framework headers
 with their folder (`<standard-harmony/harmony_cadence_rules.h>`), Analyzer headers as `<ursatz_analyzer/...>`; Composer
-headers keep their own paths. `tools/ci/check-library-includes-composer.sh build` (run after the build, CI runs it) fails on an Ursatz
+headers keep their own paths. The layer table (`cmake/layer-table.txt`, test `layer_table`) fails on an Ursatz
 header outside the staged public roots in `build/library/public/manifest.txt`, an Analyzer header outside
 `analyzer/include/ursatz_analyzer/`, any `*_internal.h` of either, or a CMake file that reads the
 `SOURCE_DIR` of an Ursatz or Analyzer target or a path under `library/tests` or `analyzer/src`.

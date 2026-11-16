@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-`transform` was retired in P28 B4 (R-287) and `generation` left the library in P55 (the unreached code was deleted, and the Composer took the three types it uses); this page keeps their history. `transform`, `analysis`, and `generation` were built together against Dependency & Layer Spec v2 §2-§3. Like L7's `theory`/`rules` split, but stricter. All three were mutually sideways-restricted the same way L6's four siblings are, with no `transform`-`analysis`-`generation` import in any direction. Each depends on L0-L7 only, never on a sibling. Each module's architecture test enforces this by allowlisting only L0-L7 directories plus its own.
+`transform` was retired in P28 B4 (R-287) and `generation` left the library in P55 (the unreached code was deleted, and the Composer took the three types it uses); this page keeps their history. `transform`, `analysis`, and `generation` were built together against Dependency & Layer Spec v2 §2-§3. Like L7's `theory`/`rules` split, but stricter. All three were mutually sideways-restricted the same way L6's four siblings are, with no `transform`-`analysis`-`generation` import in any direction. Each depends on L0-L7 only, never on a sibling. The layer table enforces this by allowing only L0-L7 directories plus its own.
 
 This is why the deleted `generation/candidate_evaluator.h`'s `CandidateEvaluation` could not reuse the deleted `analysis/analyzer.h`'s `AnalysisResult`, even though both held the identical Interpretation/Evidence shape.
 

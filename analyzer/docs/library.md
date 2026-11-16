@@ -82,8 +82,8 @@ which runs the analysis as one `AnalyzerPass` (`chain.h`) inside `analyzer_analy
    run, are library calls over the chain's prepared harmony segments), `form_pipeline`, `motive_pipeline`, `melody_pipeline` (each
    phrase's part of the chain's soprano line), `texture_pipeline`, `voice_leading_pipeline` and `schema_pipeline`.
    The stages read the chain's stage inputs (`analysis_chain_harmony_inputs`, `_prepared_harmony`, `_form_input`,
-   `_motive_input`, `_voice_grid`, `_galant_segments`) and never call `chain_build_*`; `tools/ci/check-chain-builds.sh`
-   fails CI when `src/` or `include/` does.
+   `_motive_input`, `_voice_grid`, `_galant_segments`) and never call `chain_build_*`; the layer table
+   (`cmake/layer-table.txt`) fails when `src/` or `include/` does.
 4. The Analyzer-only stages read the collected report and the chain's results: `progression_pipeline` and
    `harmonic_rhythm_pipeline`, `form_plan_pipeline` (sections, thematic returns), `meter_check_pipeline`,
    `rhythm_pipeline` (density, syncopation, hemiola, hypermeter, tuplets), `markings_pipeline` and `voicing_check`.

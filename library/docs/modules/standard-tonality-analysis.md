@@ -12,7 +12,7 @@ standard-tonality includes no other framework, so the adapter reads only kernel-
 - the kernel `Key` of each key region and its `KeyStructure` (`interpretation/key.h`): tonic pitch class and mode;
 - the segment's 12 pitch-class weights, as a plain `double[12]` (index 0 = C).
 
-`ChordStructure` and `KeyStructure` are additive: a Chord or Key built with `chord_create` / `key_create` reports none. common-practice-minimal fills them when it builds a chord (`weighted_chord_identification`) or a key (`common_practice_build_key`). The architecture test scans `analysis/` as well as the module's top directory.
+`ChordStructure` and `KeyStructure` are additive: a Chord or Key built with `chord_create` / `key_create` reports none. common-practice-minimal fills them when it builds a chord (`weighted_chord_identification`) or a key (`common_practice_build_key`). The layer table covers `analysis/` as well as the module's top directory.
 
 `standard_tonality_build_chord_inputs` returns one record per segment, in order. A segment with no Chord, no structure, no key region, or a Key with no structure passes through as no-numeral (`has_numeral` false).
 

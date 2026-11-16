@@ -46,11 +46,11 @@ textbook; each README names the chapters it covers.
 - **Dependency ceiling.** L0 to L6 plus `theory/framework.h`, `theory/framework_singleton.h`,
   `rules/rule.h`, `rules/constraint.h` and `rules/preference.h`, plus any
   framework listed in its row above. Each framework's
-  `tests/test_architecture_<name>.c` enforces this from the root build; a new include edge
-  updates that allowlist in the same commit. Input from L8 analysis is passed in by the
+  the layer table (`cmake/layer-table.txt`, test `layer_table`) enforces this from the root build; a new include edge
+  updates its row in the same commit. Input from L8 analysis is passed in by the
   caller as plain data, never included.
-- **Test-only edges.** Framework tests follow the same layer rules (`tests/test_architecture_tests.c`).
-  Edges the tests have beyond the table above are in its `ALLOWED_TEST_EDGES` with a reason:
+- **Test-only edges.** Framework tests follow the same layer rules (the `tests` rows of the layer table).
+  Edges the tests have beyond the table above are rows there with a reason:
   standard-harmony tests include standard-tonality (Roman numeral grammar cases) and the kernel
   period detection; common-practice-minimal tests include standard-tonality (its declared
   dependency); standard-form tests include the chain; standard-meter tests include the MIDI importer.
@@ -77,9 +77,9 @@ A framework declares its `Framework` with `static FrameworkSingleton g_singleton
 ## Building and testing
 
 The root build compiles every framework library and adds each framework's `tests/` directory, so
-root `ctest` and CI run every framework test, its architecture test included (since PR #99). A
+root `ctest` and CI run every framework test. A
 framework built as the top-level project still runs its own tests.
 
 ## Public headers
 
-A framework stages the headers others need under its folder name (`standard-form/analysis/analysis_phrase.h`) and keeps its source directories private; the list is in its `CMakeLists.txt` (`ursatz_public_headers`). A header of another framework is always included by that path, never by its bare name; `architecture_header_paths` checks it. Rules and layout: `docs/public-surface.md`.
+A framework stages the headers others need under its folder name (`standard-form/analysis/analysis_phrase.h`) and keeps its source directories private; the list is in its `CMakeLists.txt` (`ursatz_public_headers`). A header of another framework is always included by that path, never by its bare name; the layer table checks it. Rules and layout: `docs/public-surface.md`.

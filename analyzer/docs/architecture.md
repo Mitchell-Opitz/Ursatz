@@ -11,7 +11,7 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 
 ## Where it sits
 
-- Below: the [Ursatz library](../../library/docs/architecture.md) in `library/`, built by the same root. `tools/ci/check-library-includes-analyzer.sh` allows only its staged public headers (see [building.md](building.md#library-include-check)).
+- Below: the [Ursatz library](../../library/docs/architecture.md) in `library/`, built by the same root. the layer table (`cmake/layer-table.txt`, test `layer_table`) allows only its staged public headers (see [building.md](building.md#library-include-check)).
 - Above: the [Composer](../../composer/docs/architecture.md) calls `composer_api.h`, and the [GUI](../../gui/docs/architecture.md) calls the playback and score export entries and reads the analysis document. Both link `ursatz_analyzer`.
 
 ## Module map
@@ -76,7 +76,7 @@ A stored document is current only when its schema version, analyzer version and 
 
 ## What it calls below
 
-The Ursatz headers the Analyzer includes, found by `tools/ci/check-library-includes-analyzer.sh`, which allows only staged public paths. All come from the [library](../../library/docs/architecture.md).
+The Ursatz headers the Analyzer includes, checked by the layer table, which allows only staged public paths. All come from the [library](../../library/docs/architecture.md).
 
 | Entry used | From which repo | For what |
 | --- | --- | --- |

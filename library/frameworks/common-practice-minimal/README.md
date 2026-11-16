@@ -87,7 +87,7 @@ Same ceiling as `Framework` itself: `identity` (L0), `core` (L1),
 `context`/`semantics`/`relationship`/`interpretation` (L6) -- plus
 `theory/framework.h`, `rules/rule.h`, and `rules/constraint.h`
 specifically. Enforced by
-`tests/test_architecture_common_practice_minimal.c`.
+the layer table (`cmake/layer-table.txt`).
 
 ## Theory owners
 

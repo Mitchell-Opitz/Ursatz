@@ -32,4 +32,4 @@ The analyzers are documented by topic:
 
 ## Dependencies
 
-Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5), all four L6 modules, both L7 modules, and a scoped allowlist of common-practice-minimal vocabulary headers (see `tests/analysis/test_architecture_analysis.c`); `ChordIdentification` and `KeyEstimation` no longer live here and depend on the framework from the chain. Never imports `transform`.
+Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5), all four L6 modules, both L7 modules, and a scoped allowlist of common-practice-minimal vocabulary headers (see the `analysis` row of `cmake/layer-table.txt`); `ChordIdentification` and `KeyEstimation` no longer live here and depend on the framework from the chain. Never imports `transform`.
