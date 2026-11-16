@@ -19,6 +19,8 @@ set(URSATZ_COMPOSER_BUILD_TESTS ${URSATZ_TESTS})
 set(URSATZ_COMPOSER_BUILD_CLI ON)
 
 enable_testing()
+include(cmake/UrsatzTools.cmake)
+include(cmake/UrsatzTest.cmake)
 
 # Dependencies first; each later part reuses the targets the earlier ones define.
 add_subdirectory(third_party)
