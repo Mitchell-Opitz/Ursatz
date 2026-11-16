@@ -1,35 +1,17 @@
-add_library(accuracy_support STATIC romantext.c score_layout.c alignment.c)
-target_include_directories(accuracy_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(accuracy_support PUBLIC ursatz)
+ursatz_test_library(accuracy_support SOURCES romantext.c score_layout.c alignment.c LIBS ursatz
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(test_accuracy_romantext test_romantext.c)
-target_link_libraries(test_accuracy_romantext PRIVATE accuracy_support)
-add_test(NAME accuracy_romantext COMMAND test_accuracy_romantext)
+ursatz_test(accuracy_romantext SOURCES test_romantext.c LIBS accuracy_support LABELS accuracy)
 
-add_executable(test_accuracy_score_layout test_score_layout.c)
-target_link_libraries(test_accuracy_score_layout PRIVATE accuracy_support)
-add_test(NAME accuracy_score_layout COMMAND test_accuracy_score_layout)
+ursatz_test(accuracy_score_layout SOURCES test_score_layout.c LIBS accuracy_support LABELS accuracy)
 
-add_executable(test_accuracy_corpus_load test_corpus_load.c)
-target_link_libraries(test_accuracy_corpus_load PRIVATE accuracy_support)
-target_compile_definitions(test_accuracy_corpus_load PRIVATE
-    URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus")
-add_test(NAME accuracy_corpus_load COMMAND test_accuracy_corpus_load)
+ursatz_test(accuracy_corpus_load SOURCES test_corpus_load.c LIBS accuracy_support
+    DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus" LABELS accuracy)
 
 # Every corpus chorale through the whole analysis chain to the form stage (P41 B6, R-396).
-add_executable(test_accuracy_chorale_form test_chorale_form.c)
-target_link_libraries(test_accuracy_chorale_form PRIVATE accuracy_support ursatz_chain standard_form standard_harmony
-    common_practice_minimal standard_meter standard_tonality)
-target_compile_definitions(test_accuracy_chorale_form PRIVATE
-    URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus")
-add_test(NAME accuracy_chorale_form COMMAND test_accuracy_chorale_form)
-find_program(URSATZ_ACCURACY_VALGRIND valgrind)
-if(URSATZ_ACCURACY_VALGRIND)
-  # 34 s measured
-  add_test(NAME accuracy_chorale_form_valgrind
-           COMMAND ${URSATZ_ACCURACY_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_accuracy_chorale_form>)
-  set_tests_properties(accuracy_chorale_form_valgrind PROPERTIES LABELS slow)
-endif()
+ursatz_test(accuracy_chorale_form SOURCES test_chorale_form.c LIBS accuracy_support ursatz_chain standard_form
+    standard_harmony common_practice_minimal standard_meter standard_tonality
+    DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus" VALGRIND LABELS accuracy)
 
 # The chain over the annotated corpus and the existing fixture tests, read through the harness. Each fixture
 # wrapper compiles one tests/integration test as it is (main renamed) in its own library, linked to what that test
@@ -55,7 +37,7 @@ function(accuracy_fixture name test_file)
   add_library(accuracy_fixture_${name} STATIC ${generated})
   target_include_directories(accuracy_fixture_${name} PRIVATE ${PROJECT_SOURCE_DIR}/tests/integration
                              ${PROJECT_SOURCE_DIR}/tests/analysis)
-  target_compile_options(accuracy_fixture_${name} PRIVATE -w)
+  target_compile_options(accuracy_fixture_${name} PRIVATE -w -UNDEBUG)
   # the tests that include the cadence test for its helpers rename its main; a distinct name per library keeps
   # those unused mains from colliding at link time
   target_compile_definitions(accuracy_fixture_${name} PRIVATE ${ACCURACY_FIXTURE_DEFINITIONS}
@@ -78,18 +60,15 @@ accuracy_fixture(schema test_schema_sequence.c ursatz_chain galant_schemas scale
 add_library(accuracy_chain STATIC chorale_chain.c)
 target_include_directories(accuracy_chain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE ursatz_chain standard_harmony common_practice_minimal standard_meter standard_tonality)
+target_compile_options(accuracy_chain PRIVATE -UNDEBUG)
 
-add_executable(accuracy_harness accuracy_harness.c accuracy_report.c accuracy_gate.c fixtures.c)
-target_link_libraries(accuracy_harness PRIVATE accuracy_chain
-    accuracy_fixture_cadences accuracy_fixture_form accuracy_fixture_texture accuracy_fixture_rhythm
-    accuracy_fixture_melody accuracy_fixture_motive accuracy_fixture_phrase_model accuracy_fixture_schema)
-target_compile_definitions(accuracy_harness PRIVATE
-    URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus"
-    URSATZ_ACCURACY_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
-    URSATZ_ACCURACY_OUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
+ursatz_test_executable(accuracy_harness SOURCES accuracy_harness.c accuracy_report.c accuracy_gate.c fixtures.c
+    LIBS accuracy_chain accuracy_fixture_cadences accuracy_fixture_form accuracy_fixture_texture
+    accuracy_fixture_rhythm accuracy_fixture_melody accuracy_fixture_motive accuracy_fixture_phrase_model
+    accuracy_fixture_schema DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus"
+    URSATZ_ACCURACY_DIR="${CMAKE_CURRENT_SOURCE_DIR}" URSATZ_ACCURACY_OUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 # The harness fails when an overall metric is more than the baseline's tolerance below tests/accuracy/baseline.json.
-add_test(NAME accuracy_harness COMMAND accuracy_harness)
+ursatz_test(accuracy_harness TARGET accuracy_harness LABELS accuracy)
 
-add_executable(test_accuracy_gate test_accuracy_gate.c accuracy_gate.c accuracy_report.c)
-target_include_directories(test_accuracy_gate PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-add_test(NAME accuracy_gate COMMAND test_accuracy_gate WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+ursatz_test(accuracy_gate SOURCES test_accuracy_gate.c accuracy_gate.c accuracy_report.c
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} LABELS accuracy)

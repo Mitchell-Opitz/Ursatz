@@ -1,11 +1,5 @@
 ursatz_test_includes()
 
-function(add_ursatz_test name)
-  add_executable(test_${name} test_${name}.c)
-  target_link_libraries(test_${name} PRIVATE ursatz)
-  add_test(NAME ${name} COMMAND test_${name})
-endfunction()
-
 add_subdirectory(identity)
 add_subdirectory(core)
 add_subdirectory(time)
@@ -24,6 +18,3 @@ add_subdirectory(query)
 add_subdirectory(export)
 add_subdirectory(integration)
 add_subdirectory(accuracy)
-
-include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
-ursatz_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})

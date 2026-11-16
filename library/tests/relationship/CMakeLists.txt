@@ -1,1 +1,1 @@
-add_ursatz_test(relationship)
+ursatz_test(relationship LIBS ursatz)

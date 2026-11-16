@@ -1,2 +1,2 @@
-add_ursatz_test(entity_id)
-add_ursatz_test(schema_version)
+ursatz_test(entity_id LIBS ursatz)
+ursatz_test(schema_version LIBS ursatz)

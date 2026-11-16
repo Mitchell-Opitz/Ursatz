@@ -1,3 +1,3 @@
-add_ursatz_test(rule)
-add_ursatz_test(constraint)
-add_ursatz_test(preference)
+ursatz_test(rule LIBS ursatz)
+ursatz_test(constraint LIBS ursatz)
+ursatz_test(preference LIBS ursatz)

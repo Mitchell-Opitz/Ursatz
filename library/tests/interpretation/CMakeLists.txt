@@ -1,14 +1,7 @@
-add_ursatz_test(uncertainty)
-add_ursatz_test(interpretation)
-add_ursatz_test(claim_interpretation)
-add_ursatz_test(chord)
-add_ursatz_test(key)
-add_ursatz_test(texture)
+ursatz_test(uncertainty LIBS ursatz)
+ursatz_test(interpretation LIBS ursatz)
+ursatz_test(claim_interpretation LIBS ursatz VALGRIND)
+ursatz_test(chord LIBS ursatz)
+ursatz_test(key LIBS ursatz)
+ursatz_test(texture LIBS ursatz)
 
-# Scoped memcheck coverage for this module's new helper tests. Skips silently if valgrind isn't installed.
-find_program(URSATZ_INTERPRETATION_VALGRIND valgrind)
-if(URSATZ_INTERPRETATION_VALGRIND)
-  add_test(NAME claim_interpretation_valgrind
-           COMMAND ${URSATZ_INTERPRETATION_VALGRIND} --leak-check=full --error-exitcode=1
-                   $<TARGET_FILE:test_claim_interpretation>)
-endif()

@@ -1,1 +1,1 @@
-add_ursatz_test(section)
+ursatz_test(section LIBS ursatz)

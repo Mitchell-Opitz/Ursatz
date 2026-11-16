@@ -1,3 +1,3 @@
-add_ursatz_test(note_event)
-add_ursatz_test(dynamics)
-add_ursatz_test(tempo_marking)
+ursatz_test(note_event LIBS ursatz)
+ursatz_test(dynamics LIBS ursatz)
+ursatz_test(tempo_marking LIBS ursatz)
