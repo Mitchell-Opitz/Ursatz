@@ -1,9 +1,9 @@
 {
   "schema": "ursatz-corpus-index",
-  "schema_version": 1,
+  "schema_version": 2,
   "analyzer_version": "0.7.0",
-  "ursatz_commit": "<ursatz_commit>",
-  "document_schema_version": 11,
+  "producer_key": "<producer_key>",
+  "document_schema_version": 12,
   "input_dir": "<input_dir>",
   "pieces": [
     {

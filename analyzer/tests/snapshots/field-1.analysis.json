@@ -1,5 +1,5 @@
 {
-	"schema_version":	11,
+	"schema_version":	12,
 	"metadata":	{
 		"source_file":	"Field 1.mid",
 		"note_count":	1191,
@@ -91077,6 +91077,5 @@
 		"articulations":	null,
 		"articulations_imported":	false
 	},
-	"counterpoint_check":	null,
 	"notes":	[]
 }
