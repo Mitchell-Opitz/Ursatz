@@ -72,11 +72,7 @@ add_library(ursatz
     theory/framework_singleton.c
     rules/rule.c
     rules/constraint.c
-    rules/rule_pair.c
     rules/preference.c
-    rules/preference_weight.c
-    rules/preference_ranking.c
-    rules/rule_evaluation.c
     theory/style_model.c
     theory/style_fraction.c
     theory/style_features.c
@@ -173,7 +169,6 @@ ursatz_public_headers(ursatz
         rules/constraint.h
         rules/preference.h
         rules/rule.h
-        rules/rule_pair.h
         semantics/analysis_key.h
         semantics/analysis_note.h
         semantics/analysis_segment.h

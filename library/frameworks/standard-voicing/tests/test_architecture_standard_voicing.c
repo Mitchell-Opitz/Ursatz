@@ -13,9 +13,9 @@
  * this extension is explicitly built on top of. It MUST NOT depend on
  * music-analysis, music-generation, music-transform, or music-corpus,
  * and MUST NOT depend on any other theory/ or rules/ header
- * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference,
- * RuleEvaluation are not needed by this extension; constraint_evaluate
- * itself is never called here -- see rule_pair.c).
+ * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference
+ * are not needed by this extension; no Constraint is
+ * evaluated here -- see rule_pair.c).
  *
  * Scans every .h/.c file directly under frameworks/standard-voicing/
  * (not its tests/ subdirectory) and flags any local include ("...")

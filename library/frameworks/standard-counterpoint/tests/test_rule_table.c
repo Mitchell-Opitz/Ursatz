@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/value.h"
+#include "preference_test_access.h"
 #include "identity/entity_id.h"
 #include "rule_table.h"
 

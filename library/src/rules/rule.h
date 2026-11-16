@@ -46,10 +46,4 @@ typedef enum {
 RuleResult rule_create(EntityID *id, const Framework *framework, Value *scope, Rule **out);
 void rule_destroy(Rule *rule);
 
-const EntityID *rule_id(const Rule *rule);
-const Framework *rule_framework(const Rule *rule);
-const Value *rule_scope(const Rule *rule);
-
-bool rule_identity_equals(const Rule *a, const Rule *b);
-
 #endif

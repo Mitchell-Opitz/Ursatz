@@ -11,14 +11,14 @@
 
 /*
  * The subject of a rule that needs more than one input. A rule table
- * evaluates a candidate (constraint_evaluate) whose Value holds the bytes of
+ * evaluates a candidate (its callback) whose Value holds the bytes of
  * its subject: a Line, a Pair or an Exercise for a rule that needs nothing
  * else, and one of the structs below for a rule that also needs the tonic, the
  * cantus part or the limits. The Value's type tag is
  * "standard-counterpoint/<table prefix>" (see
  * standard_counterpoint_rule_table_candidate_type). The struct is copied into
  * the Value, but the pointers in it stay borrowed: whatever they point at must
- * outlive the constraint_evaluate call.
+ * outlive the evaluate call.
  */
 
 /* A single line and its tonic (cantus firmus rules). */

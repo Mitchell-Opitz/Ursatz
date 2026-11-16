@@ -13,7 +13,7 @@
  * referencing standard_counterpoint_framework(). A rule that states what
  * a line or interval pair must be is hard; a rule written as "limit",
  * "avoid", or "prefer" is soft, so failing it never makes a line
- * invalid. This module never calls constraint_evaluate or preference_rank;
+ * invalid. This module never evaluates a Constraint or ranks a Preference;
  * it only registers the callbacks a rule table supplies (rule_table.h) on the
  * Constraint it builds and, for a soft rule, on a Preference it builds beside
  * it.

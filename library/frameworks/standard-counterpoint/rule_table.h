@@ -32,14 +32,13 @@
  * the module's enum; every function returns false or NULL for a number out of
  * range.
  *
- * Evaluation through constraint_evaluate: a table may carry an evaluate
- * callback, registered on each of its Constraints when the pair is built. A
- * table with none (NULL) leaves its Constraints unregistered, so
- * constraint_evaluate reports NOT_IMPLEMENTED for them. The callback is
+ * Evaluation: a table may carry an evaluate callback, registered on each of
+ * its Constraints when the pair is built (constraint_set_evaluate_fn). A
+ * table with none (NULL) leaves its Constraints unregistered. The callback is
  * normally defined with STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR below and
  * calls standard_counterpoint_rule_table_evaluate.
  *
- * Scoring through preference_rank works the same way for the table's soft
+ * Scoring works the same way for the table's soft
  * rules: a table may carry a score callback, registered on a Preference built
  * for each soft rule (standard_counterpoint_rule_table_preference; NULL for a
  * hard rule or a table with no callback). It is normally defined with
@@ -131,7 +130,7 @@ ConstraintEvalResult standard_counterpoint_rule_table_evaluate(const StandardCou
  * a candidate: a rule that holds scores 1/1, one that does not scores 0/1.
  * A candidate of another type tag, content not exactly subject_size bytes, or
  * a preference that is not the table's cannot be scored and gets {0, 0}
- * (preference_rank reports that as NOT_IMPLEMENTED).
+ * (the callback of a Preference with no score reads as unscored).
  */
 PreferenceScore standard_counterpoint_rule_table_score(const StandardCounterpointRuleTable *table,
                                                        StandardCounterpointRuleHolds holds, size_t subject_size,

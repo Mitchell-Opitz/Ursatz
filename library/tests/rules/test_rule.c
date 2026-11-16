@@ -7,9 +7,9 @@
 #include "theory/framework.h"
 
 /*
- * Construction test: a Rule holds identity and a framework/scope
- * association -- rule_framework returns the exact Framework it was
- * created with, and scope round-trips when supplied.
+ * Construction test: a Rule is created from an id, a framework and an
+ * optional scope, refuses a missing id or framework, and is destroyed
+ * without destroying its framework.
  */
 
 int main(void) {
@@ -20,22 +20,27 @@ int main(void) {
 
     EntityID *id;
     assert(entity_id_create("rule-no-parallel-fifths", &id) == ENTITY_ID_OK);
-
     Rule *rule;
     assert(rule_create(id, framework, NULL, &rule) == RULE_OK);
-    assert(rule_framework(rule) == framework);
-    assert(rule_scope(rule) == NULL);
 
-    EntityID *other_id;
-    assert(entity_id_create("rule-other", &other_id) == ENTITY_ID_OK);
-    Rule *other;
-    assert(rule_create(other_id, framework, NULL, &other) == RULE_OK);
+    EntityID *scoped_id;
+    assert(entity_id_create("rule-scoped", &scoped_id) == ENTITY_ID_OK);
+    Value *scope;
+    assert(value_create("test-scope", "x", 1, &scope) == VALUE_OK);
+    Rule *scoped;
+    assert(rule_create(scoped_id, framework, scope, &scoped) == RULE_OK);
 
-    assert(rule_identity_equals(rule, rule));
-    assert(!rule_identity_equals(rule, other));
+    Rule *none = NULL;
+    EntityID *no_framework_id;
+    assert(entity_id_create("rule-no-framework", &no_framework_id) == ENTITY_ID_OK);
+    assert(rule_create(NULL, framework, NULL, &none) == RULE_ERR_NULL_ID);
+    assert(rule_create(no_framework_id, NULL, NULL, &none) == RULE_ERR_NULL_FRAMEWORK);
+    assert(none == NULL);
+    entity_id_destroy(no_framework_id);
 
+    rule_destroy(NULL);
     rule_destroy(rule);
-    rule_destroy(other);
+    rule_destroy(scoped);
     framework_destroy(framework);
 
     printf("test_rule: ok\n");

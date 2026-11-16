@@ -13,9 +13,9 @@
  * this extension is explicitly built on top of. It MUST NOT depend on
  * music-analysis, music-generation, music-transform, or music-corpus,
  * and MUST NOT depend on any other theory/ or rules/ header
- * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference,
- * RuleEvaluation are not needed by this extension; constraint_evaluate
- * itself is never called here -- see chord_vocabulary.c).
+ * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference
+ * are not needed by this extension; no Constraint is
+ * evaluated here -- see chord_vocabulary.c).
  *
  * Scans every .h/.c file directly under frameworks/common-practice-minimal/
  * (not its tests/ subdirectory) and flags any local include ("...")

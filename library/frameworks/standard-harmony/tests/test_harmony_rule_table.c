@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "core/value.h"
+#include "preference_test_access.h"
 #include "harmony_rule_table.h"
 
 /* A table of three rules: "alpha" and "gamma" are hard, "beta" is soft. */

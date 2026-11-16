@@ -13,9 +13,9 @@
  * this extension is explicitly built on top of. It MUST NOT depend on
  * music-analysis, music-generation, music-transform, or music-corpus,
  * and MUST NOT depend on any other theory/ or rules/ header
- * (Heuristic/Tendency/StatisticalModel/StyleModel,
- * RuleEvaluation are not needed by this extension; constraint_evaluate
- * itself is never called here; rule tables only register its callback -- see rule_pair.h).
+ * (Heuristic/Tendency/StatisticalModel/StyleModel
+ * are not needed by this extension; no Constraint is
+ * evaluated here; rule tables only register its callback -- see rule_pair.h).
  *
  * Scans every .h/.c file directly under frameworks/standard-counterpoint/
  * (and its analysis/ subdirectory; not its tests/ subdirectory) and flags any local include ("...")
