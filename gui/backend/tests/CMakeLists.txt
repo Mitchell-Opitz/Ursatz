@@ -112,10 +112,13 @@ ursatz_test(piece_route LIBS ursatz_gui_core ursatz_test_http
 # there), uploads the link fixtures for the brief and checks the stored files and the served playback (version_check.h).
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_snapshot)
-ursatz_test(piece_snapshot LIBS ursatz_gui_core ursatz_test_http DEFINITIONS URSATZ_GUI_TEST_PIECE_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/pieces"
+ursatz_test(piece_snapshot LIBS ursatz_gui_core ursatz_test_http
+    DEFINITIONS URSATZ_GUI_TEST_PIECE_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/pieces"
+    URSATZ_GUI_TEST_ANALYZER_SNAPSHOTS="${CMAKE_SOURCE_DIR}/analyzer/tests/snapshots/gui"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_snapshot)
-# The test compares the detail note ids, score and playback replies of three pieces with fixtures/pieces; it creates
-# pieces/ in its own working directory. URSATZ_GUI_SNAPSHOT_CAPTURE=1 rewrites the snapshot.
+# The test compares the detail note ids, score and playback replies of three pieces with fixtures/pieces (the Bach 114
+# playback with the Analyzer's own snapshot); it creates pieces/ in its own working directory.
+# URSATZ_GUI_SNAPSHOT_CAPTURE=1 rewrites the snapshot in fixtures/pieces, never the Analyzer's.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_lock)
 ursatz_test(piece_lock LIBS ursatz_gui_core ursatz_test_http

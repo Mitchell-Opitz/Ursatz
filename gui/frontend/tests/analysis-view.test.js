@@ -6,11 +6,11 @@
  * have no backend, that the view is the score workspace (no Score tab), and
  * the Library/Analysis navigation decisions.
  *
- * Fixture: frontend/tests/fixtures/mozart545.analysis.json is the Analyzer
- * CLI's document (`ursatz-analyzer --json`, schema v12) for
- * library/tests/fixtures/framework-v1-corpus/Mozart 545.mid, cut to
- * its first 6 items per array (and 6 note_ids per claim) to stay small; the
- * structure is untouched.
+ * Document: the Analyzer's own golden analysis of Mozart 545.mid
+ * (analyzer/tests/snapshots/mozart-545.analysis.json, read through
+ * support/fixtures.js). The Analyzer's snapshots drop their volatile members, so
+ * the test sets metadata.analyzer_version, producer_key and input on its
+ * parsed copy before the header and provenance are built.
  *
  * Plain Node script, no framework/deps, run directly:
  * `node frontend/tests/analysis-view.test.js`. */
@@ -20,8 +20,9 @@ const path = require("path");
 const tabs = require("../public/analysis-tabs.js");
 
 const { check, finish } = require("./support/check.js");
+const { analyzerSnapshot } = require("./support/fixtures.js");
 
-const doc = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "mozart545.analysis.json"), "utf8"));
+const doc = JSON.parse(fs.readFileSync(analyzerSnapshot("mozart-545.analysis.json"), "utf8"));
 const states = tabs.buildAllTabStates(doc);
 const byId = new Map(states.map((state) => [state.tab.id, state]));
 
@@ -146,6 +147,10 @@ check(!("label" in chordDetail) && !("location" in chordDetail), "a row's toggle
 check("note_ids" in chordDetail && "span" in chordDetail, "a row's toggle shows the remaining fields (span and note_ids among them)");
 
 /* Header and provenance. */
+// The snapshot drops these volatile metadata members; the values are those of the analysis the CLI wrote for this file.
+doc.metadata.analyzer_version = "0.7.0";
+doc.metadata.producer_key = "fc7adf2389adc521cc04c9521624ba65bdb2b280";
+doc.metadata.input = { format: "midi", source_type: "performance", meter: "embedded", key: "embedded", spelling: "rule", warning_count: 0 };
 const header = tabs.buildAnalysisHeader({ id: "piece-1", filename: "Mozart 545.mid", format: "midi", document: doc, note_xml_ids: [] });
 check(header.filename === "Mozart 545.mid" && header.format === "midi", "the header has the filename and format");
 check(header.analyzerVersion === doc.metadata.analyzer_version, "the header has the analyzer version");
@@ -281,7 +286,11 @@ function summaryOf() {
     (await tabs.loadTabState(failingCache, tabs.ANALYSIS_TABS[0], async () => null)) === null,
     "a failed fetch gives no tab state",
   );
-  const header = tabs.buildAnalysisHeader({ id: "p", document: summaryOf(), note_xml_ids: [] });
+  // The snapshot drops these volatile metadata members; the values are those of the analysis the CLI wrote for this file.
+doc.metadata.analyzer_version = "0.7.0";
+doc.metadata.producer_key = "fc7adf2389adc521cc04c9521624ba65bdb2b280";
+doc.metadata.input = { format: "midi", source_type: "performance", meter: "embedded", key: "embedded", spelling: "rule", warning_count: 0 };
+const header = tabs.buildAnalysisHeader({ id: "p", document: summaryOf(), note_xml_ids: [] });
   check(header.measureCount !== undefined && header.analyzerVersion === (doc.metadata.analyzer_version || ""), "the header reads from the summary");
   check(
     JSON.stringify(tabs.buildProvenanceFields(summaryOf())) === JSON.stringify(tabs.buildProvenanceFields(doc)),

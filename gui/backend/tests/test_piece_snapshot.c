@@ -1,6 +1,8 @@
 /* The replies for a piece's detail (note ids), score (MusicXML and its meta) and playback, compared with the
  * snapshot in fixtures/pieces taken before the Analyzer produced them (B7). JSON is compared as values, MusicXML
- * byte for byte. Set URSATZ_GUI_SNAPSHOT_CAPTURE=1 to rewrite the snapshot from the current replies. */
+ * byte for byte. The Bach 114 playback is the Analyzer's own golden (analyzer/tests/snapshots/gui, which the Analyzer's
+ * tests own), not a copy here. Set URSATZ_GUI_SNAPSHOT_CAPTURE=1 to rewrite the snapshot from the current replies
+ * (it leaves the Analyzer's golden alone). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -27,6 +29,10 @@
 #error "URSATZ_GUI_TEST_PIECE_FIXTURES must name fixtures/pieces"
 #endif
 
+#ifndef URSATZ_GUI_TEST_ANALYZER_SNAPSHOTS
+#error "URSATZ_GUI_TEST_ANALYZER_SNAPSHOTS must name analyzer/tests/snapshots/gui"
+#endif
+
 #define PORT "18775"
 
 static bool capture = false;
@@ -39,6 +45,23 @@ static char *get_body(const char *id, const char *suffix) {
   char *body = test_http_status(response) == 200 ? strdup(test_http_body(response)) : NULL;
   free(response);
   return body;
+}
+
+/* Compares text with the file at path (JSON as values, anything else byte for byte). */
+static bool text_equals_file(const char *path, const char *text, bool json) {
+  char *expected = test_read_file(path, NULL);
+  bool same = false;
+  if (expected && json) {
+    cJSON *a = cJSON_Parse(expected);
+    cJSON *b = cJSON_Parse(text);
+    same = a && b && cJSON_Compare(a, b, true);
+    cJSON_Delete(a);
+    cJSON_Delete(b);
+  } else if (expected) {
+    same = strcmp(expected, text) == 0;
+  }
+  free(expected);
+  return same;
 }
 
 /* Compares text with fixtures/pieces/<name>/<file>, or writes it in capture mode. JSON is compared as values. */
@@ -59,22 +82,21 @@ static void compare(const char *name, const char *file, const char *text, bool j
     check(test_write_file(path, text, strlen(text)), what);
     return;
   }
-  char *expected = test_read_file(path, NULL);
-  bool same = false;
-  if (expected && json) {
-    cJSON *a = cJSON_Parse(expected);
-    cJSON *b = cJSON_Parse(text);
-    same = a && b && cJSON_Compare(a, b, true);
-    cJSON_Delete(a);
-    cJSON_Delete(b);
-  } else if (expected) {
-    same = strcmp(expected, text) == 0;
-  }
-  free(expected);
-  check(same, what);
+  check(text_equals_file(path, text, json), what);
 }
 
-static void snapshot_piece(const char *name, const char *source_path, const char *encoded_filename) {
+/* Compares the playback JSON with the Analyzer's golden <analyzer snapshots>/<file>. Never written here. */
+static void compare_analyzer_playback(const char *name, const char *file, const char *text) {
+  char path[768];
+  char what[256];
+  snprintf(path, sizeof(path), "%s/%s", URSATZ_GUI_TEST_ANALYZER_SNAPSHOTS, file);
+  snprintf(what, sizeof(what), "%s: playback equals the Analyzer snapshot %s", name, file);
+  check(text && text_equals_file(path, text, true), what);
+}
+
+/* analyzer_playback is the file in the Analyzer's snapshots that holds the playback, or NULL when fixtures/pieces does. */
+static void snapshot_piece(const char *name, const char *source_path, const char *encoded_filename,
+                           const char *analyzer_playback) {
   char *id = test_http_upload(PORT, source_path, encoded_filename, NULL);
   char what[256];
   snprintf(what, sizeof(what), "%s uploads", name);
@@ -100,7 +122,11 @@ static void snapshot_piece(const char *name, const char *source_path, const char
   compare(name, "score-meta.json", meta, true);
   free(meta);
   char *playback = get_body(id, "/playback");
-  compare(name, "playback.json", playback, true);
+  if (analyzer_playback) {
+    compare_analyzer_playback(name, analyzer_playback, playback);
+  } else {
+    compare(name, "playback.json", playback, true);
+  }
   free(playback);
   free(id);
 }
@@ -127,17 +153,17 @@ int main(void) {
   const char *corpus = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char path[512];
   snprintf(path, sizeof(path), "%s/Bach 114.mid", corpus);
-  snapshot_piece("bach-114", path, "Bach%20114.mid");
+  snapshot_piece("bach-114", path, "Bach%20114.mid", "bach-114.playback.json");
 
   /* A MIDI file without a time signature: the meter is defaulted. */
   static const unsigned char kNoMeterMidi[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T',
                                                'r', 'k', 0, 0, 0, 13, 0x00, 0x90, 0x3C, 0x40, 0x83, 0x60, 0x80,
                                                0x3C, 0x40, 0x00, 0xFF, 0x2F, 0x00};
   test_write_file("no-meter.mid", (const char *)kNoMeterMidi, sizeof(kNoMeterMidi));
-  snapshot_piece("no-meter", "no-meter.mid", "no-meter.mid");
+  snapshot_piece("no-meter", "no-meter.mid", "no-meter.mid", NULL);
 
   snapshot_piece("chords-backup", URSATZ_FIXTURES_DIR "/musicxml/chords_backup.musicxml",
-                 "chords_backup.musicxml");
+                 "chords_backup.musicxml", NULL);
 
   ursatz_gui_server_stop(ctx);
   return test_finish("piece_snapshot");
