@@ -14,15 +14,13 @@
  * required; a TempoMarking with neither says nothing.
  *
  * text is an opaque, uninterpreted string, not a closed enum, the same
- * treatment events/dynamics.h and events/articulation.h give their
- * marking/kind: the vocabulary (allegro, rit., accel., a tempo, assai,
+ * treatment events/dynamics.h gives its marking: the vocabulary (allegro, rit., accel., a tempo, assai,
  * espressivo, ...) is explicitly open-ended. What the words mean -- their
  * grouping and order, that a ritardando is a gradual slowing -- is
  * framework knowledge (frameworks/standard-markings), not this type's.
  *
- * Positioned by a TemporalAnchor, like ControlEvent
- * (events/control_event.h): a tempo change occurs at a point, not on a
- * single note. No mutator: a revision is a new TempoMarking.
+ * Positioned by a TemporalAnchor: a tempo change occurs at a point, not
+ * on a single note. No mutator: a revision is a new TempoMarking.
  */
 
 typedef struct TempoMarking TempoMarking;

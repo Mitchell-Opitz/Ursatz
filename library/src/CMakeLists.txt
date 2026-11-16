@@ -47,18 +47,9 @@ add_library(ursatz
     pitch/key_signature.c
     pitch/sounding_pitch.c
     pitch/midi_pitch.c
-    events/event.c
     events/note_event.c
-    events/rest_event.c
-    events/control_event.c
-    events/tie.c
-    events/slur.c
-    events/articulation.c
     events/dynamics.c
     events/tempo_marking.c
-    events/structural_marker.c
-    events/instrument.c
-    events/instrument_capability.c
     containers/id_array.c
     containers/section.c
     structure/structure.c
