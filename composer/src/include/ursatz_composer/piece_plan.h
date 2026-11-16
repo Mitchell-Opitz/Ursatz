@@ -34,7 +34,6 @@ typedef enum {
     PLAN_ERR_BAD_PAYLOAD,
     PLAN_ERR_GIVEN_LOCKED,
     PLAN_ERR_BAD_INDEX,
-    PLAN_ERR_IO,
     PLAN_ERR_PARSE,
     PLAN_ERR_FORMAT
 } PlanResult;
@@ -54,8 +53,8 @@ typedef enum {
 } PlanNodeKind;
 
 /*
- * The Analyzer version of the result a plan was loaded from (plan_from_analyzer_result), "" for any other plan. The plan
- * file records it as metadata.analyzer_version. plan_set_analyzer_version fails with PLAN_ERR_BAD_PAYLOAD for a version
+ * The Analyzer version recorded in a plan file as metadata.analyzer_version, "" for a plan built here. A read and a write
+ * keep it. plan_set_analyzer_version fails with PLAN_ERR_BAD_PAYLOAD for a version
  * of PLAN_ANALYZER_VERSION_MAX or more characters.
  */
 #define PLAN_ANALYZER_VERSION_MAX 32
@@ -104,11 +103,5 @@ PlanSpan plan_node_span(const PiecePlan *plan, NodeId id);
 const char *plan_node_name(const PiecePlan *plan, NodeId id);
 size_t plan_node_child_count(const PiecePlan *plan, NodeId id);
 NodeId plan_node_child_at(const PiecePlan *plan, NodeId id, size_t index);
-
-/* Called once per node. Return false to stop the walk. */
-typedef bool (*PlanVisitFn)(const PiecePlan *plan, NodeId id, size_t depth, void *context);
-
-/* Visits every node in pre-order: a node before its children, children in insertion order. */
-PlanResult plan_walk(const PiecePlan *plan, PlanVisitFn visit, void *context);
 
 #endif

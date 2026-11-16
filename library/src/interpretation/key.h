@@ -78,22 +78,7 @@ KeyResult key_create_with_structure(Interpretation *interpretation, const char *
                                      Key **out);
 void key_destroy(Key *key);
 
-const Interpretation *key_interpretation(const Key *key);
-const char *key_label(const Key *key);
-
 /* Copies the Key's structure into *out and returns true; false (out untouched) when it has none. */
 bool key_structure(const Key *key, KeyStructure *out);
-
-/*
- * Ownership-transferring unwrap: destroys only the Key shell (its
- * owned label) and hands back the embedded Interpretation with
- * ownership transferred to the caller (the caller must eventually
- * interpretation_destroy it). Use this when a caller needs the
- * Interpretation on its own -- e.g. to place it into an AnalysisResult
- * (analysis/analyzer.h), which holds bare Interpretation objects, not
- * Key wrappers -- without losing everything key_create validated.
- * key must be non-NULL.
- */
-Interpretation *key_take_interpretation(Key *key);
 
 #endif

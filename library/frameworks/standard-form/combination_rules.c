@@ -1,24 +1,7 @@
 #include "combination_rules.h"
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_FORM_COMBINATION_RULE_COUNT] = {
-    "combination-repeated-phrase",
-    "combination-written-out",
-    "combination-compound-period",
-    "combination-pair-form"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
-    NAMES, STANDARD_FORM_COMBINATION_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_form_combination, StandardFormCombinationRule, STANDARD_FORM_COMBINATION_RULE_COUNT, g_table)
-
 bool standard_form_is_repeated_phrase(bool written_out_repeat, CadenceType first, CadenceType second) {
     return written_out_repeat && cadence_type_valid(first) && first == second;
-}
-
-bool standard_form_repeat_is_written_out(bool adds_measures) {
-    return adds_measures;
 }
 
 bool standard_form_is_compound_period(CadenceType antecedent, CadenceType consequent, PhraseLevelForm first_form,

@@ -40,8 +40,4 @@ bool sequence_kind_valid(SequenceKind kind);
    for an invalid kind. */
 const char *sequence_kind_name(SequenceKind kind);
 
-/* True for the kinds that are chains of suspensions: the 7-6 and the 2-3. False
-   for the others and for an invalid kind. */
-bool sequence_kind_is_suspension_chain(SequenceKind kind);
-
 #endif

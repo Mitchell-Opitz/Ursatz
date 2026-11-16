@@ -63,15 +63,6 @@ static const struct {
               {"seam", FORM_CHECK_SEAM}};
 #define CHECK_COUNT (sizeof(CHECKS) / sizeof(CHECKS[0]))
 
-const char *form_check_name(FormCheck check) {
-    for (size_t i = 0; i < CHECK_COUNT; i++) {
-        if (CHECKS[i].check == check) {
-            return CHECKS[i].name;
-        }
-    }
-    return NULL;
-}
-
 
 static const struct {
     const char *name;

@@ -6,10 +6,6 @@ add_executable(test_analysis_pipeline test_analysis_pipeline.c)
 target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer analyzer_test_support)
 add_test(NAME test_analysis_pipeline COMMAND test_analysis_pipeline)
 
-add_executable(test_report_output test_report_output.c)
-target_link_libraries(test_report_output PRIVATE ursatz_analyzer analyzer_test_support)
-add_test(NAME test_report_output COMMAND test_report_output)
-
 add_executable(test_corpus_key_estimation test_corpus_key_estimation.c)
 target_link_libraries(test_corpus_key_estimation PRIVATE ursatz_analyzer)
 target_compile_definitions(test_corpus_key_estimation PRIVATE
@@ -57,23 +53,13 @@ add_test(NAME test_analysis_document_schema
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v11.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
                  -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
 # Over 10 s in the fast set (about 49 s of CPU measured): runs nightly.
 set_tests_properties(test_analysis_document_schema PROPERTIES LABELS slow)
 set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
-
-add_executable(test_report_snapshots test_report_snapshots.c)
-target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer analyzer_test_support)
-target_compile_definitions(test_report_snapshots PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
-# Over 10 s in the fast set (about 78 s of CPU measured): runs nightly.
-set_tests_properties(test_report_snapshots PROPERTIES LABELS slow)
 
 add_executable(test_document_snapshots test_document_snapshots.c)
 target_link_libraries(test_document_snapshots PRIVATE ursatz_analyzer analyzer_test_support cjson)
@@ -379,7 +365,7 @@ add_test(NAME test_cli_notation_reading
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v11.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_notation_reading
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
 
@@ -390,24 +376,6 @@ add_test(NAME test_cli_input_formats
                  -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
-
-add_executable(test_counterpoint_check test_counterpoint_check.c)
-target_link_libraries(test_counterpoint_check PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_include_directories(test_counterpoint_check PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_counterpoint_check PRIVATE
-    URSATZ_COUNTERPOINT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/counterpoint"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_counterpoint_check COMMAND test_counterpoint_check)
-
-# The CLI's exit code: 0 for a two-voice input, 2 (with the rest of the analysis written) for one that is not two voices,
-# and a usage error (1) for a bad species or --cantus without --check-counterpoint.
-add_test(NAME test_cli_counterpoint_check
-         COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/counterpoint
-                 -DNOT_TWO_VOICES=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_counterpoint_check
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_counterpoint_check.cmake)
 
 # Test corpora, built in the build tree at configure time (never committed twice). "reference" is the five framework-v1
 # pieces; "mixed" has one MIDI, one MusicXML in a subfolder, one .txt and one broken .mid.
@@ -428,7 +396,7 @@ file(COPY "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid" "${URSATZ_REFERENCE_FIX
      DESTINATION ${URSATZ_CORPORA_DIR}/sonatinas)
 
 add_executable(test_analyzer_corpus test_corpus.c)
-target_link_libraries(test_analyzer_corpus PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_analyzer_corpus PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_analyzer_corpus PRIVATE
     URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
@@ -453,7 +421,7 @@ add_test(NAME test_corpus_index_schema
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v1.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v2.schema.json
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/corpus_index_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_corpus_index.cmake)
@@ -463,6 +431,7 @@ set_tests_properties(test_corpus_index_schema PROPERTIES SKIP_REGULAR_EXPRESSION
 
 add_executable(test_analyzer_style_labels test_style_labels.c)
 target_link_libraries(test_analyzer_style_labels PRIVATE ursatz_analyzer)
+target_include_directories(test_analyzer_style_labels PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME test_analyzer_style_labels COMMAND test_analyzer_style_labels)
 
 add_executable(test_style_profile test_style_profile.c)
@@ -578,7 +547,8 @@ add_test(NAME test_meter_check COMMAND test_meter_check)
 set_tests_properties(test_meter_check PROPERTIES LABELS slow)
 
 add_executable(test_motive_links test_motive_links.c)
-target_link_libraries(test_motive_links PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_motive_links PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_include_directories(test_motive_links PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(test_motive_links PRIVATE
     URSATZ_LINKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/links"
     URSATZ_LINKS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/motive_links_work")
@@ -600,7 +570,7 @@ add_test(NAME test_cli_link_motives
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                  -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
-                 -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v1.schema.json
+                 -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v2.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
 

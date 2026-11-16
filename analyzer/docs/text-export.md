@@ -207,4 +207,4 @@ pieces. The notes are most of it: Field 5, with two staves, 12/8 and four voices
 - A note with no `<type>` takes its value from its duration, and `?` when the duration matches no plain or dotted value
   (up to three dots).
 - Claims are those of the analysis document. Sections the export does not print (melody, rhythm, texture, voice leading,
-  schemas, progressions, harmonic rhythm, markings, counterpoint check) are in `analysis.json` only.
+  schemas, progressions, harmonic rhythm, markings) are in `analysis.json` only.

@@ -6,6 +6,24 @@ C HTTP server using [civetweb](https://github.com/civetweb/civetweb) (MIT),
 fetched by CMake `FetchContent`. Civetweb is small, permissively licensed
 and has a simple C API, with no GPL or commercial dual-licensing.
 
+## Data check
+
+At start, before any store opens, the backend checks its data folder (its working directory) once
+(`service/data_check.c`). The GUI before the overhaul migrated its stores on start and let a motif stand on any tonic;
+those paths are gone, so a folder they never ran on is refused. The folder passes at once when `.pre-overhaul-checked`
+exists in it. Otherwise it is refused when any of these holds:
+
+- `data/corpus.db` exists and `collections/.imported-from-corpus-db` does not;
+- `materials/items/` holds an item and `materials/` lacks `tones-migrated`, `segments-migrated` or `themes-cleared`;
+- a motif's current version has a key that, trimmed, is not empty and not `C major` or `C minor` (older versions are not read).
+
+The backend prints `ursatz-gui-backend: the data folder (...) has not had the one-time migrations of the GUI before the
+overhaul: <what is missing>. Run the GUI built from the git tag pre-overhaul once on this data folder, then start this
+one.` on stderr and exits 1; the problem for a motif names its ids and says to open each there and use Rewrite in C.
+Nothing is written then. A folder with no problem gets `.pre-overhaul-checked` and starts. Fix: build the GUI from the
+tag `pre-overhaul`, start it once on the data folder (its migrations run, then rewrite each named motif in C), stop it,
+and start this one.
+
 ## Piece store
 
 Each piece is a directory `pieces/<id>/`. Ids are `piece-<16 lowercase hex>`
@@ -15,7 +33,7 @@ most 8 tries.
 
 - `source.mid` or `source.musicxml`: the upload's bytes, written unchanged. A
   `.xml` or `.mxl` upload keeps its extension (`source.xml`, `source.mxl`).
-- `analysis.json`: the Analyzer's analysis document (schema v9).
+- `analysis.json`: the Analyzer's analysis document (schema v12).
 - `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
   (ISO 8601 UTC), "analyzer_version", "document_schema_version",
   "ursatz_commit"}` plus the
@@ -35,10 +53,10 @@ removes the directory. Re-running the analysis rewrites `analysis.json` and
 the three version fields of `meta.json`; the filename and `uploaded_at` stay.
 
 Staleness keys: a stored analysis is current only when its `schema_version`, `metadata.analyzer_version` and
-`metadata.ursatz_commit` (the Analyzer's producer key) all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
+`metadata.producer_key` (the Analyzer's producer key) all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
 `staleness.h`). `meta.json` holds the same three values as `document_schema_version`, `analyzer_version` and
 `ursatz_commit`, so the Library list reads the flag without opening a document. A `meta.json` from before
-`ursatz_commit` gets it from its document's `metadata.ursatz_commit` the first time the piece is opened (written back
+`ursatz_commit` gets it from its document's `metadata.producer_key` the first time the piece is opened (written back
 under the piece lock); with neither it is stale. A stale analysis is analyzed again once, under the piece lock, when
 the piece is opened, when a style is built from it and before a link run reads it (`ursatz_gui_analysis_ensure_current`);
 the link worker's re-analysis after a feature or format error stays as a fallback. If that analysis fails, the
@@ -146,8 +164,6 @@ body with a `form` object, a slot written as `{slot, item_id, version}` or any o
   version (`M1`, `M2`, ...; the motif's base harmony, its own or the analysis', and its `tone_overrides`), `slots`,
   `ideas` and `chords`.
 - A new theme version needs a note (`give a version note`); the first is noted `Created` and a compose `Composed`.
-- At start the backend deletes every theme once, for the v2 body (marker `themes-cleared` in `materials/`); a piece
-  that used one then shows its source missing.
 
 A composed version keeps its files beside its body in `items/<id>/v<n>/`: `request.json` (what the Composer read),
 `brief.style.json` (when the theme has a brief), `plan.json`, `theme.mid` and `theme.musicxml`. The folder is written

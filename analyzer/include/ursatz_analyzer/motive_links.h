@@ -11,7 +11,7 @@
 /*
  * Motive links: which motive families of different pieces are variants of one another (R-154). A family's prototype
  * is read from the "features" of its analysis document, as a melodic sketch (no chords) in the key region of its first
- * note, moved to the key of C (motive_link_scope_sketch); two families are linked when the library's variant recognizer finds a chain of at most max_depth relations
+ * note, moved to the key of C; two families are linked when the library's variant recognizer finds a chain of at most max_depth relations
  * from one to the other (analysis/motive_link.h). Like the style profile, it reads only analysis documents (R-079).
  *
  * A scope is a set of pieces in the order they were added. For each family the nearest families of other pieces are
@@ -56,17 +56,6 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
  * NULL when none failed. Valid until the next failure or the scope is destroyed.
  */
 const char *motive_link_scope_failed_piece(const MotiveLinkScope *scope);
-
-/*
- * The sketch a family is linked as: its prototype's features as a melodic sketch (motive_features_to_sketch) moved to the
- * key of C, keeping its mode, by the shortest way that puts its tonic on C. The library's relations keep a sketch's
- * scale, so motives of different keys could never be made equal without this; the chain of a link applies to these
- * sketches (motive_relation_apply). False when the piece or family is not in the scope.
- */
-bool motive_link_scope_sketch(const MotiveLinkScope *scope, const char *piece_id, size_t family, MotiveSketch *out);
-
-size_t motive_link_scope_piece_count(const MotiveLinkScope *scope);
-size_t motive_link_scope_family_count(const MotiveLinkScope *scope);
 
 typedef struct {
     MotiveLinkOptions link;
@@ -127,21 +116,22 @@ typedef struct {
     size_t pairs;    /* considered */
     size_t compared; /* run through the recognizer now */
     size_t cached;   /* taken from the cache */
-    bool cache_reset; /* the cache was for another Ursatz commit, analyzer version or set of link options and was emptied */
+    bool cache_reset; /* the cache was for another producer key, analyzer version or set of link options (or an older schema) and was emptied */
 } MotiveLinks;
 
 /*
  * The cache of compared pairs, kept by the two sketches' fingerprints so one cache serves every scope (R-156): a pair
- * compared for one scope is not compared again for another. It is valid only for the Ursatz commit, analyzer version and
+ * compared for one scope is not compared again for another. It is valid only for the producer key, analyzer version and
  * link options it was made with; motive_links_run empties one that differs and says so (MotiveLinks.cache_reset).
  *
- * Load: a file that does not exist is an empty cache. Save: written to <path>.tmp and renamed over path. The file
- * follows schema/motive-link-cache.v1.schema.json.
+ * Load: a file that does not exist is an empty cache, and so is a file of an older schema version (it is keyed with
+ * nothing, so the next run empties it and says so). Save: written to <path>.tmp and renamed over path. The file
+ * follows schema/motive-link-cache.v2.schema.json.
  */
 MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out);
 MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const char *path);
 void motive_link_cache_destroy(MotiveLinkCache *cache);
-size_t motive_link_cache_pair_count(const MotiveLinkCache *cache);
+
 
 /*
  * Links the scope's families. cache may be NULL (nothing is kept between runs); otherwise it is read and new results are

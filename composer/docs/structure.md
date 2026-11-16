@@ -12,11 +12,11 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | `src/harmony/` | The harmony operators and hearing cadences. |
 | `src/motive/` | Motives, their analysis and development. |
 | `src/melody/` | The melody operator. |
-| `src/preferences/` | The preferences document: its settings, reading with paths, writing and the default check. |
+| `src/preferences/` | The preferences document: its settings, reading with paths, and writing. |
 | `src/form/` | Hearing the phrase form through standard-form, and the form documents (`form_spec.c`, `form_builtin.c`). |
 | `forms/` | The built-in forms as JSON documents, embedded at build time (`cmake/EmbedForms.cmake`); [forms.md](forms.md). |
 | `src/counterpoint/` | The counter-melody operator: species 1 to 4 against a given line, its search and its check. |
-| `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
+| `src/texture/` | The accompaniment and four-part voicing operators. |
 | `src/piece/` | The one piece builder `form_build_plan`, keys and cadences from a form, the piece plan and the compose run over its sections. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
 | `src/check/` | Hearing a render through the Analyzer, the Analyzer check loop and the explanation report. |
@@ -24,7 +24,7 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | `src/api/` | The composer API behind `composer_api.h`: one file for each request kind. |
 | `src/util/` | Private helpers the sources share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
 | `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and `tools/ci/check-cli-api.sh` (CI runs it) fails on any other include. |
-| `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share; `tests/snapshots/` holds the CLI snapshots. |
+| `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share: file readers, the hearing wrappers, the check oracles the operators' rules define (`test_oracles.c`: the harmony, melody and figure lane checks, the cadence hearing) and the voice-leading hearing (`voice_hear.c`), none of which the library carries; `tests/snapshots/` holds the CLI snapshots. |
 | `schema/` | `plan.v2.schema.json`, the JSON Schema of the plan file, and `api/`, the JSON Schemas of the composer API requests and responses; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
 
 ## CLI snapshots

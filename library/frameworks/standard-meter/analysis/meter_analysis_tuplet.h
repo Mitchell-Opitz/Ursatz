@@ -26,12 +26,7 @@
  * `meter` the type of the signature at the run's first note; `borrowed` whether the ratio is borrowed in that type; `level` is
  * where the run's span sits against the beat when the rules give one (the caller renders its name). All pointers are owned by
  * the result except `name`, which is static.
- *
- * A claim is an Interpretation of type "standard-meter/tuplet" over a Structure shell of the run's notes, holding a
- * StandardMeterTupletClaim; its uncertainty is 0.
  */
-
-#define STANDARD_METER_TUPLET_CLAIM_TYPE "standard-meter/tuplet"
 
 typedef struct {
     size_t *notes; /* owned: indices into the note set */
@@ -54,33 +49,10 @@ typedef struct {
     size_t count;
 } StandardMeterTuplets;
 
-/* What a claim holds: the tuplet without its note indices. */
-typedef struct {
-    size_t note_count;
-    unsigned actual;
-    unsigned normal;
-    unsigned attacks;
-    int measure;
-    double beat;
-    MeterType meter;
-    bool borrowed;
-    bool has_level;
-    TupletLevel level;
-    bool level_typical;
-} StandardMeterTupletClaim;
-
 /* Finds the tuplets. `in_line` (one entry per note) is NULL for all notes; false skips a note. *out is untouched on failure. */
 StandardMeterAnalysisStatus standard_meter_find_tuplets(const AnalysisNoteSet *notes, const bool *in_line,
                                                         StandardMeterTuplets *out);
 
 void standard_meter_tuplets_destroy(StandardMeterTuplets *tuplets);
-
-/* A shell over the run's notes and the Interpretation targeting it, both owned by the caller. `key` names the claim
-   ("standard-meter-tuplet-<key>"). False on a bad argument or failure; then neither is owned. */
-bool standard_meter_tuplet_emit(const AnalysisNoteSet *notes, const StandardMeterTuplet *tuplet, const char *key,
-                                Structure **shell, Interpretation **interpretation);
-
-/* Reads the claim back from its Interpretation. False when it is not a tuplet claim. */
-bool standard_meter_tuplet_claim_read(const Interpretation *interpretation, StandardMeterTupletClaim *out);
 
 #endif

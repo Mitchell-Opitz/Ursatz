@@ -31,21 +31,6 @@ static bool has_no_pattern(const PitchSpelling *c0, const PitchSpelling *c1, con
     return !matched;
 }
 
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_weak_beat_pattern_name(STANDARD_COUNTERPOINT_WEAK_BEAT_CONSONANT_PASSING_TONE),
-                  "consonant-passing-tone") == 0);
-    assert(strcmp(standard_counterpoint_weak_beat_pattern_name(
-                      STANDARD_COUNTERPOINT_WEAK_BEAT_DELAY_OF_MELODIC_PROGRESSION),
-                  "delay-of-melodic-progression") == 0);
-    assert(strcmp(standard_counterpoint_weak_beat_pattern_name(STANDARD_COUNTERPOINT_WEAK_BEAT_DISSONANT_PASSING_TONE),
-                  "dissonant-passing-tone") == 0);
-    assert(standard_counterpoint_weak_beat_pattern_name(STANDARD_COUNTERPOINT_WEAK_BEAT_PATTERN_COUNT) == NULL);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_WEAK_BEAT_PATTERN_COUNT; i++) {
-        bool dissonant = standard_counterpoint_weak_beat_pattern_is_dissonant((StandardCounterpointWeakBeatPattern)i);
-        assert(dissonant == (i == STANDARD_COUNTERPOINT_WEAK_BEAT_DISSONANT_PASSING_TONE));
-    }
-}
-
 static void test_consonant_passing_tone(void) {
     assert(pattern_of(P(C, 0, 3), P(E, 0, 3), P(G, 0, 3), P(A, 0, 3), P(B, 0, 3)) ==
            STANDARD_COUNTERPOINT_WEAK_BEAT_CONSONANT_PASSING_TONE);
@@ -141,7 +126,6 @@ static void test_bars_without_a_pattern(void) {
 }
 
 int main(void) {
-    test_names();
     test_consonant_passing_tone();
     test_dissonant_passing_tone();
     test_substitution();

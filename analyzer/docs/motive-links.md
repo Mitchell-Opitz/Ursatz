@@ -7,7 +7,7 @@ ursatz-analyzer --link-motives <corpus output dir> [--cache <file>] [--depth <1-
 ```
 
 Library: `include/ursatz_analyzer/motive_links.h`. Output schemas: `schema/motive-links.v1.schema.json` and, for the
-cache, `schema/motive-link-cache.v1.schema.json`.
+cache, `schema/motive-link-cache.v2.schema.json`.
 
 Linking finds the motive families of different pieces that are variants of one another: one family's prototype is a
 chain of motive relations (a transposition, an augmentation, an inversion, a fragment, and so on; Ursatz's
@@ -28,7 +28,7 @@ fingerprint it prints, so a family has one sketch whichever side it is read from
 moved to the key of C, keeping its mode, by the shortest way that puts its tonic on C. The relations keep a sketch's
 scale, so two motives in different keys could never be made equal otherwise; once both are in C they differ only by the
 relations. A link between a G major motive and a C major one therefore reads as the same chain as between two C major
-ones, and the steps apply to the sketches `motive_link_scope_sketch` returns, whose pitches are the key-of-C pitches. A
+ones, and the steps apply to these sketches (the `sketch` of each family in the scope), whose pitches are the key-of-C pitches. A
 step such as `transpose by=12` is a move between those, not between the written keys.
 
 ## Candidates, the gate and directions
@@ -55,7 +55,8 @@ One cache serves every scope. It keeps, for each pair of sketches compared, whet
 the dimension similarities, keyed by the two sketches' fingerprints (`motive_sketch_fingerprint` of the key-of-C
 sketches), so the same two motives found in other pieces, or in another scope, are not compared again. `--cache <file>`
 names the file; the default is `<corpus output dir>/motive-link-cache.json`. The CLI always writes it back (to
-`<file>.tmp`, then renamed over it). A file that does not exist is an empty cache; a file that is not a cache is an error
+`<file>.tmp`, then renamed over it). A file that does not exist is an empty cache, and so is a cache of schema version 1 (it
+is emptied by the next run and reported as `cache_reset`); a file that is not a cache is an error
 (exit 2).
 
 A cache is valid only for the producer key, the analyzer version and the link options (depth, beam, nearness gate,

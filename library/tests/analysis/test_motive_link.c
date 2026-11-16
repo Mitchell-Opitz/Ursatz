@@ -198,17 +198,18 @@ static void assert_round_trip(const MotiveRelationStep *original, const char *ex
 }
 
 static void test_step_text(void) {
-    assert(motive_relation_param_name(MOTIVE_RELATION_TRANSPOSE, 1) != NULL);
-    assert(strcmp(motive_relation_param_name(MOTIVE_RELATION_TRANSPOSE, 1), "by") == 0);
-    assert(motive_relation_param_name(MOTIVE_RELATION_EXACT, 0) == NULL);
-    assert(motive_relation_param_name(MOTIVE_RELATION_TRANSPOSE, 3) == NULL);
-    assert(motive_relation_param_name(MOTIVE_RELATION_KIND_COUNT, 0) == NULL);
+    MotiveRelationParamInfo info;
+    assert(motive_relation_param_info(MOTIVE_RELATION_TRANSPOSE, 1, &info));
+    assert(strcmp(info.name, "by") == 0);
+    assert(!motive_relation_param_info(MOTIVE_RELATION_EXACT, 0, &info));
+    assert(!motive_relation_param_info(MOTIVE_RELATION_TRANSPOSE, 3, &info));
+    assert(!motive_relation_param_info(MOTIVE_RELATION_KIND_COUNT, 0, &info));
 
     for (int k = 0; k < MOTIVE_RELATION_KIND_COUNT; k++) {
         MotiveRelationKind kind = (MotiveRelationKind)k;
         size_t params = motive_relation_param_count(kind);
         for (size_t i = 0; i < params; i++) {
-            assert(motive_relation_param_name(kind, i) != NULL);
+            assert(motive_relation_param_info(kind, i, &info) && info.name != NULL);
         }
         /* Every parameter given. */
         MotiveRelationStep full = step(kind);

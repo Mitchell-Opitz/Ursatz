@@ -166,10 +166,7 @@ bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisRepor
         return true;
     }
     HarmonyPhraseSpan *spans = calloc(report->phrase_count, sizeof(HarmonyPhraseSpan));
-    size_t *owners = calloc(report->phrase_count, sizeof(size_t));
-    if (!spans || !owners) {
-        free(spans);
-        free(owners);
+    if (!spans) {
         return false;
     }
     size_t span_count = 0;
@@ -189,7 +186,7 @@ bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisRepor
                 span->last_segment = cadence->arrival_last;
             }
         }
-        owners[span_count++] = p;
+        span_count++;
     }
     HarmonyPhraseModel model = {0};
     HarmonyPhraseModelStatus status =
@@ -197,7 +194,6 @@ bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisRepor
                        : HARMONY_PHRASE_MODEL_ERR_BAD_SPAN;
     free(spans);
     if (status != HARMONY_PHRASE_MODEL_OK) {
-        free(owners);
         return status != HARMONY_PHRASE_MODEL_ERR_ALLOC;
     }
     for (size_t i = 0; i < model.segment_count && i < report->entry_count; i++) {
@@ -205,11 +201,7 @@ bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisRepor
             report->entries[i].phrase_model = phrase_model_label_abbreviation(model.segments[i].label);
         }
     }
-    for (size_t k = 0; k < span_count && k < model.phrase_count; k++) {
-        report->phrases[owners[k]].phrase_model_labeled = model.phrase_labeled[k];
-    }
     harmony_phrase_model_destroy(&model);
-    free(owners);
     return true;
 }
 

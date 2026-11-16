@@ -18,20 +18,8 @@ static PreferenceScore score_candidate(const Preference *preference, const Value
 static const HarmonyRuleTable TABLE = {"phrase", NAMES, HARMONY_PHRASE_RULE_COUNT, table_is_hard, g_pairs, g_built,
                                        evaluate_candidate, score_candidate};
 
-const Rule *harmony_phrase_rule(HarmonyPhraseRule which) {
-    return harmony_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *harmony_phrase_constraint(HarmonyPhraseRule which) {
-    return harmony_rule_table_constraint(&TABLE, (int)which);
-}
-
 const Preference *harmony_phrase_preference(HarmonyPhraseRule which) {
     return harmony_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *harmony_phrase_rule_name(HarmonyPhraseRule which) {
-    return harmony_rule_table_name(&TABLE, (int)which);
 }
 
 bool harmony_phrase_valid(const HarmonyPhrase *phrase) {

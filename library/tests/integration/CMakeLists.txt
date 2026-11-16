@@ -102,51 +102,12 @@ target_compile_definitions(test_framework_v1_thematic_returns PRIVATE
     URSATZ_RETURNS_SUMMARY="${CMAKE_CURRENT_BINARY_DIR}/framework_v1_returns_summary.txt")
 add_test(NAME framework_v1_thematic_returns COMMAND test_framework_v1_thematic_returns)
 
-add_executable(test_corpus_style_statistics test_corpus_style_statistics.c)
-target_link_libraries(test_corpus_style_statistics PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
-                      standard_meter)
-target_include_directories(test_corpus_style_statistics PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis
-                           ${PROJECT_SOURCE_DIR}/tests/corpus_stats)
-target_compile_definitions(test_corpus_style_statistics PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
-    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
-add_test(NAME corpus_style_statistics COMMAND test_corpus_style_statistics)
-# 69 s measured (serial, 10 s rule); runs in the nightly.
-set_tests_properties(corpus_style_statistics PROPERTIES LABELS slow)
-
-add_executable(test_corpus_similarity_search test_corpus_similarity_search.c)
-target_link_libraries(test_corpus_similarity_search PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
-                      standard_meter)
-target_include_directories(test_corpus_similarity_search PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis
-                           ${PROJECT_SOURCE_DIR}/tests/corpus_stats)
-target_compile_definitions(test_corpus_similarity_search PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
-    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
-add_test(NAME corpus_similarity_search COMMAND test_corpus_similarity_search)
-# 70 s measured (serial, 10 s rule); runs in the nightly.
-set_tests_properties(corpus_similarity_search PROPERTIES LABELS slow)
-
-add_executable(test_persistence_full_analysis test_persistence_full_analysis.c)
-target_link_libraries(test_persistence_full_analysis PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
-                      standard_meter)
-target_include_directories(test_persistence_full_analysis PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
-target_compile_definitions(test_persistence_full_analysis PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
-    URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
-add_test(NAME persistence_full_analysis COMMAND test_persistence_full_analysis)
-# 120 s measured (serial, 10 s rule); runs in the nightly.
-set_tests_properties(persistence_full_analysis PROPERTIES LABELS slow)
-
-# Eight threads make the first call of every framework accessor and one rule accessor per framework together (core/once.h).
+# Eight threads make the first call of every framework accessor and every preference accessor an app calls together (core/once.h).
 # Under helgrind where valgrind is installed (memcheck as well), else plain.
 add_executable(test_concurrent_first_use test_concurrent_first_use.c)
-target_link_libraries(test_concurrent_first_use PRIVATE baroque_ground_bass common_practice_minimal galant_schemas
-                      high_baroque_fugue scale_harmonization sixteenth_century_style standard_counterpoint standard_form
-                      standard_harmony standard_markings standard_meter standard_notation standard_rhythm
-                      standard_texture standard_tonality standard_voicing western_periods)
+target_link_libraries(test_concurrent_first_use PRIVATE common_practice_minimal galant_schemas scale_harmonization
+                      standard_counterpoint standard_form standard_harmony standard_markings standard_meter
+                      standard_texture standard_tonality standard_voicing)
 add_test(NAME concurrent_first_use COMMAND test_concurrent_first_use)
 find_program(URSATZ_INTEGRATION_VALGRIND valgrind)
 if(URSATZ_INTEGRATION_VALGRIND)
@@ -155,11 +116,6 @@ if(URSATZ_INTEGRATION_VALGRIND)
                    $<TARGET_FILE:test_motive_mozart545>)
   # 19 s measured (serial, 10 s rule); runs in the nightly.
   set_tests_properties(motive_mozart545_valgrind PROPERTIES LABELS slow)
-  add_test(NAME persistence_full_analysis_valgrind
-           COMMAND ${URSATZ_INTEGRATION_VALGRIND} --leak-check=full --error-exitcode=1
-                   $<TARGET_FILE:test_persistence_full_analysis>)
-  # 436 s measured (serial, 10 s rule); runs in the nightly.
-  set_tests_properties(persistence_full_analysis_valgrind PROPERTIES LABELS slow)
   add_test(NAME concurrent_first_use_valgrind
            COMMAND ${URSATZ_INTEGRATION_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_concurrent_first_use>)

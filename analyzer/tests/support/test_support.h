@@ -7,6 +7,9 @@
 
 #include <cJSON.h>
 
+#include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/imported_notes.h>
+
 /* A format 0 MIDI file with one track into buf; returns its size. */
 size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size);
 
@@ -36,6 +39,10 @@ bool test_write_file(const char *path, const char *data);
 
 /* Writes "<TMPDIR or /tmp>/ursatz_analyzer_<pid>_<name>" into out, so parallel test processes never share a file. */
 void test_temp_path(char *out, size_t size, const char *name);
+
+/* analysis_document_build, then analysis_document_to_json, for an input path, its notes and report. Returns a heap
+   string the caller frees, or NULL on allocation failure. */
+char *test_render_document(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report);
 
 /* Imports a file (the format is detected), runs the pipeline and returns the parsed analysis document the
    caller deletes. Asserts on any failure. */

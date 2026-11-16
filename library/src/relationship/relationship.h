@@ -18,20 +18,16 @@
  * the objects it connects.
  *
  * predicate is an open vocabulary name (string), not a closed enum:
- * PredicateDefinition (music-relationship, this module) is the
- * explicitly-extensible registry of predicate metadata (TDD §76-77);
- * Relationship itself only carries the name a PredicateDefinition can
- * later be looked up by, so this type has no compile-time dependency
- * on PredicateDefinition's construction order.
+ * the vocabulary is explicitly extensible (TDD §76-77), so
+ * Relationship only carries the name.
  *
  * context is an EntityID reference to a Context (music-context, L6).
  * It is a reference by id, not a Context* pointer: music-relationship
  * MUST NOT import music-context (sideways L6 dependency), so the
  * reference stays opaque the same way source/target do.
  *
- * evidence is likewise an opaque EntityID reference (to an Evidence,
- * music-interpretation) -- referenced, not embedded, and with no
- * compile-time dependency on music-interpretation.
+ * evidence is likewise an opaque EntityID reference -- referenced, not
+ * embedded, and with no compile-time dependency on music-interpretation.
  *
  * uncertainty is a PLACEHOLDER: Uncertainty (music-interpretation,
  * TDD §84) does not exist yet at this point in the build. Until it
@@ -79,13 +75,7 @@ void relationship_destroy(Relationship *relationship);
 
 const EntityID *relationship_id(const Relationship *relationship);
 const EntityID *relationship_source_id(const Relationship *relationship);
-const char *relationship_predicate_name(const Relationship *relationship);
 const EntityID *relationship_target_id(const Relationship *relationship);
-const Value *relationship_scope(const Relationship *relationship);
-const EntityID *relationship_context_id(const Relationship *relationship);
 const Value *relationship_qualifiers(const Relationship *relationship);
-const EntityID *relationship_evidence_id(const Relationship *relationship);
-const Value *relationship_uncertainty(const Relationship *relationship);
-const ProvenanceReference *relationship_provenance(const Relationship *relationship);
 
 #endif

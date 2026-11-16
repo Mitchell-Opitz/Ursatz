@@ -1,6 +1,8 @@
 #include "ursatz_chain/chain_inputs.h"
 
 #include "chain_test_piece.h"
+#include "pitch/pitch_numeric_value.h"
+#include "pitch/tuning_system.h"
 #include "standard-harmony/harmony_cadence_rules.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "standard-meter/segmentation_beat_grid.h"
@@ -12,6 +14,22 @@
  * inputs (harmony, form, meter, texture, voice grid, melody, galant) are built from the results of a chain run over the same piece, and
  * checked against them.
  */
+
+/* Same tuning system (by identity) and the same position. */
+static bool same_pitch_value(const PitchNumericValue *a, const PitchNumericValue *b) {
+    return entity_id_equals(tuning_system_id(pitch_numeric_value_tuning_system(a)),
+                            tuning_system_id(pitch_numeric_value_tuning_system(b))) &&
+           pitch_numeric_value_position_numerator(a) == pitch_numeric_value_position_numerator(b) &&
+           pitch_numeric_value_position_denominator(a) == pitch_numeric_value_position_denominator(b);
+}
+
+/* The cell of a segment and voice, or NULL when either is out of range or the grid has no cells. */
+static const AnalysisVoiceCell *grid_cell(const AnalysisVoiceGrid *grid, size_t segment, size_t voice) {
+    if (grid->cells == NULL || segment >= grid->segment_count || voice >= grid->voice_count) {
+        return NULL;
+    }
+    return &grid->cells[segment * grid->voice_count + voice];
+}
 
 static MusicalTime *time_at(long numerator, unsigned long denominator) {
     MusicalTime *time = NULL;
@@ -195,9 +213,11 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(count == segments->count && lines != NULL && chords != NULL && romans != NULL);
 
     /* the segment lines: one entry per chord segment, the voice segment sounding at its start (here the chord segments merge: 4 over 14) */
-    const OuterVoiceLines *segment_lines = analysis_chain_segment_outer_voices(chain);
     const ChainSegments *voice_segments = analysis_chain_voice_segments(chain);
-    assert(analysis_chain_segment_outer_voices(NULL) == NULL);
+    OuterVoiceLines built_lines;
+    memset(&built_lines, 0, sizeof(built_lines));
+    assert(chain_build_segment_lines(voice_segments, lines, segments, count, &built_lines) == CHAIN_INPUT_OK);
+    const OuterVoiceLines *segment_lines = &built_lines;
     assert(segment_lines != NULL && segment_lines->count == count && lines->count == voice_segments->count && lines->count > count);
     for (size_t i = 0; i < count; i++) {
         size_t v = 0;
@@ -208,6 +228,7 @@ static void test_stage_inputs(TestPiece *piece) {
         assert(strcmp(entity_id_value(segment_lines->soprano[i].note_id), entity_id_value(lines->soprano[v].note_id)) == 0);
         assert(strcmp(entity_id_value(segment_lines->bass[i].note_id), entity_id_value(lines->bass[v].note_id)) == 0);
     }
+    outer_voice_lines_destroy(&built_lines);
 
     /* harmony and cadences */
     ChainHarmonyInputs harmony;
@@ -323,7 +344,7 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(grid.grid.segment_count == count && grid.grid.voice_count >= 3 && strcmp(grid.grid.segment_ids[0], "seg-0") == 0);
     size_t present = 0;
     for (size_t v = 0; v < grid.grid.voice_count; v++) {
-        const AnalysisVoiceCell *cell = analysis_voice_grid_cell(&grid.grid, 0, v);
+        const AnalysisVoiceCell *cell = grid_cell(&grid.grid, 0, v);
         present += cell->present ? 1 : 0;
         assert(!cell->present || (cell->attacked && cell->pitch != NULL && cell->note_id != NULL));
     }
@@ -454,7 +475,7 @@ static void test_segment_lines(TestPiece *piece) {
         assert(out.soprano[i].present && out.bass[i].present);
         assert(out.soprano[i].note_id != lines.soprano[v].note_id && out.soprano[i].pitch != lines.soprano[v].pitch); /* copies */
         assert(strcmp(entity_id_value(out.soprano[i].note_id), entity_id_value(lines.soprano[v].note_id)) == 0);
-        assert(pitch_numeric_value_equals(out.soprano[i].pitch, lines.soprano[v].pitch));
+        assert(same_pitch_value(out.soprano[i].pitch, lines.soprano[v].pitch));
         assert(strcmp(entity_id_value(out.bass[i].note_id), entity_id_value(lines.bass[v].note_id)) == 0);
     }
     assert(pitch_numeric_value_position_numerator(out.soprano[0].pitch) == 76); /* E5 */

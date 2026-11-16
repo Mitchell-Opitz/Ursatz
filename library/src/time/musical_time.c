@@ -14,10 +14,6 @@ typedef struct {
     unsigned long denominator;
 } MusicalTimeContent;
 
-static unsigned long abs_ul(long n) {
-    return n < 0 ? (unsigned long)(-n) : (unsigned long)n;
-}
-
 MusicalTimeResult musical_time_create(long numerator, unsigned long denominator, MusicalTime **out) {
     if (denominator == 0) {
         return MUSICAL_TIME_ERR_NON_POSITIVE_DENOMINATOR;
@@ -94,20 +90,4 @@ MusicalTimeResult musical_time_add(const MusicalTime *time, const Duration *dura
         return MUSICAL_TIME_ERR_OVERFLOW;
     }
     return musical_time_create((long)sum.num, (unsigned long)sum.den, out);
-}
-
-DurationResult musical_time_subtract(const MusicalTime *a, const MusicalTime *b, Duration **out) {
-    Rational left;
-    Rational right;
-    Rational difference;
-    if (!rational_of_content(musical_time_content(a), &left) ||
-        !rational_of_content(musical_time_content(b), &right) ||
-        rational_sub(left, right, &difference) != RATIONAL_OK || difference.num > LONG_MAX ||
-        (unsigned long long)difference.den > ULONG_MAX) {
-        return DURATION_ERR_OVERFLOW;
-    }
-    if (difference.num < 0) {
-        return DURATION_ERR_NEGATIVE;
-    }
-    return duration_create((long)difference.num, (unsigned long)difference.den, out);
 }

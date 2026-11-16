@@ -17,6 +17,7 @@
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_oracles.h"
 
 /*
  * The schema and sequence operators, run through the fill loop. Each plan is one phrase over a meter lane and a key

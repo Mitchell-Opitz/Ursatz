@@ -3,19 +3,6 @@
 
 #include "stem_rules.h"
 
-static void test_staff_for_part(void) {
-    StandardVoicingStaff staff;
-    assert(standard_voicing_staff_for_part(VOICE_PART_SOPRANO, &staff) && staff == STANDARD_VOICING_STAFF_TREBLE);
-    assert(standard_voicing_staff_for_part(VOICE_PART_ALTO, &staff) && staff == STANDARD_VOICING_STAFF_TREBLE);
-    assert(standard_voicing_staff_for_part(VOICE_PART_TENOR, &staff) && staff == STANDARD_VOICING_STAFF_BASS);
-    assert(standard_voicing_staff_for_part(VOICE_PART_BASS, &staff) && staff == STANDARD_VOICING_STAFF_BASS);
-
-    staff = STANDARD_VOICING_STAFF_BASS;
-    assert(!standard_voicing_staff_for_part(VOICE_PART_COUNT, &staff));
-    assert(staff == STANDARD_VOICING_STAFF_BASS);
-    assert(!standard_voicing_staff_for_part(VOICE_PART_SOPRANO, NULL));
-}
-
 static void test_stem_direction_for_part(void) {
     StandardVoicingStemDirection direction;
     assert(standard_voicing_stem_direction_for_part(VOICE_PART_SOPRANO, &direction) &&
@@ -57,7 +44,6 @@ static void test_chord_stems(void) {
 }
 
 int main(void) {
-    test_staff_for_part();
     test_stem_direction_for_part();
     test_direction_valid();
     test_chord_stems();

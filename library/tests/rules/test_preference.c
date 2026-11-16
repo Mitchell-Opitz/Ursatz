@@ -5,12 +5,15 @@
 #include "context/context.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
+#include "preference_test_access.h"
 #include "rules/preference.h"
 #include "theory/framework.h"
+#include "framework_test_access.h"
 
 /*
- * Construction test: a Preference holds identity and a framework
- * association.
+ * Construction test: a Preference holds a framework association and
+ * refuses a missing id or framework. It is read through
+ * tests/support/preference_test_access.h (framework, callback, rank).
  *
  * Structural test: preference_rank has no PASS/FAIL/invalid return
  * value -- PreferenceRankResult only ever reports a computed rank or
@@ -62,8 +65,13 @@ int main(void) {
     Preference *other;
     assert(preference_create(other_id, framework, &other) == PREFERENCE_OK);
 
-    assert(preference_identity_equals(preference, preference));
-    assert(!preference_identity_equals(preference, other));
+    Preference *refused = NULL;
+    EntityID *refused_id;
+    assert(entity_id_create("preference-refused", &refused_id) == ENTITY_ID_OK);
+    assert(preference_create(NULL, framework, &refused) == PREFERENCE_ERR_NULL_ID);
+    assert(preference_create(refused_id, NULL, &refused) == PREFERENCE_ERR_NULL_FRAMEWORK);
+    assert(refused == NULL);
+    entity_id_destroy(refused_id);
 
     assert(preference_rank(preference, NULL, NULL, NULL, NULL) == PREFERENCE_RANK_ERR_NULL_CANDIDATE);
 
@@ -110,16 +118,12 @@ int main(void) {
     assert(preference_rank(preference, candidate, NULL, &numerator, &denominator) == PREFERENCE_RANK_NOT_IMPLEMENTED);
     assert(numerator == 99 && denominator == 99);
 
-    /* The context is passed through. */
-    EntityID *context_id;
-    assert(entity_id_create("context-for-preference", &context_id) == ENTITY_ID_OK);
-    Context *context;
-    assert(context_create(context_id, "test", NULL, &context) == CONTEXT_OK);
+    /* The context is passed through (opaque: the callback only records the pointer). */
+    Context *context = (Context *)&g_score;
     g_score.numerator = 1;
     g_score.denominator = 3;
     assert(preference_rank(preference, candidate, context, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
     assert(g_seen_context == context);
-    context_destroy(context);
 
     /* Replacing and clearing the callback. */
     preference_set_score_fn(preference, other_callback);

@@ -79,66 +79,6 @@ bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTon
     return true;
 }
 
-bool standard_tonality_degree_of(PitchLetter tonic_letter, int tonic_accidental,
-                                 StandardTonalityMode mode, PitchLetter note_letter,
-                                 int note_accidental, int *degree, int *alteration) {
-    if (degree == NULL || alteration == NULL || !letter_valid(tonic_letter) ||
-        !letter_valid(note_letter) || !mode_valid(mode)) {
-        return false;
-    }
-    int found = floor_mod(pitch_letter_index(note_letter) - pitch_letter_index(tonic_letter),
-                          KEY_DEGREE_COUNT) +
-                1;
-    int natural_distance =
-        floor_mod(pitch_letter_semitone(note_letter) - pitch_letter_semitone(tonic_letter),
-                  PITCH_SEMITONES_PER_OCTAVE);
-    *degree = found;
-    *alteration =
-        natural_distance + note_accidental - tonic_accidental - MODE_SEMITONES[mode][found - 1];
-    return true;
-}
-
-bool standard_tonality_spell_degree(PitchLetter tonic_letter, int tonic_accidental,
-                                    StandardTonalityMode mode, int degree, int alteration,
-                                    PitchLetter *letter, int *accidental) {
-    if (letter == NULL || accidental == NULL || !letter_valid(tonic_letter) || !mode_valid(mode) ||
-        degree < 1 || degree > KEY_DEGREE_COUNT) {
-        return false;
-    }
-    PitchLetter spelled = pitch_letter_offset(tonic_letter, degree - 1);
-    int natural_distance =
-        floor_mod(pitch_letter_semitone(spelled) - pitch_letter_semitone(tonic_letter),
-                  PITCH_SEMITONES_PER_OCTAVE);
-    int offset =
-        tonic_accidental + MODE_SEMITONES[mode][degree - 1] + alteration - natural_distance;
-    if (offset < -KEY_MAX_ACCIDENTAL_OFFSET || offset > KEY_MAX_ACCIDENTAL_OFFSET) {
-        return false;
-    }
-    *letter = spelled;
-    *accidental = offset;
-    return true;
-}
-
-int standard_tonality_scale_degree_in_mode(PitchLetter tonic_letter, int tonic_accidental,
-                                           StandardTonalityMode mode, PitchLetter note_letter,
-                                           int note_accidental) {
-    for (int degree = 1; degree <= KEY_DEGREE_COUNT; degree++) {
-        PitchLetter letter;
-        int accidental;
-        if (!standard_tonality_spell_degree(tonic_letter, tonic_accidental, mode, degree, 0,
-                                            &letter, &accidental)) {
-            return 0;
-        }
-    }
-    int degree;
-    int alteration;
-    if (!standard_tonality_degree_of(tonic_letter, tonic_accidental, mode, note_letter,
-                                     note_accidental, &degree, &alteration)) {
-        return 0;
-    }
-    return alteration == 0 ? degree : 0;
-}
-
 bool standard_tonality_key_fifths(PitchLetter tonic_letter, int tonic_accidental, bool minor,
                                   int *fifths) {
     if (fifths == NULL || !letter_valid(tonic_letter)) {
@@ -166,71 +106,6 @@ bool standard_tonality_key_of_fifths(int fifths, bool minor, PitchLetter *letter
     }
     pitch_spelling_from_fifths(fifths + (minor ? KEY_MINOR_FIFTHS_OFFSET : 0), letter, accidental);
     return true;
-}
-
-bool standard_tonality_relative_key(PitchLetter tonic_letter, int tonic_accidental, bool minor,
-                                    PitchLetter *letter, int *accidental) {
-    int fifths;
-    if (!standard_tonality_key_fifths(tonic_letter, tonic_accidental, minor, &fifths)) {
-        return false;
-    }
-    return standard_tonality_key_of_fifths(fifths, !minor, letter, accidental);
-}
-
-bool standard_tonality_circle_step(PitchLetter letter, int accidental, int steps,
-                                   PitchLetter *out_letter, int *out_accidental) {
-    if (out_letter == NULL || out_accidental == NULL || !letter_valid(letter)) {
-        return false;
-    }
-    PitchLetter stepped;
-    int stepped_accidental;
-    pitch_spelling_from_fifths(pitch_spelling_fifths(letter, accidental) + steps, &stepped,
-                               &stepped_accidental);
-    if (stepped_accidental < -KEY_MAX_ACCIDENTAL_OFFSET ||
-        stepped_accidental > KEY_MAX_ACCIDENTAL_OFFSET) {
-        return false;
-    }
-    *out_letter = stepped;
-    *out_accidental = stepped_accidental;
-    return true;
-}
-
-bool standard_tonality_mode_of_minor_form(StandardTonalityMinorForm form,
-                                          StandardTonalityMode *out) {
-    if (out == NULL) {
-        return false;
-    }
-    switch (form) {
-    case STANDARD_TONALITY_MINOR_NATURAL:
-    case STANDARD_TONALITY_MINOR_MELODIC_DESCENDING:
-        *out = STANDARD_TONALITY_MODE_NATURAL_MINOR;
-        return true;
-    case STANDARD_TONALITY_MINOR_HARMONIC:
-        *out = STANDARD_TONALITY_MODE_HARMONIC_MINOR;
-        return true;
-    case STANDARD_TONALITY_MINOR_MELODIC_ASCENDING:
-        *out = STANDARD_TONALITY_MODE_MELODIC_MINOR;
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool standard_tonality_mode_of_roman_key_mode(StandardTonalityRomanKeyMode mode,
-                                              StandardTonalityMode *out) {
-    if (out == NULL) {
-        return false;
-    }
-    switch (mode) {
-    case STANDARD_TONALITY_ROMAN_KEY_MAJOR:
-        *out = STANDARD_TONALITY_MODE_MAJOR;
-        return true;
-    case STANDARD_TONALITY_ROMAN_KEY_MINOR:
-        *out = STANDARD_TONALITY_MODE_NATURAL_MINOR;
-        return true;
-    default:
-        return false;
-    }
 }
 
 const char *standard_tonality_chromatic_degree_label(int semitones_above_tonic) {

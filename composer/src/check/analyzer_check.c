@@ -417,23 +417,6 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
     }
 }
 
-AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *out) {
-    if (!out) {
-        return ANALYZER_CHECK_ERR_NULL;
-    }
-    memset(out, 0, sizeof(*out));
-    ComposerHearing *hearing = NULL;
-    if (!plan) {
-        return ANALYZER_CHECK_ERR_NULL;
-    }
-    AnalyzerCheckResult made = result_of(hearing_create(plan, &hearing));
-    if (made == ANALYZER_CHECK_OK) {
-        made = analyzer_check_piece_in(hearing, out);
-    }
-    hearing_destroy(hearing);
-    return made;
-}
-
 AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCheck *out) {
     if (!out) {
         return ANALYZER_CHECK_ERR_NULL;

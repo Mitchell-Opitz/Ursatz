@@ -11,8 +11,8 @@
 
 /*
  * A StyleModel built from corpus statistics keeps each statistic as an exact
- * count/total, in a sorted, duplicate-free list that reads back unchanged and
- * as Tendencies; invalid statistics are rejected with an explicit result.
+ * count/total, in a sorted, duplicate-free list that reads back unchanged;
+ * invalid statistics are rejected with an explicit result.
  */
 
 static EntityID *make_id(const char *value) {
@@ -39,7 +39,6 @@ static void test_build_and_read_back(void) {
     StyleModel *model = NULL;
     assert(style_model_from_statistics(make_id("style-1"), "Test style", "reference-set", "v1", STATISTICS, 4,
                                        &model) == STYLE_MODEL_BUILD_OK);
-    assert(strcmp(entity_id_value(style_model_id(model)), "style-1") == 0);
     assert(strcmp(style_model_style_name(model), "Test style") == 0);
     assert(strcmp(style_model_training_corpus(model), "reference-set") == 0);
     assert(strcmp(style_model_model_version(model), "v1") == 0);
@@ -56,23 +55,6 @@ static void test_build_and_read_back(void) {
     assert_statistic(&statistics[3], "chord-progression-2", "V > I", 2, 5);
     style_statistics_free(statistics, count);
 
-    /* Each statistic is a Tendency: its label, its count/total as the frequency, and where it came from. */
-    Tendency **tendencies = NULL;
-    assert(style_model_tendencies(model, &tendencies, &count) == STYLE_TENDENCIES_OK);
-    assert(count == 4);
-    assert(strcmp(tendency_label(tendencies[0]), "hc") == 0);
-    assert(tendency_frequency_numerator(tendencies[0]) == 2 && tendency_frequency_denominator(tendencies[0]) == 4);
-    assert(strcmp(tendency_label(tendencies[3]), "V > I") == 0);
-    assert(tendency_frequency_numerator(tendencies[3]) == 2 && tendency_frequency_denominator(tendencies[3]) == 5);
-    const Value *source = tendency_observed_data(tendencies[2]);
-    assert(strcmp(value_type(source), STYLE_TENDENCY_SOURCE_VALUE_TYPE) == 0);
-    size_t size = 0;
-    const char *content = value_content(source, &size);
-    const char expected_source[] = "chord-progression-2\treference-set";
-    assert(size == strlen(expected_source) && memcmp(content, expected_source, size) == 0);
-    assert(strcmp(entity_id_value(tendency_id(tendencies[2])), "tendency:chord-progression-2:I > V") == 0);
-    style_tendencies_free(tendencies, count);
-
     style_model_destroy(model);
 }
 
@@ -80,14 +62,10 @@ static void test_empty_model(void) {
     StyleModel *model = NULL;
     assert(style_model_from_statistics(make_id("style-empty"), "Empty", "none", "v0", NULL, 0, &model) ==
            STYLE_MODEL_BUILD_OK);
-    Tendency **tendencies = (Tendency **)0x1;
     size_t count = 99;
-    assert(style_model_tendencies(model, &tendencies, &count) == STYLE_TENDENCIES_OK);
-    assert(count == 0 && tendencies == NULL);
     StyleStatistic *statistics = (StyleStatistic *)0x1;
     assert(style_features_decode(style_model_style_features(model), &statistics, &count) == STYLE_FEATURES_OK);
     assert(count == 0 && statistics == NULL);
-    style_tendencies_free(NULL, 0);
     style_statistics_free(NULL, 0);
     style_model_destroy(model);
 }
@@ -177,14 +155,13 @@ static void test_features_round_trip_and_malformed(void) {
     assert(style_features_encode(NULL, 1, &features) == STYLE_FEATURES_ERR_NULL_ARGUMENT);
     assert(style_features_encode(STATISTICS, 1, NULL) == STYLE_FEATURES_ERR_NULL_ARGUMENT);
 
-    /* A model whose features are not statistics reads back as malformed, never as made-up tendencies. */
+    /* A model whose features are not statistics reads back as malformed, never as made-up statistics. */
     Value *not_features = NULL;
     assert(value_create("other-features", "x", 1, &not_features) == VALUE_OK);
     StyleModel *model = NULL;
     assert(style_model_create(make_id("style-other"), "Other", not_features, "corpus", "v1", &model) == STYLE_MODEL_OK);
-    Tendency **tendencies = NULL;
-    assert(style_model_tendencies(model, &tendencies, &count) == STYLE_TENDENCIES_ERR_MALFORMED);
-    assert(style_model_tendencies(NULL, &tendencies, &count) == STYLE_TENDENCIES_ERR_NULL_ARGUMENT);
+    assert(style_features_decode(style_model_style_features(model), &statistics, &count) ==
+           STYLE_FEATURES_ERR_MALFORMED);
     style_model_destroy(model);
 }
 

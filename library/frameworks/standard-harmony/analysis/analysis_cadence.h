@@ -150,12 +150,6 @@ typedef enum {
     HARMONY_CADENCE_ANALYSIS_ERR_ALLOC
 } HarmonyCadenceAnalysisStatus;
 
-/* The candidates, in order of arrival. On OK, *out is owned by the caller (free) and *out_count counts them (NULL
-   with none). config may be NULL for the defaults. BAD_CONFIG for a negative or non-finite number. */
-HarmonyCadenceAnalysisStatus harmony_analysis_cadence_points(const HarmonySegment *segments, size_t count,
-                                                             const HarmonyCadenceConfig *config,
-                                                             HarmonyCadencePoint **out, size_t *out_count);
-
 typedef struct {
     int type;               /* CadenceType */
     int soprano_degree;     /* at the arrival's first segment; 0 when absent */
@@ -232,8 +226,5 @@ HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const Harmon
                                                                     const HarmonyCadenceConfig *config,
                                                                     const double *section_starts, size_t section_count,
                                                                     HarmonyCadences *cadences);
-
-/* Reads the claim back out of a cadence Interpretation. False if it is not one. */
-bool harmony_cadence_claim_read(const Interpretation *interpretation, HarmonyCadenceClaim *out);
 
 #endif

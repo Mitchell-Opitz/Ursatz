@@ -392,19 +392,6 @@ MeterMapResult meter_map_region_at(const MeterMap *map, const MusicalTime *time,
     return METER_MAP_OK;
 }
 
-MeterMapResult meter_map_region_by_id(const MeterMap *map, const EntityID *id, const MeterMapRegion **out) {
-    if (map == NULL || id == NULL || out == NULL) {
-        return METER_MAP_ERR_NULL_ARGUMENT;
-    }
-    for (size_t i = 0; i < map->count; i++) {
-        if (entity_id_equals(map->regions[i].id, id)) {
-            *out = &map->regions[i];
-            return METER_MAP_OK;
-        }
-    }
-    return METER_MAP_ERR_NOT_FOUND;
-}
-
 MeterMapResult meter_map_measure_index_at(const MeterMap *map, const MusicalTime *time, int *out_index) {
     if (map == NULL || time == NULL || out_index == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;
@@ -503,10 +490,6 @@ MeterMapResult meter_map_measure_count(const MeterMap *map, const MusicalTime *e
     long long last_index = region->first_measure_number + in_region - 1;
     *out_count = (size_t)(last_index - meter_map_first_measure_number(map) + 1);
     return METER_MAP_OK;
-}
-
-const EntityID *meter_map_region_id(const MeterMapRegion *region) {
-    return region->id;
 }
 
 const TimeSignature *meter_map_region_time_signature(const MeterMapRegion *region) {

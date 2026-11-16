@@ -12,8 +12,8 @@
  * Every rule is backed by one Rule and one Constraint referencing
  * standard_harmony_framework(). A rule that states what the style
  * requires is hard; a rule written as "limit", "avoid", or "prefer" is
- * soft, so failing it never makes a subject invalid. This module never calls
- * constraint_evaluate or preference_rank; it only registers the callbacks a
+ * soft, so failing it never makes a subject invalid. This module never
+ * evaluates a Constraint or ranks a Preference; it only registers the callbacks a
  * rule table supplies (harmony_rule_table.h) on the Constraint it builds and,
  * for a soft rule, on a Preference it builds beside it.
  */

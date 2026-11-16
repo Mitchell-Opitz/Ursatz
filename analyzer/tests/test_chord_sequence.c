@@ -17,8 +17,8 @@
 
 /*
  * The joined chord sequence (chord_sequence.h):
- *   - on the five reference pieces the sequence of a result and the sequence of its document are the same, and each
- *     chord is a run of document entries with one numeral, root and key region that no neighbouring chord continues,
+ *   - on the five reference pieces the sequence of the document gives, for each chord, a run of document entries with
+ *     one numeral, root and key region that no neighbouring chord continues,
  *   - a chord held across segments is one chord, a key region change splits a run, an entry with no numeral ends one,
  *   - the argument errors.
  *
@@ -45,12 +45,6 @@ static int failures = 0;
             failures++;                                      \
         }                                                    \
     } while (0)
-
-static bool same_chord(const AnalyzerChord *a, const AnalyzerChord *b) {
-    return strcmp(a->numeral, b->numeral) == 0 && a->root_pitch_class == b->root_pitch_class &&
-           a->key_region == b->key_region && a->first_entry == b->first_entry && a->last_entry == b->last_entry &&
-           rational_equals(a->start, b->start) && rational_equals(a->end, b->end);
-}
 
 static bool spans_equal(const cJSON *span, const char *edge, Rational expected) {
     const cJSON *fraction = cJSON_GetObjectItemCaseSensitive(span, edge);
@@ -105,26 +99,19 @@ static void check_piece(const char *fixture, const char *slug) {
     AnalyzerResult *result = NULL;
     CHECK(analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK && result, "%s: analyze", slug);
     if (result) {
-        AnalyzerChord *from_result = NULL, *from_document = NULL;
-        size_t result_count = 0, document_count = 0;
+        AnalyzerChord *chords = NULL;
+        size_t count = 0;
         char *json = analysis_document_render_result(fixture, result);
         cJSON *document = json ? cJSON_Parse(json) : NULL;
         CHECK(document != NULL, "%s: no document", slug);
-        CHECK(analyzer_chord_sequence(result, &from_result, &result_count) == ANALYZER_OK, "%s: result sequence", slug);
-        CHECK(json && analyzer_chord_sequence_from_document(json, &from_document, &document_count) == ANALYZER_OK,
+        CHECK(json && analyzer_chord_sequence_from_document(json, &chords, &count) == ANALYZER_OK,
               "%s: document sequence", slug);
-        CHECK(result_count > 0, "%s: empty sequence", slug);
-        CHECK(result_count == document_count, "%s: %zu chords from the result, %zu from the document", slug, result_count,
-              document_count);
-        for (size_t i = 0; i < result_count && i < document_count; i++) {
-            CHECK(same_chord(&from_result[i], &from_document[i]), "%s: chord %zu differs", slug, i);
-        }
+        CHECK(count > 0, "%s: empty sequence", slug);
         if (document) {
-            size_t held = check_against_entries(slug, document, from_result, result_count);
+            size_t held = check_against_entries(slug, document, chords, count);
             CHECK(held > 0, "%s: no chord is held across segments", slug);
         }
-        analyzer_chord_sequence_free(from_result, result_count);
-        analyzer_chord_sequence_free(from_document, document_count);
+        analyzer_chord_sequence_free(chords, count);
         cJSON_Delete(document);
         free(json);
     }
@@ -159,7 +146,7 @@ static char *case_document(const CaseEntry *entries, size_t count, int version) 
 }
 
 static void check_case(const char *name, const CaseEntry *entries, size_t count, const size_t (*expected)[2], size_t expected_count) {
-    char *json = case_document(entries, count, 11);
+    char *json = case_document(entries, count, URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
     AnalyzerChord *chords = NULL;
     size_t found = 0;
     CHECK(analyzer_chord_sequence_from_document(json, &chords, &found) == ANALYZER_OK, "%s: not read", name);
@@ -205,9 +192,9 @@ static void check_cases(void) {
 static void check_arguments(void) {
     AnalyzerChord *chords = (AnalyzerChord *)0x1;
     size_t count = 7;
-    CHECK(analyzer_chord_sequence(NULL, &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL && count == 0,
-          "a NULL result");
-    CHECK(analyzer_chord_sequence_from_document(NULL, &chords, &count) == ANALYZER_ERR_ARGUMENT, "a NULL document");
+    CHECK(analyzer_chord_sequence_from_document(NULL, &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL &&
+              count == 0,
+          "a NULL document");
     CHECK(analyzer_chord_sequence_from_document("not json", &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL,
           "text that is not JSON");
     char *old_version = case_document(NULL, 0, 1);

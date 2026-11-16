@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "core/rational.h"
+#include "style/style_profile_internal.h"
 #include "standard-tonality/roman_numeral_grammar.h"
 #include "standard-tonality/tonal_key.h"
 

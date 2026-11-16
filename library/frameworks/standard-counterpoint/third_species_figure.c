@@ -10,31 +10,6 @@
 
 typedef StandardCounterpointThirdSpeciesExercise Exercise;
 
-static const char *const NAMES[STANDARD_COUNTERPOINT_FIGURE_COUNT] = {
-    "passing-tone",       "double-passing-tone", "neighbor-tone",
-    "double-neighbor",    "nota-cambiata-down",  "nota-cambiata-up"};
-
-const char *standard_counterpoint_dissonance_figure_name(StandardCounterpointDissonanceFigure figure) {
-    return figure >= 0 && figure < STANDARD_COUNTERPOINT_FIGURE_COUNT ? NAMES[figure] : NULL;
-}
-
-NonChordTone standard_counterpoint_dissonance_figure_non_chord_tone(StandardCounterpointDissonanceFigure figure) {
-    switch (figure) {
-        case STANDARD_COUNTERPOINT_FIGURE_PASSING_TONE:
-        case STANDARD_COUNTERPOINT_FIGURE_DOUBLE_PASSING_TONE:
-            return NON_CHORD_TONE_PASSING;
-        case STANDARD_COUNTERPOINT_FIGURE_NEIGHBOR_TONE:
-            return NON_CHORD_TONE_NEIGHBOR;
-        case STANDARD_COUNTERPOINT_FIGURE_DOUBLE_NEIGHBOR:
-            return NON_CHORD_TONE_DOUBLE_NEIGHBOR;
-        case STANDARD_COUNTERPOINT_FIGURE_NOTA_CAMBIATA_DOWN:
-        case STANDARD_COUNTERPOINT_FIGURE_NOTA_CAMBIATA_UP:
-            return NON_CHORD_TONE_CHANGING_TONE;
-        default:
-            return NON_CHORD_TONE_COUNT;
-    }
-}
-
 /* Slot-level views of the counterpoint. A slot index is 4 * bar + beat. */
 
 static size_t slot_count(const Exercise *exercise) {

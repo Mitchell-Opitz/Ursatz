@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "io/import_notes.h"
+#include "../import_notes_test_util.h"
 #include "io/musicxml_importer.h"
 #include "score_layout.h"
 #include "semantics/analysis_key.h"

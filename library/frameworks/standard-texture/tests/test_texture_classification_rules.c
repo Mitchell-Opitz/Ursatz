@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "rule_check.h"
 #include "texture_classification_rules.h"
 
 typedef StandardTextureFeatures Features;
@@ -12,11 +11,6 @@ typedef StandardTextureFeatures Features;
 #define HOMORHYTHM STANDARD_TEXTURE_HOMORHYTHM
 #define MELACC STANDARD_TEXTURE_MELODY_AND_ACCOMPANIMENT
 #define POLY STANDARD_TEXTURE_POLYPHONY
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_texture_classification_rule, standard_texture_classification_constraint,
-                                    STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT);
-}
 
 static void check_classified(const Features *features, StandardTexture expected) {
     StandardTexture texture = STANDARD_TEXTURE_COUNT;
@@ -190,39 +184,7 @@ static void test_set_contains(void) {
     assert(!standard_texture_set_contains(0, MONO));
 }
 
-/* Property: over every combination of features, matching is consistent
-   with classification, and homophony is in the set exactly when one of
-   its subcategories is. */
-static void test_every_feature_combination(void) {
-    int classified = 0;
-    for (int voices = 0; voices <= 3; voices++) {
-        for (int mask = 0; mask < 32; mask++) {
-            Features f = {voices, (mask & 1) != 0, (mask & 2) != 0, (mask & 4) != 0, (mask & 8) != 0,
-                          (mask & 16) != 0};
-            StandardTextureSet set = standard_texture_matching(&f);
-            StandardTexture texture;
-            bool answered = standard_texture_classify(&f, &texture);
-
-            assert(answered == (set != 0 && !(set == STANDARD_TEXTURE_BIT(HOMO))));
-            if (!standard_texture_features_valid(&f)) {
-                assert(set == 0 && !answered);
-                continue;
-            }
-            bool homophonic = standard_texture_set_contains(set, HOMORHYTHM) ||
-                              standard_texture_set_contains(set, MELACC);
-            assert(standard_texture_set_contains(set, HOMO) == homophonic);
-            if (answered) {
-                assert(standard_texture_set_contains(set, texture));
-                assert(standard_texture_minimum_voices(texture) <= voices);
-                classified++;
-            }
-        }
-    }
-    assert(classified > 0);
-}
-
 int main(void) {
-    test_rules_reference_framework();
     test_monophony();
     test_heterophony();
     test_homorhythm();
@@ -235,7 +197,6 @@ int main(void) {
     test_no_texture();
     test_classify_rejects_invalid_arguments();
     test_set_contains();
-    test_every_feature_combination();
     printf("test_texture_classification_rules (standard-texture): ok\n");
     return 0;
 }

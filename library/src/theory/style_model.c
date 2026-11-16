@@ -76,10 +76,6 @@ void style_model_destroy(StyleModel *model) {
     free(model);
 }
 
-const EntityID *style_model_id(const StyleModel *model) {
-    return model->id;
-}
-
 const char *style_model_style_name(const StyleModel *model) {
     return model->style_name;
 }
@@ -94,11 +90,4 @@ const char *style_model_training_corpus(const StyleModel *model) {
 
 const char *style_model_model_version(const StyleModel *model) {
     return model->model_version;
-}
-
-bool style_model_identity_equals(const StyleModel *a, const StyleModel *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
 }

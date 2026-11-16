@@ -297,10 +297,6 @@ RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarg
     return scope_build(plan, targets, target_count, out, count);
 }
 
-RegenerateResult plan_regenerate_scope(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count) {
-    return scope_build(plan, &target, 1, out, count);
-}
-
 /* ------------------------------------------------------------- reopening */
 
 /* Whether the section has Given material among its nodes or the spans they own. */
@@ -551,10 +547,6 @@ static PlanResult reopen_spans(PiecePlan *plan, const LaneSpanId *ids, size_t co
 }
 
 /* ------------------------------------------------------------- regenerating */
-
-RegenerateResult plan_regenerate(PiecePlan *plan, FillTarget target, const ComposeConfig *config, ComposeOutcome *outcome) {
-    return plan_regenerate_all(plan, &target, 1, config, outcome);
-}
 
 /* Whether a section is still to be written: not grown yet, or with a lane span still open. */
 static bool section_is_open(const PiecePlan *plan, NodeId section) {

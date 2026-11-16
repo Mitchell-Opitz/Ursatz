@@ -26,12 +26,22 @@ static bool label(HarmonyMode mode, const HarmonyChord *chords, size_t count, Ca
     return harmony_phrase_model_label(&phrase, cadence, out);
 }
 
+/* The index of the chord that carries `wanted`, or -1. */
+static int label_index_of(const HarmonyPhraseLabels *labels, PhraseModelLabel wanted) {
+    for (size_t i = 0; i < labels->chord_count; i++) {
+        if (labels->has_label[i] && labels->label[i] == wanted) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
 /* The labels carried, in chord order: the indexes of Tb, PD, D, and Te, or -1. */
 static void expect(const HarmonyPhraseLabels *labels, int tb, int pd, int d, int te) {
-    assert(harmony_phrase_labels_index_of(labels, TB) == tb);
-    assert(harmony_phrase_labels_index_of(labels, PD) == pd);
-    assert(harmony_phrase_labels_index_of(labels, D) == d);
-    assert(harmony_phrase_labels_index_of(labels, TE) == te);
+    assert(label_index_of(labels, TB) == tb);
+    assert(label_index_of(labels, PD) == pd);
+    assert(label_index_of(labels, D) == d);
+    assert(label_index_of(labels, TE) == te);
     int carried = (tb >= 0) + (pd >= 0) + (d >= 0) + (te >= 0);
     int count = 0;
     for (size_t i = 0; i < labels->chord_count; i++) {
@@ -261,11 +271,8 @@ static void test_invalid_input(void) {
     assert(!harmony_phrase_model_label(NULL, PAC, &labels));
     assert(labels.chord_count == 99);
 
-    /* index_of: a missing or invalid label, or no labels, is -1. */
     HarmonyPhraseLabels good;
     assert(label(HARMONY_MODE_MAJOR, ok, COUNT_OF(ok), PAC, &good));
-    assert(harmony_phrase_labels_index_of(&good, PHRASE_MODEL_LABEL_COUNT) == -1);
-    assert(harmony_phrase_labels_index_of(NULL, D) == -1);
 }
 
 int main(void) {

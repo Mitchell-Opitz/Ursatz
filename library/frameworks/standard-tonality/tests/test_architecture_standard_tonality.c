@@ -14,15 +14,15 @@
  * this extension is explicitly built on top of. It MUST NOT depend on
  * music-analysis, music-generation, music-transform, or music-corpus,
  * and MUST NOT depend on any other theory/ or rules/ header
- * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference,
- * RuleEvaluation are not needed by this extension; constraint_evaluate
- * itself is never called here -- see rule_pair.c).
+ * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference
+ * are not needed by this extension; no Constraint is
+ * evaluated here).
  *
  * Scans every .h/.c file directly under frameworks/standard-tonality/ and under its analysis/
  * subdirectory (the L3 adapter; not its tests/ subdirectory) and flags any local include ("...")
  * that does not point into an allowed prefix. This also keeps the module
- * independent of the other framework modules: standard-notation's
- * headers are not on the allowed list. Directory-driven rather
+ * independent of the other framework modules: no other framework's
+ * headers are on the allowed list. Directory-driven rather
  * than a fixed file list, same pattern as
  * tests/rules/test_architecture_rules.c.
  */

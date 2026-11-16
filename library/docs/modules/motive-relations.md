@@ -36,7 +36,6 @@ Helpers:
 - `motive_sketch_expressible`: a duration a note list can write, w h q e s t with up to two dots. `motive_sketch_on_grid`: an onset on the 1/32 grid. `motive_sketch_has_triplets` is true when a note time, the pickup or the length has a denominator divisible by 3; `motive_sketch_time_writable` and `motive_sketch_time_on_grid` are the two checks above plus, only when the source sketch has triplets, an undotted triplet value (two thirds of w to t) and an onset on the 1/96 grid. Every relation checks its result with these `_time_` forms against its input, so a binary motive gives the same results as before.
 - `motive_sketch_strength`: 2 on the downbeat, 1 on another beat, 0 off the beat, from the pickup and the bar.
 - `motive_sketch_bar_of(sketch, time)`, `motive_sketch_offset_in_bar(sketch, bar, time)`, `motive_sketch_on_beat(sketch, time)` (ports of Composer `motive_tones.c`): bar 0 starts at the first downbeat (time `pickup`, or 0 without one) and a time before it is in bar -1, the pickup bar; `bar_of` is -1 for a bad time. The offset is the distance from the start of the bar (bad before it, or for bar -1 without a pickup); a time is on the beat when its offset is a whole number of beats.
-- `motive_tone_roles_of(sketch, out)` labels the notes with the sketch's own overrides (`motive-tone-roles.md`).
 
 ## MotiveRelation
 
@@ -124,7 +123,7 @@ A figure is formed from the notes either side of it: the pitch is the first of a
 
 ### Parameter metadata
 
-`motive_relation_param_info(kind, index, &info)` gives a `MotiveRelationParamInfo` for each parameter in the order of `motive_relation_param_name`: `name`, `kind` (`INT`, `BOOL`, `RATIO`, `CHOICE`), `min` and `max` (what the relation accepts at all; an index is also limited by the sketch it meets, and a ratio is only bounded by being above zero and writable in the meter), `default_value` and `default_den` (a parameter left out, as in the step text: 0, and the invert axis -1), `optional` (that default is accepted as it stands), `choices` (a choice's names, the name of value v at `choices[v - min]`: `position`, the ancillary-fill `kind`, the non-chord-tone `type`) and `description`. A caller builds a transform form from it and needs no spec table of its own. The values are what the relations already enforced; no relation changed.
+`motive_relation_param_info(kind, index, &info)` gives a `MotiveRelationParamInfo` for each parameter in the order of the relation's parameters: `name`, `kind` (`INT`, `BOOL`, `RATIO`, `CHOICE`), `min` and `max` (what the relation accepts at all; an index is also limited by the sketch it meets, and a ratio is only bounded by being above zero and writable in the meter), `default_value` and `default_den` (a parameter left out, as in the step text: 0, and the invert axis -1), `optional` (that default is accepted as it stands), `choices` (a choice's names, the name of value v at `choices[v - min]`: `position`, the ancillary-fill `kind`, the non-chord-tone `type`) and `description`. A caller builds a transform form from it and needs no spec table of its own. The values are what the relations already enforced; no relation changed.
 
 ### Composer fields to relation parameters (for P25)
 

@@ -103,29 +103,6 @@ int similarity_model_dimension_at(const SimilarityModel *model, size_t index, Si
     return 1;
 }
 
-int similarity_model_declares(const SimilarityModel *model, SimilarityDimension dimension) {
-    return similarity_model_weight(model, dimension, NULL, NULL);
-}
-
-int similarity_model_weight(const SimilarityModel *model, SimilarityDimension dimension,
-                            unsigned long *out_numerator, unsigned long *out_denominator) {
-    if (model == NULL) {
-        return 0;
-    }
-    for (size_t i = 0; i < model->count; i++) {
-        if (model->dimensions[i] == dimension) {
-            if (out_numerator != NULL) {
-                *out_numerator = model->weights[i].numerator;
-            }
-            if (out_denominator != NULL) {
-                *out_denominator = model->weights[i].denominator;
-            }
-            return 1;
-        }
-    }
-    return 0;
-}
-
 void similarity_model_total_weight(const SimilarityModel *model, unsigned long *out_numerator,
                                    unsigned long *out_denominator) {
     unsigned long numerator = model == NULL ? 0 : model->total.numerator;

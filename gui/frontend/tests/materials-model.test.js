@@ -99,14 +99,13 @@ const body = {
 };
 const values = M.motifFormValues(body);
 check(values.role === "accompaniment" && values.mode === "minor" && values.pickup === "1/2", "form values read the motif and the mode of its key");
-check(values.legacyKey === "D minor", "a key on another tonic is the legacy key");
-check(M.motifFormValues({ motif: { key: "C minor" } }).legacyKey === null && M.motifFormValues({ motif: { key: "C major" } }).mode === "major", "a key on C is not legacy");
-check(M.motifFormValues({ motif: { key: "Eb major" } }).legacyKey === "Eb major" && M.motifFormValues({ motif: { key: null } }).legacyKey === null && M.motifFormValues(null).mode === "major", "mode defaults to major and no key is not legacy");
+check(M.motifFormValues({ motif: { key: "C major" } }).mode === "major", "a key on C major reads as major");
+check(M.motifFormValues({ motif: { key: null } }).mode === "major" && M.motifFormValues(null).mode === "major", "mode defaults to major");
 check(same(M.MOTIF_MODES, ["major", "minor"]) && M.TONIC_HINT.startsWith("Write the notes with C as the tonic"), "the modes and the tonic hint");
 check(same(values.features, [{ label: "a", first: 1, last: 2 }]), "features show note numbers from 1");
 check(values.harmony === "" && M.motifFormValues({ motif: { harmony: "I V6@2" } }).harmony === "I V6@2", "form values read the harmony");
-check(M.motifFormProblems({ ...values, legacyKey: null, harmony: "I V6@2 I@3" }).length === 0, "a harmony is fine");
-check(M.motifFormProblems({ ...values, legacyKey: null, harmony: "I ".repeat(101) })[0].field === "harmony", "a harmony over 200 characters is a problem");
+check(M.motifFormProblems({ ...values, harmony: "I V6@2 I@3" }).length === 0, "a harmony is fine");
+check(M.motifFormProblems({ ...values, harmony: "I ".repeat(101) })[0].field === "harmony", "a harmony over 200 characters is a problem");
 check(M.buildMotifBody({ ...values, harmony: " I V6@2 " }, null).motif.harmony === "I V6@2", "the body holds the trimmed harmony");
 check(M.buildMotifBody({ ...values, harmony: "  " }, null).motif.harmony === null, "an empty harmony is stored as null");
 check(M.newItemBody("motif").motif.harmony === null, "a new motif has no harmony");
@@ -118,9 +117,8 @@ check(JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", role: "accompani
 const blank = M.motifFormValues(null);
 check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && blank.form === "full", "a new motif form has defaults");
 check(M.motifFormProblems(blank).length === 1 && M.motifFormProblems(blank)[0].field === "notes", "empty notes are a problem");
-check(M.motifFormProblems({ ...values, legacyKey: null }).length === 0, "a filled form has no problems");
-check(M.motifFormProblems(values)[0].field === "notes" && /Rewrite the motif in C/.test(M.motifFormProblems(values)[0].message), "an older motif must be rewritten in C before saving");
-check(M.motifFormProblems({ ...values, legacyKey: null, key: "Dm" }).length === 0, "the form has no key to check");
+check(M.motifFormProblems({ ...values }).length === 0, "a filled form has no problems");
+check(M.motifFormProblems({ ...values, key: "Dm" }).length === 0, "the form has no key to check");
 
 const rebuilt = M.buildMotifBody({ ...values, notes: " C4:q ", pickup: "" }, body);
 check(rebuilt.motif.notes === "C4:q" && rebuilt.motif.key === "C minor" && rebuilt.motif.pickup === "0", "body trims notes, writes the key in C and an empty pickup is 0");
@@ -147,7 +145,7 @@ check(M.featureProblems([{ label: "a", first: 1, last: 1 }, { label: "a", first:
 check(M.featureProblems([{ label: "a", first: 3, last: 2 }]).length === 1, "first after last fails");
 check(M.featureProblems([{ label: "a", first: 0, last: 1 }]).length === 1, "note numbers start at 1");
 check(M.featureProblems([{ label: "a", first: NaN, last: 1 }]).length === 1, "a blank number fails");
-check(M.motifFormProblems({ ...values, legacyKey: null, features: [{ label: "", first: 1, last: 1 }] })[0].field === "features", "feature problems show on the form");
+check(M.motifFormProblems({ ...values, features: [{ label: "", first: 1, last: 1 }] })[0].field === "features", "feature problems show on the form");
 check(M.newFeatureRow([]).label === "a" && M.newFeatureRow([{ label: "a" }]).label === "b", "a new feature row takes the next free letter");
 
 // Analysis rows.
@@ -197,11 +195,6 @@ check(unkeyedImport.mode === "major" && unkeyedImport.pickup === "0", "an import
 check(M.importNotice({ key: "C minor", moved_from: "D minor", key_found: true }) === "Moved from D minor to C minor.", "the notice names the key the notes moved from");
 check(M.importNotice({ key: "C major", moved_from: null, key_found: false }) === "No key found: read as C major.", "the notice says when no key was found");
 check(M.importNotice({ key: "C minor", moved_from: null, key_found: true }) === "Filled from the MIDI file.", "a MIDI file already in C is just filled");
-check(M.legacyNotice("D minor") === "Written in D minor before motifs moved to C.", "the older motif notice names its key");
-const toC = M.toCRequest({ motif: { degrees: "1:q 3:e", meter: "3/4", pickup: "" } }, "minor");
-check(toC.method === "POST" && toC.url === "/api/materials/motifs/to-c" && same(JSON.parse(toC.body), { degrees: "1:q 3:e", mode: "minor", meter: "3/4", pickup: "0" }), "to-c posts the stored degrees, mode, meter and pickup");
-check(M.toCRequest({ motif: { degrees: null } }, "minor") === null && M.toCRequest(null, "minor") === null, "a motif without degrees has nothing to rewrite");
-check(JSON.parse(M.toCRequest({ motif: { degrees: "1:q" } }, "dorian").body).mode === "major", "to-c defaults the mode to major");
 check(M.importToFormValues(null).meter === "4/4" && M.importToFormValues(null).notes === "", "an empty import answer gives defaults");
 const importRequest = M.buildImportMidiRequest("file");
 check(importRequest.method === "POST" && importRequest.url === "/api/materials/motifs/import" && importRequest.body === "file", "the import posts the file");
@@ -402,9 +395,6 @@ check(M.motifBodyChanged({ ...editorValues(), mode: "minor" }, stored), "another
 check(M.motifBodyChanged({ ...editorValues(), features: [{ label: "tail", first: 1, last: 2 }] }, stored), "another segment is a change");
 check(!M.motifBodyChanged({ ...editorValues(), notes: "  C4:q E4:e G4:e  " }, stored), "spaces around the notes are not a change");
 check(!M.motifBodyChanged({ ...editorValues(), pickup: "" }, { motif: { ...stored.motif, pickup: "0" } }), "an empty pickup reads as 0");
-const legacy = { uses: [], motif: { ...stored.motif, key: "D minor" } };
-check(M.motifBodyChanged({ ...M.motifFormValues(legacy), legacyKey: null }, legacy), "rewriting an older motif in C is a change");
-check(!M.motifBodyChanged(M.motifFormValues(legacy), legacy), "an older motif left alone is not a change");
 
 check(M.motifSaveDecision({}, "x").kind === "none" && M.motifSaveDecision({}, "x").message === "Nothing to save.", "no change says Nothing to save.");
 check(

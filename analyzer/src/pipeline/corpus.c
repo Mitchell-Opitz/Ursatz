@@ -11,8 +11,6 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/markdown_report.h>
-#include <ursatz_analyzer/report_writer.h>
 #include <ursatz_analyzer/staleness.h>
 #include <ursatz_analyzer/version.h>
 
@@ -24,7 +22,6 @@
 #include "util/misc_util.h"
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
-#define REPORT_SUFFIX ".report.md"
 #define INDEX_NAME "corpus-index.json"
 #define HOME_KEY_CAPACITY 64
 
@@ -209,7 +206,10 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
     if (!path) {
         return false;
     }
-    bool ok = corpus_make_parent_dirs(path) && write_report_file(path, text);
+    bool ok = corpus_make_parent_dirs(path) && file_write_atomic(path, text);
+    if (!ok) {
+        fprintf(stderr, "Error: cannot write '%s'\n", path);
+    }
     free(path);
     return ok;
 }
@@ -246,8 +246,8 @@ static void read_document_summary(const AnalysisDocument *document, PieceRecord 
 
 /* Imports, analyzes and writes one piece into record. A piece that cannot be analyzed is a failed record and still
    returns OK; only a failure to write an output file is a run error. */
-static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char *output_dir, const char *relative,
-                                     const char *input_path, PieceRecord *record) {
+static CorpusRunResult analyze_piece(const char *output_dir, const char *relative, const char *input_path,
+                                     PieceRecord *record) {
     record->status = CORPUS_PIECE_FAILED;
     record->error = NULL;
     record->document = NULL;
@@ -275,12 +275,10 @@ static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char
 
     read_document_summary(document, record);
     char *json = analysis_document_to_json(document);
-    char *markdown = options->markdown ? markdown_report_render(document) : NULL;
     analysis_document_destroy(document);
     char *document_name = malloc(strlen(relative) + strlen(ANALYSIS_DOCUMENT_SUFFIX) + 1);
-    if (!json || (options->markdown && !markdown) || !document_name) {
+    if (!json || !document_name) {
         free(json);
-        free(markdown);
         free(document_name);
         record->measures = -1;
         record->home_key[0] = '\0';
@@ -290,10 +288,8 @@ static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char
     strcpy(document_name, relative);
     strcat(document_name, ANALYSIS_DOCUMENT_SUFFIX);
 
-    bool wrote = write_output_file(output_dir, relative, ANALYSIS_DOCUMENT_SUFFIX, json) &&
-                 (!markdown || write_output_file(output_dir, relative, REPORT_SUFFIX, markdown));
+    bool wrote = write_output_file(output_dir, relative, ANALYSIS_DOCUMENT_SUFFIX, json);
     free(json);
-    free(markdown);
     if (!wrote) {
         free(document_name);
         return CORPUS_RUN_ERR_WRITE;
@@ -347,9 +343,9 @@ static char *render_index(const char *input_dir, const char *const *paths, const
     size_t capacity = 0;
     char number[64];
     bool ok = append_text(&out, &length, &capacity,
-                          "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 1,\n"
+                          "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 2,\n"
                           "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
-                          "  \"ursatz_commit\": \"") &&
+                          "  \"producer_key\": \"") &&
               append_text(&out, &length, &capacity, ursatz_analyzer_producer_key()) &&
               append_text(&out, &length, &capacity, "\",\n") &&
               (snprintf(number, sizeof(number), "  \"document_schema_version\": %d,\n",
@@ -396,8 +392,9 @@ static char *render_index(const char *input_dir, const char *const *paths, const
 /* ---- Resume ---- */
 
 /* Reads the index left by an earlier run. *out is NULL when there is no index, or when it was written by another
-   analyzer, document schema version or Ursatz commit (nothing in it can be reused). An index that exists but cannot be read is
-   CORPUS_RUN_ERR_INDEX. */
+   analyzer, document schema version or producer key (nothing in it can be reused; an index of schema version 1 holds
+   ursatz_commit instead of producer_key, so it reuses nothing and is written again). An index that exists but cannot be
+   read is CORPUS_RUN_ERR_INDEX. */
 static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) {
     *out = NULL;
     char *path = corpus_join(output_dir, INDEX_NAME);
@@ -423,11 +420,11 @@ static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) 
     free(path);
 
     const cJSON *analyzer_version = cJSON_GetObjectItemCaseSensitive(root, "analyzer_version");
-    const cJSON *ursatz_commit = cJSON_GetObjectItemCaseSensitive(root, "ursatz_commit");
+    const cJSON *producer_key = cJSON_GetObjectItemCaseSensitive(root, "producer_key");
     const cJSON *document_schema = cJSON_GetObjectItemCaseSensitive(root, "document_schema_version");
-    if (!cJSON_IsString(analyzer_version) || !cJSON_IsString(ursatz_commit) || !cJSON_IsNumber(document_schema) ||
+    if (!cJSON_IsString(analyzer_version) || !cJSON_IsString(producer_key) || !cJSON_IsNumber(document_schema) ||
         analyzer_document_status_of((int)document_schema->valuedouble, analyzer_version->valuestring,
-                                    ursatz_commit->valuestring) != ANALYZER_DOCUMENT_CURRENT) {
+                                    producer_key->valuestring) != ANALYZER_DOCUMENT_CURRENT) {
         cJSON_Delete(root);
         return CORPUS_RUN_OK;
     }
@@ -451,9 +448,9 @@ static bool file_exists(const char *dir, const char *relative, const char *suffi
 }
 
 /* Fills record from the earlier run's entry for relative when that entry can be reused: it is an analyzed entry
-   with the same content hash, its document file exists, and so does the report when one is wanted. */
-static bool reuse_previous(const cJSON *previous, const CorpusRunOptions *options, const char *output_dir,
-                           const char *relative, unsigned long long content_hash, PieceRecord *record) {
+   with the same content hash, and its document file exists. */
+static bool reuse_previous(const cJSON *previous, const char *output_dir, const char *relative,
+                           unsigned long long content_hash, PieceRecord *record) {
     const cJSON *entry;
     cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(previous, "pieces")) {
         const cJSON *path = cJSON_GetObjectItemCaseSensitive(entry, "path");
@@ -471,8 +468,7 @@ static bool reuse_previous(const cJSON *previous, const CorpusRunOptions *option
     snprintf(expected_hash, sizeof(expected_hash), "%016llx", content_hash);
     if (!cJSON_IsString(status) || strcmp(status->valuestring, "analyzed") != 0 || !cJSON_IsString(document) ||
         !cJSON_IsString(hash) || strcmp(hash->valuestring, expected_hash) != 0 ||
-        !file_exists(output_dir, document->valuestring, "") ||
-        (options->markdown && !file_exists(output_dir, relative, REPORT_SUFFIX))) {
+        !file_exists(output_dir, document->valuestring, "")) {
         return false;
     }
     char *document_copy = strdup(document->valuestring);
@@ -569,8 +565,8 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
             break;
         }
         PieceRecord *record = &records[done];
-        if (!(previous && reuse_previous(previous, options, output_dir, relative, fnv1a_file(input_path), record))) {
-            result = analyze_piece(options, output_dir, relative, input_path, record);
+        if (!(previous && reuse_previous(previous, output_dir, relative, fnv1a_file(input_path), record))) {
+            result = analyze_piece(output_dir, relative, input_path, record);
         }
         free(input_path);
         if (result != CORPUS_RUN_OK) {

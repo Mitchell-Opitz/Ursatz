@@ -672,27 +672,6 @@ char *plan_to_json(const PiecePlan *plan, PlanJsonError *error) {
     return text;
 }
 
-PlanResult plan_write_json_file(const PiecePlan *plan, const char *path, PlanJsonError *error) {
-    if (!path) {
-        json_set_error(error, -1, "", "path is NULL");
-        return PLAN_ERR_NULL;
-    }
-    char *text = plan_to_json(plan, error);
-    if (!text) {
-        return plan ? PLAN_ERR_ALLOC : PLAN_ERR_NULL;
-    }
-    FILE *file = fopen(path, "wb");
-    size_t length = strlen(text);
-    bool wrote = file && fwrite(text, 1, length, file) == length;
-    bool closed = file && fclose(file) == 0;
-    free(text);
-    if (!wrote || !closed) {
-        json_set_error(error, -1, "", "could not write '%s'", path);
-        return PLAN_ERR_IO;
-    }
-    return PLAN_OK;
-}
-
 /* ------------------------------------------------------------------ reading */
 
 bool json_fail(JsonReader *reader, PlanResult result, const char *path, const char *format, ...) {
@@ -2309,7 +2288,8 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
 }
 
 /*
- * Version 2 records metadata.analyzer_version only for a plan loaded from an Analyzer result. A version 1 file wrote the
+ * Version 2 records metadata.analyzer_version only for a plan that carries one (an earlier Composer loaded it from an
+ * Analyzer result). A version 1 file wrote the
  * Composer's own version under that key (B-A-10), so it says nothing about an analysis and is ignored.
  */
 static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *plan) {
@@ -2399,43 +2379,4 @@ PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *erro
     }
     *out = plan;
     return PLAN_OK;
-}
-
-PlanResult plan_read_json_file(const char *path, PiecePlan **out, PlanJsonError *error) {
-    if (!path || !out) {
-        json_set_error(error, -1, "", "path or out is NULL");
-        return PLAN_ERR_NULL;
-    }
-    *out = NULL;
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        json_set_error(error, -1, "", "could not open '%s'", path);
-        return PLAN_ERR_IO;
-    }
-    char *text = NULL;
-    size_t size = 0;
-    size_t capacity = 0;
-    bool ok = true;
-    while (ok && !feof(file)) {
-        if (size + 4096 + 1 > capacity) {
-            capacity = capacity ? capacity * 2 : 8192;
-            char *grown = realloc(text, capacity);
-            ok = grown != NULL;
-            text = grown ? grown : text;
-        }
-        if (ok) {
-            size += fread(text + size, 1, 4096, file);
-            ok = !ferror(file);
-        }
-    }
-    fclose(file);
-    if (!ok) {
-        free(text);
-        json_set_error(error, -1, "", "could not read '%s'", path);
-        return PLAN_ERR_IO;
-    }
-    text[size] = '\0';
-    PlanResult result = plan_from_json(text, out, error);
-    free(text);
-    return result;
 }

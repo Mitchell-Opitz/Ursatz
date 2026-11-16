@@ -5,9 +5,6 @@
 
 #include "fourth_species_exercise.h"
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * Fourth-species counterpoint line rules for standard-counterpoint-v1: the
@@ -48,15 +45,6 @@ typedef enum {
     STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_UPWARD_LEAP,
     STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT
 } StandardCounterpointFourthSpeciesLineRule;
-
-const Rule *standard_counterpoint_fourth_species_line_rule(StandardCounterpointFourthSpeciesLineRule which);
-const Constraint *standard_counterpoint_fourth_species_line_constraint(StandardCounterpointFourthSpeciesLineRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_fourth_species_line_preference(StandardCounterpointFourthSpeciesLineRule which);
-
-/* "leaps" "final-step" "range" "leading-tone" "downward-steps" "upward-leap";
-   NULL for an invalid rule. */
-const char *standard_counterpoint_fourth_species_line_rule_name(StandardCounterpointFourthSpeciesLineRule which);
 
 /* True when the counterpoint line satisfies the rule. False when it does not,
    and for invalid input. */

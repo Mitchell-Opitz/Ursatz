@@ -3,10 +3,7 @@
 
 #include <stdbool.h>
 
-#include "interval_quality_rules.h"
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "triad_rules.h"
 
 /*
@@ -45,10 +42,7 @@
  *                          the diminished seventh chord; the half-
  *                          diminished has no alternate name
  *
- * Measured with the interval rules (interval_quality_rules.h) and the
- * triad rules (triad_rules.h). Spelling and identification are
- * seventh_spelling_rules.h and seventh_identification_rules.h; chord
- * symbols are chord_symbol_rules.h.
+ * Measured in semitones from the root, with the triad rules (triad_rules.h).
  *
  * Chromatically altered seventh chords (an augmented triad with a
  * seventh, a minor triad with a major seventh) are outside the five and
@@ -65,79 +59,9 @@ typedef enum {
     STANDARD_TONALITY_SEVENTH_QUALITY_COUNT
 } StandardTonalitySeventhQuality;
 
-typedef enum {
-    STANDARD_TONALITY_SEVENTH_ROOT = 0,
-    STANDARD_TONALITY_SEVENTH_THIRD,
-    STANDARD_TONALITY_SEVENTH_FIFTH,
-    STANDARD_TONALITY_SEVENTH_SEVENTH,
-    STANDARD_TONALITY_SEVENTH_MEMBER_COUNT
-} StandardTonalitySeventhMember;
-
-typedef enum {
-    STANDARD_TONALITY_SEVENTH_RULE_STACKED_IN_THIRDS = 0,
-    STANDARD_TONALITY_SEVENTH_RULE_LINES_OR_SPACES,
-    STANDARD_TONALITY_SEVENTH_RULE_ROOT_THIRD_FIFTH_SEVENTH,
-    STANDARD_TONALITY_SEVENTH_RULE_QUALITIES,
-    STANDARD_TONALITY_SEVENTH_RULE_NAMING,
-    STANDARD_TONALITY_SEVENTH_RULE_ALTERNATE_NAMES,
-    STANDARD_TONALITY_SEVENTH_RULE_COUNT
-} StandardTonalitySeventhRule;
-
-const Rule *standard_tonality_seventh_rule(StandardTonalitySeventhRule which);
-const Constraint *standard_tonality_seventh_constraint(StandardTonalitySeventhRule which);
-
-/* NAMING: "major-major seventh" "major-minor seventh" "minor-minor
-   seventh" "half-diminished seventh" "fully diminished seventh"; NULL for
-   an invalid quality. */
-const char *standard_tonality_seventh_quality_name(StandardTonalitySeventhQuality quality);
-
-/* ALTERNATE_NAMES: "major seventh" "dominant seventh" "minor seventh"
-   (NULL: the half-diminished has none) "diminished seventh". NULL for an
-   invalid quality as well. */
-const char *standard_tonality_seventh_quality_alternate_name(StandardTonalitySeventhQuality quality);
-
-/* "root" "third" "fifth" "seventh"; NULL for an invalid member. */
-const char *standard_tonality_seventh_member_name(StandardTonalitySeventhMember member);
-
-/* ROOT_THIRD_FIFTH_SEVENTH: the generic size from the root to the member:
-   1, 3, 5, 7. 0 for an invalid member. */
-int standard_tonality_seventh_member_size(StandardTonalitySeventhMember member);
-
-/* QUALITIES: the triad quality and the seventh's interval quality of a
-   seventh chord of the quality. False (outputs untouched) for an invalid
-   quality or a NULL output. */
-bool standard_tonality_seventh_parts(StandardTonalitySeventhQuality quality, StandardTonalityTriadQuality *triad,
-                                     StandardTonalityIntervalQuality *seventh);
-
 /* QUALITIES: the root, third, fifth and seventh of a seventh chord of the quality as semitones above the
    root, in StandardTonalitySeventhQuality order: 0 4 7 11, 0 4 7 10, 0 3 7 10, 0 3 6 10, 0 3 6 9. False (out
    untouched) for an invalid quality or NULL out. */
 bool standard_tonality_seventh_quality_semitones(StandardTonalitySeventhQuality quality, int out[4]);
-
-/* QUALITIES: the seventh chord quality with the given triad quality and
-   seventh, or false (output untouched) when the pair is not one of the
-   five (a minor triad with a major seventh, for example) or *out is
-   NULL. */
-bool standard_tonality_seventh_quality_from_parts(StandardTonalityTriadQuality triad,
-                                                  StandardTonalityIntervalQuality seventh,
-                                                  StandardTonalitySeventhQuality *out);
-
-/* STACKED_IN_THIRDS: true when `third`, `fifth`, and `seventh` are a
-   generic third, fifth, and seventh above `root` (accidentals and
-   qualities aside). False for NULL or a note below the one under it. */
-bool standard_tonality_is_seventh_stack(const PitchSpelling *root, const PitchSpelling *third,
-                                        const PitchSpelling *fifth, const PitchSpelling *seventh);
-
-/* LINES_OR_SPACES: true when the four notes are all on lines or all on
-   spaces, in any clef. False for NULL. */
-bool standard_tonality_seventh_on_lines_or_spaces(const PitchSpelling *a, const PitchSpelling *b,
-                                                  const PitchSpelling *c, const PitchSpelling *d);
-
-/* QUALITIES: the quality of a stacked seventh chord. False (output
-   untouched) for NULL, a stack that is not a seventh chord stack, or a
-   triad and seventh that are not one of the five qualities. */
-bool standard_tonality_seventh_stack_quality(const PitchSpelling *root, const PitchSpelling *third,
-                                             const PitchSpelling *fifth, const PitchSpelling *seventh,
-                                             StandardTonalitySeventhQuality *quality);
 
 #endif

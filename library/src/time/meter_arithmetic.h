@@ -35,9 +35,6 @@ MeterMapResult meter_map_measure_bounds(const MeterMap *map, int measure, Ration
 /* The length of one beat in measure `measure`. */
 MeterMapResult meter_map_beat_length(const MeterMap *map, int measure, Rational *beat);
 
-/* The number of beats that start in measure `measure`: its real length over the beat length, rounded up. */
-MeterMapResult meter_map_beat_count(const MeterMap *map, int measure, int *count);
-
 /* The measure of `time`, its beat (1-based) and the offset from the start of that beat, in whole notes.
    Any output may be NULL. */
 MeterMapResult meter_map_beat_of(const MeterMap *map, Rational time, int *measure, int *beat, Rational *offset);

@@ -4,41 +4,12 @@
 
 #include "fourth_species_line_rules.h"
 #include "fourth_species_test_util.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fourth-species-line", STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT);
-#define standard_counterpoint_fourth_species_line_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_fourth_species_line_constraint, standard_counterpoint_fourth_species_line_preference, standard_counterpoint_fourth_species_line_rule_holds, StandardCounterpointFourthSpeciesTonic, which, a, b)
 
 #define LINE(name) STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_##name
 
 static bool holds(StandardCounterpointFourthSpeciesLineRule rule,
                   const StandardCounterpointFourthSpeciesExercise *exercise) {
     return standard_counterpoint_fourth_species_line_rule_holds(rule, exercise, P(D, 0, 3));
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_fourth_species_line_rule,
-                                    standard_counterpoint_fourth_species_line_constraint,
-                                    STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_fourth_species_line_constraint((StandardCounterpointFourthSpeciesLineRule)i));
-        bool soft = i == LINE(DOWNWARD_STEPS) || i == LINE(UPWARD_LEAP);
-        assert(type == (soft ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_fourth_species_line_rule_name(LINE(LEAPS)), "leaps") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_line_rule_name(LINE(FINAL_STEP)), "final-step") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_line_rule_name(LINE(RANGE)), "range") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_line_rule_name(LINE(LEADING_TONE)), "leading-tone") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_line_rule_name(LINE(DOWNWARD_STEPS)), "downward-steps") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_line_rule_name(LINE(UPWARD_LEAP)), "upward-leap") == 0);
-    assert(standard_counterpoint_fourth_species_line_rule_name(LINE(COUNT)) == NULL);
 }
 
 static void test_good_exercise(void) {
@@ -147,8 +118,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_exercise();
     test_leaps();
     test_cantus_firmus_shaped_rules();

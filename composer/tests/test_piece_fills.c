@@ -8,6 +8,7 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/piece.h>
+#include "support/test_composer.h"
 
 /*
  * Theme and progression fills (R-170): a piece structure whose sections are given a composed theme or a progression.
@@ -41,7 +42,7 @@ static PiecePlan *read_theme_plan(unsigned long seed) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
     write_theme_plan(seed);
-    assert(plan_read_json_file(THEME_PLAN, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(THEME_PLAN, &plan, &error) == PLAN_OK);
     return plan;
 }
 

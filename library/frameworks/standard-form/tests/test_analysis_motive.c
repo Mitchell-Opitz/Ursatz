@@ -4,6 +4,9 @@
 #include "form_test_util.h"
 #include "interpretation/uncertainty.h"
 #include "phrase_ending.h"
+#include "interpretation_test_access.h"
+#include "relationship_test_access.h"
+#include "structure_test_access.h"
 
 /* Motives of the soprano: windows of notes grouped by interval pattern and rhythm, the kernel's window matching as the first test,
    maximality, the kinds exact, real and tonal, and the claims and links of the output. */
@@ -32,6 +35,10 @@ static void figure(Piece *p, double start, const int *pitches, const int *degree
 }
 
 static StandardFormMotives find(Piece *p, const StandardFormConfig *config) {
+    StandardFormConfig motive_config = form_motive_config();
+    if (config == NULL) {
+        config = &motive_config;
+    }
     if (p->use_degrees) {
         form_degrees(&p->f, p->degrees);
     }
@@ -159,7 +166,7 @@ static void test_the_config_limits_the_length(void) {
     const int a[6] = {60, 62, 64, 65, 67, 69};
     figure(&p, 0.0, a, NULL, 6);
     figure(&p, 7.0, a, NULL, 6);
-    StandardFormConfig config = standard_form_config_default();
+    StandardFormConfig config = form_motive_config();
     config.motive_max_notes = 4;
     StandardFormMotives m = find(&p, &config);
     for (size_t i = 0; i < m.family_count; i++) {
@@ -192,24 +199,21 @@ static void test_the_output_is_shells_interpretations_and_links(void) {
     assert(standard_form_segment_phrases(&p.f.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&p.f.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     StandardFormMotives m;
-    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, chain_form_match_windows, NULL, &m) ==
-           STANDARD_FORM_ANALYSIS_OK);
+    StandardFormConfig motive_config = form_motive_config();
+    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, &motive_config, chain_form_match_windows, NULL,
+                                      &m) == STANDARD_FORM_ANALYSIS_OK);
     assert(m.family_count == 1);
     const StandardFormMotiveFamily *f = &m.families[0];
     assert(f->claim.note_count == 8 && f->occurrence_count == 2); /* measures 1-2 and 3-4 */
     assert(motif_event_id_count(f->motif) == 8);
     assert(strcmp(entity_id_value(interpretation_target_id(f->interpretation)), entity_id_value(motif_id(f->motif))) == 0);
     assert(interpretation_framework_reference(f->interpretation) != NULL);
-    StandardFormMotiveClaim family_claim;
-    assert(standard_form_motive_claim_read(f->interpretation, &family_claim) && family_claim.occurrence_count == 2);
     for (size_t j = 0; j < 2; j++) {
         const StandardFormMotiveOccurrence *o = &f->occurrences[j];
         assert(motif_occurrence_region_event_id_count(o->occurrence) == 8);
         assert(strcmp(entity_id_value(motif_occurrence_motif_id(o->occurrence)), entity_id_value(motif_id(f->motif))) == 0);
         assert(strcmp(entity_id_value(interpretation_target_id(o->interpretation)),
                       entity_id_value(motif_occurrence_id(o->occurrence))) == 0);
-        StandardFormMotiveOccurrenceClaim read;
-        assert(standard_form_motive_occurrence_claim_read(o->interpretation, &read) && read.occurrence == (int)j);
         assert(strcmp(relationship_predicate_name(o->family_relationship), "occurrence-of") == 0);
         assert(strcmp(entity_id_value(relationship_source_id(o->family_relationship)), entity_id_value(motif_id(f->motif))) == 0);
         assert(strcmp(entity_id_value(relationship_target_id(o->family_relationship)),
@@ -238,7 +242,7 @@ static void test_an_occurrence_outside_every_idea_is_contained_in_the_phrase(voi
     StandardFormSegmentation segmentation;
     assert(standard_form_segment_phrases(&p.f.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&p.f.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
-    StandardFormConfig config = standard_form_config_default();
+    StandardFormConfig config = form_motive_config();
     config.motive_min_notes = 3;
     config.motive_max_notes = 8;
     StandardFormMotives m;
@@ -256,7 +260,6 @@ static void test_an_occurrence_outside_every_idea_is_contained_in_the_phrase(voi
     standard_form_phrases_destroy(&phrases);
     piece_destroy(&p);
 }
-
 
 /* A figure at the given quarter starts, each note lasting until the next, the last a short one (so a rest follows). */
 static void chain(Piece *p, const double *starts, const int *pitches, size_t count) {
@@ -289,7 +292,9 @@ static void test_an_inversion_joins_the_family(void) {
     const StandardFormMotiveFamily *f = family_of_notes(&m, 4);
     assert(m.family_count == 1 && f != NULL && f->occurrence_count == 3);
     assert(f->occurrences[2].claim.kind == (int)MOTIVE_OCCURRENCE_INVERTED && f->occurrences[2].claim.note_first == 8);
-    assert(f->occurrences[2].claim.score == 1.0 && f->occurrences[2].uncertainty == 0.0);
+    /* the kernel's relation matcher scores it by the mean similarity of its four dimensions */
+    assert(f->occurrences[2].claim.score > 0.0 && f->occurrences[2].claim.score < 1.0 &&
+           fabs(f->occurrences[2].uncertainty - (1.0 - f->occurrences[2].claim.score)) < 1e-12);
     standard_form_motives_destroy(&m);
     piece_destroy(&p);
 }
@@ -343,7 +348,7 @@ static void test_a_varied_motive_has_a_score_below_one(void) {
     figure(&q, 0.0, a, NULL, 8);
     figure(&q, 10.0, a, NULL, 8);
     figure(&q, 20.0, two, NULL, 8);
-    StandardFormConfig config = standard_form_config_default();
+    StandardFormConfig config = form_motive_config();
     config.varied_max_mismatch = 2;
     m = find(&q, &config);
     f = family_of_notes(&m, 8);
@@ -392,12 +397,16 @@ static void test_bad_calls_are_refused(void) {
            STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, NULL, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR);
+    /* the defaults name no relation matcher: that is the same refusal */
+    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, chain_form_match_windows, NULL, &m) ==
+           STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR);
+    StandardFormConfig motive_config = form_motive_config();
     StandardFormConfig bad = standard_form_config_default();
     bad.motive_max_notes = 2;
     assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, &bad, chain_form_match_windows, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG);
-    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, chain_form_match_windows, NULL, &m) ==
-               STANDARD_FORM_ANALYSIS_OK &&
+    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, &motive_config, chain_form_match_windows, NULL,
+                                      &m) == STANDARD_FORM_ANALYSIS_OK &&
            m.family_count == 0);
     assert(standard_form_input_set_degree(&p.f.input, false, 5, 1, 0) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
     assert(standard_form_input_set_degree(&p.f.input, false, 0, 8, 0) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);

@@ -46,16 +46,6 @@ static void ensure_built(const StandardCounterpointRuleTable *table, int which) 
     ursatz_once(&table->built[which], build_pair, &arg);
 }
 
-const Rule *standard_counterpoint_rule_table_rule(const StandardCounterpointRuleTable *table, int which) {
-    ensure_built(table, which);
-    return standard_counterpoint_rule_table_valid(table, which) ? table->pairs[which].rule : NULL;
-}
-
-const Constraint *standard_counterpoint_rule_table_constraint(const StandardCounterpointRuleTable *table, int which) {
-    ensure_built(table, which);
-    return standard_counterpoint_rule_table_valid(table, which) ? table->pairs[which].constraint : NULL;
-}
-
 const Preference *standard_counterpoint_rule_table_preference(const StandardCounterpointRuleTable *table, int which) {
     ensure_built(table, which);
     return standard_counterpoint_rule_table_valid(table, which) ? table->pairs[which].preference : NULL;

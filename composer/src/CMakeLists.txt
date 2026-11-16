@@ -40,7 +40,6 @@ add_library(ursatz_composer STATIC
     plan/plan_state.c
     plan/constraint.c
     plan/plan_json.c
-    plan/analysis_load.c
     check/analyzer_check.c
     check/hearing.c
     check/explain.c
@@ -50,6 +49,8 @@ add_library(ursatz_composer STATIC
     fill/fill_operator.c
     fill/fill_loop.c
     fill/fill_rng.c
+    fill/candidate.c
+    fill/generation_record.c
     fill/fill_record.c
     fill/fill_suggest.c
     fill/variations.c
@@ -68,7 +69,6 @@ add_library(ursatz_composer STATIC
     harmony/harmony_embellish.c
     harmony/harmony_bass.c
     harmony/harmony_bass_check.c
-    harmony/harmony_octave.c
     harmony/harmony_skeleton.c
     harmony/harmony_schema.c
     harmony/harmony_sequence.c
@@ -144,7 +144,6 @@ add_library(ursatz_composer STATIC
     texture/voicing.c
     texture/voicing_check.c
     texture/voicing_search.c
-    texture/voice_hear.c
     texture/texture_check.c
     counterpoint/counterpoint_write.c
     counterpoint/counterpoint_species.c

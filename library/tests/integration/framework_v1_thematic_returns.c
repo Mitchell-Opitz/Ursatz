@@ -3,15 +3,13 @@
 #include "ursatz_chain/chain_inputs.h"
 
 #include "analysis/thematic_return_detection.h"
-#include "core/occurrence.h"
-#include "structure/theme_occurrence.h"
+#include "relationship_test_access.h"
 
 /*
  * Framework v1 verification, thematic returns (Mozart K. 545 and Clementi Op. 36 No. 1), and the Bach regression for PR #37.
  *
  * THE GLUE. The themes are those of the L3.6 standard-form adapter on the cadences the chain found (framework_v1_chain.h). Each theme becomes a
- * ThemeOccurrence (structure/theme_occurrence.h: its own id, the id of its Theme, and the ids of the soprano notes of the theme, which the adapter
- * keeps in the theme's shell) and a MotifWindow: the Contour of those notes' pitches (up, down or same), their RhythmicPattern (the durations of
+ * theme occurrence (its own id and the ids of the soprano notes of the theme, which the adapter keeps in the theme's shell) and a MotifWindow: the Contour of those notes' pitches (up, down or same), their RhythmicPattern (the durations of
  * the notes), and their event ids. The kernel's ThematicReturnDetection (analysis/thematic_return_detection.h, with its minimum window of
  * THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH events) compares the windows and builds one "resembles" Relationship from each later occurrence to
  * each earlier one it matches. Nothing in the library changed to feed it.
@@ -31,7 +29,9 @@ typedef struct {
     int last;
     char form[24];
     char id[48];
-    ThemeOccurrence *occurrence;
+    EntityID *occurrence_id;
+    EntityID **region_ids;
+    size_t region_count;
     Contour *contour;
     RhythmicPattern *rhythm;
     const EntityID **window_ids;
@@ -43,6 +43,12 @@ typedef struct {
     Occ *items;
     size_t count;
 } Occs;
+
+/* Octave 4 C is 60. */
+static long fv1_midi_number(const PitchSpelling *spelling) {
+    return 12L * (pitch_spelling_octave(spelling) + 1) + pitch_letter_semitone(pitch_spelling_letter(spelling)) +
+           pitch_spelling_accidental(spelling);
+}
 
 static PitchIdentity *fv1_pitch_identity(long semitone, size_t index) {
     char token[48];
@@ -64,7 +70,7 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
     assert(pitch_ids != NULL && directions != NULL && durations != NULL);
     long previous = 0;
     for (size_t i = 0; i < count; i++) {
-        long semitone = pitch_spelling_midi_number(note_event_optional_pitch_spelling(events[i]));
+        long semitone = fv1_midi_number(note_event_optional_pitch_spelling(events[i]));
         pitch_ids[i] = fv1_pitch_identity(semitone, i);
         if (i > 0) {
             directions[i - 1] = semitone > previous ? CONTOUR_DIRECTION_UP : (semitone < previous ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
@@ -123,22 +129,18 @@ static Occs fv1_occurrences(const Chain *c) {
             events[i] = fv1_find_event(&c->p, value);
             assert(events[i] != NULL);
         }
-        char target[48];
-        snprintf(target, sizeof(target), "theme-%zu", t);
-        Occurrence *occurrence = NULL;
-        assert(occurrence_create(fv1_id(o->id), fv1_id(target), &occurrence) == OCCURRENCE_OK);
         if (n == 0) {
-            occurrence_destroy(occurrence);
             free(region);
             free(events);
             continue;
         }
-        assert(theme_occurrence_create(occurrence, region, n, &o->occurrence) == THEME_OCCURRENCE_OK);
-        free(region); /* the ThemeOccurrence owns the ids and copies the array */
+        o->occurrence_id = fv1_id(o->id);
+        o->region_ids = region; /* the occurrence owns the ids and the array */
+        o->region_count = n;
         o->window_ids = (const EntityID **)calloc(n, sizeof(EntityID *));
         assert(o->window_ids != NULL);
         for (size_t i = 0; i < n; i++) {
-            o->window_ids[i] = theme_occurrence_region_event_id_at(o->occurrence, i);
+            o->window_ids[i] = o->region_ids[i];
         }
         o->usable = fv1_window_of_events(events, n, o->window_ids, &o->contour, &o->rhythm, &o->window);
         free(events);
@@ -156,8 +158,12 @@ static void fv1_occurrences_destroy(Occs *occs) {
             rhythmic_pattern_destroy(o->rhythm);
         }
         free(o->window_ids);
-        if (o->occurrence != NULL) {
-            theme_occurrence_destroy(o->occurrence);
+        if (o->occurrence_id != NULL) {
+            entity_id_destroy(o->occurrence_id);
+            for (size_t k = 0; k < o->region_count; k++) {
+                entity_id_destroy(o->region_ids[k]);
+            }
+            free(o->region_ids);
         }
     }
     free(occs->items);
@@ -165,7 +171,7 @@ static void fv1_occurrences_destroy(Occs *occs) {
 
 static const Occ *fv1_occ_by_id(const Occs *occs, const char *id) {
     for (size_t i = 0; i < occs->count; i++) {
-        if (occs->items[i].usable && strcmp(entity_id_value(theme_occurrence_id(occs->items[i].occurrence)), id) == 0) {
+        if (occs->items[i].usable && strcmp(entity_id_value(occs->items[i].occurrence_id), id) == 0) {
             return &occs->items[i];
         }
     }
@@ -182,14 +188,14 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
     size_t entry_count = 0;
     for (size_t i = 0; i < occs.count; i++) {
         if (occs.items[i].usable) {
-            entries[entry_count].theme_occurrence_id = theme_occurrence_id(occs.items[i].occurrence);
+            entries[entry_count].theme_occurrence_id = occs.items[i].occurrence_id;
             entries[entry_count].window = &occs.items[i].window;
             entry_count++;
         }
     }
     Relationship **rels = NULL;
     size_t rel_count = 0;
-    assert(thematic_return_detection_build_relationships(entries, entry_count, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(entries, entry_count, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     for (size_t r = 0; r < rel_count; r++) {
         assert(strcmp(relationship_predicate_name(rels[r]), "resembles") == 0);
     }
@@ -317,7 +323,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
     }
     Relationship **rels = NULL;
     size_t rel_count = 0;
-    assert(thematic_return_detection_build_relationships(entries, windows, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(entries, windows, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     printf("  PR #37 regression: %zu sliding three-note windows, %zu pairs of them share contour and rhythm, %zu reported as returns\n",
            windows, same_shape, rel_count);
     assert(same_shape >= 20);
@@ -357,7 +363,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
     EntityID *e1 = fv1_id("bach-first-strain");
     EntityID *e2 = fv1_id("bach-first-strain-repeat");
     ThematicReturnDetectionEntry pair[2] = {{e1, &w1}, {e2, &w2}};
-    assert(thematic_return_detection_build_relationships(pair, 2, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(pair, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     printf("  PR #37 regression: the first strain (%zu notes) and its written-out repeat: %zu \"resembles\" link(s)\n", length, rel_count);
     assert(rel_count == 1);
     assert(strcmp(entity_id_value(relationship_source_id(rels[0])), "bach-first-strain-repeat") == 0);
@@ -377,7 +383,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
     EntityID *eo = fv1_id("bach-opening-idea");
     EntityID *el = fv1_id("bach-second-strain");
     ThematicReturnDetectionEntry partial[2] = {{eo, &wo}, {el, &wl}};
-    assert(thematic_return_detection_build_relationships(partial, 2, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(partial, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     printf("  partial return: the opening idea (%zu notes) inside the repeat (%zu notes): %zu \"resembles\" link(s)", opening, n - second_start,
            rel_count);
     assert(rel_count == 1);

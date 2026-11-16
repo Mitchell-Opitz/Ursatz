@@ -10,9 +10,7 @@
 /*
  * Entity: base type for identifiable conceptual objects (Work, Instrument,
  * Voice, Motif, Framework, Rule, etc. live at higher layers as concrete
- * entities; this is only the base contract). Identity equality is
- * primary: same EntityID + SchemaVersion means the same entity,
- * regardless of instance.
+ * entities; this is only the base contract). Identity is the EntityID.
  *
  * The Entity/Occurrence/Event category boundary is contested and
  * unresolved upstream (Domain Spec, System Registry) — this type does
@@ -46,22 +44,5 @@ EntityResult entity_create(EntityID *id, const char *type, SchemaVersion *schema
 void entity_destroy(Entity *entity);
 
 const EntityID *entity_id(const Entity *entity);
-const char *entity_type(const Entity *entity);
-const SchemaVersion *entity_schema_version(const Entity *entity);
-const char *entity_metadata(const Entity *entity);
-const ProvenanceReference *entity_provenance_reference(const Entity *entity);
-
-/*
- * Identity equality: same EntityID + same SchemaVersion, regardless of
- * instance. Two entities with identical type/metadata but a different
- * EntityID are NOT identity-equal.
- *
- * provenance_reference does NOT factor into identity equality:
- * provenance is lineage, not identity (Law 8/Domain Spec). Two Entities
- * that differ only in provenance are still the same entity. This
- * mirrors events/note_event.h's note_event_equals_by_id, which likewise
- * excludes provenance from its identity comparison.
- */
-bool entity_identity_equals(const Entity *a, const Entity *b);
 
 #endif

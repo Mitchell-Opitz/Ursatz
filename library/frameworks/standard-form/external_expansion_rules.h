@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "expansion_placement.h"
 #include "external_expansion_kind.h"
 
@@ -30,27 +27,6 @@
  */
 
 typedef enum {
-    STANDARD_FORM_EXTERNAL_EXPANSION_RULE_PREFIX = 0,
-    STANDARD_FORM_EXTERNAL_EXPANSION_RULE_SUFFIX,
-    STANDARD_FORM_EXTERNAL_EXPANSION_RULE_SUFFIX_KIND,
-    STANDARD_FORM_EXTERNAL_EXPANSION_RULE_SUFFIX_LENGTH,
-    STANDARD_FORM_EXTERNAL_EXPANSION_RULE_DIAGRAM_LINE,
-    STANDARD_FORM_EXTERNAL_EXPANSION_RULE_COUNT
-} StandardFormExternalExpansionRule;
-
-const Rule *standard_form_external_expansion_rule(StandardFormExternalExpansionRule which);
-const Constraint *standard_form_external_expansion_constraint(StandardFormExternalExpansionRule which);
-
-/* SUFFIX: true for post-cadential extension, codetta, and coda; false for prefix and for an
-   invalid kind. */
-bool standard_form_external_kind_is_suffix(ExternalExpansionKind kind);
-
-/* PREFIX and SUFFIX: true when position lies outside the phrase [phrase_start, phrase_end) on the
-   side the kind belongs: before phrase_start for a prefix, at or after phrase_end for a suffix. */
-bool standard_form_external_expansion_outside(size_t phrase_start, size_t phrase_end, size_t position,
-                                              ExternalExpansionKind kind);
-
-typedef enum {
     STANDARD_FORM_SUFFIX_LOCATION_WITHIN_SECTION = 0,
     STANDARD_FORM_SUFFIX_LOCATION_AFTER_SECTION,
     STANDARD_FORM_SUFFIX_LOCATION_AFTER_PIECE,
@@ -70,15 +46,5 @@ bool standard_form_suffix_length_typical(ExternalExpansionKind kind, size_t meas
 
 /* SUFFIX_LENGTH: true when the length is typical of the suffix kind the location gives. */
 bool standard_form_suffix_length_agrees_with_location(StandardFormSuffixLocation location, size_t measures);
-
-typedef enum {
-    STANDARD_FORM_DIAGRAM_LINE_SOLID = 0,
-    STANDARD_FORM_DIAGRAM_LINE_DASHED,
-    STANDARD_FORM_DIAGRAM_LINE_COUNT
-} StandardFormDiagramLine;
-
-/* DIAGRAM_LINE: dashed for an external expansion, solid for an internal one. False, leaving *out
-   untouched, for an invalid placement. */
-bool standard_form_placement_diagram_line(ExpansionPlacement placement, StandardFormDiagramLine *out);
 
 #endif

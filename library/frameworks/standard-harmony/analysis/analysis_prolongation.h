@@ -25,7 +25,7 @@
  * Chords are runs: consecutive segments making the same chord count once. Any other interior chord (an unexplained
  * chord, an invalid or unclassified segment) means there is no prolongation from that chord. A span with no interior
  * chord (the same function twice in a row) is not a prolongation, there being nothing between. Tonic lines chain: I V6/5 I V4/3 I6 is two spans, the
- * second beginning where the first ends (harmony_prolongation_chain.h). The existing rules model spans only from
+ * second beginning where the first ends. The existing rules model spans only from
  * one T (or D) to the NEXT, so spans never nest; where a nesting could be read the spans are the outermost
  * single-function ones as found, and none is split.
  *
@@ -96,8 +96,5 @@ HarmonyProlongationStatus harmony_analysis_find_prolongations(const HarmonySegme
                                                               HarmonyProlongations *out);
 
 void harmony_prolongations_destroy(HarmonyProlongations *prolongations);
-
-/* Reads the claim back out of a prolongation Interpretation. False if it is not one. */
-bool harmony_prolongation_claim_read(const Interpretation *interpretation, HarmonyProlongationClaim *out);
 
 #endif

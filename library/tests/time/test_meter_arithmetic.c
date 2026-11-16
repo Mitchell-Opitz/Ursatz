@@ -95,11 +95,9 @@ static void expect_snap(const MeterMap *map, int measure, Rational time, Rationa
     assert(rational_equals(snapped, expected));
 }
 
-static void expect_length_and_count(const MeterMap *map, int measure, Rational length, int count) {
+static void expect_length(const MeterMap *map, int measure, Rational length) {
     Rational beat;
-    int beats = -1;
     assert(meter_map_beat_length(map, measure, &beat) == METER_MAP_OK && rational_equals(beat, length));
-    assert(meter_map_beat_count(map, measure, &beats) == METER_MAP_OK && beats == count);
 }
 
 static void test_simple_meter(void) {
@@ -109,7 +107,7 @@ static void test_simple_meter(void) {
     assert(measure_of(map, q(1, 1)) == 2);
     assert(measure_of(map, q(5, 2)) == 3);
     expect_bounds(map, 2, q(1, 1), q(2, 1));
-    expect_length_and_count(map, 1, q(1, 4), 4);
+    expect_length(map, 1, q(1, 4));
     expect_beat(map, q(0, 1), 1, 1, q(0, 1));
     expect_beat(map, q(5, 4), 2, 2, q(0, 1));
     expect_beat(map, q(11, 8), 2, 2, q(1, 8));
@@ -133,26 +131,26 @@ static void test_barlines_and_last_measure(void) {
 static void test_compound_meters(void) {
     MeterMap *six = single(6, 3);
     expect_bounds(six, 1, q(0, 1), q(3, 4));
-    expect_length_and_count(six, 1, q(3, 8), 2);
+    expect_length(six, 1, q(3, 8));
     expect_beat(six, q(3, 8), 1, 2, q(0, 1));
     expect_beat(six, q(9, 16), 1, 2, q(3, 16));
     assert(meter_map_on_beat(six, q(3, 8)) && !meter_map_on_beat(six, q(1, 4)));
     meter_map_destroy(six);
 
     MeterMap *nine = single(9, 3);
-    expect_length_and_count(nine, 1, q(3, 8), 3);
+    expect_length(nine, 1, q(3, 8));
     expect_snap(nine, 1, q(1, 2), q(3, 4));
     meter_map_destroy(nine);
 
     MeterMap *twelve = single(12, 4);
     expect_bounds(twelve, 1, q(0, 1), q(3, 4));
-    expect_length_and_count(twelve, 1, q(3, 16), 4);
+    expect_length(twelve, 1, q(3, 16));
     expect_beat(twelve, q(7, 16), 1, 3, q(1, 16));
     meter_map_destroy(twelve);
 
     /* A top number of 6 over a quarter is simple: the beat is the unit. */
     MeterMap *simple_six = single(6, 2);
-    expect_length_and_count(simple_six, 1, q(1, 4), 6);
+    expect_length(simple_six, 1, q(1, 4));
     meter_map_destroy(simple_six);
 }
 
@@ -163,9 +161,9 @@ static void test_changing_meters(void) {
     assert(measure_of(map, q(15, 8)) == 2);
     assert(measure_of(map, q(11, 4)) == 4);
     expect_bounds(map, 3, q(2, 1), q(11, 4));
-    expect_length_and_count(map, 2, q(1, 4), 4);
-    expect_length_and_count(map, 3, q(3, 8), 2);
-    expect_length_and_count(map, 4, q(1, 4), 3);
+    expect_length(map, 2, q(1, 4));
+    expect_length(map, 3, q(3, 8));
+    expect_length(map, 4, q(1, 4));
     expect_beat(map, q(2, 1), 3, 1, q(0, 1));
     expect_beat(map, q(19, 8), 3, 2, q(0, 1));
     int measure = -99;
@@ -179,8 +177,6 @@ static void test_short_measure(void) {
     MeterMap *map = build(changes, 3);
     assert(!meter_map_has_pickup(map));
     expect_bounds(map, 4, q(11, 4), q(3, 1));
-    int beats = -1;
-    assert(meter_map_beat_count(map, 4, &beats) == METER_MAP_OK && beats == 1);
     assert(measure_of(map, q(3, 1)) == 5);
     expect_snap(map, 4, q(23, 8), q(3, 1));
     meter_map_destroy(map);
@@ -195,8 +191,6 @@ static void test_pickup(void) {
     assert(measure_of(map, q(1, 4)) == 1);
     expect_bounds(map, 0, q(0, 1), q(1, 4));
     expect_bounds(map, 1, q(1, 4), q(1, 1));
-    int beats = -1;
-    assert(meter_map_beat_count(map, 0, &beats) == METER_MAP_OK && beats == 1);
     expect_beat(map, q(0, 1), 0, 1, q(0, 1));
     expect_beat(map, q(1, 4), 1, 1, q(0, 1));
     expect_beat(map, q(3, 8), 1, 1, q(1, 8));
@@ -225,7 +219,7 @@ static void test_defaulted_map(void) {
     assert(meter_map_create_defaulted(id("map"), &map) == METER_MAP_OK);
     assert(meter_map_is_defaulted(map));
     assert(measure_of(map, q(3, 2)) == 2);
-    expect_length_and_count(map, 1, q(1, 4), 4);
+    expect_length(map, 1, q(1, 4));
     expect_beat(map, q(3, 2), 2, 3, q(0, 1));
     assert(meter_map_first_counted_measure(map) == 1);
     meter_map_destroy(map);

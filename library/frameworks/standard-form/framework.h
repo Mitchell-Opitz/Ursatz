@@ -8,9 +8,7 @@
  * phrase-level form -- the hierarchy of form, motives, phrases, and the segmentation analysis
  * that divides a phrase into ideas. Built as a Framework extension module physically outside
  * src/theory/, the same shape as standard-meter and standard-harmony; this module never
- * modifies src/theory/ or src/rules/. The names it uses (FormLevel, MotiveKind) are plain
- * value types in src/semantics/; this framework gives them their conventions. See README.md
- * for the full scope statement.
+ * modifies src/theory/ or src/rules/. See README.md for the full scope statement.
  *
  * Dependency ceiling: same as Framework itself (theory/framework.h) -- canonical L0-L6
  * interfaces only. Enforced by test_architecture_standard_form.c.

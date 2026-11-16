@@ -5,7 +5,7 @@
 
 #include "analysis/progression_patterns.h"
 
-/* Ursatz's corpus_stats_chord_progressions joins a pattern's numerals with this. */
+/* A pattern's numerals are joined with this. */
 #define PROGRESSION_SEPARATOR " > "
 
 /* The report's chords as the kernel's entries: the base numeral of a labelled chord in a key region, the key region as

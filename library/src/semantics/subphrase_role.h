@@ -1,8 +1,6 @@
 #ifndef MUSIC_SEMANTICS_SUBPHRASE_ROLE_H
 #define MUSIC_SEMANTICS_SUBPHRASE_ROLE_H
 
-#include <stdbool.h>
-
 /*
  * SubphraseRole (Value): the part a subphrase plays inside a sentence. A plain enum: it names a value and carries no EntityID, no
  * container, and no framework claim.
@@ -19,12 +17,5 @@ typedef enum {
     SUBPHRASE_ROLE_CONTINUATION,
     SUBPHRASE_ROLE_COUNT
 } SubphraseRole;
-
-/* True for the 2 values above; false for any other value. */
-bool subphrase_role_valid(SubphraseRole value);
-
-/* "presentation" "continuation"; NULL for an invalid
-   value. */
-const char *subphrase_role_name(SubphraseRole value);
 
 #endif

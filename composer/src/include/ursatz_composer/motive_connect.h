@@ -49,20 +49,11 @@ bool motive_chain_distance(const VariantChain *chain, MotiveScore *out);
  * NULL, for basic. False for NULL arguments, a motive that is not valid or a search that failed; *out is untouched
  * then.
  */
-bool motive_connection(const Motive *basic, const Motive *previous, const Motive *candidate, const MotiveScore *distance,
-                       MotiveConnection *out);
+bool motive_connection_limited(const Motive *basic, const Motive *previous, const Motive *candidate,
+                               const MotiveScore *distance, const MotiveScore *limit, MotiveConnection *out);
 
 /* The remoteness limit at a tempo of this many quarter notes per minute or more (R-163): 1/2 instead of 3/4. */
 #define MOTIVE_FAST_TEMPO_QPM 140
 
-/*
- * motive_connection with the remoteness limit given: limit NULL, or a denominator of 0, is 3/4 (motive_connection is
- * this with NULL).
- */
-bool motive_connection_limited(const Motive *basic, const Motive *previous, const Motive *candidate,
-                               const MotiveScore *distance, const MotiveScore *limit, MotiveConnection *out);
-
-/* motive_connection, the total only, with the distance searched. */
-bool motive_connection_score(const Motive *basic, const Motive *previous, const Motive *candidate, MotiveScore *out);
 
 #endif

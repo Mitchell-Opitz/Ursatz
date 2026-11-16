@@ -112,28 +112,6 @@ MeterMapResult meter_map_beat_length(const MeterMap *map, int measure, Rational 
     return METER_MAP_OK;
 }
 
-MeterMapResult meter_map_beat_count(const MeterMap *map, int measure, int *count) {
-    if (count == NULL) {
-        return METER_MAP_ERR_NULL_ARGUMENT;
-    }
-    Rational start;
-    Rational end;
-    Rational beat;
-    Rational span;
-    Rational beats;
-    long long whole = 0;
-    TRY(meter_map_measure_bounds(map, measure, &start, &end));
-    TRY(meter_map_beat_length(map, measure, &beat));
-    TRY(from_rational(rational_sub(end, start, &span)));
-    TRY(from_rational(rational_div(span, beat, &beats)));
-    TRY(from_rational(rational_ceil(beats, &whole)));
-    if (whole > INT_MAX) {
-        return METER_MAP_ERR_OVERFLOW;
-    }
-    *count = (int)whole;
-    return METER_MAP_OK;
-}
-
 MeterMapResult meter_map_beat_of(const MeterMap *map, Rational time, int *measure, int *beat, Rational *offset) {
     if (map == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;

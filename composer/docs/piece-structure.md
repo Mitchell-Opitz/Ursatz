@@ -77,7 +77,7 @@ A section's fill says where its material comes from (R-170).
 - **theme**: a composed theme used as it was composed. The first theme section of `theme_plan` is given to the section
   with `plan_give_section` ([middle-out.md](middle-out.md#a-section-from-another-plan)): its melody, harmony, bass and
   inner voice spans are Given in the section, moved to its start and transposed by the key difference (D minor to E minor
-  is up a whole tone), and its phrase and idea nodes are copied under the section so that `form_hear` hears the theme it
+  is up a whole tone), and its phrase and idea nodes are copied under the section so that `form_hear_in` hears the theme it
   was. The section is Realized when the plan is built, so no stage targets it and `compose_run` leaves it as it is; change
   a theme in the Themes view, not here. The section takes the theme's archetype, pairing and cadences, not the
   request's, and the section's `cadence` for it is not used. The theme must be as long as the section, in the same

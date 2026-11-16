@@ -1,6 +1,6 @@
 # Growing a theme
 
-`grow_build_plan` and `grow_run` (`<ursatz_composer/grow.h>`) grow a theme from one motive: its structure (a
+`grow_build_plan_checked` and `grow_run` (`<ursatz_composer/grow.h>`) grow a theme from one motive: its structure (a
 sentence, a period or one of the seven hybrids), then the motives made from the motive, the harmony, the bass and the
 melody, and, when asked, an accompaniment or a four-part voicing, each through the fill loop. The [grow command](cli-grow.md) runs it. Back to the [docs index](README.md).
 
@@ -11,7 +11,7 @@ GrowRequest request = {.motive = &motive, .key = key, .meter = meter, .bars = 8,
 PiecePlan *plan;
 GrowConfig config = {.seed = 7};
 GrowOutcome outcome;
-if (grow_build_plan(&request, &plan) == GROW_OK && grow_run(plan, &config, &outcome) == GROW_OK) {
+if (grow_build_plan_checked(&request, &plan, NULL) == GROW_OK && grow_run(plan, &config, &outcome) == GROW_OK) {
     /* plan holds the theme; outcome.heard and outcome.score say how standard-form hears it */
 }
 ```
@@ -103,7 +103,7 @@ motive) develop all of it and must fit the idea they fill. Each motive in the ma
 ### Given chords
 
 `GrowRequest.chords` (`chord_count`) gives chords of the theme (R-208), `GivenChord` of [given.h](../src/include/ursatz_composer/given.h):
-a Roman numeral, an onset from the theme's start and a length. `grow_build_plan` gives them to the theme section with
+a Roman numeral, an onset from the theme's start and a length. the build gives them to the theme section with
 `plan_give_chords` once the section is made, one Given harmony span for each, exactly its onset and length;
 `GROW_ERR_BAD_REQUEST` when it refuses them. The harmony stage opens targets only over the gaps (`given_gaps`), so the chords
 stay, the bass is written over them, and a gap is judged with the Given chords before it (one chord after them is
@@ -116,7 +116,7 @@ The order: given, then motive ([grow-harmony.md](grow-harmony.md#chords-from-dev
 
 ## The plan
 
-`grow_build_plan` makes a Form over the theme and the material, with the meter and the key as Given lane spans over
+The build makes a Form over the theme and the material, with the meter and the key as Given lane spans over
 all of it, and two sections:
 
 - **theme** (Constrained) over the bars, with the `archetype` the pairing makes (sentence, period or hybrid),

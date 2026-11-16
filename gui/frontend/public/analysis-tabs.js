@@ -21,7 +21,6 @@ const ANALYSIS_TABS = [
   { id: "texture", label: "Texture", sections: ["texture", "voice_leading"] },
   { id: "schemas", label: "Schemas", sections: ["schemas"] },
   { id: "markings", label: "Markings", sections: ["markings"] },
-  { id: "counterpoint", label: "Counterpoint", sections: ["counterpoint_check"] },
   { id: "notes", label: "Notes", sections: ["notes"] },
 ];
 
@@ -166,13 +165,13 @@ function buildAnalysisHeader(data) {
   const document = data.document || {};
   const metadata = document.metadata || {};
   const meter = document.meter || {};
-  const commit = typeof metadata.ursatz_commit === "string" ? metadata.ursatz_commit.slice(0, 7) : "";
+  const producerKey = typeof metadata.producer_key === "string" ? metadata.producer_key.slice(0, 7) : "";
   const noteCount = typeof metadata.note_count === "number" ? metadata.note_count : (data.note_xml_ids || []).length;
   return {
     filename: data.filename || data.id,
     format: data.format || "",
     analyzerVersion: metadata.analyzer_version || "",
-    ursatzCommit: commit,
+    producerKey,
     analysisStatus: typeof data.analysis_status === "string" ? data.analysis_status : "current",
     noteCount,
     measureCount: typeof meter.measure_count === "number" ? meter.measure_count : null,
@@ -186,7 +185,7 @@ function buildProvenanceFields(document) {
   const fields = [
     ["Source file", metadata.source_file],
     ["Analyzer version", metadata.analyzer_version],
-    ["Ursatz commit", metadata.ursatz_commit],
+    ["Producer key", metadata.producer_key],
     ["Document schema", document && document.schema_version],
     ["Input format", input.format],
     ["Source type", input.source_type],
@@ -247,19 +246,6 @@ async function loadTabState(cache, tab, fetchSections) {
   return ok ? buildTabState(tab, cache.document()) : null;
 }
 
-/* A claim's note_ids are indices into the imported notes; the score knows
- * notes by xml:id, which the piece detail lists in the same order. */
-function mapNoteIdsToXmlIds(noteIds, noteXmlIds) {
-  const ids = [];
-  for (const noteId of noteIds || []) {
-    const xmlId = (noteXmlIds || [])[noteId];
-    if (xmlId) {
-      ids.push(xmlId);
-    }
-  }
-  return ids;
-}
-
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     ANALYSIS_TABS,
@@ -271,7 +257,6 @@ if (typeof module !== "undefined" && module.exports) {
     buildSectionBlock,
     buildAnalysisHeader,
     buildProvenanceFields,
-    mapNoteIdsToXmlIds,
     formatLocation,
     formatPosition,
     claimLabel,

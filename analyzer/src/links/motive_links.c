@@ -18,32 +18,6 @@
 
 /* ---- Scope ---- */
 
-/* One motive family of a piece: what linking needs from its document. */
-typedef struct {
-    size_t piece;  /* index into the scope's pieces */
-    size_t family; /* the family's index in its piece */
-    int first_measure;
-    int last_measure;
-    double beat;
-    char *degrees; /* the prototype's, joined by spaces */
-    MotiveSketch sketch;
-    unsigned long long fingerprint;
-} Family;
-
-typedef struct {
-    char *id;
-} Piece;
-
-struct MotiveLinkScope {
-    Piece *pieces;
-    size_t piece_count;
-    size_t piece_capacity;
-    Family *families; /* in scope order: piece order, then family index */
-    size_t family_count;
-    size_t family_capacity;
-    char *failed; /* the piece id of the last add that failed */
-};
-
 static bool number_value(const cJSON *item, double *out) {
     if (!cJSON_IsNumber(item)) {
         return false;
@@ -223,27 +197,6 @@ void motive_link_scope_destroy(MotiveLinkScope *scope) {
     free(scope->families);
     free(scope->failed);
     free(scope);
-}
-
-bool motive_link_scope_sketch(const MotiveLinkScope *scope, const char *piece_id, size_t family, MotiveSketch *out) {
-    if (!scope || !piece_id || !out) {
-        return false;
-    }
-    for (size_t i = 0; i < scope->family_count; i++) {
-        if (scope->families[i].family == family && strcmp(scope->pieces[scope->families[i].piece].id, piece_id) == 0) {
-            *out = scope->families[i].sketch;
-            return true;
-        }
-    }
-    return false;
-}
-
-size_t motive_link_scope_piece_count(const MotiveLinkScope *scope) {
-    return scope ? scope->piece_count : 0;
-}
-
-size_t motive_link_scope_family_count(const MotiveLinkScope *scope) {
-    return scope ? scope->family_count : 0;
 }
 
 static bool grow(void **items, size_t *capacity, size_t needed, size_t size) {
@@ -673,7 +626,7 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
     free(linked);
     if (!cache) {
         free(local.pairs);
-        free(local.ursatz_commit);
+        free(local.producer_key);
         free(local.analyzer_version);
     }
     return result;

@@ -54,14 +54,6 @@ bool standard_counterpoint_fourth_species_exercise_valid(const StandardCounterpo
     return true;
 }
 
-size_t standard_counterpoint_fourth_species_bar_count(const StandardCounterpointFourthSpeciesExercise *exercise) {
-    return standard_counterpoint_fourth_species_exercise_valid(exercise) ? exercise->cantus->count : 0;
-}
-
-BeatStrength standard_counterpoint_fourth_species_slot_strength(size_t slot) {
-    return slot % SLOTS == 0 ? BEAT_STRENGTH_STRONG : BEAT_STRENGTH_WEAK;
-}
-
 const PitchSpelling *standard_counterpoint_fourth_species_cantus(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                                  size_t bar) {
     if (exercise == NULL || exercise->cantus == NULL || bar >= exercise->cantus->count) {

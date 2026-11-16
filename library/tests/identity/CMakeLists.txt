@@ -1,5 +1,3 @@
 add_ursatz_test(entity_id)
-add_ursatz_test(version)
-add_ursatz_test(version_model)
 add_ursatz_test(schema_version)
 add_ursatz_architecture_test(identity)

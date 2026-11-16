@@ -12,8 +12,3 @@ const char *idea_label_name(IdeaLabel value) {
     return idea_label_valid(value) ? NAMES[value] : NULL;
 }
 
-static const char *const ABBREVIATIONS[IDEA_LABEL_COUNT] = {"b.i.", "c.i.", "f.", "u."};
-
-const char *idea_label_abbreviation(IdeaLabel value) {
-    return idea_label_valid(value) ? ABBREVIATIONS[value] : NULL;
-}

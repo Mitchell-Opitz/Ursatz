@@ -3,22 +3,12 @@
 
 #include "counterpoint_test_util.h"
 #include "motion_rules.h"
-#include "rule_check.h"
 
 static MotionType motion(const PitchSpelling *lower_from, const PitchSpelling *lower_to,
                          const PitchSpelling *upper_from, const PitchSpelling *upper_to) {
     MotionType out;
     assert(standard_counterpoint_classify_motion(lower_from, lower_to, upper_from, upper_to, &out));
     return out;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_motion_rule, standard_counterpoint_motion_constraint,
-                                    STANDARD_COUNTERPOINT_MOTION_RULE_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_MOTION_RULE_COUNT; i++) {
-        assert(constraint_type(standard_counterpoint_motion_constraint((StandardCounterpointMotionRule)i)) ==
-               CONSTRAINT_TYPE_HARD);
-    }
 }
 
 static void test_contrary(void) {
@@ -78,7 +68,6 @@ static void test_pair_motion(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_contrary();
     test_similar();
     test_parallel();

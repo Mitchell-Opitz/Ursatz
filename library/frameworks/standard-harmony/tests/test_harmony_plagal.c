@@ -18,9 +18,6 @@ static void test_placements(void) {
     assert(harmony_plagal_placement_valid(BEGIN));
     assert(!harmony_plagal_placement_valid(HARMONY_PLAGAL_PLACEMENT_COUNT));
     assert(!harmony_plagal_placement_valid((HarmonyPlagalPlacement)-1));
-    assert(strcmp(harmony_plagal_placement_name(AFTER), "after-cadence") == 0);
-    assert(strcmp(harmony_plagal_placement_name(BEGIN), "phrase-beginning") == 0);
-    assert(harmony_plagal_placement_name(HARMONY_PLAGAL_PLACEMENT_COUNT) == NULL);
 }
 
 static void test_iv_to_root_position_i_in_both_placements(void) {

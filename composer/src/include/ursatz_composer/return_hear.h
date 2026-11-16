@@ -10,7 +10,7 @@
  * Hearing the thematic returns of a written plan (R-070), the way the kernel's thematic return detection hears real
  * music. Only the plan's written lanes are read, never its constraints:
  *
- *   - each section of the piece (every section but the material) is heard with form_hear (form_hear.h), which finds the
+ *   - each section of the piece (every section but the material) is heard with form_hear_in (form_hear.h), which finds the
  *     themes in it;
  *   - each theme becomes one entry of the detection: the Contour (up, down or same between successive notes) and the
  *     RhythmicPattern (the durations of the notes) of its melody lane notes, the notes that start inside the theme's
@@ -43,11 +43,8 @@ typedef enum {
     RETURN_HEAR_ERR_NULL,
     RETURN_HEAR_ERR_ALLOC,
     RETURN_HEAR_ERR_NOT_WRITTEN, /* a melody, bass or harmony span of a section is Constrained */
-    RETURN_HEAR_ERR_ANALYSIS     /* a section form_hear cannot read, or a detection that failed */
+    RETURN_HEAR_ERR_ANALYSIS     /* a section form_hear_in cannot read, or a detection that failed */
 } ReturnHearResult;
-
-/* Hears the returns of plan into *out, which the caller destroys. On failure *out is empty. */
-ReturnHearResult return_hear(const PiecePlan *plan, ReturnHeard *out);
 
 void return_heard_destroy(ReturnHeard *heard);
 

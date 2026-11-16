@@ -100,7 +100,4 @@ GalantAnalysisStatus scale_sequence_detect(const GalantSegmentList *segments, co
 
 void scale_sequence_matches_destroy(ScaleSequenceMatches *matches);
 
-/* Reads the claim back out of a sequence Interpretation. False if it is not one. */
-bool scale_sequence_claim_read(const Interpretation *interpretation, ScaleSequenceClaim *out);
-
 #endif

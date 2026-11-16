@@ -31,22 +31,6 @@ static bool valid_rule(StandardCounterpointSpeciesBreakRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_species_break_rule(StandardCounterpointSpeciesBreakRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_species_break_constraint(StandardCounterpointSpeciesBreakRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_species_break_preference(StandardCounterpointSpeciesBreakRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_species_break_rule_name(StandardCounterpointSpeciesBreakRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
 static bool consonant_at(const StandardCounterpointInterval *interval) {

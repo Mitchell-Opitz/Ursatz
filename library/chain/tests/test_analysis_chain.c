@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "identity/entity_id.h"
-#include "io/import_notes.h"
+#include "../../tests/import_notes_test_util.h"
 #include "io/midi_importer.h"
 #include "pitch/pitch_numeric_value.h"
 #include "time/meter_map.h"
@@ -16,6 +16,8 @@
 #include "time/time_span.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "../../tests/integration/reference_pieces.h"
+#include "../../tests/key_index_test_util.h"
+#include "chain_test_access.h"
 
 /*
  * analysis_chain_run on four reference pieces (Bach 114, Mozart 545, Clementi 36 and Field 1 from tests/fixtures) against fixed expected
@@ -189,7 +191,7 @@ static AnalysisChainConfig reference_config(const Reference *ref) {
     AnalysisChainConfig config = analysis_chain_config_default();
     config.first_measure = ref->first_measure;
     config.last_measure = ref->last_measure;
-    config.home_key_index = common_practice_key_index_of(ref->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(ref->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR);
     return config;
 }
 
@@ -610,10 +612,13 @@ static void check_subsets(const char *context, ChainInput *input, const Referenc
 
 /* The outer lines on the chord segments: an entry per chord segment, the voice segment sounding at its start. */
 static void check_segment_lines(const char *context, const AnalysisChain *c) {
-    const OuterVoiceLines *lines = analysis_chain_segment_outer_voices(c);
     const OuterVoiceLines *voice_lines = analysis_chain_outer_voices(c);
     const ChainSegments *segments = analysis_chain_segments(c);
     const ChainSegments *voice_segments = analysis_chain_voice_segments(c);
+    OuterVoiceLines built;
+    memset(&built, 0, sizeof(built));
+    CHECK(chain_build_segment_lines(voice_segments, voice_lines, segments, segments->count, &built) == CHAIN_INPUT_OK);
+    const OuterVoiceLines *lines = &built;
     CHECK(lines != NULL && voice_lines != NULL && lines->count == segments->count && voice_lines->count == voice_segments->count);
     for (size_t i = 0; i < lines->count; i++) {
         size_t v = 0;
@@ -630,14 +635,15 @@ static void check_segment_lines(const char *context, const AnalysisChain *c) {
             CHECK(strcmp(entity_id_value(lines->bass[i].note_id), entity_id_value(voice_lines->bass[v].note_id)) == 0);
         }
     }
+    outer_voice_lines_destroy(&built);
 }
 
 /* The stage inputs the chain keeps: all there after a full run, none on a NULL chain, and the ones the stages read are the ones they built. */
 static void check_stage_inputs(const char *context, const AnalysisChain *c) {
-    CHECK(analysis_chain_pitches(NULL) == NULL && analysis_chain_harmony_inputs(NULL) == NULL && analysis_chain_prepared_harmony(NULL) == NULL);
+    CHECK(analysis_chain_harmony_inputs(NULL) == NULL && analysis_chain_prepared_harmony(NULL) == NULL);
     CHECK(analysis_chain_form_input(NULL) == NULL && analysis_chain_motive_input(NULL) == NULL && analysis_chain_voice_grid(NULL) == NULL);
-    CHECK(analysis_chain_galant_segments(NULL) == NULL && analysis_chain_segment_outer_voices(NULL) == NULL);
-    CHECK(analysis_chain_pitches(c) != NULL && analysis_chain_harmony_inputs(c) != NULL && analysis_chain_prepared_harmony(c) != NULL);
+    CHECK(analysis_chain_galant_segments(NULL) == NULL);
+    CHECK(analysis_chain_harmony_inputs(c) != NULL && analysis_chain_prepared_harmony(c) != NULL);
     CHECK(analysis_chain_form_input(c) != NULL && analysis_chain_motive_input(c) != NULL && analysis_chain_voice_grid(c) != NULL);
     CHECK(analysis_chain_galant_segments(c) != NULL);
     CHECK(analysis_chain_harmony_inputs(c)->count == analysis_chain_segment_count(c));
@@ -663,9 +669,13 @@ static size_t soprano_runs(const OuterVoiceLines *lines) {
    soprano note of the voice lines is the meter input's soprano line. */
 static void check_voice_line_inputs(const char *context, const ChainInput *input, const Reference *ref, const AnalysisChain *c) {
     const OuterVoiceLines *voice_lines = analysis_chain_outer_voices(c);
-    const OuterVoiceLines *segment_lines = analysis_chain_segment_outer_voices(c);
+    OuterVoiceLines segment_lines;
+    memset(&segment_lines, 0, sizeof(segment_lines));
+    CHECK(chain_build_segment_lines(analysis_chain_voice_segments(c), voice_lines, analysis_chain_segments(c), analysis_chain_segments(c)->count,
+                                    &segment_lines) == CHAIN_INPUT_OK);
     size_t runs = soprano_runs(voice_lines);
-    CHECK(runs > soprano_runs(segment_lines));
+    CHECK(runs > soprano_runs(&segment_lines));
+    outer_voice_lines_destroy(&segment_lines);
     const StandardCounterpointMelodyLine *melody = &analysis_chain_melody(c)->line.line;
     size_t present = 0;
     for (size_t i = 0; i < melody->count; i++) {
@@ -700,7 +710,7 @@ static void check_piece(const Reference *ref, bool dump) {
     AnalysisChain *chain = NULL;
     AnalysisChainStatus status = analysis_chain_run(&input.set, input.events, input.event_count, &config, &chain);
     if (status != ANALYSIS_CHAIN_OK) {
-        fprintf(stderr, "%s: the chain failed at %s\n", context, analysis_chain_status_name(status));
+        fprintf(stderr, "%s: the chain failed at status %d\n", context, (int)status);
         abort();
     }
     size_t segments = analysis_chain_segment_count(chain);

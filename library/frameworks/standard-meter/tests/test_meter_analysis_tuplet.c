@@ -188,31 +188,6 @@ static void test_order(void) {
     fixture_destroy(&f);
 }
 
-static void test_claim(void) {
-    Fixture f;
-    fixture_init(&f, 4, 2);
-    fixture_note(&f, 0, 1, 1, 12);
-    fixture_note(&f, 1, 12, 1, 6);
-    fixture_note(&f, 1, 6, 1, 4);
-    fixture_note(&f, 1, 4, 1, 2);
-    AnalysisNoteSet set = fixture_set(&f);
-    StandardMeterTuplets found = find(&f, NULL);
-    assert(found.count == 1);
-    Structure *shell = NULL;
-    Interpretation *interpretation = NULL;
-    assert(standard_meter_tuplet_emit(&set, &found.items[0], "m1-b1", &shell, &interpretation));
-    StandardMeterTupletClaim claim;
-    assert(standard_meter_tuplet_claim_read(interpretation, &claim));
-    assert(claim.actual == 3 && claim.normal == 2 && claim.attacks == 3 && claim.note_count == 3);
-    assert(claim.measure == 1 && claim.meter == METER_TYPE_SIMPLE && claim.has_level);
-    assert(!standard_meter_tuplet_claim_read(NULL, &claim));
-    assert(!standard_meter_tuplet_emit(&set, &found.items[0], NULL, &shell, &interpretation));
-    interpretation_destroy(interpretation);
-    structure_destroy(shell);
-    standard_meter_tuplets_destroy(&found);
-    fixture_destroy(&f);
-}
-
 static void test_bad_arguments(void) {
     Fixture f;
     fixture_init(&f, 4, 2);
@@ -234,7 +209,6 @@ int main(void) {
     test_a_single_attack_is_dropped();
     test_in_line_skips_notes();
     test_order();
-    test_claim();
     test_bad_arguments();
     printf("test_meter_analysis_tuplet: ok\n");
     return 0;

@@ -4,10 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <generation/generator.h>
-
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/fill_target.h>
+#include <ursatz_composer/generator.h>
 #include <ursatz_composer/piece_plan.h>
 
 /*
@@ -20,10 +19,8 @@
  * Refine and Grow take a node as their target, Fill a lane span. The loop never
  * offers an operator a target of the other kind.
  *
- * An operator wraps Ursatz's Generator: its `generator` member carries the name,
- * version, determinism and descriptions (Generator.generate is not used, since
- * it takes a GenerationPlan and returns material ids, with no way to say which
- * node to fill or what to change).
+ * An operator carries a Generator descriptor: its `generator` member holds the name,
+ * version, determinism and descriptions (a Generator has no generate function).
  *
  * An operator must not touch Given material, and it must not change the plan in
  * generate(), which only proposes. Changes happen in apply(). Any randomness in
@@ -86,7 +83,7 @@ typedef struct {
     bool (*generate)(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context, FillCandidateList *out);
     /* Applies one candidate to the plan. PLAN_OK on success. Required. */
     PlanResult (*apply)(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context);
-    /* Adds constraints to the target's relatives (see fill_relatives) after apply. May be NULL. */
+    /* Adds constraints to the target's relatives (its parent, children and neighbours) after apply. May be NULL. */
     void (*propagate)(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context);
     void *context; /* passed to every hook; may be NULL */
 } FillOperator;

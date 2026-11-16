@@ -7,6 +7,8 @@
 #include "common-practice-minimal/key_identification.h"
 #include "common-practice-minimal/key_regions.h"
 #include "weighted_pipeline.h"
+#include "../io/midi_import_split.h"
+#include "../key_index_test_util.h"
 
 /*
  * Local key regions on Clementi, Sonatina Op. 36 No. 1 (first movement) and Mozart, K. 545 (first movement),
@@ -14,7 +16,7 @@
  * readings, not yet checked against the scores (see their headers), written before the code was run. For each
  * piece the test
  *   - finds the key regions of the annotated measures from the adaptive sonority segments, the weighted pitch
- *     classes and the file's key signature events (read as midi_key_signature_scan_all returns them),
+ *     classes and the file's key signature events (read as the complete MIDI import returns them),
  *   - asserts that every annotated MODULATION boundary has an estimated key change within 2 measures,
  *   - asserts the share of scored measures that carry the annotated key, and prints it, with the misses and the
  *     estimated regions, changes and pivots,
@@ -78,7 +80,7 @@ static Annotation load_annotation(const char *file) {
             a.regions[a.region_count].first = x;
             a.regions[a.region_count].last = y;
             a.regions[a.region_count].key_index =
-                common_practice_key_index_of(tonic_of(tonic), strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
+                test_key_index_of(tonic_of(tonic), strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
                                                                                            : COMMON_PRACTICE_KEY_MAJOR);
             a.region_count++;
         } else if (sscanf(line, "unscored %d %d", &x, &y) == 2) {
@@ -175,13 +177,13 @@ static void report_piece(const char *label, const char *file, const char *annota
                                               &segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
 
-    /* the file's key signature events, as the importer's scan returns them */
+    /* the file's key signature events, as the complete import returns them */
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, file);
     size_t size = 0;
     unsigned char *data = pipeline_read_file(path, &size);
     MidiKeySignatureEvents scanned = {NULL, 0};
-    assert(midi_key_signature_scan_all(data, size, &scanned) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(test_midi_import_key_signatures(data, size, &scanned) == MIDI_IMPORT_OK);
     free(data);
     CommonPracticeKeySignatureEvent *events =
         (CommonPracticeKeySignatureEvent *)calloc(scanned.count + 1, sizeof(CommonPracticeKeySignatureEvent));

@@ -11,23 +11,6 @@
 #include "time/musical_time.h"
 #include "time/time_span.h"
 
-static bool read_claim(const Interpretation *interpretation, const char *type, void *out, size_t size) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t content_size = 0;
-    if (claim == NULL || strcmp(value_type(claim), type) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &content_size);
-    if (content == NULL || content_size != size) {
-        return false;
-    }
-    memcpy(out, content, size);
-    return true;
-}
-
 static void destroy_label(StandardCounterpointNctLabel *label) {
     interpretation_destroy(label->interpretation);
     structure_destroy(label->shell);
@@ -171,10 +154,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_labels_with(co
     return status;
 }
 
-bool standard_counterpoint_nct_claim_read(const Interpretation *interpretation, StandardCounterpointNctClaim *out) {
-    return read_claim(interpretation, STANDARD_COUNTERPOINT_NCT_CLAIM_TYPE, out, sizeof(*out));
-}
-
 static void destroy_counts(StandardCounterpointNctCounts *counts) {
     interpretation_destroy(counts->interpretation);
     structure_destroy(counts->shell);
@@ -278,7 +257,3 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_counts(const S
     return STANDARD_COUNTERPOINT_MELODY_OK;
 }
 
-bool standard_counterpoint_nct_counts_claim_read(const Interpretation *interpretation,
-                                                 StandardCounterpointNctCountsClaim *out) {
-    return read_claim(interpretation, STANDARD_COUNTERPOINT_NCT_COUNTS_CLAIM_TYPE, out, sizeof(*out));
-}

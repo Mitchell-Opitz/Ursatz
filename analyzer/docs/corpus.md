@@ -3,7 +3,7 @@
 Corpus mode, which analyzes every piece in a folder into documents and a corpus index. Back to the [docs index](README.md).
 
 ```sh
-ursatz-analyzer --corpus <dir> [--out <dir>] [--resume] [--markdown]
+ursatz-analyzer --corpus <dir> [--out <dir>] [--resume]
 ```
 
 Library: `corpus_run` in `include/ursatz_analyzer/corpus.h`.
@@ -21,7 +21,6 @@ Library: `corpus_run` in `include/ursatz_analyzer/corpus.h`.
 
 - `<out>/a/b.mid.analysis.json`: the analysis document, byte for byte what `ursatz-analyzer --json` writes for that
   file. The whole file name is kept, so `b.mid` and `b.xml` do not collide.
-- `<out>/a/b.mid.report.md`: the Markdown report, only with `--markdown`.
 - `<out>/corpus-index.json`: the index, below.
 
 A piece that cannot be read or analyzed is `failed` in the index, gets no document, and does not stop the run. The
@@ -31,13 +30,13 @@ directory, output directory that cannot be created, unreadable index on `--resum
 
 ## Corpus index
 
-`corpus-index.json` follows [schema/corpus-index.v1.schema.json](../schema/corpus-index.v1.schema.json).
+`corpus-index.json` follows [schema/corpus-index.v2.schema.json](../schema/corpus-index.v2.schema.json).
 
 | Field | Meaning |
 | --- | --- |
-| `schema`, `schema_version` | `"ursatz-corpus-index"`, `1`. |
+| `schema`, `schema_version` | `"ursatz-corpus-index"`, `2`. |
 | `analyzer_version` | The analyzer's project version. |
-| `ursatz_commit` | The producer key of the build that wrote the index (`ursatz_analyzer_producer_key()`); the member keeps its name until the next index version. Absent from indexes written before 0.4.0. |
+| `producer_key` | The producer key of the build that wrote the index (`ursatz_analyzer_producer_key()`). An index of schema version 1 holds it as `ursatz_commit`. |
 | `document_schema_version` | The analysis document schema the documents follow. |
 | `input_dir` | The directory as given on the command line. |
 | `pieces[].path` | Input path relative to `input_dir`. |
@@ -56,18 +55,18 @@ index of the pieces done so far.
 With `--resume` the existing index is read and a piece is skipped when all of these hold:
 
 - the index has an `analyzed` entry for its path with the same `content_hash`;
-- the index's `analyzer_version`, `ursatz_commit` and `document_schema_version` match this build;
-- the entry's document file exists, and with `--markdown` so does the report.
+- the index's `analyzer_version`, `producer_key` and `document_schema_version` match this build;
+- the entry's document file exists.
 
 Failed pieces are tried again. Pieces no longer in the folder are dropped from the index. An index from another
-analyzer version, producer key or schema version (or one with no `ursatz_commit`) reuses nothing. A missing index is a normal first run; an index that exists but cannot be
+analyzer version, producer key or schema version (an index of schema version 1 has `ursatz_commit` instead of `producer_key`) reuses nothing and is written again. A missing index is a normal first run; an index that exists but cannot be
 read is an error (exit 2). Without `--resume` every piece is analyzed and the index is replaced.
 
 ## Staleness keys
 
 A stored analysis is current only when its schema version, the analyzer version that wrote it and the producer key
 it was analyzed against all match the build that reads it. A document holds them as `schema_version`,
-`metadata.analyzer_version` and `metadata.ursatz_commit`; the index holds the same keys for the whole run.
+`metadata.analyzer_version` and `metadata.producer_key`; the index holds the same keys for the whole run.
 
 `<ursatz_analyzer/staleness.h>` gives the check (the first mismatch, in the order schema, analyzer, Ursatz, names the
 status):
@@ -75,7 +74,7 @@ status):
 | Status | Meaning |
 | --- | --- |
 | `ANALYZER_DOCUMENT_CURRENT` | All three keys match. |
-| `ANALYZER_DOCUMENT_STALE_SCHEMA` | Another document schema version. |
+| `ANALYZER_DOCUMENT_STALE_SCHEMA` | Another document schema version (a document of version 11 or older, with a `metadata.analyzer_version` string, reads stale whatever else it holds). |
 | `ANALYZER_DOCUMENT_STALE_ANALYZER` | Another analyzer version. |
 | `ANALYZER_DOCUMENT_STALE_URSATZ` | Another producer key. |
 | `ANALYZER_DOCUMENT_UNREADABLE` | Not JSON, or the keys are missing or have the wrong type. |
@@ -83,6 +82,6 @@ status):
 `analyzer_document_status(document_json)` reads `schema_version` and `metadata` of a document;
 `analyzer_document_status_of(schema_version, analyzer_version, producer_key)` compares keys the caller already holds.
 
-Style profiles, similar-material search and motive links keep reading stale documents as they are. The commands
+What the readers do with another schema version: the GUI and the Composer re-analyze or ignore a stale document, and `--corpus --resume` re-analyzes a stale index. Style profiles, similar-material search and motive links keep reading stale documents as they are (the front ends refuse a corpus output of an older document schema, P64). The commands
 that read a corpus output (`--style-profile`, `--similar`, `--link-motives`) print the number of stale documents on
 stderr; `--corpus --resume` re-analyzes every piece when the index is stale.

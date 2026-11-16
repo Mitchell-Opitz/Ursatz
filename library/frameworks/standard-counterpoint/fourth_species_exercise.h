@@ -54,12 +54,6 @@ typedef struct {
 /* True when the exercise has the shapes described above. */
 bool standard_counterpoint_fourth_species_exercise_valid(const StandardCounterpointFourthSpeciesExercise *exercise);
 
-/* The number of bars (cantus firmus notes); 0 for an invalid exercise. */
-size_t standard_counterpoint_fourth_species_bar_count(const StandardCounterpointFourthSpeciesExercise *exercise);
-
-/* The metric strength of a slot: even slots strong, odd slots weak. */
-BeatStrength standard_counterpoint_fourth_species_slot_strength(size_t slot);
-
 /* The cantus firmus note of the bar. */
 const PitchSpelling *standard_counterpoint_fourth_species_cantus(const StandardCounterpointFourthSpeciesExercise *exercise,
                                                                  size_t bar);

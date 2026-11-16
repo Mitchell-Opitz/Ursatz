@@ -127,20 +127,18 @@ int main(void) {
 
     for (int slot = 0; slot < GROW_SLOT_COUNT; slot++) {
         assert(strcmp(grow_slot_name((GrowSlot)slot), SLOT_NAMES[slot]) == 0);
-        assert(strcmp(grow_slot_function((GrowSlot)slot), SLOT_FUNCTIONS[slot]) == 0);
+        assert(strcmp(theme_shape_slot((GrowSlot)slot)->function, SLOT_FUNCTIONS[slot]) == 0);
         const char *node = grow_slot_node_name((GrowSlot)slot);
         assert(SLOT_NODES[slot] ? node && strcmp(node, SLOT_NODES[slot]) == 0 : node == NULL);
     }
     assert(strcmp(grow_slot_name(GROW_SLOT_COUNT), "unknown") == 0);
-    assert(strcmp(grow_slot_function(GROW_SLOT_COUNT), "unknown") == 0);
+    assert(theme_shape_slot(GROW_SLOT_COUNT) == NULL);
     assert(grow_slot_node_name(GROW_SLOT_COUNT) == NULL);
 
     /* The halves: the plan names (plan_json) and the library names (standard-form). */
     static const char *const BEGINNING_PLAN[3] = {"presentation", "antecedent", "compound_basic_idea"};
     static const char *const BEGINNING_LIBRARY[3] = {"presentation", "antecedent", "compound-basic-idea"};
     static const char *const ENDING_NAMES[3] = {"continuation", "consequent", "cadential"};
-    assert(theme_shape_half_count() == 6);
-    assert(theme_shape_half_at(6) == NULL);
     for (int i = 0; i < 3; i++) {
         const ThemeShapeHalf *beginning = theme_shape_beginning((PlanThemeBeginning)i);
         const ThemeShapeHalf *ending = theme_shape_ending((PlanThemeEnding)i);

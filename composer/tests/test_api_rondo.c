@@ -7,6 +7,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The rows of a small rondo (P52 B7, R-521): A1 names its embellish variation and the notes it added, A2 names the new setting
@@ -47,7 +48,7 @@ static void check(const char *key, const char *mode, const char *b1_key, const c
     ComposerResponse response;
     ComposerStatus status = composer_api_piece(request, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "test_api_rondo: %s: %s\n", composer_status_name(status), response.error.message);
+        fprintf(stderr, "test_api_rondo: %s: %s\n", test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);

@@ -20,11 +20,4 @@ typedef enum {
     PHRASE_ROLE_COUNT
 } PhraseRole;
 
-/* True for the 2 values above; false for any other value. */
-bool phrase_role_valid(PhraseRole value);
-
-/* "antecedent" "consequent"; NULL for an invalid
-   value. */
-const char *phrase_role_name(PhraseRole value);
-
 #endif

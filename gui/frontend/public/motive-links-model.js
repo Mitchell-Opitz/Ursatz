@@ -49,10 +49,6 @@
     }
   }
 
-  function plural(count, one, many) {
-    return count === 1 ? one : many;
-  }
-
   /* The line under the Run button: the live count while a run is going, then
    * what it compared and took from the cache. */
   function progressText(run) {

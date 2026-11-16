@@ -45,7 +45,7 @@ Notes on the verified values:
 | Phrase form | each annotated phrase end; each annotated theme (its form and its two parts); each annotated expansion | within 1 measure |
 | Thematic returns (Mozart 545, Clementi 36) | each annotated return of the main and secondary themes | starts within 1 measure, and "resembles" the original (which starts within 1 measure) |
 
-Thematic returns use the kernel's `ThematicReturnDetection` on the L3.6 themes: each theme becomes a `ThemeOccurrence` and a `MotifWindow` (the contour, the
+Thematic returns use the kernel's `ThematicReturnDetection` on the L3.6 themes: each theme becomes an occurrence id and a `MotifWindow` (the contour, the
 rhythm and the event ids of its soprano notes), and the detector's "resembles" relationships are read. No library change was needed to feed it.
 
 ## Results
@@ -87,12 +87,7 @@ and the expected files state both. C10 was removed in P1 B7.
 ## Bugs found and fixed
 
 None in the library. The assertions found no output that is wrong for a reason that no documented limit covers, so no `fix` commit changes library code.
-One defect in the new test was found and fixed: the thematic return glue leaked the arrays that `contour_create`, `rhythmic_pattern_create` and
-`theme_occurrence_create` copy.
-
-One observation, outside the Framework v1 path: the chain's `chain_subset_chord_analyze` anchors a Chord to the first event id of its sonority, and on
-Bach 114's adaptive segments two segments share a first event id (a held note), so it would give two Chords one id. The chain does not use it; it identifies chords
-with the weighted identifier, whose Chord ids come from the segment ids. Nothing here depends on it, and it was not changed.
+One defect in the new test was found and fixed: the thematic return glue leaked the arrays that `contour_create` and `rhythmic_pattern_create` copy.
 
 ## PR #36 and #37, re-verified
 

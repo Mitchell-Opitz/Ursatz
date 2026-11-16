@@ -5,7 +5,6 @@
 #include <stddef.h>
 
 #include "core/rational.h"
-#include "interpretation/interpretation.h"
 #include "meter_analysis_input.h"
 #include "time/meter_map.h"
 
@@ -19,13 +18,9 @@
  * it is offered, never applied. Of equal scores with equal barlines the one nearest the common onset interval of an eighth
  * note is shown, then the quarter-beat signature. Port of the Analyzer's meter check, on exact Rational; an exact time that
  * does not fit is STANDARD_METER_ANALYSIS_ERR_OVERFLOW, never wrapped.
- *
- * The claim is an Interpretation of type "standard-meter/meter-check" holding a StandardMeterCheck; it has no notes, so the
- * caller names its target (the piece). Its uncertainty is the check's.
  */
 
 #define STANDARD_METER_CHECK_MIN_MARGIN 0.15
-#define STANDARD_METER_CHECK_CLAIM_TYPE "standard-meter/meter-check"
 
 typedef struct {
     const Rational *changes; /* in time order */
@@ -64,11 +59,5 @@ StandardMeterAnalysisStatus standard_meter_check_meter(const MeterMap *map, cons
  */
 StandardMeterAnalysisStatus standard_meter_check_changes(const char *const *labels, const long *regions, const Rational *times,
                                                          size_t count, Rational **out, size_t *out_count);
-
-/* An Interpretation of the check targeting `target_id`. NULL on a bad argument, a check that is not present, or failure. */
-Interpretation *standard_meter_check_interpretation(const StandardMeterCheck *check, const char *target_id);
-
-/* Reads the check back from its Interpretation. False when it is not a meter-check claim. */
-bool standard_meter_check_claim_read(const Interpretation *interpretation, StandardMeterCheck *out);
 
 #endif

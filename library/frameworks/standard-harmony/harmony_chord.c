@@ -2,14 +2,8 @@
 
 #include <stddef.h>
 
-static const char *const NAMES[HARMONY_MODE_COUNT] = {"major", "minor"};
-
 bool harmony_mode_valid(HarmonyMode mode) {
     return mode >= 0 && mode < HARMONY_MODE_COUNT;
-}
-
-const char *harmony_mode_name(HarmonyMode mode) {
-    return harmony_mode_valid(mode) ? NAMES[mode] : NULL;
 }
 
 bool harmony_chord_valid(const HarmonyChord *chord) {

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,18 @@
 #include <ursatz_composer/regenerate.h>
 #include "check/hearing.h"
 #include "support/test_support.h"
+#include "support/test_composer.h"
+
+/* A single target regenerated: plan_regenerate_all with a list of one. */
+static RegenerateResult regenerate_one(PiecePlan *plan, FillTarget target, const ComposeConfig *config,
+                                       ComposeOutcome *outcome) {
+    return plan_regenerate_all(plan, &target, 1, config, outcome);
+}
+
+/* How many spans the Analyzer has been handed so far, in all hearings of this process. */
+static size_t analyzer_calls(void) {
+    return atomic_load(&hearing_analyzer_calls_made);
+}
 
 /*
  * Locking and regenerating (regenerate.h, R-072): a rounded binary of 24 bars in C major 4/4 with an invented motive,
@@ -228,7 +241,7 @@ static FillTarget pick(const Piece *piece, TargetKind kind, Rational *from) {
 static Rational rewritten_from(const PiecePlan *plan, FillTarget target, Rational from) {
     FillTarget *scope = NULL;
     size_t count = 0;
-    assert(plan_regenerate_scope(plan, target, &scope, &count) == REGENERATE_OK);
+    assert(plan_regenerate_scope_all(plan, &target, 1, &scope, &count) == REGENERATE_OK);
     for (size_t i = 0; i < count; i++) {
         if (scope[i].kind == FILL_TARGET_LANE_SPAN) {
             Rational at = plan_lane_span_span(plan, (LaneSpanId)scope[i].id).start;
@@ -257,7 +270,7 @@ static RegenerateResult regenerate_retry(Piece *piece, TargetKind kind, unsigned
         trial.plan = fresh;
         bind(&trial);
         compose_outcome_destroy(outcome);
-        result = plan_regenerate(fresh, pick(&trial, kind, &from), &config, outcome);
+        result = regenerate_one(fresh, pick(&trial, kind, &from), &config, outcome);
         plan_destroy(piece->plan);
         piece->plan = fresh;
         *used = seed + attempt;
@@ -665,9 +678,9 @@ static int test_section(void) {
 
 static int test_scope(void) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        size_t calls = hearing_analyzer_calls();
+        size_t calls = analyzer_calls();
         Piece piece = fill(seed);
-        size_t full_calls = hearing_analyzer_calls() - calls;
+        size_t full_calls = analyzer_calls() - calls;
         assert(full_calls > 0);
 
         /* Regenerating B hears B only (A and A' are not open, so they are not in the outcome) and leaves their notes
@@ -677,9 +690,9 @@ static int test_scope(void) {
         ComposeOutcome outcome;
         unsigned long used;
         memset(&outcome, 0, sizeof(outcome));
-        calls = hearing_analyzer_calls();
+        calls = analyzer_calls();
         assert(regenerate_retry(&piece, TARGET_B, seed + 100, &outcome, &used) == REGENERATE_OK);
-        size_t regenerate_calls = hearing_analyzer_calls() - calls;
+        size_t regenerate_calls = analyzer_calls() - calls;
         char *a_after = section_text(piece.plan, piece.a);
         char *return_after = section_text(piece.plan, piece.a_return);
         assert(strcmp(a_before, a_after) == 0);
@@ -917,9 +930,9 @@ static int test_locked(void) {
     LaneSpanId locked_span = span_in(plan, piece.a_return, PLAN_LANE_HARMONY, 0);
     assert(plan_lock(plan, span_target(locked_span)) == PLAN_OK);
     char *before = json_of(plan);
-    assert(plan_regenerate(plan, node_target(piece.a), &config, &outcome) == REGENERATE_ERR_LOCKED);
-    assert(plan_regenerate(plan, span_target(locked_span), &config, &outcome) == REGENERATE_ERR_LOCKED);
-    assert(plan_regenerate(plan, span_target(span_in(plan, piece.a, PLAN_LANE_BASS, 0)), &config, &outcome) == REGENERATE_ERR_LOCKED);
+    assert(regenerate_one(plan, node_target(piece.a), &config, &outcome) == REGENERATE_ERR_LOCKED);
+    assert(regenerate_one(plan, span_target(locked_span), &config, &outcome) == REGENERATE_ERR_LOCKED);
+    assert(regenerate_one(plan, span_target(span_in(plan, piece.a, PLAN_LANE_BASS, 0)), &config, &outcome) == REGENERATE_ERR_LOCKED);
 
     /* What cannot be regenerated: the form's meter (Given, so locked), a motive, the material, a target that is not there. */
     LaneSpanId meter = PLAN_LANE_SPAN_NONE;
@@ -933,13 +946,13 @@ static int test_locked(void) {
         motive = plan_node_kind(plan, id) == PLAN_NODE_MOTIVE ? id : motive;
     }
     assert(meter != PLAN_LANE_SPAN_NONE && motive != PLAN_NODE_NONE);
-    assert(plan_regenerate(plan, node_target(material), &config, &outcome) == REGENERATE_ERR_BAD_TARGET);
-    assert(plan_regenerate(plan, node_target(motive), &config, &outcome) == REGENERATE_ERR_BAD_TARGET);
-    assert(plan_regenerate(plan, span_target(meter), &config, &outcome) == REGENERATE_ERR_LOCKED);
+    assert(regenerate_one(plan, node_target(material), &config, &outcome) == REGENERATE_ERR_BAD_TARGET);
+    assert(regenerate_one(plan, node_target(motive), &config, &outcome) == REGENERATE_ERR_BAD_TARGET);
+    assert(regenerate_one(plan, span_target(meter), &config, &outcome) == REGENERATE_ERR_LOCKED);
     assert(plan_lane_span_set_state(plan, meter, PLAN_STATE_GIVEN) == PLAN_OK);
-    assert(plan_regenerate(plan, node_target(9999), &config, &outcome) == REGENERATE_ERR_NOT_FOUND);
-    assert(plan_regenerate(plan, span_target(99999), &config, &outcome) == REGENERATE_ERR_NOT_FOUND);
-    assert(plan_regenerate(NULL, node_target(piece.b), &config, &outcome) == REGENERATE_ERR_NULL);
+    assert(regenerate_one(plan, node_target(9999), &config, &outcome) == REGENERATE_ERR_NOT_FOUND);
+    assert(regenerate_one(plan, span_target(99999), &config, &outcome) == REGENERATE_ERR_NOT_FOUND);
+    assert(regenerate_one(NULL, node_target(piece.b), &config, &outcome) == REGENERATE_ERR_NULL);
     char *after = json_of(plan);
     assert(strcmp(before, after) == 0);
     free(before);
@@ -949,7 +962,7 @@ static int test_locked(void) {
     LaneSpanId inside = span_in(plan, piece.b, PLAN_LANE_MELODY, 1);
     assert(plan_lock(plan, span_target(inside)) == PLAN_OK);
     before = json_of(plan);
-    assert(plan_regenerate(plan, node_target(piece.b), &config, &outcome) == REGENERATE_ERR_LOCKED);
+    assert(regenerate_one(plan, node_target(piece.b), &config, &outcome) == REGENERATE_ERR_LOCKED);
     after = json_of(plan);
     assert(strcmp(before, after) == 0);
     free(before);
@@ -976,7 +989,7 @@ static int test_locked(void) {
         memcpy(notes, held->notes, note_count * sizeof(PlanNote));
         PlanSpan locked_at = plan_lane_span_span(plan, bass);
         config = config_of(seed + 500);
-        RegenerateResult result = plan_regenerate(plan, target, &config, &outcome);
+        RegenerateResult result = regenerate_one(plan, target, &config, &outcome);
         assert(result == REGENERATE_OK || result == REGENERATE_ERR_STUCK);
         assert(plan_lane_span_state(plan, bass) == PLAN_STATE_GIVEN);
         assert(rational_cmp(plan_lane_span_span(plan, bass).start, locked_at.start) == 0);
@@ -1037,7 +1050,7 @@ static int test_determinism(void) {
             memset(&outcome, 0, sizeof(outcome));
             assert(plan_from_json(snapshot, &again.plan, NULL) == PLAN_OK);
             bind(&again);
-            results[run] = plan_regenerate(again.plan, pick(&again, KINDS[k], &from), &config, &outcome);
+            results[run] = regenerate_one(again.plan, pick(&again, KINDS[k], &from), &config, &outcome);
             assert(results[run] == REGENERATE_OK || results[run] == REGENERATE_ERR_STUCK);
             plans[run] = json_of(again.plan);
             records[run] = records_of(&outcome);
@@ -1093,7 +1106,7 @@ static void expect_failure(const char *command, const char *arguments, int statu
 /* The text of a section of a plan file, by the child index in the form. */
 static char *file_section_text(const char *path, size_t index) {
     PiecePlan *plan = NULL;
-    assert(plan_read_json_file(path, &plan, NULL) == PLAN_OK);
+    assert(test_read_plan_file(path, &plan, NULL) == PLAN_OK);
     char *text = section_text(plan, plan_node_child_at(plan, plan_root(plan), index));
     plan_destroy(plan);
     return text;
@@ -1107,7 +1120,7 @@ static int test_cli(void) {
     /* lock */
     expect_success("lock", "regenerate_cli_filled.json --section A --out regenerate_cli_locked.json", "locked section A:");
     PiecePlan *locked = NULL;
-    assert(plan_read_json_file("regenerate_cli_locked.json", &locked, NULL) == PLAN_OK);
+    assert(test_read_plan_file("regenerate_cli_locked.json", &locked, NULL) == PLAN_OK);
     assert(plan_node_state(locked, plan_node_child_at(locked, plan_root(locked), 0)) == PLAN_STATE_GIVEN);
     assert(plan_node_state(locked, plan_node_child_at(locked, plan_root(locked), 1)) == PLAN_STATE_REALIZED);
     plan_destroy(locked);

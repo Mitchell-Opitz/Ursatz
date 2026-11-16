@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "analysis_test_util.h"
-#include "interpretation/interpretation.h"
 #include "meter_analysis_check.h"
 
 static Rational q(long long n, long long d) {
@@ -170,28 +169,6 @@ static void test_changes(void) {
     assert(standard_meter_check_changes(NULL, NULL, times, 1, NULL, &count) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
 }
 
-static void test_claim(void) {
-    Piece piece;
-    piece_init(&piece, 6, 3);
-    Rational changes[32];
-    size_t n = times_every(changes, q(0, 1), q(1, 4), q(6, 1));
-    StandardMeterCheck check = run(piece.map, changes, n, NULL, 0, NULL, 0);
-    assert(check.present);
-    Interpretation *claim = standard_meter_check_interpretation(&check, "piece-1");
-    assert(claim != NULL);
-    StandardMeterCheck read;
-    assert(standard_meter_check_claim_read(claim, &read));
-    assert(memcmp(&read, &check, sizeof(check)) == 0);
-    interpretation_destroy(claim);
-
-    StandardMeterCheck absent;
-    memset(&absent, 0, sizeof(absent));
-    assert(standard_meter_check_interpretation(&absent, "piece-1") == NULL);
-    assert(standard_meter_check_interpretation(&check, NULL) == NULL);
-    assert(!standard_meter_check_claim_read(NULL, &read));
-    piece_destroy(&piece);
-}
-
 int main(void) {
     test_effective_reading_alone();
     test_three_four_written_in_six_eight();
@@ -202,7 +179,6 @@ int main(void) {
     test_overflow_is_reported();
     test_bad_arguments();
     test_changes();
-    test_claim();
     printf("test_meter_analysis_check: ok\n");
     return 0;
 }

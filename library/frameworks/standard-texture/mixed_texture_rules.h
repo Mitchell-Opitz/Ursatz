@@ -6,8 +6,6 @@
 
 #include "identity/entity_id.h"
 #include "interpretation/texture.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "texture_rules.h"
 
 /*
@@ -40,16 +38,6 @@ typedef struct {
     StandardTexture texture;
 } StandardTextureSegment;
 
-typedef enum {
-    STANDARD_TEXTURE_MIXED_RULE_SEGMENTS = 0,
-    STANDARD_TEXTURE_MIXED_RULE_CHANGES,
-    STANDARD_TEXTURE_MIXED_RULE_LABEL,
-    STANDARD_TEXTURE_MIXED_RULE_COUNT
-} StandardTextureMixedRule;
-
-const Rule *standard_texture_mixed_rule(StandardTextureMixedRule which);
-const Constraint *standard_texture_mixed_constraint(StandardTextureMixedRule which);
-
 /* SEGMENTS: true when the list holds at least one segment and every
    segment has a passage and a valid texture. False for NULL. */
 bool standard_texture_segments_valid(const StandardTextureSegment *segments, size_t count);
@@ -63,23 +51,5 @@ bool standard_texture_segments_valid(const StandardTextureSegment *segments, siz
  */
 size_t standard_texture_change_points(const StandardTextureSegment *segments, size_t count, bool by_category,
                                       size_t *indices, size_t capacity);
-
-/* CHANGES: how many different textures (or categories) the segments use.
-   0 for an invalid list. */
-size_t standard_texture_distinct_count(const StandardTextureSegment *segments, size_t count, bool by_category);
-
-/* CHANGES: true when the work's texture changes by category. False for
-   an invalid list and for a single texture throughout. */
-bool standard_texture_is_mixed(const StandardTextureSegment *segments, size_t count);
-
-/*
- * LABEL: builds a real, populated Texture labeled with the texture's name,
- * claiming that the passage named by passage_id has that texture under
- * standard-texture-v1. Takes ownership of passage_id on success
- * (destroyed with the Texture); on failure the caller still owns it. An
- * invalid texture is TEXTURE_ERR_NULL_LABEL; other TextureResult errors
- * as in interpretation/texture.h.
- */
-TextureResult standard_texture_build_texture(StandardTexture texture, EntityID *passage_id, Texture **out);
 
 #endif

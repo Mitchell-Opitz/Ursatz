@@ -14,8 +14,7 @@
  *
  * Fields: id, framework, scope.
  *
- * framework is a reference only, not owned -- the same reference-only
- * pattern Context uses for its parent (context/context.h): rule_destroy
+ * framework is a reference only, not owned: rule_destroy
  * never destroys a Rule's framework, since the same Framework is
  * expected to be referenced by many Rules/Constraints/Preferences.
  * Caller is responsible for the Framework's lifetime. music-rules
@@ -45,11 +44,5 @@ typedef enum {
  */
 RuleResult rule_create(EntityID *id, const Framework *framework, Value *scope, Rule **out);
 void rule_destroy(Rule *rule);
-
-const EntityID *rule_id(const Rule *rule);
-const Framework *rule_framework(const Rule *rule);
-const Value *rule_scope(const Rule *rule);
-
-bool rule_identity_equals(const Rule *a, const Rule *b);
 
 #endif

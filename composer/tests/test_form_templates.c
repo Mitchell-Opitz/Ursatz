@@ -10,6 +10,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * Form templates, every template and size, in C major 4/4 and A minor 3/4, with a motive invented and with the given
@@ -444,7 +445,7 @@ static Motive scenario_motive(const Scenario *scenario) {
     MotiveError error;
     char path[1024];
     snprintf(path, sizeof(path), "%s/motive_d_minor.json", COMPOSER_FIXTURE_DIR);
-    if (motive_load_file(path, MOTIVE_FORMAT_JSON, NULL, &motive, &error) != MOTIVE_OK) {
+    if (test_load_motive_file(path, MOTIVE_FORMAT_JSON, NULL, &motive, &error) != MOTIVE_OK) {
         fprintf(stderr, "cannot load %s: %s\n", path, error.message);
         exit(2);
     }

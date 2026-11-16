@@ -88,39 +88,3 @@ unsigned long metronome_marking_bpm_numerator(const MetronomeMarking *marking) {
 unsigned long metronome_marking_bpm_denominator(const MetronomeMarking *marking) {
     return content_of(marking)->bpm_denominator;
 }
-
-void metronome_marking_seconds_per_beat_unit(const MetronomeMarking *marking, unsigned long *out_numerator,
-                                             unsigned long *out_denominator) {
-    const MetronomeMarkingContent *content = content_of(marking);
-    unsigned long numerator = 60UL * content->bpm_denominator;
-    unsigned long denominator = content->bpm_numerator;
-    reduce(&numerator, &denominator);
-    *out_numerator = numerator;
-    *out_denominator = denominator;
-}
-
-void metronome_marking_seconds_for_duration(const MetronomeMarking *marking, const Duration *duration,
-                                            unsigned long *out_numerator, unsigned long *out_denominator) {
-    const MetronomeMarkingContent *content = content_of(marking);
-
-    /* (duration / beat_unit) * (60 / bpm) */
-    unsigned long numerator =
-        (unsigned long)duration_numerator(duration) * content->beat_unit_denominator * 60UL * content->bpm_denominator;
-    unsigned long denominator =
-        duration_denominator(duration) * content->beat_unit_numerator * content->bpm_numerator;
-    if (numerator == 0) {
-        *out_numerator = 0;
-        *out_denominator = 1;
-        return;
-    }
-    reduce(&numerator, &denominator);
-    *out_numerator = numerator;
-    *out_denominator = denominator;
-}
-
-bool metronome_marking_equals(const MetronomeMarking *a, const MetronomeMarking *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return value_equals(a->value, b->value);
-}

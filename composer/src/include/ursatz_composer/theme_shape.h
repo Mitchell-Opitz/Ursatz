@@ -97,9 +97,7 @@ typedef struct {
     const char *node_name;
 } ThemeShapeSlot;
 
-/* The halves: the three beginnings, then the three endings, in enum order. NULL past the end. */
-size_t theme_shape_half_count(void);
-const ThemeShapeHalf *theme_shape_half_at(size_t index);
+/* The halves: the three beginnings, then the three endings, in enum order. */
 const ThemeShapeHalf *theme_shape_beginning(PlanThemeBeginning beginning);
 const ThemeShapeHalf *theme_shape_ending(PlanThemeEnding ending);
 /* The half of that kind with that plan name; NULL for an unknown name or NULL. */

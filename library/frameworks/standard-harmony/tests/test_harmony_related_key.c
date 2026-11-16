@@ -16,18 +16,6 @@ static HarmonyRelatedKey key(int degree, HarmonyMode mode) {
     return k;
 }
 
-static void test_the_numerals(void) {
-    const char *const major[] = {"I", "ii", "iii", "IV", "V", "vi", "viio"};
-    const char *const minor[] = {"i", "iio", "III", "iv", "v", "VI", "VII"};
-    for (int degree = 1; degree <= 7; degree++) {
-        assert(strcmp(harmony_triad_numeral(MAJ, degree), major[degree - 1]) == 0);
-        assert(strcmp(harmony_triad_numeral(MIN, degree), minor[degree - 1]) == 0);
-    }
-    assert(harmony_triad_numeral(MAJ, 0) == NULL);
-    assert(harmony_triad_numeral(MAJ, 8) == NULL);
-    assert(harmony_triad_numeral(HARMONY_MODE_COUNT, 1) == NULL);
-}
-
 static void test_there_are_five_closely_related_keys(void) {
     assert(harmony_related_key_count(MAJ) == 5);
     assert(harmony_related_key_count(MIN) == 5);
@@ -99,41 +87,20 @@ static void test_the_circle_of_fifths_neighbors_of_f_major(void) {
     assert(harmony_related_key_of(MAJ, 3, &found) && found.mode == MIN);
 }
 
-static void test_the_ranks(void) {
-    assert(harmony_key_relation_rank_valid(COMMON));
-    assert(harmony_key_relation_rank_valid(OTHER));
-    assert(!harmony_key_relation_rank_valid(NONE));
-    assert(!harmony_key_relation_rank_valid((HarmonyKeyRelationRank)-1));
-    assert(strcmp(harmony_key_relation_rank_name(COMMON), "common") == 0);
-    assert(strcmp(harmony_key_relation_rank_name(OTHER), "other") == 0);
-    assert(harmony_key_relation_rank_name(NONE) == NULL);
-}
-
 static void test_the_common_modulations(void) {
     for (int degree = 2; degree <= 6; degree++) {
         HarmonyRelatedKey k;
         assert(harmony_related_key_of(MAJ, degree, &k));
-        assert(harmony_key_relation_rank(MAJ, &k) == (degree == 5 || degree == 6 ? COMMON : OTHER));
     }
-    for (int degree = 3; degree <= 7; degree++) {
-        HarmonyRelatedKey k;
-        assert(harmony_related_key_of(MIN, degree, &k));
-        assert(harmony_key_relation_rank(MIN, &k) == (degree == 3 || degree == 5 ? COMMON : OTHER));
-    }
-    HarmonyRelatedKey tonic = key(1, MAJ);
-    assert(harmony_key_relation_rank(MAJ, &tonic) == NONE);
-    assert(harmony_key_relation_rank(MAJ, NULL) == NONE);
 }
 
 int main(void) {
-    test_the_numerals();
     test_there_are_five_closely_related_keys();
     test_the_keys_in_scale_order();
     test_the_key_of_a_diatonic_chord();
     test_a_closely_related_key();
     test_the_tonic_of_each_key();
     test_the_circle_of_fifths_neighbors_of_f_major();
-    test_the_ranks();
     test_the_common_modulations();
     printf("test_harmony_related_key: all tests passed\n");
     return 0;

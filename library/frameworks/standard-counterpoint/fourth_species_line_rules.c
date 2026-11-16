@@ -37,22 +37,6 @@ static bool valid_rule(StandardCounterpointFourthSpeciesLineRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_fourth_species_line_rule(StandardCounterpointFourthSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_fourth_species_line_constraint(StandardCounterpointFourthSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_fourth_species_line_preference(StandardCounterpointFourthSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_fourth_species_line_rule_name(StandardCounterpointFourthSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
 typedef struct {

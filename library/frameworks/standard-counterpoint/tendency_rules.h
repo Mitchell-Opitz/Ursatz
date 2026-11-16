@@ -4,9 +4,6 @@
 #include <stdbool.h>
 
 #include "counterpoint_line.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * Melodic tendency preferences for standard-counterpoint-v1: five general
@@ -44,11 +41,6 @@ typedef enum {
     STANDARD_COUNTERPOINT_TENDENCY_MELODIC_ARCH,
     STANDARD_COUNTERPOINT_TENDENCY_COUNT
 } StandardCounterpointTendency;
-
-const Rule *standard_counterpoint_tendency_rule(StandardCounterpointTendency which);
-const Constraint *standard_counterpoint_tendency_constraint(StandardCounterpointTendency which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_tendency_preference(StandardCounterpointTendency which);
 
 /* "pitch-proximity" "step-declination" "step-inertia" "melodic-regression"
    "melodic-arch"; NULL for an invalid tendency. */

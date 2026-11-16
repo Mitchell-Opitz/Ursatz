@@ -17,8 +17,7 @@
  * Deterministic, single-answer key identification for
  * common-practice-minimal-v1.
  *
- * Input shape: the same caller-supplies-the-dimension pattern
- * triad_identification.h uses. PitchIdentity carries no numeric
+ * Input shape: the caller supplies the dimension. PitchIdentity carries no numeric
  * semantics yet, so this module does not derive intervals from a
  * Sonority/Context itself -- the caller supplies each note's interval
  * in semitones (0-11) from a candidate tonic, already measured by

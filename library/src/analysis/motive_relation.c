@@ -1816,10 +1816,6 @@ bool motive_relation_harmony_changes_notes(const MotiveSketch *in, const MotiveR
     return false;
 }
 
-size_t motive_relation_count(void) {
-    return MOTIVE_RELATION_KIND_COUNT;
-}
-
 const char *motive_relation_name(MotiveRelationKind kind) {
     return (unsigned)kind < MOTIVE_RELATION_KIND_COUNT ? TABLE[kind].name : NULL;
 }
@@ -1843,13 +1839,6 @@ size_t motive_relation_param_count(MotiveRelationKind kind) {
 
 int motive_relation_cost(MotiveRelationKind kind) {
     return (unsigned)kind < MOTIVE_RELATION_KIND_COUNT ? TABLE[kind].cost : 0;
-}
-
-static const char *const RESULT_NAMES[] = {"ok",       "not applicable", "unchanged", "range",   "not expressible",
-                                           "no scale", "no harmony",     "no feature", "invalid"};
-
-const char *motive_relation_result_name(MotiveRelationResult result) {
-    return (size_t)result < sizeof(RESULT_NAMES) / sizeof(RESULT_NAMES[0]) ? RESULT_NAMES[result] : "unknown";
 }
 
 MotiveRelationResult motive_relation_apply(const MotiveSketch *in, const MotiveRelationStep *step,
@@ -1914,13 +1903,6 @@ static const char *const PARAM_NAMES[MOTIVE_RELATION_KIND_COUNT][MOTIVE_RELATION
     [MOTIVE_RELATION_CHANGE_NON_CHORD_TONE] = {"note", "type"},
     [MOTIVE_RELATION_REHARMONIZE_FRAME] = {"degree", "seventh"},
 };
-
-const char *motive_relation_param_name(MotiveRelationKind kind, size_t index) {
-    if ((unsigned)kind >= MOTIVE_RELATION_KIND_COUNT || index >= motive_relation_param_count(kind)) {
-        return NULL;
-    }
-    return PARAM_NAMES[kind][index];
-}
 
 /* --- parameter metadata --------------------------------------------------------------------------- */
 

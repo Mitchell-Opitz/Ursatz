@@ -359,8 +359,4 @@ typedef struct {
 VariantResult variant_recognize_depth(const Motive *source, const Motive *target, size_t depth, VariantChain *chain,
                                       VariantRecognition *out);
 
-/* variant_recognize_depth at the depth VARIANT_CHAIN_MAX. */
-VariantResult variant_recognize(const Motive *source, const Motive *target, VariantChain *chain,
-                                VariantRecognition *out);
-
 #endif

@@ -1,12 +1,7 @@
 #include "structure/phrase_occurrence.h"
+#include "structure/phrase_occurrence_internal.h"
 
 #include <stdlib.h>
-
-struct PhraseOccurrence {
-    Occurrence *occurrence;
-    EntityID **region_event_ids;
-    size_t region_event_id_count;
-};
 
 PhraseOccurrenceResult phrase_occurrence_create(Occurrence *occurrence, EntityID **region_event_ids,
                                                  size_t region_event_id_count, PhraseOccurrence **out) {
@@ -62,12 +57,4 @@ const EntityID *phrase_occurrence_id(const PhraseOccurrence *phrase_occurrence) 
 
 const EntityID *phrase_occurrence_phrase_id(const PhraseOccurrence *phrase_occurrence) {
     return occurrence_target_id(phrase_occurrence->occurrence);
-}
-
-size_t phrase_occurrence_region_event_id_count(const PhraseOccurrence *phrase_occurrence) {
-    return phrase_occurrence->region_event_id_count;
-}
-
-const EntityID *phrase_occurrence_region_event_id_at(const PhraseOccurrence *phrase_occurrence, size_t index) {
-    return phrase_occurrence->region_event_ids[index];
 }

@@ -20,7 +20,6 @@
 #include <standard-harmony/harmony_predominant_seventh.h>
 #include <standard-harmony/harmony_strong_predominants.h>
 
-#include <ursatz_composer/harmony_octave.h>
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
 #include <ursatz_composer/seam_hear.h>
@@ -408,53 +407,6 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
     if (strcmp(operator_->generator.name, HARMONY_BASS_OPERATOR_NAME) == 0) {
         return harmony_bass_check(candidate->payload, out);
     }
-    if (strcmp(operator_->generator.name, HARMONY_OCTAVE_OPERATOR_NAME) == 0) {
-        return harmony_octave_check(candidate->payload, out);
-    }
     return fill_default_checker(plan, target, operator_, candidate, context, out);
 }
 
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode,
-                                         const char **violation) {
-    PhraseMetre metre;
-    PhraseChord chords[HARMONY_MAX_CHORDS];
-    size_t count;
-    PhraseVerdict verdict;
-    if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
-        return false;
-    }
-    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false, &metre};
-    if (!harmony_judge(&phrase, &verdict)) {
-        return false;
-    }
-    *violation = verdict.hard;
-    return true;
-}
-
-/* Marks the chords of the lane over span that a schema made: they need no reason of their own to be there. */
-static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t count, bool *exempt) {
-    LaneSpanId ids[HARMONY_MAX_CHORDS];
-    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
-    for (size_t i = 0; i < count; i++) {
-        exempt[i] = i < found && plan_lane_span_find_constraint(plan, ids[i], PLAN_CONSTRAINT_SCHEMA) != NULL;
-    }
-}
-
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
-                        const char **violation) {
-    PhraseMetre metre;
-    PhraseChord chords[HARMONY_MAX_CHORDS];
-    bool exempt[HARMONY_MAX_CHORDS];
-    size_t count;
-    PhraseVerdict verdict;
-    if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
-        return false;
-    }
-    mark_schema_chords(plan, span, count, exempt);
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, exempt, false, false, NULL, NULL, false, &metre};
-    if (!harmony_judge(&phrase, &verdict)) {
-        return false;
-    }
-    *violation = verdict.hard;
-    return true;
-}

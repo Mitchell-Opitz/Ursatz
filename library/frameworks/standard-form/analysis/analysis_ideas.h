@@ -97,7 +97,4 @@ void standard_form_segmentation_destroy(StandardFormSegmentation *segmentation);
 /* The ideas of phrase `phrase` as [*first, *first + *count) in segmentation->ideas. False when the phrase has none. */
 bool standard_form_phrase_ideas(const StandardFormSegmentation *segmentation, int phrase, size_t *first, size_t *count);
 
-bool standard_form_idea_claim_read(const Interpretation *interpretation, StandardFormIdeaClaim *out);
-bool standard_form_subphrase_claim_read(const Interpretation *interpretation, StandardFormSubphraseClaim *out);
-
 #endif

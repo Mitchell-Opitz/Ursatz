@@ -43,11 +43,6 @@ const char *grow_slot_name(GrowSlot slot) {
     return row ? row->name : "unknown";
 }
 
-const char *grow_slot_function(GrowSlot slot) {
-    const ThemeShapeSlot *row = theme_shape_slot(slot);
-    return row ? row->function : "unknown";
-}
-
 const char *grow_slot_node_name(GrowSlot slot) {
     const ThemeShapeSlot *row = theme_shape_slot(slot);
     return row ? row->node_name : NULL;
@@ -627,10 +622,6 @@ GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType fir
         result = check_cadence_bar(request, bar, (long)beginning_bars - 1, first, refusal);
     }
     return result;
-}
-
-GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
-    return grow_build_plan_checked(request, out, NULL);
 }
 
 GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal) {

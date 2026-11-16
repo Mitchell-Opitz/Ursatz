@@ -7,6 +7,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The rows of a sonatina (P53 B3, R-525): B1 returns B at home, so in A minor its row names the copy across modes (`changes.mode`
@@ -47,7 +48,7 @@ static void check(const char *key, const char *mode, const char *b1_key, const c
     ComposerResponse response;
     ComposerStatus status = composer_api_piece(request, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "test_api_sonata: %s: %s\n", composer_status_name(status), response.error.message);
+        fprintf(stderr, "test_api_sonata: %s: %s\n", test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);

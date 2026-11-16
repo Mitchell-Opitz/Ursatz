@@ -4,7 +4,6 @@
 
 #include "galant_matching_rules.h"
 #include "galant_prototypes.h"
-#include "galant_rule_check.h"
 #include "galant_test_util.h"
 
 #define MATCH(name) GALANT_MATCH_##name
@@ -12,24 +11,6 @@
 static bool holds(GalantMatchRule rule, GalantSchemaId id, const GalantExemplar *exemplar) {
     GalantMatch match = {galant_prototype(id), exemplar};
     return galant_matching_rule_holds(rule, &match);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(galant_matching_rule, galant_matching_constraint, GALANT_MATCH_RULE_COUNT);
-    for (int i = 0; i < GALANT_MATCH_RULE_COUNT; i++) {
-        ConstraintType type = constraint_type(galant_matching_constraint((GalantMatchRule)i));
-        assert(type == (i <= MATCH(BASS_DEFINING) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(galant_matching_rule_name(MATCH(STAGE_COUNT)), "stage-count") == 0);
-    assert(strcmp(galant_matching_rule_name(MATCH(METER)), "meter") == 0);
-    assert(strcmp(galant_matching_rule_name(MATCH(MELODY)), "melody") == 0);
-    assert(strcmp(galant_matching_rule_name(MATCH(BASS_DEFINING)), "bass-defining") == 0);
-    assert(strcmp(galant_matching_rule_name(MATCH(BASS_USUAL)), "bass-usual") == 0);
-    assert(strcmp(galant_matching_rule_name(MATCH(TENTHS)), "tenths") == 0);
-    assert(galant_matching_rule_name(MATCH(RULE_COUNT)) == NULL);
 }
 
 static void test_good_exemplars(void) {
@@ -228,8 +209,6 @@ static void test_invalid_and_check(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_exemplars();
     test_stage_count();
     test_meter();

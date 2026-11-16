@@ -34,6 +34,4 @@ ProvenanceReferenceState provenance_reference_state(const ProvenanceReference *r
 /* NULL when state is PROVENANCE_REFERENCE_ABSENT. */
 const EntityID *provenance_reference_target_id(const ProvenanceReference *reference);
 
-bool provenance_reference_equals(const ProvenanceReference *a, const ProvenanceReference *b);
-
 #endif

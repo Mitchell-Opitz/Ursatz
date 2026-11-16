@@ -5,22 +5,6 @@
 #include "counterpoint_pitch.h"
 #include "rule_table.h"
 
-static const char *const NAMES[STANDARD_COUNTERPOINT_MOTION_RULE_COUNT] = {
-    "motion-contrary", "motion-similar", "motion-parallel", "motion-oblique", "motion-static"};
-
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_MOTION_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_MOTION_RULE_COUNT];
-static const StandardCounterpointRuleTable TABLE = {
-    NULL, NAMES, STANDARD_COUNTERPOINT_MOTION_RULE_COUNT, NULL, g_pairs, g_built};
-
-const Rule *standard_counterpoint_motion_rule(StandardCounterpointMotionRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_motion_constraint(StandardCounterpointMotionRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
 bool standard_counterpoint_classify_motion(const PitchSpelling *lower_from, const PitchSpelling *lower_to,
                                            const PitchSpelling *upper_from, const PitchSpelling *upper_to,
                                            MotionType *out) {

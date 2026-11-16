@@ -102,22 +102,6 @@ static bool open_on_cadential_six_four(const PhraseRequest *request, PhraseChord
 #define SHAPED_DEAL_ATTEMPTS 96
 #define GIVEN_DEAL_ATTEMPTS 480
 
-bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, size_t count, size_t cells_per_bar,
-                         bool exempt_last) {
-    size_t start = 0;
-    for (size_t i = 0; i < count; i++) {
-        bool last = i + 1 == count;
-        if (shape->max_cells_per_chord > 0 && cells[i] > (size_t)shape->max_cells_per_chord && !(last && exempt_last)) {
-            return false;
-        }
-        if (shape->split_at_bars && start % cells_per_bar + cells[i] > cells_per_bar) {
-            return false;
-        }
-        start += cells[i];
-    }
-    return true;
-}
-
 bool harmony_shape_keeps_in(const PlanHarmonyShape *shape, const size_t *cells, size_t count, const PhraseMetre *metre,
                             bool exempt_last) {
     size_t start = 0;

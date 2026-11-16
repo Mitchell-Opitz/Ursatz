@@ -32,10 +32,6 @@ typedef enum {
 /* True for the four labels above; false for any other value. */
 bool phrase_model_label_valid(PhraseModelLabel label);
 
-/* "tonic-beginning" "predominant" "dominant" "tonic-ending"; NULL for an invalid
-   label. */
-const char *phrase_model_label_name(PhraseModelLabel label);
-
 /* "Tb" "PD" "D" "Te"; NULL for an invalid label. */
 const char *phrase_model_label_abbreviation(PhraseModelLabel label);
 

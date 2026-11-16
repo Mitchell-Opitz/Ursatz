@@ -54,7 +54,4 @@ HarmonyFunctionStatus harmony_analysis_assign_functions(const HarmonySegment *se
 
 void harmony_function_results_destroy(HarmonyFunctionResult *results, size_t count);
 
-/* Reads the claim back out of a function Interpretation. False if it is not one. */
-bool harmony_function_claim_read(const Interpretation *interpretation, HarmonyFunctionClaim *out);
-
 #endif

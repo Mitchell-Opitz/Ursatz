@@ -33,31 +33,6 @@ static bool classifies(HarmonyChord a, HarmonyChord b, HarmonyChord c) {
     return line_of(a, b, c, &line);
 }
 
-static void test_validity_and_names(void) {
-    for (int i = 0; i < HARMONY_PROLONGATION_LINE_COUNT; i++) {
-        assert(harmony_prolongation_line_valid((HarmonyProlongationLine)i));
-    }
-    assert(!harmony_prolongation_line_valid(HARMONY_PROLONGATION_LINE_COUNT));
-    assert(!harmony_prolongation_line_valid((HarmonyProlongationLine)-1));
-    assert(strcmp(harmony_prolongation_line_name(DO_TI_DO), "do-ti-do") == 0);
-    assert(strcmp(harmony_prolongation_line_name(DO_RE_MI), "do-re-mi") == 0);
-    assert(strcmp(harmony_prolongation_line_name(DO_RE_DO), "do-re-do") == 0);
-    assert(strcmp(harmony_prolongation_line_name(DO_FA_MI), "do-fa-mi") == 0);
-    assert(harmony_prolongation_line_name(HARMONY_PROLONGATION_LINE_COUNT) == NULL);
-}
-
-static void test_bass_lines(void) {
-    int bass[3] = {0, 0, 0};
-    assert(harmony_prolongation_line_bass(DO_TI_DO, bass) && bass[0] == 1 && bass[1] == 7 && bass[2] == 1);
-    assert(harmony_prolongation_line_bass(DO_RE_MI, bass) && bass[0] == 1 && bass[1] == 2 && bass[2] == 3);
-    assert(harmony_prolongation_line_bass(DO_RE_DO, bass) && bass[0] == 1 && bass[1] == 2 && bass[2] == 1);
-    assert(harmony_prolongation_line_bass(DO_FA_MI, bass) && bass[0] == 1 && bass[1] == 4 && bass[2] == 3);
-    bass[0] = 99;
-    assert(!harmony_prolongation_line_bass(HARMONY_PROLONGATION_LINE_COUNT, bass));
-    assert(bass[0] == 99);
-    assert(!harmony_prolongation_line_bass(DO_TI_DO, NULL));
-}
-
 static void test_the_four_progressions(void) {
     assert(classify(I, V65, I) == DO_TI_DO);
     assert(classify(I, V6, I) == DO_TI_DO); /* V6, the triad, is also possible */
@@ -147,8 +122,6 @@ static void test_invalid_inputs(void) {
 }
 
 int main(void) {
-    test_validity_and_names();
-    test_bass_lines();
     test_the_four_progressions();
     test_other_progressions_are_not_classified();
     test_leading_tone_chords_take_the_place_of_v();

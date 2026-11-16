@@ -151,7 +151,3 @@ bool harmony_roman_format_applied(KeyStructureMode mode, const HarmonyAppliedCho
     return harmony_roman_format_applied_inverted(mode, applied, 0, out);
 }
 
-bool harmony_roman_parse_applied(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out) {
-    int inversion;
-    return harmony_roman_parse_applied_inverted(mode, roman, out, &inversion) && inversion == 0;
-}

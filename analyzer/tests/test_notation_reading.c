@@ -6,8 +6,18 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/notation_reading.h>
 
+#include "core/provenance_reference.h"
+#include "core/voice_reference.h"
+#include "events/note_event.h"
+#include "identity/entity_id.h"
+#include "pitch/pitch_identity.h"
+#include "pitch/pitch_numeric_value.h"
+#include "pitch/pitch_spelling.h"
+#include "pitch/tuning_system.h"
+#include "time/duration.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
+#include "time/temporal_anchor.h"
 
 /*
  * Notation readings: the parsers, scaling that keeps every note's identity, the meter map a reading sets (with and
@@ -23,6 +33,53 @@ static const char *musicxml(const char *name) {
 
 static void load(const char *name, ImportedNotes *notes) {
     assert(input_pipeline_import_file(musicxml(name), INPUT_FORMAT_MUSICXML, notes) == INPUT_PIPELINE_OK);
+}
+
+/* Same token bytes. */
+static bool same_pitch_identity(const PitchIdentity *a, const PitchIdentity *b) {
+    size_t a_size = 0;
+    size_t b_size = 0;
+    const void *a_token = pitch_identity_token(a, &a_size);
+    const void *b_token = pitch_identity_token(b, &b_size);
+    return a_size == b_size && memcmp(a_token, b_token, a_size) == 0;
+}
+
+/* Same tuning system (by identity) and the same position. */
+static bool same_pitch_value(const PitchNumericValue *a, const PitchNumericValue *b) {
+    return entity_id_equals(tuning_system_id(pitch_numeric_value_tuning_system(a)),
+                            tuning_system_id(pitch_numeric_value_tuning_system(b))) &&
+           pitch_numeric_value_position_numerator(a) == pitch_numeric_value_position_numerator(b) &&
+           pitch_numeric_value_position_denominator(a) == pitch_numeric_value_position_denominator(b);
+}
+
+/* Same start, duration, pitch, spelling, voice target and provenance, whatever the ids. */
+static bool same_note_by_value(const NoteEvent *a, const NoteEvent *b) {
+    if (!musical_time_equals(temporal_anchor_position(note_event_temporal_anchor(a)),
+                             temporal_anchor_position(note_event_temporal_anchor(b))) ||
+        !duration_equals(note_event_duration(a), note_event_duration(b)) ||
+        !same_pitch_identity(note_event_pitch(a), note_event_pitch(b))) {
+        return false;
+    }
+    const PitchSpelling *spelling_a = note_event_optional_pitch_spelling(a);
+    const PitchSpelling *spelling_b = note_event_optional_pitch_spelling(b);
+    if ((spelling_a == NULL) != (spelling_b == NULL) ||
+        (spelling_a != NULL && !pitch_spelling_equals(spelling_a, spelling_b))) {
+        return false;
+    }
+    const VoiceReference *voice_a = note_event_optional_voice(a);
+    const VoiceReference *voice_b = note_event_optional_voice(b);
+    if ((voice_a == NULL) != (voice_b == NULL) ||
+        (voice_a != NULL &&
+         !entity_id_equals(voice_reference_target_id(voice_a), voice_reference_target_id(voice_b)))) {
+        return false;
+    }
+    const ProvenanceReference *provenance_a = note_event_provenance(a);
+    const ProvenanceReference *provenance_b = note_event_provenance(b);
+    if (provenance_reference_state(provenance_a) != provenance_reference_state(provenance_b)) {
+        return false;
+    }
+    return provenance_reference_target_id(provenance_a) == NULL ||
+           entity_id_equals(provenance_reference_target_id(provenance_a), provenance_reference_target_id(provenance_b));
 }
 
 static bool time_is(const MusicalTime *time, long numerator, unsigned long denominator) {
@@ -92,7 +149,7 @@ static void test_scale_keeps_identity(void) {
     for (size_t i = 0; i < notes.count; i++) {
         const NoteEvent *old = before.events[i];
         const NoteEvent *now = notes.events[i];
-        assert(note_event_equals_by_id(old, now));
+        assert(entity_id_equals(note_event_id(old), note_event_id(now)));
         assert(strcmp(entity_id_value(note_event_id(old)), entity_id_value(note_event_id(now))) == 0);
         const MusicalTime *old_start = temporal_anchor_position(note_event_temporal_anchor(old));
         const MusicalTime *now_start = temporal_anchor_position(note_event_temporal_anchor(now));
@@ -103,12 +160,12 @@ static void test_scale_keeps_identity(void) {
         const Duration *now_length = note_event_duration(now);
         assert(duration_numerator(now_length) * (long)duration_denominator(old_length) ==
                2 * duration_numerator(old_length) * (long)duration_denominator(now_length));
-        assert(pitch_identity_equals(note_event_pitch(old), note_event_pitch(now)));
+        assert(same_pitch_identity(note_event_pitch(old), note_event_pitch(now)));
         assert(pitch_spelling_equals(note_event_optional_pitch_spelling(old), note_event_optional_pitch_spelling(now)));
         assert((note_event_optional_voice(old) == NULL) == (note_event_optional_voice(now) == NULL));
         assert(provenance_reference_state(note_event_provenance(old)) ==
                provenance_reference_state(note_event_provenance(now)));
-        assert(pitch_numeric_value_equals(before.pitch_values[i], notes.pitch_values[i]));
+        assert(same_pitch_value(before.pitch_values[i], notes.pitch_values[i]));
     }
 
     /* The end time doubles, and the existing 4/4 map keeps its meter, so there are half as many measures. */
@@ -126,7 +183,7 @@ static void test_scale_keeps_identity(void) {
     load("bach-114.musicxml", &same);
     assert(notation_reading_apply(&same, &none) == NOTATION_READING_OK && same.source.reading_applied);
     for (size_t i = 0; i < same.count; i++) {
-        assert(note_event_equals_by_value(same.events[i], before.events[i]));
+        assert(same_note_by_value(same.events[i], before.events[i]));
     }
 
     imported_notes_destroy(&same);
@@ -264,7 +321,7 @@ static void test_failure_leaves_notes_unchanged(void) {
     Snapshot after = snapshot(&notes);
     assert(memcmp(&before, &after, sizeof before) == 0);
     for (size_t i = 0; i < notes.count; i++) {
-        assert(note_event_equals_by_value(notes.events[i], reference.events[i]));
+        assert(same_note_by_value(notes.events[i], reference.events[i]));
     }
     assert(!notes.source.reading_applied);
 

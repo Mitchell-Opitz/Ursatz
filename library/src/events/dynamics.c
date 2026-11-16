@@ -19,34 +19,6 @@ static char *copy_marking(const char *marking) {
     return copy;
 }
 
-DynamicsResult dynamics_create_for_event(const char *marking, EntityID *event_id, Dynamics **out) {
-    if (marking == NULL || marking[0] == '\0') {
-        return DYNAMICS_ERR_NULL_MARKING;
-    }
-    if (event_id == NULL) {
-        return DYNAMICS_ERR_NULL_EVENT_ID;
-    }
-
-    char *marking_copy = copy_marking(marking);
-    if (marking_copy == NULL) {
-        return DYNAMICS_ERR_ALLOC;
-    }
-
-    Dynamics *dynamics = (Dynamics *)malloc(sizeof(Dynamics));
-    if (dynamics == NULL) {
-        free(marking_copy);
-        return DYNAMICS_ERR_ALLOC;
-    }
-
-    dynamics->marking = marking_copy;
-    dynamics->target_kind = DYNAMICS_TARGET_EVENT;
-    dynamics->target_event_id = event_id;
-    dynamics->target_time_span = NULL;
-
-    *out = dynamics;
-    return DYNAMICS_OK;
-}
-
 DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan *time_span, Dynamics **out) {
     if (marking == NULL || marking[0] == '\0') {
         return DYNAMICS_ERR_NULL_MARKING;

@@ -2,7 +2,7 @@
 
 The backend and frontend tests and the checks CI runs. [Docs index](README.md).
 
-`ctest` runs the backend tests (health, analyzer, corpus, styles, composer, materials, theme, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
+`ctest` runs the backend tests (the startup data check, analyzer, corpus, styles, composer, materials, theme, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node CMake prints one status line
 and skips them. The frontend tests are plain Node scripts that can also be

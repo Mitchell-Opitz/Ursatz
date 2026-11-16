@@ -34,13 +34,10 @@ typedef struct {
 
 const char *composer_style_result_name(ComposerStyleResult result);
 
-/* Reads the model file at path into *out, which the caller destroys. *out is NULL on failure. Every category is kept. */
-ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out);
-
 /*
- * composer_style_load without the named categories (style_model_file_read_without): the style holds no statistics of
- * them, and keeps the list. A category that is not one the Analyzer defines is COMPOSER_STYLE_ERR_ARGUMENT.
- * composer_style_load is this with none.
+ * Reads the model file at path into *out, which the caller destroys. *out is NULL on failure. The named categories are
+ * left out (style_model_file_read_without): the style holds no statistics of them, and keeps the list. A category that is
+ * not one the Analyzer defines is COMPOSER_STYLE_ERR_ARGUMENT. NULL and 0 keep every category.
  */
 ComposerStyleResult composer_style_load_without(const char *path, const char *const *categories, size_t count,
                                                 ComposerStyle **out);
@@ -86,7 +83,7 @@ bool composer_style_density(const ComposerStyle *style, ComposerRatio *out);
 
 /*
  * A style built from a model in memory, for a blend (composer_style_blend). Takes ownership of model on success only,
- * and reads its statistics the way composer_style_load does; every category of the model must give each of its labels
+ * and reads its statistics the way composer_style_load_without does; every category of the model must give each of its labels
  * the same total, as the Analyzer's files and composer_style_blend's results do. pieces is what composer_style_pieces
  * returns.
  */
@@ -202,7 +199,5 @@ typedef enum {
     COMPOSER_MEASURE_ERR_PLAN,        /* no key at the start, or the plan cannot be rendered */
     COMPOSER_MEASURE_ERR_ANALYSIS     /* the Analyzer could not analyze or compare it */
 } ComposerMeasureResult;
-
-ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const ComposerStyle *style, StyleComparison *out);
 
 #endif

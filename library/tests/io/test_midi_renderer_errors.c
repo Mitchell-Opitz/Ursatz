@@ -9,7 +9,8 @@ static MidiRenderResult render_notes(const TestNotes *notes, unsigned division) 
     unsigned char *data = SENTINEL_DATA;
     size_t size = SENTINEL_SIZE;
     MidiRenderResult result =
-        midi_renderer_render(notes->events, notes->pitches, notes->count, NULL, NULL, NULL, 0, division, &data, &size);
+        midi_renderer_render_with_options(notes->events, notes->pitches, notes->count, NULL, NULL, NULL, 0, NULL,
+                                          division, &data, &size);
     if (result != MIDI_RENDER_OK) {
         assert(data == SENTINEL_DATA && size == SENTINEL_SIZE);
     } else {
@@ -24,15 +25,18 @@ static void test_null_arguments(void) {
     test_notes_add(&notes, 0, 1, 1, 4, 60, NULL);
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, 1, NULL, NULL, NULL, 0, 480, NULL, &size) ==
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, 1, NULL, NULL, NULL, 0, NULL, 480, NULL,
+                                             &size) ==
            MIDI_RENDER_ERR_NULL_ARG);
-    assert(midi_renderer_render(notes.events, notes.pitches, 1, NULL, NULL, NULL, 0, 480, &data, NULL) ==
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, 1, NULL, NULL, NULL, 0, NULL, 480, &data,
+                                             NULL) ==
            MIDI_RENDER_ERR_NULL_ARG);
-    assert(midi_renderer_render(NULL, notes.pitches, 1, NULL, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(NULL, notes.pitches, 1, NULL, NULL, NULL, 0, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NULL_ARG);
-    assert(midi_renderer_render(notes.events, NULL, 1, NULL, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(notes.events, NULL, 1, NULL, NULL, NULL, 0, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NULL_ARG);
-    assert(midi_renderer_render(NULL, NULL, 0, NULL, NULL, NULL, 1, 480, &data, &size) == MIDI_RENDER_ERR_NULL_ARG);
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, NULL, 1, NULL, 480, &data,
+                                             &size) == MIDI_RENDER_ERR_NULL_ARG);
     assert(data == NULL && size == 0);
     test_notes_free(&notes);
 }
@@ -135,7 +139,8 @@ static void test_map_and_key_limits(void) {
     /* the widest signature a TimeSignature allows (64/16) is written */
     const TestMeterChange wide[] = {{64, 16, 0, 1}};
     MeterMap *meter_map = test_meter_map(wide, 1);
-    assert(midi_renderer_render(NULL, NULL, 0, meter_map, NULL, NULL, 0, 480, &data, &size) == MIDI_RENDER_OK);
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, meter_map, NULL, NULL, 0, NULL, 480, &data,
+                                             &size) == MIDI_RENDER_OK);
     free(data);
     data = SENTINEL_DATA;
     size = SENTINEL_SIZE;
@@ -143,7 +148,7 @@ static void test_map_and_key_limits(void) {
 
     const TestMeterChange offgrid[] = {{4, 4, 0, 1}, {3, 4, 1, 7}};
     meter_map = test_meter_map(offgrid, 2);
-    assert(midi_renderer_render(NULL, NULL, 0, meter_map, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, meter_map, NULL, NULL, 0, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NOT_REPRESENTABLE);
     assert(data == SENTINEL_DATA && size == SENTINEL_SIZE);
     meter_map_destroy(meter_map);
@@ -155,7 +160,8 @@ static void test_map_and_key_limits(void) {
         TempoMapResult created = tempo_map_create(test_id("test-tempo-map"), &point, 1, &tempo_map);
         musical_time_destroy(start);
         if (created == TEMPO_MAP_OK) {
-            assert(midi_renderer_render(NULL, NULL, 0, NULL, tempo_map, NULL, 0, 480, &data, &size) ==
+            assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, tempo_map, NULL, 0, NULL, 480, &data,
+                                                     &size) ==
                    MIDI_RENDER_ERR_NOT_REPRESENTABLE);
             assert(data == SENTINEL_DATA && size == SENTINEL_SIZE);
             tempo_map_destroy(tempo_map);
@@ -166,15 +172,15 @@ static void test_map_and_key_limits(void) {
     memset(&key, 0, sizeof(key));
     key.position = test_time(0, 1);
     key.sharps_flats = 8;
-    assert(midi_renderer_render(NULL, NULL, 0, NULL, NULL, &key, 1, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, &key, 1, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NOT_REPRESENTABLE);
     key.sharps_flats = -8;
-    assert(midi_renderer_render(NULL, NULL, 0, NULL, NULL, &key, 1, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, &key, 1, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NOT_REPRESENTABLE);
     musical_time_destroy(key.position);
     key.position = test_time(1, 7);
     key.sharps_flats = 1;
-    assert(midi_renderer_render(NULL, NULL, 0, NULL, NULL, &key, 1, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, &key, 1, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NOT_REPRESENTABLE);
     assert(data == SENTINEL_DATA && size == SENTINEL_SIZE);
     musical_time_destroy(key.position);
@@ -194,7 +200,8 @@ static void test_voice_limit_and_channels(void) {
     add_voices(&notes, 15);
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, NULL, 480,
+                                             &data, &size) ==
            MIDI_RENDER_OK);
     TestSmf smf;
     test_smf_parse(data, size, &smf);
@@ -231,10 +238,10 @@ static void test_deterministic(void) {
     unsigned char *second = NULL;
     size_t first_size = 0;
     size_t second_size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, meter_map, tempo_map, NULL, 0, 960, &first,
-                                &first_size) == MIDI_RENDER_OK);
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, meter_map, tempo_map, NULL, 0, 960, &second,
-                                &second_size) == MIDI_RENDER_OK);
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, notes.count, meter_map, tempo_map, NULL, 0,
+                                             NULL, 960, &first, &first_size) == MIDI_RENDER_OK);
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, notes.count, meter_map, tempo_map, NULL, 0,
+                                             NULL, 960, &second, &second_size) == MIDI_RENDER_OK);
     assert(first_size == second_size && memcmp(first, second, first_size) == 0);
     free(first);
     free(second);

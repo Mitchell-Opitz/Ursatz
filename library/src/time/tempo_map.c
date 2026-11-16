@@ -13,10 +13,6 @@ static int rat_of_time(const MusicalTime *time, Rational *out) {
     return rational_of_musical_time(time, out) == RATIONAL_OK ? 0 : -1;
 }
 
-static int rat_of_performance_time(const PerformanceTime *time, Rational *out) {
-    return rational_of_performance_time(time, out) == RATIONAL_OK ? 0 : -1;
-}
-
 static int fits_time(Rational r) {
     return r.num >= 0 && r.num <= (long long)LONG_MAX && (unsigned long long)r.den <= ULONG_MAX;
 }
@@ -238,10 +234,6 @@ void tempo_map_destroy(TempoMap *map) {
     map_release(map, map->count);
 }
 
-const EntityID *tempo_map_id(const TempoMap *map) {
-    return map->id;
-}
-
 bool tempo_map_is_defaulted(const TempoMap *map) {
     for (size_t i = 0; i < map->count; i++) {
         if (!map->regions[i].defaulted) {
@@ -259,177 +251,8 @@ const TempoMapRegion *tempo_map_region(const TempoMap *map, size_t index) {
     return index < map->count ? &map->regions[index] : NULL;
 }
 
-/* The last region that starts at or before t, for t >= 0. */
-static const TempoMapRegion *find_region(const TempoMap *map, Rational t) {
-    for (size_t i = map->count; i > 0; i--) {
-        if (rational_cmp(map->regions[i - 1].start_r, t) <= 0) {
-            return &map->regions[i - 1];
-        }
-    }
-    return &map->regions[0];
-}
-
-TempoMapResult tempo_map_region_at(const TempoMap *map, const MusicalTime *time, const TempoMapRegion **out) {
-    if (map == NULL || time == NULL || out == NULL) {
-        return TEMPO_MAP_ERR_NULL_ARGUMENT;
-    }
-    if (musical_time_numerator(time) < 0) {
-        return TEMPO_MAP_ERR_TIME_BEFORE_START;
-    }
-    Rational t;
-    if (rat_of_time(time, &t) != 0) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    *out = find_region(map, t);
-    return TEMPO_MAP_OK;
-}
-
-TempoMapResult tempo_map_region_by_id(const TempoMap *map, const EntityID *id, const TempoMapRegion **out) {
-    if (map == NULL || id == NULL || out == NULL) {
-        return TEMPO_MAP_ERR_NULL_ARGUMENT;
-    }
-    for (size_t i = 0; i < map->count; i++) {
-        if (entity_id_equals(map->regions[i].id, id)) {
-            *out = &map->regions[i];
-            return TEMPO_MAP_OK;
-        }
-    }
-    return TEMPO_MAP_ERR_NOT_FOUND;
-}
-
-TempoMapResult tempo_map_tempo_at(const TempoMap *map, const MusicalTime *time,
-                                   unsigned long *out_microseconds_per_quarter) {
-    if (out_microseconds_per_quarter == NULL) {
-        return TEMPO_MAP_ERR_NULL_ARGUMENT;
-    }
-    const TempoMapRegion *region = NULL;
-    TempoMapResult found = tempo_map_region_at(map, time, &region);
-    if (found != TEMPO_MAP_OK) {
-        return found;
-    }
-    *out_microseconds_per_quarter = region->microseconds_per_quarter;
-    return TEMPO_MAP_OK;
-}
-
-static TempoMapResult performance_time_of_rat(Rational r, PerformanceTime **out) {
-    if (!fits_time(r)) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    PerformanceTimeResult created = performance_time_create((long)r.num, (unsigned long)r.den, out);
-    if (created == PERFORMANCE_TIME_OK) {
-        return TEMPO_MAP_OK;
-    }
-    return created == PERFORMANCE_TIME_ERR_OVERFLOW ? TEMPO_MAP_ERR_OVERFLOW : TEMPO_MAP_ERR_ALLOC;
-}
-
-/* Seconds from 0 to t (t >= 0), as a Rational. */
-static TempoMapResult seconds_rat_at(const TempoMap *map, Rational t, Rational *out) {
-    const TempoMapRegion *region = find_region(map, t);
-    Rational into = {0, 1};
-    Rational seconds = {0, 1};
-    if (rational_sub(t, region->start_r, &into) != 0 || rational_mul(into, region->seconds_per_whole_note, &seconds) != 0 ||
-        rational_add(region->seconds_at_start, seconds, out) != 0) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    return TEMPO_MAP_OK;
-}
-
-TempoMapResult tempo_map_seconds_at(const TempoMap *map, const MusicalTime *time, PerformanceTime **out) {
-    if (map == NULL || time == NULL || out == NULL) {
-        return TEMPO_MAP_ERR_NULL_ARGUMENT;
-    }
-    if (musical_time_numerator(time) < 0) {
-        return TEMPO_MAP_ERR_TIME_BEFORE_START;
-    }
-    Rational seconds = {0, 1};
-    Rational t;
-    if (rat_of_time(time, &t) != 0) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    TempoMapResult computed = seconds_rat_at(map, t, &seconds);
-    if (computed != TEMPO_MAP_OK) {
-        return computed;
-    }
-    return performance_time_of_rat(seconds, out);
-}
-
-TempoMapResult tempo_map_time_at_seconds(const TempoMap *map, const PerformanceTime *seconds, MusicalTime **out) {
-    if (map == NULL || seconds == NULL || out == NULL) {
-        return TEMPO_MAP_ERR_NULL_ARGUMENT;
-    }
-    Rational s;
-    if (rat_of_performance_time(seconds, &s) != 0) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-
-    /* The last region whose seconds at start are at or before s. */
-    const TempoMapRegion *region = &map->regions[0];
-    for (size_t i = map->count; i > 0; i--) {
-        if (rational_cmp(map->regions[i - 1].seconds_at_start, s) <= 0) {
-            region = &map->regions[i - 1];
-            break;
-        }
-    }
-
-    Rational into = {0, 1};
-    Rational whole_notes = {0, 1};
-    Rational time = {0, 1};
-    if (rational_sub(s, region->seconds_at_start, &into) != 0 ||
-        rational_div(into, region->seconds_per_whole_note, &whole_notes) != 0 ||
-        rational_add(region->start_r, whole_notes, &time) != 0) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    if (!fits_time(time)) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    MusicalTime *result = time_of_rat(time);
-    if (result == NULL) {
-        return TEMPO_MAP_ERR_ALLOC;
-    }
-    *out = result;
-    return TEMPO_MAP_OK;
-}
-
-TempoMapResult tempo_map_duration_seconds(const TempoMap *map, const TimeSpan *span, PerformanceTime **out) {
-    if (map == NULL || span == NULL || out == NULL) {
-        return TEMPO_MAP_ERR_NULL_ARGUMENT;
-    }
-    const MusicalTime *start = time_span_start(span);
-    const MusicalTime *end = time_span_end(span);
-    if (musical_time_numerator(start) < 0) {
-        return TEMPO_MAP_ERR_TIME_BEFORE_START;
-    }
-    Rational at_start = {0, 1};
-    Rational at_end = {0, 1};
-    Rational length = {0, 1};
-    Rational start_r;
-    Rational end_r;
-    if (rat_of_time(start, &start_r) != 0 || rat_of_time(end, &end_r) != 0) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    TempoMapResult computed = seconds_rat_at(map, start_r, &at_start);
-    if (computed == TEMPO_MAP_OK) {
-        computed = seconds_rat_at(map, end_r, &at_end);
-    }
-    if (computed != TEMPO_MAP_OK) {
-        return computed;
-    }
-    if (rational_sub(at_end, at_start, &length) != 0) {
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
-    return performance_time_of_rat(length, out);
-}
-
-const EntityID *tempo_map_region_id(const TempoMapRegion *region) {
-    return region->id;
-}
-
 const MusicalTime *tempo_map_region_start(const TempoMapRegion *region) {
     return region->start;
-}
-
-const MusicalTime *tempo_map_region_end(const TempoMapRegion *region) {
-    return region->end;
 }
 
 unsigned long tempo_map_region_microseconds_per_quarter(const TempoMapRegion *region) {
@@ -438,11 +261,4 @@ unsigned long tempo_map_region_microseconds_per_quarter(const TempoMapRegion *re
 
 bool tempo_map_region_is_defaulted(const TempoMapRegion *region) {
     return region->defaulted;
-}
-
-TempoMapResult tempo_map_region_seconds_at_start(const TempoMapRegion *region, PerformanceTime **out) {
-    if (region == NULL || out == NULL) {
-        return TEMPO_MAP_ERR_NULL_ARGUMENT;
-    }
-    return performance_time_of_rat(region->seconds_at_start, out);
 }

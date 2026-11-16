@@ -25,22 +25,6 @@ static bool valid_rule(StandardCounterpointSecondSpeciesEndsRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_second_species_ends_rule(StandardCounterpointSecondSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_second_species_ends_constraint(StandardCounterpointSecondSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_second_species_ends_preference(StandardCounterpointSecondSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_second_species_ends_rule_name(StandardCounterpointSecondSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointSecondSpeciesExercise Exercise;
 
 static const StandardCounterpointSlot *slot_at(const Exercise *exercise, size_t slot) {

@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "core/value.h"
-#include "meter_analysis_claim.h"
 #include "time/musical_time.h"
 #include "time/time_signature.h"
 
@@ -461,29 +460,3 @@ StandardMeterAnalysisStatus standard_meter_check_changes(const char *const *labe
     return STANDARD_METER_ANALYSIS_OK;
 }
 
-Interpretation *standard_meter_check_interpretation(const StandardMeterCheck *check, const char *target_id) {
-    if (check == NULL || target_id == NULL || !check->present) {
-        return NULL;
-    }
-    char id[400];
-    snprintf(id, sizeof(id), "standard-meter-meter-check-%s", target_id);
-    return standard_meter_analysis_interpretation(id, target_id, STANDARD_METER_CHECK_CLAIM_TYPE, check, sizeof(*check),
-                                                 check->uncertainty, "meter-check");
-}
-
-bool standard_meter_check_claim_read(const Interpretation *interpretation, StandardMeterCheck *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    if (claim == NULL || strcmp(value_type(claim), STANDARD_METER_CHECK_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    size_t size = 0;
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

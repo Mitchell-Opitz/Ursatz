@@ -29,12 +29,6 @@ void note_name(long midi, bool prefer_flats, char out[16]);
 int spelling_from_name(const char *name, PitchSpelling **out);
 
 /*
- * The spelling of an imported note for the library's rules: the input's own when it names the pitch that sounds, else
- * the pitch class named in flats or sharps (prefer_flats) at the octave of its MIDI number. Returns as spelling_from_name.
- */
-int note_pitch_spelling(const ImportedNotes *notes, size_t note, bool prefer_flats, PitchSpelling **out);
-
-/*
  * Renames the root and bass of a reading with the spelling of the segment's
  * notes: the bass by the lowest sounding note, the root by the lowest note
  * that has its pitch class. A name with no spelled note to follow stays as it

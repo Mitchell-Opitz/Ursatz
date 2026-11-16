@@ -4,6 +4,7 @@
 #include "core/occurrence.h"
 #include "identity/entity_id.h"
 #include "structure/phrase_occurrence.h"
+#include "structure_test_access.h"
 
 /*
  * Relationship test: a PhraseOccurrence resolves back to its Phrase
@@ -44,13 +45,7 @@ int main(void) {
     assert(!entity_id_equals(phrase_occurrence_id(first), phrase_occurrence_id(second)));
 
     assert(phrase_occurrence_region_event_id_count(first) == 1);
-    EntityID *expected_region_a = dup_id("event-a");
-    assert(entity_id_equals(phrase_occurrence_region_event_id_at(first, 0), expected_region_a));
-    entity_id_destroy(expected_region_a);
-
-    EntityID *expected_region_b = dup_id("event-b");
-    assert(entity_id_equals(phrase_occurrence_region_event_id_at(second, 0), expected_region_b));
-    entity_id_destroy(expected_region_b);
+    assert(phrase_occurrence_region_event_id_count(second) == 1);
 
     phrase_occurrence_destroy(first);
     phrase_occurrence_destroy(second);

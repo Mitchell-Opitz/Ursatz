@@ -37,7 +37,7 @@ The last bar of each half (the last bar of the section and the last bar of its f
 A section with `"mode": "parallel"` (a figurate variation only, R-499) is in the home key's parallel key: the same tonic, the other mode. Its key lane span and `key` constraint are that key (`draw_keys` sets it without a draw, so no other form's draws move), and a change of mode on one tonic is not a modulation:
 
 - No pivot. `grow_read_keys` does not read a start change when the span before is on the same tonic, so no pivot anchor is asked for.
-- The key check. `related_to_home` accepts a key on the home tonic, and `piece_check_keys` skips a change between two spans on one tonic: it is neither counted nor classified. The planned key is not asserted against the heard one (R-493): a C minor variation may be heard as C major.
+- The key check. `related_to_home` accepts a key on the home tonic, and `piece_check_keys_in` skips a change between two spans on one tonic: it is neither counted nor classified. The planned key is not asserted against the heard one (R-493): a C minor variation may be heard as C major.
 
 The copy is mapped degree by degree (`return_copy_change_mode`), moved by 0: into minor every melody and inner voice pitch 4 or 9 semitones over the tonic (degrees 3 and 6 of the major key) is lowered a semitone; into major every pitch 3 or 8 over it is raised a semitone and 10 is raised to 11; the leading tone is kept. The `key` constraints of the copy take the target's mode. A section in the other mode always reharmonizes (its figure's `harmony` is `reharmonized`; `kept` is refused), because the chords of the theme are not chords of the other mode: the harmony operators write them again over the mapped melody, and a reopened chord shape keeps no chord within a bar when the target is minor (the minor phrase model has one predominant, so a half-cadence phrase of four bars deals a chord over two bars). The skeleton reads the returned melody mapped the same way (`form_figure_skeleton`).
 
@@ -51,11 +51,11 @@ With `climax` the whole melody of the section, kept cells too, is moved an octav
 
 ## The check
 
-`form_figure_check` holds a section to the above: every cell not kept holds N equal notes from the skeleton tone (an octave up for a raised climax) and keeps to its kind (neighbor: even positions the tone, odd ones a step of 1 or 2 semitones; scale: every interval a step of 1 or 2 semitones, 3 for the augmented second of the harmonic minor; broken chord: every note a tone of the chord over the cell), and every kept cell holds the theme's notes, moved.
+The tests' `form_figure_check` (`tests/support/test_oracles.h`) holds a section to the above: every cell not kept holds N equal notes from the skeleton tone (an octave up for a raised climax) and keeps to its kind (neighbor: even positions the tone, odd ones a step of 1 or 2 semitones; scale: every interval a step of 1 or 2 semitones, 3 for the augmented second of the harmonic minor; broken chord: every note a tone of the chord over the cell), and every kept cell holds the theme's notes, moved.
 
 ## The hearing
 
-The return's relation is heard on the skeletons: for a section with a figure and the section it returns, both melodies are read reduced to one note per cell (the note sounding at the cell's start, lasting the cell), and the matcher hears that pair on them, so what is heard is the skeleton's course (`return_hear`). Every other pair is read as before. Figurate returns are composed, not heard: the count of those the matcher finds is recorded below and not asserted (R-408).
+The return's relation is heard on the skeletons: for a section with a figure and the section it returns, both melodies are read reduced to one note per cell (the note sounding at the cell's start, lasting the cell), and the matcher hears that pair on them, so what is heard is the skeleton's course (`return_hear_in`). Every other pair is read as before. Figurate returns are composed, not heard: the count of those the matcher finds is recorded below and not asserted (R-408).
 
 ## Measured
 

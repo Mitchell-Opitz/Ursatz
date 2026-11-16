@@ -3,17 +3,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_TEXTURE_RULE_COUNT] = {
-    "texture-monophony", "texture-heterophony", "texture-homophony", "texture-homorhythm",
-    "texture-melody-and-accompaniment", "texture-polyphony"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_texture_framework, "standard-texture",
-    NAMES, STANDARD_TEXTURE_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_texture, StandardTextureRule, STANDARD_TEXTURE_RULE_COUNT, g_table)
-
 static bool valid_texture(StandardTexture texture) {
     return texture >= 0 && texture < STANDARD_TEXTURE_COUNT;
 }
@@ -38,11 +27,6 @@ bool standard_texture_from_name(const char *name, StandardTexture *out) {
     return false;
 }
 
-bool standard_texture_is_category(StandardTexture texture) {
-    return texture == STANDARD_TEXTURE_MONOPHONY || texture == STANDARD_TEXTURE_HETEROPHONY ||
-           texture == STANDARD_TEXTURE_HOMOPHONY || texture == STANDARD_TEXTURE_POLYPHONY;
-}
-
 bool standard_texture_is_homophonic(StandardTexture texture) {
     return texture == STANDARD_TEXTURE_HOMOPHONY || texture == STANDARD_TEXTURE_HOMORHYTHM ||
            texture == STANDARD_TEXTURE_MELODY_AND_ACCOMPANIMENT;
@@ -56,9 +40,3 @@ bool standard_texture_category(StandardTexture texture, StandardTexture *categor
     return true;
 }
 
-int standard_texture_minimum_voices(StandardTexture texture) {
-    if (!valid_texture(texture)) {
-        return 0;
-    }
-    return texture == STANDARD_TEXTURE_MONOPHONY ? 1 : 2;
-}

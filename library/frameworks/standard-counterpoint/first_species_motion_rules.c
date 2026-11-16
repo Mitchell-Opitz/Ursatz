@@ -22,22 +22,6 @@ static bool valid_rule(StandardCounterpointFirstSpeciesMotionRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_first_species_motion_rule(StandardCounterpointFirstSpeciesMotionRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_first_species_motion_constraint(StandardCounterpointFirstSpeciesMotionRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_first_species_motion_preference(StandardCounterpointFirstSpeciesMotionRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_first_species_motion_rule_name(StandardCounterpointFirstSpeciesMotionRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 /* How many motions of each MotionType the texture has. */
 static bool count_motions(const StandardCounterpointPair *pair, size_t counts[MOTION_TYPE_COUNT]) {
     for (int i = 0; i < MOTION_TYPE_COUNT; i++) {

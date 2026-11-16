@@ -277,20 +277,11 @@ static void test_redundant_change_points(void) {
     meter_map_destroy(map);
 }
 
-static void test_region_ids_resolve(void) {
+static void test_region_of_measure(void) {
     Change changes[] = {{4, 2, 0, 1}, {3, 2, 4, 1}};
     MeterMap *map = build(changes, 2);
 
     const MeterMapRegion *second = meter_map_region(map, 1);
-    const MeterMapRegion *found = NULL;
-    assert(meter_map_region_by_id(map, meter_map_region_id(second), &found) == METER_MAP_OK);
-    assert(found == second);
-    assert(!entity_id_equals(meter_map_region_id(meter_map_region(map, 0)), meter_map_region_id(second)));
-
-    EntityID *unknown = id("nowhere");
-    assert(meter_map_region_by_id(map, unknown, &found) == METER_MAP_ERR_NOT_FOUND);
-    entity_id_destroy(unknown);
-
     const MeterMapRegion *of_measure = NULL;
     assert(meter_map_region_of_measure(map, 5, &of_measure) == METER_MAP_OK);
     assert(of_measure == second);
@@ -374,7 +365,7 @@ int main(void) {
     test_defaulted_four_four();
     test_first_signature_after_zero_gets_a_defaulted_lead_in();
     test_redundant_change_points();
-    test_region_ids_resolve();
+    test_region_of_measure();
     test_rejects_bad_input();
     test_lookup_before_zero_fails();
     test_grid_overflow_is_refused();

@@ -200,11 +200,6 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     return VARIANT_OK;
 }
 
-VariantResult variant_recognize(const Motive *source, const Motive *target, VariantChain *chain,
-                                VariantRecognition *out) {
-    return variant_recognize_depth(source, target, VARIANT_CHAIN_MAX, chain, out);
-}
-
 VariantResult variant_set_remoteness(const Motive *basic, const Motive *form, size_t depth, VariantRecord *record) {
     if (!basic || !form || !record) {
         return VARIANT_ERR_NULL;

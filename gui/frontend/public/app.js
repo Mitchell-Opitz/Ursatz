@@ -10,7 +10,6 @@ const TOOLS = [
   { id: "pieces", label: "Pieces", active: false, render: () => renderMaterialsView("piece") },
   { id: "subjects", label: "Subjects", active: false, render: renderSubjectsView },
   { id: "motive-links", label: "Motive links", active: false, render: renderMotiveLinksView },
-  { id: "health", label: "Health", active: false, render: renderHealthView },
 ];
 
 /* The piece id last opened in the Analysis view (via a Library filename
@@ -117,30 +116,6 @@ async function drawMusicXmlScore(url, containerEl, statusEl, zoom) {
     statusEl.classList.add("error");
     return null;
   }
-}
-
-async function checkHealth() {
-  const el = document.getElementById("health-status");
-  try {
-    const res = await fetch("/api/health/status");
-    const data = await res.json();
-    el.textContent = data.message;
-    el.classList.add(data.ok ? "ok" : "error");
-  } catch (err) {
-    el.textContent = `Could not reach backend: ${err}`;
-    el.classList.add("error");
-  }
-}
-
-function renderHealthView() {
-  const content = getContentEl();
-  content.innerHTML = `
-    <section class="panel">
-      <h1>Backend Health</h1>
-      <div id="health-status" class="health-status">Checking...</div>
-    </section>
-  `;
-  checkHealth();
 }
 
 const UNASSIGNED = "__unassigned__";

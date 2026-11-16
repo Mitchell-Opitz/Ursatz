@@ -41,24 +41,19 @@ typedef struct {
 
 typedef struct {
     AnalyzerOptions analysis;
-    bool render_document; /* render the analysis document into the result; needs every stage */
 } AnalyzerHearingOptions;
 
-/* All stages, no cancel callback, no document. */
+/* All stages. */
 AnalyzerHearingOptions analyzer_hearing_options_default(void);
 
 /*
  * Hears the events into *out, which the caller releases with analyzer_result_destroy. options may be NULL for the
  * defaults. ANALYZER_ERR_ARGUMENT for a missing argument, a NULL event, a MIDI number outside 0 to 127, a key tonic
- * outside 0 to 11, no midi for count > 0, or render_document without every stage; the other statuses are those of
+ * outside 0 to 11 or no midi for count > 0; the other statuses are those of
  * analyzer_analyze. *out is NULL on failure and nothing is kept.
  */
 AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHearingOptions *options,
                              AnalyzerResult **out);
-
-/* The analysis document text of a result heard with render_document. Valid until the result is destroyed; NULL
-   otherwise. */
-const char *analyzer_result_document_json(const AnalyzerResult *result);
 
 /*
  * A style the fragments are measured against, prepared once: the model's statistics with the named categories

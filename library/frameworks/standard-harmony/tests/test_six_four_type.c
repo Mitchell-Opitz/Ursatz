@@ -20,18 +20,9 @@ static void test_names(void) {
     assert(six_four_type_name(SIX_FOUR_TYPE_COUNT) == NULL);
 }
 
-static void test_is_labeled(void) {
-    assert(six_four_type_is_labeled(SIX_FOUR_TYPE_CADENTIAL));
-    assert(six_four_type_is_labeled(SIX_FOUR_TYPE_PASSING));
-    assert(six_four_type_is_labeled(SIX_FOUR_TYPE_NEIGHBOR));
-    assert(!six_four_type_is_labeled(SIX_FOUR_TYPE_ARPEGGIATING));
-    assert(!six_four_type_is_labeled(SIX_FOUR_TYPE_COUNT));
-}
-
 int main(void) {
     test_validity();
     test_names();
-    test_is_labeled();
     printf("test_six_four_type: ok\n");
     return 0;
 }

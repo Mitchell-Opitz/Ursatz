@@ -1,4 +1,5 @@
 #include "ursatz_chain/analysis_chain.h"
+#include "ursatz_chain/analysis_chain_internal.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -14,117 +15,6 @@
 #include "standard-harmony/analysis/analysis_cadence_claims.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"
-
-/* The results of the stages from the key regions to the form, which run twice when the keys are refined. */
-typedef struct {
-    CommonPracticeKeyRegions regions;
-    bool have_regions;
-    CommonPracticeWeightedResult *chords; /* one per segment */
-    StandardTonalityKeyRegionInput *region_inputs;
-    StandardTonalitySegmentInput *segment_inputs;
-    int *segment_pitches; /* the members' pitches, segment after segment, for the chord bass */
-    StandardTonalityChordInput *tonal_inputs;
-    size_t tonal_count;
-    StandardTonalityRomanResult *romans;
-    ChainHarmonyInputs harmony;
-    bool have_harmony;
-    HarmonySegment *prepared;
-    HarmonyCadences cadences;
-    bool have_cadences;
-    StandardFormPhraseGrid grid;
-    bool have_grid;
-    ChainFormInput form_input;
-    bool have_form_input;
-    StandardFormPhrases phrases;
-    bool have_phrases;
-    StandardFormSegmentation ideas;
-    bool have_ideas;
-    StandardFormThemes themes;
-    bool have_themes;
-    StandardFormExpansions expansions;
-    bool have_expansions;
-} Pass;
-
-struct AnalysisChain {
-    AnalysisChainConfig config;
-    ChainRelationContext relation_context; /* the key the motive stage reads generic shapes in */
-    unsigned stages;
-    const AnalysisNoteSet *notes;
-    const AnalysisKeyEvent *key_events;
-    size_t key_event_count;
-
-    ChainPitches pitches;
-    bool have_pitches;
-    ChainSegments segs;
-    bool have_segs;
-    bool spans_merged; /* the segments are harmonic spans, each with its bass */
-    size_t count; /* the segments inside the scope */
-    ChainSegments voice_segs;
-    bool have_voice_segs;
-    OuterVoiceLines lines;        /* on the voice segments */
-    bool have_lines;
-    OuterVoiceLines segment_lines; /* the same lines on the chord segments */
-    bool have_segment_lines;
-    CommonPracticeKeySegment *key_segments;
-    MusicalTime **boundaries; /* the second pass: the phrase ends of the first, owned copies */
-    size_t boundary_count;
-    int home;
-    StandardFormRepeats repeats; /* the written-out repeats and returns, found once in prepare (R-400) */
-    CommonPracticeKeyPhrase *key_phrases; /* the third pass: the phrases of the second, on the grid (R-397); owned */
-    size_t key_phrase_count;
-    CommonPracticeKeyRepeat *key_repeats; /* the exact repeats, as the key regions read them (R-400); owned */
-    size_t key_repeat_count;
-
-    Pass pass;
-
-    ChainFormInput motive_input;
-    bool have_motive_input;
-    StandardFormPhrases motive_phrases;
-    bool have_motive_phrases;
-    StandardFormSegmentation motive_ideas;
-    bool have_motive_ideas;
-    StandardFormThemes motive_themes;
-    bool have_motive_themes;
-    StandardFormMotives motives;
-    bool have_motives;
-
-    ChainMeterInput meter_input;
-    bool have_meter_input;
-    AnalysisChainMeter meter;
-    bool have_syncopations;
-    bool have_hemiolas;
-    bool have_hypermeter;
-    bool have_densities;
-
-    ChainTextureInput texture_input;
-    bool have_texture_input;
-    StandardTextureAnalysis texture;
-    bool have_texture;
-
-    ChainVoiceGrid grid;
-    bool have_grid;
-    StandardCounterpointPreparedGrid prepared_grid;
-    bool have_prepared_grid;
-    AnalysisChainVoiceLeading voice_leading;
-    bool have_motions;
-    bool have_perfects;
-    bool have_resolutions;
-
-    AnalysisChainMelody melody;
-    bool have_melody_line;
-    bool have_intervals;
-    bool have_summaries;
-    bool have_climaxes;
-    bool have_recoveries;
-    bool have_counts;
-
-    ChainGalantSegments galant;
-    bool have_galant;
-    GalantSchemaMatches schemas;
-    bool have_schemas;
-    ScaleSequenceMatches sequences;
-    bool have_sequences;
-};
 
 AnalysisChainConfig analysis_chain_config_default(void) {
     AnalysisChainConfig config;
@@ -143,22 +33,11 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.schemas = galant_match_config_default();
     config.sequences = scale_detect_config_default();
     config.refine_keys = true;
-    config.phrase_grid = true;
-    config.keys_from_phrases = true;
     config.first_measure = 1;
     config.last_measure = 0;
     config.home_key_index = -1;
-    config.inject_kernel_owners = true;
     config.harmonic_spans = true;
-    config.applied_chords = true;
     return config;
-}
-
-const char *analysis_chain_status_name(AnalysisChainStatus status) {
-    static const char *const NAMES[] = {"ok",     "null argument", "bad config", "notes",   "segments", "keys",         "chords",
-                                        "numerals", "outer voices", "cadences",  "form",    "meter",    "texture",      "voice leading",
-                                        "melody", "schemas",       "alloc"};
-    return status >= 0 && (size_t)status < sizeof(NAMES) / sizeof(NAMES[0]) ? NAMES[status] : "unknown";
 }
 
 /* A stage pulls in the stages it needs. */
@@ -388,7 +267,7 @@ static bool identify_chords(AnalysisChain *chain) {
     }
     CommonPracticeWeightedConfig weighting = chain->config.weighting;
     weighting.require_bass_chord_tone = chain->spans_merged; /* the chord holds the span's bass (R-370) */
-    weighting.applied_chords = chain->config.applied_chords; /* this copy only: grouping, key segments and key regions keep diatonic (R-380) */
+    weighting.applied_chords = true; /* this copy only: grouping, key segments and key regions keep diatonic (R-380) */
     if (chain->spans_merged) {
         weighting.seventh_penalty = ANALYSIS_CHAIN_SPAN_SEVENTH_PENALTY; /* a passing tone does not complete a seventh (R-376) */
         weighting.context_next = false; /* a span holds its whole stretch: the next span's chord is no evidence for it (R-379) */
@@ -462,7 +341,7 @@ static bool read_numerals(AnalysisChain *chain) {
         }
     }
     StandardTonalityAppliedConfig applied = standard_tonality_applied_config_default();
-    applied.recheck_diatonic = !chain->config.applied_chords; /* identified applied chords are read directly, no re-check (R-380) */
+    applied.recheck_diatonic = false; /* identified applied chords are read directly, no re-check (R-380) */
     return standard_tonality_build_chord_inputs(p->segment_inputs, count, p->region_inputs, p->regions.region_count,
                                                 &p->tonal_inputs, &p->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK &&
            standard_tonality_build_roman_numerals_with_config(p->tonal_inputs, p->tonal_count, &applied, &p->romans) ==
@@ -569,7 +448,7 @@ done:
 static AnalysisChainStatus form_stage(AnalysisChain *chain, bool final) {
     Pass *p = &chain->pass;
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    bool on_grid = chain->config.phrase_grid && final;
+    bool on_grid = final;
     if (on_grid) {
         AnalysisChainStatus status = claim_cadences_on_grid(chain, last);
         if (status != ANALYSIS_CHAIN_OK) {
@@ -638,7 +517,7 @@ static AnalysisChainStatus run_pass(AnalysisChain *chain, const MusicalTime *con
         return ANALYSIS_CHAIN_ERR_NUMERALS;
     }
     if (wants(chain, ANALYSIS_CHAIN_STAGE_CADENCES)) {
-        bool on_grid = wants(chain, ANALYSIS_CHAIN_STAGE_FORM) && chain->config.phrase_grid && final;
+        bool on_grid = wants(chain, ANALYSIS_CHAIN_STAGE_FORM) && final;
         AnalysisChainStatus status = cadence_stage(chain, !on_grid);
         if (status != ANALYSIS_CHAIN_OK) {
             return status;
@@ -1107,14 +986,12 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         return ANALYSIS_CHAIN_ERR_ALLOC;
     }
     chain->config = *config;
-    if (config->inject_kernel_owners) {
-        if (chain->config.weighting.classifier == NULL) {
-            chain->config.weighting.classifier = chain_classify_tones;
-        }
-        if (chain->config.form.relation_match == NULL) {
-            chain->config.form.relation_match = chain_match_motive_relation;
-            chain->config.form.relation_context = &chain->relation_context;
-        }
+    if (chain->config.weighting.classifier == NULL) {
+        chain->config.weighting.classifier = chain_classify_tones;
+    }
+    if (chain->config.form.relation_match == NULL) {
+        chain->config.form.relation_match = chain_match_motive_relation;
+        chain->config.form.relation_context = &chain->relation_context;
     }
     chain->stages = stage_closure(config->stages);
     chain->notes = notes;
@@ -1143,8 +1020,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
                 pass_destroy(chain);
                 status = run_pass(chain, boundaries, boundary_count, true);
                 /* The third pass (R-398): the keys are placed on the phrases of the second, which read everything once more in them. */
-                if (status == ANALYSIS_CHAIN_OK && from_phrases && chain->config.keys_from_phrases && chain->config.phrase_grid &&
-                    chain->pass.have_grid) {
+                if (status == ANALYSIS_CHAIN_OK && from_phrases && chain->pass.have_grid) {
                     for (size_t s = 0; s < chain->count; s++) {
                         chain->key_segments[s].chord = common_practice_key_chord_of(&chain->pass.chords[s]);
                     }
@@ -1222,10 +1098,6 @@ const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain) {
     return chain != NULL && chain->have_lines ? &chain->lines : NULL;
 }
 
-const ChainPitches *analysis_chain_pitches(const AnalysisChain *chain) {
-    return chain != NULL && chain->have_pitches ? &chain->pitches : NULL;
-}
-
 const ChainHarmonyInputs *analysis_chain_harmony_inputs(const AnalysisChain *chain) {
     return chain != NULL && chain->pass.have_harmony ? &chain->pass.harmony : NULL;
 }
@@ -1250,16 +1122,8 @@ const ChainGalantSegments *analysis_chain_galant_segments(const AnalysisChain *c
     return chain != NULL && chain->have_galant ? &chain->galant : NULL;
 }
 
-const OuterVoiceLines *analysis_chain_segment_outer_voices(const AnalysisChain *chain) {
-    return chain != NULL && chain->have_segment_lines ? &chain->segment_lines : NULL;
-}
-
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain) {
     return chain != NULL && chain->pass.have_cadences ? &chain->pass.cadences : NULL;
-}
-
-const StandardFormPhraseGrid *analysis_chain_phrase_grid(const AnalysisChain *chain) {
-    return chain != NULL && chain->pass.have_grid ? &chain->pass.grid : NULL;
 }
 
 const StandardFormRepeats *analysis_chain_repeats(const AnalysisChain *chain) {
@@ -1285,10 +1149,6 @@ const StandardFormExpansions *analysis_chain_expansions(const AnalysisChain *cha
 
 const StandardFormMotives *analysis_chain_motives(const AnalysisChain *chain) {
     return chain != NULL && chain->have_motives ? &chain->motives : NULL;
-}
-
-const AnalysisChainMeter *analysis_chain_meter(const AnalysisChain *chain) {
-    return chain != NULL && chain->have_densities ? &chain->meter : NULL;
 }
 
 const StandardTextureAnalysis *analysis_chain_texture(const AnalysisChain *chain) {

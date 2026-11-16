@@ -1,5 +1,7 @@
 #include "analysis_prolongation.h"
 #include "analysis_test_util.h"
+#include "interpretation_test_access.h"
+#include "relationship_test_access.h"
 
 /* Prolongations of tonic and dominant: a span from one T (or D) to the next, with every interior chord explained. */
 
@@ -20,9 +22,6 @@ static void check_edge(const HarmonyProlongationSpan *span, size_t k, const char
     /* The Interpretation targets the Relationship, not a segment. */
     const Interpretation *interpretation = span->interpretations[k];
     assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), entity_id_value(relationship_id(r))) == 0);
-    HarmonyProlongationClaim claim;
-    assert(harmony_prolongation_claim_read(interpretation, &claim));
-    assert(claim.function == (int)span->function && claim.reason == (int)reason);
 }
 
 static void test_tonic_prolongation_through_a_passing_six_four(void) {

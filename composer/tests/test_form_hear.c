@@ -12,6 +12,7 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * Hearing the phrase form of a written plan. Two hand-written Realized themes are heard as what they
@@ -28,7 +29,7 @@ static PiecePlan *load(const char *name) {
     snprintf(path, sizeof(path), "%s/%s", COMPOSER_FIXTURE_DIR, name);
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
 }
 
@@ -42,7 +43,7 @@ static PlanSpan bars(long start, long length) {
 static void test_sentence(void) {
     PiecePlan *plan = load("sentence_c_major.json");
     FormHeard heard;
-    assert(form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 1);
     assert(heard.count == 1);
     const FormHeardTheme *theme = &heard.themes[0];
@@ -67,7 +68,7 @@ static void test_period(void) {
        second. Two phrases, then, a period: antecedent and consequent, first cadence HALF, second PAC. */
     Rational consequent;
     assert(rational_make(4, 1, &consequent) == RATIONAL_OK);
-    assert(form_hear_with_sections(plan, bars(0, 8), &consequent, 1, &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 2);
     assert(heard.count == 1);
     const FormHeardTheme *theme = &heard.themes[0];
@@ -85,7 +86,7 @@ static void test_period(void) {
            heard.cadences[1].arrival.den == 1);
     /* Given or not, the starts change nothing. */
     FormHeard plain;
-    assert(form_hear(plan, bars(0, 8), &plain) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, bars(0, 8), &plain) == FORM_HEAR_OK);
     assert(plain.phrase_count == heard.phrase_count && plain.count == heard.count &&
            plain.cadence_count == heard.cadence_count && plain.themes[0].form == theme->form);
     form_heard_destroy(&plain);
@@ -98,7 +99,7 @@ static void test_modulating_sentence(void) {
     LaneSpanId keys[3];
     assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, bars(0, 8), keys, 3) == 2);
     FormHeard heard;
-    assert(form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 1);
     assert(heard.count == 1);
     const FormHeardTheme *theme = &heard.themes[0];
@@ -114,10 +115,10 @@ static void test_modulating_sentence(void) {
     assert(heard.cadences[0].arrival.num == 7 && heard.cadences[0].arrival.den == 1);
     form_heard_destroy(&heard);
     /* Heard bar by bar, each half in its own key: the first half has no cadence, the second has the PAC. */
-    assert(form_hear(plan, bars(0, 4), &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, bars(0, 4), &heard) == FORM_HEAR_OK);
     assert(heard.count == 0 && heard.cadence_count == 0);
     form_heard_destroy(&heard);
-    assert(form_hear(plan, bars(4, 4), &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, bars(4, 4), &heard) == FORM_HEAR_OK);
     assert(heard.cadence_count == 1 && heard.cadences[0].type == CADENCE_TYPE_PERFECT_AUTHENTIC);
     form_heard_destroy(&heard);
     plan_destroy(plan);
@@ -127,7 +128,7 @@ static void test_modulating_sentence(void) {
 static void test_no_cadence(void) {
     PiecePlan *plan = load("sentence_c_major.json");
     FormHeard heard;
-    assert(form_hear(plan, bars(0, 4), &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, bars(0, 4), &heard) == FORM_HEAR_OK);
     assert(heard.count == 0 && heard.themes == NULL);
     form_heard_destroy(&heard);
     plan_destroy(plan);
@@ -139,7 +140,7 @@ static void test_constrained_melody(void) {
     assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, bars(0, 8), &melody, 1) == 1);
     assert(plan_lane_span_set_state(plan, melody, PLAN_STATE_CONSTRAINED) == PLAN_OK);
     FormHeard heard;
-    assert(form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_ERR_NOT_WRITTEN);
+    assert(test_form_hear(plan, bars(0, 8), &heard) == FORM_HEAR_ERR_NOT_WRITTEN);
     assert(heard.count == 0 && heard.themes == NULL);
     plan_destroy(plan);
 }
@@ -188,7 +189,7 @@ static void test_keys_refused(void) {
 
 static void test_names_and_null(void) {
     FormHeard heard;
-    assert(form_hear(NULL, bars(0, 8), &heard) == FORM_HEAR_ERR_NULL);
+    assert(test_form_hear(NULL, bars(0, 8), &heard) == FORM_HEAR_ERR_NULL);
     assert(form_hear_result_name(FORM_HEAR_ERR_NOT_WRITTEN) != NULL);
     assert(form_hear_form_name(PHRASE_LEVEL_FORM_SENTENCE) == phrase_level_form_name(PHRASE_LEVEL_FORM_SENTENCE));
 }

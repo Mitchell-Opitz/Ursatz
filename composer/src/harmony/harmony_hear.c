@@ -191,7 +191,7 @@ static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t ce
 }
 
 /* soprano[i] is the soprano degree over chord i, or NULL for the one the requested cadence implies. */
-static SegmentSet *segments_create(const HeardPhrase *phrase, const int *soprano) {
+SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *soprano) {
     if (!phrase || phrase->count == 0 || phrase->count > HARMONY_MAX_CHORDS || phrase->cells_per_bar == 0) {
         return NULL;
     }
@@ -254,7 +254,7 @@ static SegmentSet *segments_create(const HeardPhrase *phrase, const int *soprano
 }
 
 SegmentSet *harmony_segments_create(const HeardPhrase *phrase) {
-    return segments_create(phrase, NULL);
+    return harmony_segments_create_heard(phrase, NULL);
 }
 
 const HarmonySegment *harmony_segments_get(const SegmentSet *set, size_t *count) {
@@ -352,41 +352,3 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode
     return harmony_hear_phrase(&phrase, heard, at_end);
 }
 
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, const int *soprano,
-                                size_t count, const Rational *section_starts, size_t section_count,
-                                HarmonyCadences *out) {
-    PhraseMetre metre;
-    PhraseChord chords[HARMONY_MAX_CHORDS];
-    KeyStructureMode modes[HARMONY_MAX_CHORDS];
-    unsigned keys[HARMONY_MAX_CHORDS];
-    size_t found;
-    /* Each chord is read in the key under it, so a cadence is heard in the key of the chord it arrives on. */
-    if (!soprano || !out || !harmony_read_lane_keys(plan, span, mode, chords, &found, &metre, modes, keys) ||
-        found != count) {
-        return false;
-    }
-    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre};
-    SegmentSet *set = segments_create(&phrase, soprano);
-    if (!set) {
-        return false;
-    }
-    size_t segment_count;
-    const HarmonySegment *segments = harmony_segments_get(set, &segment_count);
-    bool ok = harmony_analysis_find_cadences(segments, segment_count, NULL, out) == HARMONY_CADENCE_ANALYSIS_OK;
-    if (ok && section_count > 0) {
-        /* Ursatz counts the starts in whole notes from the start of the range heard. */
-        double starts[HARMONY_MAX_CHORDS];
-        size_t used = 0;
-        double origin = (double)span.start.num / (double)span.start.den;
-        for (size_t i = 0; i < section_count && used < HARMONY_MAX_CHORDS; i++) {
-            starts[used++] = (double)section_starts[i].num / (double)section_starts[i].den - origin;
-        }
-        if (harmony_analysis_add_boundary_cadences(segments, segment_count, NULL, starts, used, out) !=
-            HARMONY_CADENCE_ANALYSIS_OK) {
-            harmony_cadences_destroy(out);
-            ok = false;
-        }
-    }
-    harmony_segments_destroy(set);
-    return ok;
-}

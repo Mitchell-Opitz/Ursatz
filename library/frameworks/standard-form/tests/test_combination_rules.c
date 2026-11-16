@@ -2,12 +2,6 @@
 #include <stdio.h>
 
 #include "combination_rules.h"
-#include "rule_check.h"
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_form_combination_rule, standard_form_combination_constraint,
-                                    STANDARD_FORM_COMBINATION_RULE_COUNT);
-}
 
 /* A repeated phrase ends both times with the same cadence, whatever it is. */
 static void test_repeated_phrase(void) {
@@ -17,12 +11,6 @@ static void test_repeated_phrase(void) {
     assert(!standard_form_is_repeated_phrase(true, CADENCE_TYPE_HALF, CADENCE_TYPE_PERFECT_AUTHENTIC));
     assert(!standard_form_is_repeated_phrase(false, CADENCE_TYPE_HALF, CADENCE_TYPE_HALF));
     assert(!standard_form_is_repeated_phrase(true, CADENCE_TYPE_COUNT, CADENCE_TYPE_COUNT));
-}
-
-/* Repeat signs add no measures, so they do not make a repeated phrase. */
-static void test_written_out(void) {
-    assert(standard_form_repeat_is_written_out(true));
-    assert(!standard_form_repeat_is_written_out(false));
 }
 
 static void test_compound_period(void) {
@@ -67,9 +55,7 @@ static void test_classify_phrase_pair(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_repeated_phrase();
-    test_written_out();
     test_compound_period();
     test_classify_phrase_pair();
     printf("test_combination_rules (standard-form): ok\n");

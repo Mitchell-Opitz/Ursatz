@@ -50,18 +50,18 @@
  * of the sections it left unwritten, the climax moved in a theme that is not a sentence; a run stuck after that starts
  * again from a JSON snapshot of the plan as given, up to twelve rounds.
  *
- * After a complete run every theme section is heard with form_hear over its own span, and the returns are heard
+ * After a complete run every theme section is heard with form_hear_in over its own span, and the returns are heard
  * (return_hear.h): each section with a RETURN is planned to resemble the section it returns, and is heard as planned
  * when the kernel's thematic return detection finds that pair; a pair not found is reported, not rejected (R-048). A plan with more than one key
  * span (R-069) is then checked: its keys are closely related to the home key and every key change a section ends in
- * is a modulation (piece_check_keys), and its cadences follow the plan's (piece_check_cadences). A run that fails is
+ * is a modulation (piece_check_keys_in), and its cadences follow the plan's (piece_check_cadences). A run that fails is
  * rejected like a stuck one: it starts again from the plan as given, with other seeds, up to the same twelve rounds.
  *
  * With analyzer_check (R-080) every theme section is then analyzed through the Analyzer (analyzer_check.h): a run whose
  * analysis contradicts the plan (a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault
  * in material the plan wrote) is rejected the same way. A section the check cannot read (a length that is not whole
  * bars, a lane left open) is not checked. A piece structure plan (a section with a piece part) is checked whole, once,
- * with analyzer_check_piece: outcome->analyzer_checks holds that one check, and its sections need not be whole bars. The check is off by default, so a run without it is what it always was.
+ * with analyzer_check_piece_in: outcome->analyzer_checks holds that one check, and its sections need not be whole bars. The check is off by default, so a run without it is what it always was.
  *
  * With a style (R-080, style.h) the harmony and melody stages prefer the candidates closest to it: their checkers add
  * style_weight times the candidate's closeness to the style (style_labels.h, composer_style_closeness) to the score of
@@ -184,7 +184,7 @@ typedef struct {
 void compose_outcome_destroy(ComposeOutcome *outcome);
 
 /*
- * Runs the stages on plan (one made by piece_build_plan or grow_build_plan). PIECE_OK with the plan complete;
+ * Runs the stages on plan (one made by piece_build_plan or grow_build_plan_checked). PIECE_OK with the plan complete;
  * PIECE_ERR_STUCK with the stage that failed in outcome->stuck_stage (the plan is then partly filled);
  * PIECE_ERR_BAD_REQUEST for a plan with no open theme section.
  */

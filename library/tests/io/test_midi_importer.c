@@ -27,6 +27,15 @@
  * separate test confirms clean, defined failure on a truncated file.
  */
 
+/* Same token bytes. */
+static bool same_pitch_identity(const PitchIdentity *a, const PitchIdentity *b) {
+    size_t a_size = 0;
+    size_t b_size = 0;
+    const void *a_token = pitch_identity_token(a, &a_size);
+    const void *b_token = pitch_identity_token(b, &b_size);
+    return a_size == b_size && memcmp(a_token, b_token, a_size) == 0;
+}
+
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
     memcpy(buf + *pos, bytes, len);
     *pos += len;
@@ -93,7 +102,7 @@ static void assert_duration(const NoteEvent *note, long numerator, unsigned long
 
 static void assert_pitch(const NoteEvent *note, uint8_t midi_note) {
     PitchIdentity *expected = make_expected_pitch(midi_note);
-    assert(pitch_identity_equals(note_event_pitch(note), expected));
+    assert(same_pitch_identity(note_event_pitch(note), expected));
     pitch_identity_destroy(expected);
 }
 
@@ -129,7 +138,7 @@ static void test_spells_chromatic_scale_sharps_only(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, NULL);
     assert(r == MIDI_IMPORT_OK);
     assert(count == 13);
 
@@ -178,7 +187,7 @@ static void test_sequence_of_notes(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, NULL);
 
     assert(r == MIDI_IMPORT_OK);
     assert(count == 2);
@@ -224,7 +233,7 @@ static void test_simultaneous_chord(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, NULL);
 
     assert(r == MIDI_IMPORT_OK);
     assert(count == 3);
@@ -238,13 +247,13 @@ static void test_simultaneous_chord(void) {
         PitchIdentity *p60 = make_expected_pitch(0x3C);
         PitchIdentity *p64 = make_expected_pitch(0x40);
         PitchIdentity *p67 = make_expected_pitch(0x43);
-        if (pitch_identity_equals(note_event_pitch(events[i]), p60)) {
+        if (same_pitch_identity(note_event_pitch(events[i]), p60)) {
             seen_60 = 1;
             assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x3C);
-        } else if (pitch_identity_equals(note_event_pitch(events[i]), p64)) {
+        } else if (same_pitch_identity(note_event_pitch(events[i]), p64)) {
             seen_64 = 1;
             assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x40);
-        } else if (pitch_identity_equals(note_event_pitch(events[i]), p67)) {
+        } else if (same_pitch_identity(note_event_pitch(events[i]), p67)) {
             seen_67 = 1;
             assert(pitch_numeric_value_position_numerator(pitch_values[i]) == 0x43);
         }
@@ -271,7 +280,7 @@ static const char *voice_id_of(const NoteEvent *note) {
 static const NoteEvent *find_by_pitch(NoteEvent **events, size_t count, uint8_t midi_note) {
     for (size_t i = 0; i < count; i++) {
         PitchIdentity *expected = make_expected_pitch(midi_note);
-        bool match = pitch_identity_equals(note_event_pitch(events[i]), expected);
+        bool match = same_pitch_identity(note_event_pitch(events[i]), expected);
         pitch_identity_destroy(expected);
         if (match) {
             return events[i];
@@ -301,7 +310,7 @@ static void test_single_track_overlap_gets_interval_graph_colored_voices(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, NULL);
     assert(r == MIDI_IMPORT_OK);
     assert(count == 3);
 
@@ -340,7 +349,7 @@ static void test_multi_channel_import_gets_voices_by_track(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, NULL);
     assert(r == MIDI_IMPORT_OK);
     assert(count == 2);
 
@@ -402,7 +411,7 @@ static void test_multi_track_single_channel_gets_per_track_voices(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, size, &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, NULL);
     assert(r == MIDI_IMPORT_OK);
     assert(count == 4);
 
@@ -472,7 +481,7 @@ static void test_two_tracks_on_one_channel_each_get_voices_by_track(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    assert(midi_importer_import(buf, pos, &events, &pitch_values, &count) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, pos, &events, &pitch_values, &count, NULL, NULL) == MIDI_IMPORT_OK);
     assert(count == 3);
     assert(strcmp(voice_id_of(find_by_pitch(events, count, 0x3C)), "midi-voice-1-0") == 0);
     assert(strcmp(voice_id_of(find_by_pitch(events, count, 0x3E)), "midi-voice-1-0") == 0);
@@ -496,7 +505,7 @@ static void test_rejects_truncated_file(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(buf, sizeof(buf), &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(buf, sizeof(buf), &events, &pitch_values, &count, NULL, NULL);
 
     assert(r == MIDI_IMPORT_ERR_TRUNCATED);
     assert(events == NULL);
@@ -507,7 +516,7 @@ static void test_rejects_null_buffer(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult r = midi_importer_import(NULL, 0, &events, &pitch_values, &count);
+    MidiImportResult r = test_midi_import_parts(NULL, 0, &events, &pitch_values, &count, NULL, NULL);
     assert(r == MIDI_IMPORT_ERR_NULL_BUFFER);
 }
 
@@ -555,7 +564,7 @@ static void test_import_with_meter_defaults_to_four_four_without_a_time_signatur
     free_import(events, pitch_values, count);
 }
 
-static void test_import_with_meter_reads_time_signature_and_matches_plain_import(void) {
+static void test_import_reads_time_signature(void) {
     unsigned char track[sizeof(TS_6_8) + 4 + 5 + 4];
     size_t n = 0;
     memcpy(track + n, TS_6_8, sizeof(TS_6_8));
@@ -566,17 +575,12 @@ static void test_import_with_meter_reads_time_signature_and_matches_plain_import
     unsigned char buf[128];
     size_t size = build_smf_type0(buf, 480, track, n);
 
-    NoteEvent **plain_events = NULL;
-    PitchNumericValue **plain_values = NULL;
-    size_t plain_count = 0;
-    assert(midi_importer_import(buf, size, &plain_events, &plain_values, &plain_count) == MIDI_IMPORT_OK);
-
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiMeterImport meter = {0};
     assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, &meter, NULL) == MIDI_IMPORT_OK);
-    assert(count == plain_count);
+    assert(count == 1);
     assert(note_event_duration(events[0]) != NULL);
 
     assert(!meter_map_is_defaulted(meter.meter_map));
@@ -587,7 +591,6 @@ static void test_import_with_meter_reads_time_signature_and_matches_plain_import
 
     midi_meter_import_destroy(&meter);
     free_import(events, pitch_values, count);
-    free_import(plain_events, plain_values, plain_count);
 }
 
 static void test_import_with_meter_reports_conflicting_time_signatures(void) {
@@ -670,15 +673,6 @@ static void test_import_with_tempo_reads_tempo_at_tick_zero_over_the_default(voi
     assert(tempo_map_region_count(tempo.tempo_map) == 1);
     assert(first_region_tempo(&tempo) == 1000000);
 
-    /* One whole note at 1,000,000 microseconds per quarter is 4 seconds. */
-    MusicalTime *whole = NULL;
-    musical_time_create(1, 1, &whole);
-    PerformanceTime *seconds = NULL;
-    assert(tempo_map_seconds_at(tempo.tempo_map, whole, &seconds) == TEMPO_MAP_OK);
-    assert(performance_time_numerator(seconds) == 4 && performance_time_denominator(seconds) == 1);
-    performance_time_destroy(seconds);
-    musical_time_destroy(whole);
-
     midi_tempo_import_destroy(&tempo);
     free_import(events, pitch_values, count);
 }
@@ -705,7 +699,7 @@ static void test_import_with_tempo_late_first_tempo_keeps_a_defaulted_start(void
     free(pitch_values);
 }
 
-static void test_import_with_tempo_leaves_note_times_unchanged(void) {
+static void test_import_tempo_leaves_note_times_unchanged(void) {
     unsigned char track[sizeof(TEMPO_1000000) + 18];
     size_t n = 0;
     memcpy(track + n, TEMPO_1000000, sizeof(TEMPO_1000000));
@@ -717,23 +711,12 @@ static void test_import_with_tempo_leaves_note_times_unchanged(void) {
     unsigned char buf[128];
     size_t size = build_smf_type0(buf, 480, track, n);
 
-    NoteEvent **plain_events = NULL;
-    PitchNumericValue **plain_values = NULL;
-    size_t plain_count = 0;
-    assert(midi_importer_import(buf, size, &plain_events, &plain_values, &plain_count) == MIDI_IMPORT_OK);
-
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiTempoImport tempo = {0};
     assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, &tempo) == MIDI_IMPORT_OK);
-    assert(count == plain_count && count == 2);
-    for (size_t i = 0; i < count; i++) {
-        const MusicalTime *a = temporal_anchor_position(note_event_temporal_anchor(events[i]));
-        const MusicalTime *b = temporal_anchor_position(note_event_temporal_anchor(plain_events[i]));
-        assert(musical_time_equals(a, b));
-        assert(duration_equals(note_event_duration(events[i]), note_event_duration(plain_events[i])));
-    }
+    assert(count == 2);
 
     /* The note's own times are whole-note fractions of ticks, whatever the tempo says. */
     assert_position(events[1], 240, 1920);
@@ -741,7 +724,6 @@ static void test_import_with_tempo_leaves_note_times_unchanged(void) {
 
     midi_tempo_import_destroy(&tempo);
     free_import(events, pitch_values, count);
-    free_import(plain_events, plain_values, plain_count);
 }
 
 static void test_import_with_tempo_reports_conflicting_tempos(void) {
@@ -787,13 +769,13 @@ int main(void) {
     test_rejects_truncated_file();
     test_rejects_null_buffer();
     test_import_with_meter_defaults_to_four_four_without_a_time_signature();
-    test_import_with_meter_reads_time_signature_and_matches_plain_import();
+    test_import_reads_time_signature();
     test_import_with_meter_reports_conflicting_time_signatures();
     test_import_with_meter_rejects_bad_input_without_writing_outputs();
     test_import_with_tempo_defaults_without_a_set_tempo();
     test_import_with_tempo_reads_tempo_at_tick_zero_over_the_default();
     test_import_with_tempo_late_first_tempo_keeps_a_defaulted_start();
-    test_import_with_tempo_leaves_note_times_unchanged();
+    test_import_tempo_leaves_note_times_unchanged();
     test_import_with_tempo_reports_conflicting_tempos();
     test_import_with_tempo_rejects_bad_input_without_writing_outputs();
     printf("test_midi_importer: ok\n");

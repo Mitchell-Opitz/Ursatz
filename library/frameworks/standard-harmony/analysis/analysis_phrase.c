@@ -167,19 +167,3 @@ void harmony_phrase_model_destroy(HarmonyPhraseModel *model) {
     model->phrase_count = 0;
 }
 
-bool harmony_phrase_label_claim_read(const Interpretation *interpretation, HarmonyPhraseLabelClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), HARMONY_PHRASE_LABEL_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

@@ -73,18 +73,6 @@ const char *style_label_contour(int semitones);
 /* A duration in whole notes as a reduced fraction: "1/8", "3/16", "1/1". A zero denominator reads "0/1". */
 void style_label_duration(unsigned long numerator, unsigned long denominator, char *buffer, size_t size);
 
-/*
- * A tempo in quarter notes per minute as a band of 20 from 40: "<40", "40-59", "60-79", ..., "200-219", "220+". A
- * value on a boundary goes to the upper band, so 140 reads "140-159". Writes at most size bytes, always terminated.
- */
-void style_label_tempo(double quarters_per_minute, char *buffer, size_t size);
-
-/*
- * Attacks per beat rounded to the nearest 1/2 (halves up) and written as a reduced fraction: "1/2", "1", "3/2",
- * "2"; 0 reads "0" and a rounded value of 4 or more reads "4+". Writes at most size bytes, always terminated.
- */
-void style_label_density(double attacks_per_beat, char *buffer, size_t size);
-
 /* The degree label of a pitch class against a tonic pitch class: "1 b2 2 b3 3 4 #4 5 b6 6 b7 7" by the semitones
    above the tonic. Any pitch class number is accepted (taken modulo 12). The returned text is static. */
 const char *style_label_degree(int pitch_class, int tonic_pc);

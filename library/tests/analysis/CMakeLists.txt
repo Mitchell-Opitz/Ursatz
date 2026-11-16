@@ -1,14 +1,7 @@
-add_ursatz_test(analyzer)
-add_ursatz_test(feature_extraction)
-add_ursatz_test(interval_analysis)
-add_ursatz_test(scale_analysis)
 
-add_ursatz_test(voice_leading_analysis)
 add_ursatz_test(outer_voice)
 add_ursatz_test(outer_voice_attack_soprano)
 add_ursatz_test(voice_separation)
-add_ursatz_test(cadence_detection)
-add_ursatz_test(cadence_classification)
 add_ursatz_test(motif_window_matching)
 add_ursatz_test(motive_sketch)
 add_ursatz_test(motive_sketch_value)
@@ -27,7 +20,7 @@ add_ursatz_test(motive_link_groups)
 add_ursatz_test(progression_patterns)
 
 # Scoped memcheck for the motive link test only (not a repo-wide valgrind mechanism -- see
-# tests/persistence/CMakeLists.txt for the same pattern). Skips silently if valgrind isn't installed.
+# tests/query/CMakeLists.txt for the same pattern). Skips silently if valgrind isn't installed.
 find_program(URSATZ_ANALYSIS_VALGRIND valgrind)
 if(URSATZ_ANALYSIS_VALGRIND)
   add_test(NAME motive_link_valgrind
@@ -74,11 +67,7 @@ if(URSATZ_ANALYSIS_VALGRIND)
            COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_motive_link_groups>)
 endif()
-add_ursatz_test(phrase_segmentation)
 add_ursatz_test(phrase_boundary_detection)
-add_ursatz_test(period_detection)
-add_ursatz_test(sentence_continuation_matching)
-add_ursatz_test(sentence_detection)
 add_ursatz_test(form_structure_detection)
 add_ursatz_test(thematic_return_detection)
 add_executable(test_field1_weighted_harmony test_field1_weighted_harmony.c)
@@ -138,12 +127,6 @@ target_link_libraries(test_two_voice_spans PRIVATE ursatz_chain common_practice_
 target_compile_definitions(test_two_voice_spans PRIVATE
     URSATZ_TWO_VOICE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/two-voice")
 add_test(NAME two_voice_spans COMMAND test_two_voice_spans)
-
-add_executable(test_weighted_coverage_report test_weighted_coverage_report.c)
-target_link_libraries(test_weighted_coverage_report PRIVATE ursatz_chain common_practice_minimal standard_meter)
-target_compile_definitions(test_weighted_coverage_report PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
-add_test(NAME weighted_coverage_report COMMAND test_weighted_coverage_report)
 
 add_executable(test_outer_voices_written_parts test_outer_voices_written_parts.c)
 target_link_libraries(test_outer_voices_written_parts PRIVATE ursatz_chain common_practice_minimal standard_meter standard_tonality)

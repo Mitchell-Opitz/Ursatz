@@ -31,7 +31,4 @@ bool idea_label_valid(IdeaLabel value);
    value. */
 const char *idea_label_name(IdeaLabel value);
 
-/* "b.i." "c.i." "f." "u."; NULL for an invalid value. */
-const char *idea_label_abbreviation(IdeaLabel value);
-
 #endif

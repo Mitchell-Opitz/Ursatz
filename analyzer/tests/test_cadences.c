@@ -6,7 +6,6 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "cJSON.h"
@@ -238,21 +237,6 @@ static void check_competing_cadence(const cJSON *cadences, int measure, int beat
           test_json_member(alternative, "beat")->valuedouble == alternative_beat);
 }
 
-/* The report prints each competing pair, the primary first, and calls a subverted cadence evaded. */
-static void check_reading_report(const char *path, const ImportedNotes *notes, const AnalysisReport *report,
-                                 const char *pair_line, const char *counts) {
-    AnalysisDocument *document = analysis_document_build(path, notes, report);
-    char *markdown = document ? markdown_report_render(document) : NULL;
-    CHECK(markdown != NULL);
-    if (markdown) {
-        CHECK(strstr(markdown, pair_line) != NULL);
-        CHECK(strstr(markdown, "subverted") == NULL);
-        CHECK(strstr(markdown, counts) != NULL);
-    }
-    free(markdown);
-    analysis_document_destroy(document);
-}
-
 static void check_counts(const Piece *piece, const cJSON *cadences) {
     if (strcmp(piece->name, "Bach 114") == 0) {
         CHECK(count_type(cadences, "perfect-authentic") == 0);
@@ -277,7 +261,7 @@ static void run_piece(const Piece *piece) {
         failures++;
         return;
     }
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     cJSON *document = json ? cJSON_Parse(json) : NULL;
     free(json);
     CHECK(document != NULL);
@@ -288,13 +272,9 @@ static void run_piece(const Piece *piece) {
         check_readings(test_json_member(document, "cadences"));
         if (strcmp(piece->name, "Clementi 36") == 0) {
             check_competing_cadence(test_json_member(document, "cadences"), 23, 1, "half", 500, "perfect-authentic", 24, 1, 500);
-            check_reading_report(path, &notes, &report, "- m23 b1 half cadence (50%), or perfect authentic cadence at m24 b1 (50%)\n",
-                                 "half 3, imperfect-authentic 1.");
         }
         if (strcmp(piece->name, "Field 1") == 0) {
             check_competing_cadence(test_json_member(document, "cadences"), 61, 1, "half", 650, "imperfect-authentic", 62, 1, 350);
-            check_reading_report(path, &notes, &report, "- m61 b1 half cadence (65%), or imperfect authentic cadence at m62 b1 (35%)\n",
-                                 "half 7, imperfect-authentic 1, perfect-authentic 1.");
         }
         if (strcmp(piece->name, "Field 5") == 0) {
             CHECK(cJSON_GetArraySize(test_json_member(document, "cadences")) == 0);

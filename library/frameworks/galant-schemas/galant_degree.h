@@ -54,7 +54,4 @@ GalantPitchDegree galant_degree_of_semitones(int semitones);
    (either), or +1 (raised). */
 bool galant_degree_allows(const GalantDegree *wanted, const GalantPitchDegree *actual);
 
-/* "natural" "lowered" "either" "raised"; NULL for an invalid alteration. */
-const char *galant_alteration_name(GalantAlteration alteration);
-
 #endif

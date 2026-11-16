@@ -4,13 +4,6 @@
 
 #include "counterpoint_test_util.h"
 #include "melodic_rules.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "melodic", STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT);
-#define standard_counterpoint_melodic_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_melodic_constraint, standard_counterpoint_melodic_preference, standard_counterpoint_melodic_rule_holds, StandardCounterpointLineLimits, which, a, b)
 
 static bool holds_with(StandardCounterpointMelodicRule rule, const PitchSpelling *const *notes, size_t count,
                        const StandardCounterpointLimits *limits) {
@@ -32,12 +25,10 @@ static bool is_hard(int rule) {
            rule == STANDARD_COUNTERPOINT_MELODIC_RULE_FORBIDDEN_OUTLINE;
 }
 
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_melodic_rule, standard_counterpoint_melodic_constraint,
-                                    STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT);
+static void test_soft_rules_have_preferences(void) {
     for (int i = 0; i < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; i++) {
-        ConstraintType type = constraint_type(standard_counterpoint_melodic_constraint((StandardCounterpointMelodicRule)i));
-        assert(type == (is_hard(i) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
+        const Preference *preference = standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)i);
+        assert((preference != NULL) == !is_hard(i));
     }
 }
 
@@ -220,7 +211,7 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
+    test_soft_rules_have_preferences();
     test_names();
     test_clausula_vera();
     test_repeated_notes();

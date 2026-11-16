@@ -36,12 +36,6 @@ typedef struct {
     bool conclusive;
 } HarmonyCadenceKind;
 
-/* The number of kinds. */
-size_t harmony_cadence_kind_count(void);
-
-/* The kind at index in table order; NULL past the end. */
-const HarmonyCadenceKind *harmony_cadence_kind_at(size_t index);
-
 /* The kind with this name; NULL for an unknown name or NULL. */
 const HarmonyCadenceKind *harmony_cadence_kind_find(const char *name);
 

@@ -44,7 +44,5 @@ The Library, Tags panel and the other top-level views of the GUI. [Docs index](.
 - **Motifs**, **Themes**, **Pieces**: the items of the material store (see
   [Materials views](motifs.md#materials-views)).
 - **Motive links**: the links between motives of pieces and items (see [Motive links view](analysis-and-score.md#motive-links-view)).
-- **Health**: last entry in the sidebar. Shows the backend health check; a
-  failed check appears only here.
 
 The GUI opens on the Library.

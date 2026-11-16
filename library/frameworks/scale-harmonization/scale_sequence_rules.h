@@ -2,9 +2,6 @@
 #define URSATZ_FRAMEWORKS_SCALE_HARMONIZATION_SCALE_SEQUENCE_RULES_H
 
 #include <stdbool.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "scale_harmonization.h"
 #include "scale_patterns.h"
 
@@ -55,13 +52,6 @@ typedef enum {
     SCALE_SEQUENCE_WHOLE_UNITS,
     SCALE_SEQUENCE_RULE_COUNT
 } ScaleSequenceRule;
-
-const Rule *scale_sequence_rule(ScaleSequenceRule which);
-const Constraint *scale_sequence_constraint(ScaleSequenceRule which);
-
-/* "direction" "bass-by-step" "intervals" "repeats" "suspended" "whole-units"; NULL for an
-   invalid rule. */
-const char *scale_sequence_rule_name(ScaleSequenceRule which);
 
 /* True when the sequence has a pattern and a valid harmonization. */
 bool scale_sequence_valid(const ScaleSequence *sequence);

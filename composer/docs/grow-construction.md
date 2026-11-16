@@ -42,7 +42,7 @@ Measured in C major 4/4 and A minor 3/4, seeds 1 to 10 (`test_grow_extensions`):
 
 ## Choosing a construction
 
-A request with `bars` other than 4 or 8 and no `construction` gets the one `grow_construction_choose` gives (R-469), by rule and never by a draw; `grow_build_plan` refuses it (`/bars`, `no construction makes a 10-bar period from this motif`) when there is none. 4 and 8 bars with a motif of 2 bars or fewer get none and are built as ever. A construction the caller gives keeps reason `given`.
+A request with `bars` other than 4 or 8 and no `construction` gets the one `grow_construction_choose` gives (R-469), by rule and never by a draw; `grow_build_plan_checked` refuses it (`/bars`, `no construction makes a 10-bar period from this motif`) when there is none. 4 and 8 bars with a motif of 2 bars or fewer get none and are built as ever. A construction the caller gives keeps reason `given`.
 
 1. The basic idea `b` is the motif's bars when that is 3 or more (reason `motive`), else 2 from 6 bars up, else 1 (reason `length`); a motif longer than `b` is refused.
 2. The beginning `h1` is 2b for a presentation (basic idea and repetition of `b` each). An antecedent or compound basic idea has 2b when that leaves the ending at least as long, else half the theme; its second idea is `h1 - b` bars.

@@ -2,15 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rule_check.h"
 #include "third_species_ends_rules.h"
 #include "third_species_test_util.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-ends", STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT);
-#define standard_counterpoint_third_species_ends_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_third_species_ends_constraint, standard_counterpoint_third_species_ends_preference, standard_counterpoint_third_species_ends_rule_holds, StandardCounterpointThirdSpeciesTonic, which, a, b)
 
 #define ENDS(name) STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_##name
 
@@ -19,22 +12,6 @@ STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-ends", STANDARD_COUNTERP
 
 static bool holds(StandardCounterpointThirdSpeciesEndsRule rule, const StandardCounterpointThirdSpeciesExercise *ex) {
     return standard_counterpoint_third_species_ends_rule_holds(rule, ex, P(D, 0, 4));
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_third_species_ends_rule,
-                                    standard_counterpoint_third_species_ends_constraint,
-                                    STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_THIRD_SPECIES_ENDS_COUNT; i++) {
-        assert(constraint_type(standard_counterpoint_third_species_ends_constraint(
-                   (StandardCounterpointThirdSpeciesEndsRule)i)) == CONSTRAINT_TYPE_HARD);
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_third_species_ends_rule_name(ENDS(BEGIN)), "begin") == 0);
-    assert(strcmp(standard_counterpoint_third_species_ends_rule_name(ENDS(CLAUSULA_VERA)), "clausula-vera") == 0);
-    assert(standard_counterpoint_third_species_ends_rule_name(ENDS(COUNT)) == NULL);
 }
 
 static void test_good_ending(void) {
@@ -189,8 +166,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_ending();
     test_begin();
     test_opening_bar();

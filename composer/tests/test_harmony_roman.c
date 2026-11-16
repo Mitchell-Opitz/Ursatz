@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <ursatz_composer/harmony_phrase.h>
+#include "support/test_composer.h"
 
 static const KeyStructureMode MODES[2] = {KEY_STRUCTURE_MODE_MAJOR, KEY_STRUCTURE_MODE_MINOR};
 
@@ -84,7 +85,7 @@ static void test_applied_round_trip(void) {
                 }
                 assert(harmony_roman_format_applied(MODES[m], &applied, roman));
                 HarmonyAppliedChord parsed;
-                assert(harmony_roman_parse_applied(MODES[m], roman, &parsed));
+                assert(test_roman_parse_applied(MODES[m], roman, &parsed));
                 assert(parsed.quality == applied.quality && parsed.target == applied.target);
                 /* An applied numeral is never a diatonic one. */
                 HarmonyChord chord;
@@ -95,10 +96,10 @@ static void test_applied_round_trip(void) {
         assert(formatted > 0);
     }
     HarmonyAppliedChord parsed;
-    assert(harmony_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V7/V", &parsed));
+    assert(test_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V7/V", &parsed));
     assert(parsed.quality == HARMONY_APPLIED_DOMINANT_SEVENTH && parsed.target == 5);
-    assert(!harmony_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V", &parsed));
-    assert(!harmony_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V/I", &parsed));
+    assert(!test_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V", &parsed));
+    assert(!test_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V/I", &parsed));
 }
 
 static void test_inverted_applied(void) {
@@ -123,7 +124,7 @@ static void test_inverted_applied(void) {
                     assert(parsed.quality == applied.quality && parsed.target == applied.target);
                     assert(parsed_inversion == inversion);
                     /* The plain parser reads root position only. */
-                    assert(harmony_roman_parse_applied(MODES[m], roman, &parsed) == (inversion == 0));
+                    assert(test_roman_parse_applied(MODES[m], roman, &parsed) == (inversion == 0));
                     formatted++;
                 }
             }

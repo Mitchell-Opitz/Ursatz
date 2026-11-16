@@ -9,6 +9,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "support/test_oracles.h"
 
 /*
  * The prolongation harmony operator, run through the fill loop with its checker. Every plan is one idea over a
@@ -76,7 +77,7 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = harmony_prolong_checker;
-    assert(harmony_prolong_register(registry) == FILL_OK);
+    assert(harmony_prolong_register_given(registry) == FILL_OK);
     assert(harmony_phrase_register(registry) == FILL_OK);
     assert(fill_run(fixture->plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
@@ -253,7 +254,7 @@ static void test_shape_decides_the_operator(void) {
     scenario.shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
     Fixture fixture = build(&scenario);
     PhraseRequest request;
-    assert(harmony_prolong_read_request(fixture.plan, fixture.target, &request));
+    assert(harmony_prolong_read_request_given(fixture.plan, fixture.target, &request));
     assert(!harmony_phrase_read_request(fixture.plan, fixture.target, &request));
     plan_destroy(fixture.plan);
 }

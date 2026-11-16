@@ -58,7 +58,7 @@ typedef enum {
 AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section, AnalyzerCheck *out);
 
 /*
- * The whole piece (R-172, R-173): every section of a piece structure plan (a section with a piece part; not the seam or
+ * The whole piece, checked by analyzer_check_piece_in (check/hearing.h) over a hearing (R-172, R-173): every section of a piece structure plan (a section with a piece part; not the seam or
  * the material), heard as one span (from the plan's start to the end of its last section that is not material) in the plan's first
  * meter and key. A plan version that has sections not on whole bars, a pickup or any length of beats is read as it is.
  *   - Cadence: the first CADENCE constraint of each section is its planned cadence. It is heard as planned when an
@@ -76,8 +76,6 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
  * The items' bar is counted from the start of the piece. ANALYZER_CHECK_ERR_NOT_WRITTEN for a lane left open before the
  * piece's end. analyzer_check_section stays as it was for the other commands.
  */
-AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *out);
-
 /* Frees everything and zeroes the struct. Safe on a zeroed struct. */
 void analyzer_check_destroy(AnalyzerCheck *check);
 

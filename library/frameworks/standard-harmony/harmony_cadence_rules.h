@@ -4,9 +4,7 @@
 #include <stdbool.h>
 
 #include "harmony_chord.h"
-#include "rules/constraint.h"
 #include "rules/preference.h"
-#include "rules/rule.h"
 #include "semantics/cadence_type.h"
 
 /*
@@ -68,13 +66,8 @@ typedef enum {
 /* True for two valid chords and a soprano degree from 1 to 7. */
 bool harmony_cadence_valid(const HarmonyCadence *cadence);
 
-const Rule *harmony_cadence_rule(HarmonyCadenceRule which);
-const Constraint *harmony_cadence_constraint(HarmonyCadenceRule which);
 /* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
 const Preference *harmony_cadence_preference(HarmonyCadenceRule which);
-
-/* "cadential-progression" "half-without-seventh"; NULL for an invalid rule. */
-const char *harmony_cadence_rule_name(HarmonyCadenceRule which);
 
 /* True when the cadence satisfies the rule. False when it does not, and for an
    invalid cadence or an invalid rule. */

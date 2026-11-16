@@ -8,12 +8,12 @@
  * Western music -- major scales, scale degrees and their names, which
  * key a key signature belongs to, and the circle of fifths. Built as a
  * Framework extension module physically outside src/theory/, the same
- * shape as standard-notation; this module never modifies src/theory/ or
+ * shape as standard-voicing; this module never modifies src/theory/ or
  * src/rules/, and does not depend on any other framework module.
  *
  * Scope is the pitch-relationship rules of tonal music. How accidentals
- * are written and ordered in a key signature is notation, and lives in
- * standard-notation. See README.md for the full scope statement.
+ * are written and ordered in a key signature is notation, and is not modeled
+ * here. See README.md for the full scope statement.
  *
  * Dependency ceiling: same as Framework itself (theory/framework.h) --
  * canonical L0-L6 interfaces only. Enforced by

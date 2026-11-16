@@ -44,7 +44,7 @@ The command reads the options into a request for `composer_api_plan` ([api.md](a
 | `--blend <file>` | A second style model file, blended with the style (`--style`; needs `--style`). The share of each of the two in each dimension is set by the weights below. See [style.md](style.md). |
 | `--blend-weight <n/d>` | The second style's share in every dimension, from 0 (only the first) to 1 (only the second); default `1/2`. Needs `--blend`. |
 | `--blend-weights <dimension>=<n/d>,...` | The share per dimension: `harmony`, `rhythm`, `melody`, `form`. A dimension not named takes `--blend-weight`, else `1/2`. Needs `--blend`. |
-| `--out <plan.json>` | Where the plan is written, as `plan_write_json_file` writes it. |
+| `--out <plan.json>` | Where the plan is written, as `plan_to_json` writes it. |
 | `--format <text\|json>` | How the plan is printed on stdout. Text by default. |
 
 ## Given material

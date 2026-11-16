@@ -11,9 +11,7 @@ the L7 kernel itself"). This is the first module in that pattern;
 future extensions (jazz harmony, species counterpoint, etc.) are
 expected to follow the same `frameworks/<name>/` shape.
 
-The subset-match chord analyzer and the key collection analyzer that were once compiled into this
-target now live in the analysis chain (`chain/ursatz_chain/`); this framework compiles no kernel
-source.
+This framework compiles no kernel source.
 
 ## Scope
 
@@ -24,23 +22,20 @@ covers exactly:
 - **Seven diatonic triads**, relative to a declared key: I (major), ii
   (minor), iii (minor), IV (major), V (major, also usable as dominant
   function), vi (minor), vii&deg; (diminished). Each resolves to a real
-  `Chord` (`interpretation/chord.h`) labeled with its roman numeral, and
-  each has a backing `Rule`/`Constraint` pair referencing this
-  Framework.
+  `Chord` (`interpretation/chord.h`) labeled with its roman numeral
+  (`common_practice_build_triad_chord_with_confidence`).
 - **Four diatonic seventh-chord qualities**: dominant7, major7, minor7,
   half-diminished7 -- the seventh chords that occur naturally within a
-  major or natural-minor key. Unlike the triads above, seventh-chord
-  identification (`seventh_identification.h`) is quality-keyed rather
-  than degree-keyed: matching is against each chord tone's root-relative
-  semitone interval (0-11), not scale-degree position, because which
+  major or natural-minor key. Unlike the triads above, the seventh chords
+  are quality-keyed rather than degree-keyed: matching is against each
+  chord tone's root-relative semitone interval (0-11), not scale-degree
+  position, because which
   degree a seventh chord sits on does not by itself determine its
   quality (e.g. scale degree 1 is major7 in a major key but minor7 in
   natural minor). Each quality resolves to a real `Chord` labeled with
-  its quality name (e.g. "dominant7"), with its own backing
-  `Rule`/`Constraint` pair (`chord_vocabulary_seventh.h`), mirroring the
-  triads' construction shape but as a separate table/code path.
-  The subset matcher scans these four only (and the seven degree-keyed
-  triads); the diminished7 and the augmented triad below belong to the
+  its quality name (e.g. "dominant7") (`chord_vocabulary_seventh.h`),
+  mirroring the triads' construction shape but as a separate table/code
+  path. The diminished7 and the augmented triad below belong to the
   weighted minor vocabulary.
 - **Minor-key chord vocabulary for weighted identification** (R-030). The
   weighted identifier (`weighted_identification.h`) scores the region's
@@ -60,13 +55,6 @@ covers exactly:
 - **Major and natural minor keys only.** Each resolves to a real `Key`
   (`interpretation/key.h`) labeled with its name (e.g. "C major", "A
   minor").
-- **Deterministic, single-answer triad identification**, given
-  caller-supplied scale-degree data for a Sonority already understood
-  to be in a declared key (see `triad_identification.h` for why scale
-  degrees rather than a raw `Sonority` -- `PitchIdentity` carries no
-  numeric semantics yet, so no numeric pitch-class analysis is possible
-  at this layer; this mirrors the same limitation
-  `chain/ursatz_chain/subset_chord_analyzer.c` already documents).
 
 ## Deliberately out of scope (not omitted by oversight)
 
@@ -74,18 +62,8 @@ covers exactly:
 - Modal interchange / borrowed chords
 - Secondary dominants and other tonicization (including chromatic
   seventh chords such as secondary-dominant sevenths)
-- Harmonic and melodic minor in the subset matcher and in `Key` (natural
-  minor only there); weighted identification reads all three forms
-- Chord inversion identification (a triad or seventh chord in any
-  inversion is matched to its root-position label; which tone is in the
-  bass is not reported)
-- True multi-candidate / confidence-weighted analysis: this pass
-  returns a single best match by the documented tie-break rule
-  (unordered scale-degree-set membership) rather than a weighted
-  candidate set. Genuinely ambiguous or partial sonorities (e.g. fewer
-  than three distinct scale degrees, or a set matching more than one
-  reading under a different framework) are reported as no match, not
-  guessed.
+- Harmonic and melodic minor in `Key` (natural minor only there);
+  weighted identification reads all three forms
 - Modulation and key-change detection
 - Cadence, voice-leading, and other harmonic-function analysis beyond
   bare triad/key naming
@@ -96,15 +74,11 @@ separate `frameworks/<name>/` extensions.
 
 Weighted identification and chords in context are documented in [common-practice-minimal-weighted.md](../../docs/modules/common-practice-minimal-weighted.md).
 
-## Boundary with `rules/constraint_evaluate`
+## Boundary with `rules/`
 
-`rules/constraint.h`'s `constraint_evaluate` remains an untouched stub,
-exactly as documented in `docs/modules/rules.md`: real evaluation logic
-is reserved for a future L8 `CandidateEvaluator`. This module's own
-triad-matching logic (`triad_identification.c`) is a separate,
-self-contained implementation that never calls `constraint_evaluate` --
-it uses `Rule`/`Constraint`/`Chord`/`Key` only for their existing
-shape and metadata.
+This module builds no `Rule` or `Constraint` and evaluates none (the
+`constraint_evaluate` function was deleted, P55); it uses `Chord` and
+`Key` only for their existing shape and metadata.
 
 ## Dependencies
 

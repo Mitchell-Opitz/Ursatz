@@ -15,8 +15,8 @@
 
 /*
  * Motive analysis (the form adapter, L3.7): motives of the soprano (and, by config, the bass) found by interval and rhythm, and the
- * ways they recur. A motive is a short, regularly recurring snippet of music (motive_rules.h); a recurring motive commonly
- * undergoes the transformations that file lists. Motives of different voices are not matched with each other, and inner voices are
+ * ways they recur. A motive is a short, regularly recurring snippet of music ; a recurring motive commonly
+ * undergoes transformations (the KINDS below). Motives of different voices are not matched with each other, and inner voices are
  * not read.
  *
  * DIMENSIONS. A window of notes has two interval sequences: the SEMITONES between successive notes, and, when every note of the
@@ -55,8 +55,6 @@
 
 /* StandardFormMotiveKind is MotiveOccurrenceKind (semantics/motive_occurrence_kind.h), kept as an alias until B12. */
 
-/* "exact" "real-transposed" "tonal-transposed" "inverted" "retrograde" "augmented" "diminished" "fragmented" "varied"; NULL otherwise. */
-const char *standard_form_motive_kind_name(StandardFormMotiveKind kind);
 /* The precedence rank of a kind when several apply (lower wins): exact 0, real and tonal 1, inverted and retrograde 2, augmented and
    diminished 3, fragmented 4, varied 5. -1 for an invalid kind. */
 int standard_form_motive_kind_rank(StandardFormMotiveKind kind);
@@ -118,17 +116,13 @@ typedef struct {
 } StandardFormMotives;
 
 /* Finds the motives. phrases, segmentation (the ideas, for the start rule and the containment links) and themes (the continuation spans
-   searched first for fragments) are the form adapter's outputs; themes may be NULL. config may be NULL for the defaults. `matcher` is
-   required (NO_DETECTOR otherwise). On OK, *out is owned by the caller (standard_form_motives_destroy). */
+   searched first for fragments) are the form adapter's outputs; themes may be NULL. config may be NULL for the defaults. `matcher` and
+   config->relation_match are required (NO_DETECTOR otherwise). On OK, *out is owned by the caller (standard_form_motives_destroy). */
 StandardFormAnalysisStatus standard_form_find_motives(const StandardFormInput *input, const StandardFormPhrases *phrases,
                                                       const StandardFormSegmentation *segmentation,
                                                       const StandardFormThemes *themes, const StandardFormConfig *config,
                                                       StandardFormWindowMatcher matcher, void *matcher_context,
                                                       StandardFormMotives *out);
 void standard_form_motives_destroy(StandardFormMotives *motives);
-
-bool standard_form_motive_claim_read(const Interpretation *interpretation, StandardFormMotiveClaim *out);
-bool standard_form_motive_occurrence_claim_read(const Interpretation *interpretation,
-                                                StandardFormMotiveOccurrenceClaim *out);
 
 #endif

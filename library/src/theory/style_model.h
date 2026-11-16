@@ -7,10 +7,8 @@
 #include "identity/entity_id.h"
 
 /*
- * StyleModel (Category / base type): Registry groups this with
- * Tendency (theory/tendency.h) and StatisticalModel
- * (theory/statistical_model.h) under the same Theory -> Corpus open
- * issue (Dependency Spec §7.2) -- build shape only.
+ * StyleModel (Category / base type): Registry files this under the
+ * Theory -> Corpus open issue (Dependency Spec §7.2) -- build shape only.
  *
  * Fields: id, style_name, style_features, training_corpus,
  * model_version.
@@ -20,8 +18,7 @@
  * container for whatever an L8/L9-adjacent producer supplies.
  *
  * training_corpus is an opaque identifier/label string only -- never a
- * music-corpus object reference, same treatment StatisticalModel gives
- * its own training_corpus field. This module has no include of any
+ * music-corpus object reference. This module has no include of any
  * music-corpus header.
  *
  * Construction/shape only in this pass: no ingestion, fitting, or
@@ -49,12 +46,9 @@ StyleModelResult style_model_create(EntityID *id, const char *style_name, Value 
                                      const char *training_corpus, const char *model_version, StyleModel **out);
 void style_model_destroy(StyleModel *model);
 
-const EntityID *style_model_id(const StyleModel *model);
 const char *style_model_style_name(const StyleModel *model);
 const Value *style_model_style_features(const StyleModel *model);
 const char *style_model_training_corpus(const StyleModel *model);
 const char *style_model_model_version(const StyleModel *model);
-
-bool style_model_identity_equals(const StyleModel *a, const StyleModel *b);
 
 #endif

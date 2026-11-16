@@ -7,6 +7,7 @@
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * The grown sentences, heard. The same runs as test_grow_sentence (four keys and meters, 8 and 4 bars, seeds 1 to 10):
@@ -72,11 +73,11 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
 
     PlanSpan theme = plan_node_span(plan, find_node(plan, "theme"));
-    assert(form_hear(plan, theme, &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, theme, &heard) == FORM_HEAR_OK);
     share->runs++;
     if (heard.count == 0) {
         share->nothing++;

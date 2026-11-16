@@ -52,9 +52,6 @@
  * A change point whose signature equals the previous region's and that falls on one of its
  * barlines adds nothing and is dropped. One that falls mid-measure is kept: it starts a new region
  * and so ends a short measure.
- *
- * Each region has its own EntityID (the map's id, "/region-" and the region index), which is what
- * a Measure's meter_map_region_ref names; meter_map_region_by_id resolves it.
  */
 
 typedef struct MeterMap MeterMap;
@@ -111,9 +108,6 @@ const MeterMapRegion *meter_map_region(const MeterMap *map, size_t index);
    METER_MAP_ERR_TIME_BEFORE_START for a time before 0. *out is borrowed from the map. */
 MeterMapResult meter_map_region_at(const MeterMap *map, const MusicalTime *time, const MeterMapRegion **out);
 
-/* METER_MAP_ERR_NOT_FOUND if no region has this id. */
-MeterMapResult meter_map_region_by_id(const MeterMap *map, const EntityID *id, const MeterMapRegion **out);
-
 /* The number of the measure containing time. A barline time is the measure that starts there. */
 MeterMapResult meter_map_measure_index_at(const MeterMap *map, const MusicalTime *time, int *out_index);
 
@@ -131,7 +125,6 @@ MeterMapResult meter_map_region_of_measure(const MeterMap *map, int index, const
    METER_MAP_ERR_TIME_BEFORE_START for a negative end_time. */
 MeterMapResult meter_map_measure_count(const MeterMap *map, const MusicalTime *end_time, size_t *out_count);
 
-const EntityID *meter_map_region_id(const MeterMapRegion *region);
 const TimeSignature *meter_map_region_time_signature(const MeterMapRegion *region);
 const MusicalTime *meter_map_region_start(const MeterMapRegion *region);
 /* NULL for the open (last) region. */

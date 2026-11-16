@@ -19,8 +19,6 @@ static void test_ascending_five_six_with_applied_chords(void) {
     assert(near_to(claim->unit_share, 1.0) && near_to(claim->soprano_bonus, 0.1) && near_to(claim->confidence, 1.0));
     assert(strcmp(claim->stages[1].segment_id, "s1") == 0 && claim->stages[1].soprano_degree == 6 && claim->stages[3].root_degree == 7);
     assert(matches.items[0].relationship != NULL && matches.items[0].interpretation != NULL);
-    ScaleSequenceClaim read;
-    assert(scale_sequence_claim_read(matches.items[0].interpretation, &read) && read.units == 3);
     scale_sequence_matches_destroy(&matches);
     run_destroy(&run);
 }
@@ -194,7 +192,6 @@ static void test_bad_calls(void) {
     ScaleDetectConfig bad = scale_detect_config_default();
     bad.minimum_units = 1;
     assert(scale_sequence_detect(&run.list, &bad, &matches) == GALANT_ANALYSIS_ERR_INVALID);
-    assert(!scale_sequence_claim_read(NULL, NULL));
     run_destroy(&run);
 }
 

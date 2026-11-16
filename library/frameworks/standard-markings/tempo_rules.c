@@ -3,16 +3,6 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_MARKINGS_TEMPO_RULE_COUNT] = {
-    "tempo-groups", "tempo-order", "tempo-modifiers", "tempo-metronome", "tempo-change", "tempo-a-tempo"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_markings_framework, "standard-markings",
-    NAMES, STANDARD_MARKINGS_TEMPO_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_markings_tempo, StandardMarkingsTempoRule, STANDARD_MARKINGS_TEMPO_RULE_COUNT, g_table)
-
 /* Slowest to fastest. */
 static const char *const WORDS[STANDARD_MARKINGS_TEMPO_WORD_COUNT] = {
     "grave", "largo", "lento", "adagio", "andante", "moderato", "allegretto", "allegro", "vivace", "presto"};
@@ -69,15 +59,6 @@ TempoGroup standard_markings_tempo_group(const char *word) {
     return TEMPO_GROUP_FAST; /* allegretto, allegro, vivace, presto */
 }
 
-bool standard_markings_tempo_is_slower(const char *slower, const char *faster) {
-    int slower_rank, faster_rank;
-    if (!standard_markings_tempo_word_rank(slower, &slower_rank) ||
-        !standard_markings_tempo_word_rank(faster, &faster_rank)) {
-        return false;
-    }
-    return slower_rank < faster_rank;
-}
-
 bool standard_markings_is_tempo_modifier(const char *word) {
     char text[MAX_TEXT];
     if (!normalize(word, text)) {
@@ -122,11 +103,6 @@ bool standard_markings_tempo_text_rank(const char *text, int *out_rank) {
     return true;
 }
 
-void standard_markings_metronome_seconds_per_beat(const MetronomeMarking *marking, unsigned long *out_numerator,
-                                                  unsigned long *out_denominator) {
-    metronome_marking_seconds_per_beat_unit(marking, out_numerator, out_denominator);
-}
-
 TempoChange standard_markings_tempo_change(const char *text) {
     char buffer[MAX_TEXT];
     if (!normalize(text, buffer)) {
@@ -144,26 +120,3 @@ TempoChange standard_markings_tempo_change(const char *text) {
     return TEMPO_CHANGE_NONE;
 }
 
-bool standard_markings_tempo_source_index(const char *const *texts, size_t count, size_t index,
-                                          size_t *out_source) {
-    if (texts == NULL || index >= count) {
-        return false;
-    }
-    if (texts[index] == NULL) {
-        return false;
-    }
-
-    if (standard_markings_tempo_change(texts[index]) == TEMPO_CHANGE_NONE) {
-        *out_source = index; /* a setting is its own source */
-        return true;
-    }
-
-    for (size_t i = index; i > 0; i--) {
-        const char *earlier = texts[i - 1];
-        if (earlier != NULL && standard_markings_tempo_change(earlier) == TEMPO_CHANGE_NONE) {
-            *out_source = i - 1;
-            return true;
-        }
-    }
-    return false;
-}

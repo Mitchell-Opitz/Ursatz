@@ -1,13 +1,12 @@
 # standard-counterpoint species
 
-The First to Fifth species rule groups of `frameworks/standard-counterpoint/`. [Docs index](../README.md)
+The First to Fourth species rule groups of `frameworks/standard-counterpoint/`. [Docs index](../README.md)
 
 Framework overview: [frameworks/standard-counterpoint/README.md](../../frameworks/standard-counterpoint/README.md).
 
 ## First species
 
-Note against note counterpoint (`CounterpointSpecies` first,
-`counterpoint_species.h`) stacks stricter rules on the common
+Note against note counterpoint stacks stricter rules on the common
 ones above. The caller supplies the tonic and which part is the cantus firmus;
 the counterpoint is the other part. Where the common rules treat something as
 advice, first species can make it hard.
@@ -36,8 +35,7 @@ advice, first species can make it hard.
   a leap of at least a third.
 - **Counterpoint line** (`first_species_line_rules.h`): the cantus firmus rules
   applied to the counterpoint, except that it need not begin on the tonic.
-- **Aggregate check** (`standard_counterpoint_first_species_check`,
-  `standard_counterpoint_first_species_valid`): the common groups plus the
+- **Aggregate check** (`standard_counterpoint_first_species_check`): the common groups plus the
   counterpoint line, harmony, ends, independence, and motion groups, reported
   as hard and soft bit masks. The first four bits match
   `standard_counterpoint_check`. The groups that need the tonic are skipped
@@ -45,8 +43,7 @@ advice, first species can make it hard.
 
 ## Second species
 
-Two notes against one (`CounterpointSpecies` second,
-`counterpoint_species.h`). There is no rhythm model, so the
+Two notes against one. There is no rhythm model, so the
 counterpoint is a list of slots, two per bar (`second_species_exercise.h`):
 the first slot is the strong beat (`BeatStrength`,
 `src/semantics/beat_strength.h`), the second the weak beat. A slot is an
@@ -84,16 +81,14 @@ which part is the cantus firmus, and the tonic.
   or two secondary climaxes from eight notes up. Leap recovery and consecutive
   leaps of the cantus firmus rules are not applied, because an interval
   subdivision is two leaps in a row.
-- **Aggregate check** (`standard_counterpoint_second_species_check`,
-  `standard_counterpoint_second_species_valid`): the cantus firmus, spacing
+- **Aggregate check** (`standard_counterpoint_second_species_check`): the cantus firmus, spacing
   (the common gap, crossing, and climax rules on every note against its
   cantus firmus note), strong beat, weak beat, ends, and counterpoint line
   groups, as hard and soft bit masks.
 
 ## Third species
 
-Four notes against one (`CounterpointSpecies` third,
-`counterpoint_species.h`). The counterpoint is a list of slots
+Four notes against one. The counterpoint is a list of slots
 (`counterpoint_slots.h`), four per bar, with the strengths strong, weak, medium,
 weak (`BeatStrength`, `src/semantics/beat_strength.h`). A bar is four quarter
 notes (the first may be a quarter rest and three notes) or a whole note (an
@@ -129,8 +124,7 @@ exercise, which says which part is the cantus firmus, and the tonic.
   repeated motive, at least three quarters steps, leaps inside a bar at least as
   many as across the bar line, and one or two secondary climaxes among the
   downbeats from eight bars up.
-- **Aggregate check** (`standard_counterpoint_third_species_check`,
-  `standard_counterpoint_third_species_valid`): the cantus firmus, spacing (the
+- **Aggregate check** (`standard_counterpoint_third_species_check`): the cantus firmus, spacing (the
   common gap, crossing, and climax rules on every note against its cantus
   firmus note, so the counterpoint's climax stays apart from the cantus
   firmus climax), strong beat, other beat, ends, and counterpoint line groups,
@@ -138,8 +132,7 @@ exercise, which says which part is the cantus firmus, and the tonic.
 
 ## Fourth species
 
-Syncopated counterpoint (`CounterpointSpecies` fourth,
-`counterpoint_species.h`). The counterpoint is a list of slots
+Syncopated counterpoint. The counterpoint is a list of slots
 (`counterpoint_slots.h`), two per bar, strong then weak. The weak-beat note is
 tied across the bar line to the next strong beat. The first bar is a half rest
 and a note, a middle bar is a new note on the weak beat and a tie (or a new
@@ -175,64 +168,10 @@ which part is the cantus firmus, and the tonic.
   minor sixth), final step, range, leading tone. Soft: at least half of the
   progressions are steps down, and at least one upward leap. The single climax
   and secondary climax rules of the other species are not used.
-- **Aggregate check** (`standard_counterpoint_fourth_species_check`,
-  `standard_counterpoint_fourth_species_valid`): the cantus firmus, spacing (the
+- **Aggregate check** (`standard_counterpoint_fourth_species_check`): the cantus firmus, spacing (the
   common gap, crossing, and climax rules on every sounding note against its
   cantus firmus note), suspensions, weak beats, species breaks, ends, and
   counterpoint line groups, as hard and soft bit masks.
-
-## Fifth species
-
-Florid counterpoint (`CounterpointSpecies` fifth,
-`counterpoint_species.h`). The counterpoint mixes the note values
-of the first four species, and adds eighth notes. It is a list of slots
-(`counterpoint_slots.h`) on an eighth-note grid, eight per bar, with the
-strengths strong, medium (the third beat), and weak. A note is an attack and
-its ties and lasts an eighth, quarter, half, dotted half, or whole note; a
-half or longer note may be tied across the bar line from the third beat, and a
-quarter from the fourth beat into a half or dotted half. Eighths come in pairs
-on the second or fourth beat. The first bar may begin with a rest of one to
-three quarters, and the last bar is a whole note; `fifth_species_exercise.h`.
-The caller supplies the exercise, which says which part is the cantus firmus,
-and the tonic.
-
-- **Note values and bar patterns** (`fifth_species_pattern.h`): the value of
-  each note, and the pattern of each bar (whole, halves, half and quarters,
-  quarters and half, quarters, eighths, syncopated, rest start, other).
-- **Dissonance figures** (`fifth_species_figure.h`): a dissonance is never a
-  new note on the downbeat and is part of a figure: a passing tone (a quarter
-  or the second eighth of a pair), a double passing tone, a neighbor tone, a
-  double neighbor, a nota cambiata (down or up), a suspension (7-6, 4-3, or
-  9-8 above the cantus firmus, 2-3 below it, the held note a quarter, half, or
-  dotted half), an anticipation (a quarter on the fourth beat), or an
-  anticipation with a pair of eighths. Each maps to a `NonChordTone`
-  (`src/semantics/non_chord_tone.h`).
-- **Suspension rules** (`fifth_species_suspension_rules.h`): every dissonant
-  tied downbeat is a proper suspension (hard). Soft: an exercise of five bars
-  or more has one, and no more than half of them are 9-8.
-- **Rhythm** (`fifth_species_rhythm_rules.h`): an eighth is approached and left
-  by step or repetition (hard). Soft: three of the five note values from six
-  bars up, no more than three bars in a row with the same pattern (a run of
-  syncopated bars is free), and no pair of eighths in two bars in a row.
-- **Strong beats and harmony** (`fifth_species_harmony_rules.h`): a new note
-  on a downbeat is consonant, every dissonance is part of a figure, no two
-  downbeats make the same perfect interval, no downbeat perfect interval is
-  reached by similar or parallel motion, and no more than three downbeats in a
-  row make the same imperfect consonance, all hard. Soft: no interior unison
-  on a downbeat.
-- **Beginning and ending** (`fifth_species_ends_rules.h`), all hard: a perfect
-  consonance first, a clausula vera into the last bar (the note before it
-  steps contrary to the cantus firmus, a third or sixth over its note), and a
-  last bar that is a whole note on do. Skipped when the tonic is NULL.
-- **Counterpoint line** (`fifth_species_line_rules.h`): on the line's attacks.
-  Hard: every leap a consonant melodic interval (a sixth only as the ascending
-  minor sixth), final step, range, leading tone. Soft: single climax, leap
-  recovery, mostly stepwise, and no repeated motive.
-- **Aggregate check** (`standard_counterpoint_fifth_species_check`,
-  `standard_counterpoint_fifth_species_valid`): the cantus firmus, spacing (the
-  common gap, crossing, and climax rules on every sounding slot against its
-  cantus firmus note), rhythm, suspensions, harmony, ends, and counterpoint
-  line groups, as hard and soft bit masks.
 
 The tonic of the cantus firmus, which part is the cantus firmus, and the
 limits for the soft melodic rules are the caller's input. Notes are read as

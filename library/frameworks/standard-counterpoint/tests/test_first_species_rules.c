@@ -42,7 +42,6 @@ static void test_valid_exercise(void) {
 
     assert(standard_counterpoint_first_species_check(&input, &result));
     assert(result.hard_violations == 0);
-    assert(standard_counterpoint_first_species_valid(&input));
 
     /* The first four groups report what the common check reports. */
     assert(standard_counterpoint_check(&input, &common));
@@ -68,7 +67,6 @@ static void test_harmony_violation(void) {
     assert(!(result.hard_violations & BIT(STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_COUNTERPOINT_LINE)));
     assert(!(result.hard_violations & BIT(STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_ENDS)));
     assert(result.soft_violations & BIT(STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_HARMONY));
-    assert(!standard_counterpoint_first_species_valid(&input));
 }
 
 static void test_ending_violation(void) {
@@ -84,7 +82,6 @@ static void test_ending_violation(void) {
 
     assert(standard_counterpoint_first_species_check(&input, &result));
     assert(result.hard_violations & BIT(STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_ENDS));
-    assert(!standard_counterpoint_first_species_valid(&input));
 }
 
 static void test_cantus_part_selects_lines(void) {
@@ -100,7 +97,6 @@ static void test_cantus_part_selects_lines(void) {
        it begins on A. */
     assert(standard_counterpoint_first_species_check(&input, &result));
     assert(result.hard_violations & BIT(STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_CANTUS_FIRMUS));
-    assert(!standard_counterpoint_first_species_valid(&input));
 }
 
 static void test_no_tonic_skips_groups_that_need_it(void) {
@@ -135,8 +131,6 @@ static void test_invalid_input(void) {
     input.cantus_part = (StandardCounterpointCantusPart)5;
     assert(!standard_counterpoint_first_species_check(&input, &result));
     assert(result.hard_violations == 7 && result.soft_violations == 7);
-    assert(!standard_counterpoint_first_species_valid(&input));
-    assert(!standard_counterpoint_first_species_valid(NULL));
 }
 
 int main(void) {

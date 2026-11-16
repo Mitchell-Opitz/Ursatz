@@ -77,13 +77,6 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneO
                                    size_t override_count, MotiveToneLabel *out);
 
 /*
- * The same labelling with the overrides the sketch carries (tone_overrides, tone_override_count), so a motive
- * value brings its own corrections: equal to motive_tone_roles(sketch, sketch->tone_overrides,
- * sketch->tone_override_count, out). MOTIVE_TONE_BAD_OVERRIDE when the count is above MOTIVE_SKETCH_MAX_NOTES.
- */
-MotiveToneStatus motive_tone_roles_of(const MotiveSketch *sketch, MotiveToneLabel *out);
-
-/*
  * The same rules over a tone line of any length (a NonChordToneClassifier, semantics/tone_line.h): the notes of
  * one voice in time order, each with the pitch-class mask of its chord. Equal to motive_tone_roles for a
  * sketch's notes and chord masks, without a note limit and without overrides. context is unused. False for

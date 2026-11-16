@@ -9,9 +9,8 @@
  * Pitch arithmetic for standard-counterpoint-v1.
  *
  * ASSUMPTION: twelve semitones to the octave (12-tone equal
- * temperament), the same layout standard-notation's semitone.h,
- * standard-tonality's tonal_pitch.h, and standard-voicing's
- * voicing_pitch.h use. It is a property of this framework, not of
+ * temperament), the same layout standard-voicing's voicing_pitch.h
+ * uses. It is a property of this framework, not of
  * src/pitch/. This module carries its own copy rather than depending on
  * another framework: framework modules do not depend on each other.
  *

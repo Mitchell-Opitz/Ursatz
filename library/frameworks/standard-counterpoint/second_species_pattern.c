@@ -5,20 +5,6 @@
 #include "consonance_rules.h"
 #include "counterpoint_pitch.h"
 
-static const char *const NAMES[STANDARD_COUNTERPOINT_WEAK_BEAT_PATTERN_COUNT] = {
-    "consonant-passing-tone",
-    "substitution",
-    "skipped-passing-tone",
-    "interval-subdivision",
-    "change-of-register",
-    "delay-of-melodic-progression",
-    "consonant-neighbor-tone",
-    "dissonant-passing-tone"};
-
-const char *standard_counterpoint_weak_beat_pattern_name(StandardCounterpointWeakBeatPattern pattern) {
-    return pattern >= 0 && pattern < STANDARD_COUNTERPOINT_WEAK_BEAT_PATTERN_COUNT ? NAMES[pattern] : NULL;
-}
-
 bool standard_counterpoint_weak_beat_pattern_is_dissonant(StandardCounterpointWeakBeatPattern pattern) {
     return pattern == STANDARD_COUNTERPOINT_WEAK_BEAT_DISSONANT_PASSING_TONE;
 }

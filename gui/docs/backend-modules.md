@@ -17,6 +17,7 @@ Everything but `main.c` is built as the static library `ursatz_gui_core` (`backe
 - `util/store_lock.h`: `UrsatzGuiLock` (a pthread mutex, an SRWLOCK on Windows) with `URSATZ_GUI_LOCK_INIT` and
   `ursatz_gui_lock_acquire/release`. Each store wraps it in `LOCK()` and `UNLOCK()`.
 - `service/piece_lock.c`: `ursatz_gui_piece_lock(id)` and `_unlock`, one mutex per piece directory (see [Piece store](storage.md#piece-store), [Concurrency](storage.md#concurrency)).
+- `service/data_check.c`: `ursatz_gui_data_check`, the startup check `server.c` runs first (see [Data check](storage.md#data-check)).
 - `routes/route_util.c`: the senders every route uses (`ursatz_gui_send_json`, `_send_json_status`, `_send_failure`
   with `{"ok":false,"message"}`, `_send_object`, and `ursatz_gui_reason_phrase`) and `ursatz_gui_read_json_body`, the
   JSON object body of a request (up to 1 MiB; with a status pointer it also sends the 400, 413 or 500 itself). `routes/materials.c` passes
@@ -46,9 +47,7 @@ and answers.
 | Build, vocabulary and forms | `service/composer_client.c` | `composer_api_versions`, `_vocabulary`, `_forms`; the reply type, `ursatz_gui_composer_reply_refused` and `_failure_status` |
 
 `routes/composer.c` answers the status route with `composer_api_versions` itself and the vocabulary route from
-`composer_client.c`; `routes/materials.c`, `routes/links.c` and the other routes call no `composer_api_*` entry. The material store's one-time migrations (`ursatz_gui_material_migrate_tones`,
-`ursatz_gui_material_migrate_segments`, `ursatz_gui_material_clear_themes`) are in `service/material_service.c`, which calls `motif_service.c` to analyze a
-motif again.
+`composer_client.c`; `routes/materials.c`, `routes/links.c` and the other routes call no `composer_api_*` entry.
 
 Piece documents are read only through `service/analysis_service.c`, under the piece lock: `ursatz_gui_analysis_get_document`
 (with no names, the whole stored document), `_get_filename` and `_piece_exists`. The link, style and collection services

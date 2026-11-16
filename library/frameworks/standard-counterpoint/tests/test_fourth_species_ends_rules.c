@@ -4,39 +4,12 @@
 
 #include "fourth_species_ends_rules.h"
 #include "fourth_species_test_util.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fourth-species-ends", STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT);
-#define standard_counterpoint_fourth_species_ends_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_fourth_species_ends_constraint, standard_counterpoint_fourth_species_ends_preference, standard_counterpoint_fourth_species_ends_rule_holds, StandardCounterpointFourthSpeciesTonic, which, a, b)
 
 #define ENDS(name) STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_##name
 
 static bool holds(StandardCounterpointFourthSpeciesEndsRule rule,
                   const StandardCounterpointFourthSpeciesExercise *exercise) {
     return standard_counterpoint_fourth_species_ends_rule_holds(rule, exercise, P(D, 0, 3));
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_fourth_species_ends_rule,
-                                    standard_counterpoint_fourth_species_ends_constraint,
-                                    STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT; i++) {
-        assert(constraint_type(standard_counterpoint_fourth_species_ends_constraint(
-                   (StandardCounterpointFourthSpeciesEndsRule)i)) == CONSTRAINT_TYPE_HARD);
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_fourth_species_ends_rule_name(ENDS(BEGIN)), "begin") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_ends_rule_name(ENDS(CANTUS_ENDS_RE_DO)), "cantus-ends-re-do") ==
-           0);
-    assert(strcmp(standard_counterpoint_fourth_species_ends_rule_name(ENDS(PENULTIMATE_SUSPENSION)),
-                  "penultimate-suspension") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_ends_rule_name(ENDS(FINAL_BAR)), "final-bar") == 0);
-    assert(standard_counterpoint_fourth_species_ends_rule_name(ENDS(COUNT)) == NULL);
 }
 
 static void test_good_endings(void) {
@@ -175,8 +148,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_endings();
     test_begin();
     test_cantus_ends_re_do();

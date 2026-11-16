@@ -89,7 +89,4 @@ bool composer_preferences_read(const cJSON *object, ComposerPreferences *out, ch
  */
 cJSON *composer_preferences_write(const ComposerPreferences *preferences);
 
-/* True when every setting is the default: the preferences change nothing. */
-bool composer_preferences_is_default(const ComposerPreferences *preferences);
-
 #endif

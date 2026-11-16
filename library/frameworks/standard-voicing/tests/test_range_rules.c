@@ -20,25 +20,6 @@ static void test_range_semitones(void) {
     assert(!standard_voicing_range_semitones(VOICE_PART_BASS, &low, NULL));
 }
 
-static void test_range_bounds(void) {
-    PitchLetter low_letter;
-    PitchLetter high_letter;
-    int low_octave;
-    int high_octave;
-
-    assert(standard_voicing_range_bounds(VOICE_PART_SOPRANO, &low_letter, &low_octave, &high_letter, &high_octave));
-    assert(low_letter == PITCH_LETTER_C && low_octave == 4 && high_letter == PITCH_LETTER_G && high_octave == 5);
-    assert(standard_voicing_range_bounds(VOICE_PART_ALTO, &low_letter, &low_octave, &high_letter, &high_octave));
-    assert(low_letter == PITCH_LETTER_G && low_octave == 3 && high_letter == PITCH_LETTER_D && high_octave == 5);
-    assert(standard_voicing_range_bounds(VOICE_PART_TENOR, &low_letter, &low_octave, &high_letter, &high_octave));
-    assert(low_letter == PITCH_LETTER_C && low_octave == 3 && high_letter == PITCH_LETTER_G && high_octave == 4);
-    assert(standard_voicing_range_bounds(VOICE_PART_BASS, &low_letter, &low_octave, &high_letter, &high_octave));
-    assert(low_letter == PITCH_LETTER_F && low_octave == 2 && high_letter == PITCH_LETTER_D && high_octave == 4);
-
-    assert(!standard_voicing_range_bounds(VOICE_PART_COUNT, &low_letter, &low_octave, &high_letter, &high_octave));
-    assert(!standard_voicing_range_bounds(VOICE_PART_BASS, NULL, &low_octave, &high_letter, &high_octave));
-}
-
 /* Both ends of each range are included. */
 static void test_boundaries(void) {
     assert(standard_voicing_in_range(VOICE_PART_SOPRANO, P(C, 0, 4)));
@@ -99,7 +80,6 @@ static void test_invalid_input(void) {
 
 int main(void) {
     test_range_semitones();
-    test_range_bounds();
     test_boundaries();
     test_accidentals_and_enharmonics();
     test_out_of_range_chord();

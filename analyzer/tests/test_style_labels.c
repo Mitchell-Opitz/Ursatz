@@ -4,6 +4,8 @@
 
 #include <ursatz_analyzer/style_labels.h>
 
+#include "style/style_profile_internal.h"
+
 /* The tempo and density bands and the motive label builders the Composer shares with the style profile. */
 
 static int failures = 0;

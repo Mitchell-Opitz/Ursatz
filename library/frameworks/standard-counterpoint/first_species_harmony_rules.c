@@ -34,22 +34,6 @@ static bool valid_rule(StandardCounterpointFirstSpeciesHarmonyRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_first_species_harmony_rule(StandardCounterpointFirstSpeciesHarmonyRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_first_species_harmony_constraint(StandardCounterpointFirstSpeciesHarmonyRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_first_species_harmony_preference(StandardCounterpointFirstSpeciesHarmonyRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_first_species_harmony_rule_name(StandardCounterpointFirstSpeciesHarmonyRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 /* The interval between the parts at position i, and its category. */
 static bool interval_at(const StandardCounterpointPair *pair, size_t i, StandardCounterpointInterval *interval,
                         StandardCounterpointIntervalCategory *category) {

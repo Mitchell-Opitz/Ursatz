@@ -37,18 +37,6 @@ static bool valid_rule(StandardCounterpointCantusRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_cantus_rule(StandardCounterpointCantusRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_cantus_constraint(StandardCounterpointCantusRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_cantus_preference(StandardCounterpointCantusRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
 const char *standard_counterpoint_cantus_rule_name(StandardCounterpointCantusRule which) {
     return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }

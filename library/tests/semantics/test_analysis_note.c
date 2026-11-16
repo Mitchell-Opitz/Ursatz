@@ -120,29 +120,10 @@ static void test_note_set_valid(void) {
     time_span_destroy(s1);
 }
 
-static void test_segment_valid(void) {
-    TimeSpan *span = make_span(0, 1, 2);
-    TimeSpan *empty = make_span(1, 1, 2);
-    AnalysisSegment ok = {"seg", span, NULL, BEAT_STRENGTH_STRONG};
-    assert(analysis_segment_valid(&ok));
-    AnalysisSegment no_id = {NULL, span, NULL, BEAT_STRENGTH_WEAK};
-    assert(!analysis_segment_valid(&no_id));
-    AnalysisSegment no_span = {"seg", NULL, NULL, BEAT_STRENGTH_WEAK};
-    assert(!analysis_segment_valid(&no_span));
-    AnalysisSegment zero = {"seg", empty, NULL, BEAT_STRENGTH_WEAK};
-    assert(!analysis_segment_valid(&zero));
-    AnalysisSegment bad_strength = {"seg", span, NULL, BEAT_STRENGTH_COUNT};
-    assert(!analysis_segment_valid(&bad_strength));
-    assert(!analysis_segment_valid(NULL));
-    time_span_destroy(span);
-    time_span_destroy(empty);
-}
-
 int main(void) {
     test_note_valid();
     test_note_compare();
     test_note_set_valid();
-    test_segment_valid();
     printf("test_analysis_note: ok\n");
     return 0;
 }

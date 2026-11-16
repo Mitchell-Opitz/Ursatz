@@ -117,7 +117,7 @@ static void test_compose(void) {
     GrowConfig config;
     memset(&config, 0, sizeof(config));
     config.seed = 1;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     if (result != GROW_OK) {
         fprintf(stderr, "stuck at %s\n", grow_stage_name(outcome.stuck_stage));
@@ -177,7 +177,7 @@ static void test_cadence_note(void) {
         GrowConfig config;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         GrowResult result = grow_run(plan, &config, &outcome);
         if (result != GROW_OK) {
             fprintf(stderr, "seed %lu: stuck at %s\n", seed, grow_stage_name(outcome.stuck_stage));
@@ -234,7 +234,7 @@ static void test_variety(void) {
             GrowConfig config;
             memset(&config, 0, sizeof(config));
             config.seed = seed;
-            assert(grow_build_plan(&request, &plan) == GROW_OK);
+            assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
             GrowResult result = grow_run(plan, &config, &outcome);
             if (result != GROW_OK) {
                 fprintf(stderr, "case %zu seed %lu: stuck at %s\n", c, seed, grow_stage_name(outcome.stuck_stage));
@@ -261,11 +261,11 @@ static void test_four_bar_refused(void) {
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
     /* A bar of it is accepted. */
     Motive bar = make_motive("A4:q C5:q E5:q", 3, 4, true, 9, none);
     request.motive = &bar;
-    assert(grow_build_plan(&request, &plan) == GROW_OK && plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK && plan);
     plan_destroy(plan);
 }
 
@@ -290,7 +290,7 @@ static void test_period_slot(void) {
     GrowConfig config;
     memset(&config, 0, sizeof(config));
     config.seed = 1;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     if (result != GROW_OK) {
         fprintf(stderr, "period: stuck at %s\n", grow_stage_name(outcome.stuck_stage));
@@ -361,7 +361,7 @@ static void test_part_length(void) {
                 GrowConfig config;
                 memset(&config, 0, sizeof(config));
                 config.seed = seed;
-                assert(grow_build_plan(&request, &plan) == GROW_OK);
+                assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
                 GrowResult result = grow_run(plan, &config, &outcome);
                 if (result != GROW_OK) {
                     fprintf(stderr, "part %zu/%zu seed %lu: stuck at %s\n", b, e, seed, grow_stage_name(outcome.stuck_stage));
@@ -380,21 +380,21 @@ static void test_part_length_refused(void) {
     Motive motive = make_motive(FOUR_BARS, 4, 4, false, 0, none);
     PiecePlan *plan = NULL;
     GrowRequest compound = part_request(&motive, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, PLAN_THEME_ENDING_CONTINUATION);
-    assert(grow_build_plan(&compound, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    assert(grow_build_plan_checked(&compound, &plan, NULL) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
     Motive three = make_motive("E4:q G4:q C5:q G4:q | D5:q B4:q A4:q G4:q | E4:w", 4, 4, false, 0, none);
     GrowRequest request = part_request(&three, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
     /* A 5-bar motif is longer than the part too. */
     Motive five = make_motive("C4:w C4:w C4:w C4:w C4:w", 4, 4, false, 0, none);
     request.motive = &five;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
     Motive contrasting = make_motive("E5:q C5:q A4:q G4:q", 4, 4, false, 0, none);
     request = part_request(&motive, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &contrasting;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && plan == NULL);
     request = part_request(&motive, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
     request.idea_motives[GROW_IDEA_REPETITION] = &contrasting;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && plan == NULL);
 }
 
 int main(void) {

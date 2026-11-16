@@ -201,19 +201,3 @@ void harmony_six_four_results_destroy(HarmonySixFourResult *results, size_t coun
     free(results);
 }
 
-bool harmony_six_four_claim_read(const Interpretation *interpretation, HarmonySixFourClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), HARMONY_SIX_FOUR_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

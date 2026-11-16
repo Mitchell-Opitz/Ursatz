@@ -5,6 +5,7 @@
 #include "identity/entity_id.h"
 #include "interpretation/key.h"
 #include "key_vocabulary.h"
+#include "interpretation_test_access.h"
 
 /*
  * Construction tests: one major key and one minor key, confirming each

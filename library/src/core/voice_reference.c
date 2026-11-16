@@ -33,10 +33,3 @@ void voice_reference_destroy(VoiceReference *reference) {
 const EntityID *voice_reference_target_id(const VoiceReference *reference) {
     return reference->target_id;
 }
-
-bool voice_reference_equals(const VoiceReference *a, const VoiceReference *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->target_id, b->target_id);
-}

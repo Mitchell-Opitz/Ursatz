@@ -228,7 +228,7 @@ static void test_build(void) {
     Motive one = make_motive(scenario, scenario->one);
     GrowRequest request = request_of(scenario, &one, 9, SENTENCE);
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     const PlanConstraint *constraint = plan_node_find_constraint(plan, find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
     assert(constraint);
     expect_construction(&constraint->params.construction, &ROWS[4], "plan");
@@ -252,7 +252,7 @@ static void test_build(void) {
     given.extensions[0].bars = 1;
     given.reason = PLAN_CONSTRUCTION_GIVEN;
     request.construction = &given;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = find_node(plan, "theme");
     constraint = plan_node_find_constraint(plan, theme, PLAN_CONSTRAINT_CONSTRUCTION);
     assert(constraint && constraint->params.construction.reason == PLAN_CONSTRUCTION_GIVEN);
@@ -288,7 +288,7 @@ static void test_refusals(void) {
     /* 4 and 8 bars with no construction are as before: no refusal of the length. */
     request = request_of(scenario, &one, 8, SENTENCE);
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(plan_node_find_constraint(plan, find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION) == NULL);
     plan_destroy(plan);
 }

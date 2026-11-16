@@ -37,3 +37,20 @@ void test_write_file(const char *path, const char *text) {
     fputs(text, file);
     fclose(file);
 }
+
+MidiImportResult test_midi_import_notes(const unsigned char *data, size_t size, NoteEvent ***out_events,
+                                        PitchNumericValue ***out_pitch_values, size_t *out_count) {
+    MidiImport import;
+    MidiImportResult result = midi_importer_import_complete(data, size, &import);
+    if (result != MIDI_IMPORT_OK) {
+        return result;
+    }
+    *out_events = import.events;
+    *out_pitch_values = import.pitch_values;
+    *out_count = import.count;
+    import.events = NULL;
+    import.pitch_values = NULL;
+    import.count = 0;
+    midi_import_destroy(&import);
+    return MIDI_IMPORT_OK;
+}

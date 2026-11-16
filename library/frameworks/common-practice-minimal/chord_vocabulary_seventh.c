@@ -37,10 +37,6 @@ static const int SEVENTH_INTERVALS[COMMON_PRACTICE_SEVENTH_COUNT][4] = {
     {0, 4, 7, 10}, {0, 4, 7, 11}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9},
 };
 
-static Rule *g_rules[COMMON_PRACTICE_SEVENTH_COUNT];
-static Constraint *g_constraints[COMMON_PRACTICE_SEVENTH_COUNT];
-static UrsatzOnce g_once[COMMON_PRACTICE_SEVENTH_COUNT];
-
 static bool valid_seventh(CommonPracticeSeventh seventh) {
     return seventh >= 0 && seventh < COMMON_PRACTICE_SEVENTH_COUNT;
 }
@@ -55,63 +51,11 @@ bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]
     return true;
 }
 
-static void build_one(void *arg) {
-    CommonPracticeSeventh seventh = (CommonPracticeSeventh)(intptr_t)arg;
-
-    const Framework *framework = common_practice_minimal_framework();
-    if (framework == NULL) {
-        return;
-    }
-
-    EntityID *rule_id;
-    if (entity_id_create(DESCRIPTORS[seventh].rule_id, &rule_id) != ENTITY_ID_OK) {
-        return;
-    }
-    Rule *rule;
-    if (rule_create(rule_id, framework, NULL, &rule) != RULE_OK) {
-        entity_id_destroy(rule_id);
-        return;
-    }
-
-    EntityID *constraint_id;
-    if (entity_id_create(DESCRIPTORS[seventh].constraint_id, &constraint_id) != ENTITY_ID_OK) {
-        rule_destroy(rule);
-        return;
-    }
-    Constraint *constraint;
-    if (constraint_create(constraint_id, framework, NULL, CONSTRAINT_TYPE_HARD, 0, 0, NULL, &constraint) !=
-        CONSTRAINT_OK) {
-        entity_id_destroy(constraint_id);
-        rule_destroy(rule);
-        return;
-    }
-
-    g_rules[seventh] = rule;
-    g_constraints[seventh] = constraint;
-}
-
-static void ensure_built(CommonPracticeSeventh seventh) {
-    if (!valid_seventh(seventh)) {
-        return;
-    }
-    ursatz_once(&g_once[seventh], build_one, (void *)(intptr_t)seventh);
-}
-
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh) {
     if (!valid_seventh(seventh)) {
         return NULL;
     }
     return DESCRIPTORS[seventh].label;
-}
-
-const Rule *common_practice_seventh_rule(CommonPracticeSeventh seventh) {
-    ensure_built(seventh);
-    return valid_seventh(seventh) ? g_rules[seventh] : NULL;
-}
-
-const Constraint *common_practice_seventh_constraint(CommonPracticeSeventh seventh) {
-    ensure_built(seventh);
-    return valid_seventh(seventh) ? g_constraints[seventh] : NULL;
 }
 
 ChordResult common_practice_build_seventh_chord_with_confidence(CommonPracticeSeventh seventh, EntityID *sonority_target_id,
@@ -197,6 +141,3 @@ ChordResult common_practice_build_seventh_chord_with_confidence(CommonPracticeSe
     return CHORD_OK;
 }
 
-ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, EntityID *sonority_target_id, Chord **out) {
-    return common_practice_build_seventh_chord_with_confidence(seventh, sonority_target_id, 1, 1, NULL, out);
-}

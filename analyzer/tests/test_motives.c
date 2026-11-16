@@ -324,7 +324,7 @@ int main(void) {
         fprintf(stderr, "cannot analyze %s again\n", path);
         return 1;
     }
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     cJSON *document = json ? cJSON_Parse(json) : NULL;
     free(json);
     CHECK(document != NULL);

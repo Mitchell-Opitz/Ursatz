@@ -943,22 +943,6 @@
       }));
   }
 
-  /* A copy of the form with every slot and accompaniment motif at its source's current version. */
-  function formWithUpdates(state, updates) {
-    const next = JSON.parse(JSON.stringify(state));
-    for (const update of updates) {
-      for (const entry of next.slots) {
-        if (entry.item_id === update.item_id) {
-          entry.version = update.current;
-        }
-      }
-      if (next.accompaniment.kind === "motive" && next.accompaniment.item_id === update.item_id) {
-        next.accompaniment.version = update.current;
-      }
-    }
-    return next;
-  }
-
   const api = {
     get REQUIRED_SLOT() {
       return requiredSlot();
@@ -1064,7 +1048,6 @@
     resultView,
     motiveNames,
     updatedUses,
-    formWithUpdates,
     versionPlaybackUrl,
   };
   if (typeof module !== "undefined" && module.exports) {

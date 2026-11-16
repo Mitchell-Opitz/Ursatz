@@ -29,16 +29,15 @@
  * resolution to an actual Framework happens only at L7+.
  *
  * target is an opaque EntityID reference to the object being
- * interpreted -- referenced, never embedded, the same pattern as
- * Assertion/Observation's subject. Interpretations MUST NOT mutate the
+ * interpreted -- referenced, never embedded. Interpretations MUST NOT mutate the
  * canonical objects they claim about (Law 8): this type holds only an
  * EntityID for target and exposes no accessor that resolves it to a
  * mutable object, let alone a mutator reaching into NoteEvent/Sonority/
  * etc.
  *
  * context is an EntityID reference to a Context (music-context, L6);
- * evidence is an EntityID reference to an Evidence
- * (interpretation/evidence.h, this module). Both are opaque references
+ * evidence is an opaque EntityID reference to the evidence for the
+ * Interpretation (no Evidence type exists). Both are opaque references
  * by id, consistent with Relationship's context/evidence fields
  * (relationship/relationship.h) -- neither is embedded. Both are
  * optional (an Interpretation need not narrow to a specific Context or
@@ -46,7 +45,7 @@
  *
  * framework is an optional FrameworkReference (core/framework_reference.h).
  * Optional because not every Interpretation is framework-relative --
- * ScaleDegree/Chord/Key, the Registry's framework-relative interpretation
+ * Chord/Key, the Registry's framework-relative interpretation
  * types, do not exist in this codebase yet, and every existing
  * Interpretation producer (the eight analyzers under music-analysis)
  * constructs framework-neutral claims today. Interpretation owns the
@@ -57,8 +56,7 @@
  * uncertainty is a required Uncertainty (interpretation/uncertainty.h).
  *
  * author/method are opaque identifier strings for now (ProvenanceAgent
- * does not exist yet -- same placeholder treatment as Assertion's
- * agent field, interpretation/assertion.h).
+ * does not exist yet).
  *
  * status is TDD §88's status vocabulary.
  *
@@ -112,16 +110,7 @@ InterpretationResult interpretation_create(EntityID *id, EntityID *target_id, Va
                                             Interpretation **out);
 void interpretation_destroy(Interpretation *interpretation);
 
-const EntityID *interpretation_id(const Interpretation *interpretation);
-const EntityID *interpretation_target_id(const Interpretation *interpretation);
-const Value *interpretation_claim(const Interpretation *interpretation);
-const EntityID *interpretation_context_id(const Interpretation *interpretation);
-const EntityID *interpretation_evidence_id(const Interpretation *interpretation);
 const FrameworkReference *interpretation_framework_reference(const Interpretation *interpretation);
 const Uncertainty *interpretation_uncertainty(const Interpretation *interpretation);
-const char *interpretation_author(const Interpretation *interpretation);
-const char *interpretation_method(const Interpretation *interpretation);
-InterpretationStatus interpretation_status(const Interpretation *interpretation);
-const ProvenanceReference *interpretation_provenance(const Interpretation *interpretation);
 
 #endif

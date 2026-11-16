@@ -128,7 +128,7 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
     char input[1024], output[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
-    CorpusRunOptions options = {input, output, false, false, NULL, NULL};
+    CorpusRunOptions options = {input, output, false, NULL, NULL};
     CorpusRunSummary summary;
     CHECK(corpus_run(&options, &summary) == CORPUS_RUN_OK, "%s run failed", name);
     CHECK(summary.analyzed == expected_pieces && summary.failed == 0, "%s: %zu analyzed, %zu failed", name, summary.analyzed,
@@ -272,7 +272,7 @@ static void test_round_trip(StyleProfile *reference) {
     free(from_profile);
     style_statistics_free(from_model, model_count);
 
-    /* The same profile written again gives the same bytes, and reading a file twice gives the same id. */
+    /* The same profile written again gives the same bytes, and reading a file twice gives the same name. */
     CHECK(style_model_file_write(reference, "reference", second) == STYLE_MODEL_FILE_OK, "cannot write again");
     char *a = test_read_file(first), *b = test_read_file(second);
     CHECK(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
@@ -281,7 +281,7 @@ static void test_round_trip(StyleProfile *reference) {
     StyleModel *again = NULL;
     CHECK(style_model_file_read(first, &again, NULL) == STYLE_MODEL_FILE_OK, "second read");
     if (again) {
-        CHECK(entity_id_equals(style_model_id(model), style_model_id(again)), "the same file gave two ids");
+        CHECK(strcmp(style_model_style_name(again), style_model_style_name(model)) == 0, "the same file gave two names");
         style_model_destroy(again);
     }
     CHECK(strcmp(style_model_style_name(model), "reference") == 0 && strcmp(style_model_model_version(model), PROJECT_VERSION_FOR_TESTS) == 0,
@@ -481,7 +481,7 @@ static size_t category_size(const StyleStatistic *list, size_t count, const char
    passing tone, note 7 an unclassified tone (no figure). */
 static void test_motive_categories(void) {
     const char *document =
-        "{\"schema_version\": 11,"
+        "{\"schema_version\": 12,"
         " \"non_chord_tones\": [{\"note_ids\": [3], \"type\": \"appoggiatura\"}, {\"note_ids\": [7], \"type\": null},"
         " {\"note_ids\": [9], \"type\": \"passing\"}],"
         " \"motives\": ["
@@ -520,7 +520,7 @@ static void test_motive_categories(void) {
 /* The figure of a tone at the ends of its occurrence has a dash for the missing neighbour. */
 static void test_motive_figure_ends(void) {
     const char *document =
-        "{\"schema_version\": 11,"
+        "{\"schema_version\": 12,"
         " \"non_chord_tones\": [{\"note_ids\": [1], \"type\": \"neighbor\"}, {\"note_ids\": [4], \"type\": \"escape-tone\"}],"
         " \"motives\": [{\"features\": {\"degrees\": [\"1\", \"2\", \"3\"], \"intervals\": [2, 2], \"rhythm\": [\"1/4\", \"1/4\", \"1/4\"]},"
         " \"occurrences\": [{\"note_ids\": [1, 2, 3, 4], \"degrees\": [\"6\", \"1\", \"2\", \"3\"]}]}]}";
@@ -595,7 +595,7 @@ static void test_refusals(void) {
     CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 8}") == STYLE_PROFILE_ERR_FORMAT, "version 8 is refused");
     CHECK(style_profile_add_document_json(profile, "{}") == STYLE_PROFILE_ERR_FORMAT, "a document without a version is refused");
     CHECK(style_profile_add_document_json(profile, "not json") == STYLE_PROFILE_ERR_FORMAT, "text is refused");
-    CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 11}") == STYLE_PROFILE_OK &&
+    CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 12}") == STYLE_PROFILE_OK &&
               style_profile_piece_count(profile) == 1,
           "an empty version 9 document counts as a piece with no labels");
     CHECK(style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");

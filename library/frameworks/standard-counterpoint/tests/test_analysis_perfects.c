@@ -2,6 +2,7 @@
 
 #include "analysis_perfects.h"
 #include "analysis_test_util.h"
+#include "interpretation_test_access.h"
 
 /* Parallel and direct perfect intervals: the existing rules, read across a grid of separated voices. */
 
@@ -111,10 +112,6 @@ static void test_output(void) {
     assert(strcmp(entity_id_value(interpretation_target_id(v->interpretation)),
                   entity_id_value(entity_id(structure_entity(v->shell)))) == 0);
     assert(interpretation_framework_reference(v->interpretation) != NULL);
-    StandardCounterpointViolationClaim claim;
-    assert(standard_counterpoint_violation_claim_read(v->interpretation, &claim));
-    assert(strcmp(claim.rule_name, "parallel-fifths") == 0 && claim.upper_voice == 0 && claim.lower_voice == 1 &&
-           claim.segment_from == 0 && claim.segment_to == 1 && claim.arrival_interval == 5);
     assert(strcmp(standard_counterpoint_violation_rule_name(STANDARD_COUNTERPOINT_VIOLATION_DIRECT_PERFECTS),
                   "direct-perfects") == 0);
     standard_counterpoint_violations_destroy(&found);

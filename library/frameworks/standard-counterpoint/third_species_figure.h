@@ -59,13 +59,6 @@ typedef enum {
     STANDARD_COUNTERPOINT_FIGURE_COUNT
 } StandardCounterpointDissonanceFigure;
 
-/* "passing-tone" "double-passing-tone" "neighbor-tone" "double-neighbor"
-   "nota-cambiata-down" "nota-cambiata-up"; NULL for an invalid figure. */
-const char *standard_counterpoint_dissonance_figure_name(StandardCounterpointDissonanceFigure figure);
-
-/* The NonChordTone a figure is. NON_CHORD_TONE_COUNT for an invalid figure. */
-NonChordTone standard_counterpoint_dissonance_figure_non_chord_tone(StandardCounterpointDissonanceFigure figure);
-
 /* True when the counterpoint sounds a dissonance against the cantus firmus on
    that beat of that bar (a new note or a tie). False for a consonance, a
    rest, and invalid input. */

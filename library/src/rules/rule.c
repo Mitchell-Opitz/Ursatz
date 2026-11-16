@@ -37,22 +37,3 @@ void rule_destroy(Rule *rule) {
     value_destroy(rule->scope);
     free(rule);
 }
-
-const EntityID *rule_id(const Rule *rule) {
-    return rule->id;
-}
-
-const Framework *rule_framework(const Rule *rule) {
-    return rule->framework;
-}
-
-const Value *rule_scope(const Rule *rule) {
-    return rule->scope;
-}
-
-bool rule_identity_equals(const Rule *a, const Rule *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
-}

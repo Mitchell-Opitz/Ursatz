@@ -6,6 +6,18 @@
 #include "io/musicxml_importer.h"
 #include "pitch/pitch_numeric_value.h"
 
+static inline bool rt_metronome_equal(const MetronomeMarking *a, const MetronomeMarking *b) {
+    return metronome_marking_beat_unit_numerator(a) == metronome_marking_beat_unit_numerator(b) &&
+           metronome_marking_beat_unit_denominator(a) == metronome_marking_beat_unit_denominator(b) &&
+           metronome_marking_bpm_numerator(a) == metronome_marking_bpm_numerator(b) &&
+           metronome_marking_bpm_denominator(a) == metronome_marking_bpm_denominator(b);
+}
+
+static inline bool rt_span_equal(const TimeSpan *a, const TimeSpan *b) {
+    return time_span_boundary(a) == time_span_boundary(b) && musical_time_equals(time_span_start(a), time_span_start(b)) &&
+           musical_time_equals(time_span_end(a), time_span_end(b));
+}
+
 /*
  * Export an import through musicxml_export_write_score, import the document again, and compare everything the export
  * is meant to carry: the notes (position, duration, sounding pitch, spelling, part, staff), the parts, the MeterMap
@@ -218,7 +230,7 @@ static inline void rt_assert_same(const MusicXmlImport *a, const MusicXmlImport 
         }
         assert(tempo_marking_has_metronome_marking(x) == tempo_marking_has_metronome_marking(y));
         if (tempo_marking_has_metronome_marking(x)) {
-            assert(metronome_marking_equals(tempo_marking_metronome_marking(x), tempo_marking_metronome_marking(y)));
+            assert(rt_metronome_equal(tempo_marking_metronome_marking(x), tempo_marking_metronome_marking(y)));
         }
         assert(a->tempo_marking_part[i] == b->tempo_marking_part[i]);
     }
@@ -226,7 +238,7 @@ static inline void rt_assert_same(const MusicXmlImport *a, const MusicXmlImport 
     assert(a->dynamics_count == b->dynamics_count);
     for (size_t i = 0; i < a->dynamics_count; i++) {
         assert(strcmp(dynamics_marking(a->dynamics[i]), dynamics_marking(b->dynamics[i])) == 0);
-        assert(time_span_equals(dynamics_target_time_span(a->dynamics[i]), dynamics_target_time_span(b->dynamics[i])));
+        assert(rt_span_equal(dynamics_target_time_span(a->dynamics[i]), dynamics_target_time_span(b->dynamics[i])));
         assert(a->dynamics_part[i] == b->dynamics_part[i] && a->dynamics_staff[i] == b->dynamics_staff[i]);
     }
 }

@@ -3,14 +3,7 @@
 #include <string.h>
 
 #include "harmony_cadence_rules.h"
-#include "harmony_rule_check.h"
 #include "harmony_test_util.h"
-#include "harmony_eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-HARMONY_EVAL_TABLE(g_eval, "cadence", HARMONY_CADENCE_RULE_COUNT);
-#define harmony_cadence_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_cadence_constraint, harmony_cadence_preference, harmony_cadence_rule_holds, HarmonyCadence, which, subject)
 
 static HarmonyCadence cadence(HarmonyChord from, HarmonyChord to, int soprano) {
     return (HarmonyCadence){from, to, soprano, false};
@@ -20,15 +13,6 @@ static CadenceType classify(HarmonyCadence c) {
     CadenceType type = (CadenceType)-1;
     assert(harmony_cadence_classify(&c, &type));
     return type;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(harmony_cadence_rule, harmony_cadence_constraint, HARMONY_CADENCE_RULE_COUNT);
-    assert(constraint_type(harmony_cadence_constraint(HARMONY_CADENCE_CADENTIAL_PROGRESSION)) == CONSTRAINT_TYPE_HARD);
-    assert(constraint_type(harmony_cadence_constraint(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH)) == CONSTRAINT_TYPE_SOFT);
-    assert(strcmp(harmony_cadence_rule_name(HARMONY_CADENCE_CADENTIAL_PROGRESSION), "cadential-progression") == 0);
-    assert(strcmp(harmony_cadence_rule_name(HARMONY_CADENCE_HALF_WITHOUT_SEVENTH), "half-without-seventh") == 0);
-    assert(harmony_cadence_rule_name(HARMONY_CADENCE_RULE_COUNT) == NULL);
 }
 
 static void test_perfect_authentic(void) {
@@ -190,7 +174,6 @@ static void test_invalid_cadence(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_perfect_authentic();
     test_imperfect_authentic();
     test_half();

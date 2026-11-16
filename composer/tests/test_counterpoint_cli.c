@@ -7,6 +7,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The `counterpoint` command, run as a process on Fux's D Dorian cantus firmus: the text and the JSON it prints, the same
@@ -102,7 +103,7 @@ static void test_files(void) {
     LaneSpanId ids[4];
     PlanSpan all;
     assert(strstr(text, "wrote cp_cli.json") && strstr(text, "wrote cp_cli.mid") && strstr(text, "wrote cp_cli.xml"));
-    assert(plan_read_json_file("cp_cli.json", &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file("cp_cli.json", &plan, &error) == PLAN_OK);
     rational_make(0, 1, &all.start);
     rational_make(11, 1, &all.length);
     /* The line and the counter-melody are in the plan, the counter-melody written. */

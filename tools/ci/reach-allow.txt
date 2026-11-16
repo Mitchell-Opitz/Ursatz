@@ -1,0 +1,7 @@
+# Functions the reach scan (tools/ci/check-reach.sh) may list as reached by no application.
+# One "<source path> <function>" per line; the text after # says why it stays (R-559).
+gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test hook: test_analyzer_route reads the import counter
+gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test hook: test_analyzer_route reads the import counter
+gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
+gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
+library/frameworks/common-practice-minimal/key_regions.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy key_regions.c's static stages

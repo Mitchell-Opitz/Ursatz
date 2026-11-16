@@ -8,7 +8,7 @@ A local web UI over the Ursatz platform: it imports MIDI and MusicXML files, sho
 
 ## Where it sits
 
-- Below it, three parts of the same repository, built by the root: the library in `library/` (storage only; [architecture](../../library/docs/architecture.md)), the Analyzer in `analyzer/` ([architecture](../../analyzer/docs/architecture.md)) and the Composer in `composer/` ([architecture](../../composer/docs/architecture.md)).
+- Below it, two parts of the same repository, built by the root: the Analyzer in `analyzer/` ([architecture](../../analyzer/docs/architecture.md)) and the Composer in `composer/` ([architecture](../../composer/docs/architecture.md)). The library in `library/` is reached only through them.
 - Above it, the browser only.
 
 ## Module map
@@ -17,7 +17,7 @@ A local web UI over the Ursatz platform: it imports MIDI and MusicXML files, sho
 |---|---|---|
 | `backend/src/routes/` | Route families: parse, call a service, answer | [api/](api/analysis-routes.md) |
 | `backend/src/service/` | The only code that calls the Analyzer, Composer and stores | [storage.md](storage.md), [motifs-backend.md](motifs-backend.md) |
-| `backend/src/util/`, `backend/include/` | File, JSON and lock helpers; the tool header | [Helpers](backend-modules.md#backend-helper-modules) |
+| `backend/src/util/` | File, JSON and lock helpers | [Helpers](backend-modules.md#backend-helper-modules) |
 | `backend/tests/` | Tests and fixtures | [testing.md](testing.md) |
 | `frontend/public/` | The static pages, models and views | [frontend.md](frontend.md), [views/](views/library.md) |
 | `../tools/ci/` (repository root) | Include, theory and docs checks, shared by every part | [testing.md](testing.md) |
@@ -32,11 +32,10 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 | `/api/corpus`, `/api/corpus/<id>`, `.../<id>/pieces`, `.../pieces/<piece_id>` | `corpus.c` | [Corpus routes](api/analysis-routes.md#corpus-routes) |
 | `/api/styles`, `/api/styles/<id>`, `.../<id>/rebuild` | `styles.c` | [Styles routes](api/analysis-routes.md#styles-routes) |
 | `/api/links/runs`, `/api/links/runs/<id>`, `/api/links/pieces/<id>` | `links.c` | [Motive links routes](api/analysis-routes.md#motive-links-routes) |
-| `GET /api/health/status` | `health.c` | [Analyzer routes](api/analysis-routes.md#analyzer-routes) |
 | `.../projects`, `.../projects/<id>`, `.../items`, `.../items/<id>`, `.../items/validate` | `materials.c` | [Materials and subjects routes](api/materials-routes.md#materials-and-subjects-routes) |
 | `.../items/<id>/versions`, `.../versions/<n>`, `/files/<name>`, `/score`, `/playback`, `/compose`, `/regenerate`, `/variations`, `/variations/<k>/choose` | `materials.c` | same |
 | `.../items/<id>/reanalyze`, `/variants`, `/variants/save`, `/variant-tree`, `/reroll`, `/each-op`, `/op-checks`, `/link-form`, `/promote`, `/flag`, `/uses/<source>/update` | `materials.c` | same |
-| `.../variant-operations`, `.../recognize`, `.../render`, `.../motifs/random`, `.../motifs/to-c`, `.../motifs/import` | `materials.c` | same |
+| `.../variant-operations`, `.../recognize`, `.../render`, `.../motifs/random`, `.../motifs/import` | `materials.c` | same |
 | `/api/subjects`, `/api/subjects/groups`, `/api/subjects/<id>`, `.../<id>/items/<item>`, `/pieces/<piece>`, `/related/<other>` | `materials.c` | same |
 | `GET /api/composer/status`, `GET /api/composer/vocabulary` | `composer.c` | [Composer routes](api/composer-routes.md#composer-routes) |
 | `/api/jobs/<id>` (`GET DELETE`) | `jobs.c` | [Jobs](api/composer-routes.md#jobs) |
@@ -50,8 +49,6 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 | `api_version`, `composer_version`, `ursatz_commit`, `render_key`, `tempo` | `render.json` beside a cached motif render | the Composer of this tree | [Motif score and playback](views/playback.md#motif-score-and-playback) |
 | `schema_version` of a Composer request | `theme_service.c`, `piece_service.c` | 2 for a theme, 1 for a piece (the Composer also reads piece request schema 2, any form; the GUI writes 1) | [Storage](storage.md#theme-bodies-and-version-files) |
 
-`GET /api/health/status` reports only whether the store opens (`ok`, `message`).
-
 ## What it calls below
 
 | Service | Entry used | From | For |
@@ -60,7 +57,6 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 | `playback_service.c` | `input_pipeline_import_file`, `analyzer_playback_build` | Analyzer | playback of a stored file |
 | `style_service.c`, `link_service.c` | `style_profile_*`, `style_model_*`, `motive_link_scope_*`, `motive_links_run` | Analyzer | style models and motive links |
 | `motif_service.c`, `theme_service.c`, `piece_service.c`, `compose_common.c` | `composer_api_*`, listed in [Backend services](backend-modules.md#backend-services-and-who-calls-the-composer) | Composer | motifs, themes, pieces, export, vocabulary |
-| `persistence_service.c`, `collection_service.c` | `persistence_open`, `corpus_api_open`, `corpus_api_list_corpora`, `corpus_api_list_piece_refs` | Ursatz | the piece database and the corpus index |
 
 ## Data flow
 
@@ -100,23 +96,21 @@ Three layers, in order of how rarely they should change:
   calls the Analyzer and Composer libraries. Every tool goes through this
   layer; nothing calls them from route code. The GUI is a client of the
   apps (R-218, R-219): it displays and takes input, and every music answer
-  comes from the Analyzer or the Composer. The one library edge left is
-  storage: `persistence_service.c` includes `persistence/persistence.h` and
-  `collection_service.c` includes `corpus/corpus_api.h`, both from Ursatz.
-  No other backend file includes an Ursatz header.
+  comes from the Analyzer or the Composer. No backend file includes an
+  Ursatz header.
 - **Tool modules** (`backend/src/routes/`): independent GUI features
-  (Analysis, Corpus and Composer). Each tool registers its own
-  HTTP routes under an `/api/<tool_name>/...` prefix and never calls another
-  tool directly. See `backend/include/ursatz_gui/tool.h` for the
-  registration convention and `backend/src/routes/health.c` as the reference
-  tool.
+  (Analysis, Corpus and Composer). A tool is `routes/<tool_name>.c` and
+  `.h` with one `ursatz_gui_<tool_name>_register(struct mg_context *ctx)`
+  that `server.c`'s route setup calls (the only place that wires routes). Its
+  HTTP routes sit under `/api/<tool_name>/...`, it never calls another tool,
+  and it reaches data only through `backend/src/service/`.
 - **Host/shell** (`backend/src/server.c`, `frontend/public/`): starts the
   HTTP server, wires tool routes together, and serves the static frontend
   shell (top bar, tool sidebar, content area) that tool UIs render into.
 
 New tool code goes in `backend/src/routes/`. New shared persistence or query
-logic goes in `backend/src/service/`. If you find yourself calling an Ursatz
-function from inside `routes/`, it belongs in `service/` instead.
+logic goes in `backend/src/service/`. If you find yourself calling an
+Analyzer or Composer function from inside `routes/`, it belongs in `service/` instead.
 
 The Analyzer library (`analyzer/`, linked as
 `ursatz_analyzer`) is the only analysis path: `analysis_service.c` calls

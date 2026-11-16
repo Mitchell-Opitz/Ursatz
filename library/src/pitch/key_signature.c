@@ -2,8 +2,6 @@
 
 #include <stdlib.h>
 
-#include "pitch/accidental.h"
-
 struct KeySignature {
     KeySignatureEntry *entries;
     size_t entry_count;
@@ -17,7 +15,7 @@ KeySignatureResult key_signature_create(const KeySignatureEntry *entries, size_t
         if (entries[i].letter < PITCH_LETTER_A || entries[i].letter > PITCH_LETTER_G) {
             return KEY_SIGNATURE_ERR_INVALID_LETTER;
         }
-        if (entries[i].accidental < ACCIDENTAL_MIN_OFFSET || entries[i].accidental > ACCIDENTAL_MAX_OFFSET) {
+        if (entries[i].accidental < KEY_SIGNATURE_MIN_ACCIDENTAL || entries[i].accidental > KEY_SIGNATURE_MAX_ACCIDENTAL) {
             return KEY_SIGNATURE_ERR_INVALID_ACCIDENTAL;
         }
     }
@@ -64,19 +62,4 @@ PitchLetter key_signature_letter_at(const KeySignature *key_signature, size_t in
 
 int key_signature_accidental_at(const KeySignature *key_signature, size_t index) {
     return key_signature->entries[index].accidental;
-}
-
-bool key_signature_equals(const KeySignature *a, const KeySignature *b) {
-    if (a == NULL || b == NULL) {
-        return a == b;
-    }
-    if (a->entry_count != b->entry_count) {
-        return false;
-    }
-    for (size_t i = 0; i < a->entry_count; i++) {
-        if (a->entries[i].letter != b->entries[i].letter || a->entries[i].accidental != b->entries[i].accidental) {
-            return false;
-        }
-    }
-    return true;
 }

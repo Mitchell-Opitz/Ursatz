@@ -5,8 +5,6 @@
 
 #include "counterpoint_interval.h"
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 
 /*
  * Consonance and dissonance rules for standard-counterpoint-v1. Counterpoint
@@ -33,18 +31,6 @@
  * interval is also a good one to write is a separate matter, taken up by
  * the melodic writing rules.
  */
-
-typedef enum {
-    STANDARD_COUNTERPOINT_CONSONANCE_RULE_PERFECT = 0,
-    STANDARD_COUNTERPOINT_CONSONANCE_RULE_IMPERFECT,
-    STANDARD_COUNTERPOINT_CONSONANCE_RULE_DISSONANCE,
-    STANDARD_COUNTERPOINT_CONSONANCE_RULE_PERFECT_FOURTH,
-    STANDARD_COUNTERPOINT_CONSONANCE_RULE_MELODIC,
-    STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT
-} StandardCounterpointConsonanceRule;
-
-const Rule *standard_counterpoint_consonance_rule(StandardCounterpointConsonanceRule which);
-const Constraint *standard_counterpoint_consonance_constraint(StandardCounterpointConsonanceRule which);
 
 typedef enum {
     STANDARD_COUNTERPOINT_PERFECT_CONSONANCE = 0,

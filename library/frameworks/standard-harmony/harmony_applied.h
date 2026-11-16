@@ -53,10 +53,6 @@ typedef struct {
 /* True for the five qualities above; false for any other value. */
 bool harmony_applied_quality_valid(HarmonyAppliedQuality quality);
 
-/* "major-triad" "dominant-seventh" "diminished-triad" "fully-diminished-seventh"
-   "half-diminished-seventh"; NULL for an invalid quality. */
-const char *harmony_applied_quality_name(HarmonyAppliedQuality quality);
-
 /* True for the three seventh chord qualities; false for the triads and an invalid value. */
 bool harmony_applied_quality_is_seventh(HarmonyAppliedQuality quality);
 
@@ -91,23 +87,6 @@ int harmony_applied_scale_semitone(HarmonyMode mode, int degree);
 bool harmony_applied_function(HarmonyMode mode, const HarmonyAppliedChord *chord, HarmonicFunction *out);
 
 /*
- * Analyzing tonicization. A chromatic chord is an applied chord when it is a major triad or a
- * dominant seventh (V or V7), or a diminished triad, fully diminished seventh, or half-diminished
- * seventh (vii diminished), whose target, the chord it is V or vii of, is a diatonic chord that
- * can be tonicized. Given the chord's root, as semitones above the tonic (any integer, taken
- * modulo 12), and its quality: the quality names the kind; the target's root is a fifth below
- * the root of a dominant (the root is its V) or a semitone above the root of a leading-tone
- * chord (the root is its vii); the target is the diatonic chord of that root, its Roman numeral
- * in the home key. False (*out untouched) when the root is not that of a tonicizable diatonic
- * chord (for example the root of V itself, which tonicizes the tonic and is just V), for an
- * invalid mode or quality, and for NULL.
- *
- * Whether a chromatic note belongs to the chord or is an embellishing tone is the analyst's.
- */
-bool harmony_applied_analyze(HarmonyMode mode, int root_semitone, HarmonyAppliedQuality quality,
-                             HarmonyAppliedChord *out);
-
-/*
  * Spelling an applied chord: determine the root of the chord being tonicized, pretend it is the
  * tonic of a temporary key, and spell the V7 or vii diminished 7 of that key.
  *
@@ -120,15 +99,5 @@ bool harmony_applied_analyze(HarmonyMode mode, int root_semitone, HarmonyApplied
  */
 int harmony_applied_root_degree(HarmonyMode mode, const HarmonyAppliedChord *chord);
 int harmony_applied_root_semitone(HarmonyMode mode, const HarmonyAppliedChord *chord);
-
-/*
- * Secondary dominants as altered diatonic chords: the applied V7 that shares its root with a
- * diatonic chord, which is that chord with its third raised (or otherwise altered): ii to II
- * sharp, which is V7/V; I to I7, which is V7/IV. The target is a fifth below the diatonic
- * chord's root. False (*out untouched) when that chord cannot be tonicized (the diatonic V,
- * which would tonicize the tonic, and in major IV and in minor VI, which would tonicize vii
- * diminished and ii diminished), for an invalid mode or degree, and for NULL.
- */
-bool harmony_applied_from_diatonic_root(HarmonyMode mode, int degree, HarmonyAppliedChord *out);
 
 #endif

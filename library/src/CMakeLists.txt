@@ -1,8 +1,5 @@
 add_library(ursatz
-    ursatz.c
     identity/entity_id.c
-    identity/version.c
-    identity/version_model.c
     identity/schema_version.c
     core/entity.c
     core/string_copy.c
@@ -10,23 +7,18 @@ add_library(ursatz
     core/rational.c
     core/value.c
     core/occurrence.c
-    core/equality.c
     core/voice_reference.c
-    core/relationship_reference.c
     core/provenance_reference.c
     core/framework_reference.c
     time/duration.c
     time/musical_time.c
     time/time_span.c
-    time/time_instant.c
     time/temporal_anchor.c
     time/metronome_marking.c
-    time/historical_period.c
     time/note_value.c
     time/time_signature.c
     time/meter_map.c
     time/metrical_position.c
-    time/performance_time.c
     time/tempo_map.c
     time/tuplet.c
     time/time_rational.c
@@ -36,61 +28,23 @@ add_library(ursatz
     pitch/pitch_spelling.c
     pitch/pitch_arithmetic.c
     pitch/tuning_system.c
-    pitch/pitch_class.c
-    pitch/pitch_realization.c
     pitch/pitch_numeric_value.c
-    pitch/written_pitch.c
-    pitch/clef.c
-    pitch/staff_position.c
-    pitch/clef_resolution.c
-    pitch/accidental.c
-    pitch/generic_interval.c
     pitch/key_signature.c
-    pitch/sounding_pitch.c
     pitch/midi_pitch.c
-    events/event.c
     events/note_event.c
-    events/rest_event.c
-    events/control_event.c
-    events/tie.c
-    events/slur.c
-    events/articulation.c
     events/dynamics.c
     events/tempo_marking.c
-    events/structural_marker.c
-    events/instrument.c
-    events/instrument_capability.c
-    containers/voice.c
-    containers/layer.c
-    containers/staff.c
     containers/id_array.c
-    containers/part.c
-    containers/measure.c
-    containers/phrase.c
-    containers/idea.c
-    containers/subphrase.c
     containers/section.c
-    containers/movement.c
-    containers/work.c
-    containers/edition.c
-    containers/arrangement.c
-    containers/revision.c
-    containers/source_variant.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
     structure/cadence.c
-    structure/figure.c
-    structure/theme.c
-    structure/theme_occurrence.c
     structure/phrase_occurrence.c
-    context/context.c
     semantics/interval.c
     semantics/sonority.c
-    semantics/sonority_builder.c
     semantics/sonority_segmentation.c
     semantics/rhythmic_pattern.c
-    semantics/scale.c
     semantics/contour.c
     semantics/voice_part.c
     semantics/beat_strength.c
@@ -100,53 +54,28 @@ add_library(ursatz
     semantics/motive_occurrence_kind.c
     semantics/applied_chord_kind.c
     semantics/key_change_extent.c
-    semantics/form_level.c
-    semantics/expected_length_basis.c
-    semantics/subphrase_role.c
     semantics/analysis_note.c
-    semantics/analysis_segment.c
     semantics/analysis_key.c
-    semantics/voice_grid.c
     relationship/relationship.c
-    relationship/predicate_definition.c
     interpretation/uncertainty.c
-    interpretation/evidence.c
-    interpretation/assertion.c
-    interpretation/observation.c
-    interpretation/hypothesis.c
     interpretation/interpretation.c
     interpretation/claim_interpretation.c
     interpretation/chord.c
     interpretation/key.c
-    interpretation/scale_degree.c
     interpretation/texture.c
     theory/framework.c
     theory/framework_singleton.c
     rules/rule.c
     rules/constraint.c
-    rules/rule_pair.c
     rules/preference.c
-    rules/preference_weight.c
-    rules/preference_ranking.c
-    rules/rule_evaluation.c
-    theory/heuristic.c
-    theory/tendency.c
-    theory/statistical_model.c
     theory/style_model.c
     theory/style_fraction.c
     theory/style_features.c
     theory/style_model_build.c
     theory/style_model_blend.c
-    analysis/analyzer.c
-    analysis/feature_extraction.c
-    analysis/interval_analysis.c
-    analysis/scale_analysis.c
-    analysis/voice_leading_analysis.c
     analysis/beat_grid_length.c
     analysis/outer_voice.c
     analysis/voice_separation.c
-    analysis/cadence_detection.c
-    analysis/cadence_classification.c
     analysis/motif_window_matching.c
     analysis/motive_sketch.c
     analysis/motive_relation.c
@@ -154,55 +83,18 @@ add_library(ursatz
     analysis/motive_variant_recognition.c
     analysis/motive_link.c
     analysis/progression_patterns.c
-    analysis/phrase_segmentation.c
     analysis/phrase_boundary_detection.c
-    analysis/period_detection.c
-    analysis/sentence_continuation_matching.c
-    analysis/sentence_detection.c
     analysis/form_structure_detection.c
     analysis/thematic_return_detection.c
-    generation/intent.c
-    generation/constraint_extraction.c
-    generation/conflict_detection.c
-    generation/generation_plan.c
-    generation/candidate.c
-    generation/candidate_evaluator.c
-    generation/generation_record.c
-    generation/generator_registry.c
-    generation/generator_dispatch.c
     io/midi_importer.c
     io/midi_event_decoder.c
     io/midi_key_signature.c
     io/smf_reader.c
     io/midi_renderer.c
     io/musicxml_importer.c
-    io/import_notes.c
-    persistence/persistence.c
-    persistence/persistence_note_events.c
-    persistence/persistence_uncertainty.c
-    persistence/persistence_interpretation.c
-    persistence/persistence_chord.c
-    persistence/persistence_key.c
-    persistence/persistence_context_query.c
-    persistence/persistence_support.c
-    persistence/persistence_relationship.c
-    persistence/persistence_motif.c
-    persistence/persistence_motif_occurrence.c
-    persistence/persistence_cadence.c
-    persistence/persistence_phrase_occurrence.c
-    corpus/corpus.c
-    corpus/persistence_corpus.c
-    corpus/persistence_corpus_membership.c
-    corpus/corpus_api.c
-    corpus_stats/corpus_stats_api.c
-    corpus_stats/corpus_stats_tally.c
-    corpus_stats/corpus_stats_counts.c
     query/query_fraction.c
     query/similarity_model.c
     query/similarity_scoring.c
-    query/search_result.c
-    query/corpus_search.c
-    export/musicxml_export.c
     export/musicxml_score.c
     export/score_clefs.c
     export/score_quantize.c
@@ -214,9 +106,6 @@ ursatz_public_headers(ursatz
     BASE ${CMAKE_CURRENT_SOURCE_DIR}
     SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
     HEADERS
-        analysis/analyzer.h
-        analysis/cadence_classification.h
-        analysis/cadence_detection.h
         analysis/form_structure_detection.h
         analysis/motif_window_matching.h
         analysis/motive_link.h
@@ -226,12 +115,9 @@ ursatz_public_headers(ursatz
         analysis/motive_variant_recognition.h
         analysis/outer_voice.h
         analysis/phrase_boundary_detection.h
-        analysis/phrase_segmentation.h
         analysis/progression_patterns.h
         analysis/thematic_return_detection.h
-        analysis/voice_leading_analysis.h
         analysis/voice_separation.h
-        containers/revision.h
         containers/section.h
         context/context.h
         core/entity.h
@@ -242,49 +128,30 @@ ursatz_public_headers(ursatz
         core/rational.h
         core/value.h
         core/voice_reference.h
-        corpus/corpus.h
-        corpus/corpus_api.h
         events/dynamics.h
         events/note_event.h
         events/tempo_marking.h
         export/musicxml_export.h
         export/score_quantize.h
         export/score_staves.h
-        generation/candidate.h
-        generation/constraint_extraction.h
-        generation/generation_plan.h
-        generation/generation_record.h
-        generation/generator.h
-        generation/intent.h
         identity/entity_id.h
         identity/schema_version.h
-        identity/version.h
         interpretation/chord.h
         interpretation/claim_interpretation.h
-        interpretation/evidence.h
         interpretation/interpretation.h
         interpretation/key.h
-        interpretation/scale_degree.h
         interpretation/texture.h
         interpretation/uncertainty.h
-        io/import_notes.h
         io/midi_importer.h
         io/midi_key_signature.h
         io/midi_renderer.h
         io/musicxml_importer.h
-        io/smf_reader.h
-        persistence/persistence.h
-        pitch/accidental.h
-        pitch/clef.h
-        pitch/clef_resolution.h
-        pitch/generic_interval.h
         pitch/key_signature.h
         pitch/midi_pitch.h
         pitch/pitch_arithmetic.h
         pitch/pitch_identity.h
         pitch/pitch_numeric_value.h
         pitch/pitch_spelling.h
-        pitch/staff_position.h
         pitch/tuning_system.h
         query/similarity_model.h
         query/similarity_scoring.h
@@ -292,7 +159,6 @@ ursatz_public_headers(ursatz
         rules/constraint.h
         rules/preference.h
         rules/rule.h
-        rules/rule_pair.h
         semantics/analysis_key.h
         semantics/analysis_note.h
         semantics/analysis_segment.h
@@ -300,7 +166,6 @@ ursatz_public_headers(ursatz
         semantics/beat_strength.h
         semantics/cadence_type.h
         semantics/contour.h
-        semantics/form_level.h
         semantics/interval.h
         semantics/key_change_extent.h
         semantics/motive_occurrence_kind.h
@@ -308,7 +173,6 @@ ursatz_public_headers(ursatz
         semantics/non_chord_tone.h
         semantics/rhythmic_pattern.h
         semantics/sonority.h
-        semantics/sonority_builder.h
         semantics/sonority_segmentation.h
         semantics/subphrase_role.h
         semantics/tone_line.h
@@ -319,23 +183,19 @@ ursatz_public_headers(ursatz
         structure/motif_occurrence.h
         structure/phrase_occurrence.h
         structure/structure.h
-        structure/theme.h
         theory/framework.h
         theory/framework_singleton.h
         theory/style_features.h
         theory/style_model.h
         theory/style_model_blend.h
         theory/style_model_build.h
-        theory/tendency.h
         time/duration.h
-        time/historical_period.h
         time/meter_arithmetic.h
         time/meter_map.h
         time/metrical_position.h
         time/metronome_marking.h
         time/musical_time.h
         time/note_value.h
-        time/performance_time.h
         time/score_time.h
         time/tempo_map.h
         time/temporal_anchor.h
@@ -345,9 +205,6 @@ ursatz_public_headers(ursatz
         time/tuplet.h
 )
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(SQLITE3 REQUIRED IMPORTED_TARGET sqlite3)
-target_link_libraries(ursatz PUBLIC PkgConfig::SQLITE3)
 # The XML parser used by io/musicxml_importer.c only (third_party/ezxml); PRIVATE so no consumer sees it.
 target_link_libraries(ursatz PRIVATE ursatz_ezxml)
 # lround, floor and friends (musicxml_importer.c)

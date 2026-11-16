@@ -17,10 +17,6 @@
 #include "time/meter_map.h"
 #include "time/score_time.h"
 
-const char *standard_form_motive_kind_name(StandardFormMotiveKind kind) {
-    return motive_occurrence_kind_name(kind);
-}
-
 int standard_form_motive_kind_rank(StandardFormMotiveKind kind) {
     return motive_occurrence_kind_rank(kind);
 }
@@ -483,10 +479,8 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
             /* the whole motive under a transformation */
             if (standard_form_motive_shape(line, first, fam->proto_n, fam->generic, &shape) &&
                 !held_by_equal_or_longer(families, family_count, f, first, fam->proto_n) &&
-                (config->relation_match != NULL
-                     ? standard_form_motive_classify_match(&fam->proto, &shape, config->varied_max_mismatch, config->relation_match,
-                                                           config->relation_context, &match)
-                     : standard_form_motive_classify(&fam->proto, &shape, config->varied_max_mismatch, &match)) &&
+                standard_form_motive_classify_match(&fam->proto, &shape, config->varied_max_mismatch, config->relation_match,
+                                                    config->relation_context, &match) &&
                 match.kind > (int)MOTIVE_OCCURRENCE_TONAL) {
                 fill_rec(&rec, f, fam->line, first, fam->proto_n, &match);
                 if (!push_rec(&recs, &rec_count, &capacity, &rec)) {
@@ -498,7 +492,6 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
                 size_t n = length + 1;
                 if (!standard_form_motive_shape(line, first, n, fam->generic, &shape) ||
                     held_by_equal_or_longer(families, family_count, f, first, n) ||
-                    config->relation_match == NULL ||
                     !standard_form_motive_fragment_match(&fam->proto, &shape, config->relation_match, config->relation_context,
                                                          &match)) {
                     continue;
@@ -759,32 +752,6 @@ void standard_form_motives_destroy(StandardFormMotives *motives) {
     motives->family_count = 0;
 }
 
-static bool read_claim(const Interpretation *interpretation, const char *type, void *out, size_t size) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t content_size = 0;
-    if (claim == NULL || strcmp(value_type(claim), type) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &content_size);
-    if (content == NULL || content_size != size) {
-        return false;
-    }
-    memcpy(out, content, size);
-    return true;
-}
-
-bool standard_form_motive_claim_read(const Interpretation *interpretation, StandardFormMotiveClaim *out) {
-    return read_claim(interpretation, STANDARD_FORM_MOTIVE_CLAIM_TYPE, out, sizeof(*out));
-}
-
-bool standard_form_motive_occurrence_claim_read(const Interpretation *interpretation,
-                                                StandardFormMotiveOccurrenceClaim *out) {
-    return read_claim(interpretation, STANDARD_FORM_MOTIVE_OCCURRENCE_CLAIM_TYPE, out, sizeof(*out));
-}
-
 /* The entity that holds a span of measures: the innermost idea shell, else the phrase occurrence; NULL with neither. */
 static const char *container_of(const StandardFormPhrases *phrases, const StandardFormSegmentation *segmentation, int first_measure,
                                 int last_measure) {
@@ -972,7 +939,7 @@ StandardFormAnalysisStatus standard_form_find_motives(const StandardFormInput *i
     if (!standard_form_config_valid(effective) || !input->finished) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG;
     }
-    if (matcher == NULL) {
+    if (matcher == NULL || effective->relation_match == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR;
     }
     StandardFormMotives found = {NULL, 0};

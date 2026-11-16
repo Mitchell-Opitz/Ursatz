@@ -1,3 +1,2 @@
 add_ursatz_test(relationship)
-add_ursatz_test(predicate_definition)
 add_ursatz_architecture_test(relationship)

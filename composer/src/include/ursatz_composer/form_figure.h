@@ -64,14 +64,4 @@ bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *o
  */
 bool form_figure_write(PiecePlan *plan, NodeId section, const MelodyFillParams *range, FillRng *rng);
 
-/*
- * Whether the section's melody is a figure over the skeleton: every cell not kept holds N equal notes from the skeleton
- * tone (an octave up for a raised climax) and keeps to the kind of its figure (neighbor: even positions the tone, odd
- * ones 1 or 2 semitones from it; scale: every interval inside the cell a step, 1 or 2 semitones, 3 for the augmented
- * second of the harmonic minor; broken-chord: every note a tone of the chord over the cell), and every kept cell holds the
- * notes of the returned section, moved (an octave up for a raised climax). On false, reason (size bytes) holds the first
- * fault.
- */
-bool form_figure_check(const PiecePlan *plan, NodeId section, char *reason, size_t size);
-
 #endif

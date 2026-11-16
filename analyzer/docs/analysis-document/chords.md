@@ -100,8 +100,7 @@ the one that touches; if none touches it is `"no_tonicization"`. A disagreement 
 chord keeps its applied reading and the tonicization claims are unchanged. The only scale arithmetic involved is
 locating the tonic a degree of the local key names (major scale; natural minor in a minor key).
 
-The runner-up is always recorded when the library provides one. The Markdown report shows it only
-when its score is within 0.10 of the best chord's.
+The runner-up is always recorded when the library provides one.
 
 ## Chord vocabulary
 

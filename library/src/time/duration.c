@@ -97,14 +97,3 @@ DurationResult duration_add(const Duration *a, const Duration *b, Duration **out
     }
     return create_from_rational(sum, out);
 }
-
-DurationResult duration_subtract(const Duration *a, const Duration *b, Duration **out) {
-    Rational left;
-    Rational right;
-    Rational difference;
-    if (!rational_of_content(duration_content(a), &left) || !rational_of_content(duration_content(b), &right) ||
-        rational_sub(left, right, &difference) != RATIONAL_OK) {
-        return DURATION_ERR_OVERFLOW;
-    }
-    return create_from_rational(difference, out);
-}

@@ -9,26 +9,6 @@
 
 #include "check/hearing_result.h"
 
-ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const ComposerStyle *style, StyleComparison *out) {
-    if (!out) {
-        return COMPOSER_MEASURE_ERR_ARGUMENT;
-    }
-    memset(out, 0, sizeof(*out));
-    if (!plan || !style) {
-        return COMPOSER_MEASURE_ERR_ARGUMENT;
-    }
-    ComposerHearing *hearing = NULL;
-    HearingResult made = hearing_create(plan, &hearing);
-    ComposerMeasureResult result = COMPOSER_MEASURE_OK;
-    if (made != HEARING_OK) {
-        result = made == HEARING_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_PLAN;
-    } else {
-        result = composer_style_measure_in(hearing, style, out);
-    }
-    hearing_destroy(hearing);
-    return result;
-}
-
 ComposerMeasureResult composer_style_measure_in(ComposerHearing *hearing, const ComposerStyle *style,
                                                 StyleComparison *out) {
     if (!out) {

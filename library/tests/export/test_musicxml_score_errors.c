@@ -179,30 +179,6 @@ static void test_unknown_part_and_staff(void) {
     bag_free(&bag);
 }
 
-static void test_dynamics_for_a_missing_event(void) {
-    TestBag bag;
-    memset(&bag, 0, sizeof(bag));
-    bag_add_note(&bag, "a", 0, 1, 1, 4, PITCH_LETTER_C, NULL);
-    Dynamics *dynamics = NULL;
-    assert(dynamics_create_for_event("p", tu_id("not-a-note"), &dynamics) == DYNAMICS_OK);
-    Dynamics *list[1] = {dynamics};
-    MusicXmlExportScore score = score_of(&bag);
-    score.dynamics = list;
-    score.dynamics_count = 1;
-    assert(write_failing(&score) == MUSICXML_EXPORT_ERR_UNKNOWN_EVENT);
-    dynamics_destroy(dynamics);
-
-    /* an event the score does have is written at that event */
-    assert(dynamics_create_for_event("p", tu_id("a"), &dynamics) == DYNAMICS_OK);
-    list[0] = dynamics;
-    char *xml = NULL;
-    assert(musicxml_export_write_score(&score, &xml) == MUSICXML_EXPORT_OK);
-    assert(TU_HAS(xml, "<dynamics><p/></dynamics>"));
-    free(xml);
-    dynamics_destroy(dynamics);
-    bag_free(&bag);
-}
-
 static void test_not_representable(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
@@ -284,7 +260,6 @@ int main(void) {
     test_overlap_is_per_voice();
     test_inconsistent_arrays();
     test_unknown_part_and_staff();
-    test_dynamics_for_a_missing_event();
     test_not_representable();
     test_divisions_overflow();
     test_output_is_deterministic();

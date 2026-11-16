@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "phrase_rules.h"
 #include "semantics/cadence_type.h"
 #include "idea_label.h"
@@ -35,21 +32,6 @@
  * harmony_cadence_strength, the one owner of cadence strength.
  */
 
-typedef enum {
-    STANDARD_FORM_PERIOD_RULE_STRUCTURE = 0,
-    STANDARD_FORM_PERIOD_RULE_PHRASE_IDEAS,
-    STANDARD_FORM_PERIOD_RULE_CADENCES,
-    STANDARD_FORM_PERIOD_RULE_ANTECEDENT_CADENCE,
-    STANDARD_FORM_PERIOD_RULE_CONSEQUENT_CADENCE,
-    STANDARD_FORM_PERIOD_RULE_LENGTH,
-    STANDARD_FORM_PERIOD_RULE_MODULATION,
-    STANDARD_FORM_PERIOD_RULE_CONSEQUENT_IDEAS,
-    STANDARD_FORM_PERIOD_RULE_COUNT
-} StandardFormPeriodRule;
-
-const Rule *standard_form_period_rule(StandardFormPeriodRule which);
-const Constraint *standard_form_period_constraint(StandardFormPeriodRule which);
-
 /* STRUCTURE: true only for an antecedent followed by a consequent. */
 bool standard_form_phrase_roles_in_order(PhraseRole first, PhraseRole second);
 
@@ -74,16 +56,8 @@ bool standard_form_antecedent_length_usual(size_t measures);
    antecedent is not valid). A shorter consequent is rare, not wrong. */
 bool standard_form_consequent_length_usual(size_t antecedent, size_t consequent);
 
-/* MODULATION: true for the consequent, where a change of key usually happens; false for the
-   antecedent and for an invalid role. */
-bool standard_form_phrase_role_usually_modulates(PhraseRole role);
-
 /* CONSEQUENT_IDEAS: true when the consequent's contrasting idea differs from the antecedent's,
    which is almost always. */
 bool standard_form_consequent_contrast_usual(bool contrasting_idea_differs);
-
-/* CONSEQUENT_IDEAS: true when the two basic ideas differ, so they are labeled b.i.1 and
-   b.i.2. */
-bool standard_form_basic_ideas_need_numbering(bool basic_ideas_differ);
 
 #endif

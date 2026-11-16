@@ -9,6 +9,7 @@
 #include "interpretation/texture.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
 
 /*
  * Relationship test: a Texture's underlying fact reference (the passage
@@ -74,17 +75,6 @@ int main(void) {
     Texture *rejected;
     assert(texture_create(no_framework, "homorhythm", &rejected) == TEXTURE_ERR_NULL_FRAMEWORK_REFERENCE);
     interpretation_destroy(no_framework);
-
-    /* texture_take_interpretation destroys only the Texture shell and hands
-       back the embedded Interpretation, still valid and unaffected. */
-    Interpretation *taken_source = make_interpretation("interpretation-3", "passage-3", "framework-standard-texture");
-    Texture *taken_chord;
-    assert(texture_create(taken_source, "polyphony", &taken_chord) == TEXTURE_OK);
-    Interpretation *taken = texture_take_interpretation(taken_chord);
-    assert(taken == taken_source);
-    size_t claim_size;
-    assert(strcmp((const char *)value_content(interpretation_claim(taken), &claim_size), "homorhythm") == 0);
-    interpretation_destroy(taken);
 
     printf("test_texture: ok\n");
     return 0;

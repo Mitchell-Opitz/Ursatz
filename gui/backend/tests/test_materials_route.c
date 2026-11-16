@@ -676,7 +676,7 @@ static void test_motif_import(void) {
   cJSON_Delete(answer);
 }
 
-/* Motifs are written with C as the tonic (R-179): other keys are refused, and the to-c route writes degrees in C. */
+/* Motifs are written with C as the tonic (R-179): other keys are refused. */
 static void test_motifs_in_c(void) {
   char project[64] = "";
   first_project(project, sizeof(project));
@@ -703,34 +703,6 @@ static void test_motifs_in_c(void) {
   check(status == 400 && strstr(string_of(answer, "error"), "C as the tonic") != NULL, "a new version in E minor is 400");
   cJSON_Delete(answer);
   cJSON_Delete(saved);
-
-  answer = json_exchange("POST", "/api/materials/motifs/to-c",
-                         "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"mode\":\"minor\",\"meter\":\"4/4\",\"pickup\":\"0\"}", &status);
-  check(status == 200 && ok_true(answer) && strcmp(string_of(answer, "notes_text"), "C4:q D#4:e G4:e C5:h") == 0,
-        "to-c writes minor degrees in C minor");
-  cJSON_Delete(answer);
-
-  answer = json_exchange("POST", "/api/materials/motifs/to-c",
-                         "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"mode\":\"major\",\"meter\":\"4/4\"}", &status);
-  check(status == 200 && strcmp(string_of(answer, "notes_text"), "C4:q E4:e G4:e C5:h") == 0, "to-c writes major degrees in C major");
-  cJSON_Delete(answer);
-
-  answer = json_exchange("POST", "/api/materials/motifs/to-c",
-                         "{\"degrees\":\"1:q\",\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
-  check(status == 400, "to-c refuses a mode that is not major or minor");
-  cJSON_Delete(answer);
-
-  answer = json_exchange("POST", "/api/materials/motifs/to-c", "{\"degrees\":\"\",\"mode\":\"major\",\"meter\":\"4/4\"}", &status);
-  check(status == 400, "to-c refuses an empty degree list");
-  cJSON_Delete(answer);
-
-  answer = json_exchange("POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q\",\"mode\":\"major\",\"meter\":\"four\"}", &status);
-  check(status == 400, "to-c refuses a bad meter");
-  cJSON_Delete(answer);
-
-  answer = json_exchange("GET", "/api/materials/motifs/to-c", NULL, &status);
-  check(status == 405, "to-c is POST only");
-  cJSON_Delete(answer);
 }
 
 /* A new version of a motif says what changed (P18 B3); a new motif's first version is "Created". */
@@ -1805,10 +1777,6 @@ static void test_random_motifs(void) {
   check(status == 200 && ok_true(answer), "a rational tempo is accepted by the render route");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q\",\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
-  check(status == 400 && string_of(answer, "path")[0] == '/', "a mode the Composer does not know is refused with its path");
-  cJSON_Delete(answer);
-
   answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
   check(status == 400, "a count over 16 is refused");
   cJSON_Delete(answer);
@@ -1842,8 +1810,7 @@ static const char *kToneBody =
     "\"meter\":\"4/4\",\"key\":\"C major\",\"pickup\":\"0\",\"harmony\":null,\"tone_overrides\":{\"2\":\"passing\","
     "\"4\":\"chord\"},\"features\":[],\"analysis\":null,\"derived\":null}}";
 
-/* The tone overrides of a motif reach the Composer as "tones", and a motif saved before tone labels is analyzed again
-   once. */
+/* The tone overrides of a motif reach the Composer as tones. */
 static const cJSON *analysis_tone(const cJSON *motif, int index) {
   const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motif, "analysis"), "analysis");
   return cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(analysis, "tones"), index);
@@ -1873,34 +1840,6 @@ static void test_tones(void) {
   char *plain = create_item("motif", "NoTones", project, kMotifBody);
   check(plain != NULL && !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(analysis_tone(saved_motif(plain, 1), 1), "overridden")),
         "a motif without overrides has no tone marked as given");
-
-  /* The migration analyzes a full motif without tones once and leaves a marker. A version stored before tone labels is
-     written directly. */
-  cJSON *old = cJSON_Parse(kToneBody);
-  cJSON *old_motif = cJSON_GetObjectItemCaseSensitive(old, "motif");
-  cJSON *old_analysis = cJSON_Parse("{\"analysis\":{\"degrees_text\":\"1:q 2:q 3:q 5:q\"}}");
-  cJSON_ReplaceItemInObjectCaseSensitive(old_motif, "analysis", old_analysis);
-  cJSON *added = NULL;
-  check(ursatz_gui_material_item_add_version(item, old, "Before tone labels", &added) == URSATZ_GUI_MATERIAL_OK,
-        "a version without tone labels is written");
-  cJSON_Delete(added);
-  cJSON_Delete(old);
-  remove("materials/tones-migrated");
-  int versions = saved_version_count(item);
-  int migrated = ursatz_gui_material_migrate_tones("materials");
-  check(migrated >= 1 && saved_version_count(item) == versions + 1, "the migration adds a version to a motif without tones");
-  const cJSON *migrated_analysis =
-      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(saved_motif(item, versions + 1), "analysis"), "analysis");
-  check(cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(migrated_analysis, "tones")),
-        "the migrated version holds the new analysis");
-  FILE *marker = fopen("materials/tones-migrated", "r");
-  check(marker != NULL, "the migration leaves its marker file");
-  if (marker) {
-    fclose(marker);
-  }
-  int after_first = saved_version_count(item);
-  check(ursatz_gui_material_migrate_tones("materials") == 0 && saved_version_count(item) == after_first,
-        "the migration does not run twice");
   free(item);
   free(plain);
 }
@@ -1973,71 +1912,10 @@ static void test_segments(void) {
   check(cJSON_GetArraySize(motif_features(motif)) == 1 && number_of(cJSON_GetArrayItem(motif_features(motif), 0), "last") == 2 &&
             !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")),
         "new notes with given segments keep the segments");
-
-  /* The migration: a motif whose current version has no features gets one version; a motif with features gets none. */
-  cJSON *bare = cJSON_Parse(kNoFeaturesBody);
-  cJSON *added = NULL;
-  check(ursatz_gui_material_item_add_version(plain, bare, "Before segments", &added) == URSATZ_GUI_MATERIAL_OK,
-        "a version without features is written");
-  cJSON_Delete(added);
-  cJSON_Delete(bare);
-  remove("materials/segments-migrated");
-  int plain_versions = saved_version_count(plain);
-  int given_versions = saved_version_count(given);
-  int migrated = ursatz_gui_material_migrate_segments("materials");
-  check(migrated >= 1 && saved_version_count(plain) == plain_versions + 1, "the migration adds a version to a motif without features");
-  check(saved_version_count(given) == given_versions, "the migration leaves a motif with features alone");
-  motif = saved_motif(plain, plain_versions + 1);
-  check(cJSON_GetArraySize(motif_features(motif)) >= 1 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motif, "segments_proposed")),
-        "the migrated version holds the proposal, marked proposed");
-  FILE *marker = fopen("materials/segments-migrated", "r");
-  check(marker != NULL, "the migration leaves its marker file");
-  if (marker) {
-    fclose(marker);
-  }
-  int after_first = saved_version_count(plain);
-  check(ursatz_gui_material_migrate_segments("materials") == 0 && saved_version_count(plain) == after_first,
-        "the migration does not run twice");
   free(plain);
   free(given);
 }
 #endif
-
-/* The one-time clear deletes every theme (referenced or not), leaves its marker, and does not run twice. */
-static void test_clear_themes(void) {
-  char project[64] = "";
-  first_project(project, sizeof(project));
-  remove("materials/themes-cleared");
-  char *motif = create_item("motif", "Kept", project, kMotifBody);
-  char *first = create_item("theme", "Clear one", project, "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}");
-  char *second = create_item("theme", "Clear two", project, "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}");
-  check(motif && first && second, "two themes and a motif are saved");
-  int cleared = ursatz_gui_material_clear_themes("materials");
-  check(cleared >= 2, "the clear deletes the themes");
-  cJSON *items = NULL;
-  check(ursatz_gui_material_item_list(NULL, "theme", &items) == URSATZ_GUI_MATERIAL_OK && cJSON_GetArraySize(items) == 0,
-        "no theme is left");
-  cJSON_Delete(items);
-  items = NULL;
-  check(ursatz_gui_material_item_list(NULL, "motif", &items) == URSATZ_GUI_MATERIAL_OK && cJSON_GetArraySize(items) >= 1,
-        "the motifs are kept");
-  cJSON_Delete(items);
-  FILE *marker = fopen("materials/themes-cleared", "r");
-  check(marker != NULL, "the clear leaves its marker file");
-  if (marker) {
-    fclose(marker);
-  }
-  char *later = create_item("theme", "Clear later", project, "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}");
-  check(later != NULL && ursatz_gui_material_clear_themes("materials") == 0, "the clear does not run twice");
-  items = NULL;
-  check(ursatz_gui_material_item_list(NULL, "theme", &items) == URSATZ_GUI_MATERIAL_OK && cJSON_GetArraySize(items) == 1,
-        "a theme saved after the clear stays");
-  cJSON_Delete(items);
-  free(motif);
-  free(first);
-  free(second);
-  free(later);
-}
 
 /* ---- the replies of the Composer routes (P27 B6) ---------------------------------------------------------------- */
 
@@ -2133,10 +2011,6 @@ static const ReplyCase kReplyCases[] = {
     {"analyze_bad_harmony", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"harmony\":\"not a chord\",\"key\":\"C minor\",\"meter\":\"4/4\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 400, ""},
     {"analyze_refused_notes", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":null,\"meter\":\"4/4\",\"notes\":\"zzz\",\"pickup\":\"0\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 400, ""},
     {"analyze_refused_pickup", "POST", "/api/materials/items", "{\"body\":{\"motif\":{\"analysis\":null,\"derived\":null,\"features\":[],\"form\":\"full\",\"key\":\"C major\",\"meter\":\"4/4\",\"notes\":\"C4:q D4:q\",\"pickup\":\"9/4\",\"role\":\"melodic\"},\"uses\":[]},\"name\":\"Cap\",\"project_id\":\"@project\",\"type\":\"motif\"}", NULL, 200, "analysis,degrees,analysis_error"},
-    {"to_c_0", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"meter\":\"4/4\",\"mode\":\"minor\"}", NULL, 200, "notes_text,ok"},
-    {"to_c_1", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 200, "notes_text,ok"},
-    {"to_c_2", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 3:q 5:q\",\"meter\":\"3/4\",\"mode\":\"major\",\"pickup\":\"1/2\"}", NULL, 200, "notes_text,ok"},
-    {"to_c_3", "POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q 9:q\",\"meter\":\"4/4\",\"mode\":\"major\"}", NULL, 422, ""},
     {"import_key", "POST", "/api/materials/motifs/import?key=D%20minor", NULL, "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00", 200, "analysis,key,key_found,meter,moved_from,notes_text,ok,pickup"},
     {"import_nokey", "POST", "/api/materials/motifs/import", NULL, "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00", 200, "analysis,key,key_found,meter,moved_from,notes_text,ok,pickup"},
     {"import_meter", "POST", "/api/materials/motifs/import?meter=3/4&key=G%20major", NULL, "4d546864000000060000000101e04d54726b0000001600903e648360803e0000904164836080410000ff2f00", 200, "analysis,key,key_found,meter,moved_from,notes_text,ok,pickup"},
@@ -2288,18 +2162,7 @@ static void test_served_defaults_and_draws(void) {
 /* A refusal by the Composer names the request member at fault (additive "path" of the error answer). */
 static void test_refusal_paths(void) {
   int status = 0;
-  cJSON *answer = json_exchange("POST", "/api/materials/motifs/to-c",
-                                "{\"degrees\":\"1:q\",\"mode\":\"major\",\"meter\":\"4/5\"}", &status);
-  check(status == 400 && strcmp(string_of(answer, "path"), "/meter") == 0 && strstr(string_of(answer, "error"), "4/5") != NULL,
-        "a meter that is not one is refused at /meter");
-  cJSON_Delete(answer);
-
-  answer = json_exchange("POST", "/api/materials/motifs/to-c",
-                         "{\"degrees\":\"1:q 3:q 5:q 1:q 3:q 5:q 1:q\",\"mode\":\"major\",\"meter\":\"4/4\",\"pickup\":\"4\"}", &status);
-  check(status == 422 && strcmp(string_of(answer, "path"), "/input/text") == 0, "a pickup the bar cannot hold is refused at /input/text");
-  cJSON_Delete(answer);
-
-  answer = json_exchange("POST", "/api/materials/render",
+  cJSON *answer = json_exchange("POST", "/api/materials/render",
                          "{\"form\":\"full\",\"degrees\":\"1:q 9:q\",\"meter\":\"4/4\",\"key\":\"D minor\",\"render_key\":\"D minor\","
                          "\"pickup\":\"0\"}",
                          &status);
@@ -2632,7 +2495,6 @@ int main(void) {
   test_tones();
   test_segments();
 #endif
-  test_clear_themes();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);

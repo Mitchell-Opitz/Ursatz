@@ -2,8 +2,7 @@
  * the source and the Analyzer's analysis document under pieces/<id>/, and
  * the list, detail, rename, delete and MusicXML routes read that store back.
  * The stored document is compared with what the Analyzer CLI writes for the
- * same file. Uses a plain TCP socket for the HTTP requests, same as
- * test_health_route.c. */
+ * same file. Uses a plain TCP socket for the HTTP requests. */
 
 #include <civetweb.h>
 #include <math.h>
@@ -1352,7 +1351,7 @@ int main(void) {
     const cJSON *uploaded_after = meta ? cJSON_GetObjectItemCaseSensitive(meta, "uploaded_at") : NULL;
     const cJSON *filename = meta ? cJSON_GetObjectItemCaseSensitive(meta, "filename") : NULL;
     check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
-              schema->valuedouble == 11,
+              schema->valuedouble == 12,
           "re-running the analysis rewrites the versions in meta.json");
     check(cJSON_IsString(version) && strcmp(version->valuestring, ursatz_analyzer_version()) == 0,
           "meta.json records the version the Analyzer reports");

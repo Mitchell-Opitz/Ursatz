@@ -101,7 +101,7 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, const Grow
     if (continuation) {
         config.context.continuation = *continuation;
     }
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     grow_outcome_destroy(&outcome);
     return plan;

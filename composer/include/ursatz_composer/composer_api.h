@@ -45,8 +45,6 @@ typedef enum {
     COMPOSER_ERR_INTERNAL
 } ComposerStatus;
 
-const char *composer_status_name(ComposerStatus status);
-
 typedef struct {
     char message[512];
     char path[128]; /* JSON Pointer of the request member at fault, "" when none */

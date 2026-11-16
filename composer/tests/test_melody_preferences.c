@@ -73,7 +73,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, const Melody
     config.seed = seed;
     config.basic = motive;
     config.melody = melody;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     if (result != GROW_OK) {
         fprintf(stderr, "seed %lu: stuck at %s\n", seed, grow_stage_name(outcome.stuck_stage));
@@ -183,7 +183,7 @@ static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *mel
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.melody = melody;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     assert(result == GROW_OK && !outcome.stuck);
     grow_outcome_destroy(&outcome);

@@ -8,6 +8,7 @@
 #include "identity/entity_id.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
 
 /*
  * Context + theory-tagged test:
@@ -74,10 +75,8 @@ int main(void) {
 
     /* Coexistence: both competing Interpretations point at the same
        target and both remain independently accessible with their own
-       distinct claim/status. */
+       distinct claim. */
     assert(entity_id_equals(interpretation_target_id(interpretation_a), interpretation_target_id(interpretation_b)));
-    assert(interpretation_status(interpretation_a) == INTERPRETATION_STATUS_PROPOSED);
-    assert(interpretation_status(interpretation_b) == INTERPRETATION_STATUS_DISPUTED);
 
     size_t claim_a_size;
     const void *claim_a_content = value_content(interpretation_claim(interpretation_a), &claim_a_size);
@@ -119,8 +118,6 @@ int main(void) {
     assert(result_c == INTERPRETATION_OK);
 
     assert(interpretation_framework_reference(interpretation_c) == framework_reference);
-    assert(entity_id_equals(framework_reference_target_id(interpretation_framework_reference(interpretation_c)),
-                             framework_id));
 
     interpretation_destroy(interpretation_c);
 

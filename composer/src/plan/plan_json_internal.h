@@ -17,7 +17,7 @@ cJSON *rational_json(long long numerator, long long denominator);
 /* cJSON's tab-indented print as 2-space indent, "key": value, and a trailing newline. Caller frees. */
 char *json_indent_with_spaces(const char *printed);
 
-/* Reading helpers shared by plan_json.c and analysis_load.c. */
+/* Reading helpers of plan_json.c. */
 
 typedef struct {
     PlanJsonError *error;

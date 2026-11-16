@@ -5,9 +5,6 @@
 
 #include "fourth_species_exercise.h"
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * Fourth-species beginning and ending rules for standard-counterpoint-v1.
@@ -38,15 +35,6 @@ typedef enum {
     STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_FINAL_BAR,
     STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT
 } StandardCounterpointFourthSpeciesEndsRule;
-
-const Rule *standard_counterpoint_fourth_species_ends_rule(StandardCounterpointFourthSpeciesEndsRule which);
-const Constraint *standard_counterpoint_fourth_species_ends_constraint(StandardCounterpointFourthSpeciesEndsRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_fourth_species_ends_preference(StandardCounterpointFourthSpeciesEndsRule which);
-
-/* "begin" "cantus-ends-re-do" "penultimate-suspension" "final-bar"; NULL for an
-   invalid rule. */
-const char *standard_counterpoint_fourth_species_ends_rule_name(StandardCounterpointFourthSpeciesEndsRule which);
 
 /* True when the exercise satisfies the rule. False when it does not, and for
    invalid input. */

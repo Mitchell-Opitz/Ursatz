@@ -5,28 +5,11 @@
 #include "scale_rule_table.h"
 #include "standard-counterpoint/counterpoint_pitch.h"
 
-static const char *const NAMES[SCALE_SEQUENCE_RULE_COUNT] = {"direction", "bass-by-step", "intervals",
-                                                             "repeats",   "suspended",    "whole-units"};
-
 static bool table_is_hard(int which) {
     return which <= SCALE_SEQUENCE_SUSPENDED;
 }
 
-static ScaleRulePair g_pairs[SCALE_SEQUENCE_RULE_COUNT];
-static UrsatzOnce g_built[SCALE_SEQUENCE_RULE_COUNT];
-static const ScaleRuleTable TABLE = {"sequence", NAMES, SCALE_SEQUENCE_RULE_COUNT, table_is_hard, g_pairs, g_built};
-
-const Rule *scale_sequence_rule(ScaleSequenceRule which) {
-    return scale_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *scale_sequence_constraint(ScaleSequenceRule which) {
-    return scale_rule_table_constraint(&TABLE, (int)which);
-}
-
-const char *scale_sequence_rule_name(ScaleSequenceRule which) {
-    return scale_rule_table_name(&TABLE, (int)which);
-}
+static const ScaleRuleTable TABLE = {SCALE_SEQUENCE_RULE_COUNT, table_is_hard};
 
 bool scale_sequence_valid(const ScaleSequence *sequence) {
     return sequence != NULL && sequence->pattern != NULL && sequence->pattern->unit_length > 0 &&

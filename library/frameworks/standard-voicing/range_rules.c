@@ -37,19 +37,6 @@ bool standard_voicing_range_semitones(VoicePart part, int *lowest, int *highest)
     return true;
 }
 
-bool standard_voicing_range_bounds(VoicePart part, PitchLetter *lowest_letter, int *lowest_octave,
-                                   PitchLetter *highest_letter, int *highest_octave) {
-    if (lowest_letter == NULL || lowest_octave == NULL || highest_letter == NULL || highest_octave == NULL ||
-        !voice_part_valid(part)) {
-        return false;
-    }
-    *lowest_letter = RANGES[part].low_letter;
-    *lowest_octave = RANGES[part].low_octave;
-    *highest_letter = RANGES[part].high_letter;
-    *highest_octave = RANGES[part].high_octave;
-    return true;
-}
-
 bool standard_voicing_in_range(VoicePart part, const PitchSpelling *pitch) {
     int lowest;
     int highest;

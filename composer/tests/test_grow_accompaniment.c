@@ -85,7 +85,7 @@ static GrowResult grow(const GrowRequest *request, unsigned long seed, PiecePlan
     memset(&config, 0, sizeof(config));
     memset(outcome, 0, sizeof(*outcome));
     config.seed = seed;
-    assert(grow_build_plan(request, plan) == GROW_OK);
+    assert(grow_build_plan_checked(request, plan, NULL) == GROW_OK);
     return grow_run(*plan, &config, outcome);
 }
 
@@ -178,14 +178,14 @@ static void test_bad_requests(void) {
     /* A texture that is not homophonic, a pattern that does not exist, a range with no room. */
     accompaniment.texture = STANDARD_TEXTURE_POLYPHONY;
     GrowRequest request = make_request(&SCENARIOS[0], &motive, accompaniment);
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
     request.accompaniment.texture = -1;
     request.accompaniment.pattern = (PlanAccompanimentPattern)9;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
     request.accompaniment.pattern = PLAN_ACCOMPANIMENT_BLOCK;
     request.accompaniment.low = 60;
     request.accompaniment.high = 55;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
 
     /* Alberti is not written in 6/8. */
     Scenario compound = {"G major 6/8", 7, KEY_STRUCTURE_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"};
@@ -193,9 +193,9 @@ static void test_bad_requests(void) {
     accompaniment.texture = -1;
     accompaniment.pattern = PLAN_ACCOMPANIMENT_ALBERTI;
     request = make_request(&compound, &compound_motive, accompaniment);
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
     request.accompaniment.pattern = PLAN_ACCOMPANIMENT_ANY;
-    assert(grow_build_plan(&request, &plan) == GROW_OK && plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK && plan);
     plan_destroy(plan);
 
     /* Without the request for one, a theme has no inner voice, and the texture stage has nothing to do. */
@@ -291,19 +291,19 @@ static void test_accompaniment_motive_requests(void) {
 
     /* A melodic-role motive is refused; the accompaniment motive is the accompaniment, in the material as "acc". */
     request.accompaniment_motive = &melodic;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
     request.accompaniment_motive = &accompaniment;
-    assert(grow_build_plan(&request, &plan) == GROW_OK && plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK && plan);
     assert(find_node(plan, "acc") != PLAN_NODE_NONE && find_node(plan, "m0") != PLAN_NODE_NONE);
     plan_destroy(plan);
 
     /* One longer than a bar, and one together with a voicing, are refused. */
     Motive longer = make_accompaniment_motive(&SCENARIOS[0], "C4:q E4:q G4:q E4:q C4:q", true);
     request.accompaniment_motive = &longer;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
     request.accompaniment_motive = &accompaniment;
     request.has_voicing = true;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
 }
 
 /* Themes grown to be heard as melody and accompaniment, and whether standard-texture hears them so. */

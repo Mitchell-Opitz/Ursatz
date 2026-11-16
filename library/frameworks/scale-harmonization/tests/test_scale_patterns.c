@@ -66,7 +66,6 @@ static void test_seven_six(void) {
        the upper voice resolves to a sixth. */
     assert(p->unit[0].bass_moves && p->unit[0].suspended && p->unit[0].intervals == I(7));
     assert(!p->unit[1].bass_moves && !p->unit[1].suspended && p->unit[1].intervals == I(6));
-    assert(sequence_kind_is_suspension_chain(p->kind));
 }
 
 static void test_allows_direction(void) {

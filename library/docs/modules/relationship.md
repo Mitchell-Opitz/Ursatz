@@ -6,13 +6,15 @@ Layer L6 (`music-relationship`). Path `src/relationship/`, tests `tests/relation
 
 ## Provides
 
-`Relationship`, `PredicateDefinition`.
+`Relationship`.
 
 ## Notes
 
-`PredicateDefinition`'s vocabulary is open, not a fixed enum. The System Registry marks the initial predicate vocabulary (TDD §77, `contains`, `precedes`, `derived_from`, `realizes`, `resembles`, `interpreted_as`, and others) "explicitly extensible, not fixed." `predicate_definition.h` is a registrable metadata type with an open `name` string, not a closed set of predicate constants.
+The predicate vocabulary is open, not a fixed enum. The System Registry marks the initial predicate vocabulary (TDD §77, `contains`, `precedes`, `derived_from`, `realizes`, `resembles`, `interpreted_as`, and others) "explicitly extensible, not fixed." `Relationship` takes the predicate as an open `predicate_name` string, not a closed set of predicate constants.
 
-First real analysis-layer use of `Relationship`: `PeriodDetection` (`music-analysis`, `analysis/period_detection.h`) builds one `Relationship` per identified antecedent/consequent phrase pair -- `source_id`/`target_id` the two `PhraseOccurrence` ids, `predicate_name` `"precedes"` (TDD §77's vocabulary). This is the mechanism the codebase uses wherever an Interpretation's claim needs to reference two objects rather than one: `Interpretation.target` stays a single `EntityID` (referencing the `Relationship`'s own id), and the `Relationship` itself carries the two-object link.
+The tests read a `Relationship`'s predicate name and scope through `tests/support/relationship_test_access.h`; no application reads them, so `relationship.h` has no accessor for them.
+
+Analysis-layer uses of `Relationship`: `ThematicReturnDetection` and `FormStructureDetection` (`music-analysis`) build `Relationships` between theme occurrences (`"resembles"`) and between sections (`"precedes"`, TDD §77's vocabulary). This is the mechanism the codebase uses wherever an Interpretation's claim needs to reference two objects rather than one: `Interpretation.target` stays a single `EntityID` (referencing the `Relationship`'s own id), and the `Relationship` itself carries the two-object link.
 
 ## Dependencies
 

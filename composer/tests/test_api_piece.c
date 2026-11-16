@@ -8,6 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -241,7 +242,7 @@ static void run_case(const char *name, const char *fixture, const char *plan, bo
     ComposerResponse response;
     ComposerStatus status = composer_api_piece(printed, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "%s: %s: %s\n", name, composer_status_name(status), response.error.message);
+        fprintf(stderr, "%s: %s: %s\n", name, test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK);
     expect_case(name, &response, true);
@@ -261,7 +262,7 @@ static void run_regenerate(const char *name, const char *plan, const char *secti
     ComposerResponse response;
     ComposerStatus status = composer_api_piece(printed, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "%s: %s: %s\n", name, composer_status_name(status), response.error.message);
+        fprintf(stderr, "%s: %s: %s\n", name, test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK);
     expect_case(name, &response, false);
@@ -297,7 +298,7 @@ static void test_variations(char *plan) {
     ComposerResponse response;
     ComposerStatus status = composer_api_piece_variations(printed, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "piece-variations: %s: %s\n", composer_status_name(status), response.error.message);
+        fprintf(stderr, "piece-variations: %s: %s\n", test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK && response.json && !response.midi && !response.musicxml);
     cJSON *actual = cJSON_Parse(response.json);
@@ -528,8 +529,8 @@ static void expect_refusal(const char *text, bool variations, ComposerStatus sta
     ComposerResponse response;
     ComposerStatus got = run_text(text, &response, variations);
     if (got != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
-        fprintf(stderr, "%s '%s' at '%s', expected %s '%s' at '%s'\n", composer_status_name(got), response.error.message,
-                response.error.path, composer_status_name(status), message, path);
+        fprintf(stderr, "%s '%s' at '%s', expected %s '%s' at '%s'\n", test_status_name(got), response.error.message,
+                response.error.path, test_status_name(status), message, path);
     }
     assert(got == status);
     assert(strcmp(response.error.path, path) == 0);
@@ -750,7 +751,7 @@ static void test_regenerate_theme_harmony(void) {
         ComposerResponse composed;
         ComposerStatus status = composer_api_piece(printed, NULL, &composed);
         if (status != COMPOSER_OK) {
-            fprintf(stderr, "theme seed %u: %s: %s\n", theme_seeds[t], composer_status_name(status), composed.error.message);
+            fprintf(stderr, "theme seed %u: %s: %s\n", theme_seeds[t], test_status_name(status), composed.error.message);
         }
         assert(status == COMPOSER_OK);
         free(printed);
@@ -768,7 +769,7 @@ static void test_regenerate_theme_harmony(void) {
             ComposerResponse again;
             status = composer_api_piece(printed, NULL, &again);
             if (status != COMPOSER_OK) {
-                fprintf(stderr, "theme seed %u, regenerate seed %u: %s: %s\n", theme_seeds[t], seed, composer_status_name(status),
+                fprintf(stderr, "theme seed %u, regenerate seed %u: %s: %s\n", theme_seeds[t], seed, test_status_name(status),
                         again.error.message);
             }
             assert(status == COMPOSER_OK);
@@ -812,7 +813,7 @@ static char *form_request(const char *fixture, const char *plan, const char *con
 static cJSON *composed_document(const char *printed, ComposerResponse *response) {
     ComposerStatus status = composer_api_piece(printed, NULL, response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "any form: %s: %s\n", composer_status_name(status), response->error.message);
+        fprintf(stderr, "any form: %s: %s\n", test_status_name(status), response->error.message);
     }
     assert(status == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response->json);
@@ -933,7 +934,7 @@ static void test_edited_forms(const char *rounded_plan) {
     printed = print(request);
     ComposerStatus status = composer_api_piece_variations(printed, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "variations of a rounded binary: %s: %s\n", composer_status_name(status), response.error.message);
+        fprintf(stderr, "variations of a rounded binary: %s: %s\n", test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK && response.json);
     document = cJSON_Parse(response.json);

@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "period_rules.h"
 #include "semantics/cadence_type.h"
 #include "phrase_level_form.h"
@@ -27,24 +24,9 @@
  *                     sentences), and a weaker second cadence is neither
  */
 
-typedef enum {
-    STANDARD_FORM_COMBINATION_RULE_REPEATED_PHRASE = 0,
-    STANDARD_FORM_COMBINATION_RULE_WRITTEN_OUT,
-    STANDARD_FORM_COMBINATION_RULE_COMPOUND_PERIOD,
-    STANDARD_FORM_COMBINATION_RULE_PAIR_FORM,
-    STANDARD_FORM_COMBINATION_RULE_COUNT
-} StandardFormCombinationRule;
-
-const Rule *standard_form_combination_rule(StandardFormCombinationRule which);
-const Constraint *standard_form_combination_constraint(StandardFormCombinationRule which);
-
 /* REPEATED_PHRASE: true when the second phrase is a written-out repeat that ends with the same
    cadence as the first. Any valid cadence type counts, a subverted one included. */
 bool standard_form_is_repeated_phrase(bool written_out_repeat, CadenceType first, CadenceType second);
-
-/* WRITTEN_OUT: true when a repeat adds measures to the piece. A repeat shown with repeat signs
-   adds none, so it is not a repeated phrase. */
-bool standard_form_repeat_is_written_out(bool adds_measures);
 
 /* COMPOUND_PERIOD: true when the cadences make a period and both phrases are sentences. */
 bool standard_form_is_compound_period(CadenceType antecedent, CadenceType consequent, PhraseLevelForm first_form,

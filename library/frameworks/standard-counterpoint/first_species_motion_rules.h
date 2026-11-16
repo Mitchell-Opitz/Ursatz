@@ -4,9 +4,6 @@
 #include <stdbool.h>
 
 #include "counterpoint_line.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * First-species motion rules for standard-counterpoint-v1: how the parts
@@ -41,16 +38,6 @@ typedef enum {
 
 #define STANDARD_COUNTERPOINT_FIRST_SPECIES_MIN_MOTIONS_FOR_VARIETY 4
 #define STANDARD_COUNTERPOINT_FIRST_SPECIES_LARGE_LEAP 5
-
-const Rule *standard_counterpoint_first_species_motion_rule(StandardCounterpointFirstSpeciesMotionRule which);
-const Constraint *
-standard_counterpoint_first_species_motion_constraint(StandardCounterpointFirstSpeciesMotionRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_first_species_motion_preference(StandardCounterpointFirstSpeciesMotionRule which);
-
-/* "motion-variety" "contrary-preferred" "similar-with-leap"
-   "similar-with-large-leap"; NULL for an invalid rule. */
-const char *standard_counterpoint_first_species_motion_rule_name(StandardCounterpointFirstSpeciesMotionRule which);
 
 /* True when the texture satisfies the rule. False when it does not, and for
    an invalid pair or an invalid rule. */

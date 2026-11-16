@@ -71,9 +71,4 @@ const TimeSpan *sonority_time_window(const Sonority *sonority);
 size_t sonority_event_id_count(const Sonority *sonority);
 const EntityID *sonority_event_id_at(const Sonority *sonority, size_t index);
 
-size_t sonority_voice_id_count(const Sonority *sonority);
-const EntityID *sonority_voice_id_at(const Sonority *sonority, size_t index);
-
-SonorityEventDomain sonority_event_domain(const Sonority *sonority);
-
 #endif

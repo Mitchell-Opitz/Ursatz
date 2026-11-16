@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <generation/candidate.h>
-
+#include <ursatz_composer/candidate.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/fill_suggest.h>
@@ -1018,13 +1017,12 @@ static void test_scores_in_the_loop(void) {
     FillSuggestions *suggestions = NULL;
     assert(fill_suggest(scene.plan, registry, &config, target, 4, &suggestions) == FILL_OK);
     const CandidateSet *set = fill_suggestions_set(suggestions);
-    size_t count = candidate_set_candidate_count(set);
+    size_t count = fill_suggestions_count(suggestions);
     assert(count >= 2 && count <= 4);
     for (size_t i = 0; i < count; i++) {
         const Candidate *candidate = candidate_set_candidate_at(set, i);
         assert(candidate_score_denominator(candidate) >= 1);
         assert(candidate_score_numerator(candidate) <= candidate_score_denominator(candidate));
-        assert(strcmp(fill_suggestion_operator(suggestions, i), MOTIVE_FRAGMENT_OPERATOR_NAME) == 0);
         assert(strncmp(fill_suggestion_label(suggestions, i), "fragment ", 9) == 0);
         if (i > 0) {
             const Candidate *before = candidate_set_candidate_at(set, i - 1);

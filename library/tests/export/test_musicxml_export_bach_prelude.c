@@ -10,8 +10,7 @@
 #include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "io/midi_importer.h"
-#include "persistence/persistence.h"
-#include "persistence/persistence_note_events.h"
+#include "../io/midi_import_split.h"
 
 /*
  * Regression for the multi-track voice-assignment bug: Bach_Prelude_C_
@@ -19,9 +18,8 @@
  * single-channel file with RH and LH on two separate note-bearing
  * tracks. Before per-track voice assignment, assign_voice_slots only
  * ran when the whole file was single-track, so every note here kept
- * optional_voice == NULL, musicxml_export_write grouped RH and LH into
- * one implicit voice, and their overlapping notes tripped
- * MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES. It must now import with RH/LH
+ * optional_voice == NULL, the export grouped RH and LH into one implicit
+ * voice, and their overlapping notes tripped MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES. It must now import with RH/LH
  * assigned to distinct voices and export cleanly.
  */
 
@@ -51,7 +49,7 @@ int main(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult import_result = midi_importer_import(data, size, &events, &pitch_values, &count);
+    MidiImportResult import_result = test_midi_import_parts(data, size, &events, &pitch_values, &count, NULL, NULL);
     free(data);
     assert(import_result == MIDI_IMPORT_OK);
     assert(count > 0);
@@ -73,14 +71,13 @@ int main(void) {
     }
     assert(saw_distinct_voice);
 
-    const char *path = "test_musicxml_export_bach_prelude.sqlite";
-    remove(path);
-    PersistenceHandle *handle = NULL;
-    assert(persistence_open(path, &handle) == PERSISTENCE_OK);
-    assert(persistence_store_note_events(handle, events, count) == PERSISTENCE_NOTE_EVENTS_OK);
-
+    MusicXmlExportScore score;
+    memset(&score, 0, sizeof(score));
+    score.events = events;
+    score.pitch_values = pitch_values;
+    score.count = count;
     char *xml = NULL;
-    MusicXmlExportResult export_result = musicxml_export_write(handle, &xml);
+    MusicXmlExportResult export_result = musicxml_export_write_score(&score, &xml);
     assert(export_result == MUSICXML_EXPORT_OK);
     assert(xml != NULL);
     assert(strstr(xml, "<score-partwise version=\"3.1\">") != NULL);
@@ -92,8 +89,6 @@ int main(void) {
     }
     free(events);
     free(pitch_values);
-    persistence_close(handle);
-    remove(path);
 
     printf("musicxml_export_bach_prelude: ok (%zu notes)\n", count);
     return 0;

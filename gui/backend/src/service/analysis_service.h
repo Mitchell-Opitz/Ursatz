@@ -8,8 +8,8 @@
 /*
  * Shared analysis service: import, analyze and store a piece.
  *
- * This is the ONLY place outside persistence_service.c and
- * collection_service.c allowed to call into Ursatz or the Analyzer. Every
+ * This is the ONLY place outside collection_service.c allowed to call
+ * into Ursatz or the Analyzer. Every
  * analysis goes through the Analyzer library (input_pipeline_import_file,
  * run_analysis_pipeline, analysis_document_build); the GUI keeps no
  * analysis code of its own (R-084).
@@ -152,7 +152,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_filename(const char *pieces_dir,
 UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
 
 /*
- * Changes a piece's metadata in its meta.json, written once. The source and
+ * A change of a piece's metadata in its meta.json (ursatz_gui_analysis_update_piece), written once. The source and
  * the analysis are untouched. NULL string fields are left unchanged.
  *
  *   filename            display name, stored as given (the caller rejects an empty one)
@@ -185,12 +185,8 @@ typedef struct {
     const UrsatzGuiNotation *notation;
 } UrsatzGuiMetaUpdate;
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
-                                                             const UrsatzGuiMetaUpdate *update, char *message,
-                                                             size_t message_size);
-
 /*
- * The PATCH of a piece as one hold of its lock: ursatz_gui_analysis_update_metadata, then, when the update changes
+ * The PATCH of a piece as one hold of its lock: the metadata change above, then, when the update changes
  * the notation override, ursatz_gui_analysis_reanalyze; if that fails the old override is put back, and a source
  * that no longer imports gives URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA with message "invalid notation".
  */
@@ -219,7 +215,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
 
 /*
  * Makes a piece's stored analysis current, under the piece lock. A meta.json without ursatz_commit gets it from the
- * stored analysis.json's metadata.ursatz_commit (written back). When analyzer_document_status of analysis.json is
+ * stored analysis.json's metadata.producer_key (written back). When analyzer_document_status of analysis.json is
  * not CURRENT (another schema, Analyzer version or Ursatz commit, or unreadable), the piece is analyzed again as in
  * ursatz_gui_analysis_reanalyze. OK when the stored analysis is current afterwards; otherwise the failure of the new
  * analysis, with the stored files unchanged. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.

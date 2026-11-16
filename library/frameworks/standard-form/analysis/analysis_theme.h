@@ -120,6 +120,5 @@ StandardFormAnalysisStatus standard_form_identify_themes_on_grid(const StandardF
                                                                  const StandardFormPhraseGrid *grid,
                                                                  const StandardFormConfig *config, StandardFormThemes *out);
 void standard_form_themes_destroy(StandardFormThemes *themes);
-bool standard_form_theme_claim_read(const Interpretation *interpretation, StandardFormThemeClaim *out);
 
 #endif

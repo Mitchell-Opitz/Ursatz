@@ -186,7 +186,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
     }
 
     /* The document carries the regions and the modulations the report has. */
-    char *json = analysis_document_render(piece->path, &notes, &report);
+    char *json = test_render_document(piece->path, &notes, &report);
     CHECK(json != NULL);
     if (json) {
         cJSON *document = cJSON_Parse(json);
@@ -312,7 +312,7 @@ static void analyze(const char *path, Analyzed *out) {
         fprintf(stderr, "cannot analyze %s\n", path);
         exit(1);
     }
-    char *json = analysis_document_render(path, &out->notes, &out->report);
+    char *json = test_render_document(path, &out->notes, &out->report);
     out->document = json ? cJSON_Parse(json) : NULL;
     free(json);
     if (!out->document) {

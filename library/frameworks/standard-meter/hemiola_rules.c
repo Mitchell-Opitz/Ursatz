@@ -1,15 +1,8 @@
 #include "hemiola_rules.h"
 
+#include <stddef.h>
+
 #include "meter_class_rules.h"
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_METER_HEMIOLA_RULE_COUNT] = {"hemiola-meter", "hemiola-duration", "hemiola-chord",
-                                                                      "hemiola-accent", "hemiola-evidence"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
-    NAMES, STANDARD_METER_HEMIOLA_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_meter_hemiola, StandardMeterHemiolaRule, STANDARD_METER_HEMIOLA_RULE_COUNT, g_table)
 
 bool standard_meter_hemiola_window(const TimeSignature *time_signature, Duration **out_pulse, unsigned *out_measures) {
     if (time_signature == NULL || out_pulse == NULL || out_measures == NULL) {

@@ -8,7 +8,6 @@
 
 #include "events/note_event.h"
 #include "export/musicxml_export.h"
-#include "export/musicxml_score_internal.h"
 #include "export/score_clefs.h"
 #include "export/score_quantize.h"
 #include "identity/entity_id.h"
@@ -235,7 +234,6 @@ typedef struct {
 
 typedef struct {
     const MusicXmlExportScore *score;
-    bool strict; /* an overlap in a voice fails instead of being split into lanes */
 
     PartInfo *parts;
     size_t part_count;
@@ -1003,10 +1001,6 @@ static MusicXmlExportResult split_lanes(Prep *prep) {
         if (note->group != home) {
             home = note->group;
             lane_count = 0;
-        }
-        if (prep->strict && lane_count > 0 && note->start < lanes[0].cursor) {
-            result = MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES;
-            break;
         }
         size_t chosen = lane_count;
         for (size_t l = 0; l < lane_count && chosen == lane_count; l++) {
@@ -2078,14 +2072,13 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
     return result;
 }
 
-static MusicXmlExportResult write_score(const MusicXmlExportScore *score, char **out_xml, bool strict) {
+MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml) {
     if (score == NULL || out_xml == NULL) {
         return MUSICXML_EXPORT_ERR_NULL_ARG;
     }
     Prep prep;
     memset(&prep, 0, sizeof(prep));
     prep.score = score;
-    prep.strict = strict;
     MusicXmlExportResult result = prepare(&prep);
 
     XmlBuf buf;
@@ -2111,12 +2104,4 @@ static MusicXmlExportResult write_score(const MusicXmlExportScore *score, char *
     }
     *out_xml = buf.data;
     return MUSICXML_EXPORT_OK;
-}
-
-MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml) {
-    return write_score(score, out_xml, false);
-}
-
-MusicXmlExportResult musicxml_export_write_score_strict(const MusicXmlExportScore *score, char **out_xml) {
-    return write_score(score, out_xml, true);
 }

@@ -8,6 +8,7 @@
 #include <io/midi_importer.h>
 #include <time/tempo_map.h>
 
+#include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/style_profile.h>
 
@@ -24,6 +25,7 @@
 
 #include "util/request_parse.h"
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * Styles (style.h, docs/style.md): a StyleModel file the Analyzer wrote is loaded and the harmony and melody stages
@@ -194,9 +196,16 @@ static void analyze(const PiecePlan *plan, Heard *heard) {
     hearing.key_tonic_pitch_class = 0;
     hearing.key_minor = false;
     hearing.streams = heard->rendered.part_index;
-    AnalyzerHearingOptions options = analyzer_hearing_options_default();
-    options.render_document = true;
-    assert(analyzer_hear(&hearing, &options, &heard->result) == ANALYZER_OK);
+    assert(analyzer_hear(&hearing, NULL, &heard->result) == ANALYZER_OK);
+}
+
+/* The profile of a heard analysis: the Analyzer's document of the result, counted. */
+static StyleProfile *heard_profile(const Heard *heard) {
+    char *document = analysis_document_render_result("<fragment>", heard->result);
+    StyleProfile *profile = style_profile_create();
+    assert(document && profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK);
+    free(document);
+    return profile;
 }
 
 static void heard_destroy(Heard *heard) {
@@ -274,9 +283,7 @@ static bool labelled_category(const char *category, bool harmony, bool melody) {
 
 /* The Analyzer's labels of an analysis, counted into a bag, for the categories asked. */
 static void analyzer_bag(const Heard *heard, bool harmony, bool melody, Bag *bag) {
-    StyleProfile *profile = style_profile_create();
-    assert(profile && style_profile_add_document_json(profile, analyzer_result_document_json(heard->result)) ==
-                          STYLE_PROFILE_OK);
+    StyleProfile *profile = heard_profile(heard);
     StyleStatistic *statistics = NULL;
     size_t count = 0;
     assert(style_profile_statistics(profile, &statistics, &count) == STYLE_PROFILE_OK);
@@ -417,9 +424,7 @@ static void write_style(const char *path) {
     PiecePlan *plan = block_plan();
     Heard analysis;
     analyze(plan, &analysis);
-    StyleProfile *profile = style_profile_create();
-    assert(profile && style_profile_add_document_json(profile, analyzer_result_document_json(analysis.result)) ==
-                          STYLE_PROFILE_OK);
+    StyleProfile *profile = heard_profile(&analysis);
     assert(style_model_file_write(profile, "block", path) == STYLE_MODEL_FILE_OK);
     style_profile_destroy(profile);
     heard_destroy(&analysis);
@@ -443,7 +448,7 @@ static void test_closeness(void) {
     const char *path = "style_test_block.style.json";
     write_style(path);
     ComposerStyle *style = NULL;
-    assert(composer_style_load(path, &style) == COMPOSER_STYLE_OK && style);
+    assert(composer_style_load_without(path, NULL, 0, &style) == COMPOSER_STYLE_OK && style);
     assert(composer_style_model(style) != NULL && composer_style_pieces(style) == 1);
 
     /* The share of a label: I was seen twice of four, the largest in its category; IV once. */
@@ -483,17 +488,17 @@ static void test_closeness(void) {
 
 static void test_load_errors(void) {
     ComposerStyle *style = (ComposerStyle *)1;
-    assert(composer_style_load("style_test_no_such_file.json", &style) == COMPOSER_STYLE_ERR_IO && style == NULL);
+    assert(composer_style_load_without("style_test_no_such_file.json", NULL, 0, &style) == COMPOSER_STYLE_ERR_IO && style == NULL);
     FILE *file = fopen("style_test_not_a_style.json", "w");
     assert(file);
     fputs("{\"schema\":\"something-else\"}\n", file);
     fclose(file);
-    assert(composer_style_load("style_test_not_a_style.json", &style) == COMPOSER_STYLE_ERR_FORMAT && style == NULL);
+    assert(composer_style_load_without("style_test_not_a_style.json", NULL, 0, &style) == COMPOSER_STYLE_ERR_FORMAT && style == NULL);
     remove("style_test_not_a_style.json");
-    assert(composer_style_load(NULL, &style) == COMPOSER_STYLE_ERR_ARGUMENT);
-    assert(composer_style_load(CHORALES, &style) == COMPOSER_STYLE_OK && style && composer_style_pieces(style) == 10);
+    assert(composer_style_load_without(NULL, NULL, 0, &style) == COMPOSER_STYLE_ERR_ARGUMENT);
+    assert(composer_style_load_without(CHORALES, NULL, 0, &style) == COMPOSER_STYLE_OK && style && composer_style_pieces(style) == 10);
     composer_style_destroy(style);
-    assert(composer_style_load(SONATINAS, &style) == COMPOSER_STYLE_OK && style && composer_style_pieces(style) == 2);
+    assert(composer_style_load_without(SONATINAS, NULL, 0, &style) == COMPOSER_STYLE_OK && style && composer_style_pieces(style) == 2);
     composer_style_destroy(style);
     printf("the fixtures load and a file that is not a style is refused\n");
 }
@@ -537,7 +542,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
 
@@ -605,7 +610,7 @@ static const unsigned long long MAIN_HASH[5] = {0x0a947488498a3fe5ULL, 0xd7d1256
 static int test_same(void) {
     /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */
     ComposerStyle *style = NULL;
-    assert(composer_style_load(CHORALES_MOTIVES, &style) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &style) == COMPOSER_STYLE_OK);
     ComposerRatio none = {0, 0};
     ComposerRatio zero = {0, 1};
     for (unsigned long seed = 1; seed <= 5; seed++) {
@@ -634,9 +639,9 @@ static int test_motive_categories(void) {
     ComposerStyle *kept = NULL;
     ComposerStyle *cut = NULL;
     ComposerStyle *plain = NULL;
-    assert(composer_style_load(CHORALES_MOTIVES, &kept) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &kept) == COMPOSER_STYLE_OK);
     assert(composer_style_load_without(CHORALES_MOTIVES, MOTIVE_CATEGORIES, 4, &cut) == COMPOSER_STYLE_OK);
-    assert(composer_style_load(CHORALES, &plain) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES, NULL, 0, &plain) == COMPOSER_STYLE_OK);
     ComposerStyleShare share;
     for (size_t i = 0; i < 4; i++) {
         /* the category is there, with something counted, and gone when read without it */
@@ -771,7 +776,7 @@ static int test_motive_preference(void) {
     ComposerStyle *styled = NULL;
     const char *without[1] = {"motive-degrees"};
     ComposerStyle *switched_off = NULL;
-    assert(composer_style_load(STEP_UP_MOTIVES, &styled) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(STEP_UP_MOTIVES, NULL, 0, &styled) == COMPOSER_STYLE_OK);
     assert(composer_style_load_without(STEP_UP_MOTIVES, without, 1, &switched_off) == COMPOSER_STYLE_OK);
     char plain[64];
     char preferred[64];
@@ -845,7 +850,7 @@ static int test_plan_without(void) {
 static int test_measure_without_motives(void) {
     ComposerStyle *kept = NULL;
     ComposerStyle *cut = NULL;
-    assert(composer_style_load(CHORALES_MOTIVES, &kept) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &kept) == COMPOSER_STYLE_OK);
     assert(composer_style_load_without(CHORALES_MOTIVES, MOTIVE_CATEGORIES, 4, &cut) == COMPOSER_STYLE_OK);
     Motive motive;
     PiecePlan *plan = sentence_plan(&motive);
@@ -856,14 +861,14 @@ static int test_measure_without_motives(void) {
     assert(compose_run(plan, &config, &outcome) == PIECE_OK);
     StyleComparison distance;
     memset(&distance, 0, sizeof(distance));
-    assert(composer_style_measure(plan, cut, &distance) == COMPOSER_MEASURE_OK);
+    assert(test_style_measure(plan, cut, &distance) == COMPOSER_MEASURE_OK);
     assert(distance.category_count > 0);
     for (size_t i = 0; i < distance.category_count; i++) {
         assert(strncmp(distance.categories[i].category, "motive-", 7) != 0);
     }
     style_comparison_destroy(&distance);
     memset(&distance, 0, sizeof(distance));
-    assert(composer_style_measure(plan, kept, &distance) == COMPOSER_MEASURE_OK);
+    assert(test_style_measure(plan, kept, &distance) == COMPOSER_MEASURE_OK);
     size_t motive_categories = 0;
     for (size_t i = 0; i < distance.category_count; i++) {
         motive_categories += strncmp(distance.categories[i].category, "motive-", 7) == 0;
@@ -989,7 +994,7 @@ static int test_sweep(unsigned long last_seed, bool full) {
     const char *const names[2] = {"chorales", "sonatinas"};
     for (int s = 0; s < 2; s++) {
         ComposerStyle *style = NULL;
-        assert(composer_style_load(paths[s], &style) == COMPOSER_STYLE_OK);
+        assert(composer_style_load_without(paths[s], NULL, 0, &style) == COMPOSER_STYLE_OK);
         Means styled = sweep(style, last_seed);
         Means plain = unstyled_sweep(style, last_seed);
         printf("%s: %zu of %lu completed; harmony %.4f styled, %.4f unstyled; melody %.4f styled, %.4f unstyled\n",
@@ -1112,7 +1117,7 @@ static unsigned long midi_microseconds_per_quarter(const char *path) {
 static int test_brief(void) {
     /* The style reads as the fast, minor, two-notes-a-beat style it was written as. */
     ComposerStyle *style = NULL;
-    assert(composer_style_load(FAST_MINOR, &style) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(FAST_MINOR, NULL, 0, &style) == COMPOSER_STYLE_OK);
     ComposerRatio tempo = {0, 0};
     bool minor = false;
     ComposerRatio density = {0, 0};
@@ -1122,7 +1127,7 @@ static int test_brief(void) {
     composer_style_destroy(style);
     /* A style without the categories gives none of them (the fixture is chorales plus the motive categories, with no tempo or density: the
        chorales model re-recorded at P41 B7 holds both, which a style applies as the brief even at weight 0). */
-    assert(composer_style_load(CHORALES_MOTIVES, &style) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &style) == COMPOSER_STYLE_OK);
     assert(!composer_style_tempo(style, &tempo) && !composer_style_density(style, &density));
     assert(composer_style_mode(style, &minor));
     composer_style_destroy(style);

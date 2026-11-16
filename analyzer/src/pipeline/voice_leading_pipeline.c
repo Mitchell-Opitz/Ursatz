@@ -176,17 +176,12 @@ static bool collect_resolutions(const VoiceGrid *build, const HarmonyStage *harm
         };
     }
     out->resolution_count = resolutions->count;
-    out->resolutions_checked = true;
     return true;
 }
 
 /* The semitone of a sounding cell. */
 static long cell_semitone(const VoiceGrid *build, size_t row, size_t voice) {
     return (long)pitch_numeric_value_position_numerator(cell_of(build, row, voice)->pitch);
-}
-
-static int pitch_class(long semitone) {
-    return pitch_class_of_midi((int)semitone);
 }
 
 /* Fills the doubling and spacing of one row; false when the row has fewer than three voices or is not a chord the harmony

@@ -13,19 +13,12 @@
  * soprano and tenor take up-stems; the alto and bass take down-stems.
  * A crossed stem direction is an error.
  *
- * This is a rule about voices, and it coexists with the position-based
- * stem rules of standard-notation (notes above the middle line down,
- * below up): in SATB writing the voice decides the direction, whatever
- * the note's position on its staff.
+ * This is a rule about voices, not about position (notes above the middle
+ * line down, below up): in SATB writing the voice decides the direction,
+ * whatever the note's position on its staff.
  */
 
-typedef enum { STANDARD_VOICING_STAFF_TREBLE = 0, STANDARD_VOICING_STAFF_BASS } StandardVoicingStaff;
-
 typedef enum { STANDARD_VOICING_STEM_UP = 0, STANDARD_VOICING_STEM_DOWN } StandardVoicingStemDirection;
-
-/* The staff the part is written on. False (output untouched) for an
-   invalid part or a NULL output. */
-bool standard_voicing_staff_for_part(VoicePart part, StandardVoicingStaff *out);
 
 /* The stem direction the part takes. False (output untouched) for an
    invalid part or a NULL output. */

@@ -4,9 +4,6 @@
 #include <stdbool.h>
 
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 #include "second_species_exercise.h"
 
 /*
@@ -70,16 +67,6 @@ typedef enum {
 
 #define STANDARD_COUNTERPOINT_SECOND_SPECIES_MIN_ATTACKS_FOR_SECONDARY_CLIMAXES 8
 #define STANDARD_COUNTERPOINT_SECOND_SPECIES_MAX_SECONDARY_CLIMAXES 2
-
-const Rule *standard_counterpoint_second_species_line_rule(StandardCounterpointSecondSpeciesLineRule which);
-const Constraint *standard_counterpoint_second_species_line_constraint(StandardCounterpointSecondSpeciesLineRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_second_species_line_preference(StandardCounterpointSecondSpeciesLineRule which);
-
-/* "leaps" "final-step" "range" "leading-tone" "single-climax"
-   "no-repeated-motive" "stepwise" "leap-direction" "secondary-climaxes";
-   NULL for an invalid rule. */
-const char *standard_counterpoint_second_species_line_rule_name(StandardCounterpointSecondSpeciesLineRule which);
 
 /* True when the counterpoint line satisfies the rule. False when it does
    not, and for invalid input. */

@@ -3,8 +3,6 @@ add_library(common_practice_minimal
     chord_vocabulary.c
     chord_vocabulary_seventh.c
     key_vocabulary.c
-    triad_identification.c
-    seventh_identification.c
     key_identification.c
     weighted_identification.c
     non_chord_tones.c
@@ -28,8 +26,6 @@ ursatz_public_headers(common_practice_minimal
         key_vocabulary.h
         non_chord_tones.h
         outer_scale_degrees.h
-        seventh_identification.h
-        triad_identification.h
         weighted_chord_identification.h
         weighted_identification.h
 )

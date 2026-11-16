@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "phrase_beginning.h"
 #include "phrase_ending.h"
 #include "phrase_level_form.h"
@@ -35,16 +32,6 @@
  */
 
 typedef enum {
-    STANDARD_FORM_HYBRID_RULE_PAIRING_FORM = 0,
-    STANDARD_FORM_HYBRID_RULE_COMMONALITY,
-    STANDARD_FORM_HYBRID_RULE_SUBPHRASE_ROLE,
-    STANDARD_FORM_HYBRID_RULE_COUNT
-} StandardFormHybridRule;
-
-const Rule *standard_form_hybrid_rule(StandardFormHybridRule which);
-const Constraint *standard_form_hybrid_constraint(StandardFormHybridRule which);
-
-typedef enum {
     STANDARD_FORM_COMMONALITY_VERY_COMMON = 0,
     STANDARD_FORM_COMMONALITY_SLIGHTLY_LESS_COMMON,
     STANDARD_FORM_COMMONALITY_OCCASIONAL,
@@ -70,13 +57,5 @@ bool standard_form_pairing_is_hybrid(PhraseBeginning beginning, PhraseEnding end
    or ending. */
 bool standard_form_pairing_commonality(PhraseBeginning beginning, PhraseEnding ending,
                                        StandardFormCommonality *out);
-
-/* SUBPHRASE_ROLE: the beginning a SubphraseRole is: presentation. False, leaving *out
-   untouched, for a continuation (an ending) and for an invalid role. */
-bool standard_form_beginning_of_subphrase_role(SubphraseRole role, PhraseBeginning *out);
-
-/* SUBPHRASE_ROLE: the ending a SubphraseRole is: continuation. False, leaving *out untouched,
-   for a presentation (a beginning) and for an invalid role. */
-bool standard_form_ending_of_subphrase_role(SubphraseRole role, PhraseEnding *out);
 
 #endif

@@ -5,8 +5,6 @@
 
 #include "galant_exemplar.h"
 #include "galant_prototype.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 
 /*
  * Matching rules for galant-schemas-v1: whether an exemplar resembles a
@@ -55,13 +53,6 @@ typedef enum {
     GALANT_MATCH_TENTHS,
     GALANT_MATCH_RULE_COUNT
 } GalantMatchRule;
-
-const Rule *galant_matching_rule(GalantMatchRule which);
-const Constraint *galant_matching_constraint(GalantMatchRule which);
-
-/* "stage-count" "meter" "melody" "bass-defining" "bass-usual" "tenths"; NULL for an
-   invalid rule. */
-const char *galant_matching_rule_name(GalantMatchRule which);
 
 /* True when the match has a prototype and a valid exemplar. */
 bool galant_match_valid(const GalantMatch *match);

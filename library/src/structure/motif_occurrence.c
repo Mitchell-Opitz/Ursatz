@@ -1,12 +1,7 @@
 #include "structure/motif_occurrence.h"
+#include "structure/motif_occurrence_internal.h"
 
 #include <stdlib.h>
-
-struct MotifOccurrence {
-    Occurrence *occurrence;
-    EntityID **region_event_ids;
-    size_t region_event_id_count;
-};
 
 MotifOccurrenceResult motif_occurrence_create(Occurrence *occurrence, EntityID **region_event_ids,
                                                size_t region_event_id_count, MotifOccurrence **out) {
@@ -58,16 +53,4 @@ void motif_occurrence_destroy(MotifOccurrence *motif_occurrence) {
 
 const EntityID *motif_occurrence_id(const MotifOccurrence *motif_occurrence) {
     return occurrence_id(motif_occurrence->occurrence);
-}
-
-const EntityID *motif_occurrence_motif_id(const MotifOccurrence *motif_occurrence) {
-    return occurrence_target_id(motif_occurrence->occurrence);
-}
-
-size_t motif_occurrence_region_event_id_count(const MotifOccurrence *motif_occurrence) {
-    return motif_occurrence->region_event_id_count;
-}
-
-const EntityID *motif_occurrence_region_event_id_at(const MotifOccurrence *motif_occurrence, size_t index) {
-    return motif_occurrence->region_event_ids[index];
 }

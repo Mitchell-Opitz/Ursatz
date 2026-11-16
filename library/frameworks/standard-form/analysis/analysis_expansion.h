@@ -76,6 +76,5 @@ StandardFormAnalysisStatus standard_form_detect_expansions(const StandardFormInp
                                                            const StandardFormThemes *themes,
                                                            const StandardFormConfig *config, StandardFormExpansions *out);
 void standard_form_expansions_destroy(StandardFormExpansions *expansions);
-bool standard_form_expansion_claim_read(const Interpretation *interpretation, StandardFormExpansionClaim *out);
 
 #endif

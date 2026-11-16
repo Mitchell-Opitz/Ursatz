@@ -59,8 +59,8 @@ bool rational_is_negative(Rational a);
    inputs) saturates to LLONG_MAX. */
 long long rational_gcd(long long a, long long b);
 
-/* For callers whose stored fields are unsigned and may exceed LLONG_MAX (MusicalTime, Duration and
-   PerformanceTime denominators). The gcd is exact; the comparison is of two non-negative fractions
+/* For callers whose stored fields are unsigned and may exceed LLONG_MAX (MusicalTime and Duration
+   denominators). The gcd is exact; the comparison is of two non-negative fractions
    an/ad and bn/bd (ad, bd > 0), overflow-free like rational_cmp. */
 unsigned long long rational_gcd_unsigned(unsigned long long a, unsigned long long b);
 int rational_cmp_unsigned(unsigned long long an, unsigned long long ad, unsigned long long bn, unsigned long long bd);

@@ -8,22 +8,16 @@
 
 /*
  * Dynamics: a dynamics marking (p, mf, f, cresc./dim., etc.) attaching
- * to either a single Event or a TimeSpan.
+ * to a TimeSpan.
  *
  * marking is an opaque, uninterpreted string, not a closed enum: the
- * Registry's "p, mf, f, cresc./dim., etc." is explicitly non-exhaustive,
- * the same treatment events/articulation.h gives its kind field.
+ * Registry's "p, mf, f, cresc./dim., etc." is explicitly non-exhaustive.
  *
- * Two explicit constructors, not one nullable-field constructor,
- * mirroring core/provenance_reference.h's present/absent split: an
- * Event has identity, so it is referenced by EntityID only (never
- * embedded, matching events/tie.h and events/slur.h). A TimeSpan has no
- * identity to reference by -- it is an immutable Value
- * (time/time_span.h) -- so the TimeSpan-target constructor takes
- * ownership of the TimeSpan itself rather than referencing it by id;
- * since TimeSpan is immutable, holding it directly carries none of the
- * embedding/mutation risk that holding a NoteEvent or other Entity
- * directly would.
+ * A TimeSpan has no identity to reference by -- it is an immutable Value
+ * (time/time_span.h) -- so the constructor takes ownership of the
+ * TimeSpan itself; since TimeSpan is immutable, holding it directly
+ * carries none of the embedding/mutation risk that holding a NoteEvent
+ * or other Entity directly would.
  */
 
 typedef struct Dynamics Dynamics;
@@ -41,8 +35,6 @@ typedef enum {
     DYNAMICS_ERR_ALLOC
 } DynamicsResult;
 
-/* marking is copied. Takes ownership of event_id on success (destroyed by dynamics_destroy). */
-DynamicsResult dynamics_create_for_event(const char *marking, EntityID *event_id, Dynamics **out);
 /* marking is copied. Takes ownership of time_span on success (destroyed by dynamics_destroy). */
 DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan *time_span, Dynamics **out);
 void dynamics_destroy(Dynamics *dynamics);

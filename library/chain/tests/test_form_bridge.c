@@ -6,10 +6,8 @@
 #include "analysis/motif_window_matching.h"
 #include "analysis/phrase_boundary_detection.h"
 #include "core/provenance_reference.h"
-#include "core/value.h"
 #include "events/note_event.h"
 #include "identity/entity_id.h"
-#include "interpretation/interpretation.h"
 #include "pitch/pitch_identity.h"
 #include "semantics/cadence_type.h"
 #include "semantics/contour.h"
@@ -47,37 +45,20 @@ static NoteEvent *make_note_event(const char *id_value, const char *pitch_token)
     return note_event;
 }
 
-/* The kernel called directly: is_boundary per point, and the signal (cadence or not) per boundary point in order. */
+/* The kernel called directly: is_boundary per point, and the signal (cadence or not) per boundary point. */
 static void kernel_direct(const StandardFormBoundaryPoint *points, size_t count, size_t max_length, bool *is_boundary,
                           bool *by_cadence) {
     PhraseBoundaryDetectionPoint kernel_points[16];
+    PhraseBoundarySignal signal[16];
     assert(count <= 16);
     for (size_t i = 0; i < count; i++) {
-        kernel_points[i].event = points[i].event;
         kernel_points[i].has_cadence = points[i].has_cadence;
-        kernel_points[i].cadence_type = points[i].has_cadence ? cadence_type_label(points[i].cadence_type) : NULL;
         kernel_points[i].has_discontinuity = points[i].has_discontinuity;
     }
-    PhraseBoundaryDetectionInput input = {kernel_points, count, max_length};
-    AnalysisResult *boundary_result;
-    AnalysisResult *signal_result;
-    assert(phrase_boundary_detection_analyze(&input, NULL, NULL, &boundary_result) == ANALYZER_OK);
-    assert(phrase_boundary_detection_signal_analyze(&input, NULL, NULL, &signal_result) == ANALYZER_OK);
-    size_t signal_index = 0;
+    phrase_boundary_detect(kernel_points, count, max_length, is_boundary, signal);
     for (size_t i = 0; i < count; i++) {
-        size_t size;
-        const PhraseSegmentationClaim *boundary = (const PhraseSegmentationClaim *)value_content(
-            interpretation_claim(analysis_result_interpretation_at(boundary_result, i)), &size);
-        is_boundary[i] = boundary->is_boundary;
-        by_cadence[i] = false;
-        if (boundary->is_boundary) {
-            const PhraseBoundaryDetectionSignalClaim *signal = (const PhraseBoundaryDetectionSignalClaim *)value_content(
-                interpretation_claim(analysis_result_interpretation_at(signal_result, signal_index++)), &size);
-            by_cadence[i] = signal->signal == PHRASE_BOUNDARY_SIGNAL_CADENCE;
-        }
+        by_cadence[i] = is_boundary[i] && signal[i] == PHRASE_BOUNDARY_SIGNAL_CADENCE;
     }
-    analysis_result_destroy(boundary_result);
-    analysis_result_destroy(signal_result);
 }
 
 static void check_against_kernel(const StandardFormBoundaryPoint *points, size_t count, size_t max_length,

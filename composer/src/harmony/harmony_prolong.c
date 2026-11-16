@@ -93,17 +93,10 @@ static const Figure PEDAL_FIGURES[] = {
 #define FIGURE_COUNT (sizeof(FIGURES) / sizeof(FIGURES[0]))
 #define PEDAL_FIGURE_COUNT (sizeof(PEDAL_FIGURES) / sizeof(PEDAL_FIGURES[0]))
 
-/* The operator's context is non-NULL when it works around Given material (harmony_prolong_register_given). */
-static const char AROUND_GIVEN = 1;
-
-static bool read_request(const PiecePlan *plan, LaneSpanId target, bool around_given, PhraseRequest *out) {
-    return around_given ? harmony_prolong_read_request_given(plan, target, out)
-                        : harmony_prolong_read_request(plan, target, out);
-}
-
 static bool prolong_applies(const PiecePlan *plan, FillTarget target, void *context) {
+    (void)context;
     PhraseRequest request;
-    return harmony_is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
+    return harmony_is_target(target) && harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, &request);
 }
 
 static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
@@ -228,8 +221,9 @@ static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request,
 
 static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
+    (void)context;
     PhraseRequest request;
-    if (!harmony_is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
+    if (!harmony_is_target(target) || !harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, &request)) {
         return false;
     }
     const Figure *table = request.shape.pedal ? PEDAL_FIGURES : FIGURES;
@@ -308,11 +302,11 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
 }
 
 static PlanResult prolong_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
-    return harmony_progression_apply(plan, target, candidate,
-                                     context ? harmony_prolong_read_request_given : harmony_prolong_read_request);
+    (void)context;
+    return harmony_progression_apply(plan, target, candidate, harmony_prolong_read_request_given);
 }
 
-static FillResult register_prolong(FillOperatorRegistry *registry, bool around_given) {
+FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_PROLONG_OPERATOR_NAME;
@@ -326,16 +320,7 @@ static FillResult register_prolong(FillOperatorRegistry *registry, bool around_g
     operator_.applies = prolong_applies;
     operator_.generate = prolong_generate;
     operator_.apply = prolong_apply;
-    operator_.context = around_given ? (void *)&AROUND_GIVEN : NULL;
     return fill_registry_register(registry, &operator_);
-}
-
-FillResult harmony_prolong_register(FillOperatorRegistry *registry) {
-    return register_prolong(registry, false);
-}
-
-FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
-    return register_prolong(registry, true);
 }
 
 /* The first cell whose fixed motive chord the progression changes, or the request's cell count when it keeps them all. */

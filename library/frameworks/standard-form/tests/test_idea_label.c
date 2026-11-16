@@ -20,18 +20,9 @@ static void test_names(void) {
     assert(idea_label_name(IDEA_LABEL_COUNT) == NULL);
 }
 
-static void test_abbreviations(void) {
-    assert(strcmp(idea_label_abbreviation(IDEA_LABEL_BASIC_IDEA), "b.i.") == 0);
-    assert(strcmp(idea_label_abbreviation(IDEA_LABEL_CONTRASTING_IDEA), "c.i.") == 0);
-    assert(strcmp(idea_label_abbreviation(IDEA_LABEL_FRAGMENT), "f.") == 0);
-    assert(strcmp(idea_label_abbreviation(IDEA_LABEL_UNIT), "u.") == 0);
-    assert(idea_label_abbreviation(IDEA_LABEL_COUNT) == NULL);
-}
-
 int main(void) {
     test_validity();
     test_names();
-    test_abbreviations();
     printf("test_idea_label: ok\n");
     return 0;
 }

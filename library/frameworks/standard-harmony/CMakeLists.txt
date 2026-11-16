@@ -1,9 +1,7 @@
 add_library(standard_harmony
     harmony_framework.c
-    modulation_kind.c
     six_four_type.c
     phrase_model_label.c
-    seventh_resolution.c
     harmonic_function.c
     harmony_rule_pair.c
     harmony_rule_table.c
@@ -11,48 +9,20 @@ add_library(standard_harmony
     harmony_functions.c
     harmony_phrase_rules.c
     harmony_phrase_labels.c
-    harmony_phrase_label_rules.c
     harmony_cadence_rules.c
     harmony_cadence_kinds.c
-    harmony_hearing_rules.c
-    harmony_writing_rules.c
-    harmony_seventh_rules.c
     harmony_strong_predominants.c
     harmony_steps.c
-    harmony_predominant_rules.c
-    harmony_embellishing.c
-    harmony_embellishing_rules.c
-    harmony_cadential_rules.c
     harmony_prolongation.c
-    harmony_prolongation_rules.c
-    harmony_prolongation_chain.c
     harmony_six_four.c
-    harmony_passing_rules.c
     harmony_resolution_rules.c
-    harmony_neighbor_rules.c
-    harmony_arpeggiating_rules.c
     harmony_deceptive.c
-    harmony_deceptive_rules.c
-    harmony_iv6_prolongation.c
-    harmony_iv6_prolongation_rules.c
-    harmony_plagal_six_rules.c
-    harmony_mediant.c
-    harmony_mediant_rules.c
     harmony_predominant_seventh.c
-    harmony_predominant_seventh_rules.c
-    harmony_ii7_v7_rules.c
     harmony_applied.c
-    harmony_applied_rules.c
-    harmony_tonicization_frequency.c
-    harmony_tonicized_deceptive.c
     harmony_related_key.c
     harmony_pivot.c
     harmony_key_change.c
-    harmony_connection_rules.c
-    harmony_phrygian.c
-    harmony_phrygian_rules.c
     harmony_plagal.c
-    harmony_plagal_rules.c
     analysis/analysis_input.c
     analysis/analysis_claim.c
     analysis/analysis_function.c
@@ -96,7 +66,6 @@ ursatz_public_headers(standard_harmony
         harmony_related_key.h
         harmony_resolution_rules.h
         harmony_strong_predominants.h
-        modulation_kind.h
         phrase_model_label.h
         six_four_type.h
 )

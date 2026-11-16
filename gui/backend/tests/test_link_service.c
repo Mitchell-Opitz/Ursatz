@@ -139,7 +139,7 @@ static void tag_piece(const char *id, const char *composer, const char *tag) {
     update.add_tags = tag ? tags : NULL;
     update.add_tag_count = tag ? 1 : 0;
     char message[128];
-    CHECK(ursatz_gui_analysis_update_metadata("pieces", id, &update, message, sizeof(message)) ==
+    CHECK(ursatz_gui_analysis_update_piece("pieces", id, &update, message, sizeof(message)) ==
               URSATZ_GUI_ANALYSIS_OK,
           "update metadata");
 }
@@ -226,8 +226,9 @@ static void test_scopes(void) {
     cJSON *body_b = cJSON_Parse("{\"uses\":[],\"piece\":{\"structure\":null}}");
     cJSON *item_a = NULL;
     cJSON *item_b = NULL;
-    CHECK(ursatz_gui_material_item_create("piece", "First", project_id, body_a, &item_a) == URSATZ_GUI_MATERIAL_OK &&
-              ursatz_gui_material_item_create("piece", "Second", project_id, body_b, &item_b) ==
+    CHECK(ursatz_gui_material_item_create_noted("piece", "First", project_id, body_a, NULL, &item_a) ==
+                  URSATZ_GUI_MATERIAL_OK &&
+              ursatz_gui_material_item_create_noted("piece", "Second", project_id, body_b, NULL, &item_b) ==
                   URSATZ_GUI_MATERIAL_OK,
           "items");
     CHECK(ursatz_gui_subject_link_item(anna_id, str(item_a, "id"), NULL, NULL) == URSATZ_GUI_SUBJECT_OK &&
@@ -493,7 +494,7 @@ int main(void) {
     MKDIR("pieces");
     MKDIR("data");
 
-    CHECK(ursatz_gui_collection_service_init("collections", "data/corpus.db"), "init collections");
+    CHECK(ursatz_gui_collection_service_init("collections"), "init collections");
     CHECK(ursatz_gui_material_service_init(g_materials), "init materials");
     CHECK(ursatz_gui_subject_service_init(g_subjects), "init subjects");
     CHECK(ursatz_gui_link_service_init("links"), "init links");

@@ -11,7 +11,7 @@
 #include "standard-tonality/analysis/applied_chords.h"
 #include "standard-tonality/analysis/chord_input.h"
 #include "core/rational.h"
-#include "io/import_notes.h"
+#include "../import_notes_test_util.h"
 #include "io/musicxml_importer.h"
 #include "common-practice-minimal/key_regions.h"
 #include "common-practice-minimal/key_vocabulary.h"
@@ -25,6 +25,7 @@
 #include "ursatz_chain/analysis_chain.h"
 #include "common-practice-minimal/weighted_chord_identification.h"
 #include "../rational_test_util.h"
+#include "../key_index_test_util.h"
 
 /* The analysis (segments, key regions in two passes, chords, Roman numerals) is analysis_chain_run on the imported notes. What stays here
    is the harness's own: the phrase ends it finds between the passes (cadence ends, on outer degrees read from the segment members), the
@@ -172,7 +173,7 @@ static bool read_numerals(Run *r) {
         }
         const RomanTextKey *k = &r->annotation.keys[i];
         CommonPracticeKeyMode mode = k->minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR;
-        int index = common_practice_key_index_of(k->tonic_pitch_class, mode);
+        int index = test_key_index_of(k->tonic_pitch_class, mode);
         char id[48];
         snprintf(id, sizeof(id), "annotation-key-%zu", region_total);
         EntityID *context = NULL;
@@ -189,7 +190,7 @@ static bool read_numerals(Run *r) {
     }
     if (standard_tonality_build_chord_inputs(r->segment_inputs, n, r->annotation_region_inputs, region_total,
                                              &r->annotation_inputs, &count) != STANDARD_TONALITY_CHORD_INPUT_OK ||
-        standard_tonality_build_roman_numerals(r->annotation_inputs, count, &r->annotation_romans) !=
+        standard_tonality_build_roman_numerals_with_config(r->annotation_inputs, count, NULL, &r->annotation_romans) !=
             STANDARD_TONALITY_ROMAN_OK) {
         return false;
     }
@@ -345,7 +346,6 @@ static bool find_phrase_ends(Run *r) {
 }
 
 /* --- the comparison --- */
-
 
 static int compare_double(const void *a, const void *b) {
     double x = *(const double *)a;

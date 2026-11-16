@@ -28,7 +28,7 @@ A main theme in the tonic, a transition that modulates to the key of the subordi
 
 The key lane is home (A), home then the region (T, from its half), the region (S1, S2, C), home (R, A return, K). Each section's KEY constraint is the key it ends in. The return home is at the retransition's start, as in every form that modulates ([form-parts.md](form-parts.md#the-retransition)).
 
-A closing form gives a section that ends in another key a PAC (`piece_plan_cadences`), and `piece_check_cadences` asks for an authentic cadence there. The transition is the exception (R-503, R-512): it ends on the new key's V in a half cadence, not in a PAC, so both leave a transition's cadence as its document says. S1 and the codetta close the region with a PAC, so the modulation is confirmed by authentic cadences heard inside the new key, as `piece_check_keys` asks.
+A closing form gives a section that ends in another key a PAC (`piece_plan_cadences`), and `piece_check_cadences` asks for an authentic cadence there. The transition is the exception (R-503, R-512): it ends on the new key's V in a half cadence, not in a PAC, so both leave a transition's cadence as its document says. S1 and the codetta close the region with a PAC, so the modulation is confirmed by authentic cadences heard inside the new key, as `piece_check_keys_in` asks.
 
 ## Composed, not heard
 

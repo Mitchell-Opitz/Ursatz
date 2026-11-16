@@ -58,14 +58,6 @@ static const ThemeShapeSlot SLOTS[GROW_SLOT_COUNT] = {
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
 
-size_t theme_shape_half_count(void) {
-    return COUNT_OF(HALVES);
-}
-
-const ThemeShapeHalf *theme_shape_half_at(size_t index) {
-    return index < COUNT_OF(HALVES) ? &HALVES[index] : NULL;
-}
-
 const ThemeShapeHalf *theme_shape_beginning(PlanThemeBeginning beginning) {
     return beginning >= 0 && beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA ? &HALVES[beginning] : NULL;
 }

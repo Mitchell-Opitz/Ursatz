@@ -1,8 +1,6 @@
 #ifndef MUSIC_TIME_METRICAL_POSITION_H
 #define MUSIC_TIME_METRICAL_POSITION_H
 
-#include <stdbool.h>
-
 #include "time/duration.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
@@ -24,9 +22,9 @@
  *
  * The offset is never negative. Its upper bound is the length of the measure it is in, which this
  * value cannot know on its own: metrical_position_from_time (below, with a MeterMap) produces only
- * positions inside their measure, and metrical_position_to_time rejects one that is not.
+ * positions inside their measure.
  *
- * Value type: immutable, value equality on (measure, offset).
+ * Value type: immutable.
  */
 
 typedef struct MetricalPosition MetricalPosition;
@@ -49,8 +47,6 @@ int metrical_position_measure(const MetricalPosition *position);
 
 /* The offset from the start of the measure, in whole notes. Borrowed from the position. */
 const Duration *metrical_position_offset(const MetricalPosition *position);
-
-bool metrical_position_equals(const MetricalPosition *a, const MetricalPosition *b);
 
 /*
  * Deriving a position from a MusicalTime and a MeterMap (time/meter_map.h). All arithmetic is exact
@@ -80,15 +76,6 @@ bool metrical_position_equals(const MetricalPosition *a, const MetricalPosition 
 /* The position of time. *out is new; the caller destroys it. */
 MetricalPositionResult metrical_position_from_time(const MeterMap *map, const MusicalTime *time,
                                                     MetricalPosition **out);
-
-/*
- * The inverse: the MusicalTime at position. METRICAL_POSITION_ERR_MEASURE_OUT_OF_RANGE for a measure
- * below the map's first, and METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE for an offset that is not
- * inside the measure (at or past its length, or, in a pickup, before where the pickup starts). *out
- * is new; the caller destroys it. to_time(from_time(t)) is t, and from_time(to_time(p)) is p.
- */
-MetricalPositionResult metrical_position_to_time(const MeterMap *map, const MetricalPosition *position,
-                                                  MusicalTime **out);
 
 /*
  * The TimeSignature that positions in `measure` are read in (for example, by standard-meter's

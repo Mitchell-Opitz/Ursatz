@@ -1,14 +1,8 @@
 #include "interpretation/key.h"
+#include "interpretation/key_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-struct Key {
-    Interpretation *interpretation;
-    char *label;
-    bool has_structure;
-    KeyStructure structure;
-};
 
 KeyResult key_create(Interpretation *interpretation, const char *label, Key **out) {
     if (interpretation == NULL) {
@@ -65,21 +59,6 @@ void key_destroy(Key *key) {
     interpretation_destroy(key->interpretation);
     free(key->label);
     free(key);
-}
-
-const Interpretation *key_interpretation(const Key *key) {
-    return key->interpretation;
-}
-
-const char *key_label(const Key *key) {
-    return key->label;
-}
-
-Interpretation *key_take_interpretation(Key *key) {
-    Interpretation *interpretation = key->interpretation;
-    free(key->label);
-    free(key);
-    return interpretation;
 }
 
 bool key_structure(const Key *key, KeyStructure *out) {

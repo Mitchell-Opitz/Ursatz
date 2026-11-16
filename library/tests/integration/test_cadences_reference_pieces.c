@@ -18,6 +18,7 @@
 #include "semantics/analysis_key.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
+#include "../key_index_test_util.h"
 
 /*
  * Cadences from real music for the five reference pieces (Bach 114, Mozart 545, Clementi 36, Field 1, Field 5), against
@@ -342,7 +343,7 @@ static Score evaluate(const Annotation *a, const double *starts, const HarmonyCa
                 } else if (print) {
                     printf("  wrong type at ");
                     print_where(a, a->cadences[e].at);
-                    printf(": annotated %s, got %s\n", a->cadences[e].text, cadence_type_label(cadences->items[c].type));
+                    printf(": annotated %s, got %s\n", a->cadences[e].text, cadence_type_name(cadences->items[c].type));
                 }
                 break;
             }
@@ -362,7 +363,7 @@ static Score evaluate(const Annotation *a, const double *starts, const HarmonyCa
         if (!used[c]) {
             score.false_positives++;
             if (print) {
-                printf("  false positive %s at ", cadence_type_label(cadences->items[c].type));
+                printf("  false positive %s at ", cadence_type_name(cadences->items[c].type));
                 print_where(a, arrival);
                 printf("\n");
             }
@@ -448,7 +449,7 @@ static AnalysisChain *run_analysis_chain(const WeightedPipeline *p, const MeterM
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
-    config.home_key_index = common_practice_key_index_of(a->home, COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(a->home, COMMON_PRACTICE_KEY_MAJOR);
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run(&set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);
     free(key_events);

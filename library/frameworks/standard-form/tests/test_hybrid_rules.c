@@ -3,12 +3,6 @@
 #include <string.h>
 
 #include "hybrid_rules.h"
-#include "rule_check.h"
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_form_hybrid_rule, standard_form_hybrid_constraint,
-                                    STANDARD_FORM_HYBRID_RULE_COUNT);
-}
 
 static void test_commonality_names(void) {
     for (int i = 0; i < STANDARD_FORM_COMMONALITY_COUNT; i++) {
@@ -85,29 +79,10 @@ static void test_commonality(void) {
     assert(c == STANDARD_FORM_COMMONALITY_COUNT);
 }
 
-static void test_subphrase_role(void) {
-    PhraseBeginning beginning = PHRASE_BEGINNING_ANTECEDENT;
-    PhraseEnding ending = PHRASE_ENDING_CONSEQUENT;
-
-    assert(standard_form_beginning_of_subphrase_role(SUBPHRASE_ROLE_PRESENTATION, &beginning));
-    assert(beginning == PHRASE_BEGINNING_PRESENTATION);
-    assert(standard_form_ending_of_subphrase_role(SUBPHRASE_ROLE_CONTINUATION, &ending));
-    assert(ending == PHRASE_ENDING_CONTINUATION);
-
-    beginning = PHRASE_BEGINNING_ANTECEDENT;
-    ending = PHRASE_ENDING_CONSEQUENT;
-    assert(!standard_form_beginning_of_subphrase_role(SUBPHRASE_ROLE_CONTINUATION, &beginning));
-    assert(!standard_form_ending_of_subphrase_role(SUBPHRASE_ROLE_PRESENTATION, &ending));
-    assert(!standard_form_beginning_of_subphrase_role(SUBPHRASE_ROLE_COUNT, &beginning));
-    assert(beginning == PHRASE_BEGINNING_ANTECEDENT && ending == PHRASE_ENDING_CONSEQUENT);
-}
-
 int main(void) {
-    test_rules_reference_framework();
     test_commonality_names();
     test_pairing_form();
     test_commonality();
-    test_subphrase_role();
     printf("test_hybrid_rules (standard-form): ok\n");
     return 0;
 }

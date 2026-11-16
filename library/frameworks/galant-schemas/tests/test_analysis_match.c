@@ -29,8 +29,6 @@ static void test_a_romanesca(void) {
     assert(strcmp(found->claim.stages[0].segment_id, "s0") == 0 && found->claim.stages[1].bass_degree == 7 &&
            found->claim.stages[2].melody_degree == 1);
     assert(found->relationship != NULL && found->interpretation != NULL);
-    GalantSchemaClaim claim;
-    assert(galant_schema_claim_read(found->interpretation, &claim) && strcmp(claim.name, "romanesca") == 0);
     galant_schema_matches_destroy(&matches);
     seq_destroy(&seq);
 }
@@ -309,9 +307,7 @@ static void test_bad_calls(void) {
     assert(galant_segments_add(&seq.list, &segment) == GALANT_ANALYSIS_ERR_INVALID);
     seq_add(&seq, 4, 2, W, deg(1, 0), deg(1, 0), HOME, 0.0);
     segment = seq.list.items[0];
-    assert(galant_segments_add(&seq.list, &segment) == GALANT_ANALYSIS_ERR_INVALID); /* starts before the one before it */
-    GalantSchemaClaim claim;
-    assert(!galant_schema_claim_read(NULL, &claim));
+    assert(galant_segments_add(&seq.list, &segment) == GALANT_ANALYSIS_ERR_INVALID);
     seq_destroy(&seq);
 }
 

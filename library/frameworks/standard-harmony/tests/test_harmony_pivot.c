@@ -87,31 +87,6 @@ static void test_a_pair_that_is_not_a_pivot(void) {
     assert(!harmony_pivot_valid(MAJ, &v, NULL));
 }
 
-static bool label_is(HarmonyMode home, HarmonyRelatedKey k, HarmonyPivot pivot, const char *expected) {
-    char out[32];
-    return harmony_pivot_label(home, &k, &pivot, out, sizeof(out)) && strcmp(out, expected) == 0;
-}
-
-static void test_the_labels(void) {
-    assert(label_is(MIN, key(3, MAJ), (HarmonyPivot){4, 2}, "iv becomes ii")); /* Fm in C minor and Eb major */
-    assert(label_is(MAJ, key(5, MAJ), (HarmonyPivot){1, 4}, "I becomes IV"));
-    assert(label_is(MAJ, key(5, MAJ), (HarmonyPivot){5, 1}, "V becomes I"));
-    assert(label_is(MAJ, key(5, MAJ), (HarmonyPivot){6, 2}, "vi becomes ii"));
-    assert(label_is(MAJ, key(6, MIN), (HarmonyPivot){7, 2}, "viio becomes iio"));
-}
-
-static void test_label_buffers_and_invalid_input(void) {
-    HarmonyRelatedKey v = key(5, MAJ);
-    HarmonyPivot pivot = {1, 4};
-    char out[16] = "xxxxxxxxxxxxxxx";
-    assert(harmony_pivot_label(MAJ, &v, &pivot, out, 13) && strcmp(out, "I becomes IV") == 0);
-    strcpy(out, "xxxxxxxxxxxxxxx");
-    assert(!harmony_pivot_label(MAJ, &v, &pivot, out, 12) && strcmp(out, "xxxxxxxxxxxxxxx") == 0);
-    HarmonyPivot bad = {1, 5};
-    assert(!harmony_pivot_label(MAJ, &v, &bad, out, 16));
-    assert(!harmony_pivot_label(MAJ, &v, &pivot, NULL, 16));
-}
-
 static bool rank_is(HarmonyMode home, HarmonyRelatedKey k, HarmonyPivot pivot, HarmonyPivotRank expected) {
     HarmonyPivotRank rank = HARMONY_PIVOT_RANK_COUNT;
     return harmony_pivot_rank(home, &k, &pivot, &rank) && rank == expected;
@@ -131,14 +106,6 @@ static void test_the_ranks_of_the_pivots(void) {
 }
 
 static void test_the_rank_names_and_invalid_input(void) {
-    const char *const names[] = {"best", "good", "fair", "poor"};
-    for (int i = 0; i < HARMONY_PIVOT_RANK_COUNT; i++) {
-        assert(harmony_pivot_rank_valid((HarmonyPivotRank)i));
-        assert(strcmp(harmony_pivot_rank_name((HarmonyPivotRank)i), names[i]) == 0);
-    }
-    assert(!harmony_pivot_rank_valid(HARMONY_PIVOT_RANK_COUNT));
-    assert(!harmony_pivot_rank_valid((HarmonyPivotRank)-1));
-    assert(harmony_pivot_rank_name(HARMONY_PIVOT_RANK_COUNT) == NULL);
     HarmonyRelatedKey v = key(5, MAJ);
     HarmonyPivot good = {1, 4}, bad = {1, 5};
     HarmonyPivotRank rank = HARMONY_PIVOT_RANK_COUNT;
@@ -156,8 +123,6 @@ int main(void) {
     test_every_closely_related_key_has_a_pivot();
     test_no_pivots_for_a_key_that_is_not_closely_related();
     test_a_pair_that_is_not_a_pivot();
-    test_the_labels();
-    test_label_buffers_and_invalid_input();
     test_the_ranks_of_the_pivots();
     test_the_rank_names_and_invalid_input();
     printf("test_harmony_pivot: all tests passed\n");

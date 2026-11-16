@@ -647,14 +647,11 @@ static void test_suggestions(void) {
     assert(fill_suggest(plan, registry, &config, root, 5, &suggestions) == FILL_OK);
     assert(fill_suggestions_count(suggestions) == 2);
     const CandidateSet *set = fill_suggestions_set(suggestions);
-    assert(candidate_set_candidate_count(set) == 2);
-    assert(candidate_set_random_seed(set) == 3);
     assert(candidate_score_numerator(candidate_set_candidate_at(set, 0)) == 2);
     assert(candidate_score_denominator(candidate_set_candidate_at(set, 0)) == 1);
     assert(candidate_score_numerator(candidate_set_candidate_at(set, 1)) == 1);
     assert(strcmp(fill_suggestion_label(suggestions, 0), "split-2") == 0);
     assert(strcmp(fill_suggestion_label(suggestions, 1), "split-4") == 0);
-    assert(strcmp(fill_suggestion_operator(suggestions, 0), "split") == 0);
     assert(fill_suggestion_label(suggestions, 2) == NULL);
 
     /* The plan is as it was. */
@@ -674,7 +671,7 @@ static void test_suggestions(void) {
     /* Top 1, and a target that is not open. */
     PiecePlan *fresh = top_down_plan();
     assert(fill_suggest(fresh, registry, &config, root, 1, &suggestions) == FILL_OK);
-    assert(fill_suggestions_count(suggestions) == 1 && candidate_set_candidate_count(fill_suggestions_set(suggestions)) == 1);
+    assert(fill_suggestions_count(suggestions) == 1);
     fill_suggestions_destroy(suggestions);
     assert(plan_node_set_state(fresh, 1, PLAN_STATE_GIVEN) == PLAN_OK);
     assert(fill_suggest(fresh, registry, &config, root, 1, &suggestions) == FILL_ERR_TARGET_NOT_OPEN);

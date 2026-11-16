@@ -4,7 +4,7 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 
 ## Purpose
 
-- `ursatz-analyzer` turns a MIDI or MusicXML file into an analysis: a Markdown report and a versioned JSON analysis document.
+- `ursatz-analyzer` turns a MIDI or MusicXML file into an analysis: a versioned JSON analysis document.
 - It is a thin consumer of the Ursatz library: it imports the file, runs the library's analysis chain once, collects the claims and exports them.
 - It holds no music theory of its own; every rule it applies is the library's.
 - It also runs a corpus, style profiles, similar material search and motive links over analysis documents.
@@ -35,7 +35,7 @@ The CLI commands, from [the README](../README.md#usage):
 
 | Command | What it does | Doc |
 | --- | --- | --- |
-| `ursatz-analyzer <file>` | Writes `<stem>.report.md` and `<stem>.analysis.json` | [analysis-document.md](analysis-document.md) |
+| `ursatz-analyzer <file>` | Writes `<stem>.analysis.json` | [analysis-document.md](analysis-document.md) |
 | `export <file>` | Prints the measure-addressed text export of a piece | [text-export.md](text-export.md) |
 | `--corpus <dir>` | Analyzes a folder into documents and a corpus index | [corpus.md](corpus.md) |
 | `--style-profile`, `--compare-styles` | Counts and compares styles | [style-profile.md](style-profile.md) |
@@ -67,9 +67,10 @@ The other public headers (analysis result, report, document, corpus, staleness, 
 | `URSATZ_ANALYZER_VERSION`, `ursatz_analyzer_version()` | `<ursatz_analyzer/version.h>`, generated from `src/version.h.in` at configure time | 0.7.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-producer-key) |
 | `ursatz_analyzer_producer_key()` | `<ursatz_analyzer/version.h>`, the key from the generated `producer_key.h` | a hash of the sources that produce an analysis, 16 hex digits | [building.md](building.md#version-header-and-producer-key) |
 | `URSATZ_ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/text_export.h` | 2 | [text-export.md](text-export.md) |
-| `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analysis_document.h` | 11 | [versions.md](analysis-document/versions.md) |
-| analysis document schema | `schema/analysis-document.v11.schema.json` | v11 | [analysis-document.md](analysis-document.md) |
-| corpus index, motive links, motive link cache, similar material, style model schemas | `schema/*.v1.schema.json` | v1 each | [corpus.md](corpus.md), [motive-links.md](motive-links.md), [similar-material.md](similar-material.md), [style-profile.md](style-profile.md) |
+| `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analysis_document.h` | 12 | [versions.md](analysis-document/versions.md) |
+| analysis document schema | `schema/analysis-document.v12.schema.json` | v12 | [analysis-document.md](analysis-document.md) |
+| corpus index, motive link cache schemas | `schema/corpus-index.v2.schema.json`, `schema/motive-link-cache.v2.schema.json` | v2 each |
+| motive links, similar material, style model schemas | `schema/*.v1.schema.json` | v1 each | [corpus.md](corpus.md), [motive-links.md](motive-links.md), [similar-material.md](similar-material.md), [style-profile.md](style-profile.md) |
 
 A stored document is current only when its schema version, analyzer version and producer key all match the build ([corpus.md](corpus.md)).
 
@@ -82,7 +83,7 @@ The Ursatz headers the Analyzer includes, found by `tools/ci/check-library-inclu
 | `ursatz_chain/analysis_chain.h`, `ursatz_chain/chain_inputs.h` (`analysis_chain_run` and the `analysis_chain_*` accessors) | Ursatz | The one analysis run and its results; the public headers reach them only through `result_chain.h` |
 | `io/midi_importer.h`, `io/midi_key_signature.h`, `io/musicxml_importer.h` | Ursatz | Reading MIDI and MusicXML files |
 | `core/`, `time/`, `pitch/`, `events/`, `identity/` | Ursatz | Rationals, meters, tempo maps, pitches, notes, ids |
-| `interpretation/`, `semantics/`, `structure/`, `containers/`, `relationship/` | Ursatz | Claims as `Interpretation`s and the kernel vocabulary |
+| `interpretation/`, `semantics/`, `structure/`, `containers/`, `relationship/` | Ursatz | The chain's `Interpretation`s and the kernel vocabulary |
 | `common-practice-minimal/`, `standard-tonality/` | Ursatz | Key regions, weighted chord identification, Roman numerals |
 | `standard-harmony/analysis/` | Ursatz | Cadences, functions, six-fours, prolongations, the phrase model |
 | `standard-form/analysis/`, `analysis/` (form structure, thematic returns, motive link and recognition, voice separation, outer voices, progression patterns) | Ursatz | Phrases, themes, the form plan, motives, motive links, voices |
@@ -101,10 +102,10 @@ One file, `piece.mid` or `piece.musicxml`, through `ursatz-analyzer piece.mid`:
 3. `analyzer_analyze` runs `analysis_pipeline` as one `AnalyzerPass`: `chain_input` builds the chain's neutral input from the notes ([library.md](library.md#pipeline)).
 4. `analysis_chain_run` runs once over every stage: segments, key regions, chords, Roman numerals, outer voices, cadences, form, motives, meter, texture, voice leading, melody, schemas and sequences.
 5. The stage files read the chain's accessors into the `AnalysisReport`; the library calls the chain does not run (functions, six-fours, prolongations, phrase model) are made over its prepared harmony segments. See [analyses/harmony.md](analyses/harmony.md).
-6. The Analyzer-only stages read the collected report: progressions, harmonic rhythm, form plan, meter check, rhythm, markings, voicing check, counterpoint check and pivot chords. See [analyses/form-and-motive.md](analyses/form-and-motive.md) and [analyses/rhythm-texture-voice-leading.md](analyses/rhythm-texture-voice-leading.md).
-7. The result is an `AnalyzerResult`: the claims of every area as `Interpretation`s plus the report view ([analysis-result.md](analysis-result.md)).
-8. `analysis_document` builds the analysis document once from the result, and `markdown_report` renders the report from that document ([analysis-document.md](analysis-document.md)).
-9. `report_writer` writes `piece.report.md` and `piece.analysis.json` next to the input.
+6. The Analyzer-only stages read the collected report: progressions, harmonic rhythm, form plan, meter check, rhythm, markings, voicing check and pivot chords. See [analyses/form-and-motive.md](analyses/form-and-motive.md) and [analyses/rhythm-texture-voice-leading.md](analyses/rhythm-texture-voice-leading.md).
+7. The result is an `AnalyzerResult`: the chain's results plus the report view ([analysis-result.md](analysis-result.md)).
+8. `analysis_document` builds the analysis document once from the result ([analysis-document.md](analysis-document.md)).
+9. `main.c` writes `piece.analysis.json` next to the input.
 
 ## Finding things
 

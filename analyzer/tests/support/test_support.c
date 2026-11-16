@@ -109,12 +109,22 @@ bool test_write_file(const char *path, const char *data) {
     return fclose(file) == 0 && ok;
 }
 
+char *test_render_document(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
+    AnalysisDocument *document = analysis_document_build(input_path, notes, report);
+    if (!document) {
+        return NULL;
+    }
+    char *json = analysis_document_to_json(document);
+    analysis_document_destroy(document);
+    return json;
+}
+
 cJSON *test_analyze_midi(const char *path) {
     ImportedNotes notes;
     assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);

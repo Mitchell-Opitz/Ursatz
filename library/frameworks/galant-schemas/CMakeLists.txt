@@ -5,7 +5,6 @@ add_library(galant_schemas
     galant_exemplar.c
     galant_prototypes.c
     galant_matching_rules.c
-    galant_classification.c
     analysis/galant_analysis_input.c
     analysis/galant_analysis_claim.c
     analysis/galant_analysis_match.c

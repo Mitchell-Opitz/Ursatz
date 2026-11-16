@@ -14,6 +14,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * The Analyzer check (analyzer_check.h, docs/analyzer-check.md): a realized section is analyzed in memory by the
@@ -98,7 +99,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     request.pairing.beginning = shape == PERIOD ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = shape == PERIOD ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
 
@@ -369,12 +370,12 @@ static void piece_fixture(PieceFixture *fixture) {
 
 static int test_piece(void) {
     AnalyzerCheck check;
-    assert(analyzer_check_piece(NULL, &check) == ANALYZER_CHECK_ERR_NULL);
+    assert(test_analyzer_check_piece(NULL, &check) == ANALYZER_CHECK_ERR_NULL);
     PieceFixture fixture;
     piece_fixture(&fixture);
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
-    assert(analyzer_check_piece(plan, &check) == ANALYZER_CHECK_ERR_NOT_WRITTEN && check.item_count == 0);
+    assert(test_analyzer_check_piece(plan, &check) == ANALYZER_CHECK_ERR_NOT_WRITTEN && check.item_count == 0);
     plan_destroy(plan);
     size_t checked = 0;
     for (unsigned long seed = 1; seed <= 12 && checked < 3; seed++) {
@@ -388,7 +389,7 @@ static int test_piece(void) {
             plan_destroy(plan);
             continue;
         }
-        assert(analyzer_check_piece(plan, &check) == ANALYZER_CHECK_OK);
+        assert(test_analyzer_check_piece(plan, &check) == ANALYZER_CHECK_OK);
         /* A cadence for each of the four sections, and the key. */
         size_t cadences = 0;
         size_t keys = 0;

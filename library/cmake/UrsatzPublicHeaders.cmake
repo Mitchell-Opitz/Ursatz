@@ -47,13 +47,15 @@ function(ursatz_public_headers target)
 endfunction()
 
 # A test sees the internals of the code it tests: the kernel sources, the
-# framework folders, the chain, and the folder it sits beside. An app does not.
+# framework folders, the chain, the test access headers (tests/support), and
+# the folder it sits beside. An app does not.
 # Call it first in a tests/CMakeLists.txt.
 macro(ursatz_test_includes)
     include_directories(
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/frameworks
         ${PROJECT_SOURCE_DIR}/chain
+        ${PROJECT_SOURCE_DIR}/tests/support
         ${CMAKE_CURRENT_SOURCE_DIR}/..)
     if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../analysis")
         include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../analysis)
@@ -155,7 +157,7 @@ function(ursatz_add_public_header_tests)
         file(GENERATE OUTPUT "${source}" CONTENT "${text}")
         add_library(public_headers_compile_${name} OBJECT EXCLUDE_FROM_ALL "${source}")
         set_source_files_properties("${source}" PROPERTIES GENERATED TRUE)
-        # only the staged roots (no source directory); system headers (sqlite3.h) come with the compiler
+        # only the staged roots (no source directory); system headers come with the compiler
         target_include_directories(public_headers_compile_${name} PRIVATE ${roots})
         list(APPEND objects public_headers_compile_${name})
     endforeach()

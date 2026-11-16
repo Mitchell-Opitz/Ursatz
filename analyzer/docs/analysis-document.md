@@ -2,21 +2,19 @@
 
 The structure of the analysis JSON document: top level, metadata, meter, sources and the claim index. Back to the [docs index](README.md).
 
-`ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README for the
-`--json` and `--markdown` flags). It is the structured, versioned output that the Composer, the
+`ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v11.schema.json`](../schema/analysis-document.v11.schema.json)
+[`schema/analysis-document.v12.schema.json`](../schema/analysis-document.v12.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render_result` from
 `<ursatz_analyzer/analysis_document.h>`. The document is an export of an `AnalyzerResult`
-(see [analysis-result.md](analysis-result.md)); `analysis_document_render` over a notes and report pair gives the
-same bytes.
+(see [analysis-result.md](analysis-result.md)).
 
 The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
 newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v11 content |
+| Key | Type | v12 content |
 | --- | --- | --- |
 | `schema_version` | integer | Always `11`. |
 | `metadata` | object | Filled. See below. |
@@ -44,12 +42,10 @@ newline. The same input and build always give the same bytes.
 | `progressions` | array of progression entries | Filled: the recurring progressions of two to six chords. See below. |
 | `harmonic_rhythm` | object or null | Filled: changes of harmony per measure and the approach to cadences. See below; `null` when the piece has no chords the meter can place. |
 | `markings` | markings object | Filled: the notated tempo and dynamics markings, read with the library's standard-markings rules. See below. |
-| `counterpoint_check` | object or null | Filled by `--check-counterpoint`: two-voice input checked against a species. See below; `null` otherwise. |
 | `notes` | array of notes | Filled: where the notated and detected keys disagree. Empty when they do not, or there is no notated key signature. |
 
 Every key is always present, so consumers can read any section without checking for it first.
-The singular section `counterpoint_check` is `null` unless `--check-counterpoint` ran; the rest are empty arrays.
-`harmonic_rhythm` is `null` only for a piece with no chords the meter can place, and `form` only for a piece with no
+The sections that find nothing are empty arrays. `harmonic_rhythm` is `null` only for a piece with no chords the meter can place, and `form` only for a piece with no
 phrases.
 
 ## metadata
@@ -58,7 +54,7 @@ phrases.
 | --- | --- | --- |
 | `source_file` | string | Input file name without its directory. |
 | `analyzer_version` | string | Ursatz-Analyzer version, from the CMake project version. |
-| `ursatz_commit` | string | The producer key of the build that wrote the document: 16 hex digits, a hash of the sources that produce an analysis (`ursatz_analyzer_producer_key()`). The member keeps its name until the next document version renames it. |
+| `producer_key` | string | The producer key of the build that wrote the document: 16 hex digits, a hash of the sources that produce an analysis (`ursatz_analyzer_producer_key()`). Version 11 and older documents call it `ursatz_commit`. |
 | `note_count` | integer | Number of imported notes. |
 | `ticks_per_quarter` | integer or null | The MIDI header's ticks per quarter note, or `null` when unavailable. |
 | `input` | object | The input format and what it states or leaves to inference. See below. |
@@ -139,7 +135,7 @@ Each section comes from one accessor, or from a library call over the chain's re
 | `texture` | `analysis_chain_texture` |
 | `voice_leading` | `analysis_chain_voice_leading` |
 | `schemas` | `analysis_chain_schemas`, `analysis_chain_sequences` |
-| `progressions`, `harmonic_rhythm`, `markings`, `counterpoint_check` | the collected report (Analyzer-only) |
+| `progressions`, `harmonic_rhythm`, `markings` | the collected report (Analyzer-only) |
 
 ## Claims
 
@@ -165,8 +161,6 @@ cannot be read (a time signature with no beat grid):
 | `measure` | integer | The measure number. |
 | `beat` | integer | The 1-based beat in that measure. |
 | `subdivision` | rational | The exact fraction of that beat past its start, `0/1` on the beat. |
-
-The report writes a position as `m. N, beat B`, with the subdivision added to the beat (`beat 2.5`).
 
 Conventions:
 
@@ -211,7 +205,6 @@ Each claim section lives in its own file.
 | Texture | [rhythm-and-texture.md](analysis-document/rhythm-and-texture.md#texture) |
 | Voice leading | [voice-leading.md](analysis-document/voice-leading.md#voice-leading) |
 | Schemas and sequences | [voice-leading.md](analysis-document/voice-leading.md#schemas-and-sequences) |
-| Counterpoint check | [voice-leading.md](analysis-document/voice-leading.md#counterpoint-check) |
 | Markings | [voice-leading.md](analysis-document/voice-leading.md#markings) |
 | Version history | [versions.md](analysis-document/versions.md) |
 

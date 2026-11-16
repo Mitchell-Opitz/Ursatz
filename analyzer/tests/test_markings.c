@@ -3,17 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/musicxml_pipeline.h>
 
 /*
  * The tempo and dynamics markings of the report, on a constructed score (tests/musicxml/markings.musicxml, four
  * measures in 4/4): "Allegro" with quarter = 120 and p in measure 1, the text "cresc." in measure 2, f in measure 3,
  * "rit." and mp in measure 4. Asserted: each marking at its measure, the library's group, rank and change for each, the
- * comparison against the previous level marking, that the markdown names them, and that a file with no markings (the
+ * comparison against the previous level marking, and that a file with no markings (the
  * two-part score) reports none.
  */
 
@@ -83,17 +81,6 @@ static void check_markings(const char *dir) {
         CHECK(mp->relation && strcmp(mp->relation, "quieter") == 0);
     }
 
-    AnalysisDocument *document = analysis_document_build("markings.musicxml", &notes, &report);
-    char *markdown = document ? markdown_report_render(document) : NULL;
-    CHECK(markdown != NULL);
-    if (markdown) {
-        CHECK(strstr(markdown, "## Markings") != NULL);
-        CHECK(strstr(markdown, "| m. 1, beat 1 | Allegro | 1/4 = 120 | fast | none |") != NULL);
-        CHECK(strstr(markdown, "| m. 4, beat 1 | rit. | - | - | gradually-slower |") != NULL);
-        CHECK(strstr(markdown, "| m. 3, beat 1 | f | Piano | none | louder |") != NULL);
-    }
-    free(markdown);
-    analysis_document_destroy(document);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
 }
@@ -106,15 +93,6 @@ static void check_no_markings(const char *dir) {
     }
     CHECK(report.tempo_marking_count == 0);
     CHECK(report.dynamic_count == 0);
-    AnalysisDocument *document = analysis_document_build("two-parts.musicxml", &notes, &report);
-    char *markdown = document ? markdown_report_render(document) : NULL;
-    CHECK(markdown != NULL);
-    if (markdown) {
-        CHECK(strstr(markdown, "The score has no tempo marking.") != NULL);
-        CHECK(strstr(markdown, "The score has no dynamics marking.") != NULL);
-    }
-    free(markdown);
-    analysis_document_destroy(document);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
 }

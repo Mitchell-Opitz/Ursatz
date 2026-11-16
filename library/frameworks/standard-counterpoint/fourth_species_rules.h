@@ -68,7 +68,4 @@ typedef struct {
 bool standard_counterpoint_fourth_species_check(const StandardCounterpointFourthSpeciesInput *input,
                                                 StandardCounterpointResult *out);
 
-/* True when the input is valid and breaks no hard rule. */
-bool standard_counterpoint_fourth_species_valid(const StandardCounterpointFourthSpeciesInput *input);
-
 #endif

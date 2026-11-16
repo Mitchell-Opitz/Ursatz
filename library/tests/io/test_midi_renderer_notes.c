@@ -17,7 +17,8 @@ static void test_two_voices(void) {
 
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, NULL, 480,
+                                             &data, &size) ==
            MIDI_RENDER_OK);
     TestSmf smf;
     test_smf_parse(data, size, &smf);
@@ -41,7 +42,8 @@ static void test_no_voice_shares_one_track(void) {
     test_notes_add(&notes, 0, 1, 1, 4, 64, NULL);
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, NULL, 480,
+                                             &data, &size) ==
            MIDI_RENDER_OK);
     TestSmf smf;
     test_smf_parse(data, size, &smf);
@@ -60,7 +62,8 @@ static void test_back_to_back_same_pitch_releases_first(void) {
     test_notes_add(&notes, 1, 4, 1, 4, 60, NULL);
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, NULL, 480,
+                                             &data, &size) ==
            MIDI_RENDER_OK);
     TestSmf smf;
     test_smf_parse(data, size, &smf);
@@ -80,7 +83,8 @@ static void test_track_order_follows_first_sounding(void) {
     test_notes_add(&notes, 0, 1, 1, 4, 60, "voice-early");
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, 480, &data, &size) ==
+    assert(midi_renderer_render_with_options(notes.events, notes.pitches, notes.count, NULL, NULL, NULL, 0, NULL, 480,
+                                             &data, &size) ==
            MIDI_RENDER_OK);
     TestSmf smf;
     test_smf_parse(data, size, &smf);

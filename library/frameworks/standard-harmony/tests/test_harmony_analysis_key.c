@@ -8,20 +8,6 @@
 #include "time/musical_time.h"
 #include "time/time_span.h"
 
-static void test_mode(void) {
-    HarmonyMode mode = HARMONY_MODE_COUNT;
-    AnalysisKey major = {"k", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MAJOR};
-    assert(harmony_mode_of_analysis_key(&major, &mode) && mode == HARMONY_MODE_MAJOR);
-    AnalysisKey minor = {"k", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
-    assert(harmony_mode_of_analysis_key(&minor, &mode) && mode == HARMONY_MODE_MINOR);
-
-    mode = HARMONY_MODE_COUNT;
-    AnalysisKey bad = {"k", PITCH_LETTER_D, 0, (KeyStructureMode)7};
-    assert(!harmony_mode_of_analysis_key(&bad, &mode) && mode == HARMONY_MODE_COUNT);
-    assert(!harmony_mode_of_analysis_key(NULL, &mode));
-    assert(!harmony_mode_of_analysis_key(&major, NULL));
-}
-
 static void test_segment(void) {
     MusicalTime *from = NULL;
     MusicalTime *to = NULL;
@@ -52,7 +38,6 @@ static void test_segment(void) {
 }
 
 int main(void) {
-    test_mode();
     test_segment();
     printf("test_harmony_analysis_key: ok\n");
     return 0;

@@ -78,59 +78,11 @@ static void test_accessors(void) {
     musical_time_destroy(end);
 }
 
-/* Value equality requires start, end, AND boundary to all match. */
-static void test_equality_requires_matching_boundary(void) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    musical_time_create(1, 4, &start);
-    musical_time_create(3, 4, &end);
-
-    TimeSpan *closed = NULL;
-    TimeSpan *open = NULL;
-    time_span_create(start, end, TIME_SPAN_BOUNDARY_CLOSED, &closed);
-    time_span_create(start, end, TIME_SPAN_BOUNDARY_OPEN, &open);
-
-    assert(!time_span_equals(closed, open));
-
-    time_span_destroy(closed);
-    time_span_destroy(open);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-}
-
-static void test_equality_independent_instances(void) {
-    MusicalTime *start_a = NULL;
-    MusicalTime *end_a = NULL;
-    MusicalTime *start_b = NULL;
-    MusicalTime *end_b = NULL;
-    musical_time_create(1, 4, &start_a);
-    musical_time_create(3, 4, &end_a);
-    musical_time_create(1, 4, &start_b);
-    musical_time_create(3, 4, &end_b);
-
-    TimeSpan *a = NULL;
-    TimeSpan *b = NULL;
-    time_span_create(start_a, end_a, TIME_SPAN_BOUNDARY_CLOSED, &a);
-    time_span_create(start_b, end_b, TIME_SPAN_BOUNDARY_CLOSED, &b);
-
-    assert(a != b);
-    assert(time_span_equals(a, b));
-
-    time_span_destroy(a);
-    time_span_destroy(b);
-    musical_time_destroy(start_a);
-    musical_time_destroy(end_a);
-    musical_time_destroy(start_b);
-    musical_time_destroy(end_b);
-}
-
 int main(void) {
     test_create_rejects_null();
     test_create_rejects_end_before_start();
     test_create_accepts_equal_start_end();
     test_create_rejects_invalid_boundary();
     test_accessors();
-    test_equality_requires_matching_boundary();
-    test_equality_independent_instances();
     return 0;
 }

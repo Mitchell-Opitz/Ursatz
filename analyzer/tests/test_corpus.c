@@ -10,6 +10,8 @@
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 
+#include "test_support.h"
+
 /*
  * Corpus mode over the corpora CMake builds in the build tree: "reference" (the five framework-v1 pieces) and "mixed"
  * (one MIDI, one MusicXML in a subfolder, one .txt, one broken .mid). Checks the index against
@@ -95,8 +97,8 @@ static unsigned long long fnv1a(const char *data, size_t length) {
     return hash;
 }
 
-static CorpusRunSummary run(const char *input, const char *output, bool resume, bool markdown, CorpusRunResult *result) {
-    CorpusRunOptions options = {input, output, resume, markdown, NULL, NULL};
+static CorpusRunSummary run(const char *input, const char *output, bool resume, CorpusRunResult *result) {
+    CorpusRunOptions options = {input, output, resume, NULL, NULL};
     CorpusRunSummary summary;
     *result = corpus_run(&options, &summary);
     return summary;
@@ -132,9 +134,9 @@ static char *masked_index(const char *output) {
         if (strncmp(line, "  \"input_dir\": ", 15) == 0) {
             key = "  \"input_dir\": ";
             replacement = "\"<input_dir>\",";
-        } else if (strncmp(line, "  \"ursatz_commit\": ", 18) == 0) {
-            key = "  \"ursatz_commit\": ";
-            replacement = "\"<ursatz_commit>\",";
+        } else if (strncmp(line, "  \"producer_key\": ", 18) == 0) {
+            key = "  \"producer_key\": ";
+            replacement = "\"<producer_key>\",";
         } else if (strncmp(line, "      \"content_hash\": ", 22) == 0) {
             key = "      \"content_hash\": ";
             replacement = "\"<hash>\",";
@@ -167,7 +169,7 @@ static char *render_single(const char *path) {
         imported_notes_destroy(&notes);
         return NULL;
     }
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     return json;
@@ -179,7 +181,7 @@ static void test_reference(const char *work) {
     snprintf(output, sizeof(output), "%s/reference", work);
 
     CorpusRunResult result;
-    CorpusRunSummary summary = run(input, output, false, false, &result);
+    CorpusRunSummary summary = run(input, output, false, &result);
     CHECK(result == CORPUS_RUN_OK, "reference run result %d", (int)result);
     CHECK(summary.analyzed == 5 && summary.skipped == 0 && summary.failed == 0, "reference summary %zu/%zu/%zu",
           summary.analyzed, summary.skipped, summary.failed);
@@ -224,19 +226,19 @@ static void test_reference(const char *work) {
     cJSON_Delete(index);
 
     /* Resume: nothing changed, then one document deleted. */
-    summary = run(input, output, true, false, &result);
+    summary = run(input, output, true, &result);
     CHECK(result == CORPUS_RUN_OK && summary.analyzed == 0 && summary.skipped == 5 && summary.failed == 0,
           "resume unchanged: %zu/%zu/%zu", summary.analyzed, summary.skipped, summary.failed);
     char deleted[1200];
     snprintf(deleted, sizeof(deleted), "%s/Field 1.mid.analysis.json", output);
     CHECK(remove(deleted) == 0, "cannot delete %s", deleted);
-    summary = run(input, output, true, false, &result);
+    summary = run(input, output, true, &result);
     CHECK(result == CORPUS_RUN_OK && summary.analyzed == 1 && summary.skipped == 4 && summary.failed == 0,
           "resume after deleting a document: %zu/%zu/%zu", summary.analyzed, summary.skipped, summary.failed);
     CHECK(exists(deleted), "the deleted document was not written again");
 
     /* Without --resume every piece is analyzed again. */
-    summary = run(input, output, false, false, &result);
+    summary = run(input, output, false, &result);
     CHECK(summary.analyzed == 5 && summary.skipped == 0, "no resume: %zu analyzed, %zu skipped", summary.analyzed,
           summary.skipped);
 }
@@ -247,15 +249,13 @@ static void test_mixed(const char *work) {
     snprintf(output, sizeof(output), "%s/mixed", work);
 
     CorpusRunResult result;
-    CorpusRunSummary summary = run(input, output, false, true, &result);
+    CorpusRunSummary summary = run(input, output, false, &result);
     CHECK(result == CORPUS_RUN_OK, "mixed run result %d (one failed piece is not a failed run)", (int)result);
     CHECK(summary.analyzed == 2 && summary.skipped == 0 && summary.failed == 1, "mixed summary %zu/%zu/%zu",
           summary.analyzed, summary.skipped, summary.failed);
 
     snprintf(path, sizeof(path), "%s/sub/field-1.musicxml.analysis.json", output);
     CHECK(exists(path), "the MusicXML in the subfolder has no document");
-    snprintf(path, sizeof(path), "%s/sub/field-1.musicxml.report.md", output);
-    CHECK(exists(path), "the MusicXML in the subfolder has no report");
     snprintf(path, sizeof(path), "%s/notes.txt.analysis.json", output);
     CHECK(!exists(path), "the .txt file was analyzed");
 
@@ -282,7 +282,7 @@ static void test_mixed(const char *work) {
     cJSON_Delete(index);
 
     /* The failed piece is tried again on resume; the others are skipped. */
-    summary = run(input, output, true, true, &result);
+    summary = run(input, output, true, &result);
     CHECK(summary.analyzed == 0 && summary.skipped == 2 && summary.failed == 1, "mixed resume %zu/%zu/%zu",
           summary.analyzed, summary.skipped, summary.failed);
 }
@@ -302,20 +302,20 @@ static void test_resume_changes(const char *work) {
     CHECK(copy_file(from, path), "cannot copy the MusicXML");
 
     CorpusRunResult result;
-    CorpusRunSummary summary = run(input, output, false, false, &result);
+    CorpusRunSummary summary = run(input, output, false, &result);
     CHECK(summary.analyzed == 2, "first run analyzed %zu", summary.analyzed);
 
     /* Changing one file's bytes re-analyzes only that file. */
     const char *comment = "\n<!-- touched -->\n";
     CHECK(write_file(path, comment, strlen(comment), "ab"), "cannot touch the MusicXML");
-    summary = run(input, output, true, false, &result);
+    summary = run(input, output, true, &result);
     CHECK(result == CORPUS_RUN_OK && summary.analyzed == 1 && summary.skipped == 1 && summary.failed == 0,
           "resume after touching a file: %zu/%zu/%zu", summary.analyzed, summary.skipped, summary.failed);
 
     /* A piece no longer in the folder is dropped from the index. */
     snprintf(path, sizeof(path), "%s/Bach 114.mid", input);
     CHECK(remove(path) == 0, "cannot remove the MIDI");
-    summary = run(input, output, true, false, &result);
+    summary = run(input, output, true, &result);
     CHECK(summary.analyzed == 0 && summary.skipped == 1, "resume after removing a file: %zu analyzed, %zu skipped",
           summary.analyzed, summary.skipped);
     cJSON *index = read_index(output);
@@ -330,49 +330,84 @@ static void test_resume_changes(const char *work) {
     if (at) {
         at[21] = 'X';
         CHECK(write_file(path, text, strlen(text), "wb"), "cannot rewrite the index");
-        summary = run(input, output, true, false, &result);
+        summary = run(input, output, true, &result);
         CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across versions: %zu analyzed, %zu skipped",
               summary.analyzed, summary.skipped);
     }
     free(text);
 
-    /* An index from another Ursatz commit reuses nothing either. */
+    /* An index from another producer key reuses nothing either. */
     text = read_file(path, NULL);
-    at = text ? strstr(text, "\"ursatz_commit\": \"") : NULL;
-    CHECK(at != NULL, "no ursatz_commit in the index");
+    at = text ? strstr(text, "\"producer_key\": \"") : NULL;
+    CHECK(at != NULL, "no producer_key in the index");
     if (at) {
-        at[18] = at[18] == 'X' ? 'Y' : 'X';
+        at[17] = at[17] == 'X' ? 'Y' : 'X';
         CHECK(write_file(path, text, strlen(text), "wb"), "cannot rewrite the index");
-        summary = run(input, output, true, false, &result);
-        CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across commits: %zu analyzed, %zu skipped",
+        summary = run(input, output, true, &result);
+        CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across keys: %zu analyzed, %zu skipped",
               summary.analyzed, summary.skipped);
-        summary = run(input, output, true, false, &result);
-        CHECK(summary.analyzed == 0 && summary.skipped == 1, "resume under the same commit: %zu analyzed, %zu skipped",
+        summary = run(input, output, true, &result);
+        CHECK(summary.analyzed == 0 && summary.skipped == 1, "resume under the same key: %zu analyzed, %zu skipped",
               summary.analyzed, summary.skipped);
+    }
+    free(text);
+
+    /* An index of schema version 1 (it keeps ursatz_commit) reuses nothing and is written again, not refused. */
+    text = read_file(path, NULL);
+    char *version_at = text ? strstr(text, "\"schema_version\": 2") : NULL;
+    char *key_at = text ? strstr(text, "\"producer_key\"") : NULL;
+    CHECK(version_at != NULL && key_at != NULL && version_at < key_at, "no schema_version 2 and producer_key in the index");
+    if (version_at && key_at && version_at < key_at) {
+        const char *old_key = "\"producer_key\"";
+        const char *v1_key = "\"ursatz_commit\"";
+        char *v1 = malloc(strlen(text) + strlen(v1_key) + 1);
+        if (v1) {
+            size_t head = (size_t)(version_at - text);
+            size_t before_key = (size_t)(key_at - text);
+            memcpy(v1, text, head);
+            memcpy(v1 + head, "\"schema_version\": 1", strlen("\"schema_version\": 1"));
+            size_t cursor = head + strlen("\"schema_version\": 1");
+            size_t middle = before_key - (head + strlen("\"schema_version\": 2"));
+            memcpy(v1 + cursor, version_at + strlen("\"schema_version\": 2"), middle);
+            cursor += middle;
+            memcpy(v1 + cursor, v1_key, strlen(v1_key));
+            cursor += strlen(v1_key);
+            strcpy(v1 + cursor, key_at + strlen(old_key));
+            CHECK(write_file(path, v1, strlen(v1), "wb"), "cannot rewrite the index as version 1");
+            free(v1);
+            summary = run(input, output, true, &result);
+            CHECK(result == CORPUS_RUN_OK && summary.analyzed == 1 && summary.skipped == 0,
+                  "resume over a version 1 index: %zu analyzed, %zu skipped", summary.analyzed, summary.skipped);
+            cJSON *rewritten = read_index(output);
+            const cJSON *rewritten_version = cJSON_GetObjectItemCaseSensitive(rewritten, "schema_version");
+            CHECK(cJSON_IsNumber(rewritten_version) && rewritten_version->valuedouble == 2,
+                  "the version 1 index was not written again as version 2");
+            cJSON_Delete(rewritten);
+        }
     }
     free(text);
 
     /* An index that cannot be read is a run error, not a silent restart. */
     CHECK(write_file(path, "{", 1, "wb"), "cannot corrupt the index");
-    summary = run(input, output, true, false, &result);
+    summary = run(input, output, true, &result);
     CHECK(result == CORPUS_RUN_ERR_INDEX, "unreadable index gave result %d", (int)result);
 }
 
 static void test_arguments(const char *work) {
     CorpusRunResult result;
-    CorpusRunOptions options = {NULL, NULL, false, false, NULL, NULL};
+    CorpusRunOptions options = {NULL, NULL, false, NULL, NULL};
     CHECK(corpus_run(&options, NULL) == CORPUS_RUN_ERR_ARGUMENT, "NULL input_dir");
     CHECK(corpus_run(NULL, NULL) == CORPUS_RUN_ERR_ARGUMENT, "NULL options");
     char missing[1024];
     snprintf(missing, sizeof(missing), "%s/does-not-exist", work);
-    run(missing, work, false, false, &result);
+    run(missing, work, false, &result);
     CHECK(result == CORPUS_RUN_ERR_INPUT_DIR, "missing input dir gave %d", (int)result);
     char blocker[1024];
     snprintf(blocker, sizeof(blocker), "%s/blocker", work);
     CHECK(write_file(blocker, "x", 1, "wb"), "cannot write the blocker file");
     char input[1024];
     snprintf(input, sizeof(input), "%s/reference", URSATZ_CORPORA_DIR);
-    run(input, blocker, false, false, &result);
+    run(input, blocker, false, &result);
     CHECK(result == CORPUS_RUN_ERR_OUTPUT_DIR, "output dir that is a file gave %d", (int)result);
 }
 

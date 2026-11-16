@@ -134,8 +134,8 @@ static void test_markers(void) {
     tempo_map_destroy(tempo_map);
 }
 
-/* NULL options give exactly the bytes of the old function, on a piece with two voices, maps and a key signature. */
-static void test_null_options_equal_the_old_function(void) {
+/* NULL options and zeroed options give the same bytes, on a piece with two voices, maps and a key signature. */
+static void test_null_options_equal_empty_options(void) {
     const TestMeterChange meters[] = {{6, 8, 0, 1}, {4, 4, 3, 2}};
     const TestTempoChange tempos[] = {{0, 1, 500000}, {1, 1, 400000}};
     MeterMap *meter_map = test_meter_map(meters, 2);
@@ -153,22 +153,18 @@ static void test_null_options_equal_the_old_function(void) {
     test_notes_add(&notes, 0, 1, 1, 2, 48, "v2");
     test_notes_add(&notes, 3, 4, 1, 8, 50, NULL);
 
-    unsigned char *old_data = NULL;
-    size_t old_size = 0;
-    assert(midi_renderer_render(notes.events, notes.pitches, notes.count, meter_map, tempo_map, keys, 1, 480, &old_data,
-                                &old_size) == MIDI_RENDER_OK);
-    unsigned char *new_data = NULL;
-    size_t new_size = 0;
-    render_options(&notes, meter_map, tempo_map, keys, 1, NULL, &new_data, &new_size);
-    assert_bytes(new_data, new_size, old_data, old_size);
-    free(new_data);
+    unsigned char *null_data = NULL;
+    size_t null_size = 0;
+    render_options(&notes, meter_map, tempo_map, keys, 1, NULL, &null_data, &null_size);
 
     MidiRenderOptions empty;
     memset(&empty, 0, sizeof(empty));
-    render_options(&notes, meter_map, tempo_map, keys, 1, &empty, &new_data, &new_size);
-    assert_bytes(new_data, new_size, old_data, old_size);
-    free(new_data);
-    free(old_data);
+    unsigned char *empty_data = NULL;
+    size_t empty_size = 0;
+    render_options(&notes, meter_map, tempo_map, keys, 1, &empty, &empty_data, &empty_size);
+    assert_bytes(empty_data, empty_size, null_data, null_size);
+    free(empty_data);
+    free(null_data);
 
     test_notes_free(&notes);
     musical_time_destroy(keys[0].position);
@@ -384,7 +380,7 @@ int main(void) {
     test_names_two_voices();
     test_name_for_notes_without_a_voice();
     test_markers();
-    test_null_options_equal_the_old_function();
+    test_null_options_equal_empty_options();
     test_errors();
     test_import_ignores_names_and_markers();
     printf("test_midi_renderer_meta: all tests passed\n");

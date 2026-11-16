@@ -371,11 +371,6 @@ StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(
     return STANDARD_TONALITY_ROMAN_OK;
 }
 
-StandardTonalityRomanStatus standard_tonality_build_roman_numerals(const StandardTonalityChordInput *inputs,
-                                                                   size_t count, StandardTonalityRomanResult **out) {
-    return standard_tonality_build_roman_numerals_with_config(inputs, count, NULL, out);
-}
-
 void standard_tonality_roman_results_destroy(StandardTonalityRomanResult *results, size_t count) {
     if (results == NULL) {
         return;
@@ -387,19 +382,3 @@ void standard_tonality_roman_results_destroy(StandardTonalityRomanResult *result
     free(results);
 }
 
-bool standard_tonality_roman_claim_read(const Interpretation *interpretation, StandardTonalityRomanClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), STANDARD_TONALITY_ROMAN_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

@@ -43,30 +43,20 @@ static void test_a_valid_model(void) {
     assert(!similarity_model_dimension_at(model, 3, &dimension, &numerator, &denominator));
     assert(similarity_model_dimension_at(model, 0, NULL, NULL, NULL));
 
-    assert(similarity_model_declares(model, SIMILARITY_DIMENSION_INTERVAL));
-    assert(similarity_model_declares(model, SIMILARITY_DIMENSION_RHYTHM));
-    assert(similarity_model_weight(model, SIMILARITY_DIMENSION_CONTOUR, &numerator, &denominator));
-    assert(numerator == 1 && denominator == 2);
-
     /* 1/2 + 3 + 0 = 7/2. */
     similarity_model_total_weight(model, &numerator, &denominator);
     assert(numerator == 7 && denominator == 2);
     similarity_model_destroy(model);
 
-    /* A dimension not declared is not there. */
+    /* A dimension not declared is not listed. */
     const SimilarityDimensionWeight only_interval[] = {{SIMILARITY_DIMENSION_INTERVAL, 1, 1}};
     assert(similarity_model_create(only_interval, 1, &model) == SIMILARITY_MODEL_OK);
     assert(similarity_model_dimension_count(model) == 1);
-    assert(!similarity_model_declares(model, SIMILARITY_DIMENSION_RHYTHM));
-    assert(!similarity_model_declares(model, SIMILARITY_DIMENSION_CONTOUR));
-    numerator = 99;
-    assert(!similarity_model_weight(model, SIMILARITY_DIMENSION_RHYTHM, &numerator, NULL));
-    assert(numerator == 99);
+    assert(!similarity_model_dimension_at(model, 1, &dimension, &numerator, &denominator));
     similarity_model_destroy(model);
 
     /* NULL is a model with no dimensions. */
     assert(similarity_model_dimension_count(NULL) == 0);
-    assert(!similarity_model_declares(NULL, SIMILARITY_DIMENSION_INTERVAL));
     assert(!similarity_model_dimension_at(NULL, 0, NULL, NULL, NULL));
     similarity_model_total_weight(NULL, &numerator, &denominator);
     assert(numerator == 0 && denominator == 1);

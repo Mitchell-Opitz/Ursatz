@@ -14,11 +14,12 @@
 #include "relationship/relationship.h"
 #include "semantics/cadence_type.h"
 #include "structure/phrase_occurrence.h"
+#include "relationship_test_access.h"
 
 /*
  * Behavioral-contract test: NULL input is rejected without touching *out,
  * and an input with no structural cadence among its entries is a valid,
- * empty AnalysisResult / Section / Relationship set (requirement 4 -- no
+ * empty Section / Relationship set (requirement 4 -- no
  * detected form structure is legitimate, never forced).
  *
  * Analysis-regression test: a five-phrase sequence with a structural
@@ -26,8 +27,7 @@
  * entries[3] splits into three Sections -- [0,1], [2,3], [4] -- of which
  * only the first two are closed by a structural cadence and thus
  * reported (entries[4] trails with no closing cadence, so it is not
- * turned into a Section of its own, matching PeriodDetection/
- * SentenceDetection's skip-don't-guess discipline). Pins the resulting
+ * turned into a Section of its own, skip-don't-guess). Pins the resulting
  * Section (phrase_ids) and Relationship/Interpretation ("precedes")
  * shape against a future refactor.
  */
@@ -50,19 +50,7 @@ static PhraseOccurrence *make_phrase_occurrence(const char *occurrence_id_value,
 }
 
 int main(void) {
-    /* Behavioral contract: NULL input is rejected without touching *out. */
-    AnalysisResult *untouched = (AnalysisResult *)0x1;
-    assert(form_structure_detection_analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
-    assert(untouched == (AnalysisResult *)0x1);
-    assert(strcmp(FORM_STRUCTURE_DETECTION_ANALYZER.name, "FormStructureDetection") == 0);
-
     /* Behavioral contract: 0 entries is valid and empty. */
-    FormStructureDetectionInput empty_input = {NULL, 0};
-    AnalysisResult *empty_result;
-    assert(form_structure_detection_analyze(&empty_input, NULL, NULL, &empty_result) == ANALYZER_OK);
-    assert(analysis_result_interpretation_count(empty_result) == 0);
-    analysis_result_destroy(empty_result);
-
     Section **empty_sections;
     size_t empty_section_count;
     assert(form_structure_detection_build_sections(NULL, 0, &empty_sections, &empty_section_count) ==
@@ -83,22 +71,18 @@ int main(void) {
         {only_phrase, CADENCE_TYPE_HALF},
         {only_phrase, CADENCE_TYPE_PLAGAL},
     };
-    FormStructureDetectionInput no_boundary_input = {no_boundary_entries, 2};
-    AnalysisResult *no_boundary_result;
-    assert(form_structure_detection_analyze(&no_boundary_input, NULL, NULL, &no_boundary_result) == ANALYZER_OK);
-    assert(analysis_result_interpretation_count(no_boundary_result) == 0);
-    analysis_result_destroy(no_boundary_result);
+    Section **none;
+    size_t none_count;
+    assert(form_structure_detection_build_sections(no_boundary_entries, 2, &none, &none_count) == FORM_STRUCTURE_DETECTION_OK);
+    assert(none == NULL && none_count == 0);
 
     /* An unspecified authentic cadence is not promoted to structural, and neither is an unknown one. */
     FormStructureDetectionEntry unspecified_entries[2] = {
         {only_phrase, CADENCE_TYPE_AUTHENTIC_UNSPECIFIED},
         {only_phrase, CADENCE_TYPE_UNKNOWN},
     };
-    FormStructureDetectionInput unspecified_input = {unspecified_entries, 2};
-    AnalysisResult *unspecified_result;
-    assert(form_structure_detection_analyze(&unspecified_input, NULL, NULL, &unspecified_result) == ANALYZER_OK);
-    assert(analysis_result_interpretation_count(unspecified_result) == 0);
-    analysis_result_destroy(unspecified_result);
+    assert(form_structure_detection_build_sections(unspecified_entries, 2, &none, &none_count) == FORM_STRUCTURE_DETECTION_OK);
+    assert(none == NULL && none_count == 0);
     phrase_occurrence_destroy(only_phrase);
 
     /*
@@ -122,29 +106,6 @@ int main(void) {
         {phrase3, CADENCE_TYPE_IMPERFECT_AUTHENTIC},
         {phrase4, CADENCE_TYPE_HALF},
     };
-    FormStructureDetectionInput input = {entries, 5};
-
-    AnalysisResult *result;
-    assert(form_structure_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
-    assert(analysis_result_interpretation_count(result) == 1);
-
-    const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
-    assert(strcmp(entity_id_value(interpretation_target_id(interpretation)),
-                   "relationship-formstructure-order-section-formstructure-phrase-occ-0-phrase-occ-1-"
-                   "section-formstructure-phrase-occ-2-phrase-occ-3") == 0);
-    size_t claim_size;
-    const FormStructureDetectionClaim *claim =
-        (const FormStructureDetectionClaim *)value_content(interpretation_claim(interpretation), &claim_size);
-    assert(claim_size == sizeof(FormStructureDetectionClaim));
-    assert(strcmp(claim->earlier_section_id, "section-formstructure-phrase-occ-0-phrase-occ-1") == 0);
-    assert(strcmp(claim->later_section_id, "section-formstructure-phrase-occ-2-phrase-occ-3") == 0);
-    assert(claim->earlier_section_closing_cadence_type == CADENCE_TYPE_PERFECT_AUTHENTIC);
-    const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
-    assert(uncertainty_scalar_confidence_numerator(uncertainty) == 1);
-    assert(uncertainty_scalar_confidence_denominator(uncertainty) == 1);
-    assert(strcmp(interpretation_author(interpretation), "FormStructureDetection") == 0);
-
-    analysis_result_destroy(result);
 
     /* form_structure_detection_build_sections mints the two closed Sections, in order. */
     Section **sections;

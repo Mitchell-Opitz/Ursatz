@@ -4,13 +4,6 @@
 
 #include "counterpoint_test_util.h"
 #include "first_species_motion_rules.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-motion", STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT);
-#define standard_counterpoint_first_species_motion_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_first_species_motion_constraint, standard_counterpoint_first_species_motion_preference, standard_counterpoint_first_species_motion_rule_holds, StandardCounterpointPair, which, subject)
 
 static bool holds(StandardCounterpointFirstSpeciesMotionRule rule, const PitchSpelling *const *upper_notes,
                   const PitchSpelling *const *lower_notes, size_t count) {
@@ -21,27 +14,6 @@ static bool holds(StandardCounterpointFirstSpeciesMotionRule rule, const PitchSp
 }
 
 #define HOLDS(rule, upper, lower) holds(rule, upper, lower, sizeof(upper) / sizeof((upper)[0]))
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_first_species_motion_rule,
-                                    standard_counterpoint_first_species_motion_constraint,
-                                    STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT; i++) {
-        assert(constraint_type(standard_counterpoint_first_species_motion_constraint(
-                   (StandardCounterpointFirstSpeciesMotionRule)i)) == CONSTRAINT_TYPE_SOFT);
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_first_species_motion_rule_name(
-                      STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_VARIETY),
-                  "motion-variety") == 0);
-    assert(strcmp(standard_counterpoint_first_species_motion_rule_name(
-                      STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_SIMILAR_WITH_LARGE_LEAP),
-                  "similar-with-large-leap") == 0);
-    assert(standard_counterpoint_first_species_motion_rule_name(STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT) ==
-           NULL);
-}
 
 /* Parallel, similar, contrary, contrary: all three types in four motions. */
 #define VARIED_LOWER(name) \
@@ -129,8 +101,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_motion_variety();
     test_contrary_preferred();
     test_similar_with_leap();

@@ -108,14 +108,6 @@ static void test_degree_allows(void) {
     assert(!galant_degree_allows(&want_either, NULL));
 }
 
-static void test_alteration_names(void) {
-    assert(strcmp(galant_alteration_name(GALANT_ALTERATION_NATURAL), "natural") == 0);
-    assert(strcmp(galant_alteration_name(GALANT_ALTERATION_LOWERED), "lowered") == 0);
-    assert(strcmp(galant_alteration_name(GALANT_ALTERATION_EITHER), "either") == 0);
-    assert(strcmp(galant_alteration_name(GALANT_ALTERATION_RAISED), "raised") == 0);
-    assert(galant_alteration_name((GalantAlteration)9) == NULL);
-}
-
 static void test_exemplar_valid(void) {
     GalantFixture f;
     meyer_in_c(&f);
@@ -174,7 +166,6 @@ int main(void) {
     test_degree_of_arguments();
     test_degree_of_semitones();
     test_degree_allows();
-    test_alteration_names();
     test_exemplar_valid();
     printf("test_galant_degree: ok\n");
     return 0;

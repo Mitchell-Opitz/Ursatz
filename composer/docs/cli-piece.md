@@ -24,7 +24,7 @@ The two versions are the same note for note up to the body's end.
 
 The seed, `--check`, `--out` and the other options are `theme`'s ([cli-theme.md](cli-theme.md)). The seeds from `--seed`
 are tried one after another, up to 16, and a seed whose loop or ending is stuck (or, with `--check`, contradicted by the
-Analyzer) is passed over. `--check` runs `analyzer_check_piece` on each version ([analyzer-check.md](analyzer-check.md#the-whole-piece)).
+Analyzer) is passed over. `--check` runs `analyzer_check_piece_in` on each version ([analyzer-check.md](analyzer-check.md#the-whole-piece)).
 
 | Option | Effect |
 | --- | --- |

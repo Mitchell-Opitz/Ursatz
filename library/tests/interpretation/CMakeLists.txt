@@ -1,13 +1,8 @@
 add_ursatz_test(uncertainty)
-add_ursatz_test(evidence)
-add_ursatz_test(assertion)
-add_ursatz_test(observation)
-add_ursatz_test(hypothesis)
 add_ursatz_test(interpretation)
 add_ursatz_test(claim_interpretation)
 add_ursatz_test(chord)
 add_ursatz_test(key)
-add_ursatz_test(scale_degree)
 add_ursatz_test(texture)
 add_ursatz_architecture_test(interpretation)
 

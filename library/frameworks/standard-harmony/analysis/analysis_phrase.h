@@ -82,7 +82,4 @@ HarmonyPhraseModelStatus harmony_analysis_phrase_model_label(const HarmonySegmen
 
 void harmony_phrase_model_destroy(HarmonyPhraseModel *model);
 
-/* Reads the claim back out of a phrase model Interpretation. False if it is not one. */
-bool harmony_phrase_label_claim_read(const Interpretation *interpretation, HarmonyPhraseLabelClaim *out);
-
 #endif

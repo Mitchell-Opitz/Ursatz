@@ -14,9 +14,8 @@
  *
  * Framework depends only on canonical L1-L6 interfaces. It MUST NOT
  * depend on its own siblings in music-rules (Rule, Constraint,
- * Preference) or on music-theory's own Heuristic/Tendency/
- * StatisticalModel/StyleModel -- Framework is referenced BY those
- * types, never the reverse (Dependency & Layer Spec v2 §2, §3).
+ * Preference) or on music-theory's own StyleModel -- Framework is
+ * referenced BY that type, never the reverse (Dependency & Layer Spec v2 §2, §3).
  *
  * Framework also does not import music-interpretation: the L6
  * Interpretation<->Framework open issue (Dependency Spec §7.1)
@@ -34,13 +33,10 @@ typedef enum {
     FRAMEWORK_ERR_ALLOC
 } FrameworkResult;
 
-/* Takes ownership of id on success (destroyed by framework_destroy). name is copied, required, non-empty. */
+/* Takes ownership of id on success. name is copied, required, non-empty. */
 FrameworkResult framework_create(EntityID *id, const char *name, Framework **out);
-void framework_destroy(Framework *framework);
 
 const EntityID *framework_id(const Framework *framework);
 const char *framework_name(const Framework *framework);
-
-bool framework_identity_equals(const Framework *a, const Framework *b);
 
 #endif

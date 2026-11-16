@@ -54,9 +54,6 @@ typedef struct {
 /* True for the two modes above; false for any other value. */
 bool harmony_mode_valid(HarmonyMode mode);
 
-/* "major" "minor"; NULL for an invalid mode. */
-const char *harmony_mode_name(HarmonyMode mode);
-
 /* True for a degree from 1 to 7, an inversion from 0 to 3 (3 only for a seventh
    chord), a leading_tone that is false unless the degree is 7, and a cadential
    that is false unless the chord is the triad on degree 1 in second inversion, and a

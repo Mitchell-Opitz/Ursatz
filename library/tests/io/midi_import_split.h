@@ -36,4 +36,21 @@ static inline MidiImportResult test_midi_import_parts(const unsigned char *data,
     return MIDI_IMPORT_OK;
 }
 
+/*
+ * Test helper over midi_importer_import_complete: imports once, hands the caller the file's key signatures
+ * (destroy with midi_key_signature_events_destroy) and destroys the rest. On failure nothing is written.
+ */
+static inline MidiImportResult test_midi_import_key_signatures(const unsigned char *data, size_t size,
+                                                               MidiKeySignatureEvents *out_keys) {
+    MidiImport import;
+    MidiImportResult result = midi_importer_import_complete(data, size, &import);
+    if (result != MIDI_IMPORT_OK) {
+        return result;
+    }
+    *out_keys = import.key_signatures;
+    memset(&import.key_signatures, 0, sizeof(import.key_signatures));
+    midi_import_destroy(&import);
+    return MIDI_IMPORT_OK;
+}
+
 #endif

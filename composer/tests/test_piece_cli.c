@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The `piece` command, run as a process (docs/cli-piece.md, docs/piece-request.md): the loop version and the ending version
@@ -138,7 +139,7 @@ static long marker_tick(const char *path, const char *text) {
 static PiecePlan *load_plan(const char *path) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
 }
 

@@ -28,11 +28,8 @@ intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
 - A motif body whose `key` is not `C major` or `C minor` is 400 `motifs are
   written with C as the tonic`, checked before the Composer runs (re-analyze
   keeps an older motif's key).
-- `POST /api/materials/motifs/to-c` `{degrees, mode, meter, pickup?}` writes a
-  full motif's degrees as C notes: `composer_api_motive` with `input.format`
-  `degrees`, `key` `"C <mode>"`, `meter` and `pickup`, answering `{ok, notes_text}`.
-  `degrees` is 1 to 4000 characters; the Composer refuses a mode it does not know.
-- `POST /api/materials/motifs/import` answers the notes in C: `{notes_text,
+- `POST /api/materials/motifs/import` answers the notes in C (a motif found on another tonic moves its notes to C
+  through `composer_api_motive`, `input.format` `degrees`, `key` `"C <mode>"`): `{notes_text,
   meter, key: "C <mode>", moved_from: "D minor" | null, key_found, pickup,
   analysis}`. With no key found the notes are unchanged and the key is `C
   major`.
@@ -41,9 +38,6 @@ intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
   segments and they are stored as `features` with `segments_proposed` true (`analysis.analysis.segments.items`). Otherwise the
   features go to the Composer as given and `segments_proposed` is kept (false when absent). This holds for create, add
   version and re-analyze (which compares nothing: the notes are the same).
-- One-time migration `ursatz_gui_material_migrate_segments` (marker `materials/segments-migrated`, run in `server.c` after
-  the tones migration): every motif item, variants included, whose current version has no features gets a new version
-  noted `Segments proposed` with the proposal and `segments_proposed` true. Motifs with features are untouched.
 - `rhythm` and `contour` motifs are analyzed on save like full ones: `motif.analysis` holds the Composer's result and
   `motif.degrees` the rhythm or contour list. The stored `pickup` is passed to the Composer.
 

@@ -2,47 +2,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rule_check.h"
 #include "third_species_line_rules.h"
 #include "third_species_test_util.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-line", STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT);
-#define standard_counterpoint_third_species_line_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_third_species_line_constraint, standard_counterpoint_third_species_line_preference, standard_counterpoint_third_species_line_rule_holds, StandardCounterpointThirdSpeciesTonic, which, a, b)
 
 #define LINE_RULE(name) STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_##name
 
 /* Four quarter notes. */
 #define BAR(a, b, c, d) ATK(a), ATK(b), ATK(c), ATK(d)
 
-static bool is_hard(int rule) {
-    return rule == LINE_RULE(LEAPS) || rule == LINE_RULE(FINAL_STEP) || rule == LINE_RULE(RANGE) ||
-           rule == LINE_RULE(LEADING_TONE);
-}
-
 static bool holds(StandardCounterpointThirdSpeciesLineRule rule,
                   const StandardCounterpointThirdSpeciesExercise *exercise) {
     return standard_counterpoint_third_species_line_rule_holds(rule, exercise, P(D, 0, 4));
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_third_species_line_rule,
-                                    standard_counterpoint_third_species_line_constraint,
-                                    STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_third_species_line_constraint((StandardCounterpointThirdSpeciesLineRule)i));
-        assert(type == (is_hard(i) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_third_species_line_rule_name(LINE_RULE(LEAPS)), "leaps") == 0);
-    assert(strcmp(standard_counterpoint_third_species_line_rule_name(LINE_RULE(LEAP_PLACEMENT)), "leap-placement") ==
-           0);
-    assert(standard_counterpoint_third_species_line_rule_name(LINE_RULE(COUNT)) == NULL);
 }
 
 static void test_good_line(void) {
@@ -196,8 +166,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_line();
     test_leaps();
     test_cantus_firmus_rules_on_the_line();

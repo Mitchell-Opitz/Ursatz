@@ -10,16 +10,6 @@ static bool of(HarmonyChord a, HarmonyChord b, HarmonyDeceptiveKind *kind) {
     return harmony_deceptive_of(chords, kind);
 }
 
-static void test_kinds(void) {
-    assert(harmony_deceptive_kind_valid(HARMONY_DECEPTIVE_VI));
-    assert(harmony_deceptive_kind_valid(HARMONY_DECEPTIVE_IV6));
-    assert(!harmony_deceptive_kind_valid(HARMONY_DECEPTIVE_KIND_COUNT));
-    assert(!harmony_deceptive_kind_valid((HarmonyDeceptiveKind)-1));
-    assert(strcmp(harmony_deceptive_kind_name(HARMONY_DECEPTIVE_VI), "vi") == 0);
-    assert(strcmp(harmony_deceptive_kind_name(HARMONY_DECEPTIVE_IV6), "iv6") == 0);
-    assert(harmony_deceptive_kind_name(HARMONY_DECEPTIVE_KIND_COUNT) == NULL);
-}
-
 static void test_v_or_v7_to_vi(void) {
     HarmonyDeceptiveKind kind = HARMONY_DECEPTIVE_KIND_COUNT;
     assert(of(CH(5), CH(6), &kind) && kind == HARMONY_DECEPTIVE_VI);
@@ -57,7 +47,6 @@ static void test_invalid_subjects(void) {
 }
 
 int main(void) {
-    test_kinds();
     test_v_or_v7_to_vi();
     test_v_or_v7_to_iv6();
     test_other_pairs_are_not_deceptive();

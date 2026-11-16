@@ -149,9 +149,7 @@ typedef enum {
 
 const char *piece_result_name(PieceResult result);
 
-/* The material bars a piece of section_count sections holds: m0, then five bars a section. */
-size_t piece_material_bars(size_t section_count);
-/* The same for a motive that takes motive_bars bars: m0 takes them, and so does each of the five motives a section holds. */
+/* The material bars a piece of section_count sections holds, for a motive that takes motive_bars bars: m0 takes them, and so does each of the five motives a section holds. */
 size_t piece_material_bars_of(size_t section_count, size_t motive_bars);
 
 /*

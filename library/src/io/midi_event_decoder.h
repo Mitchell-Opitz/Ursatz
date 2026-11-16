@@ -22,10 +22,8 @@
  * A note-on with velocity 0 is treated as a note-off, per the MIDI
  * spec.
  *
- * Time signature meta-events (0xFF 0x58) are read separately, by
- * midi_event_decoder_collect_time_signatures below, and set-tempo meta-events (0xFF 0x51) by
- * midi_event_decoder_collect_tempos. midi_event_decoder_decode
- * still skips them, so its output and signature are unchanged.
+ * Time signature meta-events (0xFF 0x58), set-tempo meta-events (0xFF 0x51), program changes, track
+ * names and key signatures are read by the one pass midi_event_decoder_scan makes, below.
  */
 
 typedef enum {
@@ -49,19 +47,9 @@ typedef enum {
 } MidiEventDecoderResult;
 
 /*
- * Decodes track_data[0..track_size) into a newly allocated array of
- * *out_count MidiNoteEvent entries (caller frees with free()), in the
- * order encountered (which is tick order, since delta-times cannot be
- * negative).
- */
-MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data, size_t track_size,
-                                                  MidiNoteEvent **out_events, size_t *out_count);
-
-/*
  * Reads a MIDI variable-length quantity from data[*pos..size) (at most 4 bytes) and advances *pos past
  * it. Returns 0 on success, -1 if the bytes run out before a terminating byte (top bit clear) or the
- * quantity is longer than 4 bytes; *pos and *out are then untouched. Internal to the io module: the one
- * reader midi_event_decoder.c and midi_key_signature.c both use.
+ * quantity is longer than 4 bytes; *pos and *out are then untouched. Internal to the io module.
  */
 int midi_event_decoder_read_vlq(const unsigned char *data, size_t size, size_t *pos, uint32_t *out);
 
@@ -77,12 +65,11 @@ int midi_event_decoder_read_vlq(const unsigned char *data, size_t size, size_t *
  * byte order) wins and the tick is reported in conflict_ticks. The library does not print the
  * warning; the caller decides what to do with conflict_ticks.
  *
- * Malformed events are skipped, as midi_key_signature_scan_all skips its malformed events: a length
+ * Malformed events are skipped, as the key signature list skips its malformed events: a length
  * other than 4, nn outside 1..TIME_SIGNATURE_MAX_TOP_NUMBER, or dd above
  * TIME_SIGNATURE_MAX_BOTTOM_UNIT_EXPONENT (a bottom number the TimeSignature type cannot hold).
- * A track whose bytes are structurally malformed fails the collect with TRUNCATED, as
- * midi_event_decoder_decode does. An SMPTE division never reaches this function: smf_reader_parse
- * rejects it when the tracks are read. No time signature events is OK with zero events.
+ * A track whose bytes are structurally malformed fails the scan with TRUNCATED. An SMPTE division
+ * never reaches the scan: smf_reader_parse rejects it when the tracks are read. No time signature events is OK with zero events.
  */
 
 typedef struct {
@@ -97,10 +84,6 @@ typedef struct {
     uint64_t *conflict_ticks; /* owned; NULL when conflict_count is 0 */
     size_t conflict_count;
 } MidiTimeSignatureEvents;
-
-/* On OK, *out owns its events (midi_time_signature_events_destroy). Otherwise *out is untouched. */
-MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack *tracks, size_t track_count,
-                                                                    MidiTimeSignatureEvents *out);
 
 /* Destroys every event's TimeSignature, and the lists. NULL is a no-op. */
 void midi_time_signature_events_destroy(MidiTimeSignatureEvents *events);
@@ -119,9 +102,8 @@ void midi_time_signature_events_destroy(MidiTimeSignatureEvents *events);
  * event, even if the value repeats.
  *
  * Malformed events are skipped: a length other than 3, or a tempo of 0 (no quarter note can last no
- * time). A track whose bytes are structurally malformed fails with TRUNCATED, as
- * midi_event_decoder_decode does. An SMPTE division never reaches this function: smf_reader_parse
- * rejects it when the tracks are read. No set-tempo events is OK with zero events.
+ * time). A track whose bytes are structurally malformed fails the scan with TRUNCATED. An SMPTE division
+ * never reaches the scan: smf_reader_parse rejects it when the tracks are read. No set-tempo events is OK with zero events.
  */
 
 typedef struct {
@@ -137,22 +119,18 @@ typedef struct {
     size_t conflict_count;
 } MidiTempoEvents;
 
-/* On OK, *out owns its lists (midi_tempo_events_destroy). Otherwise *out is untouched. */
-MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks, size_t track_count,
-                                                          MidiTempoEvents *out);
-
 /* Destroys the lists. NULL is a no-op. */
 void midi_tempo_events_destroy(MidiTempoEvents *events);
 
 /*
  * One pass over every track (internal to the io module; the importer's complete import is built on
- * it). Each track is walked once and yields, together: its note events (as midi_event_decoder_decode),
+ * it). Each track is walked once and yields, together: its note events (note-on and note-off, a note-on of velocity 0 as a note-off),
  * its program changes (0xC0, with the tick and channel they happen at, in byte order), its name (the
  * first 0xFF 0x03 in the track; NULL if none) and the time signature and set-tempo events, merged
  * across tracks with the rules above. When keys is not NULL, every 0xFF 0x59 meta-event is also handed
  * to that collector (midi_key_signature.h), so the key signatures come from the same walk.
  *
- * A structurally malformed track fails with TRUNCATED, as for the other functions. On OK, *out owns
+ * A structurally malformed track fails with TRUNCATED. On OK, *out owns
  * everything (midi_file_scan_destroy); otherwise *out is untouched. keys is not destroyed here.
  */
 

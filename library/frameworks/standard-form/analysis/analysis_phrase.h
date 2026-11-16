@@ -23,8 +23,8 @@
  * REUSE OF THE KERNEL. The segmenter is the kernel's Phrase Boundary Detection (analysis/phrase_boundary_detection.h), not a
  * second one. A framework may not include kernel analysis, so the caller INJECTS it as a StandardFormBoundaryDetector: a
  * function that takes the points below and answers, for each, whether it is a boundary and by which signal. The bridge to the
- * kernel (the points as PhraseBoundaryDetectionPoints, the cadence label from cadence_type_label, the answer read from the
- * PhraseSegmentation Interpretations) is tests/integration/form_kernel_bridge.h.
+ * kernel (the points mapped onto PhraseBoundaryDetectionPoints, has_cadence and has_discontinuity, and the call to
+ * phrase_boundary_detect in src/analysis/phrase_boundary_detection.h) is the chain's form_bridge (chain_form_boundary_detect).
  *
  * THE POINTS. One per MEASURE that has a sounding soprano note, in order, so the kernel's default of 8 points without a
  * cadence is 8 measures (max_length_without_cadence). A point's event is the first soprano note sounding in the measure. A
@@ -148,9 +148,6 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
 StandardFormAnalysisStatus standard_form_segment_phrases_on_grid(const StandardFormInput *input, const StandardFormConfig *config,
                                                                  const StandardFormPhraseGrid *grid, StandardFormPhrases *out);
 void standard_form_phrases_destroy(StandardFormPhrases *phrases);
-
-/* Reads the claim back out of a phrase Interpretation. False if it is not one. */
-bool standard_form_phrase_claim_read(const Interpretation *interpretation, StandardFormPhraseClaim *out);
 
 /* True for a phrase-goal cadence in this adapter's reading: the framework's goals, and AUTHENTIC_UNSPECIFIED. */
 bool standard_form_cadence_ends_phrase(CadenceType type);

@@ -126,7 +126,7 @@ MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDo
 MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
 
-/* JSON building shared with the analysis document. The motive as an object (see motive_to_json); NULL on failure. */
+/* JSON building shared with the analysis document. The motive as an object; NULL on failure. */
 cJSON *motive_json_object(const Motive *motive);
 /* Prints document as the project's JSON text and deletes it. NULL on failure; caller frees the text. */
 char *motive_json_text(cJSON *document);

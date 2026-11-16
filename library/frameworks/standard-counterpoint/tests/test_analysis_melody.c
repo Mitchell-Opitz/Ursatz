@@ -3,6 +3,8 @@
 #include "analysis_melody.h"
 #include "core/framework_reference.h"
 #include "melody_test_util.h"
+#include "interpretation_test_access.h"
+#include "semantics_test_access.h"
 
 /* Melodic intervals and contour of one line: directions and sizes the adapter computes, rests that break the chain, the
    generic size from a spelling or a scale degree, and the contour summary of a span. */
@@ -52,10 +54,7 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     assert(strcmp(entity_id_value(interpretation_target_id(item->interpretation)),
                   entity_id_value(entity_id(structure_entity(item->shell)))) == 0);
     assert(interpretation_framework_reference(item->interpretation) != NULL);
-    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(item->interpretation)) == 750000UL); /* approximate (no spelling or degree): the default penalty applies */
-    StandardCounterpointMelodicIntervalClaim claim;
-    assert(standard_counterpoint_melodic_interval_claim_read(item->interpretation, &claim));
-    assert(claim.from == 0 && claim.to == 1 && claim.semitones == 7 && claim.leap == 1 && claim.step == 0);
+    assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(item->interpretation)) == 750000UL);
     standard_counterpoint_melodic_intervals_destroy(&intervals);
     test_melody_destroy(&m);
 }
@@ -187,8 +186,6 @@ static void test_spans_are_caller_supplied(void) {
     assert(summaries.items[0].claim.range_semitones == 7 && summaries.items[0].claim.highest_index == 3);
     assert(summaries.items[1].claim.up == 1 && summaries.items[1].claim.note_count == 2);
     assert(summaries.items[2].claim.note_count == 1 && summaries.items[2].claim.up + summaries.items[2].claim.down == 0);
-    StandardCounterpointContourSummaryClaim read;
-    assert(standard_counterpoint_contour_summary_claim_read(summaries.items[0].interpretation, &read) && read.up == 2);
     standard_counterpoint_contour_summaries_destroy(&summaries);
     const StandardCounterpointMelodySpan bad[] = {{"x", 3, 2}};
     assert(standard_counterpoint_melody_contour_summaries(&m.line, &intervals, bad, 1, &summaries) ==

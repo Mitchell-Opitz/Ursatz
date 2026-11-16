@@ -5,8 +5,8 @@ struct mg_context;
 
 /* Registers the Collections tool's routes ("/api/corpus", "/api/corpus/<id>",
  * "/api/corpus/<id>/pieces", "/api/corpus/<id>/pieces/<piece_id>") against
- * ctx, following the tool-registration convention described in
- * ursatz_gui/tool.h. The paths keep the name "corpus" (R-098).
+ * ctx, following the tool-registration convention in
+ * docs/architecture.md (Layers). The paths keep the name "corpus" (R-098).
  *
  * The collection store must already be initialized (see
  * ursatz_gui_collection_service_init in service/collection_service.h)

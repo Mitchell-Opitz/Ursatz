@@ -14,10 +14,9 @@
  * StyleModel built from corpus statistics and one read back agree.
  *
  * Statistics describe what a corpus's already-persisted interpretations say.
- * They are non-authoritative: a Tendency built from one (theory/tendency.h)
- * states how often something was seen, never that it is required or
- * forbidden, and nothing in this module produces or accepts a Rule or
- * Constraint.
+ * They are non-authoritative: one states how often something was seen,
+ * never that it is required or forbidden, and nothing in this module
+ * produces or accepts a Rule or Constraint.
  *
  * Value type STYLE_FEATURES_VALUE_TYPE; content is text, one statistic per
  * line, "category<TAB>label<TAB>count<TAB>total<NEWLINE>", sorted by category

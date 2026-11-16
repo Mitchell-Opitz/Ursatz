@@ -4,13 +4,6 @@
 
 #include "counterpoint_test_util.h"
 #include "first_species_independence_rules.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-independence", STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT);
-#define standard_counterpoint_first_species_independence_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_first_species_independence_constraint, standard_counterpoint_first_species_independence_preference, standard_counterpoint_first_species_independence_rule_holds, StandardCounterpointPairCantus, which, a, b)
 
 #define CANTUS_LOWER STANDARD_COUNTERPOINT_CANTUS_IN_LOWER
 #define CANTUS_UPPER STANDARD_COUNTERPOINT_CANTUS_IN_UPPER
@@ -24,29 +17,6 @@ static bool holds(StandardCounterpointFirstSpeciesIndependenceRule rule, const P
 }
 
 #define HOLDS(rule, upper, lower, part) holds(rule, upper, lower, sizeof(upper) / sizeof((upper)[0]), part)
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_first_species_independence_rule,
-                                    standard_counterpoint_first_species_independence_constraint,
-                                    STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT; i++) {
-        ConstraintType type = constraint_type(standard_counterpoint_first_species_independence_constraint(
-            (StandardCounterpointFirstSpeciesIndependenceRule)i));
-        bool hard = i == STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_SINGLE_REPEAT;
-        assert(type == (hard ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_first_species_independence_rule_name(
-                      STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_SINGLE_REPEAT),
-                  "single-repeat") == 0);
-    assert(strcmp(standard_counterpoint_first_species_independence_rule_name(
-                      STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_EMERGENCY_GAP),
-                  "emergency-gap") == 0);
-    assert(standard_counterpoint_first_species_independence_rule_name(
-               STANDARD_COUNTERPOINT_FIRST_SPECIES_INDEPENDENCE_COUNT) == NULL);
-}
 
 static void test_single_repeat(void) {
     const PitchSpelling *lower[] = {P(C, 0, 3), P(D, 0, 3), P(E, 0, 3), P(F, 0, 3)};
@@ -131,8 +101,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_single_repeat();
     test_no_repeat();
     test_no_overlap();

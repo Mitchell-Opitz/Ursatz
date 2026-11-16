@@ -33,14 +33,6 @@ static bool valid_rule(StandardCounterpointMelodicRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_melodic_rule(StandardCounterpointMelodicRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_melodic_constraint(StandardCounterpointMelodicRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
 const Preference *standard_counterpoint_melodic_preference(StandardCounterpointMelodicRule which) {
     return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }

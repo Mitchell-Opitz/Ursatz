@@ -5,9 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <generation/generation_record.h>
-
 #include <ursatz_composer/fill_loop.h>
+#include <ursatz_composer/generation_record.h>
 
 /*
  * The record of a fill run. It wraps Ursatz's GenerationRecord, which holds the

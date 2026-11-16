@@ -25,10 +25,6 @@
  * Deciding which type a pair of moves is takes pitch arithmetic, which
  * belongs to a Framework (frameworks/standard-counterpoint). This type
  * only names the result.
- *
- * MotionType is NOT VoiceLeadingMotion (analysis/voice_leading_analysis.h).
- * That enum is a caller-supplied observation of the four classic types
- * and has no STATIC case.
  */
 
 typedef enum {
@@ -39,13 +35,6 @@ typedef enum {
     MOTION_TYPE_STATIC,
     MOTION_TYPE_COUNT
 } MotionType;
-
-/* True for the five types above; false for any other value. */
-bool motion_type_valid(MotionType type);
-
-/* "contrary" "similar" "parallel" "oblique" "static"; NULL for an invalid
-   type. */
-const char *motion_type_name(MotionType type);
 
 /* True for SIMILAR and PARALLEL: both parts move the same way. False for
    every other type, and for an invalid type. */

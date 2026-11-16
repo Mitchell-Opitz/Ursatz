@@ -206,19 +206,6 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMo
 /* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
 bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);
 
-/*
- * Every cadence the recognizer hears over the harmony lane chords of span (read as harmony_read_lane does), the
- * soprano over chord i being soprano[i], a scale degree or 0 for none; count must be the number of chords. On true,
- * *out is the caller's (harmony_cadences_destroy), in order of arrival, its segment indices the chords'.
- *
- * section_starts (section_count of them, plan times inside span; NULL and 0 for none) are where the caller says a
- * section or phrase begins. Ursatz reads a V before such a start as a half cadence, with the authentic cadence into
- * the tonic as its competing reading; without one, a V to I6 is an evaded cadence (R-090, R-091).
- */
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, const int *soprano,
-                                size_t count, const Rational *section_starts, size_t section_count,
-                                HarmonyCadences *out);
-
 /* How many strong beats a bar of the meter has, which is where a chord may start. False for a meter not supported. */
 bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);
 /* The strength of the cell with this index in its bar: the first is strong, any other medium. */
@@ -286,12 +273,11 @@ PlanResult harmony_cells_span(Rational start, Rational cell_length, size_t first
 
 /* Fills out from the plan. False when the span is not one this operator applies to. */
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
-/* The same for the prolongation operator: a PROLONGATION shape, whole bars, a key, and no cadence asked for. */
-bool harmony_prolong_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
 /*
- * The same two for an operator registered to work around Given material (harmony_phrase_register_given): a Given bass
- * over the span does not refuse the span, it is read into the request with the Given melody and the Given chords at the
- * ends (harmony_given_read).
+ * The phrase reader for an operator registered to work around Given material (harmony_phrase_register_given): a Given
+ * bass over the span does not refuse the span, it is read into the request with the Given melody and the Given chords at
+ * the ends (harmony_given_read). The prolongation reader, harmony_prolong_read_request_given, does the same for a
+ * PROLONGATION shape, whole bars, a key, and no cadence asked for.
  */
 bool harmony_phrase_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
 bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
@@ -321,12 +307,10 @@ PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const F
                                      ReadRequestFn read_request);
 
 /*
- * Whether chords of the given lengths in cells, from cell 0, keep to the shape: none over max_cells_per_chord
- * (when set; the last chord is exempt when exempt_last) and, with split_at_bars, none across a barline.
+ * Whether chords of the given lengths in cells, from cell 0 of a metre, keep to the shape: none over max_cells_per_chord
+ * (when set; the last chord is exempt when exempt_last) and, with split_at_bars, none across a barline. The metre may
+ * start between barlines and have part cells at its ends.
  */
-bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, size_t count, size_t cells_per_bar,
-                         bool exempt_last);
-/* The same over the cells of a metre, which may start between barlines and have part cells at its ends. */
 bool harmony_shape_keeps_in(const PlanHarmonyShape *shape, const size_t *cells, size_t count, const PhraseMetre *metre,
                             bool exempt_last);
 
@@ -369,6 +353,8 @@ bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContex
 /* The segments the recognizer reads, one per chord of a phrase. */
 typedef struct SegmentSet SegmentSet;
 SegmentSet *harmony_segments_create(const HeardPhrase *phrase);
+/* The same with the soprano over each chord (a scale degree, 0 for none; NULL for none at all). */
+SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *soprano);
 const HarmonySegment *harmony_segments_get(const SegmentSet *set, size_t *count);
 void harmony_segments_destroy(SegmentSet *set);
 
@@ -468,9 +454,6 @@ void harmony_progression_destroy(void *payload);
  * (or what is left of a span after a skeleton) must have.
  */
 size_t harmony_phrase_room_cells(CadenceType cadence, size_t cells_per_bar);
-
-/* The verdict of the harmony-from-bass operator's checker on a candidate payload. */
-bool harmony_octave_check(const void *payload, FillCheck *out);
 
 /* The harmony under a bass span, as the bass operator reads it. */
 typedef struct {

@@ -28,7 +28,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/markings_pipeline.c
     pipeline/voice_leading_pipeline.c
     pipeline/voicing_check.c
-    pipeline/counterpoint_pipeline.c
     pipeline/schema_pipeline.c
     pipeline/analysis_report.c
     pipeline/chain.c
@@ -38,8 +37,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/staleness.c
     pipeline/playback.c
     pipeline/score_export.c
-    pipeline/markdown_report.c
-    pipeline/report_writer.c
     pipeline/path_util.c
     pipeline/analysis_document.c
     pipeline/corpus.c

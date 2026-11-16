@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/style.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * Style blending (style.h, docs/style.md): two style models blended with a weight per dimension.
@@ -51,7 +52,7 @@ __extension__ typedef unsigned __int128 Wide;
 
 static ComposerStyle *load(const char *path) {
     ComposerStyle *style = NULL;
-    assert(composer_style_load(path, &style) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(path, NULL, 0, &style) == COMPOSER_STYLE_OK);
     return style;
 }
 
@@ -238,7 +239,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
 
@@ -274,7 +275,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, cons
         free(json);
         for (int s = 0; s < 2; s++) {
             StyleComparison comparison;
-            assert(composer_style_measure(plan, measured[s], &comparison) == COMPOSER_MEASURE_OK);
+            assert(test_style_measure(plan, measured[s], &comparison) == COMPOSER_MEASURE_OK);
             run.harmony_to[s] = dimension_distance(&comparison, STYLE_DIMENSION_HARMONY);
             run.melody_to[s] = dimension_distance(&comparison, STYLE_DIMENSION_MELODY);
             style_comparison_destroy(&comparison);

@@ -6,7 +6,6 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "cJSON.h"
@@ -115,7 +114,6 @@ static void write_fixture(const char *path, const Note *notes, size_t count) {
 
 typedef struct {
     cJSON *document;
-    char *markdown;
 } Analyzed;
 
 static Analyzed analyze(const char *name, const Note *notes, size_t count) {
@@ -133,8 +131,8 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
     assert(built != NULL);
     char *json = analysis_document_to_json(built);
     assert(json != NULL);
-    Analyzed analyzed = {cJSON_Parse(json), markdown_report_render(built)};
-    assert(analyzed.document != NULL && analyzed.markdown != NULL);
+    Analyzed analyzed = {cJSON_Parse(json)};
+    assert(analyzed.document != NULL);
     free(json);
     analysis_document_destroy(built);
     analysis_report_destroy(&report);
@@ -145,7 +143,6 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
 
 static void analyzed_destroy(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
-    free(analyzed->markdown);
 }
 
 static const char *string(const cJSON *object, const char *key) {
@@ -180,7 +177,6 @@ static void test_inversion(void) {
     assert(strcmp(string(chord, "bass"), "E") == 0);
     assert(number(chord, "inversion") == 1);
     assert(number(test_json_require(test_json_require(chord, "duration"), "beats"), "num") == 4);
-    assert(strstr(analyzed.markdown, "| I | I6 (in C major) | tonic | - | C | major | E | first | 4 |") != NULL);
     analyzed_destroy(&analyzed);
 
     /* The same chord with the G lowest is in second inversion; with the C lowest, root position. */
@@ -193,7 +189,6 @@ static void test_inversion(void) {
     const Note root[] = {{0, 4 * BEAT, 48}, {0, 4 * BEAT, 52}, {0, 4 * BEAT, 55}};
     analyzed = analyze("root_position", root, 3);
     assert(number(chord_at(&analyzed, 0), "inversion") == 0);
-    assert(strstr(analyzed.markdown, "root position") != NULL);
     analyzed_destroy(&analyzed);
 }
 
@@ -217,9 +212,6 @@ static void test_runner_up(void) {
     assert(strcmp(string(runner_up, "root"), string(chord, "root")) != 0);
     assert(cJSON_IsNumber(test_json_require(runner_up, "score")));
     assert(test_json_require(runner_up, "score")->valuedouble <= test_json_require(chord, "score")->valuedouble + 1e-9);
-    /* The report shows the runner-up only when its score is within 0.10 of the best chord's. */
-    double margin = test_json_require(chord, "score")->valuedouble - test_json_require(runner_up, "score")->valuedouble;
-    assert((strstr(analyzed.markdown, ", score ") != NULL) == (margin < 0.10));
     analyzed_destroy(&analyzed);
 }
 
@@ -245,9 +237,6 @@ static void check_single_tone(const Analyzed *analyzed, const char *type, const 
     const cJSON *chord = chord_at(analyzed, number(tone, "chord_index"));
     assert(strcmp(string(chord, "label"), chord_label) == 0);
     assert(number(test_json_require(test_json_require(tone, "location"), "start"), "beat") == number(test_json_require(test_json_require(chord, "location"), "start"), "beat"));
-    char row[64];
-    snprintf(row, sizeof(row), " | %s | %s |\n", type, chord_label);
-    assert(strstr(analyzed->markdown, row) != NULL);
 }
 
 static void test_non_chord_tone_types(void) {
@@ -302,8 +291,6 @@ static void test_unclassified_tone_is_listed(void) {
     assert(cJSON_IsNull(test_json_require(tone, "type")));
     assert(cJSON_IsFalse(test_json_require(tone, "classified")));
     assert(strcmp(string(tone, "label"), "unclassified") == 0);
-    assert(strstr(analyzed.markdown, " | unclassified | I |\n") != NULL);
-    assert(strstr(analyzed.markdown, "1 the library left unclassified") != NULL);
     analyzed_destroy(&analyzed);
 }
 

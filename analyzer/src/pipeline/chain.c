@@ -194,15 +194,6 @@ static bool collect_non_chord_tones(AnalyzerPass *chain) {
     return true;
 }
 
-/* Asks the cancel callback; true (and pass->cancelled set) when it wants the run to stop. */
-static bool stop_requested(AnalyzerPass *pass) {
-    if (pass->options.cancel && pass->options.cancel(pass->options.cancel_context)) {
-        pass->cancelled = true;
-        return true;
-    }
-    return false;
-}
-
 /* The home key: the library's key with the longest total duration over its regions. */
 static bool collect_pass(AnalyzerPass *pass) {
     const Segmentation *segmentation = &pass->segmentation;
@@ -232,7 +223,7 @@ static bool collect_pass(AnalyzerPass *pass) {
         !collect_non_chord_tones(pass)) {
         return false;
     }
-    /* The Analyzer-only stages are switched by their bits; the cancel callback is asked before each. */
+    /* The Analyzer-only stages are switched by their bits. */
 #define STAGE_ON(bit) ((pass->options.stages & (bit)) != 0)
 #define RUN(call) \
     do {          \
@@ -243,9 +234,6 @@ static bool collect_pass(AnalyzerPass *pass) {
 #define RUN_STAGE(bit, call)       \
     do {                           \
         if (STAGE_ON(bit)) {       \
-            if (stop_requested(pass)) { \
-                return false;      \
-            }                      \
             RUN(call);             \
         }                          \
     } while (0)
@@ -285,9 +273,6 @@ bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const Ana
     if (notes->count == 0) {
         return true;
     }
-    if (stop_requested(pass)) {
-        return false;
-    }
     if (!chain_input_build(notes, &pass->input)) {
         return false;
     }
@@ -295,7 +280,6 @@ bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const Ana
     config.stages = pass->options.stages & ANALYSIS_CHAIN_STAGE_ALL;
     config.harmonic_spans = pass->options.harmonic_spans;
     config.refine_keys = true;
-    config.inject_kernel_owners = true;
     if (analysis_chain_run(&pass->input.set, pass->input.key_events, pass->input.key_event_count, &config,
                            &pass->library) != ANALYSIS_CHAIN_OK) {
         return false;

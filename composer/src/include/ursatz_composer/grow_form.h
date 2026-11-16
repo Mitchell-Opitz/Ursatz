@@ -13,7 +13,7 @@
  * The motive-forms of a grown theme's ideas (R-143, R-145). grow-theme gives each idea after the basic idea a motive
  * node m<slot> with the P13 motive_ref it was planned with; in the motives stage this operator asks the variant
  * registry for forms of the basic idea that suit the idea's place in the theme, and ranks them by how well they connect
- * (motive_connection):
+ * (motive_connection_limited):
  *
  *   repetition               the exact restatement, or a transposition; see grow.md for the dominant form
  *   consequent basic idea    the exact restatement
@@ -35,7 +35,7 @@
  * A pool of saved motive-forms (R-166) is offered first for every idea this operator makes, before the registry's forms:
  * a pool form is offered for an idea when it derives from the motive the idea is made from (slot_motive_of: the slot
  * whose motive the form was made from, basic for m0, and the section's own motive), its functions include the function of
- * the idea's slot (GrowSlot, grow_slot_function) and it fits as a registry form does (a full motive in range, no wider a
+ * the idea's slot (GrowSlot; the slot's function is in theme_shape.h) and it fits as a registry form does (a full motive in range, no wider a
  * leap, no longer than the idea's room, the cadence tone of an idea that ends in a cadence). It scores 1 plus the
  * connection plus 1/2 when approved, 1/4 when unflagged, so it outranks a registry form of the same connection and an
  * approved one an unflagged one. The candidate's label names it as "pool <item> <connection>%: <chain>".
@@ -47,7 +47,7 @@
 #define GROW_FUNCTION_CONTRAST 4u
 #define GROW_FUNCTION_CADENTIAL 8u
 
-/* The bit of the function a slot's ideas have (grow_slot_function). */
+/* The bit of the function a slot's ideas have (the slot's function in theme_shape.h). */
 unsigned grow_slot_function_bit(GrowSlot slot);
 
 /* A saved motive-form the motives stage may use (R-166). The strings are copies; the motive must outlive the run. */

@@ -367,7 +367,7 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
     }
     CHECK(report.section_count == piece->sections);
     CHECK(report.thematic_return_count == piece->returns);
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     cJSON *document = json ? cJSON_Parse(json) : NULL;
     free(json);
     CHECK(document != NULL);

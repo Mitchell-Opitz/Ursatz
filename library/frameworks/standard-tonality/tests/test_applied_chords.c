@@ -3,6 +3,7 @@
 #include "adapter_test_util.h"
 #include "applied_chords.h"
 #include "roman_numeral_adapter.h"
+#include "relationship_test_access.h"
 
 /* Applied chords: the diatonic reading is re-checked against V/x, V7/x, vii-diminished/x and the fully
    diminished seventh, and relabelled only when the chromatic evidence and the resolution are there. */
@@ -67,9 +68,6 @@ static void test_v_of_v_resolving_to_v_is_relabelled(void) {
 
     /* The resolution itself is the plain V and carries no link. */
     assert(strcmp(results[1].claim.label, "V") == 0 && results[1].resolves_to == NULL);
-
-    StandardTonalityRomanClaim claim;
-    assert(standard_tonality_roman_claim_read(results[0].interpretation, &claim) && claim.applied);
     standard_tonality_roman_results_destroy(results, 2);
 }
 

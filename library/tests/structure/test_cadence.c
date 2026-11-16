@@ -5,6 +5,7 @@
 #include "core/value.h"
 #include "identity/entity_id.h"
 #include "structure/cadence.h"
+#include "structure_test_access.h"
 
 /*
  * Structural/invariant tests only (construction, event-ref
@@ -25,7 +26,7 @@ int main(void) {
     EntityID *event_ids[2] = {dup_id("event-a"), dup_id("event-b")};
     Cadence *cadence;
     assert(cadence_create(dup_id("cadence-1"), event_ids, 2, NULL, &cadence) == CADENCE_OK);
-    assert(cadence_optional_harmonic_context(cadence) == NULL);
+    assert(cadence_event_id_count(cadence) == 2);
 
     /* Event refs are held without duplication. */
     assert(cadence_event_id_count(cadence) == 2);
@@ -45,18 +46,16 @@ int main(void) {
     Cadence *cadence_with_context;
     assert(cadence_create(dup_id("cadence-2"), other_event_ids, 1, harmonic_context, &cadence_with_context) ==
            CADENCE_OK);
-    assert(cadence_optional_harmonic_context(cadence_with_context) != NULL);
+    assert(cadence_event_id_count(cadence_with_context) == 1);
 
-    /* Identity equality: same id, regardless of instance. */
-    EntityID *other_event_ids_2[1] = {dup_id("event-d")};
-    Cadence *same_id_cadence;
-    assert(cadence_create(dup_id("cadence-1"), other_event_ids_2, 1, NULL, &same_id_cadence) == CADENCE_OK);
-    assert(cadence_identity_equals(cadence, same_id_cadence));
-    assert(!cadence_identity_equals(cadence, cadence_with_context));
+    /* Each cadence keeps its own id. */
+    EntityID *expected_id = dup_id("cadence-2");
+    assert(entity_id_equals(cadence_id(cadence_with_context), expected_id));
+    assert(!entity_id_equals(cadence_id(cadence), expected_id));
+    entity_id_destroy(expected_id);
 
     cadence_destroy(cadence);
     cadence_destroy(cadence_with_context);
-    cadence_destroy(same_id_cadence);
 
     printf("test_cadence: ok\n");
     return 0;

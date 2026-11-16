@@ -32,22 +32,6 @@ static bool valid_rule(StandardCounterpointFourthSpeciesWeakRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_fourth_species_weak_rule(StandardCounterpointFourthSpeciesWeakRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_fourth_species_weak_constraint(StandardCounterpointFourthSpeciesWeakRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_fourth_species_weak_preference(StandardCounterpointFourthSpeciesWeakRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_fourth_species_weak_rule_name(StandardCounterpointFourthSpeciesWeakRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
 /* The number of weak-beat bars: the first to the penultimate. */

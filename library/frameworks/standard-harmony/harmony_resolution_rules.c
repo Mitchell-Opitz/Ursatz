@@ -13,14 +13,6 @@ static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, con
 static const HarmonyRuleTable TABLE = {"resolution", NAMES,   HARMONY_RESOLUTION_RULE_COUNT,
                                        NULL,         g_pairs, g_built, evaluate_candidate};
 
-const Rule *harmony_resolution_rule(HarmonyResolutionRule which) {
-    return harmony_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *harmony_resolution_constraint(HarmonyResolutionRule which) {
-    return harmony_rule_table_constraint(&TABLE, (int)which);
-}
-
 const char *harmony_resolution_rule_name(HarmonyResolutionRule which) {
     return harmony_rule_table_name(&TABLE, (int)which);
 }

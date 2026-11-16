@@ -337,7 +337,8 @@ static void to_c_fail(ToCFailure *failure, int status, const char *message) {
 }
 
 /* Writes a full motif's degree list as C notes in mode ("major" or "minor"): the Composer reads the degrees in
-   "C <mode>" and answers analysis.notes_text. Returns the notes text (caller frees), or NULL with failure set. */
+   "C <mode>" and answers analysis.notes_text. Returns the notes text (caller frees), or NULL with failure set. The MIDI
+   import (handle_import_motif) moves a motif found on another tonic to C with it. */
 static char *degrees_to_c_notes(const char *degrees, const char *mode, const char *meter, const char *pickup,
                                 ToCFailure *failure) {
   size_t length = degrees ? strlen(degrees) : 0;
@@ -379,39 +380,6 @@ static char *degrees_to_c_notes(const char *degrees, const char *mode, const cha
   }
   ursatz_gui_composer_reply_destroy(&reply);
   return notes;
-}
-
-/* POST /api/materials/motifs/to-c {degrees, mode, meter, pickup?}: answers {"ok":true,"notes_text":...} and saves
-   nothing. Full motifs only; rhythm and contour lists hold no pitches. */
-static int handle_motifs_to_c(struct mg_connection *conn) {
-  int status = 0;
-  cJSON *body = read_json_body(conn, &status);
-  if (!body) {
-    return status;
-  }
-  bool bad = false;
-  const char *degrees = optional_string(body, "degrees", &bad);
-  const char *mode = optional_string(body, "mode", &bad);
-  const char *meter = optional_string(body, "meter", &bad);
-  const char *pickup = optional_string(body, "pickup", &bad);
-  if (bad) {
-    cJSON_Delete(body);
-    return send_failure(conn, 400, "degrees, mode, meter and pickup must be text");
-  }
-  ToCFailure failure = {0, ""};
-  char *notes = degrees_to_c_notes(degrees, mode, meter, pickup ? pickup : "0", &failure);
-  cJSON_Delete(body);
-  if (!notes) {
-    return send_failure_at(conn, failure.status, failure.message, failure.path);
-  }
-  cJSON *answer = cJSON_CreateObject();
-  if (!answer || !cJSON_AddBoolToObject(answer, "ok", 1) || !cJSON_AddStringToObject(answer, "notes_text", notes)) {
-    cJSON_Delete(answer);
-    free(notes);
-    return send_failure(conn, 500, "out of memory");
-  }
-  free(notes);
-  return ursatz_gui_send_object(conn, 200, answer);
 }
 
 /* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers
@@ -3273,9 +3241,6 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "random") == 0) {
     return strcmp(method, "POST") == 0 ? handle_random_motifs(conn) : send_method_not_allowed(conn);
-  }
-  if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "to-c") == 0) {
-    return strcmp(method, "POST") == 0 ? handle_motifs_to_c(conn) : send_method_not_allowed(conn);
   }
   if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "import") == 0) {
     return strcmp(method, "POST") == 0 ? handle_import_motif(conn) : send_method_not_allowed(conn);

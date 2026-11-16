@@ -5,7 +5,6 @@
 #include "core/rational.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
-#include "time/performance_time.h"
 #include "time/time_rational.h"
 
 static void test_musical_time_round_trip(void) {
@@ -31,28 +30,12 @@ static void test_negative_musical_time(void) {
     musical_time_destroy(back);
 }
 
-static void test_duration_round_trip_and_negative(void) {
+static void test_duration_reads(void) {
     Duration *d = NULL;
     assert(duration_create(5, 8, &d) == DURATION_OK);
     Rational r;
     assert(rational_of_duration(d, &r) == RATIONAL_OK && r.num == 5 && r.den == 8);
-    Duration *back = NULL;
-    assert(duration_from_rational(r, &back) == TIME_RATIONAL_OK && duration_equals(d, back));
     duration_destroy(d);
-    duration_destroy(back);
-
-    Duration *none = NULL;
-    Rational negative = {-1, 2};
-    assert(duration_from_rational(negative, &none) == TIME_RATIONAL_ERR_NEGATIVE);
-    assert(none == NULL);
-}
-
-static void test_performance_time_reads(void) {
-    PerformanceTime *p = NULL;
-    assert(performance_time_create(7, 2, &p) == PERFORMANCE_TIME_OK);
-    Rational r;
-    assert(rational_of_performance_time(p, &r) == RATIONAL_OK && r.num == 7 && r.den == 2);
-    performance_time_destroy(p);
 }
 
 static void test_does_not_fit(void) {
@@ -91,22 +74,8 @@ static void test_duration_arithmetic_overflow(void) {
     assert(duration_create(1, 1, &b) == DURATION_OK);
     assert(duration_add(a, b, &out) == DURATION_ERR_OVERFLOW);
     assert(out == NULL);
-    assert(duration_subtract(b, a, &out) == DURATION_ERR_NEGATIVE);
-    assert(out == NULL);
     duration_destroy(a);
     duration_destroy(b);
-}
-
-static void test_musical_time_subtract_overflow(void) {
-    MusicalTime *a = NULL;
-    MusicalTime *b = NULL;
-    assert(musical_time_create(1, LONG_MAX, &a) == MUSICAL_TIME_OK);
-    assert(musical_time_create(1, LONG_MAX - 1, &b) == MUSICAL_TIME_OK);
-    Duration *out = NULL;
-    assert(musical_time_subtract(a, b, &out) == DURATION_ERR_OVERFLOW);
-    assert(out == NULL);
-    musical_time_destroy(a);
-    musical_time_destroy(b);
 }
 
 static void test_exact_results_unchanged(void) {
@@ -125,12 +94,10 @@ static void test_exact_results_unchanged(void) {
 int main(void) {
     test_musical_time_round_trip();
     test_negative_musical_time();
-    test_duration_round_trip_and_negative();
-    test_performance_time_reads();
+    test_duration_reads();
     test_does_not_fit();
     test_musical_time_add_overflow();
     test_duration_arithmetic_overflow();
-    test_musical_time_subtract_overflow();
     test_exact_results_unchanged();
     return 0;
 }

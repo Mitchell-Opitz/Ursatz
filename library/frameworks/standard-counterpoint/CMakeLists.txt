@@ -43,15 +43,6 @@ add_library(standard_counterpoint
     fourth_species_ends_rules.c
     fourth_species_line_rules.c
     fourth_species_rules.c
-    fifth_species_exercise.c
-    fifth_species_pattern.c
-    fifth_species_figure.c
-    fifth_species_suspension_rules.c
-    fifth_species_rhythm_rules.c
-    fifth_species_harmony_rules.c
-    fifth_species_ends_rules.c
-    fifth_species_line_rules.c
-    fifth_species_rules.c
     analysis/analysis_grid.c
     analysis/analysis_claim.c
     analysis/analysis_motion.c
@@ -61,8 +52,6 @@ add_library(standard_counterpoint
     analysis/analysis_melody_climax.c
     analysis/analysis_melody_leaps.c
     analysis/analysis_melody_nct.c
-    counterpoint_species.c
-    imitation_answer.c
 )
 # Public headers (R-223), staged under standard-counterpoint/ in the build tree; the source directories are private.
 ursatz_public_headers(standard_counterpoint
@@ -85,8 +74,6 @@ ursatz_public_headers(standard_counterpoint
         counterpoint_pitch.h
         counterpoint_rules.h
         counterpoint_slots.h
-        fifth_species_exercise.h
-        fifth_species_rules.h
         first_species_ends_rules.h
         first_species_harmony_rules.h
         first_species_independence_rules.h
@@ -98,14 +85,12 @@ ursatz_public_headers(standard_counterpoint
         fourth_species_rules.h
         framework.h
         harmonic_rules.h
-        imitation_answer.h
         melodic_rules.h
         motion_type.h
         second_species_ends_rules.h
         second_species_exercise.h
         second_species_line_rules.h
         second_species_rules.h
-        slot_note.h
         tendency_rules.h
         third_species_ends_rules.h
         third_species_exercise.h

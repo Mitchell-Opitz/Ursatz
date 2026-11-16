@@ -3,6 +3,7 @@
 #include "analysis_ideas.h"
 #include "form_test_util.h"
 #include "idea_label.h"
+#include "interpretation_test_access.h"
 
 /* Ideas and subphrases of each phrase by standard-form's length conventions, labelled by similarity to the basic idea. */
 
@@ -71,8 +72,6 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     assert(strcmp(entity_id_value(interpretation_target_id(idea->interpretation)),
                   entity_id_value(entity_id(structure_entity(idea->shell)))) == 0);
     assert(interpretation_framework_reference(idea->interpretation) != NULL);
-    StandardFormIdeaClaim read;
-    assert(standard_form_idea_claim_read(idea->interpretation, &read) && read.index == 1 && read.phrase == 0);
     /* u = 1 - (1 - 0.1)(1 - 0.5 * (1 - margin)); the contrast has margin 1, so u is the phrase's */
     assert(fabs(idea->uncertainty - 0.1) < 1e-12);
     assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(idea->interpretation)) == 900000UL);

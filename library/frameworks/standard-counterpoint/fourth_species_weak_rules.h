@@ -4,9 +4,6 @@
 #include <stdbool.h>
 
 #include "fourth_species_exercise.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * Fourth-species weak-beat rules for standard-counterpoint-v1. The pattern of
@@ -50,15 +47,6 @@ typedef enum {
 } StandardCounterpointFourthSpeciesWeakRule;
 
 #define STANDARD_COUNTERPOINT_FOURTH_SPECIES_MAX_IMPERFECT_RUN 3
-
-const Rule *standard_counterpoint_fourth_species_weak_rule(StandardCounterpointFourthSpeciesWeakRule which);
-const Constraint *standard_counterpoint_fourth_species_weak_constraint(StandardCounterpointFourthSpeciesWeakRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_fourth_species_weak_preference(StandardCounterpointFourthSpeciesWeakRule which);
-
-/* "consonant" "no-repeated-perfect" "max-same-imperfect-run"
-   "no-direct-perfect" "no-interior-unison"; NULL for an invalid rule. */
-const char *standard_counterpoint_fourth_species_weak_rule_name(StandardCounterpointFourthSpeciesWeakRule which);
 
 /* True when the exercise satisfies the rule. False when it does not, and for an
    invalid exercise or an invalid rule. */

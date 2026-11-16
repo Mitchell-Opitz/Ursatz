@@ -3,14 +3,13 @@
 
 #include <stddef.h>
 
-#include "analysis/analyzer.h"
 #include "containers/section.h"
 #include "relationship/relationship.h"
 #include "semantics/cadence_type.h"
 #include "structure/phrase_occurrence.h"
 
 /*
- * FormStructureDetection (Procedure -> Analyzer implementation):
+ * FormStructureDetection (Procedure):
  * groups consecutive PhraseOccurrences into formal Sections (L4
  * containers/section.h) at the strongest, section-closing cadences, and
  * orders the identified Sections via a "precedes" Relationship chain --
@@ -32,77 +31,32 @@
  * work as internal phrase punctuation, not section-ending closure. An
  * ambiguous PAC/IAC call (AUTHENTIC_UNSPECIFIED) is deliberately NOT
  * promoted to structural: the same unknown-vs-low-confidence discipline
- * used throughout this codebase. PeriodDetection's cadence_type is the
- * same CadenceType (semantics/cadence_type.h).
+ * used throughout this codebase. cadence_type is a CadenceType
+ * (semantics/cadence_type.h).
  *
  * Boundary rule: a structural cadence at entries[i] (i.e. not the last
  * entry) closes a Section spanning entries since the previous boundary
  * (or the start) through i, inclusive. If NO entry (other than possibly
  * the last) carries a structural cadence, NO boundary is found and this
- * analyzer produces no output at all (requirement 4 -- no detected form
+ * procedure produces no output at all (requirement 4 -- no detected form
  * structure is a legitimate outcome, never forced). A trailing run of
  * entries after the last boundary that never reaches another structural
  * cadence is not turned into a Section of its own -- only spans that are
- * actually closed by a structural cadence become Sections, the same
- * discipline PeriodDetection/SentenceDetection apply to their own
- * pairs/chains (skip, don't guess).
+ * actually closed by a structural cadence become Sections (skip, don't
+ * guess).
  *
- * Linking mechanism: reuses PeriodDetection's exact pattern. Each
- * identified Section gets minted via section_create (id + phrase_ids =
+ * Linking mechanism: each identified Section gets minted via section_create (id + phrase_ids =
  * the underlying L4 Phrase ids of its member PhraseOccurrences, via
  * phrase_occurrence_phrase_id). Consecutive Sections (in input order)
  * are linked by one Relationship each (source = earlier Section id,
- * predicate "precedes", target = later Section id -- the identical
- * chronological semantics PeriodDetection already uses "precedes" for),
- * then one Interpretation targeting that Relationship's id, carrying a
- * FormStructureDetectionClaim with both Sections' ids and closing
- * cadence types.
+ * predicate "precedes", target = later Section id).
+ * No Interpretation is built for them.
  */
 
 typedef struct {
     const PhraseOccurrence *phrase_occurrence;
     CadenceType cadence_type; /* CADENCE_TYPE_UNKNOWN: no reliable cadence for this phrase */
 } FormStructureDetectionEntry;
-
-typedef struct {
-    const FormStructureDetectionEntry *entries;
-    size_t entry_count;
-} FormStructureDetectionInput;
-
-#define FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE 128
-
-typedef struct {
-    char earlier_section_id[FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE];
-    char later_section_id[FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE];
-    CadenceType earlier_section_closing_cadence_type;
-} FormStructureDetectionClaim;
-
-/*
- * Conforms to AnalyzerFn (analysis/analyzer.h): input MUST point to a
- * FormStructureDetectionInput; context and config are accepted per the
- * interface but unused. Every entry's phrase_occurrence MUST be
- * non-NULL. entry_count == 0, or an input with no structural cadence
- * among entries[0..entry_count-2], is valid and yields an empty
- * AnalysisResult (no Section boundary found -- requirement 4).
- *
- * On finding N >= 2 Sections (N - 1 >= 1 "precedes" links), produces
- * N - 1 Interpretations, one per consecutive Section pair, in
- * chronological order. AnalysisResult here holds only the
- * Interpretations (and their backing absent-provenance) -- neither the
- * Section nor Relationship objects themselves are owned by
- * AnalysisResult (it only ever holds Interpretation/Evidence, per
- * analysis/analyzer.h); callers wanting those objects use
- * form_structure_detection_build_sections /
- * form_structure_detection_build_relationships below instead/in
- * addition. Ids are deterministically derived from the same
- * PhraseOccurrence ids those calls use, so a caller running all three
- * against the same input gets matching ids without this call
- * constructing the Section/Relationship objects itself.
- */
-AnalyzerResult form_structure_detection_analyze(const void *input, const Context *context, const Value *config,
-                                                 AnalysisResult **out);
-
-extern const Analyzer FORM_STRUCTURE_DETECTION_ANALYZER;
 
 typedef enum {
     FORM_STRUCTURE_DETECTION_OK = 0,
@@ -114,7 +68,7 @@ typedef enum {
 /*
  * Builds the Section objects FormStructureDetection identifies, using
  * the identical boundary rule. entries/entry_count validation matches
- * form_structure_detection_analyze. No boundary found is valid and
+ * form_structure_detection_build_relationships. No boundary found is valid and
  * yields *out_sections = NULL, *out_section_count = 0.
  *
  * On success, *out_sections is a freshly allocated array (caller frees
@@ -136,11 +90,11 @@ typedef enum {
 } FormStructureDetectionRelationshipResult;
 
 /*
- * Builds the Relationship objects backing form_structure_detection_
- * analyze's Interpretations, using the identical boundary rule and the
- * identical Section ids form_structure_detection_build_sections mints.
+ * Builds the Relationship objects that link the identified Sections,
+ * using the identical boundary rule and the identical Section ids
+ * form_structure_detection_build_sections mints.
  * entries/entry_count validation matches form_structure_detection_
- * analyze. Fewer than 2 Sections found is valid and yields
+ * build_sections. Fewer than 2 Sections found is valid and yields
  * *out_relationships = NULL, *out_relationship_count = 0.
  *
  * On success, *out_relationships is a freshly allocated array (caller

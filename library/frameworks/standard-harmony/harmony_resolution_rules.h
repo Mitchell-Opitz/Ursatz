@@ -4,23 +4,19 @@
 #include <stdbool.h>
 
 #include "harmony_chord.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 
 /*
  * Resolution of one voice for standard-harmony-v1: where a voice goes from a chord to the next, for the two notes whose
- * tendencies are fixed. These rules extend the V7 resolution rules (harmony_seventh_rules.h), which cover a root-position V7
- * to a root-position I in four voices, to ONE VOICE of ANY chord with a seventh and to the leading tone of V, V7, vii-diminished
- * and its seventh chord, in any inversion, to a tonic in any number of voices. They keep the same tendencies:
+ * tendencies are fixed. These rules cover ONE VOICE of ANY chord with a seventh and the leading tone of V, V7, vii-diminished
+ * and its seventh chord, in any inversion, to a tonic in any number of voices:
  *
  *   SEVENTH_RESOLVES_DOWN   the voice that sounds the chord's seventh goes down by a diatonic step in the next chord (fa to
  *                           mi in V7). Holding it, repeating it, leaping, or going up breaks it; so does passing it to
- *                           another voice, which this rule sees as the voice leaving the seventh. The rules of
- *                           harmony_seventh_rules.h allow no suspension, hold or transfer either
+ *                           another voice, which this rule sees as the voice leaving the seventh
  *   LEADING_TONE_RESOLVES   the voice on the leading tone (degree 7) of V, V7, vii-diminished or its seventh chord, when the
  *                           next chord is a tonic (degree 1): in an OUTER voice (the top or the bottom one) it goes up a
  *                           step to the tonic; in an INNER voice it goes up a step or, in a complete V7 only, down a third
- *                           to sol (the leading-tone drop of harmony_seventh_rules.h: sol is the closest note it can go to
+ *                           to sol (the leading-tone drop: sol is the closest note it can go to
  *                           without making parallels). In minor the vii-diminished and the V are on the raised seventh
  *
  * Both are hard. A rule that does not apply to the subject (the voice is not the seventh, or not the leading tone, or the
@@ -50,9 +46,6 @@ typedef enum {
 
 /* True for a valid mode and two valid chords. */
 bool harmony_resolution_valid(const HarmonyVoiceResolution *resolution);
-
-const Rule *harmony_resolution_rule(HarmonyResolutionRule which);
-const Constraint *harmony_resolution_constraint(HarmonyResolutionRule which);
 
 /* "seventh-resolves-down" "leading-tone-resolves"; NULL for an invalid rule. */
 const char *harmony_resolution_rule_name(HarmonyResolutionRule which);

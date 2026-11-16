@@ -6,8 +6,8 @@
 
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
-#include "triad_identification.h"
 #include "weighted_chord_identification.h"
+#include "interpretation_test_access.h"
 
 /*
  * Weighted chord identification result tests: the best and runner-up chord, both scores, the uncertainty
@@ -329,14 +329,6 @@ static void test_an_arpeggio_inside_one_beat_is_one_chord(void) {
     common_practice_weighted_results_destroy(&results);
 }
 
-static void test_the_existing_subset_match_functions_are_unchanged(void) {
-    /* The weighted path sits beside them: the degrees {1, 3, 5, 6} still resolve to the first match, I. */
-    int degrees[4] = {1, 3, 5, 6};
-    CommonPracticeTriad triad;
-    assert(common_practice_identify_triad(degrees, 4, &triad));
-    assert(triad == COMMON_PRACTICE_TRIAD_I);
-}
-
 static bool same_ranked(const CommonPracticeRankedChord *a, const CommonPracticeRankedChord *b) {
     return a->degree == b->degree && a->is_seventh == b->is_seventh && a->triad == b->triad &&
            a->seventh == b->seventh && a->root_pitch_class == b->root_pitch_class && a->score == b->score &&
@@ -638,7 +630,6 @@ int main(void) {
     test_an_incomplete_first_segment_takes_the_next_chord();
     test_a_root_in_the_bass_keeps_its_own_reading();
     test_an_arpeggio_inside_one_beat_is_one_chord();
-    test_the_existing_subset_match_functions_are_unchanged();
     test_an_applied_dominant_seventh_is_ranked_when_asked();
     test_clementi_m6_beat_4_reads_as_vii_dim_of_v();
     test_a_chromatic_neighbour_does_not_make_an_applied_chord();

@@ -61,7 +61,7 @@ The melody stage's checker is `grow_fidelity_checker` (`src/grow/grow_fidelity.c
 - a score under the role's **minimum** is a hard violation (unless the ref makes the idea differ from its source, below), with the reason `motive fidelity n/d under n/d (role)`;
 - otherwise the score becomes `((agree * 100 + floor(100 * fidelity)) * (total + 1) + held) / (201 * (total + 1))`, where `held/total` is the inner score: agreement ranks first, then the fidelity in hundredths, then the melody rules' share. `held/total` is taken in lowest terms, and a style's part of the score stays a part of it (scaled as `held` is).
 
-Ideas with no motive ref or no role are not scored. The minimums are the table at the top of `grow_fidelity.c` (`grow_fidelity_minimum(development, role)`):
+Ideas with no motive ref or no role are not scored. The minimums are the table at the top of `grow_fidelity.c` (`grow_fidelity_minimum_in(NULL, development, role)`):
 
 | Role | `balanced` | `melody` | `theme` |
 |---|---|---|---|

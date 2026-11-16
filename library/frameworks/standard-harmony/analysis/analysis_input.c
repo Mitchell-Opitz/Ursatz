@@ -124,21 +124,6 @@ void harmony_analysis_destroy(HarmonySegment *segments) {
     free(segments);
 }
 
-bool harmony_mode_of_analysis_key(const AnalysisKey *key, HarmonyMode *out) {
-    if (key == NULL || out == NULL) {
-        return false;
-    }
-    if (key->mode == KEY_STRUCTURE_MODE_MAJOR) {
-        *out = HARMONY_MODE_MAJOR;
-        return true;
-    }
-    if (key->mode == KEY_STRUCTURE_MODE_MINOR) {
-        *out = HARMONY_MODE_MINOR;
-        return true;
-    }
-    return false;
-}
-
 bool harmony_segment_input_set_segment(HarmonySegmentInput *input, const AnalysisSegment *segment) {
     if (input == NULL || segment == NULL) {
         return false;

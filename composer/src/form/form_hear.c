@@ -171,34 +171,6 @@ FormHearResult form_hear_in(ComposerHearing *hearing, const PiecePlan *plan, Pla
     return status;
 }
 
-FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {
-    return form_hear_with_sections(plan, span, NULL, 0, out);
-}
-
-/*
- * The Analyzer's hearing takes no section starts (AnalyzerHearingOptions holds only the stages, not
- * refine_with_given_boundaries), so the starts are not passed on: this is form_hear.
- */
-FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const Rational *section_starts,
-                                       size_t section_count, FormHeard *out) {
-    (void)section_starts;
-    (void)section_count;
-    if (!out) {
-        return FORM_HEAR_ERR_NULL;
-    }
-    memset(out, 0, sizeof(*out));
-    if (!plan) {
-        return FORM_HEAR_ERR_NULL;
-    }
-    ComposerHearing *hearing = NULL;
-    FormHearResult status = result_of(hearing_create(plan, &hearing));
-    if (status == FORM_HEAR_OK) {
-        status = form_hear_in(hearing, plan, span, out);
-    }
-    hearing_destroy(hearing);
-    return status;
-}
-
 /* The key regions the Analyzer heard over the span, with where each starts. */
 static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out, size_t *count) {
     const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(analyzer_result_chain(result));

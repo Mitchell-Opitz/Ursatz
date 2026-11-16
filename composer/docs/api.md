@@ -41,8 +41,7 @@ Every entry returns a `ComposerStatus`. The CLI maps it to its exit code.
 | `COMPOSER_ERR_INTERNAL` | a failure that is not the request's | 1 |
 
 `COMPOSER_ERR_ALLOC` and `COMPOSER_ERR_INTERNAL` are 1 unless a command did otherwise before. A failure to write a file is
-the CLI's own (the API writes none) and stays 3 where it was 3 (`export` has always given 1). `composer_status_name`
-gives `"ok"`, `"request"`, `"unsatisfiable"`, `"cancelled"`, `"alloc"` and `"internal"`.
+the CLI's own (the API writes none) and stays 3 where it was 3 (`export` has always given 1). The statuses are the numbers 0 (`COMPOSER_OK`) to 5 (`COMPOSER_ERR_INTERNAL`); the library has no function that names one.
 
 On any failure `ComposerResponse.error` holds `message` and `path`, the JSON Pointer of the request member at fault
 (`"/tempo"`, `"/plan/form/children/1"`), or `""` when no member is at fault. Nothing else is set.
@@ -182,7 +181,7 @@ int main(void) {
     ComposerResponse response;
     ComposerStatus status = composer_api_theme(request, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "%s: %s (at '%s')\n", composer_status_name(status), response.error.message, response.error.path);
+        fprintf(stderr, "status %d: %s (at '%s')\n", (int)status, response.error.message, response.error.path);
         composer_response_destroy(&response);
         return 1;
     }

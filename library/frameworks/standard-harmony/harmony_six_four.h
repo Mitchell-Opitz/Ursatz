@@ -14,7 +14,7 @@
  * fourth above and the third a sixth above. The fourth is a dissonance with the bass, so
  * composers treat these chords in special ways, and in analysis the Roman numeral is not
  * a sufficient label: the kind (SixFourType, six_four_type.h) is part of it.
- * Besides the cadential 6/4 (harmony_cadential_rules.h), three more are labeled:
+ * Besides the cadential 6/4, three more are labeled:
  *
  *   PASSING   built on a passing tone in the bass: three notes in stepwise motion, the
  *             first and last belonging to the same functional area (tonic or

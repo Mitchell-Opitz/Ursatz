@@ -32,7 +32,5 @@ long duration_numerator(const Duration *duration);
 unsigned long duration_denominator(const Duration *duration);
 
 DurationResult duration_add(const Duration *a, const Duration *b, Duration **out);
-/* Fails with DURATION_ERR_NEGATIVE if a - b would be negative. */
-DurationResult duration_subtract(const Duration *a, const Duration *b, Duration **out);
 
 #endif

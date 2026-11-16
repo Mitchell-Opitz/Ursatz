@@ -1,26 +1,28 @@
 #include "server.h"
 
 #include <civetweb.h>
+#include <stdio.h>
 
 #include "routes/analyzer.h"
 #include "routes/composer.h"
 #include "routes/corpus.h"
-#include "routes/health.h"
 #include "routes/jobs.h"
 #include "routes/links.h"
 #include "routes/materials.h"
 #include "routes/styles.h"
 #include "service/collection_service.h"
+#include "service/data_check.h"
 #include "service/job_queue.h"
 #include "service/link_service.h"
 #include "service/material_service.h"
 #include "service/subject_service.h"
 
+/* The data folder: every store path below is relative, so it is the backend's working directory. */
+static const char *kDataDir = ".";
 static const char *kCollectionsDir = "collections";
 static const char *kMaterialsDir = "materials";
 static const char *kSubjectsDir = "subjects";
 static const char *kLinksDir = "links";
-static const char *kLegacyCorpusDbPath = "data/corpus.db";
 
 struct mg_context *ursatz_gui_server_start(const char *listen_port,
                                             const char *frontend_dir) {
@@ -31,9 +33,17 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
       NULL,
   };
 
+  /* A data folder the one-time migrations of the GUI before the overhaul never ran on is refused (service/data_check.h),
+   * before any store is opened. */
+  char data_message[2048];
+  if (!ursatz_gui_data_check(kDataDir, data_message, sizeof(data_message))) {
+    fprintf(stderr, "ursatz-gui-backend: %s\n", data_message);
+    return NULL;
+  }
+
   /* Collections are files under collections/ (see
    * service/collection_service.h); the store is prepared once here. */
-  if (!ursatz_gui_collection_service_init(kCollectionsDir, kLegacyCorpusDbPath)) {
+  if (!ursatz_gui_collection_service_init(kCollectionsDir)) {
     return NULL;
   }
 
@@ -66,15 +76,6 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
     return NULL;
   }
 
-  /* Motifs analyzed before tone labels existed are analyzed again, once (R-204). */
-  ursatz_gui_material_migrate_tones(kMaterialsDir);
-
-  /* Motifs without segments are given a proposal, once (R-312). */
-  ursatz_gui_material_migrate_segments(kMaterialsDir);
-
-  /* Themes of the old body are deleted, once (R-205). */
-  ursatz_gui_material_clear_themes(kMaterialsDir);
-
   struct mg_context *ctx = mg_start(NULL, NULL, options);
   if (!ctx) {
     ursatz_gui_jobs_stop();
@@ -87,7 +88,6 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
 
   /* Route registration: each tool module registers itself here. This is
    * the only place that wires tool routes into the running server. */
-  ursatz_gui_health_register(ctx);
   ursatz_gui_analyzer_register(ctx);
   ursatz_gui_corpus_register(ctx);
   ursatz_gui_composer_register(ctx);

@@ -38,9 +38,6 @@ typedef enum {
 /* True for the two placements above; false for any other value. */
 bool harmony_plagal_placement_valid(HarmonyPlagalPlacement placement);
 
-/* "after-cadence" "phrase-beginning"; NULL for an invalid placement. */
-const char *harmony_plagal_placement_name(HarmonyPlagalPlacement placement);
-
 /* True when the two chords are plagal motion in that placement: IV (a triad, root
    position) then I (a triad, root position, or first inversion at a phrase beginning).
    False for any other pair, for a chord marked cadential or an invalid one, for an

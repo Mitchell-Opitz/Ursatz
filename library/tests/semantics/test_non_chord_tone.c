@@ -26,39 +26,9 @@ static void test_names(void) {
     assert(non_chord_tone_name(NON_CHORD_TONE_COUNT) == NULL);
 }
 
-static void test_involves_leap(void) {
-    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_PASSING));
-    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_NEIGHBOR));
-    assert(non_chord_tone_involves_leap(NON_CHORD_TONE_DOUBLE_NEIGHBOR));
-    assert(non_chord_tone_involves_leap(NON_CHORD_TONE_CHANGING_TONE));
-    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_SUSPENSION));
-    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_ANTICIPATION));
-    assert(non_chord_tone_involves_leap(NON_CHORD_TONE_APPOGGIATURA));
-    assert(non_chord_tone_involves_leap(NON_CHORD_TONE_ESCAPE_TONE));
-    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_RETARDATION));
-    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_PEDAL));
-    assert(!non_chord_tone_involves_leap(NON_CHORD_TONE_COUNT));
-}
-
-static void test_involves_static_note(void) {
-    assert(!non_chord_tone_involves_static_note(NON_CHORD_TONE_PASSING));
-    assert(!non_chord_tone_involves_static_note(NON_CHORD_TONE_NEIGHBOR));
-    assert(!non_chord_tone_involves_static_note(NON_CHORD_TONE_DOUBLE_NEIGHBOR));
-    assert(!non_chord_tone_involves_static_note(NON_CHORD_TONE_CHANGING_TONE));
-    assert(non_chord_tone_involves_static_note(NON_CHORD_TONE_SUSPENSION));
-    assert(non_chord_tone_involves_static_note(NON_CHORD_TONE_ANTICIPATION));
-    assert(!non_chord_tone_involves_static_note(NON_CHORD_TONE_APPOGGIATURA));
-    assert(!non_chord_tone_involves_static_note(NON_CHORD_TONE_ESCAPE_TONE));
-    assert(non_chord_tone_involves_static_note(NON_CHORD_TONE_RETARDATION));
-    assert(non_chord_tone_involves_static_note(NON_CHORD_TONE_PEDAL));
-    assert(!non_chord_tone_involves_static_note(NON_CHORD_TONE_COUNT));
-}
-
 int main(void) {
     test_validity();
     test_names();
-    test_involves_leap();
-    test_involves_static_note();
     printf("test_non_chord_tone: ok\n");
     return 0;
 }

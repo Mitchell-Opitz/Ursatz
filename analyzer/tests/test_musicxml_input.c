@@ -43,7 +43,7 @@ static cJSON *analyze(const char *path, ImportedNotes *notes_out) {
     assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
     analysis_report_destroy(&report);
     if (notes_out) {
@@ -80,8 +80,6 @@ static void test_format_names(void) {
     assert(input_format_parse("musicxml", &format) && format == INPUT_FORMAT_MUSICXML);
     assert(!input_format_parse("mxl", &format) && format == INPUT_FORMAT_MUSICXML);
     assert(!input_format_parse("", &format));
-    assert(strcmp(input_format_name(INPUT_FORMAT_MIDI), "midi") == 0);
-    assert(strcmp(input_format_name(INPUT_FORMAT_MUSICXML), "musicxml") == 0);
 }
 
 static void test_format_detection(void) {
@@ -119,7 +117,7 @@ static void test_notated_metadata_and_pickup(void) {
     imported_notes_destroy(&notes);
 
     const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
-    assert(number(document, "schema_version") == 11);
+    assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
     assert(strcmp(string(input, "format"), "musicxml") == 0);
     assert(strcmp(string(input, "source_type"), "score") == 0);
     assert(strcmp(string(input, "meter"), "notated") == 0);

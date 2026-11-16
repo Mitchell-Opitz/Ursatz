@@ -9,6 +9,7 @@
 #include "internal_expansion_technique.h"
 #include "phrase_length_change.h"
 #include "phrase_level_form.h"
+#include "interpretation_test_access.h"
 
 /* Expansion and contraction from the theme's own balance (an ending as long as its beginning), the internal technique evidence,
    and the external expansion of a phrase's extension. */
@@ -76,8 +77,6 @@ static void test_a_ten_measure_sentence_is_expanded_by_two(void) {
     assert(interpretation_framework_reference(e->interpretation) != NULL);
     assert(structure_event_id_count(e->shell) == 24);
     assert(fabs(e->uncertainty - r.themes.items[0].uncertainty) < 1e-12);
-    StandardFormExpansionClaim read;
-    assert(standard_form_expansion_claim_read(e->interpretation, &read) && read.measures_changed == 2);
     finish(&r);
 }
 
@@ -90,9 +89,6 @@ static void test_a_repeated_ending_idea_is_a_repetition(void) {
     form_cadence(&r.f, "pac10", 10, 0, 4, PAC, 3, false, 0.1);
     run(&r);
     assert(r.expansions.count == 1);
-    unsigned bit = standard_form_internal_technique_bit(INTERNAL_EXPANSION_TECHNIQUE_REPETITION);
-    assert(((unsigned)r.expansions.items[0].claim.techniques & bit) != 0 &&
-           !standard_form_internal_expansion_is_combined((unsigned)r.expansions.items[0].claim.techniques));
     finish(&r);
 }
 

@@ -98,24 +98,24 @@
  * voice leading, melody and schemas run over the segments that START before the end of last_measure (last_measure 0: all); the form,
  * meter and motive stages read the notes and segments of the measures first_measure to last_measure.
  *
- * PHRASES FIRST. With phrase_grid (default on; R-389 to R-391) the final pass of the form stage, the second pass of the key refinement
- * (the only pass when there is none), finds the phrases first: the grid of units of 4, 8 or 16 measures is read from the soprano and the
- * cadences found, the cadences are claimed at the grid's points (R-390), and phrases and themes are segmented on the grid (R-391). The
- * first pass of the refinement keeps the cadence-ended phrases, so the key regions do not move. Off, every pass runs as before.
+ * PHRASES FIRST (R-389 to R-391). The final pass of the form stage, the second pass of the key refinement (the only pass when there is
+ * none), finds the phrases first: the grid of units of 4, 8 or 16 measures is read from the soprano and the cadences found, the cadences
+ * are claimed at the grid's points (R-390), and phrases and themes are segmented on the grid (R-391). The first pass of the refinement
+ * keeps the cadence-ended phrases, so the key regions do not move.
  *
- * KEYS FROM PHRASES (R-397, R-398; keys_from_phrases, default on). After the second pass a third reads the keys again, now placed on the
- * phrases of the grid the second pass found: a key changes only when a phrase establishes the new key, the cadences the second pass claimed
- * are the evidence, and exact repeats read the same. Everything from the keys on runs once more on that answer. It runs only with the form
- * stage, refine_keys and phrase_grid, and only when the second pass found a grid. Off, the chain is as it was before it.
+ * KEYS FROM PHRASES (R-397, R-398). After the second pass a third reads the keys again, now placed on the phrases of the grid the second
+ * pass found: a key changes only when a phrase establishes the new key, the cadences the second pass claimed are the evidence, and exact
+ * repeats read the same. Everything from the keys on runs once more on that answer. It runs only with the form stage and refine_keys, and
+ * only when the second pass found a grid.
  *
  * refine_with_given_boundaries: with no form stage there are no phrases to bound the second key pass; when set (and refine_keys is on) the
  * second pass runs anyway, on the first pass's chords as evidence and key_regions.phrase_boundaries as the boundaries (possibly none), as a
  * caller that finds its own phrase ends does (the accuracy harness). The boundaries are borrowed and must outlive the run. Default off.
  *
- * inject_kernel_owners (default true): the chain hands the kernel owners to the frameworks (ursatz_chain/kernel_owners.h): motive_tone_roles
- * labels the leftover tones of the weighted chord identifier and the notes of the melody stage, and motive_variant_recognize decides the
- * transposed, inverted and retrograde occurrences of the motive stage. Off: the frameworks' own fallback rules, as before R-243. A
- * classifier or matcher the caller already set in weighting or form is kept.
+ * KERNEL OWNERS. The chain hands the kernel owners to the frameworks (ursatz_chain/kernel_owners.h): motive_tone_roles labels the
+ * leftover tones of the weighted chord identifier and the notes of the melody stage. A classifier the caller already set in weighting is
+ * kept. The motive stage always gets motive_variant_recognize as its relation matcher (it decides the transposed, inverted and retrograde
+ * occurrences), unless the caller already set form.relation_match.
  *
  * home_key_index: the home key as a key index 0..23 (key_regions.h), or -1 for the key of the first key region. It is the key of the
  * boundary cadences, the motive degrees, the melody degrees and the schema key degrees.
@@ -125,10 +125,9 @@
  * the bass its span was read over; the chords then require that bass as a chord tone and the Roman numerals take it as the inversion's
  * bass. Off: one chord per segment as before. It is the switch for measuring the change.
  *
- * applied_chords (default true): the chain reads applied chords (R-380). The chord identification also ranks the key's applied chords
- * (V/x, V7/x, vii°/x, vii°7/x) and the Roman numerals name an identified applied chord directly, with the diatonic re-check as an applied
- * chord off. The grouping, the key segments and the key regions do not see it. Off: diatonic chords only and the re-check, as before. It
- * is the switch for measuring the change; it applies with harmonic_spans on or off.
+ * APPLIED CHORDS (R-380). The chord identification also ranks the key's applied chords (V/x, V7/x, vii°/x, vii°7/x) and the Roman
+ * numerals name an identified applied chord directly, with no diatonic re-check. The grouping, the key segments and the key regions do not
+ * see it. It applies with harmonic_spans on or off.
  */
 typedef struct {
     unsigned stages;
@@ -144,16 +143,12 @@ typedef struct {
     StandardCounterpointMelodyConfig melody;
     GalantMatchConfig schemas;
     ScaleDetectConfig sequences;
-    bool refine_keys;
-    bool refine_with_given_boundaries;
-    bool phrase_grid;
-    bool keys_from_phrases;
-    int first_measure;
-    int last_measure;
-    int home_key_index;
-    bool inject_kernel_owners;
+    bool refine_keys;                  /* test and harness hook */
+    bool refine_with_given_boundaries; /* test and harness hook */
+    int first_measure;                 /* test and harness hook */
+    int last_measure;                  /* test and harness hook */
+    int home_key_index;                /* test and harness hook */
     bool harmonic_spans;
-    bool applied_chords;
 } AnalysisChainConfig;
 
 AnalysisChainConfig analysis_chain_config_default(void);
@@ -177,9 +172,6 @@ typedef enum {
     ANALYSIS_CHAIN_ERR_SCHEMAS,
     ANALYSIS_CHAIN_ERR_ALLOC
 } AnalysisChainStatus;
-
-/* The name of a status, e.g. "keys"; "ok" for ANALYSIS_CHAIN_OK. */
-const char *analysis_chain_status_name(AnalysisChainStatus status);
 
 typedef struct AnalysisChain AnalysisChain;
 
@@ -212,12 +204,8 @@ const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *
 /* The segmentation the outer lines are read on (one segment per melody note), and the lines (one entry per such segment): the melody and meter stages read them (R-377). */
 const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain);
 const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain);
-/* The same lines on the chord segments: one entry per segment of analysis_chain_segments, as the harmony, galant and form builders read them (the form input moves to the voice lines in P41, R-377). */
-const OuterVoiceLines *analysis_chain_segment_outer_voices(const AnalysisChain *chain);
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain);
 /* The stage inputs the chain builds and reads, kept until analysis_chain_destroy. NULL when the chain is NULL or the stage did not run. */
-/* The pitches of every note (outer voices, texture and voice leading). */
-const ChainPitches *analysis_chain_pitches(const AnalysisChain *chain);
 /* The harmony inputs of the final pass, one per chord segment. */
 const ChainHarmonyInputs *analysis_chain_harmony_inputs(const AnalysisChain *chain);
 /* The prepared harmony segments of the final pass: analysis_chain_segment_count entries. */
@@ -232,8 +220,6 @@ const ChainVoiceGrid *analysis_chain_voice_grid(const AnalysisChain *chain);
 const ChainGalantSegments *analysis_chain_galant_segments(const AnalysisChain *chain);
 
 const StandardFormPhrases *analysis_chain_phrases(const AnalysisChain *chain);
-/* The phrase grid the final pass found (R-389): NULL without one (phrase_grid off, no form stage, or a pass that ran without it). */
-const StandardFormPhraseGrid *analysis_chain_phrase_grid(const AnalysisChain *chain);
 /* The written-out repeats and returns of the notes in scope (R-400), found once in prepare; the phrase grid follows them. An empty list
    (no items) when there are none or no segment stage ran; never NULL. */
 const StandardFormRepeats *analysis_chain_repeats(const AnalysisChain *chain);
@@ -241,14 +227,6 @@ const StandardFormSegmentation *analysis_chain_ideas(const AnalysisChain *chain)
 const StandardFormThemes *analysis_chain_themes(const AnalysisChain *chain);
 const StandardFormExpansions *analysis_chain_expansions(const AnalysisChain *chain);
 const StandardFormMotives *analysis_chain_motives(const AnalysisChain *chain);
-
-typedef struct {
-    StandardMeterSyncopations syncopations;
-    StandardMeterHemiolas hemiolas;
-    StandardMeterHypermeter hypermeter;
-    StandardMeterDensities densities;
-} AnalysisChainMeter;
-const AnalysisChainMeter *analysis_chain_meter(const AnalysisChain *chain);
 
 const StandardTextureAnalysis *analysis_chain_texture(const AnalysisChain *chain);
 

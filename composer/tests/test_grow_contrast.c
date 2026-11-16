@@ -89,7 +89,7 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, bool perio
         request.contrast = *contrast;
         config.context.contrast = *contrast;
     }
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     if (result != GROW_OK) {
         plan_destroy(plan);

@@ -9,7 +9,7 @@
  * homophony (homorhythm, melody and accompaniment), and polyphony, and
  * the way a work moves between them. Built as a Framework extension
  * module physically outside src/theory/, the same shape as
- * standard-tonality, standard-rhythm, and standard-meter; this module
+ * standard-tonality and standard-meter; this module
  * never modifies src/theory/ or src/rules/, and does not depend on any
  * other framework module.
  *

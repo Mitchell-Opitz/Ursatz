@@ -9,6 +9,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -134,7 +135,7 @@ static void test_snapshots(void) {
         ComposerResponse response;
         ComposerStatus status = composer_api_theme(request, NULL, &response);
         if (status != COMPOSER_OK) {
-            fprintf(stderr, "theme-%s: %s: %s\n", CASES[i].name, composer_status_name(status), response.error.message);
+            fprintf(stderr, "theme-%s: %s: %s\n", CASES[i].name, test_status_name(status), response.error.message);
         }
         assert(status == COMPOSER_OK);
         expect_case(&CASES[i], &response);
@@ -255,7 +256,7 @@ static void test_given_construction(void) {
     char *request = NULL;
     ComposerStatus status = compose_uneven(THEME("uneven-period.json"), 1, edits, &request, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "given construction: %s: %s\n", composer_status_name(status), response.error.message);
+        fprintf(stderr, "given construction: %s: %s\n", test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);
@@ -703,8 +704,8 @@ static void expect_refused(const char *name, const char *value, ComposerStatus s
     ComposerResponse response;
     ComposerStatus got = refuse(name, value, &response);
     if (got != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
-        fprintf(stderr, "%s: %s '%s' at '%s', expected %s '%s' at '%s'\n", name, composer_status_name(got),
-                response.error.message, response.error.path, composer_status_name(status), message, path);
+        fprintf(stderr, "%s: %s '%s' at '%s', expected %s '%s' at '%s'\n", name, test_status_name(got),
+                response.error.message, response.error.path, test_status_name(status), message, path);
     }
     assert(got == status);
     assert(strcmp(response.error.path, path) == 0);
@@ -725,7 +726,7 @@ static void expect_motif_refused(const char *meter, const char *degrees, const c
     ComposerStatus status = refuse_with(edits, 3, &response);
     if (status != COMPOSER_ERR_UNSATISFIABLE || strcmp(response.error.path, "/slots/basic") != 0 ||
         !strstr(response.error.message, message)) {
-        fprintf(stderr, "%s: %s '%s' at '%s'\n", message, composer_status_name(status), response.error.message,
+        fprintf(stderr, "%s: %s '%s' at '%s'\n", message, test_status_name(status), response.error.message,
                 response.error.path);
     }
     assert(status == COMPOSER_ERR_UNSATISFIABLE);
@@ -748,7 +749,7 @@ static void test_two_bar_motif(void) {
     ComposerResponse response;
     ComposerStatus status = refuse_with(edits, 2, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "2-bar 3/4: %s: %s at '%s'\n", composer_status_name(status), response.error.message, response.error.path);
+        fprintf(stderr, "2-bar 3/4: %s: %s at '%s'\n", test_status_name(status), response.error.message, response.error.path);
     }
     assert(status == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);
@@ -768,7 +769,7 @@ static void test_part_length_motif(void) {
     ComposerResponse response;
     ComposerStatus status = refuse_with(edits, 1, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "4-bar motif: %s: %s at '%s'\n", composer_status_name(status), response.error.message, response.error.path);
+        fprintf(stderr, "4-bar motif: %s: %s at '%s'\n", test_status_name(status), response.error.message, response.error.path);
     }
     assert(status == COMPOSER_OK);
     composer_response_destroy(&response);

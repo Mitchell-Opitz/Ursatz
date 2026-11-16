@@ -24,14 +24,3 @@ SchemaVersionResult schema_version_create(unsigned long value, SchemaVersion **o
 void schema_version_destroy(SchemaVersion *version) {
     free(version);
 }
-
-bool schema_version_equals(const SchemaVersion *a, const SchemaVersion *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return a->value == b->value;
-}
-
-unsigned long schema_version_value(const SchemaVersion *version) {
-    return version->value;
-}

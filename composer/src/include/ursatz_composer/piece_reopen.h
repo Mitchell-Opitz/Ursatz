@@ -25,7 +25,7 @@
  * bar as it is then. PIECE_ERR_BAD_REQUEST when they cannot be removed; PIECE_OK without a seam.
  *
  * piece_reopen_lane: makes the Given lane spans of one lane in a section and what is under it Realized, so that
- * plan_regenerate can write them again (the lanes of a theme fill or a progression are Given). The number reopened. This
+ * plan_regenerate_all can write them again (the lanes of a theme fill or a progression are Given). The number reopened. This
  * is the one way out of Given: it is for a plan that is about to be regenerated, never for the user's own material.
  */
 NodeId piece_section_find(const PiecePlan *plan, const char *id);

@@ -6,15 +6,6 @@
 #include "core/rational.h"
 #include "grouping_rules.h"
 #include "meter_class_rules.h"
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_METER_METRIC_RULE_COUNT] = {"metric-beat-position", "metric-level",
-                                                                     "metric-beat-strength"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
-    NAMES, STANDARD_METER_METRIC_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_meter_metric, StandardMeterMetricRule, STANDARD_METER_METRIC_RULE_COUNT, g_table)
 
 bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats) {
     if (time_signature == NULL || out_beat == NULL || out_beats == NULL) {

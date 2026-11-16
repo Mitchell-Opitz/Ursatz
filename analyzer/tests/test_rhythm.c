@@ -65,7 +65,7 @@ static bool analyze(const char *path, Analysis *analysis) {
         imported_notes_destroy(&analysis->notes);
         return false;
     }
-    char *json = analysis_document_render(path, &analysis->notes, &analysis->report);
+    char *json = test_render_document(path, &analysis->notes, &analysis->report);
     analysis->document = json ? cJSON_Parse(json) : NULL;
     free(json);
     return analysis->document != NULL;

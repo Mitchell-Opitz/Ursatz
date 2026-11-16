@@ -103,38 +103,6 @@ static void test_add(void) {
     duration_destroy(sum);
 }
 
-static void test_subtract(void) {
-    Duration *a = NULL;
-    Duration *b = NULL;
-    Duration *diff = NULL;
-    duration_create(3, 4, &a);
-    duration_create(1, 4, &b);
-
-    DurationResult r = duration_subtract(a, b, &diff);
-    assert(r == DURATION_OK);
-    assert(duration_numerator(diff) == 1);
-    assert(duration_denominator(diff) == 2);
-
-    duration_destroy(a);
-    duration_destroy(b);
-    duration_destroy(diff);
-}
-
-static void test_subtract_rejects_negative_result(void) {
-    Duration *a = NULL;
-    Duration *b = NULL;
-    Duration *diff = NULL;
-    duration_create(1, 4, &a);
-    duration_create(3, 4, &b);
-
-    DurationResult r = duration_subtract(a, b, &diff);
-    assert(r == DURATION_ERR_NEGATIVE);
-    assert(diff == NULL);
-
-    duration_destroy(a);
-    duration_destroy(b);
-}
-
 int main(void) {
     test_create_rejects_zero_denominator();
     test_create_rejects_negative_numerator();
@@ -145,7 +113,5 @@ int main(void) {
     test_never_negative();
     test_inequality_different_reduced_value();
     test_add();
-    test_subtract();
-    test_subtract_rejects_negative_result();
     return 0;
 }

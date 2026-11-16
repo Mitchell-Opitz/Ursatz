@@ -177,8 +177,6 @@ static void test_half_reading_before_an_authentic_cadence(void) {
     assert(h->type == CADENCE_TYPE_HALF && h->share == 1000 && !h->alternative.present);
     assert(h->arrival_first == index_of(&r.piece, 4, 1) && h->arrival_last == index_of(&r.piece, 4, 3));
     assert(h->cadence != NULL && h->interpretation != NULL && h->span != NULL);
-    HarmonyCadenceClaim c;
-    assert(harmony_cadence_claim_read(h->interpretation, &c) && c.type == (int)CADENCE_TYPE_HALF && c.share == 1000);
     run_destroy(&r);
 }
 

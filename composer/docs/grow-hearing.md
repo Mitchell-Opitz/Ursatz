@@ -4,7 +4,7 @@ How `grow_run` hears the grown theme, with periods and hybrids; the hearing itse
 
 ## Hearing the result
 
-After a complete run `grow_run` calls `form_hear` on the theme section (see [form-hear.md](form-hear.md)) and keeps
+After a complete run `grow_run` calls `form_hear_in` on the theme section (see [form-hear.md](form-hear.md)) and keeps
 the themes in `GrowOutcome.heard`. A theme heard as the form the section asks for adds to `GrowOutcome.score`
 (`structure share + heard`, out of `structure total + 1`); a mismatch is reported in `heard_form` and
 `heard_as_requested`, never rejected. A hybrid is heard as requested only with the beginning and the ending asked

@@ -17,14 +17,6 @@ static const HarmonyCadenceKind KINDS[] = {
 
 #define KIND_COUNT (sizeof KINDS / sizeof KINDS[0])
 
-size_t harmony_cadence_kind_count(void) {
-    return KIND_COUNT;
-}
-
-const HarmonyCadenceKind *harmony_cadence_kind_at(size_t index) {
-    return index < KIND_COUNT ? &KINDS[index] : NULL;
-}
-
 const HarmonyCadenceKind *harmony_cadence_kind_find(const char *name) {
     if (name == NULL) {
         return NULL;

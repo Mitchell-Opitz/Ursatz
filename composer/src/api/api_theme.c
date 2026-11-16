@@ -343,7 +343,7 @@ static ComposerStatus refuse_idea_beside_part(const GrowMaterial *material, cons
         part_bars = of.beginning;
         basic_bars = setup->construction.idea_bars[GROW_IDEA_BASIC];
     } else if (setup->bars != 4 && setup->bars != 8) {
-        return COMPOSER_OK; /* a construction chosen at the build (R-469): grow_build_plan checks the idea then */
+        return COMPOSER_OK; /* a construction chosen at the build (R-469): grow_build_plan_checked checks the idea then */
     }
     if (!grow_part_basic_idea(&material->basic, grow_bar_length(&setup->meter), part_bars, basic_bars,
                               setup->pairing.beginning, &basic, &step)) {

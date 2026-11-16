@@ -14,6 +14,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan_keys.h>
+#include "support/test_composer.h"
 
 /*
  * Piece plans that change key follow standard-harmony's key-change rules (R-069). Every template, in C major and A
@@ -322,7 +323,7 @@ static double as_double(Rational time) {
 /* Whether an authentic cadence heard in `span` arrives in [start, end). */
 static bool authentic_in_part(const PiecePlan *plan, PlanSpan span, Rational start, Rational end) {
     FormHeard heard;
-    assert(form_hear(plan, span, &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, span, &heard) == FORM_HEAR_OK);
     for (size_t i = 0; i < heard.cadence_count; i++) {
         Rational at = heard.cadences[i].arrival;
         int type = heard.cadences[i].type;
@@ -424,7 +425,7 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
         assert(as_double(end) > as_double(lane.span[k].start));
     }
     PieceKeyCheck keys;
-    assert(piece_check_keys(plan, &keys) && keys.ok);
+    assert(test_piece_check_keys(plan, &keys) && keys.ok);
     assert(keys.changes == changes && keys.modulations == changes);
     /* The last cadence is the strongest of the piece's, by standard-harmony's order. */
     if (strcmp(kind, "loop") != 0 && strcmp(kind, "layered") != 0) {
@@ -528,7 +529,7 @@ static int test_smoke_always(void) {
             changes = read_lane(plan).count > 1;
             check_piece(plan, "scherzo");
             PieceKeyCheck keys;
-            assert(piece_check_keys(plan, &keys) && keys.ok && keys.changes > 0);
+            assert(test_piece_check_keys(plan, &keys) && keys.ok && keys.changes > 0);
         }
         compose_outcome_destroy(&outcome);
         plan_destroy(plan);

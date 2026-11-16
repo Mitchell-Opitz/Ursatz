@@ -26,22 +26,6 @@ static bool valid_rule(StandardCounterpointFourthSpeciesEndsRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_fourth_species_ends_rule(StandardCounterpointFourthSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_fourth_species_ends_constraint(StandardCounterpointFourthSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_fourth_species_ends_preference(StandardCounterpointFourthSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_fourth_species_ends_rule_name(StandardCounterpointFourthSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
 /* The leading tone: the letter below the tonic's, a half step below it. */

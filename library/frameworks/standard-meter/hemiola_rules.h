@@ -2,9 +2,6 @@
 #define URSATZ_FRAMEWORKS_STANDARD_METER_HEMIOLA_RULES_H
 
 #include <stdbool.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "time/duration.h"
 #include "time/time_signature.h"
 
@@ -33,18 +30,6 @@
  */
 
 #define STANDARD_METER_HEMIOLA_PULSES 6
-
-typedef enum {
-    STANDARD_METER_HEMIOLA_RULE_METER = 0,
-    STANDARD_METER_HEMIOLA_RULE_DURATION,
-    STANDARD_METER_HEMIOLA_RULE_CHORD,
-    STANDARD_METER_HEMIOLA_RULE_ACCENT,
-    STANDARD_METER_HEMIOLA_RULE_EVIDENCE,
-    STANDARD_METER_HEMIOLA_RULE_COUNT
-} StandardMeterHemiolaRule;
-
-const Rule *standard_meter_hemiola_rule(StandardMeterHemiolaRule which);
-const Constraint *standard_meter_hemiola_constraint(StandardMeterHemiolaRule which);
 
 /*
  * METER: the pulse length and the number of measures a hemiola window fills in this signature. True for a

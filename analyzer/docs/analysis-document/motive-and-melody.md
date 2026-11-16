@@ -76,10 +76,6 @@ A sketch cannot hold overlapping notes, so a prototype note held past the next o
 features keep the real durations. The sketch is built by `motive_features_to_sketch` (`src/pipeline/motive_sketch_map.c`),
 from these fields alone.
 
-The Markdown report renders `## Motives` from this section, a row per family (notes, degrees, pattern, occurrence count,
-measures, phrases, kinds), and `### Development`, a line per family as `m1 original > m3 real-transposed > m5
-fragmented`.
-
 ## Melody
 
 `melody` holds one claim per phrase that has soprano notes, in phrase order: the melody of that phrase, read by the
@@ -119,6 +115,3 @@ the cantus firmus rule LEADING_TONE (`"leading-tone"`) on the pair, in the key o
 half step below the tonic) goes up to the tonic by step, and a seventh a whole step below the tonic does not step up to
 it. `followed` counts the notes that follow the rule and `broken` those that do not, and `breaks` has a claim over each
 broken seventh and the note after it (`label` `"leading-tone"`). The library has no rule for 4 to 3 or any other pair.
-
-The Markdown report renders `## Melody` from this section, a row per phrase (notes, range, climax, contour counts), and
-the subsections `### Leaps`, `### Non-chord tones` and `### Tendencies`.

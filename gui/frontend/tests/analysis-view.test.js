@@ -7,7 +7,7 @@
  * the Library/Analysis navigation decisions.
  *
  * Fixture: frontend/tests/fixtures/mozart545.analysis.json is the Analyzer
- * CLI's document (`ursatz-analyzer --json`, schema v11) for
+ * CLI's document (`ursatz-analyzer --json`, schema v12) for
  * library/tests/fixtures/framework-v1-corpus/Mozart 545.mid, cut to
  * its first 6 items per array (and 6 note_ids per claim) to stay small; the
  * structure is untouched.
@@ -48,7 +48,6 @@ const expectedTabs = [
   ["Texture", ["texture", "voice_leading"]],
   ["Schemas", ["schemas"]],
   ["Markings", ["markings"]],
-  ["Counterpoint", ["counterpoint_check"]],
   ["Notes", ["notes"]],
 ];
 check(
@@ -98,7 +97,8 @@ check(
 );
 
 /* Empty tabs. */
-check(byId.get("counterpoint").empty === true, "a tab whose only section is null is empty (disabled)");
+const cadencesTab = tabs.ANALYSIS_TABS.find((tab) => tab.id === "cadences");
+check(tabs.buildTabState(cadencesTab, { ...doc, cadences: null }).empty === true, "a tab whose only section is null is empty (disabled)");
 check(byId.get("keys").empty === false && byId.get("chords").empty === false, "tabs with content are not empty");
 const emptyDocument = {};
 for (const tab of tabs.ANALYSIS_TABS) {
@@ -158,7 +158,7 @@ check("note_ids" in chordDetail && "span" in chordDetail, "a row's toggle shows 
 const header = tabs.buildAnalysisHeader({ id: "piece-1", filename: "Mozart 545.mid", format: "midi", document: doc, note_xml_ids: [] });
 check(header.filename === "Mozart 545.mid" && header.format === "midi", "the header has the filename and format");
 check(header.analyzerVersion === doc.metadata.analyzer_version, "the header has the analyzer version");
-check(header.ursatzCommit === doc.metadata.ursatz_commit.slice(0, 7) && header.ursatzCommit.length === 7, "the header has the first 7 characters of the Ursatz commit");
+check(header.producerKey === doc.metadata.producer_key.slice(0, 7) && header.producerKey.length === 7, "the header has the first 7 characters of the producer key");
 check(header.noteCount === doc.metadata.note_count && header.measureCount === doc.meter.measure_count, "the header has the note count and meter.measure_count");
 const provenance = tabs.buildProvenanceFields(doc);
 check(
@@ -166,15 +166,6 @@ check(
     provenance.some(([label, value]) => label === "Input format" && value === "midi"),
   "the provenance panel lists the document's metadata fields",
 );
-
-/* note_ids to xml:ids. */
-check(
-  JSON.stringify(tabs.mapNoteIdsToXmlIds([0, 2], ["midi-note-0", "midi-note-1", "midi-note-2"])) ===
-    JSON.stringify(["midi-note-0", "midi-note-2"]),
-  "a claim's note_ids are mapped through note_xml_ids",
-);
-check(tabs.mapNoteIdsToXmlIds([9], ["midi-note-0"]).length === 0, "a note id past the end of note_xml_ids is skipped");
-check(tabs.mapNoteIdsToXmlIds(undefined, undefined).length === 0, "a claim without note_ids maps to no notes");
 
 /* app.js carries no claim actions without a backend. */
 const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");

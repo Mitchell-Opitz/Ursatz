@@ -4,21 +4,6 @@ add_executable(test_architecture_chain test_architecture_chain.c)
 add_test(NAME architecture_chain COMMAND test_architecture_chain
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(test_chord_identification test_chord_identification.c)
-target_link_libraries(test_chord_identification PRIVATE ursatz_chain)
-add_test(NAME chord_identification COMMAND test_chord_identification)
-
-# The two fixture tests keep their ../fixtures paths by running from tests/analysis.
-add_executable(test_bach_prelude_arpeggiated_chords test_bach_prelude_arpeggiated_chords.c)
-target_link_libraries(test_bach_prelude_arpeggiated_chords PRIVATE ursatz_chain)
-add_test(NAME bach_prelude_arpeggiated_chords COMMAND test_bach_prelude_arpeggiated_chords
-         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/analysis)
-
-add_executable(test_framework_v1_corpus_subset_match_report test_framework_v1_corpus_subset_match_report.c)
-target_link_libraries(test_framework_v1_corpus_subset_match_report PRIVATE ursatz_chain)
-add_test(NAME framework_v1_corpus_subset_match_report COMMAND test_framework_v1_corpus_subset_match_report
-         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/analysis)
-
 add_executable(test_form_bridge test_form_bridge.c)
 target_link_libraries(test_form_bridge PRIVATE ursatz_chain)
 add_test(NAME chain_form_bridge COMMAND test_form_bridge)

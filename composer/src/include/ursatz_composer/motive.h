@@ -57,7 +57,6 @@ typedef enum {
     MOTIVE_OK = 0,
     MOTIVE_ERR_NULL,
     MOTIVE_ERR_ALLOC,
-    MOTIVE_ERR_IO,            /* the file could not be read */
     MOTIVE_ERR_FORMAT,        /* an unknown format name */
     MOTIVE_ERR_SYNTAX,        /* text that is not a note list or not JSON */
     MOTIVE_ERR_VALUE,         /* a value that is not allowed: a pitch, a duration, an overlap, an unknown name */
@@ -167,8 +166,6 @@ const char *motive_result_name(MotiveResult result);
 
 /* Reads "auto", "midi", "musicxml", "notes", "json", "degrees", "rhythm" or "contour". False for any other text. */
 bool motive_format_parse(const char *name, MotiveFormat *out);
-/* "midi", "musicxml", "notes", "json", "degrees", "rhythm", "contour" or "auto". */
-const char *motive_format_name(MotiveFormat format);
 
 /* Reads "full", "rhythm" or "contour". False for any other text. */
 bool motive_form_parse(const char *name, MotiveSketchForm *out);
@@ -262,8 +259,6 @@ MotiveResult motive_from_musicxml(const char *data, size_t size, const MotiveOpt
 /* Any of the formats; MOTIVE_FORMAT_AUTO uses motive_detect_format. */
 MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, const MotiveOptions *options, Motive *out,
                          MotiveError *error);
-MotiveResult motive_load_file(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
-                              MotiveError *error);
 
 /* The same meter, key, notes, harmony, features and role. */
 bool motive_equal(const Motive *a, const Motive *b);
@@ -321,9 +316,6 @@ MotiveResult motive_feature_parse(const char *text, MotiveSketchFeature *out, Mo
 bool motive_role_parse(const char *name, bool *accompaniment);
 /* "melodic" (false) or "accompaniment" (true). */
 const char *motive_role_name(bool accompaniment);
-
-/* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
-char *motive_to_json(const Motive *motive);
 
 /*
  * Attaches the motive to the plan as Given material: a motive node under

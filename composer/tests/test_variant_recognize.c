@@ -154,7 +154,7 @@ static bool round_trip(const Fixture *fixture, const VariantChain *chain, unsign
     VariantChain found;
     VariantRecognition recognition;
     Motive replay;
-    bool ok = variant_recognize(&fixture->motive, &variant, &found, &recognition) == VARIANT_OK && recognition.found &&
+    bool ok = variant_recognize_depth(&fixture->motive, &variant, VARIANT_CHAIN_MAX, &found, &recognition) == VARIANT_OK && recognition.found &&
               variant_apply_chain(&fixture->motive, &found, 0, &replay, NULL) == VARIANT_OK && motive_equal(&replay, &variant);
     if (ok) {
         return true;

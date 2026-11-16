@@ -9,6 +9,7 @@
 #include "interpretation/interpretation.h"
 #include "interpretation/key.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
 
 /*
  * Relationship test: a Key's underlying fact reference (the Context it
@@ -74,17 +75,6 @@ int main(void) {
     Key *rejected;
     assert(key_create(no_framework, "D major", &rejected) == KEY_ERR_NULL_FRAMEWORK_REFERENCE);
     interpretation_destroy(no_framework);
-
-    /* key_take_interpretation destroys only the Key shell and hands back
-       the embedded Interpretation, still valid and unaffected. */
-    Interpretation *taken_source = make_interpretation("interpretation-3", "context-3", "framework-common-practice");
-    Key *taken_key;
-    assert(key_create(taken_source, "A minor", &taken_key) == KEY_OK);
-    Interpretation *taken = key_take_interpretation(taken_key);
-    assert(taken == taken_source);
-    size_t claim_size;
-    assert(strcmp((const char *)value_content(interpretation_claim(taken), &claim_size), "D major") == 0);
-    interpretation_destroy(taken);
 
     printf("test_key: ok\n");
     return 0;

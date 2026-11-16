@@ -14,6 +14,8 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_json.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
+#include "support/test_oracles.h"
 
 /*
  * The `progression` command, run as a process. What it wrote is read back from the files and judged by the same
@@ -92,7 +94,7 @@ static unsigned long printed_seed(const char *out_file) {
 static PiecePlan *read_plan(const char *path) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
 }
 
@@ -248,7 +250,7 @@ static void test_midi_and_musicxml(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitches = NULL;
     size_t count = 0;
-    assert(data && midi_importer_import(data, size, &events, &pitches, &count) == MIDI_IMPORT_OK);
+    assert(data && test_midi_import_notes(data, size, &events, &pitches, &count) == MIDI_IMPORT_OK);
     assert(count == notes);
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);

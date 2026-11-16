@@ -31,38 +31,7 @@ typedef enum {
 } MidiImportResult;
 
 /*
- * Parses data[0..size) as a well-formed SMF type 0 or type 1 file and
- * writes a newly allocated array of NoteEvent* to *out_events, with
- * *out_count entries, in time order (ties broken by original event
- * order). Caller owns the array and every NoteEvent in it (destroy each
- * with note_event_destroy, then free the array).
- *
- * *out_pitch_values receives a second newly allocated array, also
- * *out_count entries, index-paired with *out_events: out_pitch_values[i]
- * is the PitchNumericValue this importer computed for out_events[i]'s
- * pitch before converting it into the opaque PitchIdentity stored on the
- * NoteEvent (the conversion is one-directional and does not support
- * recovering this value from the NoteEvent afterward). Caller owns the
- * array and every PitchNumericValue in it (destroy each with
- * pitch_numeric_value_destroy, then free the array). This does not
- * change PitchIdentity's own guarantees; it only exposes a value this
- * importer already had on hand.
- *
- * Fails cleanly (no partial *out_events, no partial *out_pitch_values,
- * no crash) on anything not a well-formed SMF 0/1 file: bad/truncated
- * header, SMF type 2, SMPTE-format division, truncated track data, or
- * malformed event bytes.
- */
-MidiImportResult midi_importer_import(const unsigned char *data, size_t size, NoteEvent ***out_events,
-                                       PitchNumericValue ***out_pitch_values, size_t *out_count);
-
-/*
- * Meter (additive). midi_importer_import above is unchanged: it still returns only notes and still
- * ignores time signature meta-events, so existing callers (Ursatz-Analyzer, Ursatz-GUI) see no
- * difference. The meter is read by a new function, midi_importer_import_with_meter, rather than
- * by a field on the existing result: MidiImportResult is a bare status enum with no result struct
- * to extend, and changing midi_importer_import's signature would break its callers. The new
- * function takes the same arguments plus a MidiMeterImport, and returns the same notes.
+ * Meter. Part of the complete import below; the importer reads no meter on its own.
  *
  * meter_map: the file's time signature meta-events (0xFF 0x58, every track) as a MeterMap. A file
  * with no such event gets a single 4/4 region marked defaulted. See time/meter_map.h for measure
@@ -83,23 +52,14 @@ typedef struct {
     size_t conflict_count;
 } MidiMeterImport;
 
-/*
- * As midi_importer_import, and also fills *out_meter (destroy with midi_meter_import_destroy). On
- * any failure no output is written: *out_events, *out_pitch_values and *out_meter are untouched.
- */
-MidiImportResult midi_importer_import_with_meter(const unsigned char *data, size_t size, NoteEvent ***out_events,
-                                                  PitchNumericValue ***out_pitch_values, size_t *out_count,
-                                                  MidiMeterImport *out_meter);
-
 /* Destroys the MeterMap, the end time and the conflict list. NULL is a no-op. */
 void midi_meter_import_destroy(MidiMeterImport *meter);
 
 /*
- * Tempo (additive, the same pattern as the meter above). midi_importer_import and
- * midi_importer_import_with_meter are unchanged. Note times stay tempo-independent: positions and
- * durations are whole-note fractions from ticks and the header's division alone, exactly as before,
- * and reading the tempo does not change them. The TempoMap is a separate answer to "how many
- * seconds is that?", not an input to the notes.
+ * Tempo. Part of the complete import below. Note times stay tempo-independent: positions and
+ * durations are whole-note fractions from ticks and the header's division alone, and reading the
+ * tempo does not change them. The TempoMap is a separate answer to "how many seconds is that?", not
+ * an input to the notes.
  *
  * tempo_map: the file's set-tempo meta-events (0xFF 0x51, every track) as a TempoMap, one region
  * per distinct tick. A tempo at tick 0 is the first region; with none at tick 0 the default of
@@ -116,34 +76,25 @@ typedef struct {
     size_t conflict_count;
 } MidiTempoImport;
 
-/*
- * As midi_importer_import, and also fills *out_tempo (destroy with midi_tempo_import_destroy). On
- * any failure no output is written: *out_events, *out_pitch_values and *out_tempo are untouched.
- * A file whose tempo times do not fit a TempoMap (the seconds would overflow) fails with
- * MIDI_IMPORT_ERR_ALLOC.
- */
-MidiImportResult midi_importer_import_with_tempo(const unsigned char *data, size_t size, NoteEvent ***out_events,
-                                                  PitchNumericValue ***out_pitch_values, size_t *out_count,
-                                                  MidiTempoImport *out_tempo);
-
 /* Destroys the TempoMap and the conflict list. NULL is a no-op. */
 void midi_tempo_import_destroy(MidiTempoImport *tempo);
 
 /*
  * Complete import: one call that parses the file once and returns everything the importer reads --
  * notes, meter, tempo, key signatures, and the tracks with their names and program changes. The file's
- * header is parsed once and every track is walked once. midi_importer_import,
- * midi_importer_import_with_meter and midi_importer_import_with_tempo are wrappers over this call: they
- * keep the part they return and destroy the rest. smf_reader.h and midi_event_decoder.h stay
+ * header is parsed once and every track is walked once. smf_reader.h and midi_event_decoder.h stay
  * implementation details of this module.
  *
- * events, pitch_values and count are exactly what midi_importer_import returns (same order, same
- * ownership rules). note_tracks[i] and note_channels[i] are index-paired with events[i]: the index of
- * the MTrk chunk the note came from and its MIDI channel (0-15). Both are NULL when count is 0.
+ * events and pitch_values are index-paired and count long, in time order (ties broken by original event
+ * order). Caller owns every NoteEvent (note_event_destroy) and every PitchNumericValue
+ * (pitch_numeric_value_destroy) and both arrays; midi_import_destroy does it all. pitch_values[i] is the
+ * PitchNumericValue the importer computed for events[i]'s pitch before converting it into the opaque
+ * PitchIdentity stored on the NoteEvent (the conversion is one-directional). note_tracks[i] and
+ * note_channels[i] are index-paired with events[i]: the index of the MTrk chunk the note came from and
+ * its MIDI channel (0-15). Both are NULL when count is 0.
  *
- * meter and tempo are exactly what midi_importer_import_with_meter and midi_importer_import_with_tempo
- * return. key_signatures is exactly what midi_key_signature_scan_all returns for the same buffer
- * (every key signature, in time order). format (0 or 1) and division (ticks per quarter note) are the
+ * meter is the file's time signatures and tempo its set-tempo events. key_signatures is every key
+ * signature meta-event, in time order. format (0 or 1) and division (ticks per quarter note) are the
  * file header's.
  *
  * tracks has one entry per MTrk chunk, in file order (track_count == the header's chunk count, NULL
@@ -152,10 +103,10 @@ void midi_tempo_import_destroy(MidiTempoImport *tempo);
  * channel, program number (0-127), tick and the exact MusicalTime of that tick (tick / (4 * division),
  * as note positions are).
  *
- * Fails as midi_importer_import does, and also with MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION for a division
- * of 0 (no position can be formed). On any failure *out is untouched and nothing leaks. Because every
- * part is built, a file whose tempo times do not fit a TempoMap (MIDI_IMPORT_ERR_ALLOC, see
- * midi_importer_import_with_tempo) fails here, and so also in the three entry points above.
+ * Fails cleanly (no partial output, nothing leaks) on anything not a well-formed SMF 0/1 file: bad or
+ * truncated header, SMF type 2, SMPTE-format division or a division of 0, truncated track data, or
+ * malformed event bytes. A file whose tempo times do not fit a TempoMap fails with MIDI_IMPORT_ERR_ALLOC.
+ * On any failure *out is untouched.
  */
 typedef struct {
     uint64_t tick;

@@ -39,19 +39,3 @@ bool harmony_key_change_confirm(KeyChangeExtent length_extent, double region_sta
     return true;
 }
 
-ModulationKind harmony_modulation_kind(const HarmonyPivot *pivot) {
-    return pivot != NULL ? MODULATION_KIND_PIVOT : MODULATION_KIND_DIRECT;
-}
-
-bool harmony_extended_tonicization_label(HarmonyMode home, const HarmonyRelatedKey *key, char *out, size_t size) {
-    if (out == NULL || !harmony_key_is_closely_related(home, key)) {
-        return false;
-    }
-    char label[8];
-    int length = snprintf(label, sizeof(label), "%s", harmony_triad_numeral(home, key->degree));
-    if (length < 0 || (size_t)length >= size) {
-        return false;
-    }
-    snprintf(out, size, "%s", label);
-    return true;
-}

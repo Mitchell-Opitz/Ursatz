@@ -7,7 +7,7 @@ ursatz-composer grow (<motive-input> | --from-corpus <dir> --like <file>) --into
 ```
 
 Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a bass line and a melody,
-ending in the cadence asked for. It builds a request for `grow_build_plan` and runs `grow_run`
+ending in the cadence asked for. It builds a request for `grow_build_plan_checked` and runs `grow_run`
 (`<ursatz_composer/grow.h>`, see [grow.md](grow.md)); the result is the plan of the theme.
 
 The command is a wrapper of the [composer API](api.md): it reads its arguments, the motive file and the accompaniment motive file into a request (a MIDI file through `composer_api_motive_from_midi` first), calls `composer_api_grow` (and `composer_api_export` for the MIDI file of a theme after the first), writes the plan, MIDI, MusicXML and explanation files the response holds, all or none, and prints the theme from the response document alone. `--from-corpus` and `--like` are the members `corpus` and `like`.
@@ -54,7 +54,7 @@ refused as hybrids. `--hybrid` with any other form is an error.
 | `--harmony "<text>"`, `--feature <label:first-last>`, `--role <role>` | The motive's own chords, labelled features and role, as for the [motive command](cli-motive.md#harmony-features-and-role). The chord onsets are in beats of `--meter`. They are kept with the motive; the theme is not grown from them yet. Not with `--from-corpus`. |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock. The same input, options and seed give the same output. |
 | `--suggest <n>` | 1 to 16 different themes instead of one. |
-| `--out <file.json>` | The plan as JSON, as `plan_write_json_file` writes it. |
+| `--out <file.json>` | The plan as JSON, as `plan_to_json` writes it. |
 | `--midi <file>`, `--musicxml <file>` | The melody and the bass of the theme, and the accompaniment, one part for each voice of it. The source material is not part of the piece. |
 | `--mode <mode>` | `major`, `minor` or `style`: replaces the mode of `--key`, which may then be a tonic alone (`--key D --mode style`). `style` takes the style's most common `mode` and needs `--style` with a `mode` category, else exit 1. The key printed and written is the result. |
 | `--tempo <bpm>` | Write a tempo in the MIDI and MusicXML files: quarter notes per minute from 20 to 400, a whole number or a fraction like `195/2`. Default: the style's tempo when `--style` has a `tempo` category, else none. See [export.md](export.md) and [style.md](style.md). |
@@ -94,7 +94,7 @@ Per theme, in text:
 
 ### The form heard
 
-`form_hear` hears the finished theme with standard-form's analysis adapter. The result is one of
+`form_hear_in` hears the finished theme with standard-form's analysis adapter. The result is one of
 
 - `heard as <form>`: the form asked for. A hybrid is heard as asked only with the beginning and the
   ending asked for, and is written with them (`hybrid (compound basic idea + continuation)`);

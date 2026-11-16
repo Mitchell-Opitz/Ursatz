@@ -10,8 +10,8 @@
 /*
  * The joined chord sequence: the chords of an analysis in time order, where consecutive chord entries with the same
  * Roman numeral, key region and root count as one chord (a chord held across several segments). An entry the analysis
- * gave no numeral, root or key region for is not a chord; it ends the run before it. The sequence of a result and the
- * sequence of its stored document are the same (R-220: the Analyzer is the one reader of its document).
+ * gave no numeral, root or key region for is not a chord; it ends the run before it. The sequence is read from the stored
+ * document (R-220: the Analyzer is the one reader of its document).
  *
  * first_entry and last_entry are indices into the entries of the report, which are the "chords" of the document, both
  * inclusive. The numeral is the root-position numeral in the style label form (style_label_numeral), relative to the
@@ -29,14 +29,13 @@ typedef struct {
 
 /*
  * On ANALYZER_OK *out is the sequence (NULL when *count is 0), which the caller releases with
- * analyzer_chord_sequence_free. A result whose stages did not collect the report gives an empty sequence. On any other
- * status *out is NULL and *count is 0: ANALYZER_ERR_ARGUMENT for a NULL argument, text that is not an analysis document
+ * analyzer_chord_sequence_free. On any other status *out is NULL and *count is 0: ANALYZER_ERR_ARGUMENT for a NULL
+ * argument, text that is not an analysis document
  * of the current schema version, or a chord whose time cannot be read; ANALYZER_ERR_ALLOC.
  */
-AnalyzerStatus analyzer_chord_sequence(const AnalyzerResult *result, AnalyzerChord **out, size_t *count);
 AnalyzerStatus analyzer_chord_sequence_from_document(const char *document_json, AnalyzerChord **out, size_t *count);
 
-/* Frees a sequence from either call. NULL is a no-op. */
+/* Frees a sequence. NULL is a no-op. */
 void analyzer_chord_sequence_free(AnalyzerChord *chords, size_t count);
 
 #endif

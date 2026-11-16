@@ -324,19 +324,3 @@ HarmonyProlongationStatus harmony_analysis_find_prolongations(const HarmonySegme
     return HARMONY_PROLONGATION_OK;
 }
 
-bool harmony_prolongation_claim_read(const Interpretation *interpretation, HarmonyProlongationClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), HARMONY_PROLONGATION_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

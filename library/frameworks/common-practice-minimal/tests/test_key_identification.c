@@ -5,6 +5,7 @@
 #include "identity/entity_id.h"
 #include "interpretation/key.h"
 #include "key_identification.h"
+#include "interpretation_test_access.h"
 
 /*
  * Identification tests: major and natural-minor pitch-class collections

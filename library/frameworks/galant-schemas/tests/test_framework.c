@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "galant_framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: galant_schemas_framework() returns a single, stable,

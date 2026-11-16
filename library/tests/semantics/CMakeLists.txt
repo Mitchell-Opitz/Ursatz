@@ -1,9 +1,7 @@
 add_ursatz_test(interval)
 add_ursatz_test(sonority)
-add_ursatz_test(sonority_builder)
 add_ursatz_test(sonority_segmentation)
 add_ursatz_test(rhythmic_pattern)
-add_ursatz_test(scale)
 add_ursatz_test(contour)
 add_ursatz_test(voice_part)
 add_ursatz_test(beat_strength)
@@ -13,19 +11,15 @@ add_ursatz_test(cadence_type)
 add_ursatz_test(motive_occurrence_kind)
 add_ursatz_test(applied_chord_kind)
 add_ursatz_test(key_change_extent)
-add_ursatz_test(form_level)
-add_ursatz_test(subphrase_role)
-add_ursatz_test(expected_length_basis)
 add_ursatz_test(analysis_note)
 add_ursatz_test(analysis_key)
-add_ursatz_test(voice_grid)
 add_ursatz_architecture_test(semantics)
 
 # Memcheck for the neutral analysis type tests (analysis_note allocates spans and a meter map). Skips
 # silently if valgrind isn't installed.
 find_program(URSATZ_SEMANTICS_VALGRIND valgrind)
 if(URSATZ_SEMANTICS_VALGRIND)
-  foreach(semantics_test_name analysis_note analysis_key voice_grid tone_line)
+  foreach(semantics_test_name analysis_note analysis_key tone_line)
     add_test(NAME ${semantics_test_name}_valgrind
              COMMAND ${URSATZ_SEMANTICS_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${semantics_test_name}>)

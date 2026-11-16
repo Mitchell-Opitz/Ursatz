@@ -7,6 +7,7 @@
 
 #include <ursatz_composer/plan_json.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The `plan` and `fill` commands, run as processes: every form planned and filled to MIDI and MusicXML, the same plan and
@@ -82,7 +83,7 @@ static void test_every_form(void) {
         char path[256];
         snprintf(path, sizeof(path), "plan_cli_%s.json", FORMS[f]);
         PlanJsonError error;
-        assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+        assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
         plan_destroy(plan);
 
         snprintf(arguments, sizeof(arguments),
@@ -112,7 +113,7 @@ static void test_every_form(void) {
         free(record);
         /* The realized plan is a plan and has nothing left open. */
         snprintf(name, sizeof(name), "plan_cli_%s_done.json", FORMS[f]);
-        assert(plan_read_json_file(name, &plan, &error) == PLAN_OK);
+        assert(test_read_plan_file(name, &plan, &error) == PLAN_OK);
         plan_destroy(plan);
         snprintf(arguments, sizeof(arguments), "%s", name);
         out = output_of("fill", arguments);
@@ -255,7 +256,7 @@ static void test_fill_errors(void) {
     write_text("plan_cli_malformed.json", "{\"schema_version\":");
     expect_failure("fill", "plan_cli_malformed.json", 2, "cannot read plan 'plan_cli_malformed.json'");
     /* An analysis document describes a piece already written; it points at the loader. */
-    expect_failure("fill", FIXTURE("analysis_small.json"), 2, "plan_from_analyzer_result");
+    expect_failure("fill", FIXTURE("analysis_small.json"), 2, "analysis document");
     expect_failure("fill", "plan_cli_binary.json --seed 1 --midi /nonexistent-directory/a.mid --out plan_cli_none.json", 3,
                    "cannot write '/nonexistent-directory/a.mid'");
     /* Nothing is left behind by a write that failed. */
@@ -363,7 +364,7 @@ static void test_given(void) {
     free(out);
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file("plan_cli_given.json", &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file("plan_cli_given.json", &plan, &error) == PLAN_OK);
     plan_destroy(plan);
 
     /* Filled, the given melody is shown as unchanged, in text and in JSON, and the same seed gives the same file. */

@@ -77,20 +77,17 @@ typedef enum {
 const char *regenerate_result_name(RegenerateResult result);
 
 /*
- * What plan_regenerate reopens for a target, without changing the plan: the sections reopened whole (nodes), then
+ * What plan_regenerate_all reopens for the targets, without changing the plan: the sections reopened whole (nodes), then
  * the lane spans reopened one by one (those inside a section reopened whole are not listed), into a new array the
- * caller frees with free (NULL when empty). The errors are plan_regenerate's.
- */
-RegenerateResult plan_regenerate_scope(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count);
-
-RegenerateResult plan_regenerate(PiecePlan *plan, FillTarget target, const ComposeConfig *config, ComposeOutcome *outcome);
-
-/*
- * The same for several targets at once (every harmony span of a section, say): what depends on any of them is reopened
- * once and composed once. The errors are plan_regenerate's, for the first target that has one.
+ * caller frees with free (NULL when empty). The errors are plan_regenerate_all's, for the first target that has one.
  */
 RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
                                            FillTarget **out, size_t *count);
+
+/*
+ * Reopens what depends on any of the targets (every harmony span of a section, say) and composes it once. A single
+ * target is a list of one.
+ */
 RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets, size_t target_count,
                                      const ComposeConfig *config, ComposeOutcome *outcome);
 

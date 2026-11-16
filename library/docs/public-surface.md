@@ -12,9 +12,13 @@ A library target exposes only the headers it names (R-223). `ursatz_public_heade
 | a framework | its folder name, then the path in the framework | `standard-form/analysis/analysis_motive.h`, `common-practice-minimal/key_regions.h` |
 | `ursatz_chain` | `ursatz_chain/` | `ursatz_chain/analysis_chain.h` |
 
-A framework or chain source that includes another framework's header uses that path, never the bare name, so the eight names that exist in more than one framework (`analysis_claim.h`, `analysis_input.h`, `analysis_phrase.h`, `framework.h`, `hierarchy_rules.h`, `key_signature_rules.h`, `rule_pair.h`, `stem_rules.h`) mean one header each. A sibling or a header of the same framework stays bare. `rule_pair.h` stays private in each framework.
+A framework or chain source that includes another framework's header uses that path, never the bare name, so the four names that exist in more than one framework (`analysis_claim.h`, `analysis_input.h`, `analysis_phrase.h`, `framework.h`) mean one header each. A sibling or a header of the same framework stays bare. standard-counterpoint's `rule_pair.h` stays private.
 
 The public set of a target is: every header the apps include (`docs/public-headers-baseline.txt`, made by `scripts/app_includes.sh <app checkout>...`), the owners named on this page, every header a framework or the chain takes from another target, every header those include, and nothing named `*_internal.h`. `internal_expansion_technique.h` is a plain enum and is public. A framework with nothing in the set stages nothing.
+
+Three headers no consumer includes are not staged: `io/smf_reader.h` (kernel), `form_bridge.h` and `kernel_owners.h` (chain). The chain's own sources and tests still reach them through their source directory. A clean stage holds 97 kernel headers and 2 chain headers (`analysis_chain.h`, `chain_inputs.h`).
+
+The accessors only tests read are not in the public headers. The struct of such a type is in a `*_internal.h` header beside it (never staged), and the tests read it through `tests/support/*_test_access.h` (chain, framework, interpretation, preference, relationship, semantics, structure), which `ursatz_test_includes` puts on every test's include path. An application cannot include either.
 
 A test sees the internals of what it tests (`ursatz_test_includes()`); an app does not.
 

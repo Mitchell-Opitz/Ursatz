@@ -5,15 +5,13 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 /*
  * Labels are owned strings, not fixed 32-byte buffers: a report whose
  * first entry carries labels longer than 31 characters (swapped in
  * through the report API) keeps them intact through the analysis
- * document and the Markdown report, and analysis_report_destroy frees
- * them.
+ * document, and analysis_report_destroy frees them.
  */
 
 static char *copy_string(const char *s) {
@@ -47,13 +45,11 @@ int main(void) {
 
     AnalysisDocument *document = analysis_document_build("long_labels.mid", &notes, &report);
     assert(document != NULL);
-    char *markdown = markdown_report_render(document);
-    assert(markdown != NULL);
-    assert(strstr(markdown, "- **Home key:** C major (long key label beyond thirty-one characters).\n") != NULL);
-    assert(strstr(markdown, "| m. 1, beat 1 to m. ") != NULL);
-    assert(strstr(markdown, " | I (long chord label beyond thirty-one characters) | ") != NULL);
-
-    free(markdown);
+    char *json = analysis_document_to_json(document);
+    assert(json);
+    assert(strstr(json, key_label));
+    assert(strstr(json, chord_label));
+    free(json);
     analysis_document_destroy(document);
     analysis_report_destroy(&report);
     assert(report.entries == NULL);

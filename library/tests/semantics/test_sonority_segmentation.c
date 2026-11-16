@@ -181,8 +181,6 @@ static void test_a_held_whole_note_is_held_in_every_later_beat(void) {
         assert_window(&out.items[beat], (long)beat, 4, (long)beat + 1, 4);
         assert_member(&out.items[beat], 0, "bass", beat > 0); /* attacked in beat 1, held after */
         assert_member(&out.items[beat], 1, upper[beat], false);
-        assert(sonority_event_domain(out.items[beat].sonority) == SONORITY_EVENT_DOMAIN_SOUNDING);
-        assert(sonority_voice_id_count(out.items[beat].sonority) == 0);
     }
 
     adaptive_sonorities_destroy(&out);

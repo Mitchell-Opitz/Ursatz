@@ -13,6 +13,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The `theme` command, run as a process (docs/cli-theme.md, docs/theme-request.md): themes from up to 16 motives, named
@@ -190,7 +191,7 @@ static size_t idea_melody(const PiecePlan *plan, const char *idea, int *pitches,
 static PiecePlan *read_plan(const char *path) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
 }
 
@@ -311,7 +312,7 @@ static void write_request_with_style(const char *fixture, const char *path) {
 static size_t melody_attacks(const char *plan_path) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file(plan_path, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(plan_path, &plan, &error) == PLAN_OK);
     NodeId theme = PLAN_NODE_NONE;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
@@ -378,7 +379,7 @@ static void write_chords(const char *chords, const char *path) {
 static size_t given_harmony(const char *plan_path, char numerals[][32], Rational *starts, size_t capacity) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file(plan_path, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(plan_path, &plan, &error) == PLAN_OK);
     NodeId theme = PLAN_NODE_NONE;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);

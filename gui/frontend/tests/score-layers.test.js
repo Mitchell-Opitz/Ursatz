@@ -107,12 +107,6 @@ check(ScoreLayers.abbreviateCadence(null) === "PROL", "a prolongation reading is
 check(ScoreLayers.abbreviateCadence("evaded-phrygian-half") === "EPH", "an unlisted type gives its initials");
 
 check(ScoreLayers.rat({ num: 3, den: 4 }) === 0.75 && ScoreLayers.rat([5, 2]) === 2.5, "rat reads both forms");
-check(
-  ScoreLayers.ratCompare([1, 3], { num: 2, den: 6 }) === 0 &&
-    ScoreLayers.ratCompare([1, 3], [1, 2]) < 0 &&
-    ScoreLayers.ratCompare({ num: 3, den: 4 }, [2, 3]) > 0,
-  "ratCompare is exact",
-);
 
 const extra = JSON.parse(JSON.stringify(fixture));
 extra.cadence_rhymes = [{ span: { start: { num: 0, den: 1 }, end: { num: 2, den: 1 } }, label: "rhyme", note_ids: [0] }];

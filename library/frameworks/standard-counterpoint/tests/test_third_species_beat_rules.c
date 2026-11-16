@@ -2,15 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rule_check.h"
 #include "third_species_beat_rules.h"
 #include "third_species_test_util.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-beat", STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT);
-#define standard_counterpoint_third_species_beat_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_third_species_beat_constraint, standard_counterpoint_third_species_beat_preference, standard_counterpoint_third_species_beat_rule_holds, StandardCounterpointThirdSpeciesExercise, which, subject)
 
 #define BEAT(name) STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_##name
 
@@ -20,25 +13,6 @@ STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-beat", STANDARD_COUNTERP
 static bool holds(StandardCounterpointThirdSpeciesBeatRule rule,
                   const StandardCounterpointThirdSpeciesExercise *exercise) {
     return standard_counterpoint_third_species_beat_rule_holds(rule, exercise);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_third_species_beat_rule,
-                                    standard_counterpoint_third_species_beat_constraint,
-                                    STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_third_species_beat_constraint((StandardCounterpointThirdSpeciesBeatRule)i));
-        assert(type == (i == BEAT(DISSONANCE_FIGURE) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_third_species_beat_rule_name(BEAT(DISSONANCE_FIGURE)), "dissonance-figure") ==
-           0);
-    assert(strcmp(standard_counterpoint_third_species_beat_rule_name(BEAT(LARGE_LEAP_RECOVERY)),
-                  "large-leap-recovery") == 0);
-    assert(standard_counterpoint_third_species_beat_rule_name(BEAT(COUNT)) == NULL);
 }
 
 static void test_dissonance_figure(void) {
@@ -147,8 +121,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_dissonance_figure();
     test_mixture();
     test_large_leap_recovery();

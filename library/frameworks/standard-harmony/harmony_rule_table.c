@@ -14,11 +14,6 @@ bool harmony_rule_table_is_hard(const HarmonyRuleTable *table, int which) {
     return table->is_hard == NULL || table->is_hard(which);
 }
 
-bool harmony_rule_table_never_hard(int which) {
-    (void)which;
-    return false;
-}
-
 typedef struct {
     const HarmonyRuleTable *table;
     int which;
@@ -40,16 +35,6 @@ static void ensure_built(const HarmonyRuleTable *table, int which) {
     }
     BuildPairArg arg = {table, which};
     ursatz_once(&table->built[which], build_pair, &arg);
-}
-
-const Rule *harmony_rule_table_rule(const HarmonyRuleTable *table, int which) {
-    ensure_built(table, which);
-    return harmony_rule_table_valid(table, which) ? table->pairs[which].rule : NULL;
-}
-
-const Constraint *harmony_rule_table_constraint(const HarmonyRuleTable *table, int which) {
-    ensure_built(table, which);
-    return harmony_rule_table_valid(table, which) ? table->pairs[which].constraint : NULL;
 }
 
 const Preference *harmony_rule_table_preference(const HarmonyRuleTable *table, int which) {

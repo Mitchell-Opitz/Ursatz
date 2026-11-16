@@ -4,6 +4,7 @@
 #include "analysis_test_util.h"
 #include "interpretation/texture.h"
 #include "texture_analysis_classify.h"
+#include "interpretation_test_access.h"
 
 static bool near(double a, double b) {
     return fabs(a - b) < 1e-9;

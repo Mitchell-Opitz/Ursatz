@@ -74,7 +74,7 @@ static PiecePlan *grow(const Motive *motive, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.basic = motive;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     grow_outcome_destroy(&outcome);
     return plan;

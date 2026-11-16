@@ -5,8 +5,6 @@
 #include <stddef.h>
 
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "voicing_chord.h"
 
 /*
@@ -30,17 +28,6 @@
  * nothing to forbid.
  */
 
-typedef enum {
-    STANDARD_VOICING_DOUBLING_BASS_DOUBLED = 0, /* soft: a preference */
-    STANDARD_VOICING_DOUBLING_LEADING_TONE,
-    STANDARD_VOICING_DOUBLING_SEVENTH,
-    STANDARD_VOICING_DOUBLING_SEVENTH_CHORD,
-    STANDARD_VOICING_DOUBLING_RULE_COUNT
-} StandardVoicingDoublingRule;
-
-const Rule *standard_voicing_doubling_rule(StandardVoicingDoublingRule which);
-const Constraint *standard_voicing_doubling_constraint(StandardVoicingDoublingRule which);
-
 /* How many voices of the chord sound the pitch class of `note` (letter and
    accidental; octaves ignored). 0 for NULL. */
 int standard_voicing_pitch_class_count(const StandardVoicingChord *chord, const PitchSpelling *note);
@@ -60,13 +47,6 @@ bool standard_voicing_seventh_undoubled(const StandardVoicingChord *chord, const
    for invalid input. */
 bool standard_voicing_seventh_chord_undoubled(const StandardVoicingChord *chord, const PitchSpelling *const *tones,
                                               size_t tone_count);
-
-/* BASS_DOUBLED (preference): true when the bass of a triad is doubled in
-   an upper voice, or the chord is a seventh chord (the preference does
-   not apply). False when a triad's bass is not doubled, or for invalid
-   input. Failing this never makes a voicing wrong, only less usual. */
-bool standard_voicing_bass_doubled(const StandardVoicingChord *chord, const PitchSpelling *const *tones,
-                                   size_t tone_count);
 
 /* The hard rules together: LEADING_TONE, SEVENTH, and SEVENTH_CHORD
    (the bass preference is not part of validity). leading_tone may be

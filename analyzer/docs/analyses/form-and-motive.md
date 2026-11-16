@@ -9,8 +9,7 @@ from the outer-voice soprano (consecutive segments of one note are one note), th
 cadences with their arrival spans, injects the kernel's Phrase Boundary Detection, and reads back the phrases, then
 the ideas and subphrases inside each. The library's phrase model labels (`Tb`, `PD`, `D`, `Te`) go on the chords of
 each phrase that ends in a cadence. The ends of all but the last phrase are then the boundaries of the second key
-pass (see [Pipeline](../library.md#pipeline)). The Markdown report has a `## Phrases` table (measures, length, cadence, what ended it, role)
-and a line per phrase with its ideas, subphrases and phrase model; the document's `phrases` has the claims. A
+pass (see [Pipeline](../library.md#pipeline)). The document's `phrases` has the claims. A
 phrase's role is its position in the piece (the first is a beginning, the last an ending), since the library names
 none.
 
@@ -34,7 +33,7 @@ On the phrases, ideas and subphrases above the library identifies themes (`stand
 detects expansions and contractions (`standard_form_detect_expansions`), both with the default config. The document's
 `themes` has a claim per theme with the form, the names of its two parts, their measures and cadences, the commonality
 of the pairing and the traits of its continuation; each phrase claim lists the expansions and contractions that concern
-it. The Markdown report has a `## Themes` table and an Expansion column in `## Phrases`. A constructed sentence,
+it. A constructed sentence,
 period and compound period (`tests/musicxml/sentence.musicxml`, `period.musicxml`, `compound-period.musicxml`) are
 heard as such by `test_themes`.
 
@@ -68,8 +67,7 @@ The letters are the analyzer's bookkeeping over the returns. Sections are letter
 whose opening theme (a theme that starts at the section's first phrase) returns a theme of an earlier section takes
 that section's letter with a prime, one more prime for each section of that letter already (`M`, `M'`, `M''`);
 where several returns qualify, the most similar one decides, then the earliest section. The document's `form` is the
-tree (`form`, `section`, `phrase`, `subphrase`, `idea`) and the returns; the Markdown report has a `## Form plan`
-table, a `### Thematic returns` table and an indented `### Outline`.
+tree (`form`, `section`, `phrase`, `subphrase`, `idea`) and the returns.
 
 Measured on the reference pieces (MIDI; `test_form_plan` asserts these counts and letters, and the structure):
 
@@ -99,8 +97,7 @@ placed in the report's phrases and ideas by span (an occurrence that crosses a p
 A family has a prototype and occurrences, each with the library's kind against the prototype (exact, real-transposed,
 tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied) and its score. The development of a
 family is its occurrences in time order. The prototype is not always the earliest occurrence, because the library
-searches continuations for fragments first. The document's `motives` holds all of it; the Markdown report has a
-`## Motives` table (with the prototype's degrees) and a `### Development` list.
+searches continuations for fragments first. The document's `motives` holds all of it.
 
 Each family also carries `features`, read from its prototype: the notes with exact onsets and durations, the key
 region's tonic and mode, the meter, the degrees against the tonic's major scale (`1 b2 2 b3 3 4 #4 5 b6 6 b7 7`, so a
@@ -138,8 +135,7 @@ the previous phrase is left out, a gap is a rest); each note carries its scale d
 strength. The library has no table of scale-degree tendencies, so the report gives the five line tendencies of
 `tendency_rules.h` (pitch proximity, step declination, step inertia, melodic regression, melodic arch) as held or not, and
 the seventh degree judged by the cantus firmus rule LEADING_TONE: how many sevenths a note follows that follow the rule,
-and where the broken ones stand. The document's `melody` holds all of it; the Markdown report has a `## Melody` table and
-the subsections `### Leaps`, `### Non-chord tones` and `### Tendencies`.
+and where the broken ones stand. The document's `melody` holds all of it.
 
 Measured on the reference pieces (MIDI), summed over the phrases:
 

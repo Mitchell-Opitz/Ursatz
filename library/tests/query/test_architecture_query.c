@@ -4,27 +4,20 @@
 #include <string.h>
 
 /*
- * Architecture test: music-query (L9, a sibling of music-corpus-stats) may
- * depend on music-identity (L0), music-core (for ProvenanceReference), music-
- * semantics (for ContourDirection), music-persistence (L9, for
- * PersistenceHandle and its context queries) and music-corpus (for
- * CorpusStoreHandle and its piece-ref listing) only. It MUST NOT depend on
- * music-time, music-pitch, music-events, music-containers, music-structure,
- * music-context, music-interpretation, music-relationship, music-theory,
- * music-rules, music-transform, music-analysis, music-generation, music-io,
- * music-corpus-stats, or frameworks/.
- *
- * In particular it does not import music-analysis: a search can only return
- * what analysis has already persisted, never run analysis itself.
+ * Architecture test: music-query (L9) may depend on music-identity (L0),
+ * music-core (for ProvenanceReference) and music-semantics (for
+ * ContourDirection) only. It MUST NOT depend on music-time, music-pitch,
+ * music-events, music-containers, music-structure, music-context,
+ * music-interpretation, music-relationship, music-theory, music-rules,
+ * music-transform, music-analysis, music-generation, music-io, or frameworks/.
  *
  * Scans every .h/.c file under src/query/ and flags any local include ("...")
- * that does not point into identity/, core/, semantics/, persistence/,
- * corpus/, or query/ itself.
+ * that does not point into identity/, core/, semantics/, or query/ itself.
  *
  * Also scans every .h/.c file under src/ outside src/query/ and flags any
- * local include of a query/ internal header -- the similarity model, scoring,
- * search result and corpus search headers are the public surface of
- * music-query; query_fraction.h is internal.
+ * local include of a query/ internal header -- the similarity model and
+ * scoring headers are the public surface of music-query; query_fraction.h is
+ * internal.
  */
 
 static int check_file(const char *path) {
@@ -52,11 +45,9 @@ static int check_file(const char *path) {
         *end = '\0';
 
         if (strncmp(start, "identity/", 9) != 0 && strncmp(start, "core/", 5) != 0 &&
-            strncmp(start, "semantics/", 10) != 0 && strncmp(start, "persistence/", 12) != 0 &&
-            strncmp(start, "corpus/", 7) != 0 && strncmp(start, "query/", 6) != 0) {
+            strncmp(start, "semantics/", 10) != 0 && strncmp(start, "query/", 6) != 0) {
             fprintf(stderr,
-                    "violation: %s includes \"%s\" (outside identity/, core/, semantics/, persistence/, corpus/, or "
-                    "query/)\n",
+                    "violation: %s includes \"%s\" (outside identity/, core/, semantics/, or query/)\n",
                     path, start);
             violations++;
         }
@@ -91,11 +82,10 @@ static int check_file_external(const char *path) {
         *end = '\0';
 
         if (strncmp(start, "query/", 6) == 0 && strcmp(start, "query/similarity_model.h") != 0 &&
-            strcmp(start, "query/similarity_scoring.h") != 0 && strcmp(start, "query/search_result.h") != 0 &&
-            strcmp(start, "query/corpus_search.h") != 0) {
+            strcmp(start, "query/similarity_scoring.h") != 0) {
             fprintf(stderr,
-                    "violation: %s includes \"%s\" (only the similarity model, scoring, search result and corpus "
-                    "search headers may be included from outside query/)\n",
+                    "violation: %s includes \"%s\" (only the similarity model and scoring headers may be included "
+                    "from outside query/)\n",
                     path, start);
             violations++;
         }

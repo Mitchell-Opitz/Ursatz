@@ -3,11 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "semantics/cadence_type.h"
-#include "semantics/form_level.h"
 
 /*
  * Phrase rules for standard-form-v1. A phrase is a relatively complete thought that shows
@@ -29,47 +25,8 @@
  * Lengths are whole measures.
  */
 
-typedef enum {
-    STANDARD_FORM_PHRASE_RULE_COMPLETE = 0,
-    STANDARD_FORM_PHRASE_RULE_CLOSURE,
-    STANDARD_FORM_PHRASE_RULE_LENGTH,
-    STANDARD_FORM_PHRASE_RULE_GOAL,
-    STANDARD_FORM_PHRASE_RULE_DIAGRAM,
-    STANDARD_FORM_PHRASE_RULE_COUNT
-} StandardFormPhraseRule;
-
-const Rule *standard_form_phrase_rule(StandardFormPhraseRule which);
-const Constraint *standard_form_phrase_constraint(StandardFormPhraseRule which);
-
-/* PHRASE_COMPLETE: true only when all three parts are present. */
-bool standard_form_phrase_complete(bool has_beginning, bool has_middle, bool has_end);
-
-/* PHRASE_CLOSURE: true when a cadence signals closure. False means this rule cannot say the
-   phrase is closed, not that it is open. */
-bool standard_form_cadence_signals_closure(bool has_cadence);
-
-/* PHRASE_LENGTH: true for any length of at least one measure. */
-bool standard_form_phrase_length_valid(size_t measures);
-
-/* PHRASE_LENGTH: true for the particularly common lengths 4, 8, and 16. Any other valid
-   length is unusual, not wrong. */
-bool standard_form_phrase_length_common(size_t measures);
-
 /* PHRASE_GOAL: true for the perfect authentic, imperfect authentic, and half cadence. False
    for a subverted cadence and for an invalid type. */
 bool standard_form_cadence_is_phrase_goal(CadenceType type);
-
-typedef enum {
-    STANDARD_FORM_DIAGRAM_MARK_BRACKET = 0,
-    STANDARD_FORM_DIAGRAM_MARK_ARC,
-    STANDARD_FORM_DIAGRAM_MARK_COUNT
-} StandardFormDiagramMark;
-
-/*
- * PHRASE_DIAGRAM: the mark a level takes in a diagram: a bracket for idea and subphrase, an
- * arc for phrase, theme, section, movement, and piece. False, leaving *out untouched, for
- * the motive level (a motive is circled, not bracketed) and for an invalid level.
- */
-bool standard_form_level_diagram_mark(FormLevel level, StandardFormDiagramMark *out);
 
 #endif

@@ -8,6 +8,7 @@
 #include "standard-form/phrase_level_form.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
+#include "../key_index_test_util.h"
 
 /*
  * The chain's keys against Michelle's readings of the Clementi and Mozart reference pieces (R-401): the keys are placed on the phrases of the
@@ -15,7 +16,7 @@
  * default the library's, with the file's key signature events and C major as the home key. The readings are
  * tests/fixtures/annotations/{clementi36,mozart545}_key_regions.txt and *_v1_expected.txt.
  *
- * Asserted for Clementi 36: the key regions are exactly C major 1-7, G major 8-15, C minor 16-23 and C major 24-38; the grid units, the
+ * Asserted for Clementi 36: the key regions are exactly C major 1-7, G major 8-15, C minor 16-23 and C major 24-38; the
  * cadences claimed and the period of measures 1 to 8 are those test_reference_phrases asserts.
  * Asserted for Mozart 545:
  *   - the key regions begin C major 1-12, G major 13-28, C major 29-40, G major 41-56; the key is G minor at measures 57 and 102, F major
@@ -98,7 +99,7 @@ static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, Analysi
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
-    config.home_key_index = common_practice_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run(&p->set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);
     *key_events_out = key_events;
@@ -195,7 +196,7 @@ static void annotated_keys(const char *file, int *keys) {
         int first = 0;
         int last = 0;
         if (sscanf(line, "region %d %d %7s %15s", &first, &last, tonic, mode) == 4) {
-            int key = common_practice_key_index_of(tonic_of(tonic), strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
+            int key = test_key_index_of(tonic_of(tonic), strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
                                                                                                 : COMMON_PRACTICE_KEY_MAJOR);
             for (int m = first; m <= last && m < MAX_MEASURES; m++) {
                 keys[m] = key;
@@ -212,9 +213,9 @@ static void check_region(const CommonPracticeKeyRegions *regions, size_t index, 
         return;
     }
     const CommonPracticeKeyRegion *r = &regions->regions[index];
-    CHECK(r->first_measure == first && r->last_measure == last && r->key_index == common_practice_key_index_of(tonic, mode),
+    CHECK(r->first_measure == first && r->last_measure == last && r->key_index == test_key_index_of(tonic, mode),
           "%s: key region %zu is %d-%d, key %d, expected %d-%d, key %d", piece, index + 1, r->first_measure, r->last_measure, r->key_index,
-          first, last, common_practice_key_index_of(tonic, mode));
+          first, last, test_key_index_of(tonic, mode));
 }
 
 static void check_clementi(void) {
@@ -237,17 +238,7 @@ static void check_clementi(void) {
     check_region(regions, 2, "Clementi", 16, 23, 0, COMMON_PRACTICE_KEY_MINOR);
     check_region(regions, 3, "Clementi", 24, 38, 0, COMMON_PRACTICE_KEY_MAJOR);
 
-    /* the grid, cadences and period of test_reference_phrases, unchanged */
-    const StandardFormPhraseGrid *grid = analysis_chain_phrase_grid(chain);
-    assert(grid != NULL);
-    static const int UNITS[5][3] = {{1, 8, 0}, {8, 15, 1}, {16, 23, 0}, {24, 31, 0}, {32, 38, 0}};
-    CHECK(grid->count == 5, "Clementi: %zu grid units, expected 5", grid->count);
-    for (size_t i = 0; i < grid->count && i < 5; i++) {
-        CHECK(grid->units[i].first_measure == UNITS[i][0] && grid->units[i].last_measure == UNITS[i][1] &&
-                  grid->units[i].elided == (UNITS[i][2] == 1),
-              "Clementi: grid unit %zu is %d-%d, expected %d-%d", i, grid->units[i].first_measure, grid->units[i].last_measure, UNITS[i][0],
-              UNITS[i][1]);
-    }
+    /* the cadences and period of test_reference_phrases, unchanged */
     Claimed claimed[MAX_CADENCES];
     size_t count = claimed_of(chain, p.set.map, claimed);
     CHECK(count == 4, "Clementi: %zu cadences claimed, expected 4", count);
@@ -363,9 +354,9 @@ static void check_mozart(void) {
     check_region(regions, 1, "Mozart", 13, 28, 7, COMMON_PRACTICE_KEY_MAJOR);
     check_region(regions, 2, "Mozart", 29, 40, 0, COMMON_PRACTICE_KEY_MAJOR);
     check_region(regions, 3, "Mozart", 41, 56, 7, COMMON_PRACTICE_KEY_MAJOR);
-    const int g_minor = common_practice_key_index_of(7, COMMON_PRACTICE_KEY_MINOR);
-    const int f_major = common_practice_key_index_of(5, COMMON_PRACTICE_KEY_MAJOR);
-    const int c_major = common_practice_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
+    const int g_minor = test_key_index_of(7, COMMON_PRACTICE_KEY_MINOR);
+    const int f_major = test_key_index_of(5, COMMON_PRACTICE_KEY_MAJOR);
+    const int c_major = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
     CHECK(keys[57] == g_minor, "Mozart: measure 57 is not G minor");
     CHECK(keys[102] == g_minor, "Mozart: measure 102 is not G minor");
     for (int m = 70; m <= 77; m++) {

@@ -3,10 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/midi_pipeline.h>
-#include <ursatz_analyzer/version.h>
-#include <ursatz_composer/analysis_load.h>
 #include <galant-schemas/galant_prototypes.h>
 
 #include <ursatz_composer/constraint.h>
@@ -20,9 +16,7 @@
 
 /*
  * A plan written as JSON and read back is the same plan: tree, spans, states,
- * constraints and lane payloads. An analysis document loads as a Realized
- * plan with its skipped and trimmed elements reported. Malformed input is
- * refused with a path and no crash.
+ * constraints and lane payloads. Malformed input is refused with a path and no crash.
  */
 
 static PlanSpan bars(long start, long length) {
@@ -436,12 +430,6 @@ static void test_round_trip(void) {
     assert(again != NULL);
     assert(strcmp(text, again) == 0);
 
-    /* Through a file. */
-    assert(plan_write_json_file(plan, "test_plan_json_roundtrip.json", &error) == PLAN_OK);
-    PiecePlan *from_file = NULL;
-    assert(plan_read_json_file("test_plan_json_roundtrip.json", &from_file, &error) == PLAN_OK);
-    assert(plans_equal(plan, from_file));
-
     /* A Given item stays refusing writes after the round trip. */
     PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     length.params.bars = 1;
@@ -451,7 +439,6 @@ static void test_round_trip(void) {
     free(again);
     plan_destroy(plan);
     plan_destroy(parsed);
-    plan_destroy(from_file);
 }
 
 /*
@@ -1374,8 +1361,6 @@ static void test_malformed_input(void) {
     assert(plan_from_json("{\"schema_version\":1,\"extra\":[1,2],\"form\":null}", &parsed, &error) == PLAN_OK);
     plan_destroy(parsed);
 
-    assert(plan_read_json_file("no/such/file.json", &parsed, &error) == PLAN_ERR_IO);
-    assert(parsed == NULL);
 }
 
 /* ------------------------------------------------------------ format versions 1 and 2 */
@@ -1598,103 +1583,6 @@ static void test_format_errors(void) {
     assert(strcmp(error.path, "metadata.analyzer_version") == 0);
 }
 
-static bool report_has(const AnalysisLoadReport *report, const char *path_prefix, const char *message_part) {
-    for (size_t i = 0; i < report->count; i++) {
-        if (strncmp(report->notes[i].path, path_prefix, strlen(path_prefix)) == 0 &&
-            strstr(report->notes[i].message, message_part) != NULL) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static size_t lane_count(const PiecePlan *plan, PlanLaneKind lane) {
-    size_t count = 0;
-    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        count += plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == lane;
-    }
-    return count;
-}
-
-/* A piece analyzed by the Analyzer loads as a plan: no document is read. */
-static void test_load_analyzer_result(void) {
-    ImportedNotes notes;
-    memset(&notes, 0, sizeof(notes));
-    assert(midi_pipeline_import_file(COMPOSER_FIXTURE_DIR "/mozart545-bar1.mid", &notes) == MIDI_PIPELINE_OK);
-    AnalyzerResult *result = NULL;
-    assert(analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK);
-
-    PiecePlan *plan = NULL;
-    AnalysisLoadReport report = {NULL, 0};
-    PlanJsonError error;
-    assert(plan_from_analyzer_result(result, &notes, &plan, &report) == PLAN_OK);
-
-    /* A Form root, Realized, over the piece from the start; the plan records the Analyzer that heard it. */
-    NodeId root = plan_root(plan);
-    assert(plan_node_kind(plan, root) == PLAN_NODE_FORM && plan_node_state(plan, root) == PLAN_STATE_REALIZED);
-    assert(plan_node_span(plan, root).start.num == 0);
-    assert(strcmp(plan_analyzer_version(plan), ursatz_analyzer_version()) == 0);
-
-    /* The phrases the Analyzer heard are Phrase nodes under one Section. */
-    assert(plan_node_count(plan) >= 1);
-    for (NodeId id = 2; id <= plan_node_count(plan); id++) {
-        assert(plan_node_state(plan, id) == PLAN_STATE_REALIZED);
-        assert(plan_node_kind(plan, id) == PLAN_NODE_SECTION || plan_node_kind(plan, id) == PLAN_NODE_PHRASE);
-    }
-
-    /* The meter, key and chords, and both outer voices. */
-    assert(lane_count(plan, PLAN_LANE_METER) >= 1);
-    assert(lane_count(plan, PLAN_LANE_KEY) >= 1);
-    assert(lane_count(plan, PLAN_LANE_HARMONY) >= 1);
-    assert(lane_count(plan, PLAN_LANE_MELODY) == 1);
-    assert(lane_count(plan, PLAN_LANE_BASS) == 1);
-    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        assert(plan_lane_span_state(plan, id) == PLAN_STATE_REALIZED);
-        assert(plan_lane_span_owner(plan, id) == root);
-        const PlanLanePayload *payload = plan_lane_span_payload(plan, id);
-        if (plan_lane_span_lane(plan, id) == PLAN_LANE_HARMONY) {
-            assert(payload->harmony.roman_numeral[0] != '\0' && !payload->harmony.has_function);
-        }
-        if (plan_lane_span_lane(plan, id) == PLAN_LANE_MELODY) {
-            assert(payload->notes.note_count > 0);
-        }
-    }
-    /* Nothing is dropped silently: an area the plan has no place for is listed. */
-    assert(report_has(&report, "", ""));
-
-    /* Realized material can be regenerated: a write is accepted. */
-    LaneSpanId first_chord = PLAN_LANE_SPAN_NONE;
-    assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, root), &first_chord, 1) >= 1);
-    PlanLanePayload tonic = harmony("I", HARMONIC_FUNCTION_TONIC);
-    assert(plan_lane_span_write(plan, first_chord, &tonic) == PLAN_OK);
-
-    /* The loaded plan survives a plan JSON round trip. */
-    char *text = plan_to_json(plan, &error);
-    PiecePlan *again = NULL;
-    assert(text != NULL);
-    assert(strstr(text, "\"composer_version\"") != NULL && strstr(text, "\"analyzer_version\"") != NULL);
-    assert(plan_from_json(text, &again, &error) == PLAN_OK);
-    assert(plans_equal(plan, again));
-    assert(strcmp(plan_analyzer_version(again), ursatz_analyzer_version()) == 0);
-    free(text);
-    plan_destroy(again);
-
-    analysis_load_report_destroy(&report);
-    plan_destroy(plan);
-    analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
-}
-
-static void test_load_analyzer_result_errors(void) {
-    PiecePlan *plan = NULL;
-    AnalysisLoadReport report = {NULL, 0};
-    ImportedNotes notes;
-    memset(&notes, 0, sizeof(notes));
-    assert(plan_from_analyzer_result(NULL, &notes, &plan, &report) == PLAN_ERR_NULL);
-    assert(plan == NULL && report.count == 0);
-    assert(plan_from_analyzer_result(NULL, NULL, NULL, NULL) == PLAN_ERR_NULL);
-}
-
 int main(void) {
     test_round_trip();
     test_old_transforms();
@@ -1714,7 +1602,5 @@ int main(void) {
     test_version_one_values();
     test_spelling_round_trip();
     test_format_errors();
-    test_load_analyzer_result();
-    test_load_analyzer_result_errors();
     return 0;
 }

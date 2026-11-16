@@ -6,8 +6,6 @@
 
 #include "counterpoint_line.h"
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "motion_type.h"
 
 /*
@@ -29,18 +27,6 @@
  * equal and SIMILAR otherwise (motion_type_is_same_direction is true for
  * both). The type itself is motion_type.h.
  */
-
-typedef enum {
-    STANDARD_COUNTERPOINT_MOTION_RULE_CONTRARY = 0,
-    STANDARD_COUNTERPOINT_MOTION_RULE_SIMILAR,
-    STANDARD_COUNTERPOINT_MOTION_RULE_PARALLEL,
-    STANDARD_COUNTERPOINT_MOTION_RULE_OBLIQUE,
-    STANDARD_COUNTERPOINT_MOTION_RULE_STATIC,
-    STANDARD_COUNTERPOINT_MOTION_RULE_COUNT
-} StandardCounterpointMotionRule;
-
-const Rule *standard_counterpoint_motion_rule(StandardCounterpointMotionRule which);
-const Constraint *standard_counterpoint_motion_constraint(StandardCounterpointMotionRule which);
 
 /* The motion of two parts from one pair of notes to the next. False (*out
    untouched) when any pitch is NULL. */

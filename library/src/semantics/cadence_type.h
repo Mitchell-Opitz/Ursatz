@@ -53,12 +53,6 @@ bool cadence_type_valid(CadenceType type);
    "authentic-unspecified" "unknown"; NULL for an invalid type. */
 const char *cadence_type_name(CadenceType type);
 
-/* A human-readable label for display and debug output only: "authentic (PAC)",
-   "authentic (IAC)", "half", "subverted", "plagal", "deceptive",
-   "authentic (unspecified)", "unknown". NULL for an invalid type. Not a key to
-   compare or parse; compare CadenceType values. */
-const char *cadence_type_label(CadenceType type);
-
 /* True for the authentic cadences (PAC and IAC), the ones that sound conclusive.
    False for the others and for an invalid type. */
 bool cadence_type_is_authentic(CadenceType type);

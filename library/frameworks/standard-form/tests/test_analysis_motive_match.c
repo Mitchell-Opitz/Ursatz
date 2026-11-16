@@ -3,8 +3,8 @@
 #include "analysis_motive_match.h"
 #include "form_test_util.h"
 
-/* The transformation matchers, each on shapes built from real notes: the pattern match, inversion, retrograde, augmentation and
-   diminution, a varied motive, and the precedence between kinds. */
+/* The framework's own matching, on shapes built from real notes: a varied motive, the fewest intervals of a fragment, and the
+   precedence between kinds. */
 
 typedef struct {
     FormFixture f;
@@ -40,82 +40,6 @@ static StandardFormMotiveShape shape_of(Notes *n, size_t first, size_t count) {
 static void notes_destroy(Notes *n) {
     standard_form_motive_line_destroy(&n->line);
     form_destroy(&n->f);
-}
-
-static const double STEADY[4] = {0, 1, 2, 3};
-
-/* a second figure placed after a rest */
-static double shifted(const double *starts, size_t i, double by) {
-    return starts[i] + by;
-}
-
-static void test_a_pattern_is_exact_real_or_tonal(void) {
-    Notes n;
-    notes_init(&n);
-    const int a[4] = {60, 62, 64, 60};
-    const int same[4] = {60, 62, 64, 60};
-    const int up[4] = {65, 67, 69, 65};
-    const double later[4] = {shifted(STEADY, 0, 10), shifted(STEADY, 1, 10), shifted(STEADY, 2, 10), shifted(STEADY, 3, 10)};
-    const double later2[4] = {shifted(STEADY, 0, 20), shifted(STEADY, 1, 20), shifted(STEADY, 2, 20), shifted(STEADY, 3, 20)};
-    figure(&n, STEADY, a, 4);
-    figure(&n, later, same, 4);
-    figure(&n, later2, up, 4);
-    notes_done(&n);
-    StandardFormMotiveShape proto = shape_of(&n, 0, 4);
-    StandardFormMotiveMatch match;
-    assert(standard_form_motive_match_pattern(&proto, &(StandardFormMotiveShape){0}, &match) == false);
-    StandardFormMotiveShape exact = shape_of(&n, 4, 4);
-    assert(standard_form_motive_match_pattern(&proto, &exact, &match) && match.kind == (int)MOTIVE_OCCURRENCE_EXACT &&
-           match.score == 1.0);
-    StandardFormMotiveShape real = shape_of(&n, 8, 4);
-    assert(standard_form_motive_match_pattern(&proto, &real, &match) && match.kind == (int)MOTIVE_OCCURRENCE_REAL);
-    notes_destroy(&n);
-}
-
-static void test_inversion_negates_every_interval(void) {
-    Notes n;
-    notes_init(&n);
-    const int a[4] = {60, 62, 64, 60};     /* +2 +2 -4 */
-    const int inverted[4] = {72, 70, 68, 72}; /* -2 -2 +4 */
-    const int not_inverted[4] = {72, 70, 69, 72};
-    const double s1[4] = {10, 11, 12, 13};
-    const double s2[4] = {20, 21, 22, 23};
-    figure(&n, STEADY, a, 4);
-    figure(&n, s1, inverted, 4);
-    figure(&n, s2, not_inverted, 4);
-    notes_done(&n);
-    StandardFormMotiveShape proto = shape_of(&n, 0, 4);
-    StandardFormMotiveMatch match;
-    StandardFormMotiveShape cand = shape_of(&n, 4, 4);
-    assert(standard_form_motive_match_inversion(&proto, &cand, &match) && match.kind == (int)MOTIVE_OCCURRENCE_INVERTED &&
-           match.score == 1.0 && match.mismatches == 0);
-    assert(!standard_form_motive_match_pattern(&proto, &cand, &match));
-    cand = shape_of(&n, 8, 4);
-    assert(!standard_form_motive_match_inversion(&proto, &cand, &match));
-    notes_destroy(&n);
-}
-
-static void test_retrograde_reverses_the_notes_and_the_onset_gaps(void) {
-    Notes n;
-    notes_init(&n);
-    const double proto_starts[4] = {0, 1, 2, 4};   /* gaps 1 1 2 */
-    const int a[4] = {60, 62, 65, 64};             /* +2 +3 -1 */
-    const double back_starts[4] = {10, 12, 13, 14}; /* gaps 2 1 1 */
-    const int back[4] = {64, 65, 62, 60};          /* +1 -3 -2: the notes reversed */
-    const int wrong_rhythm[4] = {64, 65, 62, 60};
-    const double wrong_starts[4] = {20, 21, 22, 24}; /* gaps 1 1 2: not reversed */
-    figure(&n, proto_starts, a, 4);
-    figure(&n, back_starts, back, 4);
-    figure(&n, wrong_starts, wrong_rhythm, 4);
-    notes_done(&n);
-    StandardFormMotiveShape proto = shape_of(&n, 0, 4);
-    StandardFormMotiveMatch match;
-    StandardFormMotiveShape cand = shape_of(&n, 4, 4);
-    assert(standard_form_motive_match_retrograde(&proto, &cand, &match) && match.kind == (int)MOTIVE_OCCURRENCE_RETROGRADE &&
-           match.score == 1.0);
-    cand = shape_of(&n, 8, 4);
-    assert(!standard_form_motive_match_retrograde(&proto, &cand, &match));
-    notes_destroy(&n);
 }
 
 static void test_a_varied_motive_changes_an_interval_or_the_rhythm(void) {
@@ -166,38 +90,6 @@ static void test_a_varied_motive_changes_an_interval_or_the_rhythm(void) {
 }
 
 static void test_precedence_picks_the_strongest_kind(void) {
-    Notes n;
-    notes_init(&n);
-    /* 60 62 60 is its own retrograde (+2 -2): a transposition of it is both a real transposition and a retrograde */
-    const int a[3] = {60, 62, 60};
-    const int up[3] = {65, 67, 65};
-    const double s0[3] = {0, 1, 2};
-    const double s1[3] = {10, 11, 12};
-    figure(&n, s0, a, 3);
-    figure(&n, s1, up, 3);
-    notes_done(&n);
-    StandardFormMotiveShape proto = shape_of(&n, 0, 3);
-    StandardFormMotiveShape cand = shape_of(&n, 3, 3);
-    StandardFormMotiveMatch match;
-    assert(standard_form_motive_match_retrograde(&proto, &cand, &match));
-    assert(standard_form_motive_match_pattern(&proto, &cand, &match));
-    assert(standard_form_motive_classify(&proto, &cand, 1, &match) && match.kind == (int)MOTIVE_OCCURRENCE_REAL);
-    notes_destroy(&n);
-
-    notes_init(&n);
-    /* a rising line of equal steps: its inversion and its retrograde coincide; the inversion is listed first */
-    const int rise[3] = {60, 62, 64};
-    const int fall[3] = {72, 70, 68};
-    figure(&n, s0, rise, 3);
-    figure(&n, s1, fall, 3);
-    notes_done(&n);
-    proto = shape_of(&n, 0, 3);
-    cand = shape_of(&n, 3, 3);
-    assert(standard_form_motive_match_inversion(&proto, &cand, &match));
-    assert(standard_form_motive_match_retrograde(&proto, &cand, &match));
-    assert(standard_form_motive_classify(&proto, &cand, 1, &match) && match.kind == (int)MOTIVE_OCCURRENCE_INVERTED);
-    notes_destroy(&n);
-
     assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_EXACT) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_REAL) ||
            standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_EXACT) == 0);
     assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_TONAL) == standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_REAL));
@@ -206,10 +98,7 @@ static void test_precedence_picks_the_strongest_kind(void) {
     assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_RETROGRADE) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_AUGMENTED));
     assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_DIMINISHED) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_FRAGMENTED));
     assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_FRAGMENTED) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_VARIED));
-    assert(standard_form_motive_kind_rank((StandardFormMotiveKind)99) == -1 && standard_form_motive_kind_name((StandardFormMotiveKind)99) == NULL);
-    assert(strcmp(standard_form_motive_kind_name(MOTIVE_OCCURRENCE_TONAL), "tonal-transposed") == 0);
 }
-
 
 static void test_the_fewest_intervals_of_a_fragment(void) {
     assert(standard_form_motive_fragment_min_intervals(1) == 2 && standard_form_motive_fragment_min_intervals(2) == 2 &&
@@ -217,35 +106,10 @@ static void test_the_fewest_intervals_of_a_fragment(void) {
            standard_form_motive_fragment_min_intervals(7) == 4);
 }
 
-static void test_shapes_of_different_dimensions_or_lengths_do_not_compare(void) {
-    Notes n;
-    notes_init(&n);
-    const int a[4] = {60, 62, 64, 60};
-    const double s1[4] = {10, 11, 12, 13};
-    figure(&n, STEADY, a, 4);
-    figure(&n, s1, a, 4);
-    notes_done(&n);
-    StandardFormMotiveShape proto = shape_of(&n, 0, 4);
-    StandardFormMotiveShape shorter = shape_of(&n, 4, 3);
-    StandardFormMotiveShape generic = proto;
-    generic.generic = true;
-    StandardFormMotiveMatch match;
-    assert(!standard_form_motive_match_pattern(&proto, &shorter, &match));
-    assert(!standard_form_motive_match_inversion(&proto, &shorter, &match));
-    assert(!standard_form_motive_match_pattern(&proto, &generic, &match));
-    assert(!standard_form_motive_classify(&proto, &shorter, 1, &match));
-    assert(!standard_form_motive_match_pattern(&proto, NULL, &match) && !standard_form_motive_match_pattern(&proto, &proto, NULL));
-    notes_destroy(&n);
-}
-
 int main(void) {
-    test_a_pattern_is_exact_real_or_tonal();
-    test_inversion_negates_every_interval();
-    test_retrograde_reverses_the_notes_and_the_onset_gaps();
     test_a_varied_motive_changes_an_interval_or_the_rhythm();
     test_precedence_picks_the_strongest_kind();
     test_the_fewest_intervals_of_a_fragment();
-    test_shapes_of_different_dimensions_or_lengths_do_not_compare();
     printf("test_standard_form_analysis_motive_match: ok\n");
     return 0;
 }

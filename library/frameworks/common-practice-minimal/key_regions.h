@@ -84,8 +84,6 @@ CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void);
 /* Tonic pitch class (0..11) and mode of key index 0..23; -1 and MAJOR for an invalid index. */
 int common_practice_key_index_tonic(int key_index);
 CommonPracticeKeyMode common_practice_key_index_mode(int key_index);
-/* The index of a tonic and mode, or -1. */
-int common_practice_key_index_of(int tonic_pitch_class, CommonPracticeKeyMode mode);
 /* "C", "Db" ... the tonic name used for key labels (C Db D Eb E F F# G Ab A Bb B); NULL if invalid. */
 const char *common_practice_key_index_tonic_name(int key_index);
 
@@ -323,7 +321,7 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  * AUTHORITATIVE boundary: the piece's key regions are found separately between the events, so a region can
  * never straddle one. The caller passes the events as plain structs (this framework includes no io/ and no
  * other framework): the position of the event and its sharps_flats count (-7..7, negative flats), in time
- * order, as midi_key_signature_scan_all returns them. The mode hint is ignored (the byte is unreliable).
+ * order, as the key_signatures of a MidiImport list them. The mode hint is ignored (the byte is unreliable).
  *
  * Each event, snapped to the nearest barline, starts a span of the piece. Consecutive events with the same
  * sharps_flats are one signature, so the repeat is not a boundary. The FIRST region of a span that starts at an

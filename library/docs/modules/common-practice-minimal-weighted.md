@@ -6,16 +6,9 @@ Framework overview: [frameworks/common-practice-minimal/README.md](../../framewo
 
 ## Weighted identification and non-chord tones
 
-`triad_identification.c` and `seventh_identification.c` match by subset:
-a triad or seventh matches when its degrees or intervals are all present,
-and any extra degrees are ignored as non-chord tones. Ties go to the first
-match in scan order and are logged to stderr. This tolerates one extra tone
-per beat; with two or more, nothing matches (Field Nocturne No. 1 resolved
-61 of 394 fixed-grid beats). Those functions are unchanged.
-
 `weighted_identification.h`, `non_chord_tones.h` and
-`weighted_chord_identification.h` are the weighted replacement, a new
-function beside them. A segment's members (plain structs: pitch, held or
+`weighted_chord_identification.h` are the weighted chord identification.
+A segment's members (plain structs: pitch, held or
 attacked, duration, the caller-computed `BeatStrength`, voice) are weighted by
 duration times a beat-strength or held factor, with the bass pitch class
 boosted. The 14
@@ -64,9 +57,9 @@ before). Field Nocturne No. 1 stays at 78.7% (48 of 61), below the 90%
 target: its misses are a vii or iii read where V7 or I is marked, on beats
 whose bass sounded in an earlier beat and is not held into them.
 
-`outer_scale_degrees.h` takes its degree numbers from `standard_tonality_degree_of_semitone`, the one scale degree owner (R-285), and labels the soprano and bass of each segment from
-`analysis/outer_voice.h` as `ScaleDegree` Interpretations relative to the
-caller's key, with a required `FrameworkReference` and confidence 1/1. Limits:
+`outer_scale_degrees.h` takes its degree numbers from `standard_tonality_degree_of_semitone`, the one scale degree owner (R-285), and gives the label of a pitch class relative to the
+caller's key (`common_practice_scale_degree_label`, and the numbers behind it in `common_practice_scale_degree_of`). The chain labels the soprano and bass of each segment from
+`analysis/outer_voice.h` with it; no `ScaleDegree` Interpretation is built (the type was deleted, P55). Limits:
 no voice-crossing awareness, no inner voices, one line per extreme; absent
 segments get no label. See docs/modules/analysis.md.
 
@@ -143,7 +136,7 @@ A greedy split against a margin over the whole (R-369) could not cut a bar that 
 
 ## Applied chords (R-380)
 
-`CommonPracticeWeightedConfig.applied_chords` (default false) ranks the key's applied chords beside the diatonic ones. The chain sets it for the chord identification only (`AnalysisChainConfig.applied_chords`, P40 B5), and `harmonic_spans_group` keeps it off (grouping is key-free and already reads these shapes as diatonic in another key).
+`CommonPracticeWeightedConfig.applied_chords` (default false) ranks the key's applied chords beside the diatonic ones. The chain always sets it for the chord identification (P40 B5), and `harmonic_spans_group` keeps it off (grouping is key-free and already reads these shapes as diatonic in another key).
 
 - **Vocabulary.** For each target x (major: ii iii IV V vi; minor, natural roots: III iv V VI VII) the shapes V/x (major triad on x's root plus 7), V7/x (dominant seventh, same root), vii°/x (diminished triad on x's root minus 1) and vii°7/x (diminished seventh, same root). A chord the mode's diatonic vocabulary already has is left out, and a diminished seventh with the pitch classes of a diatonic one. Diminished sevenths are symmetric, so one entry per pitch-class set is kept, the target V first, else the lowest degree. That leaves 17 applied chords in major and 10 in minor (`COMMON_PRACTICE_CANDIDATE_COUNT` is 36).
 - **Ranked chord.** `degree` is the root's letter degree as the function spells it (V/V is 2, vii°7/V is 4), `applied_target_degree` the degree of the key it tonicizes (0 for a diatonic chord), `triad` is `COMMON_PRACTICE_TRIAD_MAJOR` or `_DIMINISHED`, `seventh` is `_DOMINANT7` or `_DIMINISHED7`.

@@ -105,7 +105,4 @@ GalantAnalysisStatus galant_schema_match(const GalantSegmentList *segments, cons
 
 void galant_schema_matches_destroy(GalantSchemaMatches *matches);
 
-/* Reads the claim back out of a match's Interpretation. False if it is not one. */
-bool galant_schema_claim_read(const Interpretation *interpretation, GalantSchemaClaim *out);
-
 #endif

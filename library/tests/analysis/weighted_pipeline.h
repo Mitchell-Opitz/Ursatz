@@ -9,7 +9,7 @@
 
 #include "core/rational.h"
 #include "events/note_event.h"
-#include "io/import_notes.h"
+#include "../import_notes_test_util.h"
 #include "io/midi_importer.h"
 #include "pitch/pitch_arithmetic.h"
 #include "standard-meter/segmentation_beat_grid.h"

@@ -140,7 +140,7 @@ A chord is the form's own harmony, else its best implied chord. A form without a
 
 ## Recognizing a variant
 
-`variant_recognize(source, target, &chain, &recognition)` is the reverse: it finds the chain of rows that turns `source` into `target`, `found`, its `distance` as a fraction, `kept`, `changed` and the derivation. Each library relation step becomes the registry step of the row whose `relation` it is, every parameter set; only steps the registry can replay are searched. See [docs/cli-recognize.md](cli-recognize.md).
+`variant_recognize_depth(source, target, depth, &chain, &recognition)` is the reverse: it finds the chain of rows that turns `source` into `target`, `found`, its `distance` as a fraction, `kept`, `changed` and the derivation. Each library relation step becomes the registry step of the row whose `relation` it is, every parameter set; only steps the registry can replay are searched. See [docs/cli-recognize.md](cli-recognize.md).
 
 ## Adding an entry
 

@@ -116,7 +116,7 @@ static void test_three_kinds(void) {
         memset(&config, 0, sizeof(config));
         config.seed = seed;
         config.basic = &motive;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
         Kind kind = repetition_kind(plan);
         seen[kind]++;
@@ -162,7 +162,7 @@ static void test_one_cell(void) {
         memset(&config, 0, sizeof(config));
         config.seed = seed;
         config.basic = &motive;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
         assert(repetition_kind(plan) == EXACT);
         grow_outcome_destroy(&outcome);

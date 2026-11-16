@@ -45,15 +45,6 @@ int spelling_from_name(const char *name, PitchSpelling **out) {
     return result == PITCH_SPELLING_OK ? 1 : (result == PITCH_SPELLING_ERR_ALLOC ? -1 : 0);
 }
 
-int note_pitch_spelling(const ImportedNotes *notes, size_t note, bool prefer_flats, PitchSpelling **out) {
-    long pitch = pitch_numeric_value_position_numerator(notes->pitch_values[note]);
-    char name[16];
-    if (!(notes->source.spelling_notated && spelled_note_name(notes->events[note], pitch, true, name))) {
-        note_name(pitch, prefer_flats, name);
-    }
-    return spelling_from_name(name, out);
-}
-
 /* The pitch class of a note name without an octave ("C#", "Db"); -1 for text that is not one. */
 static int pitch_class_of_name(const char *name) {
     PitchLetter letter;

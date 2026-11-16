@@ -160,7 +160,7 @@ ComposerStatus api_read_plan_text(const cJSON *request, const char *name, char *
             cJSON_free(printed);
             return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path,
                             "the input is an Ursatz-Analyzer analysis document, not a plan; it describes a piece that is "
-                            "already written (load an analysis with plan_from_analyzer_result)");
+                            "already written");
         }
         cJSON_free(printed);
         if (read == PLAN_ERR_ALLOC) {

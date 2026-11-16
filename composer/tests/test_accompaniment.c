@@ -13,6 +13,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "accompaniment_check.h"
+#include "support/test_composer.h"
 
 /*
  * The accompaniment operator on realized plans: the fixed 8-bar sentence in C major 4/4, and plans built here in 3/4
@@ -61,7 +62,7 @@ static Piece fixture_piece(void) {
     Piece piece;
     PlanJsonError error;
     memset(&piece, 0, sizeof(piece));
-    assert(plan_read_json_file(COMPOSER_FIXTURE_DIR "/sentence_c_major.json", &piece.plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(COMPOSER_FIXTURE_DIR "/sentence_c_major.json", &piece.plan, &error) == PLAN_OK);
     measure(&piece);
     return piece;
 }

@@ -225,30 +225,6 @@ NodeId plan_node_child_at(const PiecePlan *plan, NodeId id, size_t index) {
     return node->children[index];
 }
 
-/* Returns false once a visit asks to stop. */
-static bool walk_node(const PiecePlan *plan, NodeId id, size_t depth, PlanVisitFn visit, void *context) {
-    if (!visit(plan, id, depth, context)) {
-        return false;
-    }
-    const PlanNode *node = plan_node_at(plan, id);
-    for (size_t i = 0; i < node->child_count; i++) {
-        if (!walk_node(plan, node->children[i], depth + 1, visit, context)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-PlanResult plan_walk(const PiecePlan *plan, PlanVisitFn visit, void *context) {
-    if (!plan || !visit) {
-        return PLAN_ERR_NULL;
-    }
-    if (plan->node_count > 0) {
-        walk_node(plan, plan_root(plan), 0, visit, context);
-    }
-    return PLAN_OK;
-}
-
 void plan_replace_contents(PiecePlan *dst, PiecePlan *src) {
     PiecePlan old = *dst;
     *dst = *src;

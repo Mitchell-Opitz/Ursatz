@@ -15,6 +15,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/return_hear.h>
+#include "support/test_oracles.h"
+#include "support/test_composer.h"
 
 /*
  * The figurate return (form_figure.h, R-497, R-498): tests/fixtures/forms/figure-form.json (a theme and three
@@ -237,7 +239,7 @@ static void check_parallel_plan(PiecePlan *plan) {
     assert(melody_in_scale(plan, sections[1], other));
     PieceKeyCheck keys;
     memset(&keys, 0, sizeof(keys));
-    assert(piece_check_keys(plan, &keys) && keys.ok && keys.changes == 0);
+    assert(test_piece_check_keys(plan, &keys) && keys.ok && keys.changes == 0);
     char *json = plan_to_json(plan, NULL);
     PiecePlan *again = NULL;
     assert(json && plan_from_json(json, &again, NULL) == PLAN_OK);

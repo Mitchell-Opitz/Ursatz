@@ -4,43 +4,12 @@
 
 #include "fourth_species_test_util.h"
 #include "fourth_species_weak_rules.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fourth-species-weak", STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT);
-#define standard_counterpoint_fourth_species_weak_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_fourth_species_weak_constraint, standard_counterpoint_fourth_species_weak_preference, standard_counterpoint_fourth_species_weak_rule_holds, StandardCounterpointFourthSpeciesExercise, which, subject)
 
 #define WEAK(name) STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_##name
 
 static bool holds(StandardCounterpointFourthSpeciesWeakRule rule,
                   const StandardCounterpointFourthSpeciesExercise *exercise) {
     return standard_counterpoint_fourth_species_weak_rule_holds(rule, exercise);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_fourth_species_weak_rule,
-                                    standard_counterpoint_fourth_species_weak_constraint,
-                                    STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_fourth_species_weak_constraint((StandardCounterpointFourthSpeciesWeakRule)i));
-        assert(type == (i == WEAK(NO_INTERIOR_UNISON) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_fourth_species_weak_rule_name(WEAK(CONSONANT)), "consonant") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_weak_rule_name(WEAK(NO_REPEATED_PERFECT)),
-                  "no-repeated-perfect") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_weak_rule_name(WEAK(MAX_SAME_IMPERFECT_RUN)),
-                  "max-same-imperfect-run") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_weak_rule_name(WEAK(NO_DIRECT_PERFECT)),
-                  "no-direct-perfect") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_weak_rule_name(WEAK(NO_INTERIOR_UNISON)),
-                  "no-interior-unison") == 0);
-    assert(standard_counterpoint_fourth_species_weak_rule_name(WEAK(COUNT)) == NULL);
 }
 
 static void test_good_exercise(void) {
@@ -181,8 +150,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_exercise();
     test_consonant();
     test_no_repeated_perfect();

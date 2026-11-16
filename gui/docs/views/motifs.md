@@ -91,19 +91,15 @@ version as `motif.tone_overrides` (`{"2": "passing"}`, 1-based notes, the roles
 of the Composer's `tones` request member) and sent as `tones` when the motif is analyzed on
 save or Re-analyze; Automatic removes it, and a changed override is a new
 version like any edit. The Composer's warnings (`Note 3 (B5) does not resolve`)
-show in the Motif tab's status area. On the first start with this version every
-full motif whose current analysis has no tones is analyzed again (a new version
-noted `Re-analyzed`); the file `materials/tones-migrated` records that it ran,
-and a motif the Composer cannot analyze keeps its `analysis_error`.
+show in the Motif tab's status area. A motif the Composer cannot analyze keeps its
+`analysis_error`.
 
 Motifs are written with C as the tonic (R-179): the note list is C-based and
 the Mode select sets major or minor, so every motif is stored with the key
 `C major` or `C minor`. A piece sets the real key. Upload MIDI moves the notes
 to C and says so (`Moved from D minor to C minor.`, or `No key found: read as
-C major.`). A motif saved before this change keeps its old key: the editor
-shows `Written in D minor before motifs moved to C.` with a Rewrite in C
-button that writes the stored degrees in C, and saving waits until it is
-rewritten. The score and playback always use the stored key.
+C major.`). A motif on another tonic is refused when the backend starts (see
+[Data check](../storage.md#data-check)). The score and playback always use the stored key.
 
 The Composer's
 message for a note list it cannot read shows beside the note list and the

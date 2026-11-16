@@ -7,7 +7,6 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "cJSON.h"
@@ -161,8 +160,6 @@ static void check_piece(const char *path, const char *display_name, const Expect
     assert(built != NULL);
     char *json = analysis_document_to_json(built);
     assert(json != NULL);
-    char *markdown = markdown_report_render(built);
-    assert(markdown != NULL);
     analysis_document_destroy(built);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
@@ -186,7 +183,6 @@ static void check_piece(const char *path, const char *display_name, const Expect
         assert(number(test_json_require(pickup, "beats"), "den") == 1);
         assert(number(test_json_require(pickup, "length"), "num") == 1);
         assert(number(test_json_require(pickup, "length"), "den") == 4);
-        assert(strstr(markdown, "- **Pickup:** 1 beat(s), numbered measure 0.\n") != NULL);
     }
 
     const cJSON *changes = test_json_require(meter, "changes");
@@ -196,12 +192,6 @@ static void check_piece(const char *path, const char *display_name, const Expect
         assert(number(change, "measure") == expected->changes[i].measure);
         assert(number(test_json_require(change, "time_signature"), "numerator") == expected->changes[i].numerator);
         assert(number(test_json_require(change, "time_signature"), "denominator") == expected->changes[i].denominator);
-    }
-
-    if (strcmp(expected->source, "inferred") == 0) {
-        assert(strstr(markdown, "(inferred: the file has no time signature, so 4/4 is assumed)") != NULL);
-    } else {
-        assert(strstr(markdown, "(inferred") == NULL);
     }
 
     const cJSON *chords = test_json_require(document, "chords");
@@ -235,13 +225,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
         assert(cJSON_IsObject(test_json_require(test_json_require(key, "location"), "start")));
     }
 
-    /* The report shows measure and beat, not raw beats from the start of the file. */
-    assert(strstr(markdown, "## Meter\n") != NULL);
-    assert(strstr(markdown, "- Beat ") == NULL);
-    assert(strstr(markdown, "| m. ") != NULL);
-
     cJSON_Delete(document);
-    free(markdown);
     free(json);
 }
 

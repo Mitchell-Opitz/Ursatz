@@ -13,9 +13,9 @@
  * this extension is explicitly built on top of. It MUST NOT depend on
  * music-analysis, music-generation, music-transform, or music-corpus,
  * and MUST NOT depend on any other theory/ or rules/ header
- * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference,
- * RuleEvaluation are not needed by this extension; constraint_evaluate
- * itself is never called here -- see chord_vocabulary.c).
+ * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference
+ * are not needed by this extension; no Constraint is
+ * evaluated here -- see chord_vocabulary.c).
  *
  * Scans every .h/.c file directly under frameworks/common-practice-minimal/
  * (not its tests/ subdirectory) and flags any local include ("...")
@@ -59,8 +59,8 @@ static int check_file(const char *path) {
             strcmp(start, "theory/framework_singleton.h") == 0 ||
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
             strcmp(start, "chord_vocabulary.h") == 0 || strcmp(start, "key_vocabulary.h") == 0 ||
-            strcmp(start, "triad_identification.h") == 0 || strcmp(start, "key_identification.h") == 0 ||
-            strcmp(start, "chord_vocabulary_seventh.h") == 0 || strcmp(start, "seventh_identification.h") == 0 ||
+            strcmp(start, "key_identification.h") == 0 ||
+            strcmp(start, "chord_vocabulary_seventh.h") == 0 ||
             strcmp(start, "weighted_identification.h") == 0 || strcmp(start, "non_chord_tones.h") == 0 ||
             strcmp(start, "weighted_chord_identification.h") == 0 || strcmp(start, "outer_scale_degrees.h") == 0 ||
             strcmp(start, "key_regions.h") == 0 || strcmp(start, "harmonic_spans.h") == 0) {

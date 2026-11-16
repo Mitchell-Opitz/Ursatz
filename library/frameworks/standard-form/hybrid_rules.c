@@ -1,17 +1,6 @@
 #include "hybrid_rules.h"
 
-#include "rule_pair.h"
 #include <stddef.h>
-
-static const char *const NAMES[STANDARD_FORM_HYBRID_RULE_COUNT] = {
-    "hybrid-pairing-form",
-    "hybrid-commonality",
-    "hybrid-subphrase-role"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
-    NAMES, STANDARD_FORM_HYBRID_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_form_hybrid, StandardFormHybridRule, STANDARD_FORM_HYBRID_RULE_COUNT, g_table)
 
 static const char *const COMMONALITY_NAMES[STANDARD_FORM_COMMONALITY_COUNT] = {
     "very-common", "slightly-less-common", "occasional", "rare"};
@@ -66,18 +55,3 @@ bool standard_form_pairing_commonality(PhraseBeginning beginning, PhraseEnding e
     return true;
 }
 
-bool standard_form_beginning_of_subphrase_role(SubphraseRole role, PhraseBeginning *out) {
-    if (role != SUBPHRASE_ROLE_PRESENTATION) {
-        return false;
-    }
-    *out = PHRASE_BEGINNING_PRESENTATION;
-    return true;
-}
-
-bool standard_form_ending_of_subphrase_role(SubphraseRole role, PhraseEnding *out) {
-    if (role != SUBPHRASE_ROLE_CONTINUATION) {
-        return false;
-    }
-    *out = PHRASE_ENDING_CONTINUATION;
-    return true;
-}

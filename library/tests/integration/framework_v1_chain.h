@@ -20,6 +20,7 @@
 
 #include "io/midi_importer.h"
 #include "ursatz_chain/analysis_chain.h"
+#include "../key_index_test_util.h"
 
 /* --- the expected values --- */
 
@@ -121,7 +122,7 @@ static int fv1_key_index(const char *tonic, const char *mode) {
     static const char *const NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
     for (int pc = 0; pc < 12; pc++) {
         if (strcmp(tonic, NAMES[pc]) == 0) {
-            return common_practice_key_index_of(pc, strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
+            return test_key_index_of(pc, strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
                                                                                 : COMMON_PRACTICE_KEY_MAJOR);
         }
     }

@@ -4,11 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/imported_notes.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 /*
@@ -27,7 +25,7 @@
  * order, stages inside them, degrees in range, confidence parts in [0, 1], the library's names.
  *
  * On the reference pieces (the Mozart 545 and Clementi 36 of Ursatz's own test, printed there and not asserted) the
- * matches are pinned to what the library gives, with the structure checked, and the Markdown names them. The library
+ * matches are pinned to what the library gives, with the structure checked. The library
  * finds no schema in the Bach 114, Clementi 36, Field 1 or Field 5 outer voices.
  */
 
@@ -323,8 +321,7 @@ static void check_structure(const AnalysisReport *report) {
             CHECK(degree_ok(stage->bass_degree, stage->bass_alteration));
             CHECK(stage->has_melody == !stage->bass_only);
             CHECK(!stage->has_melody || degree_ok(stage->melody_degree, stage->melody_alteration));
-            CHECK(!stage->has_second || (stage->second_last_entry <= s->last_entry &&
-                                         degree_ok(stage->second_degree, stage->second_alteration)));
+            CHECK(!stage->has_second || degree_ok(stage->second_degree, stage->second_alteration));
             CHECK(unit_ok(stage->credit));
             bass_only += stage->bass_only ? 1 : 0;
         }
@@ -425,21 +422,6 @@ static void check_piece(const char *dir, const Pinned *pinned) {
     CHECK(count_kind(report, "cycle-of-fifths") == pinned->cycles_of_fifths);
     CHECK(count_kind(report, "parallel-chords") == pinned->parallel_chords);
     check_structure(report);
-    AnalysisDocument *document = analysis_document_build(path, &analysis.notes, report);
-    char *markdown = document ? markdown_report_render(document) : NULL;
-    CHECK(markdown != NULL);
-    if (markdown) {
-        bool has_section = strstr(markdown, "## Schemas and sequences") != NULL;
-        CHECK(has_section == (pinned->schemas + pinned->sequences > 0));
-        CHECK((strstr(markdown, "### Sequences") != NULL) == (pinned->sequences > 0));
-        for (size_t i = 0; i < report->schema_count; i++) {
-            char row[128];
-            snprintf(row, sizeof(row), "| %s | %s |", report->schemas[i].name, report->schemas[i].function);
-            CHECK(strstr(markdown, row) != NULL);
-        }
-    }
-    free(markdown);
-    analysis_document_destroy(document);
     analysis_destroy(&analysis);
 }
 

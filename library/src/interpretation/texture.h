@@ -10,7 +10,7 @@
  * independent lines).
  *
  * Texture embeds and owns an Interpretation (interpretation/
- * interpretation.h), the same shape Chord, Key, and ScaleDegree have.
+ * interpretation.h), the same shape Chord and Key have.
  * The underlying fact (which passage this Texture is about) is carried
  * by the embedded Interpretation's own target_id -- the caller sets
  * target_id to the passage's EntityID when building that
@@ -50,18 +50,5 @@ typedef enum {
  */
 TextureResult texture_create(Interpretation *interpretation, const char *label, Texture **out);
 void texture_destroy(Texture *texture);
-
-const Interpretation *texture_interpretation(const Texture *texture);
-const char *texture_label(const Texture *texture);
-
-/*
- * Ownership-transferring unwrap: destroys only the Texture shell (its
- * owned label) and hands back the embedded Interpretation with ownership
- * transferred to the caller (the caller must eventually
- * interpretation_destroy it). Use this when a caller needs the
- * Interpretation on its own, e.g. to place it into an AnalysisResult
- * (analysis/analyzer.h). texture must be non-NULL.
- */
-Interpretation *texture_take_interpretation(Texture *texture);
 
 #endif

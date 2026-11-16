@@ -12,7 +12,7 @@
 
 /*
  * Seventh and leading tone resolution on separated voices (the standard-harmony analysis adapter, step 6). The rules are
- * standard-harmony's (harmony_resolution_rules.h, which extends the V7 resolution rules of harmony_seventh_rules.h to one
+ * standard-harmony's (harmony_resolution_rules.h, for one
  * voice of any chord); the adapter finds each voice's role in the chord and what it does in the next chord, and asks the rule.
  *
  * WHERE. A chord is a run of consecutive segments making the same chord (analysis_runs.h). Resolution is judged where the chord
@@ -94,8 +94,5 @@ HarmonyResolutionStatus harmony_analysis_check_resolutions(const HarmonySegment 
                                                            HarmonyResolutions *out);
 
 void harmony_resolutions_destroy(HarmonyResolutions *resolutions);
-
-/* Reads the claim back out of a resolution Interpretation. False if it is not one. */
-bool harmony_resolution_claim_read(const Interpretation *interpretation, HarmonyResolutionClaim *out);
 
 #endif

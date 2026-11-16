@@ -38,9 +38,6 @@ TimeSpanResult time_span_create(const MusicalTime *start, const MusicalTime *end
                                  TimeSpan **out);
 void time_span_destroy(TimeSpan *span);
 
-/* Value equality: start, end, AND boundary must all match. */
-bool time_span_equals(const TimeSpan *a, const TimeSpan *b);
-
 const MusicalTime *time_span_start(const TimeSpan *span);
 const MusicalTime *time_span_end(const TimeSpan *span);
 TimeSpanBoundary time_span_boundary(const TimeSpan *span);

@@ -6,7 +6,6 @@ function(ursatz_gui_add_test name source workdir)
   add_test(NAME ${name} COMMAND test_${name} WORKING_DIRECTORY ${workdir})
 endfunction()
 
-ursatz_gui_add_test(health_route test_health_route.c ${CMAKE_CURRENT_BINARY_DIR}/health_route)
 
 ursatz_gui_add_test(analyzer_route test_analyzer_route.c ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 # Slow: about 363 s in a -j4 run (R-307).
@@ -20,11 +19,13 @@ target_compile_definitions(test_analyzer_route PRIVATE
 )
 
 ursatz_gui_add_test(corpus_route test_corpus_route.c ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
-# The test creates collections/, pieces/ and data/ in its own working directory.
+# The test creates collections/ and pieces/ in its own working directory.
 
 ursatz_gui_add_test(piece_metadata test_piece_metadata.c ${CMAKE_CURRENT_BINARY_DIR}/piece_metadata)
 
 ursatz_gui_add_test(id_service test_id_service.c ${CMAKE_CURRENT_BINARY_DIR}/id_service)
+# The test makes one data folder per case in its own working directory and removes it.
+ursatz_gui_add_test(data_check test_data_check.c ${CMAKE_CURRENT_BINARY_DIR}/data_check)
 
 ursatz_gui_add_test(job_queue test_job_queue.c ${CMAKE_CURRENT_BINARY_DIR}/job_queue)
 # The test cancels a theme compose made from a request fixture; no server is started.

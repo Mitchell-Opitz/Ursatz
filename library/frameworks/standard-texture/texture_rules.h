@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 
-#include "rules/constraint.h"
-#include "rules/rule.h"
-
 /*
  * Texture rules for standard-texture-v1. Texture is the density of and
  * interaction between a work's different voices. There are many types;
@@ -54,19 +51,6 @@ typedef enum {
     STANDARD_TEXTURE_COUNT
 } StandardTexture;
 
-typedef enum {
-    STANDARD_TEXTURE_RULE_MONOPHONY = 0,
-    STANDARD_TEXTURE_RULE_HETEROPHONY,
-    STANDARD_TEXTURE_RULE_HOMOPHONY,
-    STANDARD_TEXTURE_RULE_HOMORHYTHM,
-    STANDARD_TEXTURE_RULE_MELODY_AND_ACCOMPANIMENT,
-    STANDARD_TEXTURE_RULE_POLYPHONY,
-    STANDARD_TEXTURE_RULE_COUNT
-} StandardTextureRule;
-
-const Rule *standard_texture_rule(StandardTextureRule which);
-const Constraint *standard_texture_constraint(StandardTextureRule which);
-
 /* The label: "monophony", "heterophony", "homophony", "homorhythm",
    "melody and accompaniment", "polyphony"; NULL for an invalid texture. */
 const char *standard_texture_name(StandardTexture texture);
@@ -75,11 +59,6 @@ const char *standard_texture_name(StandardTexture texture);
    NULL, an unknown name, or a NULL output. */
 bool standard_texture_from_name(const char *name, StandardTexture *out);
 
-/* True for the four main categories: monophony, heterophony, homophony,
-   polyphony. False for the two homophony subcategories and for an
-   invalid texture. */
-bool standard_texture_is_category(StandardTexture texture);
-
 /* True for homophony and its two subcategories. */
 bool standard_texture_is_homophonic(StandardTexture texture);
 
@@ -87,10 +66,5 @@ bool standard_texture_is_homophonic(StandardTexture texture);
    homorhythm and melody and accompaniment. False (output untouched) for
    an invalid texture or a NULL output. */
 bool standard_texture_category(StandardTexture texture, StandardTexture *category);
-
-/* The fewest voices a passage of the texture has: 1 for monophony, 2 for
-   the others (heterophony, homophony, and polyphony are about voices
-   together). 0 for an invalid texture. */
-int standard_texture_minimum_voices(StandardTexture texture);
 
 #endif

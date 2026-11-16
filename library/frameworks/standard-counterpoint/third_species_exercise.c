@@ -58,21 +58,6 @@ bool standard_counterpoint_third_species_exercise_valid(const StandardCounterpoi
     return true;
 }
 
-size_t standard_counterpoint_third_species_bar_count(const StandardCounterpointThirdSpeciesExercise *exercise) {
-    return standard_counterpoint_third_species_exercise_valid(exercise) ? exercise->cantus->count : 0;
-}
-
-BeatStrength standard_counterpoint_third_species_slot_strength(size_t slot) {
-    switch (slot % SLOTS) {
-        case 0:
-            return BEAT_STRENGTH_STRONG;
-        case 2:
-            return BEAT_STRENGTH_MEDIUM;
-        default:
-            return BEAT_STRENGTH_WEAK;
-    }
-}
-
 const PitchSpelling *standard_counterpoint_third_species_cantus(const StandardCounterpointThirdSpeciesExercise *exercise,
                                                                 size_t bar) {
     if (exercise == NULL || exercise->cantus == NULL || bar >= exercise->cantus->count) {

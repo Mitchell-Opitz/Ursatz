@@ -56,7 +56,7 @@ static char *new_item(const char *type, const char *name, const char *project_id
     cJSON *body = cJSON_Parse(body_text);
     cJSON *item = NULL;
     char *id = NULL;
-    if (ursatz_gui_material_item_create(type, name, project_id, body, &item) == OK) {
+    if (ursatz_gui_material_item_create_noted(type, name, project_id, body, NULL, &item) == OK) {
         id = strdup(str(item, "id"));
     }
     cJSON_Delete(item);
@@ -176,7 +176,7 @@ static void test_items_and_versions(void) {
     cJSON *body = cJSON_Parse(kMotifBody);
     cJSON *item = NULL;
 
-    CHECK(ursatz_gui_material_item_create("motif", "  Opening  ", home, body, &item) == OK, "create motif");
+    CHECK(ursatz_gui_material_item_create_noted("motif", "  Opening  ", home, body, NULL, &item) == OK, "create motif");
     CHECK(strncmp(str(item, "id"), "mot-", 4) == 0, "motif ids start with mot-");
     CHECK(strcmp(str(item, "name"), "Opening") == 0 && strcmp(str(item, "type"), "motif") == 0, "name and type");
     CHECK(num(item, "current_version") == 1, "current version is 1");
@@ -188,14 +188,17 @@ static void test_items_and_versions(void) {
     CHECK(theme && strncmp(theme, "thm-", 4) == 0, "theme ids start with thm-");
     CHECK(piece && strncmp(piece, "pce-", 4) == 0, "piece ids start with pce-");
 
-    CHECK(ursatz_gui_material_item_create("chord", "x", home, body, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE,
+    CHECK(ursatz_gui_material_item_create_noted("chord", "x", home, body, NULL, NULL) ==
+              URSATZ_GUI_MATERIAL_ERR_INVALID_TYPE,
           "unknown type");
-    CHECK(ursatz_gui_material_item_create("motif", " ", home, body, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
+    CHECK(ursatz_gui_material_item_create_noted("motif", " ", home, body, NULL, NULL) ==
+              URSATZ_GUI_MATERIAL_ERR_INVALID_NAME,
           "blank item name");
-    CHECK(ursatz_gui_material_item_create("motif", "x", "prj-0000000000000000", body, NULL) ==
+    CHECK(ursatz_gui_material_item_create_noted("motif", "x", "prj-0000000000000000", body, NULL, NULL) ==
               URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
           "unknown project");
-    CHECK(ursatz_gui_material_item_create("motif", "x", "a/b", body, NULL) == URSATZ_GUI_MATERIAL_ERR_INVALID_ID,
+    CHECK(ursatz_gui_material_item_create_noted("motif", "x", "a/b", body, NULL, NULL) ==
+              URSATZ_GUI_MATERIAL_ERR_INVALID_ID,
           "bad project id");
 
     cJSON *meta = NULL;
@@ -670,7 +673,7 @@ static void test_body_validation(void) {
     char *home = new_project("Validation home");
     cJSON *bad = motif_with("role", "\"bass\"");
     cJSON *item = NULL;
-    CHECK(ursatz_gui_material_item_create("motif", "Bad", home, bad, &item) == INVALID && item == NULL,
+    CHECK(ursatz_gui_material_item_create_noted("motif", "Bad", home, bad, NULL, &item) == INVALID && item == NULL,
           "create refuses a bad body");
     cJSON *list = NULL;
     CHECK(ursatz_gui_material_item_list(home, NULL, &list) == OK && cJSON_GetArraySize(list) == 0, "no item written");
@@ -727,7 +730,7 @@ static char *new_theme_using(const char *name, const char *project_id, const cha
     cJSON *body = theme_body_using(source_id, 1);
     cJSON *item = NULL;
     char *id = NULL;
-    if (ursatz_gui_material_item_create("theme", name, project_id, body, &item) == OK) {
+    if (ursatz_gui_material_item_create_noted("theme", name, project_id, body, NULL, &item) == OK) {
         id = strdup(str(item, "id"));
     }
     cJSON_Delete(item);
@@ -753,10 +756,12 @@ static void test_references(void) {
 
     /* Unknown items and versions, and an item using itself, are refused. */
     cJSON *bad = theme_body_using("mot-0000000000000000", 1);
-    CHECK(ursatz_gui_material_item_create("theme", "Ghost use", other, bad, NULL) == INVALID, "unknown source item");
+    CHECK(ursatz_gui_material_item_create_noted("theme", "Ghost use", other, bad, NULL, NULL) == INVALID,
+          "unknown source item");
     cJSON_Delete(bad);
     bad = theme_body_using(source, 2);
-    CHECK(ursatz_gui_material_item_create("theme", "Future use", other, bad, NULL) == INVALID, "unknown source version");
+    CHECK(ursatz_gui_material_item_create_noted("theme", "Future use", other, bad, NULL, NULL) == INVALID,
+          "unknown source version");
     CHECK(ursatz_gui_material_item_add_version(user, bad, NULL, NULL) == INVALID, "add_version refuses unknown version");
     cJSON_Delete(bad);
     bad = theme_body_using(user, 1);
@@ -886,7 +891,7 @@ static char *new_variant(const char *name, const char *project_id, const char *s
     cJSON *body = motif_with("derived", derived);
     cJSON *item = NULL;
     char *id = NULL;
-    if (ursatz_gui_material_item_create("motif", name, project_id, body, &item) == OK) {
+    if (ursatz_gui_material_item_create_noted("motif", name, project_id, body, NULL, &item) == OK) {
         id = strdup(str(item, "id"));
     }
     cJSON_Delete(item);
