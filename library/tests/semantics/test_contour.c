@@ -3,6 +3,7 @@
 
 #include "pitch/pitch_identity.h"
 #include "semantics/contour.h"
+#include "semantics_test_access.h"
 
 /*
  * Golden test: a known PitchIdentity sequence and caller-supplied

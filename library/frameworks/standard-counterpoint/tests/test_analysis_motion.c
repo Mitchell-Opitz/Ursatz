@@ -2,6 +2,7 @@
 
 #include "analysis_motion.h"
 #include "analysis_test_util.h"
+#include "interpretation_test_access.h"
 
 /* Motion between voice pairs: each classification is the existing rule's, as an Interpretation on a note-id shell. */
 

@@ -1,23 +1,10 @@
 #include "interpretation/interpretation.h"
+#include "interpretation/interpretation_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "core/string_copy.h"
-
-struct Interpretation {
-    EntityID *id;
-    EntityID *target_id;
-    Value *claim;
-    EntityID *context_id;
-    EntityID *evidence_id;
-    FrameworkReference *framework_reference;
-    Uncertainty *uncertainty;
-    char *author;
-    char *method;
-    InterpretationStatus status;
-    ProvenanceReference *provenance;
-};
 
 InterpretationResult interpretation_create(EntityID *id, EntityID *target_id, Value *claim, EntityID *context_id,
                                             EntityID *evidence_id, FrameworkReference *framework_reference,
@@ -95,34 +82,10 @@ void interpretation_destroy(Interpretation *interpretation) {
     free(interpretation);
 }
 
-const EntityID *interpretation_id(const Interpretation *interpretation) {
-    return interpretation->id;
-}
-
-const EntityID *interpretation_target_id(const Interpretation *interpretation) {
-    return interpretation->target_id;
-}
-
-const Value *interpretation_claim(const Interpretation *interpretation) {
-    return interpretation->claim;
-}
-
-const EntityID *interpretation_context_id(const Interpretation *interpretation) {
-    return interpretation->context_id;
-}
-
 const FrameworkReference *interpretation_framework_reference(const Interpretation *interpretation) {
     return interpretation->framework_reference;
 }
 
 const Uncertainty *interpretation_uncertainty(const Interpretation *interpretation) {
     return interpretation->uncertainty;
-}
-
-const char *interpretation_author(const Interpretation *interpretation) {
-    return interpretation->author;
-}
-
-const char *interpretation_method(const Interpretation *interpretation) {
-    return interpretation->method;
 }

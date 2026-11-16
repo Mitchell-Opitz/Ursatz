@@ -2,6 +2,7 @@
 
 #include "analysis_melody_nct.h"
 #include "melody_test_util.h"
+#include "interpretation_test_access.h"
 
 /* The L2.5 result of each melody note, attached by reference: never re-derived, with the unclassified fallback and the
    per-span counts by type. */

@@ -1,12 +1,7 @@
 #include "structure/motif.h"
+#include "structure/motif_internal.h"
 
 #include <stdlib.h>
-
-struct Motif {
-    EntityID *id;
-    EntityID **event_ids;
-    size_t event_id_count;
-};
 
 MotifResult motif_create(EntityID *id, EntityID **event_ids, size_t event_id_count, Motif **out) {
     if (id == NULL) {
@@ -57,8 +52,4 @@ void motif_destroy(Motif *motif) {
 
 const EntityID *motif_id(const Motif *motif) {
     return motif->id;
-}
-
-size_t motif_event_id_count(const Motif *motif) {
-    return motif->event_id_count;
 }

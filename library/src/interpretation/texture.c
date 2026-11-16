@@ -1,12 +1,8 @@
 #include "interpretation/texture.h"
+#include "interpretation/texture_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-struct Texture {
-    Interpretation *interpretation;
-    char *label;
-};
 
 TextureResult texture_create(Interpretation *interpretation, const char *label, Texture **out) {
     if (interpretation == NULL) {
@@ -45,12 +41,4 @@ void texture_destroy(Texture *texture) {
     interpretation_destroy(texture->interpretation);
     free(texture->label);
     free(texture);
-}
-
-const Interpretation *texture_interpretation(const Texture *texture) {
-    return texture->interpretation;
-}
-
-const char *texture_label(const Texture *texture) {
-    return texture->label;
 }

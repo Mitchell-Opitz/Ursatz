@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: common_practice_minimal_framework() returns a

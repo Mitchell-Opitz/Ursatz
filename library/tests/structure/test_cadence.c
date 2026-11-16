@@ -5,6 +5,7 @@
 #include "core/value.h"
 #include "identity/entity_id.h"
 #include "structure/cadence.h"
+#include "structure_test_access.h"
 
 /*
  * Structural/invariant tests only (construction, event-ref

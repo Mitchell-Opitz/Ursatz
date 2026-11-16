@@ -110,13 +110,7 @@ InterpretationResult interpretation_create(EntityID *id, EntityID *target_id, Va
                                             Interpretation **out);
 void interpretation_destroy(Interpretation *interpretation);
 
-const EntityID *interpretation_id(const Interpretation *interpretation);
-const EntityID *interpretation_target_id(const Interpretation *interpretation);
-const Value *interpretation_claim(const Interpretation *interpretation);
-const EntityID *interpretation_context_id(const Interpretation *interpretation);
 const FrameworkReference *interpretation_framework_reference(const Interpretation *interpretation);
 const Uncertainty *interpretation_uncertainty(const Interpretation *interpretation);
-const char *interpretation_author(const Interpretation *interpretation);
-const char *interpretation_method(const Interpretation *interpretation);
 
 #endif

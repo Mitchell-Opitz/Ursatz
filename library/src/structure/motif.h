@@ -48,6 +48,5 @@ MotifResult motif_create(EntityID *id, EntityID **event_ids, size_t event_id_cou
 void motif_destroy(Motif *motif);
 
 const EntityID *motif_id(const Motif *motif);
-size_t motif_event_id_count(const Motif *motif);
 
 #endif

@@ -54,8 +54,4 @@ CadenceResult cadence_create(EntityID *id, EntityID **event_ids, size_t event_id
                               Value *optional_harmonic_context, Cadence **out);
 void cadence_destroy(Cadence *cadence);
 
-const EntityID *cadence_id(const Cadence *cadence);
-size_t cadence_event_id_count(const Cadence *cadence);
-const EntityID *cadence_event_id_at(const Cadence *cadence, size_t index);
-
 #endif

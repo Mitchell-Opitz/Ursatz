@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "analysis_test_util.h"
+#include "interpretation_test_access.h"
 
 /* Harmonic function per segment, and the neutral input's reading of it. */
 

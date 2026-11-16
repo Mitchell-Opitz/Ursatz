@@ -8,6 +8,7 @@
 #include "identity/entity_id.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
 
 /*
  * Context + theory-tagged test:

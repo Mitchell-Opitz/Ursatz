@@ -9,6 +9,7 @@
 #include "interpretation/chord.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
 
 /*
  * Relationship test: a Chord's underlying fact reference (the Sonority

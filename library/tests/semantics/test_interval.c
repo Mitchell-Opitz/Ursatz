@@ -4,6 +4,7 @@
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
 #include "semantics/interval.h"
+#include "semantics_test_access.h"
 
 /*
  * Property-based test: for every (has_directed, has_undirected,

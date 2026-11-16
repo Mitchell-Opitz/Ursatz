@@ -78,9 +78,6 @@ KeyResult key_create_with_structure(Interpretation *interpretation, const char *
                                      Key **out);
 void key_destroy(Key *key);
 
-const Interpretation *key_interpretation(const Key *key);
-const char *key_label(const Key *key);
-
 /* Copies the Key's structure into *out and returns true; false (out untouched) when it has none. */
 bool key_structure(const Key *key, KeyStructure *out);
 

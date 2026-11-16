@@ -4,6 +4,7 @@
 
 #include "identity/entity_id.h"
 #include "theory/framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: a Framework holds identity and a name.

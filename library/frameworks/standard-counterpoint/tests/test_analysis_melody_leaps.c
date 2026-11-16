@@ -3,6 +3,7 @@
 #include "analysis_melody_climax.h"
 #include "analysis_melody_leaps.h"
 #include "melody_test_util.h"
+#include "interpretation_test_access.h"
 
 /* Leap recovery, consecutive leaps and the climax of a span: the existing cantus firmus and melodic rules' definitions,
    read back as Interpretations. */

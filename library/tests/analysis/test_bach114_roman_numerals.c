@@ -12,6 +12,7 @@
 #include "time/note_value.h"
 #include "time/time_signature.h"
 #include "weighted_pipeline.h"
+#include "interpretation_test_access.h"
 
 /*
  * Roman numerals for Bach, Minuet in G (BWV Anh. 114), against tests/fixtures/annotations/

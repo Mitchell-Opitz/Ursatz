@@ -228,14 +228,6 @@ const StandardFormThemes *analysis_chain_themes(const AnalysisChain *chain);
 const StandardFormExpansions *analysis_chain_expansions(const AnalysisChain *chain);
 const StandardFormMotives *analysis_chain_motives(const AnalysisChain *chain);
 
-typedef struct {
-    StandardMeterSyncopations syncopations;
-    StandardMeterHemiolas hemiolas;
-    StandardMeterHypermeter hypermeter;
-    StandardMeterDensities densities;
-} AnalysisChainMeter;
-const AnalysisChainMeter *analysis_chain_meter(const AnalysisChain *chain);
-
 const StandardTextureAnalysis *analysis_chain_texture(const AnalysisChain *chain);
 
 typedef struct {

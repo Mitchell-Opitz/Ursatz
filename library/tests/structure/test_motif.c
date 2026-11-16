@@ -3,6 +3,7 @@
 
 #include "identity/entity_id.h"
 #include "structure/motif.h"
+#include "structure_test_access.h"
 
 /*
  * Relationship test: a Motif holds its defining events as EntityID

@@ -6,6 +6,7 @@
 #include "chord_vocabulary_seventh.h"
 #include "identity/entity_id.h"
 #include "interpretation/chord.h"
+#include "interpretation_test_access.h"
 
 /*
  * Construction tests: one per diatonic triad (I through vii\xC2\xB0),

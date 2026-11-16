@@ -2,6 +2,7 @@
 
 #include "analysis_perfects.h"
 #include "analysis_test_util.h"
+#include "interpretation_test_access.h"
 
 /* Parallel and direct perfect intervals: the existing rules, read across a grid of separated voices. */
 

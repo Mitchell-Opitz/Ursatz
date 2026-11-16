@@ -17,6 +17,7 @@
 #include "ursatz_chain/analysis_chain.h"
 #include "../../tests/integration/reference_pieces.h"
 #include "../../tests/key_index_test_util.h"
+#include "chain_test_access.h"
 
 /*
  * analysis_chain_run on four reference pieces (Bach 114, Mozart 545, Clementi 36 and Field 1 from tests/fixtures) against fixed expected

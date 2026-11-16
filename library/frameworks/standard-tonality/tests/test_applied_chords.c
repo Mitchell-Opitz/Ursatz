@@ -3,6 +3,7 @@
 #include "adapter_test_util.h"
 #include "applied_chords.h"
 #include "roman_numeral_adapter.h"
+#include "relationship_test_access.h"
 
 /* Applied chords: the diatonic reading is re-checked against V/x, V7/x, vii-diminished/x and the fully
    diminished seventh, and relabelled only when the chromatic evidence and the resolution are there. */

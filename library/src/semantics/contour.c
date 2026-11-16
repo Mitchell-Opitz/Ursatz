@@ -1,13 +1,7 @@
 #include "semantics/contour.h"
+#include "semantics/contour_internal.h"
 
 #include <stdlib.h>
-
-struct Contour {
-    PitchIdentity **pitch_ids;
-    size_t pitch_id_count;
-    ContourDirection *directions;
-    size_t direction_count;
-};
 
 ContourResult contour_create(PitchIdentity **pitch_ids, size_t pitch_id_count, ContourDirection *directions,
                               size_t direction_count, Contour **out) {
@@ -72,10 +66,6 @@ void contour_destroy(Contour *contour) {
     free(contour->pitch_ids);
     free(contour->directions);
     free(contour);
-}
-
-size_t contour_pitch_id_count(const Contour *contour) {
-    return contour->pitch_id_count;
 }
 
 size_t contour_direction_count(const Contour *contour) {

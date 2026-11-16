@@ -3,6 +3,7 @@
 #include "adapter_test_util.h"
 #include "applied_chords.h"
 #include "roman_numeral_adapter.h"
+#include "interpretation_test_access.h"
 
 /* Roman numeral Interpretations per chord segment, in the segment's local key. */
 

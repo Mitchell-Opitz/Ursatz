@@ -1,13 +1,7 @@
 #include "structure/cadence.h"
+#include "structure/cadence_internal.h"
 
 #include <stdlib.h>
-
-struct Cadence {
-    EntityID *id;
-    EntityID **event_ids;
-    size_t event_id_count;
-    Value *optional_harmonic_context;
-};
 
 CadenceResult cadence_create(EntityID *id, EntityID **event_ids, size_t event_id_count,
                               Value *optional_harmonic_context, Cadence **out) {
@@ -57,16 +51,4 @@ void cadence_destroy(Cadence *cadence) {
     free(cadence->event_ids);
     value_destroy(cadence->optional_harmonic_context);
     free(cadence);
-}
-
-const EntityID *cadence_id(const Cadence *cadence) {
-    return cadence->id;
-}
-
-size_t cadence_event_id_count(const Cadence *cadence) {
-    return cadence->event_id_count;
-}
-
-const EntityID *cadence_event_id_at(const Cadence *cadence, size_t index) {
-    return cadence->event_ids[index];
 }

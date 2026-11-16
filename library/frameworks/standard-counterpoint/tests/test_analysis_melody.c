@@ -3,6 +3,8 @@
 #include "analysis_melody.h"
 #include "core/framework_reference.h"
 #include "melody_test_util.h"
+#include "interpretation_test_access.h"
+#include "semantics_test_access.h"
 
 /* Melodic intervals and contour of one line: directions and sizes the adapter computes, rests that break the chain, the
    generic size from a spelling or a scale degree, and the contour summary of a span. */

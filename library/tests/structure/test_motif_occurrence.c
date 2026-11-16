@@ -4,6 +4,7 @@
 #include "core/occurrence.h"
 #include "identity/entity_id.h"
 #include "structure/motif_occurrence.h"
+#include "structure_test_access.h"
 
 /*
  * Relationship test: a MotifOccurrence resolves back to its Motif (by

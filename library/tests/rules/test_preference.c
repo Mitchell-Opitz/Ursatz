@@ -8,6 +8,7 @@
 #include "preference_test_access.h"
 #include "rules/preference.h"
 #include "theory/framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: a Preference holds a framework association and

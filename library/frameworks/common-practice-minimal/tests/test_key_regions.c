@@ -9,6 +9,7 @@
 #include "time/note_value.h"
 #include "time/time_signature.h"
 #include "../../../tests/key_index_test_util.h"
+#include "interpretation_test_access.h"
 
 /*
  * Key regions, step 1: windowed key scoring. Segments are built straight from pitch-class weights (one whole

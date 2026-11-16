@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: standard_meter_framework() returns a single,

@@ -47,7 +47,4 @@ IntervalResult interval_create(const PitchIdentity *pitch_a, const PitchIdentity
                                 bool has_chromatic_distance, unsigned long chromatic_distance, Interval **out);
 void interval_destroy(Interval *interval);
 
-bool interval_has_directed_semitones(const Interval *interval);
-long interval_directed_semitones(const Interval *interval);
-
 #endif

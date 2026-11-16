@@ -12,6 +12,7 @@
 #include "semantics/contour.h"
 #include "semantics/rhythmic_pattern.h"
 #include "time/duration.h"
+#include "relationship_test_access.h"
 
 /*
  * Behavioral-contract test: NULL input is rejected without touching *out,

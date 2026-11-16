@@ -4,6 +4,9 @@
 #include "form_test_util.h"
 #include "interpretation/uncertainty.h"
 #include "phrase_ending.h"
+#include "interpretation_test_access.h"
+#include "relationship_test_access.h"
+#include "structure_test_access.h"
 
 /* Motives of the soprano: windows of notes grouped by interval pattern and rhythm, the kernel's window matching as the first test,
    maximality, the kinds exact, real and tonal, and the claims and links of the output. */

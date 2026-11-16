@@ -4,6 +4,7 @@
 #include "core/provenance_reference.h"
 #include "identity/entity_id.h"
 #include "relationship/relationship.h"
+#include "relationship_test_access.h"
 
 /*
  * Relationship-category test (Test Spec Ref = "Relationship"): confirms

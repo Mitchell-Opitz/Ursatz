@@ -7,6 +7,7 @@
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
 #include "weighted_chord_identification.h"
+#include "interpretation_test_access.h"
 
 /*
  * Weighted chord identification result tests: the best and runner-up chord, both scores, the uncertainty

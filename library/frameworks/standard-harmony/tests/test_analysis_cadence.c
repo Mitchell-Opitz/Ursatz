@@ -3,6 +3,8 @@
 
 #include "analysis_cadence.h"
 #include "analysis_test_util.h"
+#include "interpretation_test_access.h"
+#include "structure_test_access.h"
 
 /* Cadences from real music: candidates at cadence points, classified by the existing rules. The fixture's segments are
    quarter notes in 4/4: index 0 is beat 1 (strong), 1 beat 2 (weak), 2 beat 3 (medium), 3 beat 4 (weak), and so on. */

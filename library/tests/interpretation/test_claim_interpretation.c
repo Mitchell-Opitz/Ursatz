@@ -7,6 +7,8 @@
 #include "identity/entity_id.h"
 #include "interpretation/claim_interpretation.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
+#include "relationship_test_access.h"
 
 static Interpretation *make(double uncertainty) {
     int content = 7;

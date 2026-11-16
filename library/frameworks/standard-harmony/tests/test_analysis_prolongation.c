@@ -1,5 +1,7 @@
 #include "analysis_prolongation.h"
 #include "analysis_test_util.h"
+#include "interpretation_test_access.h"
+#include "relationship_test_access.h"
 
 /* Prolongations of tonic and dominant: a span from one T (or D) to the next, with every interior chord explained. */
 

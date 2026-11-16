@@ -6,6 +6,8 @@
 #include "external_expansion_rules.h"
 #include "form_test_util.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
+#include "structure_test_access.h"
 
 /* Phrases from cadences: the kernel's Phrase Boundary Detection (through the bridge) fed with real cadences, post-cadential
    absorption, snapping, and the secondary signal. */

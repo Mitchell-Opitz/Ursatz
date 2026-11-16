@@ -51,7 +51,4 @@ typedef enum {
 TextureResult texture_create(Interpretation *interpretation, const char *label, Texture **out);
 void texture_destroy(Texture *texture);
 
-const Interpretation *texture_interpretation(const Texture *texture);
-const char *texture_label(const Texture *texture);
-
 #endif

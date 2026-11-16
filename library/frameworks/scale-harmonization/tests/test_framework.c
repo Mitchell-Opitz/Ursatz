@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "scale_framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: scale_harmonization_framework() returns a single, stable,

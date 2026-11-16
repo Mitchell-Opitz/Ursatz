@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "harmony_framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: standard_harmony_framework() returns a single, stable,

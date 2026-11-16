@@ -33,13 +33,10 @@ typedef enum {
     FRAMEWORK_ERR_ALLOC
 } FrameworkResult;
 
-/* Takes ownership of id on success (destroyed by framework_destroy). name is copied, required, non-empty. */
+/* Takes ownership of id on success. name is copied, required, non-empty. */
 FrameworkResult framework_create(EntityID *id, const char *name, Framework **out);
-void framework_destroy(Framework *framework);
 
 const EntityID *framework_id(const Framework *framework);
 const char *framework_name(const Framework *framework);
-
-bool framework_identity_equals(const Framework *a, const Framework *b);
 
 #endif

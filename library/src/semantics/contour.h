@@ -60,8 +60,6 @@ ContourResult contour_create(PitchIdentity **pitch_ids, size_t pitch_id_count, C
                               size_t direction_count, Contour **out);
 void contour_destroy(Contour *contour);
 
-size_t contour_pitch_id_count(const Contour *contour);
-
 size_t contour_direction_count(const Contour *contour);
 ContourDirection contour_direction_at(const Contour *contour, size_t index);
 

@@ -75,9 +75,7 @@ void relationship_destroy(Relationship *relationship);
 
 const EntityID *relationship_id(const Relationship *relationship);
 const EntityID *relationship_source_id(const Relationship *relationship);
-const char *relationship_predicate_name(const Relationship *relationship);
 const EntityID *relationship_target_id(const Relationship *relationship);
-const Value *relationship_scope(const Relationship *relationship);
 const Value *relationship_qualifiers(const Relationship *relationship);
 
 #endif

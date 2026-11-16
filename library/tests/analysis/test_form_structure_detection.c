@@ -14,6 +14,7 @@
 #include "relationship/relationship.h"
 #include "semantics/cadence_type.h"
 #include "structure/phrase_occurrence.h"
+#include "relationship_test_access.h"
 
 /*
  * Behavioral-contract test: NULL input is rejected without touching *out,

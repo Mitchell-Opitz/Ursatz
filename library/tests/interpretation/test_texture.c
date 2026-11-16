@@ -9,6 +9,7 @@
 #include "interpretation/texture.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
+#include "interpretation_test_access.h"
 
 /*
  * Relationship test: a Texture's underlying fact reference (the passage

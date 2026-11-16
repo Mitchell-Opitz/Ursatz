@@ -8,6 +8,7 @@
 #include "identity/entity_id.h"
 #include "rules/constraint.h"
 #include "theory/framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: a Constraint is created as a hard, a weighted and a conditional one, refuses a missing id or framework and a WEIGHTED

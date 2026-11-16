@@ -1,20 +1,8 @@
 #include "relationship/relationship.h"
+#include "relationship/relationship_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-struct Relationship {
-    EntityID *id;
-    EntityID *source_id;
-    char *predicate_name;
-    EntityID *target_id;
-    Value *scope;
-    EntityID *context_id;
-    Value *qualifiers;
-    EntityID *evidence_id;
-    Value *uncertainty;
-    ProvenanceReference *provenance;
-};
 
 RelationshipResult relationship_create(EntityID *id, EntityID *source_id, const char *predicate_name,
                                         EntityID *target_id, Value *scope, EntityID *context_id,
@@ -88,16 +76,8 @@ const EntityID *relationship_source_id(const Relationship *relationship) {
     return relationship->source_id;
 }
 
-const char *relationship_predicate_name(const Relationship *relationship) {
-    return relationship->predicate_name;
-}
-
 const EntityID *relationship_target_id(const Relationship *relationship) {
     return relationship->target_id;
-}
-
-const Value *relationship_scope(const Relationship *relationship) {
-    return relationship->scope;
 }
 
 const Value *relationship_qualifiers(const Relationship *relationship) {

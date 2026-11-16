@@ -55,6 +55,5 @@ void phrase_occurrence_destroy(PhraseOccurrence *phrase_occurrence);
 const EntityID *phrase_occurrence_id(const PhraseOccurrence *phrase_occurrence);
 /* The id of the Phrase this is an occurrence of. */
 const EntityID *phrase_occurrence_phrase_id(const PhraseOccurrence *phrase_occurrence);
-size_t phrase_occurrence_region_event_id_count(const PhraseOccurrence *phrase_occurrence);
 
 #endif

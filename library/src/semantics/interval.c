@@ -1,20 +1,7 @@
 #include "semantics/interval.h"
+#include "semantics/interval_internal.h"
 
 #include <stdlib.h>
-
-struct Interval {
-    const PitchIdentity *pitch_a;
-    const PitchIdentity *pitch_b;
-
-    bool has_directed_semitones;
-    long directed_semitones;
-
-    bool has_undirected_semitones;
-    unsigned long undirected_semitones;
-
-    bool has_chromatic_distance;
-    unsigned long chromatic_distance;
-};
 
 static unsigned long abs_long(long value) {
     return value < 0 ? (unsigned long)(-value) : (unsigned long)value;
@@ -52,12 +39,4 @@ IntervalResult interval_create(const PitchIdentity *pitch_a, const PitchIdentity
 
 void interval_destroy(Interval *interval) {
     free(interval);
-}
-
-bool interval_has_directed_semitones(const Interval *interval) {
-    return interval->has_directed_semitones;
-}
-
-long interval_directed_semitones(const Interval *interval) {
-    return interval->directed_semitones;
 }

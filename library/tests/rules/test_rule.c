@@ -5,6 +5,7 @@
 #include "identity/entity_id.h"
 #include "rules/rule.h"
 #include "theory/framework.h"
+#include "framework_test_access.h"
 
 /*
  * Construction test: a Rule is created from an id, a framework and an
