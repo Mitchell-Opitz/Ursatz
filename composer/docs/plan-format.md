@@ -39,7 +39,7 @@ number with an optional spelling (the file writes `spelling` for a spelled note 
 | --- | --- |
 | `format` | Always `"ursatz-composer-plan"`. |
 | `format_version` | Always `2`. |
-| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the Ursatz commit the Analyzer was configured against, `ursatz_analyzer_ursatz_commit()`; `scripts/check-pins.sh` keeps it the commit the Composer pins) and, only for a plan loaded from an Analyzer result, `analyzer_version` (`ursatz_analyzer_version()`). |
+| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the Analyzer's producer key, `ursatz_analyzer_producer_key()`; the member keeps its name until plan format 3) and, only for a plan loaded from an Analyzer result, `analyzer_version` (`ursatz_analyzer_version()`). |
 | `meter` | `null`, or `{"spans": [<claim>, ...]}` for meter spans. |
 | `keys` | Key lane claims. |
 | `chords` | Harmony lane claims. |
@@ -206,7 +206,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
   "format_version": 2,
   "metadata": {
     "composer_version": "0.1.0",
-    "ursatz_commit": "36cb9f306b5fdf07f7e907cb2836b2e39fee70ed"
+    "ursatz_commit": "528d5ccae6f72661"
   },
   "meter": {
     "spans": [{

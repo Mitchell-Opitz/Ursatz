@@ -692,7 +692,7 @@ void text_export_write_summary(Text *text, const cJSON *document, const ScoreTex
 
 void text_export_write_legend(Text *text) {
     char commit[13];
-    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_ursatz_commit());
+    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_producer_key());
     export_text_addf(text, "analyzer: %s ursatz %s\n", ursatz_analyzer_version(), commit);
     export_text_add(text,
                     "notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>\n");

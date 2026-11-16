@@ -11,4 +11,4 @@ Source: Mitchell-Opitz/Ursatz-Composer at commit `987e0a5`, a Debug build of its
 | `period-a-minor.mid` | `ursatz-composer export tests/fixtures/period_a_minor.json --midi period-a-minor.mid` |
 | `fill.mid` | a copy of the Composer's `tests/snapshots/fill.mid` |
 
-To regenerate, attach the Composer, run `git submodule update --init --recursive`, and build `ursatz-composer`.
+To regenerate, build `ursatz-composer` from the repository root (`build/composer/cli/ursatz-composer`).

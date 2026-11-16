@@ -15,7 +15,7 @@
 #include <ursatz_composer/lanes.h>
 
 /* Test only (hearing.h): how many spans were handed to the Analyzer. Not static, so it is not the file-scope state
-   scripts/check-statics.sh refuses; nothing in src reads it. */
+   tools/ci/check-statics.sh refuses; nothing in src reads it. */
 atomic_size_t hearing_analyzer_calls_made;
 
 size_t hearing_analyzer_calls(void) {

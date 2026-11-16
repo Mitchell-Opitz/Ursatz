@@ -14,16 +14,18 @@ explicit, named Theory Framework.
 
 ## Build and test
 
+From the repository root ([README](../README.md#build-and-test)):
+
 ```sh
 cmake -S . -B build
 cmake --build build -j
-bash scripts/check-docs.sh
+bash tools/ci/check-docs.sh library
 ```
 
 - Fast set (every test without the `slow` label), what pull request CI runs:
-  `ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow`
-- Slow set: `ctest --test-dir build -j$(nproc) -L slow`
-- Full run, both sets: `ctest --test-dir build -j$(nproc) --output-on-failure`
+  `ctest --test-dir build/library --output-on-failure --no-tests=error -j$(nproc) -LE slow`
+- Slow set: `ctest --test-dir build/library -j$(nproc) -L slow`
+- Full run, both sets: `ctest --test-dir build/library -j$(nproc) --output-on-failure`
 - The 10 s rule: a fast-set test that takes over 10 s is sped up or labeled `slow`. CI prints the ten slowest tests and
   warns about each fast-set test over 10 s.
 - Timeouts come from `cmake/TestTimeouts.cmake`: 30 s for fast-set tests, 1800 s for `slow` tests.
@@ -33,7 +35,7 @@ Requirements, the full test run and CI are in [docs/BUILDING.md](docs/BUILDING.m
 
 ## Using the library
 
-Link `ursatz` (and the frameworks and `ursatz_chain` you need) from a submodule build. A consumer sees only the
+Link `ursatz` (and the frameworks and `ursatz_chain` you need) from the repository's build. A consumer sees only the
 public headers: kernel headers by their module path (`time/meter_map.h`), framework headers by their folder
 name (`standard-form/analysis/analysis_phrase.h`), the chain as `ursatz_chain/analysis_chain.h`. Details in
 [docs/public-surface.md](docs/public-surface.md).

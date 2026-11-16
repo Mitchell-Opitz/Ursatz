@@ -197,7 +197,7 @@ static void test_list_flag(const char *id) {
     CHECK(strcmp(listed_status(id, status, sizeof(status)), "unreadable") == 0, "no ursatz_commit lists as stale");
 
     cJSON_ReplaceItemInObjectCaseSensitive(meta, "analyzer_version", cJSON_CreateString(ursatz_analyzer_version()));
-    cJSON_AddStringToObject(meta, "ursatz_commit", ursatz_analyzer_ursatz_commit());
+    cJSON_AddStringToObject(meta, "ursatz_commit", ursatz_analyzer_producer_key());
     write_json(path, meta);
     CHECK(strcmp(listed_status(id, status, sizeof(status)), "current") == 0, "restored lists as current");
     cJSON_Delete(meta);
@@ -236,7 +236,7 @@ static void test_backfill(const char *id) {
     CHECK(ursatz_gui_analysis_get_piece("pieces", id, &detail) == URSATZ_GUI_ANALYSIS_OK, "open an old meta.json");
     ursatz_gui_piece_detail_destroy(detail);
     meta = read_json(path);
-    CHECK(strcmp(str(meta, "ursatz_commit"), ursatz_analyzer_ursatz_commit()) == 0,
+    CHECK(strcmp(str(meta, "ursatz_commit"), ursatz_analyzer_producer_key()) == 0,
           "ursatz_commit comes from the document");
     cJSON_Delete(meta);
     CHECK(has_marker(id), "filling ursatz_commit does not analyze again");

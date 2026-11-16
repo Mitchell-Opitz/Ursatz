@@ -39,6 +39,5 @@ version's `request.json`), the version it writes with its files, the files route
 leaving no staging folder, `update_uses`, two composes of one theme at once, the jobs routes, and one compose over a
 brief of fixture pieces whose `plan.json`, `theme.mid` and `theme.musicxml` are what they claim to be (`backend/tests/version_check.h`: a plan with `"format": "ursatz-composer-plan"`, a MIDI file starting `MThd`, a score with `<score-partwise`) and whose served playback equals the playback service's for the stored MIDI file. `test_piece_route` does the same for a piece: each stored plan, MIDI and MusicXML file of its compose, regenerate and choose passes those checks, the summary names the stored plans, and the sections of the loop and ending versions follow the request the version was composed from (a chosen variation's ending is made from a seed read from the clock, so only its loop version is checked).
 
-CI (`.github/workflows/ci.yml`) builds and runs `ctest` on every push and
-pull request. The private submodules are checked out through the
-`URSATZ_SUBMODULE_TOKEN` repository secret, which must be set.
+CI (`.github/workflows/ci.yml`) builds the whole repository once and runs the checks and the fast set on every push and
+pull request; no secret is needed.

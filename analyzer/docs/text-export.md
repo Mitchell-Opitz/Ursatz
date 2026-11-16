@@ -48,7 +48,7 @@ m1
 | `title:` | The `title` option, else the file name the document records (`metadata.source_file`), else `untitled`. |
 | `key:` | The first key region's label (`unknown` with none), the first measure's time signature, the declared tempo as `q=<quarters per minute>` or `not declared` (from the document's `metadata.input.tempo`), and the measures exported. |
 | `clefs:` | One line per part that writes a clef: `clefs: P<part> S<staff> <clef>`, then `, S<staff> <clef>` for each further staff, for example `clefs: P1 S1 treble, S2 bass`. The clef is `treble` (G, line 2) or `bass` (F, line 4), as in force at the start of the first exported measure. A score that writes no clef has no `clefs:` line. |
-| `analyzer:` | `URSATZ_ANALYZER_VERSION`, then `ursatz` and the first 12 characters of the Ursatz commit. |
+| `analyzer:` | `URSATZ_ANALYZER_VERSION`, then `ursatz` and the first 12 characters of the producer key. |
 | `notes:` | A fixed legend. |
 
 `measures:` is the first and last measure number as written, for example `0-4`. A range export adds the whole piece:
@@ -149,7 +149,7 @@ name: Rising arch
 id: motif-7
 version: 3
 role: head
-analyzer: <version> ursatz <commit>
+analyzer: <version> ursatz <producer key>
 notes: <pitch><octave> @<beat> <duration>; r = rest; ~ = tied to next; 3:2 = tuplet; c=<confidence>
 
 ## motif

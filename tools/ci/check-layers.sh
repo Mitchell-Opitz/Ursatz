@@ -3,7 +3,8 @@
 # its job through util/job.h; API internals stay inside the API layer.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$root/composer"
 
 failed=0
 while IFS= read -r hit; do

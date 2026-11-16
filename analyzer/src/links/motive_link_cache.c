@@ -83,11 +83,11 @@ static bool options_equal(const MotiveLinkOptions *a, const MotiveLinkOptions *b
 bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *options, bool *reset) {
     *reset = false;
     if (cache->keyed && cache->ursatz_commit && cache->analyzer_version &&
-        strcmp(cache->ursatz_commit, URSATZ_ANALYZER_URSATZ_COMMIT) == 0 &&
+        strcmp(cache->ursatz_commit, ursatz_analyzer_producer_key()) == 0 &&
         strcmp(cache->analyzer_version, URSATZ_ANALYZER_VERSION) == 0 && options_equal(&cache->options, options)) {
         return true;
     }
-    char *commit = text_copy(URSATZ_ANALYZER_URSATZ_COMMIT);
+    char *commit = text_copy(ursatz_analyzer_producer_key());
     char *version = text_copy(URSATZ_ANALYZER_VERSION);
     if (!commit || !version) {
         free(commit);
@@ -317,7 +317,7 @@ MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const cha
     bool ok = cJSON_AddStringToObject(root, "schema", CACHE_SCHEMA) &&
               cJSON_AddNumberToObject(root, "schema_version", CACHE_SCHEMA_VERSION) &&
               cJSON_AddStringToObject(root, "ursatz_commit",
-                                      cache->keyed ? cache->ursatz_commit : URSATZ_ANALYZER_URSATZ_COMMIT) &&
+                                      cache->keyed ? cache->ursatz_commit : ursatz_analyzer_producer_key()) &&
               cJSON_AddStringToObject(root, "analyzer_version",
                                       cache->keyed ? cache->analyzer_version : URSATZ_ANALYZER_VERSION) &&
               cJSON_AddNumberToObject(object, "max_depth", (double)options->max_depth) &&

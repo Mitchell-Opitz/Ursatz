@@ -4,20 +4,18 @@ A small C11 command-line tool that turns a MIDI or MusicXML file into a Markdown
 document: the piece's time signature, measure count and pickup, its local keys over time (key
 regions, with the home key, tonicizations, modulations and pivot chords), and the most likely chord
 for each group of notes that start together, each located by measure and beat. It is a
-thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library and its
+thin consumer of the [Ursatz library](../library/README.md) in `library/` and its
 `common-practice-minimal` framework.
 
 ## Build
 
-Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
-`external/ursatz`, pinned to Ursatz main at `d2b85ce`. cJSON 1.7.18 is vendored at `external/cjson`; it is added only when no
-parent project already provides a `cjson` target.
+The Analyzer builds from the repository root with the other parts ([README](../README.md#build-and-test)); it needs
+CMake 3.28+, a C11 compiler and SQLite3 (for the library). cJSON 1.7.18 is vendored in `third_party/cjson`.
 
 ```sh
-git submodule update --init --recursive
 cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
+cmake --build build -j
+ctest --test-dir build/analyzer --output-on-failure
 ```
 
 Build details, the test list and the CI checks are in [docs/building.md](docs/building.md).
@@ -27,14 +25,14 @@ Build details, the test list and the CI checks are in [docs/building.md](docs/bu
 Every test is in one of two sets. The fast set is every test without the `slow` label; pull request CI runs it in parallel:
 
 ```sh
-ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
+ctest --test-dir build/analyzer --output-on-failure --no-tests=error -j$(nproc) -LE slow
 ```
 
 The slow set is the tests labeled `slow` (the valgrind runs and the longest suites). Run it with
-`ctest --test-dir build -j$(nproc) -L slow`; the full run is `ctest --test-dir build -j$(nproc)`. CI runs the slow set
+`ctest --test-dir build/analyzer -j$(nproc) -L slow`; the full run is `ctest --test-dir build/analyzer -j$(nproc)`. CI runs the slow set
 nightly (and on demand) in the `Nightly` workflow, which runs the full suite.
 
-A fast-set test that takes over 10 s is sped up or labeled `slow` (`scripts/slowest-tests.sh build` prints the ten slowest
+A fast-set test that takes over 10 s is sped up or labeled `slow` (`tools/ci/slowest-tests.sh build/analyzer` from the repository root prints the ten slowest
 tests and warns about fast-set tests over 10 s). Timeouts come from `cmake/TestTimeouts.cmake`, so local runs match CI:
 30 s for a test without the `slow` label, 1800 s for a test with it.
 

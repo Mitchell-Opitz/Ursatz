@@ -13,7 +13,7 @@ It owns every analysis algorithm (R-217); the apps orchestrate and render.
 
 ## Where it sits
 
-Ursatz depends on no other repo. The Analyzer, the Composer and the GUI pin it as the git submodule `external/ursatz` ([Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md), [Ursatz-Composer](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md), [Ursatz-GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI/blob/main/docs/architecture.md)), each at a commit on Ursatz `main` that its own `scripts/check-pins.sh` checks. Details are in [Who calls it](#who-calls-it).
+Ursatz depends on no other part of the repository. The Analyzer ([architecture](../../analyzer/docs/architecture.md)), the Composer ([architecture](../../composer/docs/architecture.md)) and the GUI ([architecture](../../gui/docs/architecture.md)) build on it, in the same tree. Details are in [Who calls it](#who-calls-it).
 
 ## Module map
 
@@ -83,9 +83,9 @@ Nothing. Ursatz sits at the bottom of the stack; its only dependencies are SQLit
 
 | App | Headers used | Mostly from |
 |---|---|---|
-| Ursatz-Analyzer | 157 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
-| Ursatz-Composer | 115 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, generation, io |
-| Ursatz-GUI | 4 | analysis (`analyzer.h`), corpus, persistence |
+| Analyzer | 157 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
+| Composer | 115 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, generation, io |
+| GUI | 4 | analysis (`analyzer.h`), corpus, persistence |
 
 Made with `scripts/app_includes.sh <app checkout>...`; the combined list is in `docs/public-headers-baseline.txt`.
 

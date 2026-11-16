@@ -58,7 +58,7 @@ phrases.
 | --- | --- | --- |
 | `source_file` | string | Input file name without its directory. |
 | `analyzer_version` | string | Ursatz-Analyzer version, from the CMake project version. |
-| `ursatz_commit` | string | Full commit hash of the `external/ursatz` submodule at configure time, or `"unknown"` when `git` could not read it. |
+| `ursatz_commit` | string | The producer key of the build that wrote the document: 16 hex digits, a hash of the sources that produce an analysis (`ursatz_analyzer_producer_key()`). The member keeps its name until the next document version renames it. |
 | `note_count` | integer | Number of imported notes. |
 | `ticks_per_quarter` | integer or null | The MIDI header's ticks per quarter note, or `null` when unavailable. |
 | `input` | object | The input format and what it states or leaves to inference. See below. |

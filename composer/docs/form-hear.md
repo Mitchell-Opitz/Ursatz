@@ -25,7 +25,7 @@ that start inside the span (borrowed, not copied), with the meter map of the ren
 start, and a stream for each lane, and keeps the result for the life of the hearing, so a second check of the same span
 reads the same result. `compose_run` makes one hearing after the texture stage, and `form_hear`, `return_hear`,
 `piece_check_keys`, `analyzer_check_section`, `analyzer_check_piece` and `composer_style_measure` read it; each public call
-made on its own makes a hearing of its own. `scripts/check-hearing.sh` (run in CI) fails when `src/` or `cli/` calls the
+made on its own makes a hearing of its own. `tools/ci/check-hearing.sh` (run in CI) fails when `src/` or `cli/` calls the
 library's form or texture detectors, an `analyzer_analyze_fragment` entry, or `plan_render` anywhere but `hearing.c`,
 `export.c` and `variations.c`.
 

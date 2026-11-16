@@ -122,7 +122,7 @@ in the motif's stored key (C major or C minor). Nothing is saved.
   `items/<id>/v<n>/render/`: `score.musicxml`, `motif.mid` and `render.json`
   `{api_version, composer_version, ursatz_commit, render_key, tempo}` (the three
   versions from `composer_api_versions`). A request with the same key, tempo
-  and Composer build and Ursatz commit reads these files, an older cache missing once, so the Composer runs at most once
+  and Composer build and producer key reads these files, an older cache missing once, so the Composer runs at most once
   per version and key.
 - `GET /api/materials/items/<id>/versions/<n>/playback?file=theme|<name>` (`loop`, `ending`, `piece`: a version name of the piece's form)
   answers the playback of a theme or piece version's `theme.mid` or `<name>.mid`

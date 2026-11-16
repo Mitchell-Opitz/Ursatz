@@ -164,7 +164,7 @@ static void check_pickup_piece(void) {
     CHECK(line_is(whole, 3, "key: C major | meter: 4/4 | tempo: not declared | measures: 0-4"), "the key, meter, tempo, measures line");
     CHECK(line_is(whole, 4, "clefs: P1 S1 treble"), "the clefs line names each part's opening clefs");
     char commit[13];
-    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_ursatz_commit());
+    snprintf(commit, sizeof(commit), "%.12s", ursatz_analyzer_producer_key());
     char analyzer_line[160];
     snprintf(analyzer_line, sizeof(analyzer_line), "analyzer: %s ursatz %s", ursatz_analyzer_version(), commit);
     CHECK(line_is(whole, 5, analyzer_line), "the analyzer line names the version and a 12 character commit");

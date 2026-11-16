@@ -24,7 +24,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
-| `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and Ursatz commit all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [corpus.md](corpus.md). |
+| `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and producer key all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [corpus.md](corpus.md). |
 | `chord_sequence.h` | `analyzer_chord_sequence` and `analyzer_chord_sequence_from_document` give the joined chord sequence (consecutive entries with one numeral, key region and root are one chord) of a result or of a stored document; `analyzer_chord_sequence_free` releases it. |
 | `playback.h` | Playback timing for an import as the GUI player needs it. See [gui-api.md](gui-api.md). |
 | `score_export.h` | MusicXML score export of the imported notes, with the base `xml:id` of each note. See [gui-api.md](gui-api.md). |
@@ -44,7 +44,7 @@ or the report, so those can be destroyed as soon as it is built. Strings returne
 `derive_report_path` and `derive_analysis_document_path` are freed by the caller with `free`.
 
 ```cmake
-add_subdirectory(external/ursatz-analyzer)
+add_subdirectory(ursatz/analyzer)             # after ursatz/third_party and ursatz/library, as the root does
 target_link_libraries(my_app PRIVATE ursatz_analyzer)        # the pipeline, and the Ursatz kernel its headers use
 target_link_libraries(my_tool PRIVATE ursatz_analyzer::chain) # also reads the library chain (result_chain.h)
 ```
@@ -84,7 +84,7 @@ which runs the analysis as one `AnalyzerPass` (`chain.h`) inside `analyzer_analy
    run, are library calls over the chain's prepared harmony segments), `form_pipeline`, `motive_pipeline`, `melody_pipeline` (each
    phrase's part of the chain's soprano line), `texture_pipeline`, `voice_leading_pipeline` and `schema_pipeline`.
    The stages read the chain's stage inputs (`analysis_chain_harmony_inputs`, `_prepared_harmony`, `_form_input`,
-   `_motive_input`, `_voice_grid`, `_galant_segments`) and never call `chain_build_*`; `scripts/check-chain-builds.sh`
+   `_motive_input`, `_voice_grid`, `_galant_segments`) and never call `chain_build_*`; `tools/ci/check-chain-builds.sh`
    fails CI when `src/` or `include/` does.
 4. The Analyzer-only stages read the collected report and the chain's results: `progression_pipeline` and
    `harmonic_rhythm_pipeline`, `form_plan_pipeline` (sections, thematic returns), `meter_check_pipeline`,

@@ -5,8 +5,8 @@ Build requirements, the test list and the checks CI runs beyond the configure, b
 
 Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
 `common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is off
-(Ursatz's default), so the build sees only the staged public headers. `scripts/check-library-includes.sh` checks this
-(see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the submodule (see `tests/fixtures/README.md`).
+(Ursatz's default), so the build sees only the staged public headers. `tools/ci/check-library-includes-analyzer.sh` checks this
+(see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the library's own test folders (see `tests/fixtures/README.md`).
 
 The Analyzer holds no arithmetic of its own on times, pitches, key signatures or numerals. Exact times are `Rational`
 (`core/rational.h`, with the `time/time_rational.h` bridges); an overflow fails the stage that met it, and a document
@@ -99,25 +99,25 @@ Tests:
   valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and
   validates both JSON files against their schemas (see below).
 - `test_staleness`: each `AnalyzerDocumentStatus`, from keys and from snapshot documents with one key changed, also under
-  valgrind. `test_corpus` also resumes across a changed Ursatz commit.
-- `test_version`: the public version header returns the macros, the version of `project()` and a non-empty Ursatz
-  commit.
+  valgrind. `test_corpus` also resumes across a changed producer key.
+- `test_version`: the public version header returns the macros, the version of `project()` and a producer key of 16
+  lowercase hex digits.
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
 
 ## Library include check
 
-`scripts/check-library-includes.sh <build dir>` runs after the build and fails when `src/` or `include/` includes an
+`tools/ci/check-library-includes-analyzer.sh <build dir>` (relative to the repository root) runs after the build and fails when `src/` or `include/` includes an
 Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, when a CMake
-file reads `SOURCE_DIR` of an Ursatz target or a path under `external/ursatz/tests`, or when a public header other than
+file reads `SOURCE_DIR` of an Ursatz target or a path under `library/tests`, or when a public header other than
 `result_chain.h` includes a chain or framework header. It prints each offending line. CI runs it after the build.
 `test_consumer_isolation` builds the targets of `tests/consumer`: one linking only `ursatz_analyzer` compiles every public
 header but `result_chain.h`, and cannot include a chain or framework header.
 
 ## File scope state check
 
-`scripts/check-statics.sh` fails when a file in `src/` declares a file-scope `static` variable that is not `const`
+`tools/ci/check-statics.sh analyzer` fails when a file in `src/` declares a file-scope `static` variable that is not `const`
 (a pointer to const data counts as mutable; write `static const T *const name`). It prints each file and line. State a
 stage needs is passed through its caller's context. CI runs it after the library include check.
 
@@ -138,13 +138,17 @@ call them and render the result:
   `progression_patterns_find` and `progression_pattern_label` (repeated progressions), `motive_link_candidates` and
   `motive_link_groups` (the motive links; the analyzer orders the groups, largest first).
 
-## Version header and pin check
+## Version header and producer key
 
-`<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and
-`URSATZ_ANALYZER_URSATZ_COMMIT` and declares `ursatz_analyzer_version()` and `ursatz_analyzer_ursatz_commit()`, so a
-consumer reads the version from the library instead of parsing `CMakeLists.txt`.
+`<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and declares
+`ursatz_analyzer_version()` and `ursatz_analyzer_producer_key()`, so a consumer reads the version and the producer key
+from the library instead of parsing `CMakeLists.txt`.
+
+The producer key is computed at build time, not configure time (R-554). `analyzer/cmake/ProducerKey.cmake` hashes every
+file under `library/src`, `library/frameworks`, `library/chain`, `analyzer/src`, `analyzer/include`, `third_party/cjson` and
+`third_party/ezxml` (sources, headers and `*.in`, not `tests/`), as the text `<path> <SHA-256>` per file in path order, and
+keeps the first 16 hex digits of that text's SHA-256 in `producer_key.h` beside `version.h`. The header is rewritten only
+when the key changes. A change to a test, a doc or the GUI leaves the key as it was and marks nothing stale; a change to a
+listed source changes it and marks every stored analysis stale.
 
 The version is 0.7.0. Every analysis stored by an earlier version is stale by version.
-
-`scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`, or when one repository is pinned at
-two different commits anywhere in the tree. CI runs it right after the submodule checkout.

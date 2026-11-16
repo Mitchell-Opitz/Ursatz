@@ -4,7 +4,8 @@
 # Analyzer. The CLI may include its own headers, cJSON (to build requests) and system headers. Prints each offending line.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$root/composer"
 
 failed=0
 

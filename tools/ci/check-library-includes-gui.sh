@@ -5,9 +5,10 @@
 # offending line. Run after the build; the build directory is the first argument (it must exist).
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$root/gui"
 
-build="${1:-../build}"
+build="$(cd "$root" && cd "${1:-build}" && pwd)"
 if [ ! -d "$build" ]; then
     echo "FAIL $build not found (build first)" >&2
     exit 2
@@ -24,14 +25,14 @@ report() {
 submodule_has() {
     local dir="$1" name="$2" base
     base="$(basename "$name")"
-    find "$dir" -name "$base" -not -path '*/.git/*' -not -path "$dir/external/*" 2>/dev/null |
+    find "$dir" -name "$base" -not -path '*/.git/*' 2>/dev/null |
         grep -q "/$name\$"
 }
 
 while IFS=: read -r file line text; do
     name="$(printf '%s' "$text" | sed -E 's/^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]([^">]+)[">].*/\1/')"
     local_found=0
-    for dir in backend/src backend/include "$(dirname "$file")" external/cjson; do
+    for dir in backend/src backend/include "$(dirname "$file")" ../third_party/cjson; do
         if [ -e "$dir/$name" ]; then
             local_found=1
             break

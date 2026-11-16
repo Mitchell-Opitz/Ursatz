@@ -58,7 +58,7 @@ names the file; the default is `<corpus output dir>/motive-link-cache.json`. The
 `<file>.tmp`, then renamed over it). A file that does not exist is an empty cache; a file that is not a cache is an error
 (exit 2).
 
-A cache is valid only for the Ursatz commit, the analyzer version and the link options (depth, beam, nearness gate,
+A cache is valid only for the producer key, the analyzer version and the link options (depth, beam, nearness gate,
 contour) it was made with. A run with others empties it, compares everything, and says so (`cache_reset` in the JSON).
 `--candidates` is not part of the key: it changes which pairs are considered, not what a pair's result is.
 

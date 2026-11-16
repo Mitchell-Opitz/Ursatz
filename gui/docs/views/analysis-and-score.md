@@ -115,7 +115,7 @@ part (zoom steps, panel modes, shortcut table, saved state) is
 
 Data mode replaces the score with the Provenance list and the claim tabs
 below. Provenance lists the document's metadata (source file, analyzer
-version, Ursatz commit, document schema, input format, source type, meter,
+version, producer key, document schema, input format, source type, meter,
 key signature, spelling, importer warnings).
 
 There is one tab per group of document sections, in this order:

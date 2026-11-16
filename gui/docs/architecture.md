@@ -8,7 +8,7 @@ A local web UI over the Ursatz platform: it imports MIDI and MusicXML files, sho
 
 ## Where it sits
 
-- Below it, three submodules in `external/`, pinned by commit (versions in [Building](../README.md#building)): [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) (storage only), the [Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md) and the [Composer](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md).
+- Below it, three parts of the same repository, built by the root: the library in `library/` (storage only; [architecture](../../library/docs/architecture.md)), the Analyzer in `analyzer/` ([architecture](../../analyzer/docs/architecture.md)) and the Composer in `composer/` ([architecture](../../composer/docs/architecture.md)).
 - Above it, the browser only.
 
 ## Module map
@@ -20,7 +20,7 @@ A local web UI over the Ursatz platform: it imports MIDI and MusicXML files, sho
 | `backend/src/util/`, `backend/include/` | File, JSON and lock helpers; the tool header | [Helpers](backend-modules.md#backend-helper-modules) |
 | `backend/tests/` | Tests and fixtures | [testing.md](testing.md) |
 | `frontend/public/` | The static pages, models and views | [frontend.md](frontend.md), [views/](views/library.md) |
-| `scripts/` | Pin, include, theory and docs checks | [testing.md](testing.md) |
+| `../tools/ci/` (repository root) | Include, theory and docs checks, shared by every part | [testing.md](testing.md) |
 
 ## Public API
 
@@ -45,9 +45,9 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 
 | Name | Where reported | Current value | Doc |
 |---|---|---|---|
-| `version`, `api_version`, `analyzer_version`, `ursatz_commit` | `GET /api/composer/status`, from `composer_api_versions` | the pinned Composer (0.4.1, API 1.25, `a4d0a2a`) and the builds it links | [Composer routes](api/composer-routes.md#composer-routes) |
-| `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `ursatz_analyzer_version`, `ursatz_analyzer_ursatz_commit` and `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | the pinned Analyzer (0.6.0) | [Piece store](storage.md#piece-store) |
-| `api_version`, `composer_version`, `ursatz_commit`, `render_key`, `tempo` | `render.json` beside a cached motif render | the pinned Composer | [Motif score and playback](views/playback.md#motif-score-and-playback) |
+| `version`, `api_version`, `analyzer_version`, `ursatz_commit` | `GET /api/composer/status`, from `composer_api_versions` | the Composer of this tree and the builds it links | [Composer routes](api/composer-routes.md#composer-routes) |
+| `analyzer_version`, `ursatz_commit`, `document_schema_version` | each piece's `meta.json`, from `ursatz_analyzer_version`, `ursatz_analyzer_producer_key` (kept under the member `ursatz_commit`) and `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | the Analyzer of this tree | [Piece store](storage.md#piece-store) |
+| `api_version`, `composer_version`, `ursatz_commit`, `render_key`, `tempo` | `render.json` beside a cached motif render | the Composer of this tree | [Motif score and playback](views/playback.md#motif-score-and-playback) |
 | `schema_version` of a Composer request | `theme_service.c`, `piece_service.c` | 2 for a theme, 1 for a piece (the Composer also reads piece request schema 2, any form; the GUI writes 1) | [Storage](storage.md#theme-bodies-and-version-files) |
 
 `GET /api/health/status` reports only whether the store opens (`ok`, `message`).
@@ -118,11 +118,11 @@ New tool code goes in `backend/src/routes/`. New shared persistence or query
 logic goes in `backend/src/service/`. If you find yourself calling an Ursatz
 function from inside `routes/`, it belongs in `service/` instead.
 
-The Analyzer library (`external/ursatz-analyzer`, linked as
+The Analyzer library (`analyzer/`, linked as
 `ursatz_analyzer`) is the only analysis path: `analysis_service.c` calls
 `input_pipeline_import_file`, `run_analysis_pipeline` and
 `analysis_document_build`; the piece detail's note ids, the score
 (`analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`) and the
 playback (`analyzer_playback_build`) also come from the Analyzer. The file
 includes no Ursatz header, and the GUI keeps no analysis code of its own.
-Analysis therefore changes only when the Analyzer submodule is bumped.
+Analysis therefore changes only when the Analyzer changes.

@@ -10,14 +10,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The full suite of every part, slow tests included.
+  # The full suite of the whole tree, slow tests included.
   full-test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        part: [library, analyzer, composer, gui]
-    name: ${{ matrix.part }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +24,7 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-ccache-${{ matrix.part }}
+          key: ${{ runner.os }}-ccache
 
       - name: Configure
         env:
@@ -41,8 +36,7 @@ jobs:
         run: cmake --build build -j
 
       - name: Test
-        run: ctest --test-dir build/${{ matrix.part }} --output-on-failure --no-tests=error -j$(nproc)
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc)
       - name: Ten slowest tests
         if: always()
-        working-directory: ${{ matrix.part }}
-        run: bash scripts/slowest-tests.sh ../build/${{ matrix.part }}
+        run: bash tools/ci/slowest-tests.sh build

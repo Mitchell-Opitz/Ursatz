@@ -78,7 +78,7 @@ abbreviations are the Composer's lists (`GET /api/composer/vocabulary`); the
 choice for no override is empty. So are the roles and forms of a motif, the phrase
 functions and distances of the variant tree, and the slots a theme form has (the
 slots of its ideas): the frontend and the backend keep none of these lists, and
-`scripts/check-frontend-theory.sh` refuses their old table names.
+`tools/ci/check-frontend-theory.sh` refuses their old table names.
 
 Tone labels (R-195, R-196): under the note list the Tones row has one chip per
 note, `<note> <label>` with `-> <n>` for the note it resolves to. The label is

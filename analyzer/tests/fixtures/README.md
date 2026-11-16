@@ -1,6 +1,6 @@
 # Test fixtures
 
-Copies of the Ursatz files the tests read, so no test reads `external/ursatz/tests`. Source commit: Ursatz `2c53118` (PR #181).
+Copies of the library's test files, made from `library/tests/` in this repository, so no test reads the library's test folders.
 `URSATZ_ANALYZER_FIXTURE_DIR` is this folder.
 
 | Here | Ursatz path |
@@ -13,4 +13,4 @@ Copies of the Ursatz files the tests read, so no test reads `external/ursatz/tes
 | `export/motif*.musicxml` | Written by hand in the Composer's rendered form: a 2-bar motif and two variants (material export tests) |
 | `chorales/<name>.musicxml` | `tests/accuracy/corpus/<name>/score.musicxml` |
 
-Update a copy by recopying it from the Ursatz commit the submodule is pinned to and naming that commit here.
+Update a copy by recopying it from `library/tests/` in the same tree.

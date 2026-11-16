@@ -9,7 +9,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 
 ## Build and test
 
-- [building.md](building.md): the slow tests, the public header rule, the submodule pins and what comes from the library.
+- [building.md](building.md): the slow tests, the public header rule and what comes from the library.
 
 ## Using it
 

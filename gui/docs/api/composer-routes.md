@@ -7,8 +7,8 @@ The Composer routes and the job queue that runs long work. [Docs index](../READM
 The Composer tool grows themes, plans and fills pieces, and makes variations. The quick requests (version,
 motif analysis, degrees to notes, MIDI to motif, motif render, the operation list, recognize and random motifs)
 are calls of the Composer API (`composer_api_*`, `ursatz_composer/composer_api.h`) in process (R-219): the backend
-links the Composer library (`add_subdirectory(external/ursatz-composer)` with the command off), which reuses the
-cJSON, Ursatz and Analyzer targets the GUI builds, so one version of each is in the build. A request is a cJSON
+links the Composer library (the root build's `composer` target; the command is built separately), which reuses the
+cJSON, Ursatz and Analyzer targets the root builds, so one version of each is in the build. A request is a cJSON
 object printed to text, never an argument list; `service/composer_client.c` moves the answer into an
 `UrsatzGuiComposerReply` (`status`, `json`, `plan_json`, `midi`, `musicxml`, and the refusal `message` and `path`). The
 CLI's exit 1 is `COMPOSER_ERR_REQUEST`, exit 2 `COMPOSER_ERR_UNSATISFIABLE`; a request error is 400 and an unsatisfiable
@@ -44,7 +44,7 @@ are the Composer's to read: it refuses what it does not read with a message and 
 Routes (bodies are JSON; success bodies have `"ok":true`):
 
 - `GET /api/composer/status`: `{"ok":true,"available":true,"version":"ursatz-composer 0.4.0","api_version":"1.1",
-  "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (the last three are additive).
+  "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (`ursatz_commit` holds the Analyzer's producer key until the next version renames it) (the last three are additive).
 
 - `GET /api/composer/vocabulary`: the lists the Composer reads (`composer_api_vocabulary`), built once and kept: meters
   with their beats and second chord beat, modes, keys and `pitch_class_names`, cadences, pickups for each meter, the
