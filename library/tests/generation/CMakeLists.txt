@@ -14,7 +14,7 @@ add_ursatz_architecture_test(generation)
 
 # Scoped memcheck coverage for the generator registry, dispatch and
 # reproducibility test binaries only (not a repo-wide valgrind mechanism -- see
-# tests/persistence/CMakeLists.txt for the same pattern). Skips silently if
+# tests/query/CMakeLists.txt for the same pattern). Skips silently if
 # valgrind isn't installed.
 find_program(URSATZ_GENERATION_VALGRIND valgrind)
 if(URSATZ_GENERATION_VALGRIND)

@@ -21,7 +21,7 @@
  *
  * The statistics arrive as plain values (StyleStatistic), the opaque-value
  * boundary theory/ has with the corpus: this module has no dependency on
- * corpus_stats/ or corpus/ (Dependency Spec §7.2).
+ * any storage or corpus module (Dependency Spec §7.2).
  */
 
 typedef enum {

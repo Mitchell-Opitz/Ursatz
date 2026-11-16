@@ -177,31 +177,9 @@ add_library(ursatz
     io/midi_renderer.c
     io/musicxml_importer.c
     io/import_notes.c
-    persistence/persistence.c
-    persistence/persistence_note_events.c
-    persistence/persistence_uncertainty.c
-    persistence/persistence_interpretation.c
-    persistence/persistence_chord.c
-    persistence/persistence_key.c
-    persistence/persistence_context_query.c
-    persistence/persistence_support.c
-    persistence/persistence_relationship.c
-    persistence/persistence_motif.c
-    persistence/persistence_motif_occurrence.c
-    persistence/persistence_cadence.c
-    persistence/persistence_phrase_occurrence.c
-    corpus/corpus.c
-    corpus/persistence_corpus.c
-    corpus/persistence_corpus_membership.c
-    corpus/corpus_api.c
-    corpus_stats/corpus_stats_api.c
-    corpus_stats/corpus_stats_tally.c
-    corpus_stats/corpus_stats_counts.c
     query/query_fraction.c
     query/similarity_model.c
     query/similarity_scoring.c
-    query/search_result.c
-    query/corpus_search.c
     export/musicxml_score.c
     export/score_clefs.c
     export/score_quantize.c
@@ -241,8 +219,6 @@ ursatz_public_headers(ursatz
         core/rational.h
         core/value.h
         core/voice_reference.h
-        corpus/corpus.h
-        corpus/corpus_api.h
         events/dynamics.h
         events/note_event.h
         events/tempo_marking.h
@@ -272,7 +248,6 @@ ursatz_public_headers(ursatz
         io/midi_renderer.h
         io/musicxml_importer.h
         io/smf_reader.h
-        persistence/persistence.h
         pitch/accidental.h
         pitch/clef.h
         pitch/clef_resolution.h

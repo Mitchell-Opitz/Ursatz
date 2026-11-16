@@ -27,8 +27,7 @@ typedef struct {
 static const ModuleLayer KERNEL_MODULES[] = {
     {"identity", 0},  {"core", 1},          {"time", 2},     {"pitch", 2},       {"events", 3},       {"containers", 4},
     {"structure", 5}, {"context", 6},       {"semantics", 6}, {"relationship", 6}, {"interpretation", 6}, {"theory", 7},
-    {"rules", 7},     {"analysis", 8},      {"generation", 8}, {"io", 9},        {"export", 9},       {"persistence", 9},
-    {"corpus", 9},    {"corpus_stats", 9},  {"query", 9},
+    {"rules", 7},     {"analysis", 8},      {"generation", 8}, {"io", 9},        {"export", 9},       {"query", 9},
 };
 
 static const char *const FRAMEWORKS[] = {
@@ -51,7 +50,6 @@ static const TestEdge ALLOWED_TEST_EDGES[] = {
     {"tests/analysis/", "ursatz_chain/", "analysis tests run the chain end to end"},
     {"tests/analysis/", "io/", "analysis tests import the corpus MIDI files"},
     {"tests/analysis/", "standard-form/phrase_level_form.h", "phrase tests name the theme forms the chain reports"},
-    {"tests/persistence/", "common-practice-minimal/", "persistence tests store framework chord and key labels"},
     {"frameworks/common-practice-minimal/tests/", "standard-tonality/", "declared dependency (the scale degree owner)"},
     {"frameworks/common-practice-minimal/tests/", "analysis/outer_voice.h",
      "the test builds kernel outer lines and hands them to the framework in its own input shape"},

@@ -27,7 +27,7 @@ add_ursatz_test(motive_link_groups)
 add_ursatz_test(progression_patterns)
 
 # Scoped memcheck for the motive link test only (not a repo-wide valgrind mechanism -- see
-# tests/persistence/CMakeLists.txt for the same pattern). Skips silently if valgrind isn't installed.
+# tests/query/CMakeLists.txt for the same pattern). Skips silently if valgrind isn't installed.
 find_program(URSATZ_ANALYSIS_VALGRIND valgrind)
 if(URSATZ_ANALYSIS_VALGRIND)
   add_test(NAME motive_link_valgrind

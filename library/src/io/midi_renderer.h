@@ -15,7 +15,7 @@
  * Standard MIDI File of format 1. It is the inverse of MIDIImporter
  * (io/midi_importer.h), which reads what this writes. See docs/modules/midi_renderer.md.
  *
- * INPUTS. All borrowed and never mutated; nothing is read from persistence.
+ * INPUTS. All borrowed and never mutated.
  *   - events / pitch_values / count: count NoteEvents and, index-paired with them, the
  *     PitchNumericValue of each note's pitch -- the pairing midi_importer_import returns.
  *     The renderer needs no PitchSpelling. count may be 0 (events and pitch_values may

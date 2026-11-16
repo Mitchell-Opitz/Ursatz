@@ -1,4 +1,0 @@
-add_ursatz_test(corpus_stats_api)
-add_ursatz_test(corpus_stats_counts)
-
-add_ursatz_architecture_test(corpus_stats)

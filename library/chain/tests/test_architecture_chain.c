@@ -7,7 +7,7 @@
  * Architecture test: the analysis chain (an extension above the numbered
  * stack, physically separate from src/) may include kernel L0 to L8 and the
  * framework headers named in FRAMEWORK_HEADERS below. It MUST NOT include
- * L9 (io/, export/, persistence/, corpus/, corpus_stats/, query/). Framework
+ * L9 (io/, export/, query/). Framework
  * headers are an exact allowlist of file names, not a directory prefix.
  *
  * Scans every .h/.c file under chain/ursatz_chain/ and flags any local
