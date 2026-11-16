@@ -16,9 +16,8 @@
 
 /*
  * Adaptive sonority segmentation (semantics): a meter-aware way to cut a stream of NoteEvents into
- * Sonority segments. It sits next to the fixed-grid SonorityBuilder (semantics/sonority_builder.h),
- * which is unchanged: that builder groups notes by attack on a fixed quarter-note grid, ignores
- * meter, and does not carry a held note into later beats. Callers move over later.
+ * Sonority segments. It replaced the fixed-grid sonority builder, which grouped notes by attack on a
+ * fixed quarter-note grid, ignored meter, and did not carry a held note into later beats.
  *
  * Segment content is EVERY note sounding in the segment, those attacked in it and those held over
  * from earlier. Each member records which: AdaptiveSonority::held is parallel to the Sonority's event

@@ -44,7 +44,6 @@ add_library(ursatz
     context/context.c
     semantics/interval.c
     semantics/sonority.c
-    semantics/sonority_builder.c
     semantics/sonority_segmentation.c
     semantics/rhythmic_pattern.c
     semantics/contour.c
