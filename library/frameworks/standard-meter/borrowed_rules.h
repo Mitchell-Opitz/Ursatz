@@ -29,9 +29,6 @@
  *   TYPICAL_LEVEL  triplets occur at any level; duplets typically at the
  *                  beat or a subdivision. This describes where they
  *                  usually occur, it does not forbid anything.
- *
- * How a borrowed division is counted is counting_rules.h (the borrowed
- * meter's own syllables).
  */
 
 typedef enum {

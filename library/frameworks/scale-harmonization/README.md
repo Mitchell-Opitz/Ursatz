@@ -26,9 +26,9 @@ each scale degree, in an ascending and a descending form. A sequence
 (`SequenceKind`, `sequence_kind.h`) is a pattern of one or more
 harmonies that repeats in the direction of the scale.
 
-Every rule has a Rule/Constraint pair referencing this Framework plus a pure
-check function. A rule that states what the pattern requires is hard; "avoid" and
-"usually" features are soft. `constraint_evaluate` is never called here.
+Every rule is a pure check function. A rule that states what the pattern requires
+is hard; "avoid" and "usually" features are soft. No rule builds a `Rule` or
+`Constraint`.
 
 - **Sequence patterns** (`scale_patterns.h`), as the Harmonizing the Scale with
   Sequences chapter describes them. A pattern is a repeating unit of stages over
@@ -52,24 +52,11 @@ check function. A rule that states what the pattern requires is hard; "avoid" an
   interval the pattern allows at every stage; each stage repeats the interval one
   unit before it (so the sequence repeats); and a suspended upper voice holds its
   pitch. Soft: the harmonization is a whole number of units.
-- **Rule of the Octave rules** (`scale_octave_rules.h`), on a four-voice
-  realization of eight chords over the bass scale (Fenaroli's version, with four
-  voices throughout and no suggestion of parallels). Hard: four voices at every
-  stage; the bass is the degrees of a diatonic scale in the direction (1 2 3 4 5
-  6 7 1 ascending, 1 7 6 5 4 3 2 1 descending, with the third, sixth, and seventh
-  allowed lowered); the first and last chords are tonic 5/3 chords; and no
-  parallel fifths or octaves between any two voices. Soft: the chords between are
-  first inversion (6/3) chords.
 
 ## Not covered
 
-- **The Rule of the Octave's chord table.** The chord on each scale degree, in the
-  ascending and descending forms, and the three positions (the top voice
-  centered on the tonic, mediant, or dominant), are in the chapter's scores, not
-  its text, and are not encoded. Neither are the steps of its construction past the
-  parallel chords and the tonic 5/3 chords (the extra figure on the dominant
-  chords, the sevenths before the tonic and dominant chords, and the one
-  chromatic alteration).
+- **The Rule of the Octave.** Its four-voice realization and its chord table, in
+  the ascending and descending forms, are not encoded.
 - **Other sequences.** The ascending 7-6 and 2-3 patterns (which need a leap up an
   octave to restart: 7-6-8 and 2-3-1, or 9-8-10 with the bass), the descending 2-3
   pattern, the three descending cycles of fifths (triads; sevenths and
@@ -87,5 +74,5 @@ check function. A rule that states what the pattern requires is hard; "avoid" an
 
 Owned here (moved from `src/semantics/`; type names and values unchanged):
 
-- `ScaleDirection` is a plain enum value naming the direction a scale or a bass line runs: ascending or descending. `scale_direction_opposite` gives the other. It carries no `EntityID`, pitches, or framework claim, and is not `ContourDirection` (`semantics/contour.h`), which also has a "same" direction and describes the change between two pitches of a `Contour`.
-- `SequenceKind` is a plain enum value naming a kind of sequential harmonization of a bass scale, a pattern of one or more harmonies that repeats in the direction of the scale: parallel chords, 5-6, 7-6 (a chain of suspensions), cycle of fifths, or 2-3 (the inversion of the 7-6, also a chain of suspensions; `sequence_kind_is_suspension_chain` is true for these two). It carries no `EntityID`, pitches, or framework claim. Which patterns a framework encodes, and their intervals above the bass, are its own convention (`frameworks/scale-harmonization`).
+- `ScaleDirection` is a plain enum value naming the direction a scale or a bass line runs: ascending or descending. It carries no `EntityID`, pitches, or framework claim, and is not `ContourDirection` (`semantics/contour.h`), which also has a "same" direction and describes the change between two pitches of a `Contour`.
+- `SequenceKind` is a plain enum value naming a kind of sequential harmonization of a bass scale, a pattern of one or more harmonies that repeats in the direction of the scale: parallel chords, 5-6, 7-6 (a chain of suspensions), cycle of fifths, or 2-3 (the inversion of the 7-6, also a chain of suspensions). It carries no `EntityID`, pitches, or framework claim. Which patterns a framework encodes, and their intervals above the bass, are its own convention (`frameworks/scale-harmonization`).

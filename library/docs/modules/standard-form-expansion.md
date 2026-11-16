@@ -46,6 +46,4 @@ the idea and subphrase levels, built like `Phrase`. `PhraseLevelForm`,
 sentence and period are procedures over `Phrase`, `Subphrase`, `Idea` and
 `Cadence`; none is a stored entity.
 
-Each rule has a backing `Rule`/`Constraint` pair referencing this
-Framework, plus a pure check function. `constraint_evaluate` is never
-called here.
+Each rule is a pure check function; no rule builds a `Rule` or `Constraint`.

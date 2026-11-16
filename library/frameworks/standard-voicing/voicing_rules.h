@@ -5,16 +5,14 @@
 #include <stddef.h>
 
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "semantics/voice_part.h"
 #include "stem_rules.h"
 #include "voicing_chord.h"
 
 /*
  * The six rules a chord in strict SATB style follows, as standard-voicing-v1
- * names them. Each has a backing Rule/Constraint pair (hard) referencing
- * this Framework; the checks themselves are in the header named below.
+ * names them. Each is hard; the checks themselves are in the header named
+ * below.
  *
  *   STEM_DIRECTION       stem_rules.h: soprano and alto on the treble
  *                        staff, tenor and bass on the bass staff; soprano
@@ -49,8 +47,7 @@ typedef enum {
  *   chord           the four voices (every one non-NULL)
  *   tones           the chord's tones in root position order
  *   tone_count      3 (triad) or 4 (seventh chord)
- *   inversion       0 root position, up to tone_count - 1; from a Roman
- *                   numeral figure, standard_voicing_inversion_from_figure
+ *   inversion       0 root position, up to tone_count - 1
  *   leading_tone    the key's leading tone, or NULL when none is in play
  *   stem_directions the written stem direction of each voice, indexed by
  *                   VoicePart, or NULL when the chord has not been

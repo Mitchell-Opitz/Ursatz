@@ -109,7 +109,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
                                              StandardTonalityAppliedResult *out);
 
 /*
- * As standard_tonality_build_roman_numerals with the thresholds of `config` (NULL for the defaults). A config
+ * Builds the Roman numerals of the inputs with the thresholds of `config` (NULL for the defaults). A config
  * that is not valid is STANDARD_TONALITY_ROMAN_ERR_NULL_ARGUMENT.
  */
 StandardTonalityRomanStatus standard_tonality_build_roman_numerals_with_config(

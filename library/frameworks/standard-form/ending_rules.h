@@ -15,7 +15,7 @@
  *                  begins stable
  *   continuation   HC, IAC or PAC; ideas vary but are often divided 1+1+2 or 2+2; begins
  *                  unstable
- *   cadential      PAC or IAC, never HC; harmonizes the core bass line (cadential_bass_rules.h);
+ *   cadential      PAC or IAC, never HC; harmonizes the core bass line;
  *                  divided 2+2 or not divisible at all; never fragmented
  *
  * Rules:

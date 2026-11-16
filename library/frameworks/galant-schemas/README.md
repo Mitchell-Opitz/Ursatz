@@ -31,10 +31,9 @@ This framework holds the prototypes and decides whether an exemplar resembles on
   an alteration in semitones against the major scale, so the third and sixth
   degrees can be lowered in a minor key (mi or me, la or le).
 
-Every rule has a Rule/Constraint pair referencing this Framework plus a pure
-check function. A rule that states what the schema requires is hard; "less
-fixed" and "usually" features are soft. `constraint_evaluate` is never called
-here.
+Every rule is a pure check function. A rule that states what the schema
+requires is hard; "less fixed" and "usually" features are soft. No rule builds
+a `Rule` or `Constraint`.
 
 - **Prototypes** (`galant_prototypes.h`), 26 schemas. Meyer, Prinner, and the
   modulating Prinner are as the Galant schemas chapter of Open Music Theory sets
@@ -62,9 +61,6 @@ here.
   prototype's bass is defining, the bass degrees. Soft: the bass degrees, when
   the bass is less fixed (the Meyer), and parallel tenths (a third, or a tenth,
   with the melody above the bass) for the Prinner schemas.
-- **Classification** (`galant_classification.h`): `galant_classify` reports, as a
-  bit mask indexed by `GalantSchemaId`, the prototypes an exemplar resembles:
-  those it breaks no hard rule against. It can resemble more than one, or none.
 
 ## Not covered
 
@@ -106,4 +102,4 @@ Owned here (moved from `src/semantics/`; type names and values unchanged):
 
 ## Neutral analysis input
 
-`galant_segment_set_analysis_segment` and `galant_segment_set_analysis_key` (`analysis/galant_analysis_input.h`) fill a `GalantSegment` from an `AnalysisSegment` and an `AnalysisKey`. The key degree is the key's tonic read from the tonic of the home `AnalysisKey`, so the setter takes both.
+`galant_segment_set_analysis_segment` (`analysis/galant_analysis_input.h`) sets the id, span, position and strength of a `GalantSegment` from an `AnalysisSegment`.

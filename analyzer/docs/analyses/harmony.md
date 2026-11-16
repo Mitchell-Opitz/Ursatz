@@ -34,7 +34,7 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's segm
 ## Roman numerals and the chord vocabulary
 
 The analyzer adds no music theory here either. `roman_numeral_pipeline` hands Ursatz's
-standard-tonality Roman numeral adapter (`standard_tonality_build_roman_numerals`) each segment's
+standard-tonality Roman numeral adapter (`standard_tonality_build_roman_numerals_with_config`, a `NULL` config) each segment's
 identified chord, its key region's kernel Key, its pitch-class weights and its sounding pitches, in time
 order (`standard_tonality_build_chord_inputs`), and copies what comes back. The inversion figure is read
 from the library's chord bass: the lowest sounding chord tone, so a non-chord tone in the bass does not

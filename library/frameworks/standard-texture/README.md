@@ -22,8 +22,7 @@ of a passage; its target is the passage's `EntityID`.
   subcategories, homorhythm (similar or unison rhythm in all voices, block
   chords) and melody and accompaniment (a clear melody over supporting
   voices, often in a different rhythm); polyphony is voices with separate
-  melodic lines and rhythms. Names read back, categories, and the fewest
-  voices each has.
+  melodic lines and rhythms. Names read back, and categories.
 - **Classification** (`texture_classification_rules.h`): a passage's
   textures from features the caller has measured: voice count, unison,
   shared melody, rhythmic unison, a predominant melody, independent lines.
@@ -37,13 +36,9 @@ of a passage; its target is the passage's `EntityID`.
   textures. A work's textures are an ordered list of passages and their
   textures; the rules find where the texture changes (by texture, or by
   category, so homorhythm to melody and accompaniment is not a change of
-  category), count the textures used, say whether a work is mixed, and
-  build a `Texture` labeled with the texture's name. No container type is
-  added for the list.
+  category). No container type is added for the list.
 
-Each rule has a backing `Rule`/`Constraint` pair referencing this
-Framework, plus a pure check function. `constraint_evaluate` is never
-called here.
+Each rule is a pure check function; no rule builds a `Rule` or `Constraint`.
 
 ## Not covered
 

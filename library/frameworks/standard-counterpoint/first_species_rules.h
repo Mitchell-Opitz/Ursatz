@@ -29,9 +29,7 @@
  * hard rule broken, and in soft_violations for each group with a soft rule
  * broken. An exercise is valid when no hard rule is broken. The number of
  * counterpoint notes against each cantus firmus note is one for first
- * species (counterpoint_species_notes_per_cantus_note in
- * counterpoint_species.h), which equal-length lines already
- * give.
+ * species, which equal-length lines already give.
  */
 
 typedef enum {

@@ -12,9 +12,8 @@ not depend on any other framework module.
 Rules for a chord written in four parts: soprano, alto, tenor, bass
 (`VoicePart`, `src/semantics/voice_part.h`). A voiced chord is
 `StandardVoicingChord` (`voicing_chord.h`): one sounding `PitchSpelling`
-per part. Six rules (`voicing_rules.h`), each with a backing hard
-`Rule`/`Constraint` pair referencing this Framework plus a pure check
-function. `constraint_evaluate` is never called here.
+per part. Six rules (`voicing_rules.h`), each a pure check function; no
+rule builds a `Rule` or `Constraint`.
 
 - **Stem direction** (`stem_rules.h`): soprano and alto on the treble
   staff, tenor and bass on the bass staff; soprano and tenor take up-stems,
@@ -24,9 +23,7 @@ function. `constraint_evaluate` is never called here.
   tone the inversion calls for, every chord tone sounds in some voice, and
   no voice sounds a note outside the chord. Notes are compared by letter
   and accidental, so an erroneous accidental is caught. The first problem
-  found is reported. `standard_voicing_inversion_from_figure` maps a Roman
-  numeral figure to an inversion (triads: none/5/53, 6/63, 64; sevenths:
-  7, 65, 43, 42/2). The upper voices may be arranged in any order.
+  found is reported. The upper voices may be arranged in any order.
 - **Range** (`range_rules.h`): soprano C4-G5, alto G3-D5, tenor C3-G4,
   bass F2-D4, both ends included. Pitches are compared by sounding
   semitone number (12-TET, this module's own copy in `voicing_pitch.h`),
@@ -40,8 +37,8 @@ function. `constraint_evaluate` is never called here.
 - **Doubling** (`doubling_rules.h`): the leading tone and a chordal seventh
   are never doubled, and a seventh chord has one note per voice, so none is
   doubled (hard). A triad usually doubles its bass note: a preference, so
-  its constraint is soft and failing it never makes a voicing invalid.
-- **Aggregate check** (`standard_voicing_check`, `standard_voicing_valid`):
+  failing it never makes a voicing invalid.
+- **Aggregate check** (`standard_voicing_check`):
   runs the six rules over a voicing and reports the broken ones as a bit
   mask indexed by `StandardVoicingRule`. Stem directions are optional in
   the input: an unengraved chord skips that rule.

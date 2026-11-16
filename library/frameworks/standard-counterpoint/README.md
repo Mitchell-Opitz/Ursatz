@@ -18,15 +18,12 @@ A line is `StandardCounterpointLine` (`counterpoint_line.h`): an ordered run
 of sounding `PitchSpelling`s, one per note. A two-part texture is
 `StandardCounterpointPair`: two lines of equal length, the note at position
 i of the upper line sounding with the note at position i of the lower line.
-Rhythm is not modeled. Each group below has a Rule/Constraint pair per rule
-referencing this Framework plus a pure check function.
-Each rule table (except consonance and motion, which only classify) registers an
-evaluation callback on its Constraints, so `constraint_evaluate` runs the same check
-(`standard_counterpoint_rule_table_evaluate`) on a candidate `Value` tagged
-`standard-counterpoint/<table prefix>` holding the rule's subject; the multi-input subjects are in
-`counterpoint_subject.h`. Each soft rule also has a `Preference` (`standard_counterpoint_*_preference`)
-whose scoring callback makes `preference_rank` score the same candidate 1/1 when the rule holds
-and 0/1 when it does not.
+Rhythm is not modeled. Each group below has a pure check function. The soft
+rules of the melodic and harmonic groups have a `Preference`
+(`standard_counterpoint_melodic_preference`, `standard_counterpoint_harmonic_preference`)
+whose scoring callback makes `preference_rank` score a candidate `Value` tagged
+`standard-counterpoint/<table prefix>`, holding the rule's subject, 1/1 when the rule holds
+and 0/1 when it does not; the multi-input subjects are in `counterpoint_subject.h`.
 
 - **Consonance** (`consonance_rules.h`): harmonic intervals are perfect
   consonances (unison, fifth, octave), imperfect consonances (major and minor
@@ -61,14 +58,13 @@ and 0/1 when it does not.
   no interior unisons, the two climaxes do not coincide.
 - **Melodic tendencies** (`tendency_rules.h`): Huron's pitch proximity, step
   declination, step inertia, melodic regression, and melodic arch, all soft.
-- **Aggregate check** (`standard_counterpoint_check`,
-  `standard_counterpoint_valid`): runs the cantus firmus, melodic, harmonic,
+- **Aggregate check** (`standard_counterpoint_check`): runs the cantus firmus, melodic, harmonic,
   and tendency groups over an exercise and reports the groups with a hard rule
   broken and the groups with a soft rule broken as two bit masks indexed by
   `StandardCounterpointGroup`. An exercise is valid when no hard rule is
   broken.
 
-The five species are documented in [standard-counterpoint-species.md](../../docs/modules/standard-counterpoint-species.md).
+The first four species are documented in [standard-counterpoint-species.md](../../docs/modules/standard-counterpoint-species.md).
 
 ## Adding a rule module
 
@@ -77,10 +73,8 @@ melodic rules) follows one pattern, built on two shared helpers.
 
 - **`rule_table.h`**: a table for one group. The module defines its rule
   names, a function that says which rules are hard, and static storage for the
-  cached Rule/Constraint pairs, then points the table at them. The table
-  builds each pair the first time it is asked for, names it
-  `<prefix>-<rule>`, and reports a group's failures as hard and soft bit
-  masks. The module writes only how one rule is evaluated and a small adapter
+  cached pairs, then points the table at them. The table reports a group's
+  failures as hard and soft bit masks. The module writes only how one rule is evaluated and a small adapter
   that hands the table the exercise (or the exercise and the tonic).
 - **`species_aggregate.h`**: the parts every species aggregate shares: the
   helper that records a group's result in the hard and soft masks, and the
@@ -128,15 +122,8 @@ firmus. The perfect fourth between two upper parts is consonant, but this
 framework has two parts only. Three or more parts and imitation in the style of
 16th-century choral polyphony are not modeled.
 
-## Vocabulary enums
-
-Owned here (moved from `src/semantics/`; type names and values unchanged):
-
-- `CounterpointSpecies` is a plain enum value naming one of the five species of strict counterpoint (first through fifth, ordered simplest to most elaborate), with a helper for the counterpoint notes against each cantus firmus note (1, 2, 4, 2, and 0 for the fifth, which mixes ratios). It carries no `EntityID`, rules, or framework claim. What each species requires of a line is a convention of `frameworks/standard-counterpoint`.
-- `ImitationAnswer` is a plain enum value naming how a later entry of a melody answers an earlier one in imitative writing: real (every interval kept at a fixed transposition), tonal (adjusted by a step to stay in the key), or free (keeps the rhythm and opening shape, then goes its own way). `imitation_answer_keeps_intervals` is true only for the real answer. It carries no `EntityID`, pitches, or framework claim. Which answer a style expects, and how closely it is kept, is a convention of a framework.
-
 ## Neutral analysis input
 
-`StandardCounterpointVoiceCell` and `StandardCounterpointVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`), the same grid standard-harmony reads. `slot_note.h` defines `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult`, the note and result types of a counterpoint rule.
+`StandardCounterpointVoiceCell` and `StandardCounterpointVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`), the same grid standard-harmony reads.
 
 `standard_counterpoint_melody_nct_labels_with` takes a `NonChordToneClassifier` (`semantics/tone_line.h`; the owner is `motive_tone_roles_line`) and relabels the notes that carry a `chord_pitch_classes` mask, run by run; `standard_counterpoint_melody_nct_labels` is the same with no classifier, the attached results as given.

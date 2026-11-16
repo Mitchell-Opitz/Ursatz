@@ -11,7 +11,6 @@ An extension above the numbered stack. It may include kernel L0 to L8 and the fr
 - `analysis_chain.h/.c`: `analysis_chain_run` and the opaque `AnalysisChain` that owns every result (below).
 - `chain_inputs.h/.c`: the input builders, one per framework input, each owning what it allocates with a matching `_destroy`. A failed builder leaves its output untouched. `ChainInputStatus` names the failure.
 - `form_bridge.h/.c`: `chain_form_boundary_detect` (standard-form's boundary detector, over the kernel's Phrase Boundary Detection) and `chain_form_match_windows` (standard-form's window matcher, over the kernel's Motif Window Matching).
-- `subset_chord_analyzer.h/.c`: `chain_subset_chord_analyze` and `CHAIN_SUBSET_CHORD_ANALYZER`, the subset-match chord analyzer (not the chord identification owner; kept for the subset coverage reports).
 
 ## The run
 
@@ -81,4 +80,4 @@ The library's tests run analysis through the chain: `tests/analysis/weighted_pip
 
 ## Kernel owners (`ursatz_chain/kernel_owners.h`)
 
-With `AnalysisChainConfig.inject_kernel_owners` (default on) the chain hands the kernel owners to the frameworks, which cannot call L8: `chain_classify_tones` (`motive_tone_roles_line`) is the `NonChordToneClassifier` of the weighted chord identifier and of the melody stage (`chain_relabel_melody_line`), and `chain_match_motive_relation` (`motive_variant_recognize` at depth 1: exact, transpose, invert, retrograde, augment 2:1, diminish 1:2, and a leading or trailing fragment) is the `StandardFormRelationMatchFn` (`relation_match`) of the motive stage. Turn it off to get the frameworks' own fallback rules. A classifier or matcher already set in `weighting` or `form` is kept.
+With `AnalysisChainConfig.inject_kernel_owners` (default on) the chain hands `chain_classify_tones` (`motive_tone_roles_line`) to the frameworks, which cannot call L8, as the `NonChordToneClassifier` of the weighted chord identifier and of the melody stage (`chain_relabel_melody_line`); turn it off to get the frameworks' own fallback rule. Whatever that switch, `chain_match_motive_relation` (`motive_variant_recognize` at depth 1: exact, transpose, invert, retrograde, augment 2:1, diminish 1:2, and a leading or trailing fragment) is the `StandardFormRelationMatchFn` (`relation_match`) of the motive stage, which requires one. A classifier or matcher already set in `weighting` or `form` is kept.

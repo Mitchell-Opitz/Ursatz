@@ -21,7 +21,7 @@
  *                 differs and the rhythm does. The rhythm may differ, which costs a factor of 0.8; no other kind may
  *
  * The score is (1 - mismatches / intervals) times the rhythm factor (1, or 0.8 for a pitch-only match of a varied motive): 1 for every
- * kind but a varied one. Retrograde inversion is not defined by standard-form's motive rules and is not matched. Displacement and
+ * kind but a varied one. Retrograde inversion is not matched. Displacement and
  * embellishment are not detected.
  *
  * EXACT, REAL, TONAL, INVERTED, RETROGRADE, AUGMENTATION (onset gaps times 2), DIMINUTION (times 1/2) and FRAGMENTS (a prefix or suffix

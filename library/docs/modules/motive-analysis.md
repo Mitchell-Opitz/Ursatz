@@ -40,7 +40,7 @@ Precedence: exact > transposed > inverted/retrograde > augmented/diminished > fr
 
 ## Kernel reuse
 
-Exact and transposed matching uses kernel Motif Window Matching v1 (contour direction + exact rhythm), injected through the `StandardFormWindowMatcher` callback. Frameworks do not include kernel analysis; `chain/ursatz_chain/form_bridge.h` supplies the bridge.
+Exact and transposed matching uses kernel Motif Window Matching v1 (contour direction + exact rhythm), injected through the `StandardFormWindowMatcher` callback. Frameworks do not include kernel analysis; `chain/ursatz_chain/form_bridge.h` supplies the bridge. Every kind but varied is decided by the injected relation matcher (`StandardFormConfig.relation_match`; the chain injects `chain_match_motive_relation`), which the analysis requires: without one it returns `STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR`.
 
 ## Output
 

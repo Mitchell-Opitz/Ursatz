@@ -15,8 +15,8 @@
 
 /*
  * Motive analysis (the form adapter, L3.7): motives of the soprano (and, by config, the bass) found by interval and rhythm, and the
- * ways they recur. A motive is a short, regularly recurring snippet of music (motive_rules.h); a recurring motive commonly
- * undergoes the transformations that file lists. Motives of different voices are not matched with each other, and inner voices are
+ * ways they recur. A motive is a short, regularly recurring snippet of music ; a recurring motive commonly
+ * undergoes transformations (the KINDS below). Motives of different voices are not matched with each other, and inner voices are
  * not read.
  *
  * DIMENSIONS. A window of notes has two interval sequences: the SEMITONES between successive notes, and, when every note of the

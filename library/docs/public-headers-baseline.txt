@@ -48,7 +48,6 @@ export/musicxml_export.h src/export/musicxml_export.h
 export/score_quantize.h src/export/score_quantize.h 
 export/score_staves.h src/export/score_staves.h 
 external_expansion_kind.h frameworks/standard-form/external_expansion_kind.h 
-fifth_species_rules.h frameworks/standard-counterpoint/fifth_species_rules.h 
 first_species_ends_rules.h frameworks/standard-counterpoint/first_species_ends_rules.h 
 first_species_harmony_rules.h frameworks/standard-counterpoint/first_species_harmony_rules.h 
 first_species_independence_rules.h frameworks/standard-counterpoint/first_species_independence_rules.h 

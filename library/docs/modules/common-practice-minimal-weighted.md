@@ -6,16 +6,9 @@ Framework overview: [frameworks/common-practice-minimal/README.md](../../framewo
 
 ## Weighted identification and non-chord tones
 
-`triad_identification.c` and `seventh_identification.c` match by subset:
-a triad or seventh matches when its degrees or intervals are all present,
-and any extra degrees are ignored as non-chord tones. Ties go to the first
-match in scan order and are logged to stderr. This tolerates one extra tone
-per beat; with two or more, nothing matches (Field Nocturne No. 1 resolved
-61 of 394 fixed-grid beats). Those functions are unchanged.
-
 `weighted_identification.h`, `non_chord_tones.h` and
-`weighted_chord_identification.h` are the weighted replacement, a new
-function beside them. A segment's members (plain structs: pitch, held or
+`weighted_chord_identification.h` are the weighted chord identification.
+A segment's members (plain structs: pitch, held or
 attacked, duration, the caller-computed `BeatStrength`, voice) are weighted by
 duration times a beat-strength or held factor, with the bass pitch class
 boosted. The 14

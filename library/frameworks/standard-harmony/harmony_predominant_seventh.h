@@ -20,8 +20,8 @@
  *   VI7    vi7, in any inversion (typically root position)
  *   III7   iii7, in any inversion (typically root position)
  *
- * ii7 and its inversions are the most common, and their relative commonality is a value of the
- * kind (HarmonyPredominantSeventhRank), not a rule: ii6/5 most common, ii7 somewhat common,
+ * ii7 and its inversions are the most common, and their relative commonality is not a rule:
+ * ii6/5 most common, ii7 somewhat common,
  * ii4/3 less common, ii4/2 least common. IV7 and vi7 are less common, and iii7, which is not
  * very common as a triad, least. In minor the seventh chord on ii is half diminished and the
  * others have altered notes; accidentals are not modeled.

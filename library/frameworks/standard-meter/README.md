@@ -21,36 +21,16 @@ the two numbers and nothing more; this framework reads them):
   eighth over 16). A simple beat divides into 2 then 4, a compound beat
   into 3 then 6. The usual compound bottom numbers are 4, 8, 16.
 - **Beat grid** (`beat_grid.h`): where beats fall in a measure, from the
-  meter class, so beaming, ties, and counting work for both.
+  meter class, for simple and compound meter alike.
 
-- **Beats and grouping** (`grouping_rules.h`): the beat divides into
-  two, then four; 2, 3, 4 beats per group are duple, triple, quadruple;
-  beat 1 is the downbeat and the last beat the upbeat.
-- **Time signatures** (`time_signature_rules.h`): a simple meter's top
-  number is 2, 3, or 4; the bottom number is usually 2, 4, or 8 (1 and 16
-  also occur); common time is 4/4 and cut time is 2/2; a time signature
-  is not a fraction (2/4 and 4/8 hold the same length but differ).
-- **Measures** (`measure_rules.h`): a measure is one beat group; a
-  multi-measure rest of n measures lasts n times the measure.
-- **Anacrusis** (`anacrusis_rules.h`): a pickup is shorter than a
-  measure, is counted as the end of an imaginary measure, and shortens
-  the final measure by its length.
-- **Counting** (`counting_rules.h`): American traditional counting by
-  position in the beat -- simple "1 e + a" with "ta" one level finer,
-  compound "1 ta la ta li ta" -- and parentheses for beats not said
-  aloud. A dot parenthesizes a beat in simple meter but not in compound,
-  where the dotted note is the beat.
-- **Beaming** (`beaming_rules.h`): only eighth notes and shorter are
-  beamed; how many of a value make a beat depends on the time signature;
-  a beam group stays inside one beat, so sixteenths beam in sixes in 6/8
-  and in threes in 6/16.
+- **Beats and grouping** (`grouping_rules.h`): 2, 3, 4 beats per group
+  are duple, triple, quadruple (`MeterGrouping`).
 - **Borrowed divisions** (`borrowed_rules.h`): a triplet in a simple
   meter and a duplet in a compound meter divide the beat the other way,
   "borrowed" from the other class. A tuplet's metric level (beat,
   subdivision, multi-beat) comes from its span against the beat; triplets
   are typical at any level and duplets at the beat or a subdivision, as a
-  description, not a prohibition. Counting borrows the other class's
-  syllables: a triplet is "1 la li", a duplet "1 +".
+  description, not a prohibition.
 - **Hypermeter** (`hypermeter_rules.h`): groups of measures counted like
   beats (duple, triple, quadruple hypermeter); the first is accented, and
   in quadruple the third also is. Pure counting on a measure index. It also
@@ -80,14 +60,10 @@ the two numbers and nothing more; this framework reads them):
   measure's last beat is cut at the barline, and a pickup's beats fall where
   a full measure's would, so a pickup starting partway through a beat begins
   with a partial beat.
-- **Beat ties** (`beat_tie_rules.h`): a note starting off the beat that
-  runs past the next beat is split and tied there to show the beat.
 
 Stem and flag direction for beamed and flagged notes are not modeled.
 
-Each rule has a backing `Rule`/`Constraint` pair referencing this
-Framework, plus a pure check function. `constraint_evaluate` is never
-called here.
+Each rule is a pure check function; no rule builds a `Rule` or `Constraint`.
 
 ## Accented beats
 
@@ -101,8 +77,7 @@ mixed groupings (including the common partial-beam variations), the
 vocal-music beaming convention, conducting patterns (the same for simple
 and compound),
 and engraving craft. That simple quadruple can feel like two groups of two
-is a perceptual ambiguity and is not asserted as a rule. Counting is
-American only; the syllables are a table so another system can be added.
+is a perceptual ambiguity and is not asserted as a rule.
 
 ## Analysis of real music
 
@@ -110,8 +85,8 @@ American only; the syllables are a table so another system can be added.
 
 Two adapters carry the rules the Analyzer used to hold (R-217, P23 B1):
 
-- `analysis/meter_analysis_check.h`: the meter check. Input: `StandardMeterCheckEvidence` (harmonic-change times, cadence-arrival times and every note onset, in whole notes on `Rational`) and the `MeterMap`. The effective reading is the map's first full measure; the candidates are 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 and 12/8 at scale 1/2, 1 and 2 with each beat as a pickup, scored from the share of changes on downbeats (harmonic mean with the share of downbeats carrying a change), on beats, and of arrivals on downbeats; a secondary downbeat of a four-beat meter counts half. The best candidate with different barlines is offered when it beats the effective reading by `STANDARD_METER_CHECK_MIN_MARGIN` (0.15); on equal score and barlines the one nearest an eighth by the common onset gap is shown, then the quarter-beat signature. `standard_meter_check_changes` finds the change times from labels and regions. An exact time that does not fit 64 bits is `STANDARD_METER_ANALYSIS_ERR_OVERFLOW`. Claim type `standard-meter/meter-check`, read back with `standard_meter_check_claim_read`.
-- `analysis/meter_analysis_tuplet.h`: tuplets and duplets from an `AnalysisNoteSet`. Onsets are read on a 96-step grid within a quarter step (rubato is left out); a triplet is an attack or distance off the 1/32 grid, a duplet is two halves of a compound beat; runs are per ratio, a single attack is dropped, and the order is smaller `actual`, measure, beat. `in_line` selects the notes to read. Claim type `standard-meter/tuplet`, read back with `standard_meter_tuplet_claim_read`.
+- `analysis/meter_analysis_check.h`: the meter check. Input: `StandardMeterCheckEvidence` (harmonic-change times, cadence-arrival times and every note onset, in whole notes on `Rational`) and the `MeterMap`. The effective reading is the map's first full measure; the candidates are 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 and 12/8 at scale 1/2, 1 and 2 with each beat as a pickup, scored from the share of changes on downbeats (harmonic mean with the share of downbeats carrying a change), on beats, and of arrivals on downbeats; a secondary downbeat of a four-beat meter counts half. The best candidate with different barlines is offered when it beats the effective reading by `STANDARD_METER_CHECK_MIN_MARGIN` (0.15); on equal score and barlines the one nearest an eighth by the common onset gap is shown, then the quarter-beat signature. `standard_meter_check_changes` finds the change times from labels and regions. An exact time that does not fit 64 bits is `STANDARD_METER_ANALYSIS_ERR_OVERFLOW`. Claim type `standard-meter/meter-check`.
+- `analysis/meter_analysis_tuplet.h`: tuplets and duplets from an `AnalysisNoteSet`. Onsets are read on a 96-step grid within a quarter step (rubato is left out); a triplet is an attack or distance off the 1/32 grid, a duplet is two halves of a compound beat; runs are per ratio, a single attack is dropped, and the order is smaller `actual`, measure, beat. `in_line` selects the notes to read. Claim type `standard-meter/tuplet`.
 
 ## Neutral analysis input
 

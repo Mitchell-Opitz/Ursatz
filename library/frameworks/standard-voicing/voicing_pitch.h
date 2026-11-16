@@ -9,8 +9,7 @@
  * Pitch arithmetic for standard-voicing-v1.
  *
  * ASSUMPTION: twelve semitones to the octave (12-tone equal
- * temperament), the same layout standard-tonality's tonal_pitch.h
- * uses. It is a property of this
+ * temperament). It is a property of this
  * framework, not of src/pitch/. This module carries its own copy rather
  * than depending on another framework: framework modules do not depend
  * on each other.

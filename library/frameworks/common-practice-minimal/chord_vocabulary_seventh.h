@@ -40,11 +40,11 @@ bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh);
 
 /*
- * As common_practice_build_seventh_chord, but the Interpretation's scalar confidence is
- * confidence_numerator / confidence_denominator (a rational in [0, 1]) instead of 1, and the
- * Interpretation's id has interpretation_id_suffix (NULL for none) appended, so two Chords over one
- * Sonority (a best and a runner-up) get distinct ids. The existing builder is this one with confidence
- * 1/1 and no suffix. Takes ownership of sonority_target_id on success only.
+ * Builds a Chord claiming that the Sonority named by sonority_target_id is this seventh chord under
+ * common-practice-minimal-v1. The Interpretation's scalar confidence is confidence_numerator /
+ * confidence_denominator (a rational in [0, 1]), and its id has interpretation_id_suffix (NULL for none)
+ * appended, so two Chords over one Sonority (a best and a runner-up) get distinct ids. Takes ownership
+ * of sonority_target_id on success only.
  */
 ChordResult common_practice_build_seventh_chord_with_confidence(CommonPracticeSeventh seventh, EntityID *sonority_target_id,
                                                           unsigned long confidence_numerator,

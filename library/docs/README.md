@@ -39,7 +39,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/relationship.md](modules/relationship.md): L6 relationship: typed links between entities.
 - [docs/modules/interpretation.md](modules/interpretation.md): L6 interpretation: claims, chords, keys, uncertainty.
 - [docs/modules/theory.md](modules/theory.md): L7 theory: Theory Framework type, style models.
-- [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference, RulePair.
+- [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference.
 - [docs/modules/analysis.md](modules/analysis.md): L8 analysis: overview of the analyzers and what is deferred.
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
 - [docs/modules/export.md](modules/export.md): L9 export: MusicXML writer.
@@ -48,24 +48,24 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/motive-relations.md](modules/motive-relations.md): Motive sketches and relations.
 - [docs/modules/motive-variant-recognition.md](modules/motive-variant-recognition.md): Recognizing varied statements of a motive.
 - [docs/modules/motive-tone-roles.md](modules/motive-tone-roles.md): Tone roles of a motive against a harmony.
-- [docs/modules/standard-harmony-rules.md](modules/standard-harmony-rules.md): standard-harmony rules: function, cadences, V7, predominants, six-fours, mediant.
+- [docs/modules/standard-harmony-rules.md](modules/standard-harmony-rules.md): standard-harmony rules: function, cadences, predominants, six-fours.
 - [docs/modules/standard-harmony-prolongation-and-keys.md](modules/standard-harmony-prolongation-and-keys.md): standard-harmony rules: prolongation, plagal, tonicization, modulation.
-- [docs/modules/standard-counterpoint-species.md](modules/standard-counterpoint-species.md): standard-counterpoint rules for the five species.
+- [docs/modules/standard-counterpoint-species.md](modules/standard-counterpoint-species.md): standard-counterpoint rules for the first four species.
 - [docs/modules/standard-form-expansion.md](modules/standard-form-expansion.md): standard-form hybrid, length and expansion rules.
 - [docs/modules/standard-meter-metric-position.md](modules/standard-meter-metric-position.md): standard-meter metric position rules.
-- [docs/modules/standard-tonality-chords.md](modules/standard-tonality-chords.md): standard-tonality triad, seventh and chord symbol rules.
+- [docs/modules/standard-tonality-chords.md](modules/standard-tonality-chords.md): standard-tonality triad and seventh quality rules.
 - [docs/modules/standard-tonality-numerals-and-keys.md](modules/standard-tonality-numerals-and-keys.md): standard-tonality Roman numerals, adapter and key functions.
 - [docs/modules/common-practice-minimal-weighted.md](modules/common-practice-minimal-weighted.md): common-practice-minimal weighted identification and chords in context.
 - [frameworks/common-practice-minimal/README.md](../frameworks/common-practice-minimal/README.md): Diatonic triads and sevenths, major and minor keys, scope and boundaries.
 - [frameworks/galant-schemas/README.md](../frameworks/galant-schemas/README.md): Galant schema prototypes.
 - [frameworks/scale-harmonization/README.md](../frameworks/scale-harmonization/README.md): Rule of the octave and sequences over a bass scale.
 - [frameworks/standard-counterpoint/README.md](../frameworks/standard-counterpoint/README.md): Species counterpoint framework: scope, adding a rule module, Fux conformance.
-- [frameworks/standard-form/README.md](../frameworks/standard-form/README.md): Form framework: hierarchy, motives, phrases, sentence, period.
+- [frameworks/standard-form/README.md](../frameworks/standard-form/README.md): Form framework: phrases, sentence, period.
 - [frameworks/standard-harmony/README.md](../frameworks/standard-harmony/README.md): Harmony framework: scope list and what is not covered.
-- [frameworks/standard-markings/README.md](../frameworks/standard-markings/README.md): Dynamics, articulation, tempo and repeat rules.
+- [frameworks/standard-markings/README.md](../frameworks/standard-markings/README.md): Dynamics and tempo rules.
 - [frameworks/standard-meter/README.md](../frameworks/standard-meter/README.md): Meter framework: scope, accented beats, what is not covered.
 - [frameworks/standard-texture/README.md](../frameworks/standard-texture/README.md): Texture rules and classification.
-- [frameworks/standard-tonality/README.md](../frameworks/standard-tonality/README.md): Tonality framework: scales, modes, intervals, key functions.
+- [frameworks/standard-tonality/README.md](../frameworks/standard-tonality/README.md): Tonality framework: key functions, chord qualities, Roman numerals.
 - [frameworks/standard-voicing/README.md](../frameworks/standard-voicing/README.md): SATB voicing of one chord.
 
 ## Formats and schemas
