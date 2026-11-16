@@ -16,6 +16,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "support/test_oracles.h"
+#include "ursatz_test.h"
 
 /*
  * The `progression` command, run as a process. What it wrote is read back from the files and judged by the same
@@ -54,19 +55,11 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static bool file_exists(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (file) {
-        fclose(file);
-    }
-    return file != NULL;
-}
-
 static bool same_file(const char *a, const char *b) {
     size_t size_a;
     size_t size_b;
-    char *data_a = test_read_file(a, &size_a);
-    char *data_b = test_read_file(b, &size_b);
+    char *data_a = test_must_read_file(a, &size_a);
+    char *data_b = test_must_read_file(b, &size_b);
     bool same = data_a && data_b && size_a == size_b && memcmp(data_a, data_b, size_a) == 0;
     free(data_a);
     free(data_b);
@@ -74,7 +67,7 @@ static bool same_file(const char *a, const char *b) {
 }
 
 static bool contains(const char *path, const char *text) {
-    char *data = test_read_file(path, NULL);
+    char *data = test_must_read_file(path, NULL);
     bool found = data && strstr(data, text) != NULL;
     free(data);
     return found;
@@ -82,7 +75,7 @@ static bool contains(const char *path, const char *text) {
 
 /* The seed the command printed, from its text output. */
 static unsigned long printed_seed(const char *out_file) {
-    char *data = test_read_file(out_file, NULL);
+    char *data = test_must_read_file(out_file, NULL);
     assert(data);
     const char *at = strstr(data, "\nseed ");
     assert(at);
@@ -222,7 +215,7 @@ static void test_no_bass_and_json_format(void) {
                "cli_json.txt", "cli_e.txt") == 0);
     PiecePlan *plan = check_plan("cli_nobass.json", &combination, false);
     plan_destroy(plan);
-    char *json = test_read_file("cli_json.txt", NULL);
+    char *json = test_must_read_file("cli_json.txt", NULL);
     assert(json && json[0] == '{' && strstr(json, "\"seed\":3,") && strstr(json, "\"cadence\":\"PAC\"") &&
            strstr(json, "\"chords\":[") && strstr(json, "\"key\":\"D minor\""));
     free(json);
@@ -246,7 +239,7 @@ static void test_midi_and_musicxml(void) {
 
     /* Both files read back with Ursatz's own importers, with the bass notes of the plan. */
     size_t size = 0;
-    unsigned char *data = (unsigned char *)test_read_file("cli_files.mid", &size);
+    unsigned char *data = (unsigned char *)test_must_read_file("cli_files.mid", &size);
     NoteEvent **events = NULL;
     PitchNumericValue **pitches = NULL;
     size_t count = 0;
@@ -265,7 +258,7 @@ static void test_midi_and_musicxml(void) {
     assert(musicxml_import_file("cli_files.xml", &imported) == MUSICXML_IMPORT_OK);
     assert(imported.count == notes);
     musicxml_import_destroy(&imported);
-    assert(!file_exists("cli_files.mid.tmp") && !file_exists("cli_files.xml.tmp") && !file_exists("cli_files.json.tmp"));
+    assert(!test_file_exists("cli_files.mid.tmp") && !test_file_exists("cli_files.xml.tmp") && !test_file_exists("cli_files.json.tmp"));
 }
 
 typedef struct {
@@ -317,11 +310,11 @@ static void test_errors(void) {
         /* An error says what is wrong on stderr, writes nothing on stdout, and leaves no file behind. */
         assert(contains("cli_e.txt", "Error:"));
         size_t out_size = 0;
-        free(test_read_file("cli_o.txt", &out_size));
+        free(test_must_read_file("cli_o.txt", &out_size));
         assert(out_size == 0);
-        assert(!file_exists("cli_short.json") && !file_exists("cli_partial.json") && !file_exists("cli_err.mid") &&
-               !file_exists("cli_err.xml"));
-        assert(!file_exists("cli_partial.json.tmp") && !file_exists("cli_short.json.tmp"));
+        assert(!test_file_exists("cli_short.json") && !test_file_exists("cli_partial.json") && !test_file_exists("cli_err.mid") &&
+               !test_file_exists("cli_err.xml"));
+        assert(!test_file_exists("cli_partial.json.tmp") && !test_file_exists("cli_short.json.tmp"));
     }
 }
 
@@ -357,7 +350,7 @@ static int schema_in_plan(const PiecePlan *plan) {
 
 /* The names under a heading of the --list-schemas output, up to the next blank line. */
 static size_t listed_names(const char *heading, char names[][64], size_t capacity) {
-    char *text = test_read_file("cli_list.txt", NULL);
+    char *text = test_must_read_file("cli_list.txt", NULL);
     assert(text);
     char *at = strstr(text, heading);
     assert(at);
@@ -410,7 +403,7 @@ static void test_list_schemas(void) {
             plan_destroy(plan);
             used++;
         } else {
-            assert(!file_exists("cli_schema.json"));
+            assert(!test_file_exists("cli_schema.json"));
         }
     }
     assert(used >= 5);
@@ -473,8 +466,8 @@ static void test_suggest(void) {
                "--out cli_sg.json --midi cli_sg.mid",
                "cli_sg.txt", "cli_e.txt") == 0);
     assert(contains("cli_sg.txt", "alternative 1 of 3") && contains("cli_sg.txt", "alternative 3 of 3"));
-    assert(!file_exists("cli_sg.json") && !file_exists("cli_sg.mid"));
-    assert(file_exists("cli_sg-1.json") && file_exists("cli_sg-3.json") && file_exists("cli_sg-2.mid"));
+    assert(!test_file_exists("cli_sg.json") && !test_file_exists("cli_sg.mid"));
+    assert(test_file_exists("cli_sg-1.json") && test_file_exists("cli_sg-3.json") && test_file_exists("cli_sg-2.mid"));
     PiecePlan *plan = check_plan("cli_sg-1.json", &combination, true);
     plan_destroy(plan);
     plan = check_plan("cli_sg-2.json", &combination, true);
@@ -494,7 +487,7 @@ static void test_suggest(void) {
     /* On stdout only, as text and as JSON. */
     assert(run("--key \"D minor\" --meter 4/4 --bars 8 --cadence PAC --seed 6 --suggest 2 --format json", "cli_sj.txt",
                "cli_e.txt") == 0);
-    char *json = test_read_file("cli_sj.txt", NULL);
+    char *json = test_must_read_file("cli_sj.txt", NULL);
     assert(json && strstr(json, "\"alternatives\":[{") && strstr(json, "\"seed\":6,"));
     free(json);
 }
@@ -520,7 +513,7 @@ static void test_skeleton_errors(void) {
         assert(status == CASES[i].status);
         assert(contains("cli_e.txt", "Error:"));
         size_t out_size = 0;
-        free(test_read_file("cli_o.txt", &out_size));
+        free(test_must_read_file("cli_o.txt", &out_size));
         assert(out_size == 0);
     }
 }

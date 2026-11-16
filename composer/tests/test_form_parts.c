@@ -16,6 +16,8 @@
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "util/plan_util.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -90,7 +92,7 @@ static const char *const TRANSITION =
 static char *fixture_without_coda(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     assert(text);
     static const char *const CODA = "\"role\": \"coda\", \"bars\": 8, \"cadence\": \"perfect-authentic\"";
     static const char *const CODETTA = "\"role\": \"codetta\", \"bars\": 8, \"beginning\": \"presentation\", "
@@ -173,21 +175,6 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
     return count;
 }
 
-/* The first node under `node` (any depth) with this name, or PLAN_NODE_NONE. */
-static NodeId find_named(const PiecePlan *plan, NodeId node, const char *name) {
-    for (size_t i = 0; i < plan_node_child_count(plan, node); i++) {
-        NodeId child = plan_node_child_at(plan, node, i);
-        if (strcmp(plan_node_name(plan, child), name) == 0) {
-            return child;
-        }
-        NodeId inner = find_named(plan, child, name);
-        if (inner != PLAN_NODE_NONE) {
-            return inner;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 /* The motive reference of the motive node an idea's melody span names (the idea's own made motive), or NULL. */
 static const PlanMotiveRef *idea_motive_ref(const PiecePlan *plan, NodeId idea) {
     LaneSpanId melody;
@@ -265,16 +252,16 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
     assert(strcmp(numeral, "V") == 0 || strcmp(numeral, "V7") == 0);
 
     /* The liquidation, read from the plan: fragment 2 is a liquidation by steps on a segment, the cadential idea at least as far. */
-    NodeId fragment_2 = find_named(plan, t, "fragment 2");
+    NodeId fragment_2 = test_find_named(plan, t, "fragment 2");
     const PlanMotiveRef *residue = idea_motive_ref(plan, fragment_2);
     if (!residue || residue->steps < 1 || residue->segment[0] == '\0' ||
-        idea_steps(plan, find_named(plan, t, "cadential")) < residue->steps) {
+        idea_steps(plan, test_find_named(plan, t, "cadential")) < residue->steps) {
         fprintf(stderr, "%s seed %lu: T's continuation is not liquidated\n", row->name, seed);
     }
     assert(residue && residue->steps >= 1 && residue->segment[0] != '\0');
-    assert(idea_steps(plan, find_named(plan, t, "cadential")) >= residue->steps);
+    assert(idea_steps(plan, test_find_named(plan, t, "cadential")) >= residue->steps);
     /* Only the transition liquidates: the codetta's continuation is the form's usual one. */
-    assert(idea_steps(plan, find_named(plan, sections[3], "fragment 2")) == 0);
+    assert(idea_steps(plan, test_find_named(plan, sections[3], "fragment 2")) == 0);
 }
 
 /* The pitches of an idea's melody span, in order; the count, 0 when the idea has none. */
@@ -293,7 +280,7 @@ static size_t idea_pitches(const PiecePlan *plan, NodeId idea, int *out, size_t 
 
 /* The motive node of the material with this name, or PLAN_NODE_NONE, and its invented notes (2 or more). */
 static bool invented_motive(const PiecePlan *plan, const char *name, NodeId *node) {
-    *node = find_named(plan, plan_root(plan), name);
+    *node = test_find_named(plan, plan_root(plan), name);
     LaneSpanId melody;
     return *node != PLAN_NODE_NONE && plan_node_kind(plan, *node) == PLAN_NODE_MOTIVE && plan_melody_span_of(plan, *node, &melody) &&
            plan_lane_span_payload(plan, melody)->notes.note_count >= 2;
@@ -332,8 +319,8 @@ static void check_independent(const PiecePlan *plan, const Row *row, unsigned lo
     /* T's basic idea is not A's. */
     int a[64];
     int t[64];
-    size_t a_count = idea_pitches(plan, find_named(plan, sections[0], "basic idea"), a, 64);
-    size_t t_count = idea_pitches(plan, find_named(plan, sections[1], "basic idea"), t, 64);
+    size_t a_count = idea_pitches(plan, test_find_named(plan, sections[0], "basic idea"), a, 64);
+    size_t t_count = idea_pitches(plan, test_find_named(plan, sections[1], "basic idea"), t, 64);
     bool same = a_count == t_count;
     for (size_t i = 0; same && i < a_count; i++) {
         same = a[i] == t[i];
@@ -427,7 +414,7 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
     int notes[64];
     size_t m0_count = node_pitches(plan, m0, notes, 64);
     int residue[64];
-    NodeId basic = find_named(plan, r, "basic idea");
+    NodeId basic = test_find_named(plan, r, "basic idea");
     size_t residue_count = node_pitches(plan, asked_motive(plan, basic), residue, 64);
     if (residue_count == 0 || residue_count >= m0_count) {
         fprintf(stderr, "%s seed %lu: R's basic idea asks for %zu notes, m0 has %zu\n", row->name, seed, residue_count, m0_count);
@@ -436,7 +423,7 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
 
     /* The cadential idea is the main theme head: the head motive it asks for is m0's first notes, and the melody keeps its
        intervals. */
-    NodeId cadential = find_named(plan, r, "cadential");
+    NodeId cadential = test_find_named(plan, r, "cadential");
     int head[64];
     size_t head_count = node_pitches(plan, asked_motive(plan, cadential), head, 64);
     int heard[64];
@@ -592,7 +579,7 @@ static const char *const THEME_AND_CODA =
 static void test_applies(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     assert(text);
     FormSpec *form = parse_form(text);
     free(text);
@@ -650,7 +637,7 @@ static void test_applies(void) {
 
     /* A source of 2 bars (3/4): the plan is built, the coda is not grown. */
     snprintf(path, sizeof(path), "%s/rates/two-bar-3-4.json", COMPOSER_FIXTURE_DIR);
-    char *motive_text = test_read_file(path, NULL);
+    char *motive_text = test_must_read_file(path, NULL);
     Motive motive;
     assert(motive_text && motive_from_json(motive_text, NULL, &motive, NULL) == MOTIVE_OK);
     free(motive_text);
@@ -712,7 +699,7 @@ int main(void) {
     {
         char path[1024];
         snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-        with_coda = test_read_file(path, NULL);
+        with_coda = test_must_read_file(path, NULL);
         assert(with_coda);
     }
     form = parse_form(with_coda);

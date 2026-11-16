@@ -50,16 +50,6 @@ typedef struct {
     size_t nothing;
 } Share;
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 static PhraseBeginning beginning_of(PlanThemeBeginning beginning) {
     switch (beginning) {
     case PLAN_THEME_BEGINNING_ANTECEDENT:
@@ -118,7 +108,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     bool sentence = beginning == PLAN_THEME_BEGINNING_PRESENTATION && ending == PLAN_THEME_ENDING_CONTINUATION;
     wanted = period ? PHRASE_LEVEL_FORM_PERIOD : (sentence ? PHRASE_LEVEL_FORM_SENTENCE : PHRASE_LEVEL_FORM_HYBRID);
 
-    PlanSpan theme = plan_node_span(plan, find_node(plan, "theme"));
+    PlanSpan theme = plan_node_span(plan, test_find_node(plan, "theme"));
     assert(test_form_hear(plan, theme, &heard) == FORM_HEAR_OK);
     share->runs++;
     bool as_requested = false;

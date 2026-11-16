@@ -60,16 +60,6 @@ static const char *const SHAPE_NAMES[] = {"sentence", "period", "rounded binary"
  */
 static const size_t BASELINE[3][SCENARIO_COUNT] = {{9, 7}, {10, 0}, {9, 0}};
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 /* Builds the plan of a shape in a scenario; *motive_out is the motive a grown shape keeps pointing at. */
 static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_out) {
     PiecePlan *plan = NULL;
@@ -132,7 +122,7 @@ static int test_contradiction(void) {
             plan_destroy(plan);
             continue;
         }
-        NodeId theme = find_node(plan, "theme");
+        NodeId theme = test_find_node(plan, "theme");
         AnalyzerCheck check;
         assert(analyzer_check_section(plan, theme, &check) == ANALYZER_CHECK_OK);
         const AnalyzerCheckItem *item = cadence_item(&check);

@@ -5,14 +5,14 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 
 # Helpers the tests share (tests/support).
 ursatz_test_library(composer_test_support SOURCES support/test_support.c support/test_composer.c support/test_oracles.c
-    support/voice_hear.c LIBS ursatz_composer cjson INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
+    support/voice_hear.c LIBS ursatz_composer ursatz_test_support cjson INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(composer_test_support PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
 ursatz_test(test_smoke LIBS ursatz_composer)
 
 ursatz_test(test_piece_plan_sentence LIBS ursatz_composer)
 
-ursatz_test(test_plan_json LIBS ursatz_composer
+ursatz_test(test_plan_json LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     PROPERTIES FIXTURES_SETUP plan_files_written RESOURCE_LOCK plan_json_files)
@@ -97,7 +97,7 @@ ursatz_test(test_form_hear LIBS ursatz_composer composer_test_support
 ursatz_test(test_harmony_prolong LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 # Measured 12.0 s of CPU, over the 10 s fast-set limit.
-ursatz_test(test_grow_sentence LIBS ursatz_composer LABELS slow)
+ursatz_test(test_grow_sentence LIBS ursatz_composer composer_test_support LABELS slow)
 
 # A sentence ending in a half cadence in a minor key grows (P44 B6, R-418): 12 runs.
 ursatz_test(test_grow_half_cadence LIBS ursatz_composer)
@@ -107,16 +107,17 @@ ursatz_test(test_grow_half_cadence LIBS ursatz_composer)
 ursatz_test(test_grow_sentence_heard LIBS ursatz_composer composer_test_support PROPERTIES WILL_FAIL TRUE)
 ursatz_test(test_theme_shape LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test(test_grow_layout LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
-ursatz_test_executable(test_grow_uneven LIBS ursatz_composer)
+ursatz_test_executable(test_grow_uneven LIBS ursatz_composer composer_test_support)
 # The fast case: seed 1 of each construction, the refusals and the plan round trip. The slow case grows seeds 1 to 10.
 ursatz_test(test_grow_uneven_fast TARGET test_grow_uneven ARGS fast)
 ursatz_test(test_grow_uneven TARGET test_grow_uneven LABELS slow)
-ursatz_test(test_grow_construction LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
-ursatz_test_executable(test_grow_extensions LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_grow_construction LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test_executable(test_grow_extensions LIBS ursatz_composer composer_test_support
+    INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # The fast case: seed 1 of each theme, the layouts and the refusals. The slow case grows seeds 1 to 10.
 ursatz_test(test_grow_extensions_fast TARGET test_grow_extensions ARGS fast)
 ursatz_test(test_grow_extensions TARGET test_grow_extensions LABELS slow)
-ursatz_test_executable(test_grow_period LIBS ursatz_composer)
+ursatz_test_executable(test_grow_period LIBS ursatz_composer composer_test_support)
 # One test for each of the nine pairings of a beginning and an ending (the order of PlanThemeBeginning and PlanThemeEnding).
 set(GROW_BEGINNINGS presentation antecedent compound_basic_idea)
 set(GROW_ENDINGS continuation consequent cadential)
@@ -158,7 +159,8 @@ add_dependencies(test_grow_cli ursatz-composer)
 ursatz_test(test_accompaniment LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-ursatz_test_executable(test_grow_accompaniment LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test_executable(test_grow_accompaniment LIBS ursatz_composer composer_test_support
+    INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Measured 13.5 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_grow_accompaniment TARGET test_grow_accompaniment LABELS slow)
 # standard-texture does not hear every grown theme as melody and accompaniment in every measure (measured, with the cause,
@@ -214,7 +216,7 @@ ursatz_test(test_form_plans_templates TARGET test_form_plans)
 # The loop plan of each piece request in tests/fixtures/piece against tests/fixtures/forms/piece-plans.txt (R-417).
 ursatz_test(test_form_plans_pieces TARGET test_form_plans ARGS pieces)
 
-ursatz_test_executable(test_form_spec LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
+ursatz_test_executable(test_form_spec LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # The form documents: the reader, its refusals, the six built-in forms and their sizes.
 ursatz_test(test_form_spec TARGET test_form_spec)
@@ -231,7 +233,7 @@ ursatz_test(test_form_spec_leads TARGET test_form_spec ARGS leads)
 # (tests/fixtures/forms/modulating-form.json).
 ursatz_test(test_form_spec_modulates TARGET test_form_spec ARGS modulates)
 
-ursatz_test_executable(test_piece_perform LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
+ursatz_test_executable(test_piece_perform LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # A composed piece performed in order (R-485): tests/fixtures/forms/repeat-form.json, repeats written out in place.
 ursatz_test(test_piece_perform TARGET test_piece_perform)
@@ -254,7 +256,8 @@ endforeach()
 # continuation or free phrase in a minor key gets chords, and a key change inside a section is heard in its new key,
 # R-418; docs/piece.md has the measured shares).
 
-ursatz_test_executable(test_piece_structure LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test_executable(test_piece_structure LIBS ursatz_composer composer_test_support
+    INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # The checks and the plans, then the composed runs (seeds 1 to 10 each): a structure, a pickup, free phrases, the transition and the coda.
 foreach(mode checks plan compose pickup free minor_half_free functions)
     ursatz_test(test_piece_structure_${mode} TARGET test_piece_structure ARGS ${mode})
@@ -278,7 +281,7 @@ foreach(mode rules sweep)
     ursatz_test(test_loop_seam_${mode} TARGET test_loop_seam ARGS ${mode})
 endforeach()
 
-ursatz_test_executable(test_form_return LIBS ursatz_composer
+ursatz_test_executable(test_form_return LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Returning sections (form_return.h): the smoke test is quick; the others compose a few pieces each.
 # Reregister measured 14.6 s of CPU, embellish 16 s (20 pieces composed) and setting 41 s (85 pieces), over the 10 s fast-set limit.
@@ -648,7 +651,7 @@ ursatz_test(test_grow_motif_realized LIBS ursatz_composer composer_test_support 
 ursatz_test(test_grow_motive_relaxed LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-ursatz_test(test_grow_whole_motif LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_grow_whole_motif LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test_executable(test_grow_triplets LIBS ursatz_composer composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -656,7 +659,7 @@ ursatz_test_executable(test_grow_triplets LIBS ursatz_composer composer_test_sup
 ursatz_test(test_grow_triplets TARGET test_grow_triplets LABELS slow)
 ursatz_test(test_grow_triplets_smoke TARGET test_grow_triplets ARGS quick)
 
-ursatz_test(test_grow_repetitions LIBS ursatz_composer)
+ursatz_test(test_grow_repetitions LIBS ursatz_composer composer_test_support)
 
 ursatz_test(test_grow_developed_motives LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -664,7 +667,7 @@ ursatz_test(test_grow_developed_motives LIBS ursatz_composer composer_test_suppo
 ursatz_test(test_grow_motive_harmony LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-ursatz_test(test_grow_segment_fragments LIBS ursatz_composer cjson)
+ursatz_test(test_grow_segment_fragments LIBS ursatz_composer cjson composer_test_support)
 
 ursatz_test(test_grow_liquidated_residue LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -690,7 +693,7 @@ foreach(form sonatina sonatina-tonic-major)
     ursatz_test(test_sonata_forms_${form} TARGET test_sonata_forms ARGS ${form} LABELS slow)
 endforeach()
 
-ursatz_test(test_grow_development LIBS ursatz_composer cjson)
+ursatz_test(test_grow_development LIBS ursatz_composer cjson composer_test_support)
 
 ursatz_test_executable(test_grow_continuation LIBS ursatz_composer composer_test_support cjson
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")

@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The `counterpoint` command, run as a process on Fux's D Dorian cantus firmus: the text and the JSON it prints, the same
@@ -29,17 +30,17 @@ static int run(const char *arguments, const char *out_file, const char *err_file
 static char *output_of(const char *arguments) {
     int status = run(arguments, "cp_cli_out.txt", "cp_cli_err.txt");
     if (status != 0) {
-        char *err = test_read_file("cp_cli_err.txt", NULL);
+        char *err = test_must_read_file("cp_cli_err.txt", NULL);
         fprintf(stderr, "'%s' exited %d: %s\n", arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return test_read_file("cp_cli_out.txt", NULL);
+    return test_must_read_file("cp_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     int got = run(arguments, "cp_cli_out.txt", "cp_cli_err.txt");
-    char *err = test_read_file("cp_cli_err.txt", NULL);
+    char *err = test_must_read_file("cp_cli_err.txt", NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
     }
@@ -47,13 +48,6 @@ static void expect_failure(const char *arguments, int status, const char *messag
     assert(strstr(err, message) != NULL);
     assert(strncmp(err, "Error: ", 7) == 0);
     free(err);
-}
-
-static void write_text(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file);
-    fputs(text, file);
-    fclose(file);
 }
 
 static void test_text_and_json(void) {
@@ -113,7 +107,7 @@ static void test_files(void) {
     assert(plan_lane_span_payload(plan, ids[0])->notes.note_count >= 11);
     plan_destroy(plan);
     /* The MIDI file holds the line and the counter-melody: two tracks of notes besides any of its own. */
-    midi = test_read_file("cp_cli.mid", NULL);
+    midi = test_must_read_file("cp_cli.mid", NULL);
     assert(strncmp(midi, "MThd", 4) == 0);
     {
         int tracks = ((unsigned char)midi[10] << 8) | (unsigned char)midi[11];
@@ -124,8 +118,8 @@ static void test_files(void) {
 }
 
 static void test_failures(void) {
-    write_text("cp_cli_halves.txt", "D4:h F4:h E4:w D4:w G4:w\n");
-    write_text("cp_cli_unreadable.txt", "this is not a line\n");
+    test_write_text("cp_cli_halves.txt", "D4:h F4:h E4:w D4:w G4:w\n");
+    test_write_text("cp_cli_unreadable.txt", "this is not a line\n");
     expect_failure(BASE " --species 5", 1, "--species must be 1, 2, 3 or 4");
     expect_failure(BASE " --species 2 --above --below", 1, "cannot both be given");
     expect_failure(FIXTURE("cantus_d_dorian.txt") " --species 2 --key \"D minor\"", 1, "needs --species, --key and --meter");

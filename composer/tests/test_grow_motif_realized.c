@@ -10,6 +10,8 @@
 
 #include "support/test_support.h"
 #include "util/plan_util.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -27,18 +29,8 @@
 #define MOVE_LIMIT 2
 #define CHORDS 9
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 static Motive load_motive(void) {
-    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", NULL);
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
@@ -129,7 +121,7 @@ int main(void) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         GivenChord chords[CHORDS];
         PiecePlan *plan = compose(&motive, seed, chords);
-        NodeId basic = find_node(plan, "basic idea");
+        NodeId basic = test_find_node(plan, "basic idea");
         assert(basic != PLAN_NODE_NONE);
         const PlanNotes *notes = melody_of(plan, basic);
         assert(notes->note_count == motive.note_count);

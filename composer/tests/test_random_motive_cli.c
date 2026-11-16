@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The `random-motive` command, run as a process: that the same seed gives the same output and another seed does not,
@@ -27,15 +28,15 @@ static int run(const char *arguments, const char *out_file, const char *err_file
 /* The standard output of a command that must succeed. */
 static char *output_of(const char *arguments) {
     assert(run(arguments, "random_motive_cli_out.txt", "random_motive_cli_err.txt") == 0);
-    char *err = test_read_file("random_motive_cli_err.txt", NULL);
+    char *err = test_must_read_file("random_motive_cli_err.txt", NULL);
     assert(err[0] == '\0');
     free(err);
-    return test_read_file("random_motive_cli_out.txt", NULL);
+    return test_must_read_file("random_motive_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     assert(run(arguments, "random_motive_cli_out.txt", "random_motive_cli_err.txt") == status);
-    char *err = test_read_file("random_motive_cli_err.txt", NULL);
+    char *err = test_must_read_file("random_motive_cli_err.txt", NULL);
     if (strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected '%s' in: %s\n", arguments, message, err);
     }

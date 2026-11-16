@@ -8,6 +8,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The rows of a small rondo (P52 B7, R-521): A1 names its embellish variation and the notes it added, A2 names the new setting
@@ -15,7 +16,7 @@
  */
 
 static const cJSON *member(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    const cJSON *item = test_json_member(object, name);
     assert(item);
     return item;
 }

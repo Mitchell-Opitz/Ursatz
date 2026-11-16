@@ -8,6 +8,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The rows of a sonatina (P53 B3, R-525): B1 returns B at home, so in A minor its row names the copy across modes (`changes.mode`
@@ -15,7 +16,7 @@
  */
 
 static const cJSON *member(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    const cJSON *item = test_json_member(object, name);
     assert(item);
     return item;
 }

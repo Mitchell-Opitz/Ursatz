@@ -10,6 +10,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -56,7 +57,7 @@ static char *replace(char *text, const char *placeholder, const char *value) {
 
 /* The request of a case: the fixture with its placeholders filled as cli_snapshots.cmake fills them, the seed, and the files asked for. */
 static char *case_request(const Case *item) {
-    char *text = test_read_file(item->fixture, NULL);
+    char *text = test_must_read_file(item->fixture, NULL);
     text = replace(text, "@CHORDS@",
                    "[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 1, \"text\": \"IV V@2\"}, {\"bar\": 2, \"text\": \"VI\"}, "
                    "{\"bar\": 3, \"text\": \"V\"}]");
@@ -81,7 +82,7 @@ static char *snapshot_path(const char *name, const char *suffix, char *out, size
 }
 
 static void expect_json_equal(const char *actual, const char *expected_path, bool drop_files, const char *what) {
-    char *expected_text = test_read_file(expected_path, NULL);
+    char *expected_text = test_must_read_file(expected_path, NULL);
     cJSON *actual_json = cJSON_Parse(actual);
     cJSON *expected_json = cJSON_Parse(expected_text);
     assert(actual_json && expected_json);
@@ -111,10 +112,10 @@ static void expect_case(const Case *item, const ComposerResponse *response) {
     expect_json_equal(response->json, snapshot_path(item->name, "stdout.json", path, sizeof path), true, "the document");
     expect_json_equal(response->plan_json, snapshot_path(item->name, "plan.json", path, sizeof path), false, "the plan");
     size_t size = 0;
-    char *midi = test_read_file(snapshot_path(item->name, "mid", path, sizeof path), &size);
+    char *midi = test_must_read_file(snapshot_path(item->name, "mid", path, sizeof path), &size);
     assert(response->midi && response->midi_size == size && memcmp(response->midi, midi, size) == 0);
     free(midi);
-    char *musicxml = test_read_file(snapshot_path(item->name, "musicxml", path, sizeof path), NULL);
+    char *musicxml = test_must_read_file(snapshot_path(item->name, "musicxml", path, sizeof path), NULL);
     assert(response->musicxml && strcmp(response->musicxml, musicxml) == 0);
     free(musicxml);
 }
@@ -122,9 +123,9 @@ static void expect_case(const Case *item, const ComposerResponse *response) {
 static void write_pair(const char *tag, const char *request, const ComposerResponse *response) {
     char path[160];
     snprintf(path, sizeof path, "api_theme_request_%s.json", tag);
-    test_write_file(path, request);
+    test_write_text(path, request);
     snprintf(path, sizeof path, "api_theme_response_%s.json", tag);
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 /* --- the snapshots ------------------------------------------------------------------------------ */
@@ -167,14 +168,14 @@ static const Uneven UNEVEN[] = {
      "evaded"}};
 
 static const cJSON *member(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    const cJSON *item = test_json_member(object, name);
     assert(item);
     return item;
 }
 
 /* The request of a case with seed `seed`, composed: the status, and the response. */
 static ComposerStatus compose_uneven(const char *fixture, unsigned seed, cJSON *edits, char **request, ComposerResponse *response) {
-    char *text = test_read_file(fixture, NULL);
+    char *text = test_must_read_file(fixture, NULL);
     cJSON *json = cJSON_Parse(text);
     free(text);
     assert(json);
@@ -290,7 +291,7 @@ static void test_plain_has_no_construction(void) {
 
 /* The one-motive request with seed `seed` and, when not NULL, the member "preferences" set to the JSON text. */
 static char *preferences_request(unsigned seed, const char *preferences) {
-    char *text = test_read_file(THEME("one-motive.json"), NULL);
+    char *text = test_must_read_file(THEME("one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request);
@@ -444,7 +445,7 @@ static void test_l4_preferences(void) {
 /* --- suggest, plans and explanations ------------------------------------------------------------- */
 
 static void test_suggest_plans_explain(void) {
-    char *text = test_read_file(THEME("one-motive.json"), NULL);
+    char *text = test_must_read_file(THEME("one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request);
@@ -482,7 +483,7 @@ static void test_suggest_plans_explain(void) {
  * each idea's fidelity to its source, the minimum its role asks, the relation heard and whether it is the one intended
  * (API 1.10, R-332). */
 static void test_developments(void) {
-    char *text = test_read_file(THEME("one-motive.json"), NULL);
+    char *text = test_must_read_file(THEME("one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request && cJSON_AddNumberToObject(request, "seed", 1));
@@ -649,7 +650,7 @@ static void test_threads(void) {
 
 /* The one-motive request with each member of `edits` ({name, JSON text or NULL to remove}) set. */
 static ComposerStatus refuse_with(const char *const edits[][2], size_t count, ComposerResponse *response) {
-    char *text = test_read_file(THEME("one-motive.json"), NULL);
+    char *text = test_must_read_file(THEME("one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request);

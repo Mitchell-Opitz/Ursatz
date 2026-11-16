@@ -13,6 +13,7 @@
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/render.h>
+#include "ursatz_test.h"
 
 /*
  * A composed piece performed in order (R-485, docs/form-performance.md): tests/fixtures/forms/repeat-form.json (A, B, A',
@@ -37,19 +38,6 @@
 #define SEEDS 5
 #define PART_SEEDS 10
 #define INNER_VOICES 4
-
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)size + 1);
-    assert(text && fread(text, 1, (size_t)size, file) == (size_t)size);
-    text[size] = '\0';
-    fclose(file);
-    return text;
-}
 
 /* The document with the first `from` replaced by `to`; the caller frees it. */
 static char *replaced(const char *text, const char *from, const char *to) {
@@ -308,7 +296,7 @@ static void check_region_keys(void) {
 static int test_parts(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/forms/parts-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form_spec_performed(form) && form->part_count == 3);
@@ -402,7 +390,7 @@ static void check_part_bars_performance(const FormSpec *form, size_t bars, const
 static int test_part_bars(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/forms/part-bars-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form_spec_performed(form) && form->part_count == 3);
@@ -454,7 +442,7 @@ int main(int argc, char **argv) {
     }
     char path[512];
     snprintf(path, sizeof(path), "%s/forms/repeat-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpec *plain_form = NULL;
     FormSpecError error;

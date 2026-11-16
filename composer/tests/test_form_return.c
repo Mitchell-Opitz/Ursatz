@@ -12,6 +12,7 @@
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
+#include "ursatz_test.h"
 
 /*
  * Returning sections (form-return, form_return.h): rounded binary, ternary, layered and variations, C major 4/4 with an
@@ -394,23 +395,6 @@ static int test_reharmonize(void) {
 
 /* ------------------------------------------------------------ varied */
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "cannot read %s\n", path);
-        exit(2);
-    }
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    size_t read = text ? fread(text, 1, (size_t)length, file) : 0;
-    assert(text && read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 /* The notes the varied return adds to A's melody: every note of A is there at its place and pitch, at most one added a bar. */
 static size_t check_varied(const PiecePlan *plan, NodeId source, NodeId section) {
     static Event a[MAX_EVENTS];
@@ -450,7 +434,7 @@ static size_t check_varied(const PiecePlan *plan, NodeId source, NodeId section)
 static int test_varied(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/varied-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {

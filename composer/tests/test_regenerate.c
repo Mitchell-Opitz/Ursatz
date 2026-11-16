@@ -17,6 +17,7 @@
 #include "check/hearing.h"
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /* A single target regenerated: plan_regenerate_all with a list of one. */
 static RegenerateResult regenerate_one(PiecePlan *plan, FillTarget target, const ComposeConfig *config,
@@ -1083,8 +1084,8 @@ static int run(const char *command, const char *arguments) {
 
 static void expect_success(const char *command, const char *arguments, const char *message) {
     int status = run(command, arguments);
-    char *err = test_read_file(ERR, NULL);
-    char *out = test_read_file(OUT, NULL);
+    char *err = test_must_read_file(ERR, NULL);
+    char *out = test_must_read_file(OUT, NULL);
     if (status != 0 || strstr(out, message) == NULL) {
         fprintf(stderr, "'%s %s': expected 0 with '%s', got %d\nout: %s\nerr: %s\n", command, arguments, message, status, out, err);
     }
@@ -1095,7 +1096,7 @@ static void expect_success(const char *command, const char *arguments, const cha
 
 static void expect_failure(const char *command, const char *arguments, int status, const char *message) {
     int got = run(command, arguments);
-    char *err = test_read_file(ERR, NULL);
+    char *err = test_must_read_file(ERR, NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'%s %s': expected %d with '%s', got %d: %s\n", command, arguments, status, message, got, err);
     }
@@ -1134,7 +1135,7 @@ static int test_cli(void) {
     expect_failure("lock", "regenerate_cli_filled.json --node 2 --lane sax --out regenerate_cli_x.json", 1, "--lane must be");
     expect_failure("lock", "regenerate_cli_filled.json --node 2 --bogus --out regenerate_cli_x.json", 1, "unknown option");
     expect_failure("lock", "regenerate_cli_missing.json --node 2 --out regenerate_cli_x.json", 2, "cannot read plan");
-    assert(!test_exists("regenerate_cli_x.json"));
+    assert(!test_file_exists("regenerate_cli_x.json"));
 
     /* regenerate: A is locked, B is written again with the seed, and the files are written */
     remove("regenerate_cli_b.mid");
@@ -1143,11 +1144,11 @@ static int test_cli(void) {
                    "regenerate_cli_locked.json --section B --seed 5 --out regenerate_cli_b.json --midi regenerate_cli_b.mid "
                    "--musicxml regenerate_cli_b.xml",
                    "reopened sections B");
-    char *out = test_read_file(OUT, NULL);
+    char *out = test_must_read_file(OUT, NULL);
     assert(strstr(out, "seed 5") != NULL && strstr(out, "sections (form and cadences heard)") != NULL);
     assert(strstr(out, "returns heard") != NULL && strstr(out, "wrote regenerate_cli_b.json") != NULL);
     free(out);
-    assert(test_exists("regenerate_cli_b.mid") && test_exists("regenerate_cli_b.xml"));
+    assert(test_file_exists("regenerate_cli_b.mid") && test_file_exists("regenerate_cli_b.xml"));
     char *a_before = file_section_text("regenerate_cli_locked.json", 0);
     char *a_after = file_section_text("regenerate_cli_b.json", 0);
     char *b_before = file_section_text("regenerate_cli_locked.json", 1);
@@ -1164,8 +1165,8 @@ static int test_cli(void) {
 
     /* the same plan, node and seed give the same bytes */
     expect_success("regenerate", "regenerate_cli_locked.json --section B --seed 5 --out regenerate_cli_b2.json", "seed 5");
-    char *first = test_read_file("regenerate_cli_b.json", NULL);
-    char *second = test_read_file("regenerate_cli_b2.json", NULL);
+    char *first = test_must_read_file("regenerate_cli_b.json", NULL);
+    char *second = test_must_read_file("regenerate_cli_b2.json", NULL);
     assert(strcmp(first, second) == 0);
     free(first);
     free(second);
@@ -1186,7 +1187,7 @@ static int test_cli(void) {
     expect_failure("regenerate", "--section B --out regenerate_cli_x.json", 1, "needs a plan file");
     expect_failure("regenerate", "regenerate_cli_missing.json --section B --out regenerate_cli_x.json", 2, "cannot read plan");
     expect_failure("regenerate", "regenerate_cli_locked.json --section B --out regenerate_cli_x.json --lane sax", 1, "--lane must be");
-    assert(!test_exists("regenerate_cli_x.json"));
+    assert(!test_file_exists("regenerate_cli_x.json"));
     printf("cli ok\n");
     return 0;
 }

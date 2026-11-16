@@ -13,6 +13,7 @@
 #include "grow/grow_internal.h"
 #include "motive/motive_internal.h"
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -292,7 +293,7 @@ static bool theme_made(const Motive *motive, const GrowFidelityTable *table, uns
  * with this table and never 1/1 with the default table, whose largest minimum is 11/20.
  */
 static void raised_minimum_is_shown(void) {
-    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", NULL);
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));

@@ -16,6 +16,7 @@
 #include <ursatz_composer/render.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The `piece` command, run as a process (docs/cli-piece.md, docs/piece-request.md): the loop version and the ending version
@@ -53,7 +54,7 @@ static int run(const char *command, const char *arguments, const char *out_file,
 
 /* The request with the name in it replaced by the value, written to a file of its own. */
 static void write_request(const char *fixture, const char *path, const char *name, const char *value) {
-    char *text = test_read_file(fixture, NULL);
+    char *text = test_must_read_file(fixture, NULL);
     FILE *file = fopen(path, "wb");
     char *at = strstr(text, name);
     assert(file && at);
@@ -64,28 +65,21 @@ static void write_request(const char *fixture, const char *path, const char *nam
     free(text);
 }
 
-static void write_text(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file);
-    fputs(text, file);
-    fclose(file);
-}
-
 /* The standard output of a piece command that must succeed. */
 static char *piece_output(const char *arguments) {
     int status = run("piece", arguments, "piece_out.txt", "piece_err.txt");
     if (status != 0) {
-        char *err = test_read_file("piece_err.txt", NULL);
+        char *err = test_must_read_file("piece_err.txt", NULL);
         fprintf(stderr, "'piece %s' exited %d: %s\n", arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return test_read_file("piece_out.txt", NULL);
+    return test_must_read_file("piece_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     int got = run("piece", arguments, "piece_out.txt", "piece_err.txt");
-    char *err = test_read_file("piece_err.txt", NULL);
+    char *err = test_must_read_file("piece_err.txt", NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'piece %s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
     }
@@ -108,7 +102,7 @@ static unsigned long read_vlq(const unsigned char *data, size_t *at) {
 /* The tick of the first marker of the text in the conductor track, or -1 when there is none. */
 static long marker_tick(const char *path, const char *text) {
     size_t size;
-    unsigned char *data = (unsigned char *)test_read_file(path, &size);
+    unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
     assert(size >= 22 && memcmp(data, "MThd", 4) == 0 && memcmp(data + 14, "MTrk", 4) == 0);
     size_t at = 22;
     size_t end = at + (((size_t)data[18] << 24) | ((size_t)data[19] << 16) | ((size_t)data[20] << 8) | data[21]);
@@ -289,8 +283,8 @@ static void test_done_when(void) {
     char *shown = piece_output("request.json --seed 1 --check --format json --out loop.json --ending-out ending.json "
                                "--midi loop.mid --ending-midi ending.mid --musicxml loop.musicxml --ending-musicxml "
                                "ending.musicxml --explain explain.json");
-    assert(test_exists("loop.json") && test_exists("ending.json") && test_exists("loop.mid") && test_exists("ending.mid") &&
-           test_exists("loop.musicxml") && test_exists("ending.musicxml") && test_exists("explain.json"));
+    assert(test_file_exists("loop.json") && test_file_exists("ending.json") && test_file_exists("loop.mid") && test_file_exists("ending.mid") &&
+           test_file_exists("loop.musicxml") && test_file_exists("ending.musicxml") && test_file_exists("explain.json"));
 
     /* Intro 2 bars, then the body 12 bars and the turnaround 2: the loop is whole notes 2 to 16. */
     assert(strstr(shown, "\"loop\":{\"start\":\"2/1\",\"end\":\"16/1\"}"));
@@ -327,9 +321,9 @@ static void test_done_when(void) {
     /* The same seed gives the same plan. */
     size_t first_size;
     size_t second_size;
-    char *first = test_read_file("loop.json", &first_size);
+    char *first = test_must_read_file("loop.json", &first_size);
     free(piece_output("request.json --seed 1 --check --out loop_again.json"));
-    char *second = test_read_file("loop_again.json", &second_size);
+    char *second = test_must_read_file("loop_again.json", &second_size);
     assert(first_size == second_size && memcmp(first, second, first_size) == 0);
     free(first);
     free(second);
@@ -359,7 +353,7 @@ static void test_uneven_body(void) {
 
     /* A construction object is read as the theme API reads it: a 4+5 sentence by its ideas. */
     write_request(PIECE("uneven-body.json"), "given.json", "@STYLE@", FIXTURE("style-fast-minor.json"));
-    char *text = test_read_file("given.json", NULL);
+    char *text = test_must_read_file("given.json", NULL);
     char *at = strstr(text, "\"construction\": \"auto\"");
     assert(at);
     FILE *file = fopen("given.json", "wb");
@@ -385,25 +379,25 @@ static void expect_construction_refusals(void) {
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":\"auto\"}}]}",
              HEAD);
-    write_text("short_construction.json", text);
+    test_write_text("short_construction.json", text);
     expect_failure("short_construction.json --seed 1", 1, "a construction needs a theme of 3 to 16 whole bars and no pickup");
     snprintf(text, sizeof(text),
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":36,\"pickup\":\"1\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":\"auto\"}}]}",
              HEAD);
-    write_text("pickup_construction.json", text);
+    test_write_text("pickup_construction.json", text);
     expect_failure("pickup_construction.json --seed 1", 1, "a construction needs a theme of 3 to 16 whole bars and no pickup");
     snprintf(text, sizeof(text),
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":36,\"pickup\":\"0\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":\"chosen\"}}]}",
              HEAD);
-    write_text("bad_construction.json", text);
+    test_write_text("bad_construction.json", text);
     expect_failure("bad_construction.json --seed 1", 1, "\"construction\" must be \"auto\" or");
     snprintf(text, sizeof(text),
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":36,\"pickup\":\"0\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"motif\",\"into\":\"sentence\",\"construction\":{\"ideas\":{\"coda\":9}}}}]}",
              HEAD);
-    write_text("unknown_idea.json", text);
+    test_write_text("unknown_idea.json", text);
     expect_failure("unknown_idea.json --seed 1", 1, "unknown idea 'coda'");
 }
 
@@ -614,7 +608,7 @@ static void test_regenerate(void) {
     expect_region(before, after, 0, 17, true);
     plan_destroy(before);
     plan_destroy(after);
-    assert(test_exists("same_ending.json"));
+    assert(test_file_exists("same_ending.json"));
 }
 
 static void test_variations(void) {
@@ -627,7 +621,7 @@ static void test_variations(void) {
     }
     assert(seeds[0] != seeds[1] && seeds[1] != seeds[2] && seeds[0] != seeds[2]);
     free(shown);
-    assert(test_exists("variations/result.json"));
+    assert(test_file_exists("variations/result.json"));
     PiecePlan *original = load_plan("loop.json");
     char *old_melody = dump_lane(original, PLAN_LANE_MELODY, 0, 2, 10);
     size_t tunes_changed = 0;
@@ -635,9 +629,9 @@ static void test_variations(void) {
     for (size_t i = 0; i < 3; i++) {
         char path[128];
         snprintf(path, sizeof(path), "variations/variation-%zu.json", i + 1);
-        assert(test_exists(path));
+        assert(test_file_exists(path));
         snprintf(path, sizeof(path), "variations/variation-%zu.musicxml", i + 1);
-        assert(test_exists(path));
+        assert(test_file_exists(path));
         snprintf(path, sizeof(path), "variations/variation-%zu.mid", i + 1);
         assert(marker_tick(path, "loopStart") == (long)(2 * WHOLE_TICKS) && marker_tick(path, "loopEnd") == (long)(16 * WHOLE_TICKS));
         snprintf(path, sizeof(path), "variations/variation-%zu.json", i + 1);
@@ -704,29 +698,29 @@ static void test_errors(void) {
              "%s\"sections\":[{\"id\":\"intro\",\"part\":\"intro\",\"letter\":\"I\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"empty\"}}]}",
              HEAD);
-    write_text("no_body.json", text);
+    test_write_text("no_body.json", text);
     expect_failure("no_body.json --seed 1", 1, "they need a body");
     snprintf(text, sizeof(text),
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"half\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"empty\"}}]}",
              HEAD);
-    write_text("bad_pickup.json", text);
+    test_write_text("bad_pickup.json", text);
     expect_failure("bad_pickup.json --seed 1", 1, "pickup 'half' is not a number of beats");
     snprintf(text, sizeof(text),
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"0\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"wobble\"}}]}",
              HEAD);
-    write_text("bad_fill.json", text);
+    test_write_text("bad_fill.json", text);
     expect_failure("bad_fill.json --seed 1", 1, "the fill kind must be empty, motif, theme or progression, not 'wobble'");
     snprintf(text, sizeof(text),
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"coda\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"0\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"empty\"}}]}",
              HEAD);
-    write_text("bad_part.json", text);
+    test_write_text("bad_part.json", text);
     expect_failure("bad_part.json --seed 1", 1, "the part must be intro, body, turnaround or ending");
-    write_text("not_json.json", "[1, 2");
+    test_write_text("not_json.json", "[1, 2");
     expect_failure("not_json.json", 1, "is not a JSON object");
-    write_text("wrong_schema.json", "{\"schema\":\"ursatz-theme-request\",\"schema_version\":1}");
+    test_write_text("wrong_schema.json", "{\"schema\":\"ursatz-theme-request\",\"schema_version\":1}");
     expect_failure("wrong_schema.json", 1, "ursatz-piece-request");
     expect_failure("missing.json", 1, "cannot read the request");
     expect_failure("", 1, "piece needs a request file");
@@ -734,7 +728,7 @@ static void test_errors(void) {
     expect_failure(PIECE("structure-only.json") " --seed x", 1, "--seed must be a whole number");
     /* A file that cannot be written is exit 3 and leaves nothing behind. */
     expect_failure(PIECE("structure-only.json") " --seed 1 --out no_such_dir/plan.json", 3, "cannot write");
-    assert(!test_exists("no_such_dir/plan.json"));
+    assert(!test_file_exists("no_such_dir/plan.json"));
 }
 
 int main(void) {

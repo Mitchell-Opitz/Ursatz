@@ -12,6 +12,7 @@
 
 #include "support/test_support.h"
 #include "util/plan_util.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -33,7 +34,7 @@
 #define CHORDS 9
 
 static Motive load_motive(void) {
-    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", NULL);
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));

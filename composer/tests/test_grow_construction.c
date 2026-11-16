@@ -8,6 +8,7 @@
 #include <ursatz_composer/theme_shape.h>
 
 #include "grow/grow_internal.h"
+#include "support/test_composer.h"
 
 /*
  * The construction chosen for a theme that is given none (R-469, B4 of P47): grow_construction_choose gives each row of
@@ -198,16 +199,6 @@ static void test_none(void) {
     }
 }
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 static GrowRequest request_of(const Scenario *scenario, const Motive *motive, size_t bars, PlanThemeBeginning beginning,
                               PlanThemeEnding ending) {
     GrowRequest request;
@@ -229,7 +220,7 @@ static void test_build(void) {
     GrowRequest request = request_of(scenario, &one, 9, SENTENCE);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
     assert(constraint);
     expect_construction(&constraint->params.construction, &ROWS[4], "plan");
     GrowConfig config;
@@ -253,7 +244,7 @@ static void test_build(void) {
     given.reason = PLAN_CONSTRUCTION_GIVEN;
     request.construction = &given;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     constraint = plan_node_find_constraint(plan, theme, PLAN_CONSTRAINT_CONSTRUCTION);
     assert(constraint && constraint->params.construction.reason == PLAN_CONSTRUCTION_GIVEN);
     char text[192];
@@ -289,7 +280,7 @@ static void test_refusals(void) {
     request = request_of(scenario, &one, 8, SENTENCE);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    assert(plan_node_find_constraint(plan, find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION) == NULL);
+    assert(plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION) == NULL);
     plan_destroy(plan);
 }
 

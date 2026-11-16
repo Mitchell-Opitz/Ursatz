@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_json.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The `plan` and `fill` commands, run as processes: every form planned and filled to MIDI and MusicXML, the same plan and
@@ -32,17 +33,17 @@ static int run(const char *command, const char *arguments) {
 static char *output_of(const char *command, const char *arguments) {
     int status = run(command, arguments);
     if (status != 0) {
-        char *err = test_read_file(ERR, NULL);
+        char *err = test_must_read_file(ERR, NULL);
         fprintf(stderr, "'%s %s' exited %d: %s\n", command, arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return test_read_file(OUT, NULL);
+    return test_must_read_file(OUT, NULL);
 }
 
 static void expect_failure(const char *command, const char *arguments, int status, const char *message) {
     int got = run(command, arguments);
-    char *err = test_read_file(ERR, NULL);
+    char *err = test_must_read_file(ERR, NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'%s %s': expected status %d with '%s', got %d: %s\n", command, arguments, status, message, got,
                 err);
@@ -56,8 +57,8 @@ static void expect_failure(const char *command, const char *arguments, int statu
 static void expect_same_file(const char *a, const char *b) {
     size_t length_a;
     size_t length_b;
-    char *text_a = test_read_file(a, &length_a);
-    char *text_b = test_read_file(b, &length_b);
+    char *text_a = test_must_read_file(a, &length_a);
+    char *text_b = test_must_read_file(b, &length_b);
     assert(length_a > 0);
     assert(length_a == length_b);
     assert(memcmp(text_a, text_b, length_a) == 0);
@@ -98,15 +99,15 @@ static void test_every_form(void) {
 
         char name[256];
         snprintf(name, sizeof(name), "plan_cli_%s.mid", FORMS[f]);
-        char *midi = test_read_file(name, NULL);
+        char *midi = test_must_read_file(name, NULL);
         assert(strncmp(midi, "MThd", 4) == 0);
         free(midi);
         snprintf(name, sizeof(name), "plan_cli_%s.xml", FORMS[f]);
-        char *xml = test_read_file(name, NULL);
+        char *xml = test_must_read_file(name, NULL);
         assert(strstr(xml, "<score-partwise") != NULL);
         free(xml);
         snprintf(name, sizeof(name), "plan_cli_%s_record.json", FORMS[f]);
-        char *record = test_read_file(name, NULL);
+        char *record = test_must_read_file(name, NULL);
         assert(record[0] == '[');
         assert(strstr(record, "\"stage\":\"structure\"") != NULL);
         assert(strstr(record, "\"stage\":\"melody\"") != NULL);
@@ -157,7 +158,7 @@ static void test_grow_plan(void) {
     assert(strstr(out, "already realized") != NULL);
     assert(strstr(out, "wrote plan_cli_grown.mid") != NULL);
     free(out);
-    char *midi = test_read_file("plan_cli_grown.mid", NULL);
+    char *midi = test_must_read_file("plan_cli_grown.mid", NULL);
     assert(strncmp(midi, "MThd", 4) == 0);
     free(midi);
 }
@@ -212,13 +213,6 @@ static void test_options(void) {
     free(help);
 }
 
-static void write_text(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file);
-    fputs(text, file);
-    fclose(file);
-}
-
 static void test_plan_errors(void) {
     expect_failure("plan", "--form nope --key C --meter 4/4 --out plan_cli_bad.json", 1,
                    "unknown form 'nope'; the forms are binary, rounded-binary, ternary, variations, loop, layered");
@@ -244,7 +238,7 @@ static void test_plan_errors(void) {
                    "cannot load 'plan_cli_missing.txt'");
     expect_failure("plan", "--form binary --key C --meter 4/4 --out /nonexistent-directory/plan.json", 3,
                    "cannot write '/nonexistent-directory/plan.json'");
-    assert(!test_exists("plan_cli_bad.json"));
+    assert(!test_file_exists("plan_cli_bad.json"));
 }
 
 static void test_fill_errors(void) {
@@ -253,15 +247,15 @@ static void test_fill_errors(void) {
     expect_failure("fill", "plan_cli_binary.json plan_cli_ternary.json", 1, "unexpected argument");
     expect_failure("fill", "plan_cli_binary.json --seed -1", 1, "--seed must be");
     expect_failure("fill", "plan_cli_missing.json", 2, "cannot read plan 'plan_cli_missing.json'");
-    write_text("plan_cli_malformed.json", "{\"schema_version\":");
+    test_write_text("plan_cli_malformed.json", "{\"schema_version\":");
     expect_failure("fill", "plan_cli_malformed.json", 2, "cannot read plan 'plan_cli_malformed.json'");
     /* An analysis document describes a piece already written; it points at the loader. */
     expect_failure("fill", FIXTURE("analysis_small.json"), 2, "analysis document");
     expect_failure("fill", "plan_cli_binary.json --seed 1 --midi /nonexistent-directory/a.mid --out plan_cli_none.json", 3,
                    "cannot write '/nonexistent-directory/a.mid'");
     /* Nothing is left behind by a write that failed. */
-    assert(!test_exists("plan_cli_none.json"));
-    assert(!test_exists("plan_cli_none.json.tmp"));
+    assert(!test_file_exists("plan_cli_none.json"));
+    assert(!test_file_exists("plan_cli_none.json.tmp"));
 }
 
 /*
@@ -271,17 +265,17 @@ static void test_fill_errors(void) {
  * is written.
  */
 static void test_stuck(void) {
-    write_text("plan_cli_stuck_motive.txt", "D4:q F4:e A4:e D5:q\n");
+    test_write_text("plan_cli_stuck_motive.txt", "D4:q F4:e A4:e D5:q\n");
     free(output_of("plan", "--form binary --key A --mode minor --meter 3/4 --motive plan_cli_stuck_motive.txt --seed 1 --out plan_cli_stuck.json"));
     expect_failure("fill", "plan_cli_stuck.json --seed 1 --midi plan_cli_stuck.mid --out plan_cli_stuck_done.json", 2,
                    "could not be completed from seeds 1 to 16: stuck at the structure stage");
-    char *err = test_read_file(ERR, NULL);
+    char *err = test_must_read_file(ERR, NULL);
     assert(strstr(err, "  open: ") != NULL);
     assert(strstr(err, "no operator applies") != NULL);
     assert(strstr(err, "every candidate was rejected") != NULL);
     free(err);
-    assert(!test_exists("plan_cli_stuck.mid"));
-    assert(!test_exists("plan_cli_stuck_done.json"));
+    assert(!test_file_exists("plan_cli_stuck.mid"));
+    assert(!test_file_exists("plan_cli_stuck_done.json"));
 }
 
 /*
@@ -347,9 +341,9 @@ static const char GIVEN_MELODY[] = "C5:h E5:h G5:q E5:q C5:h E5:h G5:h G5:q F5:q
 static const char GIVEN_BASS[] = "C3:w C3:w C3:w C3:w C3:w F3:w G3:w C3:w\n";
 
 static void test_given(void) {
-    write_text("plan_cli_given_melody.txt", GIVEN_MELODY);
-    write_text("plan_cli_given_bass.txt", GIVEN_BASS);
-    write_text("plan_cli_given_rest.txt", "r:h C3:h C3:w\n"); /* a line that opens with a rest is no bass line */
+    test_write_text("plan_cli_given_melody.txt", GIVEN_MELODY);
+    test_write_text("plan_cli_given_bass.txt", GIVEN_BASS);
+    test_write_text("plan_cli_given_rest.txt", "r:h C3:h C3:w\n"); /* a line that opens with a rest is no bass line */
 
     /* No form: a binary form of 16 bars with the melody in B, and the plan says so. */
     char *out = output_of("plan", "--key C --meter 4/4 --given-melody plan_cli_given_melody.txt --seed 1 --out plan_cli_given.json");
@@ -422,7 +416,7 @@ static void test_given(void) {
                    "cannot load 'plan_cli_missing.txt'");
     expect_failure("plan", "--form binary --key C --meter 4/4 --given-bass plan_cli_given_rest.txt --at B --out plan_cli_bad.json", 2,
                    "notes that cannot be placed");
-    assert(!test_exists("plan_cli_bad.json"));
+    assert(!test_file_exists("plan_cli_bad.json"));
 }
 
 int main(void) {

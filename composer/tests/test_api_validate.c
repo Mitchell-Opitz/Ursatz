@@ -10,6 +10,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -32,7 +33,7 @@ typedef struct {
 } Request;
 
 static char *request_text(const char *fixture, const char *const edits[][2], size_t count) {
-    char *text = test_read_file(fixture, NULL);
+    char *text = test_must_read_file(fixture, NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request);
@@ -270,7 +271,7 @@ static void test_preferences(void) {
 
 /* A piece request of a form with sizes comes back with the size it chose, and no section defaults (P45 B2). */
 static void test_piece_of_a_form(void) {
-    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/piece/rounded-binary.json", NULL);
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/piece/rounded-binary.json", NULL);
     ComposerResponse response;
     ComposerStatus status = composer_api_validate("piece", text, &response);
     assert(status == COMPOSER_OK && response.json);

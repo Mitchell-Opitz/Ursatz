@@ -9,6 +9,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The section functions in the piece entry (P51 B8, R-510): the rows of a main-and-subordinate piece name each section's
@@ -17,7 +18,7 @@
  */
 
 static const cJSON *member(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    const cJSON *item = test_json_member(object, name);
     assert(item);
     return item;
 }
@@ -31,9 +32,9 @@ static const char *text(const cJSON *object, const char *name) {
 static void write_pair(const char *tag, const char *request, const ComposerResponse *response) {
     char path[160];
     snprintf(path, sizeof path, "api_piece_request_%s.json", tag);
-    test_write_file(path, request);
+    test_write_text(path, request);
     snprintf(path, sizeof path, "api_piece_response_%s.json", tag);
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 static char *print(cJSON *request) {

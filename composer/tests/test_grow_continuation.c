@@ -11,6 +11,8 @@
 
 #include "api/api_grow.h"
 #include "support/test_support.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -42,7 +44,7 @@ static unsigned long last_seed(void) {
 }
 
 static Motive load_motive(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
@@ -66,16 +68,6 @@ static void load_fixtures(void) {
     CHORD_FIXTURES[1].motive = load_motive(COMPOSER_FIXTURE_DIR "/continuation/u51-chords.json");
     TRIPLE_MOTIVE = load_motive(COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json");
     DOTTED_MOTIVE = load_motive(COMPOSER_FIXTURE_DIR "/continuation/dotted.json");
-}
-
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
 }
 
 /* The 8-bar sentence of the motive and seed under the continuation settings (NULL for none) and the basic idea as written
@@ -113,7 +105,7 @@ static PiecePlan *grow(const Motive *motive, unsigned long seed, const GrowConti
 
 /* The motive_ref of the node `name`. */
 static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
-    NodeId node = find_node(plan, name);
+    NodeId node = test_find_node(plan, name);
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
@@ -128,7 +120,7 @@ static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
 /* The end of the notes of the motive node `name`, in whole notes. */
 static Rational node_end(const PiecePlan *plan, const char *name) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
-    assert(plan_node_lane_spans(plan, find_node(plan, name), &span, 1) == 1);
+    assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *held = &plan_lane_span_payload(plan, span)->notes;
     assert(held->note_count > 0);
     const PlanNote *last = &held->notes[held->note_count - 1];
@@ -263,7 +255,7 @@ static void test_cut_beat(void) {
 
 /* The melody notes of the bars [from, to) of the theme (0-based), in whole-note onsets of a 4/4 bar. */
 static size_t melody_notes(const PiecePlan *plan, long from, long to) {
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
     size_t count = 0;
@@ -384,7 +376,7 @@ typedef struct {
 } Chord;
 
 static size_t chords_of(const PiecePlan *plan, Chord *out, size_t size) {
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, theme), spans, 64);
     assert(found <= size);
@@ -450,7 +442,7 @@ static void test_faster_harmony_changes_each_cell(void) {
 
 /* Whether the melody of the first two bars of the theme is the motif's notes exactly. */
 static bool basic_idea_is(const PiecePlan *plan, const Motive *motive) {
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
     size_t next = 0;
@@ -560,7 +552,7 @@ static void test_rates(void) {
 
 /* The shortest note of the theme's melody that starts in the bars from `from` up to `to` (whole numbers of whole notes). */
 static Rational shortest_note(const PiecePlan *plan, long from, long to) {
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
     Rational shortest = {1, 1};

@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The `theme` command, run as a process (docs/cli-theme.md, docs/theme-request.md): themes from up to 16 motives, named
@@ -50,17 +51,17 @@ static int run(const char *command, const char *arguments, const char *out_file,
 static char *theme_output(const char *arguments) {
     int status = run("theme", arguments, "theme_out.txt", "theme_err.txt");
     if (status != 0) {
-        char *err = test_read_file("theme_err.txt", NULL);
+        char *err = test_must_read_file("theme_err.txt", NULL);
         fprintf(stderr, "'theme %s' exited %d: %s\n", arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return test_read_file("theme_out.txt", NULL);
+    return test_must_read_file("theme_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     int got = run("theme", arguments, "theme_out.txt", "theme_err.txt");
-    char *err = test_read_file("theme_err.txt", NULL);
+    char *err = test_must_read_file("theme_err.txt", NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'theme %s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
     }
@@ -101,8 +102,8 @@ static void test_one_motive(void) {
                  "%s --into sentence --key \"D minor\" --meter 4/4 --seed %d --out grow_one.json", FIXTURE("motive_d_minor.txt"),
                  seed);
         assert(run("grow", arguments, "grow_out.txt", "grow_err.txt") == 0);
-        char *theme_plan = test_read_file("theme_one.json", NULL);
-        char *grow_plan = test_read_file("grow_one.json", NULL);
+        char *theme_plan = test_must_read_file("theme_one.json", NULL);
+        char *grow_plan = test_must_read_file("grow_one.json", NULL);
         assert(strcmp(theme_plan, grow_plan) == 0);
         free(theme_plan);
         free(grow_plan);
@@ -243,7 +244,7 @@ static void test_idea_motives(void) {
 
 /* The request of a fixture with the text `from` replaced by `to`, written to `path`. */
 static void write_changed(const char *fixture, const char *from, const char *to, const char *path) {
-    char *text = test_read_file(fixture, NULL);
+    char *text = test_must_read_file(fixture, NULL);
     char *at = strstr(text, from);
     assert(at);
     FILE *file = fopen(path, "wb");
@@ -279,7 +280,7 @@ static void test_request_v2(void) {
 /* ----------------------------------------------------------------- brief */
 
 static unsigned long midi_microseconds_per_quarter(const char *path) {
-    char *bytes = test_read_file(path, NULL);
+    char *bytes = test_must_read_file(path, NULL);
     FILE *file = fopen(path, "rb");
     assert(file);
     fseek(file, 0, SEEK_END);
@@ -296,7 +297,7 @@ static unsigned long midi_microseconds_per_quarter(const char *path) {
 
 /* The request with the style's path in place of @STYLE@, written to a file of its own. */
 static void write_request_with_style(const char *fixture, const char *path) {
-    char *text = test_read_file(fixture, NULL);
+    char *text = test_must_read_file(fixture, NULL);
     char *at = strstr(text, "@STYLE@");
     assert(at);
     FILE *file = fopen(path, "wb");
@@ -348,7 +349,7 @@ static void test_fast_minor(void) {
     free(out);
     assert(midi_microseconds_per_quarter("theme_fast.mid") == (60000000UL + 85) / 170);
     /* The Analyzer agrees with the plan: every planned cadence and the key are heard. */
-    char *explained = test_read_file("theme_fast_explain.txt", NULL);
+    char *explained = test_must_read_file("theme_fast_explain.txt", NULL);
     const char *check = strstr(explained, "analyzer check: ");
     assert(check);
     unsigned agreed = 0;
@@ -457,7 +458,7 @@ static void test_chords(void) {
     write_chords("[{\"bar\": 3, \"text\": \"V\"}]", "theme_chords_cadence.json");
     out = theme_output("theme_chords_cadence.json --seed 1");
     free(out);
-    char *cadence = test_read_file("theme_chords_cadence.json", NULL);
+    char *cadence = test_must_read_file("theme_chords_cadence.json", NULL);
     char *hc = strstr(cadence, "\"cadence\": \"HC\"");
     assert(hc);
     FILE *file = fopen("theme_chords_contradiction.json", "wb");
@@ -509,7 +510,7 @@ static void test_tone_roles(void) {
         plan_destroy(plan);
     }
     /* The plan keeps the tones of the motive in its material node. */
-    char *plan_text = test_read_file("theme_tones_plan.json", NULL);
+    char *plan_text = test_must_read_file("theme_tones_plan.json", NULL);
     assert(strstr(plan_text, "\"kind\": \"motive_tones\"") != NULL);
     free(plan_text);
 
@@ -518,7 +519,7 @@ static void test_tone_roles(void) {
     write_changed(THEME("one-motive.json"), "\"features\": []", "\"features\": [], \"tone_overrides\": {\"2\": \"passing\"}",
                   "theme_tones_override.json");
     free(theme_output("theme_tones_override.json --seed 1 --out theme_tones_override_plan.json"));
-    plan_text = test_read_file("theme_tones_override_plan.json", NULL);
+    plan_text = test_must_read_file("theme_tones_override_plan.json", NULL);
     assert(strstr(plan_text, "\"passing\"") != NULL);
     free(plan_text);
     write_changed(THEME("one-motive.json"), "\"features\": []", "\"features\": [], \"tone_overrides\": {\"9\": \"passing\"}",
@@ -546,7 +547,7 @@ static void test_errors(void) {
     /* A contrasting slot has no idea in a sentence: the request cannot be grown. */
     file = fopen("theme_unused.json", "wb");
     assert(file);
-    char *text = test_read_file(THEME("period-contrast.json"), NULL);
+    char *text = test_must_read_file(THEME("period-contrast.json"), NULL);
     char *into = strstr(text, "\"period\"");
     assert(into);
     fwrite(text, 1, (size_t)(into - text), file);

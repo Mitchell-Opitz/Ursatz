@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The `grow` command, run as a process: each form and a hybrid from the D minor motive fixture, the files it writes
@@ -38,17 +39,17 @@ static int run(const char *arguments, const char *out_file, const char *err_file
 static char *output_of(const char *arguments) {
     int status = run(arguments, "grow_cli_out.txt", "grow_cli_err.txt");
     if (status != 0) {
-        char *err = test_read_file("grow_cli_err.txt", NULL);
+        char *err = test_must_read_file("grow_cli_err.txt", NULL);
         fprintf(stderr, "'%s' exited %d: %s\n", arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return test_read_file("grow_cli_out.txt", NULL);
+    return test_must_read_file("grow_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     int got = run(arguments, "grow_cli_out.txt", "grow_cli_err.txt");
-    char *err = test_read_file("grow_cli_err.txt", NULL);
+    char *err = test_must_read_file("grow_cli_err.txt", NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
     }
@@ -56,13 +57,6 @@ static void expect_failure(const char *arguments, int status, const char *messag
     assert(strstr(err, message) != NULL);
     assert(strncmp(err, "Error: ", 7) == 0);
     free(err);
-}
-
-static void write_text(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file);
-    fputs(text, file);
-    fclose(file);
 }
 
 /* The seed printed for the first theme. */
@@ -146,7 +140,7 @@ static void test_four_bars_and_cadences(void) {
     char *out = output_of(BASE " --into sentence --bars 4 --cadence IAC --seed 2");
     assert(strstr(out, "4 bars, cadence IAC") != NULL && strstr(out, "theme (section) bars 0-4") != NULL);
     free(out);
-    write_text("grow_cli_waltz.txt", "F4:q A4:e G4:e E4:q\n");
+    test_write_text("grow_cli_waltz.txt", "F4:q A4:e G4:e E4:q\n");
     out = output_of("grow_cli_waltz.txt --into period --key \"D minor\" --meter 3/4 --seed 4");
     assert(strstr(out, "key D minor, meter 3/4") != NULL);
     free(out);
@@ -212,12 +206,8 @@ static void test_files(void) {
     plan_destroy(plan);
 
     /* The melody and the bass, eight bars of them: nothing of the source material. */
-    char *midi_bytes = test_read_file("grow_cli.mid", NULL);
-    FILE *file = fopen("grow_cli.mid", "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    size_t size = (size_t)ftell(file);
-    fclose(file);
+    size_t size = 0;
+    char *midi_bytes = test_must_read_file("grow_cli.mid", &size);
     NoteEvent **events = NULL;
     PitchNumericValue **values = NULL;
     size_t count = 0;
@@ -265,9 +255,9 @@ static void test_suggest(void) {
         PlanJsonError error;
         assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
         plan_destroy(plan);
-        plans[k - 1] = test_read_file(path, NULL);
+        plans[k - 1] = test_must_read_file(path, NULL);
         snprintf(path, sizeof(path), "grow_cli_s-%d.mid", k);
-        free(test_read_file(path, NULL));
+        free(test_must_read_file(path, NULL));
     }
     assert(strcmp(plans[0], plans[1]) != 0 && strcmp(plans[1], plans[2]) != 0 && strcmp(plans[0], plans[2]) != 0);
     for (int k = 0; k < 3; k++) {
@@ -323,15 +313,15 @@ static void test_bad_arguments(void) {
 
 static void test_cannot_be_satisfied(void) {
     /* A motive longer than the basic idea (two bars of eight). */
-    write_text("grow_cli_long.txt", "D4:w D4:w D4:q\n");
+    test_write_text("grow_cli_long.txt", "D4:w D4:w D4:q\n");
     expect_failure("grow_cli_long.txt --into sentence --key \"D minor\" --meter 4/4", 2, "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent");
     /* One note is not a motive to grow a theme from. */
-    write_text("grow_cli_single.txt", "D4:q\n");
+    test_write_text("grow_cli_single.txt", "D4:q\n");
     expect_failure("grow_cli_single.txt --into sentence --key \"D minor\" --meter 4/4", 2, "the basic motif needs at least two notes");
     /* An input that cannot be loaded as a motive. */
     expect_failure(FIXTURE("no_such_file.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "cannot load");
     expect_failure(FIXTURE("motive_polyphonic.mid") " --into sentence --key \"D minor\" --meter 4/4", 2, "polyphonic");
-    write_text("grow_cli_long34.txt", "D4:w D4:w D4:q\n");
+    test_write_text("grow_cli_long34.txt", "D4:w D4:w D4:q\n");
     expect_failure("grow_cli_long34.txt --into sentence --key \"D minor\" --meter 3/4", 2, "the motif is 3 bars; a 8-bar theme takes a motif of up to 2 bars, or of 4 for its presentation or antecedent");
     /* An antecedent cannot end more strongly than the theme. */
     expect_failure(BASE " --into period --first-cadence IAC --cadence IAC", 2, "an antecedent ends in a cadence weaker than the theme's");
@@ -435,7 +425,7 @@ static void test_mode(void) {
 
 static void test_help(void) {
     assert(run("--help", "grow_cli_out.txt", "grow_cli_err.txt") == 0);
-    char *out = test_read_file("grow_cli_out.txt", NULL);
+    char *out = test_must_read_file("grow_cli_out.txt", NULL);
     assert(strstr(out, "--into") != NULL && strstr(out, "--hybrid") != NULL && strstr(out, "--suggest") != NULL &&
            strstr(out, "--first-cadence") != NULL && strstr(out, "--accompaniment") != NULL &&
            strstr(out, "--texture") != NULL);

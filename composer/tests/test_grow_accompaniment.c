@@ -11,6 +11,7 @@
 
 #include "accompaniment_check.h"
 #include "texture_heard.h"
+#include "support/test_composer.h"
 
 /*
  * Themes grown with an accompaniment, seeds 1 to 10, in C major 4/4 and D minor 3/4, for each pattern. Run with no
@@ -70,16 +71,6 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     return request;
 }
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 static GrowResult grow(const GrowRequest *request, unsigned long seed, PiecePlan **plan, GrowOutcome *outcome) {
     GrowConfig config;
     memset(&config, 0, sizeof(config));
@@ -126,7 +117,7 @@ static void test_hard_rules(void) {
                 assert(result == GROW_OK && !outcome.stuck);
                 assert(outcome.records[GROW_STAGE_TEXTURE] != NULL);
 
-                NodeId theme = find_node(plan, "theme");
+                NodeId theme = test_find_node(plan, "theme");
                 PlanSpan span = plan_node_span(plan, theme);
                 AnalysisKey key = plan_key_of_pitch_class(SCENARIOS[s].tonic, SCENARIOS[s].mode);
                 checked += check_accompaniment(plan, span, key, PLAN_ACCOMPANIMENT_DEFAULT_LOW,
@@ -206,7 +197,7 @@ static void test_bad_requests(void) {
     assert(grow(&request, 1, &plan, &outcome) == GROW_OK);
     size_t notes[3];
     size_t spans[3];
-    voice_notes(plan, plan_node_span(plan, find_node(plan, "theme")), notes, spans);
+    voice_notes(plan, plan_node_span(plan, test_find_node(plan, "theme")), notes, spans);
     assert(spans[0] == 0 && spans[1] == 0 && spans[2] == 0);
     assert(outcome.records[GROW_STAGE_TEXTURE] != NULL && outcome.records[GROW_STAGE_TEXTURE]->step_count == 0);
     grow_outcome_destroy(&outcome);
@@ -253,9 +244,9 @@ static void test_accompaniment_motive(void) {
                         grow_stage_name(outcome.stuck_stage));
             }
             assert(result == GROW_OK && !outcome.stuck && outcome.records[GROW_STAGE_TEXTURE] != NULL);
-            assert(find_node(plan, "acc") != PLAN_NODE_NONE);
+            assert(test_find_node(plan, "acc") != PLAN_NODE_NONE);
 
-            NodeId theme = find_node(plan, "theme");
+            NodeId theme = test_find_node(plan, "theme");
             PlanSpan span = plan_node_span(plan, theme);
             AnalysisKey key = plan_key_of_pitch_class(SCENARIOS[s].tonic, SCENARIOS[s].mode);
             assert(check_accompaniment(plan, span, key, PLAN_ACCOMPANIMENT_DEFAULT_LOW, PLAN_ACCOMPANIMENT_DEFAULT_HIGH) > 0);
@@ -294,7 +285,7 @@ static void test_accompaniment_motive_requests(void) {
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
     request.accompaniment_motive = &accompaniment;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK && plan);
-    assert(find_node(plan, "acc") != PLAN_NODE_NONE && find_node(plan, "m0") != PLAN_NODE_NONE);
+    assert(test_find_node(plan, "acc") != PLAN_NODE_NONE && test_find_node(plan, "m0") != PLAN_NODE_NONE);
     plan_destroy(plan);
 
     /* One longer than a bar, and one together with a voicing, are refused. */
@@ -323,7 +314,7 @@ static int test_heard(void) {
             PiecePlan *plan = NULL;
             GrowOutcome outcome;
             assert(grow(&request, seed, &plan, &outcome) == GROW_OK);
-            NodeId theme = find_node(plan, "theme");
+            NodeId theme = test_find_node(plan, "theme");
             PlanMeter meter = {SCENARIOS[s].beats, SCENARIOS[s].unit, 0};
             TextureHeard heard =
                 texture_heard(plan, plan_node_span(plan, theme), meter, STANDARD_TEXTURE_MELODY_AND_ACCOMPANIMENT);

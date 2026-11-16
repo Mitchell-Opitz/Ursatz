@@ -7,6 +7,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/theme_shape.h>
+#include "support/test_composer.h"
 
 /*
  * Uneven themes (R-468, R-471, B2 of P47): a theme of 3 to 16 bars whose ideas are any whole bars, given by a
@@ -107,16 +108,6 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     return request;
 }
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 /* The length of a span in bars of the scenario's meter; the span must be whole bars. */
 static size_t whole_bars(Rational time, const Scenario *scenario) {
     Rational bar;
@@ -128,17 +119,17 @@ static size_t whole_bars(Rational time, const Scenario *scenario) {
 
 /* The section is as long as all the ideas and each idea node lies where the construction puts it, in whole bars. */
 static void check_spans(const PiecePlan *plan, const Scenario *scenario, const Case *item) {
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
     assert(whole_bars(plan_node_span(plan, theme).length, scenario) == bars_of(item));
     size_t at = 0;
     size_t found = 0;
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         if (item->ideas[idea] == 0) {
-            assert(find_node(plan, theme_shape_idea_name((GrowIdea)idea)) == PLAN_NODE_NONE);
+            assert(test_find_node(plan, theme_shape_idea_name((GrowIdea)idea)) == PLAN_NODE_NONE);
             continue;
         }
-        NodeId node = find_node(plan, theme_shape_idea_name((GrowIdea)idea));
+        NodeId node = test_find_node(plan, theme_shape_idea_name((GrowIdea)idea));
         assert(node != PLAN_NODE_NONE && plan_node_kind(plan, node) == PLAN_NODE_IDEA);
         PlanSpan span = plan_node_span(plan, node);
         if (whole_bars(span.start, scenario) != at || whole_bars(span.length, scenario) != item->ideas[idea]) {
@@ -157,7 +148,7 @@ static void check_spans(const PiecePlan *plan, const Scenario *scenario, const C
         GrowIdea idea = CONTRASTS[k];
         char name[32];
         snprintf(name, sizeof(name), "shortened for m%d", idea == GROW_IDEA_CONTRASTING ? 1 : 3);
-        NodeId node = find_node(plan, name);
+        NodeId node = test_find_node(plan, name);
         if (item->long_motive && item->ideas[idea] != 0 && item->ideas[idea] < item->ideas[GROW_IDEA_BASIC]) {
             assert(node != PLAN_NODE_NONE);
             assert(whole_bars(plan_node_span(plan, node).length, scenario) <= item->ideas[idea]);
@@ -169,7 +160,7 @@ static void check_spans(const PiecePlan *plan, const Scenario *scenario, const C
 
 /* The plan carries the construction as given. */
 static void check_constraint(const PiecePlan *plan, const PlanConstruction *wanted) {
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
     assert(constraint);
     assert(memcmp(constraint->params.construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
     assert(constraint->params.construction.extension_count == 0);
@@ -310,7 +301,7 @@ static void test_round_trip(void) {
         assert(plan_from_json(text, &again, &error) == PLAN_OK);
         char *text_again = plan_to_json(again, &error);
         assert(text_again && strcmp(text, text_again) == 0);
-        const PlanConstraint *read = plan_node_find_constraint(again, find_node(again, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+        const PlanConstraint *read = plan_node_find_constraint(again, test_find_node(again, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
         assert(read && memcmp(read->params.construction.idea_bars, construction.idea_bars, sizeof(construction.idea_bars)) == 0);
         assert(read->params.construction.reason == construction.reason);
         free(text);
@@ -325,7 +316,7 @@ static void test_round_trip(void) {
     PlanConstruction construction = construction_of(&CASES[3]);
     GrowRequest request = make_request(scenario, &motive, &CASES[3], &construction);
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     PlanConstraint extended = {PLAN_CONSTRAINT_CONSTRUCTION, {0}};
     extended.params.construction = construction;
     extended.params.construction.extension_count = 2;
@@ -334,7 +325,7 @@ static void test_round_trip(void) {
     extended.params.construction.reason = PLAN_CONSTRUCTION_FROM_LENGTH;
     PiecePlan *scratch = NULL;
     assert(grow_build_plan_checked(&request, &scratch, NULL) == GROW_OK);
-    NodeId scratch_theme = find_node(scratch, "theme");
+    NodeId scratch_theme = test_find_node(scratch, "theme");
     assert(plan_node_remove_constraint(scratch, scratch_theme, plan_node_constraint_count(scratch, scratch_theme) - 1) == PLAN_OK);
     assert(plan_node_add_constraint(scratch, scratch_theme, &extended) == PLAN_OK);
     PlanJsonError error;

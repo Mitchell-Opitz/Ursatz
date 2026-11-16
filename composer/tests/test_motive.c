@@ -97,11 +97,6 @@ static void expect_json_error(const char *text, const PlanMeter *meter, MotiveRe
     assert(error.message[0] != '\0');
 }
 
-static MotiveResult load_fixture(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
-                                 MotiveError *error) {
-    return test_load_motive_file(path, format, options, out, error);
-}
-
 /* ------------------------------------------------------- the four formats */
 
 /* A MusicXML note keeps the spelling it is written with (C sharp and D flat are one pitch); other formats write none. */
@@ -110,9 +105,9 @@ static void test_musicxml_keeps_spelling(void) {
     Motive motive;
     Motive midi;
     MotiveError error;
-    assert(load_fixture(FIXTURE("motive_spelled.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_spelled.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) == MOTIVE_OK);
     assert(motive.note_count == 3 && motive.notes[0].pitch == 61 && motive.notes[1].pitch == 61);
-    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_AUTO, NULL, &midi, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_AUTO, NULL, &midi, &error) == MOTIVE_OK);
 }
 
 static void test_same_motive_from_each_format(void) {
@@ -122,10 +117,10 @@ static void test_same_motive_from_each_format(void) {
     Motive text;
     Motive json;
     MotiveError error;
-    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_AUTO, NULL, &midi, &error) == MOTIVE_OK);
-    assert(load_fixture(FIXTURE("motive_d_minor.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &musicxml, &error) == MOTIVE_OK);
-    assert(load_fixture(FIXTURE("motive_d_minor.txt"), MOTIVE_FORMAT_AUTO, &for_text, &text, &error) == MOTIVE_OK);
-    assert(load_fixture(FIXTURE("motive_d_minor.json"), MOTIVE_FORMAT_AUTO, NULL, &json, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_AUTO, NULL, &midi, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &musicxml, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.txt"), MOTIVE_FORMAT_AUTO, &for_text, &text, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.json"), MOTIVE_FORMAT_AUTO, NULL, &json, &error) == MOTIVE_OK);
 
     /* D4 quarter, F4 eighth, A4 eighth, D5 half, in 4/4, D minor. */
     assert(midi.note_count == 4);
@@ -172,21 +167,21 @@ static void test_options(void) {
     MotiveOptions bossa = options_with(NULL, &C_MAJOR);
     Motive motive;
     MotiveError error;
-    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &bossa, &motive, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &bossa, &motive, &error) == MOTIVE_OK);
     assert(motive.tonic_pc == 0 && !motive.minor);
     assert(motive.key_source == MOTIVE_SKETCH_KEY_GIVEN);
 
     /* The same meter as the file's is fine; a different one changes the bars and is refused. */
     MotiveOptions same = options_with(&FOUR_FOUR, NULL);
-    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &same, &motive, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &same, &motive, &error) == MOTIVE_OK);
     MotiveOptions different = options_with(&THREE_FOUR, NULL);
-    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &different, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &different, &motive, &error) ==
            MOTIVE_ERR_METER);
     assert(strcmp(error.location, "meter") == 0);
     assert(strstr(error.message, "3/4") != NULL && strstr(error.message, "4/4") != NULL);
-    assert(load_fixture(FIXTURE("motive_d_minor.musicxml"), MOTIVE_FORMAT_MUSICXML, &different, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.musicxml"), MOTIVE_FORMAT_MUSICXML, &different, &motive, &error) ==
            MOTIVE_ERR_METER);
-    assert(load_fixture(FIXTURE("motive_d_minor.json"), MOTIVE_FORMAT_JSON, &different, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.json"), MOTIVE_FORMAT_JSON, &different, &motive, &error) ==
            MOTIVE_ERR_METER);
 
     /* A note list has no meter of its own. */
@@ -451,7 +446,7 @@ static void test_json_round_trip(void) {
     /* The fixture is what the writer writes, apart from layout. */
     Motive fixture;
     MotiveError error;
-    assert(load_fixture(FIXTURE("motive_d_minor.json"), MOTIVE_FORMAT_JSON, NULL, &fixture, &error) == MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.json"), MOTIVE_FORMAT_JSON, NULL, &fixture, &error) == MOTIVE_OK);
     assert(motive_equal(&fixture, &motives[0]));
 }
 
@@ -532,32 +527,32 @@ static void test_file_errors(void) {
     MotiveError error;
 
     /* Notes sounding together are polyphony, whatever the format. */
-    assert(load_fixture(FIXTURE("motive_polyphonic.mid"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_polyphonic.mid"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
            MOTIVE_ERR_POLYPHONIC);
     assert(strstr(error.location, "note 2") != NULL && strstr(error.message, "one voice") != NULL);
-    assert(load_fixture(FIXTURE("motive_polyphonic.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_polyphonic.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
            MOTIVE_ERR_POLYPHONIC);
     assert(strstr(error.location, "note 2") != NULL);
 
     /* So is more than one part: none is chosen for the user and none dropped. */
-    assert(load_fixture(FIXTURE("motive_two_parts.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_two_parts.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
            MOTIVE_ERR_POLYPHONIC);
     assert(strstr(error.message, "more than one part") != NULL);
 
     /* A file the importer refuses. */
-    assert(load_fixture(FIXTURE("motive_truncated.mid"), MOTIVE_FORMAT_MIDI, NULL, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_truncated.mid"), MOTIVE_FORMAT_MIDI, NULL, &motive, &error) ==
            MOTIVE_ERR_IMPORT);
     assert(strcmp(error.location, "midi") == 0 && error.message[0] != '\0');
-    assert(load_fixture(FIXTURE("motive_malformed.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_malformed.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) ==
            MOTIVE_ERR_IMPORT);
     assert(strcmp(error.location, "musicxml") == 0 && error.message[0] != '\0');
 
     /* A format the bytes are not. */
-    assert(load_fixture(FIXTURE("motive_d_minor.txt"), MOTIVE_FORMAT_MIDI, NULL, &motive, &error) == MOTIVE_ERR_IMPORT);
-    assert(load_fixture(FIXTURE("motive_d_minor.txt"), MOTIVE_FORMAT_MUSICXML, NULL, &motive, &error) ==
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.txt"), MOTIVE_FORMAT_MIDI, NULL, &motive, &error) == MOTIVE_ERR_IMPORT);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.txt"), MOTIVE_FORMAT_MUSICXML, NULL, &motive, &error) ==
            MOTIVE_ERR_IMPORT);
-    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_JSON, NULL, &motive, &error) != MOTIVE_OK);
-    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_NOTES, NULL, &motive, &error) != MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_JSON, NULL, &motive, &error) != MOTIVE_OK);
+    assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_NOTES, NULL, &motive, &error) != MOTIVE_OK);
 
     /* Nothing crashes on any bytes in any format, and nothing is accepted that is not a motive. */
     static const char *const GARBAGE[] = {"", "\xFF\xFF\xFF", "MThd", "MThd\0\0\0\6\0\0\0\1\1\340MTrk\0\0\0\4\0\0\0\0",

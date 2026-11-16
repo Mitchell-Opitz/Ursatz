@@ -9,6 +9,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -45,7 +46,7 @@ static char *replace(char *text, const char *placeholder, const char *value) {
 
 /* The plan of the one-motive theme at seed 1: what the snapshot cases give a theme fill. */
 static char *theme_plan(void) {
-    char *text = test_read_file(FIXTURE("theme/one-motive.json"), NULL);
+    char *text = test_must_read_file(FIXTURE("theme/one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request && cJSON_AddNumberToObject(request, "seed", 1));
@@ -64,7 +65,7 @@ static char *theme_plan(void) {
 static cJSON *piece_fixture(const char *name, const char *plan) {
     char path[256];
     snprintf(path, sizeof path, FIXTURE("piece/%s"), name);
-    char *text = replace(test_read_file(path, NULL), "@STYLE@", FIXTURE("style-fast-minor.json"));
+    char *text = replace(test_must_read_file(path, NULL), "@STYLE@", FIXTURE("style-fast-minor.json"));
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request);
@@ -108,15 +109,15 @@ static char *print(cJSON *request) {
 static void write_pair(const char *kind, const char *tag, const char *request, const ComposerResponse *response) {
     char path[160];
     snprintf(path, sizeof path, "api_%s_request_%s.json", kind, tag);
-    test_write_file(path, request);
+    test_write_text(path, request);
     snprintf(path, sizeof path, "api_%s_response_%s.json", kind, tag);
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 /* --- comparisons ---------------------------------------------------------------------------------- */
 
 static cJSON *load_json(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     cJSON *json = cJSON_Parse(text);
     assert(json);
     free(text);
@@ -203,7 +204,7 @@ static void expect_document(const char *json, const char *snapshot) {
 
 static void expect_file(const unsigned char *data, size_t size, const char *snapshot) {
     size_t expected_size = 0;
-    char *expected = test_read_file(snapshot, &expected_size);
+    char *expected = test_must_read_file(snapshot, &expected_size);
     assert(data && size == expected_size && memcmp(data, expected, size) == 0);
     free(expected);
 }
@@ -315,7 +316,7 @@ static void test_variations(char *plan) {
         snprintf(path, sizeof path, SNAPSHOT("piece-variations.variation-%d.json"), index);
         expect_plan(cJSON_GetObjectItemCaseSensitive(loop, "plan"), path);
         snprintf(path, sizeof path, SNAPSHOT("piece-variations.variation-%d.musicxml"), index);
-        char *musicxml = test_read_file(path, NULL);
+        char *musicxml = test_must_read_file(path, NULL);
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(item, "musicxml")->valuestring, musicxml) == 0);
         free(musicxml);
         /* The MIDI file of a variation: the export entry with the loop markers of the entry. */
@@ -734,7 +735,7 @@ static cJSON *melody_between(const char *plan_json, long start, long end) {
 static void test_regenerate_theme_harmony(void) {
     static const unsigned theme_seeds[2] = {1, 6};
     for (size_t t = 0; t < 2; t++) {
-        char *text = test_read_file(FIXTURE("theme/c-minor-arpeggio.json"), NULL);
+        char *text = test_must_read_file(FIXTURE("theme/c-minor-arpeggio.json"), NULL);
         cJSON *theme_request = cJSON_Parse(text);
         free(text);
         assert(theme_request && cJSON_AddNumberToObject(theme_request, "seed", theme_seeds[t]));
@@ -1404,7 +1405,7 @@ static void test_any_form(const char *plan) {
 int main(int argc, char **argv) {
     bool quick = argc > 1 && strcmp(argv[1], "quick") == 0;
     /* The quick run takes the plan of the theme snapshot: composing one hears it. */
-    char *plan = quick ? test_read_file(SNAPSHOT("theme-one-motive.plan.json"), NULL) : theme_plan();
+    char *plan = quick ? test_must_read_file(SNAPSHOT("theme-one-motive.plan.json"), NULL) : theme_plan();
     if (quick) {
         /* The edits need a loop plan: the theme plan stands in, which the refused requests never read. */
         loop_plan_of_theme_fill = strdup(plan);

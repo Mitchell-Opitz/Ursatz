@@ -19,15 +19,21 @@
 
 /*
  * File readers the tests use over the library's text entries: the library reads no file (the Composer's callers hand it
- * text). test_read_file asserts when the file cannot be read.
+ * text). They read with test_must_read_file, which aborts when the file cannot be read.
  */
 
-/* The plan in the JSON file at path: test_read_file, then plan_from_json. */
+/* The plan in the JSON file at path: test_must_read_file, then plan_from_json. */
 PlanResult test_read_plan_file(const char *path, PiecePlan **out, PlanJsonError *error);
 
-/* The motive in the file at path: test_read_file, then motive_load. */
+/* The motive in the file at path: test_must_read_file, then motive_load. */
 MotiveResult test_load_motive_file(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
                                    MotiveError *error);
+
+/* The first node of the plan (in id order) with this name, or PLAN_NODE_NONE. */
+NodeId test_find_node(const PiecePlan *plan, const char *name);
+
+/* The first node under `node` (any depth, depth first) with this name, or PLAN_NODE_NONE. */
+NodeId test_find_named(const PiecePlan *plan, NodeId node, const char *name);
 
 /*
  * The hearing checks over a plan, each making one hearing of its own (hearing_create) and calling the check over it

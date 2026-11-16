@@ -16,6 +16,7 @@
 #include <ursatz_composer/style.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * Style blending (style.h, docs/style.md): two style models blended with a weight per dimension.
@@ -450,7 +451,7 @@ static int run(const char *arguments, const char *out_file) {
 }
 
 static bool contains(const char *path, const char *needle) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     bool found = strstr(text, needle) != NULL;
     free(text);
     return found;
@@ -476,19 +477,19 @@ static int test_cli(void) {
     /* fill reads the blend from the plan; the plan survives a round trip through the JSON */
     assert(run("fill blend_test_plan.json --seed 1 --format json", "blend_test_out.txt") == 0);
     assert(contains("blend_test_out.txt", "\"style_distance\":{\"harmony\":"));
-    char *planned = test_read_file("blend_test_out.txt", NULL);
+    char *planned = test_must_read_file("blend_test_out.txt", NULL);
     /* --style alone drops the plan's blend; --blend overrides it; --blend-weights overrides its weights */
     snprintf(arguments, sizeof(arguments), "fill blend_test_plan.json --seed 1 --format json --style %s", CHORALES);
     assert(run(arguments, "blend_test_out.txt") == 0);
-    char *dropped = test_read_file("blend_test_out.txt", NULL);
+    char *dropped = test_must_read_file("blend_test_out.txt", NULL);
     assert(strcmp(planned, dropped) != 0);
     assert(run("fill blend_test_plan.json --seed 1 --format json --blend-weight 0", "blend_test_out.txt") == 0);
-    char *weighted = test_read_file("blend_test_out.txt", NULL);
+    char *weighted = test_must_read_file("blend_test_out.txt", NULL);
     assert(strcmp(planned, weighted) != 0);
     snprintf(arguments, sizeof(arguments), "fill blend_test_plan.json --seed 1 --format json --blend %s --blend-weights "
                                            "harmony=3/4,rhythm=1/4,melody=1/4,form=1", SONATINAS);
     assert(run(arguments, "blend_test_out.txt") == 0);
-    char *same = test_read_file("blend_test_out.txt", NULL);
+    char *same = test_must_read_file("blend_test_out.txt", NULL);
     assert(strcmp(planned, same) == 0);
     free(planned);
     free(dropped);

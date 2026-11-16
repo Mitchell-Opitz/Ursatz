@@ -16,6 +16,7 @@
 
 #include "api/api_piece.h"
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The plans every form template makes (R-417): each template at each size in C major 4/4 and A minor 3/4, with an
@@ -280,7 +281,7 @@ static char *replace(char *text, const char *placeholder, const char *value) {
 
 /* The plan of the one-motive theme at seed 1: what a theme fill is given. */
 static char *theme_plan(void) {
-    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/theme/one-motive.json", NULL);
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/theme/one-motive.json", NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request && cJSON_AddNumberToObject(request, "seed", 1));
@@ -299,7 +300,7 @@ static char *theme_plan(void) {
 static uint64_t piece_hash(const char *name, const char *theme) {
     char path[512];
     snprintf(path, sizeof(path), "%s/piece/%s", COMPOSER_FIXTURE_DIR, name);
-    char *text = replace(test_read_file(path, NULL), "@STYLE@", STYLE_FILE);
+    char *text = replace(test_must_read_file(path, NULL), "@STYLE@", STYLE_FILE);
     cJSON *root = cJSON_Parse(text);
     free(text);
     assert(root);

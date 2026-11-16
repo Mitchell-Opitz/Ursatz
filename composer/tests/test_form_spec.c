@@ -13,6 +13,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "ursatz_test.h"
 
 /*
  * The form documents (R-416, docs/forms.md).
@@ -801,8 +802,6 @@ static void test_refusals(void) {
 
 /* ------------------------------------------------------------- meters and tempo (R-487) */
 
-static char *read_file(const char *path);
-
 static void test_meters_and_tempo(void) {
     char sizes[512];
     char text[1024];
@@ -872,7 +871,7 @@ static void test_meters_and_tempo(void) {
 static int test_meters(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/meter-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
@@ -1101,23 +1100,6 @@ static void test_sizes(void) {
 
 #define CUSTOM_SEEDS 10
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "cannot read %s\n", path);
-        exit(2);
-    }
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    size_t read = text ? fread(text, 1, (size_t)length, file) : 0;
-    assert(text && read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 /* Composes the form's piece with the seed; the plan is returned (the caller destroys it), the result in *ran. */
 static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
     PieceRequest request;
@@ -1154,7 +1136,7 @@ static int test_uneven_form(void);
 static int test_custom(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/bar-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
@@ -1205,7 +1187,7 @@ static int test_custom(void) {
 
     /* The same seed with the form naming one check: what is written does not change, the returns are not heard. */
     FormSpec *sections_only = NULL;
-    char *again_text = read_file(path);
+    char *again_text = test_must_read_file(path, NULL);
     FormSpecResult parsed = form_spec_parse(again_text, &sections_only, NULL);
     assert(parsed == FORM_SPEC_OK);
     free(again_text);
@@ -1236,7 +1218,7 @@ static int test_custom(void) {
 static int test_uneven_form(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/uneven-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
@@ -1472,7 +1454,7 @@ static void check_pedal_half(const PiecePlan *plan, NodeId section) {
 static int test_pedal_form(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/pedal-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
@@ -1601,7 +1583,7 @@ static void test_figure_reader(void) {
     FormSpec *form = NULL;
     FormSpecError error;
     snprintf(path, sizeof(path), "%s/forms/figure-form.json", COMPOSER_FIXTURE_DIR);
-    char *fixture = read_file(path);
+    char *fixture = test_must_read_file(path, NULL);
     assert(form_spec_parse(fixture, &form, &error) == FORM_SPEC_OK && form);
     free(fixture);
     assert(strcmp(form->name, "figure-form") == 0 && form->size_count == 1 && form->sizes[0].bars == 32 &&
@@ -1680,7 +1662,7 @@ static void test_figure_reader(void) {
 
     /* The parallel mode (R-499): tests/fixtures/forms/parallel-form.json; each refusal at its path. */
     snprintf(path, sizeof(path), "%s/forms/parallel-form.json", COMPOSER_FIXTURE_DIR);
-    fixture = read_file(path);
+    fixture = test_must_read_file(path, NULL);
     assert(form_spec_parse(fixture, &form, &error) == FORM_SPEC_OK && form->sizes[0].section_count == 3);
     free(fixture);
     assert(form->sizes[0].sections[1].parallel && form->sizes[0].sections[1].figure.reharmonize &&
@@ -2073,7 +2055,7 @@ static void test_parts_reader(void) {
     /* The form of the four parts: 48 bars in C major 4/4; T, S, R and K carry their function, R and K have no archetype. */
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-    char *fixture = read_file(path);
+    char *fixture = test_must_read_file(path, NULL);
     assert(form_spec_parse(fixture, &form, &error) == FORM_SPEC_OK && form);
     free(fixture);
     assert(strcmp(form->name, "parts-of-forms") == 0 && form->size_count == 1 && form->sizes[0].bars == 48 &&
@@ -2159,7 +2141,7 @@ static void lead_document(char *out, size_t cap, const char *a, const char *b, c
 static void test_repeats(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/forms/repeat-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     const char *original = "\"repeats\": [[\"A\"], [\"B\", \"A'\"]]";
     FormSpec *form = NULL;
     FormSpecError error;
@@ -2214,7 +2196,7 @@ static void test_repeats(void) {
 static void test_parts(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/forms/parts-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form_spec_performed(form) && form->part_count == 3);
@@ -2292,7 +2274,7 @@ static void test_parts(void) {
 static void test_part_bars(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/forms/part-bars-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->part_count == 3 && form->size_count == 2);
@@ -2609,7 +2591,7 @@ static void lead_sometimes(const char *text) {
 static int test_leads(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/lead-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
@@ -2659,7 +2641,7 @@ static AnalysisKey key_at_start(const PiecePlan *plan, NodeId section) {
 static int test_modulates(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/modulating-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError error;
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {

@@ -8,6 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -28,16 +29,16 @@ static void write_pair(const char *kind, const char *tag, const char *request, c
     char path[160];
     if (request) {
         snprintf(path, sizeof path, "api_%s_request_%s.json", kind, tag);
-        test_write_file(path, request);
+        test_write_text(path, request);
     }
     snprintf(path, sizeof path, "api_%s_response_%s.json", kind, tag);
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 static void expect_snapshot(const ComposerResponse *response, const char *snapshot) {
     char path[256];
     snprintf(path, sizeof path, COMPOSER_SNAPSHOT_DIR "/%s", snapshot);
-    char *expected = test_read_file(path, NULL);
+    char *expected = test_must_read_file(path, NULL);
     cJSON *actual_json = cJSON_Parse(response->json);
     cJSON *expected_json = cJSON_Parse(expected);
     assert(actual_json && expected_json);
@@ -53,7 +54,7 @@ static void expect_snapshot(const ComposerResponse *response, const char *snapsh
 /* The request text: the members of options (a JSON object text) and, for each named part, "input" with the file's text. */
 static cJSON *input_object(const char *file, const char *format) {
     cJSON *part = cJSON_CreateObject();
-    char *text = test_read_file(file, NULL);
+    char *text = test_must_read_file(file, NULL);
     cJSON *input = cJSON_AddObjectToObject(part, "input");
     assert(input && cJSON_AddStringToObject(input, "text", text));
     if (format) {

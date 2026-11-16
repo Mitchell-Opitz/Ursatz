@@ -6,6 +6,7 @@
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * The development setting (B3 of P34, ch. XI): the 2-bar two-segment motif of test_grow_segment_fragments in an 8-bar
@@ -17,16 +18,6 @@
 
 #define SEEDS 10
 #define MOTIF_NOTES "C4:q D4:e E4:e G4:q E4:q G4:q E4:e D4:e C4:h"
-
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
 
 static Motive make_motive(void) {
     Motive motive;
@@ -73,7 +64,7 @@ static PiecePlan *grow(const Motive *motive, GrowDevelopment development, unsign
 
 static size_t written_notes(const PiecePlan *plan, const char *name, const PlanNote **notes) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
-    assert(plan_node_lane_spans(plan, find_node(plan, name), &span, 1) == 1);
+    assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *held = &plan_lane_span_payload(plan, span)->notes;
     *notes = held->notes;
     return held->note_count;
@@ -81,7 +72,7 @@ static size_t written_notes(const PiecePlan *plan, const char *name, const PlanN
 
 /* The relation the motive node's motive_ref asks for, or NULL for none. */
 static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
-    NodeId node = find_node(plan, name);
+    NodeId node = test_find_node(plan, name);
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);

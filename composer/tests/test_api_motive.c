@@ -8,6 +8,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -25,16 +26,16 @@
 static void write_pair(const char *tag, const char *request, const ComposerResponse *response) {
     char path[128];
     snprintf(path, sizeof path, "api_motive_request_%s.json", tag);
-    test_write_file(path, request);
+    test_write_text(path, request);
     snprintf(path, sizeof path, "api_motive_response_%s.json", tag);
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 /* The request: the members of options (a JSON object text) and, from the file, "input" with its format and form. */
 static char *request_with_input(const char *file, const char *format, const char *form, const char *options) {
     cJSON *request = cJSON_Parse(options);
     assert(request);
-    char *text = test_read_file(file, NULL);
+    char *text = test_must_read_file(file, NULL);
     cJSON *input = cJSON_AddObjectToObject(request, "input");
     assert(input && cJSON_AddStringToObject(input, "text", text));
     if (format) {
@@ -53,7 +54,7 @@ static char *request_with_input(const char *file, const char *format, const char
 static void expect_snapshot(const ComposerResponse *response, const char *snapshot) {
     char path[256];
     snprintf(path, sizeof path, COMPOSER_SNAPSHOT_DIR "/%s", snapshot);
-    char *expected = test_read_file(path, NULL);
+    char *expected = test_must_read_file(path, NULL);
     cJSON *actual_json = cJSON_Parse(response->json);
     cJSON *expected_json = cJSON_Parse(expected);
     assert(actual_json && expected_json);
@@ -140,7 +141,7 @@ static void test_segments(void) {
 
 static void test_midi(void) {
     size_t size = 0;
-    unsigned char *bytes = (unsigned char *)test_read_file(COMPOSER_FIXTURE_DIR "/motive_d_minor.mid", &size);
+    unsigned char *bytes = (unsigned char *)test_must_read_file(COMPOSER_FIXTURE_DIR "/motive_d_minor.mid", &size);
     ComposerResponse response;
     const char *request = "{\"meter\":\"4/4\",\"key\":\"C major\"}";
     assert(composer_api_motive_from_midi(bytes, size, request, NULL, &response) == COMPOSER_OK);
@@ -171,7 +172,7 @@ static void test_render(void) {
     assert(composer_api_motive_render(request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "motive-render.stdout.json");
     size_t size = 0;
-    char *xml = test_read_file(COMPOSER_SNAPSHOT_DIR "/motive-render.musicxml", &size);
+    char *xml = test_must_read_file(COMPOSER_SNAPSHOT_DIR "/motive-render.musicxml", &size);
     assert(response.musicxml && strlen(response.musicxml) == size && memcmp(response.musicxml, xml, size) == 0);
     assert(!response.midi && response.midi_size == 0);
     write_pair("render", request, &response);

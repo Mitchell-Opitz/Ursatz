@@ -7,9 +7,10 @@
 #include "form/form_internal.h"
 #include "motive/motive_internal.h"
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 PlanResult test_read_plan_file(const char *path, PiecePlan **out, PlanJsonError *error) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     PlanResult result = plan_from_json(text, out, error);
     free(text);
     return result;
@@ -18,10 +19,34 @@ PlanResult test_read_plan_file(const char *path, PiecePlan **out, PlanJsonError 
 MotiveResult test_load_motive_file(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
                                    MotiveError *error) {
     size_t size = 0;
-    char *data = test_read_file(path, &size);
+    char *data = test_must_read_file(path, &size);
     MotiveResult result = motive_load(data, size, format, options, out, error);
     free(data);
     return result;
+}
+
+NodeId test_find_node(const PiecePlan *plan, const char *name) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *found = plan_node_name(plan, id);
+        if (found && strcmp(found, name) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+NodeId test_find_named(const PiecePlan *plan, NodeId node, const char *name) {
+    for (size_t i = 0; i < plan_node_child_count(plan, node); i++) {
+        NodeId child = plan_node_child_at(plan, node, i);
+        if (strcmp(plan_node_name(plan, child), name) == 0) {
+            return child;
+        }
+        NodeId inner = test_find_named(plan, child, name);
+        if (inner != PLAN_NODE_NONE) {
+            return inner;
+        }
+    }
+    return PLAN_NODE_NONE;
 }
 
 FormHearResult test_form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {

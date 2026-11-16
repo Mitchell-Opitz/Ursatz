@@ -13,6 +13,8 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_support.h"
+#include "ursatz_test.h"
 
 /*
  * A plan written as JSON and read back is the same plan: tree, spans, states,
@@ -634,24 +636,11 @@ static void test_liquidation(void) {
  * byte; a plan with no figure is written as it always was; a figure missing a member, or with a root change over kept
  * harmony, is refused with its path.
  */
-static char *read_whole(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text && fread(text, 1, (size_t)length, file) == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 static void test_figure(void) {
     PlanJsonError error;
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/figure-form.json", COMPOSER_FIXTURE_DIR);
-    char *document = read_whole(path);
+    char *document = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError form_error;
     assert(form_spec_parse(document, &form, &form_error) == FORM_SPEC_OK && form);
@@ -753,7 +742,7 @@ static void test_section_function(void) {
     PlanJsonError error;
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-    char *document = read_whole(path);
+    char *document = test_must_read_file(path, NULL);
     FormSpec *form = NULL;
     FormSpecError form_error;
     assert(form_spec_parse(document, &form, &form_error) == FORM_SPEC_OK && form);
@@ -1365,19 +1354,6 @@ static void test_malformed_input(void) {
 
 /* ------------------------------------------------------------ format versions 1 and 2 */
 
-static char *read_all(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file != NULL);
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)size + 1);
-    assert(text != NULL && fread(text, 1, (size_t)size, file) == (size_t)size);
-    text[size] = '\0';
-    fclose(file);
-    return text;
-}
-
 /* The MIDI file of the plan, or NULL when it cannot be rendered (a plan with unwritten lanes). */
 static unsigned char *midi_of(const PiecePlan *plan, size_t *size) {
     RenderedPlan rendered;
@@ -1392,17 +1368,12 @@ static unsigned char *midi_of(const PiecePlan *plan, size_t *size) {
     return data;
 }
 
-static void write_text(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file != NULL && fputs(text, file) >= 0 && fclose(file) == 0);
-}
-
 /*
  * A plan file of either version reads, writes as version 2, reads back equal and renders the same MIDI. The version 2 text
  * is kept as plan_written_<name> for the schema test.
  */
 static void check_plan_file(const char *path, const char *name) {
-    char *text = read_all(path);
+    char *text = test_must_read_file(path, NULL);
     PiecePlan *first = NULL;
     PiecePlan *second = NULL;
     PlanJsonError error;
@@ -1428,7 +1399,7 @@ static void check_plan_file(const char *path, const char *name) {
     }
     char file_name[256];
     snprintf(file_name, sizeof(file_name), "plan_written_%s", name);
-    write_text(file_name, written);
+    test_write_text(file_name, written);
 
     free(midi_first);
     free(midi_second);
