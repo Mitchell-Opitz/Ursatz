@@ -78,6 +78,7 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-construction.md](grow-construction.md): a theme of any whole bars from 3 to 16 and ideas of any whole bars, given by a construction (P47).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.
+- [piece-tests.md](piece-tests.md): the piece tests and their measured results.
 - [forms.md](forms.md): forms as JSON documents (P44): the members, the game loop, how to add one.
 - [form-sections.md](form-sections.md): the members of a section of a size.
 - [forms-builtin.md](forms-builtin.md): the thirteen built-in forms.
