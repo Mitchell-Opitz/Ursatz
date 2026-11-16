@@ -45,6 +45,8 @@ static void thread_join(thread_t thread) {
 #include "service/analysis_service.h"
 #include "service/link_service.h"
 #include "service/piece_lock.h"
+#include "gui_check.h"
+#include "test_http.h"
 
 #ifndef URSATZ_GUI_TEST_SOURCE
 #error "URSATZ_GUI_TEST_SOURCE must name the MusicXML file the pieces are made from"
@@ -55,34 +57,7 @@ static void thread_join(thread_t thread) {
 static const char *kPiecesDir = "pieces";
 static const char *kOverrideMeter = "2/4";
 
-static int failures = 0;
 static volatile int stop_readers = 0;
-
-static void check(bool cond, const char *what) {
-  if (!cond) {
-    fprintf(stderr, "FAIL: %s\n", what);
-    failures++;
-  } else {
-    printf("PASS: %s\n", what);
-  }
-}
-
-static char *read_all(const char *path, size_t *size) {
-  FILE *file = fopen(path, "rb");
-  if (!file) {
-    return NULL;
-  }
-  fseek(file, 0, SEEK_END);
-  long length = ftell(file);
-  fseek(file, 0, SEEK_SET);
-  char *data = malloc((size_t)length + 1);
-  if (data) {
-    *size = fread(data, 1, (size_t)length, file);
-    data[*size] = '\0';
-  }
-  fclose(file);
-  return data;
-}
 
 /* The label of the analysis document's meter ("meter" -> "label"), copied into out; false when absent. */
 static bool document_meter_label(const char *json, char *out, size_t out_size) {
@@ -223,7 +198,7 @@ static thread_result_t THREAD_CALL read_detail(void *arg) {
 
 static char *upload_piece(const char *source, const char *name) {
   size_t size = 0;
-  char *data = read_all(source, &size);
+  char *data = test_read_file(source, &size);
   if (!data) {
     return NULL;
   }
@@ -362,15 +337,6 @@ static void test_delete_during_reads(void) {
 
 /* ---- the reads of the link and style services ---- */
 
-static void sleep_ms(unsigned ms) {
-#ifdef _WIN32
-  Sleep(ms);
-#else
-  struct timespec pause = {ms / 1000, (long)(ms % 1000) * 1000000L};
-  nanosleep(&pause, NULL);
-#endif
-}
-
 typedef struct {
   const char *id;
   volatile int done;
@@ -411,7 +377,7 @@ static void test_service_reads(void) {
   char path[512];
   size_t size = 0;
   if (snprintf(path, sizeof(path), "%s/%s/analysis.json", kPiecesDir, id) < (int)sizeof(path)) {
-    stored = read_all(path, &size);
+    stored = test_read_file(path, &size);
   }
   char *whole = NULL;
   check(stored != NULL && ursatz_gui_analysis_get_document(kPiecesDir, id, NULL, 0, &whole) == URSATZ_GUI_ANALYSIS_OK &&
@@ -424,7 +390,7 @@ static void test_service_reads(void) {
   check(ursatz_gui_piece_lock(id), "the test holds the piece lock");
   thread_t thread;
   bool started = thread_start(&thread, read_like_services, &read);
-  sleep_ms(300);
+  test_sleep_ms(300);
   check(started && read.done == 0, "the document, name and title reads wait while the piece lock is held");
   ursatz_gui_piece_unlock(id);
   if (started) {
@@ -450,5 +416,5 @@ int main(void) {
   test_delete_during_reads();
   test_service_reads();
   check(ursatz_gui_piece_lock_entries() == 0, "no lock entry is left behind");
-  return failures == 0 ? 0 : 1;
+  return test_finish("piece_lock");
 }

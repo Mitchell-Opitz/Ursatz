@@ -1,7 +1,7 @@
 /* Theme bodies, composing and the files of a version end to end (R-167). The theme runs on the job queue through the
  * Composer API, in process; the request the route built is read back from the version's request.json. The motifs are
- * saved with the Composer too, and the composed files are checked as files (version_check.h). Uses a plain TCP socket
- * for the HTTP requests, same as test_composer_route.c. Runs in its own working directory (materials/, subjects/ and
+ * saved with the Composer too, and the composed files are checked as files (version_check.h). Uses the shared
+ * HTTP client (tests/support/test_http.h). Runs in its own working directory (materials/, subjects/ and
  * pieces/ are created there). */
 
 #include <civetweb.h>
@@ -10,110 +10,33 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <arpa/inet.h>
 #include <dirent.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
 
 #include <cJSON.h>
 
+#include "gui_check.h"
 #include "server.h"
+#include "test_http.h"
 #include "version_check.h"
+
+#define PORT "18773"
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
 #endif
 
-static int failures = 0;
-
-static void check(bool cond, const char *what) {
-  if (!cond) {
-    fprintf(stderr, "FAIL: %s\n", what);
-    failures++;
-  } else {
-    printf("PASS: %s\n", what);
-  }
-}
-
-static void sleep_ms(int ms) {
-  struct timespec ts = {0, (long)ms * 1000 * 1000};
-  nanosleep(&ts, NULL);
-}
-
-/* One HTTP exchange; the whole response (status line, headers, body), newly allocated, or NULL. */
-static char *http_exchange(const char *method, const char *path, const char *extra_headers, const void *body,
-                           size_t body_len, size_t *out_size) {
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock < 0) {
-    return NULL;
-  }
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(18773);
-  inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-    close(sock);
-    return NULL;
-  }
-  char header[1024];
-  int header_len = snprintf(header, sizeof(header),
-                            "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n%s"
-                            "Content-Length: %zu\r\nConnection: close\r\n\r\n",
-                            method, path, extra_headers ? extra_headers : "", body_len);
-  send(sock, header, (size_t)header_len, 0);
-  if (body_len > 0) {
-    send(sock, body, body_len, 0);
-  }
-  size_t capacity = 65536;
-  size_t total = 0;
-  char *response = malloc(capacity);
-  while (response) {
-    if (total + 1 >= capacity) {
-      capacity *= 2;
-      char *grown = realloc(response, capacity);
-      if (!grown) {
-        free(response);
-        response = NULL;
-        break;
-      }
-      response = grown;
-    }
-    ssize_t n = recv(sock, response + total, capacity - 1 - total, 0);
-    if (n <= 0) {
-      break;
-    }
-    total += (size_t)n;
-  }
-  close(sock);
-  if (response) {
-    response[total] = '\0';
-  }
-  if (out_size) {
-    *out_size = total;
-  }
-  return response;
-}
-
-static const char *response_body(const char *response) {
-  const char *split = response ? strstr(response, "\r\n\r\n") : NULL;
-  return split ? split + 4 : "";
-}
-
-static int response_status(const char *response) {
-  int status = 0;
-  return response && sscanf(response, "HTTP/1.1 %d", &status) == 1 ? status : 0;
-}
-
 /* The body parsed as JSON; the status goes to *status. Caller frees the JSON. */
 static cJSON *exchange(const char *method, const char *path, const char *body, int *status) {
-  char *response = http_exchange(method, path, NULL, body, body ? strlen(body) : 0, NULL);
-  *status = response_status(response);
-  cJSON *json = cJSON_Parse(response_body(response));
-  free(response);
-  return json;
+  return test_http_json(PORT, method, path, body, status);
+}
+
+/* The Content-Length of a response (the shared client answers a string, so a binary body cannot be measured by its
+ * length), or -1 when it has none. */
+static long content_length_of(const char *response) {
+  const char *line = response ? strstr(response, "Content-Length: ") : NULL;
+  return line ? atol(line + strlen("Content-Length: ")) : -1;
 }
 
 /* The content type of a response, copied into out. */
@@ -125,54 +48,6 @@ static void content_type_of(const char *response, char *out, size_t size) {
     size_t length = strcspn(line, "\r\n");
     snprintf(out, size, "%.*s", (int)(length < size - 1 ? length : size - 1), line);
   }
-}
-
-/* The whole file; its size goes to *out_size when that is not NULL. */
-static char *read_file(const char *path, size_t *out_size) {
-  FILE *file = fopen(path, "rb");
-  if (!file) {
-    return NULL;
-  }
-  size_t capacity = 4096;
-  size_t length = 0;
-  char *buffer = malloc(capacity);
-  while (buffer) {
-    size_t n = fread(buffer + length, 1, capacity - length - 1, file);
-    length += n;
-    if (n == 0) {
-      break;
-    }
-    if (length + 1 >= capacity) {
-      capacity *= 2;
-      char *grown = realloc(buffer, capacity);
-      if (!grown) {
-        free(buffer);
-        buffer = NULL;
-      } else {
-        buffer = grown;
-      }
-    }
-  }
-  fclose(file);
-  if (buffer) {
-    buffer[length] = '\0';
-  }
-  if (out_size) {
-    *out_size = length;
-  }
-  return buffer;
-}
-
-static cJSON *read_json_file(const char *path) {
-  char *text = read_file(path, NULL);
-  cJSON *json = text ? cJSON_Parse(text) : NULL;
-  free(text);
-  return json;
-}
-
-static bool file_exists(const char *path) {
-  struct stat st;
-  return stat(path, &st) == 0 && S_ISREG(st.st_mode);
 }
 
 static bool dir_exists(const char *path) {
@@ -331,7 +206,7 @@ static cJSON *finish_job(cJSON *accepted, int *status) {
       return result;
     }
     cJSON_Delete(answer);
-    sleep_ms(50);
+    test_sleep_ms(50);
   }
   cJSON_Delete(accepted);
   *status = 0;
@@ -359,24 +234,14 @@ static void version_dir(const char *id, int version, char *out, size_t size) {
 
 /* The request the last compose read, as the version kept it. */
 static cJSON *last_request(void) {
-  return read_json_file(g_last_request_path);
+  return test_read_json(g_last_request_path);
 }
 
 /* Uploads a link fixture to the Library; the new piece's id (caller frees), or NULL. */
 static char *upload_piece(const char *name) {
   char path[600];
-  char headers[256];
-  size_t size = 0;
   snprintf(path, sizeof(path), "%s/%s", URSATZ_GUI_TEST_LINK_FIXTURES, name);
-  char *data = read_file(path, &size);
-  snprintf(headers, sizeof(headers), "X-Filename: %s\r\n", name);
-  char *response = data ? http_exchange("POST", "/api/analyzer/pieces", headers, data, size, NULL) : NULL;
-  free(data);
-  cJSON *json = cJSON_Parse(response_body(response));
-  char *id = cJSON_IsString(member(json, "id")) ? copy_string(string_of(json, "id")) : NULL;
-  cJSON_Delete(json);
-  free(response);
-  return id;
+  return test_http_upload(PORT, path, name, NULL);
 }
 
 /* --- the tests ----------------------------------------------------------- */
@@ -667,11 +532,11 @@ static void test_compose(const Motifs *m) {
   bool all = true;
   for (size_t i = 0; i < 4; i++) {
     snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
-    all = all && file_exists(path);
+    all = all && test_file_exists(path);
   }
   check(all, "the version folder holds the request, the plan, the MIDI and the MusicXML");
   snprintf(path, sizeof(path), "%s/brief.style.json", dir);
-  check(!file_exists(path), "a theme without a brief has no style file");
+  check(!test_file_exists(path), "a theme without a brief has no style file");
 
   answer = get_item(theme, &status);
   const cJSON *result = member(theme_of(answer), "result");
@@ -912,48 +777,47 @@ static void test_files(const Motifs *m) {
   static const char *const types[] = {"application/json", "application/json", "audio/midi", "application/xml"};
   for (size_t i = 0; i < 4; i++) {
     snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/%s", theme, names[i]);
-    char *response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+    char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
     char type[128];
     content_type_of(response, type, sizeof(type));
     char what[160];
     snprintf(what, sizeof(what), "%s is served as %s", names[i], types[i]);
-    check(response_status(response) == 200 && strcmp(type, types[i]) == 0 && strlen(response_body(response)) > 0, what);
+    check(test_http_status(response) == 200 && strcmp(type, types[i]) == 0 && strlen(test_http_body(response)) > 0, what);
     free(response);
   }
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/theme.mid", theme);
-  size_t size = 0;
-  char *response = http_exchange("GET", path, NULL, NULL, 0, &size);
-  check(size - (size_t)(response_body(response) - response) > 5 && strncmp(response_body(response), "MThd", 4) == 0,
+  char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
+  check(content_length_of(response) > 5 && strncmp(test_http_body(response), "MThd", 4) == 0,
         "the MIDI file is served whole");
   free(response);
 
   static const char *const refused[] = {"item.json", "brief.style.json", "..%2Fitem.json", "v2.json", "theme.MID"};
   for (size_t i = 0; i < sizeof(refused) / sizeof(refused[0]); i++) {
     snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/%s", theme, refused[i]);
-    response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+    response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
     char what[160];
     snprintf(what, sizeof(what), "%s is not served", refused[i]);
-    check(response_status(response) == 404, what);
+    check(test_http_status(response) == 404, what);
     free(response);
   }
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/files/plan.json", theme);
-  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
-  check(response_status(response) == 404, "a version without files is 404");
+  response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
+  check(test_http_status(response) == 404, "a version without files is 404");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/files/plan.json", theme);
-  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
-  check(response_status(response) == 404, "a version that does not exist is 404");
+  response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
+  check(test_http_status(response) == 404, "a version that does not exist is 404");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/x/files/plan.json", theme);
-  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
-  check(response_status(response) == 404, "a version that is not a number is 404");
+  response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
+  check(test_http_status(response) == 404, "a version that is not a number is 404");
   free(response);
-  response = http_exchange("GET", "/api/materials/items/thm-0123456789abcdef/versions/1/files/plan.json", NULL, NULL, 0, NULL);
-  check(response_status(response) == 404, "an item that does not exist is 404");
+  response = test_http_exchange(PORT, "GET", "/api/materials/items/thm-0123456789abcdef/versions/1/files/plan.json", NULL, NULL, 0);
+  check(test_http_status(response) == 404, "an item that does not exist is 404");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/plan.json", theme);
-  response = http_exchange("POST", path, NULL, "{}", 2, NULL);
-  check(response_status(response) == 405, "the files route takes GET only");
+  response = test_http_exchange(PORT, "POST", path, NULL, "{}", 2);
+  check(test_http_status(response) == 405, "the files route takes GET only");
   free(response);
 
   /* Deleting the item removes its version folders. */
@@ -997,7 +861,7 @@ static void test_brief(const Motifs *m) {
 
   version_dir(theme, 2, dir, sizeof(dir));
   snprintf(path, sizeof(path), "%s/brief.style.json", dir);
-  check(file_exists(path), "the brief is built into the version folder");
+  check(test_file_exists(path), "the brief is built into the version folder");
   answer = get_item(theme, &status);
   const cJSON *result = member(theme_of(answer), "result");
   const cJSON *brief = member(result, "brief");
@@ -1020,9 +884,9 @@ static void test_brief(const Motifs *m) {
         "the style weight, the without list and the tempo pass through");
   cJSON_Delete(request);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/brief.style.json", theme);
-  char *response = http_exchange("GET", path, NULL, NULL, 0, NULL);
-  cJSON *style_json = cJSON_Parse(response_body(response));
-  check(response_status(response) == 200 && style_json, "the style file is served");
+  char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
+  cJSON *style_json = cJSON_Parse(test_http_body(response));
+  check(test_http_status(response) == 200 && style_json, "the style file is served");
   cJSON_Delete(style_json);
   free(response);
   free(theme);
@@ -1136,7 +1000,7 @@ static void test_concurrent(const Motifs *m) {
     static const char *const files[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
     for (size_t i = 0; i < 4; i++) {
       snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", theme, version, files[i]);
-      all = all && file_exists(path);
+      all = all && test_file_exists(path);
     }
   }
   check(all, "each version has its four files");
@@ -1181,7 +1045,7 @@ static void test_jobs_route(const Motifs *m) {
     if (strcmp(now, "queued") != 0 && strcmp(now, "running") != 0) {
       break;
     }
-    sleep_ms(50);
+    test_sleep_ms(50);
   }
   const cJSON *finished = member(state, "job");
   check(status == 200 && strcmp(string_of(finished, "state"), "done") == 0 && number_of(finished, "http_status") == 200 &&
@@ -1229,7 +1093,7 @@ static void test_real_composer(const Motifs *m) {
   bool all = true;
   for (size_t i = 0; i < 5; i++) {
     snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
-    char *text = read_file(path, NULL);
+    char *text = test_read_file(path, NULL);
     all = all && text && strlen(text) > 0;
     free(text);
   }
@@ -1237,7 +1101,7 @@ static void test_real_composer(const Motifs *m) {
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=theme", theme);
   char midi[700];
   snprintf(midi, sizeof(midi), "%s/theme.mid", dir);
-  check_playback_of(path, midi, "the theme's playback is built from its stored MIDI file");
+  check_playback_of(exchange, path, midi, "the theme's playback is built from its stored MIDI file");
   answer = get_item(theme, &status);
   const cJSON *result = member(theme_of(answer), "result");
   check(number_of(result, "seed") == 97 && cJSON_GetArraySize(member(member(result, "summary"), "themes")) >= 1 &&
@@ -1411,12 +1275,12 @@ static void test_two_bar_theme(void) {
 int main(void) {
   system("rm -rf materials subjects pieces collections styles");
 
-  struct mg_context *ctx = ursatz_gui_server_start("18773", ".");
+  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
   }
-  sleep_ms(200);
+  test_sleep_ms(200);
 
   int status = 0;
   cJSON *projects = exchange("GET", "/api/materials/projects", NULL, &status);
@@ -1443,10 +1307,5 @@ int main(void) {
   }
 
   ursatz_gui_server_stop(ctx);
-  if (failures > 0) {
-    fprintf(stderr, "%d check(s) failed\n", failures);
-    return 1;
-  }
-  printf("all checks passed\n");
-  return 0;
+  return test_finish("theme_route");
 }

@@ -4,21 +4,12 @@
 #include <string.h>
 
 #include "service/piece_metadata.h"
-
-static int failures = 0;
-
-#define CHECK(cond, msg)                                            \
-    do {                                                            \
-        if (!(cond)) {                                              \
-            fprintf(stderr, "FAIL: %s (line %d)\n", msg, __LINE__); \
-            failures++;                                             \
-        }                                                           \
-    } while (0)
+#include "gui_check.h"
 
 static void check_value(const char *input, const char *expected, const char *label) {
     bool too_long = true;
     char *out = ursatz_gui_meta_normalize_value(input, &too_long);
-    CHECK(out != NULL && !too_long && strcmp(out, expected) == 0, label);
+    check_quiet(out != NULL && !too_long && strcmp(out, expected) == 0, label);
     free(out);
 }
 
@@ -35,75 +26,75 @@ static void test_normalize_value(void) {
     memset(text, 'a', 120);
     text[120] = '\0';
     char *out = ursatz_gui_meta_normalize_value(text, &too_long);
-    CHECK(out != NULL && strlen(out) == 120, "120 bytes are accepted");
+    check_quiet(out != NULL && strlen(out) == 120, "120 bytes are accepted");
     free(out);
     memset(text, 'a', 121);
     text[121] = '\0';
     out = ursatz_gui_meta_normalize_value(text, &too_long);
-    CHECK(out == NULL && too_long, "121 bytes are too long");
+    check_quiet(out == NULL && too_long, "121 bytes are too long");
     /* Length is measured after normalizing. */
     memset(text, 'a', 120);
     memcpy(text + 120, "      ", 7);
     too_long = true;
     out = ursatz_gui_meta_normalize_value(text, &too_long);
-    CHECK(out != NULL && !too_long, "trailing whitespace does not count toward the limit");
+    check_quiet(out != NULL && !too_long, "trailing whitespace does not count toward the limit");
     free(out);
 }
 
 static void test_normalize_tag(void) {
     bool invalid = true;
     char *tag = ursatz_gui_meta_normalize_tag("  Whimsical   Mood ", &invalid);
-    CHECK(tag && !invalid && strcmp(tag, "whimsical mood") == 0, "tag is trimmed, collapsed and lowercased");
+    check_quiet(tag && !invalid && strcmp(tag, "whimsical mood") == 0, "tag is trimmed, collapsed and lowercased");
     free(tag);
 
     tag = ursatz_gui_meta_normalize_tag("   ", &invalid);
-    CHECK(tag == NULL && invalid, "an empty tag is invalid");
+    check_quiet(tag == NULL && invalid, "an empty tag is invalid");
     tag = ursatz_gui_meta_normalize_tag("a,b", &invalid);
-    CHECK(tag == NULL && invalid, "a comma makes a tag invalid");
+    check_quiet(tag == NULL && invalid, "a comma makes a tag invalid");
 
     char text[80];
     memset(text, 'A', 48);
     text[48] = '\0';
     tag = ursatz_gui_meta_normalize_tag(text, &invalid);
-    CHECK(tag && !invalid && strlen(tag) == 48 && tag[0] == 'a', "48 bytes are accepted and lowercased");
+    check_quiet(tag && !invalid && strlen(tag) == 48 && tag[0] == 'a', "48 bytes are accepted and lowercased");
     free(tag);
     memset(text, 'A', 49);
     text[49] = '\0';
     tag = ursatz_gui_meta_normalize_tag(text, &invalid);
-    CHECK(tag == NULL && invalid, "49 bytes are too long for a tag");
+    check_quiet(tag == NULL && invalid, "49 bytes are too long for a tag");
 }
 
 static void test_values_equal(void) {
-    CHECK(ursatz_gui_meta_values_equal("John Field", "  john   FIELD"), "equal after normalizing, ignoring case");
-    CHECK(!ursatz_gui_meta_values_equal("John Field", "John Fields"), "different values differ");
-    CHECK(ursatz_gui_meta_values_equal(NULL, "  "), "NULL equals blank");
+    check_quiet(ursatz_gui_meta_values_equal("John Field", "  john   FIELD"), "equal after normalizing, ignoring case");
+    check_quiet(!ursatz_gui_meta_values_equal("John Field", "John Fields"), "different values differ");
+    check_quiet(ursatz_gui_meta_values_equal(NULL, "  "), "NULL equals blank");
 }
 
 static void test_tag_list(void) {
     char **tags = NULL;
     size_t count = 0;
-    CHECK(ursatz_gui_meta_tags_add(&tags, &count, "b") == URSATZ_GUI_META_OK, "add first tag");
-    CHECK(ursatz_gui_meta_tags_add(&tags, &count, "a") == URSATZ_GUI_META_OK, "add second tag");
-    CHECK(ursatz_gui_meta_tags_add(&tags, &count, "B") == URSATZ_GUI_META_OK && count == 2,
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "b") == URSATZ_GUI_META_OK, "add first tag");
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "a") == URSATZ_GUI_META_OK, "add second tag");
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "B") == URSATZ_GUI_META_OK && count == 2,
           "a duplicate is skipped without error");
-    CHECK(count == 2 && strcmp(tags[0], "b") == 0 && strcmp(tags[1], "a") == 0, "insertion order is kept");
-    CHECK(ursatz_gui_meta_tags_remove(&tags, &count, "zzz") == URSATZ_GUI_META_OK && count == 2,
+    check_quiet(count == 2 && strcmp(tags[0], "b") == 0 && strcmp(tags[1], "a") == 0, "insertion order is kept");
+    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "zzz") == URSATZ_GUI_META_OK && count == 2,
           "removing an absent tag is not an error");
-    CHECK(ursatz_gui_meta_tags_remove(&tags, &count, "b") == URSATZ_GUI_META_OK && count == 1 &&
+    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "b") == URSATZ_GUI_META_OK && count == 1 &&
               strcmp(tags[0], "a") == 0,
           "remove drops the tag");
-    CHECK(ursatz_gui_meta_tags_remove(&tags, &count, "a") == URSATZ_GUI_META_OK && count == 0 && tags == NULL,
+    check_quiet(ursatz_gui_meta_tags_remove(&tags, &count, "a") == URSATZ_GUI_META_OK && count == 0 && tags == NULL,
           "removing the last tag empties the list");
 
     for (int i = 0; i < URSATZ_GUI_META_MAX_TAGS; i++) {
         char name[16];
         snprintf(name, sizeof(name), "tag%d", i);
-        CHECK(ursatz_gui_meta_tags_add(&tags, &count, name) == URSATZ_GUI_META_OK, "add up to 32 tags");
+        check_quiet(ursatz_gui_meta_tags_add(&tags, &count, name) == URSATZ_GUI_META_OK, "add up to 32 tags");
     }
-    CHECK(ursatz_gui_meta_tags_add(&tags, &count, "one-too-many") == URSATZ_GUI_META_ERR_TOO_MANY_TAGS &&
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "one-too-many") == URSATZ_GUI_META_ERR_TOO_MANY_TAGS &&
               count == 32,
           "the 33rd tag fails");
-    CHECK(ursatz_gui_meta_tags_add(&tags, &count, "tag3") == URSATZ_GUI_META_OK && count == 32,
+    check_quiet(ursatz_gui_meta_tags_add(&tags, &count, "tag3") == URSATZ_GUI_META_OK && count == 32,
           "a duplicate at the limit is still not an error");
     ursatz_gui_meta_tags_free(tags, count);
 }
@@ -155,27 +146,27 @@ static void test_grouping(void) {
     size_t count = sizeof(kSpecs) / sizeof(kSpecs[0]);
     UrsatzGuiPieceSummary *pieces = build_pieces(kSpecs, count);
     UrsatzGuiMetaGroups groups;
-    CHECK(ursatz_gui_meta_group(pieces, count, &groups) == URSATZ_GUI_META_OK, "grouping succeeds");
+    check_quiet(ursatz_gui_meta_group(pieces, count, &groups) == URSATZ_GUI_META_OK, "grouping succeeds");
 
-    CHECK(groups.total == 8, "total counts every piece");
-    CHECK(groups.composer_count == 5, "composers are distinct case-insensitively");
-    CHECK(groups.composer_count > 0 && strcmp(groups.composers[0].value, "John Field") == 0 &&
+    check_quiet(groups.total == 8, "total counts every piece");
+    check_quiet(groups.composer_count == 5, "composers are distinct case-insensitively");
+    check_quiet(groups.composer_count > 0 && strcmp(groups.composers[0].value, "John Field") == 0 &&
               groups.composers[0].count == 3,
           "the most used spelling is shown (John Field twice, john field once)");
-    CHECK(groups.composer_count == 5 && strcmp(groups.composers[1].value, "Alpha") == 0 &&
+    check_quiet(groups.composer_count == 5 && strcmp(groups.composers[1].value, "Alpha") == 0 &&
               groups.composers[2].value && strcmp(groups.composers[2].value, "beta") == 0,
           "equal counts sort by case-insensitive value");
-    CHECK(groups.unassigned_composer == 1, "one piece has no composer");
-    CHECK(groups.unassigned_source == 3, "three pieces have no source");
+    check_quiet(groups.unassigned_composer == 1, "one piece has no composer");
+    check_quiet(groups.unassigned_source == 3, "three pieces have no source");
 
-    CHECK(groups.source_count == 2 && strcmp(groups.sources[0].value, "Nocturnes") == 0 &&
+    check_quiet(groups.source_count == 2 && strcmp(groups.sources[0].value, "Nocturnes") == 0 &&
               groups.sources[0].count == 3 && groups.sources[1].count == 2,
           "sources group case-insensitively, most used spelling shown");
 
-    CHECK(groups.tag_count == 4, "tags are distinct");
-    CHECK(groups.tag_count == 4 && strcmp(groups.tags[0].value, "slow") == 0 && groups.tags[0].count == 3,
+    check_quiet(groups.tag_count == 4, "tags are distinct");
+    check_quiet(groups.tag_count == 4 && strcmp(groups.tags[0].value, "slow") == 0 && groups.tags[0].count == 3,
           "a tag repeated within one piece counts once");
-    CHECK(groups.untagged == 1, "one piece is untagged");
+    check_quiet(groups.untagged == 1, "one piece is untagged");
 
     ursatz_gui_meta_groups_destroy(&groups);
     free_pieces(pieces, count);
@@ -185,15 +176,15 @@ static void test_spelling_tie(void) {
     static const Spec specs[] = {{"bach", "", {}, 0}, {"Bach", "", {}, 0}};
     UrsatzGuiPieceSummary *pieces = build_pieces(specs, 2);
     UrsatzGuiMetaGroups groups;
-    CHECK(ursatz_gui_meta_group(pieces, 2, &groups) == URSATZ_GUI_META_OK, "grouping a tie succeeds");
-    CHECK(groups.composer_count == 1 && groups.composers[0].count == 2 &&
+    check_quiet(ursatz_gui_meta_group(pieces, 2, &groups) == URSATZ_GUI_META_OK, "grouping a tie succeeds");
+    check_quiet(groups.composer_count == 1 && groups.composers[0].count == 2 &&
               strcmp(groups.composers[0].value, "Bach") == 0,
           "a spelling tie is broken by byte order");
     ursatz_gui_meta_groups_destroy(&groups);
     free_pieces(pieces, 2);
 
     UrsatzGuiMetaGroups empty;
-    CHECK(ursatz_gui_meta_group(NULL, 0, &empty) == URSATZ_GUI_META_OK && empty.total == 0 &&
+    check_quiet(ursatz_gui_meta_group(NULL, 0, &empty) == URSATZ_GUI_META_OK && empty.total == 0 &&
               empty.composers == NULL,
           "no pieces gives empty groups");
     ursatz_gui_meta_groups_destroy(&empty);
@@ -212,36 +203,36 @@ static void test_filters(void) {
     UrsatzGuiPieceSummary *pieces = build_pieces(kSpecs, count);
 
     UrsatzGuiMetaFilter none = {0};
-    CHECK(count_matches(pieces, count, &none) == count, "an empty filter matches everything");
+    check_quiet(count_matches(pieces, count, &none) == count, "an empty filter matches everything");
 
     UrsatzGuiMetaFilter composer = {0};
     composer.composer = "JOHN FIELD";
-    CHECK(count_matches(pieces, count, &composer) == 3, "composer matches case-insensitively");
+    check_quiet(count_matches(pieces, count, &composer) == 3, "composer matches case-insensitively");
 
     UrsatzGuiMetaFilter tag = {0};
     tag.tag = "Romantic";
-    CHECK(count_matches(pieces, count, &tag) == 2, "tag matches when any tag equals it");
+    check_quiet(count_matches(pieces, count, &tag) == 2, "tag matches when any tag equals it");
 
     UrsatzGuiMetaFilter combined = {0};
     combined.composer = "john field";
     combined.tag = "romantic";
-    CHECK(count_matches(pieces, count, &combined) == 1, "all given fields must match");
+    check_quiet(count_matches(pieces, count, &combined) == 1, "all given fields must match");
 
     UrsatzGuiMetaFilter unassigned = {0};
     unassigned.composer_unassigned = true;
-    CHECK(count_matches(pieces, count, &unassigned) == 1, "composer_unassigned matches an empty composer");
+    check_quiet(count_matches(pieces, count, &unassigned) == 1, "composer_unassigned matches an empty composer");
     unassigned.composer_unassigned = false;
     unassigned.source_unassigned = true;
-    CHECK(count_matches(pieces, count, &unassigned) == 3, "source_unassigned matches an empty source");
+    check_quiet(count_matches(pieces, count, &unassigned) == 3, "source_unassigned matches an empty source");
 
     UrsatzGuiMetaFilter untagged = {0};
     untagged.untagged = true;
-    CHECK(count_matches(pieces, count, &untagged) == 1, "untagged matches a piece without tags");
+    check_quiet(count_matches(pieces, count, &untagged) == 1, "untagged matches a piece without tags");
 
     UrsatzGuiMetaFilter source_and_unassigned = {0};
     source_and_unassigned.source = "sonatinas";
     source_and_unassigned.composer_unassigned = true;
-    CHECK(count_matches(pieces, count, &source_and_unassigned) == 1, "source and unassigned composer combine");
+    check_quiet(count_matches(pieces, count, &source_and_unassigned) == 1, "source and unassigned composer combine");
 
     free_pieces(pieces, count);
 }
@@ -254,8 +245,5 @@ int main(void) {
     test_grouping();
     test_spelling_tie();
     test_filters();
-    if (failures == 0) {
-        printf("piece_metadata: all checks passed\n");
-    }
-    return failures == 0 ? 0 : 1;
+    return test_finish("piece_metadata");
 }

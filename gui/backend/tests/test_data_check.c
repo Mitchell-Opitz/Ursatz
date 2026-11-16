@@ -16,15 +16,7 @@
 #endif
 
 #include "service/data_check.h"
-
-static int failures = 0;
-
-static void check(bool condition, const char *name) {
-  if (!condition) {
-    fprintf(stderr, "FAIL: %s\n", name);
-    failures++;
-  }
-}
+#include "gui_check.h"
 
 static const char *kRoot = "case";
 
@@ -47,22 +39,13 @@ static void make_dirs(const char *relative) {
 static void write_file(const char *relative, const char *text) {
   char path[512];
   snprintf(path, sizeof(path), "%s/%s", kRoot, relative);
-  FILE *file = fopen(path, "wb");
-  if (file) {
-    fputs(text, file);
-    fclose(file);
-  }
+  test_write_file(path, text, strlen(text));
 }
 
 static bool exists(const char *relative) {
   char path[512];
   snprintf(path, sizeof(path), "%s/%s", kRoot, relative);
-  FILE *file = fopen(path, "rb");
-  if (file) {
-    fclose(file);
-    return true;
-  }
-  return false;
+  return test_file_exists(path);
 }
 
 static void reset_case(void) {
@@ -115,9 +98,9 @@ static void test_empty_folder(void) {
   printf("-- an empty folder\n");
   reset_case();
   char message[4096];
-  check(run(message, sizeof(message)) && message[0] == '\0', "an empty folder passes");
-  check(exists(".pre-overhaul-checked"), "an empty folder gets the marker");
-  check(run(message, sizeof(message)), "an empty folder passes again");
+  check_quiet(run(message, sizeof(message)) && message[0] == '\0', "an empty folder passes");
+  check_quiet(exists(".pre-overhaul-checked"), "an empty folder gets the marker");
+  check_quiet(run(message, sizeof(message)), "an empty folder passes again");
 }
 
 static void test_store_without_items(void) {
@@ -126,8 +109,8 @@ static void test_store_without_items(void) {
   make_dirs("materials/projects");
   make_dirs("materials/items");
   char message[4096];
-  check(run(message, sizeof(message)), "a store with projects and no items passes");
-  check(!exists("materials/tones-migrated") && !exists("materials/segments-migrated") && !exists("materials/themes-cleared"),
+  check_quiet(run(message, sizeof(message)), "a store with projects and no items passes");
+  check_quiet(!exists("materials/tones-migrated") && !exists("materials/segments-migrated") && !exists("materials/themes-cleared"),
         "a store with no items needs no migration markers and gets none");
 }
 
@@ -137,14 +120,14 @@ static void test_corpus_db(void) {
   make_dirs("data");
   write_file("data/corpus.db", "old");
   char message[4096];
-  check(!run(message, sizeof(message)), "an unimported data/corpus.db is refused");
-  check(has(message, "data/corpus.db") && has(message, "collections/.imported-from-corpus-db"),
+  check_quiet(!run(message, sizeof(message)), "an unimported data/corpus.db is refused");
+  check_quiet(has(message, "data/corpus.db") && has(message, "collections/.imported-from-corpus-db"),
         "the refusal names the database and the import marker");
-  check(has(message, "pre-overhaul") && has(message, "then start this one"), "the refusal says what to run first");
-  check(!exists(".pre-overhaul-checked"), "a refusal writes no marker");
+  check_quiet(has(message, "pre-overhaul") && has(message, "then start this one"), "the refusal says what to run first");
+  check_quiet(!exists(".pre-overhaul-checked"), "a refusal writes no marker");
   make_dirs("collections");
   write_file("collections/.imported-from-corpus-db", "imported\n");
-  check(run(message, sizeof(message)), "data/corpus.db passes once the import marker exists");
+  check_quiet(run(message, sizeof(message)), "data/corpus.db passes once the import marker exists");
 }
 
 static void test_store_markers(void) {
@@ -153,15 +136,15 @@ static void test_store_markers(void) {
   const char *keys[] = {"C major"};
   make_item("mot-a", "motif", keys, 1);
   char message[4096];
-  check(!run(message, sizeof(message)), "a motif without store markers is refused");
-  check(has(message, "tones-migrated") && has(message, "segments-migrated") && has(message, "themes-cleared"),
+  check_quiet(!run(message, sizeof(message)), "a motif without store markers is refused");
+  check_quiet(has(message, "tones-migrated") && has(message, "segments-migrated") && has(message, "themes-cleared"),
         "the refusal names all three markers");
   make_store_markers(2);
-  check(!run(message, sizeof(message)), "a motif with two store markers is refused");
-  check(!has(message, "tones-migrated") && !has(message, "segments-migrated") && has(message, "themes-cleared"),
+  check_quiet(!run(message, sizeof(message)), "a motif with two store markers is refused");
+  check_quiet(!has(message, "tones-migrated") && !has(message, "segments-migrated") && has(message, "themes-cleared"),
         "only the missing marker is named");
   make_store_markers(3);
-  check(run(message, sizeof(message)), "a motif with all three markers passes");
+  check_quiet(run(message, sizeof(message)), "a motif with all three markers passes");
 }
 
 static void test_tonics(void) {
@@ -186,18 +169,18 @@ static void test_tonics(void) {
   make_item("mot-empty", "motif", empty, 1);
   make_item("thm-key", "theme", theme, 1);
   char message[4096];
-  check(!run(message, sizeof(message)), "motifs on another tonic are refused");
-  check(has(message, "mot-old-d") && has(message, "mot-old-eb") && has(message, "mot-lower"),
+  check_quiet(!run(message, sizeof(message)), "motifs on another tonic are refused");
+  check_quiet(has(message, "mot-old-d") && has(message, "mot-old-eb") && has(message, "mot-lower"),
         "the current key decides: D minor, Eb major and c major are named");
-  check(!has(message, "mot-rewritten") && !has(message, "mot-spaced") && !has(message, "mot-none") &&
+  check_quiet(!has(message, "mot-rewritten") && !has(message, "mot-spaced") && !has(message, "mot-none") &&
             !has(message, "mot-empty") && !has(message, "thm-key"),
         "a rewritten, spaced, keyless or empty-key motif and a theme are not named");
-  check(has(message, "Rewrite in C"), "the refusal says how to fix a motif");
-  check(strstr(message, "mot-lower") < strstr(message, "mot-old-d") && strstr(message, "mot-old-d") < strstr(message, "mot-old-eb"),
+  check_quiet(has(message, "Rewrite in C"), "the refusal says how to fix a motif");
+  check_quiet(strstr(message, "mot-lower") < strstr(message, "mot-old-d") && strstr(message, "mot-old-d") < strstr(message, "mot-old-eb"),
         "the motifs are listed in name order");
-  check(!exists(".pre-overhaul-checked"), "a refusal writes no marker");
+  check_quiet(!exists(".pre-overhaul-checked"), "a refusal writes no marker");
   system("rm -rf case/materials/items/mot-old-d case/materials/items/mot-old-eb case/materials/items/mot-lower");
-  check(run(message, sizeof(message)), "the store passes once the three are removed");
+  check_quiet(run(message, sizeof(message)), "the store passes once the three are removed");
 }
 
 static void test_marker_wins(void) {
@@ -209,7 +192,7 @@ static void test_marker_wins(void) {
   make_item("mot-old", "motif", keys, 1);
   write_file(".pre-overhaul-checked", "checked\n");
   char message[4096] = "left over";
-  check(run(message, sizeof(message)) && message[0] == '\0', "a folder with the marker passes whatever it holds");
+  check_quiet(run(message, sizeof(message)) && message[0] == '\0', "a folder with the marker passes whatever it holds");
 }
 
 int main(void) {
@@ -225,10 +208,5 @@ int main(void) {
 #else
   system("rm -rf case");
 #endif
-  if (failures > 0) {
-    fprintf(stderr, "%d check(s) failed\n", failures);
-    return 1;
-  }
-  printf("data check: all checks passed\n");
-  return 0;
+  return test_finish("data_check");
 }

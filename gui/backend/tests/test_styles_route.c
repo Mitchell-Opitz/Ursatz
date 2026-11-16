@@ -2,9 +2,8 @@
  * then POST /api/styles builds a StyleModel file from a tag, a collection or
  * a list of ids, and the list, read, rebuild and delete routes work on what
  * is stored under styles/<id>/. The model is read back with the Analyzer's
- * style_model_file_read. Uses a plain TCP socket for the HTTP requests, same
- * as test_analyzer_route.c. Runs in its own working directory (pieces/,
- * collections/ and styles/ are created there). */
+ * style_model_file_read. Uses the shared HTTP client (tests/support/test_http.h).
+ * Runs in its own working directory (pieces/, collections/ and styles/ are created there). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -14,21 +13,10 @@
 
 #ifdef _WIN32
 #include <direct.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-typedef SOCKET socket_t;
-#define CLOSESOCK closesocket
 #define MKDIR(path) _mkdir(path)
 #else
-#include <arpa/inet.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
-typedef int socket_t;
-#define CLOSESOCK close
-#define INVALID_SOCKET (-1)
 #define MKDIR(path) mkdir(path, 0755)
 #endif
 
@@ -37,172 +25,16 @@ typedef int socket_t;
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/style_profile.h>
 
+#include "gui_check.h"
 #include "server.h"
+#include "test_http.h"
+
+#define PORT "18769"
 #include "service/style_service.h"
 
 #ifndef URSATZ_GUI_TEST_URSATZ_DIR
 #error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
 #endif
-
-static void sleep_ms(int ms) {
-#ifdef _WIN32
-  Sleep((DWORD)ms);
-#else
-  struct timespec ts = {0, (long)ms * 1000 * 1000};
-  nanosleep(&ts, NULL);
-#endif
-}
-
-static int failures = 0;
-
-static void check(bool cond, const char *what) {
-  if (!cond) {
-    fprintf(stderr, "FAIL: %s\n", what);
-    failures++;
-  } else {
-    printf("PASS: %s\n", what);
-  }
-}
-
-/* One HTTP exchange. extra_headers is zero or more complete "Name: value\r\n"
- * lines. Returns the whole response (status line, headers, body) as a newly
- * allocated string, or NULL when the connection failed. */
-static char *http_exchange(const char *method, const char *path, const char *extra_headers, const void *body,
-                           size_t body_len) {
-  socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == INVALID_SOCKET) {
-    return NULL;
-  }
-
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(18769);
-  inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-    CLOSESOCK(sock);
-    return NULL;
-  }
-
-  char header[1024];
-  int header_len = snprintf(header, sizeof(header),
-                            "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\n%sContent-Length: %zu\r\nConnection: close\r\n\r\n",
-                            method, path, extra_headers ? extra_headers : "", body_len);
-  send(sock, header, header_len, 0);
-  const char *cursor = body;
-  size_t remaining = body_len;
-  while (remaining > 0) {
-    int n = send(sock, cursor, remaining > 65536 ? 65536 : (int)remaining, 0);
-    if (n <= 0) {
-      break;
-    }
-    cursor += n;
-    remaining -= (size_t)n;
-  }
-
-  size_t capacity = 65536;
-  size_t total = 0;
-  char *response = malloc(capacity);
-  while (response) {
-    if (total + 1 >= capacity) {
-      capacity *= 2;
-      char *grown = realloc(response, capacity);
-      if (!grown) {
-        free(response);
-        response = NULL;
-        break;
-      }
-      response = grown;
-    }
-    int n = recv(sock, response + total, (int)(capacity - 1 - total), 0);
-    if (n <= 0) {
-      break;
-    }
-    total += (size_t)n;
-  }
-  CLOSESOCK(sock);
-  if (response) {
-    response[total] = '\0';
-  }
-  return response;
-}
-
-/* The part of a response after its headers. */
-static const char *response_body(const char *response) {
-  const char *split = response ? strstr(response, "\r\n\r\n") : NULL;
-  return split ? split + 4 : "";
-}
-
-static bool response_has_status(const char *response, int status) {
-  char needle[32];
-  snprintf(needle, sizeof(needle), "HTTP/1.1 %d", status);
-  return response && strncmp(response, needle, strlen(needle)) == 0;
-}
-
-static char *read_file(const char *path, size_t *out_size) {
-  FILE *file = fopen(path, "rb");
-  if (!file) {
-    return NULL;
-  }
-  size_t capacity = 65536;
-  size_t length = 0;
-  char *buffer = malloc(capacity);
-  while (buffer) {
-    size_t n = fread(buffer + length, 1, capacity - length - 1, file);
-    length += n;
-    if (n == 0) {
-      break;
-    }
-    if (length + 1 >= capacity) {
-      capacity *= 2;
-      char *grown = realloc(buffer, capacity);
-      if (!grown) {
-        free(buffer);
-        return NULL;
-      }
-      buffer = grown;
-    }
-  }
-  fclose(file);
-  if (buffer) {
-    buffer[length] = '\0';
-    if (out_size) {
-      *out_size = length;
-    }
-  }
-  return buffer;
-}
-
-static bool write_file(const char *path, const char *text) {
-  FILE *file = fopen(path, "wb");
-  if (!file) {
-    return false;
-  }
-  bool ok = fwrite(text, 1, strlen(text), file) == strlen(text);
-  return (fclose(file) == 0) && ok;
-}
-
-static bool file_exists(const char *path) {
-  FILE *file = fopen(path, "rb");
-  if (file) {
-    fclose(file);
-  }
-  return file != NULL;
-}
-
-/* An exchange with a JSON body; *status gets the HTTP status and the result is the parsed body (caller deletes). */
-static cJSON *json_exchange(const char *method, const char *path, const char *body, int *status) {
-  char *response = http_exchange(method, path, "Content-Type: application/json\r\n", body ? body : "",
-                                 body ? strlen(body) : 0);
-  *status = 0;
-  if (response && strncmp(response, "HTTP/1.1 ", 9) == 0) {
-    *status = atoi(response + 9);
-  }
-  cJSON *json = response ? cJSON_Parse(response_body(response)) : NULL;
-  free(response);
-  return json;
-}
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -218,39 +50,17 @@ static bool ok_true(const cJSON *json) {
   return cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "ok"));
 }
 
-/* POSTs the file at path with the given upload name; returns the new piece's id (caller frees), or NULL. */
-static char *upload_file(const char *path, const char *encoded_filename) {
-  size_t size = 0;
-  char *data = read_file(path, &size);
-  if (!data) {
-    return NULL;
-  }
-  char headers[512];
-  snprintf(headers, sizeof(headers), "X-Filename: %s\r\n", encoded_filename);
-  char *response = http_exchange("POST", "/api/analyzer/pieces", headers, data, size);
-  free(data);
-  char *id = NULL;
-  cJSON *json = cJSON_Parse(response_body(response));
-  const cJSON *id_item = json ? cJSON_GetObjectItemCaseSensitive(json, "id") : NULL;
-  if (cJSON_IsString(id_item)) {
-    id = strdup(id_item->valuestring);
-  }
-  cJSON_Delete(json);
-  free(response);
-  return id;
-}
-
 /* PATCHes a piece with a JSON body. */
 static void patch_piece(const char *id, const char *body) {
   char path[256];
   int status = 0;
   snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
-  cJSON_Delete(json_exchange("PATCH", path, body, &status));
+  cJSON_Delete(test_http_json(PORT, "PATCH", path, body, &status));
 }
 
 /* Builds a style with a JSON body; returns the parsed answer (caller deletes). */
 static cJSON *build_style(const char *body, int *status) {
-  return json_exchange("POST", "/api/styles", body, status);
+  return test_http_json(PORT, "POST", "/api/styles", body, status);
 }
 
 static const cJSON *style_of(const cJSON *answer) {
@@ -265,7 +75,7 @@ static int skipped_count(const cJSON *answer) {
 /* How many styles GET /api/styles lists. */
 static int listed_styles(void) {
   int status = 0;
-  cJSON *list = json_exchange("GET", "/api/styles", NULL, &status);
+  cJSON *list = test_http_json(PORT, "GET", "/api/styles", NULL, &status);
   const cJSON *styles = cJSON_GetObjectItemCaseSensitive(list, "styles");
   int count = cJSON_IsArray(styles) ? cJSON_GetArraySize(styles) : -1;
   cJSON_Delete(list);
@@ -286,11 +96,6 @@ static bool model_reads_with_pieces(const char *id, size_t expected_pieces) {
 }
 
 int main(void) {
-#ifdef _WIN32
-  WSADATA wsa_data;
-  WSAStartup(MAKEWORD(2, 2), &wsa_data);
-#endif
-
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
   system("rmdir /s /q pieces collections styles data 2> nul");
@@ -305,15 +110,15 @@ int main(void) {
   snprintf(clementi_path, sizeof(clementi_path), "%s/Clementi 36.mid", fixtures);
   snprintf(mozart_path, sizeof(mozart_path), "%s/Mozart 545.mid", fixtures);
 
-  struct mg_context *ctx = ursatz_gui_server_start("18769", ".");
+  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
   }
-  sleep_ms(200);
+  test_sleep_ms(200);
 
-  char *clementi_id = upload_file(clementi_path, "Clementi%2036.mid");
-  char *mozart_id = upload_file(mozart_path, "Mozart%20545.mid");
+  char *clementi_id = test_http_upload(PORT, clementi_path, "Clementi%2036.mid", NULL);
+  char *mozart_id = test_http_upload(PORT, mozart_path, "Mozart%20545.mid", NULL);
   check(clementi_id && mozart_id, "Clementi 36 and Mozart 545 upload");
   if (!clementi_id || !mozart_id) {
     mg_stop(ctx);
@@ -344,7 +149,7 @@ int main(void) {
   {
     char path[512];
     snprintf(path, sizeof(path), "styles/%s/meta.json", tag_style_id);
-    check(file_exists(path), "meta.json is stored next to the model");
+    check(test_file_exists(path), "meta.json is stored next to the model");
   }
   check(listed_styles() == 1, "the list holds the new style");
 
@@ -352,7 +157,7 @@ int main(void) {
   {
     char path[256];
     snprintf(path, sizeof(path), "/api/styles/%s", tag_style_id);
-    answer = json_exchange("GET", path, NULL, &status);
+    answer = test_http_json(PORT, "GET", path, NULL, &status);
     style = style_of(answer);
     check(status == 200 && strcmp(string_of(style, "id"), tag_style_id) == 0, "GET one style answers it");
     const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(style, "pieces");
@@ -380,7 +185,7 @@ int main(void) {
     check(path[0] == '/' || (path[0] && path[1] == ':'), "the model path is absolute");
     size_t length = strlen(path);
     check(length > 16 && strcmp(path + length - 16, "style-model.json") == 0, "the path ends with style-model.json");
-    check(file_exists(path), "the path names an existing file");
+    check(test_file_exists(path), "the path names an existing file");
     check(ursatz_gui_style_model_path("sty-0000000000000000", path, sizeof(path)) == URSATZ_GUI_STYLE_ERR_NOT_FOUND,
           "model_path of an unknown style is not found");
   }
@@ -395,7 +200,7 @@ int main(void) {
     cJSON_Delete(answer);
     char path[256];
     snprintf(path, sizeof(path), "/api/styles/%s", quoted_id);
-    cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+    cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
   }
 
   /* A name longer than 120 bytes is refused. */
@@ -411,7 +216,7 @@ int main(void) {
   }
 
   /* From a collection. */
-  answer = json_exchange("POST", "/api/corpus", "{\"name\":\"Pair\"}", &status);
+  answer = test_http_json(PORT, "POST", "/api/corpus", "{\"name\":\"Pair\"}", &status);
   char collection_id[128];
   snprintf(collection_id, sizeof(collection_id), "%s", string_of(answer, "id"));
   cJSON_Delete(answer);
@@ -420,7 +225,7 @@ int main(void) {
     char body[512];
     snprintf(path, sizeof(path), "/api/corpus/%s/pieces", collection_id);
     snprintf(body, sizeof(body), "{\"piece_ids\":[\"%s\",\"%s\"]}", clementi_id, mozart_id);
-    cJSON_Delete(json_exchange("POST", path, body, &status));
+    cJSON_Delete(test_http_json(PORT, "POST", path, body, &status));
     snprintf(body, sizeof(body), "{\"collection_id\":\"%s\"}", collection_id);
     answer = build_style(body, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2, "a style from a collection holds its pieces");
@@ -437,7 +242,7 @@ int main(void) {
 
   /* From a brief: the union of a collection, a filter and ids, and of a style's pieces. */
   {
-    answer = json_exchange("POST", "/api/corpus", "{\"name\":\"Solo\"}", &status);
+    answer = test_http_json(PORT, "POST", "/api/corpus", "{\"name\":\"Solo\"}", &status);
     char solo_id[128];
     snprintf(solo_id, sizeof(solo_id), "%s", string_of(answer, "id"));
     cJSON_Delete(answer);
@@ -445,7 +250,7 @@ int main(void) {
     char body[1024];
     snprintf(path, sizeof(path), "/api/corpus/%s/pieces", solo_id);
     snprintf(body, sizeof(body), "{\"piece_ids\":[\"%s\"]}", clementi_id);
-    cJSON_Delete(json_exchange("POST", path, body, &status));
+    cJSON_Delete(test_http_json(PORT, "POST", path, body, &status));
 
     snprintf(body, sizeof(body),
              "{\"brief\":{\"scopes\":[{\"kind\":\"collection\",\"collection_id\":\"%s\"},"
@@ -472,7 +277,7 @@ int main(void) {
 
     /* The pieces are in id order. */
     snprintf(path, sizeof(path), "/api/styles/%s", brief_style_id);
-    answer = json_exchange("GET", path, NULL, &status);
+    answer = test_http_json(PORT, "GET", path, NULL, &status);
     {
       const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(style_of(answer), "pieces");
       check(cJSON_GetArraySize(pieces) == 2 &&
@@ -527,11 +332,11 @@ int main(void) {
 
     /* Rebuild resolves the brief again: the style it names changed. */
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", one_id);
-    answer = json_exchange("POST", path, NULL, &status);
+    answer = test_http_json(PORT, "POST", path, NULL, &status);
     check(status == 200, "rebuilding the style a brief names answers 200");
     cJSON_Delete(answer);
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
-    answer = json_exchange("POST", path, NULL, &status);
+    answer = test_http_json(PORT, "POST", path, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 2 &&
               strcmp(string_of(cJSON_GetObjectItemCaseSensitive(style_of(answer), "source"), "kind"), "brief") == 0,
           "rebuilding a brief resolves it again and keeps its kind");
@@ -540,17 +345,17 @@ int main(void) {
 
     /* A deleted style makes the brief's rebuild 422. */
     snprintf(path, sizeof(path), "/api/styles/%s", one_id);
-    cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+    cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
     snprintf(path, sizeof(path), "/api/styles/%s/rebuild", with_style_id);
-    answer = json_exchange("POST", path, NULL, &status);
+    answer = test_http_json(PORT, "POST", path, NULL, &status);
     check(status == 422 && !ok_true(answer), "rebuilding a brief whose style is gone answers 422");
     cJSON_Delete(answer);
     check(model_reads_with_pieces(with_style_id, 2), "a refused brief rebuild leaves the model as it was");
 
     snprintf(path, sizeof(path), "/api/styles/%s", with_style_id);
-    cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+    cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
     snprintf(path, sizeof(path), "/api/styles/%s", brief_style_id);
-    cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+    cJSON_Delete(test_http_json(PORT, "DELETE", path, NULL, &status));
   }
 
   /* From ids, one unknown. */
@@ -599,14 +404,14 @@ int main(void) {
     char analysis_path[512];
     snprintf(meta_path, sizeof(meta_path), "pieces/%s/meta.json", mozart_id);
     snprintf(analysis_path, sizeof(analysis_path), "pieces/%s/analysis.json", mozart_id);
-    char *meta_text = read_file(meta_path, NULL);
+    char *meta_text = test_read_file(meta_path, NULL);
     cJSON *meta = meta_text ? cJSON_Parse(meta_text) : NULL;
     free(meta_text);
     bool seeded = false;
     if (meta) {
       cJSON_ReplaceItemInObjectCaseSensitive(meta, "document_schema_version", cJSON_CreateNumber(1));
       char *text = cJSON_Print(meta);
-      seeded = text && write_file(meta_path, text) && write_file(analysis_path, "{\"schema_version\":1}");
+      seeded = text && test_write_file(meta_path, text, strlen(text)) && test_write_file(analysis_path, "{\"schema_version\":1}", strlen("{\"schema_version\":1}"));
       free(text);
     }
     cJSON_Delete(meta);
@@ -619,7 +424,7 @@ int main(void) {
           "the old piece is re-analyzed and used");
     cJSON_Delete(answer);
 
-    meta_text = read_file(meta_path, NULL);
+    meta_text = test_read_file(meta_path, NULL);
     meta = meta_text ? cJSON_Parse(meta_text) : NULL;
     free(meta_text);
     check(number_of(meta, "document_schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION,
@@ -636,11 +441,11 @@ int main(void) {
     {
       char get_path[256];
       snprintf(get_path, sizeof(get_path), "/api/styles/%s", tag_style_id);
-      answer = json_exchange("GET", get_path, NULL, &status);
+      answer = test_http_json(PORT, "GET", get_path, NULL, &status);
       snprintf(old_updated, sizeof(old_updated), "%s", string_of(style_of(answer), "updated_at"));
       cJSON_Delete(answer);
     }
-    answer = json_exchange("POST", path, NULL, &status);
+    answer = test_http_json(PORT, "POST", path, NULL, &status);
     check(status == 200 && number_of(style_of(answer), "piece_count") == 1, "rebuilding after untagging one gives 1 piece");
     check(strcmp(string_of(style_of(answer), "id"), tag_style_id) == 0, "the rebuilt style keeps its id");
     check(strcmp(string_of(style_of(answer), "name"), "Tag: sonatina") == 0, "the rebuilt style keeps its name");
@@ -650,7 +455,7 @@ int main(void) {
 
     /* No piece left: 422, and the style stays as it was. */
     patch_piece(mozart_id, "{\"remove_tags\":[\"sonatina\"]}");
-    answer = json_exchange("POST", path, NULL, &status);
+    answer = test_http_json(PORT, "POST", path, NULL, &status);
     check(status == 422 && !ok_true(answer), "rebuilding with no piece left answers 422");
     cJSON_Delete(answer);
     check(model_reads_with_pieces(tag_style_id, 1), "a refused rebuild leaves the model as it was");
@@ -661,25 +466,25 @@ int main(void) {
     char path[256];
     snprintf(path, sizeof(path), "/api/styles/%s", tag_style_id);
     int before = listed_styles();
-    cJSON *deleted = json_exchange("DELETE", path, NULL, &status);
+    cJSON *deleted = test_http_json(PORT, "DELETE", path, NULL, &status);
     check(status == 200 && ok_true(deleted), "DELETE a style answers ok");
     cJSON_Delete(deleted);
     check(listed_styles() == before - 1, "the list no longer holds it");
     char model[512];
     snprintf(model, sizeof(model), "styles/%s/style-model.json", tag_style_id);
-    check(!file_exists(model), "its files are gone");
-    answer = json_exchange("GET", path, NULL, &status);
+    check(!test_file_exists(model), "its files are gone");
+    answer = test_http_json(PORT, "GET", path, NULL, &status);
     check(status == 404 && !ok_true(answer), "GET a deleted style answers 404");
     cJSON_Delete(answer);
-    answer = json_exchange("DELETE", path, NULL, &status);
+    answer = test_http_json(PORT, "DELETE", path, NULL, &status);
     check(status == 404, "DELETE a deleted style answers 404");
     cJSON_Delete(answer);
     char rebuild[256];
     snprintf(rebuild, sizeof(rebuild), "/api/styles/%s/rebuild", tag_style_id);
-    answer = json_exchange("POST", rebuild, NULL, &status);
+    answer = test_http_json(PORT, "POST", rebuild, NULL, &status);
     check(status == 404, "rebuilding a deleted style answers 404");
     cJSON_Delete(answer);
-    answer = json_exchange("GET", "/api/styles/sty-0000000000000000", NULL, &status);
+    answer = test_http_json(PORT, "GET", "/api/styles/sty-0000000000000000", NULL, &status);
     check(status == 404, "an unknown style id answers 404");
     cJSON_Delete(answer);
   }
@@ -688,9 +493,5 @@ int main(void) {
   free(mozart_id);
   mg_stop(ctx);
 
-  if (failures > 0) {
-    fprintf(stderr, "%d check(s) failed\n", failures);
-    return 1;
-  }
-  return 0;
+  return test_finish("styles_route");
 }
