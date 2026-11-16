@@ -44,7 +44,7 @@ The tests are split into a fast set and a slow set. The `slow` label is new: a t
 
 A fast-set test that takes over 10 s is sped up or labeled `slow`. `tools/ci/slowest-tests.sh build/gui` (from the repository root) prints the ten slowest tests of the last run and warns about any fast-set test over 10 s.
 
-CMake sets the timeouts (`cmake/TestTimeouts.cmake`): 30 s for a test without the `slow` label, 1800 s for a slow one. The `Nightly` workflow runs the full suite, so the slow set runs nightly in CI.
+Each test gets its timeout when it is registered with `ursatz_test()`: 120 s for a test without the `slow` label, 1800 s for a slow one. The `Nightly` workflow runs the full suite, so the slow set runs nightly in CI.
 
 The tests and checks are in [docs/testing.md](docs/testing.md).
 
