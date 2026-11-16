@@ -94,4 +94,9 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 ## Limits and changes
 
 - [changelog.md](changelog.md): the Composer versions and what each changed.
-- [changelog-archive.md](changelog-archive.md): the older changelog entries.
+- [changelog-archive.md](changelog-archive.md): the changelog entries before P44.
+- [changelog-archive-2.md](changelog-archive-2.md): the changelog entries of P51 and P50.
+- [changelog-archive-3.md](changelog-archive-3.md): the changelog entries of P49 and P48.
+- [changelog-archive-4.md](changelog-archive-4.md): the changelog entries of L4 and P47.
+- [changelog-archive-5.md](changelog-archive-5.md): the changelog entries of L3, P46 and L2.
+- [changelog-archive-6.md](changelog-archive-6.md): the changelog entries of P45, L1 and P44.
