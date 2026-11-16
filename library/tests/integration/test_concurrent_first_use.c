@@ -23,7 +23,6 @@
     X(galant_schemas_framework)                                                                                        \
     X(high_baroque_fugue_framework)                                                                                    \
     X(scale_harmonization_framework)                                                                                   \
-    X(sixteenth_century_framework)                                                                                     \
     X(standard_counterpoint_framework)                                                                                 \
     X(standard_form_framework)                                                                                         \
     X(standard_harmony_framework)                                                                                      \
@@ -40,7 +39,6 @@
     X(galant_matching_rule)                                                                                            \
     X(fugue_answer_rule)                                                                                               \
     X(scale_octave_rule)                                                                                               \
-    X(sixteenth_century_dissonance_rule)                                                                               \
     X(standard_counterpoint_cantus_rule)                                                                               \
     X(standard_form_beginning_rule)                                                                                    \
     X(harmony_applied_rule)                                                                                            \

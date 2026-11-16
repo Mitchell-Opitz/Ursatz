@@ -32,7 +32,7 @@ static const ModuleLayer KERNEL_MODULES[] = {
 
 static const char *const FRAMEWORKS[] = {
     "baroque-ground-bass", "common-practice-minimal", "galant-schemas", "high-baroque-fugue", "scale-harmonization",
-    "sixteenth-century-style", "standard-counterpoint", "standard-form", "standard-harmony", "standard-markings",
+    "standard-counterpoint", "standard-form", "standard-harmony", "standard-markings",
     "standard-meter", "standard-texture", "standard-tonality",
     "standard-voicing", "western-periods",
 };
@@ -55,7 +55,6 @@ static const TestEdge ALLOWED_TEST_EDGES[] = {
      "the test builds kernel outer lines and hands them to the framework in its own input shape"},
     {"frameworks/baroque-ground-bass/tests/", "standard-counterpoint/", "declared dependency"},
     {"frameworks/high-baroque-fugue/tests/", "standard-counterpoint/", "declared dependency"},
-    {"frameworks/sixteenth-century-style/tests/", "standard-counterpoint/", "declared dependency"},
     {"frameworks/scale-harmonization/tests/", "galant-schemas/", "declared dependency"},
     {"frameworks/standard-harmony/tests/", "standard-tonality/", "test-only edge: Roman numeral grammar cases"},
     {"frameworks/standard-harmony/tests/", "analysis/period_detection.h",
