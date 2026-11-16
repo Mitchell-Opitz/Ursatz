@@ -137,15 +137,9 @@ add_library(ursatz
     theory/style_model_build.c
     theory/style_model_blend.c
     analysis/analyzer.c
-    analysis/feature_extraction.c
-    analysis/interval_analysis.c
-    analysis/scale_analysis.c
-    analysis/voice_leading_analysis.c
     analysis/beat_grid_length.c
     analysis/outer_voice.c
     analysis/voice_separation.c
-    analysis/cadence_detection.c
-    analysis/cadence_classification.c
     analysis/motif_window_matching.c
     analysis/motive_sketch.c
     analysis/motive_relation.c
@@ -155,8 +149,6 @@ add_library(ursatz
     analysis/progression_patterns.c
     analysis/phrase_boundary_detection.c
     analysis/period_detection.c
-    analysis/sentence_continuation_matching.c
-    analysis/sentence_detection.c
     analysis/form_structure_detection.c
     analysis/thematic_return_detection.c
     io/midi_importer.c
@@ -181,8 +173,6 @@ ursatz_public_headers(ursatz
     SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
     HEADERS
         analysis/analyzer.h
-        analysis/cadence_classification.h
-        analysis/cadence_detection.h
         analysis/form_structure_detection.h
         analysis/motif_window_matching.h
         analysis/motive_link.h
@@ -194,7 +184,6 @@ ursatz_public_headers(ursatz
         analysis/phrase_boundary_detection.h
         analysis/progression_patterns.h
         analysis/thematic_return_detection.h
-        analysis/voice_leading_analysis.h
         analysis/voice_separation.h
         containers/revision.h
         containers/section.h

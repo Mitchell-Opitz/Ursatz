@@ -25,10 +25,6 @@
  * Deciding which type a pair of moves is takes pitch arithmetic, which
  * belongs to a Framework (frameworks/standard-counterpoint). This type
  * only names the result.
- *
- * MotionType is NOT VoiceLeadingMotion (analysis/voice_leading_analysis.h).
- * That enum is a caller-supplied observation of the four classic types
- * and has no STATIC case.
  */
 
 typedef enum {
