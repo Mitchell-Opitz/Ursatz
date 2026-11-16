@@ -4,16 +4,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_MARKINGS_DYNAMICS_RULE_COUNT] = {
-    "dynamics-loudness-order", "dynamics-issimo-stacking", "dynamics-mezzo-moderate", "dynamics-change"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_markings_framework, "standard-markings",
-    NAMES, STANDARD_MARKINGS_DYNAMICS_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_markings_dynamics, StandardMarkingsDynamicsRule, STANDARD_MARKINGS_DYNAMICS_RULE_COUNT, g_table)
-
 #define MAX_MARKING 64
 
 /* Lowercased copy with surrounding spaces and one trailing '.' removed. */
@@ -115,11 +105,6 @@ bool standard_markings_dynamic_rank(const char *marking, int *out_rank) {
     return true;
 }
 
-bool standard_markings_is_dynamic_level(const char *marking) {
-    int rank;
-    return standard_markings_dynamic_rank(marking, &rank);
-}
-
 bool standard_markings_dynamic_is_quieter(const char *quieter, const char *louder) {
     int quieter_rank, louder_rank;
     if (!standard_markings_dynamic_rank(quieter, &quieter_rank) ||
@@ -127,39 +112,6 @@ bool standard_markings_dynamic_is_quieter(const char *quieter, const char *loude
         return false;
     }
     return quieter_rank < louder_rank;
-}
-
-bool standard_markings_dynamic_abbreviation(const char *marking, char *buffer, unsigned long buffer_size) {
-    int rank;
-    if (buffer == NULL || !standard_markings_dynamic_rank(marking, &rank)) {
-        return false;
-    }
-
-    char abbreviation[MAX_MARKING];
-    size_t length = 0;
-    if (rank == -1) {
-        memcpy(abbreviation, "mp", 3);
-        length = 2;
-    } else if (rank == 1) {
-        memcpy(abbreviation, "mf", 3);
-        length = 2;
-    } else {
-        char letter = rank < 0 ? 'p' : 'f';
-        int count = (rank < 0 ? -rank : rank) - 1;
-        if (count >= MAX_MARKING) {
-            return false;
-        }
-        for (int i = 0; i < count; i++) {
-            abbreviation[length++] = letter;
-        }
-        abbreviation[length] = '\0';
-    }
-
-    if (length + 1 > buffer_size) {
-        return false;
-    }
-    memcpy(buffer, abbreviation, length + 1);
-    return true;
 }
 
 DynamicChange standard_markings_dynamic_change(const char *marking) {

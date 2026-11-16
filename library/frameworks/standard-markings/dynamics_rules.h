@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 
-#include "rules/constraint.h"
-#include "rules/rule.h"
-
 /*
  * Dynamics rules for standard-markings-v1. Dynamics indicate loudness,
  * written as Italian words usually abbreviated:
@@ -32,21 +29,10 @@
  */
 
 typedef enum {
-    STANDARD_MARKINGS_DYNAMICS_RULE_LOUDNESS_ORDER = 0,
-    STANDARD_MARKINGS_DYNAMICS_RULE_ISSIMO_STACKING,
-    STANDARD_MARKINGS_DYNAMICS_RULE_MEZZO_MODERATE,
-    STANDARD_MARKINGS_DYNAMICS_RULE_CHANGE,
-    STANDARD_MARKINGS_DYNAMICS_RULE_COUNT
-} StandardMarkingsDynamicsRule;
-
-typedef enum {
     DYNAMIC_CHANGE_NONE, /* not a change word or hairpin */
     DYNAMIC_CHANGE_LOUDER,
     DYNAMIC_CHANGE_QUIETER
 } DynamicChange;
-
-const Rule *standard_markings_dynamics_rule(StandardMarkingsDynamicsRule which);
-const Constraint *standard_markings_dynamics_constraint(StandardMarkingsDynamicsRule which);
 
 /*
  * LOUDNESS_ORDER / ISSIMO_STACKING / MEZZO_MODERATE: the loudness rank of
@@ -57,19 +43,9 @@ const Constraint *standard_markings_dynamics_constraint(StandardMarkingsDynamics
  */
 bool standard_markings_dynamic_rank(const char *marking, int *out_rank);
 
-/* True when the marking is a recognized level marking. */
-bool standard_markings_is_dynamic_level(const char *marking);
-
 /* LOUDNESS_ORDER: true when both are level markings and `quieter` ranks
    strictly below `louder`. */
 bool standard_markings_dynamic_is_quieter(const char *quieter, const char *louder);
-
-/*
- * The abbreviation of a level marking in its canonical lowercase form
- * ("pianissimo" -> "pp"), written to buffer. Returns false when the
- * marking is not a level marking or buffer is too small.
- */
-bool standard_markings_dynamic_abbreviation(const char *marking, char *buffer, unsigned long buffer_size);
 
 /* CHANGE: direction of a crescendo/decrescendo/diminuendo word or
    abbreviation; hairpins are written "<" (louder) and ">" (quieter). */

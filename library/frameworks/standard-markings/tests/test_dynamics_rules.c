@@ -11,17 +11,6 @@ static int rank_of(const char *marking) {
     return rank;
 }
 
-static void test_rules_reference_framework(void) {
-    for (int i = 0; i < STANDARD_MARKINGS_DYNAMICS_RULE_COUNT; i++) {
-        const Rule *rule = standard_markings_dynamics_rule((StandardMarkingsDynamicsRule)i);
-        const Constraint *constraint = standard_markings_dynamics_constraint((StandardMarkingsDynamicsRule)i);
-        assert(rule != NULL && constraint != NULL);
-        assert(framework_identity_equals(rule_framework(rule), standard_markings_framework()));
-        assert(constraint_type(constraint) == CONSTRAINT_TYPE_HARD);
-    }
-    assert(standard_markings_dynamics_rule(STANDARD_MARKINGS_DYNAMICS_RULE_COUNT) == NULL);
-}
-
 /* Quietest to loudest: ppp pp p mp mf f ff fff. */
 static void test_loudness_order(void) {
     const char *order[] = {"ppp", "pp", "p", "mp", "mf", "f", "ff", "fff"};
@@ -75,28 +64,8 @@ static void test_case_and_unrecognized(void) {
     assert(!standard_markings_dynamic_rank("mpp", &rank));
     assert(!standard_markings_dynamic_rank("pf", &rank));
     assert(!standard_markings_dynamic_rank("mezzo", &rank));
-    assert(rank == 99); /* untouched on failure */
-
-    assert(standard_markings_is_dynamic_level("mf"));
-    assert(!standard_markings_is_dynamic_level("cresc."));
+    assert(rank == 99);
     assert(!standard_markings_dynamic_is_quieter("loud", "ff"));
-}
-
-static void test_abbreviation(void) {
-    char buffer[16];
-    assert(standard_markings_dynamic_abbreviation("pianissimo", buffer, sizeof(buffer)));
-    assert(strcmp(buffer, "pp") == 0);
-    assert(standard_markings_dynamic_abbreviation("Mezzo Forte", buffer, sizeof(buffer)));
-    assert(strcmp(buffer, "mf") == 0);
-    assert(standard_markings_dynamic_abbreviation("fortississimo", buffer, sizeof(buffer)));
-    assert(strcmp(buffer, "fff") == 0);
-    assert(standard_markings_dynamic_abbreviation("pppppp", buffer, sizeof(buffer)));
-    assert(strcmp(buffer, "pppppp") == 0);
-
-    char small[3];
-    assert(!standard_markings_dynamic_abbreviation("fff", small, sizeof(small))); /* needs 4 */
-    assert(!standard_markings_dynamic_abbreviation("nonsense", buffer, sizeof(buffer)));
-    assert(!standard_markings_dynamic_abbreviation("f", NULL, 0));
 }
 
 static void test_dynamic_change(void) {
@@ -118,13 +87,11 @@ static void test_dynamic_change(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_loudness_order();
     test_full_names_match_abbreviations();
     test_issimo_stacking();
     test_mezzo_is_moderate();
     test_case_and_unrecognized();
-    test_abbreviation();
     test_dynamic_change();
     printf("test_dynamics_rules (standard-markings): ok\n");
     return 0;
