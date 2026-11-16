@@ -108,4 +108,4 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 
 ## Limits and changes
 
-- [third_party/ezxml/README.md](../third_party/ezxml/README.md): The vendored ezxml XML parser, its license and use.
+- [third_party/ezxml/README.md](../../third_party/ezxml/README.md): The vendored ezxml XML parser, its license and use (in the repository's `third_party/`).
