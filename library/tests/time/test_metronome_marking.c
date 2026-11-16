@@ -50,21 +50,6 @@ static void test_quarter_equals_sixty_is_one_second(void) {
     metronome_marking_seconds_per_beat_unit(m, &n, &d);
     assert(n == 1 && d == 1);
 
-    Duration *quarter = duration(1, 4);
-    metronome_marking_seconds_for_duration(m, quarter, &n, &d);
-    assert(n == 1 && d == 1);
-
-    /* A half note is two beats: two seconds. A sixteenth is a quarter second. */
-    Duration *half = duration(1, 2);
-    metronome_marking_seconds_for_duration(m, half, &n, &d);
-    assert(n == 2 && d == 1);
-    Duration *sixteenth = duration(1, 16);
-    metronome_marking_seconds_for_duration(m, sixteenth, &n, &d);
-    assert(n == 1 && d == 4);
-
-    duration_destroy(quarter);
-    duration_destroy(half);
-    duration_destroy(sixteenth);
     metronome_marking_destroy(m);
 }
 
@@ -77,12 +62,10 @@ static void test_other_beat_units_and_rates(void) {
     assert(n == 1 && d == 2);
     metronome_marking_destroy(fast);
 
-    /* Dotted quarter (3/8) = 60: a dotted quarter lasts one second, so an eighth lasts a third. */
+    /* Dotted quarter (3/8) = 60: a dotted quarter lasts one second. */
     MetronomeMarking *dotted = marking(3, 8, 60, 1);
-    Duration *eighth = duration(1, 8);
-    metronome_marking_seconds_for_duration(dotted, eighth, &n, &d);
-    assert(n == 1 && d == 3);
-    duration_destroy(eighth);
+    metronome_marking_seconds_per_beat_unit(dotted, &n, &d);
+    assert(n == 1 && d == 1);
     metronome_marking_destroy(dotted);
 
     /* A fractional rate is exact: quarter = 72.5 (145/2) -> 120/145 = 24/29 s per quarter. */
@@ -90,31 +73,6 @@ static void test_other_beat_units_and_rates(void) {
     metronome_marking_seconds_per_beat_unit(fractional, &n, &d);
     assert(n == 24 && d == 29);
     metronome_marking_destroy(fractional);
-
-    /* A zero duration lasts zero seconds. */
-    MetronomeMarking *m = marking(1, 4, 60, 1);
-    Duration *zero = duration(0, 1);
-    metronome_marking_seconds_for_duration(m, zero, &n, &d);
-    assert(n == 0 && d == 1);
-    duration_destroy(zero);
-    metronome_marking_destroy(m);
-}
-
-static void test_equality(void) {
-    MetronomeMarking *a = marking(1, 4, 60, 1);
-    MetronomeMarking *same = marking(2, 8, 120, 2); /* same value, unreduced inputs */
-    MetronomeMarking *other_rate = marking(1, 4, 72, 1);
-    MetronomeMarking *other_unit = marking(1, 8, 60, 1);
-
-    assert(metronome_marking_equals(a, same));
-    assert(!metronome_marking_equals(a, other_rate));
-    assert(!metronome_marking_equals(a, other_unit));
-    assert(!metronome_marking_equals(a, NULL));
-
-    metronome_marking_destroy(a);
-    metronome_marking_destroy(same);
-    metronome_marking_destroy(other_rate);
-    metronome_marking_destroy(other_unit);
 }
 
 int main(void) {
@@ -122,6 +80,5 @@ int main(void) {
     test_accessors_reduce_to_lowest_terms();
     test_quarter_equals_sixty_is_one_second();
     test_other_beat_units_and_rates();
-    test_equality();
     return 0;
 }

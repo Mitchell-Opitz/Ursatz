@@ -36,6 +36,5 @@ long musical_time_numerator(const MusicalTime *time);
 unsigned long musical_time_denominator(const MusicalTime *time);
 
 MusicalTimeResult musical_time_add(const MusicalTime *time, const Duration *duration, MusicalTime **out);
-DurationResult musical_time_subtract(const MusicalTime *a, const MusicalTime *b, Duration **out);
 
 #endif

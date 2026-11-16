@@ -53,6 +53,4 @@ unsigned note_value_dots(const NoteValue *note_value);
    (2 - 2^-dots) for the dots. */
 DurationResult note_value_duration(const NoteValue *note_value, Duration **out);
 
-bool note_value_equals(const NoteValue *a, const NoteValue *b);
-
 #endif

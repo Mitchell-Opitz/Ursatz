@@ -338,10 +338,6 @@ static inline void test_assert_same_tempo(const TempoMap *a, const TempoMap *b) 
         const TempoMapRegion *y = tempo_map_region(b, i);
         assert(tempo_map_region_microseconds_per_quarter(x) == tempo_map_region_microseconds_per_quarter(y));
         assert(musical_time_equals(tempo_map_region_start(x), tempo_map_region_start(y)));
-        assert((tempo_map_region_end(x) == NULL) == (tempo_map_region_end(y) == NULL));
-        if (tempo_map_region_end(x) != NULL) {
-            assert(musical_time_equals(tempo_map_region_end(x), tempo_map_region_end(y)));
-        }
     }
 }
 

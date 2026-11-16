@@ -18,14 +18,12 @@ add_library(ursatz
     time/duration.c
     time/musical_time.c
     time/time_span.c
-    time/time_instant.c
     time/temporal_anchor.c
     time/metronome_marking.c
     time/note_value.c
     time/time_signature.c
     time/meter_map.c
     time/metrical_position.c
-    time/performance_time.c
     time/tempo_map.c
     time/tuplet.c
     time/time_rational.c
@@ -232,7 +230,6 @@ ursatz_public_headers(ursatz
         time/metronome_marking.h
         time/musical_time.h
         time/note_value.h
-        time/performance_time.h
         time/score_time.h
         time/tempo_map.h
         time/temporal_anchor.h

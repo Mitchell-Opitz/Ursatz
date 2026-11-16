@@ -49,25 +49,6 @@ static void test_accessors_and_bounds(void) {
     tuplet_destroy(narrowest);
 }
 
-/* Not reduced: a sextuplet 6:4 is not a triplet 3:2. */
-static void test_equality_does_not_reduce(void) {
-    Tuplet *triplet = make(3, 2);
-    Tuplet *also_triplet = make(3, 2);
-    Tuplet *sextuplet = make(6, 4);
-    Tuplet *duplet = make(2, 3);
-
-    assert(tuplet_equals(triplet, also_triplet));
-    assert(!tuplet_equals(triplet, sextuplet));
-    assert(!tuplet_equals(triplet, duplet));
-    assert(!tuplet_equals(triplet, NULL));
-    assert(!tuplet_equals(NULL, triplet));
-
-    tuplet_destroy(triplet);
-    tuplet_destroy(also_triplet);
-    tuplet_destroy(sextuplet);
-    tuplet_destroy(duplet);
-}
-
 /* Three eighth notes in a triplet are 1/12 each. */
 static void test_note_duration(void) {
     Tuplet *triplet = make(3, 2);
@@ -155,7 +136,6 @@ static void test_notes_fill_span(void) {
 int main(void) {
     test_create_rejects_invalid();
     test_accessors_and_bounds();
-    test_equality_does_not_reduce();
     test_note_duration();
     test_span();
     test_notes_fill_span();

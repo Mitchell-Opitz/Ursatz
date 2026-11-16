@@ -8,9 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/rational.h"
 #include "time/duration.h"
+#include "time/meter_map.h"
 #include "time/metrical_position.h"
+#include "time/time_rational.h"
 #include "time/time_signature.h"
+#include "time/time_span.h"
 
 static void set_error(RomanTextAnalysis *out, const char *format, int line, const char *detail) {
     snprintf(out->error_message, sizeof(out->error_message), format, line, detail);
@@ -256,6 +260,54 @@ bool romantext_beat_offset(unsigned top, unsigned bottom, long beat_thousandths,
     return true;
 }
 
+/* The time at `offset` (whole notes) into `measure` of the map: the measure's start plus the offset. A pickup (measure
+   0 of a map with one) counts its offset from where a full measure would have started. False when the measure or the
+   offset is not in the map. */
+static bool position_time(const MeterMap *map, int measure, const Duration *offset_duration, MusicalTime **out) {
+    TimeSpan *span = NULL;
+    if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
+        return false;
+    }
+    Rational start = {0, 1};
+    Rational end = {0, 1};
+    Rational offset = {0, 1};
+    bool read = rational_of_musical_time(time_span_start(span), &start) == RATIONAL_OK &&
+                rational_of_musical_time(time_span_end(span), &end) == RATIONAL_OK &&
+                rational_of_duration(offset_duration, &offset) == RATIONAL_OK;
+    time_span_destroy(span);
+    if (!read) {
+        return false;
+    }
+
+    Rational length = {0, 1};
+    Rational into_span = offset;
+    if (rational_sub(end, start, &length) != 0) {
+        return false;
+    }
+    if (measure == 0 && meter_map_has_pickup(map)) {
+        const TimeSignature *reading = NULL;
+        Duration *measure_duration = NULL;
+        if (metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK ||
+            time_signature_measure_duration(reading, &measure_duration) != DURATION_OK) {
+            return false;
+        }
+        Rational full = {0, 1};
+        bool full_read = rational_of_duration(measure_duration, &full) == RATIONAL_OK;
+        duration_destroy(measure_duration);
+        Rational base = {0, 1};
+        if (!full_read || rational_cmp(length, full) > 0 || rational_sub(full, length, &base) != 0 ||
+            rational_cmp(offset, base) < 0 || rational_cmp(offset, full) >= 0 ||
+            rational_sub(offset, base, &into_span) != 0) {
+            return false;
+        }
+    } else if (rational_cmp(offset, length) >= 0) {
+        return false;
+    }
+
+    Rational time = {0, 1};
+    return rational_add(start, into_span, &time) == 0 && musical_time_from_rational(time, out) == TIME_RATIONAL_OK;
+}
+
 /* The time of (measure, beat in thousandths) on a MeterMap. */
 static bool meter_map_time_at(const void *context, int measure, long thousandths, MusicalTime **time) {
     const MeterMap *map = (const MeterMap *)context;
@@ -273,15 +325,9 @@ static bool meter_map_time_at(const void *context, int measure, long thousandths
     if (duration_create(numerator, denominator, &offset) != DURATION_OK) {
         return false;
     }
-    MetricalPosition *position = NULL;
-    MetricalPositionResult made = metrical_position_create(measure, offset, &position);
+    bool converted = position_time(map, measure, offset, time);
     duration_destroy(offset);
-    if (made != METRICAL_POSITION_OK) {
-        return false;
-    }
-    MetricalPositionResult converted = metrical_position_to_time(map, position, time);
-    metrical_position_destroy(position);
-    return converted == METRICAL_POSITION_OK;
+    return converted;
 }
 
 RomanTextGrid romantext_meter_map_grid(const MeterMap *map) {

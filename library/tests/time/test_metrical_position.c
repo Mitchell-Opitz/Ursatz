@@ -44,21 +44,6 @@ static void test_offset_is_copied_and_reduced(void) {
     metrical_position_destroy(p);
 }
 
-static void test_equality_is_by_value(void) {
-    MetricalPosition *a = make(2, 1, 2);
-    MetricalPosition *b = make(2, 2, 4);
-    MetricalPosition *other_measure = make(3, 1, 2);
-    MetricalPosition *other_offset = make(2, 1, 4);
-    assert(metrical_position_equals(a, b));
-    assert(!metrical_position_equals(a, other_measure));
-    assert(!metrical_position_equals(a, other_offset));
-    assert(!metrical_position_equals(a, NULL));
-    metrical_position_destroy(a);
-    metrical_position_destroy(b);
-    metrical_position_destroy(other_measure);
-    metrical_position_destroy(other_offset);
-}
-
 static void test_rejects_null(void) {
     MetricalPosition *p = NULL;
     Duration *zero = dur(0, 1);
@@ -114,29 +99,16 @@ static MeterMap *build(const Change *changes, size_t count) {
     return map;
 }
 
-/* from_time must give (measure, offset); and to_time of that must give the time back. */
+/* from_time must give (measure, offset). */
 static void assert_position(const MeterMap *map, long tn, unsigned long td, int measure, long on,
                             unsigned long od) {
     MusicalTime *t = at(tn, td);
     MetricalPosition *p = NULL;
     assert(metrical_position_from_time(map, t, &p) == METRICAL_POSITION_OK);
-    MetricalPosition *expected = make(measure, on, od);
-    assert(metrical_position_equals(p, expected));
-
-    MusicalTime *back = NULL;
-    assert(metrical_position_to_time(map, p, &back) == METRICAL_POSITION_OK);
-    assert(musical_time_equals(back, t));
-
-    MetricalPosition *again = NULL;
-    MusicalTime *from_expected = NULL;
-    assert(metrical_position_to_time(map, expected, &from_expected) == METRICAL_POSITION_OK);
-    assert(metrical_position_from_time(map, from_expected, &again) == METRICAL_POSITION_OK);
-    assert(metrical_position_equals(again, expected));
-
-    metrical_position_destroy(again);
-    musical_time_destroy(from_expected);
-    musical_time_destroy(back);
-    metrical_position_destroy(expected);
+    Duration *expected = dur(on, od);
+    assert(metrical_position_measure(p) == measure);
+    assert(duration_equals(metrical_position_offset(p), expected));
+    duration_destroy(expected);
     metrical_position_destroy(p);
     musical_time_destroy(t);
 }
@@ -206,12 +178,6 @@ static void test_short_measure_keeps_its_own_start(void) {
     assert_position(map, 5, 2, 4, 0, 1); /* the short measure ends; the 3/4 measure starts here */
     assert_position(map, 11, 4, 4, 1, 4);
     assert_position(map, 13, 4, 5, 0, 1);
-
-    /* An offset past the short measure's real length is not in it, though a 4/4 measure would hold it. */
-    MetricalPosition *too_far = make(3, 3, 4);
-    MusicalTime *time = NULL;
-    assert(metrical_position_to_time(map, too_far, &time) == METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE);
-    metrical_position_destroy(too_far);
     meter_map_destroy(map);
 }
 
@@ -229,12 +195,6 @@ static void test_pickup_in_four_four(void) {
     assert(time_signature_top_number(reading) == 4 && time_signature_bottom_number(reading) == 4);
     assert(metrical_position_reading_signature(map, 1, &reading) == METRICAL_POSITION_OK);
     assert(time_signature_top_number(reading) == 3 && time_signature_bottom_number(reading) == 4);
-
-    /* An offset before where the pickup starts is not in the pickup. */
-    MetricalPosition *before = make(0, 1, 2);
-    MusicalTime *time = NULL;
-    assert(metrical_position_to_time(map, before, &time) == METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE);
-    metrical_position_destroy(before);
     meter_map_destroy(map);
 }
 
@@ -288,17 +248,6 @@ static void test_errors(void) {
     assert(p == NULL);
     musical_time_destroy(negative);
 
-    /* A measure below the first (there is no pickup, so measure 0 is out of range), and an offset
-       at or past the measure's length. */
-    MusicalTime *time = NULL;
-    MetricalPosition *no_such_measure = make(0, 0, 1);
-    assert(metrical_position_to_time(map, no_such_measure, &time) == METRICAL_POSITION_ERR_MEASURE_OUT_OF_RANGE);
-    metrical_position_destroy(no_such_measure);
-    MetricalPosition *whole = make(1, 1, 1);
-    assert(metrical_position_to_time(map, whole, &time) == METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE);
-    metrical_position_destroy(whole);
-    assert(time == NULL);
-
     assert(metrical_position_from_time(NULL, NULL, &p) == METRICAL_POSITION_ERR_NULL_ARGUMENT);
     const TimeSignature *reading = NULL;
     assert(metrical_position_reading_signature(map, 0, &reading) == METRICAL_POSITION_ERR_MEASURE_OUT_OF_RANGE);
@@ -321,7 +270,6 @@ int main(void) {
     test_holds_measure_and_offset();
     test_a_pickup_is_measure_zero();
     test_offset_is_copied_and_reduced();
-    test_equality_is_by_value();
     test_rejects_null();
     test_four_four();
     test_three_four();

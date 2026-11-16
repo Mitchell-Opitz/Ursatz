@@ -55,10 +55,3 @@ DurationResult note_value_duration(const NoteValue *note_value, Duration **out) 
     }
     return duration_create(dot_numerator, 1UL << ((unsigned)note_value->exponent + dots), out);
 }
-
-bool note_value_equals(const NoteValue *a, const NoteValue *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return a->exponent == b->exponent && a->dots == b->dots;
-}

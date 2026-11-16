@@ -95,19 +95,3 @@ MusicalTimeResult musical_time_add(const MusicalTime *time, const Duration *dura
     }
     return musical_time_create((long)sum.num, (unsigned long)sum.den, out);
 }
-
-DurationResult musical_time_subtract(const MusicalTime *a, const MusicalTime *b, Duration **out) {
-    Rational left;
-    Rational right;
-    Rational difference;
-    if (!rational_of_content(musical_time_content(a), &left) ||
-        !rational_of_content(musical_time_content(b), &right) ||
-        rational_sub(left, right, &difference) != RATIONAL_OK || difference.num > LONG_MAX ||
-        (unsigned long long)difference.den > ULONG_MAX) {
-        return DURATION_ERR_OVERFLOW;
-    }
-    if (difference.num < 0) {
-        return DURATION_ERR_NEGATIVE;
-    }
-    return duration_create((long)difference.num, (unsigned long)difference.den, out);
-}

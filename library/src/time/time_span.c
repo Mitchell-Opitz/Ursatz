@@ -67,14 +67,6 @@ void time_span_destroy(TimeSpan *span) {
     free(span);
 }
 
-bool time_span_equals(const TimeSpan *a, const TimeSpan *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return a->boundary == b->boundary && musical_time_equals(a->start, b->start) &&
-           musical_time_equals(a->end, b->end);
-}
-
 const MusicalTime *time_span_start(const TimeSpan *span) {
     return span->start;
 }

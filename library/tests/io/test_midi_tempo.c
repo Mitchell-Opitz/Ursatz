@@ -16,7 +16,7 @@
  * Tempo import fixtures: SMF files built in code with a constant tempo, a step series that speeds up
  * (an accelerando in steps), a tempo on a non-first track, duplicate and conflicting tempos across
  * tracks, and malformed set-tempo events. Each is imported with midi_importer_import_complete and
- * checked for its regions and for the seconds a chosen note starts at. Division is 480 ticks per
+ * checked for its regions. Division is 480 ticks per
  * quarter note, so a whole note is 1920 ticks.
  */
 
@@ -130,17 +130,6 @@ static void release(Imported *imported) {
     midi_tempo_import_destroy(&imported->tempo);
 }
 
-static void assert_note_seconds(const Imported *imported, size_t note, long sn, unsigned long sd) {
-    const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(imported->events[note]));
-    PerformanceTime *seconds = NULL;
-    assert(tempo_map_seconds_at(imported->tempo.tempo_map, position, &seconds) == TEMPO_MAP_OK);
-    PerformanceTime *expected = NULL;
-    assert(performance_time_create(sn, sd, &expected) == PERFORMANCE_TIME_OK);
-    assert(performance_time_equals(seconds, expected));
-    performance_time_destroy(expected);
-    performance_time_destroy(seconds);
-}
-
 static unsigned long region_tempo(const Imported *imported, size_t region) {
     const TempoMapRegion *r = tempo_map_region(imported->tempo.tempo_map, region);
     assert(r != NULL);
@@ -158,9 +147,6 @@ static void test_constant_tempo(void) {
     assert(!tempo_map_is_defaulted(imported.tempo.tempo_map));
     assert(tempo_map_region_count(imported.tempo.tempo_map) == 1);
     assert(region_tempo(&imported, 0) == 500000);
-    assert_note_seconds(&imported, 0, 0, 1);
-    assert_note_seconds(&imported, 1, 2, 1); /* a whole note at 120 quarter notes per minute */
-    assert_note_seconds(&imported, 3, 6, 1);
 
     release(&imported);
 }
@@ -185,13 +171,6 @@ static void test_step_series_that_speeds_up(void) {
     assert(region_tempo(&imported, 2) == 400000);
     assert(region_tempo(&imported, 3) == 300000);
 
-    /* 2.4 s, then 2.0, 1.6 and 1.2 s a whole note: 0, 12/5, 22/5, 6, 36/5. */
-    assert_note_seconds(&imported, 0, 0, 1);
-    assert_note_seconds(&imported, 1, 12, 5);
-    assert_note_seconds(&imported, 2, 22, 5);
-    assert_note_seconds(&imported, 3, 6, 1);
-    assert_note_seconds(&imported, 4, 36, 5);
-
     release(&imported);
 }
 
@@ -209,8 +188,6 @@ static void test_tempo_on_a_non_first_track(void) {
     assert(region_tempo(&imported, 0) == 500000);
     assert(region_tempo(&imported, 1) == 1000000);
     assert(!tempo_map_is_defaulted(imported.tempo.tempo_map));
-    assert_note_seconds(&imported, 1, 2, 1);
-    assert_note_seconds(&imported, 2, 6, 1);
 
     release(&imported);
 }
@@ -281,7 +258,6 @@ static void test_no_set_tempo_is_a_defaulted_120(void) {
 
     assert(tempo_map_is_defaulted(imported.tempo.tempo_map));
     assert(region_tempo(&imported, 0) == TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER);
-    assert_note_seconds(&imported, 1, 2, 1);
 
     release(&imported);
 }

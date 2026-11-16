@@ -49,10 +49,3 @@ DurationResult tuplet_note_duration(const Tuplet *tuplet, const Duration *nomina
 DurationResult tuplet_span(const Tuplet *tuplet, const Duration *nominal, Duration **out) {
     return duration_create(duration_numerator(nominal) * (long)tuplet->normal, duration_denominator(nominal), out);
 }
-
-bool tuplet_equals(const Tuplet *a, const Tuplet *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return a->actual == b->actual && a->normal == b->normal;
-}

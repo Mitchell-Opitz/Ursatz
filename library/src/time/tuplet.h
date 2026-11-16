@@ -62,6 +62,4 @@ DurationResult tuplet_note_duration(const Tuplet *tuplet, const Duration *nomina
  */
 DurationResult tuplet_span(const Tuplet *tuplet, const Duration *nominal, Duration **out);
 
-bool tuplet_equals(const Tuplet *a, const Tuplet *b);
-
 #endif

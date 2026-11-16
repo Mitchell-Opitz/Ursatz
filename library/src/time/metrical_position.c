@@ -45,13 +45,6 @@ const Duration *metrical_position_offset(const MetricalPosition *position) {
     return position->offset;
 }
 
-bool metrical_position_equals(const MetricalPosition *a, const MetricalPosition *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return a->measure == b->measure && duration_equals(a->offset, b->offset);
-}
-
 /* Exact arithmetic is core/rational.h; every operation is checked and reports overflow. */
 static int rat_of_time(const MusicalTime *time, Rational *out) {
     return rational_of_musical_time(time, out) == RATIONAL_OK ? 0 : -1;
@@ -220,52 +213,4 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
     MetricalPositionResult created = metrical_position_create(measure, offset_duration, out);
     duration_destroy(offset_duration);
     return created;
-}
-
-MetricalPositionResult metrical_position_to_time(const MeterMap *map, const MetricalPosition *position,
-                                                  MusicalTime **out) {
-    if (map == NULL || position == NULL || out == NULL) {
-        return METRICAL_POSITION_ERR_NULL_ARGUMENT;
-    }
-    int measure = metrical_position_measure(position);
-    Rational start = {0, 1};
-    Rational end = {0, 1};
-    MetricalPositionResult bounded = span_bounds(map, measure, &start, &end);
-    if (bounded != METRICAL_POSITION_OK) {
-        return bounded;
-    }
-
-    Rational offset = {0, 1};
-    if (rat_of_duration(metrical_position_offset(position), &offset) != 0) {
-        return METRICAL_POSITION_ERR_OVERFLOW;
-    }
-    Rational into_span = offset; /* how far past the measure's start in time */
-    if (measure == 0 && meter_map_has_pickup(map)) {
-        Rational base = {0, 1};
-        Rational full = {0, 1};
-        MetricalPositionResult based = pickup_base(map, start, end, &base, &full);
-        if (based != METRICAL_POSITION_OK) {
-            return based;
-        }
-        if (rational_cmp(offset, base) < 0 || rational_cmp(offset, full) >= 0 || rational_sub(offset, base, &into_span) != 0) {
-            return METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE;
-        }
-    } else {
-        Rational length = {0, 1};
-        if (rational_sub(end, start, &length) != 0) {
-            return METRICAL_POSITION_ERR_OVERFLOW;
-        }
-        if (rational_cmp(offset, length) >= 0) {
-            return METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE;
-        }
-    }
-
-    Rational time = {0, 1};
-    if (rational_add(start, into_span, &time) != 0 || !fits(time)) {
-        return METRICAL_POSITION_ERR_OVERFLOW;
-    }
-    if (musical_time_create((long)time.num, (unsigned long)time.den, out) != MUSICAL_TIME_OK) {
-        return METRICAL_POSITION_ERR_ALLOC;
-    }
-    return METRICAL_POSITION_OK;
 }

@@ -111,28 +111,6 @@ static void test_double_dot_is_seven_quarters_of_base(void) {
     note_value_destroy(dotted);
 }
 
-static void test_equality(void) {
-    NoteValue *quarter = NULL;
-    NoteValue *other_quarter = NULL;
-    NoteValue *dotted_quarter = NULL;
-    NoteValue *eighth = NULL;
-    assert(note_value_create(2, &quarter) == NOTE_VALUE_OK);
-    assert(note_value_create(2, &other_quarter) == NOTE_VALUE_OK);
-    assert(note_value_create_dotted(2, 1, &dotted_quarter) == NOTE_VALUE_OK);
-    assert(note_value_create(3, &eighth) == NOTE_VALUE_OK);
-
-    assert(note_value_equals(quarter, other_quarter));
-    assert(!note_value_equals(quarter, dotted_quarter));
-    assert(!note_value_equals(quarter, eighth));
-    assert(!note_value_equals(quarter, NULL));
-    assert(!note_value_equals(NULL, quarter));
-
-    note_value_destroy(quarter);
-    note_value_destroy(other_quarter);
-    note_value_destroy(dotted_quarter);
-    note_value_destroy(eighth);
-}
-
 int main(void) {
     test_create_rejects_out_of_range();
     test_accessors();
@@ -140,7 +118,6 @@ int main(void) {
     test_undotted_durations();
     test_dotted_durations();
     test_double_dot_is_seven_quarters_of_base();
-    test_equality();
     printf("test_note_value: ok\n");
     return 0;
 }

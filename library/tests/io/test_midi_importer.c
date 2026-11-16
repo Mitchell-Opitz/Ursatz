@@ -664,15 +664,6 @@ static void test_import_with_tempo_reads_tempo_at_tick_zero_over_the_default(voi
     assert(tempo_map_region_count(tempo.tempo_map) == 1);
     assert(first_region_tempo(&tempo) == 1000000);
 
-    /* One whole note at 1,000,000 microseconds per quarter is 4 seconds. */
-    MusicalTime *whole = NULL;
-    musical_time_create(1, 1, &whole);
-    PerformanceTime *seconds = NULL;
-    assert(tempo_map_seconds_at(tempo.tempo_map, whole, &seconds) == TEMPO_MAP_OK);
-    assert(performance_time_numerator(seconds) == 4 && performance_time_denominator(seconds) == 1);
-    performance_time_destroy(seconds);
-    musical_time_destroy(whole);
-
     midi_tempo_import_destroy(&tempo);
     free_import(events, pitch_values, count);
 }

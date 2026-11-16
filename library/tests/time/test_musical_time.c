@@ -109,38 +109,6 @@ static void test_add_duration_to_negative_position(void) {
     musical_time_destroy(sum);
 }
 
-static void test_subtract_yields_duration(void) {
-    MusicalTime *a = NULL;
-    MusicalTime *b = NULL;
-    Duration *diff = NULL;
-    musical_time_create(3, 4, &a);
-    musical_time_create(1, 4, &b);
-
-    DurationResult r = musical_time_subtract(a, b, &diff);
-    assert(r == DURATION_OK);
-    assert(duration_numerator(diff) == 1);
-    assert(duration_denominator(diff) == 2);
-
-    musical_time_destroy(a);
-    musical_time_destroy(b);
-    duration_destroy(diff);
-}
-
-static void test_subtract_rejects_negative_result(void) {
-    MusicalTime *a = NULL;
-    MusicalTime *b = NULL;
-    Duration *diff = NULL;
-    musical_time_create(1, 4, &a);
-    musical_time_create(3, 4, &b);
-
-    DurationResult r = musical_time_subtract(a, b, &diff);
-    assert(r == DURATION_ERR_NEGATIVE);
-    assert(diff == NULL);
-
-    musical_time_destroy(a);
-    musical_time_destroy(b);
-}
-
 int main(void) {
     test_create_rejects_zero_denominator();
     test_create_accepts_valid();
@@ -151,7 +119,5 @@ int main(void) {
     test_inequality_different_reduced_value();
     test_add_duration();
     test_add_duration_to_negative_position();
-    test_subtract_yields_duration();
-    test_subtract_rejects_negative_result();
     return 0;
 }
