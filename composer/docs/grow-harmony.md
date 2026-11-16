@@ -7,7 +7,7 @@ The motive-forms, the pool, the harmony, the melody and the free phrases of the 
 The motives stage writes the motive node of each idea as concrete notes with its own chords and tone roles. `motive-form` (`<ursatz_composer/grow_form.h>`, `src/grow/grow_form.c`)
 offers, for each idea, the motive its `motive_ref` names: `grow_develop_motive` (`src/grow/grow_develop.c`) maps the ref's step to one
 chain of the [variant registry](variant-registry.md) and applies it to the basic idea, and the candidate is ranked by how well it connects
-(`motive_connection`, `<ursatz_composer/motive_connect.h>`). The slot is the name of the idea whose melody asks for the motive node. The
+(`motive_connection_limited`, `<ursatz_composer/motive_connect.h>`). The slot is the name of the idea whose melody asks for the motive node. The
 structure stage uses the same function to check the ideas, so the same plan always gives the same candidates (a fixed seed of 1 draws any
 open parameter).
 

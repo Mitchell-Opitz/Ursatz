@@ -7,7 +7,7 @@ ursatz-composer theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--o
 ```
 
 Grows a theme from the motives of a request ([theme-request.md](theme-request.md)): up to 16 motives, which the slots of
-the theme and its single ideas name, and the brief. It is `grow` over the same library (`grow_build_plan` and `grow_run`, see
+the theme and its single ideas name, and the brief. It is `grow` over the same library (`grow_build_plan_checked` and `grow_run`, see
 [grow.md](grow.md)): the options after the request file, the seeds, `--check`, the files and the output are
 [grow's](cli-grow.md), and a request with one motive gives the plan `grow` gives for the same options and seed.
 

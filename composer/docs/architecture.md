@@ -94,10 +94,10 @@ One `composer_api_theme` request, from the reply's side:
 
 1. `composer_api_theme` parses the JSON text and checks `schema` and `schema_version`; a bad member is refused with its JSON path ([theme-request.md](theme-request.md)).
 2. The request is read into motives, slots, ideas, chords and the brief.
-3. `grow_build_plan` plans the theme's structure (sentence, period or hybrid) as a piece plan with one section ([grow.md](grow.md)).
+3. `grow_build_plan_checked` plans the theme's structure (sentence, period or hybrid) as a piece plan with one section ([grow.md](grow.md)).
 4. `grow_run` runs a compose run over that section: the stages write the motives, harmony, bass and melody, each through the fill loop with its seed, retries and records ([fill-loop.md](fill-loop.md), [grow-harmony.md](grow-harmony.md)).
 5. With `check` set, the Analyzer check renders the plan once and hears the section through `analyzer_hear`; a planned cadence or key not heard, or a hard voice-leading fault, rejects the run ([analyzer-check.md](analyzer-check.md)).
-6. `form_hear` reports the form heard in the theme, kept in the outcome without rejecting ([form-hear.md](form-hear.md), [grow-hearing.md](grow-hearing.md)).
+6. `form_hear_in` reports the form heard in the theme, kept in the outcome without rejecting ([form-hear.md](form-hear.md), [grow-hearing.md](grow-hearing.md)).
 7. The plan is rendered for MIDI and MusicXML when the request asks ([export.md](export.md)).
 8. The reply is a `ComposerResponse`: the theme document in `json`, the plan, the MIDI bytes and the MusicXML text; the caller frees it with `composer_response_destroy` ([api.md](api.md#memory)).
 

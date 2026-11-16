@@ -111,7 +111,7 @@ framework's check); the other melodic rules, parallel fifths and octaves against
 unresolved leading tone or seventh and a climax not above the phrase before it score with the soft rules; voice crossing, figures,
 strong-beat chord tones and the cadence tone stay hard. Its generated notes fall back past the arch and the bass checks when no
 option passes, and the fill search starts at the nearest motive note and tries again without the bass checks.
-`melody_check_lane` judges a written lane with motive notes strict, then relaxed. Realized notes are not held to the rules the motive
+The tests' `melody_check_lane` (`tests/support/test_oracles.h`) judges a written lane with motive notes strict, then relaxed. Realized notes are not held to the rules the motive
 itself breaks (`motive_waived`), nor is the join to the idea before or after it.
 
 ## Spans on beats
@@ -212,4 +212,4 @@ The cost: a theme whose presentation cannot hold the cap above the motive fideli
 With `leap_weight` above 0, each interval of a candidate (and the one from the last written note before it) counts once, twice when it lands on a strong beat, and holds when under 5 semitones (a leap is 5 or more, as `leaps_per_motif` counts). With `register_weight` above 0 and melody written right before the target, two rules hold when the candidate's median pitch is within 7 and within 4 semitones of that melody's median. Both rank among the `keep` candidates, so a round may raise `keep`; `assign` is not steered, so the effect is small. 0 adds nothing and draws no random number. Measured on the baseline (735 themes, both weights 20): leaps per theme 2.2 to 8.3 (2.5 to 9.8), on a downbeat 1.4 to 4.2 (1.9 to 5.0), largest move of the mean pitch between ideas 4.3 to 7.8 (6.7 to 12.2); 33 to 56 of 60 compose as before.
 
 `melody_check_lane(plan, span, key, params, &violation)` runs the same rules on a melody lane read from
-the plan, for tests and tools.
+the plan. It is the tests' oracle (`tests/support/test_oracles.c`), not part of the library.

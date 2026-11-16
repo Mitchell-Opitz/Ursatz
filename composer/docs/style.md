@@ -13,7 +13,7 @@ ursatz-composer grow theme.txt --into sentence --key "D minor" --meter 4/4 --sty
 Library: `<ursatz_composer/style.h>`. `ComposeConfig.style` and `.style_weight` (`compose.h`), `GrowConfig` the same.
 
 A style is a StyleModel file the Ursatz Analyzer wrote from a corpus (`ursatz-analyzer --style-profile`, see the Analyzer's
-`docs/style-profile.md`). The Composer reads it with the Analyzer's own reader (`composer_style_load`) and keeps, for each
+`docs/style-profile.md`). The Composer reads it with the Analyzer's own reader (`composer_style_load_without`) and keeps, for each
 category, how often each label was seen. A style is a count, not a rule (Laws 12, 13): it prefers one candidate over another
 and never rejects one.
 
@@ -33,7 +33,7 @@ agree exactly where each note starts a chord (the test's hand-written progressio
 ## Motive categories
 
 A style model from the Analyzer may also hold the four motive categories (`motive-degrees`, `motive-intervals`,
-`motive-rhythm`, `motive-nct-figure`). `composer_style_load` keeps them, and they are preferences like the others:
+`motive-rhythm`, `motive-nct-figure`). `composer_style_load_without` keeps them (with NULL and 0 it keeps every category), and they are preferences like the others:
 
 - The motives stage adds `style_weight * closeness` to the score of each motive-form and of each motive the development
   operators offer, by the candidate's `motive-degrees` (each note's degree in the key, joined), `motive-intervals` (the
@@ -46,7 +46,7 @@ A style model from the Analyzer may also hold the four motive categories (`motiv
 
 `composer_style_load_without(path, categories, count, &style)` reads a style without the named categories (any category
 the Analyzer defines; an unknown one is `COMPOSER_STYLE_ERR_ARGUMENT`). The style keeps the list
-(`composer_style_without_count`, `composer_style_without_at`), and the distance (`composer_style_measure`) drops the same
+(`composer_style_without_count`, `composer_style_without_at`), and the distance (`composer_style_measure_in`) drops the same
 categories from the fragment and from the model, so they appear nowhere in the result. On the command line it is
 `--style-without <category>`, repeatable up to 8 times, and a plan keeps the list in its `style` constraint. A blend keeps
 both styles' lists and counts none of those categories.
@@ -100,8 +100,8 @@ The scores the fill loop compares have to stay below 2^32, so a sum that would n
 
 After a complete run with a style the whole plan is heard through the Analyzer (the run's one hearing, `analyzer_hear`) and the
 result is compared with the style by `analyzer_result_style_distance` against an `AnalyzerStyleReference` that
-`composer_style_load*` prepares once with the style (the without list applied when it is created, and again when
-`composer_style_add_without` changes it; `composer_style_measure`). That measure is independent of the closeness the Composer
+`composer_style_load_without` prepares once with the style (the without list applied when it is created, and again when
+`composer_style_add_without` changes it; `composer_style_measure_in`). That measure is independent of the closeness the Composer
 scores with. It is `ComposeOutcome.style_distance` (0 is the style, 1 is nothing alike), per dimension and overall, and is
 printed by `fill`, `grow` (text and JSON). A category the plan has no data for is left out of the means.
 

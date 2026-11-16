@@ -1,7 +1,7 @@
 # Plan format
 
-A piece plan is written as JSON by `plan_to_json` / `plan_write_json_file` and read by
-`plan_from_json` / `plan_read_json_file` (`<ursatz_composer/plan_json.h>`). The file is the Composer's own: it has a
+A piece plan is written as JSON text by `plan_to_json` and read from text by `plan_from_json`
+(`<ursatz_composer/plan_json.h>`): text in, text out, and the caller reads and writes the file. The format is the Composer's own: it has a
 name, a version and a JSON Schema ([`schema/plan.v2.schema.json`](../schema/plan.v2.schema.json), JSON Schema 2020-12),
 and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
 name, a note may carry its spelling. Writing always gives format version 2 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
@@ -144,11 +144,10 @@ gaps, so the ids of a plan written after `regenerate` can differ from the ids of
 - Unknown fields are ignored, as the Analyzer's versioning rule says. Unknown values in a field
   the Composer owns (`kind`, `state`, `lane`, a constraint `kind` or its enums) are an error.
 - A failure returns `PLAN_ERR_PARSE` for text that is not JSON, `PLAN_ERR_FORMAT` for JSON that is
-  not a valid plan, `PLAN_ERR_IO` for a file that cannot be read, or `PLAN_ERR_ALLOC`. The
+  not a valid plan, or `PLAN_ERR_ALLOC`. The
   `PlanJsonError` gives a `path` such as `form.children[1].span.end.den`, a `message`, and the byte
   `offset` for a syntax error.
-- A lane claim without a `composer` object is an error. An analyzed piece is loaded with
-  `plan_from_analyzer_result`, below.
+- A lane claim without a `composer` object is an error.
 
 ## Format versions
 
@@ -168,32 +167,11 @@ a file with `schema_version` is version 1) and nothing writes it. What version 1
 Writing the plan again gives version 2: `plan_from_json` then `plan_to_json` turns any version 1 plan into its version 2
 file, and the two render the same MIDI.
 
-## Loading an analyzed piece
+## Analyzer version
 
-`plan_from_analyzer_result` (`<ursatz_composer/analysis_load.h>`) builds a plan from an `AnalyzerResult` and the
-`ImportedNotes` it was made from, in which every node and lane span is `realized`. It reads the Analyzer's results, not
-its analysis document, and records `ursatz_analyzer_version()` as the plan's `metadata.analyzer_version`.
-
-| Analyzer result | Plan |
-| --- | --- |
-| The piece | A form root from time 0 to the end of the last note or chord. |
-| The imported meter map | The meter lane: one span for each run of regions with one signature. A pickup measure joins the span of the measure after it. |
-| The chain's key regions | The key lane: a span for each region, the tonic as the library spells it. |
-| `analyzer_chord_sequence` | The harmony lane: a span for each joined chord, the root-position numeral, no function. |
-| The chain's phrases | A section over the piece with a phrase under it for each phrase. |
-| The chain's soprano and bass lines | The melody lane and the bass lane: one span over the piece with a note for each run of segments one note sounds in. |
-
-Nothing is dropped silently. The report lists:
-
-- a pickup measure (joined to the next measure's meter)
-- a phrase that overlaps the one before it or does not fit the piece (skipped)
-- a key region or chord that cannot be placed on the timeline (skipped)
-- a line with no notes (no lane written)
-- an area of the result with claims the plan has no place for yet: `cadences`, `themes`, `motives`, `texture`,
-  `voice_leading`, `schemas`
-
-A result with no notes, or with no key region and no chord, is an error (`PLAN_ERR_FORMAT`), since there is no timeline
-to build on. An analysis document is not read: `fill` refuses one and names `plan_from_analyzer_result`.
+A plan's `metadata.analyzer_version` is kept through a read and a write: a plan saved with one comes back with it. A plan
+the Composer builds has none. The Composer does not turn an analysis document into a plan: `fill` refuses one, and says it
+is an analysis document.
 
 ## Example
 

@@ -4,7 +4,7 @@
 a bass lane that are already written and voices the progression in four parts, soprano, alto, tenor and bass, by the
 rules of `standard-voicing`, with the voices joined by `standard-counterpoint` and `standard-harmony` (R-066). It is the
 texture stage of [grow](grow.md) when the request asks for a voicing, and it applies to any plan that has the targets
-below. The hearing that checks it, `voice_hear`, is described at the end. Back to the [docs index](README.md).
+below. The hearing that checks it, the tests' `voice_hear`, is described at the end. Back to the [docs index](README.md).
 
 ## The target
 
@@ -86,7 +86,7 @@ the other voices, and the form is heard from that soprano.
 
 ## Hearing the voice leading
 
-`voice_hear` (`<ursatz_composer/voice_hear.h>`) hears a written plan as Ursatz-Analyzer's voice-leading stage hears
+`voice_hear` (`tests/support/voice_hear.h`, the tests' oracle) hears a written plan as Ursatz-Analyzer's voice-leading stage hears
 real music. The grid is built here from the lanes (the Analyzer pin has no stage that does), from the library's own
 adapter tests:
 

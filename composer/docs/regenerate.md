@@ -40,9 +40,9 @@ lane spans, each by id:
 
 ## Regenerating
 
-`plan_regenerate(plan, target, config, outcome)` reopens the target and what depends on it, then runs `compose_run` with
-the config's seed. `plan_regenerate_all` takes several targets (every harmony span of a section) and composes once;
-`plan_regenerate_scope` lists what would be reopened without changing the plan.
+`plan_regenerate_all(plan, targets, count, config, outcome)` reopens the targets and what depends on them, then runs
+`compose_run` with the config's seed. It takes several targets (every harmony span of a section) and composes once; one
+target is a list of one. `plan_regenerate_scope_all` lists what would be reopened without changing the plan.
 
 | Target | What is reopened |
 | --- | --- |

@@ -1,20 +1,22 @@
 # Hearing the phrase form
 
-`form_hear` (`<ursatz_composer/form_hear.h>`) hears the phrase-level form of a written plan through the Ursatz Analyzer.
+`form_hear_in` (`src/form/form_internal.h`, over the run's hearing) hears the phrase-level form of a written plan through the Ursatz Analyzer.
 There is one analysis path in the Composer (R-257): the plan is rendered once, `analyzer_hear` (`<ursatz_analyzer/composer_api.h>`)
-analyzes the notes that start inside the span, and `form_hear` reads the themes, phrases and cadences of the Analyzer's
+analyzes the notes that start inside the span, and `form_hear_in` reads the themes, phrases and cadences of the Analyzer's
 result (`analysis_chain_themes`, `analysis_chain_phrases`, `analysis_chain_cadences` of `analyzer_result_chain`). It is how
 the Composer checks the form of what it wrote with the framework's rules, never with rules of its own. Back to the [docs index](README.md).
 
 ```c
-FormHeard heard;
-if (form_hear(plan, span, &heard) == FORM_HEAR_OK) {
+ComposerHearing *hearing = NULL;
+FormHeard heard = {0};
+if (hearing_create(plan, &hearing) == HEARING_OK && form_hear_in(hearing, plan, span, &heard) == FORM_HEAR_OK) {
     for (size_t i = 0; i < heard.count; i++) {
         printf("%s, bars %zu to %zu\n", form_hear_form_name(heard.themes[i].form),
                heard.themes[i].first_bar, heard.themes[i].first_bar + heard.themes[i].bars - 1);
     }
 }
 form_heard_destroy(&heard);
+hearing_destroy(hearing);
 ```
 
 ## One hearing a run
@@ -23,9 +25,10 @@ form_heard_destroy(&heard);
 render with the MIDI number of each note. `hearing_section(hearing, span, &result)` runs `analyzer_hear` over the events
 that start inside the span (borrowed, not copied), with the meter map of the render, the key lane's key under the span's
 start, and a stream for each lane, and keeps the result for the life of the hearing, so a second check of the same span
-reads the same result. `compose_run` makes one hearing after the texture stage, and `form_hear`, `return_hear`,
-`piece_check_keys`, `analyzer_check_section`, `analyzer_check_piece` and `composer_style_measure` read it; each public call
-made on its own makes a hearing of its own. `tools/ci/check-hearing.sh` (run in CI) fails when `src/` or `cli/` calls the
+reads the same result. `compose_run` makes one hearing after the texture stage, and `form_hear_in`, `return_hear_in`,
+`piece_check_keys_in`, `analyzer_check_section_in`, `analyzer_check_piece_in` and `composer_style_measure_in` read it;
+`analyzer_check_section` and `form_hear_keys` made on their own make a hearing of their own, and the tests make one for
+the others (`tests/support/test_composer.c`). `tools/ci/check-hearing.sh` (run in CI) fails when `src/` or `cli/` calls the
 library's form or texture detectors, an `analyzer_analyze_fragment` entry, or `plan_render` anywhere but `hearing.c`,
 `export.c` and `variations.c`.
 
@@ -42,14 +45,13 @@ map and the key under the span's start. Constraints, nodes and the planned chord
 not make a cadence, and the Analyzer identifies the chords from the notes. A note belongs to the span when it starts inside
 it. Bars are counted from the start of the plan.
 
-`form_hear` still checks that the lanes over the span are written (`FORM_HEAR_ERR_NOT_WRITTEN`) and that the span is in one
+`form_hear_in` still checks that the lanes over the span are written (`FORM_HEAR_ERR_NOT_WRITTEN`) and that the span is in one
 meter (`FORM_HEAR_ERR_METER`).
 
 ## Where a phrase starts
 
-The Analyzer finds the phrases itself. `form_hear_with_sections(plan, span, starts, count, &heard)` keeps its signature, but
-the Analyzer's hearing takes no given boundaries (`AnalyzerHearingOptions` holds the stages only, not
-`refine_with_given_boundaries`), so the starts are not passed on and it equals `form_hear`. A V followed by I6 is heard as
+The Analyzer finds the phrases itself. Its hearing takes no given boundaries (`AnalyzerHearingOptions` holds the stages
+only, not `refine_with_given_boundaries`), so no section starts are passed on. A V followed by I6 is heard as
 an evaded (subverted) cadence, and a period whose consequent opens on I6 is heard as one phrase, a hybrid.
 
 ## Several keys
@@ -57,7 +59,7 @@ an evaded (subverted) cadence, and a period whose consequent opens on I6 is hear
 The Analyzer is given the key under the span's start and finds its key regions from the notes. `FormHeard.cadences` lists
 the cadences heard, each with where its arrival chord starts (from the Analyzer's report) and its `CadenceType`.
 
-`form_hear_keys(plan, span, &keys, &count)` hears the same span once and returns the key regions of the Analyzer's chain (`analysis_chain_key_regions`): a `FormHeardKey` is the region's start in whole notes from the start of the plan and its `AnalysisKey`. The caller frees `keys`; with none heard `keys` is NULL and `count` 0. The same errors as `form_hear`. The piece rows' `key_heard` is the region in force at a section's start in the keys of the whole piece.
+`form_hear_keys(plan, span, &keys, &count)` hears the same span once and returns the key regions of the Analyzer's chain (`analysis_chain_key_regions`): a `FormHeardKey` is the region's start in whole notes from the start of the plan and its `AnalysisKey`. The caller frees `keys`; with none heard `keys` is NULL and `count` 0. The same errors as `form_hear_in`. The piece rows' `key_heard` is the region in force at a section's start in the keys of the whole piece.
 
 ## The result
 

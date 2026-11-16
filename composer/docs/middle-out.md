@@ -51,7 +51,7 @@ this one, the way the game loop fills a section with a theme ([piece-structure.m
 - its harmony, bass, melody and inner voice spans become Given spans owned by the section, moved to its start and
   transposed by the key difference between the two sections (the key lanes must have the same shape and mode, else
   `GIVEN_ERR_KEY`);
-- its phrase and idea nodes are copied under the section, in the states they had, so `form_hear` reads the section as the
+- its phrase and idea nodes are copied under the section, in the states they had, so `form_hear_in` reads the section as the
   theme it was; the section is then Realized and no stage targets it. Constraints that name a node of the source plan
   (a motive reference) are dropped, since the plan has no such node;
 - the source must be realized (not Constrained, with harmony, bass and melody all written: `GIVEN_ERR_NOT_REALIZED`),
@@ -80,7 +80,7 @@ The Given spans are in the snapshot like any others, so `given_snapshot_report` 
 (`harmony_prolong.h`, `harmony_phrase.h`). They write the same chords as the operators without `_given`, and they read
 what is Given around a target:
 
-- *a Given bass* under it no longer leaves the target to `harmony_octave`: each chord's bass member (root, or third,
+- *a Given bass* under it decides the chords: each chord's bass member (root, or third,
   fifth, seventh by inversion, `harmony_chord_bass_pc`) is the pitch class of the Given bass note sounding where the
   chord starts;
 - *a Given melody* over it is harmonized: a note that starts on a strong beat (the first cell of a bar) is a tone of the

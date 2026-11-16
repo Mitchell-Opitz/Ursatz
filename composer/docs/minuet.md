@@ -34,7 +34,7 @@ The piece response lists one row for each performed section, and each row carrie
 
 ## Measured
 
-Seeds 1 to 10, the API path (the CLI `piece` is the same entry), an invented motive, 3/4, up to 16 seeds each (the piece entry tries the next seeds when a run is stuck). Composed is the number of requests that composed. Not on the first seed counts the requests that needed another seed. Returns heard counts the runs where `return_hear` finds A return as A's return, of the returns planned (`compose_run` with the seeds the entry used; a compound form's parts are in the trio rows). The longest chord is in bars, over A, B and A return. Seconds a piece is the mean wall time of a request, retries included, on a shared 4-core container.
+Seeds 1 to 10, the API path (the CLI `piece` is the same entry), an invented motive, 3/4, up to 16 seeds each (the piece entry tries the next seeds when a run is stuck). Composed is the number of requests that composed. Not on the first seed counts the requests that needed another seed. Returns heard counts the runs where `return_hear_in` finds A return as A's return, of the returns planned (`compose_run` with the seeds the entry used; a compound form's parts are in the trio rows). The longest chord is in bars, over A, B and A return. Seconds a piece is the mean wall time of a request, retries included, on a shared 4-core container.
 
 | Form, size, key, meter | Composed | Not on the first seed | Returns heard | Longest chord (bars) | Seconds a piece |
 | --- | --- | --- | --- | --- | --- |

@@ -13,7 +13,6 @@ Every member is optional and its default is the value the Composer used before t
 | `composer_preferences_default(out)` | Writes the defaults. |
 | `composer_preferences_read(object, out, path, path_size, message, message_size)` | Starts from the defaults, applies every member present, and returns false at the first bad one with its `path` and a `message` naming the limit. |
 | `composer_preferences_write(preferences)` | The full document, every member, as a `cJSON` object the caller deletes. Ratios are `"n/d"` text and `nct_types` is in the order passing, neighbor, appoggiatura, suspension, anticipation. |
-| `composer_preferences_is_default(preferences)` | True when every setting is the default. |
 
 `ComposerPreferences` holds `MelodyFillParams melody`, `MotiveRandomPreferences motif`, `GrowFidelityTable development` and, from 1.19, `GrowContrast contrast` (the development group's contrast settings). The API carries the document as the `preferences` member of the random motive and theme requests (below).
 

@@ -7,7 +7,7 @@ The motive document and its motive analysis, as the plan format embeds them (see
 A motive is a short cell of notes the user supplies (`<ursatz_composer/motive.h>`). It is read from MIDI,
 MusicXML, a note list or JSON, and attaches to a plan as a Given motive node with a Given melody lane span
 (`motive_attach`). The JSON below is the motive on its own and the form `motive_from_json` reads and
-`motive_to_json` writes. It uses the plan's vocabulary: the meter and key are payloads of the meter and key
+`motive_json_object` writes. It uses the plan's vocabulary: the meter and key are payloads of the meter and key
 lanes, and `notes` is the note payload of a melody lane, with times as in the conventions above.
 
 | Key | Content |

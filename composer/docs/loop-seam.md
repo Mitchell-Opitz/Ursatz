@@ -72,8 +72,8 @@ compose score adds 4 to its denominator and `seam.held` to its numerator.
 ## Rendering and hearing
 
 The seam is not part of the piece. `plan_render` skips its spans with `RENDER_SKIP_SEAM`, gives it no section marker and
-ends the piece where the loop does; an export has the loop and nothing after it. `return_hear`, the key and cadence checks
-leave the seam section out as they leave the material out. `form_hear` is asked about a span, and `compose_run` does not
+ends the piece where the loop does; an export has the loop and nothing after it. `return_hear_in`, the key and cadence checks
+leave the seam section out as they leave the material out. `form_hear_in` is asked about a span, and `compose_run` does not
 ask it about the seam.
 
 ## Measured

@@ -70,10 +70,6 @@ The loop never offers an operator a target of the wrong kind.
 A candidate is a short label (for the record), an opaque payload, and an optional destroy function.
 Only the operator that made a candidate reads its payload; a checker may too, if it knows the operator.
 
-`fill_relatives` lists the relatives to propagate to: for a node, its parent, children and the
-siblings before and after; for a lane span, its owner node and the spans before and after it in the
-same lane and voice.
-
 Operators are registered with `fill_registry_register` and tried in registration order. That order
 is part of what makes a run reproducible.
 
@@ -109,7 +105,7 @@ decimal strings, to be kept next to the plan. The plan's own format does not cha
 `fill_suggest` returns the top N candidates for one open target instead of choosing, and leaves the
 plan unchanged. They come back as an Ursatz `CandidateSet`, best first: each `Candidate` names its
 material by id and carries its score (it has no Interpretations, since there is no framework yet).
-`fill_suggestion_label` and `fill_suggestion_operator` say what each one is. Rejected candidates are
+`fill_suggestion_label` says what each one is. Rejected candidates are
 not suggested. `fill_apply_suggestion` applies one, by its index in the set, the way the loop would.
 
 ## A minimal operator

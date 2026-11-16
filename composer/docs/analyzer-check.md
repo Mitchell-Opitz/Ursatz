@@ -35,7 +35,7 @@ that is not whole bars, no meter or key over it) returns an error and is not hel
 
 ## The whole piece
 
-`analyzer_check_piece(plan, &out)` (R-172, R-173) checks a piece structure plan as one span, from the start of the plan to the
+`analyzer_check_piece_in` (R-172, R-173) checks a piece structure plan as one span, from the start of the plan to the
 end of its last section that is not material (so not the seam, not the material), heard in its first meter and key, and
 sections need not be whole bars (the per-section check above stays as it was for the other commands). The planned items are,
 for each section with a piece part, its first `CADENCE` constraint, and the key.
@@ -62,7 +62,7 @@ and the run starts again from the plan as given with the next round's seeds, up 
 are kept in `ComposeOutcome.analyzer_checks` (one per theme section) with their totals `analyzer_planned` and
 `analyzer_agreed`, and the compose score adds `agreed` to its numerator and `planned` to its denominator.
 
-`form_hear` and the texture hearing now read the same Analyzer result, and `return_hear` reads its themes; `voice_hear` and
+`form_hear_in` and the texture hearing now read the same Analyzer result, and `return_hear_in` reads its themes; the tests' `voice_hear` and
 the planned-material checks (`harmony_hear`, `harmony_check`, `harmony_given`, motive recognizability) stay framework rule
 checks on the plan's own planned material (boundary rule 7, R-257). They stay scores, and the Analyzer check is the only
 gate. A single fill-loop candidate is never sent to the Analyzer (too slow, one analysis a candidate): the

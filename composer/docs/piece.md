@@ -2,7 +2,7 @@
 
 `piece_build_plan` (`<ursatz_composer/piece.h>`) plans a short piece from a named built-in form, and `compose_run`
 (`<ursatz_composer/compose.h>`) fills every section of the plan with the grow stages. A piece is a row of theme sections
-as [grow](grow.md) builds them (4 or 8 bars each), so every section can be heard with `form_hear`. Large forms (sonata,
+as [grow](grow.md) builds them (4 or 8 bars each), so every section can be heard with `form_hear_in`. Large forms (sonata,
 rondo) are not offered: standard-form and the kernel do not analyze them. Back to the [docs index](README.md).
 
 ```c
@@ -77,7 +77,7 @@ the variation changes the copy:
 | `setting` | The harmony, bass and melody are the returned section's, moved; the accompaniment is written anew in the pattern the return names (R-518). The copy's inner voice spans are dropped and, over each harmony target (found as `reharmonize` finds them), open ones are added as `grow-theme` opens them: voice 1 with an `accompaniment` constraint of the pattern, and voices 2 and 3 for `block` and `oom-pah`. The texture stage writes them after the returns. The form's `setting` (`block`, `arpeggiated`, `alberti` or `oom-pah`) is the pattern, except when it is the piece's own accompaniment pattern or `alberti` in a compound meter: then the next of `block`, `arpeggiated`, `alberti`, `oom-pah` after it, wrapping, skipping those two (`form_build.c`). Checked by `return_vary_check`: every node and every harmony, bass and melody span, notes included, are the returned section's, and the inner voice spans are open with the pattern on voice 1. |
 | `reregister` | The melody and the inner voices an octave up or down, whichever keeps the melody inside the range of `MelodyFillParams` (`ComposeConfig.melody`, else the default 60 to 79). One candidate for each that fits, none when neither does: the section stays open and the run is stuck at the returns. |
 
-`return_hear` (`return_hear.h`) hears the returns of a written plan: each section of the piece is heard with `form_hear`,
+`return_hear_in` (`src/check/hearing.h`) hears the returns of a written plan: each section of the piece is heard with `form_hear_in`,
 each theme found becomes an entry (the contour and the rhythm of its melody notes), and the kernel's thematic return
 detection with its default configuration (windows of 6 events, similarity of at least 0.8) gives a pair for each later
 theme resembling an earlier one. `ComposeOutcome` has `returns` (the pairs), `returns_planned`, `returns_heard` and
@@ -143,9 +143,9 @@ and layered) ends open by design and keeps its document's cadences. `piece_check
 cadence is a PAC, so the strongest; a section ending in another key ends in a PAC or IAC (a transition: a half cadence); no section before the last
 closes in the home key with a PAC unless it is `closed` (ternary A, rounded binary A, the theme and every variation).
 
-After a complete run, `compose_run` of a plan with several key spans runs `piece_check_keys`: every key is closely
+After a complete run, `compose_run` of a plan with several key spans runs `piece_check_keys_in`: every key is closely
 related to the home key, and each key change a section ends in is classified from its length and what follows the
-cadence (`harmony_key_change_classify`) and confirmed by the authentic cadences `form_hear` heard (an authentic cadence
+cadence (`harmony_key_change_classify`) and confirmed by the authentic cadences `form_hear_in` heard (an authentic cadence
 must arrive inside the new key's span, `harmony_key_change_confirm`); it must be a modulation or a weak modulation, not
 a tonicization. A run that fails the key or cadence check is rejected like a stuck one and starts again from the plan as
 given with other seeds, up to the same 12 rounds; the check of the last run is in `ComposeOutcome.key_check`
@@ -159,7 +159,7 @@ A section's basic idea takes its motive from `m0`. A section may carry a `motive
 `grow-theme` then adds the section's own motive node ("<section> motive") to the material and builds the basic idea
 from it. The forms give B sections an inverted `m0`, and Var k the diminished (k odd) or interval-changed (k even)
 `m0`, so contrasting sections sound different; returning sections use their source's. The material holds `m0` and ten
-bars for each section (its motive, the four its ideas are made from and up to five made motives) (`piece_material_bars`); each section's motives go after the ones already there.
+bars for each section (its motive, the four its ideas are made from and up to five made motives) (`piece_material_bars_of`); each section's motives go after the ones already there.
 
 ## Inventing a motive
 
@@ -185,7 +185,7 @@ Each stage is one `fill_run` over the whole plan. The seeds of the stages from s
 `grow_run`, a compose run of one theme section, gives the same result as before. The invent stage runs first and only for
 a plan with an `invent_motive` span. The retries are grow's: the melody stage runs up to 6 times, each from the next
 seed, reopening only the melody of the sections it left unwritten, and a run still stuck starts again from a JSON
-snapshot of the plan as given, up to 12 rounds. After a complete run every theme section is heard with `form_hear` over
+snapshot of the plan as given, up to 12 rounds. After a complete run every theme section is heard with `form_hear_in` over
 its own span: `ComposeOutcome.sections` has what each was heard as, and `heard_as_requested` how many were as requested.
 A layered form with fewer than 4 layers keeps the build-up order and makes its last layer everything.
 
