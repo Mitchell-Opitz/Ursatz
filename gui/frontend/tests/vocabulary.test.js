@@ -5,16 +5,7 @@
 const V = require("../public/vocabulary.js");
 const fixture = require("./fixtures/vocabulary.json");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 async function main() {
   // before it is loaded
@@ -162,10 +153,7 @@ async function main() {
   check(V.entry("theme_extensions", "repeat").varied === true && V.entry("theme_extensions", "repeat").ideas.includes("fragment 1"), "a repeat may be varied and follows ideas");
   check(V.entry("theme_extensions", "evaded").ideas === undefined && V.entry("theme_extensions", "addition").ideas === undefined, "an addition and an evaded cadence follow no idea");
 
-  if (failures > 0) {
-    console.error(`${failures} check(s) failed`);
-    process.exit(1);
-  }
+  finish();
 }
 
 main();

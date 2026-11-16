@@ -7,16 +7,7 @@
 const ScoreLayers = require("../public/score-layers.js");
 const fixture = require("./fixtures/mozart545.analysis.json");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 const doc = JSON.parse(JSON.stringify(fixture));
 const catalog = ScoreLayers.buildLayerCatalog(doc);
@@ -284,8 +275,5 @@ check(closest >= 15, `every pair of colors is at least 15 apart (closest ${close
   check(!wanted.includes("notes") && !wanted.includes("metadata"), "the score does not ask for the notes or the metadata");
 }
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();
 console.log("all score layer checks passed");

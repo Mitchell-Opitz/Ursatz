@@ -19,16 +19,7 @@ const fs = require("fs");
 const path = require("path");
 const tabs = require("../public/analysis-tabs.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 const doc = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "mozart545.analysis.json"), "utf8"));
 const states = tabs.buildAllTabStates(doc);
@@ -297,5 +288,5 @@ function summaryOf() {
     "the provenance list reads the same from the summary as from the whole document",
   );
 
-  process.exit(failures === 0 ? 0 : 1);
+  finish();
 })();

@@ -28,16 +28,7 @@ function libraryFilterFor(filter) {
 const LIBRARY_COLUMNS = ["", "Title", "Composer", "Source", "Tags", "Actions"];
 const LIBRARY_ACTIONS = ["Play", "Edit", "Re-run analysis", "Import from URL", "Delete analysis", "Delete piece"];
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 check(
   libraryFilenameCellText({ id: "piece-1788837459-41", filename: "sonata.mid" }) === "sonata.mid",
@@ -63,4 +54,4 @@ check(libraryFilterFor({ untagged: true }).unassigned.length === 0, "unassigned 
 check(LIBRARY_COLUMNS.length === 6, "Library has select, title, composer, source, tags and actions columns");
 check(LIBRARY_ACTIONS.includes("Edit") && !LIBRARY_ACTIONS.includes("Rename"), "Edit replaces Rename");
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

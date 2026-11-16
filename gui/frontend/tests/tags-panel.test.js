@@ -4,16 +4,7 @@
  * Plain Node script: `node frontend/tests/tags-panel.test.js`. */
 const P = require("../public/tags-panel.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 const groups = {
   composers: [
@@ -85,8 +76,5 @@ check(P.isActiveFilter({ untagged: true }, { ...blank, untagged: true }), "Untag
 check(P.isActiveFilter({ tag: "etude" }, { ...blank, tag: "etude", search: "x", sort: "title" }), "search and sort do not affect the active row");
 check(!P.isActiveFilter({ tag: "etude" }, null), "a missing Library filter matches nothing");
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();
 console.log("tags-panel checks passed");

@@ -9,16 +9,7 @@ const path = require("path");
 require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"), require("./fixtures/forms.json"));
 const P = require("../public/pieces-model.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 function section(id, part, letter, beats, fill, extra) {
   return { id, part, letter, beats, pickup: "0", cadence: null, fill: fill || { kind: "empty" }, ...extra };
@@ -493,7 +484,4 @@ check(
   "the home mode return of B in a sonatina says it was mapped into minor and the elaboration says no mode",
 );
 
-if (failures > 0) {
-  console.error(`${failures} failure(s)`);
-  process.exit(1);
-}
+finish();

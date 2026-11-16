@@ -5,16 +5,7 @@
 require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
 const V = require("../public/variant-tree.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 const node = (id, flag, children, extra) => ({
   id,
@@ -418,8 +409,5 @@ check(text.includes("harmony-append: works - ok (result C5:q harmony I V@2)") &&
   named(parent, "button", "Hide notation")[0].click();
   check(rowMounts().length === 2 && named(parent, "button", "Show notation").length === 2, "Hide notation closes it again");
 
-  if (failures > 0) {
-    console.error(`${failures} check(s) failed`);
-    process.exit(1);
-  }
+  finish();
 })();

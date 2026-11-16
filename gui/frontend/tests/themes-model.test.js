@@ -9,16 +9,7 @@ const Vocabulary = require("../public/vocabulary.js");
 Vocabulary.set(require("./fixtures/vocabulary.json"));
 const T = require("../public/themes-model.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 function filled() {
   const state = T.emptyState("thm-1");
@@ -471,8 +462,5 @@ check(T.resultView({ seed: 1, summary: { themes: [{ construction: null }] } }).c
 check(T.resultView({ seed: 1, summary: { themes: [{}] } }).construction === "", "a result without the member shows no reason");
 check(T.constructionHalves({ halves: [4, 6] }) === "4+6" && T.constructionHalves(null) === "", "the halves read as 4+6");
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();
 console.log("themes-model tests passed");

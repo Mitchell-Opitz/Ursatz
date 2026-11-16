@@ -9,16 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const ScoreNotes = require("../public/score-notes.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 /* Minimal XML reader giving the element shape score-notes.js needs
  * (tagName, children, getAttribute, textContent). Enough for the fixture:
@@ -136,4 +127,4 @@ check(
   "choosing a claim row selects that claim in the workspace, which switches to Score mode",
 );
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

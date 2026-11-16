@@ -7,16 +7,7 @@ const InspectorModel = require("../public/inspector-model.js");
 const ScoreLayers = require("../public/score-layers.js");
 const fixture = require("./fixtures/mozart545.analysis.json");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 const doc = JSON.parse(JSON.stringify(fixture));
 const catalog = ScoreLayers.buildLayerCatalog(doc);
@@ -156,4 +147,4 @@ check(InspectorModel.filterItems(spans, "  ").length === 3, "a blank query keeps
 check(InspectorModel.filterItems(spans, "zzz").length === 0, "no match gives nothing");
 check(InspectorModel.locationOf(cadenceItems[1]) === "m27 b4 to m30 b1", "locationOf formats an item's location");
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

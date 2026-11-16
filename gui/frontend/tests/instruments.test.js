@@ -5,16 +5,7 @@
 
 const Instruments = require("../public/instruments.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 function source(id) {
   return { id, label: id, credit: "", load: () => Promise.resolve(), start: () => ({ stop() {} }) };
@@ -53,7 +44,4 @@ try {
 }
 check(threw, "a source without load and start is rejected");
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();

@@ -3,16 +3,7 @@
  * once passes through, and an aborted signal cancels. Plain Node script: `node frontend/tests/backend-jobs.test.js`. */
 const J = require("../public/backend-jobs.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 /* A fake fetch: script is a list of [status, body] answers, one for each call in order; calls records them. */
 function fakeFetch(script) {
@@ -100,9 +91,6 @@ const instant = () => Promise.resolve();
   check(J.progressText({ state: "queued" }) === "waiting" && J.progressText({ state: "running", stage: "seed", done: 2, total: 0 }) === "seed" && J.progressText({ state: "running" }) === "working", "progress text");
   check(J.POLL_MS === 500, "the poll interval is 500 ms");
 
-  if (failures > 0) {
-    console.error(`${failures} check(s) failed`);
-    process.exit(1);
-  }
+  finish();
   console.log("all checks passed");
 })();

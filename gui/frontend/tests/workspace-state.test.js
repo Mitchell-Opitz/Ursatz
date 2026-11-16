@@ -6,16 +6,7 @@
 
 const WorkspaceState = require("../public/workspace-state.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 /* Zoom. */
 const { ZOOM_STEPS, nextZoom, zoomLabel, panelMode, shortcutFor, loadUiState, saveUiState } = WorkspaceState;
@@ -149,4 +140,4 @@ try {
 }
 check(!threw, "saving to a storage that throws or is missing does not throw");
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

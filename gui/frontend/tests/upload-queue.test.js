@@ -12,14 +12,7 @@ const {
   acceptedFile,
 } = require("../public/upload-queue.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 const queue = createQueue([{ name: "a.mid" }, { name: "b.xml" }, { name: "c.mxl" }]);
 check(queue.length === 3, "one entry per file");
@@ -49,8 +42,5 @@ for (const name of ["a.txt", "a.mid.bak", "midi", "a.pdf", ""]) {
   check(!acceptedFile(name), `"${name}" is rejected`);
 }
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();
 console.log("upload-queue: all checks passed");
