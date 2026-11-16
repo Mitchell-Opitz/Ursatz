@@ -1,73 +1,30 @@
 ursatz_test_includes()
 
-add_executable(test_standard_tonality_framework test_framework.c)
-target_link_libraries(test_standard_tonality_framework PRIVATE standard_tonality)
-add_test(NAME standard_tonality_framework COMMAND test_standard_tonality_framework)
+ursatz_test(standard_tonality_framework SOURCES test_framework.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_triad_in_key_rules test_triad_in_key_rules.c)
-target_link_libraries(test_standard_tonality_triad_in_key_rules PRIVATE standard_tonality)
-add_test(NAME standard_tonality_triad_in_key_rules COMMAND test_standard_tonality_triad_in_key_rules)
+ursatz_test(standard_tonality_triad_in_key_rules SOURCES test_triad_in_key_rules.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_seventh_in_key_rules test_seventh_in_key_rules.c)
-target_link_libraries(test_standard_tonality_seventh_in_key_rules PRIVATE standard_tonality)
-add_test(NAME standard_tonality_seventh_in_key_rules COMMAND test_standard_tonality_seventh_in_key_rules)
+ursatz_test(standard_tonality_seventh_in_key_rules SOURCES test_seventh_in_key_rules.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_roman_numeral_rules test_roman_numeral_rules.c)
-target_link_libraries(test_standard_tonality_roman_numeral_rules PRIVATE standard_tonality)
-add_test(NAME standard_tonality_roman_numeral_rules COMMAND test_standard_tonality_roman_numeral_rules)
+ursatz_test(standard_tonality_roman_numeral_rules SOURCES test_roman_numeral_rules.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_chord_input test_chord_input.c)
-target_link_libraries(test_standard_tonality_chord_input PRIVATE standard_tonality)
-add_test(NAME standard_tonality_chord_input COMMAND test_standard_tonality_chord_input)
+ursatz_test(standard_tonality_chord_input SOURCES test_chord_input.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_roman_numeral_adapter test_roman_numeral_adapter.c)
-target_link_libraries(test_standard_tonality_roman_numeral_adapter PRIVATE standard_tonality)
-add_test(NAME standard_tonality_roman_numeral_adapter COMMAND test_standard_tonality_roman_numeral_adapter)
+ursatz_test(standard_tonality_roman_numeral_adapter SOURCES test_roman_numeral_adapter.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_applied_chords test_applied_chords.c)
-target_link_libraries(test_standard_tonality_applied_chords PRIVATE standard_tonality)
-add_test(NAME standard_tonality_applied_chords COMMAND test_standard_tonality_applied_chords)
+ursatz_test(standard_tonality_applied_chords SOURCES test_applied_chords.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_tonal_key test_tonal_key.c)
-target_link_libraries(test_standard_tonality_tonal_key PRIVATE standard_tonality)
-add_test(NAME standard_tonality_tonal_key COMMAND test_standard_tonality_tonal_key)
+ursatz_test(standard_tonality_tonal_key SOURCES test_tonal_key.c LIBS standard_tonality VALGRIND)
 
-# Scoped memcheck coverage for the key functions. Skips silently if valgrind isn't installed.
-find_program(URSATZ_TONAL_KEY_VALGRIND valgrind)
-if(URSATZ_TONAL_KEY_VALGRIND)
-  add_test(NAME standard_tonality_tonal_key_valgrind
-           COMMAND ${URSATZ_TONAL_KEY_VALGRIND} --leak-check=full --error-exitcode=1
-                   $<TARGET_FILE:test_standard_tonality_tonal_key>)
-endif()
+ursatz_test(standard_tonality_roman_numeral_grammar SOURCES test_roman_numeral_grammar.c LIBS standard_tonality
+    VALGRIND)
 
-add_executable(test_standard_tonality_roman_numeral_grammar test_roman_numeral_grammar.c)
-target_link_libraries(test_standard_tonality_roman_numeral_grammar PRIVATE standard_tonality)
-add_test(NAME standard_tonality_roman_numeral_grammar COMMAND test_standard_tonality_roman_numeral_grammar)
+ursatz_test(standard_tonality_quality_semitones SOURCES test_quality_semitones.c LIBS standard_tonality)
 
-# Scoped memcheck coverage for the numeral grammar. Skips silently if valgrind isn't installed.
-find_program(URSATZ_NUMERAL_GRAMMAR_VALGRIND valgrind)
-if(URSATZ_NUMERAL_GRAMMAR_VALGRIND)
-  add_test(NAME standard_tonality_roman_numeral_grammar_valgrind
-           COMMAND ${URSATZ_NUMERAL_GRAMMAR_VALGRIND} --leak-check=full --error-exitcode=1
-                   $<TARGET_FILE:test_standard_tonality_roman_numeral_grammar>)
-endif()
+ursatz_test(standard_tonality_chromatic_degree_label SOURCES test_chromatic_degree_label.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_quality_semitones test_quality_semitones.c)
-target_link_libraries(test_standard_tonality_quality_semitones PRIVATE standard_tonality)
-add_test(NAME standard_tonality_quality_semitones COMMAND test_standard_tonality_quality_semitones)
+ursatz_test(standard_tonality_key_tonic_of_pitch_class SOURCES test_key_tonic_of_pitch_class.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_chromatic_degree_label test_chromatic_degree_label.c)
-target_link_libraries(test_standard_tonality_chromatic_degree_label PRIVATE standard_tonality)
-add_test(NAME standard_tonality_chromatic_degree_label COMMAND test_standard_tonality_chromatic_degree_label)
+ursatz_test(standard_tonality_mode_pitch_classes SOURCES test_mode_pitch_classes.c LIBS standard_tonality)
 
-add_executable(test_standard_tonality_key_tonic_of_pitch_class test_key_tonic_of_pitch_class.c)
-target_link_libraries(test_standard_tonality_key_tonic_of_pitch_class PRIVATE standard_tonality)
-add_test(NAME standard_tonality_key_tonic_of_pitch_class COMMAND test_standard_tonality_key_tonic_of_pitch_class)
-
-add_executable(test_standard_tonality_mode_pitch_classes test_mode_pitch_classes.c)
-target_link_libraries(test_standard_tonality_mode_pitch_classes PRIVATE standard_tonality)
-add_test(NAME standard_tonality_mode_pitch_classes COMMAND test_standard_tonality_mode_pitch_classes)
-
-add_executable(test_standard_tonality_degree_of_semitone test_degree_of_semitone.c)
-target_link_libraries(test_standard_tonality_degree_of_semitone PRIVATE standard_tonality)
-add_test(NAME standard_tonality_degree_of_semitone COMMAND test_standard_tonality_degree_of_semitone)
+ursatz_test(standard_tonality_degree_of_semitone SOURCES test_degree_of_semitone.c LIBS standard_tonality)

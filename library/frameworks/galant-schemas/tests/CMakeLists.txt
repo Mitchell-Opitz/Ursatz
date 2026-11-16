@@ -1,40 +1,18 @@
 ursatz_test_includes()
 
-add_executable(test_galant_schemas_framework test_framework.c)
-target_link_libraries(test_galant_schemas_framework PRIVATE galant_schemas)
-add_test(NAME galant_schemas_framework COMMAND test_galant_schemas_framework)
+ursatz_test(galant_schemas_framework SOURCES test_framework.c LIBS galant_schemas)
 
-add_executable(test_galant_schemas_degree test_galant_degree.c)
-target_link_libraries(test_galant_schemas_degree PRIVATE galant_schemas)
-add_test(NAME galant_schemas_degree COMMAND test_galant_schemas_degree)
+ursatz_test(galant_schemas_degree SOURCES test_galant_degree.c LIBS galant_schemas)
 
-add_executable(test_galant_schemas_prototypes test_galant_prototypes.c)
-target_link_libraries(test_galant_schemas_prototypes PRIVATE galant_schemas)
-add_test(NAME galant_schemas_prototypes COMMAND test_galant_schemas_prototypes)
+ursatz_test(galant_schemas_prototypes SOURCES test_galant_prototypes.c LIBS galant_schemas)
 
-add_executable(test_galant_schemas_matching_rules test_galant_matching_rules.c)
-target_link_libraries(test_galant_schemas_matching_rules PRIVATE galant_schemas)
-add_test(NAME galant_schemas_matching_rules COMMAND test_galant_schemas_matching_rules)
+ursatz_test(galant_schemas_matching_rules SOURCES test_galant_matching_rules.c LIBS galant_schemas)
 
-add_executable(test_galant_schemas_prototypes_cadential test_galant_prototypes_cadential.c)
-target_link_libraries(test_galant_schemas_prototypes_cadential PRIVATE galant_schemas)
-add_test(NAME galant_schemas_prototypes_cadential COMMAND test_galant_schemas_prototypes_cadential)
+ursatz_test(galant_schemas_prototypes_cadential SOURCES test_galant_prototypes_cadential.c LIBS galant_schemas)
 
-add_executable(test_galant_schemas_analysis_match test_analysis_match.c)
-target_link_libraries(test_galant_schemas_analysis_match PRIVATE galant_schemas)
-add_test(NAME galant_schemas_analysis_match COMMAND test_galant_schemas_analysis_match)
+ursatz_test(galant_schemas_analysis_match SOURCES test_analysis_match.c LIBS galant_schemas)
 
-add_executable(test_galant_schemas_schema_function test_schema_function.c)
-target_link_libraries(test_galant_schemas_schema_function PRIVATE galant_schemas)
-add_test(NAME galant_schemas_schema_function COMMAND test_galant_schemas_schema_function)
+ursatz_test(galant_schemas_schema_function SOURCES test_schema_function.c LIBS galant_schemas)
 
-add_executable(test_galant_schemas_analysis_segment test_galant_analysis_segment.c)
-target_link_libraries(test_galant_schemas_analysis_segment PRIVATE galant_schemas)
-add_test(NAME galant_schemas_analysis_segment COMMAND test_galant_schemas_analysis_segment)
+ursatz_test(galant_schemas_analysis_segment SOURCES test_galant_analysis_segment.c LIBS galant_schemas VALGRIND)
 
-# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
-find_program(URSATZ_GALANT_SEGMENT_VALGRIND valgrind)
-if(URSATZ_GALANT_SEGMENT_VALGRIND)
-  add_test(NAME galant_schemas_analysis_segment_valgrind
-           COMMAND ${URSATZ_GALANT_SEGMENT_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_galant_schemas_analysis_segment>)
-endif()

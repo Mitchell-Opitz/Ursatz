@@ -1,105 +1,44 @@
 ursatz_test_includes()
 
-add_executable(test_standard_meter_framework test_framework.c)
-target_link_libraries(test_standard_meter_framework PRIVATE standard_meter)
-add_test(NAME standard_meter_framework COMMAND test_standard_meter_framework)
+ursatz_test(standard_meter_framework SOURCES test_framework.c LIBS standard_meter)
 
-add_executable(test_standard_meter_meter_class_rules test_meter_class_rules.c)
-target_link_libraries(test_standard_meter_meter_class_rules PRIVATE standard_meter)
-add_test(NAME standard_meter_meter_class_rules COMMAND test_standard_meter_meter_class_rules)
+ursatz_test(standard_meter_meter_class_rules SOURCES test_meter_class_rules.c LIBS standard_meter)
 
-add_executable(test_standard_meter_compound_meter test_compound_meter.c)
-target_link_libraries(test_standard_meter_compound_meter PRIVATE standard_meter)
-add_test(NAME standard_meter_compound_meter COMMAND test_standard_meter_compound_meter)
+ursatz_test(standard_meter_compound_meter SOURCES test_compound_meter.c LIBS standard_meter)
 
-add_executable(test_standard_meter_borrowed_rules test_borrowed_rules.c)
-target_link_libraries(test_standard_meter_borrowed_rules PRIVATE standard_meter)
-add_test(NAME standard_meter_borrowed_rules COMMAND test_standard_meter_borrowed_rules)
+ursatz_test(standard_meter_borrowed_rules SOURCES test_borrowed_rules.c LIBS standard_meter)
 
-add_executable(test_standard_meter_metric_position_rules test_metric_position_rules.c)
-target_link_libraries(test_standard_meter_metric_position_rules PRIVATE standard_meter)
-add_test(NAME standard_meter_metric_position_rules COMMAND test_standard_meter_metric_position_rules)
+ursatz_test(standard_meter_metric_position_rules SOURCES test_metric_position_rules.c LIBS standard_meter)
 
-add_executable(test_standard_meter_metric_position_integration test_metric_position_integration.c)
-target_link_libraries(test_standard_meter_metric_position_integration PRIVATE standard_meter)
-target_compile_definitions(test_standard_meter_metric_position_integration PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
-add_test(NAME standard_meter_metric_position_integration COMMAND test_standard_meter_metric_position_integration)
+ursatz_test(standard_meter_metric_position_integration SOURCES test_metric_position_integration.c LIBS standard_meter
+    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 
-add_executable(test_standard_meter_segmentation_beat_grid test_segmentation_beat_grid.c)
-target_link_libraries(test_standard_meter_segmentation_beat_grid PRIVATE standard_meter)
-add_test(NAME standard_meter_segmentation_beat_grid COMMAND test_standard_meter_segmentation_beat_grid)
+ursatz_test(standard_meter_segmentation_beat_grid SOURCES test_segmentation_beat_grid.c LIBS standard_meter)
 
-add_executable(test_standard_meter_adaptive_segmentation_eval test_adaptive_segmentation_eval.c)
-target_link_libraries(test_standard_meter_adaptive_segmentation_eval PRIVATE standard_meter)
-target_compile_definitions(test_standard_meter_adaptive_segmentation_eval PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+ursatz_test(standard_meter_adaptive_segmentation_eval SOURCES test_adaptive_segmentation_eval.c LIBS standard_meter
+    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
-add_test(NAME standard_meter_adaptive_segmentation_eval COMMAND test_standard_meter_adaptive_segmentation_eval)
 
-add_executable(test_standard_meter_hemiola_rules test_hemiola_rules.c)
-target_link_libraries(test_standard_meter_hemiola_rules PRIVATE standard_meter)
-add_test(NAME standard_meter_hemiola_rules COMMAND test_standard_meter_hemiola_rules)
+ursatz_test(standard_meter_hemiola_rules SOURCES test_hemiola_rules.c LIBS standard_meter)
 
-add_executable(test_standard_meter_syncopation_through_stronger test_syncopation_through_stronger.c)
-target_link_libraries(test_standard_meter_syncopation_through_stronger PRIVATE standard_meter)
-add_test(NAME standard_meter_syncopation_through_stronger COMMAND test_standard_meter_syncopation_through_stronger)
+ursatz_test(standard_meter_syncopation_through_stronger SOURCES test_syncopation_through_stronger.c
+    LIBS standard_meter)
 
-add_executable(test_standard_meter_analysis_syncopation test_analysis_syncopation.c)
-target_link_libraries(test_standard_meter_analysis_syncopation PRIVATE standard_meter)
-add_test(NAME standard_meter_analysis_syncopation COMMAND test_standard_meter_analysis_syncopation)
+ursatz_test(standard_meter_analysis_syncopation SOURCES test_analysis_syncopation.c LIBS standard_meter)
 
-add_executable(test_standard_meter_analysis_hemiola test_analysis_hemiola.c)
-target_link_libraries(test_standard_meter_analysis_hemiola PRIVATE standard_meter)
-add_test(NAME standard_meter_analysis_hemiola COMMAND test_standard_meter_analysis_hemiola)
+ursatz_test(standard_meter_analysis_hemiola SOURCES test_analysis_hemiola.c LIBS standard_meter)
 
-add_executable(test_standard_meter_hypermeasure_rules test_hypermeasure_rules.c)
-target_link_libraries(test_standard_meter_hypermeasure_rules PRIVATE standard_meter)
-add_test(NAME standard_meter_hypermeasure_rules COMMAND test_standard_meter_hypermeasure_rules)
+ursatz_test(standard_meter_hypermeasure_rules SOURCES test_hypermeasure_rules.c LIBS standard_meter)
 
-add_executable(test_standard_meter_analysis_hypermeter test_analysis_hypermeter.c)
-target_link_libraries(test_standard_meter_analysis_hypermeter PRIVATE standard_meter)
-add_test(NAME standard_meter_analysis_hypermeter COMMAND test_standard_meter_analysis_hypermeter)
+ursatz_test(standard_meter_analysis_hypermeter SOURCES test_analysis_hypermeter.c LIBS standard_meter)
 
-add_executable(test_standard_meter_analysis_density test_analysis_density.c)
-target_link_libraries(test_standard_meter_analysis_density PRIVATE standard_meter)
-add_test(NAME standard_meter_analysis_density COMMAND test_standard_meter_analysis_density)
+ursatz_test(standard_meter_analysis_density SOURCES test_analysis_density.c LIBS standard_meter)
 
-add_executable(test_standard_meter_analysis_note test_meter_analysis_note.c)
-target_link_libraries(test_standard_meter_analysis_note PRIVATE standard_meter)
-add_test(NAME standard_meter_analysis_note COMMAND test_standard_meter_analysis_note)
+ursatz_test(standard_meter_analysis_note SOURCES test_meter_analysis_note.c LIBS standard_meter VALGRIND)
 
-# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
-find_program(URSATZ_METER_NOTE_VALGRIND valgrind)
-if(URSATZ_METER_NOTE_VALGRIND)
-  add_test(NAME standard_meter_analysis_note_valgrind
-           COMMAND ${URSATZ_METER_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_note>)
-endif()
+ursatz_test(standard_meter_analysis_check SOURCES test_meter_analysis_check.c LIBS standard_meter VALGRIND)
 
-add_executable(test_standard_meter_analysis_check test_meter_analysis_check.c)
-target_link_libraries(test_standard_meter_analysis_check PRIVATE standard_meter)
-add_test(NAME standard_meter_analysis_check COMMAND test_standard_meter_analysis_check)
+ursatz_test(standard_meter_analysis_tuplet SOURCES test_meter_analysis_tuplet.c LIBS standard_meter VALGRIND)
 
-add_executable(test_standard_meter_analysis_tuplet test_meter_analysis_tuplet.c)
-target_link_libraries(test_standard_meter_analysis_tuplet PRIVATE standard_meter)
-add_test(NAME standard_meter_analysis_tuplet COMMAND test_standard_meter_analysis_tuplet)
+ursatz_test(standard_meter_accent_beats SOURCES test_accent_beats.c LIBS standard_meter VALGRIND)
 
-# Memcheck for the check and tuplet adapters. Skips silently if valgrind isn't installed.
-find_program(URSATZ_METER_CHECK_VALGRIND valgrind)
-if(URSATZ_METER_CHECK_VALGRIND)
-  add_test(NAME standard_meter_analysis_check_valgrind
-           COMMAND ${URSATZ_METER_CHECK_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_check>)
-  add_test(NAME standard_meter_analysis_tuplet_valgrind
-           COMMAND ${URSATZ_METER_CHECK_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_tuplet>)
-endif()
-
-add_executable(test_standard_meter_accent_beats test_accent_beats.c)
-target_link_libraries(test_standard_meter_accent_beats PRIVATE standard_meter)
-add_test(NAME standard_meter_accent_beats COMMAND test_standard_meter_accent_beats)
-
-# Memcheck for the accent beats test. Skips silently if valgrind isn't installed.
-find_program(URSATZ_METER_ACCENT_VALGRIND valgrind)
-if(URSATZ_METER_ACCENT_VALGRIND)
-  add_test(NAME standard_meter_accent_beats_valgrind
-           COMMAND ${URSATZ_METER_ACCENT_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_accent_beats>)
-endif()
