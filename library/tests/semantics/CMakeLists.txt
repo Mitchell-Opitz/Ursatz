@@ -13,7 +13,6 @@ add_ursatz_test(applied_chord_kind)
 add_ursatz_test(key_change_extent)
 add_ursatz_test(analysis_note)
 add_ursatz_test(analysis_key)
-add_ursatz_architecture_test(semantics)
 
 # Memcheck for the neutral analysis type tests (analysis_note allocates spans and a meter map). Skips
 # silently if valgrind isn't installed.

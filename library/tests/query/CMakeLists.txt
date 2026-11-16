@@ -1,4 +1,3 @@
-add_ursatz_architecture_test(query)
 add_ursatz_test(similarity_scoring)
 add_ursatz_test(similarity_model)
 

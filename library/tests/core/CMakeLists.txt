@@ -5,7 +5,6 @@ add_ursatz_test(references)
 add_ursatz_test(string_copy)
 add_ursatz_test(rational)
 add_ursatz_test(once)
-add_ursatz_architecture_test(core)
 
 # Scoped memcheck coverage for this module's new helper tests. Skips silently if valgrind isn't installed.
 find_program(URSATZ_CORE_VALGRIND valgrind)

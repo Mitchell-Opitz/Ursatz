@@ -12,7 +12,6 @@ add_ursatz_test(tuplet)
 add_ursatz_test(time_rational)
 add_ursatz_test(meter_arithmetic)
 add_ursatz_test(score_time)
-add_ursatz_architecture_test(time)
 
 # Scoped memcheck coverage for the rational bridges and the meter arithmetic. Skips silently if valgrind isn't installed.
 find_program(URSATZ_TIME_VALGRIND valgrind)

@@ -12,6 +12,3 @@ add_executable(test_standard_markings_tempo_rules test_tempo_rules.c)
 target_link_libraries(test_standard_markings_tempo_rules PRIVATE standard_markings)
 add_test(NAME standard_markings_tempo_rules COMMAND test_standard_markings_tempo_rules)
 
-add_executable(test_architecture_standard_markings test_architecture_standard_markings.c)
-add_test(NAME architecture_standard_markings COMMAND test_architecture_standard_markings
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

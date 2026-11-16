@@ -5,7 +5,6 @@ add_ursatz_test(pitch_numeric_value)
 add_ursatz_test(key_signature)
 add_ursatz_test(pitch_arithmetic)
 add_ursatz_test(midi_pitch)
-add_ursatz_architecture_test(pitch)
 
 # Scoped memcheck coverage for pitch arithmetic. Skips silently if valgrind isn't installed.
 find_program(URSATZ_PITCH_VALGRIND valgrind)

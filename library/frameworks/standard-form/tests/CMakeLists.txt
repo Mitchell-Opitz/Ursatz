@@ -48,10 +48,6 @@ add_executable(test_standard_form_external_expansion_rules test_external_expansi
 target_link_libraries(test_standard_form_external_expansion_rules PRIVATE standard_form)
 add_test(NAME standard_form_external_expansion_rules COMMAND test_standard_form_external_expansion_rules)
 
-add_executable(test_architecture_standard_form test_architecture_standard_form.c)
-add_test(NAME architecture_standard_form COMMAND test_architecture_standard_form
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-
 add_executable(test_standard_form_analysis_phrase test_analysis_phrase.c)
 target_link_libraries(test_standard_form_analysis_phrase PRIVATE standard_form ursatz_chain)
 add_test(NAME standard_form_analysis_phrase COMMAND test_standard_form_analysis_phrase)

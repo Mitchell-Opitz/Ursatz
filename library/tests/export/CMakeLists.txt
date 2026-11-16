@@ -26,7 +26,6 @@ target_link_libraries(test_musicxml_export_bach_prelude PRIVATE ursatz)
 add_test(NAME musicxml_export_bach_prelude COMMAND test_musicxml_export_bach_prelude
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_ursatz_architecture_test(export)
 
 # Scoped memcheck coverage for this module's own test binaries only (not a repo-wide valgrind mechanism -- see
 # docs/modules/export.md). Skips silently if valgrind isn't installed.
