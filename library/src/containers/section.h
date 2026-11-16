@@ -7,14 +7,11 @@
 #include "identity/entity_id.h"
 
 /*
- * Section (Container): groups Phrase(s) (containers/phrase.h -- the L4
- * container sense, not L5's occurrence-based PhraseOccurrence) by
- * reference, not by embedding the referenced objects. Same
- * reference-only containment pattern Part uses toward Staff
- * (containers/part.h).
+ * Section (Container): groups phrases by reference (their ids), not by
+ * embedding the referenced objects.
  *
  * Fields: id (EntityID), phrase_ids (owned array of EntityID references
- * to Phrase). May be empty (count == 0, pass NULL) -- a Section with no
+ * to phrases). May be empty (count == 0, pass NULL) -- a Section with no
  * phrases assigned yet is still a valid Section, same "found nothing is
  * not an error" treatment CandidateSet gives its own arrays.
  *
@@ -49,12 +46,5 @@ void section_destroy(Section *section);
 const EntityID *section_id(const Section *section);
 size_t section_phrase_id_count(const Section *section);
 const EntityID *section_phrase_id_at(const Section *section, size_t index);
-
-/*
- * Identity equality: same EntityID, regardless of instance. Referenced
- * phrase_ids do not factor in, same reasoning Part's identity equality
- * excludes its referenced staff_ids.
- */
-bool section_identity_equals(const Section *a, const Section *b);
 
 #endif

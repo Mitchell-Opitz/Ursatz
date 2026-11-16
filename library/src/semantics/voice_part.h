@@ -9,9 +9,9 @@
  * lowest. A plain enum: it names a role in a four-part texture and
  * carries no EntityID, no range, no clef, and no framework claim.
  *
- * VoicePart is NOT Voice (containers/voice.h). Voice identifies a single
- * line and is deliberately id-only; a Voice MAY be written as any part,
- * or none. Ranges, staff placement, and stem direction are conventions
+ * VoicePart is NOT a voice. A voice identifies a single line and is
+ * deliberately id-only; a voice MAY be written as any part, or none.
+ * Ranges, staff placement, and stem direction are conventions
  * of a Framework (frameworks/standard-voicing), not of this type.
  */
 

@@ -59,47 +59,10 @@ static void test_create_accepts_phrase_references(void) {
     section_destroy(section);
 }
 
-static void test_identity_equals_same_id(void) {
-    EntityID *id_a = NULL;
-    entity_id_create("section-1", &id_a);
-    EntityID *id_b = NULL;
-    entity_id_create("section-1", &id_b);
-
-    Section *a = NULL;
-    section_create(id_a, NULL, 0, &a);
-    Section *b = NULL;
-    section_create(id_b, NULL, 0, &b);
-
-    assert(a != b);
-    assert(section_identity_equals(a, b));
-
-    section_destroy(a);
-    section_destroy(b);
-}
-
-static void test_identity_not_equal_with_different_id(void) {
-    EntityID *id_a = NULL;
-    entity_id_create("section-1", &id_a);
-    EntityID *id_b = NULL;
-    entity_id_create("section-2", &id_b);
-
-    Section *a = NULL;
-    section_create(id_a, NULL, 0, &a);
-    Section *b = NULL;
-    section_create(id_b, NULL, 0, &b);
-
-    assert(!section_identity_equals(a, b));
-
-    section_destroy(a);
-    section_destroy(b);
-}
-
 int main(void) {
     test_create_rejects_null_id();
     test_create_accepts_empty_references();
     test_create_rejects_null_phrase_id_entry();
     test_create_accepts_phrase_references();
-    test_identity_equals_same_id();
-    test_identity_not_equal_with_different_id();
     return 0;
 }

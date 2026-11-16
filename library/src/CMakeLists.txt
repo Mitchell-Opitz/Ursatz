@@ -59,22 +59,8 @@ add_library(ursatz
     events/structural_marker.c
     events/instrument.c
     events/instrument_capability.c
-    containers/voice.c
-    containers/layer.c
-    containers/staff.c
     containers/id_array.c
-    containers/part.c
-    containers/measure.c
-    containers/phrase.c
-    containers/idea.c
-    containers/subphrase.c
     containers/section.c
-    containers/movement.c
-    containers/work.c
-    containers/edition.c
-    containers/arrangement.c
-    containers/revision.c
-    containers/source_variant.c
     structure/structure.c
     structure/motif.c
     structure/motif_occurrence.c
@@ -169,7 +155,6 @@ ursatz_public_headers(ursatz
         analysis/progression_patterns.h
         analysis/thematic_return_detection.h
         analysis/voice_separation.h
-        containers/revision.h
         containers/section.h
         context/context.h
         core/entity.h

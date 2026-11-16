@@ -6,8 +6,8 @@
 #include "identity/entity_id.h"
 
 /*
- * Internal to src/containers/ and src/analysis/: not part of the public API. The id-array helpers every container shares, and
- * the one construction path of the same-shape shells (Idea, Movement, Part, Phrase, Section, Subphrase, Work): an owner (an
+ * Internal to src/containers/ and src/analysis/: not part of the public API. The id-array helpers the containers share, and
+ * the one construction path of the same-shape shells (Section): an owner (an
  * EntityID or Entity) plus an owned array of EntityIDs.
  */
 

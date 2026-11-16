@@ -57,10 +57,3 @@ size_t section_phrase_id_count(const Section *section) {
 const EntityID *section_phrase_id_at(const Section *section, size_t index) {
     return section->phrase_ids[index];
 }
-
-bool section_identity_equals(const Section *a, const Section *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
-}
