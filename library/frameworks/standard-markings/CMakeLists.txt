@@ -15,4 +15,6 @@ ursatz_public_headers(standard_markings
 )
 target_link_libraries(standard_markings PUBLIC ursatz)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()

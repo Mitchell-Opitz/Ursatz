@@ -27,4 +27,6 @@ ursatz_public_headers(standard_voicing
 )
 target_link_libraries(standard_voicing PUBLIC ursatz)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()

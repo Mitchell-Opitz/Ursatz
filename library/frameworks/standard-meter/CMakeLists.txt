@@ -42,4 +42,6 @@ ursatz_public_headers(standard_meter
 )
 target_link_libraries(standard_meter PUBLIC ursatz)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()

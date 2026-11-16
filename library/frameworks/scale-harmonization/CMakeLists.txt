@@ -23,4 +23,6 @@ ursatz_public_headers(scale_harmonization
 )
 target_link_libraries(scale_harmonization PUBLIC galant_schemas standard_counterpoint ursatz)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()
