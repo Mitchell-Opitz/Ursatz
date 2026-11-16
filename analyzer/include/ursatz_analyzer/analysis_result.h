@@ -7,11 +7,9 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/imported_notes.h>
 
-#include "interpretation/interpretation.h"
-
 /*
- * The analysis as library results (R-220): one run over imported notes gives the library chain's results, the claims
- * (Interpretations) of every area, and the report view the document is exported from. The document JSON
+ * The analysis as library results (R-220, R-530): one run over imported notes gives the library chain's results and the
+ * report view the document is exported from. The document JSON
  * (analysis_document.h) is an export of an AnalyzerResult; it holds nothing the result does not.
  */
 
@@ -29,7 +27,7 @@ typedef enum {
  * ursatz_chain/analysis_chain.h) and the bits below for the Analyzer-only stages. The chain stages pull in the stages they need (ursatz_chain/analysis_chain.h).
  *
  * The report view, and so the document, is collected only when every chain stage is selected.
- * With fewer, the result holds the chain and the claims its stages give, and analyzer_result_report is an empty report.
+ * With fewer, the result holds the chain's results of those stages, and analyzer_result_report is an empty report.
  * The Analyzer-only stages read the chain's results: a bit set without the chain stage it reads gives no entries.
  */
 #define ANALYZER_STAGE_PROGRESSIONS    (1u << 12)
@@ -62,51 +60,6 @@ AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOption
 void analyzer_result_destroy(AnalyzerResult *result);
 
 /* The library chain is read through result_chain.h (analyzer_result_chain), served by the ursatz_analyzer::chain target. */
-
-/*
- * The claims of an area. Each is an Interpretation of the owning framework's claim (or the Analyzer's, for progressions
- * and tuplets, through the framework's claim helper) that targets the id of its note, segment or shell and keeps the
- * library's confidence. They are built once per result, in the order the library returns them (time order within each
- * result list) and borrowed from the result.
- *
- *   KEYS            the key of each key region
- *   CHORDS          the best chord of each chord segment that has one
- *   NUMERALS        the Roman numeral of each chord segment that has one
- *   CADENCES        each cadence's primary reading
- *   PHRASES         each phrase
- *   THEMES          each theme
- *   MOTIVES         each motive family
- *   METER           the meter check, syncopations, hemiolas, hypermeasures, reinterpretations and densities
- *   TEXTURE         each texture passage and each change between passages
- *   VOICE_LEADING   each voice-pair motion, perfect-interval violation and resolution
- *   MELODY          the soprano's melodic intervals, contour summaries, climaxes and leap recoveries
- *   SCHEMAS         each galant schema and each scale sequence
- *   PROGRESSIONS    each recurring chord progression
- *   RHYTHM          each tuplet run
- */
-typedef enum {
-    ANALYZER_AREA_KEYS,
-    ANALYZER_AREA_CHORDS,
-    ANALYZER_AREA_NUMERALS,
-    ANALYZER_AREA_CADENCES,
-    ANALYZER_AREA_PHRASES,
-    ANALYZER_AREA_THEMES,
-    ANALYZER_AREA_MOTIVES,
-    ANALYZER_AREA_METER,
-    ANALYZER_AREA_TEXTURE,
-    ANALYZER_AREA_VOICE_LEADING,
-    ANALYZER_AREA_MELODY,
-    ANALYZER_AREA_SCHEMAS,
-    ANALYZER_AREA_PROGRESSIONS,
-    ANALYZER_AREA_RHYTHM,
-    ANALYZER_AREA_COUNT
-} AnalyzerArea;
-
-/* 0 for a NULL result or an area outside the enum, or an area whose stage did not run. */
-size_t analyzer_result_claim_count(const AnalyzerResult *result, AnalyzerArea area);
-
-/* NULL for a NULL result, an area outside the enum or an index past the count. */
-const Interpretation *analyzer_result_claim(const AnalyzerResult *result, AnalyzerArea area, size_t index);
 
 /* The report view the document is exported from (R-252). Never NULL for a result. */
 const AnalysisReport *analyzer_result_report(const AnalyzerResult *result);

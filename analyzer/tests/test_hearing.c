@@ -19,7 +19,7 @@
 /*
  * The hearing entry and the style reference (composer_api.h) on the five reference pieces:
  *   - the events are not copied: the result's notes point at the caller's events,
- *   - the claim counts equal those of analyzer_analyze over the same notes,
+ *   - the report equals that of analyzer_analyze over the same notes,
  *   - bad arguments are refused,
  *   - style_profile_add_result gives the statistics of style_profile_add_document_json on the rendered document,
  *   - the distance against a style reference equals that of a second hearing of the same events,
@@ -229,11 +229,12 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
         same_events = borrowed->events[i] == notes.events[i];
     }
     CHECK(same_events, "%s: the result's notes do not point at the caller's events", fixture);
-    for (int area = 0; area < ANALYZER_AREA_COUNT; area++) {
-        CHECK(analyzer_result_claim_count(heard, (AnalyzerArea)area) ==
-                  analyzer_result_claim_count(direct, (AnalyzerArea)area),
-              "%s: area %d claim count differs", fixture, area);
-    }
+    const AnalysisReport *heard_report = analyzer_result_report(heard);
+    const AnalysisReport *direct_report = analyzer_result_report(direct);
+    CHECK(heard_report->entry_count == direct_report->entry_count &&
+              heard_report->key_region_count == direct_report->key_region_count &&
+              heard_report->progression_count == direct_report->progression_count,
+          "%s: the hearing's report differs from the direct analysis", fixture);
 
     /* The document of a second hearing of the same events (the notes carry no file source). */
     AnalyzerResult *rendered = NULL;

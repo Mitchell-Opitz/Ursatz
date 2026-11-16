@@ -12,18 +12,12 @@
 
 #include <ursatz_chain/analysis_chain.h>
 
-#include "core/entity.h"
-#include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
-
 #include "test_support.h"
 
 /*
  * The analysis result API (analysis_result.h) on the five reference pieces (Ursatz framework-v1 corpus):
- *   - the claims of each area against the document's entries of that area (or, where one area is several of the
- *     document's sections, against the report counts the document is built from),
- *   - every claim has a target and a scalar confidence,
- *   - a partial stage set gives the chain's claims and no export,
+ *   - the chain's voice-leading and melody results against the report and the document's sections,
+ *   - a partial stage set gives the chain's results of those stages and no export,
  *   - the document of the result equals the snapshots of tests/snapshots.
  *
  *   test_analysis_result          the five pieces
@@ -55,24 +49,6 @@ static size_t array_length(const cJSON *root, const char *key) {
     return cJSON_IsArray(array) ? (size_t)cJSON_GetArraySize(array) : 0;
 }
 
-/* The chord entries of the document that carry a reading (label other than "no match") or a labelled Roman numeral. */
-static size_t chord_entries(const cJSON *root, bool numerals) {
-    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(root, "chords");
-    size_t count = 0;
-    const cJSON *chord;
-    cJSON_ArrayForEach(chord, chords) {
-        if (numerals) {
-            const cJSON *numeral = cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral");
-            const cJSON *reason = cJSON_GetObjectItemCaseSensitive(numeral, "unlabelled_reason");
-            count += cJSON_IsObject(numeral) && (!reason || cJSON_IsNull(reason));
-        } else {
-            const cJSON *label = cJSON_GetObjectItemCaseSensitive(chord, "label");
-            count += cJSON_IsString(label) && strcmp(label->valuestring, "no match") != 0;
-        }
-    }
-    return count;
-}
-
 static void strip_run_metadata(cJSON *root) {
     cJSON *metadata = cJSON_GetObjectItemCaseSensitive(root, "metadata");
     if (cJSON_IsObject(metadata)) {
@@ -82,81 +58,22 @@ static void strip_run_metadata(cJSON *root) {
     }
 }
 
-static void check_every_claim(const char *slug, const AnalyzerResult *result) {
-    for (int area = 0; area < ANALYZER_AREA_COUNT; area++) {
-        size_t count = analyzer_result_claim_count(result, (AnalyzerArea)area);
-        for (size_t i = 0; i < count; i++) {
-            const Interpretation *claim = analyzer_result_claim(result, (AnalyzerArea)area, i);
-            const EntityID *target = claim ? interpretation_target_id(claim) : NULL;
-            const Uncertainty *uncertainty = claim ? interpretation_uncertainty(claim) : NULL;
-            CHECK(claim != NULL, "%s: area %d claim %zu is NULL", slug, area, i);
-            CHECK(target && entity_id_value(target) && entity_id_value(target)[0] != '\0',
-                  "%s: area %d claim %zu has no target", slug, area, i);
-            CHECK(uncertainty && uncertainty_kind(uncertainty) == UNCERTAINTY_KIND_SCALAR_CONFIDENCE,
-                  "%s: area %d claim %zu has no scalar confidence", slug, area, i);
-        }
-        CHECK(analyzer_result_claim(result, (AnalyzerArea)area, count) == NULL, "%s: area %d claim past the count", slug,
-              area);
-    }
-}
-
-static void check_counts(const char *slug, const AnalyzerResult *result, const cJSON *document) {
+static void check_chain_against_document(const char *slug, const AnalyzerResult *result, const cJSON *document) {
     const AnalysisReport *report = analyzer_result_report(result);
     const AnalysisChain *chain = analyzer_result_chain(result);
-    size_t claims[ANALYZER_AREA_COUNT];
-    for (int area = 0; area < ANALYZER_AREA_COUNT; area++) {
-        claims[area] = analyzer_result_claim_count(result, (AnalyzerArea)area);
-    }
-    const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
-    CHECK(claims[ANALYZER_AREA_KEYS] == array_length(keys, "regions"), "%s: key claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_KEYS], array_length(keys, "regions"));
-    CHECK(claims[ANALYZER_AREA_CHORDS] == chord_entries(document, false), "%s: chord claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_CHORDS], chord_entries(document, false));
-    CHECK(claims[ANALYZER_AREA_NUMERALS] == chord_entries(document, true), "%s: numeral claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_NUMERALS], chord_entries(document, true));
-    CHECK(claims[ANALYZER_AREA_CADENCES] == array_length(document, "cadences"), "%s: cadence claims %zu, document %zu",
-          slug, claims[ANALYZER_AREA_CADENCES], array_length(document, "cadences"));
-    CHECK(claims[ANALYZER_AREA_PHRASES] == array_length(document, "phrases"), "%s: phrase claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_PHRASES], array_length(document, "phrases"));
-    CHECK(claims[ANALYZER_AREA_THEMES] == array_length(document, "themes"), "%s: theme claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_THEMES], array_length(document, "themes"));
-    CHECK(claims[ANALYZER_AREA_MOTIVES] == array_length(document, "motives"), "%s: motive claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_MOTIVES], array_length(document, "motives"));
-    CHECK(claims[ANALYZER_AREA_TEXTURE] == array_length(document, "texture"), "%s: texture claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_TEXTURE], array_length(document, "texture"));
-    CHECK(claims[ANALYZER_AREA_SCHEMAS] == array_length(document, "schemas"), "%s: schema claims %zu, document %zu", slug,
-          claims[ANALYZER_AREA_SCHEMAS], array_length(document, "schemas"));
-    CHECK(claims[ANALYZER_AREA_PROGRESSIONS] == array_length(document, "progressions"),
-          "%s: progression claims %zu, document %zu", slug, claims[ANALYZER_AREA_PROGRESSIONS],
-          array_length(document, "progressions"));
 
-    /* The document's rhythm section holds the meter check, the densities, syncopations, hemiolas, hypermeter and the
-       tuplets; the result splits it into the METER and RHYTHM areas. */
-    const AnalysisChainMeter *meter = analysis_chain_meter(chain);
-    size_t meter_claims = (report->meter_check.present ? 1 : 0) + report->density_count + report->syncopation_count +
-                          report->hemiola_count + (meter ? meter->hypermeter.hypermeasure_count : 0) +
-                          (meter ? meter->hypermeter.reinterpretation_count : 0);
-    CHECK(claims[ANALYZER_AREA_METER] == meter_claims, "%s: meter claims %zu, report %zu", slug,
-          claims[ANALYZER_AREA_METER], meter_claims);
-    CHECK(claims[ANALYZER_AREA_RHYTHM] == report->tuplet_count, "%s: rhythm claims %zu, tuplets %zu", slug,
-          claims[ANALYZER_AREA_RHYTHM], report->tuplet_count);
-
-    /* The voice-leading and melody claims are the chain's own results; the document aggregates them. */
+    /* The voice-leading and melody results are the chain's own; the document aggregates them. */
     const AnalysisChainVoiceLeading *leading = analysis_chain_voice_leading(chain);
-    size_t voice_claims = leading ? leading->motions.count + leading->perfects.count + leading->resolutions.count : 0;
-    CHECK(claims[ANALYZER_AREA_VOICE_LEADING] == voice_claims, "%s: voice-leading claims %zu, chain %zu", slug,
-          claims[ANALYZER_AREA_VOICE_LEADING], voice_claims);
+    size_t voice_results = leading ? leading->motions.count + leading->perfects.count + leading->resolutions.count : 0;
     CHECK(leading && leading->perfects.count == report->voice_leading.violation_count,
           "%s: violations %zu, report %zu", slug, leading ? leading->perfects.count : 0,
           report->voice_leading.violation_count);
     const AnalysisChainMelody *melody = analysis_chain_melody(chain);
-    size_t melody_claims = melody ? melody->intervals.count + melody->summaries.count + melody->climaxes.count +
-                                        melody->recoveries.count
-                                  : 0;
-    CHECK(claims[ANALYZER_AREA_MELODY] == melody_claims, "%s: melody claims %zu, chain %zu", slug,
-          claims[ANALYZER_AREA_MELODY], melody_claims);
-    CHECK(array_length(document, "voice_leading") > 0 || voice_claims == 0, "%s: no voice-leading section", slug);
-    CHECK(array_length(document, "melody") > 0 || melody_claims == 0, "%s: no melody section", slug);
+    size_t melody_results = melody ? melody->intervals.count + melody->summaries.count + melody->climaxes.count +
+                                         melody->recoveries.count
+                                   : 0;
+    CHECK(array_length(document, "voice_leading") > 0 || voice_results == 0, "%s: no voice-leading section", slug);
+    CHECK(array_length(document, "melody") > 0 || melody_results == 0, "%s: no melody section", slug);
 }
 
 static void check_snapshots(const char *slug, const char *fixture, const AnalyzerResult *result) {
@@ -194,7 +111,6 @@ static void check_piece(const char *fixture, const char *slug) {
     AnalyzerStatus status = analyzer_analyze(&notes, NULL, &result);
     CHECK(status == ANALYZER_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
     if (result) {
-        check_every_claim(slug, result);
         const AnalysisReport *report = analyzer_result_report(result);
         CHECK(report && report->entry_count > 0, "%s: empty report view", slug);
 
@@ -202,7 +118,7 @@ static void check_piece(const char *fixture, const char *slug) {
         cJSON *document = json ? cJSON_Parse(json) : NULL;
         CHECK(document != NULL, "%s: no document", slug);
         if (document) {
-            check_counts(slug, result, document);
+            check_chain_against_document(slug, result, document);
             cJSON_Delete(document);
         }
         free(json);
@@ -233,19 +149,18 @@ static void check_options(const char *fixture) {
     none.stages = 0;
     CHECK(analyzer_analyze(&notes, &none, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no stages");
     analyzer_result_destroy(NULL);
-    CHECK(analyzer_result_claim_count(NULL, ANALYZER_AREA_KEYS) == 0, "claim count of NULL");
-    CHECK(analyzer_result_claim(NULL, ANALYZER_AREA_KEYS, 0) == NULL, "claim of NULL");
     CHECK(analyzer_result_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
 
-    /* A partial stage set: the chain's claims, an empty report view, no export. */
+    /* A partial stage set: the chain's results, an empty report view, no export. */
     AnalyzerOptions texture = analyzer_options_default();
     texture.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
     result = NULL;
     CHECK(analyzer_analyze(&notes, &texture, &result) == ANALYZER_OK && result, "texture stage only");
     if (result) {
-        CHECK(analyzer_result_claim_count(result, ANALYZER_AREA_TEXTURE) > 0, "texture claims from the texture stage");
-        CHECK(analyzer_result_claim_count(result, ANALYZER_AREA_CADENCES) == 0, "cadence claims without the stage");
-        CHECK(analyzer_result_claim_count(result, ANALYZER_AREA_PROGRESSIONS) == 0, "progression claims without the report");
+        const AnalysisChain *chain = analyzer_result_chain(result);
+        CHECK(analysis_chain_texture(chain) != NULL, "texture results from the texture stage");
+        CHECK(analysis_chain_cadences(chain) == NULL, "cadence results without the stage");
+        CHECK(analyzer_result_report(result)->progression_count == 0, "progressions without the report");
         CHECK(analyzer_result_report(result)->entry_count == 0, "report entries from a partial chain");
         CHECK(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
     }
