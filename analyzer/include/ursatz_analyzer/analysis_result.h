@@ -33,9 +33,6 @@ typedef enum {
  * The report view, and so the document and the Markdown report, is collected only when every chain stage is selected.
  * With fewer, the result holds the chain and the claims its stages give, and analyzer_result_report is an empty report.
  * The Analyzer-only stages read the chain's results: a bit set without the chain stage it reads gives no entries.
- * ANALYZER_STAGE_VOICING and ANALYZER_STAGE_COUNTERPOINT are reserved: those checks need a species and a voice choice
- * the options do not carry. Voicing stays on its own entry (voicing_check.h); counterpoint is checked with
- * standard-counterpoint, not by the Analyzer.
  */
 #define ANALYZER_STAGE_PROGRESSIONS    (1u << 12)
 #define ANALYZER_STAGE_HARMONIC_RHYTHM (1u << 13)
@@ -43,9 +40,7 @@ typedef enum {
 #define ANALYZER_STAGE_RHYTHM          (1u << 15)
 #define ANALYZER_STAGE_MARKINGS        (1u << 16)
 #define ANALYZER_STAGE_FORM_PLAN       (1u << 17)
-#define ANALYZER_STAGE_VOICING         (1u << 18)
-#define ANALYZER_STAGE_COUNTERPOINT    (1u << 19)
-#define ANALYZER_STAGE_ALL             ((1u << 20) - 1u) /* every chain stage (bits 0 to 11) and the above */
+#define ANALYZER_STAGE_ALL             ((1u << 18) - 1u) /* every chain stage (bits 0 to 11) and the above */
 
 typedef struct {
     unsigned stages;

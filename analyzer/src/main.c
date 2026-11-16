@@ -16,9 +16,7 @@
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
 
-#include "pipeline/analysis_result_internal.h"
 #include "pipeline/corpus_walk.h"
-#include "pipeline/counterpoint_pipeline.h"
 #include "pipeline/run_file.h"
 
 typedef char *(*RenderOutput)(const AnalysisDocument *document);
@@ -52,8 +50,8 @@ static bool write_output(const char *path, const char *what, const char *written
 
 static void print_usage(const char *program) {
     fprintf(stderr,
-            "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> "
-            "[--cantus upper|lower]] [--meter <n/d>] [--value-scale <n or n/d>] [--pickup <n/d>] <input-file-path>\n"
+            "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] [--meter <n/d>] [--value-scale <n or n/d>] "
+            "[--pickup <n/d>] <input-file-path>\n"
             "       %s --corpus <dir> [--out <dir>] [--resume] [--markdown]\n"
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
             "       %s --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]\n"
@@ -647,9 +645,6 @@ int main(int argc, char *argv[]) {
     bool want_json = false;
     bool want_markdown = false;
     InputFormat input_format = INPUT_FORMAT_AUTO;
-    int species = 0;
-    bool cantus_set = false;
-    bool cantus_upper = false;
     const char *similar_dir = NULL;
     const char *motive_file = NULL;
     const char *progression = NULL;
@@ -748,12 +743,6 @@ int main(int argc, char *argv[]) {
             }
         } else if (strcmp(arg, "--resume") == 0) {
             corpus_resume = true;
-        } else if (strcmp(arg, "--check-counterpoint") == 0) {
-            if (i + 1 >= argc || strlen(argv[i + 1]) != 1 || argv[i + 1][0] < '1' || argv[i + 1][0] > '5') {
-                print_usage(argv[0]);
-                return 1;
-            }
-            species = argv[++i][0] - '0';
         } else if (strcmp(arg, "--meter") == 0 || strcmp(arg, "--value-scale") == 0 || strcmp(arg, "--pickup") == 0) {
             bool (*parse)(const char *, NotationReading *) = strcmp(arg, "--meter") == 0
                                                                  ? notation_reading_parse_meter
@@ -766,13 +755,6 @@ int main(int argc, char *argv[]) {
             }
             i++;
             reading_set = true;
-        } else if (strcmp(arg, "--cantus") == 0) {
-            if (i + 1 >= argc || (strcmp(argv[i + 1], "upper") != 0 && strcmp(argv[i + 1], "lower") != 0)) {
-                print_usage(argv[0]);
-                return 1;
-            }
-            cantus_upper = strcmp(argv[++i], "upper") == 0;
-            cantus_set = true;
         } else if (arg[0] == '-' || path) {
             print_usage(argv[0]);
             return 1;
@@ -783,7 +765,7 @@ int main(int argc, char *argv[]) {
     if (link_dir || link_cache || link_depth || link_candidates) {
         if (!link_dir || similar_dir || motive_file || progression || similar_flags || compare_a || without_count > 0 ||
             style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
-            species != 0 || cantus_set || input_format_set || reading_set) {
+            input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
@@ -791,7 +773,7 @@ int main(int argc, char *argv[]) {
     }
     if (similar_dir || motive_file || progression || similar_flags) {
         if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || without_count > 0 || style_dir || style_name ||
-            corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume || species != 0 || cantus_set ||
+            corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
             input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
@@ -800,7 +782,7 @@ int main(int argc, char *argv[]) {
     }
     if (compare_a) {
         if (style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
-            species != 0 || cantus_set || input_format_set || reading_set) {
+            input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
@@ -816,14 +798,14 @@ int main(int argc, char *argv[]) {
     }
     if (style_dir || style_name) {
         if (!style_dir || !style_name || !style_name[0] || corpus_dir || path || want_json || want_markdown || corpus_resume ||
-            species != 0 || cantus_set || input_format_set || reading_set) {
+            input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
         return run_style_profile(style_dir, style_name, corpus_out);
     }
     if (corpus_dir) {
-        if (path || want_json || species != 0 || cantus_set || input_format_set || reading_set) {
+        if (path || want_json || input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
@@ -833,7 +815,7 @@ int main(int argc, char *argv[]) {
         print_usage(argv[0]);
         return 1;
     }
-    if (!path || (cantus_set && species == 0)) {
+    if (!path) {
         print_usage(argv[0]);
         return 1;
     }
@@ -863,21 +845,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int exit_code = 0;
-    if (species != 0) {
-        CounterpointCheckResult checked = counterpoint_check_collect(&notes, species, cantus_upper, analyzer_result_report_mutable(result));
-        if (checked == COUNTERPOINT_CHECK_ERR_ALLOC) {
-            fprintf(stderr, "Error: out of memory while checking counterpoint in '%s'\n", path);
-            analyzer_result_destroy(result);
-            imported_notes_destroy(&notes);
-            return 1;
-        }
-        if (checked == COUNTERPOINT_CHECK_NOT_TWO_VOICES) {
-            fprintf(stderr, "Error: counterpoint check needs two voices\n");
-            exit_code = 2;
-        }
-    }
-
     AnalysisDocument *document = analyzer_run_file_document(path, &notes, result);
     if (!document) {
         fprintf(stderr, "Error: out of memory while building analysis document for '%s'\n", path);
@@ -889,5 +856,5 @@ int main(int argc, char *argv[]) {
                                       derive_analysis_document_path, document));
 
     analysis_document_destroy(document);
-    return ok ? exit_code : 1;
+    return ok ? 0 : 1;
 }

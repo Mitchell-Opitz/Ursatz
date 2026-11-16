@@ -81,7 +81,6 @@ message(STATUS "--resume: ok")
 check_case("--corpus without a directory" 1 --corpus)
 check_case("--corpus and a file" 1 --corpus "${MIXED}" "${FIXTURE}")
 check_case("--corpus and --json" 1 --corpus "${MIXED}" --json)
-check_case("--corpus and --check-counterpoint" 1 --corpus "${MIXED}" --check-counterpoint 1)
 check_case("--out without --corpus" 1 --out "${OUT}" "${FIXTURE}")
 check_case("--resume without --corpus" 1 --resume "${FIXTURE}")
 

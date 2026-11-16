@@ -21,7 +21,6 @@ const ANALYSIS_TABS = [
   { id: "texture", label: "Texture", sections: ["texture", "voice_leading"] },
   { id: "schemas", label: "Schemas", sections: ["schemas"] },
   { id: "markings", label: "Markings", sections: ["markings"] },
-  { id: "counterpoint", label: "Counterpoint", sections: ["counterpoint_check"] },
   { id: "notes", label: "Notes", sections: ["notes"] },
 ];
 

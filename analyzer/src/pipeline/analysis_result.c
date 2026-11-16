@@ -49,7 +49,7 @@ typedef struct {
 #define PROGRESSION_CLAIM_TYPE "standard-harmony/progression"
 #define TUPLET_CLAIM_TYPE "standard-meter/tuplet"
 
-_Static_assert(ANALYZER_STAGE_ALL == (ANALYSIS_CHAIN_STAGE_ALL | ((1u << 20) - (1u << 12))),
+_Static_assert(ANALYZER_STAGE_ALL == (ANALYSIS_CHAIN_STAGE_ALL | ((1u << 18) - (1u << 12))),
                "ANALYZER_STAGE_ALL covers the chain stages and the Analyzer bits");
 
 AnalyzerOptions analyzer_options_default(void) {
@@ -365,10 +365,6 @@ const Interpretation *analyzer_result_claim(const AnalyzerResult *result, Analyz
 }
 
 const AnalysisReport *analyzer_result_report(const AnalyzerResult *result) {
-    return result ? &result->pass.report : NULL;
-}
-
-AnalysisReport *analyzer_result_report_mutable(AnalyzerResult *result) {
     return result ? &result->pass.report : NULL;
 }
 

@@ -7,9 +7,6 @@
 
 /* Library-private views of an AnalyzerResult for the exports and the CLI. */
 
-/* The report, for a check that writes into it before the export (counterpoint_check_collect). */
-AnalysisReport *analyzer_result_report_mutable(AnalyzerResult *result);
-
 /* The notes the result borrows. */
 const ImportedNotes *analyzer_result_notes(const AnalyzerResult *result);
 

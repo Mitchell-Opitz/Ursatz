@@ -48,7 +48,6 @@ const expectedTabs = [
   ["Texture", ["texture", "voice_leading"]],
   ["Schemas", ["schemas"]],
   ["Markings", ["markings"]],
-  ["Counterpoint", ["counterpoint_check"]],
   ["Notes", ["notes"]],
 ];
 check(
@@ -98,7 +97,8 @@ check(
 );
 
 /* Empty tabs. */
-check(byId.get("counterpoint").empty === true, "a tab whose only section is null is empty (disabled)");
+const cadencesTab = tabs.ANALYSIS_TABS.find((tab) => tab.id === "cadences");
+check(tabs.buildTabState(cadencesTab, { ...doc, cadences: null }).empty === true, "a tab whose only section is null is empty (disabled)");
 check(byId.get("keys").empty === false && byId.get("chords").empty === false, "tabs with content are not empty");
 const emptyDocument = {};
 for (const tab of tabs.ANALYSIS_TABS) {
