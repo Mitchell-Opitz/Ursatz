@@ -1,5 +1,4 @@
 add_library(ursatz
-    ursatz.c
     identity/entity_id.c
     identity/schema_version.c
     core/entity.c

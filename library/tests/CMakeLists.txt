@@ -19,10 +19,6 @@ add_executable(test_architecture_tests test_architecture_tests.c)
 target_compile_definitions(test_architecture_tests PRIVATE SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 add_test(NAME architecture_tests COMMAND test_architecture_tests)
 
-add_executable(test_ursatz test_ursatz.c)
-target_link_libraries(test_ursatz PRIVATE ursatz)
-add_test(NAME ursatz_bootstrap COMMAND test_ursatz)
-
 add_subdirectory(identity)
 add_subdirectory(core)
 add_subdirectory(time)
