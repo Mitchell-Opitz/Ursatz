@@ -15,14 +15,14 @@ The layer table, the dependency rule that holds it together, and the open and re
 | L6 | `context`, `semantics`, `relationship`, `interpretation` (four mutually-restricted siblings) |
 | L7 | `theory`, `rules` (`rules` depends on `theory`; `theory` never depends back) |
 | L8 | `analysis` |
-| L9 | `io` (MIDI import, MIDI key-signature scan), `export` (MusicXML), `query` |
+| L9 | `io` (MIDI import), `export` (MusicXML), `query` |
 | Extensions | `frameworks/<name>/`: 11 Theory Frameworks built on L7 (see `frameworks/README.md`); `chain/`: the analysis chain (`ursatz_chain`), above the kernel and the frameworks |
 
 ## Dependency rule
 
 A module in layer N may depend only on modules in layers 0 through N. It must never depend sideways within its own layer unless that specific dependency is documented, and never depend upward on a higher layer. The documented sideways edges are `rules` on `theory` (L7), `interpretation` on `relationship` through `claim_interpretation.h` (L6), and in L9 no sideways edge. No `src/` module includes a framework header. Frameworks never compile kernel sources (`architecture_framework_sources` checks every `frameworks/*/CMakeLists.txt` and `chain/CMakeLists.txt`); code that needs both a framework and the kernel lives in `chain/`. The former exception, `analysis`'s `ChordIdentification` and `KeyEstimation`, is gone (R-010 finished, R-241).
 
-The analysis chain (`chain/`, target `ursatz_chain`) is an extension above the numbered stack. It may include kernel L0 to L8 and the framework headers named in `chain/tests/test_architecture_chain.c`, and never L9 (`io`, `export`, `query`). Headers are included as `ursatz_chain/<name>.h`. A framework test may link the chain; a framework library may not. The chain keeps the stage inputs it builds (pitches, harmony inputs, prepared harmony, form and motive inputs, voice grid, galant segments) and exposes them through `analysis_chain_*` accessors, and it reads the outer lines on the chord segments (`chain_build_segment_lines`, `analysis_chain_segment_outer_voices`) alongside the lines on the voice segments (`analysis_chain_outer_voices`).
+The analysis chain (`chain/`, target `ursatz_chain`) is an extension above the numbered stack. It may include kernel L0 to L8 and the framework headers named in `chain/tests/test_architecture_chain.c`, and never L9 (`io`, `export`, `query`). Headers are included as `ursatz_chain/<name>.h`. A framework test may link the chain; a framework library may not. The chain keeps the stage inputs it builds (harmony inputs, prepared harmony, form and motive inputs, voice grid, galant segments) and exposes them through `analysis_chain_*` accessors, and it reads the outer lines on the chord segments (`chain_build_segment_lines`) alongside the lines on the voice segments (`analysis_chain_outer_voices`).
 
 A framework may depend on L0 to L6, on `theory/framework.h`, `theory/framework_singleton.h`, `rules/rule.h`, `rules/constraint.h` and `rules/preference.h`, and on another framework only where that edge is recorded in `frameworks/README.md`.
 
@@ -30,9 +30,9 @@ Every module and every framework has an architecture test that allowlists the di
 
 ## Open issues
 
-- **Theory to Corpus** (Dependency Spec §7.2). The Registry lists `Tendency`, `StatisticalModel`, and `StyleModel` (L7) as depending on `Corpus` (L9). All three accept corpus-derived data only as an opaque, already-computed value; no L7 file includes a corpus header. Detail in `docs/modules/theory.md`.
+- **Theory to Corpus** (Dependency Spec §7.2). The Registry lists `StyleModel` (L7) as depending on `Corpus` (L9). It accepts corpus-derived data only as an opaque, already-computed value; no L7 file includes a corpus header. Detail in `docs/modules/theory.md`.
 
 ## Resolved issues
 
 - **Interpretation-family to Framework** (Dependency Spec §7.1, closed). `Interpretation`, `ScaleDegree`, `Chord`, and `Key` (L6) carry an optional `FrameworkReference` (`core`, L1) rather than a live `Framework` reference. `Chord`, `Key`, `ScaleDegree` and `Texture` require it at construction. Detail in `docs/modules/l6-notes.md`.
-- **Reference-type Registry synchronization.** `VoiceReference`, `RelationshipReference`, and `ProvenanceReference` are authorized in the System Registry and implemented in `core`. See `docs/modules/core.md`.
+- **Reference-type Registry synchronization.** `VoiceReference` and `ProvenanceReference` are authorized in the System Registry and implemented in `core`. See `docs/modules/core.md`.

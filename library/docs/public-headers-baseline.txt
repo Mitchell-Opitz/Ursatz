@@ -90,7 +90,6 @@ io/midi_importer.h src/io/midi_importer.h
 io/midi_key_signature.h src/io/midi_key_signature.h 
 io/midi_renderer.h src/io/midi_renderer.h 
 io/musicxml_importer.h src/io/musicxml_importer.h 
-io/smf_reader.h src/io/smf_reader.h 
 key_identification.h frameworks/common-practice-minimal/key_identification.h 
 key_regions.h frameworks/common-practice-minimal/key_regions.h 
 key_vocabulary.h frameworks/common-practice-minimal/key_vocabulary.h 
@@ -164,7 +163,6 @@ tendency_rules.h frameworks/standard-counterpoint/tendency_rules.h
 texture_analysis_classify.h frameworks/standard-texture/analysis/texture_analysis_classify.h 
 texture_analysis_input.h frameworks/standard-texture/analysis/texture_analysis_input.h 
 texture_rules.h frameworks/standard-texture/texture_rules.h 
-theme.h src/structure/theme.h 
 theory/framework.h src/theory/framework.h 
 theory/style_features.h src/theory/style_features.h 
 theory/style_model.h src/theory/style_model.h 

@@ -6,7 +6,7 @@ Layer L6 (`music-context`). Path `src/context/`, tests `tests/context/`. One of 
 
 ## Provides
 
-`Context`, composable via a parent reference.
+`Context`, which takes an optional parent at creation.
 
 ## Notes
 

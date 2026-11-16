@@ -32,7 +32,7 @@ lanes of the plan (R-019) hold library values:
 | Need | Library owner |
 | --- | --- |
 | Exact fractions and their gcd (motive scores, MIDI divisions, hashing, text) | `<core/rational.h>`: `Rational`, checked, an overflow fails the caller. |
-| Pitch class names, spelling, octaves | `<pitch/pitch_arithmetic.h>`: `pitch_class_name`, `pitch_spelling_from_fifths`, `pitch_spelling_midi_number`. |
+| Pitch class names, spelling, octaves | `<pitch/pitch_arithmetic.h>`: `pitch_class_name`, `pitch_spelling_from_fifths`, `pitch_letter_semitone`. |
 | Key names and signatures | `<standard-tonality/tonal_key.h>`: `standard_tonality_key_tonic_of_pitch_class`, `standard_tonality_key_fifths`, `standard_tonality_key_signature_of`. |
 | Roman numerals of plain chords | `<standard-tonality/roman_numeral_grammar.h>`: parse reads every form, format writes the canonical one (`viio`, `viiø7`, `65`, `43`, `42`). Applied chords keep `harmony_applied_label`. |
 | Plan time, spans and the positions inside an operator | `<core/rational.h>`: a `PlanSpan` is a `Rational` start and length; the operators work on `Rational` positions from the start of their target (`src/util/position.h` wraps the checked arithmetic), and `<time/time_rational.h>` bridges to `MusicalTime`. No meter is refused for a grid. |

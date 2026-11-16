@@ -18,8 +18,8 @@ This is why the deleted `generation/candidate_evaluator.h`'s `CandidateEvaluatio
 
 ## Chord and Key
 
-Per the Registry, `Chord` and `Key` belong to `interpretation` (L6), not L8. Both are built there, and `ChordIdentification`/`KeyEstimation` produce populated `Chord`/`Key` objects (see `docs/modules/analysis.md`). `CadenceDetection` still does not construct a `Cadence`, and `MotifDetection` does not persist the `MotifOccurrence` it validates; both report by `Interpretation` and let a downstream caller build the L5 object from the claim.
+Per the Registry, `Chord` and `Key` belong to `interpretation` (L6), not L8. Both are built there, and `ChordIdentification`/`KeyEstimation` produce populated `Chord`/`Key` objects (see `docs/modules/analysis.md`). The kernel analyzers do not construct a `Cadence` or persist a `MotifOccurrence`; they report by `Interpretation` and let a downstream caller build the L5 object from the claim.
 
 ## Out of scope for L8 entirely, not missing
 
-Actual I/O format adapters (MIDI/MusicXML/MEI/ABC, L9); corpus ingestion/statistics itself (L9, and separately blocked from being imported here regardless, per the L7 open issue in `docs/modules/theory.md`; `CandidateEvaluator` consuming a `StatisticalModel` is fine, that is L8 to L7, legal; nothing in L8 reaches past L7 into a corpus module directly); and the theory frameworks, including species counterpoint and common-practice harmony (`frameworks/`, extension modules on `Framework`/`Rule`/`Constraint`, not part of L8's own build; see `frameworks/README.md`).
+Actual I/O format adapters (MIDI/MusicXML/MEI/ABC, L9); corpus ingestion/statistics itself (L9, and separately blocked from being imported here regardless, per the L7 open issue in `docs/modules/theory.md`; nothing in L8 reaches past L7 into a corpus module directly); and the theory frameworks, including species counterpoint and common-practice harmony (`frameworks/`, extension modules on `Framework`/`Rule`/`Constraint`, not part of L8's own build; see `frameworks/README.md`).

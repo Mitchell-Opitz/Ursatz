@@ -6,7 +6,7 @@ Layer L0. Path `src/identity/`, tests `tests/identity/`. No dependencies on any 
 
 ## Provides
 
-`EntityID`, `Version`, `VersionModel`, `SchemaVersion`.
+`EntityID`, `SchemaVersion`.
 
 ## Notes
 

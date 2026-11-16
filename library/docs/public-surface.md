@@ -16,6 +16,8 @@ A framework or chain source that includes another framework's header uses that p
 
 The public set of a target is: every header the apps include (`docs/public-headers-baseline.txt`, made by `scripts/app_includes.sh <app checkout>...`), the owners named on this page, every header a framework or the chain takes from another target, every header those include, and nothing named `*_internal.h`. `internal_expansion_technique.h` is a plain enum and is public. A framework with nothing in the set stages nothing.
 
+Four headers no consumer includes are not staged: `io/smf_reader.h` and `semantics/sonority_builder.h` (kernel), `form_bridge.h` and `kernel_owners.h` (chain). The chain's own sources and tests still reach them through their source directory. A clean stage holds 107 kernel headers and 2 chain headers (`analysis_chain.h`, `chain_inputs.h`).
+
 A test sees the internals of what it tests (`ursatz_test_includes()`); an app does not.
 
 Three tests guard this: `architecture_public_headers` (a public header includes only public headers of its own or a linked target), `public_headers_compile` (a generated file per target includes every public header and compiles with only the staged folders of the target and its links), `architecture_header_paths` (no bare include of another framework's header).

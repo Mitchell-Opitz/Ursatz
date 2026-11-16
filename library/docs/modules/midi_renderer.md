@@ -4,7 +4,7 @@
 
 `src/io/midi_renderer.{h,c}`, tests `tests/io/test_midi_renderer*.c`. Part of `music-io` (L9); same dependencies as the rest of the module (`identity`, `core`, `time`, `pitch`, `events`).
 
-`midi_renderer_render` writes NoteEvents (with the index-paired PitchNumericValues `midi_importer_import` returns), an optional MeterMap, an optional TempoMap and optional key signature events to a Standard MIDI File of format 1. It is the inverse of `MIDIImporter` and changes none of the importer, `smf_reader`, MeterMap or TempoMap.
+`midi_renderer_render_with_options` writes NoteEvents (with the index-paired PitchNumericValues `midi_importer_import_complete` returns), an optional MeterMap, an optional TempoMap and optional key signature events to a Standard MIDI File of format 1. It is the inverse of `MIDIImporter` and changes none of the importer, `smf_reader`, MeterMap or TempoMap.
 
 ## Output
 
@@ -16,7 +16,7 @@
 
 ## Track names and markers
 
-`midi_renderer_render_with_options` takes a `MidiRenderOptions`; `midi_renderer_render` calls it with NULL options and its bytes are unchanged. Every member is optional (NULL, 0).
+`midi_renderer_render_with_options` takes a `MidiRenderOptions`, or NULL for none. Every member is optional (NULL, 0).
 
 - **`conductor_name`.** A Sequence/Track Name meta-event (`FF 03`, variable-length length, the name's bytes as given) at tick 0, first in track 0.
 - **`track_names`.** `MidiTrackName { voice_id, name }`: `voice_id` is the voice reference's target id value (`entity_id_value`), NULL for the track of notes with no voice. The name is an `FF 03` at tick 0, first in that voice's track. Entries are matched by id, in any order. A name for a voice with no notes is ignored.

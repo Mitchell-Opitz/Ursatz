@@ -76,8 +76,7 @@ framework gives it its conventions.
 The suggested listening process for phrase-level forms (its tables are
 encoded as the beginning and ending classifiers), other signals of closure
 besides the cadence, and the harmonic start of a presentation. `analysis/` does
-not use these rules yet (`phrase_segmentation`, `motif_detection`,
-`sentence_detection`, `period_detection`). Phrase expansion and contraction
+not use these rules yet (`period_detection`). Phrase expansion and contraction
 are rules over caller-supplied lengths only: detecting them in real music
 arrives with the form adapter (L3.6).
 

@@ -38,12 +38,9 @@ Framework overview: [frameworks/standard-form/README.md](../../frameworks/standa
   the location, since the terms are used flexibly. External expansions are
   drawn with dashed lines, internal ones with solid.
 
-Related types: `Idea` (`src/containers/idea.h`) and `Subphrase`
-(`src/containers/subphrase.h`) are reference-only groupings of events at
-the idea and subphrase levels, built like `Phrase`. `PhraseLevelForm`,
-`SubphraseRole`, `PhraseRole`, `IdeaLabel` and `ContinuationTrait` in
-`src/semantics/` name the forms, roles, labels and traits. Segmentation,
-sentence and period are procedures over `Phrase`, `Subphrase`, `Idea` and
-`Cadence`; none is a stored entity.
+Related types: `PhraseLevelForm`, `SubphraseRole`, `PhraseRole`,
+`IdeaLabel` and `ContinuationTrait` name the forms, roles, labels and
+traits. Segmentation, sentence and period are procedures over phrases,
+subphrases, ideas and `Cadence`; none is a stored entity.
 
 Each rule is a pure check function; no rule builds a `Rule` or `Constraint`.

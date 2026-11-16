@@ -25,7 +25,6 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 | `tests/` | Kernel tests mirrored by module, accuracy harness, integration tests | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
 | `cmake/`, `scripts/` | Public header staging, app include report, docs check | [Public surface](public-surface.md) |
-| `examples/` | Usage examples | [README](../README.md) |
 
 ## Public API
 
@@ -38,14 +37,14 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 | time | `duration.h`, `meter_arithmetic.h` and 11 more | `MeterMap`, `TempoMap`, `MusicalTime` | Exact musical time, meter and tempo. | [time](modules/time.md) |
 | pitch | `key_signature.h`, `midi_pitch.h` and 5 more | `PitchSpelling`, `pitch_arithmetic` | Pitch identity, spelling, MIDI numbers, key signatures. | [pitch](modules/pitch.md) |
 | events | `note_event.h` | `NoteEvent` | The canonical note. | [events](modules/events.md) |
-| containers | `section.h` | `Section` | Containers for events and phrases. | [containers](modules/containers.md) |
-| structure | `phrase_occurrence.h`, `structure.h` and 1 more | `PhraseOccurrence`, `Theme` | Occurrences of structures. | [structure](modules/structure.md) |
+| containers | `section.h` | `Section` | The section container, grouping phrases. | [containers](modules/containers.md) |
+| structure | `phrase_occurrence.h`, `structure.h` | `PhraseOccurrence`, `Structure` | Occurrences of structures. | [structure](modules/structure.md) |
 | semantics | `analysis_key.h`, `analysis_note.h` and 9 more | `CadenceType`, `sonority_segmentation`, vocabulary enums | Shared theory vocabulary and the neutral analysis inputs. | [semantics](modules/semantics.md) |
 | relationship | `relationship.h` | `Relationship` | Typed link between two entities. | [relationship](modules/relationship.md) |
 | interpretation | `chord.h`, `claim_interpretation.h` and 4 more | `Interpretation`, `Chord`, `Uncertainty` | Claims under a named framework, with uncertainty. | [interpretation](modules/interpretation.md) |
 | theory | `framework.h`, `style_features.h` and 3 more | `Framework`, `StyleModel` | Theory Framework type and style models. | [theory](modules/theory.md) |
 | analysis | `analyzer.h`, `form_structure_detection.h` and 9 more | `Analyzer`, `motive_sketch`, `outer_voice_extract`, `voice_separate` | Kernel analyses: motives, voices, progressions, form. | [analysis](modules/analysis.md), [motive link](modules/motive-link.md) |
-| io | `midi_importer.h`, `midi_key_signature.h` and 2 more | `midi_importer_import_complete`, `MusicXMLImporter`, `midi_key_signature_scan` | Import of MIDI and MusicXML into notes, meter, tempo and keys. | [io](modules/io.md), [MIDI](modules/io-midi.md), [MusicXML](modules/io-musicxml.md) |
+| io | `midi_importer.h`, `midi_key_signature.h` and 2 more | `midi_importer_import_complete`, `MusicXMLImporter` | Import of MIDI and MusicXML into notes, meter, tempo and keys. | [io](modules/io.md), [MIDI](modules/io-midi.md), [MusicXML](modules/io-musicxml.md) |
 | export | `musicxml_export.h`, `score_quantize.h` and 1 more | `musicxml_export_write_score`, `score_quantize` | MusicXML export of a MeterMap and notes. | [export](modules/export.md) |
 | query | `similarity_model.h`, `similarity_scoring.h` | `similarity_model.h` | Similarity scoring over sequences. | [query](modules/query.md) |
 | common-practice-minimal | `chord_vocabulary_seventh.h`, `framework.h` and 7 more | framework entry and rules | Weighted chord identification, key regions, non-chord tones. | [README](../frameworks/common-practice-minimal/README.md), [analysis detail](modules/common-practice-minimal-analysis.md) |
@@ -65,7 +64,6 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 
 | Name | File | Current value | Doc |
 |---|---|---|---|
-| `ursatz_version()` | `src/ursatz.h` | 0 | this page |
 | Framework ids (`<name>-v1`, one per framework) | `frameworks/<name>/framework.c` (the singleton init) | `-v1` for all 11 | [frameworks/README.md](../frameworks/README.md) |
 | `SchemaVersion` (a value type for callers' schemas) | `src/identity/schema_version.h` | caller-supplied | [identity](modules/identity.md) |
 
@@ -80,7 +78,7 @@ Nothing. Ursatz sits at the bottom of the stack; its only dependencies are POSIX
 | App | Headers used | Mostly from |
 |---|---|---|
 | Analyzer | 157 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
-| Composer | 115 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, io |
+| Composer | 114 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, io |
 | GUI | 1 | analysis (`analyzer.h`) |
 
 Made with `scripts/app_includes.sh <app checkout>...`; the combined list is in `docs/public-headers-baseline.txt`.
@@ -91,7 +89,7 @@ One file through the library:
 
 1. A MIDI or MusicXML buffer enters `io` (`midi_importer_import_complete` or `MusicXMLImporter`), which parses it once ([io-midi](modules/io-midi.md), [io-musicxml](modules/io-musicxml.md)).
 2. The import holds kernel types: `NoteEvent`s with exact `MusicalTime` and `Duration`, a `MeterMap`, a `TempoMap` and key signature events (`events`, `time`, `pitch`).
-3. `io/import_notes.h` turns the import into neutral `AnalysisNote`s (`semantics/analysis_note.h`).
+3. The caller turns the import into neutral `AnalysisNote`s (`semantics/analysis_note.h`); the library's tests use `tests/import_notes_test_util.h`.
 4. `analysis_chain_run` (`ursatz_chain/analysis_chain.h`) takes the notes and runs the stages in order: segments, key regions, weighted chords, Roman numerals, outer voices, cadences, phrase form and motives, meter, texture, voice leading, melody, schemas and sequences ([analytic-job-owners](analytic-job-owners.md)).
 5. Each stage builds its input with `chain_inputs.h` and calls the owner of its job: a framework (`frameworks/<name>/analysis/`) or the kernel's `analysis` module.
 6. Results are `Interpretation`s and framework result structs, owned by the `AnalysisChain` and read through its `analysis_chain_*` accessors.

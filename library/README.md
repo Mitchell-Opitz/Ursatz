@@ -2,7 +2,7 @@
 
 Ursatz is a general-purpose, theory-neutral computational music platform, written as a C11
 static library (`libursatz`). It provides a canonical representation of musical material that
-strictly separates events, structures, relationships, observations, interpretations, contexts,
+strictly separates events, structures, relationships, interpretations, contexts,
 and provenance. Interpretations (chord, key, cadence, form) are only ever produced under an
 explicit, named Theory Framework.
 

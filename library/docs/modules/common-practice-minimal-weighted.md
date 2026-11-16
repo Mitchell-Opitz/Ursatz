@@ -136,7 +136,7 @@ A greedy split against a margin over the whole (R-369) could not cut a bar that 
 
 ## Applied chords (R-380)
 
-`CommonPracticeWeightedConfig.applied_chords` (default false) ranks the key's applied chords beside the diatonic ones. The chain sets it for the chord identification only (`AnalysisChainConfig.applied_chords`, P40 B5), and `harmonic_spans_group` keeps it off (grouping is key-free and already reads these shapes as diatonic in another key).
+`CommonPracticeWeightedConfig.applied_chords` (default false) ranks the key's applied chords beside the diatonic ones. The chain always sets it for the chord identification (P40 B5), and `harmonic_spans_group` keeps it off (grouping is key-free and already reads these shapes as diatonic in another key).
 
 - **Vocabulary.** For each target x (major: ii iii IV V vi; minor, natural roots: III iv V VI VII) the shapes V/x (major triad on x's root plus 7), V7/x (dominant seventh, same root), vii°/x (diminished triad on x's root minus 1) and vii°7/x (diminished seventh, same root). A chord the mode's diatonic vocabulary already has is left out, and a diminished seventh with the pitch classes of a diatonic one. Diminished sevenths are symmetric, so one entry per pitch-class set is kept, the target V first, else the lowest degree. That leaves 17 applied chords in major and 10 in minor (`COMMON_PRACTICE_CANDIDATE_COUNT` is 36).
 - **Ranked chord.** `degree` is the root's letter degree as the function spells it (V/V is 2, vii°7/V is 4), `applied_target_degree` the degree of the key it tonicizes (0 for a diatonic chord), `triad` is `COMMON_PRACTICE_TRIAD_MAJOR` or `_DIMINISHED`, `seventh` is `_DOMINANT7` or `_DIMINISHED7`.
