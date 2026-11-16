@@ -13,6 +13,3 @@ const char *sequence_kind_name(SequenceKind kind) {
     return sequence_kind_valid(kind) ? NAMES[kind] : NULL;
 }
 
-bool sequence_kind_is_suspension_chain(SequenceKind kind) {
-    return kind == SEQUENCE_KIND_SEVEN_SIX || kind == SEQUENCE_KIND_TWO_THREE;
-}

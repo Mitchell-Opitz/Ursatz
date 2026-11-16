@@ -32,7 +32,6 @@
 #define RULES(X)                                                                                                       \
     X(common_practice_triad_rule)                                                                                      \
     X(galant_matching_rule)                                                                                            \
-    X(scale_octave_rule)                                                                                               \
     X(standard_counterpoint_cantus_rule)                                                                               \
     X(harmony_applied_rule)                                                                                            \
     X(standard_markings_articulation_rule)                                                                             \

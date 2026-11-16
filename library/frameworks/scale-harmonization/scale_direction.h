@@ -29,7 +29,4 @@ bool scale_direction_valid(ScaleDirection direction);
 /* "ascending" "descending"; NULL for an invalid direction. */
 const char *scale_direction_name(ScaleDirection direction);
 
-/* The other direction. Returns the direction unchanged when it is invalid. */
-ScaleDirection scale_direction_opposite(ScaleDirection direction);
-
 #endif

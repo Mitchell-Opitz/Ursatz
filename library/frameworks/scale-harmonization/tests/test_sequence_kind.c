@@ -21,19 +21,9 @@ static void test_names(void) {
     assert(sequence_kind_name(SEQUENCE_KIND_COUNT) == NULL);
 }
 
-static void test_is_suspension_chain(void) {
-    assert(!sequence_kind_is_suspension_chain(SEQUENCE_KIND_PARALLEL_CHORDS));
-    assert(!sequence_kind_is_suspension_chain(SEQUENCE_KIND_FIVE_SIX));
-    assert(sequence_kind_is_suspension_chain(SEQUENCE_KIND_SEVEN_SIX));
-    assert(!sequence_kind_is_suspension_chain(SEQUENCE_KIND_CYCLE_OF_FIFTHS));
-    assert(sequence_kind_is_suspension_chain(SEQUENCE_KIND_TWO_THREE));
-    assert(!sequence_kind_is_suspension_chain(SEQUENCE_KIND_COUNT));
-}
-
 int main(void) {
     test_validity();
     test_names();
-    test_is_suspension_chain();
     printf("test_sequence_kind: ok\n");
     return 0;
 }

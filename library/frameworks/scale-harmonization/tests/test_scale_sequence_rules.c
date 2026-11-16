@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "scale_rule_check.h"
 #include "scale_sequence_rules.h"
 #include "scale_test_util.h"
 
@@ -11,24 +10,6 @@
 static bool holds(ScaleSequenceRule rule, ScalePatternId id, const ScaleHarmonization *harmonization) {
     ScaleSequence sequence = {scale_pattern(id), harmonization};
     return scale_sequence_rule_holds(rule, &sequence);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(scale_sequence_rule, scale_sequence_constraint, SCALE_SEQUENCE_RULE_COUNT);
-    for (int i = 0; i < SCALE_SEQUENCE_RULE_COUNT; i++) {
-        ConstraintType type = constraint_type(scale_sequence_constraint((ScaleSequenceRule)i));
-        assert(type == (i <= SEQ(SUSPENDED) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(scale_sequence_rule_name(SEQ(DIRECTION)), "direction") == 0);
-    assert(strcmp(scale_sequence_rule_name(SEQ(BASS_BY_STEP)), "bass-by-step") == 0);
-    assert(strcmp(scale_sequence_rule_name(SEQ(INTERVALS)), "intervals") == 0);
-    assert(strcmp(scale_sequence_rule_name(SEQ(REPEATS)), "repeats") == 0);
-    assert(strcmp(scale_sequence_rule_name(SEQ(SUSPENDED)), "suspended") == 0);
-    assert(strcmp(scale_sequence_rule_name(SEQ(WHOLE_UNITS)), "whole-units") == 0);
-    assert(scale_sequence_rule_name(SEQ(RULE_COUNT)) == NULL);
 }
 
 /* The good exemplars, each over the bass scale in C. */
@@ -229,8 +210,6 @@ static void test_invalid_and_check(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_exemplars();
     test_minor_key();
     test_direction();

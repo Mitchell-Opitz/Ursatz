@@ -4,7 +4,6 @@ add_library(scale_harmonization
     scale_harmonization.c
     scale_patterns.c
     scale_sequence_rules.c
-    scale_octave_rules.c
     analysis/scale_analysis_claim.c
     analysis/scale_analysis_detect.c
     scale_direction.c
