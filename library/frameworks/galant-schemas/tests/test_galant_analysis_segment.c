@@ -55,18 +55,8 @@ static void test_segment(void) {
     musical_time_destroy(to);
 }
 
-static void test_key(void) {
-    GalantSegment galant;
-    memset(&galant, 0, sizeof(galant));
-
-    char long_id[GALANT_ANALYSIS_ID_MAX + 8];
-    memset(long_id, 'k', sizeof(long_id));
-    long_id[sizeof(long_id) - 1] = '\0';
-}
-
 int main(void) {
     test_segment();
-    test_key();
     printf("test_galant_analysis_segment: ok\n");
     return 0;
 }
