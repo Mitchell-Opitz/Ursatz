@@ -28,7 +28,9 @@ ctest --test-dir build --output-on-failure -LE slow
 - `-LE slow` runs the fast set (what CI runs). `-L slow` runs the slow set; the nightly workflow runs every test.
 - `ctest --test-dir build/<part>` runs one part's tests. Each part builds only from the root.
 - Needs cmake 3.28+, and a C11 compiler.
-- The build type defaults to Debug. Never build Release: it compiles out the asserts the tests rely on.
+- The build type defaults to Debug. Release builds work for tests too (the guard `test_asserts_on`), but the default stays Debug.
+
+Tests are registered with `ursatz_test()` (`cmake/UrsatzTest.cmake`; `ursatz_test_executable()` and `ursatz_test_library()` build shared helpers). It compiles every test executable with `-UNDEBUG`, so asserts hold in any build type, defines `URSATZ_FIXTURES_DIR` (the root `tests/fixtures`), and sets the timeout (120 s, or 1800 s for a `slow` test). Labels: `slow` (nightly only), `valgrind` (always with `slow`), `schema`, `accuracy`, `golden`. Some tests need valgrind, python3 with jsonschema or node (`cmake/UrsatzTools.cmake`); a test whose tool is missing is not registered, and `-DURSATZ_REQUIRE="valgrind;jsonschema;node"` makes the configure fail when a named tool is missing.
 
 Options (both ON by default):
 
