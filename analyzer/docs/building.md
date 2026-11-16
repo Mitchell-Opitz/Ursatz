@@ -20,6 +20,8 @@ check's own fraction stay until the library owns them.
 
 ## Tests
 
+Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together.
+
 Tests:
 
 - `test_analysis_pipeline`: the end-to-end pipeline.
