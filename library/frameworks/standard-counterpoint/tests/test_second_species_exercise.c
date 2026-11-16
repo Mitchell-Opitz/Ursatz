@@ -9,7 +9,6 @@ static void test_valid_exercise(void) {
     const StandardCounterpointSlot slots[] = {ATK(P(A, 0, 3)), ATK(P(D, 0, 4)), ATK(P(F, 0, 4)), TIE(P(F, 0, 4))};
     EXERCISE(exercise, cantus, slots, CANTUS_LOWER);
     assert(standard_counterpoint_second_species_exercise_valid(&exercise));
-    assert(standard_counterpoint_second_species_bar_count(&exercise) == 2);
 }
 
 static void test_valid_with_half_rest(void) {
@@ -64,13 +63,6 @@ static void test_invalid_shapes(void) {
     valid.cantus = &short_cantus;
     assert(!standard_counterpoint_second_species_exercise_valid(&valid));
     assert(!standard_counterpoint_second_species_exercise_valid(NULL));
-}
-
-static void test_slot_strength(void) {
-    assert(standard_counterpoint_second_species_slot_strength(0) == BEAT_STRENGTH_STRONG);
-    assert(standard_counterpoint_second_species_slot_strength(1) == BEAT_STRENGTH_WEAK);
-    assert(standard_counterpoint_second_species_slot_strength(2) == BEAT_STRENGTH_STRONG);
-    assert(standard_counterpoint_second_species_slot_strength(7) == BEAT_STRENGTH_WEAK);
 }
 
 static void test_accessors(void) {
@@ -131,7 +123,6 @@ int main(void) {
     test_valid_exercise();
     test_valid_with_half_rest();
     test_invalid_shapes();
-    test_slot_strength();
     test_accessors();
     test_rest_has_no_downbeat();
     test_attacks();

@@ -26,22 +26,6 @@ static bool valid_rule(StandardCounterpointFirstSpeciesEndsRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_first_species_ends_rule(StandardCounterpointFirstSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_first_species_ends_constraint(StandardCounterpointFirstSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_first_species_ends_preference(StandardCounterpointFirstSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_first_species_ends_rule_name(StandardCounterpointFirstSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 static const StandardCounterpointLine *counterpoint_line(const StandardCounterpointPair *pair,
                                                          StandardCounterpointCantusPart cantus_part) {
     return cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER ? pair->upper : pair->lower;

@@ -32,10 +32,6 @@ typedef enum {
     STANDARD_COUNTERPOINT_GROUP_COUNT
 } StandardCounterpointGroup;
 
-/* "cantus-firmus" "melodic" "harmonic" "tendency"; NULL for an invalid
-   group. */
-const char *standard_counterpoint_group_name(StandardCounterpointGroup group);
-
 /* Which part of the pair is the cantus firmus. */
 typedef enum {
     STANDARD_COUNTERPOINT_CANTUS_IN_LOWER = 0,
@@ -69,8 +65,5 @@ typedef struct {
    input: NULL, an invalid pair, or a cantus part that is not one of the
    two. */
 bool standard_counterpoint_check(const StandardCounterpointInput *input, StandardCounterpointResult *out);
-
-/* True when the input is valid and breaks no hard rule. */
-bool standard_counterpoint_valid(const StandardCounterpointInput *input);
 
 #endif

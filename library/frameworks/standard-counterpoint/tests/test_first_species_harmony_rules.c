@@ -5,13 +5,6 @@
 #include "counterpoint_test_util.h"
 #include "first_species_harmony_rules.h"
 #include "first_species_test_util.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-harmony", STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT);
-#define standard_counterpoint_first_species_harmony_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_first_species_harmony_constraint, standard_counterpoint_first_species_harmony_preference, standard_counterpoint_first_species_harmony_rule_holds, StandardCounterpointPair, which, subject)
 
 static bool holds(StandardCounterpointFirstSpeciesHarmonyRule rule, const PitchSpelling *const *upper_notes,
                   const PitchSpelling *const *lower_notes, size_t count) {
@@ -22,34 +15,6 @@ static bool holds(StandardCounterpointFirstSpeciesHarmonyRule rule, const PitchS
 }
 
 #define HOLDS(rule, upper, lower) holds(rule, upper, lower, sizeof(upper) / sizeof((upper)[0]))
-
-static bool is_soft(int rule) {
-    return rule == STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_IMPERFECT_PREFERRED ||
-           rule == STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_PERFECT_THEN_IMPERFECT ||
-           rule == STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_INTERVAL_VARIETY;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_first_species_harmony_rule,
-                                    standard_counterpoint_first_species_harmony_constraint,
-                                    STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_first_species_harmony_constraint((StandardCounterpointFirstSpeciesHarmonyRule)i));
-        assert(type == (is_soft(i) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_first_species_harmony_rule_name(
-                      STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_ALL_CONSONANT),
-                  "all-consonant") == 0);
-    assert(strcmp(standard_counterpoint_first_species_harmony_rule_name(
-                      STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_INTERVAL_VARIETY),
-                  "interval-variety") == 0);
-    assert(standard_counterpoint_first_species_harmony_rule_name(STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT) ==
-           NULL);
-}
 
 static void test_good_exercise(void) {
     FIRST_SPECIES_LOWER(lower_notes);
@@ -185,8 +150,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_exercise();
     test_all_consonant();
     test_no_repeated_perfect();

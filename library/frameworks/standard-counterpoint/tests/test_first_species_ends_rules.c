@@ -5,13 +5,6 @@
 #include "counterpoint_test_util.h"
 #include "first_species_ends_rules.h"
 #include "first_species_test_util.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "first-species-ends", STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT);
-#define standard_counterpoint_first_species_ends_rule_holds(which, a, b, c) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS3(g_eval, standard_counterpoint_first_species_ends_constraint, standard_counterpoint_first_species_ends_preference, standard_counterpoint_first_species_ends_rule_holds, StandardCounterpointPairCantusTonic, which, a, b, c)
 
 #define CANTUS_LOWER STANDARD_COUNTERPOINT_CANTUS_IN_LOWER
 #define CANTUS_UPPER STANDARD_COUNTERPOINT_CANTUS_IN_UPPER
@@ -25,25 +18,6 @@ static bool holds(StandardCounterpointFirstSpeciesEndsRule rule, const PitchSpel
 }
 
 #define HOLDS(rule, upper, lower, part) holds(rule, upper, lower, sizeof(upper) / sizeof((upper)[0]), part)
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_first_species_ends_rule,
-                                    standard_counterpoint_first_species_ends_constraint,
-                                    STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT; i++) {
-        assert(constraint_type(standard_counterpoint_first_species_ends_constraint(
-                   (StandardCounterpointFirstSpeciesEndsRule)i)) == CONSTRAINT_TYPE_HARD);
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_first_species_ends_rule_name(STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_BEGIN),
-                  "begin") == 0);
-    assert(strcmp(standard_counterpoint_first_species_ends_rule_name(
-                      STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_PENULTIMATE_THIRD_OR_SIXTH),
-                  "penultimate-third-or-sixth") == 0);
-    assert(standard_counterpoint_first_species_ends_rule_name(STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT) == NULL);
-}
 
 static void test_good_exercise(void) {
     FIRST_SPECIES_LOWER(lower_notes);
@@ -169,8 +143,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_exercise();
     test_begin_above();
     test_begin_below();

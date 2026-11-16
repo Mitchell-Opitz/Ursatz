@@ -22,17 +22,9 @@ static void test_each_note_carries_its_result_and_reference(void) {
     StandardCounterpointNctLabels labels;
     assert(standard_counterpoint_melody_nct_labels(&m.line, &labels) == STANDARD_COUNTERPOINT_MELODY_OK);
     assert(labels.count == 4);
-    StandardCounterpointNctClaim claim;
-    assert(standard_counterpoint_nct_claim_read(labels.items[1].interpretation, &claim));
-    assert(claim.status == (int)STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE && claim.type == (int)NON_CHORD_TONE_PASSING);
-    assert(claim.has_ref == 1 && strcmp(claim.ref, "seg-4/m1") == 0);
     assert(structure_event_id_count(labels.items[1].shell) == 1);
     assert(strcmp(entity_id_value(interpretation_target_id(labels.items[1].interpretation)),
                   entity_id_value(entity_id(structure_entity(labels.items[1].shell)))) == 0);
-    assert(standard_counterpoint_nct_claim_read(labels.items[0].interpretation, &claim));
-    assert(claim.status == (int)STANDARD_COUNTERPOINT_NCT_CHORD_TONE && claim.type == -1 && claim.has_ref == 0);
-    assert(standard_counterpoint_nct_claim_read(labels.items[2].interpretation, &claim));
-    assert(claim.status == (int)STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED && claim.type == -1 && claim.has_ref == 0);
     assert(fabs(labels.items[3].uncertainty - 0.5) < 1e-12);
     assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(labels.items[3].interpretation)) == 500000UL);
     standard_counterpoint_nct_labels_destroy(&labels);
@@ -46,8 +38,6 @@ static void test_rests_have_no_label(void) {
     StandardCounterpointNctLabels labels;
     assert(standard_counterpoint_melody_nct_labels(&m.line, &labels) == STANDARD_COUNTERPOINT_MELODY_OK);
     assert(labels.count == 2);
-    StandardCounterpointNctClaim claim;
-    assert(standard_counterpoint_nct_claim_read(labels.items[1].interpretation, &claim) && claim.index == 2);
     standard_counterpoint_nct_labels_destroy(&labels);
     test_melody_destroy(&m);
 }
@@ -76,8 +66,6 @@ static void test_counts_by_type_per_span(void) {
     const StandardCounterpointNctCountsClaim *b = &counts.items[1].claim;
     assert(b->note_count == 3 && b->chord_tones == 0 && b->non_chord_tones == 1 && b->unclassified == 2);
     assert(b->by_type[NON_CHORD_TONE_PASSING] == 1);
-    StandardCounterpointNctCountsClaim read;
-    assert(standard_counterpoint_nct_counts_claim_read(counts.items[0].interpretation, &read) && read.chord_tones == 2);
     standard_counterpoint_nct_count_list_destroy(&counts);
     assert(standard_counterpoint_melody_nct_counts(&m.line, NULL, 0, &counts) == STANDARD_COUNTERPOINT_MELODY_OK);
     assert(counts.count == 1 && counts.items[0].claim.note_count == 7);

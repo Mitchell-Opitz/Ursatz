@@ -53,17 +53,9 @@ typedef enum {
     STANDARD_COUNTERPOINT_SUSPENSION_COUNT
 } StandardCounterpointSuspensionType;
 
-/* "7-6" "4-3" "9-8" "2-3" "consonant-tie"; NULL for an invalid type. */
-const char *standard_counterpoint_suspension_name(StandardCounterpointSuspensionType type);
-
 /* True for the four dissonant suspensions, false for the consonant tie and for
    an invalid type. */
 bool standard_counterpoint_suspension_is_dissonant(StandardCounterpointSuspensionType type);
-
-/* The NonChordTone of a type: NON_CHORD_TONE_SUSPENSION for a dissonant
-   suspension, NON_CHORD_TONE_COUNT for the consonant tie (no dissonance) and
-   for an invalid type. */
-NonChordTone standard_counterpoint_suspension_non_chord_tone(StandardCounterpointSuspensionType type);
 
 /* The suspension at the downbeat of the bar. True and *type set when the bar's
    downbeat is a tie and the bar is a proper suspension or consonant tie as

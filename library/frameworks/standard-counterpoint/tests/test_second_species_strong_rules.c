@@ -2,43 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rule_check.h"
 #include "second_species_strong_rules.h"
 #include "second_species_test_util.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "second-species-strong", STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT);
-#define standard_counterpoint_second_species_strong_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_second_species_strong_constraint, standard_counterpoint_second_species_strong_preference, standard_counterpoint_second_species_strong_rule_holds, StandardCounterpointSecondSpeciesExercise, which, subject)
 
 /* A bar that is one whole note: a note on the strong beat tied through the
    weak beat. */
 #define WHOLE(pitch) ATK(pitch), TIE(pitch)
 
 #define STRONG(name) STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_##name
-
-static bool is_soft(int rule) {
-    return rule == STRONG(IMPERFECT_PREFERRED) || rule == STRONG(NO_STRONG_UNISON);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_second_species_strong_rule,
-                                    standard_counterpoint_second_species_strong_constraint,
-                                    STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_second_species_strong_constraint((StandardCounterpointSecondSpeciesStrongRule)i));
-        assert(type == (is_soft(i) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_second_species_strong_rule_name(STRONG(CONSONANT)), "consonant") == 0);
-    assert(strcmp(standard_counterpoint_second_species_strong_rule_name(STRONG(NO_DISSONANT_OUTLINE)),
-                  "no-dissonant-outline") == 0);
-    assert(standard_counterpoint_second_species_strong_rule_name(STRONG(COUNT)) == NULL);
-}
 
 static void test_consonant(void) {
     const PitchSpelling *cantus[] = {P(C, 0, 3), P(D, 0, 3)};
@@ -164,8 +135,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_consonant();
     test_imperfect_preferred();
     test_no_strong_unison();

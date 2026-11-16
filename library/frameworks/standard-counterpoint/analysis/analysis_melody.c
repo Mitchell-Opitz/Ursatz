@@ -280,28 +280,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const St
     return STANDARD_COUNTERPOINT_MELODY_OK;
 }
 
-static bool read_claim(const Interpretation *interpretation, const char *type, void *out, size_t size) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t content_size = 0;
-    if (claim == NULL || strcmp(value_type(claim), type) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &content_size);
-    if (content == NULL || content_size != size) {
-        return false;
-    }
-    memcpy(out, content, size);
-    return true;
-}
-
-bool standard_counterpoint_melodic_interval_claim_read(const Interpretation *interpretation,
-                                                       StandardCounterpointMelodicIntervalClaim *out) {
-    return read_claim(interpretation, STANDARD_COUNTERPOINT_MELODIC_INTERVAL_CLAIM_TYPE, out, sizeof(*out));
-}
-
 /* --- contour summaries --- */
 
 static void destroy_summary(StandardCounterpointContourSummary *summary) {
@@ -432,7 +410,3 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_contour_summaries(
     return STANDARD_COUNTERPOINT_MELODY_OK;
 }
 
-bool standard_counterpoint_contour_summary_claim_read(const Interpretation *interpretation,
-                                                      StandardCounterpointContourSummaryClaim *out) {
-    return read_claim(interpretation, STANDARD_COUNTERPOINT_CONTOUR_SUMMARY_CLAIM_TYPE, out, sizeof(*out));
-}

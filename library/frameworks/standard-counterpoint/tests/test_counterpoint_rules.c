@@ -16,14 +16,6 @@
     const PitchSpelling *name[] = {P(A, 0, 3), P(D, 0, 4), P(C, 0, 4), P(B, 0, 3), P(E, 0, 4), P(D, 0, 4), \
                                    P(C, 0, 4), P(B, 0, 3), P(A, 0, 3), P(C, 1, 4), P(D, 0, 4)}
 
-static void test_group_names(void) {
-    assert(strcmp(standard_counterpoint_group_name(STANDARD_COUNTERPOINT_GROUP_CANTUS_FIRMUS), "cantus-firmus") == 0);
-    assert(strcmp(standard_counterpoint_group_name(STANDARD_COUNTERPOINT_GROUP_MELODIC), "melodic") == 0);
-    assert(strcmp(standard_counterpoint_group_name(STANDARD_COUNTERPOINT_GROUP_HARMONIC), "harmonic") == 0);
-    assert(strcmp(standard_counterpoint_group_name(STANDARD_COUNTERPOINT_GROUP_TENDENCY), "tendency") == 0);
-    assert(standard_counterpoint_group_name(STANDARD_COUNTERPOINT_GROUP_COUNT) == NULL);
-}
-
 static void test_valid_exercise(void) {
     LOWER(lower_notes);
     UPPER(upper_notes);
@@ -35,7 +27,6 @@ static void test_valid_exercise(void) {
 
     assert(standard_counterpoint_check(&input, &result));
     assert(result.hard_violations == 0);
-    assert(standard_counterpoint_valid(&input));
     /* With the default limits, runs of four seconds in both parts are a
        soft melodic violation. */
     assert(result.soft_violations & BIT(STANDARD_COUNTERPOINT_GROUP_MELODIC));
@@ -63,7 +54,6 @@ static void test_harmonic_violation(void) {
     assert(standard_counterpoint_check(&input, &result));
     assert(result.hard_violations == BIT(STANDARD_COUNTERPOINT_GROUP_HARMONIC));
     assert(result.soft_violations & BIT(STANDARD_COUNTERPOINT_GROUP_HARMONIC));
-    assert(!standard_counterpoint_valid(&input));
 }
 
 static void test_cantus_firmus_violation(void) {
@@ -114,7 +104,6 @@ static void test_melodic_violation(void) {
 
     assert(standard_counterpoint_check(&input, &result));
     assert(result.hard_violations & BIT(STANDARD_COUNTERPOINT_GROUP_MELODIC));
-    assert(!standard_counterpoint_valid(&input));
 }
 
 static void test_invalid_input(void) {
@@ -138,12 +127,9 @@ static void test_invalid_input(void) {
     input.cantus_part = (StandardCounterpointCantusPart)5;
     assert(!standard_counterpoint_check(&input, &result));
     assert(result.hard_violations == 7 && result.soft_violations == 7);
-    assert(!standard_counterpoint_valid(&input));
-    assert(!standard_counterpoint_valid(NULL));
 }
 
 int main(void) {
-    test_group_names();
     test_valid_exercise();
     test_harmonic_violation();
     test_cantus_firmus_violation();

@@ -87,8 +87,4 @@ StandardCounterpointPerfectsStatus standard_counterpoint_check_perfects(const St
 
 void standard_counterpoint_violations_destroy(StandardCounterpointViolations *violations);
 
-/* Reads the claim back out of a violation Interpretation. False if it is not one. */
-bool standard_counterpoint_violation_claim_read(const Interpretation *interpretation,
-                                                StandardCounterpointViolationClaim *out);
-
 #endif

@@ -2,15 +2,6 @@
 
 #include <stddef.h>
 
-bool standard_counterpoint_first_species_line_rule_holds(StandardCounterpointCantusRule which,
-                                                         const StandardCounterpointLine *counterpoint,
-                                                         const PitchSpelling *tonic) {
-    if (which == STANDARD_COUNTERPOINT_FIRST_SPECIES_LINE_EXCLUDED) {
-        return standard_counterpoint_line_valid(counterpoint) && tonic != NULL;
-    }
-    return standard_counterpoint_cantus_rule_holds(which, counterpoint, tonic);
-}
-
 bool standard_counterpoint_first_species_line_check(const StandardCounterpointLine *counterpoint,
                                                     const PitchSpelling *tonic, unsigned *hard_violations,
                                                     unsigned *soft_violations) {

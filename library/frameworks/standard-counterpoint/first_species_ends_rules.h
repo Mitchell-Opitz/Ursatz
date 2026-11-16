@@ -6,9 +6,6 @@
 #include "counterpoint_line.h"
 #include "counterpoint_rules.h"
 #include "pitch/pitch_spelling.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * First-species beginning and ending rules for standard-counterpoint-v1:
@@ -42,15 +39,6 @@ typedef enum {
     STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_PENULTIMATE_THIRD_OR_SIXTH,
     STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT
 } StandardCounterpointFirstSpeciesEndsRule;
-
-const Rule *standard_counterpoint_first_species_ends_rule(StandardCounterpointFirstSpeciesEndsRule which);
-const Constraint *standard_counterpoint_first_species_ends_constraint(StandardCounterpointFirstSpeciesEndsRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_first_species_ends_preference(StandardCounterpointFirstSpeciesEndsRule which);
-
-/* "begin" "end-on-tonic" "contrary-stepwise-approach"
-   "penultimate-third-or-sixth"; NULL for an invalid rule. */
-const char *standard_counterpoint_first_species_ends_rule_name(StandardCounterpointFirstSpeciesEndsRule which);
 
 /* True when the texture satisfies the rule. False when it does not, and for
    invalid input. */

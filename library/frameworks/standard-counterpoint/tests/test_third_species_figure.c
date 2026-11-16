@@ -12,26 +12,6 @@ static bool figure_of(const StandardCounterpointThirdSpeciesExercise *exercise, 
     return standard_counterpoint_third_species_dissonance_figure(exercise, bar, beat, figure);
 }
 
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_dissonance_figure_name(FIGURE(PASSING_TONE)), "passing-tone") == 0);
-    assert(strcmp(standard_counterpoint_dissonance_figure_name(FIGURE(NOTA_CAMBIATA_UP)), "nota-cambiata-up") == 0);
-    assert(standard_counterpoint_dissonance_figure_name(FIGURE(COUNT)) == NULL);
-}
-
-static void test_non_chord_tones(void) {
-    assert(standard_counterpoint_dissonance_figure_non_chord_tone(FIGURE(PASSING_TONE)) == NON_CHORD_TONE_PASSING);
-    assert(standard_counterpoint_dissonance_figure_non_chord_tone(FIGURE(DOUBLE_PASSING_TONE)) ==
-           NON_CHORD_TONE_PASSING);
-    assert(standard_counterpoint_dissonance_figure_non_chord_tone(FIGURE(NEIGHBOR_TONE)) == NON_CHORD_TONE_NEIGHBOR);
-    assert(standard_counterpoint_dissonance_figure_non_chord_tone(FIGURE(DOUBLE_NEIGHBOR)) ==
-           NON_CHORD_TONE_DOUBLE_NEIGHBOR);
-    assert(standard_counterpoint_dissonance_figure_non_chord_tone(FIGURE(NOTA_CAMBIATA_DOWN)) ==
-           NON_CHORD_TONE_CHANGING_TONE);
-    assert(standard_counterpoint_dissonance_figure_non_chord_tone(FIGURE(NOTA_CAMBIATA_UP)) ==
-           NON_CHORD_TONE_CHANGING_TONE);
-    assert(standard_counterpoint_dissonance_figure_non_chord_tone(FIGURE(COUNT)) == NON_CHORD_TONE_COUNT);
-}
-
 static void test_beat_is_dissonant(void) {
     /* Over C3: G3 is a fifth, F3 a fourth. */
     const PitchSpelling *cantus[] = {P(C, 0, 3), P(C, 0, 3)};
@@ -189,8 +169,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_names();
-    test_non_chord_tones();
     test_beat_is_dissonant();
     test_passing_tone();
     test_passing_tone_on_beat_four();

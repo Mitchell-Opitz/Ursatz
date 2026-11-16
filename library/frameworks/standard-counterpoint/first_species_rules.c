@@ -61,7 +61,3 @@ bool standard_counterpoint_first_species_check(const StandardCounterpointInput *
     return true;
 }
 
-bool standard_counterpoint_first_species_valid(const StandardCounterpointInput *input) {
-    StandardCounterpointResult result;
-    return standard_counterpoint_first_species_check(input, &result) && result.hard_violations == 0;
-}

@@ -10,13 +10,11 @@ static void test_valid_exercise(void) {
                                               WHOLE(P(B, 0, 3))};
     EXERCISE(exercise, cantus, slots, CANTUS_LOWER);
     assert(standard_counterpoint_fourth_species_exercise_valid(&exercise));
-    assert(standard_counterpoint_fourth_species_bar_count(&exercise) == 3);
 
     GOOD_FOURTH_SPECIES_CANTUS(good_notes);
     GOOD_FOURTH_SPECIES_SLOTS(good_pitches);
     EXERCISE(good, good_notes, good_pitches, CANTUS_LOWER);
     assert(standard_counterpoint_fourth_species_exercise_valid(&good));
-    assert(standard_counterpoint_fourth_species_bar_count(&good) == 11);
 }
 
 static void test_invalid_shapes(void) {
@@ -73,14 +71,6 @@ static void test_invalid_shapes(void) {
     valid.cantus = &short_cantus;
     assert(!standard_counterpoint_fourth_species_exercise_valid(&valid));
     assert(!standard_counterpoint_fourth_species_exercise_valid(NULL));
-    assert(standard_counterpoint_fourth_species_bar_count(NULL) == 0);
-}
-
-static void test_slot_strength(void) {
-    assert(standard_counterpoint_fourth_species_slot_strength(0) == BEAT_STRENGTH_STRONG);
-    assert(standard_counterpoint_fourth_species_slot_strength(1) == BEAT_STRENGTH_WEAK);
-    assert(standard_counterpoint_fourth_species_slot_strength(2) == BEAT_STRENGTH_STRONG);
-    assert(standard_counterpoint_fourth_species_slot_strength(3) == BEAT_STRENGTH_WEAK);
 }
 
 static void test_accessors(void) {
@@ -140,7 +130,6 @@ static void test_attacks(void) {
 int main(void) {
     test_valid_exercise();
     test_invalid_shapes();
-    test_slot_strength();
     test_accessors();
     test_attacks();
     printf("test_fourth_species_exercise (standard-counterpoint): ok\n");

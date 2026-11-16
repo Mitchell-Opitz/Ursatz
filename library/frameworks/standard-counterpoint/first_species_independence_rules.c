@@ -31,22 +31,6 @@ static bool valid_rule(StandardCounterpointFirstSpeciesIndependenceRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_first_species_independence_rule(StandardCounterpointFirstSpeciesIndependenceRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_first_species_independence_constraint(StandardCounterpointFirstSpeciesIndependenceRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_first_species_independence_preference(StandardCounterpointFirstSpeciesIndependenceRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_first_species_independence_rule_name(StandardCounterpointFirstSpeciesIndependenceRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 static size_t repeated_notes(const StandardCounterpointLine *line) {
     size_t repeats = 0;
     for (size_t i = 0; i + 1 < line->count; i++) {

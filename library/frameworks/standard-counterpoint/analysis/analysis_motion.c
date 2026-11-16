@@ -121,20 +121,3 @@ StandardCounterpointMotionStatus standard_counterpoint_classify_motions(const St
     return STANDARD_COUNTERPOINT_MOTION_OK;
 }
 
-bool standard_counterpoint_motion_claim_read(const Interpretation *interpretation,
-                                             StandardCounterpointMotionClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), STANDARD_COUNTERPOINT_MOTION_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

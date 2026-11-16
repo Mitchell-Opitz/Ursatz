@@ -25,23 +25,6 @@ const char *standard_counterpoint_leap_status_name(StandardCounterpointLeapStatu
     }
 }
 
-static bool read_claim(const Interpretation *interpretation, const char *type, void *out, size_t size) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t content_size = 0;
-    if (claim == NULL || strcmp(value_type(claim), type) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &content_size);
-    if (content == NULL || content_size != size) {
-        return false;
-    }
-    memcpy(out, content, size);
-    return true;
-}
-
 static double greater(double a, double b) {
     return a > b ? a : b;
 }
@@ -128,11 +111,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_leap_recoveries(
     }
     *out = found;
     return STANDARD_COUNTERPOINT_MELODY_OK;
-}
-
-bool standard_counterpoint_leap_recovery_claim_read(const Interpretation *interpretation,
-                                                    StandardCounterpointLeapRecoveryClaim *out) {
-    return read_claim(interpretation, STANDARD_COUNTERPOINT_LEAP_RECOVERY_CLAIM_TYPE, out, sizeof(*out));
 }
 
 /* --- consecutive leaps --- */
@@ -227,7 +205,3 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_consecutive_leaps(
     return STANDARD_COUNTERPOINT_MELODY_OK;
 }
 
-bool standard_counterpoint_consecutive_leaps_claim_read(const Interpretation *interpretation,
-                                                        StandardCounterpointConsecutiveLeapsClaim *out) {
-    return read_claim(interpretation, STANDARD_COUNTERPOINT_CONSECUTIVE_LEAPS_CLAIM_TYPE, out, sizeof(*out));
-}

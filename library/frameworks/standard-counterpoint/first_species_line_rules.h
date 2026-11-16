@@ -28,13 +28,6 @@
 /* The cantus firmus rule that does not apply to a counterpoint line. */
 #define STANDARD_COUNTERPOINT_FIRST_SPECIES_LINE_EXCLUDED STANDARD_COUNTERPOINT_CANTUS_RULE_TONIC_ENDS
 
-/* True when the counterpoint line satisfies the cantus firmus rule `which`.
-   True for the excluded rule. False when it does not, and for invalid
-   input. */
-bool standard_counterpoint_first_species_line_rule_holds(StandardCounterpointCantusRule which,
-                                                         const StandardCounterpointLine *counterpoint,
-                                                         const PitchSpelling *tonic);
-
 /* The rules a counterpoint line breaks: hard_violations has bit
    (1u << rule) set for each hard cantus firmus rule that fails,
    soft_violations for each soft one. False (both untouched) for invalid

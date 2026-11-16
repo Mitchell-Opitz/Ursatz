@@ -7,25 +7,11 @@
 #include "semantics/non_chord_tone.h"
 
 static void test_names_and_kinds(void) {
-    assert(strcmp(standard_counterpoint_suspension_name(STANDARD_COUNTERPOINT_SUSPENSION_SEVEN_SIX), "7-6") == 0);
-    assert(strcmp(standard_counterpoint_suspension_name(STANDARD_COUNTERPOINT_SUSPENSION_FOUR_THREE), "4-3") == 0);
-    assert(strcmp(standard_counterpoint_suspension_name(STANDARD_COUNTERPOINT_SUSPENSION_NINE_EIGHT), "9-8") == 0);
-    assert(strcmp(standard_counterpoint_suspension_name(STANDARD_COUNTERPOINT_SUSPENSION_TWO_THREE), "2-3") == 0);
-    assert(strcmp(standard_counterpoint_suspension_name(STANDARD_COUNTERPOINT_SUSPENSION_CONSONANT_TIE),
-                  "consonant-tie") == 0);
-    assert(standard_counterpoint_suspension_name(STANDARD_COUNTERPOINT_SUSPENSION_COUNT) == NULL);
 
     assert(standard_counterpoint_suspension_is_dissonant(STANDARD_COUNTERPOINT_SUSPENSION_SEVEN_SIX));
     assert(standard_counterpoint_suspension_is_dissonant(STANDARD_COUNTERPOINT_SUSPENSION_TWO_THREE));
     assert(!standard_counterpoint_suspension_is_dissonant(STANDARD_COUNTERPOINT_SUSPENSION_CONSONANT_TIE));
     assert(!standard_counterpoint_suspension_is_dissonant(STANDARD_COUNTERPOINT_SUSPENSION_COUNT));
-
-    assert(standard_counterpoint_suspension_non_chord_tone(STANDARD_COUNTERPOINT_SUSPENSION_NINE_EIGHT) ==
-           NON_CHORD_TONE_SUSPENSION);
-    assert(standard_counterpoint_suspension_non_chord_tone(STANDARD_COUNTERPOINT_SUSPENSION_CONSONANT_TIE) ==
-           NON_CHORD_TONE_COUNT);
-    assert(standard_counterpoint_suspension_non_chord_tone(STANDARD_COUNTERPOINT_SUSPENSION_COUNT) ==
-           NON_CHORD_TONE_COUNT);
 }
 
 static void test_good_exercise_suspensions(void) {

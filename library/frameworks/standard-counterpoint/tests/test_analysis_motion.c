@@ -104,10 +104,6 @@ static void test_interpretation_shell_and_uncertainty(void) {
                   entity_id_value(entity_id(structure_entity(m->shell)))) == 0);
     assert(interpretation_framework_reference(m->interpretation) != NULL);
     assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(m->interpretation)) == 600000UL);
-    StandardCounterpointMotionClaim claim;
-    assert(standard_counterpoint_motion_claim_read(m->interpretation, &claim));
-    assert(claim.motion_type == (int)MOTION_TYPE_PARALLEL && claim.upper_voice == 0 && claim.lower_voice == 1 &&
-           claim.segment_from == 0 && claim.segment_to == 1);
     standard_counterpoint_motions_destroy(&motions);
     standard_counterpoint_grid_destroy(&prepared);
     test_grid_destroy(&g);

@@ -40,13 +40,6 @@ typedef enum {
     MOTION_TYPE_COUNT
 } MotionType;
 
-/* True for the five types above; false for any other value. */
-bool motion_type_valid(MotionType type);
-
-/* "contrary" "similar" "parallel" "oblique" "static"; NULL for an invalid
-   type. */
-const char *motion_type_name(MotionType type);
-
 /* True for SIMILAR and PARALLEL: both parts move the same way. False for
    every other type, and for an invalid type. */
 bool motion_type_is_same_direction(MotionType type);

@@ -8,13 +8,6 @@
 #include "species_aggregate.h"
 #include "tendency_rules.h"
 
-static const char *const NAMES[STANDARD_COUNTERPOINT_GROUP_COUNT] = {"cantus-firmus", "melodic", "harmonic",
-                                                                      "tendency"};
-
-const char *standard_counterpoint_group_name(StandardCounterpointGroup group) {
-    return group >= 0 && group < STANDARD_COUNTERPOINT_GROUP_COUNT ? NAMES[group] : NULL;
-}
-
 bool standard_counterpoint_check(const StandardCounterpointInput *input, StandardCounterpointResult *out) {
     if (input == NULL || out == NULL || !standard_counterpoint_pair_valid(input->texture) ||
         (input->cantus_part != STANDARD_COUNTERPOINT_CANTUS_IN_LOWER &&
@@ -57,7 +50,3 @@ bool standard_counterpoint_check(const StandardCounterpointInput *input, Standar
     return true;
 }
 
-bool standard_counterpoint_valid(const StandardCounterpointInput *input) {
-    StandardCounterpointResult result;
-    return standard_counterpoint_check(input, &result) && result.hard_violations == 0;
-}

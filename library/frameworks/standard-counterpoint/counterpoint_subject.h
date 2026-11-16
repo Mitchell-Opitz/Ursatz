@@ -4,7 +4,6 @@
 #include "counterpoint_limits.h"
 #include "counterpoint_line.h"
 #include "counterpoint_rules.h"
-#include "fifth_species_exercise.h"
 #include "fourth_species_exercise.h"
 #include "pitch/pitch_spelling.h"
 #include "second_species_exercise.h"
@@ -62,10 +61,5 @@ typedef struct {
     const StandardCounterpointFourthSpeciesExercise *exercise;
     const PitchSpelling *tonic;
 } StandardCounterpointFourthSpeciesTonic;
-
-typedef struct {
-    const StandardCounterpointFifthSpeciesExercise *exercise;
-    const PitchSpelling *tonic;
-} StandardCounterpointFifthSpeciesTonic;
 
 #endif

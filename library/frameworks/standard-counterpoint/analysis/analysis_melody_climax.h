@@ -68,7 +68,4 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_climaxes(const Sta
                                                                        StandardCounterpointClimaxes *out);
 void standard_counterpoint_climaxes_destroy(StandardCounterpointClimaxes *climaxes);
 
-bool standard_counterpoint_climax_claim_read(const Interpretation *interpretation,
-                                             StandardCounterpointClimaxClaim *out);
-
 #endif

@@ -2,10 +2,6 @@
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_RULES_H
 
 #include <stdbool.h>
-
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 #include "third_species_exercise.h"
 
 /*
@@ -45,15 +41,6 @@ typedef enum {
 
 #define STANDARD_COUNTERPOINT_THIRD_SPECIES_MIN_BARS_FOR_MIXTURE 4
 #define STANDARD_COUNTERPOINT_THIRD_SPECIES_LARGE_LEAP 4
-
-const Rule *standard_counterpoint_third_species_beat_rule(StandardCounterpointThirdSpeciesBeatRule which);
-const Constraint *standard_counterpoint_third_species_beat_constraint(StandardCounterpointThirdSpeciesBeatRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_third_species_beat_preference(StandardCounterpointThirdSpeciesBeatRule which);
-
-/* "dissonance-figure" "mixture" "large-leap-recovery"; NULL for an invalid
-   rule. */
-const char *standard_counterpoint_third_species_beat_rule_name(StandardCounterpointThirdSpeciesBeatRule which);
 
 /* True when the exercise satisfies the rule. False when it does not, and for
    an invalid exercise or an invalid rule. */

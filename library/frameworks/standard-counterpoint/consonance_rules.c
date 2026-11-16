@@ -4,23 +4,6 @@
 
 #include "rule_table.h"
 
-static const char *const NAMES[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT] = {
-    "consonance-perfect", "consonance-imperfect", "consonance-dissonance", "consonance-perfect-fourth",
-    "consonance-melodic"};
-
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT];
-static UrsatzOnce g_built[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT];
-static const StandardCounterpointRuleTable TABLE = {
-    NULL, NAMES, STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT, NULL, g_pairs, g_built};
-
-const Rule *standard_counterpoint_consonance_rule(StandardCounterpointConsonanceRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_consonance_constraint(StandardCounterpointConsonanceRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
 bool standard_counterpoint_classify_interval(const StandardCounterpointInterval *interval,
                                              StandardCounterpointIntervalCategory *out) {
     if (interval == NULL || out == NULL) {

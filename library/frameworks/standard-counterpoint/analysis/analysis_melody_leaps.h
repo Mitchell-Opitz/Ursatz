@@ -74,8 +74,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_leap_recoveries(
     const StandardCounterpointMelodyLine *line, const StandardCounterpointMelodicIntervals *intervals,
     StandardCounterpointLeapRecoveries *out);
 void standard_counterpoint_leap_recoveries_destroy(StandardCounterpointLeapRecoveries *recoveries);
-bool standard_counterpoint_leap_recovery_claim_read(const Interpretation *interpretation,
-                                                    StandardCounterpointLeapRecoveryClaim *out);
 
 typedef struct {
     int first_from; /* the first leap is first_from to middle */
@@ -101,7 +99,5 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_consecutive_leaps(
     const StandardCounterpointMelodyLine *line, const StandardCounterpointMelodicIntervals *intervals,
     StandardCounterpointConsecutiveLeapList *out);
 void standard_counterpoint_consecutive_leap_list_destroy(StandardCounterpointConsecutiveLeapList *list);
-bool standard_counterpoint_consecutive_leaps_claim_read(const Interpretation *interpretation,
-                                                        StandardCounterpointConsecutiveLeapsClaim *out);
 
 #endif

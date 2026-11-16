@@ -5,9 +5,7 @@
 #include <stddef.h>
 
 #include "counterpoint_line.h"
-#include "rules/constraint.h"
 #include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * Harmonic writing rules for standard-counterpoint-v1: the vertical
@@ -65,8 +63,6 @@ typedef enum {
 #define STANDARD_COUNTERPOINT_MAX_GAP 12
 #define STANDARD_COUNTERPOINT_USUAL_GAP 8
 
-const Rule *standard_counterpoint_harmonic_rule(StandardCounterpointHarmonicRule which);
-const Constraint *standard_counterpoint_harmonic_constraint(StandardCounterpointHarmonicRule which);
 /* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
 const Preference *standard_counterpoint_harmonic_preference(StandardCounterpointHarmonicRule which);
 

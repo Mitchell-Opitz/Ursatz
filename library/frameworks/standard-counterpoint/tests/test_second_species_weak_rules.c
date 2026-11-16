@@ -2,40 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rule_check.h"
 #include "second_species_test_util.h"
 #include "second_species_weak_rules.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "second-species-weak", STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT);
-#define standard_counterpoint_second_species_weak_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_second_species_weak_constraint, standard_counterpoint_second_species_weak_preference, standard_counterpoint_second_species_weak_rule_holds, StandardCounterpointSecondSpeciesExercise, which, subject)
 
 /* A bar that is one whole note: a note on the strong beat tied through the
    weak beat. */
 #define WHOLE(pitch) ATK(pitch), TIE(pitch)
 
 #define WEAK(name) STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_##name
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_second_species_weak_rule,
-                                    standard_counterpoint_second_species_weak_constraint,
-                                    STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_second_species_weak_constraint((StandardCounterpointSecondSpeciesWeakRule)i));
-        assert(type == (i == WEAK(DISSONANT_PASSING) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_second_species_weak_rule_name(WEAK(DISSONANT_PASSING)), "dissonant-passing") ==
-           0);
-    assert(strcmp(standard_counterpoint_second_species_weak_rule_name(WEAK(REGISTER_CHANGE_RARE)),
-                  "register-change-rare") == 0);
-    assert(standard_counterpoint_second_species_weak_rule_name(WEAK(COUNT)) == NULL);
-}
 
 static void test_dissonant_passing(void) {
     const PitchSpelling *cantus[] = {P(C, 0, 3), P(E, 0, 3)};
@@ -160,8 +134,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_dissonant_passing();
     test_pattern_fit();
     test_mixture();

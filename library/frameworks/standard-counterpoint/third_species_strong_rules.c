@@ -40,22 +40,6 @@ static bool valid_rule(StandardCounterpointThirdSpeciesStrongRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_third_species_strong_rule(StandardCounterpointThirdSpeciesStrongRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_third_species_strong_constraint(StandardCounterpointThirdSpeciesStrongRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_third_species_strong_preference(StandardCounterpointThirdSpeciesStrongRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_third_species_strong_rule_name(StandardCounterpointThirdSpeciesStrongRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointThirdSpeciesExercise Exercise;
 
 static bool category_of(const StandardCounterpointInterval *interval, StandardCounterpointIntervalCategory *category) {

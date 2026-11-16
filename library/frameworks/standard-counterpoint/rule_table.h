@@ -75,9 +75,6 @@ bool standard_counterpoint_rule_table_valid(const StandardCounterpointRuleTable 
 /* True when the rule is hard; false when it is soft or the number is invalid. */
 bool standard_counterpoint_rule_table_is_hard(const StandardCounterpointRuleTable *table, int which);
 
-/* The rule, its constraint, and its name. NULL for an invalid number. */
-const Rule *standard_counterpoint_rule_table_rule(const StandardCounterpointRuleTable *table, int which);
-const Constraint *standard_counterpoint_rule_table_constraint(const StandardCounterpointRuleTable *table, int which);
 /* The soft rule's Preference; NULL for a hard rule, a table with no score callback, or an invalid number. */
 const Preference *standard_counterpoint_rule_table_preference(const StandardCounterpointRuleTable *table, int which);
 const char *standard_counterpoint_rule_table_name(const StandardCounterpointRuleTable *table, int which);

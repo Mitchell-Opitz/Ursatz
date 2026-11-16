@@ -71,8 +71,4 @@ StandardCounterpointMotionStatus standard_counterpoint_classify_motions(const St
 
 void standard_counterpoint_motions_destroy(StandardCounterpointMotions *motions);
 
-/* Reads the claim back out of a motion Interpretation. False if it is not one. */
-bool standard_counterpoint_motion_claim_read(const Interpretation *interpretation,
-                                             StandardCounterpointMotionClaim *out);
-
 #endif

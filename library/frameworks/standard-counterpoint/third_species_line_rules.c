@@ -40,22 +40,6 @@ static bool valid_rule(StandardCounterpointThirdSpeciesLineRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_third_species_line_rule(StandardCounterpointThirdSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_third_species_line_constraint(StandardCounterpointThirdSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_third_species_line_preference(StandardCounterpointThirdSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_third_species_line_rule_name(StandardCounterpointThirdSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointThirdSpeciesExercise Exercise;
 
 /* The attacks of the counterpoint, as a line and with each one's slot. */

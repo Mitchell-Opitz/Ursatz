@@ -35,14 +35,6 @@ static bool valid_rule(StandardCounterpointHarmonicRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_harmonic_rule(StandardCounterpointHarmonicRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_harmonic_constraint(StandardCounterpointHarmonicRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
 const Preference *standard_counterpoint_harmonic_preference(StandardCounterpointHarmonicRule which) {
     return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
 }

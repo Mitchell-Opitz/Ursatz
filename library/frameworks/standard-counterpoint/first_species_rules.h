@@ -56,7 +56,4 @@ const char *standard_counterpoint_first_species_group_name(StandardCounterpointF
 bool standard_counterpoint_first_species_check(const StandardCounterpointInput *input,
                                                StandardCounterpointResult *out);
 
-/* True when the input is valid and breaks no hard rule. */
-bool standard_counterpoint_first_species_valid(const StandardCounterpointInput *input);
-
 #endif

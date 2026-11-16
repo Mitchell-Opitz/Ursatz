@@ -4,13 +4,6 @@
 
 #include "counterpoint_test_util.h"
 #include "harmonic_rules.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "harmonic", STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT);
-#define standard_counterpoint_harmonic_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_harmonic_constraint, standard_counterpoint_harmonic_preference, standard_counterpoint_harmonic_rule_holds, StandardCounterpointPair, which, subject)
 
 static bool holds(StandardCounterpointHarmonicRule rule, const PitchSpelling *const *upper_notes,
                   const PitchSpelling *const *lower_notes, size_t count) {
@@ -38,12 +31,10 @@ static bool is_soft(int rule) {
     const PitchSpelling *name[] = {P(A, 0, 3), P(D, 0, 4), P(C, 0, 4), P(F, 0, 3), P(B, 0, 3), P(A, 0, 3), \
                                    P(C, 0, 4), P(B, 0, 3), P(A, 0, 3), P(C, 1, 4), P(D, 0, 4)}
 
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_harmonic_rule, standard_counterpoint_harmonic_constraint,
-                                    STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT);
+static void test_soft_rules_have_preferences(void) {
     for (int i = 0; i < STANDARD_COUNTERPOINT_HARMONIC_RULE_COUNT; i++) {
-        ConstraintType type = constraint_type(standard_counterpoint_harmonic_constraint((StandardCounterpointHarmonicRule)i));
-        assert(type == (is_soft(i) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD));
+        const Preference *preference = standard_counterpoint_harmonic_preference((StandardCounterpointHarmonicRule)i);
+        assert((preference != NULL) == is_soft(i));
     }
 }
 
@@ -216,7 +207,7 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
+    test_soft_rules_have_preferences();
     test_names();
     test_good_exercise_follows_every_rule();
     test_first_interval();

@@ -44,9 +44,6 @@ static void test_a_leap_then_a_step_down_is_recovered(void) {
     assert(structure_event_id_count(recoveries.items[0].shell) == 3);
     assert(strcmp(entity_id_value(interpretation_target_id(recoveries.items[0].interpretation)),
                   entity_id_value(entity_id(structure_entity(recoveries.items[0].shell)))) == 0);
-    StandardCounterpointLeapRecoveryClaim read;
-    assert(standard_counterpoint_leap_recovery_claim_read(recoveries.items[0].interpretation, &read) &&
-           read.status == (int)STANDARD_COUNTERPOINT_LEAP_RECOVERED);
     standard_counterpoint_leap_recoveries_destroy(&recoveries);
     fixture_destroy(&f);
 }
@@ -111,9 +108,6 @@ static void test_two_leaps_in_the_same_direction_are_flagged(void) {
            STANDARD_COUNTERPOINT_MELODY_OK);
     assert(leaps.count == 1 && leaps.items[0].claim.same_direction == 1 && leaps.items[0].claim.three_in_a_row == 0);
     assert(leaps.items[0].claim.first_from == 0 && leaps.items[0].claim.middle == 1 && leaps.items[0].claim.last_to == 2);
-    StandardCounterpointConsecutiveLeapsClaim read;
-    assert(standard_counterpoint_consecutive_leaps_claim_read(leaps.items[0].interpretation, &read) &&
-           read.same_direction == 1);
     standard_counterpoint_consecutive_leap_list_destroy(&leaps);
     fixture_destroy(&f);
 }
@@ -166,8 +160,6 @@ static void test_a_unique_climax_and_its_position(void) {
     assert(c->has_strength == 1 && c->strength == (int)BEAT_STRENGTH_STRONG);
     assert(c->by_leap == 1 && c->final_note == 0);
     assert(structure_event_id_count(climaxes.items[0].shell) == 1);
-    StandardCounterpointClimaxClaim read;
-    assert(standard_counterpoint_climax_claim_read(climaxes.items[0].interpretation, &read) && read.pitch == 69);
     standard_counterpoint_climaxes_destroy(&climaxes);
     fixture_destroy(&f);
 }

@@ -30,22 +30,6 @@ static bool valid_rule(StandardCounterpointFourthSpeciesSuspensionRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_fourth_species_suspension_rule(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_fourth_species_suspension_constraint(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_fourth_species_suspension_preference(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_fourth_species_suspension_rule_name(StandardCounterpointFourthSpeciesSuspensionRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
 static bool check_proper(const Exercise *exercise) {

@@ -41,22 +41,6 @@ static bool valid_rule(StandardCounterpointSecondSpeciesLineRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_second_species_line_rule(StandardCounterpointSecondSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_second_species_line_constraint(StandardCounterpointSecondSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_second_species_line_preference(StandardCounterpointSecondSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_second_species_line_rule_name(StandardCounterpointSecondSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointSecondSpeciesExercise Exercise;
 
 /* The attacks of the counterpoint, as a line and with each one's slot. */

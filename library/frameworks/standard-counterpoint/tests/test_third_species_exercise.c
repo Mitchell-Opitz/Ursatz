@@ -10,7 +10,6 @@ static void test_valid_exercise(void) {
                                               WHOLE(P(A, 0, 3))};
     EXERCISE(exercise, cantus, slots, CANTUS_LOWER);
     assert(standard_counterpoint_third_species_exercise_valid(&exercise));
-    assert(standard_counterpoint_third_species_bar_count(&exercise) == 2);
 }
 
 static void test_valid_with_quarter_rest(void) {
@@ -75,15 +74,6 @@ static void test_invalid_shapes(void) {
     assert(!standard_counterpoint_third_species_exercise_valid(NULL));
 }
 
-static void test_slot_strength(void) {
-    assert(standard_counterpoint_third_species_slot_strength(0) == BEAT_STRENGTH_STRONG);
-    assert(standard_counterpoint_third_species_slot_strength(1) == BEAT_STRENGTH_WEAK);
-    assert(standard_counterpoint_third_species_slot_strength(2) == BEAT_STRENGTH_MEDIUM);
-    assert(standard_counterpoint_third_species_slot_strength(3) == BEAT_STRENGTH_WEAK);
-    assert(standard_counterpoint_third_species_slot_strength(4) == BEAT_STRENGTH_STRONG);
-    assert(standard_counterpoint_third_species_slot_strength(6) == BEAT_STRENGTH_MEDIUM);
-}
-
 static void test_accessors(void) {
     const PitchSpelling *cantus[] = {P(D, 0, 3), P(F, 0, 3)};
     const StandardCounterpointSlot slots[] = {ATK(P(A, 0, 3)), ATK(P(B, 0, 3)), ATK(P(C, 0, 4)), ATK(P(B, 0, 3)),
@@ -145,7 +135,6 @@ int main(void) {
     test_valid_exercise();
     test_valid_with_quarter_rest();
     test_invalid_shapes();
-    test_slot_strength();
     test_accessors();
     test_rest_has_no_pitch();
     test_attacks();

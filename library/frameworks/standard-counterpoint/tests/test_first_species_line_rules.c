@@ -19,16 +19,12 @@ static void test_tonic_start_is_excluded(void) {
     FIRST_SPECIES_UPPER(notes);
     StandardCounterpointLine line = LINE_OF(notes);
     assert(!standard_counterpoint_cantus_rule_holds(STANDARD_COUNTERPOINT_CANTUS_RULE_TONIC_ENDS, &line, P(D, 0, 4)));
-    assert(standard_counterpoint_first_species_line_rule_holds(STANDARD_COUNTERPOINT_CANTUS_RULE_TONIC_ENDS, &line,
-                                                               P(D, 0, 4)));
     assert(STANDARD_COUNTERPOINT_FIRST_SPECIES_LINE_EXCLUDED == STANDARD_COUNTERPOINT_CANTUS_RULE_TONIC_ENDS);
 }
 
 static void test_other_cantus_rules_apply(void) {
-    FIRST_SPECIES_UPPER(good);
     /* Too short, and ends with a leap into the last note. */
     const PitchSpelling *bad[] = {P(A, 0, 3), P(D, 0, 4), P(C, 0, 4), P(G, 0, 4)};
-    StandardCounterpointLine good_line = LINE_OF(good);
     StandardCounterpointLine bad_line = LINE_OF(bad);
     unsigned hard = 0, soft = 0;
 
@@ -36,10 +32,6 @@ static void test_other_cantus_rules_apply(void) {
     assert(hard & (1u << STANDARD_COUNTERPOINT_CANTUS_RULE_LENGTH));
     assert(hard & (1u << STANDARD_COUNTERPOINT_CANTUS_RULE_FINAL_STEP));
     assert(!(hard & (1u << STANDARD_COUNTERPOINT_CANTUS_RULE_TONIC_ENDS)));
-    assert(!standard_counterpoint_first_species_line_rule_holds(STANDARD_COUNTERPOINT_CANTUS_RULE_LENGTH, &bad_line,
-                                                                P(D, 0, 4)));
-    assert(standard_counterpoint_first_species_line_rule_holds(STANDARD_COUNTERPOINT_CANTUS_RULE_LENGTH, &good_line,
-                                                               P(D, 0, 4)));
 }
 
 static void test_soft_rules_stay_soft(void) {
@@ -66,10 +58,6 @@ static void test_invalid_input(void) {
     assert(!standard_counterpoint_first_species_line_check(&line, P(D, 0, 4), NULL, &soft));
     assert(!standard_counterpoint_first_species_line_check(&line, P(D, 0, 4), &hard, NULL));
     assert(hard == 5 && soft == 5);
-    assert(!standard_counterpoint_first_species_line_rule_holds(STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT, &line,
-                                                                P(D, 0, 4)));
-    assert(!standard_counterpoint_first_species_line_rule_holds(STANDARD_COUNTERPOINT_FIRST_SPECIES_LINE_EXCLUDED,
-                                                                NULL, P(D, 0, 4)));
 }
 
 int main(void) {

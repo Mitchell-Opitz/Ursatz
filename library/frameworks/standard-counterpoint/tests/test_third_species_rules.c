@@ -30,7 +30,6 @@ static void test_valid_exercise(void) {
 
     assert(standard_counterpoint_third_species_check(&input, &result));
     assert(result.hard_violations == 0);
-    assert(standard_counterpoint_third_species_valid(&input));
     /* Nothing is left to advise on the downbeats or the ends. */
     unsigned clean = BIT(GROUP(STRONG_BEATS)) | BIT(GROUP(ENDS));
     assert(!(result.soft_violations & clean));
@@ -46,7 +45,6 @@ static void test_strong_beat_violation(void) {
 
     assert(standard_counterpoint_third_species_check(&input, &result));
     assert(result.hard_violations & BIT(GROUP(STRONG_BEATS)));
-    assert(!standard_counterpoint_third_species_valid(&input));
 }
 
 static void test_other_beat_violation(void) {
@@ -73,7 +71,6 @@ static void test_spacing_violation(void) {
 
     assert(standard_counterpoint_third_species_check(&input, &result));
     assert(result.hard_violations & BIT(GROUP(SPACING)));
-    assert(!standard_counterpoint_third_species_valid(&input));
 }
 
 static void test_cantus_firmus_and_tonic_groups(void) {
@@ -109,8 +106,6 @@ static void test_invalid_input(void) {
     assert(!standard_counterpoint_third_species_check(&input, &result));
     assert(!standard_counterpoint_third_species_check(&no_exercise, &result));
     assert(result.hard_violations == 7 && result.soft_violations == 7);
-    assert(!standard_counterpoint_third_species_valid(&input));
-    assert(!standard_counterpoint_third_species_valid(NULL));
 }
 
 int main(void) {

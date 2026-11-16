@@ -58,12 +58,6 @@ typedef enum {
     STANDARD_COUNTERPOINT_WEAK_BEAT_PATTERN_COUNT
 } StandardCounterpointWeakBeatPattern;
 
-/* "consonant-passing-tone" "substitution" "skipped-passing-tone"
-   "interval-subdivision" "change-of-register"
-   "delay-of-melodic-progression" "consonant-neighbor-tone"
-   "dissonant-passing-tone"; NULL for an invalid pattern. */
-const char *standard_counterpoint_weak_beat_pattern_name(StandardCounterpointWeakBeatPattern pattern);
-
 /* True for the one pattern with a dissonant weak beat. */
 bool standard_counterpoint_weak_beat_pattern_is_dissonant(StandardCounterpointWeakBeatPattern pattern);
 

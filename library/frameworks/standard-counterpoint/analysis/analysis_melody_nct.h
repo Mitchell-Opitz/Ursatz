@@ -72,7 +72,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_labels_with(co
                                                                               void *context,
                                                                               StandardCounterpointNctLabels *out);
 void standard_counterpoint_nct_labels_destroy(StandardCounterpointNctLabels *labels);
-bool standard_counterpoint_nct_claim_read(const Interpretation *interpretation, StandardCounterpointNctClaim *out);
 
 typedef struct {
     int span_first;
@@ -102,7 +101,5 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_counts(const S
                                                                          size_t span_count,
                                                                          StandardCounterpointNctCountList *out);
 void standard_counterpoint_nct_count_list_destroy(StandardCounterpointNctCountList *list);
-bool standard_counterpoint_nct_counts_claim_read(const Interpretation *interpretation,
-                                                 StandardCounterpointNctCountsClaim *out);
 
 #endif

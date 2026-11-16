@@ -2,10 +2,6 @@
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_RULES_H
 
 #include <stdbool.h>
-
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 #include "second_species_exercise.h"
 
 /*
@@ -49,15 +45,6 @@ typedef enum {
 
 #define STANDARD_COUNTERPOINT_SECOND_SPECIES_MIN_WEAK_FOR_MIXTURE 4
 #define STANDARD_COUNTERPOINT_SECOND_SPECIES_MAX_REGISTER_CHANGES 1
-
-const Rule *standard_counterpoint_second_species_weak_rule(StandardCounterpointSecondSpeciesWeakRule which);
-const Constraint *standard_counterpoint_second_species_weak_constraint(StandardCounterpointSecondSpeciesWeakRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_second_species_weak_preference(StandardCounterpointSecondSpeciesWeakRule which);
-
-/* "dissonant-passing" "pattern-fit" "mixture" "register-change-rare"; NULL
-   for an invalid rule. */
-const char *standard_counterpoint_second_species_weak_rule_name(StandardCounterpointSecondSpeciesWeakRule which);
 
 /* True when the exercise satisfies the rule. False when it does not, and for
    an invalid exercise or an invalid rule. */

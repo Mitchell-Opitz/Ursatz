@@ -2,46 +2,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "rule_check.h"
 #include "third_species_strong_rules.h"
 #include "third_species_test_util.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "third-species-strong", STANDARD_COUNTERPOINT_THIRD_SPECIES_STRONG_COUNT);
-#define standard_counterpoint_third_species_strong_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_third_species_strong_constraint, standard_counterpoint_third_species_strong_preference, standard_counterpoint_third_species_strong_rule_holds, StandardCounterpointThirdSpeciesExercise, which, subject)
 
 #define STRONG(name) STANDARD_COUNTERPOINT_THIRD_SPECIES_STRONG_##name
 
 /* Four quarter notes. */
 #define BAR(a, b, c, d) ATK(a), ATK(b), ATK(c), ATK(d)
 
-static bool is_soft(int rule) {
-    return rule == STRONG(IMPERFECT_PREFERRED) || rule == STRONG(NO_STRONG_UNISON);
-}
-
 static bool holds(StandardCounterpointThirdSpeciesStrongRule rule,
                   const StandardCounterpointThirdSpeciesExercise *exercise) {
     return standard_counterpoint_third_species_strong_rule_holds(rule, exercise);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_third_species_strong_rule,
-                                    standard_counterpoint_third_species_strong_constraint,
-                                    STANDARD_COUNTERPOINT_THIRD_SPECIES_STRONG_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_THIRD_SPECIES_STRONG_COUNT; i++) {
-        ConstraintType type = constraint_type(
-            standard_counterpoint_third_species_strong_constraint((StandardCounterpointThirdSpeciesStrongRule)i));
-        assert(type == (is_soft(i) ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_third_species_strong_rule_name(STRONG(CONSONANT)), "consonant") == 0);
-    assert(strcmp(standard_counterpoint_third_species_strong_rule_name(STRONG(BAR_LINE_DIRECT_PERFECT)),
-                  "bar-line-direct-perfect") == 0);
-    assert(standard_counterpoint_third_species_strong_rule_name(STRONG(COUNT)) == NULL);
 }
 
 static void test_consonant(void) {
@@ -205,8 +176,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_consonant();
     test_imperfect_preferred_and_unison();
     test_no_three_perfect();

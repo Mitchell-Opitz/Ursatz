@@ -6,18 +6,8 @@
 #include "counterpoint_interval.h"
 #include "counterpoint_pitch.h"
 
-static const char *const NAMES[STANDARD_COUNTERPOINT_SUSPENSION_COUNT] = {"7-6", "4-3", "9-8", "2-3", "consonant-tie"};
-
-const char *standard_counterpoint_suspension_name(StandardCounterpointSuspensionType type) {
-    return type >= 0 && type < STANDARD_COUNTERPOINT_SUSPENSION_COUNT ? NAMES[type] : NULL;
-}
-
 bool standard_counterpoint_suspension_is_dissonant(StandardCounterpointSuspensionType type) {
     return type >= 0 && type < STANDARD_COUNTERPOINT_SUSPENSION_CONSONANT_TIE;
-}
-
-NonChordTone standard_counterpoint_suspension_non_chord_tone(StandardCounterpointSuspensionType type) {
-    return standard_counterpoint_suspension_is_dissonant(type) ? NON_CHORD_TONE_SUSPENSION : NON_CHORD_TONE_COUNT;
 }
 
 static bool consonant(const StandardCounterpointInterval *interval) {

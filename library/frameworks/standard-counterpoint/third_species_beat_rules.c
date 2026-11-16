@@ -33,22 +33,6 @@ static bool valid_rule(StandardCounterpointThirdSpeciesBeatRule which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_third_species_beat_rule(StandardCounterpointThirdSpeciesBeatRule which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_third_species_beat_constraint(StandardCounterpointThirdSpeciesBeatRule which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_third_species_beat_preference(StandardCounterpointThirdSpeciesBeatRule which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *standard_counterpoint_third_species_beat_rule_name(StandardCounterpointThirdSpeciesBeatRule which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
-}
-
 typedef StandardCounterpointThirdSpeciesExercise Exercise;
 
 static bool check_dissonance_figure(const Exercise *exercise) {

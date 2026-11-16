@@ -74,7 +74,3 @@ bool standard_counterpoint_second_species_check(const StandardCounterpointSecond
     return true;
 }
 
-bool standard_counterpoint_second_species_valid(const StandardCounterpointSecondSpeciesInput *input) {
-    StandardCounterpointResult result;
-    return standard_counterpoint_second_species_check(input, &result) && result.hard_violations == 0;
-}

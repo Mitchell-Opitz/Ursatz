@@ -166,10 +166,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const St
                                                                         StandardCounterpointMelodicIntervals *out);
 void standard_counterpoint_melodic_intervals_destroy(StandardCounterpointMelodicIntervals *intervals);
 
-/* Reads the claim back from an interval Interpretation. False if it is not one. */
-bool standard_counterpoint_melodic_interval_claim_read(const Interpretation *interpretation,
-                                                       StandardCounterpointMelodicIntervalClaim *out);
-
 typedef struct {
     const char *id; /* the span's name (used in claim ids); borrowed */
     size_t first;   /* inclusive entry indices */
@@ -211,8 +207,5 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_contour_summaries(
     const StandardCounterpointMelodyLine *line, const StandardCounterpointMelodicIntervals *intervals,
     const StandardCounterpointMelodySpan *spans, size_t span_count, StandardCounterpointContourSummaries *out);
 void standard_counterpoint_contour_summaries_destroy(StandardCounterpointContourSummaries *summaries);
-
-bool standard_counterpoint_contour_summary_claim_read(const Interpretation *interpretation,
-                                                      StandardCounterpointContourSummaryClaim *out);
 
 #endif

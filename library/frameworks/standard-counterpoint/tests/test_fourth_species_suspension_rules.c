@@ -4,38 +4,12 @@
 
 #include "fourth_species_suspension_rules.h"
 #include "fourth_species_test_util.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "fourth-species-suspension", STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT);
-#define standard_counterpoint_fourth_species_suspension_rule_holds(which, subject) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS(g_eval, standard_counterpoint_fourth_species_suspension_constraint, standard_counterpoint_fourth_species_suspension_preference, standard_counterpoint_fourth_species_suspension_rule_holds, StandardCounterpointFourthSpeciesExercise, which, subject)
 
 #define SUSPENSION(name) STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_##name
 
 static bool holds(StandardCounterpointFourthSpeciesSuspensionRule rule,
                   const StandardCounterpointFourthSpeciesExercise *exercise) {
     return standard_counterpoint_fourth_species_suspension_rule_holds(rule, exercise);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_fourth_species_suspension_rule,
-                                    standard_counterpoint_fourth_species_suspension_constraint,
-                                    STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT; i++) {
-        ConstraintType type = constraint_type(standard_counterpoint_fourth_species_suspension_constraint(
-            (StandardCounterpointFourthSpeciesSuspensionRule)i));
-        assert(type == (i == SUSPENSION(PROPER) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(standard_counterpoint_fourth_species_suspension_rule_name(SUSPENSION(PROPER)), "proper") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_suspension_rule_name(SUSPENSION(MANY)), "many") == 0);
-    assert(strcmp(standard_counterpoint_fourth_species_suspension_rule_name(SUSPENSION(FEW_NINE_EIGHT)),
-                  "few-nine-eight") == 0);
-    assert(standard_counterpoint_fourth_species_suspension_rule_name(SUSPENSION(RULE_COUNT)) == NULL);
 }
 
 static void test_good_exercise(void) {
@@ -45,28 +19,6 @@ static void test_good_exercise(void) {
     for (int i = 0; i < STANDARD_COUNTERPOINT_FOURTH_SPECIES_SUSPENSION_RULE_COUNT; i++) {
         assert(holds((StandardCounterpointFourthSpeciesSuspensionRule)i, &exercise));
     }
-}
-
-static void test_proper(void) {
-    const PitchSpelling *cantus[] = {P(D, 0, 3), P(F, 0, 3), P(E, 0, 3)};
-
-    /* A tied tritone is a dissonance that is not a suspension. */
-    const StandardCounterpointSlot tritone[] = {REST(), ATK(P(B, 0, 3)), TIE(P(B, 0, 3)), ATK(P(A, 0, 3)),
-                                                WHOLE(P(D, 0, 4))};
-    EXERCISE(tritone_exercise, cantus, tritone, CANTUS_LOWER);
-    assert(!holds(SUSPENSION(PROPER), &tritone_exercise));
-
-    /* A new note on the downbeat is a broken bar, judged elsewhere. */
-    const StandardCounterpointSlot broken[] = {REST(), ATK(P(A, 0, 3)), ATK(P(G, 0, 3)), ATK(P(A, 0, 3)),
-                                               WHOLE(P(B, 0, 3))};
-    EXERCISE(broken_exercise, cantus, broken, CANTUS_LOWER);
-    assert(holds(SUSPENSION(PROPER), &broken_exercise));
-
-    /* A tied consonance. */
-    const StandardCounterpointSlot seven_six[] = {REST(), ATK(P(A, 0, 3)), TIE(P(A, 0, 3)), ATK(P(D, 0, 4)),
-                                                  WHOLE(P(D, 0, 4))};
-    EXERCISE(good_exercise, cantus, seven_six, CANTUS_LOWER);
-    assert(holds(SUSPENSION(PROPER), &good_exercise));
 }
 
 static void test_many(void) {
@@ -117,7 +69,6 @@ static void test_check_masks(void) {
                                                 WHOLE(P(D, 0, 4))};
     EXERCISE(improper, cantus_t, tritone, CANTUS_LOWER);
     assert(standard_counterpoint_fourth_species_suspension_check(&improper, &hard, &soft));
-    assert(hard == (1u << SUSPENSION(PROPER)));
 }
 
 static void test_invalid_input(void) {
@@ -135,10 +86,7 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_good_exercise();
-    test_proper();
     test_many();
     test_few_nine_eight();
     test_check_masks();

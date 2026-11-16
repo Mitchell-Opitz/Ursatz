@@ -22,18 +22,6 @@ static bool valid_rule(StandardCounterpointTendency which) {
     return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
 }
 
-const Rule *standard_counterpoint_tendency_rule(StandardCounterpointTendency which) {
-    return standard_counterpoint_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *standard_counterpoint_tendency_constraint(StandardCounterpointTendency which) {
-    return standard_counterpoint_rule_table_constraint(&TABLE, (int)which);
-}
-
-const Preference *standard_counterpoint_tendency_preference(StandardCounterpointTendency which) {
-    return standard_counterpoint_rule_table_preference(&TABLE, (int)which);
-}
-
 const char *standard_counterpoint_tendency_name(StandardCounterpointTendency which) {
     return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }

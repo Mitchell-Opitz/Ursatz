@@ -4,9 +4,6 @@
 #include <stdbool.h>
 
 #include "counterpoint_line.h"
-#include "rules/constraint.h"
-#include "rules/preference.h"
-#include "rules/rule.h"
 
 /*
  * First-species harmony rules for standard-counterpoint-v1: what note
@@ -54,17 +51,6 @@ typedef enum {
 
 #define STANDARD_COUNTERPOINT_FIRST_SPECIES_MAX_IMPERFECT_RUN 3
 #define STANDARD_COUNTERPOINT_FIRST_SPECIES_MIN_INTERVAL_VARIETY 3
-
-const Rule *standard_counterpoint_first_species_harmony_rule(StandardCounterpointFirstSpeciesHarmonyRule which);
-const Constraint *
-standard_counterpoint_first_species_harmony_constraint(StandardCounterpointFirstSpeciesHarmonyRule which);
-/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
-const Preference *standard_counterpoint_first_species_harmony_preference(StandardCounterpointFirstSpeciesHarmonyRule which);
-
-/* "all-consonant" "no-repeated-perfect" "no-direct-perfects"
-   "max-same-imperfect-run" "imperfect-preferred" "perfect-then-imperfect"
-   "interval-variety"; NULL for an invalid rule. */
-const char *standard_counterpoint_first_species_harmony_rule_name(StandardCounterpointFirstSpeciesHarmonyRule which);
 
 /* True when the two-part texture satisfies the rule. False when it does not,
    and for an invalid pair or an invalid rule. */

@@ -4,13 +4,6 @@
 
 #include "cantus_firmus_rules.h"
 #include "counterpoint_test_util.h"
-#include "rule_check.h"
-#include "eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-STANDARD_COUNTERPOINT_EVAL_TABLE(g_eval, "cantus-firmus", STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT);
-#define standard_counterpoint_cantus_rule_holds(which, a, b) \
-    STANDARD_COUNTERPOINT_EVAL_HOLDS2(g_eval, standard_counterpoint_cantus_constraint, standard_counterpoint_cantus_preference, standard_counterpoint_cantus_rule_holds, StandardCounterpointLineTonic, which, a, b)
 
 static bool holds(StandardCounterpointCantusRule rule, const PitchSpelling *const *notes, size_t count,
                   const PitchSpelling *tonic) {
@@ -24,18 +17,6 @@ static bool holds(StandardCounterpointCantusRule rule, const PitchSpelling *cons
 #define FUX_D(name)                                                                                      \
     const PitchSpelling *name[] = {P(D, 0, 4), P(F, 0, 4), P(E, 0, 4), P(D, 0, 4), P(G, 0, 4), P(F, 0, 4), \
                                    P(A, 0, 4), P(G, 0, 4), P(F, 0, 4), P(E, 0, 4), P(D, 0, 4)}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_cantus_rule, standard_counterpoint_cantus_constraint,
-                                    STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT; i++) {
-        ConstraintType type = constraint_type(standard_counterpoint_cantus_constraint((StandardCounterpointCantusRule)i));
-        bool soft = i == STANDARD_COUNTERPOINT_CANTUS_RULE_SINGLE_CLIMAX ||
-                    i == STANDARD_COUNTERPOINT_CANTUS_RULE_MOSTLY_STEPWISE ||
-                    i == STANDARD_COUNTERPOINT_CANTUS_RULE_NO_REPEATED_MOTIVE;
-        assert(type == (soft ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD));
-    }
-}
 
 static void test_names(void) {
     assert(strcmp(standard_counterpoint_cantus_rule_name(STANDARD_COUNTERPOINT_CANTUS_RULE_LENGTH), "length") == 0);
@@ -216,7 +197,6 @@ static void test_invalid_input(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_names();
     test_fux_cantus_firmus_is_well_formed();
     test_length();

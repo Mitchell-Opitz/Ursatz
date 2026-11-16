@@ -3,21 +3,11 @@
 
 #include "consonance_rules.h"
 #include "counterpoint_test_util.h"
-#include "rule_check.h"
 
 static StandardCounterpointIntervalCategory category(const PitchSpelling *a, const PitchSpelling *b) {
     StandardCounterpointIntervalCategory out;
     assert(standard_counterpoint_classify_pitches(a, b, &out));
     return out;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_counterpoint_consonance_rule, standard_counterpoint_consonance_constraint,
-                                    STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT);
-    for (int i = 0; i < STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT; i++) {
-        assert(constraint_type(standard_counterpoint_consonance_constraint(
-                   (StandardCounterpointConsonanceRule)i)) == CONSTRAINT_TYPE_HARD);
-    }
 }
 
 static void test_perfect_consonances(void) {
@@ -98,7 +88,6 @@ static void test_melodic_consonance(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_perfect_consonances();
     test_imperfect_consonances();
     test_dissonances();

@@ -63,7 +63,4 @@ typedef struct {
 bool standard_counterpoint_second_species_check(const StandardCounterpointSecondSpeciesInput *input,
                                                 StandardCounterpointResult *out);
 
-/* True when the input is valid and breaks no hard rule. */
-bool standard_counterpoint_second_species_valid(const StandardCounterpointSecondSpeciesInput *input);
-
 #endif
