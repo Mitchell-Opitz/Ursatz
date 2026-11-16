@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 /* Compares the three keys with URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION, ursatz_analyzer_version() and
-   ursatz_analyzer_ursatz_commit(). NULL strings are UNREADABLE. Never returns UNREADABLE for non-NULL strings. */
+   ursatz_analyzer_producer_key(). NULL strings are UNREADABLE. Never returns UNREADABLE for non-NULL strings. */
 AnalyzerDocumentStatus analyzer_document_status_of(int schema_version, const char *analyzer_version,
                                                    const char *ursatz_commit);
 

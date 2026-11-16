@@ -589,7 +589,7 @@ static cJSON *metadata_json(const PiecePlan *plan) {
     cJSON *object = cJSON_CreateObject();
     const char *analyzer = plan_analyzer_version(plan);
     if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(composer_version())) &&
-                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(ursatz_analyzer_ursatz_commit())) &&
+                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(ursatz_analyzer_producer_key())) &&
                     (analyzer[0] == '\0' || plan_json_add(object, "analyzer_version", cJSON_CreateString(analyzer))))) {
         cJSON_Delete(object);
         return NULL;

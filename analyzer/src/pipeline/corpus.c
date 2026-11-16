@@ -349,7 +349,9 @@ static char *render_index(const char *input_dir, const char *const *paths, const
     bool ok = append_text(&out, &length, &capacity,
                           "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 1,\n"
                           "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
-                          "  \"ursatz_commit\": \"" URSATZ_ANALYZER_URSATZ_COMMIT "\",\n") &&
+                          "  \"ursatz_commit\": \"") &&
+              append_text(&out, &length, &capacity, ursatz_analyzer_producer_key()) &&
+              append_text(&out, &length, &capacity, "\",\n") &&
               (snprintf(number, sizeof(number), "  \"document_schema_version\": %d,\n",
                         URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION),
                append_text(&out, &length, &capacity, number)) &&

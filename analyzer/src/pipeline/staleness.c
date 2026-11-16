@@ -18,7 +18,7 @@ AnalyzerDocumentStatus analyzer_document_status_of(int schema_version, const cha
     if (strcmp(analyzer_version, ursatz_analyzer_version()) != 0) {
         return ANALYZER_DOCUMENT_STALE_ANALYZER;
     }
-    if (strcmp(ursatz_commit, ursatz_analyzer_ursatz_commit()) != 0) {
+    if (strcmp(ursatz_commit, ursatz_analyzer_producer_key()) != 0) {
         return ANALYZER_DOCUMENT_STALE_URSATZ;
     }
     return ANALYZER_DOCUMENT_CURRENT;

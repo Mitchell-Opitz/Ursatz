@@ -122,7 +122,7 @@ static bool write_meta_file(const char *dir_path, const char *filename, const ch
     cJSON_AddStringToObject(meta, "uploaded_at", uploaded_at);
     cJSON_AddStringToObject(meta, "analyzer_version", analyzer_version_string());
     cJSON_AddNumberToObject(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    cJSON_AddStringToObject(meta, "ursatz_commit", ursatz_analyzer_ursatz_commit());
+    cJSON_AddStringToObject(meta, "ursatz_commit", ursatz_analyzer_producer_key());
     char *text = cJSON_Print(meta);
     cJSON_Delete(meta);
     if (!text) {
@@ -1027,7 +1027,7 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
 
     ok = ok && meta_set_string(meta, "analyzer_version", analyzer_version_string()) &&
          meta_set_number(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) &&
-         meta_set_string(meta, "ursatz_commit", ursatz_analyzer_ursatz_commit());
+         meta_set_string(meta, "ursatz_commit", ursatz_analyzer_producer_key());
     char *text = ok ? cJSON_Print(meta) : NULL;
     cJSON_Delete(meta);
     if (!text) {
