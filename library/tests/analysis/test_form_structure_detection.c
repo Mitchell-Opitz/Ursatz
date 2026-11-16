@@ -18,7 +18,7 @@
 /*
  * Behavioral-contract test: NULL input is rejected without touching *out,
  * and an input with no structural cadence among its entries is a valid,
- * empty AnalysisResult / Section / Relationship set (requirement 4 -- no
+ * empty Section / Relationship set (requirement 4 -- no
  * detected form structure is legitimate, never forced).
  *
  * Analysis-regression test: a five-phrase sequence with a structural
@@ -26,8 +26,7 @@
  * entries[3] splits into three Sections -- [0,1], [2,3], [4] -- of which
  * only the first two are closed by a structural cadence and thus
  * reported (entries[4] trails with no closing cadence, so it is not
- * turned into a Section of its own, matching PeriodDetection/
- * SentenceDetection's skip-don't-guess discipline). Pins the resulting
+ * turned into a Section of its own, skip-don't-guess). Pins the resulting
  * Section (phrase_ids) and Relationship/Interpretation ("precedes")
  * shape against a future refactor.
  */

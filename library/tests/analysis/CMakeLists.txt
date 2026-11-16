@@ -1,4 +1,3 @@
-add_ursatz_test(analyzer)
 
 add_ursatz_test(outer_voice)
 add_ursatz_test(outer_voice_attack_soprano)
@@ -69,7 +68,6 @@ if(URSATZ_ANALYSIS_VALGRIND)
                    $<TARGET_FILE:test_motive_link_groups>)
 endif()
 add_ursatz_test(phrase_boundary_detection)
-add_ursatz_test(period_detection)
 add_ursatz_test(form_structure_detection)
 add_ursatz_test(thematic_return_detection)
 add_executable(test_field1_weighted_harmony test_field1_weighted_harmony.c)

@@ -3,14 +3,13 @@
 
 #include <stddef.h>
 
-#include "analysis/analyzer.h"
 #include "containers/section.h"
 #include "relationship/relationship.h"
 #include "semantics/cadence_type.h"
 #include "structure/phrase_occurrence.h"
 
 /*
- * FormStructureDetection (Procedure -> Analyzer implementation):
+ * FormStructureDetection (Procedure):
  * groups consecutive PhraseOccurrences into formal Sections (L4
  * containers/section.h) at the strongest, section-closing cadences, and
  * orders the identified Sections via a "precedes" Relationship chain --
@@ -32,8 +31,8 @@
  * work as internal phrase punctuation, not section-ending closure. An
  * ambiguous PAC/IAC call (AUTHENTIC_UNSPECIFIED) is deliberately NOT
  * promoted to structural: the same unknown-vs-low-confidence discipline
- * used throughout this codebase. PeriodDetection's cadence_type is the
- * same CadenceType (semantics/cadence_type.h).
+ * used throughout this codebase. cadence_type is a CadenceType
+ * (semantics/cadence_type.h).
  *
  * Boundary rule: a structural cadence at entries[i] (i.e. not the last
  * entry) closes a Section spanning entries since the previous boundary
@@ -43,17 +42,14 @@
  * structure is a legitimate outcome, never forced). A trailing run of
  * entries after the last boundary that never reaches another structural
  * cadence is not turned into a Section of its own -- only spans that are
- * actually closed by a structural cadence become Sections, the same
- * discipline PeriodDetection/SentenceDetection apply to their own
- * pairs/chains (skip, don't guess).
+ * actually closed by a structural cadence become Sections (skip, don't
+ * guess).
  *
- * Linking mechanism: reuses PeriodDetection's exact pattern. Each
- * identified Section gets minted via section_create (id + phrase_ids =
+ * Linking mechanism: each identified Section gets minted via section_create (id + phrase_ids =
  * the underlying L4 Phrase ids of its member PhraseOccurrences, via
  * phrase_occurrence_phrase_id). Consecutive Sections (in input order)
  * are linked by one Relationship each (source = earlier Section id,
- * predicate "precedes", target = later Section id -- the identical
- * chronological semantics PeriodDetection already uses "precedes" for),
+ * predicate "precedes", target = later Section id),
  * then one Interpretation targeting that Relationship's id, carrying a
  * FormStructureDetectionClaim with both Sections' ids and closing
  * cadence types.

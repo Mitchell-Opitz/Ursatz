@@ -52,8 +52,6 @@ static const TestEdge ALLOWED_TEST_EDGES[] = {
     {"frameworks/common-practice-minimal/tests/", "standard-tonality/", "declared dependency (the scale degree owner)"},
     {"frameworks/scale-harmonization/tests/", "galant-schemas/", "declared dependency"},
     {"frameworks/standard-harmony/tests/", "standard-tonality/", "test-only edge: Roman numeral grammar cases"},
-    {"frameworks/standard-harmony/tests/", "analysis/period_detection.h",
-     "test-only edge: compares the period ranking with the kernel period detection"},
     {"frameworks/standard-form/tests/", "ursatz_chain/", "test-only edge: form_test_util.h builds the chain's form input"},
     {"frameworks/standard-meter/tests/", "io/", "test-only edge: tests import MIDI to feed the meter analysis"},
 };

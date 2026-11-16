@@ -36,8 +36,8 @@
  * etc.
  *
  * context is an EntityID reference to a Context (music-context, L6);
- * evidence is an EntityID reference to an Evidence
- * (interpretation/evidence.h, this module). Both are opaque references
+ * evidence is an opaque EntityID reference to the evidence for the
+ * Interpretation (no Evidence type exists). Both are opaque references
  * by id, consistent with Relationship's context/evidence fields
  * (relationship/relationship.h) -- neither is embedded. Both are
  * optional (an Interpretation need not narrow to a specific Context or

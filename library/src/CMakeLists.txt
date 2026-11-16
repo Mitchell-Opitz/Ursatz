@@ -61,7 +61,6 @@ add_library(ursatz
     semantics/analysis_key.c
     relationship/relationship.c
     interpretation/uncertainty.c
-    interpretation/evidence.c
     interpretation/interpretation.c
     interpretation/claim_interpretation.c
     interpretation/chord.c
@@ -78,7 +77,6 @@ add_library(ursatz
     theory/style_features.c
     theory/style_model_build.c
     theory/style_model_blend.c
-    analysis/analyzer.c
     analysis/beat_grid_length.c
     analysis/outer_voice.c
     analysis/voice_separation.c
@@ -90,7 +88,6 @@ add_library(ursatz
     analysis/motive_link.c
     analysis/progression_patterns.c
     analysis/phrase_boundary_detection.c
-    analysis/period_detection.c
     analysis/form_structure_detection.c
     analysis/thematic_return_detection.c
     io/midi_importer.c
@@ -113,7 +110,6 @@ ursatz_public_headers(ursatz
     BASE ${CMAKE_CURRENT_SOURCE_DIR}
     SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
     HEADERS
-        analysis/analyzer.h
         analysis/form_structure_detection.h
         analysis/motif_window_matching.h
         analysis/motive_link.h
@@ -146,7 +142,6 @@ ursatz_public_headers(ursatz
         identity/schema_version.h
         interpretation/chord.h
         interpretation/claim_interpretation.h
-        interpretation/evidence.h
         interpretation/interpretation.h
         interpretation/key.h
         interpretation/scale_degree.h

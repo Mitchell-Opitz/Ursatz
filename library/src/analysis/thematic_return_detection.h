@@ -3,13 +3,12 @@
 
 #include <stddef.h>
 
-#include "analysis/analyzer.h"
 #include "analysis/motif_window_matching.h"
 #include "identity/entity_id.h"
 #include "relationship/relationship.h"
 
 /*
- * ThematicReturnDetection (Procedure -> Analyzer implementation):
+ * ThematicReturnDetection (Procedure):
  * identifies thematic return -- a later section's Theme material
  * recognizably recurring from an earlier one -- the thematic-return half of this
  * branch's scope (section order is analysis/form_structure_detection.h).

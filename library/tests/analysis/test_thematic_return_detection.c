@@ -15,7 +15,7 @@
 
 /*
  * Behavioral-contract test: NULL input is rejected without touching *out,
- * and fewer than two entries is a valid, empty AnalysisResult /
+ * and fewer than two entries is a valid, empty
  * relationship set (no pair to compare).
  *
  * Analysis-regression test: three ThemeOccurrence windows where entries[0]

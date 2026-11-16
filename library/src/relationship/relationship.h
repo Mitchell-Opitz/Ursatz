@@ -26,9 +26,8 @@
  * MUST NOT import music-context (sideways L6 dependency), so the
  * reference stays opaque the same way source/target do.
  *
- * evidence is likewise an opaque EntityID reference (to an Evidence,
- * music-interpretation) -- referenced, not embedded, and with no
- * compile-time dependency on music-interpretation.
+ * evidence is likewise an opaque EntityID reference -- referenced, not
+ * embedded, and with no compile-time dependency on music-interpretation.
  *
  * uncertainty is a PLACEHOLDER: Uncertainty (music-interpretation,
  * TDD §84) does not exist yet at this point in the build. Until it
