@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 /* Reduces a semitone number (a MIDI note number, or the number segmentation reads from a spelling) to a pitch class
-   0-11. The library reduces only spellings (pitch_spelling_pitch_class), not a bare number. */
+   0-11. The library reduces a letter and accidental (pitch_class_of_letter), not a bare number. */
 int pitch_class_of(long midi_note_number);
 
 /* pitch_class_name(pitch_class, prefer_flats) is the library's: the flat spelling when prefer_flats is true. */

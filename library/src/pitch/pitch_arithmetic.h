@@ -32,12 +32,6 @@ PitchLetter pitch_letter_offset(PitchLetter letter, int steps);
 /* 0 to 11 for a letter and accidental, whatever the octave. */
 int pitch_class_of_letter(PitchLetter letter, int accidental);
 
-/* 0 to 11. spelling must not be NULL. */
-int pitch_spelling_pitch_class(const PitchSpelling *spelling);
-
-/* Octave 4 C is 60. -1 outside 0 to 127. spelling must not be NULL. */
-int pitch_spelling_midi_number(const PitchSpelling *spelling);
-
 /* Position on the line of fifths: C=0, G=1, D=2 ..., F=-1; each sharp adds 7, each flat
  * subtracts 7. */
 int pitch_spelling_fifths(PitchLetter letter, int accidental);

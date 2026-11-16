@@ -43,6 +43,12 @@ typedef struct {
     size_t count;
 } Occs;
 
+/* Octave 4 C is 60. */
+static long fv1_midi_number(const PitchSpelling *spelling) {
+    return 12L * (pitch_spelling_octave(spelling) + 1) + pitch_letter_semitone(pitch_spelling_letter(spelling)) +
+           pitch_spelling_accidental(spelling);
+}
+
 static PitchIdentity *fv1_pitch_identity(long semitone, size_t index) {
     char token[48];
     int length = snprintf(token, sizeof(token), "p%ld-%zu", semitone, index);
@@ -63,7 +69,7 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
     assert(pitch_ids != NULL && directions != NULL && durations != NULL);
     long previous = 0;
     for (size_t i = 0; i < count; i++) {
-        long semitone = pitch_spelling_midi_number(note_event_optional_pitch_spelling(events[i]));
+        long semitone = fv1_midi_number(note_event_optional_pitch_spelling(events[i]));
         pitch_ids[i] = fv1_pitch_identity(semitone, i);
         if (i > 0) {
             directions[i - 1] = semitone > previous ? CONTOUR_DIRECTION_UP : (semitone < previous ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);

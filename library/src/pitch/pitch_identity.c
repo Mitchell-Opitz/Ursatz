@@ -37,7 +37,7 @@ void pitch_identity_destroy(PitchIdentity *identity) {
 
 /* Strict identity: same token bytes. Final by design, not a placeholder
    -- see pitch/pitch_identity.h. Theory-relative equivalence (octave
-   equivalence, etc.) is PitchClass's job, not this function's. */
+   equivalence, etc.) is the theory layers' job, not this function's. */
 bool pitch_identity_equals(const PitchIdentity *a, const PitchIdentity *b) {
     if (a == NULL || b == NULL) {
         return false;

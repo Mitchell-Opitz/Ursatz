@@ -23,8 +23,7 @@
  * the same token," which is a different question from "are these
  * equivalent under some theory" (octave equivalence, enharmonic
  * equivalence under some tuning, etc.). That second question is
- * answered by PitchClass (pitch/pitch_class.h), which wraps a
- * PitchIdentity together with a caller-supplied equivalence relation.
+ * answered by the theory layers above this one.
  * PitchIdentity itself never gains theory-relative comparison; asking
  * for it here would be asking the wrong type the wrong question.
  */
@@ -41,7 +40,7 @@ PitchIdentityResult pitch_identity_create(const void *token, size_t token_size, 
 void pitch_identity_destroy(PitchIdentity *identity);
 
 /* Strict identity equality: same token bytes. Final by design -- see
-   PitchClass (pitch/pitch_class.h) for theory-relative equivalence. */
+   the theory layers for theory-relative equivalence. */
 bool pitch_identity_equals(const PitchIdentity *a, const PitchIdentity *b);
 
 const void *pitch_identity_token(const PitchIdentity *identity, size_t *out_size);

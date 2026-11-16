@@ -43,36 +43,12 @@ static void test_every_spelling(void) {
         for (int accidental = -2; accidental <= 2; accidental++) {
             PitchSpelling *spelling = make(LETTERS[i], accidental, 4);
             int semitone = LETTER_SEMITONES[i] + accidental;
-            assert(pitch_spelling_pitch_class(spelling) == ((semitone % 12) + 12) % 12);
             assert(pitch_class_of_letter(LETTERS[i], accidental) == ((semitone % 12) + 12) % 12);
-            assert(pitch_spelling_midi_number(spelling) == 60 + semitone);
             pitch_spelling_destroy(spelling);
             count++;
         }
     }
     assert(count == 35);
-}
-
-static void test_midi_number_range(void) {
-    PitchSpelling *c4 = make(PITCH_LETTER_C, 0, 4);
-    PitchSpelling *c_minus_1 = make(PITCH_LETTER_C, 0, -1);
-    PitchSpelling *c_flat_minus_1 = make(PITCH_LETTER_C, -1, -1);
-    PitchSpelling *g9 = make(PITCH_LETTER_G, 0, 9);
-    PitchSpelling *g_sharp_9 = make(PITCH_LETTER_G, 1, 9);
-    PitchSpelling *b_sharp_3 = make(PITCH_LETTER_B, 1, 3);
-    assert(pitch_spelling_midi_number(c4) == 60);
-    assert(pitch_spelling_midi_number(c_minus_1) == 0);
-    assert(pitch_spelling_midi_number(c_flat_minus_1) == -1);
-    assert(pitch_spelling_midi_number(g9) == 127);
-    assert(pitch_spelling_midi_number(g_sharp_9) == -1);
-    assert(pitch_spelling_midi_number(b_sharp_3) == 60);
-    assert(pitch_spelling_pitch_class(b_sharp_3) == 0);
-    pitch_spelling_destroy(c4);
-    pitch_spelling_destroy(c_minus_1);
-    pitch_spelling_destroy(c_flat_minus_1);
-    pitch_spelling_destroy(g9);
-    pitch_spelling_destroy(g_sharp_9);
-    pitch_spelling_destroy(b_sharp_3);
 }
 
 static void test_fifths_values(void) {
@@ -187,7 +163,6 @@ int main(void) {
     test_letter_semitone_and_index();
     test_letter_offset_wraps_both_ways();
     test_every_spelling();
-    test_midi_number_range();
     test_fifths_values();
     test_fifths_round_trip();
     test_name_every_spelling();

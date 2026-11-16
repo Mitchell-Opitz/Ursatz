@@ -271,7 +271,7 @@ static Spelling spell(int midi, const AnalysisKey *key) {
     return written;
 }
 
-/* The octave that makes the spelling sound at midi (octave 4 C is 60), as pitch_spelling_midi_number counts. */
+/* The octave that makes the spelling sound at midi (octave 4 C is 60). */
 static int spelling_octave(int midi, Spelling written) {
     int semitones = pitch_letter_semitone(written.letter) + written.accidental;
     return (midi - semitones) / PITCH_SEMITONES_PER_OCTAVE - 1;

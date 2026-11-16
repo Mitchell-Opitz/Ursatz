@@ -35,17 +35,13 @@ add_library(ursatz
     pitch/pitch_spelling.c
     pitch/pitch_arithmetic.c
     pitch/tuning_system.c
-    pitch/pitch_class.c
-    pitch/pitch_realization.c
     pitch/pitch_numeric_value.c
-    pitch/written_pitch.c
     pitch/clef.c
     pitch/staff_position.c
     pitch/clef_resolution.c
     pitch/accidental.c
     pitch/generic_interval.c
     pitch/key_signature.c
-    pitch/sounding_pitch.c
     pitch/midi_pitch.c
     events/note_event.c
     events/dynamics.c

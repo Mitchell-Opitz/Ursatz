@@ -55,7 +55,10 @@ static void test_spelling_matches_pitch_class(void) {
         for (int midi = 0; midi <= 127; midi++) {
             PitchSpelling *spelling = NULL;
             assert(pitch_spelling_of_midi(midi, fifths, &spelling));
-            assert(pitch_spelling_midi_number(spelling) == midi);
+            int octave_midi = 12 * (pitch_spelling_octave(spelling) + 1) + pitch_letter_semitone(pitch_spelling_letter(spelling)) +
+                              pitch_spelling_accidental(spelling);
+            assert(octave_midi == midi);
+            assert(pitch_class_of_letter(pitch_spelling_letter(spelling), pitch_spelling_accidental(spelling)) == pitch_class_of_midi(midi));
             pitch_spelling_destroy(spelling);
         }
     }

@@ -7,8 +7,8 @@
 
 /*
  * TuningSystem (Entity category): a tuning definition (12-TET, just
- * intonation, a custom scheme, etc.) that PitchRealization measures its
- * ratios against. This base type only holds identity and a label; it
+ * intonation, a custom scheme, etc.) that a PitchNumericValue is measured
+ * against. This base type only holds identity and a label; it
  * does not encode any particular tuning's actual pitch values here --
  * defining 12-TET's specific ratio set or JI's specific ratio set is out
  * of scope for this type (Deliverable D / Phase 2-3), matching this

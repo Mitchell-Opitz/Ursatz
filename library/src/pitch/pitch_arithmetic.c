@@ -72,17 +72,6 @@ int pitch_class_of_letter(PitchLetter letter, int accidental) {
     return floor_mod(pitch_letter_semitone(letter) + accidental, PITCH_SEMITONES_PER_OCTAVE);
 }
 
-int pitch_spelling_pitch_class(const PitchSpelling *spelling) {
-    return pitch_class_of_letter(pitch_spelling_letter(spelling), pitch_spelling_accidental(spelling));
-}
-
-int pitch_spelling_midi_number(const PitchSpelling *spelling) {
-    int number = PITCH_SEMITONES_PER_OCTAVE * (pitch_spelling_octave(spelling) + 1) +
-                 pitch_letter_semitone(pitch_spelling_letter(spelling)) +
-                 pitch_spelling_accidental(spelling);
-    return (number < 0 || number > 127) ? -1 : number;
-}
-
 static int letter_fifths(PitchLetter letter) {
     switch (letter) {
     case PITCH_LETTER_F:

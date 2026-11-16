@@ -20,33 +20,19 @@
  * under one specific TuningSystem -- never a replacement for
  * PitchIdentity, and never implying every PitchIdentity has one.
  *
- * This is also NOT PitchRealization (pitch/pitch_realization.h), which
- * measures a MULTIPLICATIVE frequency ratio against a reference
- * frequency and explicitly refuses cents/log-based conversion because
- * a step like a 12-TET semitone (2^(1/12)) is irrational -- unsupportable
- * under Law 19. Transposition (add an interval) and Inversion (reflect
- * about an axis) need ADDITIVE arithmetic that stays exact rational for
- * ANY tuning system, not just ratio-based ones: this is the type that
- * provides it. A "position" here makes no claim about frequency; it is
- * purely an ordinal/linear coordinate the caller defines the meaning of
- * relative to its TuningSystem.
+ * A "position" here makes no claim about frequency; it is purely an
+ * ordinal/linear coordinate the caller defines the meaning of relative
+ * to its TuningSystem.
  *
  * Construction MUST supply a TuningSystem: a numeric value is only
  * meaningful relative to the tuning system that defines it, so no
  * "tuning-agnostic" numeric constructor exists (unlike PitchIdentity,
- * where such a constructor is required). Like PitchRealization,
- * PitchNumericValue does NOT take ownership of the TuningSystem passed
- * to pitch_numeric_value_create: it copies the tuning system's identity
+ * where such a constructor is required). PitchNumericValue does NOT take
+ * ownership of the TuningSystem passed to pitch_numeric_value_create: it copies the tuning system's identity
  * and name internally, so a single TuningSystem can be shared as the
  * reference for many PitchNumericValues without any ownership/aliasing
  * hazard. The caller retains ownership of the TuningSystem it passed in
  * and must destroy it itself.
- *
- * Binary operations (add_interval, distance, reflect_about_axis) that
- * take two PitchNumericValues require both to share the same
- * TuningSystem (by identity) -- combining positions measured under
- * different tuning systems is not a meaningful operation and is
- * rejected rather than silently computed.
  *
  * Conversion to/from PitchIdentity is intentionally one-directional.
  * pitch_numeric_value_to_identity packages a PitchNumericValue into a
@@ -84,42 +70,6 @@ unsigned long pitch_numeric_value_position_denominator(const PitchNumericValue *
 
 /* Value equality: same TuningSystem (by identity) AND same reduced position. */
 bool pitch_numeric_value_equals(const PitchNumericValue *a, const PitchNumericValue *b);
-
-typedef enum {
-    PITCH_NUMERIC_VALUE_OP_OK = 0,
-    PITCH_NUMERIC_VALUE_OP_ERR_NULL_VALUE,
-    PITCH_NUMERIC_VALUE_OP_ERR_NON_POSITIVE_DENOMINATOR,
-    PITCH_NUMERIC_VALUE_OP_ERR_TUNING_SYSTEM_MISMATCH,
-    PITCH_NUMERIC_VALUE_OP_ERR_ALLOC
-} PitchNumericValueOpResult;
-
-/*
- * *out = base + (interval_numerator/interval_denominator), exact
- * rational addition, reduced to lowest terms, under base's TuningSystem.
- * interval_denominator must be positive; interval_numerator may be
- * negative (a downward interval). This is Transposition's core
- * operation.
- */
-PitchNumericValueOpResult pitch_numeric_value_add_interval(const PitchNumericValue *base, long interval_numerator,
-                                                             unsigned long interval_denominator,
-                                                             PitchNumericValue **out);
-
-/*
- * *out_numerator/*out_denominator = a - b, exact rational, reduced.
- * Requires a and b to share the same TuningSystem (by identity).
- */
-PitchNumericValueOpResult pitch_numeric_value_distance(const PitchNumericValue *a, const PitchNumericValue *b,
-                                                         long *out_numerator, unsigned long *out_denominator);
-
-/*
- * *out = reflection of value about axis: 2*axis - value, exact
- * rational, reduced, under value's TuningSystem. Requires value and
- * axis to share the same TuningSystem (by identity). This is
- * Inversion's core operation.
- */
-PitchNumericValueOpResult pitch_numeric_value_reflect_about_axis(const PitchNumericValue *value,
-                                                                   const PitchNumericValue *axis,
-                                                                   PitchNumericValue **out);
 
 typedef enum {
     PITCH_NUMERIC_VALUE_TO_IDENTITY_OK = 0,
