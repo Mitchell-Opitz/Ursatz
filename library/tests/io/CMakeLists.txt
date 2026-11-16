@@ -26,8 +26,6 @@ add_ursatz_test(musicxml_importer)
 target_compile_definitions(test_musicxml_importer PRIVATE
     URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
 add_ursatz_test(musicxml_roundtrip)
-# 174 s measured (serial, 10 s rule); runs in the nightly.
-set_tests_properties(musicxml_roundtrip PROPERTIES LABELS slow)
 target_compile_definitions(test_musicxml_roundtrip PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 add_ursatz_test(import_notes)

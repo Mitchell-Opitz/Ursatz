@@ -1,4 +1,3 @@
-add_ursatz_test(musicxml_export)
 add_ursatz_test(musicxml_score)
 add_ursatz_test(musicxml_score_values)
 add_ursatz_test(musicxml_score_beams)
@@ -21,15 +20,11 @@ add_executable(test_musicxml_export_mozart545 test_musicxml_export_mozart545.c)
 target_link_libraries(test_musicxml_export_mozart545 PRIVATE ursatz)
 add_test(NAME musicxml_export_mozart545 COMMAND test_musicxml_export_mozart545
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-# 111 s measured (serial, 10 s rule); runs in the nightly.
-set_tests_properties(musicxml_export_mozart545 PROPERTIES LABELS slow)
 
 add_executable(test_musicxml_export_bach_prelude test_musicxml_export_bach_prelude.c)
 target_link_libraries(test_musicxml_export_bach_prelude PRIVATE ursatz)
 add_test(NAME musicxml_export_bach_prelude COMMAND test_musicxml_export_bach_prelude
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-# 11 s measured (serial, 10 s rule); runs in the nightly.
-set_tests_properties(musicxml_export_bach_prelude PROPERTIES LABELS slow)
 
 add_ursatz_architecture_test(export)
 
@@ -37,7 +32,7 @@ add_ursatz_architecture_test(export)
 # docs/modules/export.md). Skips silently if valgrind isn't installed.
 find_program(URSATZ_EXPORT_VALGRIND valgrind)
 if(URSATZ_EXPORT_VALGRIND)
-  foreach(export_test_name musicxml_export musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_overlaps musicxml_score_reference musicxml_score_values musicxml_score_beams score_clefs)
+  foreach(export_test_name musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_overlaps musicxml_score_reference musicxml_score_values musicxml_score_beams score_clefs)
     add_test(NAME ${export_test_name}_valgrind
              COMMAND ${URSATZ_EXPORT_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${export_test_name}>

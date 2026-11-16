@@ -202,7 +202,6 @@ add_library(ursatz
     query/similarity_scoring.c
     query/search_result.c
     query/corpus_search.c
-    export/musicxml_export.c
     export/musicxml_score.c
     export/score_clefs.c
     export/score_quantize.c

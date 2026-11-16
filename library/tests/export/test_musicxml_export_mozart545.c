@@ -6,8 +6,6 @@
 #include <string.h>
 
 #include "io/midi_importer.h"
-#include "persistence/persistence.h"
-#include "persistence/persistence_note_events.h"
 
 /*
  * Direct regression for the false-positive overlap bug: Mozart 545.mid
@@ -15,8 +13,8 @@
  * a conductor track with no notes, plus one note-bearing track holding
  * both hands of a piano part on a single channel -- so its two hands
  * legitimately overlap in time. Before per-voice overlap grouping, this
- * failed musicxml_export_write with MUSICXML_EXPORT_ERR_OVERLAPPING_
- * NOTES; it must now import and export cleanly.
+ * failed the export with MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES; it
+ * must now import and export cleanly.
  */
 
 #define FIXTURE_PATH "../fixtures/framework-v1-corpus/Mozart 545.mid"
@@ -50,14 +48,13 @@ int main(void) {
     assert(import_result == MIDI_IMPORT_OK);
     assert(count > 0);
 
-    const char *path = "test_musicxml_export_mozart545.sqlite";
-    remove(path);
-    PersistenceHandle *handle = NULL;
-    assert(persistence_open(path, &handle) == PERSISTENCE_OK);
-    assert(persistence_store_note_events(handle, events, count) == PERSISTENCE_NOTE_EVENTS_OK);
-
+    MusicXmlExportScore plain;
+    memset(&plain, 0, sizeof(plain));
+    plain.events = events;
+    plain.pitch_values = pitch_values;
+    plain.count = count;
     char *xml = NULL;
-    MusicXmlExportResult export_result = musicxml_export_write(handle, &xml);
+    MusicXmlExportResult export_result = musicxml_export_write_score(&plain, &xml);
     assert(export_result == MUSICXML_EXPORT_OK);
     assert(xml != NULL);
     assert(strstr(xml, "<score-partwise version=\"3.1\">") != NULL);
@@ -100,8 +97,6 @@ int main(void) {
     }
     free(events);
     free(pitch_values);
-    persistence_close(handle);
-    remove(path);
 
     printf("musicxml_export_mozart545: ok (%zu notes)\n", count);
     return 0;

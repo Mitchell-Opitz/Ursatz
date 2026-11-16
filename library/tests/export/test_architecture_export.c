@@ -5,20 +5,17 @@
 
 /*
  * Architecture test: music-export may depend on music-identity (L0),
- * music-time and music-pitch (L2), music-events (L3), music-persistence
- * (L9), and music-export itself only, plus the one kernel header core/rational.h (the shared exact
+ * music-time and music-pitch (L2), music-events (L3),
+ * and music-export itself only, plus the one kernel header core/rational.h (the shared exact
  * rational, named by file). It MUST NOT depend on the rest of music-core,
  * music-containers, music-structure, music-context, music-semantics,
  * music-relationship, music-theory, music-rules, music-transform,
- * music-analysis, music-generation, music-io, music-corpus,
- * music-corpus-stats, or frameworks/ -- this module reads persisted
- * NoteEvents and their PitchSpelling only, the same dependency shape
- * corpus_stats/ uses toward persistence (see docs/modules/
- * corpus_stats.md), applied here to export instead of corpus.
+ * music-analysis, music-generation, music-io, or
+ * frameworks/ -- this module reads in-memory NoteEvents and their PitchSpelling only.
  *
  * Scans every .h/.c file under src/export/ and flags any local include
  * ("...") that does not point into identity/, time/, pitch/, events/,
- * persistence/, or export/ itself, or name core/rational.h.
+ * or export/ itself, or name core/rational.h.
  */
 
 static int check_file(const char *path) {
@@ -47,11 +44,11 @@ static int check_file(const char *path) {
 
         if (strncmp(start, "identity/", 9) != 0 && strncmp(start, "time/", 5) != 0 &&
             strncmp(start, "pitch/", 6) != 0 && strncmp(start, "events/", 7) != 0 &&
-            strncmp(start, "persistence/", 12) != 0 && strncmp(start, "export/", 7) != 0 &&
+            strncmp(start, "export/", 7) != 0 &&
             strcmp(start, "core/rational.h") != 0) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, time/, pitch/, events/, "
-                    "persistence/, or export/)\n",
+                    "or export/)\n",
                     path, start);
             violations++;
         }
