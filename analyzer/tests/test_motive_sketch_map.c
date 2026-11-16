@@ -9,7 +9,9 @@
 #include <ursatz_analyzer/motive_links.h>
 
 #include "core/rational.h"
+#include "links/links_internal.h"
 #include "pipeline/motive_sketch_map.h"
+#include "test_support.h"
 
 /*
  * The one mapping from motive features to a MotiveSketch (motive_features_to_sketch). Every family of Mozart 545 is
@@ -55,6 +57,17 @@ static void check_equal(const MotiveSketch *a, const MotiveSketch *b) {
     CHECK(motive_sketch_fingerprint(a) == motive_sketch_fingerprint(b));
 }
 
+/* The sketch a family is linked as, from the scope's own list. */
+static bool scope_sketch(const MotiveLinkScope *scope, const char *piece_id, size_t family, MotiveSketch *out) {
+    for (size_t i = 0; i < scope->family_count; i++) {
+        if (scope->families[i].family == family && strcmp(scope->pieces[scope->families[i].piece].id, piece_id) == 0) {
+            *out = scope->families[i].sketch;
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_ANALYZER_FIXTURE_DIR);
@@ -64,7 +77,7 @@ int main(void) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     MotiveLinkScope *scope = motive_link_scope_create();
     CHECK(json != NULL && scope != NULL);
     CHECK(json && scope && motive_link_scope_add_document(scope, "mozart-545", json) == MOTIVE_LINKS_OK);
@@ -82,7 +95,7 @@ int main(void) {
         snprintf(fingerprint, sizeof fingerprint, "%016llx", motive_sketch_fingerprint(&from_report));
         CHECK(strcmp(fingerprint, motive->features.fingerprint) == 0);
         CHECK(transposed_to_c(&from_report));
-        CHECK(motive_link_scope_sketch(scope, "mozart-545", i, &from_document));
+        CHECK(scope_sketch(scope, "mozart-545", i, &from_document));
         check_equal(&from_report, &from_document);
         mapped++;
     }

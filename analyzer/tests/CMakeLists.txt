@@ -396,7 +396,7 @@ file(COPY "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid" "${URSATZ_REFERENCE_FIX
      DESTINATION ${URSATZ_CORPORA_DIR}/sonatinas)
 
 add_executable(test_analyzer_corpus test_corpus.c)
-target_link_libraries(test_analyzer_corpus PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_analyzer_corpus PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_analyzer_corpus PRIVATE
     URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
@@ -431,6 +431,7 @@ set_tests_properties(test_corpus_index_schema PROPERTIES SKIP_REGULAR_EXPRESSION
 
 add_executable(test_analyzer_style_labels test_style_labels.c)
 target_link_libraries(test_analyzer_style_labels PRIVATE ursatz_analyzer)
+target_include_directories(test_analyzer_style_labels PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_test(NAME test_analyzer_style_labels COMMAND test_analyzer_style_labels)
 
 add_executable(test_style_profile test_style_profile.c)
@@ -546,7 +547,8 @@ add_test(NAME test_meter_check COMMAND test_meter_check)
 set_tests_properties(test_meter_check PROPERTIES LABELS slow)
 
 add_executable(test_motive_links test_motive_links.c)
-target_link_libraries(test_motive_links PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_motive_links PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_include_directories(test_motive_links PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(test_motive_links PRIVATE
     URSATZ_LINKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/links"
     URSATZ_LINKS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/motive_links_work")

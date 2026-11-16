@@ -321,8 +321,7 @@ static void check_structure(const AnalysisReport *report) {
             CHECK(degree_ok(stage->bass_degree, stage->bass_alteration));
             CHECK(stage->has_melody == !stage->bass_only);
             CHECK(!stage->has_melody || degree_ok(stage->melody_degree, stage->melody_alteration));
-            CHECK(!stage->has_second || (stage->second_last_entry <= s->last_entry &&
-                                         degree_ok(stage->second_degree, stage->second_alteration)));
+            CHECK(!stage->has_second || degree_ok(stage->second_degree, stage->second_alteration));
             CHECK(unit_ok(stage->credit));
             bass_only += stage->bass_only ? 1 : 0;
         }

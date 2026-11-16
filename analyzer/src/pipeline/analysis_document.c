@@ -4045,16 +4045,6 @@ void analysis_document_destroy(AnalysisDocument *document) {
     free(document);
 }
 
-char *analysis_document_render(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
-    AnalysisDocument *document = analysis_document_build(input_path, notes, report);
-    if (!document) {
-        return NULL;
-    }
-    char *json = analysis_document_to_json(document);
-    analysis_document_destroy(document);
-    return json;
-}
-
 char *derive_analysis_document_path(const char *input_path) {
     return path_with_suffix(input_path, ".analysis.json");
 }

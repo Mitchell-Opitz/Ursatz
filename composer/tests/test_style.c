@@ -8,6 +8,7 @@
 #include <io/midi_importer.h>
 #include <time/tempo_map.h>
 
+#include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/style_profile.h>
 
@@ -194,9 +195,16 @@ static void analyze(const PiecePlan *plan, Heard *heard) {
     hearing.key_tonic_pitch_class = 0;
     hearing.key_minor = false;
     hearing.streams = heard->rendered.part_index;
-    AnalyzerHearingOptions options = analyzer_hearing_options_default();
-    options.render_document = true;
-    assert(analyzer_hear(&hearing, &options, &heard->result) == ANALYZER_OK);
+    assert(analyzer_hear(&hearing, NULL, &heard->result) == ANALYZER_OK);
+}
+
+/* The profile of a heard analysis: the Analyzer's document of the result, counted. */
+static StyleProfile *heard_profile(const Heard *heard) {
+    char *document = analysis_document_render_result("<fragment>", heard->result);
+    StyleProfile *profile = style_profile_create();
+    assert(document && profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK);
+    free(document);
+    return profile;
 }
 
 static void heard_destroy(Heard *heard) {
@@ -274,9 +282,7 @@ static bool labelled_category(const char *category, bool harmony, bool melody) {
 
 /* The Analyzer's labels of an analysis, counted into a bag, for the categories asked. */
 static void analyzer_bag(const Heard *heard, bool harmony, bool melody, Bag *bag) {
-    StyleProfile *profile = style_profile_create();
-    assert(profile && style_profile_add_document_json(profile, analyzer_result_document_json(heard->result)) ==
-                          STYLE_PROFILE_OK);
+    StyleProfile *profile = heard_profile(heard);
     StyleStatistic *statistics = NULL;
     size_t count = 0;
     assert(style_profile_statistics(profile, &statistics, &count) == STYLE_PROFILE_OK);
@@ -417,9 +423,7 @@ static void write_style(const char *path) {
     PiecePlan *plan = block_plan();
     Heard analysis;
     analyze(plan, &analysis);
-    StyleProfile *profile = style_profile_create();
-    assert(profile && style_profile_add_document_json(profile, analyzer_result_document_json(analysis.result)) ==
-                          STYLE_PROFILE_OK);
+    StyleProfile *profile = heard_profile(&analysis);
     assert(style_model_file_write(profile, "block", path) == STYLE_MODEL_FILE_OK);
     style_profile_destroy(profile);
     heard_destroy(&analysis);

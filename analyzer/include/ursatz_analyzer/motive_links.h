@@ -11,7 +11,7 @@
 /*
  * Motive links: which motive families of different pieces are variants of one another (R-154). A family's prototype
  * is read from the "features" of its analysis document, as a melodic sketch (no chords) in the key region of its first
- * note, moved to the key of C (motive_link_scope_sketch); two families are linked when the library's variant recognizer finds a chain of at most max_depth relations
+ * note, moved to the key of C; two families are linked when the library's variant recognizer finds a chain of at most max_depth relations
  * from one to the other (analysis/motive_link.h). Like the style profile, it reads only analysis documents (R-079).
  *
  * A scope is a set of pieces in the order they were added. For each family the nearest families of other pieces are
@@ -56,17 +56,6 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
  * NULL when none failed. Valid until the next failure or the scope is destroyed.
  */
 const char *motive_link_scope_failed_piece(const MotiveLinkScope *scope);
-
-/*
- * The sketch a family is linked as: its prototype's features as a melodic sketch (motive_features_to_sketch) moved to the
- * key of C, keeping its mode, by the shortest way that puts its tonic on C. The library's relations keep a sketch's
- * scale, so motives of different keys could never be made equal without this; the chain of a link applies to these
- * sketches (motive_relation_apply). False when the piece or family is not in the scope.
- */
-bool motive_link_scope_sketch(const MotiveLinkScope *scope, const char *piece_id, size_t family, MotiveSketch *out);
-
-size_t motive_link_scope_piece_count(const MotiveLinkScope *scope);
-size_t motive_link_scope_family_count(const MotiveLinkScope *scope);
 
 typedef struct {
     MotiveLinkOptions link;
@@ -142,7 +131,7 @@ typedef struct {
 MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out);
 MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const char *path);
 void motive_link_cache_destroy(MotiveLinkCache *cache);
-size_t motive_link_cache_pair_count(const MotiveLinkCache *cache);
+
 
 /*
  * Links the scope's families. cache may be NULL (nothing is kept between runs); otherwise it is read and new results are

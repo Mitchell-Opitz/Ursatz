@@ -117,10 +117,6 @@ void motive_link_cache_destroy(MotiveLinkCache *cache) {
     free(cache);
 }
 
-size_t motive_link_cache_pair_count(const MotiveLinkCache *cache) {
-    return cache ? cache->count : 0;
-}
-
 /* ---- File ---- */
 
 static bool whole_number(const cJSON *item, size_t *out) {

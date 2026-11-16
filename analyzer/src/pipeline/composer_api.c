@@ -21,7 +21,6 @@
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
 
-#include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/style_profile.h>
 #include <ursatz_analyzer/version.h>
@@ -31,7 +30,6 @@
 #include "util/misc_util.h"
 
 #define MIDI_NOTE_COUNT 128
-#define FRAGMENT_INPUT_PATH "<fragment>"
 
 /* A copy of the meter map, or a defaulted 4/4 map for NULL or a defaulted one. NULL on allocation failure. */
 static MeterMap *copy_meter_map(const MeterMap *map) {
@@ -194,7 +192,7 @@ static HearingNotes *hearing_notes_build(const AnalyzerHearing *hearing) {
 }
 
 AnalyzerHearingOptions analyzer_hearing_options_default(void) {
-    AnalyzerHearingOptions options = {analyzer_options_default(), false};
+    AnalyzerHearingOptions options = {analyzer_options_default()};
     return options;
 }
 
@@ -205,7 +203,7 @@ AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHeari
     }
     *out = NULL;
     AnalyzerHearingOptions used = options ? *options : analyzer_hearing_options_default();
-    if (!hearing_valid(hearing) || (used.render_document && used.analysis.stages != ANALYZER_STAGE_ALL)) {
+    if (!hearing_valid(hearing)) {
         return ANALYZER_ERR_ARGUMENT;
     }
     HearingNotes *built = hearing_notes_build(hearing);
@@ -219,14 +217,6 @@ AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHeari
         return status;
     }
     analyzer_result_set_owner(result, built, hearing_notes_destroy);
-    if (used.render_document) {
-        char *json = analysis_document_render_result(FRAGMENT_INPUT_PATH, result);
-        if (!json) {
-            analyzer_result_destroy(result);
-            return ANALYZER_ERR_ALLOC;
-        }
-        analyzer_result_set_document(result, json);
-    }
     *out = result;
     return ANALYZER_OK;
 }

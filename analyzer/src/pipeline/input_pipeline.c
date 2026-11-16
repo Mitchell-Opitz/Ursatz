@@ -21,17 +21,6 @@ bool input_format_parse(const char *name, InputFormat *out) {
     return false;
 }
 
-const char *input_format_name(InputFormat format) {
-    switch (format) {
-        case INPUT_FORMAT_MIDI:
-            return "midi";
-        case INPUT_FORMAT_MUSICXML:
-            return "musicxml";
-        default:
-            return "auto";
-    }
-}
-
 static bool extension_equals(const char *path, const char *extension) {
     const char *dot = strrchr(path, '.');
     const char *slash = strrchr(path, '/');

@@ -19,9 +19,6 @@ typedef enum {
  */
 bool input_format_parse(const char *name, InputFormat *out);
 
-/* "midi" or "musicxml"; "auto" for INPUT_FORMAT_AUTO. */
-const char *input_format_name(InputFormat format);
-
 /*
  * The concrete format of the file at path: by extension (.mid, .midi;
  * .musicxml, .xml, .mxl), and when the extension says nothing, by the

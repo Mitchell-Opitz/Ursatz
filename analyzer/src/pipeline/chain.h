@@ -25,15 +25,14 @@
  * R-217, R-241) over the neutral notes of chain_input.h, and collects the library's results into report. The chain
  * does the analysis, including the second key pass on the first pass's chords and phrase ends; the stage files only
  * read its accessors, and the Analyzer-only stages (progressions, harmonic rhythm, meter check, rhythm, markings, form
- * plan, voicing check, counterpoint check) read the collected report and the chain's results.
+ * plan, voicing check) read the collected report and the chain's results.
  *
  * The pass borrows notes, which must outlive it. analyzer_pass_run returns false only on allocation or library
  * failure; on false the pass still holds what was built and analyzer_pass_destroy releases it.
  */
 typedef struct AnalyzerPass {
     const ImportedNotes *notes;
-    AnalyzerOptions options;         /* the stages and the cancel callback of this run */
-    bool cancelled;                  /* the callback asked to stop; the pass is then incomplete */
+    AnalyzerOptions options;         /* the stages of this run */
     ChainInput input;                /* the library chain's neutral notes and key events */
     AnalysisChain *library;          /* owned; NULL for a piece with no notes */
     AnalysisReport report;           /* the pass's results: entries, non-chord tones, key regions and changes */
@@ -50,8 +49,7 @@ typedef struct AnalyzerPass {
     MotiveStage motives;     /* the note-level soprano input, its phrases, ideas and themes, and the motive families */
 } AnalyzerPass;
 
-/* Runs the pass over notes with the stages and the cancel callback of options (NULL: all stages, no callback). False
-   also when the callback asked to stop: pass->cancelled is then set. */
+/* Runs the pass over notes with the stages of options (NULL: all stages). */
 bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const AnalyzerOptions *options);
 
 /* Releases the pass and the report it still holds. */

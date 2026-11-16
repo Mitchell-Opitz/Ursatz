@@ -125,12 +125,6 @@ typedef struct {
     AnalysisOuterNote bass;
 } AnalysisOuterLineEntry;
 
-/* Frees an outer note's strings and clears it. */
-void analysis_outer_note_destroy(AnalysisOuterNote *note);
-
-/* Frees a Roman numeral's strings and clears it. */
-void analysis_roman_numeral_destroy(AnalysisRomanNumeral *roman);
-
 /* Frees a reading's strings and clears it. */
 void analysis_chord_reading_destroy(AnalysisChordReading *reading);
 
@@ -297,7 +291,6 @@ typedef struct {
     double uncertainty;   /* the library's, in [0, 1]; higher is LESS certain */
     const char *role;     /* where the phrase stands in the piece: "beginning" (the first), "ending" (the last) or
                              "middle". The library names no such role for a phrase, so this is position alone. */
-    bool phrase_model_labeled; /* the library labelled the phrase's chords for the phrase model */
     size_t first_idea;    /* the phrase's ideas: ideas[first_idea .. + idea_count) */
     size_t idea_count;
     size_t first_subphrase; /* its subphrases: subphrases[first_subphrase .. + subphrase_count) */
@@ -859,9 +852,7 @@ typedef struct {
     int bass_degree;
     int bass_alteration;
     bool has_second;
-    size_t second_first_entry; /* valid only when has_second */
-    size_t second_last_entry;
-    int second_degree;
+    int second_degree; /* valid only when has_second */
     int second_alteration;
     bool bass_only;
     double credit; /* the library's: 1 both voices match, 0.75 a non-defining bass that is not the usual one, 0.5 bass only */
@@ -1014,7 +1005,6 @@ typedef struct {
     size_t violation_count;
     AnalysisVoiceResolution *resolutions;     /* owned; unresolved tones only, in order of chord change, then voice */
     size_t resolution_count;
-    bool resolutions_checked;                 /* the library had prepared chords to check against */
     AnalysisVoiceChord *chords;               /* owned; in time order */
     size_t chord_count;
 } AnalysisVoiceLeading;

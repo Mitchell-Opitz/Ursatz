@@ -59,7 +59,6 @@ static void check_chorale(const char *dir) {
         CHECK(starts_measure(&report, violation->entry_to, 2));
     }
 
-    CHECK(voice_leading->resolutions_checked);
     CHECK(voice_leading->resolution_count == 1);
     if (voice_leading->resolution_count == 1) {
         const AnalysisVoiceResolution *resolution = &voice_leading->resolutions[0];

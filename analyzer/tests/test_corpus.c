@@ -10,6 +10,8 @@
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 
+#include "test_support.h"
+
 /*
  * Corpus mode over the corpora CMake builds in the build tree: "reference" (the five framework-v1 pieces) and "mixed"
  * (one MIDI, one MusicXML in a subfolder, one .txt, one broken .mid). Checks the index against
@@ -167,7 +169,7 @@ static char *render_single(const char *path) {
         imported_notes_destroy(&notes);
         return NULL;
     }
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     return json;

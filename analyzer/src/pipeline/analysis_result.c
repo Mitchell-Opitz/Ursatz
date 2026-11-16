@@ -28,7 +28,6 @@ struct AnalyzerResult {
     size_t owned_count;
     void *owner; /* what the pass borrows, released after it (a hearing's notes) */
     void (*owner_destroy)(void *);
-    char *document_json; /* the rendered document of a hearing, or NULL */
 };
 
 /* The claim contents the Analyzer writes for its own results (no library owner builds them), through the kernel's
@@ -53,7 +52,7 @@ _Static_assert(ANALYZER_STAGE_ALL == (ANALYSIS_CHAIN_STAGE_ALL | ((1u << 18) - (
                "ANALYZER_STAGE_ALL covers the chain stages and the Analyzer bits");
 
 AnalyzerOptions analyzer_options_default(void) {
-    AnalyzerOptions options = {ANALYZER_STAGE_ALL, NULL, NULL, true};
+    AnalyzerOptions options = {ANALYZER_STAGE_ALL, true};
     return options;
 }
 
@@ -316,7 +315,6 @@ void analyzer_result_destroy(AnalyzerResult *result) {
     if (result->owner_destroy) {
         result->owner_destroy(result->owner);
     }
-    free(result->document_json);
     free(result);
 }
 
@@ -334,10 +332,7 @@ AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOption
         return ANALYZER_ERR_ALLOC;
     }
     if (!analyzer_pass_run(&result->pass, notes, &used)) {
-        AnalyzerStatus status = result->pass.cancelled ? ANALYZER_ERR_CANCELLED
-                                                       : (result->pass.library || notes->count == 0
-                                                              ? ANALYZER_ERR_ALLOC
-                                                              : ANALYZER_ERR_LIBRARY);
+        AnalyzerStatus status = result->pass.library || notes->count == 0 ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_LIBRARY;
         analyzer_result_destroy(result);
         return status;
     }
@@ -389,13 +384,4 @@ bool analyzer_result_take_report(AnalyzerResult *result, AnalysisReport *report)
 void analyzer_result_set_owner(AnalyzerResult *result, void *owner, void (*owner_destroy)(void *)) {
     result->owner = owner;
     result->owner_destroy = owner_destroy;
-}
-
-void analyzer_result_set_document(AnalyzerResult *result, char *document_json) {
-    free(result->document_json);
-    result->document_json = document_json;
-}
-
-const char *analyzer_result_document_json(const AnalyzerResult *result) {
-    return result ? result->document_json : NULL;
 }

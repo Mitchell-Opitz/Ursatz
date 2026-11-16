@@ -11,4 +11,16 @@
  */
 StyleProfileResult style_profile_add_result(StyleProfile *profile, const AnalyzerResult *result);
 
+/*
+ * A tempo in quarter notes per minute as a band of 20 from 40: "<40", "40-59", "60-79", ..., "200-219", "220+". A
+ * value on a boundary goes to the upper band, so 140 reads "140-159". Writes at most size bytes, always terminated.
+ */
+void style_label_tempo(double quarters_per_minute, char *buffer, size_t size);
+
+/*
+ * Attacks per beat rounded to the nearest 1/2 (halves up) and written as a reduced fraction: "1/2", "1", "3/2",
+ * "2"; 0 reads "0" and a rounded value of 4 or more reads "4+". Writes at most size bytes, always terminated.
+ */
+void style_label_density(double attacks_per_beat, char *buffer, size_t size);
+
 #endif

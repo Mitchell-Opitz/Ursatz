@@ -108,12 +108,12 @@ int main(void) {
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));
 
-    char *json = analysis_document_render(path, &notes, &report);
+    char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
     assert(strncmp(json, "{\n  \"schema_version\": 12,\n", 26) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
-    char *again = analysis_document_render(path, &notes, &report);
+    char *again = test_render_document(path, &notes, &report);
     assert(again != NULL);
     assert(strcmp(json, again) == 0);
     free(again);

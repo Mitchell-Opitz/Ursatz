@@ -115,8 +115,6 @@ static bool copy_stage(const SchemaBuild *build, const GalantStageClaim *claim, 
             return false;
         }
         out->has_second = true;
-        out->second_first_entry = build->first_entry[second];
-        out->second_last_entry = build->last_entry[second];
         out->second_degree = claim->second_degree;
         out->second_alteration = claim->second_alteration;
     }

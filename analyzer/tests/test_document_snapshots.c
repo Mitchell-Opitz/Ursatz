@@ -42,7 +42,7 @@ static char *render_piece(const char *fixture) {
         imported_notes_destroy(&notes);
         return NULL;
     }
-    char *json = analysis_document_render(fixture, &notes, &report);
+    char *json = test_render_document(fixture, &notes, &report);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     if (!json) {

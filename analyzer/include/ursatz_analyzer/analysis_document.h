@@ -46,10 +46,6 @@ char *analysis_document_to_json(const AnalysisDocument *document);
 
 void analysis_document_destroy(AnalysisDocument *document);
 
-/* Convenience: analysis_document_build, then analysis_document_to_json.
-   Returns a heap string the caller frees, or NULL on allocation failure. */
-char *analysis_document_render(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report);
-
 /* Convenience: analysis_document_build_from_result, then analysis_document_to_json. NULL as for the build. */
 char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result);
 

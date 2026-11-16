@@ -23,7 +23,6 @@
  *   - the claims of each area against the document's entries of that area (or, where one area is several of the
  *     document's sections, against the report counts the document is built from),
  *   - every claim has a target and a scalar confidence,
- *   - a callback that refuses stops the run with ANALYZER_ERR_CANCELLED and nothing written,
  *   - a partial stage set gives the chain's claims and no export,
  *   - the document of the result equals the snapshots of tests/snapshots.
  *
@@ -213,17 +212,6 @@ static void check_piece(const char *fixture, const char *slug) {
     imported_notes_destroy(&notes);
 }
 
-typedef struct {
-    int calls;
-    int refuse_from; /* the call number (from 1) at which the callback refuses */
-} CancelState;
-
-static bool cancel_callback(void *context) {
-    CancelState *state = context;
-    state->calls++;
-    return state->calls >= state->refuse_from;
-}
-
 static void check_options(const char *fixture) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
@@ -233,36 +221,12 @@ static void check_options(const char *fixture) {
         return;
     }
 
-    /* The defaults: all stages, no callback. */
+    /* The defaults: all stages, chords on harmonic spans. */
     AnalyzerOptions defaults = analyzer_options_default();
-    CHECK(defaults.stages == ANALYZER_STAGE_ALL && defaults.cancel == NULL && defaults.cancel_context == NULL,
-          "the default options are not all stages without a callback");
-
-    /* A callback that refuses at once: cancelled before the chain run, nothing written. */
-    for (int refuse_from = 1; refuse_from <= 4; refuse_from++) {
-        CancelState state = {0, refuse_from};
-        AnalyzerOptions options = analyzer_options_default();
-        options.cancel = cancel_callback;
-        options.cancel_context = &state;
-        AnalyzerResult *result = (AnalyzerResult *)0x1;
-        AnalyzerStatus status = analyzer_analyze(&notes, &options, &result);
-        CHECK(status == ANALYZER_ERR_CANCELLED, "refusal at call %d returned %d", refuse_from, (int)status);
-        CHECK(result == NULL, "refusal at call %d left a result", refuse_from);
-        CHECK(state.calls == refuse_from, "refusal at call %d made %d calls", refuse_from, state.calls);
-    }
-
-    /* A callback that never refuses is asked before the chain and between the Analyzer stages. */
-    CancelState never = {0, 1 << 30};
-    AnalyzerOptions asked = analyzer_options_default();
-    asked.cancel = cancel_callback;
-    asked.cancel_context = &never;
-    AnalyzerResult *result = NULL;
-    CHECK(analyzer_analyze(&notes, &asked, &result) == ANALYZER_OK && result, "a callback that accepts stopped the run");
-    CHECK(never.calls > 1, "the callback was asked %d times", never.calls);
-    analyzer_result_destroy(result);
+    CHECK(defaults.stages == ANALYZER_STAGE_ALL && defaults.harmonic_spans, "the default options are not all stages on spans");
 
     /* Arguments. */
-    result = (AnalyzerResult *)0x1;
+    AnalyzerResult *result = (AnalyzerResult *)0x1;
     CHECK(analyzer_analyze(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "NULL notes");
     CHECK(analyzer_analyze(&notes, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
     AnalyzerOptions none = analyzer_options_default();

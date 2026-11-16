@@ -42,7 +42,7 @@ static void analyze(const char *name, const NotationReading *reading, Analysis *
         assert(notation_reading_apply(&analysis->notes, reading) == NOTATION_READING_OK);
     }
     assert(run_analysis_pipeline(&analysis->notes, &analysis->report));
-    char *json = analysis_document_render(musicxml(name), &analysis->notes, &analysis->report);
+    char *json = test_render_document(musicxml(name), &analysis->notes, &analysis->report);
     assert(json);
     analysis->document = cJSON_Parse(json);
     free(json);

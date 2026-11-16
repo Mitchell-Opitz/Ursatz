@@ -176,7 +176,6 @@ static bool collect_resolutions(const VoiceGrid *build, const HarmonyStage *harm
         };
     }
     out->resolution_count = resolutions->count;
-    out->resolutions_checked = true;
     return true;
 }
 

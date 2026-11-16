@@ -21,8 +21,7 @@ typedef enum {
     ANALYZER_OK = 0,
     ANALYZER_ERR_ARGUMENT,
     ANALYZER_ERR_ALLOC,
-    ANALYZER_ERR_LIBRARY,
-    ANALYZER_ERR_CANCELLED
+    ANALYZER_ERR_LIBRARY
 } AnalyzerStatus;
 
 /*
@@ -43,22 +42,19 @@ typedef enum {
 
 typedef struct {
     unsigned stages;
-    /* Asked before the chain run and between the Analyzer stages; true stops the run. May be NULL. */
-    bool (*cancel)(void *context);
-    void *cancel_context;
     /* true (the default) reads the chords on harmonic spans (Ursatz AnalysisChainConfig.harmonic_spans); false reads one chord
        per segment, as before Ursatz P39. The Composer's hearing sets it false until P41 (R-378). */
     bool harmonic_spans;
 } AnalyzerOptions;
 
-/* All stages, no cancel callback. */
+/* All stages. */
 AnalyzerOptions analyzer_options_default(void);
 
 /*
  * Analyzes notes. options may be NULL for the defaults. On ANALYZER_OK *out is the result, which the caller releases with
  * analyzer_result_destroy and which borrows notes: notes must outlive it. On any other status *out is left NULL and
  * nothing is kept: ANALYZER_ERR_ARGUMENT for a NULL notes, options with no stages or out, ANALYZER_ERR_ALLOC,
- * ANALYZER_ERR_LIBRARY when the chain refuses the notes, ANALYZER_ERR_CANCELLED when the callback asked to stop.
+ * ANALYZER_ERR_LIBRARY when the chain refuses the notes.
  */
 AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOptions *options, AnalyzerResult **out);
 

@@ -9,6 +9,8 @@
 #include <ursatz_analyzer/motive_links.h>
 
 #include "cJSON.h"
+#include "links/links_internal.h"
+#include "test_support.h"
 
 /*
  * Motive links over the four pieces of tests/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
@@ -46,7 +48,7 @@ static bool analyze_fixtures(void) {
             imported_notes_destroy(&notes);
             return false;
         }
-        documents[i] = analysis_document_render(path, &notes, &report);
+        documents[i] = test_render_document(path, &notes, &report);
         analysis_report_destroy(&report);
         imported_notes_destroy(&notes);
         if (!documents[i]) {
@@ -94,14 +96,25 @@ static bool in_a_group(const MotiveLinks *links, const char *piece) {
     return false;
 }
 
+/* The sketch a family is linked as, from the scope's own list. */
+static bool scope_sketch(const MotiveLinkScope *scope, const char *piece_id, size_t family, MotiveSketch *out) {
+    for (size_t i = 0; i < scope->family_count; i++) {
+        if (scope->families[i].family == family && strcmp(scope->pieces[scope->families[i].piece].id, piece_id) == 0) {
+            *out = scope->families[i].sketch;
+            return true;
+        }
+    }
+    return false;
+}
+
 /* Replaying a link's steps (the structs and the text) from the source family's sketch gives the target's. */
 static void check_replay(const MotiveLinkScope *scope, const MotiveLinkFound *link) {
     const MotiveLinkEnd *source = link->reversed ? &link->b : &link->a;
     const MotiveLinkEnd *target = link->reversed ? &link->a : &link->b;
     MotiveSketch from;
     MotiveSketch to;
-    CHECK(motive_link_scope_sketch(scope, source->piece, source->family, &from));
-    CHECK(motive_link_scope_sketch(scope, target->piece, target->family, &to));
+    CHECK(scope_sketch(scope, source->piece, source->family, &from));
+    CHECK(scope_sketch(scope, target->piece, target->family, &to));
     CHECK(link->step_count >= 1 && link->step_count <= 2);
     MotiveSketch by_struct = from;
     MotiveSketch by_text = from;
@@ -160,7 +173,7 @@ static void check_scope_errors(void) {
     CHECK(motive_link_scope_add_document(scope, "x", "{\"schema_version\": 8, \"motives\": []}") ==
           MOTIVE_LINKS_ERR_FORMAT);
     CHECK(motive_link_scope_add_document(NULL, "x", documents[0]) == MOTIVE_LINKS_ERR_ARGUMENT);
-    CHECK(motive_link_scope_piece_count(scope) == 1);
+    CHECK(scope->piece_count == 1);
 
     /* a document written before features: the family has none */
     cJSON *document = cJSON_Parse(documents[1]);
@@ -171,15 +184,15 @@ static void check_scope_errors(void) {
     cJSON_Delete(document);
     CHECK(motive_link_scope_add_document(scope, "b.musicxml", stripped) == MOTIVE_LINKS_ERR_NO_FEATURES);
     CHECK(strcmp(motive_link_scope_failed_piece(scope), "b.musicxml") == 0);
-    CHECK(motive_link_scope_piece_count(scope) == 1);
+    CHECK(scope->piece_count == 1);
     CHECK(motive_link_scope_add_document(scope, "b.musicxml", documents[1]) == MOTIVE_LINKS_OK);
     cJSON_free(stripped);
 
     /* a piece without motives is a piece without families */
     CHECK(motive_link_scope_add_document(scope, "empty", "{\"schema_version\": 12, \"motives\": []}") ==
           MOTIVE_LINKS_OK);
-    CHECK(motive_link_scope_piece_count(scope) == 3);
-    CHECK(motive_link_scope_family_count(scope) == 2);
+    CHECK(scope->piece_count == 3);
+    CHECK(scope->family_count == 2);
 
     MotiveLinksOptions options;
     motive_links_options_default(&options);
@@ -206,11 +219,11 @@ int main(void) {
 
     /* a, b, c: a and b link by one step across keys, c is in no link */
     MotiveLinkScope *scope = scope_of(3);
-    CHECK(motive_link_scope_piece_count(scope) == 3);
-    CHECK(motive_link_scope_family_count(scope) == 3);
+    CHECK(scope->piece_count == 3);
+    CHECK(scope->family_count == 3);
     MotiveLinkCache *cache = NULL;
     CHECK(motive_link_cache_load(cache_path, &cache) == MOTIVE_LINKS_OK);
-    CHECK(motive_link_cache_pair_count(cache) == 0);
+    CHECK(cache->count == 0);
     MotiveLinksOptions options;
     motive_links_options_default(&options);
     options.progress = on_progress;
@@ -256,7 +269,7 @@ int main(void) {
     motive_link_cache_destroy(cache);
     cache = NULL;
     CHECK(motive_link_cache_load(cache_path, &cache) == MOTIVE_LINKS_OK);
-    CHECK(motive_link_cache_pair_count(cache) == 1);
+    CHECK(cache->count == 1);
     MotiveLinks second;
     CHECK(motive_links_run(scope, cache, &options, &second) == MOTIVE_LINKS_OK);
     CHECK(second.pairs == 1 && second.compared == 0 && second.cached == 1 && !second.cache_reset);

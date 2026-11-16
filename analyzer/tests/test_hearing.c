@@ -18,11 +18,8 @@
 
 /*
  * The hearing entry and the style reference (composer_api.h) on the five reference pieces:
- *   - a hearing without render_document has no document; with it, the document is rendered from the
- *     result,
  *   - the events are not copied: the result's notes point at the caller's events,
  *   - the claim counts equal those of analyzer_analyze over the same notes,
- *   - a callback that refuses stops the hearing with ANALYZER_ERR_CANCELLED and nothing written,
  *   - bad arguments are refused,
  *   - style_profile_add_result gives the statistics of style_profile_add_document_json on the rendered document,
  *   - the distance against a style reference equals that of a second hearing of the same events,
@@ -57,11 +54,6 @@ static int failures = 0;
             failures++;                                                \
         }                                                              \
     } while (0)
-
-static bool refuse(void *context) {
-    (*(int *)context)++;
-    return true;
-}
 
 static int tonic_of(const ImportedNotes *notes) {
     int fifths = notes->key_signature.sharps_flats;
@@ -145,12 +137,6 @@ static void check_arguments(const AnalyzerHearing *hearing) {
     bad_key.has_key = true;
     bad_key.key_tonic_pitch_class = 12;
     CHECK(analyzer_hear(&bad_key, NULL, &result) == ANALYZER_ERR_ARGUMENT, "tonic 12");
-    AnalyzerHearingOptions partial = analyzer_hearing_options_default();
-    partial.analysis.stages = ANALYSIS_CHAIN_STAGE_ALL;
-    partial.analysis.stages &= ~1u;
-    partial.render_document = true;
-    CHECK(analyzer_hear(hearing, &partial, &result) == ANALYZER_ERR_ARGUMENT, "document without every stage");
-    CHECK(analyzer_result_document_json(NULL) == NULL, "document of NULL");
 }
 
 static bool same_violations(const AnalyzerViolation *a, const AnalyzerViolation *b, size_t count) {
@@ -210,7 +196,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
                                notes.key_signature.is_minor,
                                notes.streams};
 
-    /* No document unless asked for; the events are the caller's. */
+    /* The events are the caller's. */
     AnalyzerResult *heard = NULL;
     CHECK(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
     if (heard) {
@@ -237,7 +223,6 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
         imported_notes_destroy(&notes);
         return;
     }
-    CHECK(analyzer_result_document_json(heard) == NULL, "%s: a document without render_document", fixture);
     const ImportedNotes *borrowed = analyzer_result_notes(heard);
     bool same_events = borrowed && borrowed->count == notes.count;
     for (size_t i = 0; same_events && i < notes.count; i++) {
@@ -250,13 +235,10 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
               "%s: area %d claim count differs", fixture, area);
     }
 
-    /* The document, when asked for, is the one rendered from the direct analysis (the notes carry no file source). */
-    AnalyzerHearingOptions with_document = analyzer_hearing_options_default();
-    with_document.render_document = true;
+    /* The document of a second hearing of the same events (the notes carry no file source). */
     AnalyzerResult *rendered = NULL;
-    CHECK(analyzer_hear(&hearing, &with_document, &rendered) == ANALYZER_OK && rendered, "%s: hear with document",
-          fixture);
-    const char *json = analyzer_result_document_json(rendered);
+    CHECK(analyzer_hear(&hearing, NULL, &rendered) == ANALYZER_OK && rendered, "%s: hear again", fixture);
+    char *json = rendered ? analysis_document_render_result("<fragment>", rendered) : NULL;
     /* The result's profile equals the profile of its document. */
     StyleProfile *from_result = style_profile_create();
     StyleProfile *from_json = style_profile_create();
@@ -289,17 +271,9 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     analyzer_style_reference_destroy(reference);
     analyzer_style_reference_destroy(NULL);
 
-    /* Cancel: refusing at once stops the hearing and writes nothing. */
-    int asked = 0;
-    AnalyzerHearingOptions cancelling = analyzer_hearing_options_default();
-    cancelling.analysis.cancel = refuse;
-    cancelling.analysis.cancel_context = &asked;
-    AnalyzerResult *none = (AnalyzerResult *)1;
-    CHECK(analyzer_hear(&hearing, &cancelling, &none) == ANALYZER_ERR_CANCELLED && none == NULL && asked >= 1,
-          "%s: cancel", fixture);
-
     check_arguments(&hearing);
 
+    free(json);
     analyzer_result_destroy(rendered);
     analyzer_result_destroy(direct);
     analyzer_result_destroy(heard);

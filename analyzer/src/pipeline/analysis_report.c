@@ -5,7 +5,8 @@
 
 #include "pipeline/motive_features.h"
 
-void analysis_outer_note_destroy(AnalysisOuterNote *note) {
+/* Frees an outer note's strings and clears it. */
+static void analysis_outer_note_destroy(AnalysisOuterNote *note) {
     if (!note) {
         return;
     }
@@ -14,7 +15,8 @@ void analysis_outer_note_destroy(AnalysisOuterNote *note) {
     *note = (AnalysisOuterNote){ANALYSIS_OUTER_ABSENT, 0, 0, false, NULL, NULL};
 }
 
-void analysis_roman_numeral_destroy(AnalysisRomanNumeral *roman) {
+/* Frees a Roman numeral's strings and clears it. */
+static void analysis_roman_numeral_destroy(AnalysisRomanNumeral *roman) {
     if (!roman) {
         return;
     }

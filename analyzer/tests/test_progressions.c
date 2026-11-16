@@ -266,7 +266,7 @@ static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes 
         failures++;
         return NULL;
     }
-    char *json = analysis_document_render(path, notes, report);
+    char *json = test_render_document(path, notes, report);
     cJSON *document = json ? cJSON_Parse(json) : NULL;
     free(json);
     CHECK(document != NULL);
