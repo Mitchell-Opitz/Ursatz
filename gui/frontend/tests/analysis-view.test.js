@@ -7,7 +7,7 @@
  * the Library/Analysis navigation decisions.
  *
  * Fixture: frontend/tests/fixtures/mozart545.analysis.json is the Analyzer
- * CLI's document (`ursatz-analyzer --json`, schema v11) for
+ * CLI's document (`ursatz-analyzer --json`, schema v12) for
  * library/tests/fixtures/framework-v1-corpus/Mozart 545.mid, cut to
  * its first 6 items per array (and 6 note_ids per claim) to stay small; the
  * structure is untouched.
@@ -158,7 +158,7 @@ check("note_ids" in chordDetail && "span" in chordDetail, "a row's toggle shows 
 const header = tabs.buildAnalysisHeader({ id: "piece-1", filename: "Mozart 545.mid", format: "midi", document: doc, note_xml_ids: [] });
 check(header.filename === "Mozart 545.mid" && header.format === "midi", "the header has the filename and format");
 check(header.analyzerVersion === doc.metadata.analyzer_version, "the header has the analyzer version");
-check(header.ursatzCommit === doc.metadata.ursatz_commit.slice(0, 7) && header.ursatzCommit.length === 7, "the header has the first 7 characters of the Ursatz commit");
+check(header.producerKey === doc.metadata.producer_key.slice(0, 7) && header.producerKey.length === 7, "the header has the first 7 characters of the producer key");
 check(header.noteCount === doc.metadata.note_count && header.measureCount === doc.meter.measure_count, "the header has the note count and meter.measure_count");
 const provenance = tabs.buildProvenanceFields(doc);
 check(

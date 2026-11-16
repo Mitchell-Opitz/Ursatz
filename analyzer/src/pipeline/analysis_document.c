@@ -511,7 +511,7 @@ static cJSON *metadata_json(DocBuild *build, const char *input_path, const Impor
     if (metadata &&
         !(json_add(metadata, "source_file", cJSON_CreateString(path_basename(input_path))) &&
           json_add(metadata, "analyzer_version", cJSON_CreateString(URSATZ_ANALYZER_VERSION)) &&
-          json_add(metadata, "ursatz_commit", cJSON_CreateString(ursatz_analyzer_producer_key())) &&
+          json_add(metadata, "producer_key", cJSON_CreateString(ursatz_analyzer_producer_key())) &&
           json_add(metadata, "note_count", cJSON_CreateNumber((double)notes->count)) &&
           json_add(metadata, "ticks_per_quarter", notes->ticks_per_quarter > 0
                                                  ? cJSON_CreateNumber((double)notes->ticks_per_quarter)
@@ -3884,7 +3884,7 @@ static cJSON *document_json(DocBuild *build, const char *input_path, const Impor
           json_add(document, "rhythm", rhythm_json(build, notes, report)) && json_add(document, "texture", texture_json(build, notes, report)) &&
           json_add(document, "voice_leading", voice_leading_json(build, notes, report)) && json_add(document, "schemas", schemas_json(build, notes, report)) &&
           json_add(document, "progressions", progressions_json(build, notes, report)) && json_add(document, "harmonic_rhythm", harmonic_rhythm_json(build, report)) &&
-          json_add(document, "markings", markings_json(build, notes, report)) && json_add(document, "counterpoint_check", cJSON_CreateNull()) &&
+          json_add(document, "markings", markings_json(build, notes, report))  &&
           json_add(document, "notes", notes_json(build, notes, report)))) {
         cJSON_Delete(document);
         return NULL;

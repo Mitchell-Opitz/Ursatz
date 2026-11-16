@@ -10,7 +10,7 @@
 
 /*
  * analyzer_document_status_of over each status, and analyzer_document_status over a document from the snapshots
- * (which hold no analyzer_version or ursatz_commit; the test sets them) with each key changed in turn.
+ * (which hold no analyzer_version or producer_key; the test sets them) with each key changed in turn.
  */
 
 static int failures;
@@ -45,7 +45,7 @@ static char *read_file(const char *path) {
     return data;
 }
 
-/* The snapshot document with schema_version, metadata.analyzer_version and metadata.ursatz_commit replaced. A NULL
+/* The snapshot document with schema_version, metadata.analyzer_version and metadata.producer_key replaced. A NULL
    string leaves the member out. */
 static char *variant(const char *snapshot, int schema_version, const char *analyzer, const char *commit) {
     char path[1024];
@@ -61,12 +61,12 @@ static char *variant(const char *snapshot, int schema_version, const char *analy
     cJSON_DeleteItemFromObjectCaseSensitive(root, "schema_version");
     cJSON_AddNumberToObject(root, "schema_version", schema_version);
     cJSON_DeleteItemFromObjectCaseSensitive(metadata, "analyzer_version");
-    cJSON_DeleteItemFromObjectCaseSensitive(metadata, "ursatz_commit");
+    cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_key");
     if (analyzer) {
         cJSON_AddStringToObject(metadata, "analyzer_version", analyzer);
     }
     if (commit) {
-        cJSON_AddStringToObject(metadata, "ursatz_commit", commit);
+        cJSON_AddStringToObject(metadata, "producer_key", commit);
     }
     char *printed = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -117,11 +117,14 @@ int main(void) {
     CHECK(analyzer_document_status("") == ANALYZER_DOCUMENT_UNREADABLE, "empty text");
     CHECK(analyzer_document_status("{") == ANALYZER_DOCUMENT_UNREADABLE, "not JSON");
     CHECK(analyzer_document_status("[]") == ANALYZER_DOCUMENT_UNREADABLE, "not an object");
-    CHECK(analyzer_document_status("{\"schema_version\": 11}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
+    CHECK(analyzer_document_status("{\"schema_version\": 12}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
     CHECK(analyzer_document_status("{\"metadata\": {}}") == ANALYZER_DOCUMENT_UNREADABLE, "no schema_version");
     CHECK(analyzer_document_status("{\"schema_version\": \"9\", \"metadata\": {\"analyzer_version\": \"a\", "
-                                   "\"ursatz_commit\": \"b\"}}") == ANALYZER_DOCUMENT_UNREADABLE,
+                                   "\"producer_key\": \"b\"}}") == ANALYZER_DOCUMENT_UNREADABLE,
           "schema_version is not a number");
+    CHECK(analyzer_document_status("{\"schema_version\": 11, \"metadata\": {\"analyzer_version\": \"a\", "
+                                   "\"ursatz_commit\": \"b\"}}") == ANALYZER_DOCUMENT_STALE_SCHEMA,
+          "a v11 document reads stale, not unreadable");
 
     return failures ? 1 : 0;
 }

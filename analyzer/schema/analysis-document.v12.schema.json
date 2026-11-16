@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/analysis-document.v11.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/analysis-document.v12.schema.json",
   "title": "Ursatz-Analyzer analysis document",
   "description": "Structured analysis of one piece. One top-level section per analysis area; unfilled sections are empty arrays, or null for singular sections.",
   "type": "object",
@@ -29,12 +29,11 @@
     "progressions",
     "harmonic_rhythm",
     "markings",
-    "counterpoint_check",
     "notes"
   ],
   "properties": {
     "schema_version": {
-      "const": 11
+      "const": 12
     },
     "metadata": {
       "$ref": "#/$defs/metadata"
@@ -127,7 +126,6 @@
       "oneOf": [{ "$ref": "#/$defs/harmonic_rhythm" }, { "type": "null" }]
     },
     "markings": { "type": ["object", "null"] },
-    "counterpoint_check": { "type": ["object", "null"] },
     "notes": {
       "type": "array",
       "items": { "$ref": "#/$defs/note" }
@@ -139,7 +137,7 @@
       "required": [
         "source_file",
         "analyzer_version",
-        "ursatz_commit",
+        "producer_key",
         "note_count",
         "ticks_per_quarter",
         "input",
@@ -149,7 +147,7 @@
       "properties": {
         "source_file": { "type": "string" },
         "analyzer_version": { "type": "string" },
-        "ursatz_commit": { "type": "string" },
+        "producer_key": { "type": "string" },
         "note_count": { "type": "integer", "minimum": 0 },
         "ticks_per_quarter": {
           "type": ["integer", "null"],

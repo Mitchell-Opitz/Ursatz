@@ -215,7 +215,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
 
 /*
  * Makes a piece's stored analysis current, under the piece lock. A meta.json without ursatz_commit gets it from the
- * stored analysis.json's metadata.ursatz_commit (written back). When analyzer_document_status of analysis.json is
+ * stored analysis.json's metadata.producer_key (written back). When analyzer_document_status of analysis.json is
  * not CURRENT (another schema, Analyzer version or Ursatz commit, or unreadable), the piece is analyzed again as in
  * ursatz_gui_analysis_reanalyze. OK when the stored analysis is current afterwards; otherwise the failure of the new
  * analysis, with the stored files unchanged. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.

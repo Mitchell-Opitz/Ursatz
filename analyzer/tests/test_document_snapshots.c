@@ -16,7 +16,7 @@
  * (Ursatz framework-v1 corpus, MIDI files). Each piece runs import ->
  * pipeline -> analysis document and is compared with
  * tests/snapshots/<slug>.analysis.json after the run-dependent metadata
- * members (analyzer_version, ursatz_commit, input) are removed. With
+ * members (analyzer_version, producer_key, input) are removed. With
  * UPDATE_SNAPSHOTS=1 (or URSATZ_UPDATE_SNAPSHOTS=1) in the environment the
  * golden files are rewritten instead.
  */
@@ -57,7 +57,7 @@ static char *render_piece(const char *fixture) {
     cJSON *metadata = cJSON_GetObjectItemCaseSensitive(root, "metadata");
     if (cJSON_IsObject(metadata)) {
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "analyzer_version");
-        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "ursatz_commit");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_key");
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "input");
     }
     char *text = cJSON_Print(root);

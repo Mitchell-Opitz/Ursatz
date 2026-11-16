@@ -78,7 +78,7 @@ static void strip_run_metadata(cJSON *root) {
     cJSON *metadata = cJSON_GetObjectItemCaseSensitive(root, "metadata");
     if (cJSON_IsObject(metadata)) {
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "analyzer_version");
-        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "ursatz_commit");
+        cJSON_DeleteItemFromObjectCaseSensitive(metadata, "producer_key");
         cJSON_DeleteItemFromObjectCaseSensitive(metadata, "input");
     }
 }

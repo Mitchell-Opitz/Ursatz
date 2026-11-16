@@ -1041,15 +1041,15 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
 }
 
 /* Appends text to *out (grown with realloc) with the XML characters escaped. */
-/* A meta.json without ursatz_commit gets it from the stored document's metadata.ursatz_commit, written back.
-   Without either, meta.json stays as it is. */
+/* A meta.json without ursatz_commit gets it from the stored document's metadata.producer_key, written back (meta.json
+   keeps the member name ursatz_commit). Without either, meta.json stays as it is. */
 static void meta_backfill_ursatz_commit(const char *dir_path, cJSON *meta, const char *document_json) {
     if (!document_json || cJSON_IsString(cJSON_GetObjectItemCaseSensitive(meta, "ursatz_commit"))) {
         return;
     }
     cJSON *document = cJSON_Parse(document_json);
     const cJSON *metadata = document ? cJSON_GetObjectItemCaseSensitive(document, "metadata") : NULL;
-    const cJSON *commit = metadata ? cJSON_GetObjectItemCaseSensitive(metadata, "ursatz_commit") : NULL;
+    const cJSON *commit = metadata ? cJSON_GetObjectItemCaseSensitive(metadata, "producer_key") : NULL;
     if (cJSON_IsString(commit) && meta_set_string(meta, "ursatz_commit", commit->valuestring)) {
         char *text = cJSON_Print(meta);
         if (text) {

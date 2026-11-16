@@ -110,7 +110,7 @@ int main(void) {
 
     char *json = analysis_document_render(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 11,\n", 26) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 12,\n", 26) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = analysis_document_render(path, &notes, &report);
@@ -125,13 +125,13 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 11);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 12);
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(cJSON_IsObject(metadata));
     assert(strcmp(string(metadata, "source_file"), strrchr(path, '/') + 1) == 0);
     assert(strlen(string(metadata, "analyzer_version")) > 0);
-    assert(strlen(string(metadata, "ursatz_commit")) > 0);
+    assert(strlen(string(metadata, "producer_key")) > 0);
     assert(number(metadata, "note_count") == 11);
     assert(number(metadata, "ticks_per_quarter") == 96);
     assert(cJSON_IsTrue(test_json_require(metadata, "key_found")));
@@ -152,7 +152,7 @@ int main(void) {
                                                                 : cJSON_IsObject(test_json_require(document, "form")));
     assert(cJSON_IsObject(test_json_require(document, "harmonic_rhythm")));
     assert(cJSON_IsObject(test_json_require(document, "markings")));
-    assert(cJSON_IsNull(test_json_require(document, "counterpoint_check")));
+    assert(cJSON_GetObjectItemCaseSensitive(document, "counterpoint_check") == NULL);
     static const char *const EMPTY_SECTIONS[] = {"cadences", "motives", "schemas", "progressions"};
     for (size_t i = 0; i < sizeof(EMPTY_SECTIONS) / sizeof(EMPTY_SECTIONS[0]); i++) {
         const cJSON *section = test_json_require(document, EMPTY_SECTIONS[i]);
