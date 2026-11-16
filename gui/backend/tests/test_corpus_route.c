@@ -1,9 +1,9 @@
 /* Confirms the Collections routes end to end (they keep the /api/corpus
  * paths): create with a description, list order, read, rename, delete, bulk
  * add, removal, the cleanup when a piece is deleted, persistence across a
- * restart, and the one-time import of the old data/corpus.db. Uses a plain
- * TCP socket for the HTTP requests, same as test_analyzer_route.c. Runs in its own working directory (collections/,
- * pieces/ and data/ are created there). */
+ * restart. Uses a plain TCP socket for the HTTP requests, same as
+ * test_analyzer_route.c. Runs in its own working directory (collections/ and
+ * pieces/ are created there). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <corpus/corpus_api.h>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -135,9 +134,9 @@ static bool extract_id(const char *response, char *out, size_t out_size) {
 
 static void reset_directories(void) {
 #ifdef _WIN32
-  system("rmdir /s /q collections pieces data 2> nul");
+  system("rmdir /s /q collections pieces 2> nul");
 #else
-  system("rm -rf collections pieces data");
+  system("rm -rf collections pieces");
 #endif
 }
 
@@ -163,53 +162,11 @@ static bool file_exists(const char *path) {
   return false;
 }
 
-static void test_import(void) {
-  printf("-- import from the old corpus store\n");
-  reset_directories();
-  MKDIR("data");
-  MKDIR("pieces");
-  make_piece("piece-a");
-
-  CorpusStoreHandle *handle = NULL;
-  check(corpus_api_open("data/corpus.db", &handle) == CORPUS_API_OK, "old corpus.db opens");
-  if (!handle) {
-    return;
-  }
-  check(corpus_api_create_corpus(handle, "old-one", "Old One") == CORPUS_API_OK, "old corpus created");
-  check(corpus_api_create_corpus(handle, "old-two", "Old Two") == CORPUS_API_OK, "second old corpus created");
-  check(corpus_api_add_piece_ref(handle, "old-one", "piece-a") == CORPUS_API_OK, "existing piece ref added");
-  check(corpus_api_add_piece_ref(handle, "old-one", "piece-gone") == CORPUS_API_OK, "missing piece ref added");
-  corpus_api_close(handle);
-
-  struct mg_context *ctx = ursatz_gui_server_start("18767", ".");
-  check(ctx != NULL, "server starts and imports");
-  if (!ctx) {
-    return;
-  }
-  sleep_ms(200);
-
-  char response[8192];
-  check(http_request("GET", "/api/corpus", NULL, response, sizeof(response)), "import: list got a response");
-  check(has(response, "\"id\":\"old-one\"") && has(response, "\"name\":\"Old One\""), "import: first corpus listed");
-  check(has(response, "\"id\":\"old-two\""), "import: second corpus listed");
-  check(http_request("GET", "/api/corpus/old-one/pieces", NULL, response, sizeof(response)),
-        "import: pieces got a response");
-  check(has(response, "\"id\":\"piece-a\""), "import: existing piece kept");
-  check(!has(response, "piece-gone"), "import: missing piece dropped");
-  check(file_exists("collections/.imported-from-corpus-db"), "import: marker file written");
-  check(file_exists("data/corpus.db"), "import: old corpus.db left in place");
-
-  ursatz_gui_server_stop(ctx);
-  reset_directories();
-}
-
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
   WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
-
-  test_import();
 
   printf("-- collection routes\n");
   reset_directories();

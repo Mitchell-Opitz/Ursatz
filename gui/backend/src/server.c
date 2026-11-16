@@ -19,7 +19,6 @@ static const char *kCollectionsDir = "collections";
 static const char *kMaterialsDir = "materials";
 static const char *kSubjectsDir = "subjects";
 static const char *kLinksDir = "links";
-static const char *kLegacyCorpusDbPath = "data/corpus.db";
 
 struct mg_context *ursatz_gui_server_start(const char *listen_port,
                                             const char *frontend_dir) {
@@ -32,7 +31,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
 
   /* Collections are files under collections/ (see
    * service/collection_service.h); the store is prepared once here. */
-  if (!ursatz_gui_collection_service_init(kCollectionsDir, kLegacyCorpusDbPath)) {
+  if (!ursatz_gui_collection_service_init(kCollectionsDir)) {
     return NULL;
   }
 

@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Fails when backend/src or backend/include includes an Ursatz header other than persistence/persistence.h in
-# persistence_service.c and corpus/corpus_api.h in collection_service.c (the storage edge, R-218), an Analyzer header
-# outside ursatz_analyzer/, a Composer header other than ursatz_composer/composer_api.h, or any *_internal.h. Prints each
-# offending line. Run after the build; the build directory is the first argument (it must exist).
+# Fails when backend/src or backend/include includes an Ursatz header, an Analyzer header outside ursatz_analyzer/, a
+# Composer header other than ursatz_composer/composer_api.h, or any *_internal.h. Prints each offending line. Run after
+# the build; the build directory is the first argument (it must exist).
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -58,13 +57,7 @@ while IFS=: read -r file line text; do
     if submodule_has ../library "$name"; then
         case "$name" in
             *_internal.h) report "$file" "$line" "$name" "internal header of Ursatz" ;;
-            persistence/persistence.h)
-                [ "$(basename "$file")" = persistence_service.c ] || report "$file" "$line" "$name" "storage edge header outside persistence_service.c"
-                ;;
-            corpus/corpus_api.h)
-                [ "$(basename "$file")" = collection_service.c ] || report "$file" "$line" "$name" "storage edge header outside collection_service.c"
-                ;;
-            *) report "$file" "$line" "$name" "Ursatz header outside the storage edge" ;;
+            *) report "$file" "$line" "$name" "Ursatz header" ;;
         esac
     fi
 done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' backend/src backend/include || true)
@@ -72,4 +65,4 @@ done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' backend/s
 if [ "$failed" = 1 ]; then
     exit 1
 fi
-echo "OK backend includes only app APIs and the storage edge"
+echo "OK backend includes only app APIs"

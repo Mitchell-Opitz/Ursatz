@@ -19,7 +19,7 @@ target_compile_definitions(test_analyzer_route PRIVATE
 )
 
 ursatz_gui_add_test(corpus_route test_corpus_route.c ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
-# The test creates collections/, pieces/ and data/ in its own working directory.
+# The test creates collections/ and pieces/ in its own working directory.
 
 ursatz_gui_add_test(piece_metadata test_piece_metadata.c ${CMAKE_CURRENT_BINARY_DIR}/piece_metadata)
 

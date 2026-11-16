@@ -299,7 +299,7 @@ int main(void) {
 #endif
     MKDIR("pieces");
     MKDIR("data");
-    CHECK(ursatz_gui_collection_service_init("collections", "data/corpus.db"), "init collections");
+    CHECK(ursatz_gui_collection_service_init("collections"), "init collections");
     CHECK(ursatz_gui_material_service_init(g_materials), "init materials");
     CHECK(ursatz_gui_subject_service_init(g_subjects), "init subjects");
     CHECK(ursatz_gui_link_service_init("links"), "init links");
