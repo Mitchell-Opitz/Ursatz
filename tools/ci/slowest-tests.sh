@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prints the ten slowest tests from ctest's cost data as "seconds  name", and a GitHub
 # ::warning:: line for each fast-set (not labeled slow) test over 10 s (R-307).
-# Usage: scripts/slowest-tests.sh <build-dir>. Always exits 0.
+# Usage: tools/ci/slowest-tests.sh <build-dir>. Always exits 0.
 build_dir="${1:-build}"
 cost_file="$build_dir/Testing/Temporary/CTestCostData.txt"
 

@@ -3,7 +3,8 @@
 # stage inputs through the analysis_chain_* accessors and never builds them again. Prints each offending line.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$root/analyzer"
 
 failed=0
 while IFS= read -r hit; do

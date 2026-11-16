@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Docs check: README size, doc size, relative links and anchors, docs index coverage.
+# Docs check of one part: tools/ci/check-docs.sh <part>. README size, doc size, relative links and anchors, docs index coverage.
 # Exit 0 with no output when clean.
-cd "$(dirname "$0")/.." || exit 1
+cd "$(dirname "$0")/../../${1:?usage: tools/ci/check-docs.sh <part>}" || exit 1
 exec python3 - <<'PY'
 import os, re, sys
 

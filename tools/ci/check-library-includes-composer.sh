@@ -7,9 +7,10 @@
 # ../analyzer/src. Prints each offending line. Run after the build; the build directory is the first argument.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$root/composer"
 
-build="${1:-../build}"
+build="$(cd "$root" && cd "${1:-build}" && pwd)"
 manifest="$build/library/public/manifest.txt"
 if [ ! -f "$manifest" ]; then
     echo "FAIL $manifest not found (build first)" >&2
@@ -32,7 +33,7 @@ ursatz_has() {
     # True when ../library holds a file whose path ends with the include name.
     local name="$1" base
     base="$(basename "$name")"
-    find ../library -name "$base" -not -path '*/.git/*' -not -path '../library/external/*' 2>/dev/null |
+    find ../library -name "$base" -not -path '*/.git/*' 2>/dev/null |
         grep -q "/$name\$"
 }
 
@@ -40,7 +41,7 @@ analyzer_has() {
     # True when ../analyzer holds a file whose path ends with the include name.
     local name="$1" base
     base="$(basename "$name")"
-    find ../analyzer -name "$base" -not -path '*/.git/*' -not -path '../analyzer/external/*' 2>/dev/null |
+    find ../analyzer -name "$base" -not -path '*/.git/*' 2>/dev/null |
         grep -q "/$name\$"
 }
 
@@ -61,7 +62,7 @@ fi
 while IFS=: read -r file line text; do
     name="$(printf '%s' "$text" | sed -E 's/^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]([^">]+)[">].*/\1/')"
     local_found=0
-    for dir in src src/include include cli "$(dirname "$file")" external/cjson; do
+    for dir in src src/include include cli "$(dirname "$file")" ../third_party/cjson; do
         if [ -e "$dir/$name" ]; then
             local_found=1
             break
