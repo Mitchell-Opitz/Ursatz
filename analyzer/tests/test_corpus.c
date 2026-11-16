@@ -132,9 +132,9 @@ static char *masked_index(const char *output) {
         if (strncmp(line, "  \"input_dir\": ", 15) == 0) {
             key = "  \"input_dir\": ";
             replacement = "\"<input_dir>\",";
-        } else if (strncmp(line, "  \"ursatz_commit\": ", 18) == 0) {
-            key = "  \"ursatz_commit\": ";
-            replacement = "\"<ursatz_commit>\",";
+        } else if (strncmp(line, "  \"producer_key\": ", 18) == 0) {
+            key = "  \"producer_key\": ";
+            replacement = "\"<producer_key>\",";
         } else if (strncmp(line, "      \"content_hash\": ", 22) == 0) {
             key = "      \"content_hash\": ";
             replacement = "\"<hash>\",";
@@ -334,19 +334,54 @@ static void test_resume_changes(const char *work) {
     }
     free(text);
 
-    /* An index from another Ursatz commit reuses nothing either. */
+    /* An index from another producer key reuses nothing either. */
     text = read_file(path, NULL);
-    at = text ? strstr(text, "\"ursatz_commit\": \"") : NULL;
-    CHECK(at != NULL, "no ursatz_commit in the index");
+    at = text ? strstr(text, "\"producer_key\": \"") : NULL;
+    CHECK(at != NULL, "no producer_key in the index");
     if (at) {
-        at[18] = at[18] == 'X' ? 'Y' : 'X';
+        at[17] = at[17] == 'X' ? 'Y' : 'X';
         CHECK(write_file(path, text, strlen(text), "wb"), "cannot rewrite the index");
         summary = run(input, output, true, &result);
-        CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across commits: %zu analyzed, %zu skipped",
+        CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across keys: %zu analyzed, %zu skipped",
               summary.analyzed, summary.skipped);
         summary = run(input, output, true, &result);
-        CHECK(summary.analyzed == 0 && summary.skipped == 1, "resume under the same commit: %zu analyzed, %zu skipped",
+        CHECK(summary.analyzed == 0 && summary.skipped == 1, "resume under the same key: %zu analyzed, %zu skipped",
               summary.analyzed, summary.skipped);
+    }
+    free(text);
+
+    /* An index of schema version 1 (it keeps ursatz_commit) reuses nothing and is written again, not refused. */
+    text = read_file(path, NULL);
+    char *version_at = text ? strstr(text, "\"schema_version\": 2") : NULL;
+    char *key_at = text ? strstr(text, "\"producer_key\"") : NULL;
+    CHECK(version_at != NULL && key_at != NULL && version_at < key_at, "no schema_version 2 and producer_key in the index");
+    if (version_at && key_at && version_at < key_at) {
+        const char *old_key = "\"producer_key\"";
+        const char *v1_key = "\"ursatz_commit\"";
+        char *v1 = malloc(strlen(text) + strlen(v1_key) + 1);
+        if (v1) {
+            size_t head = (size_t)(version_at - text);
+            size_t before_key = (size_t)(key_at - text);
+            memcpy(v1, text, head);
+            memcpy(v1 + head, "\"schema_version\": 1", strlen("\"schema_version\": 1"));
+            size_t cursor = head + strlen("\"schema_version\": 1");
+            size_t middle = before_key - (head + strlen("\"schema_version\": 2"));
+            memcpy(v1 + cursor, version_at + strlen("\"schema_version\": 2"), middle);
+            cursor += middle;
+            memcpy(v1 + cursor, v1_key, strlen(v1_key));
+            cursor += strlen(v1_key);
+            strcpy(v1 + cursor, key_at + strlen(old_key));
+            CHECK(write_file(path, v1, strlen(v1), "wb"), "cannot rewrite the index as version 1");
+            free(v1);
+            summary = run(input, output, true, &result);
+            CHECK(result == CORPUS_RUN_OK && summary.analyzed == 1 && summary.skipped == 0,
+                  "resume over a version 1 index: %zu analyzed, %zu skipped", summary.analyzed, summary.skipped);
+            cJSON *rewritten = read_index(output);
+            const cJSON *rewritten_version = cJSON_GetObjectItemCaseSensitive(rewritten, "schema_version");
+            CHECK(cJSON_IsNumber(rewritten_version) && rewritten_version->valuedouble == 2,
+                  "the version 1 index was not written again as version 2");
+            cJSON_Delete(rewritten);
+        }
     }
     free(text);
 

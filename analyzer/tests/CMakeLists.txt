@@ -421,7 +421,7 @@ add_test(NAME test_corpus_index_schema
                  -DPYTHON=${Python3_EXECUTABLE}
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v1.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v2.schema.json
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/corpus_index_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_corpus_index.cmake)
@@ -568,7 +568,7 @@ add_test(NAME test_cli_link_motives
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                  -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
-                 -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v1.schema.json
+                 -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v2.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
 

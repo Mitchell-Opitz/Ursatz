@@ -127,16 +127,17 @@ typedef struct {
     size_t pairs;    /* considered */
     size_t compared; /* run through the recognizer now */
     size_t cached;   /* taken from the cache */
-    bool cache_reset; /* the cache was for another Ursatz commit, analyzer version or set of link options and was emptied */
+    bool cache_reset; /* the cache was for another producer key, analyzer version or set of link options (or an older schema) and was emptied */
 } MotiveLinks;
 
 /*
  * The cache of compared pairs, kept by the two sketches' fingerprints so one cache serves every scope (R-156): a pair
- * compared for one scope is not compared again for another. It is valid only for the Ursatz commit, analyzer version and
+ * compared for one scope is not compared again for another. It is valid only for the producer key, analyzer version and
  * link options it was made with; motive_links_run empties one that differs and says so (MotiveLinks.cache_reset).
  *
- * Load: a file that does not exist is an empty cache. Save: written to <path>.tmp and renamed over path. The file
- * follows schema/motive-link-cache.v1.schema.json.
+ * Load: a file that does not exist is an empty cache, and so is a file of an older schema version (it is keyed with
+ * nothing, so the next run empties it and says so). Save: written to <path>.tmp and renamed over path. The file
+ * follows schema/motive-link-cache.v2.schema.json.
  */
 MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out);
 MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const char *path);

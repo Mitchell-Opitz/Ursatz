@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/motive-link-cache.v1.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/motive-link-cache.v2.schema.json",
   "title": "Ursatz-Analyzer motive link cache",
-  "description": "The motive pairs compared so far, keyed by the fingerprints of the two sketches, so one cache serves every scope. Valid only for the Ursatz commit, analyzer version and link options it records; a run with others empties it.",
+  "description": "The motive pairs compared so far, keyed by the fingerprints of the two sketches, so one cache serves every scope. Valid only for the producer key, analyzer version and link options it records; a run with others empties it, and so does a cache of an older schema version.",
   "type": "object",
-  "required": ["schema", "schema_version", "ursatz_commit", "analyzer_version", "options", "pairs"],
+  "required": ["schema", "schema_version", "producer_key", "analyzer_version", "options", "pairs"],
   "additionalProperties": false,
   "properties": {
     "schema": { "const": "ursatz-motive-link-cache" },
-    "schema_version": { "const": 1 },
-    "ursatz_commit": { "type": "string" },
+    "schema_version": { "const": 2 },
+    "producer_key": { "type": "string" },
     "analyzer_version": { "type": "string" },
     "options": {
       "type": "object",

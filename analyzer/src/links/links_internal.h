@@ -23,7 +23,7 @@ typedef struct {
 
 struct MotiveLinkCache {
     bool keyed; /* the three fields below were read from a file or set by a run */
-    char *ursatz_commit;
+    char *producer_key;
     char *analyzer_version;
     MotiveLinkOptions options;
     MotiveLinkCachePair *pairs; /* sorted by (a, b) */

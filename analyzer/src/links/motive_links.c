@@ -673,7 +673,7 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
     free(linked);
     if (!cache) {
         free(local.pairs);
-        free(local.ursatz_commit);
+        free(local.producer_key);
         free(local.analyzer_version);
     }
     return result;

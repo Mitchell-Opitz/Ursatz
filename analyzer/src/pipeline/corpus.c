@@ -343,9 +343,9 @@ static char *render_index(const char *input_dir, const char *const *paths, const
     size_t capacity = 0;
     char number[64];
     bool ok = append_text(&out, &length, &capacity,
-                          "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 1,\n"
+                          "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 2,\n"
                           "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
-                          "  \"ursatz_commit\": \"") &&
+                          "  \"producer_key\": \"") &&
               append_text(&out, &length, &capacity, ursatz_analyzer_producer_key()) &&
               append_text(&out, &length, &capacity, "\",\n") &&
               (snprintf(number, sizeof(number), "  \"document_schema_version\": %d,\n",
@@ -392,8 +392,9 @@ static char *render_index(const char *input_dir, const char *const *paths, const
 /* ---- Resume ---- */
 
 /* Reads the index left by an earlier run. *out is NULL when there is no index, or when it was written by another
-   analyzer, document schema version or Ursatz commit (nothing in it can be reused). An index that exists but cannot be read is
-   CORPUS_RUN_ERR_INDEX. */
+   analyzer, document schema version or producer key (nothing in it can be reused; an index of schema version 1 holds
+   ursatz_commit instead of producer_key, so it reuses nothing and is written again). An index that exists but cannot be
+   read is CORPUS_RUN_ERR_INDEX. */
 static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) {
     *out = NULL;
     char *path = corpus_join(output_dir, INDEX_NAME);
@@ -419,11 +420,11 @@ static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) 
     free(path);
 
     const cJSON *analyzer_version = cJSON_GetObjectItemCaseSensitive(root, "analyzer_version");
-    const cJSON *ursatz_commit = cJSON_GetObjectItemCaseSensitive(root, "ursatz_commit");
+    const cJSON *producer_key = cJSON_GetObjectItemCaseSensitive(root, "producer_key");
     const cJSON *document_schema = cJSON_GetObjectItemCaseSensitive(root, "document_schema_version");
-    if (!cJSON_IsString(analyzer_version) || !cJSON_IsString(ursatz_commit) || !cJSON_IsNumber(document_schema) ||
+    if (!cJSON_IsString(analyzer_version) || !cJSON_IsString(producer_key) || !cJSON_IsNumber(document_schema) ||
         analyzer_document_status_of((int)document_schema->valuedouble, analyzer_version->valuestring,
-                                    ursatz_commit->valuestring) != ANALYZER_DOCUMENT_CURRENT) {
+                                    producer_key->valuestring) != ANALYZER_DOCUMENT_CURRENT) {
         cJSON_Delete(root);
         return CORPUS_RUN_OK;
     }

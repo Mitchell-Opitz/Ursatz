@@ -14,7 +14,7 @@
 #include "util/misc_util.h"
 
 #define CACHE_SCHEMA "ursatz-motive-link-cache"
-#define CACHE_SCHEMA_VERSION 1
+#define CACHE_SCHEMA_VERSION 2
 
 static const char *const dimension_keys[MOTIVE_DIMENSION_COUNT] = {"rhythm", "intervals", "contour", "harmony"};
 
@@ -82,8 +82,8 @@ static bool options_equal(const MotiveLinkOptions *a, const MotiveLinkOptions *b
 
 bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *options, bool *reset) {
     *reset = false;
-    if (cache->keyed && cache->ursatz_commit && cache->analyzer_version &&
-        strcmp(cache->ursatz_commit, ursatz_analyzer_producer_key()) == 0 &&
+    if (cache->keyed && cache->producer_key && cache->analyzer_version &&
+        strcmp(cache->producer_key, ursatz_analyzer_producer_key()) == 0 &&
         strcmp(cache->analyzer_version, URSATZ_ANALYZER_VERSION) == 0 && options_equal(&cache->options, options)) {
         return true;
     }
@@ -98,9 +98,9 @@ bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *
         cache->count = 0;
         *reset = true;
     }
-    free(cache->ursatz_commit);
+    free(cache->producer_key);
     free(cache->analyzer_version);
-    cache->ursatz_commit = commit;
+    cache->producer_key = commit;
     cache->analyzer_version = version;
     cache->options = *options;
     cache->keyed = true;
@@ -112,7 +112,7 @@ void motive_link_cache_destroy(MotiveLinkCache *cache) {
         return;
     }
     free(cache->pairs);
-    free(cache->ursatz_commit);
+    free(cache->producer_key);
     free(cache->analyzer_version);
     free(cache);
 }
@@ -184,12 +184,25 @@ static bool read_pair(const cJSON *entry, MotiveLinkCachePair *pair) {
 static MotiveLinksResult read_cache(const cJSON *root, MotiveLinkCache *cache) {
     const cJSON *schema = json_member(root, "schema");
     const cJSON *version = json_member(root, "schema_version");
-    const cJSON *commit = json_member(root, "ursatz_commit");
+    const cJSON *commit = json_member(root, "producer_key");
     const cJSON *analyzer = json_member(root, "analyzer_version");
     const cJSON *options = json_member(root, "options");
     const cJSON *pairs = json_member(root, "pairs");
     const cJSON *contour = json_member(options, "contour");
     const cJSON *nearness = json_member(options, "min_nearness");
+    if (cJSON_IsString(schema) && strcmp(schema->valuestring, CACHE_SCHEMA) == 0 && cJSON_IsNumber(version) &&
+        version->valuedouble < CACHE_SCHEMA_VERSION) {
+        /* A cache of an older schema version (it keys itself by ursatz_commit) reads as an empty cache keyed with
+           nothing, so the next run starts it again and reports cache_reset. */
+        cache->producer_key = text_copy("");
+        cache->analyzer_version = text_copy("");
+        motive_link_options_default(&cache->options);
+        if (!cache->producer_key || !cache->analyzer_version) {
+            return MOTIVE_LINKS_ERR_ALLOC;
+        }
+        cache->keyed = true;
+        return MOTIVE_LINKS_OK;
+    }
     if (!cJSON_IsString(schema) || strcmp(schema->valuestring, CACHE_SCHEMA) != 0 || !cJSON_IsNumber(version) ||
         version->valuedouble != CACHE_SCHEMA_VERSION || !cJSON_IsString(commit) || !cJSON_IsString(analyzer) ||
         !whole_number(json_member(options, "max_depth"), &cache->options.max_depth) ||
@@ -199,9 +212,9 @@ static MotiveLinksResult read_cache(const cJSON *root, MotiveLinkCache *cache) {
     }
     cache->options.min_nearness = nearness->valuedouble;
     cache->options.contour = cJSON_IsTrue(contour);
-    cache->ursatz_commit = text_copy(commit->valuestring);
+    cache->producer_key = text_copy(commit->valuestring);
     cache->analyzer_version = text_copy(analyzer->valuestring);
-    if (!cache->ursatz_commit || !cache->analyzer_version) {
+    if (!cache->producer_key || !cache->analyzer_version) {
         return MOTIVE_LINKS_ERR_ALLOC;
     }
     cache->keyed = true;
@@ -316,8 +329,8 @@ MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const cha
     }
     bool ok = cJSON_AddStringToObject(root, "schema", CACHE_SCHEMA) &&
               cJSON_AddNumberToObject(root, "schema_version", CACHE_SCHEMA_VERSION) &&
-              cJSON_AddStringToObject(root, "ursatz_commit",
-                                      cache->keyed ? cache->ursatz_commit : ursatz_analyzer_producer_key()) &&
+              cJSON_AddStringToObject(root, "producer_key",
+                                      cache->keyed ? cache->producer_key : ursatz_analyzer_producer_key()) &&
               cJSON_AddStringToObject(root, "analyzer_version",
                                       cache->keyed ? cache->analyzer_version : URSATZ_ANALYZER_VERSION) &&
               cJSON_AddNumberToObject(object, "max_depth", (double)options->max_depth) &&

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/corpus-index.v1.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/corpus-index.v2.schema.json",
   "title": "Ursatz-Analyzer corpus index",
   "description": "The pieces of one corpus run, in path order, with the analysis document written for each.",
   "type": "object",
@@ -8,6 +8,7 @@
     "schema",
     "schema_version",
     "analyzer_version",
+    "producer_key",
     "document_schema_version",
     "input_dir",
     "pieces"
@@ -15,12 +16,12 @@
   "additionalProperties": false,
   "properties": {
     "schema": { "const": "ursatz-corpus-index" },
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "analyzer_version": { "type": "string", "minLength": 1 },
-    "ursatz_commit": {
+    "producer_key": {
       "type": "string",
       "minLength": 1,
-      "description": "The Ursatz commit the run was analyzed against. Absent from indexes written before P24; such an index is stale."
+      "description": "The producer key the run was analyzed against (ursatz_analyzer_producer_key). An index of schema version 1 holds it as ursatz_commit and is stale."
     },
     "document_schema_version": { "type": "integer", "minimum": 1 },
     "input_dir": { "type": "string" },

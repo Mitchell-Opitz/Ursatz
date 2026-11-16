@@ -322,6 +322,26 @@ int main(void) {
     CHECK(shallow.link_count == 2); /* a-b (augment) and a-d (invert) are single steps; b-d needs two */
     motive_links_destroy(&shallow);
 
+    /* a cache of schema version 1 (keyed by ursatz_commit) loads as an empty cache and is emptied by the next run */
+    CHECK(motive_link_cache_save(cache, cache_path) == MOTIVE_LINKS_OK);
+    char *current = read_text(cache_path);
+    char *version_at = current ? strstr(current, "\"schema_version\":\t2") : NULL;
+    CHECK(version_at != NULL);
+    if (version_at) {
+        version_at[strlen("\"schema_version\":\t")] = '1';
+        CHECK(write_text(cache_path, current));
+    }
+    free(current);
+    MotiveLinkCache *older = NULL;
+    CHECK(motive_link_cache_load(cache_path, &older) == MOTIVE_LINKS_OK && older != NULL);
+    if (older) {
+        MotiveLinks restarted;
+        CHECK(motive_links_run(scope, older, &options, &restarted) == MOTIVE_LINKS_OK);
+        CHECK(restarted.cache_reset && restarted.compared == restarted.pairs && restarted.cached == 0);
+        motive_links_destroy(&restarted);
+        motive_link_cache_destroy(older);
+    }
+
     /* a file that is not a cache is refused */
     CHECK(write_text(cache_path, "{\"schema\": \"other\"}"));
     MotiveLinkCache *refused = NULL;
