@@ -9,7 +9,6 @@
 #include <ursatz_composer/harmony_prolong.h>
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
-#include <ursatz_composer/harmony_octave.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -534,7 +533,7 @@ static void test_prolongation_part_cells(void) {
                 memset(&config, 0, sizeof(config));
                 config.seed = seed;
                 config.checker = harmony_prolong_checker;
-                assert(harmony_prolong_register(registry) == FILL_OK);
+                assert(harmony_prolong_register_given(registry) == FILL_OK);
                 assert(fill_run(fixture.plan, registry, &config, &outcome, NULL) == FILL_OK);
                 if (outcome.status == FILL_STATUS_COMPLETE) {
                     LaneSpanId ids[MAX_CHORDS];
@@ -574,64 +573,6 @@ static void test_schemas_skip_part_cells(void) {
     }
 }
 
-/* The harmony from a Given bass whose notes last whole cells from a span that starts and ends between cells. */
-static void test_octave_on_beat_spans(void) {
-    /* Tonic, step up, tonic: the lengths in beats of the three notes, for spans of 7 beats from beat 1 and beat 2. */
-    static const struct {
-        int start;
-        int lengths[3];
-    } SPANS[] = {{0, {4, 2, 1}}, {1, {1, 4, 2}}, {2, {2, 4, 1}}};
-    static const int PITCHES[3] = {48, 50, 48};
-    for (size_t w = 0; w < sizeof(SPANS) / sizeof(SPANS[0]); w++) {
-        for (unsigned long seed = 0; seed < 4; seed++) {
-            Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, SPANS[w].start, 7, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
-            Fixture fixture = build(&scenario, false);
-            PlanNote notes[3];
-            Rational position = fraction(0, 1);
-            for (int n = 0; n < 3; n++) {
-                notes[n].midi = PITCHES[n];
-                notes[n].spelled = false;
-                notes[n].offset = position;
-                notes[n].duration = beats(&scenario, SPANS[w].lengths[n]);
-                assert(rational_add(position, notes[n].duration, &position) == RATIONAL_OK);
-            }
-            PlanLanePayload payload;
-            LaneSpanId bass;
-            memset(&payload, 0, sizeof(payload));
-            payload.notes.notes = notes;
-            payload.notes.note_count = 3;
-            assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_BASS, 0, fixture.span, &payload,
-                                      &bass) == PLAN_OK);
-            assert(plan_lane_span_set_state(fixture.plan, bass, PLAN_STATE_GIVEN) == PLAN_OK);
-            assert(plan_lane_span_remove_constraint(fixture.plan, fixture.target, 0) == PLAN_OK);
-
-            FillOperatorRegistry *registry = fill_registry_create();
-            FillConfig config;
-            FillOutcome outcome;
-            memset(&config, 0, sizeof(config));
-            config.seed = seed;
-            config.checker = harmony_phrase_checker;
-            assert(harmony_octave_register(registry) == FILL_OK);
-            assert(fill_run(fixture.plan, registry, &config, &outcome, NULL) == FILL_OK);
-            assert(outcome.status == FILL_STATUS_COMPLETE);
-            /* One chord for each note, on the notes' spans. */
-            LaneSpanId ids[MAX_CHORDS];
-            Cells cells = cells_of(&scenario);
-            assert(check_lane_tiles(&fixture, &scenario, &cells, PLAN_LANE_HARMONY, ids) == 3);
-            Rational at = fixture.span.start;
-            for (int n = 0; n < 3; n++) {
-                PlanSpan chord = plan_lane_span_span(fixture.plan, ids[n]);
-                assert(rational_cmp(chord.start, at) == 0);
-                assert(rational_cmp(chord.length, beats(&scenario, SPANS[w].lengths[n])) == 0);
-                assert(rational_add(at, chord.length, &at) == RATIONAL_OK);
-            }
-            fill_outcome_destroy(&outcome);
-            fill_registry_destroy(registry);
-            plan_destroy(fixture.plan);
-        }
-    }
-}
-
 int main(void) {
     test_four_four();
     test_off_cell_starts();
@@ -642,7 +583,6 @@ int main(void) {
     test_prolongation_part_cells();
     test_schemas_skip_part_cells();
     test_bass_under_beat_spans();
-    test_octave_on_beat_spans();
     puts("test_harmony_beats ok");
     return 0;
 }

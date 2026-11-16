@@ -286,12 +286,11 @@ PlanResult harmony_cells_span(Rational start, Rational cell_length, size_t first
 
 /* Fills out from the plan. False when the span is not one this operator applies to. */
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
-/* The same for the prolongation operator: a PROLONGATION shape, whole bars, a key, and no cadence asked for. */
-bool harmony_prolong_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
 /*
- * The same two for an operator registered to work around Given material (harmony_phrase_register_given): a Given bass
- * over the span does not refuse the span, it is read into the request with the Given melody and the Given chords at the
- * ends (harmony_given_read).
+ * The phrase reader for an operator registered to work around Given material (harmony_phrase_register_given): a Given
+ * bass over the span does not refuse the span, it is read into the request with the Given melody and the Given chords at
+ * the ends (harmony_given_read). The prolongation reader, harmony_prolong_read_request_given, does the same for a
+ * PROLONGATION shape, whole bars, a key, and no cadence asked for.
  */
 bool harmony_phrase_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
 bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
@@ -468,9 +467,6 @@ void harmony_progression_destroy(void *payload);
  * (or what is left of a span after a skeleton) must have.
  */
 size_t harmony_phrase_room_cells(CadenceType cadence, size_t cells_per_bar);
-
-/* The verdict of the harmony-from-bass operator's checker on a candidate payload. */
-bool harmony_octave_check(const void *payload, FillCheck *out);
 
 /* The harmony under a bass span, as the bass operator reads it. */
 typedef struct {

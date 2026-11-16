@@ -67,7 +67,6 @@ add_library(ursatz_composer STATIC
     harmony/harmony_embellish.c
     harmony/harmony_bass.c
     harmony/harmony_bass_check.c
-    harmony/harmony_octave.c
     harmony/harmony_skeleton.c
     harmony/harmony_schema.c
     harmony/harmony_sequence.c

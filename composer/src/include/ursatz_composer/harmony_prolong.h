@@ -32,10 +32,8 @@
 
 #define HARMONY_PROLONG_OPERATOR_NAME "harmony-prolongation"
 
-/* Registers the operator. FILL_OK, or the registry's error. */
-FillResult harmony_prolong_register(FillOperatorRegistry *registry);
-
-/* The same, working around Given material as harmony_phrase_register_given does (harmony_phrase.h). */
+/* Registers the operator, working around Given material as harmony_phrase_register_given does (harmony_phrase.h).
+   FILL_OK, or the registry's error. */
 FillResult harmony_prolong_register_given(FillOperatorRegistry *registry);
 
 /*

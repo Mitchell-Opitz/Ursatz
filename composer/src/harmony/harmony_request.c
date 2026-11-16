@@ -401,8 +401,8 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     request.lead = metre.lead;
     request.tail = metre.tail;
     request.metre = metre;
-    /* A Given bass over the span means the harmony is to be found from the bass (harmony_octave.h), unless this operator
-       works around Given material: it writes chords that stand on the bass. */
+    /* A Given bass over the span refuses the span, unless this operator works around Given material: it writes chords
+       that stand on the bass. */
     LaneSpanId basses[HARMONY_MAX_CHORDS];
     size_t bass_count = plan_lane_find(plan, PLAN_LANE_BASS, 0, request.span, basses, HARMONY_MAX_CHORDS);
     for (size_t i = 0; !around_given && i < bass_count && i < HARMONY_MAX_CHORDS; i++) {
@@ -458,10 +458,6 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
 
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
     return read_request(plan, target, false, false, out);
-}
-
-bool harmony_prolong_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
-    return read_request(plan, target, true, false, out);
 }
 
 bool harmony_phrase_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {

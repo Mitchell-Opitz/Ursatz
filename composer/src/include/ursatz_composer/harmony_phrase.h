@@ -69,8 +69,8 @@ size_t harmony_phrase_min_bars(CadenceType cadence, const PlanMeter *meter);
 FillResult harmony_phrase_register(FillOperatorRegistry *registry);
 
 /*
- * The same operator for a plan with Given material in it (R-071): a Given bass under the span does not leave the span to
- * harmony_octave (the chords it writes stand on the bass, one chord's bass member at the pitch class of the Given bass
+ * The same operator for a plan with Given material in it (R-071): a Given bass under the span does not refuse the span
+ * (the chords it writes stand on the bass, one chord's bass member at the pitch class of the Given bass
  * note at its start); a Given melody over it is harmonized (a note it starts on a strong beat is a tone of the chord
  * there); and the chords are heard with the Given chords at either end, so that no cadence arises across the join that
  * the plan does not ask for. A target with no Given material around it is written as harmony_phrase_register does.
@@ -121,7 +121,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode m
 
 /*
  * The same check for a lane that need not end in a cadence nor explain every inverted chord, such
- * as the harmony found from a bass (harmony_octave.h): only the phrase model, the applied chords
+ * as the harmony under a bass: only the phrase model, the applied chords
  * resolving, and that every chord is readable are asked.
  */
 bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode,

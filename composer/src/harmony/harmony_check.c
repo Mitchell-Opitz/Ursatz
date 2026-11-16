@@ -20,7 +20,6 @@
 #include <standard-harmony/harmony_predominant_seventh.h>
 #include <standard-harmony/harmony_strong_predominants.h>
 
-#include <ursatz_composer/harmony_octave.h>
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
 #include <ursatz_composer/seam_hear.h>
@@ -407,9 +406,6 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
     }
     if (strcmp(operator_->generator.name, HARMONY_BASS_OPERATOR_NAME) == 0) {
         return harmony_bass_check(candidate->payload, out);
-    }
-    if (strcmp(operator_->generator.name, HARMONY_OCTAVE_OPERATOR_NAME) == 0) {
-        return harmony_octave_check(candidate->payload, out);
     }
     return fill_default_checker(plan, target, operator_, candidate, context, out);
 }

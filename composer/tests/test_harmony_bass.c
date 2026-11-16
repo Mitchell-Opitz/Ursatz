@@ -8,14 +8,13 @@
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_embellish.h>
-#include <ursatz_composer/harmony_octave.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 
 /*
  * The bass operators, run through the fill loop after the harmony operators. The first group writes a bass
- * for a progression made by the phrase-model operator and embellished by the embellishment operator; the
- * second harmonizes a Given stepwise bass. Results are judged from what is in the plan.
+ * for a progression made by the phrase-model operator and embellished by the embellishment operator. Results are
+ * judged from what is in the plan.
  */
 
 #define MAX_CHORDS 64
@@ -121,7 +120,7 @@ static Fixture build(const Scenario *scenario, bool cadence) {
 }
 
 static FillOutcome run(const Fixture *fixture, unsigned long seed, bool phrase, bool embellish, bool bass,
-                       const HarmonyBassParams *params, bool octave) {
+                       const HarmonyBassParams *params) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;
@@ -136,9 +135,6 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed, bool phrase, 
     }
     if (bass) {
         assert(harmony_bass_register(registry, params) == FILL_OK);
-    }
-    if (octave) {
-        assert(harmony_octave_register(registry) == FILL_OK);
     }
     assert(fill_run(fixture->plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
@@ -265,11 +261,11 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
  */
 static bool pipeline(const Scenario *scenario, const HarmonyBassParams *params, char *text) {
     Fixture fixture = build(scenario, true);
-    FillOutcome outcome = run(&fixture, scenario->seed, true, false, false, NULL, false);
+    FillOutcome outcome = run(&fixture, scenario->seed, true, false, false, NULL);
     assert(outcome.status == FILL_STATUS_COMPLETE);
     fill_outcome_destroy(&outcome);
     assert(harmony_embellish_open(fixture.plan, fixture.span) == PLAN_OK);
-    outcome = run(&fixture, scenario->seed, true, true, false, NULL, false);
+    outcome = run(&fixture, scenario->seed, true, true, false, NULL);
     assert(outcome.status == FILL_STATUS_COMPLETE);
     fill_outcome_destroy(&outcome);
 
@@ -277,7 +273,7 @@ static bool pipeline(const Scenario *scenario, const HarmonyBassParams *params, 
     PlanSpan given_span = plan_lane_span_span(fixture.plan, fixture.given_bass);
     (void)given_before;
     LaneSpanId target = add_bass_target(&fixture);
-    outcome = run(&fixture, scenario->seed, false, false, true, params, false);
+    outcome = run(&fixture, scenario->seed, false, false, true, params);
     bool written = outcome.status == FILL_STATUS_COMPLETE;
     if (!written) {
         assert(outcome.status == FILL_STATUS_STUCK);
@@ -357,11 +353,11 @@ static void test_subdivision_and_stepwise(void) {
         Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         for (int which = 0; which < 2; which++) {
             Fixture fixture = build(&scenario, true);
-            FillOutcome outcome = run(&fixture, seed, true, false, false, NULL, false);
+            FillOutcome outcome = run(&fixture, seed, true, false, false, NULL);
             assert(outcome.status == FILL_STATUS_COMPLETE);
             fill_outcome_destroy(&outcome);
             add_bass_target(&fixture);
-            outcome = run(&fixture, seed, false, false, true, which ? &split : &plain, false);
+            outcome = run(&fixture, seed, false, false, true, which ? &split : &plain);
             assert(outcome.status == FILL_STATUS_COMPLETE);
             fill_outcome_destroy(&outcome);
             LaneSpanId ids[MAX_CHORDS];
@@ -390,11 +386,11 @@ static void test_unsatisfiable_range(void) {
     narrow.range_low = 40;
     narrow.range_high = 41;
     Fixture fixture = build(&scenario, true);
-    FillOutcome outcome = run(&fixture, 1, true, false, false, NULL, false);
+    FillOutcome outcome = run(&fixture, 1, true, false, false, NULL);
     assert(outcome.status == FILL_STATUS_COMPLETE);
     fill_outcome_destroy(&outcome);
     LaneSpanId target = add_bass_target(&fixture);
-    outcome = run(&fixture, 1, false, false, true, &narrow, false);
+    outcome = run(&fixture, 1, false, false, true, &narrow);
     assert(outcome.status == FILL_STATUS_STUCK);
     assert(outcome.stuck_count == 1 && outcome.stuck[0].reason == FILL_STUCK_ALL_REJECTED);
     assert(outcome.stuck[0].target.kind == FILL_TARGET_LANE_SPAN && outcome.stuck[0].target.id == target);
@@ -411,89 +407,16 @@ static void test_random_octaves(void) {
     for (unsigned long seed = 0; seed < 10; seed++) {
         Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MINOR, 3, 8, CADENCE_TYPE_HALF, seed};
         Fixture fixture = build(&scenario, true);
-        FillOutcome outcome = run(&fixture, seed, true, false, false, NULL, false);
+        FillOutcome outcome = run(&fixture, seed, true, false, false, NULL);
         assert(outcome.status == FILL_STATUS_COMPLETE);
         fill_outcome_destroy(&outcome);
         add_bass_target(&fixture);
-        outcome = run(&fixture, seed, false, false, true, &loose, false);
+        outcome = run(&fixture, seed, false, false, true, &loose);
         if (outcome.status == FILL_STATUS_COMPLETE) {
             check_bass(&fixture, &scenario, &loose);
         } else {
             assert(outcome.stuck_count == 1 && outcome.stuck[0].reason == FILL_STUCK_ALL_REJECTED);
         }
-        fill_outcome_destroy(&outcome);
-        plan_destroy(fixture.plan);
-    }
-}
-
-/* --- a Given stepwise bass, harmonized ---------------------------------- */
-
-/* Builds a plan with a Given bass of one note a bar over an open harmony span, runs the operators. */
-static Fixture octave_fixture(KeyStructureMode mode, const int *pitches, int count, bool cadence_constraint) {
-    Scenario scenario = {4, 4, mode, 0, count, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
-    Fixture fixture = build(&scenario, cadence_constraint);
-    /* The note after the phrase is not wanted here. */
-    for (int i = 0; i < count; i++) {
-        PlanSpan bar = {fraction(i * (long)fixture.bar_length.num, fixture.bar_length.den), fixture.bar_length};
-        LaneSpanId id = add_bass(fixture.plan, fixture.owner, bar, &pitches[i], 1);
-        assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
-    }
-    return fixture;
-}
-
-static void check_octave(const Fixture *fixture, KeyStructureMode mode, const int *pitches, int count) {
-    LaneSpanId ids[MAX_CHORDS];
-    size_t chords = plan_lane_find(fixture->plan, PLAN_LANE_HARMONY, 0, fixture->span, ids, MAX_CHORDS);
-    assert(chords == (size_t)count);
-    const char *violation = "unread";
-    assert(harmony_check_lane_without_cadence(fixture->plan, fixture->span, mode, &violation));
-    assert(violation == NULL);
-    for (int i = 0; i < count; i++) {
-        PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
-        assert(rational_cmp(span.start, fraction(i * (long)fixture->bar_length.num, fixture->bar_length.den)) == 0);
-        assert(rational_cmp(span.length, fixture->bar_length) == 0);
-        assert(plan_lane_span_state(fixture->plan, ids[i]) == PLAN_STATE_REALIZED);
-        /* Each chord has the given bass note as its bass member. */
-        assert(bass_matches(mode, 0, plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral,
-                            pitches[i] % 12));
-    }
-    /* The first and last chords are the tonic in root position. */
-    const char *tonic = mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I";
-    assert(strcmp(plan_lane_span_payload(fixture->plan, ids[0])->harmony.roman_numeral, tonic) == 0);
-    assert(strcmp(plan_lane_span_payload(fixture->plan, ids[count - 1])->harmony.roman_numeral, tonic) == 0);
-}
-
-static void test_rule_of_the_octave(void) {
-    static const int major_up[8] = {48, 50, 52, 53, 55, 57, 59, 60};
-    static const int major_down[8] = {60, 59, 57, 55, 53, 52, 50, 48};
-    static const int minor_up[8] = {48, 50, 51, 53, 55, 56, 59, 60};
-    static const int minor_down[8] = {60, 58, 56, 55, 53, 51, 50, 48};
-    const int *lines[4] = {major_up, major_down, minor_up, minor_down};
-    for (int line = 0; line < 4; line++) {
-        KeyStructureMode mode = line < 2 ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR;
-        for (unsigned long seed = 0; seed < 8; seed++) {
-            /* With a cadence constraint on the span too: the phrase-model operator must leave it alone. */
-            Fixture fixture = octave_fixture(mode, lines[line], 8, seed % 2 == 1);
-            FillOutcome outcome = run(&fixture, seed, true, false, false, NULL, true);
-            assert(outcome.status == FILL_STATUS_COMPLETE);
-            fill_outcome_destroy(&outcome);
-            check_octave(&fixture, mode, lines[line], 8);
-            plan_destroy(fixture.plan);
-        }
-    }
-}
-
-/* A bass that is not stepwise, or that does not start on the tonic, is not one the operator applies to. */
-static void test_octave_needs_a_scale(void) {
-    static const int leaping[8] = {48, 52, 55, 53, 55, 57, 59, 60};
-    static const int off_tonic[8] = {50, 52, 53, 55, 57, 59, 60, 62};
-    const int *lines[2] = {leaping, off_tonic};
-    for (int line = 0; line < 2; line++) {
-        Fixture fixture = octave_fixture(KEY_STRUCTURE_MODE_MAJOR, lines[line], 8, false);
-        FillOutcome outcome = run(&fixture, 1, false, false, false, NULL, true);
-        assert(outcome.status == FILL_STATUS_STUCK);
-        assert(outcome.stuck_count == 1 && outcome.stuck[0].reason == FILL_STUCK_NO_OPERATOR);
-        assert(plan_lane_span_state(fixture.plan, fixture.target) == PLAN_STATE_CONSTRAINED);
         fill_outcome_destroy(&outcome);
         plan_destroy(fixture.plan);
     }
@@ -524,7 +447,7 @@ static void test_first_octave_fallback(void) {
             assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         }
         add_bass_target(&fixture);
-        FillOutcome outcome = run(&fixture, seed, false, false, true, NULL, false);
+        FillOutcome outcome = run(&fixture, seed, false, false, true, NULL);
         assert(outcome.status == FILL_STATUS_COMPLETE);
         HarmonyBassParams defaults = harmony_bass_params_default();
         check_bass(&fixture, &scenario, &defaults);
@@ -542,7 +465,5 @@ int main(void) {
     test_unsatisfiable_range();
     test_random_octaves();
     test_first_octave_fallback();
-    test_rule_of_the_octave();
-    test_octave_needs_a_scale();
     return 0;
 }
