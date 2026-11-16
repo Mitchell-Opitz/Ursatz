@@ -16,12 +16,11 @@ add_custom_target(gui_frontend_fixtures ALL
     DEPENDS ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
-ursatz_test(analyzer_route LIBS ursatz_gui_core ursatz_test_http DEFINITIONS URSATZ_GUI_TEST_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>" LABELS slow
+ursatz_test(analyzer_route LIBS ursatz_gui_core ursatz_test_http LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 # Slow: about 363 s in a -j4 run (R-307).
-# The test compares the stored analysis with what the Analyzer CLI writes for the same file, in its own
-# working directory (pieces/ and cli/ are created there).
-add_dependencies(test_analyzer_route ursatz-analyzer)
+# The test creates pieces/ in its own working directory. It does not run the Analyzer CLI: the Analyzer's own tests
+# check the CLI's output.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)
 ursatz_test(corpus_route LIBS ursatz_gui_core ursatz_test_http WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_route)

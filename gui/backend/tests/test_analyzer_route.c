@@ -1,8 +1,9 @@
 /* Uploads round-trip through the Analyzer: POST /api/analyzer/pieces stores
  * the source and the Analyzer's analysis document under pieces/<id>/, and
  * the list, detail, rename, delete and MusicXML routes read that store back.
- * The stored document is compared with what the Analyzer CLI writes for the
- * same file. Uses the shared HTTP client (tests/support/test_http.h). */
+ * The Analyzer's own tests own what the CLI and the document snapshots hold;
+ * the stored document is checked here by section and by detail. Uses the shared
+ * HTTP client (tests/support/test_http.h). */
 
 #include <civetweb.h>
 #include <math.h>
@@ -33,10 +34,6 @@
 #include "test_http.h"
 
 #define PORT "18766"
-
-#ifndef URSATZ_GUI_TEST_ANALYZER_CLI
-#error "URSATZ_GUI_TEST_ANALYZER_CLI must name the ursatz-analyzer executable"
-#endif
 
 static bool is_directory(const char *path) {
 #ifdef _WIN32
@@ -82,72 +79,6 @@ static bool first_corpus_folder(const char *dir_path, char *out, size_t out_size
   closedir(dir);
   return found;
 #endif
-}
-
-/* The document `ursatz-analyzer --json` writes for a copy of source_path
- * made in cli_dir. */
-static cJSON *analyzer_cli_document(const char *source_path, const char *file_name, const char *cli_dir) {
-  MKDIR("cli");
-  MKDIR(cli_dir);
-
-  size_t size = 0;
-  char *data = test_read_file(source_path, &size);
-  if (!data) {
-    return NULL;
-  }
-  char copy_path[512];
-  snprintf(copy_path, sizeof(copy_path), "%s/%s", cli_dir, file_name);
-  bool copied = test_write_file(copy_path, data, size);
-  free(data);
-  if (!copied) {
-    return NULL;
-  }
-
-  char command[1536];
-  snprintf(command, sizeof(command), "\"%s\" --json \"%s\"", URSATZ_GUI_TEST_ANALYZER_CLI, copy_path);
-  if (system(command) != 0) {
-    return NULL;
-  }
-
-  char stem[256];
-  snprintf(stem, sizeof(stem), "%s", file_name);
-  char *dot = strrchr(stem, '.');
-  if (dot) {
-    *dot = '\0';
-  }
-  char document_path[512];
-  snprintf(document_path, sizeof(document_path), "%s/%s.analysis.json", cli_dir, stem);
-  char *text = test_read_file(document_path, NULL);
-  cJSON *document = text ? cJSON_Parse(text) : NULL;
-  free(text);
-  return document;
-}
-
-/* metadata.source_file names the input file, which differs between the CLI's
- * copy and the stored source. */
-static void drop_source_file(cJSON *document) {
-  cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
-  if (metadata) {
-    cJSON_DeleteItemFromObjectCaseSensitive(metadata, "source_file");
-  }
-}
-
-/* True when pieces/<id>/analysis.json equals `expected`, both without
- * metadata.source_file. */
-static bool stored_document_equals(const char *id, cJSON *expected) {
-  char path[512];
-  snprintf(path, sizeof(path), "pieces/%s/analysis.json", id);
-  char *text = test_read_file(path, NULL);
-  cJSON *stored = text ? cJSON_Parse(text) : NULL;
-  free(text);
-  bool equal = false;
-  if (stored && expected) {
-    drop_source_file(stored);
-    drop_source_file(expected);
-    equal = cJSON_Compare(stored, expected, true) != 0;
-  }
-  cJSON_Delete(stored);
-  return equal;
 }
 
 static bool piece_file_exists(const char *id, const char *name) {
@@ -929,9 +860,9 @@ static void check_import_cache(const char *id) {
 int main(void) {
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
-  system("rmdir /s /q pieces cli 2> nul");
+  system("rmdir /s /q pieces 2> nul");
 #else
-  system("rm -rf pieces cli");
+  system("rm -rf pieces");
 #endif
   MKDIR("pieces");
 
@@ -974,10 +905,6 @@ int main(void) {
     free(stored);
     free(original);
 
-    cJSON *expected = analyzer_cli_document(mozart_path, "Mozart 545.mid", "cli/mozart");
-    check(expected != NULL, "the Analyzer CLI writes a document for Mozart 545.mid");
-    check(stored_document_equals(mozart_id, expected), "the stored MIDI analysis equals the Analyzer CLI's document");
-    cJSON_Delete(expected);
     check_detail(mozart_id, "midi", "midi-note-0", "Mozart 545");
     check_score_meter(mozart_id, false, "Mozart 545");
     check_document_sections(mozart_id);
@@ -991,11 +918,6 @@ int main(void) {
   free(response);
   check(score_id && piece_file_exists(score_id, "source.musicxml"), "the MusicXML upload is stored as source.musicxml");
   if (score_id) {
-    cJSON *expected = analyzer_cli_document(score_path, "score.musicxml", "cli/score");
-    check(expected != NULL, "the Analyzer CLI writes a document for the MusicXML score");
-    check(stored_document_equals(score_id, expected),
-          "the stored MusicXML analysis equals the Analyzer CLI's document");
-    cJSON_Delete(expected);
     check_detail(score_id, "musicxml", NULL, "MusicXML score");
   }
 
