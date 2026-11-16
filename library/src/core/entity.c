@@ -75,26 +75,3 @@ void entity_destroy(Entity *entity) {
 const EntityID *entity_id(const Entity *entity) {
     return entity->id;
 }
-
-const char *entity_type(const Entity *entity) {
-    return entity->type;
-}
-
-const SchemaVersion *entity_schema_version(const Entity *entity) {
-    return entity->schema_version;
-}
-
-const char *entity_metadata(const Entity *entity) {
-    return entity->metadata;
-}
-
-const ProvenanceReference *entity_provenance_reference(const Entity *entity) {
-    return entity->provenance_reference;
-}
-
-bool entity_identity_equals(const Entity *a, const Entity *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id) && schema_version_equals(a->schema_version, b->schema_version);
-}

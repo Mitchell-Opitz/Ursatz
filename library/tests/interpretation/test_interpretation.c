@@ -117,8 +117,6 @@ int main(void) {
     assert(result_c == INTERPRETATION_OK);
 
     assert(interpretation_framework_reference(interpretation_c) == framework_reference);
-    assert(entity_id_equals(framework_reference_target_id(interpretation_framework_reference(interpretation_c)),
-                             framework_id));
 
     interpretation_destroy(interpretation_c);
 

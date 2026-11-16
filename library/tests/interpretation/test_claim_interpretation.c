@@ -36,8 +36,7 @@ static void test_fields(void) {
     assert(interpretation != NULL);
     assert(strcmp(entity_id_value(interpretation_id(interpretation)), "demo-claim-1") == 0);
     assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "target-1") == 0);
-    assert(strcmp(entity_id_value(framework_reference_target_id(interpretation_framework_reference(interpretation))),
-                  "framework-demo") == 0);
+    assert(interpretation_framework_reference(interpretation) != NULL);
     assert(strcmp(interpretation_author(interpretation), "demo-v1") == 0);
     assert(strcmp(interpretation_method(interpretation), "demo-method") == 0);
     interpretation_destroy(interpretation);
@@ -63,7 +62,6 @@ static void test_note_group(void) {
     Structure *group = claim_interpretation_note_group("demo", "demo-notes-a", notes, 3);
     assert(group != NULL);
     assert(strcmp(entity_id_value(entity_id(structure_entity(group))), "demo-notes-a") == 0);
-    assert(strcmp(entity_type(structure_entity(group)), "demo/note-group") == 0);
     assert(structure_event_id_count(group) == 2);
     assert(strcmp(entity_id_value(structure_event_id_at(group, 0)), "n1") == 0);
     assert(strcmp(entity_id_value(structure_event_id_at(group, 1)), "n2") == 0);

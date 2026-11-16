@@ -1,7 +1,6 @@
 add_ursatz_test(entity)
 add_ursatz_test(value)
 add_ursatz_test(occurrence)
-add_ursatz_test(equality)
 add_ursatz_test(references)
 add_ursatz_test(string_copy)
 add_ursatz_test(rational)

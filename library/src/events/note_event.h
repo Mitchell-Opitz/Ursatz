@@ -94,8 +94,7 @@ bool note_event_equals_by_id(const NoteEvent *a, const NoteEvent *b);
 /*
  * StructuralEquality: same temporal_anchor, duration, pitch,
  * optional_pitch_spelling, optional_voice, and provenance, independent
- * of id (mirrors core/equality.h's StructuralEquality, which is also
- * independent of EntityID). Value-equal does NOT imply the same event --
+ * of id. Value-equal does NOT imply the same event --
  * two independently constructed NoteEvents can carry identical content
  * under different ids.
  */

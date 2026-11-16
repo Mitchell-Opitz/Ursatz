@@ -29,14 +29,3 @@ void framework_reference_destroy(FrameworkReference *reference) {
     entity_id_destroy(reference->target_id);
     free(reference);
 }
-
-const EntityID *framework_reference_target_id(const FrameworkReference *reference) {
-    return reference->target_id;
-}
-
-bool framework_reference_equals(const FrameworkReference *a, const FrameworkReference *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->target_id, b->target_id);
-}

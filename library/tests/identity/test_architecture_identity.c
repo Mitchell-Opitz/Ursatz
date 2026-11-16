@@ -45,10 +45,6 @@ int main(void) {
     const char *files[] = {
         "../../src/identity/entity_id.h",
         "../../src/identity/entity_id.c",
-        "../../src/identity/version.h",
-        "../../src/identity/version.c",
-        "../../src/identity/version_model.h",
-        "../../src/identity/version_model.c",
         "../../src/identity/schema_version.h",
         "../../src/identity/schema_version.c"
     };

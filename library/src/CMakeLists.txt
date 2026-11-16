@@ -1,8 +1,6 @@
 add_library(ursatz
     ursatz.c
     identity/entity_id.c
-    identity/version.c
-    identity/version_model.c
     identity/schema_version.c
     core/entity.c
     core/string_copy.c
@@ -10,9 +8,7 @@ add_library(ursatz
     core/rational.c
     core/value.c
     core/occurrence.c
-    core/equality.c
     core/voice_reference.c
-    core/relationship_reference.c
     core/provenance_reference.c
     core/framework_reference.c
     time/duration.c
@@ -158,7 +154,6 @@ ursatz_public_headers(ursatz
         export/score_staves.h
         identity/entity_id.h
         identity/schema_version.h
-        identity/version.h
         interpretation/chord.h
         interpretation/claim_interpretation.h
         interpretation/evidence.h
