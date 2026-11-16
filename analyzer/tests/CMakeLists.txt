@@ -61,7 +61,7 @@ endif()
 
 ursatz_test_executable(test_playback LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 ursatz_test(test_playback TARGET test_playback)
 ursatz_test(test_playback_smoke TARGET test_playback ARGS smoke)
@@ -74,12 +74,12 @@ ursatz_test_executable(test_score_export LIBS ursatz_analyzer analyzer_test_supp
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-ursatz_test(test_score_export TARGET test_score_export)
-ursatz_test(test_score_export_smoke TARGET test_score_export ARGS smoke)
+ursatz_test(test_score_export TARGET test_score_export PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
+ursatz_test(test_score_export_smoke TARGET test_score_export ARGS smoke PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
 if(URSATZ_VALGRIND)
     ursatz_test(test_score_export_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
         --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_score_export> smoke LABELS slow
-        valgrind)
+        valgrind PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
 endif()
 
 # Over 10 s in the fast set (about 40 s of CPU measured): runs nightly.
@@ -193,14 +193,16 @@ ursatz_test(test_musicxml_input LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-ursatz_test(test_midi_parts LIBS ursatz_analyzer
+ursatz_test(test_midi_parts LIBS ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
 ursatz_test(test_tempo_map_import LIBS ursatz_analyzer analyzer_test_support cjson
-    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    PROPERTIES RESOURCE_LOCK analyzer_tempo_map_file)
 if(URSATZ_VALGRIND)
     ursatz_test(test_tempo_map_import_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
-        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_tempo_map_import> LABELS slow valgrind)
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_tempo_map_import> LABELS slow valgrind
+        PROPERTIES RESOURCE_LOCK analyzer_tempo_map_file)
 endif()
 
 ursatz_test(test_notation_reading LIBS ursatz_analyzer

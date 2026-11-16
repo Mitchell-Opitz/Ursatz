@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/midi_pipeline.h>
+#include "test_support.h"
 
 /*
  * MIDI parts: a generated type-1 file whose tracks cover a track with two channels, a single-channel track with a
@@ -252,7 +253,8 @@ int main(void) {
     put_note(&tracks[4], 0, 3, 62);
     put_end(&tracks[4]);
 
-    const char *path = "test_midi_parts.mid";
+    char path[512];
+    test_temp_path(path, sizeof path, "test_midi_parts.mid");
     write_file(path, tracks, 5);
     ImportedNotes notes;
     assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
