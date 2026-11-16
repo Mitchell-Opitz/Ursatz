@@ -29,7 +29,6 @@
     X(standard_harmony_framework)                                                                                      \
     X(standard_markings_framework)                                                                                     \
     X(standard_meter_framework)                                                                                        \
-    X(standard_notation_framework)                                                                                     \
     X(standard_rhythm_framework)                                                                                       \
     X(standard_texture_framework)                                                                                      \
     X(standard_tonality_framework)                                                                                     \
@@ -48,7 +47,6 @@
     X(harmony_applied_rule)                                                                                            \
     X(standard_markings_articulation_rule)                                                                             \
     X(standard_meter_anacrusis_rule)                                                                                   \
-    X(standard_notation_accidental_placement_rule)                                                                     \
     X(standard_rhythm_dot_rule)                                                                                        \
     X(standard_texture_mixed_rule)                                                                                     \
     X(standard_tonality_chord_symbol_rule)                                                                             \

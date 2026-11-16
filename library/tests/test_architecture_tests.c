@@ -33,7 +33,7 @@ static const ModuleLayer KERNEL_MODULES[] = {
 static const char *const FRAMEWORKS[] = {
     "baroque-ground-bass", "common-practice-minimal", "galant-schemas", "high-baroque-fugue", "scale-harmonization",
     "sixteenth-century-style", "standard-counterpoint", "standard-form", "standard-harmony", "standard-markings",
-    "standard-meter", "standard-notation", "standard-rhythm", "standard-texture", "standard-tonality",
+    "standard-meter", "standard-rhythm", "standard-texture", "standard-tonality",
     "standard-voicing", "western-periods",
 };
 
