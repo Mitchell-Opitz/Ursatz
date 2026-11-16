@@ -15,8 +15,6 @@ ursatz_public_headers(ursatz_chain
     HEADERS
         analysis_chain.h
         chain_inputs.h
-        form_bridge.h
-        kernel_owners.h
 )
 target_link_libraries(ursatz_chain PUBLIC
     ursatz

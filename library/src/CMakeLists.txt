@@ -165,7 +165,6 @@ ursatz_public_headers(ursatz
         io/midi_key_signature.h
         io/midi_renderer.h
         io/musicxml_importer.h
-        io/smf_reader.h
         pitch/accidental.h
         pitch/clef.h
         pitch/clef_resolution.h
@@ -200,7 +199,6 @@ ursatz_public_headers(ursatz
         semantics/non_chord_tone.h
         semantics/rhythmic_pattern.h
         semantics/sonority.h
-        semantics/sonority_builder.h
         semantics/sonority_segmentation.h
         semantics/subphrase_role.h
         semantics/tone_line.h
