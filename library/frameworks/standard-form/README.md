@@ -2,9 +2,7 @@
 
 Theory Framework instance `standard-form-v1`: how Western tonal music is
 organized into phrase-level form. Path `frameworks/standard-form/`, tests
-in `frameworks/standard-form/tests/`. A Framework extension module
-physically separate from `src/theory/`, same shape as
-`frameworks/standard-meter/` and `frameworks/standard-harmony/`. The names
+in `frameworks/standard-form/tests/`. The names
 it uses are plain value types in `src/semantics/` (`FormLevel`,
 `MotiveKind`); this framework gives them their conventions.
 
