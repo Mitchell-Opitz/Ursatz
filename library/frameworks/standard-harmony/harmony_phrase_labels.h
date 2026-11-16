@@ -51,8 +51,4 @@ typedef struct {
    half cadence needs V last), or NULL. */
 bool harmony_phrase_model_label(const HarmonyPhrase *phrase, CadenceType cadence, HarmonyPhraseLabels *out);
 
-/* The index of the chord that carries the label, or -1 when no chord does (including
-   an invalid label). */
-int harmony_phrase_labels_index_of(const HarmonyPhraseLabels *labels, PhraseModelLabel label);
-
 #endif

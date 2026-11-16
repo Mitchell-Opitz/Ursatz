@@ -8,7 +8,6 @@
 #include "harmony_pivot.h"
 #include "harmony_related_key.h"
 #include "semantics/key_change_extent.h"
-#include "modulation_kind.h"
 
 /*
  * Tonicization versus modulation, for standard-harmony-v1 (Extended Tonicization and
@@ -61,14 +60,5 @@ bool harmony_key_change_classify(const HarmonyKeyChange *change, KeyChangeExtent
  */
 bool harmony_key_change_confirm(KeyChangeExtent length_extent, double region_start, double region_end,
                                 const double *cadence_arrivals, size_t cadence_count, KeyChangeExtent *out);
-
-/* PIVOT when a pivot is given, DIRECT when it is NULL. */
-ModulationKind harmony_modulation_kind(const HarmonyPivot *pivot);
-
-/* The label of an extended tonicization: the Roman numeral of the new key's tonic in the home
-   key ("ii" for the key of ii, "v" for the minor key of v), with a terminating zero. False (*out
-   untouched) when the key is not closely related to the home key, a NULL pointer, and a buffer
-   too small. */
-bool harmony_extended_tonicization_label(HarmonyMode home, const HarmonyRelatedKey *key, char *out, size_t size);
 
 #endif

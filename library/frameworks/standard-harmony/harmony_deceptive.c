@@ -2,21 +2,6 @@
 
 #include <stddef.h>
 
-bool harmony_deceptive_kind_valid(HarmonyDeceptiveKind kind) {
-    return kind >= 0 && kind < HARMONY_DECEPTIVE_KIND_COUNT;
-}
-
-const char *harmony_deceptive_kind_name(HarmonyDeceptiveKind kind) {
-    switch (kind) {
-        case HARMONY_DECEPTIVE_VI:
-            return "vi";
-        case HARMONY_DECEPTIVE_IV6:
-            return "iv6";
-        default:
-            return NULL;
-    }
-}
-
 bool harmony_deceptive_of(const HarmonyChord chords[2], HarmonyDeceptiveKind *out) {
     if (chords == NULL || out == NULL) {
         return false;

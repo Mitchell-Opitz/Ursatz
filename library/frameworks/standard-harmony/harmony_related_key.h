@@ -31,17 +31,6 @@ typedef struct {
     HarmonyMode mode;
 } HarmonyRelatedKey;
 
-typedef enum {
-    HARMONY_KEY_RELATION_COMMON = 0,
-    HARMONY_KEY_RELATION_OTHER,
-    HARMONY_KEY_RELATION_COUNT
-} HarmonyKeyRelationRank;
-
-/* The Roman numeral of the triad on the degree in the mode (natural minor), upper case for a
-   major triad, lower case for a minor one, "o" after a diminished one: major I ii iii IV V vi
-   viio; minor i iio III iv v VI VII. NULL for an invalid mode or degree. */
-const char *harmony_triad_numeral(HarmonyMode mode, int degree);
-
 /* How many closely related keys the home key has (5), or 0 for an invalid mode. */
 int harmony_related_key_count(HarmonyMode home);
 
@@ -60,16 +49,5 @@ bool harmony_key_is_closely_related(HarmonyMode home, const HarmonyRelatedKey *k
 /* The key's tonic as semitones above the home key's tonic (0 to 11): the semitone of its scale
    degree. -1 for an invalid key. */
 int harmony_related_key_semitone(HarmonyMode home, const HarmonyRelatedKey *key);
-
-/* "common" "other"; NULL for an invalid rank. */
-const char *harmony_key_relation_rank_name(HarmonyKeyRelationRank rank);
-
-/* True for the two ranks above; false for any other value. */
-bool harmony_key_relation_rank_valid(HarmonyKeyRelationRank rank);
-
-/* How common a modulation to the key is: COMMON for V and vi in major and III and v in minor,
-   OTHER for the rest of the closely related keys, and HARMONY_KEY_RELATION_COUNT for a key
-   that is not closely related. */
-HarmonyKeyRelationRank harmony_key_relation_rank(HarmonyMode home, const HarmonyRelatedKey *key);
 
 #endif

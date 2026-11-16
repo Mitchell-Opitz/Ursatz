@@ -97,7 +97,4 @@ HarmonyProlongationStatus harmony_analysis_find_prolongations(const HarmonySegme
 
 void harmony_prolongations_destroy(HarmonyProlongations *prolongations);
 
-/* Reads the claim back out of a prolongation Interpretation. False if it is not one. */
-bool harmony_prolongation_claim_read(const Interpretation *interpretation, HarmonyProlongationClaim *out);
-
 #endif

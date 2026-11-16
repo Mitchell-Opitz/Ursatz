@@ -192,43 +192,6 @@ static HarmonyCadenceAnalysisStatus collect(const HarmonySegment *segments, size
     return HARMONY_CADENCE_ANALYSIS_OK;
 }
 
-HarmonyCadenceAnalysisStatus harmony_analysis_cadence_points(const HarmonySegment *segments, size_t count,
-                                                             const HarmonyCadenceConfig *config,
-                                                             HarmonyCadencePoint **out, size_t *out_count) {
-    HarmonyCadenceConfig defaults = harmony_cadence_config_default();
-    if (config == NULL) {
-        config = &defaults;
-    }
-    if (out == NULL || out_count == NULL || (segments == NULL && count > 0)) {
-        return HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT;
-    }
-    HarmonyRun *runs = NULL;
-    size_t run_count = 0;
-    InternalPoint *internal = NULL;
-    size_t n = 0;
-    HarmonyCadenceAnalysisStatus status = collect(segments, count, config, &runs, &run_count, &internal, &n);
-    if (status != HARMONY_CADENCE_ANALYSIS_OK) {
-        return status;
-    }
-    HarmonyCadencePoint *points = NULL;
-    if (n > 0) {
-        points = (HarmonyCadencePoint *)calloc(n, sizeof(HarmonyCadencePoint));
-        if (points == NULL) {
-            free(runs);
-            free(internal);
-            return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
-        }
-        for (size_t i = 0; i < n; i++) {
-            points[i] = internal[i].point;
-        }
-    }
-    free(runs);
-    free(internal);
-    *out = points;
-    *out_count = n;
-    return HARMONY_CADENCE_ANALYSIS_OK;
-}
-
 /* --- classification --- */
 
 typedef struct {
@@ -903,19 +866,3 @@ HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const Harmon
     return HARMONY_CADENCE_ANALYSIS_OK;
 }
 
-bool harmony_cadence_claim_read(const Interpretation *interpretation, HarmonyCadenceClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), HARMONY_CADENCE_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

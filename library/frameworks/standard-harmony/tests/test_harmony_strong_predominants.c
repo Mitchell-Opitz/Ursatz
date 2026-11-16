@@ -13,18 +13,6 @@ static bool kind_of(HarmonyMode mode, HarmonyChord chord, HarmonyStrongPredomina
     return harmony_strong_predominant_of(mode, &chord, kind);
 }
 
-static void test_validity_and_names(void) {
-    for (int i = 0; i < HARMONY_STRONG_PREDOMINANT_COUNT; i++) {
-        assert(harmony_strong_predominant_valid((HarmonyStrongPredominant)i));
-    }
-    assert(!harmony_strong_predominant_valid(HARMONY_STRONG_PREDOMINANT_COUNT));
-    assert(!harmony_strong_predominant_valid((HarmonyStrongPredominant)-1));
-    assert(strcmp(harmony_strong_predominant_name(IV), "iv") == 0);
-    assert(strcmp(harmony_strong_predominant_name(II6), "ii6") == 0);
-    assert(strcmp(harmony_strong_predominant_name(II), "ii") == 0);
-    assert(harmony_strong_predominant_name(HARMONY_STRONG_PREDOMINANT_COUNT) == NULL);
-}
-
 static void test_the_three_kinds(void) {
     for (int mode = 0; mode < HARMONY_MODE_COUNT; mode++) {
         HarmonyMode m = (HarmonyMode)mode;
@@ -71,7 +59,6 @@ static void test_invalid_inputs(void) {
 }
 
 int main(void) {
-    test_validity_and_names();
     test_the_three_kinds();
     test_other_chords_are_not_strong_predominants();
     test_invalid_inputs();

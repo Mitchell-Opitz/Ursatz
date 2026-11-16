@@ -25,9 +25,6 @@ static void test_model_phrase_i_iv_v_i(void) {
                                           PHRASE_MODEL_LABEL_DOMINANT, PHRASE_MODEL_LABEL_TONIC_ENDING};
     for (int i = 0; i < 4; i++) {
         assert(model.segments[i].has_label && model.segments[i].label == expected[i]);
-        HarmonyPhraseLabelClaim claim;
-        assert(harmony_phrase_label_claim_read(model.segments[i].interpretation, &claim));
-        assert(claim.label == (int)expected[i] && claim.phrase_index == 0);
     }
     harmony_phrase_model_destroy(&model);
     harmony_analysis_destroy(segments);

@@ -17,20 +17,8 @@ static PreferenceScore score_candidate(const Preference *preference, const Value
 static const HarmonyRuleTable TABLE = {"cadence", NAMES, HARMONY_CADENCE_RULE_COUNT, table_is_hard, g_pairs, g_built,
                                        evaluate_candidate, score_candidate};
 
-const Rule *harmony_cadence_rule(HarmonyCadenceRule which) {
-    return harmony_rule_table_rule(&TABLE, (int)which);
-}
-
-const Constraint *harmony_cadence_constraint(HarmonyCadenceRule which) {
-    return harmony_rule_table_constraint(&TABLE, (int)which);
-}
-
 const Preference *harmony_cadence_preference(HarmonyCadenceRule which) {
     return harmony_rule_table_preference(&TABLE, (int)which);
-}
-
-const char *harmony_cadence_rule_name(HarmonyCadenceRule which) {
-    return harmony_rule_table_name(&TABLE, (int)which);
 }
 
 bool harmony_cadence_valid(const HarmonyCadence *cadence) {

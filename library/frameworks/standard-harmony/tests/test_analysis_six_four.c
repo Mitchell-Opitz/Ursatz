@@ -13,8 +13,6 @@ static HarmonySixFourResult *classify(Fixture *f, HarmonySegment **segments) {
 
 static void expect(const HarmonySixFourResult *r, SixFourType type) {
     assert(r->is_six_four && r->classified && r->type == type && r->interpretation != NULL);
-    HarmonySixFourClaim claim;
-    assert(harmony_six_four_claim_read(r->interpretation, &claim) && claim.type == (int)type);
 }
 
 static void test_cadential(void) {

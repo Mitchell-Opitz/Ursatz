@@ -102,14 +102,6 @@ typedef enum {
     HARMONY_ANALYSIS_ERR_ALLOC
 } HarmonyAnalysisStatus;
 
-/*
- * Reads `count` inputs into prepared segments, in order. On OK, *out is owned by the caller
- * (harmony_analysis_destroy) and holds `count` segments, each pointing at its input, which must outlive it;
- * otherwise *out is untouched. `count` may be 0.
- */
-/* The mode of an AnalysisKey: major or minor. False, *out untouched, for a NULL argument or a mode that is neither. */
-bool harmony_mode_of_analysis_key(const AnalysisKey *key, HarmonyMode *out);
-
 /* Sets the segment id, span, position and beat strength of `input` from an AnalysisSegment, and nothing else. False for a NULL argument. */
 bool harmony_segment_input_set_segment(HarmonySegmentInput *input, const AnalysisSegment *segment);
 

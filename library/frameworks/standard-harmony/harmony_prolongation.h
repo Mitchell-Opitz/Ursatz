@@ -59,16 +59,6 @@ typedef enum {
     HARMONY_PROLONGATION_LINE_COUNT
 } HarmonyProlongationLine;
 
-/* True for the four lines above; false for any other value. */
-bool harmony_prolongation_line_valid(HarmonyProlongationLine line);
-
-/* "do-ti-do" "do-re-mi" "do-re-do" "do-fa-mi"; NULL for an invalid line. */
-const char *harmony_prolongation_line_name(HarmonyProlongationLine line);
-
-/* The three bass scale degrees of the line: 1 7 1, 1 2 3, 1 2 1, 1 4 3. False
-   (*out untouched) for an invalid line or NULL. */
-bool harmony_prolongation_line_bass(HarmonyProlongationLine line, int out[3]);
-
 /* The line a progression of three chords makes: I, then V6, V6/5, V4/3, V4/2 or the
    leading-tone chord that replaces it, then I or I6, as listed above. False (*out untouched) for any other three chords, for a
    chord marked cadential or an invalid one, and for NULL. */

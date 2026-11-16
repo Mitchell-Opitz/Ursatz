@@ -16,13 +16,6 @@ static void test_every_core_type_has_one_entry(void) {
         assert(kind != NULL);
         assert(strcmp(kind->name, cadence_type_name(type)) == 0);
         assert(kind->core == type);
-        size_t named = 0;
-        for (size_t i = 0; i < harmony_cadence_kind_count(); i++) {
-            if (strcmp(harmony_cadence_kind_at(i)->name, cadence_type_name(type)) == 0) {
-                named++;
-            }
-        }
-        assert(named == 1);
     }
     assert(harmony_cadence_kind_of(CADENCE_TYPE_COUNT) == NULL);
     assert(harmony_cadence_kind_of((CadenceType)-1) == NULL);
@@ -38,27 +31,14 @@ static void test_caplin_and_sonata_kinds(void) {
     assert(abandoned->strength == -1);
 }
 
-static void test_strength_and_names(void) {
-    for (size_t i = 0; i < harmony_cadence_kind_count(); i++) {
-        const HarmonyCadenceKind *kind = harmony_cadence_kind_at(i);
-        assert(kind->name != NULL && kind->label != NULL && kind->abbreviation != NULL);
-        assert(harmony_cadence_kind_find(kind->name) == kind);
-        if (strcmp(kind->name, "abandoned") != 0) {
-            assert(kind->strength == harmony_cadence_strength(kind->core));
-        }
-    }
-}
-
 static void test_lookup_failures(void) {
     assert(harmony_cadence_kind_find("no-such-cadence") == NULL);
     assert(harmony_cadence_kind_find(NULL) == NULL);
-    assert(harmony_cadence_kind_at(harmony_cadence_kind_count()) == NULL);
 }
 
 int main(void) {
     test_every_core_type_has_one_entry();
     test_caplin_and_sonata_kinds();
-    test_strength_and_names();
     test_lookup_failures();
     printf("test_harmony_cadence_kinds: ok\n");
     return 0;

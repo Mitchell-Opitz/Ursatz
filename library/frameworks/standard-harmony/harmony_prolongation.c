@@ -2,28 +2,6 @@
 
 #include <stddef.h>
 
-static const char *const NAMES[HARMONY_PROLONGATION_LINE_COUNT] = {"do-ti-do", "do-re-mi", "do-re-do", "do-fa-mi"};
-
-static const int BASS[HARMONY_PROLONGATION_LINE_COUNT][3] = {{1, 7, 1}, {1, 2, 3}, {1, 2, 1}, {1, 4, 3}};
-
-bool harmony_prolongation_line_valid(HarmonyProlongationLine line) {
-    return line >= 0 && line < HARMONY_PROLONGATION_LINE_COUNT;
-}
-
-const char *harmony_prolongation_line_name(HarmonyProlongationLine line) {
-    return harmony_prolongation_line_valid(line) ? NAMES[line] : NULL;
-}
-
-bool harmony_prolongation_line_bass(HarmonyProlongationLine line, int out[3]) {
-    if (out == NULL || !harmony_prolongation_line_valid(line)) {
-        return false;
-    }
-    for (int i = 0; i < 3; i++) {
-        out[i] = BASS[line][i];
-    }
-    return true;
-}
-
 /* A tonic triad, root position (inversion 0) or first inversion (inversion 1). */
 static bool is_tonic(const HarmonyChord *chord, int inversion) {
     return chord->degree == 1 && chord->inversion == inversion && !chord->seventh && !chord->cadential;

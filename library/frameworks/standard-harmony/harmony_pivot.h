@@ -39,12 +39,6 @@ int harmony_pivot_find(HarmonyMode home, const HarmonyRelatedKey *key, HarmonyPi
 /* True when the pair is one of the triads diatonic in both keys. */
 bool harmony_pivot_valid(HarmonyMode home, const HarmonyRelatedKey *key, const HarmonyPivot *pivot);
 
-/* The label, for example "iv becomes ii" (the old key's numeral, then the new key's), with a
-   terminating zero. False (*out untouched) for a pair that is not a pivot, a NULL pointer, and a
-   buffer too small. */
-bool harmony_pivot_label(HarmonyMode home, const HarmonyRelatedKey *key, const HarmonyPivot *pivot, char *out,
-                         size_t size);
-
 /*
  * How good a pivot is, by the function of the chord in each key (harmony_functions.h). Several
  * chords could serve as the pivot; V usually appears soon after it, so the best are predominants
@@ -65,12 +59,6 @@ typedef enum {
     HARMONY_PIVOT_POOR,
     HARMONY_PIVOT_RANK_COUNT
 } HarmonyPivotRank;
-
-/* True for the four ranks above; false for any other value. */
-bool harmony_pivot_rank_valid(HarmonyPivotRank rank);
-
-/* "best" "good" "fair" "poor"; NULL for an invalid rank. */
-const char *harmony_pivot_rank_name(HarmonyPivotRank rank);
 
 /* The rank of the pivot. False (*out untouched) for a pair that is not a pivot between the two
    keys, an invalid mode, and NULL. */

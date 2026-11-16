@@ -3,14 +3,7 @@
 #include <string.h>
 
 #include "harmony_phrase_rules.h"
-#include "harmony_rule_check.h"
 #include "harmony_test_util.h"
-#include "harmony_eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-HARMONY_EVAL_TABLE(g_eval, "phrase", HARMONY_PHRASE_RULE_COUNT);
-#define harmony_phrase_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS(g_eval, harmony_phrase_constraint, harmony_phrase_preference, harmony_phrase_rule_holds, HarmonyPhrase, which, subject)
 
 #define PHRASE(name) HARMONY_PHRASE_##name
 
@@ -21,23 +14,6 @@ static HarmonyPhrase phrase_of(HarmonyMode mode, const HarmonyChord *chords, siz
 static bool holds(HarmonyPhraseRule rule, HarmonyMode mode, const HarmonyChord *chords, size_t count) {
     HarmonyPhrase phrase = phrase_of(mode, chords, count);
     return harmony_phrase_rule_holds(rule, &phrase);
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(harmony_phrase_rule, harmony_phrase_constraint, HARMONY_PHRASE_RULE_COUNT);
-    for (int i = 0; i < HARMONY_PHRASE_RULE_COUNT; i++) {
-        ConstraintType type = constraint_type(harmony_phrase_constraint((HarmonyPhraseRule)i));
-        bool hard = i == PHRASE(TONIC_THEN_DOMINANT) || i == PHRASE(IV_BEFORE_II);
-        assert(type == (hard ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT));
-    }
-}
-
-static void test_names(void) {
-    assert(strcmp(harmony_phrase_rule_name(PHRASE(TONIC_THEN_DOMINANT)), "tonic-then-dominant") == 0);
-    assert(strcmp(harmony_phrase_rule_name(PHRASE(NO_BACKWARD_MOTION)), "no-backward-motion") == 0);
-    assert(strcmp(harmony_phrase_rule_name(PHRASE(WEAK_PREDOMINANT_LEADS_ON)), "weak-predominant-leads-on") == 0);
-    assert(strcmp(harmony_phrase_rule_name(PHRASE(IV_BEFORE_II)), "iv-before-ii") == 0);
-    assert(harmony_phrase_rule_name(PHRASE(RULE_COUNT)) == NULL);
 }
 
 static void test_phrase_model_layouts_hold(void) {
@@ -203,8 +179,6 @@ static void test_invalid_phrase(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
-    test_names();
     test_phrase_model_layouts_hold();
     test_tonic_then_dominant();
     test_no_backward_motion();

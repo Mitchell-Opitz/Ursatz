@@ -32,12 +32,6 @@ typedef enum {
     HARMONY_STRONG_PREDOMINANT_COUNT
 } HarmonyStrongPredominant;
 
-/* True for the three kinds above; false for any other value. */
-bool harmony_strong_predominant_valid(HarmonyStrongPredominant kind);
-
-/* "iv" "ii6" "ii"; NULL for an invalid kind. */
-const char *harmony_strong_predominant_name(HarmonyStrongPredominant kind);
-
 /* The kind of the chord: IV for a root position triad on degree 4, II6 for a
    first inversion triad on degree 2, II for a root position triad on degree 2.
    False (*out untouched) for any other chord, for a seventh chord, and for an

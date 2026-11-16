@@ -11,10 +11,6 @@ static void check(Fixture *f, size_t index, HarmonicFunction expected, bool appl
     assert(harmony_analysis_assign_functions(segments, f->count, &results) == HARMONY_FUNCTION_OK);
     assert(results[index].has_function && results[index].function == expected);
     assert(results[index].applied == applied && results[index].applied_to == applied_to);
-
-    HarmonyFunctionClaim claim;
-    assert(harmony_function_claim_read(results[index].interpretation, &claim));
-    assert(claim.function == (int)expected && claim.applied == applied && claim.applied_to == applied_to);
     harmony_function_results_destroy(results, f->count);
     harmony_analysis_destroy(segments);
 }

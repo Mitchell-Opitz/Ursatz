@@ -4,8 +4,6 @@
 #include <stdbool.h>
 
 #include "harmony_chord.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 
 /*
  * Resolution of one voice for standard-harmony-v1: where a voice goes from a chord to the next, for the two notes whose
@@ -50,9 +48,6 @@ typedef enum {
 
 /* True for a valid mode and two valid chords. */
 bool harmony_resolution_valid(const HarmonyVoiceResolution *resolution);
-
-const Rule *harmony_resolution_rule(HarmonyResolutionRule which);
-const Constraint *harmony_resolution_constraint(HarmonyResolutionRule which);
 
 /* "seventh-resolves-down" "leading-tone-resolves"; NULL for an invalid rule. */
 const char *harmony_resolution_rule_name(HarmonyResolutionRule which);

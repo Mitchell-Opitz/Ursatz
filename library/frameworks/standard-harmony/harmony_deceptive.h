@@ -25,12 +25,6 @@ typedef enum {
     HARMONY_DECEPTIVE_KIND_COUNT
 } HarmonyDeceptiveKind;
 
-/* True for the two kinds above; false for any other value. */
-bool harmony_deceptive_kind_valid(HarmonyDeceptiveKind kind);
-
-/* "vi" "iv6"; NULL for an invalid kind. */
-const char *harmony_deceptive_kind_name(HarmonyDeceptiveKind kind);
-
 /* The kind the two chords make: V (or V7) in root position, then the triad on degree 6
    in root position (VI) or the triad on degree 4 in first inversion (IV6). False (*out
    untouched) for any other pair, for a chord marked cadential or an invalid one, and

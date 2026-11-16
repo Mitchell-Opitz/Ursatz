@@ -54,31 +54,6 @@ bool harmony_pivot_valid(HarmonyMode home, const HarmonyRelatedKey *key, const H
     return false;
 }
 
-bool harmony_pivot_label(HarmonyMode home, const HarmonyRelatedKey *key, const HarmonyPivot *pivot, char *out,
-                         size_t size) {
-    if (out == NULL || !harmony_pivot_valid(home, key, pivot)) {
-        return false;
-    }
-    char label[32];
-    int length = snprintf(label, sizeof(label), "%s becomes %s", harmony_triad_numeral(home, pivot->old_degree),
-                          harmony_triad_numeral(key->mode, pivot->new_degree));
-    if (length < 0 || (size_t)length >= size) {
-        return false;
-    }
-    snprintf(out, size, "%s", label);
-    return true;
-}
-
-static const char *const RANK_NAMES[HARMONY_PIVOT_RANK_COUNT] = {"best", "good", "fair", "poor"};
-
-bool harmony_pivot_rank_valid(HarmonyPivotRank rank) {
-    return rank >= 0 && rank < HARMONY_PIVOT_RANK_COUNT;
-}
-
-const char *harmony_pivot_rank_name(HarmonyPivotRank rank) {
-    return harmony_pivot_rank_valid(rank) ? RANK_NAMES[rank] : NULL;
-}
-
 static bool function_of(HarmonyMode mode, int degree, HarmonicFunction *out) {
     HarmonyChord chord = {degree, 0, false, false, false, false};
     return harmony_function_of(mode, &chord, out);

@@ -36,11 +36,6 @@ static void test_authentic_v_to_i_on_a_strong_enough_beat(void) {
     assert(strcmp(entity_id_value(interpretation_target_id(c->interpretation)),
                   entity_id_value(cadence_id(c->cadence))) == 0);
     assert(interpretation_framework_reference(c->interpretation) != NULL);
-    HarmonyCadenceClaim claim;
-    assert(harmony_cadence_claim_read(c->interpretation, &claim));
-    assert(claim.type == (int)CADENCE_TYPE_PERFECT_AUTHENTIC && claim.soprano_degree == 1 &&
-           strcmp(claim.arrival_segment, "seg-2") == 0 &&
-           strcmp(claim.dominant_segment, "seg-1") == 0 && strcmp(claim.key_ref, "C") == 0);
 
     /* The TimeSpan runs from the dominant's start (1/4) to the arrival's end (3/4). */
     assert(musical_time_numerator(time_span_start(c->span)) == 1 && musical_time_denominator(time_span_start(c->span)) == 4);
@@ -123,9 +118,6 @@ static void test_a_weak_beat_arrival_after_a_stronger_dominant(void) {
     const HarmonyCadenceResult *c = &found.items[0];
     assert(c->type == CADENCE_TYPE_PERFECT_AUTHENTIC && c->arrival_first == 3);
     assert(c->arrival_beat_strength == BEAT_STRENGTH_WEAK);
-    HarmonyCadenceClaim claim;
-    assert(harmony_cadence_claim_read(c->interpretation, &claim));
-    assert(claim.arrival_beat_strength == (int)BEAT_STRENGTH_WEAK);
     harmony_cadences_destroy(&found);
 
     /* Switched off, it is not one. */
@@ -227,9 +219,6 @@ static void test_cadential_six_four_is_part_of_the_dominant(void) {
     assert(c->six_four_first == 2 && c->six_four_last == 2);
     assert(c->dominant_first == 2 && c->dominant_last == 3 && c->arrival_first == 4);
     assert(cadence_event_id_count(c->cadence) == 3);
-    HarmonyCadenceClaim claim;
-    assert(harmony_cadence_claim_read(c->interpretation, &claim) && claim.has_six_four &&
-           strcmp(claim.dominant_segment, "seg-2") == 0);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -403,64 +392,6 @@ static void test_subverted(void) {
     fixture_destroy(&f);
 }
 
-static void test_cadence_points_and_config(void) {
-    Fixture f;
-    fixture_init(&f);
-    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);   /* I, beat 1 */
-    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 2: weak */
-    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 3: a point */
-    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 4: weak */
-    HarmonySegment *segments = NULL;
-    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
-    HarmonyCadencePoint *points = NULL;
-    size_t n = 0;
-    HarmonyCadenceConfig config = harmony_cadence_config_default();
-    config.allow_weak_arrival = false;
-    assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
-    assert(n == 1 && points[0].arrival_first == 2 && points[0].before_first == 1);
-    free(points);
-
-    /* With weak arrivals allowed, the final I on beat 4 (after the V on the stronger beat 3) is a second point. */
-    assert(harmony_analysis_cadence_points(segments, f.count, NULL, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
-    assert(n == 2 && points[1].arrival_first == 3);
-    free(points);
-
-    /* A longer minimum arrival drops it unless the soprano rests right after: here the next segment has a soprano. */
-    config.arrival_min_beats = 2.0;
-    config.allow_weak_arrival = false;
-    assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
-    assert(n == 0 && points == NULL);
-    f.inputs[3].soprano_degree = 0; /* the soprano rests after the V */
-    harmony_analysis_destroy(segments);
-    assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_OK);
-    assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
-    assert(n == 1);
-    free(points);
-    config.soprano_rest_counts = false;
-    assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
-    assert(n == 0);
-
-    /* A beat length on the segment overrides the config's: a half-note beat makes a quarter arrival half a beat. */
-    Duration *half = NULL;
-    assert(duration_create(1, 2, &half) == DURATION_OK);
-    for (size_t i = 0; i < f.count; i++) {
-        f.inputs[i].beat_length = half;
-    }
-    config = harmony_cadence_config_default();
-    config.allow_weak_arrival = false;
-    config.soprano_rest_counts = false;
-    assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) == HARMONY_CADENCE_ANALYSIS_OK);
-    assert(n == 0); /* one quarter is shorter than one half-note beat */
-    duration_destroy(half);
-
-    config = harmony_cadence_config_default();
-    config.arrival_min_beats = -1.0;
-    assert(harmony_analysis_cadence_points(segments, f.count, &config, &points, &n) ==
-           HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
-    harmony_analysis_destroy(segments);
-    fixture_destroy(&f);
-}
-
 /* Cadences at formal boundaries: a V before a section start is a half cadence of the earlier section. Segment n starts
    at n/4 whole notes. */
 static HarmonyCadences boundary(Fixture *f, HarmonySegment **segments, const double *starts, size_t n) {
@@ -496,9 +427,6 @@ static void test_a_dominant_before_a_section_start_is_a_half_cadence(void) {
     assert(c->alternative.present && c->alternative.reading == HARMONY_CADENCE_READING_CADENCE &&
            c->alternative.type == CADENCE_TYPE_HALF && c->alternative.arrival_first == 2 &&
            c->alternative.arrival_last == 3 && c->alternative.share == 350);
-    HarmonyCadenceClaim claim;
-    assert(harmony_cadence_claim_read(c->interpretation, &claim) && claim.type == (int)CADENCE_TYPE_PERFECT_AUTHENTIC &&
-           strcmp(claim.arrival_segment, "seg-4") == 0 && claim.rank == 1 && claim.share == 650);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -583,11 +511,6 @@ static void check_readings(const HarmonyCadenceResult *c, HarmonyCadenceReading 
                            HarmonyCadenceReading alt_reading, int share) {
     assert(c->share == share && c->alternative.present && c->alternative.share == 1000 - share);
     assert(c->alternative.reading == alt_reading && c->alternative.interpretation != NULL);
-    HarmonyCadenceClaim first, second;
-    assert(harmony_cadence_claim_read(c->interpretation, &first));
-    assert(harmony_cadence_claim_read(c->alternative.interpretation, &second));
-    assert(first.reading == (int)primary_reading && first.rank == 1 && first.share == share);
-    assert(second.reading == (int)alt_reading && second.rank == 2 && second.share == 1000 - share);
     assert(strcmp(entity_id_value(interpretation_target_id(c->interpretation)),
                   entity_id_value(interpretation_target_id(c->alternative.interpretation))) == 0);
     assert(strcmp(entity_id_value(interpretation_target_id(c->interpretation)),
@@ -595,7 +518,6 @@ static void check_readings(const HarmonyCadenceResult *c, HarmonyCadenceReading 
     char expected[300];
     snprintf(expected, sizeof(expected), "%s-alt", entity_id_value(interpretation_id(c->interpretation)));
     assert(strcmp(entity_id_value(interpretation_id(c->alternative.interpretation)), expected) == 0);
-    assert(second.type == (int)c->alternative.type);
 }
 
 static void test_v_to_i6_on_a_downbeat_after_a_predominant_is_evaded(void) {
@@ -648,9 +570,6 @@ static void test_other_cadences_have_one_reading(void) {
     HarmonyCadences found = find(&f, &segments, NULL);
     assert(found.count == 1 && found.items[0].share == 1000 && !found.items[0].alternative.present &&
            found.items[0].alternative.interpretation == NULL);
-    HarmonyCadenceClaim claim;
-    assert(harmony_cadence_claim_read(found.items[0].interpretation, &claim) &&
-           claim.reading == (int)HARMONY_CADENCE_READING_CADENCE && claim.rank == 1 && claim.share == 1000);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);
@@ -766,7 +685,6 @@ int main(void) {
     test_subverted();
     test_cadential_six_four_is_part_of_the_dominant();
     test_uncertainty_is_the_largest_of_the_chords_involved();
-    test_cadence_points_and_config();
     test_a_dominant_before_a_section_start_is_a_half_cadence();
     test_a_boundary_leaves_other_cadences_alone();
     test_a_recorded_half_cadence_is_kept_at_a_boundary();

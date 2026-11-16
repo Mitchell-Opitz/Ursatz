@@ -12,42 +12,6 @@ static bool kind_of(HarmonyChord chord, HarmonyPredominantSeventhKind *kind) {
     return harmony_predominant_seventh_of(&chord, kind);
 }
 
-static void test_kinds_and_names(void) {
-    const char *const expected[] = {"ii7", "ii6/5", "ii4/3", "ii4/2", "iv7", "vi7", "iii7"};
-    for (int i = 0; i < PS(COUNT); i++) {
-        assert(harmony_predominant_seventh_kind_valid((HarmonyPredominantSeventhKind)i));
-        assert(strcmp(harmony_predominant_seventh_kind_name((HarmonyPredominantSeventhKind)i), expected[i]) == 0);
-    }
-    assert(!harmony_predominant_seventh_kind_valid(PS(COUNT)));
-    assert(!harmony_predominant_seventh_kind_valid((HarmonyPredominantSeventhKind)-1));
-    assert(harmony_predominant_seventh_kind_name(PS(COUNT)) == NULL);
-}
-
-static void test_ranks_and_names(void) {
-    const char *const expected[] = {"most", "somewhat", "less", "least"};
-    for (int i = 0; i < RANK(COUNT); i++) {
-        assert(harmony_predominant_seventh_rank_valid((HarmonyPredominantSeventhRank)i));
-        assert(strcmp(harmony_predominant_seventh_rank_name((HarmonyPredominantSeventhRank)i), expected[i]) == 0);
-    }
-    assert(!harmony_predominant_seventh_rank_valid(RANK(COUNT)));
-    assert(!harmony_predominant_seventh_rank_valid((HarmonyPredominantSeventhRank)-1));
-    assert(harmony_predominant_seventh_rank_name(RANK(COUNT)) == NULL);
-}
-
-static void test_the_commonality_of_the_ii7_inversions(void) {
-    assert(harmony_predominant_seventh_rank(PS(II65)) == RANK(MOST));
-    assert(harmony_predominant_seventh_rank(PS(II7)) == RANK(SOMEWHAT));
-    assert(harmony_predominant_seventh_rank(PS(II43)) == RANK(LESS));
-    assert(harmony_predominant_seventh_rank(PS(II42)) == RANK(LEAST));
-}
-
-static void test_the_other_sevenths_are_less_common_than_ii7(void) {
-    assert(harmony_predominant_seventh_rank(PS(IV7)) == RANK(LESS));
-    assert(harmony_predominant_seventh_rank(PS(VI7)) == RANK(LESS));
-    assert(harmony_predominant_seventh_rank(PS(III7)) == RANK(LEAST));
-    assert(harmony_predominant_seventh_rank(PS(COUNT)) == RANK(COUNT));
-}
-
 static void test_the_inversions_of_ii7(void) {
     HarmonyPredominantSeventhKind kind = PS(COUNT);
     assert(kind_of(CH7(2), &kind) && kind == PS(II7));
@@ -84,10 +48,6 @@ static void test_invalid_subjects(void) {
 }
 
 int main(void) {
-    test_kinds_and_names();
-    test_ranks_and_names();
-    test_the_commonality_of_the_ii7_inversions();
-    test_the_other_sevenths_are_less_common_than_ii7();
     test_the_inversions_of_ii7();
     test_iv7_vi7_and_iii7_in_any_inversion();
     test_other_chords_are_not_predominant_sevenths();

@@ -71,9 +71,6 @@ bool harmony_rule_table_valid(const HarmonyRuleTable *table, int which);
 /* True when the rule is hard; false when it is soft or the number is invalid. */
 bool harmony_rule_table_is_hard(const HarmonyRuleTable *table, int which);
 
-/* The rule, its constraint, and its name. NULL for an invalid number. */
-const Rule *harmony_rule_table_rule(const HarmonyRuleTable *table, int which);
-const Constraint *harmony_rule_table_constraint(const HarmonyRuleTable *table, int which);
 /* The soft rule's Preference; NULL for a hard rule, a table with no score callback, or an invalid number. */
 const Preference *harmony_rule_table_preference(const HarmonyRuleTable *table, int which);
 const char *harmony_rule_table_name(const HarmonyRuleTable *table, int which);
@@ -150,8 +147,5 @@ PreferenceScore harmony_rule_table_score(const HarmonyRuleTable *table, HarmonyR
         (void)context;                                                                                          \
         return harmony_rule_table_score(&(table), (holds), sizeof(subject_type), preference, candidate);       \
     }
-
-/* Hardness predicate for a table whose rules are all soft. */
-bool harmony_rule_table_never_hard(int which);
 
 #endif

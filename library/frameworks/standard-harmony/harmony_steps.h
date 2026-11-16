@@ -20,27 +20,7 @@
  * another framework.
  */
 
-typedef enum {
-    HARMONY_PERFECT_NONE = 0,
-    HARMONY_PERFECT_FIFTH,
-    HARMONY_PERFECT_OCTAVE
-} HarmonyPerfectInterval;
-
 /* The scale degree (1 to 7) of a step. */
 int harmony_step_degree(int step);
-
-/* 1 if the voice moves up (to a higher step), -1 if it moves down, 0 if it
-   stays. */
-int harmony_step_direction(int from, int to);
-
-/* Whether two voices at these steps make a perfect fifth or an octave (a unison
-   counts as an octave; any number of octaves is the same), measured from the
-   lower voice up. A fifth between ti and fa (ti below, fa above) is a diminished
-   fifth, so it is not perfect. */
-HarmonyPerfectInterval harmony_step_perfect_interval(int a, int b);
-
-/* True when two voices move in the same direction, both moving, from one perfect
-   interval to the same kind of perfect interval: parallel fifths or octaves. */
-bool harmony_steps_parallel(int a_from, int a_to, int b_from, int b_to);
 
 #endif

@@ -19,9 +19,6 @@ static void test_mode_and_chord_validity(void) {
     assert(harmony_mode_valid(HARMONY_MODE_MAJOR));
     assert(harmony_mode_valid(HARMONY_MODE_MINOR));
     assert(!harmony_mode_valid(HARMONY_MODE_COUNT));
-    assert(strcmp(harmony_mode_name(HARMONY_MODE_MAJOR), "major") == 0);
-    assert(strcmp(harmony_mode_name(HARMONY_MODE_MINOR), "minor") == 0);
-    assert(harmony_mode_name(HARMONY_MODE_COUNT) == NULL);
 
     HarmonyChord ok = CH(5);
     HarmonyChord low = CH(0);

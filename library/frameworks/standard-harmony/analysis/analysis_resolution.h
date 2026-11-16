@@ -95,7 +95,4 @@ HarmonyResolutionStatus harmony_analysis_check_resolutions(const HarmonySegment 
 
 void harmony_resolutions_destroy(HarmonyResolutions *resolutions);
 
-/* Reads the claim back out of a resolution Interpretation. False if it is not one. */
-bool harmony_resolution_claim_read(const Interpretation *interpretation, HarmonyResolutionClaim *out);
-
 #endif

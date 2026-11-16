@@ -87,14 +87,3 @@ bool harmony_phrase_model_label(const HarmonyPhrase *phrase, CadenceType cadence
     return true;
 }
 
-int harmony_phrase_labels_index_of(const HarmonyPhraseLabels *labels, PhraseModelLabel label) {
-    if (labels == NULL || !phrase_model_label_valid(label)) {
-        return -1;
-    }
-    for (size_t i = 0; i < labels->chord_count; i++) {
-        if (labels->has_label[i] && labels->label[i] == label) {
-            return (int)i;
-        }
-    }
-    return -1;
-}

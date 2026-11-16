@@ -69,7 +69,4 @@ HarmonySixFourStatus harmony_analysis_classify_six_fours(const HarmonySegment *s
 
 void harmony_six_four_results_destroy(HarmonySixFourResult *results, size_t count);
 
-/* Reads the claim back out of a six-four Interpretation. False if it is not one. */
-bool harmony_six_four_claim_read(const Interpretation *interpretation, HarmonySixFourClaim *out);
-
 #endif

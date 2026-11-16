@@ -3,14 +3,7 @@
 #include <string.h>
 
 #include "harmony_resolution_rules.h"
-#include "harmony_rule_check.h"
 #include "harmony_test_util.h"
-#include "harmony_eval_check.h"
-
-/* Every call to the group's rule_holds below also runs the rule through constraint_evaluate. */
-HARMONY_EVAL_TABLE(g_eval, "resolution", HARMONY_RESOLUTION_RULE_COUNT);
-#define harmony_resolution_rule_holds(which, subject) \
-    HARMONY_EVAL_HOLDS_APPLIES(g_eval, harmony_resolution_constraint, harmony_eval_no_preference, harmony_resolution_rule_holds, harmony_resolution_rule_applies, HarmonyVoiceResolution, which, subject)
 
 #define R(name) HARMONY_RESOLUTION_##name
 
@@ -24,16 +17,6 @@ static HarmonyVoiceResolution move(HarmonyChord from, HarmonyChord to, int from_
     r.outer = outer;
     r.complete_dominant_seventh = false;
     return r;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(harmony_resolution_rule, harmony_resolution_constraint, HARMONY_RESOLUTION_RULE_COUNT);
-    for (int i = 0; i < HARMONY_RESOLUTION_RULE_COUNT; i++) {
-        assert(constraint_type(harmony_resolution_constraint((HarmonyResolutionRule)i)) == CONSTRAINT_TYPE_HARD);
-    }
-    assert(strcmp(harmony_resolution_rule_name(R(SEVENTH_RESOLVES_DOWN)), "seventh-resolves-down") == 0);
-    assert(strcmp(harmony_resolution_rule_name(R(LEADING_TONE_RESOLVES)), "leading-tone-resolves") == 0);
-    assert(harmony_resolution_rule_name(R(RULE_COUNT)) == NULL);
 }
 
 static void test_seventh_resolves_down_by_step(void) {
@@ -131,7 +114,6 @@ static void test_invalid_subjects(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_seventh_resolves_down_by_step();
     test_seventh_of_other_chords_and_inversions();
     test_leading_tone_in_an_outer_voice();

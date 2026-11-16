@@ -39,8 +39,4 @@ bool six_four_type_valid(SixFourType type);
 /* "cadential" "passing" "neighbor" "arpeggiating"; NULL for an invalid type. */
 const char *six_four_type_name(SixFourType type);
 
-/* True for the types that are labeled in analysis: cadential, passing, and neighbor.
-   False for the arpeggiating 6/4 and for an invalid type. */
-bool six_four_type_is_labeled(SixFourType type);
-
 #endif
