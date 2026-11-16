@@ -1,15 +1,6 @@
 #include "meter_class_rules.h"
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_METER_CLASS_RULE_COUNT] = {
-    "class-classify", "class-beats-per-measure", "class-beat-division", "class-compound-beat",
-    "class-compound-bottom"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
-    NAMES, STANDARD_METER_CLASS_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_meter_class, StandardMeterClassRule, STANDARD_METER_CLASS_RULE_COUNT, g_table)
+#include <stddef.h>
 
 MeterClass standard_meter_classify(const TimeSignature *time_signature) {
     MeterClass unclassified = {METER_TYPE_UNCLASSIFIED, METER_GROUPING_NONE};
@@ -111,23 +102,3 @@ bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration 
     return duration_create(units, time_signature_bottom_number(time_signature), out) == DURATION_OK;
 }
 
-bool standard_meter_beat_note_value(const TimeSignature *time_signature, NoteValue **out) {
-    MeterType type = standard_meter_type(time_signature);
-    int exponent = time_signature_bottom_unit_exponent(time_signature);
-    if (type == METER_TYPE_SIMPLE) {
-        return note_value_create(exponent, out) == NOTE_VALUE_OK;
-    }
-    if (type == METER_TYPE_COMPOUND) {
-        /* three bottom units = one dotted note, one step longer */
-        return note_value_create_dotted(exponent - 1, 1, out) == NOTE_VALUE_OK;
-    }
-    return false;
-}
-
-bool standard_meter_compound_bottom_is_usual(const TimeSignature *time_signature) {
-    if (standard_meter_type(time_signature) != METER_TYPE_COMPOUND) {
-        return false;
-    }
-    unsigned number = time_signature_bottom_number(time_signature);
-    return number == 4 || number == 8 || number == 16;
-}

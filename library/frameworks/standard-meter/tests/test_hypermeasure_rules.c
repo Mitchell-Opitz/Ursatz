@@ -3,15 +3,9 @@
 #include <stdio.h>
 
 #include "hypermeter_rules.h"
-#include "rule_check.h"
 
 static bool near(double a, double b) {
     return fabs(a - b) < 1e-12;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_meter_hypermeter_rule, standard_meter_hypermeter_constraint,
-                                    STANDARD_METER_HYPERMETER_RULE_COUNT);
 }
 
 static void test_score(void) {
@@ -72,7 +66,6 @@ static void test_expansion_and_elision(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_score();
     test_score_refuses();
     test_choose();

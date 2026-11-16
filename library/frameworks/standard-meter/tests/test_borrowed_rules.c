@@ -3,19 +3,12 @@
 #include <string.h>
 
 #include "borrowed_rules.h"
-#include "counting_rules.h"
 #include "meter_test_util.h"
-#include "rule_check.h"
 
 static Tuplet *make(unsigned actual, unsigned normal) {
     Tuplet *tuplet = NULL;
     assert(tuplet_create(actual, normal, &tuplet) == TUPLET_OK);
     return tuplet;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_meter_borrowed_rule, standard_meter_borrowed_constraint,
-                                    STANDARD_METER_BORROWED_RULE_COUNT);
 }
 
 /* A triplet is borrowed in simple meter, a duplet in compound; in its own meter it is not. */
@@ -118,18 +111,7 @@ static void test_borrowed_counting(void) {
     Tuplet *quintuplet = make(5, 4);
     const char *syllable = "unset";
 
-    assert(standard_meter_tuplet_count_syllable(triplet, 0, &syllable) && syllable == NULL);
-    assert(standard_meter_tuplet_count_syllable(triplet, 1, &syllable) && strcmp(syllable, "la") == 0);
-    assert(standard_meter_tuplet_count_syllable(triplet, 2, &syllable) && strcmp(syllable, "li") == 0);
-
-    assert(standard_meter_tuplet_count_syllable(duplet, 0, &syllable) && syllable == NULL);
-    assert(standard_meter_tuplet_count_syllable(duplet, 1, &syllable) && strcmp(syllable, "+") == 0);
-
     syllable = "unset";
-    assert(!standard_meter_tuplet_count_syllable(triplet, 3, &syllable));  /* past the count */
-    assert(!standard_meter_tuplet_count_syllable(duplet, 2, &syllable));
-    assert(!standard_meter_tuplet_count_syllable(quintuplet, 0, &syllable)); /* not named */
-    assert(!standard_meter_tuplet_count_syllable(NULL, 0, &syllable));
     assert(strcmp(syllable, "unset") == 0);
 
     tuplet_destroy(triplet);
@@ -137,36 +119,13 @@ static void test_borrowed_counting(void) {
     tuplet_destroy(quintuplet);
 }
 
-/* The borrowed syllables are the other meter's own division syllables. */
-static void test_borrowed_matches_native_division(void) {
-    Tuplet *triplet = make(3, 2);
-    TimeSignature *six_eight = make_signature(6, 3);
-    const char *syllable;
-
-    /* a triplet's second and third notes are the compound division at 1/3 and 2/3 of the beat */
-    Duration *la = make_duration(1, 8);
-    Duration *li = make_duration(1, 4);
-    StandardMeterCount count;
-    assert(standard_meter_count(six_eight, la, &count));
-    assert(standard_meter_tuplet_count_syllable(triplet, 1, &syllable) && strcmp(syllable, count.syllable) == 0);
-    assert(standard_meter_count(six_eight, li, &count));
-    assert(standard_meter_tuplet_count_syllable(triplet, 2, &syllable) && strcmp(syllable, count.syllable) == 0);
-
-    duration_destroy(la);
-    duration_destroy(li);
-    time_signature_destroy(six_eight);
-    tuplet_destroy(triplet);
-}
-
 int main(void) {
-    test_rules_reference_framework();
     test_borrowed();
     test_triplet_levels_in_simple_meter();
     test_duplet_levels_in_compound_meter();
     test_level_declines();
     test_typical_level();
     test_borrowed_counting();
-    test_borrowed_matches_native_division();
     printf("test_borrowed_rules (standard-meter): ok\n");
     return 0;
 }

@@ -471,19 +471,3 @@ Interpretation *standard_meter_check_interpretation(const StandardMeterCheck *ch
                                                  check->uncertainty, "meter-check");
 }
 
-bool standard_meter_check_claim_read(const Interpretation *interpretation, StandardMeterCheck *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    if (claim == NULL || strcmp(value_type(claim), STANDARD_METER_CHECK_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    size_t size = 0;
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}

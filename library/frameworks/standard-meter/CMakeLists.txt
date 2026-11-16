@@ -1,11 +1,6 @@
 add_library(standard_meter
     framework.c
-    grouping_rules.c
-    time_signature_rules.c
     meter_class_rules.c
-    measure_rules.c
-    anacrusis_rules.c
-    counting_rules.c
     borrowed_rules.c
     hypermeter_rules.c
     syncopation_rules.c
@@ -13,8 +8,6 @@ add_library(standard_meter
     metric_position_rules.c
     segmentation_beat_grid.c
     beat_grid.c
-    beaming_rules.c
-    beat_tie_rules.c
     analysis/meter_analysis_position.c
     analysis/meter_analysis_input.c
     analysis/meter_analysis_claim.c

@@ -4,7 +4,6 @@
 
 #include "meter_test_util.h"
 #include "metric_position_rules.h"
-#include "rule_check.h"
 
 /*
  * Metric position tests: beat and subdivision, metric level and BeatStrength in simple (2/4, 3/4,
@@ -18,11 +17,6 @@ static MetricalPosition *position(long n, unsigned long d) {
     assert(metrical_position_create(1, offset, &p) == METRICAL_POSITION_OK);
     duration_destroy(offset);
     return p;
-}
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_meter_metric_rule, standard_meter_metric_constraint,
-                                    STANDARD_METER_METRIC_RULE_COUNT);
 }
 
 /* The offset on_n/on_d into the measure reads as `beat` at sub_n/sub_d of the beat, at the given level
@@ -213,7 +207,6 @@ static void test_declines_null_and_overflow(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_two_four();
     test_three_four();
     test_four_four();

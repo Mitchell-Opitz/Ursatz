@@ -1,14 +1,6 @@
 #include "borrowed_rules.h"
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_METER_BORROWED_RULE_COUNT] = {"borrowed-borrowed", "borrowed-level",
-                                                                       "borrowed-typical-level"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
-    NAMES, STANDARD_METER_BORROWED_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_meter_borrowed, StandardMeterBorrowedRule, STANDARD_METER_BORROWED_RULE_COUNT, g_table)
+#include <stddef.h>
 
 static bool is_triplet(const Tuplet *tuplet) {
     return tuplet != NULL && tuplet_actual(tuplet) == 3 && tuplet_normal(tuplet) == 2;

@@ -1,46 +1,6 @@
 #include "hypermeter_rules.h"
 
-#include "rule_pair.h"
-
-static const char *const NAMES[STANDARD_METER_HYPERMETER_RULE_COUNT] = {"hypermeter-count-measures",
-                                                                         "hypermeter-accent", "hypermeter-length",
-                                                                         "hypermeter-expansion", "hypermeter-elision"};
-
-static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
-    NAMES, STANDARD_METER_HYPERMETER_RULE_COUNT);
-
-URSATZ_RULE_ACCESSORS(standard_meter_hypermeter, StandardMeterHypermeterRule, STANDARD_METER_HYPERMETER_RULE_COUNT, g_table)
-
-/* Measures per hypermetric group, or 0 for no grouping. */
-static unsigned group_size(MeterGrouping grouping) {
-    switch (grouping) {
-    case METER_GROUPING_DUPLE:
-        return 2;
-    case METER_GROUPING_TRIPLE:
-        return 3;
-    case METER_GROUPING_QUADRUPLE:
-        return 4;
-    default:
-        return 0;
-    }
-}
-
-bool standard_meter_hypermetric_count(unsigned measure_index, MeterGrouping grouping, unsigned *out_count) {
-    unsigned size = group_size(grouping);
-    if (size == 0) {
-        return false;
-    }
-    *out_count = measure_index % size + 1;
-    return true;
-}
-
-bool standard_meter_hypermetric_accented(unsigned count, MeterGrouping grouping) {
-    unsigned size = group_size(grouping);
-    if (size == 0 || count < 1 || count > size) {
-        return false;
-    }
-    return count == 1 || (grouping == METER_GROUPING_QUADRUPLE && count == 3);
-}
+#include <stddef.h>
 
 bool standard_meter_hypermeasure_score(unsigned phrase_measures, int arrival_index, bool elided, unsigned length,
                                        double *out_score) {

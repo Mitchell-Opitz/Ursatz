@@ -3,12 +3,6 @@
 
 #include "hemiola_rules.h"
 #include "meter_test_util.h"
-#include "rule_check.h"
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_meter_hemiola_rule, standard_meter_hemiola_constraint,
-                                    STANDARD_METER_HEMIOLA_RULE_COUNT);
-}
 
 static void window(unsigned beats, int exponent, bool expected, long pulse_n, unsigned long pulse_d, unsigned measures) {
     TimeSignature *signature = make_signature(beats, exponent);
@@ -71,7 +65,6 @@ static void test_evidence_count(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_window();
     test_evidence();
     test_evidence_count();

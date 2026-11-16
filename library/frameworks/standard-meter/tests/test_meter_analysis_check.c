@@ -179,16 +179,12 @@ static void test_claim(void) {
     assert(check.present);
     Interpretation *claim = standard_meter_check_interpretation(&check, "piece-1");
     assert(claim != NULL);
-    StandardMeterCheck read;
-    assert(standard_meter_check_claim_read(claim, &read));
-    assert(memcmp(&read, &check, sizeof(check)) == 0);
     interpretation_destroy(claim);
 
     StandardMeterCheck absent;
     memset(&absent, 0, sizeof(absent));
     assert(standard_meter_check_interpretation(&absent, "piece-1") == NULL);
     assert(standard_meter_check_interpretation(&check, NULL) == NULL);
-    assert(!standard_meter_check_claim_read(NULL, &read));
     piece_destroy(&piece);
 }
 

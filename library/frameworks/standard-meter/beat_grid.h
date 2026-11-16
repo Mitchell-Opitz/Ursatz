@@ -18,15 +18,6 @@
  */
 
 /*
- * The beat `offset` falls in: *out_index is 0-based, *out_on_beat is true
- * when the offset is exactly the start of that beat. False, leaving the
- * outputs untouched, when the offset is at or past the end of the
- * measure.
- */
-bool standard_meter_beat_at(const TimeSignature *time_signature, const Duration *offset, unsigned *out_index,
-                            bool *out_on_beat);
-
-/*
  * The start of beat `index` as an offset from the start of the measure;
  * index equal to the beats per measure is the end of the measure. False,
  * leaving *out untouched, past that or on allocation failure. On success

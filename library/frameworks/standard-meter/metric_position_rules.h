@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "semantics/beat_strength.h"
 #include "time/duration.h"
 #include "time/metrical_position.h"
@@ -46,13 +43,6 @@
  */
 
 typedef enum {
-    STANDARD_METER_METRIC_RULE_BEAT_POSITION = 0,
-    STANDARD_METER_METRIC_RULE_METRIC_LEVEL,
-    STANDARD_METER_METRIC_RULE_BEAT_STRENGTH,
-    STANDARD_METER_METRIC_RULE_COUNT
-} StandardMeterMetricRule;
-
-typedef enum {
     STANDARD_METER_LEVEL_DOWNBEAT = 0,
     STANDARD_METER_LEVEL_SECONDARY_BEAT,
     STANDARD_METER_LEVEL_BEAT,
@@ -75,9 +65,6 @@ typedef struct {
  * allocation failure. On success the caller owns *out_beat.
  */
 bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats);
-
-const Rule *standard_meter_metric_rule(StandardMeterMetricRule which);
-const Constraint *standard_meter_metric_constraint(StandardMeterMetricRule which);
 
 /* BEAT_POSITION. */
 bool standard_meter_beat_position(const TimeSignature *time_signature, const MetricalPosition *position,

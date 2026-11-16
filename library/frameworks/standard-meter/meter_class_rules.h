@@ -4,8 +4,6 @@
 #include <stdbool.h>
 
 #include "grouping_rules.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "time/duration.h"
 #include "time/note_value.h"
 #include "time/time_signature.h"
@@ -50,15 +48,6 @@
  */
 
 typedef enum {
-    STANDARD_METER_CLASS_RULE_CLASSIFY = 0,
-    STANDARD_METER_CLASS_RULE_BEATS_PER_MEASURE,
-    STANDARD_METER_CLASS_RULE_BEAT_DIVISION,
-    STANDARD_METER_CLASS_RULE_COMPOUND_BEAT,
-    STANDARD_METER_CLASS_RULE_COMPOUND_BOTTOM,
-    STANDARD_METER_CLASS_RULE_COUNT
-} StandardMeterClassRule;
-
-typedef enum {
     METER_TYPE_UNCLASSIFIED,
     METER_TYPE_SIMPLE,
     METER_TYPE_COMPOUND
@@ -68,9 +57,6 @@ typedef struct {
     MeterType type;
     MeterGrouping grouping; /* METER_GROUPING_NONE when unclassified */
 } MeterClass;
-
-const Rule *standard_meter_class_rule(StandardMeterClassRule which);
-const Constraint *standard_meter_class_constraint(StandardMeterClassRule which);
 
 /* CLASSIFY: the signature's meter type and grouping. A NULL signature is
    unclassified. */
@@ -101,17 +87,5 @@ bool standard_meter_beat_division(MeterType type, unsigned *out_division, unsign
  * the caller owns *out.
  */
 bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration **out);
-
-/*
- * COMPOUND_BEAT: the beat as a written value -- the bottom unit for
- * simple meter, the dotted note one step longer for compound (a dotted
- * quarter in 6/8). False, leaving *out untouched, when unclassified or on
- * allocation failure. On success the caller owns *out.
- */
-bool standard_meter_beat_note_value(const TimeSignature *time_signature, NoteValue **out);
-
-/* COMPOUND_BOTTOM: true when the signature is compound and its bottom
-   number is 4, 8, or 16. */
-bool standard_meter_compound_bottom_is_usual(const TimeSignature *time_signature);
 
 #endif

@@ -31,7 +31,6 @@
 
 #define RULES(X)                                                                                                       \
     X(standard_markings_articulation_rule)                                                                             \
-    X(standard_meter_anacrusis_rule)                                                                                   \
     X(standard_texture_mixed_rule)                                                                                     \
     X(standard_voicing_doubling_rule)
 

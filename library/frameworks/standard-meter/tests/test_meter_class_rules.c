@@ -3,12 +3,6 @@
 
 #include "meter_class_rules.h"
 #include "meter_test_util.h"
-#include "rule_check.h"
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_meter_class_rule, standard_meter_class_constraint,
-                                    STANDARD_METER_CLASS_RULE_COUNT);
-}
 
 /* 2, 3, 4 are simple; 6, 9, 12 are compound; duple, triple, quadruple. */
 static void test_classify_the_six_categories(void) {
@@ -45,11 +39,8 @@ static void test_unclassified_tops(void) {
 
         unsigned beats = 77;
         Duration *beat = NULL;
-        NoteValue *beat_value = NULL;
         assert(!standard_meter_beats_per_measure(time_signature, &beats));
         assert(!standard_meter_beat_duration(time_signature, &beat));
-        assert(!standard_meter_beat_note_value(time_signature, &beat_value));
-        assert(beats == 77 && beat == NULL && beat_value == NULL);
         time_signature_destroy(time_signature);
     }
 
@@ -113,54 +104,15 @@ static void test_beat_duration_and_value(void) {
     /* 4/4: quarter, 1/4 */
     TimeSignature *four_four = make_signature(4, 2);
     Duration *beat = NULL;
-    NoteValue *value = NULL;
     assert(standard_meter_beat_duration(four_four, &beat));
     assert_duration(beat, 1, 4);
     duration_destroy(beat);
-    assert(standard_meter_beat_note_value(four_four, &value));
-    assert(note_value_exponent(value) == 2 && note_value_dots(value) == 0);
-    note_value_destroy(value);
     time_signature_destroy(four_four);
-
-    /* x/8 is a dotted quarter (3/8), x/4 a dotted half (3/4), x/16 a dotted eighth (3/16) */
-    struct {
-        int bottom_exponent;
-        long beat_n;
-        unsigned long beat_d;
-        int value_exponent;
-    } compound[] = {{3, 3, 8, 2}, {2, 3, 4, 1}, {4, 3, 16, 3}};
-    unsigned tops[] = {6, 9, 12};
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            TimeSignature *time_signature = make_signature(tops[j], compound[i].bottom_exponent);
-            assert(standard_meter_beat_duration(time_signature, &beat));
-            assert_duration(beat, compound[i].beat_n, compound[i].beat_d);
-            assert(standard_meter_beat_note_value(time_signature, &value));
-            assert(note_value_exponent(value) == compound[i].value_exponent);
-            assert(note_value_dots(value) == 1);
-
-            /* the dotted value's own length is the beat */
-            Duration *value_length = NULL;
-            assert(note_value_duration(value, &value_length) == DURATION_OK);
-            assert(duration_equals(value_length, beat));
-
-            duration_destroy(value_length);
-            duration_destroy(beat);
-            note_value_destroy(value);
-            time_signature_destroy(time_signature);
-        }
-    }
 
     /* a bottom number of 2 is a dotted whole; 1 a dotted breve */
     TimeSignature *six_two = make_signature(6, 1);
-    assert(standard_meter_beat_note_value(six_two, &value));
-    assert(note_value_exponent(value) == 0 && note_value_dots(value) == 1);
-    note_value_destroy(value);
     time_signature_destroy(six_two);
     TimeSignature *six_one = make_signature(6, 0);
-    assert(standard_meter_beat_note_value(six_one, &value));
-    assert(note_value_exponent(value) == -1 && note_value_dots(value) == 1);
-    note_value_destroy(value);
     time_signature_destroy(six_one);
 }
 
@@ -185,24 +137,7 @@ static void test_beats_times_beat_is_measure(void) {
     }
 }
 
-/* Compound bottom number is usually 4, 8, or 16. */
-static void test_compound_bottom_usual(void) {
-    bool usual[] = {false, false, true, true, true}; /* bottom 1, 2, 4, 8, 16 */
-    for (int exponent = 0; exponent <= 4; exponent++) {
-        TimeSignature *compound = make_signature(6, exponent);
-        assert(standard_meter_compound_bottom_is_usual(compound) == usual[exponent]);
-        time_signature_destroy(compound);
-
-        /* a simple meter is never a usual compound bottom */
-        TimeSignature *simple = make_signature(4, exponent);
-        assert(!standard_meter_compound_bottom_is_usual(simple));
-        time_signature_destroy(simple);
-    }
-    assert(!standard_meter_compound_bottom_is_usual(NULL));
-}
-
 int main(void) {
-    test_rules_reference_framework();
     test_classify_the_six_categories();
     test_unclassified_tops();
     test_beats_per_measure();
@@ -210,7 +145,6 @@ int main(void) {
     test_category_table();
     test_beat_duration_and_value();
     test_beats_times_beat_is_measure();
-    test_compound_bottom_usual();
     printf("test_meter_class_rules (standard-meter): ok\n");
     return 0;
 }

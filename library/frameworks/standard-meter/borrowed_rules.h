@@ -4,8 +4,6 @@
 #include <stdbool.h>
 
 #include "meter_class_rules.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "time/duration.h"
 #include "time/time_signature.h"
 #include "time/tuplet.h"
@@ -37,20 +35,10 @@
  */
 
 typedef enum {
-    STANDARD_METER_BORROWED_RULE_BORROWED = 0,
-    STANDARD_METER_BORROWED_RULE_LEVEL,
-    STANDARD_METER_BORROWED_RULE_TYPICAL_LEVEL,
-    STANDARD_METER_BORROWED_RULE_COUNT
-} StandardMeterBorrowedRule;
-
-typedef enum {
     TUPLET_LEVEL_BEAT,        /* spans exactly one beat */
     TUPLET_LEVEL_SUBDIVISION, /* spans less than a beat, dividing it evenly */
     TUPLET_LEVEL_MULTI_BEAT   /* spans a whole number of beats, more than one */
 } TupletLevel;
-
-const Rule *standard_meter_borrowed_rule(StandardMeterBorrowedRule which);
-const Constraint *standard_meter_borrowed_constraint(StandardMeterBorrowedRule which);
 
 /* BORROWED: true for a triplet in a simple meter or a duplet in a
    compound meter; false for anything else, including an unclassified

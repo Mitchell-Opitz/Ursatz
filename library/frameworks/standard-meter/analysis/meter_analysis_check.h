@@ -68,7 +68,4 @@ StandardMeterAnalysisStatus standard_meter_check_changes(const char *const *labe
 /* An Interpretation of the check targeting `target_id`. NULL on a bad argument, a check that is not present, or failure. */
 Interpretation *standard_meter_check_interpretation(const StandardMeterCheck *check, const char *target_id);
 
-/* Reads the check back from its Interpretation. False when it is not a meter-check claim. */
-bool standard_meter_check_claim_read(const Interpretation *interpretation, StandardMeterCheck *out);
-
 #endif
