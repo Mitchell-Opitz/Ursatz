@@ -6,10 +6,6 @@ add_executable(test_analysis_pipeline test_analysis_pipeline.c)
 target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer analyzer_test_support)
 add_test(NAME test_analysis_pipeline COMMAND test_analysis_pipeline)
 
-add_executable(test_report_output test_report_output.c)
-target_link_libraries(test_report_output PRIVATE ursatz_analyzer analyzer_test_support)
-add_test(NAME test_report_output COMMAND test_report_output)
-
 add_executable(test_corpus_key_estimation test_corpus_key_estimation.c)
 target_link_libraries(test_corpus_key_estimation PRIVATE ursatz_analyzer)
 target_compile_definitions(test_corpus_key_estimation PRIVATE
@@ -64,16 +60,6 @@ add_test(NAME test_analysis_document_schema
 # Over 10 s in the fast set (about 49 s of CPU measured): runs nightly.
 set_tests_properties(test_analysis_document_schema PROPERTIES LABELS slow)
 set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
-
-add_executable(test_report_snapshots test_report_snapshots.c)
-target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer analyzer_test_support)
-target_compile_definitions(test_report_snapshots PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
-# Over 10 s in the fast set (about 78 s of CPU measured): runs nightly.
-set_tests_properties(test_report_snapshots PROPERTIES LABELS slow)
 
 add_executable(test_document_snapshots test_document_snapshots.c)
 target_link_libraries(test_document_snapshots PRIVATE ursatz_analyzer analyzer_test_support cjson)

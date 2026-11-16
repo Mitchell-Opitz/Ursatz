@@ -14,8 +14,7 @@
  */
 #define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 11
 
-/* An in-memory analysis document: an export of an AnalyzerResult. The JSON file and
-   the Markdown report are both rendered from it. */
+/* An in-memory analysis document: an export of an AnalyzerResult. The JSON file is rendered from it. */
 typedef struct AnalysisDocument AnalysisDocument;
 
 /*
@@ -56,8 +55,7 @@ char *analysis_document_render_result(const char *input_path, const AnalyzerResu
 
 /*
  * The analysis document path for input_path: "<stem>.analysis.json"
- * next to it, using the same stem rule as derive_report_path. Caller
- * frees; NULL on allocation failure.
+ * next to it. Caller frees; NULL on allocation failure.
  */
 char *derive_analysis_document_path(const char *input_path);
 

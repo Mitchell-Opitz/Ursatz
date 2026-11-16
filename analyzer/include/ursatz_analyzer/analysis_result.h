@@ -11,9 +11,8 @@
 
 /*
  * The analysis as library results (R-220): one run over imported notes gives the library chain's results, the claims
- * (Interpretations) of every area, and the report view the document and the Markdown report are exported from. The
- * document JSON (analysis_document.h) and the Markdown report (markdown_report.h) are exports of an AnalyzerResult; they
- * hold nothing the result does not.
+ * (Interpretations) of every area, and the report view the document is exported from. The document JSON
+ * (analysis_document.h) is an export of an AnalyzerResult; it holds nothing the result does not.
  */
 
 typedef struct AnalyzerResult AnalyzerResult;
@@ -30,7 +29,7 @@ typedef enum {
  * The stages of a run. `stages` holds ANALYSIS_CHAIN_STAGE_* bits (bits 0 to 11, the library chain, from
  * ursatz_chain/analysis_chain.h) and the bits below for the Analyzer-only stages. The chain stages pull in the stages they need (ursatz_chain/analysis_chain.h).
  *
- * The report view, and so the document and the Markdown report, is collected only when every chain stage is selected.
+ * The report view, and so the document, is collected only when every chain stage is selected.
  * With fewer, the result holds the chain and the claims its stages give, and analyzer_result_report is an empty report.
  * The Analyzer-only stages read the chain's results: a bit set without the chain stage it reads gives no entries.
  */
@@ -113,7 +112,7 @@ size_t analyzer_result_claim_count(const AnalyzerResult *result, AnalyzerArea ar
 /* NULL for a NULL result, an area outside the enum or an index past the count. */
 const Interpretation *analyzer_result_claim(const AnalyzerResult *result, AnalyzerArea area, size_t index);
 
-/* The report view the document and the Markdown report are exported from (R-252). Never NULL for a result. */
+/* The report view the document is exported from (R-252). Never NULL for a result. */
 const AnalysisReport *analyzer_result_report(const AnalyzerResult *result);
 
 #endif

@@ -211,7 +211,7 @@ static StyleModel *corpus_model_without(const char *name, size_t pieces, const c
     char input[1024], output[1024], file[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
-    CorpusRunOptions options = {input, output, false, false, NULL, NULL};
+    CorpusRunOptions options = {input, output, false, NULL, NULL};
     CorpusRunSummary summary;
     CHECK(corpus_run(&options, &summary) == CORPUS_RUN_OK && summary.analyzed == pieces && summary.failed == 0,
           "%s analyzed", name);

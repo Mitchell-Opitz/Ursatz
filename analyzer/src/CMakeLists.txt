@@ -37,8 +37,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/staleness.c
     pipeline/playback.c
     pipeline/score_export.c
-    pipeline/markdown_report.c
-    pipeline/report_writer.c
     pipeline/path_util.c
     pipeline/analysis_document.c
     pipeline/corpus.c

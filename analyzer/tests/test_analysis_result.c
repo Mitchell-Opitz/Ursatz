@@ -8,7 +8,6 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/result_chain.h>
 
 #include <ursatz_chain/analysis_chain.h>
@@ -26,7 +25,7 @@
  *   - every claim has a target and a scalar confidence,
  *   - a callback that refuses stops the run with ANALYZER_ERR_CANCELLED and nothing written,
  *   - a partial stage set gives the chain's claims and no export,
- *   - the document and the Markdown report of the result equal the snapshots of tests/snapshots.
+ *   - the document of the result equals the snapshots of tests/snapshots.
  *
  *   test_analysis_result          the five pieces
  *   test_analysis_result smoke    Bach 114 only (the valgrind run)
@@ -181,16 +180,6 @@ static void check_snapshots(const char *slug, const char *fixture, const Analyze
         }
         free(json);
     }
-
-    char *markdown = markdown_report_render_result(fixture, result);
-    CHECK(markdown != NULL, "%s: no report from the result", slug);
-    if (markdown) {
-        snprintf(path, sizeof(path), "%s/%s.report.md", URSATZ_SNAPSHOT_DIR, slug);
-        char *expected = test_read_file(path);
-        CHECK(expected && strcmp(expected, markdown) == 0, "%s: the report differs from %s", slug, path);
-        free(expected);
-        free(markdown);
-    }
 }
 
 static void check_piece(const char *fixture, const char *slug) {
@@ -295,7 +284,6 @@ static void check_options(const char *fixture) {
         CHECK(analyzer_result_claim_count(result, ANALYZER_AREA_PROGRESSIONS) == 0, "progression claims without the report");
         CHECK(analyzer_result_report(result)->entry_count == 0, "report entries from a partial chain");
         CHECK(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
-        CHECK(markdown_report_render_result(fixture, result) == NULL, "a report from a partial chain");
     }
     analyzer_result_destroy(result);
     imported_notes_destroy(&notes);

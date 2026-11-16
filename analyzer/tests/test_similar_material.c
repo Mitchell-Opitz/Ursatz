@@ -276,7 +276,7 @@ int main(int argc, char **argv) {
     }
     mkdir(work_dir, 0777);
 
-    CorpusRunOptions run = {URSATZ_CORPORA_DIR "/reference", work_dir, false, false, NULL, NULL};
+    CorpusRunOptions run = {URSATZ_CORPORA_DIR "/reference", work_dir, false, NULL, NULL};
     CorpusRunSummary summary;
     if (corpus_run(&run, &summary) != CORPUS_RUN_OK || summary.analyzed != 5) {
         fprintf(stderr, "cannot analyze the reference corpus\n");

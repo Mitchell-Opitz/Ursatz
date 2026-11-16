@@ -42,13 +42,7 @@ expect_line("corpus" "failed broken.mid: import failed\n")
 expect_line("corpus" "2 analyzed, 0 skipped, 1 failed\n")
 expect_file("corpus" "${OUT}/corpus-index.json" TRUE)
 expect_file("corpus" "${OUT}/Bach 114.mid.analysis.json" TRUE)
-expect_file("corpus" "${OUT}/Bach 114.mid.report.md" FALSE)
 expect_file("corpus" "${OUT}/notes.txt.analysis.json" FALSE)
-
-file(REMOVE_RECURSE "${OUT}")
-check_case("--markdown" 0 --corpus "${MIXED}" --markdown --out "${OUT}")
-expect_file("--markdown" "${OUT}/Bach 114.mid.report.md" TRUE)
-expect_file("--markdown" "${OUT}/sub/field-1.musicxml.report.md" TRUE)
 
 # Without --out the output goes to <input>/.ursatz-corpus.
 file(REMOVE_RECURSE "${WORK_DIR}")

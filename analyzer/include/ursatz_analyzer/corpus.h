@@ -26,7 +26,6 @@ typedef struct {
     /* NULL means "<input_dir>/.ursatz-corpus". */
     const char *output_dir;
     bool resume;
-    bool markdown;
     /* Optional progress callback (NULL for none) and its user pointer. */
     CorpusPieceCallback on_piece;
     void *user;
@@ -52,8 +51,7 @@ typedef enum {
  * .mid, .midi, .musicxml and .xml (case-insensitive), sorted by relative
  * path so a run is reproducible. Each piece is imported (format
  * detected), analyzed and written to
- * "<output_dir>/<relative path>.analysis.json", plus
- * "<relative path>.report.md" when markdown is set, with directories
+ * "<output_dir>/<relative path>.analysis.json", with directories
  * created as needed. A piece that cannot be imported or analyzed is
  * counted as failed; that is not a failed run.
  *

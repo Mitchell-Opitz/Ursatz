@@ -3,10 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/musicxml_pipeline.h>
 
 /*
@@ -14,7 +12,7 @@
  * C major, one whole-note chord per measure: I ii V I). It holds one fault of each kind the section flags and nothing
  * else: a parallel fifth between the tenor (voice 2) and the bass (voice 3) from measure 1 to 2, and the soprano's
  * leading tone (voice 0) falling instead of rising to the tonic from measure 3 to 4. Asserted: the four voices, both
- * faults and only those, each at its measure, the doubling of the first two chords, and that the Markdown names both.
+ * faults and only those, each at its measure, and the doubling of the first two chords.
  */
 
 static int failures = 0;
@@ -83,17 +81,6 @@ static void check_chorale(const char *dir) {
         }
     }
 
-    AnalysisDocument *document = analysis_document_build(path, &notes, &report);
-    char *markdown = document ? markdown_report_render(document) : NULL;
-    CHECK(markdown != NULL);
-    if (markdown) {
-        CHECK(strstr(markdown, "## Voice leading") != NULL);
-        CHECK(strstr(markdown, "parallel-fifths") != NULL);
-        CHECK(strstr(markdown, "leading-tone-resolves") != NULL);
-        CHECK(strstr(markdown, "1 parallel fifth,") != NULL);
-    }
-    free(markdown);
-    analysis_document_destroy(document);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
 }

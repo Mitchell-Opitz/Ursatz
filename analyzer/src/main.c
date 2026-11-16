@@ -8,16 +8,15 @@
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/motive_links.h>
 #include <ursatz_analyzer/notation_reading.h>
-#include <ursatz_analyzer/report_writer.h>
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
 
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
+#include "util/file_util.h"
 
 typedef char *(*RenderOutput)(const AnalysisDocument *document);
 typedef char *(*DeriveOutputPath)(const char *input_path);
@@ -38,9 +37,11 @@ static bool write_output(const char *path, const char *what, const char *written
         return false;
     }
 
-    bool wrote = write_report_file(output_path, text);
+    bool wrote = file_write_atomic(output_path, text);
     if (wrote) {
         printf("%s written to %s\n", written, output_path);
+    } else {
+        fprintf(stderr, "Error: cannot write %s to '%s'\n", what, output_path);
     }
 
     free(output_path);
@@ -50,9 +51,9 @@ static bool write_output(const char *path, const char *what, const char *written
 
 static void print_usage(const char *program) {
     fprintf(stderr,
-            "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] [--meter <n/d>] [--value-scale <n or n/d>] "
+            "Usage: %s [--json] [--input-format midi|musicxml] [--meter <n/d>] [--value-scale <n or n/d>] "
             "[--pickup <n/d>] <input-file-path>\n"
-            "       %s --corpus <dir> [--out <dir>] [--resume] [--markdown]\n"
+            "       %s --corpus <dir> [--out <dir>] [--resume]\n"
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
             "       %s --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]\n"
             "       %s --similar <corpus output dir> (--motive <file> | --progression \"<numerals>\") [--min <n/d>] "
@@ -73,8 +74,8 @@ static void print_corpus_piece(const char *path, CorpusPieceStatus status, const
     }
 }
 
-static int run_corpus(const char *input_dir, const char *output_dir, bool resume, bool markdown) {
-    CorpusRunOptions options = {input_dir, output_dir, resume, markdown, print_corpus_piece, NULL};
+static int run_corpus(const char *input_dir, const char *output_dir, bool resume) {
+    CorpusRunOptions options = {input_dir, output_dir, resume, print_corpus_piece, NULL};
     CorpusRunSummary summary;
     if (corpus_run(&options, &summary) != CORPUS_RUN_OK) {
         return 2;
@@ -643,7 +644,6 @@ int main(int argc, char *argv[]) {
     bool corpus_resume = false;
     bool input_format_set = false;
     bool want_json = false;
-    bool want_markdown = false;
     InputFormat input_format = INPUT_FORMAT_AUTO;
     const char *similar_dir = NULL;
     const char *motive_file = NULL;
@@ -660,8 +660,6 @@ int main(int argc, char *argv[]) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
             want_json = true;
-        } else if (strcmp(arg, "--markdown") == 0) {
-            want_markdown = true;
         } else if (strcmp(arg, "--input-format") == 0) {
             if (i + 1 >= argc || !input_format_parse(argv[++i], &input_format)) {
                 print_usage(argv[0]);
@@ -764,7 +762,7 @@ int main(int argc, char *argv[]) {
     }
     if (link_dir || link_cache || link_depth || link_candidates) {
         if (!link_dir || similar_dir || motive_file || progression || similar_flags || compare_a || without_count > 0 ||
-            style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
+            style_dir || style_name || corpus_dir || corpus_out || path || want_json || corpus_resume ||
             input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
@@ -773,7 +771,7 @@ int main(int argc, char *argv[]) {
     }
     if (similar_dir || motive_file || progression || similar_flags) {
         if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || without_count > 0 || style_dir || style_name ||
-            corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
+            corpus_dir || corpus_out || path || want_json || corpus_resume ||
             input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
@@ -781,7 +779,7 @@ int main(int argc, char *argv[]) {
         return run_similar(similar_dir, motive_file, progression, &similar_options, format_json);
     }
     if (compare_a) {
-        if (style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
+        if (style_dir || style_name || corpus_dir || corpus_out || path || want_json || corpus_resume ||
             input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
@@ -797,7 +795,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     if (style_dir || style_name) {
-        if (!style_dir || !style_name || !style_name[0] || corpus_dir || path || want_json || want_markdown || corpus_resume ||
+        if (!style_dir || !style_name || !style_name[0] || corpus_dir || path || want_json || corpus_resume ||
             input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
@@ -809,7 +807,7 @@ int main(int argc, char *argv[]) {
             print_usage(argv[0]);
             return 1;
         }
-        return run_corpus(corpus_dir, corpus_out, corpus_resume, want_markdown);
+        return run_corpus(corpus_dir, corpus_out, corpus_resume);
     }
     if (corpus_out || corpus_resume) {
         print_usage(argv[0]);
@@ -819,11 +817,6 @@ int main(int argc, char *argv[]) {
         print_usage(argv[0]);
         return 1;
     }
-    if (!want_json && !want_markdown) {
-        want_json = true;
-        want_markdown = true;
-    }
-
     ImportedNotes notes;
     AnalyzerResult *result = NULL;
     InputPipelineResult import_status;
@@ -851,9 +844,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    bool ok = (!want_markdown || write_output(path, "report", "Report", markdown_report_render, derive_report_path, document)) &&
-              (!want_json || write_output(path, "analysis document", "Analysis document", analysis_document_to_json,
-                                      derive_analysis_document_path, document));
+    bool ok = write_output(path, "analysis document", "Analysis document", analysis_document_to_json,
+                           derive_analysis_document_path, document);
 
     analysis_document_destroy(document);
     return ok ? 0 : 1;
