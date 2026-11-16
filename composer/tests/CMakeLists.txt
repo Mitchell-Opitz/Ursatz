@@ -1006,7 +1006,7 @@ set_tests_properties(test_api_schema PROPERTIES RESOURCE_LOCK "${API_FILE_LOCKS}
 add_test(NAME consumer_build
          COMMAND ${CMAKE_CTEST_COMMAND} --build-and-test ${CMAKE_CURRENT_SOURCE_DIR}/consumer ${CMAKE_CURRENT_BINARY_DIR}/consumer
                  --build-generator "${CMAKE_GENERATOR}" --build-target consumer
-                 --build-options -DCOMPOSER_ROOT=${PROJECT_SOURCE_DIR}
+                 --build-options -DURSATZ_ROOT=${CMAKE_SOURCE_DIR}
                  --test-command ${CMAKE_CURRENT_BINARY_DIR}/consumer/consumer)
 # A consumer that links the Composer cannot include any other ursatz_composer/ header or any Ursatz or Analyzer header.
 add_test(NAME consumer_rejects_internals
