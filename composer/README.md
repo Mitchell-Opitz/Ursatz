@@ -6,7 +6,7 @@ bottom-up or middle-out.
 
 It is a C11 static library (`ursatz_composer`) plus a CLI (`ursatz-composer`), built on the library in
 [`library/`](../library/README.md) and the Analyzer in [`analyzer/`](../analyzer/README.md), in the same repository.
-Style-dependent generators live here; the library keeps only the theory-neutral Generator interface.
+Style-dependent generators live here; the Generator descriptor, Candidate and GenerationRecord types they use live here too.
 
 Intents are structured (CLI flags or a JSON request), never natural language.
 

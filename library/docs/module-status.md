@@ -18,7 +18,6 @@ The implementation status and doc of each kernel module. [Docs index](README.md)
 | theory | L7 | Implemented (partial, see doc) | [theory](modules/theory.md) |
 | rules | L7 | Implemented (partial, see doc) | [rules](modules/rules.md) |
 | analysis | L8 | Implemented | [analysis](modules/analysis.md), [motive-relations](modules/motive-relations.md), [motive-variant-recognition](modules/motive-variant-recognition.md), [motive-tone-roles](modules/motive-tone-roles.md) |
-| generation | L8 | Implemented (partial, see doc) | [generation](modules/generation.md) |
 | io | L9 | Implemented (partial, see doc) | [io](modules/io.md) |
 | export | L9 | Implemented (MusicXML from a MeterMap: parts, staves, key, tempo, dynamics; no MXL, repeats or articulations) | `src/export/musicxml_export.h` |
 | query | L9 | Implemented (partial, see doc) | [query](modules/query.md) |

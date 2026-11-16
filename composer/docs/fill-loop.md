@@ -47,10 +47,10 @@ always ends, with one of:
 
 ## Operators
 
-An operator is a `FillOperator`. It wraps Ursatz's `Generator`: `generator.name` and
-`generator.version` are required (and the name must be unique in the registry); `deterministic` and the
-descriptions are carried for the record. `Generator.generate` is not used, since it takes a
-`GenerationPlan` and returns material ids, with no way to name a node or say what to change.
+An operator is a `FillOperator`. It carries a `Generator` descriptor (`ursatz_composer/generator.h`):
+`generator.name` and `generator.version` are required (and the name must be unique in the registry);
+`deterministic` and the descriptions are carried for the record. A `Generator` has no generate function;
+the operator's own `generate` proposes the candidates.
 
 | Kind | Target | Does |
 | --- | --- | --- |
@@ -83,7 +83,7 @@ bool checker(const PiecePlan *plan, FillTarget target, const FillOperator *op,
 ```
 
 It fills `FillCheck`: `hard_violation` rejects the candidate; the score is a non-negative rational
-(`score_numerator / score_denominator`, as in Ursatz's `Candidate`), higher is better; `reason` is
+(`score_numerator / score_denominator`, as in `Candidate`), higher is better; `reason` is
 short text for the record. It returns false only when it fails itself, not for a rejected candidate.
 The default, `fill_default_checker`, accepts everything at 0/1. Rule checking against a framework
 plugs in here; the stages supply their own checkers (for example harmony phrase, motive development and counterpoint).
@@ -94,7 +94,7 @@ One `FillRng` (SplitMix64) is seeded from `FillConfig.seed` and serves the whole
 tie-breaks and any randomness in operators. Operators must not use another source. With the same
 plan, operators, checker and seed, the plan and the record come out the same.
 
-`fill_run` can return a `FillRecord`. It wraps Ursatz's `GenerationRecord` (seed, Composer version)
+`fill_run` can return a `FillRecord`. It wraps a `GenerationRecord` (`ursatz_composer/generation_record.h`: seed, Composer version)
 and adds a step per attempt: the target, the outcome (`applied`, `no_operator` or `all_rejected`),
 every candidate considered with its operator, score, rejection and reason, the chosen index, and the
 random state before and after. `fill_record_to_json` writes it as JSON, with the seed and states as
@@ -103,7 +103,7 @@ decimal strings, to be kept next to the plan. The plan's own format does not cha
 ## Suggestion mode
 
 `fill_suggest` returns the top N candidates for one open target instead of choosing, and leaves the
-plan unchanged. They come back as an Ursatz `CandidateSet`, best first: each `Candidate` names its
+plan unchanged. They come back as a `CandidateSet`, best first: each `Candidate` names its
 material by id and carries its score (it has no Interpretations, since there is no framework yet).
 `fill_suggestion_label` says what each one is. Rejected candidates are
 not suggested. `fill_apply_suggestion` applies one, by its index in the set, the way the loop would.

@@ -41,7 +41,6 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/theory.md](modules/theory.md): L7 theory: Theory Framework type, style models.
 - [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference, RulePair.
 - [docs/modules/analysis.md](modules/analysis.md): L8 analysis: overview of the analyzers and what is deferred.
-- [docs/modules/generation.md](modules/generation.md): L8 generation: candidates and generation records.
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
 - [docs/modules/export.md](modules/export.md): L9 export: MusicXML writer.
 - [docs/modules/query.md](modules/query.md): L9 query: similarity scoring.

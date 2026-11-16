@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L8 (`music-analysis`). Path `src/analysis/`, tests `tests/analysis/`. One of two mutually-restricted L8 siblings (with `generation`); see `docs/modules/l8-notes.md` for the sibling rule and shared L8 notes.
+Layer L8 (`music-analysis`). Path `src/analysis/`, tests `tests/analysis/`. The only L8 module (`generation` left the library in P55); see `docs/modules/l8-notes.md` for the sibling rule and shared L8 notes.
 
 ## Provides
 
@@ -38,4 +38,4 @@ Both build their real `Chord`/`Key` via the framework, then unwrap it with `chor
 
 ## Dependencies
 
-Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5), all four L6 modules, both L7 modules, and a scoped allowlist of common-practice-minimal vocabulary headers (see `tests/analysis/test_architecture_analysis.c`); `ChordIdentification` and `KeyEstimation` no longer live here and depend on the framework from the chain. Never imports `transform` or `generation`. `CadenceDetection`/`CadenceClassification` take an optional `Framework` (L7) reference but never depend on `frameworks/common-practice-minimal/` vocabulary directly -- root motion is caller-supplied as plain scale-degree integers, not framework-specific chord labels.
+Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), `structure` (L5), all four L6 modules, both L7 modules, and a scoped allowlist of common-practice-minimal vocabulary headers (see `tests/analysis/test_architecture_analysis.c`); `ChordIdentification` and `KeyEstimation` no longer live here and depend on the framework from the chain. Never imports `transform`. `CadenceDetection`/`CadenceClassification` take an optional `Framework` (L7) reference but never depend on `frameworks/common-practice-minimal/` vocabulary directly -- root motion is caller-supplied as plain scale-degree integers, not framework-specific chord labels.

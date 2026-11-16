@@ -2,7 +2,7 @@
 
 The owner of each analytic job, and the production chain that runs them. [Docs index](README.md)
 
-One owner per analytic job (R-224). Every other implementation of the job is retired or a thin wrapper, and its header names the owner. A framework may include kernel L0 to L6 plus the L7 headers above (Framework, FrameworkSingleton, Rule, Constraint, Preference, RulePair), never kernel L8 (`analysis/`, `generation/`), and the kernel depends on no framework (Law 11). A wrapper that joins an L8 analysis with a framework adapter therefore cannot live in either one: it lives in the `chain/` target above both (P22 B3). Where a framework needs an L8 owner and the chain does not apply, the caller injects it as a callback (the `StandardFormBoundaryDetector` pattern).
+One owner per analytic job (R-224). Every other implementation of the job is retired or a thin wrapper, and its header names the owner. A framework may include kernel L0 to L6 plus the L7 headers above (Framework, FrameworkSingleton, Rule, Constraint, Preference, RulePair), never kernel L8 (`analysis/`), and the kernel depends on no framework (Law 11). A wrapper that joins an L8 analysis with a framework adapter therefore cannot live in either one: it lives in the `chain/` target above both (P22 B3). Where a framework needs an L8 owner and the chain does not apply, the caller injects it as a callback (the `StandardFormBoundaryDetector` pattern).
 
 | Job | Owner | Other implementations: what happens |
 |---|---|---|

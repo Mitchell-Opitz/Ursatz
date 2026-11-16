@@ -45,7 +45,6 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 | interpretation | `chord.h`, `claim_interpretation.h` and 4 more | `Interpretation`, `Chord`, `Uncertainty` | Claims under a named framework, with uncertainty. | [interpretation](modules/interpretation.md) |
 | theory | `framework.h`, `style_features.h` and 3 more | `Framework`, `StyleModel` | Theory Framework type and style models. | [theory](modules/theory.md) |
 | analysis | `analyzer.h`, `form_structure_detection.h` and 9 more | `Analyzer`, `motive_sketch`, `outer_voice_extract`, `voice_separate` | Kernel analyses: motives, voices, progressions, form. | [analysis](modules/analysis.md), [motive link](modules/motive-link.md) |
-| generation | `candidate.h`, `generation_record.h` and 1 more | `Generator`, `Candidate` | Candidate generation with a generation record. | [generation](modules/generation.md) |
 | io | `midi_importer.h`, `midi_key_signature.h` and 2 more | `midi_importer_import_complete`, `MusicXMLImporter`, `midi_key_signature_scan` | Import of MIDI and MusicXML into notes, meter, tempo and keys. | [io](modules/io.md), [MIDI](modules/io-midi.md), [MusicXML](modules/io-musicxml.md) |
 | export | `musicxml_export.h`, `score_quantize.h` and 1 more | `musicxml_export_write_score`, `score_quantize` | MusicXML export of a MeterMap and notes. | [export](modules/export.md) |
 | query | `similarity_model.h`, `similarity_scoring.h` | `similarity_model.h` | Similarity scoring over sequences. | [query](modules/query.md) |
@@ -81,7 +80,7 @@ Nothing. Ursatz sits at the bottom of the stack; its only dependencies are POSIX
 | App | Headers used | Mostly from |
 |---|---|---|
 | Analyzer | 157 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
-| Composer | 115 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, generation, io |
+| Composer | 115 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, io |
 | GUI | 1 | analysis (`analyzer.h`) |
 
 Made with `scripts/app_includes.sh <app checkout>...`; the combined list is in `docs/public-headers-baseline.txt`.

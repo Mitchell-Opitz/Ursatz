@@ -63,9 +63,6 @@ galant_analysis_match.h frameworks/galant-schemas/analysis/galant_analysis_match
 galant_degree.h frameworks/galant-schemas/galant_degree.h 
 galant_framework.h frameworks/galant-schemas/galant_framework.h 
 galant_prototypes.h frameworks/galant-schemas/galant_prototypes.h 
-generation/candidate.h src/generation/candidate.h 
-generation/generation_record.h src/generation/generation_record.h 
-generation/generator.h src/generation/generator.h 
 harmonic_function.h frameworks/standard-harmony/harmonic_function.h 
 harmonic_rules.h frameworks/standard-counterpoint/harmonic_rules.h 
 harmonic_spans.h frameworks/common-practice-minimal/harmonic_spans.h 

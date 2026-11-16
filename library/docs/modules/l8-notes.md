@@ -2,13 +2,13 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-`transform` was retired in P28 B4 (R-287); this page keeps its history. `transform`, `analysis`, and `generation` are built together against Dependency & Layer Spec v2 §2-§3. Like L7's `theory`/`rules` split, but stricter. All three are mutually sideways-restricted the same way L6's four siblings are, with no `transform`-`analysis`-`generation` import in any direction. Each depends on L0-L7 only, never on a sibling. Each module's architecture test enforces this by allowlisting only L0-L7 directories plus its own.
+`transform` was retired in P28 B4 (R-287) and `generation` left the library in P55 (the unreached code was deleted, and the Composer took the three types it uses); this page keeps their history. `transform`, `analysis`, and `generation` were built together against Dependency & Layer Spec v2 §2-§3. Like L7's `theory`/`rules` split, but stricter. All three were mutually sideways-restricted the same way L6's four siblings are, with no `transform`-`analysis`-`generation` import in any direction. Each depends on L0-L7 only, never on a sibling. Each module's architecture test enforces this by allowlisting only L0-L7 directories plus its own.
 
-This is why `generation/candidate_evaluator.h`'s `CandidateEvaluation` cannot reuse `analysis/analyzer.h`'s `AnalysisResult`, even though both hold the identical Interpretation/Evidence shape. See `docs/modules/generation.md`.
+This is why the deleted `generation/candidate_evaluator.h`'s `CandidateEvaluation` could not reuse `analysis/analyzer.h`'s `AnalysisResult`, even though both hold the identical Interpretation/Evidence shape.
 
-## L7 rules decisions relevant to CandidateEvaluator (L8)
+## L7 rules decisions made for CandidateEvaluator (deleted in P55)
 
-`rules/rule.h` depended on a `RuleEvaluation` shape that had no confirmed Registry row; this was flagged, reviewed, and resolved in the same L7 pass rather than left for L8 to invent later. Four decisions, recorded here since a future `CandidateEvaluator` implementation is the actual consumer:
+`rules/rule.h` depended on a `RuleEvaluation` shape that had no confirmed Registry row; this was flagged, reviewed, and resolved in the same L7 pass rather than left for L8 to invent later. Four decisions, recorded here for history, since a `CandidateEvaluator` was the consumer:
 
 - `constraint_evaluate` (`rules/constraint.h`) takes an optional `Context` (`context/context.h`) reference, so a `CandidateEvaluator` evaluating a `CONDITIONAL`/`CONTEXTUAL` `Constraint` passes context through this call rather than resolving the condition itself. It dispatches to the callback the `Constraint`'s framework registered (standard-harmony and standard-counterpoint do; a `Constraint` with none returns `CONSTRAINT_EVAL_NOT_IMPLEMENTED`). A framework candidate is a `Value` with type tag `standard-<framework>/<table prefix>` holding the rule's subject struct; an unrecognised tag is `NOT_APPLICABLE`.
 - `ConstraintEvalResult` gained `CONSTRAINT_EVAL_NOT_APPLICABLE`, distinct from `CONSTRAINT_EVAL_FAIL`. A `CandidateEvaluator` folding many per-Constraint results into one `CandidateEvaluation.score` MUST treat NOT_APPLICABLE as excluded from the score, never as a failure.
