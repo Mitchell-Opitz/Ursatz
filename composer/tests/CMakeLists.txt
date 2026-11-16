@@ -1,274 +1,122 @@
 # The tests are white-box: they see the internal headers and the libraries the sources use.
 link_libraries(ursatz_composer_internal)
 
+add_compile_options(-Wall -Wextra -Wpedantic)
+
 # Helpers the tests share (tests/support).
-add_library(composer_test_support STATIC support/test_support.c support/test_composer.c support/test_oracles.c
-            support/voice_hear.c)
-target_link_libraries(composer_test_support PUBLIC ursatz_composer cjson)
-target_include_directories(composer_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+ursatz_test_library(composer_test_support SOURCES support/test_support.c support/test_composer.c support/test_oracles.c
+    support/voice_hear.c LIBS ursatz_composer cjson INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(composer_test_support PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
-target_compile_options(composer_test_support PRIVATE -Wall -Wextra -Wpedantic)
 
-add_executable(test_smoke test_smoke.c)
-target_link_libraries(test_smoke PRIVATE ursatz_composer)
-add_test(NAME test_smoke COMMAND test_smoke)
-target_compile_options(test_smoke PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test(test_smoke LIBS ursatz_composer)
 
-add_executable(test_piece_plan_sentence test_piece_plan_sentence.c)
-target_link_libraries(test_piece_plan_sentence PRIVATE ursatz_composer)
-target_compile_options(test_piece_plan_sentence PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_piece_plan_sentence COMMAND test_piece_plan_sentence)
+ursatz_test(test_piece_plan_sentence LIBS ursatz_composer)
 
-add_executable(test_plan_json test_plan_json.c)
-target_link_libraries(test_plan_json PRIVATE ursatz_composer)
-target_compile_options(test_plan_json PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_plan_json PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-                                                  COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_plan_json COMMAND test_plan_json)
-set_tests_properties(test_plan_json PROPERTIES FIXTURES_SETUP plan_files_written)
+ursatz_test(test_plan_json LIBS ursatz_composer
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    PROPERTIES FIXTURES_SETUP plan_files_written RESOURCE_LOCK plan_json_files)
 
-# Optional: schema validation needs python3 with the jsonschema module.
-find_package(Python3 COMPONENTS Interpreter QUIET)
-set(HAVE_JSONSCHEMA FALSE)
-if(Python3_Interpreter_FOUND)
-    execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema"
-                    RESULT_VARIABLE jsonschema_result OUTPUT_QUIET ERROR_QUIET)
-    if(jsonschema_result EQUAL 0)
-        set(HAVE_JSONSCHEMA TRUE)
-    endif()
+# test_plan_json and its valgrind run write the plan files in the build directory that test_plan_schema reads, so they
+# share a lock. The valgrind run does not set up the fixture: a test that requires a fixture pulls in its setup tests,
+# and the fast set must not run a valgrind test.
+if(URSATZ_VALGRIND)
+    ursatz_test(test_plan_json_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS} $<TARGET_FILE:test_plan_json>
+        LABELS slow valgrind PROPERTIES RESOURCE_LOCK plan_json_files)
 endif()
-if(NOT HAVE_JSONSCHEMA)
-    message(STATUS "python3 with jsonschema not found: test_plan_schema will be skipped")
+# The schema tests need python3 with jsonschema (cmake/UrsatzTools.cmake).
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(test_plan_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v2.schema.json
+                     -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake
+        LABELS schema
+        PROPERTIES FIXTURES_REQUIRED plan_files_written RESOURCE_LOCK plan_json_files)
 endif()
-add_test(NAME test_plan_schema
-         COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DHAVE_JSONSCHEMA=${HAVE_JSONSCHEMA}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v2.schema.json
-                 -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake)
-set_tests_properties(test_plan_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED" FIXTURES_REQUIRED plan_files_written)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_plan_json_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_plan_json>)
-    set_tests_properties(test_plan_json_valgrind PROPERTIES LABELS slow)
-endif()
-# test_plan_json and its valgrind run write the plan files in the build directory that test_plan_schema reads.
-foreach(plan_test test_plan_json test_plan_json_valgrind test_plan_schema)
-    if(TEST ${plan_test})
-        set_tests_properties(${plan_test} PROPERTIES RESOURCE_LOCK plan_json_files)
-    endif()
-endforeach()
 
-if(TARGET ursatz-composer)
-add_executable(test_render_plan test_render_plan.c)
-target_link_libraries(test_render_plan PRIVATE ursatz_composer)
-target_compile_options(test_render_plan PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_render_plan PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
+ursatz_test(test_render_plan LIBS ursatz_composer DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_render_plan ursatz-composer)
-add_test(NAME test_render_plan COMMAND test_render_plan)
-endif()
 
-add_executable(test_fill_loop test_fill_loop.c)
-target_link_libraries(test_fill_loop PRIVATE ursatz_composer)
-target_compile_options(test_fill_loop PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_fill_loop COMMAND test_fill_loop)
+ursatz_test(test_fill_loop LIBS ursatz_composer)
 
-add_executable(test_candidate test_candidate.c)
-target_link_libraries(test_candidate PRIVATE ursatz_composer)
-target_compile_options(test_candidate PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_candidate COMMAND test_candidate)
+ursatz_test(test_candidate LIBS ursatz_composer)
 
-add_executable(test_generation_record test_generation_record.c)
-target_link_libraries(test_generation_record PRIVATE ursatz_composer)
-target_compile_options(test_generation_record PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_generation_record COMMAND test_generation_record)
+ursatz_test(test_generation_record LIBS ursatz_composer)
 
-add_executable(test_lane_resize test_lane_resize.c)
-target_link_libraries(test_lane_resize PRIVATE ursatz_composer)
-target_compile_options(test_lane_resize PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_lane_resize COMMAND test_lane_resize)
+ursatz_test(test_lane_resize LIBS ursatz_composer)
 
-add_executable(test_harmony_phrase test_harmony_phrase.c)
-target_link_libraries(test_harmony_phrase PRIVATE ursatz_composer)
-target_compile_options(test_harmony_phrase PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_phrase COMMAND test_harmony_phrase)
+ursatz_test(test_harmony_phrase LIBS ursatz_composer)
 
-add_executable(test_harmony_roman test_harmony_roman.c)
-target_link_libraries(test_harmony_roman PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_harmony_roman PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_roman COMMAND test_harmony_roman)
+ursatz_test(test_harmony_roman LIBS ursatz_composer composer_test_support)
 
-add_executable(test_harmony_embellish test_harmony_embellish.c)
-target_link_libraries(test_harmony_embellish PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_harmony_embellish PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_embellish COMMAND test_harmony_embellish)
+ursatz_test(test_harmony_embellish LIBS ursatz_composer composer_test_support)
 
-add_executable(test_harmony_bass test_harmony_bass.c)
-target_link_libraries(test_harmony_bass PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_harmony_bass PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_bass COMMAND test_harmony_bass)
+ursatz_test(test_harmony_bass LIBS ursatz_composer composer_test_support)
 
-add_executable(test_harmony_schema test_harmony_schema.c)
-target_link_libraries(test_harmony_schema PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_harmony_schema PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_schema COMMAND test_harmony_schema)
+ursatz_test(test_harmony_schema LIBS ursatz_composer composer_test_support)
 
-add_executable(test_harmony_lookups test_harmony_lookups.c)
-target_link_libraries(test_harmony_lookups PRIVATE ursatz_composer)
-target_compile_options(test_harmony_lookups PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_lookups COMMAND test_harmony_lookups)
+ursatz_test(test_harmony_lookups LIBS ursatz_composer)
 
-if(TARGET ursatz-composer)
-add_executable(test_progression_cli test_progression_cli.c)
-target_link_libraries(test_progression_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_progression_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_progression_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
+ursatz_test(test_progression_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_progression_cli ursatz-composer)
-add_test(NAME test_progression_cli COMMAND test_progression_cli)
-endif()
 
-add_executable(test_motive test_motive.c)
-target_link_libraries(test_motive PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_motive PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_motive PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_motive PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_motive COMMAND test_motive)
+ursatz_test(test_motive LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-if(TARGET ursatz-composer)
-add_executable(test_motive_cli test_motive_cli.c)
-target_link_libraries(test_motive_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_motive_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_motive_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                   COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_motive_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_motive_cli ursatz-composer)
-add_test(NAME test_motive_cli COMMAND test_motive_cli)
-endif()
 
-add_executable(test_motive_meter test_motive_meter.c)
-target_link_libraries(test_motive_meter PRIVATE ursatz_composer cjson)
-target_include_directories(test_motive_meter PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_motive_meter PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motive_meter COMMAND test_motive_meter)
+ursatz_test(test_motive_meter LIBS ursatz_composer cjson INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
 
-add_executable(test_motive_segments test_motive_segments.c)
-target_link_libraries(test_motive_segments PRIVATE ursatz_composer)
-target_include_directories(test_motive_segments PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_motive_segments PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motive_segments COMMAND test_motive_segments)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_motive_meter_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_motive_meter>)
-    set_tests_properties(test_motive_meter_valgrind PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_motive_segments LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-add_executable(test_motive_develop test_motive_develop.c)
-target_link_libraries(test_motive_develop PRIVATE ursatz_composer)
-target_compile_options(test_motive_develop PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motive_develop COMMAND test_motive_develop)
+ursatz_test(test_motive_develop LIBS ursatz_composer)
 
-if(TARGET ursatz-composer)
-add_executable(test_develop_cli test_develop_cli.c)
-target_link_libraries(test_develop_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_develop_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_develop_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_develop_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_develop_cli ursatz-composer)
-add_test(NAME test_develop_cli COMMAND test_develop_cli)
-endif()
 
-add_executable(test_melody_fill test_melody_fill.c)
-target_link_libraries(test_melody_fill PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_melody_fill PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_melody_fill COMMAND test_melody_fill)
+ursatz_test(test_melody_fill LIBS ursatz_composer composer_test_support)
 
-add_executable(test_preferences test_preferences.c)
-target_link_libraries(test_preferences PRIVATE ursatz_composer cjson composer_test_support)
-target_compile_options(test_preferences PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_preferences COMMAND test_preferences)
+ursatz_test(test_preferences LIBS ursatz_composer cjson composer_test_support)
 
-add_executable(test_melody_preferences test_melody_preferences.c)
-target_link_libraries(test_melody_preferences PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_melody_preferences PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_melody_preferences PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_melody_preferences PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_melody_preferences COMMAND test_melody_preferences)
+ursatz_test(test_melody_preferences LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_motif_preferences test_motif_preferences.c)
-target_link_libraries(test_motif_preferences PRIVATE ursatz_composer composer_test_support cjson)
-target_include_directories(test_motif_preferences PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_motif_preferences PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_motif_preferences PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motif_preferences COMMAND test_motif_preferences)
+ursatz_test(test_motif_preferences LIBS ursatz_composer composer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_form_hear test_form_hear.c)
-target_link_libraries(test_form_hear PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_form_hear PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_form_hear PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_form_hear COMMAND test_form_hear)
+ursatz_test(test_form_hear LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_harmony_prolong test_harmony_prolong.c)
-target_link_libraries(test_harmony_prolong PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_harmony_prolong PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_harmony_prolong PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_prolong COMMAND test_harmony_prolong)
+ursatz_test(test_harmony_prolong LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-add_executable(test_grow_sentence test_grow_sentence.c)
-target_link_libraries(test_grow_sentence PRIVATE ursatz_composer)
-target_compile_options(test_grow_sentence PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_sentence COMMAND test_grow_sentence)
 # Measured 12.0 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_grow_sentence PROPERTIES LABELS slow)
+ursatz_test(test_grow_sentence LIBS ursatz_composer LABELS slow)
 
-add_executable(test_grow_half_cadence test_grow_half_cadence.c)
-target_link_libraries(test_grow_half_cadence PRIVATE ursatz_composer)
-target_compile_options(test_grow_half_cadence PRIVATE -Wall -Wextra -Wpedantic)
 # A sentence ending in a half cadence in a minor key grows (P44 B6, R-418): 12 runs.
-add_test(NAME test_grow_half_cadence COMMAND test_grow_half_cadence)
+ursatz_test(test_grow_half_cadence LIBS ursatz_composer)
 
-add_executable(test_grow_sentence_heard test_grow_sentence_heard.c)
-target_link_libraries(test_grow_sentence_heard PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_grow_sentence_heard PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_sentence_heard COMMAND test_grow_sentence_heard)
 # The share of grown sentences standard-form hears as a sentence is below 100% (measured, with the cause, in docs/grow.md):
 # the test asserts all of them are, so it fails, and the failure is expected. Not tuned away, not skipped.
-set_tests_properties(test_grow_sentence_heard PROPERTIES WILL_FAIL TRUE)
-add_executable(test_theme_shape test_theme_shape.c)
-target_link_libraries(test_theme_shape PRIVATE ursatz_composer)
-target_include_directories(test_theme_shape PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_theme_shape PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_theme_shape COMMAND test_theme_shape)
-add_executable(test_grow_layout test_grow_layout.c)
-target_link_libraries(test_grow_layout PRIVATE ursatz_composer)
-target_include_directories(test_grow_layout PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_grow_layout PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_layout COMMAND test_grow_layout)
-add_executable(test_grow_uneven test_grow_uneven.c)
-target_link_libraries(test_grow_uneven PRIVATE ursatz_composer)
-target_compile_options(test_grow_uneven PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test(test_grow_sentence_heard LIBS ursatz_composer composer_test_support PROPERTIES WILL_FAIL TRUE)
+ursatz_test(test_theme_shape LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_grow_layout LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test_executable(test_grow_uneven LIBS ursatz_composer)
 # The fast case: seed 1 of each construction, the refusals and the plan round trip. The slow case grows seeds 1 to 10.
-add_test(NAME test_grow_uneven_fast COMMAND test_grow_uneven fast)
-add_test(NAME test_grow_uneven COMMAND test_grow_uneven)
-set_tests_properties(test_grow_uneven PROPERTIES LABELS slow)
-add_executable(test_grow_construction test_grow_construction.c)
-target_link_libraries(test_grow_construction PRIVATE ursatz_composer)
-target_include_directories(test_grow_construction PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_grow_construction PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_construction COMMAND test_grow_construction)
-add_executable(test_grow_extensions test_grow_extensions.c)
-target_link_libraries(test_grow_extensions PRIVATE ursatz_composer)
-target_include_directories(test_grow_extensions PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_grow_extensions PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test(test_grow_uneven_fast TARGET test_grow_uneven ARGS fast)
+ursatz_test(test_grow_uneven TARGET test_grow_uneven LABELS slow)
+ursatz_test(test_grow_construction LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test_executable(test_grow_extensions LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # The fast case: seed 1 of each theme, the layouts and the refusals. The slow case grows seeds 1 to 10.
-add_test(NAME test_grow_extensions_fast COMMAND test_grow_extensions fast)
-add_test(NAME test_grow_extensions COMMAND test_grow_extensions)
-set_tests_properties(test_grow_extensions PROPERTIES LABELS slow)
-add_executable(test_grow_period test_grow_period.c)
-target_link_libraries(test_grow_period PRIVATE ursatz_composer)
-target_compile_options(test_grow_period PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test(test_grow_extensions_fast TARGET test_grow_extensions ARGS fast)
+ursatz_test(test_grow_extensions TARGET test_grow_extensions LABELS slow)
+ursatz_test_executable(test_grow_period LIBS ursatz_composer)
 # One test for each of the nine pairings of a beginning and an ending (the order of PlanThemeBeginning and PlanThemeEnding).
 set(GROW_BEGINNINGS presentation antecedent compound_basic_idea)
 set(GROW_ENDINGS continuation consequent cadential)
@@ -276,424 +124,315 @@ foreach(beginning RANGE 2)
     foreach(ending RANGE 2)
         list(GET GROW_BEGINNINGS ${beginning} beginning_name)
         list(GET GROW_ENDINGS ${ending} ending_name)
-        add_test(NAME test_grow_period_${beginning_name}_${ending_name}
-                 COMMAND test_grow_period ${beginning} ${ending})
+        ursatz_test(test_grow_period_${beginning_name}_${ending_name} TARGET test_grow_period
+            ARGS ${beginning} ${ending})
     endforeach()
 endforeach()
-add_executable(test_grow_period_heard test_grow_period_heard.c)
-target_link_libraries(test_grow_period_heard PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_grow_period_heard PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_grow_period_heard LIBS ursatz_composer composer_test_support)
 foreach(beginning RANGE 2)
     foreach(ending RANGE 2)
         list(GET GROW_BEGINNINGS ${beginning} beginning_name)
         list(GET GROW_ENDINGS ${ending} ending_name)
         # A presentation and a continuation is the sentence, heard by test_grow_sentence_heard.
         if(NOT (beginning EQUAL 0 AND ending EQUAL 0))
-            add_test(NAME test_grow_period_heard_${beginning_name}_${ending_name}
-                     COMMAND test_grow_period_heard ${beginning} ${ending})
             # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test asserts
             # that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
             # The compound basic idea and a continuation was heard in every run (the motive-forms) until the Analyzer heard
             # the plan: 38 of 40, and again 40 of 40 since P36 B1 (every idea is the step its ref names), so its test passes.
+            set(expected_failure)
             if(NOT (beginning EQUAL 2 AND ending EQUAL 0))
-                set_tests_properties(test_grow_period_heard_${beginning_name}_${ending_name} PROPERTIES WILL_FAIL TRUE)
+                set(expected_failure WILL_FAIL TRUE)
             endif()
+            ursatz_test(test_grow_period_heard_${beginning_name}_${ending_name} TARGET test_grow_period_heard
+                ARGS ${beginning} ${ending} PROPERTIES ${expected_failure})
         endif()
     endforeach()
 endforeach()
 
-if(TARGET ursatz-composer)
-add_executable(test_grow_cli test_grow_cli.c)
-target_link_libraries(test_grow_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_grow_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_grow_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                 COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_grow_cli ursatz-composer)
-add_test(NAME test_grow_cli COMMAND test_grow_cli)
 # Measured 11.6 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_grow_cli PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_grow_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+add_dependencies(test_grow_cli ursatz-composer)
 
-add_executable(test_accompaniment test_accompaniment.c)
-target_link_libraries(test_accompaniment PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_accompaniment PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_accompaniment PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_accompaniment PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_accompaniment COMMAND test_accompaniment)
+ursatz_test(test_accompaniment LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_accompaniment test_grow_accompaniment.c)
-target_link_libraries(test_grow_accompaniment PRIVATE ursatz_composer)
-target_include_directories(test_grow_accompaniment PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_grow_accompaniment PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_accompaniment COMMAND test_grow_accompaniment)
+ursatz_test_executable(test_grow_accompaniment LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Measured 13.5 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_grow_accompaniment PROPERTIES LABELS slow)
-add_test(NAME test_grow_accompaniment_heard COMMAND test_grow_accompaniment heard)
+ursatz_test(test_grow_accompaniment TARGET test_grow_accompaniment LABELS slow)
 # standard-texture does not hear every grown theme as melody and accompaniment in every measure (measured, with the cause,
 # in docs/accompaniment.md): the test asserts that it does, so it fails, and the failure is expected. Not tuned away, not
 # skipped.
-set_tests_properties(test_grow_accompaniment_heard PROPERTIES WILL_FAIL TRUE)
+ursatz_test(test_grow_accompaniment_heard TARGET test_grow_accompaniment ARGS heard PROPERTIES WILL_FAIL TRUE)
 
-add_executable(test_voicing test_voicing.c)
-target_link_libraries(test_voicing PRIVATE ursatz_composer)
-target_include_directories(test_voicing PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_voicing PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_voicing COMMAND test_voicing)
+ursatz_test(test_voicing LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-add_executable(test_voicing_heard test_voicing_heard.c)
-target_link_libraries(test_voicing_heard PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_voicing_heard PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_voicing_heard_chorale COMMAND test_voicing_heard chorale)
-add_test(NAME test_voicing_heard_voicing COMMAND test_voicing_heard voicing)
+ursatz_test_executable(test_voicing_heard LIBS ursatz_composer composer_test_support)
+ursatz_test(test_voicing_heard_chorale TARGET test_voicing_heard ARGS chorale)
 # The voice leading of grown themes is not heard as clean in every run (measured, with the causes, in docs/voicing.md):
 # the voicing test asserts that it is, so it fails, and the failure is expected. Not tuned away, not skipped. The chorale
 # test heard all 30 themes clean once the shaping preferences (P16 B4) changed the chords chosen, so it passes.
-set_tests_properties(test_voicing_heard_voicing PROPERTIES WILL_FAIL TRUE)
+ursatz_test(test_voicing_heard_voicing TARGET test_voicing_heard ARGS voicing PROPERTIES WILL_FAIL TRUE)
 
-add_executable(test_counterpoint test_counterpoint.c)
-target_link_libraries(test_counterpoint PRIVATE ursatz_composer)
-target_include_directories(test_counterpoint PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_counterpoint PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_counterpoint LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 foreach(species 1 2 3 4)
-    add_test(NAME test_counterpoint_species_${species} COMMAND test_counterpoint ${species})
+    set(labels)
+    # Species 3 measured 26.9 s of CPU, over the 10 s fast-set limit.
+    if(species EQUAL 3)
+        set(labels slow)
+    endif()
+    ursatz_test(test_counterpoint_species_${species} TARGET test_counterpoint ARGS ${species} LABELS ${labels})
 endforeach()
-# Species 3 measured 26.9 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_counterpoint_species_3 PROPERTIES LABELS slow)
-add_test(NAME test_counterpoint_not_applicable COMMAND test_counterpoint na)
+ursatz_test(test_counterpoint_not_applicable TARGET test_counterpoint ARGS na)
 
-if(TARGET ursatz-composer)
-add_executable(test_counterpoint_cli test_counterpoint_cli.c)
-target_link_libraries(test_counterpoint_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_counterpoint_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_counterpoint_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                         COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_counterpoint_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_counterpoint_cli ursatz-composer)
-add_test(NAME test_counterpoint_cli COMMAND test_counterpoint_cli)
-endif()
 
-add_executable(test_motive_invent test_motive_invent.c)
-target_link_libraries(test_motive_invent PRIVATE ursatz_composer)
-target_compile_options(test_motive_invent PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motive_invent COMMAND test_motive_invent)
+ursatz_test(test_motive_invent LIBS ursatz_composer)
 
-add_executable(test_form_templates test_form_templates.c)
-target_link_libraries(test_form_templates PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_form_templates PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_form_templates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_form_templates LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Four tests for each template: the plan's structure, a quick compose run, the compose sweep, and the share heard as
 # requested.
 set(FORM_TEMPLATES binary rounded-binary ternary variations loop layered minuet trio scherzo figured-variations main-and-subordinate andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo sonatina sonatina-tonic-major)
 foreach(template ${FORM_TEMPLATES})
-    add_test(NAME test_form_templates_${template} COMMAND test_form_templates structure ${template})
-    add_test(NAME test_form_templates_${template}_smoke COMMAND test_form_templates smoke ${template})
-    add_test(NAME test_form_templates_${template}_compose COMMAND test_form_templates compose ${template})
-    add_test(NAME test_form_templates_${template}_heard COMMAND test_form_templates heard ${template})
+    ursatz_test(test_form_templates_${template} TARGET test_form_templates ARGS structure ${template})
+    ursatz_test(test_form_templates_${template}_smoke TARGET test_form_templates ARGS smoke ${template})
     # The sweeps take minutes: label them "slow", so CI can leave them out (ctest -LE slow) and a full ctest run
     # before a push keeps them. They fail when a count falls below its baseline (tests/test_form_templates.c).
-    set_tests_properties(test_form_templates_${template}_compose test_form_templates_${template}_heard
-                         PROPERTIES LABELS slow)
+    ursatz_test(test_form_templates_${template}_compose TARGET test_form_templates ARGS compose ${template} LABELS slow)
+    ursatz_test(test_form_templates_${template}_heard TARGET test_form_templates ARGS heard ${template} LABELS slow)
 endforeach()
 
-add_executable(test_form_plans test_form_plans.c)
-target_link_libraries(test_form_plans PRIVATE ursatz_composer composer_test_support cjson)
-target_include_directories(test_form_plans PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_form_plans PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_form_plans PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_form_plans LIBS ursatz_composer composer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Every template at every size: its plan's hash against tests/fixtures/forms/template-plans.txt (R-417).
-add_test(NAME test_form_plans_templates COMMAND test_form_plans)
+ursatz_test(test_form_plans_templates TARGET test_form_plans)
 # The loop plan of each piece request in tests/fixtures/piece against tests/fixtures/forms/piece-plans.txt (R-417).
-add_test(NAME test_form_plans_pieces COMMAND test_form_plans pieces)
+ursatz_test(test_form_plans_pieces TARGET test_form_plans ARGS pieces)
 
-add_executable(test_form_spec test_form_spec.c)
-target_link_libraries(test_form_spec PRIVATE ursatz_composer)
-target_include_directories(test_form_spec PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_form_spec PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_form_spec LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # The form documents: the reader, its refusals, the six built-in forms and their sizes.
-target_compile_definitions(test_form_spec PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_form_spec COMMAND test_form_spec)
+ursatz_test(test_form_spec TARGET test_form_spec)
 # A form added as a document alone composes (tests/fixtures/forms/bar-form.json).
-add_test(NAME test_form_spec_custom COMMAND test_form_spec custom)
+ursatz_test(test_form_spec_custom TARGET test_form_spec ARGS custom)
 # A form that lists its meters builds in one of them and is refused in another (tests/fixtures/forms/meter-form.json).
-add_test(NAME test_form_spec_meters COMMAND test_form_spec meters)
+ursatz_test(test_form_spec_meters TARGET test_form_spec ARGS meters)
 # A form with a dominant pedal in its B composes with B's first half on the dominant (tests/fixtures/forms/pedal-form.json).
-add_test(NAME test_form_spec_pedal COMMAND test_form_spec pedal)
+ursatz_test(test_form_spec_pedal TARGET test_form_spec ARGS pedal)
 # A form whose B leads into A return (held, then filled against it) composes, and the connective is written in most seeds
 # (tests/fixtures/forms/lead-form.json).
-add_test(NAME test_form_spec_leads COMMAND test_form_spec leads)
+ursatz_test(test_form_spec_leads TARGET test_form_spec ARGS leads)
 # A form that always modulates plans its key lane away from home whatever the request says, and composes
 # (tests/fixtures/forms/modulating-form.json).
-add_test(NAME test_form_spec_modulates COMMAND test_form_spec modulates)
+ursatz_test(test_form_spec_modulates TARGET test_form_spec ARGS modulates)
 
-add_executable(test_piece_perform test_piece_perform.c)
-target_link_libraries(test_piece_perform PRIVATE ursatz_composer)
-target_include_directories(test_piece_perform PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_piece_perform PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_piece_perform PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_piece_perform LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # A composed piece performed in order (R-485): tests/fixtures/forms/repeat-form.json, repeats written out in place.
-add_test(NAME test_piece_perform COMMAND test_piece_perform)
+ursatz_test(test_piece_perform TARGET test_piece_perform)
 # A compound form (R-485): tests/fixtures/forms/parts-form.json, its parts composed on their own and performed in order.
-add_test(NAME test_piece_perform_parts COMMAND test_piece_perform parts)
+ursatz_test(test_piece_perform_parts TARGET test_piece_perform ARGS parts)
 # A part with its own bars (R-495): tests/fixtures/forms/part-bars-form.json at sizes 24 and 12, its Trio always 12 bars.
-add_test(NAME test_piece_perform_part_bars COMMAND test_piece_perform part-bars)
+ursatz_test(test_piece_perform_part_bars TARGET test_piece_perform ARGS part-bars)
 
-add_executable(test_piece_keys test_piece_keys.c)
-target_link_libraries(test_piece_keys PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_piece_keys PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_piece_keys LIBS ursatz_composer composer_test_support)
 # The plans and a quick compose run, and for each template the compose sweep (seeds 1 to 10, C major and A minor).
-add_test(NAME test_piece_keys_plan COMMAND test_piece_keys plan)
-add_test(NAME test_piece_keys_smoke COMMAND test_piece_keys smoke)
-add_test(NAME test_piece_keys_tonic_major COMMAND test_piece_keys tonic-major)
+ursatz_test(test_piece_keys_plan TARGET test_piece_keys ARGS plan)
+ursatz_test(test_piece_keys_smoke TARGET test_piece_keys ARGS smoke)
 # The tonic major case composes 20 pieces of 56 bars in 16 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_piece_keys_tonic_major PROPERTIES LABELS slow)
+ursatz_test(test_piece_keys_tonic_major TARGET test_piece_keys ARGS tonic-major LABELS slow)
 foreach(template ${FORM_TEMPLATES})
-    add_test(NAME test_piece_keys_${template} COMMAND test_piece_keys compose ${template})
     # The sweeps are slow: CI leaves them out (ctest -LE slow).
-    set_tests_properties(test_piece_keys_${template} PROPERTIES LABELS slow)
+    ursatz_test(test_piece_keys_${template} TARGET test_piece_keys ARGS compose ${template} LABELS slow)
 endforeach()
 # Every completed run passes every check, and every template completes all 20 runs since P44 B6 (a half-cadence
 # continuation or free phrase in a minor key gets chords, and a key change inside a section is heard in its new key,
 # R-418; docs/piece.md has the measured shares).
 
-add_executable(test_piece_structure test_piece_structure.c)
-target_link_libraries(test_piece_structure PRIVATE ursatz_composer)
-target_include_directories(test_piece_structure PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_piece_structure PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_piece_structure LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # The checks and the plans, then the composed runs (seeds 1 to 10 each): a structure, a pickup, free phrases, the transition and the coda.
 foreach(mode checks plan compose pickup free minor_half_free functions)
-    add_test(NAME test_piece_structure_${mode} COMMAND test_piece_structure ${mode})
+    ursatz_test(test_piece_structure_${mode} TARGET test_piece_structure ARGS ${mode})
 endforeach()
 
-if(TARGET ursatz-composer)
 # Theme and progression fills (R-170). The theme plan comes from the theme command, run as a process in a directory of its own.
-add_executable(test_piece_fills test_piece_fills.c)
-target_link_libraries(test_piece_fills PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_piece_fills PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_piece_fills PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_piece_fills LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_piece_fills ursatz-composer)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
 foreach(mode fixture theme refused progression partial)
-    add_test(NAME test_piece_fills_${mode} COMMAND test_piece_fills ${mode}
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
     # Every mode writes piece_fills_theme.json and piece_fills_out.txt in the one directory.
-    set_tests_properties(test_piece_fills_${mode} PROPERTIES RESOURCE_LOCK piece_fills)
+    ursatz_test(test_piece_fills_${mode} TARGET test_piece_fills ARGS ${mode}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills PROPERTIES RESOURCE_LOCK piece_fills)
 endforeach()
-endif()
 
 # The loop seam (R-171): the seam rules on hand-made plans, then the composed sweep (seeds 1 to 20).
-add_executable(test_loop_seam test_loop_seam.c)
-target_link_libraries(test_loop_seam PRIVATE ursatz_composer)
-target_compile_options(test_loop_seam PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_loop_seam LIBS ursatz_composer)
 foreach(mode rules sweep)
-    add_test(NAME test_loop_seam_${mode} COMMAND test_loop_seam ${mode})
+    ursatz_test(test_loop_seam_${mode} TARGET test_loop_seam ARGS ${mode})
 endforeach()
 
-add_executable(test_form_return test_form_return.c)
-target_link_libraries(test_form_return PRIVATE ursatz_composer)
-target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_form_return PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_form_return LIBS ursatz_composer
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Returning sections (form_return.h): the smoke test is quick; the others compose a few pieces each.
-foreach(mode smoke exact ornament reharmonize varied embellish setting reregister home)
-    add_test(NAME test_form_return_${mode} COMMAND test_form_return ${mode})
-endforeach()
 # Reregister measured 14.6 s of CPU, embellish 16 s (20 pieces composed) and setting 41 s (85 pieces), over the 10 s fast-set limit.
 # Home (R-524) composes four rows of 10 seeds, tried again from the next seeds, in about 1 s a try.
-set_tests_properties(test_form_return_embellish test_form_return_setting test_form_return_reregister test_form_return_home PROPERTIES LABELS slow)
-
-add_executable(test_form_figure test_form_figure.c)
-target_link_libraries(test_form_figure PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_form_figure PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_form_figure PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-# The figurate return (form_figure.h): the smoke test is quick; the sweep composes 50 pieces.
-foreach(mode smoke sweep parallel)
-    add_test(NAME test_form_figure_${mode} COMMAND test_form_figure ${mode})
+set(SLOW_RETURN_MODES embellish setting reregister home)
+foreach(mode smoke exact ornament reharmonize varied embellish setting reregister home)
+    set(labels)
+    if(mode IN_LIST SLOW_RETURN_MODES)
+        set(labels slow)
+    endif()
+    ursatz_test(test_form_return_${mode} TARGET test_form_return ARGS ${mode} LABELS ${labels})
 endforeach()
+
+ursatz_test_executable(test_form_figure LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+# The figurate return (form_figure.h): the smoke test is quick; the sweep composes 50 pieces.
 # The sweep composed 50 pieces in 22 s of CPU and the parallel case 40 in 13 s, over the 10 s fast-set limit.
-set_tests_properties(test_form_figure_sweep test_form_figure_parallel PROPERTIES LABELS slow)
+foreach(mode smoke sweep parallel)
+    set(labels)
+    if(NOT mode STREQUAL "smoke")
+        set(labels slow)
+    endif()
+    ursatz_test(test_form_figure_${mode} TARGET test_form_figure ARGS ${mode} LABELS ${labels})
+endforeach()
 
-add_executable(test_return_heard test_return_heard.c)
-target_link_libraries(test_return_heard PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_return_heard PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_return_heard LIBS ursatz_composer composer_test_support)
 # The returns heard in composed pieces: the smoke test is quick; the sweep fails when a share falls below its baseline.
-add_test(NAME test_return_heard_smoke COMMAND test_return_heard smoke)
-add_test(NAME test_return_heard_heard COMMAND test_return_heard heard)
+ursatz_test(test_return_heard_smoke TARGET test_return_heard ARGS smoke)
 # Measured 20.8 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_return_heard_heard PROPERTIES LABELS slow)
+ursatz_test(test_return_heard_heard TARGET test_return_heard ARGS heard LABELS slow)
 
-if(TARGET ursatz-composer)
-add_executable(test_plan_cli test_plan_cli.c)
-target_link_libraries(test_plan_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_plan_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_plan_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                 COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_plan_cli ursatz-composer)
-add_test(NAME test_plan_cli COMMAND test_plan_cli)
 # Measured 24.6 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_plan_cli PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_plan_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+add_dependencies(test_plan_cli ursatz-composer)
 
 # Chords given at exact onsets (given.h plan_give_chords).
-add_executable(test_given_chords test_given_chords.c)
-target_link_libraries(test_given_chords PRIVATE ursatz_composer)
-target_compile_options(test_given_chords PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_given_chords COMMAND test_given_chords)
+ursatz_test(test_given_chords LIBS ursatz_composer)
 
-add_executable(test_middle_out test_middle_out.c)
-target_link_libraries(test_middle_out PRIVATE ursatz_composer)
-target_include_directories(test_middle_out PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_middle_out PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_middle_out LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Given material (given.h): the placing calls and a quick run are quick; the sweeps (seeds 1 to 10) fail when a share
 # falls below its baseline (tests/test_middle_out.c, docs/middle-out.md).
-add_test(NAME test_middle_out_give COMMAND test_middle_out give)
-add_test(NAME test_middle_out_smoke COMMAND test_middle_out smoke)
-add_test(NAME test_middle_out_partial COMMAND test_middle_out partial)
+ursatz_test(test_middle_out_give TARGET test_middle_out ARGS give)
+ursatz_test(test_middle_out_smoke TARGET test_middle_out ARGS smoke)
+ursatz_test(test_middle_out_partial TARGET test_middle_out ARGS partial)
 foreach(scenario melody progression bass)
-    add_test(NAME test_middle_out_${scenario} COMMAND test_middle_out ${scenario})
+    ursatz_test(test_middle_out_${scenario} TARGET test_middle_out ARGS ${scenario})
 endforeach()
 
-if(TARGET ursatz-composer)
 # Locking and regenerating (docs/regenerate.md). Each mode is one ctest entry; the cli mode runs the commands as
 # processes.
-add_executable(test_regenerate test_regenerate.c)
-target_link_libraries(test_regenerate PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_regenerate PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_regenerate PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
-target_include_directories(test_regenerate PRIVATE ${PROJECT_SOURCE_DIR}/src)
+ursatz_test_executable(test_regenerate LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_regenerate ursatz-composer)
 foreach(mode remove lock dependents section scope scope-config returns lanes locked determinism cli)
-    add_test(NAME test_regenerate_${mode} COMMAND test_regenerate ${mode})
+    ursatz_test(test_regenerate_${mode} TARGET test_regenerate ARGS ${mode})
 endforeach()
 # Memory errors only: every analyzer_hear leaks in the Analyzer's make_kernel_window (analysis_motive.c), not here.
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_regenerate_scope_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=no $<TARGET_FILE:test_regenerate> scope)
-    add_test(NAME test_regenerate_scope_config_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=no $<TARGET_FILE:test_regenerate> scope-config)
-    set_tests_properties(test_regenerate_scope_valgrind test_regenerate_scope_config_valgrind PROPERTIES LABELS slow)
-endif()
+if(URSATZ_VALGRIND)
+    ursatz_test(test_regenerate_scope_valgrind
+        COMMAND ${URSATZ_VALGRIND} --error-exitcode=1 --leak-check=no $<TARGET_FILE:test_regenerate> scope
+        LABELS slow valgrind)
+    ursatz_test(test_regenerate_scope_config_valgrind
+        COMMAND ${URSATZ_VALGRIND} --error-exitcode=1 --leak-check=no $<TARGET_FILE:test_regenerate> scope-config
+        LABELS slow valgrind)
 endif()
 
 # Variations and harmonizations (docs/regenerate.md). Each mode is one ctest entry; the sweep is slow and CI leaves it
 # out (ctest -LE slow), its smoke test is the sweep on seeds 1 and 2. The cli test runs the commands as processes.
-add_executable(test_variations test_variations.c)
-target_link_libraries(test_variations PRIVATE ursatz_composer)
-target_compile_options(test_variations PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_variations LIBS ursatz_composer)
 foreach(mode distinct refused harmonize sweep_smoke sweep)
-    add_test(NAME test_variations_${mode} COMMAND test_variations ${mode})
+    set(labels)
+    if(mode STREQUAL "sweep")
+        set(labels slow)
+    endif()
+    ursatz_test(test_variations_${mode} TARGET test_variations ARGS ${mode} LABELS ${labels})
 endforeach()
-set_tests_properties(test_variations_sweep PROPERTIES LABELS slow)
-if(TARGET ursatz-composer)
-    add_test(NAME test_variations_cli
-             COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
+ursatz_test(test_variations_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/variations_cli
                      -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_variations.cmake)
-endif()
 
 # The listen command (docs/cli-listen.md): batches of motifs and themes with settings. The slow case also makes a style model
 # from the sonatina folder with the Analyzer (about 30 s in a Debug build).
-if(TARGET ursatz-composer AND TARGET ursatz-analyzer)
-    foreach(case smoke style_folder)
-        set(folder OFF)
-        if(case STREQUAL "style_folder")
-            set(folder ON)
-        endif()
-        add_test(NAME test_listen_cli_${case}
-                 COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DANALYZER=$<TARGET_FILE:ursatz-analyzer>
-                         -DWORK=${CMAKE_CURRENT_BINARY_DIR}/listen_cli_${case} -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
-                         -DSTYLE_FOLDER=${folder} -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_listen.cmake)
-        set_tests_properties(test_listen_cli_${case} PROPERTIES TIMEOUT 300)
-    endforeach()
-    set_tests_properties(test_listen_cli_style_folder PROPERTIES LABELS slow)
-endif()
+foreach(case smoke style_folder)
+    set(folder OFF)
+    set(labels)
+    if(case STREQUAL "style_folder")
+        set(folder ON)
+        set(labels slow)
+    endif()
+    ursatz_test(test_listen_cli_${case}
+        COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DANALYZER=$<TARGET_FILE:ursatz-analyzer>
+                -DWORK=${CMAKE_CURRENT_BINARY_DIR}/listen_cli_${case} -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+                -DSTYLE_FOLDER=${folder} -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_listen.cmake
+        LABELS ${labels} TIMEOUT 300)
+endforeach()
 
 # The DAW-friendly export (docs/export.md): names, markers and tempo in the MIDI file, tempo in the MusicXML.
-add_executable(test_export_daw test_export_daw.c)
-target_link_libraries(test_export_daw PRIVATE ursatz_composer)
-target_compile_options(test_export_daw PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_export_daw COMMAND test_export_daw)
-if(TARGET ursatz-composer)
-    add_test(NAME test_export_cli
-             COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
+ursatz_test(test_export_daw LIBS ursatz_composer)
+ursatz_test(test_export_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_export.cmake)
-endif()
 
 # The JSON snapshot comparison ignores member order and indentation and fails on a changed value.
-add_test(NAME test_cli_snapshot_compare
-         COMMAND ${CMAKE_COMMAND} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshot_compare
+ursatz_test(test_cli_snapshot_compare COMMAND ${CMAKE_COMMAND} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshot_compare
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshot_compare.cmake)
 
-if(TARGET ursatz-composer)
 # Seeded CLI output against tests/snapshots; recapture with -DUPDATE=1 (README.md).
-add_test(NAME test_cli_snapshots
-         COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
-                 -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake)
 # Measured 20.1 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_cli_snapshots PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_cli_snapshots COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
+                 -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake
+    LABELS slow)
 
-add_executable(test_analyzer_check test_analyzer_check.c)
-target_link_libraries(test_analyzer_check PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_analyzer_check LIBS ursatz_composer composer_test_support)
 # The Analyzer check (docs/analyzer-check.md): the modes are quick except the sweep, which CI leaves out (ctest -LE slow);
 # its smoke test is the sweep on one seed.
 foreach(mode contradiction default smoke same candidates piece)
-    add_test(NAME test_analyzer_check_${mode} COMMAND test_analyzer_check ${mode})
+    ursatz_test(test_analyzer_check_${mode} TARGET test_analyzer_check ARGS ${mode})
 endforeach()
-add_test(NAME test_analyzer_check_planned COMMAND test_analyzer_check planned)
-set_tests_properties(test_analyzer_check_planned PROPERTIES LABELS slow)
+ursatz_test(test_analyzer_check_planned TARGET test_analyzer_check ARGS planned LABELS slow)
 
-if(TARGET ursatz-composer)
-add_executable(test_explain test_explain.c)
-target_link_libraries(test_explain PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_explain PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_explain PRIVATE
-    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+ursatz_test_executable(test_explain LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
     COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
 add_dependencies(test_explain ursatz-composer)
 # The explanation of a run (docs/explain.md); every mode is quick.
 foreach(mode choices rejections same cli)
-    add_test(NAME test_explain_${mode} COMMAND test_explain ${mode})
+    ursatz_test(test_explain_${mode} TARGET test_explain ARGS ${mode})
 endforeach()
-endif()
 
-if(TARGET ursatz-composer)
-add_executable(test_style test_style.c)
-target_link_libraries(test_style PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_style PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_style PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_style PRIVATE
-    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+ursatz_test_executable(test_style LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
 add_dependencies(test_style ursatz-composer)
 # Styles (docs/style.md): the sweep is slow and CI leaves it out (ctest -LE slow); its smoke test is the sweep on seeds 1 and 2.
 foreach(mode labels same motives labels-motive prefer without measure smoke cli)
-    add_test(NAME test_style_${mode} COMMAND test_style ${mode})
+    ursatz_test(test_style_${mode} TARGET test_style ARGS ${mode})
 endforeach()
 # brief runs the command line in a directory of its own, as cli does in the build's, and the two can run together.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/style_brief)
-add_test(NAME test_style_brief COMMAND test_style brief WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/style_brief)
-add_test(NAME test_style_distance COMMAND test_style distance)
-set_tests_properties(test_style_distance PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_style_brief TARGET test_style ARGS brief WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/style_brief)
+ursatz_test(test_style_distance TARGET test_style ARGS distance LABELS slow)
 
-if(TARGET ursatz-composer)
-add_executable(test_style_blend test_style_blend.c)
-target_link_libraries(test_style_blend PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_style_blend PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_style_blend PRIVATE
-    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+ursatz_test_executable(test_style_blend LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_STYLE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/styles")
 add_dependencies(test_style_blend ursatz-composer)
 # Style blending (docs/style.md): the sweep is slow and CI leaves it out (ctest -LE slow); its smoke test is the sweep on seeds 1 and 2.
 foreach(mode statistics labels form smoke cli)
-    add_test(NAME test_style_blend_${mode} COMMAND test_style_blend ${mode})
+    ursatz_test(test_style_blend_${mode} TARGET test_style_blend ARGS ${mode})
 endforeach()
-add_test(NAME test_style_blend_harmony COMMAND test_style_blend harmony)
-set_tests_properties(test_style_blend_harmony PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_style_blend_harmony TARGET test_style_blend ARGS harmony LABELS slow)
 
 # Seeding from a corpus (docs/style.md). "sonatinas" is Clementi 36 and Mozart 545 from Ursatz's reference corpus (kept in fixtures/corpus-sonatinas),
 # copied into the build tree at configure time and analyzed by the Analyzer CLI at build time; "empty" holds one file
@@ -711,490 +450,282 @@ add_custom_command(
     VERBATIM)
 add_custom_target(seed_corpora DEPENDS ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json)
 
-if(TARGET ursatz-composer)
-add_executable(test_corpus_seed test_corpus_seed.c)
-target_link_libraries(test_corpus_seed PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_corpus_seed PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_corpus_seed PRIVATE
-    COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+ursatz_test_executable(test_corpus_seed LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_SONATINAS_CORPUS="${SEED_CORPORA_DIR}/sonatinas-analyzed"
     COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed")
 add_dependencies(test_corpus_seed ursatz-composer seed_corpora)
 # Each mode runs in a directory of its own: the modes write files of the same names, and ctest -j runs them together.
+# The same mode measured 36.2 s of CPU, over the 10 s fast-set limit.
 foreach(mode motive same plan progression no-match cli)
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
-    add_test(NAME test_corpus_seed_${mode} COMMAND test_corpus_seed ${mode}
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
+    set(labels)
+    if(mode STREQUAL "same")
+        set(labels slow)
+    endif()
+    ursatz_test(test_corpus_seed_${mode} TARGET test_corpus_seed ARGS ${mode} LABELS ${labels}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/corpus_seed_${mode})
 endforeach()
-# The same mode measured 36.2 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_corpus_seed_same PROPERTIES LABELS slow)
-endif()
 
-add_executable(test_variant_registry test_variant_registry.c)
-target_link_libraries(test_variant_registry PRIVATE ursatz_composer)
-target_include_directories(test_variant_registry PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_include_directories(test_variant_registry PRIVATE ${PROJECT_SOURCE_DIR}/../library/src)
-target_compile_options(test_variant_registry PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_variant_registry COMMAND test_variant_registry)
+ursatz_test(test_variant_registry LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/../library/src)
 
-if(TARGET ursatz-composer)
-add_executable(test_variants_cli test_variants_cli.c)
-target_link_libraries(test_variants_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_variants_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_variants_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_variants_cli ursatz-composer)
-add_test(NAME test_variants_cli COMMAND test_variants_cli)
 # Measured 43.9 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_variants_cli PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_variants_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+add_dependencies(test_variants_cli ursatz-composer)
 
-add_executable(test_motive_random test_motive_random.c)
-target_link_libraries(test_motive_random PRIVATE ursatz_composer cjson)
-target_include_directories(test_motive_random PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_motive_random PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_motive_random PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_motive_random COMMAND test_motive_random)
+ursatz_test(test_motive_random LIBS ursatz_composer cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_motive_random_segments test_motive_random_segments.c)
-target_link_libraries(test_motive_random_segments PRIVATE ursatz_composer)
-target_include_directories(test_motive_random_segments PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_motive_random_segments PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motive_random_segments COMMAND test_motive_random_segments)
+ursatz_test(test_motive_random_segments LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-if(TARGET ursatz-composer)
-add_executable(test_random_motive_cli test_random_motive_cli.c)
-target_link_libraries(test_random_motive_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_random_motive_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_random_motive_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                          COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_random_motive_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_random_motive_cli ursatz-composer)
-add_test(NAME test_random_motive_cli COMMAND test_random_motive_cli)
-endif()
 
 # Recognizing variants (docs/cli-recognize.md). The round trip makes every registry row and random chains on four
 # fixtures and recognizes each result; it is slow and CI leaves it out (ctest -LE slow). Its smoke test is the same
 # check on seeds 1 and 2. The cli test runs the command as a process.
-add_executable(test_variant_recognize test_variant_recognize.c)
-target_link_libraries(test_variant_recognize PRIVATE ursatz_composer)
-target_include_directories(test_variant_recognize PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_variant_recognize PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_variant_recognize COMMAND test_variant_recognize)
-add_test(NAME test_variant_recognize_smoke COMMAND test_variant_recognize --smoke)
-set_tests_properties(test_variant_recognize PROPERTIES LABELS slow)
+ursatz_test_executable(test_variant_recognize LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_variant_recognize TARGET test_variant_recognize LABELS slow)
+ursatz_test(test_variant_recognize_smoke TARGET test_variant_recognize ARGS --smoke)
 
-if(TARGET ursatz-composer)
-add_executable(test_recognize_cli test_recognize_cli.c)
-target_link_libraries(test_recognize_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_recognize_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_recognize_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                      COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_recognize_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_recognize_cli ursatz-composer)
-add_test(NAME test_recognize_cli COMMAND test_recognize_cli)
-endif()
 
-add_executable(test_motive_connect test_motive_connect.c)
-target_link_libraries(test_motive_connect PRIVATE ursatz_composer)
-target_include_directories(test_motive_connect PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_include_directories(test_motive_connect PRIVATE ${PROJECT_SOURCE_DIR}/../library/src)
-target_compile_options(test_motive_connect PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motive_connect COMMAND test_motive_connect)
+ursatz_test(test_motive_connect LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/../library/src)
 
-add_executable(test_shaping test_shaping.c)
-target_link_libraries(test_shaping PRIVATE ursatz_composer)
-target_include_directories(test_shaping PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_shaping PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_shaping COMMAND test_shaping)
+ursatz_test(test_shaping LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-if(TARGET ursatz-composer)
 # The theme command (docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
 # in a directory of its own, so it can run beside the other command tests.
-add_executable(test_theme_cli test_theme_cli.c)
-target_link_libraries(test_theme_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_theme_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_theme_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_theme_cli ursatz-composer)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
-add_test(NAME test_theme_cli COMMAND test_theme_cli WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
 # Measured 11.6 s of CPU, over the 10 s fast-set limit.
-set_tests_properties(test_theme_cli PROPERTIES LABELS slow)
-endif()
+ursatz_test(test_theme_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
+add_dependencies(test_theme_cli ursatz-composer)
 
-if(TARGET ursatz-composer)
 # The piece command (docs/cli-piece.md): the loop and the ending version of a looping game track, run as a process. It writes
 # its files in a directory of its own, so it can run beside the other command tests.
-add_executable(test_piece_cli test_piece_cli.c)
-target_link_libraries(test_piece_cli PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_piece_cli PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_piece_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
-                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_dependencies(test_piece_cli ursatz-composer)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
-add_test(NAME test_piece_cli COMMAND test_piece_cli WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
-endif()
+ursatz_test(test_piece_cli LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
+add_dependencies(test_piece_cli ursatz-composer)
 
-add_executable(test_harmony_beats test_harmony_beats.c)
-target_link_libraries(test_harmony_beats PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_harmony_beats PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_harmony_beats COMMAND test_harmony_beats)
+ursatz_test(test_harmony_beats LIBS ursatz_composer composer_test_support)
 
-add_executable(test_melody_beats test_melody_beats.c)
-target_link_libraries(test_melody_beats PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_melody_beats PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_melody_beats PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_melody_beats COMMAND test_melody_beats)
+ursatz_test(test_melody_beats LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 # The Composer API (docs/api.md): the core entries, and progress and cancel through the library loops.
-add_executable(test_api_core test_api_core.c)
-target_link_libraries(test_api_core PRIVATE ursatz_composer composer_test_support)
-target_compile_options(test_api_core PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_core PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_api_core COMMAND test_api_core WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_core PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_core LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_core_files)
 
-add_executable(test_api_motive test_api_motive.c)
-target_link_libraries(test_api_motive PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_motive PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_motive PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
-                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_api_motive COMMAND test_api_motive WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_motive PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_motive LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_motive_files)
 
-add_executable(test_api_variants test_api_variants.c)
-target_link_libraries(test_api_variants PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_variants PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_variants PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
-                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_api_variants COMMAND test_api_variants WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_variants PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_variants LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_variants_files)
 
 find_package(Threads REQUIRED)
-add_executable(test_api_theme test_api_theme.c)
-target_link_libraries(test_api_theme PRIVATE ursatz_composer composer_test_support cjson Threads::Threads)
-target_compile_options(test_api_theme PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_theme PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
-                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_api_theme LIBS ursatz_composer composer_test_support cjson Threads::Threads
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Two tests of one executable (each theme measures its ideas' fidelity, about 1 s, R-332; together 12 s, over the 10 s rule).
-add_test(NAME test_api_theme COMMAND test_api_theme responses WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_theme PROPERTIES FIXTURES_SETUP api_responses_written)
-add_test(NAME test_api_theme_runs COMMAND test_api_theme runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+ursatz_test(test_api_theme TARGET test_api_theme ARGS responses WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_theme_files)
+ursatz_test(test_api_theme_runs TARGET test_api_theme ARGS runs WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(test_api_validate test_api_validate.c)
-target_link_libraries(test_api_validate PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_validate PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_validate PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_api_validate COMMAND test_api_validate WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+ursatz_test(test_api_validate LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(test_api_piece test_api_piece.c)
-target_link_libraries(test_api_piece PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_piece PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_piece PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
-                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_api_piece COMMAND test_api_piece WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_piece PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_piece LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_piece_files)
 
-add_executable(test_api_parts test_api_parts.c)
-target_link_libraries(test_api_parts PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_parts PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_api_parts COMMAND test_api_parts WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_parts PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_parts LIBS ursatz_composer composer_test_support cjson
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_parts_files)
 
-add_executable(test_api_rondo test_api_rondo.c)
-target_link_libraries(test_api_rondo PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_rondo PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_api_rondo COMMAND test_api_rondo WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_rondo PROPERTIES LABELS slow)
+ursatz_test(test_api_rondo LIBS ursatz_composer composer_test_support cjson LABELS slow
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(test_api_sonata test_api_sonata.c)
-target_link_libraries(test_api_sonata PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_sonata PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_api_sonata COMMAND test_api_sonata WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_sonata PROPERTIES LABELS slow)
+ursatz_test(test_api_sonata LIBS ursatz_composer composer_test_support cjson LABELS slow
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(test_api_plan_workflow test_api_plan_workflow.c)
-target_link_libraries(test_api_plan_workflow PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_plan_workflow PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_plan_workflow PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
-                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_api_plan_workflow COMMAND test_api_plan_workflow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_plan_workflow PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_plan_workflow LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_plan_workflow_files)
 
-add_executable(test_api_material test_api_material.c)
-target_link_libraries(test_api_material PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_material PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_material PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
-                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-                           COMPOSER_SONATINAS_CORPUS="${SEED_CORPORA_DIR}/sonatinas-analyzed"
-                           COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed")
+ursatz_test(test_api_material LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_SONATINAS_CORPUS="${SEED_CORPORA_DIR}/sonatinas-analyzed"
+    COMPOSER_EMPTY_CORPUS="${SEED_CORPORA_DIR}/empty-analyzed" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_material_files)
 add_dependencies(test_api_material seed_corpora)
-add_test(NAME test_api_material COMMAND test_api_material WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_material PROPERTIES FIXTURES_SETUP api_responses_written)
 
-add_executable(test_api_vocabulary test_api_vocabulary.c)
-target_link_libraries(test_api_vocabulary PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_vocabulary PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_api_vocabulary PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_api_vocabulary COMMAND test_api_vocabulary WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_vocabulary PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_vocabulary LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_vocabulary_files)
 
-add_executable(test_api_forms test_api_forms.c)
-target_link_libraries(test_api_forms PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_api_forms PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_api_forms COMMAND test_api_forms WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties(test_api_forms PROPERTIES FIXTURES_SETUP api_responses_written)
+ursatz_test(test_api_forms LIBS ursatz_composer composer_test_support cjson
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written)
 
-add_executable(test_job_cancel test_job_cancel.c)
-target_link_libraries(test_job_cancel PRIVATE ursatz_composer)
-target_compile_options(test_job_cancel PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_job_cancel COMMAND test_job_cancel)
+ursatz_test(test_job_cancel LIBS ursatz_composer)
 
-# Every API test response is validated against schema/api/<kind>.schema.json (needs python3 with jsonschema).
-add_test(NAME test_api_schema
-         COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DHAVE_JSONSCHEMA=${HAVE_JSONSCHEMA}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
-                 -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake)
-set_tests_properties(test_api_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED" FIXTURES_REQUIRED api_responses_written)
-
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_api_core_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_core>
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    add_test(NAME test_api_motive_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_motive>
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    add_test(NAME test_api_vocabulary_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_vocabulary>
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    set_tests_properties(test_api_vocabulary_valgrind PROPERTIES LABELS slow)
-    add_test(NAME test_api_variants_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_variants>
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    set_tests_properties(test_api_variants_valgrind PROPERTIES LABELS slow)
-    add_test(NAME test_api_theme_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_theme> quick
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    set_tests_properties(test_api_theme_valgrind PROPERTIES LABELS slow)
-    add_test(NAME test_api_piece_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_piece> quick
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    add_test(NAME test_api_plan_workflow_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_plan_workflow> quick
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    add_test(NAME test_api_material_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_api_material> quick
-             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    set_tests_properties(test_api_material_valgrind PROPERTIES LABELS slow)
-    add_test(NAME test_job_cancel_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     $<TARGET_FILE:test_job_cancel> cancel)
+if(URSATZ_VALGRIND)
+    # The valgrind runs do not set up the api_responses_written fixture (see test_plan_json_valgrind).
+    foreach(api_test core motive variants vocabulary theme piece plan_workflow material)
+        set(api_args)
+        if(api_test MATCHES "^(theme|piece|plan_workflow|material)$")
+            set(api_args quick)
+        endif()
+        ursatz_test(test_api_${api_test}_valgrind
+            COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS} $<TARGET_FILE:test_api_${api_test}> ${api_args}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} LABELS slow valgrind
+            PROPERTIES RESOURCE_LOCK api_${api_test}_files)
+    endforeach()
+    ursatz_test(test_job_cancel_valgrind
+        COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS} $<TARGET_FILE:test_job_cancel> cancel
+        LABELS slow valgrind)
 endif()
 
 # Each API test writes its requests and responses in the build directory under names no other test uses, and its valgrind run
-# writes the same names again, so a test and its valgrind run share a lock. test_api_schema reads every one of them.
-set(API_FILE_LOCKS "")
-foreach(api_test core motive variants theme piece parts plan_workflow material vocabulary)
-    list(APPEND API_FILE_LOCKS api_${api_test}_files)
-    foreach(variant test_api_${api_test} test_api_${api_test}_valgrind)
-        if(TEST ${variant})
-            set_tests_properties(${variant} PROPERTIES RESOURCE_LOCK api_${api_test}_files)
-        endif()
-    endforeach()
-endforeach()
-set_tests_properties(test_api_schema PROPERTIES RESOURCE_LOCK "${API_FILE_LOCKS}")
+# writes the same names again, so a test and its valgrind run share a lock (api_<name>_files, set on the tests above).
+# test_api_schema reads every one of them, so it takes every lock. Every API test response is validated against
+# schema/api/<kind>.schema.json (needs python3 with jsonschema).
+if(URSATZ_JSONSCHEMA_PYTHON)
+    set(API_FILE_LOCKS api_core_files api_motive_files api_variants_files api_theme_files api_piece_files api_parts_files
+        api_plan_workflow_files api_material_files api_vocabulary_files)
+    ursatz_test(test_api_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
+                     -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake
+        LABELS schema
+        PROPERTIES FIXTURES_REQUIRED api_responses_written)
+    # A list of locks cannot pass through PROPERTIES.
+    set_tests_properties(test_api_schema PROPERTIES RESOURCE_LOCK "${API_FILE_LOCKS}")
+endif()
 
 # A project that adds cJSON, Ursatz and the Analyzer first and the Composer after them, with its command off, builds and runs.
-add_test(NAME consumer_build
-         COMMAND ${CMAKE_CTEST_COMMAND} --build-and-test ${CMAKE_CURRENT_SOURCE_DIR}/consumer ${CMAKE_CURRENT_BINARY_DIR}/consumer
-                 --build-generator "${CMAKE_GENERATOR}" --build-target consumer
-                 --build-options -DURSATZ_ROOT=${CMAKE_SOURCE_DIR}
-                 --test-command ${CMAKE_CURRENT_BINARY_DIR}/consumer/consumer)
-# A consumer that links the Composer cannot include any other ursatz_composer/ header or any Ursatz or Analyzer header.
-add_test(NAME consumer_rejects_internals
-         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/consumer
-                 "-DTARGETS=reject_composer_header;reject_analyzer_header;reject_library_header"
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_rejects.cmake)
-set_tests_properties(consumer_rejects_internals PROPERTIES DEPENDS consumer_build RESOURCE_LOCK consumer_build_dir)
-set_tests_properties(consumer_build PROPERTIES RESOURCE_LOCK consumer_build_dir)
 # consumer_build measured 42.6 s of CPU on a warm tree and 169 s of wall time on a cold one, over the 10 s fast-set limit.
 # consumer_rejects_internals needs its build tree, so it is slow with it.
-set_tests_properties(consumer_build consumer_rejects_internals PROPERTIES LABELS slow)
+ursatz_test(consumer_build COMMAND ${CMAKE_CTEST_COMMAND} --build-and-test ${CMAKE_CURRENT_SOURCE_DIR}/consumer ${CMAKE_CURRENT_BINARY_DIR}/consumer
+                 --build-generator "${CMAKE_GENERATOR}" --build-target consumer
+                 --build-options -DURSATZ_ROOT=${CMAKE_SOURCE_DIR}
+                 --test-command ${CMAKE_CURRENT_BINARY_DIR}/consumer/consumer
+    LABELS slow
+    PROPERTIES RESOURCE_LOCK consumer_build_dir)
+# A consumer that links the Composer cannot include any other ursatz_composer/ header or any Ursatz or Analyzer header.
+ursatz_test(consumer_rejects_internals COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/consumer
+                 -DTARGETS=reject_composer_header,reject_analyzer_header,reject_library_header
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_rejects.cmake
+    LABELS slow
+    PROPERTIES DEPENDS consumer_build RESOURCE_LOCK consumer_build_dir)
 
 # Default timeouts by label (cmake/TestTimeouts.cmake), set last so every test above has its labels.
 include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
 ursatz_composer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(test_grow_motif_realized test_grow_motif_realized.c)
-target_link_libraries(test_grow_motif_realized PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_motif_realized PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_motif_realized PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_motif_realized PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_motif_realized COMMAND test_grow_motif_realized)
+ursatz_test(test_grow_motif_realized LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_motive_relaxed test_grow_motive_relaxed.c)
-target_link_libraries(test_grow_motive_relaxed PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_motive_relaxed PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_motive_relaxed PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_motive_relaxed PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_motive_relaxed COMMAND test_grow_motive_relaxed)
+ursatz_test(test_grow_motive_relaxed LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_whole_motif test_grow_whole_motif.c)
-target_link_libraries(test_grow_whole_motif PRIVATE ursatz_composer)
-target_include_directories(test_grow_whole_motif PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_options(test_grow_whole_motif PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_whole_motif COMMAND test_grow_whole_motif)
+ursatz_test(test_grow_whole_motif LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-add_executable(test_grow_triplets test_grow_triplets.c)
-target_link_libraries(test_grow_triplets PRIVATE ursatz_composer composer_test_support cjson)
-target_compile_options(test_grow_triplets PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_grow_triplets PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_grow_triplets LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # The sweep (3 motives, a sentence and a period, seeds 1 to 8) takes about 90 s: labeled slow; the smoke test is seed 1 of a sentence.
-add_test(NAME test_grow_triplets COMMAND test_grow_triplets)
-set_tests_properties(test_grow_triplets PROPERTIES LABELS slow)
-add_test(NAME test_grow_triplets_smoke COMMAND test_grow_triplets quick)
+ursatz_test(test_grow_triplets TARGET test_grow_triplets LABELS slow)
+ursatz_test(test_grow_triplets_smoke TARGET test_grow_triplets ARGS quick)
 
-add_executable(test_grow_repetitions test_grow_repetitions.c)
-target_link_libraries(test_grow_repetitions PRIVATE ursatz_composer)
-target_compile_options(test_grow_repetitions PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_repetitions COMMAND test_grow_repetitions)
+ursatz_test(test_grow_repetitions LIBS ursatz_composer)
 
-add_executable(test_grow_developed_motives test_grow_developed_motives.c)
-target_link_libraries(test_grow_developed_motives PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_developed_motives PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_developed_motives PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_developed_motives PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_developed_motives COMMAND test_grow_developed_motives)
+ursatz_test(test_grow_developed_motives LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_motive_harmony test_grow_motive_harmony.c)
-target_link_libraries(test_grow_motive_harmony PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_motive_harmony PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_motive_harmony PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_motive_harmony PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_motive_harmony COMMAND test_grow_motive_harmony)
+ursatz_test(test_grow_motive_harmony LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_segment_fragments test_grow_segment_fragments.c)
-target_link_libraries(test_grow_segment_fragments PRIVATE ursatz_composer cjson)
-target_compile_options(test_grow_segment_fragments PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_segment_fragments COMMAND test_grow_segment_fragments)
+ursatz_test(test_grow_segment_fragments LIBS ursatz_composer cjson)
 
-add_executable(test_grow_liquidated_residue test_grow_liquidated_residue.c)
-target_link_libraries(test_grow_liquidated_residue PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_liquidated_residue PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_liquidated_residue PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_liquidated_residue PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_liquidated_residue COMMAND test_grow_liquidated_residue)
+ursatz_test(test_grow_liquidated_residue LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_liquidate test_grow_liquidate.c)
-target_link_libraries(test_grow_liquidate PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_liquidate PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_liquidate PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_liquidate PRIVATE -Wall -Wextra -Wpedantic)
 # The liquidation section (R-494): tests/fixtures/forms/liquidation-form.json composes in four rows of key and meter.
-add_test(NAME test_grow_liquidate COMMAND test_grow_liquidate)
+ursatz_test(test_grow_liquidate LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_form_parts test_form_parts.c)
-target_link_libraries(test_form_parts PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_form_parts PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_form_parts PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_form_parts PRIVATE -Wall -Wextra -Wpedantic)
 # The parts of larger forms (R-503 to R-509): a 32-bar form composes in eight rows of key and meter, one case per part.
-add_test(NAME test_form_parts COMMAND test_form_parts)
-set_tests_properties(test_form_parts PROPERTIES LABELS slow)
+ursatz_test(test_form_parts LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
 
-add_executable(test_rondo_forms test_rondo_forms.c)
-target_link_libraries(test_rondo_forms PRIVATE ursatz_composer)
-target_compile_options(test_rondo_forms PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_rondo_forms LIBS ursatz_composer)
 # The Andante, small, large and sonata rondo forms (R-520): eight rows of key and meter, seeds 1 to 10 each tried up to 16 times; one test
 # per form, all slow.
 foreach(form andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo)
-    add_test(NAME test_rondo_forms_${form} COMMAND test_rondo_forms ${form})
-    set_tests_properties(test_rondo_forms_${form} PROPERTIES LABELS slow)
+    ursatz_test(test_rondo_forms_${form} TARGET test_rondo_forms ARGS ${form} LABELS slow)
 endforeach()
 
-add_executable(test_sonata_forms test_sonata_forms.c)
-target_link_libraries(test_sonata_forms PRIVATE ursatz_composer)
-target_compile_options(test_sonata_forms PRIVATE -Wall -Wextra -Wpedantic)
+ursatz_test_executable(test_sonata_forms LIBS ursatz_composer)
 # The sonatina forms (R-523): eight rows of key and meter, seeds 1 to 10 each tried up to 16 times; one test per form, all slow.
 foreach(form sonatina sonatina-tonic-major)
-    add_test(NAME test_sonata_forms_${form} COMMAND test_sonata_forms ${form})
-    set_tests_properties(test_sonata_forms_${form} PROPERTIES LABELS slow)
+    ursatz_test(test_sonata_forms_${form} TARGET test_sonata_forms ARGS ${form} LABELS slow)
 endforeach()
 
-add_executable(test_grow_development test_grow_development.c)
-target_link_libraries(test_grow_development PRIVATE ursatz_composer cjson)
-target_compile_options(test_grow_development PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_development COMMAND test_grow_development)
+ursatz_test(test_grow_development LIBS ursatz_composer cjson)
 
-add_executable(test_grow_continuation test_grow_continuation.c)
-target_link_libraries(test_grow_continuation PRIVATE ursatz_composer composer_test_support cjson)
-target_include_directories(test_grow_continuation PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_continuation PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_continuation PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_continuation COMMAND test_grow_continuation)
-add_test(NAME test_grow_continuation_rates COMMAND test_grow_continuation rates)
+ursatz_test_executable(test_grow_continuation LIBS ursatz_composer composer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Measured 51 s of CPU for the cases and 41 s for the compose rates, over the 10 s fast-set limit; test_grow_continuation_smoke (7.5 s) runs seed 1 of every case and rate.
-set_tests_properties(test_grow_continuation test_grow_continuation_rates PROPERTIES LABELS slow)
-add_test(NAME test_grow_continuation_smoke COMMAND test_grow_continuation fast)
+ursatz_test(test_grow_continuation TARGET test_grow_continuation LABELS slow)
+ursatz_test(test_grow_continuation_rates TARGET test_grow_continuation ARGS rates LABELS slow)
+ursatz_test(test_grow_continuation_smoke TARGET test_grow_continuation ARGS fast)
 
-add_executable(test_grow_contrast test_grow_contrast.c)
-target_link_libraries(test_grow_contrast PRIVATE ursatz_composer composer_test_support cjson)
-target_include_directories(test_grow_contrast PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_contrast PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_contrast PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_contrast COMMAND test_grow_contrast)
+ursatz_test_executable(test_grow_contrast LIBS ursatz_composer composer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Measured 58 s of CPU, over the 10 s fast-set limit; test_grow_contrast_smoke runs seed 1 of every case.
-set_tests_properties(test_grow_contrast PROPERTIES LABELS slow)
-add_test(NAME test_grow_contrast_smoke COMMAND test_grow_contrast fast)
+ursatz_test(test_grow_contrast TARGET test_grow_contrast LABELS slow)
+ursatz_test(test_grow_contrast_smoke TARGET test_grow_contrast ARGS fast)
 
-add_executable(test_grow_compose_rates test_grow_compose_rates.c)
-target_link_libraries(test_grow_compose_rates PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_compose_rates PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_compose_rates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_compose_rates PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_compose_rates COMMAND test_grow_compose_rates)
+ursatz_test_executable(test_grow_compose_rates LIBS ursatz_composer composer_test_support
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Measured 13.7 s of CPU for one setting (three now), over the 10 s fast-set limit; test_grow_compose_rates_fast (5.5 s) runs seed 1 of every case and setting.
-set_tests_properties(test_grow_compose_rates PROPERTIES LABELS slow)
-add_test(NAME test_grow_compose_rates_fast COMMAND test_grow_compose_rates fast)
+ursatz_test(test_grow_compose_rates TARGET test_grow_compose_rates LABELS slow)
+ursatz_test(test_grow_compose_rates_fast TARGET test_grow_compose_rates ARGS fast)
 
-add_executable(test_motive_fidelity test_motive_fidelity.c)
-target_link_libraries(test_motive_fidelity PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_motive_fidelity PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_motive_fidelity PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_motive_fidelity PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_motive_fidelity COMMAND test_motive_fidelity)
+ursatz_test(test_motive_fidelity LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_fidelity test_grow_fidelity.c)
-target_link_libraries(test_grow_fidelity PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_fidelity PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_fidelity PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_fidelity PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_fidelity_sentence COMMAND test_grow_fidelity sentence)
-add_test(NAME test_grow_fidelity_period COMMAND test_grow_fidelity period)
+ursatz_test_executable(test_grow_fidelity LIBS ursatz_composer composer_test_support
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_grow_fidelity_sentence TARGET test_grow_fidelity ARGS sentence)
+ursatz_test(test_grow_fidelity_period TARGET test_grow_fidelity ARGS period)
 
-add_executable(test_grow_fidelity_rank test_grow_fidelity_rank.c)
-target_link_libraries(test_grow_fidelity_rank PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_fidelity_rank PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_fidelity_rank PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_fidelity_rank PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_fidelity_rank COMMAND test_grow_fidelity_rank)
+ursatz_test(test_grow_fidelity_rank LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-add_executable(test_grow_fidelity_sweep test_grow_fidelity_sweep.c)
-target_link_libraries(test_grow_fidelity_sweep PRIVATE ursatz_composer composer_test_support)
-target_include_directories(test_grow_fidelity_sweep PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_grow_fidelity_sweep PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-target_compile_options(test_grow_fidelity_sweep PRIVATE -Wall -Wextra -Wpedantic)
-add_test(NAME test_grow_fidelity_sweep COMMAND test_grow_fidelity_sweep)
 # Composes 80 themes for each of the three settings and reads every idea's fidelity: minutes, so slow; the fast set has test_grow_fidelity_sentence and _period.
-set_tests_properties(test_grow_fidelity_sweep PROPERTIES LABELS slow)
+ursatz_test(test_grow_fidelity_sweep LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
