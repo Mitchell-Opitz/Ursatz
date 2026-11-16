@@ -15,21 +15,25 @@
  *
  * Each entry is a letter and a semitone offset (-2..+2), the same
  * integer PitchSpelling already uses for its accidental field
- * (pitch/pitch_spelling.h, pitch/accidental.h). An empty KeySignature
+ * (pitch/pitch_spelling.h). An empty KeySignature
  * (count 0) is valid: it is the signature with no sharps or flats.
  *
  * This type carries no theory. Which entries make a conventional
  * signature (sharps in the order F C G D A E B, flats in the reverse
  * order, at most seven) and which key a signature belongs to are rules
- * of a Framework (frameworks/standard-notation, frameworks/
- * standard-tonality), not facts of this type -- so a signature with
- * mixed or repeated accidentals is representable here.
+ * of a Framework (frameworks/standard-tonality), not facts of this
+ * type -- so a signature with mixed or repeated accidentals is
+ * representable here.
  *
  * A KeySignature is a Value, not an Entity -- it carries no EntityID of
  * its own (same as Sonority, semantics/sonority.h). It has no mutator: a
  * revision is a new KeySignature construction, not an in-place field
  * change (Law C2).
  */
+
+/* The accidental range of an entry, in semitones. */
+#define KEY_SIGNATURE_MIN_ACCIDENTAL (-2)
+#define KEY_SIGNATURE_MAX_ACCIDENTAL 2
 
 typedef struct KeySignature KeySignature;
 
@@ -49,7 +53,7 @@ typedef enum {
 /*
  * entries is copied. entries may be NULL only when entry_count is 0 (the
  * empty signature). Every letter must be a valid PitchLetter and every
- * accidental within ACCIDENTAL_MIN_OFFSET..ACCIDENTAL_MAX_OFFSET.
+ * accidental within KEY_SIGNATURE_MIN_ACCIDENTAL..KEY_SIGNATURE_MAX_ACCIDENTAL.
  */
 KeySignatureResult key_signature_create(const KeySignatureEntry *entries, size_t entry_count, KeySignature **out);
 void key_signature_destroy(KeySignature *key_signature);

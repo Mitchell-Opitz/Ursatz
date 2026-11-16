@@ -2,8 +2,6 @@
 
 #include <stdlib.h>
 
-#include "pitch/accidental.h"
-
 struct KeySignature {
     KeySignatureEntry *entries;
     size_t entry_count;
@@ -17,7 +15,7 @@ KeySignatureResult key_signature_create(const KeySignatureEntry *entries, size_t
         if (entries[i].letter < PITCH_LETTER_A || entries[i].letter > PITCH_LETTER_G) {
             return KEY_SIGNATURE_ERR_INVALID_LETTER;
         }
-        if (entries[i].accidental < ACCIDENTAL_MIN_OFFSET || entries[i].accidental > ACCIDENTAL_MAX_OFFSET) {
+        if (entries[i].accidental < KEY_SIGNATURE_MIN_ACCIDENTAL || entries[i].accidental > KEY_SIGNATURE_MAX_ACCIDENTAL) {
             return KEY_SIGNATURE_ERR_INVALID_ACCIDENTAL;
         }
     }

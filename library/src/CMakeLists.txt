@@ -29,11 +29,6 @@ add_library(ursatz
     pitch/pitch_arithmetic.c
     pitch/tuning_system.c
     pitch/pitch_numeric_value.c
-    pitch/clef.c
-    pitch/staff_position.c
-    pitch/clef_resolution.c
-    pitch/accidental.c
-    pitch/generic_interval.c
     pitch/key_signature.c
     pitch/midi_pitch.c
     events/note_event.c
@@ -165,17 +160,12 @@ ursatz_public_headers(ursatz
         io/midi_key_signature.h
         io/midi_renderer.h
         io/musicxml_importer.h
-        pitch/accidental.h
-        pitch/clef.h
-        pitch/clef_resolution.h
-        pitch/generic_interval.h
         pitch/key_signature.h
         pitch/midi_pitch.h
         pitch/pitch_arithmetic.h
         pitch/pitch_identity.h
         pitch/pitch_numeric_value.h
         pitch/pitch_spelling.h
-        pitch/staff_position.h
         pitch/tuning_system.h
         query/similarity_model.h
         query/similarity_scoring.h
