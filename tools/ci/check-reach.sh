@@ -109,7 +109,9 @@ sort -u "$out/objects" "$out/all.objects" -o "$out/all.objects"
 # shellcheck disable=SC2046
 sections_of $(cat "$out/all.objects") | sort -u > "$out/all"
 sort -u "$out/kept" -o "$out/kept"
-comm -23 "$out/all" "$out/kept" | source_of | sort -u > "$out/unreached.txt"
+# The VALGRIND_* inline functions of valgrind.h exist only where valgrind is installed (the CI runner has none), and are not
+# Ursatz code: they are never listed, so the result does not depend on the machine.
+comm -23 "$out/all" "$out/kept" | source_of | grep -v ' VALGRIND_' | sort -u > "$out/unreached.txt"
 
 total=$(wc -l < "$out/unreached.txt")
 echo "check-reach: $total functions no application reaches"
