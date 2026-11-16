@@ -161,15 +161,8 @@ add_library(ursatz
     analysis/sentence_detection.c
     analysis/form_structure_detection.c
     analysis/thematic_return_detection.c
-    generation/intent.c
-    generation/constraint_extraction.c
-    generation/conflict_detection.c
-    generation/generation_plan.c
     generation/candidate.c
-    generation/candidate_evaluator.c
     generation/generation_record.c
-    generation/generator_registry.c
-    generation/generator_dispatch.c
     io/midi_importer.c
     io/midi_event_decoder.c
     io/midi_key_signature.c
@@ -226,11 +219,8 @@ ursatz_public_headers(ursatz
         export/score_quantize.h
         export/score_staves.h
         generation/candidate.h
-        generation/constraint_extraction.h
-        generation/generation_plan.h
         generation/generation_record.h
         generation/generator.h
-        generation/intent.h
         identity/entity_id.h
         identity/schema_version.h
         identity/version.h

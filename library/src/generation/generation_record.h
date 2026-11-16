@@ -73,12 +73,5 @@ void generation_record_destroy(GenerationRecord *record);
 const EntityID *generation_record_id(const GenerationRecord *record);
 unsigned long generation_record_random_seed(const GenerationRecord *record);
 const char *generation_record_generator_version(const GenerationRecord *record);
-/* NULL when not available -- see the KNOWN GAP note above. */
-const char *generation_record_framework_version(const GenerationRecord *record);
-/* NULL when the generation run took no configuration. */
-const Value *generation_record_configuration(const GenerationRecord *record);
-const ProvenanceReference *generation_record_provenance(const GenerationRecord *record);
-
-bool generation_record_identity_equals(const GenerationRecord *a, const GenerationRecord *b);
 
 #endif

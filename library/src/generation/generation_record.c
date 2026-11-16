@@ -81,22 +81,3 @@ unsigned long generation_record_random_seed(const GenerationRecord *record) {
 const char *generation_record_generator_version(const GenerationRecord *record) {
     return record->generator_version;
 }
-
-const char *generation_record_framework_version(const GenerationRecord *record) {
-    return record->framework_version;
-}
-
-const Value *generation_record_configuration(const GenerationRecord *record) {
-    return record->configuration;
-}
-
-const ProvenanceReference *generation_record_provenance(const GenerationRecord *record) {
-    return record->provenance;
-}
-
-bool generation_record_identity_equals(const GenerationRecord *a, const GenerationRecord *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
-}

@@ -76,18 +76,8 @@ CandidateResult candidate_create(EntityID *id, EntityID *material_id, Interpreta
                                   ProvenanceReference *provenance, Candidate **out);
 void candidate_destroy(Candidate *candidate);
 
-const EntityID *candidate_id(const Candidate *candidate);
-const EntityID *candidate_material_id(const Candidate *candidate);
-size_t candidate_evaluation_count(const Candidate *candidate);
-const Interpretation *candidate_evaluation_at(const Candidate *candidate, size_t index);
-size_t candidate_violation_count(const Candidate *candidate);
-const Interpretation *candidate_violation_at(const Candidate *candidate, size_t index);
 unsigned long candidate_score_numerator(const Candidate *candidate);
 unsigned long candidate_score_denominator(const Candidate *candidate);
-const ProvenanceReference *candidate_provenance(const Candidate *candidate);
-
-bool candidate_identity_equals(const Candidate *a, const Candidate *b);
-
 /*
  * CandidateSet (Category / base type): the owned collection of
  * Candidate objects a Generator (generation/generator.h, Registry #26)
@@ -159,19 +149,5 @@ CandidateSetResult candidate_set_create(EntityID *id, Candidate **candidates, si
                                          CandidateSet **out);
 void candidate_set_destroy(CandidateSet *set);
 
-const EntityID *candidate_set_id(const CandidateSet *set);
-size_t candidate_set_candidate_count(const CandidateSet *set);
 const Candidate *candidate_set_candidate_at(const CandidateSet *set, size_t index);
-unsigned long candidate_set_random_seed(const CandidateSet *set);
-const char *candidate_set_generator_version(const CandidateSet *set);
-/* NULL when the generator took no configuration. */
-const Value *candidate_set_configuration(const CandidateSet *set);
-size_t candidate_set_input_id_count(const CandidateSet *set);
-const EntityID *candidate_set_input_id_at(const CandidateSet *set, size_t index);
-/* NULL when not available -- see the KNOWN GAP note above. */
-const char *candidate_set_framework_version(const CandidateSet *set);
-const ProvenanceReference *candidate_set_provenance(const CandidateSet *set);
-
-bool candidate_set_identity_equals(const CandidateSet *a, const CandidateSet *b);
-
 #endif

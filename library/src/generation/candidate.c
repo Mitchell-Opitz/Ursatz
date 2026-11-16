@@ -138,47 +138,12 @@ void candidate_destroy(Candidate *candidate) {
     free(candidate);
 }
 
-const EntityID *candidate_id(const Candidate *candidate) {
-    return candidate->id;
-}
-
-const EntityID *candidate_material_id(const Candidate *candidate) {
-    return candidate->material_id;
-}
-
-size_t candidate_evaluation_count(const Candidate *candidate) {
-    return candidate->evaluation_count;
-}
-
-const Interpretation *candidate_evaluation_at(const Candidate *candidate, size_t index) {
-    return candidate->evaluations[index];
-}
-
-size_t candidate_violation_count(const Candidate *candidate) {
-    return candidate->violation_count;
-}
-
-const Interpretation *candidate_violation_at(const Candidate *candidate, size_t index) {
-    return candidate->violations[index];
-}
-
 unsigned long candidate_score_numerator(const Candidate *candidate) {
     return candidate->score_numerator;
 }
 
 unsigned long candidate_score_denominator(const Candidate *candidate) {
     return candidate->score_denominator;
-}
-
-const ProvenanceReference *candidate_provenance(const Candidate *candidate) {
-    return candidate->provenance;
-}
-
-bool candidate_identity_equals(const Candidate *a, const Candidate *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
 }
 
 CandidateSetResult candidate_set_create(EntityID *id, Candidate **candidates, size_t candidate_count,
@@ -305,49 +270,6 @@ void candidate_set_destroy(CandidateSet *set) {
     free(set);
 }
 
-const EntityID *candidate_set_id(const CandidateSet *set) {
-    return set->id;
-}
-
-size_t candidate_set_candidate_count(const CandidateSet *set) {
-    return set->candidate_count;
-}
-
 const Candidate *candidate_set_candidate_at(const CandidateSet *set, size_t index) {
     return set->candidates[index];
-}
-
-unsigned long candidate_set_random_seed(const CandidateSet *set) {
-    return set->random_seed;
-}
-
-const char *candidate_set_generator_version(const CandidateSet *set) {
-    return set->generator_version;
-}
-
-const Value *candidate_set_configuration(const CandidateSet *set) {
-    return set->configuration;
-}
-
-size_t candidate_set_input_id_count(const CandidateSet *set) {
-    return set->input_id_count;
-}
-
-const EntityID *candidate_set_input_id_at(const CandidateSet *set, size_t index) {
-    return set->input_ids[index];
-}
-
-const char *candidate_set_framework_version(const CandidateSet *set) {
-    return set->framework_version;
-}
-
-const ProvenanceReference *candidate_set_provenance(const CandidateSet *set) {
-    return set->provenance;
-}
-
-bool candidate_set_identity_equals(const CandidateSet *a, const CandidateSet *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
 }

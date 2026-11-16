@@ -1018,7 +1018,7 @@ static void test_scores_in_the_loop(void) {
     FillSuggestions *suggestions = NULL;
     assert(fill_suggest(scene.plan, registry, &config, target, 4, &suggestions) == FILL_OK);
     const CandidateSet *set = fill_suggestions_set(suggestions);
-    size_t count = candidate_set_candidate_count(set);
+    size_t count = fill_suggestions_count(suggestions);
     assert(count >= 2 && count <= 4);
     for (size_t i = 0; i < count; i++) {
         const Candidate *candidate = candidate_set_candidate_at(set, i);

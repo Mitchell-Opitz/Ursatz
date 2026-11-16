@@ -39,12 +39,6 @@ int main(void) {
 
     assert(generation_record_random_seed(record) == 42);
     assert(strcmp(generation_record_generator_version(record), "1.0.0") == 0);
-    assert(strcmp(generation_record_framework_version(record), "common-practice-tonal-harmony-1.2") == 0);
-    size_t config_size;
-    const long *config_value = (const long *)value_content(generation_record_configuration(record), &config_size);
-    assert(config_size == sizeof(long));
-    assert(*config_value == 7);
-    assert(provenance_reference_state(generation_record_provenance(record)) == PROVENANCE_REFERENCE_ABSENT);
 
     /* Minimal GenerationRecord: no configuration, framework_version not available (KNOWN GAP). */
     EntityID *minimal_id = make_id("generation-record-minimal");
@@ -52,11 +46,6 @@ int main(void) {
     assert(generation_record_create(minimal_id, 0, "1.0.0", NULL, NULL, make_absent_provenance(), &minimal) ==
            GENERATION_RECORD_OK);
     assert(generation_record_random_seed(minimal) == 0);
-    assert(generation_record_framework_version(minimal) == NULL);
-    assert(generation_record_configuration(minimal) == NULL);
-
-    assert(generation_record_identity_equals(record, record));
-    assert(!generation_record_identity_equals(record, minimal));
 
     /* Rejects a missing generator_version. */
     EntityID *no_version_id = make_id("generation-record-rejects-no-version");
