@@ -9,6 +9,7 @@
 #include "time/musical_time.h"
 #include "time/time_span.h"
 #include "weighted_identification.h"
+#include "../../../tests/key_index_test_util.h"
 
 static TimeSpan *make_span(long start, long end, unsigned long den) {
     MusicalTime *from = NULL;
@@ -111,10 +112,10 @@ static void test_region_key(void) {
     CommonPracticeKeyRegion region;
     memset(&region, 0, sizeof(region));
     AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
-    region.key_index = common_practice_key_index_of(3, COMMON_PRACTICE_KEY_MINOR);
+    region.key_index = test_key_index_of(3, COMMON_PRACTICE_KEY_MINOR);
     assert(common_practice_key_region_analysis_key(&region, &key));
     assert(key.tonic_letter == PITCH_LETTER_E && key.tonic_accidental == -1 && key.mode == KEY_STRUCTURE_MODE_MINOR);
-    region.key_index = common_practice_key_index_of(6, COMMON_PRACTICE_KEY_MAJOR);
+    region.key_index = test_key_index_of(6, COMMON_PRACTICE_KEY_MAJOR);
     assert(common_practice_key_region_analysis_key(&region, &key));
     assert(key.tonic_letter == PITCH_LETTER_F && key.tonic_accidental == 1 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
 

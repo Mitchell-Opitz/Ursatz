@@ -25,6 +25,7 @@
 #include "ursatz_chain/analysis_chain.h"
 #include "common-practice-minimal/weighted_chord_identification.h"
 #include "../rational_test_util.h"
+#include "../key_index_test_util.h"
 
 /* The analysis (segments, key regions in two passes, chords, Roman numerals) is analysis_chain_run on the imported notes. What stays here
    is the harness's own: the phrase ends it finds between the passes (cadence ends, on outer degrees read from the segment members), the
@@ -172,7 +173,7 @@ static bool read_numerals(Run *r) {
         }
         const RomanTextKey *k = &r->annotation.keys[i];
         CommonPracticeKeyMode mode = k->minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR;
-        int index = common_practice_key_index_of(k->tonic_pitch_class, mode);
+        int index = test_key_index_of(k->tonic_pitch_class, mode);
         char id[48];
         snprintf(id, sizeof(id), "annotation-key-%zu", region_total);
         EntityID *context = NULL;
@@ -345,7 +346,6 @@ static bool find_phrase_ends(Run *r) {
 }
 
 /* --- the comparison --- */
-
 
 static int compare_double(const void *a, const void *b) {
     double x = *(const double *)a;

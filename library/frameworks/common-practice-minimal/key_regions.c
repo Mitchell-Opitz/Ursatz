@@ -84,14 +84,6 @@ CommonPracticeKeyMode common_practice_key_index_mode(int key_index) {
                                                                     : COMMON_PRACTICE_KEY_MAJOR;
 }
 
-int common_practice_key_index_of(int tonic_pitch_class, CommonPracticeKeyMode mode) {
-    if (tonic_pitch_class < 0 || tonic_pitch_class > 11 ||
-        (mode != COMMON_PRACTICE_KEY_MAJOR && mode != COMMON_PRACTICE_KEY_MINOR)) {
-        return -1;
-    }
-    return tonic_pitch_class + (mode == COMMON_PRACTICE_KEY_MINOR ? 12 : 0);
-}
-
 const char *common_practice_key_index_tonic_name(int key_index) {
     int tonic = common_practice_key_index_tonic(key_index);
     return tonic < 0 ? NULL : key_tonic_name(tonic);

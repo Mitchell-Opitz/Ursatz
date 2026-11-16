@@ -52,10 +52,6 @@ static const int TRIAD_INTERVALS[COMMON_PRACTICE_TRIAD_COUNT][3] = {
     {0, 4, 7}, {0, 3, 7}, {0, 3, 6},
 };
 
-static Rule *g_rules[COMMON_PRACTICE_TRIAD_COUNT];
-static Constraint *g_constraints[COMMON_PRACTICE_TRIAD_COUNT];
-static UrsatzOnce g_once[COMMON_PRACTICE_TRIAD_COUNT];
-
 static bool valid_triad(CommonPracticeTriad triad) {
     return triad >= 0 && triad < COMMON_PRACTICE_TRIAD_COUNT;
 }
@@ -68,65 +64,6 @@ bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]) {
         out[i] = TRIAD_INTERVALS[triad][i];
     }
     return true;
-}
-
-static void build_one(void *arg) {
-    CommonPracticeTriad triad = (CommonPracticeTriad)(intptr_t)arg;
-
-    const Framework *framework = common_practice_minimal_framework();
-    if (framework == NULL) {
-        return;
-    }
-
-    EntityID *rule_id;
-    if (entity_id_create(DESCRIPTORS[triad].rule_id, &rule_id) != ENTITY_ID_OK) {
-        return;
-    }
-    Rule *rule;
-    if (rule_create(rule_id, framework, NULL, &rule) != RULE_OK) {
-        entity_id_destroy(rule_id);
-        return;
-    }
-
-    EntityID *constraint_id;
-    if (entity_id_create(DESCRIPTORS[triad].constraint_id, &constraint_id) != ENTITY_ID_OK) {
-        rule_destroy(rule);
-        return;
-    }
-    Constraint *constraint;
-    if (constraint_create(constraint_id, framework, NULL, CONSTRAINT_TYPE_HARD, 0, 0, NULL, &constraint) !=
-        CONSTRAINT_OK) {
-        entity_id_destroy(constraint_id);
-        rule_destroy(rule);
-        return;
-    }
-
-    g_rules[triad] = rule;
-    g_constraints[triad] = constraint;
-}
-
-static void ensure_built(CommonPracticeTriad triad) {
-    if (!valid_triad(triad)) {
-        return;
-    }
-    ursatz_once(&g_once[triad], build_one, (void *)(intptr_t)triad);
-}
-
-const char *common_practice_triad_label(CommonPracticeTriad triad) {
-    if (!valid_triad(triad)) {
-        return NULL;
-    }
-    return DESCRIPTORS[triad].label;
-}
-
-const Rule *common_practice_triad_rule(CommonPracticeTriad triad) {
-    ensure_built(triad);
-    return valid_triad(triad) ? g_rules[triad] : NULL;
-}
-
-const Constraint *common_practice_triad_constraint(CommonPracticeTriad triad) {
-    ensure_built(triad);
-    return valid_triad(triad) ? g_constraints[triad] : NULL;
 }
 
 ChordResult common_practice_build_triad_chord_with_confidence(CommonPracticeTriad triad, EntityID *sonority_target_id,
@@ -212,6 +149,3 @@ ChordResult common_practice_build_triad_chord_with_confidence(CommonPracticeTria
     return CHORD_OK;
 }
 
-ChordResult common_practice_build_triad_chord(CommonPracticeTriad triad, EntityID *sonority_target_id, Chord **out) {
-    return common_practice_build_triad_chord_with_confidence(triad, sonority_target_id, 1, 1, NULL, out);
-}

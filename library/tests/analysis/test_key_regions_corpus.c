@@ -7,6 +7,7 @@
 #include "common-practice-minimal/key_identification.h"
 #include "common-practice-minimal/key_regions.h"
 #include "weighted_pipeline.h"
+#include "../key_index_test_util.h"
 
 /*
  * Local key regions on Clementi, Sonatina Op. 36 No. 1 (first movement) and Mozart, K. 545 (first movement),
@@ -78,7 +79,7 @@ static Annotation load_annotation(const char *file) {
             a.regions[a.region_count].first = x;
             a.regions[a.region_count].last = y;
             a.regions[a.region_count].key_index =
-                common_practice_key_index_of(tonic_of(tonic), strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
+                test_key_index_of(tonic_of(tonic), strcmp(mode, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
                                                                                            : COMMON_PRACTICE_KEY_MAJOR);
             a.region_count++;
         } else if (sscanf(line, "unscored %d %d", &x, &y) == 2) {

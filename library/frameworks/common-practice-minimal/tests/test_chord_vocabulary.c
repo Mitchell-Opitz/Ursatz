@@ -10,25 +10,16 @@
 /*
  * Construction tests: one per diatonic triad (I through vii\xC2\xB0),
  * confirming each resolves to a real Chord labeled with its actual
- * roman numeral, and that the shared Rule/Constraint for each triad are
- * real, stable, framework-linked objects.
+ * roman numeral.
  */
 
 static void check_triad(CommonPracticeTriad triad, const char *expected_label, const char *sonority_id_value) {
-    assert(strcmp(common_practice_triad_label(triad), expected_label) == 0);
-
-    const Rule *rule = common_practice_triad_rule(triad);
-    assert(rule != NULL);
-    const Constraint *constraint = common_practice_triad_constraint(triad);
-    assert(constraint != NULL);
-    assert(constraint_type(constraint) == CONSTRAINT_TYPE_HARD);
-    assert(rule_framework(rule) == constraint_framework(constraint));
 
     EntityID *sonority_id;
     assert(entity_id_create(sonority_id_value, &sonority_id) == ENTITY_ID_OK);
 
     Chord *chord;
-    assert(common_practice_build_triad_chord(triad, sonority_id, &chord) == CHORD_OK);
+    assert(common_practice_build_triad_chord_with_confidence(triad, sonority_id, 1, 1, NULL, &chord) == CHORD_OK);
     assert(strcmp(chord_label(chord), expected_label) == 0);
     assert(interpretation_framework_reference(chord_interpretation(chord)) != NULL);
 
@@ -48,9 +39,9 @@ static void check_distinct_occurrences_get_distinct_ids(CommonPracticeTriad tria
     assert(entity_id_create("sonority-occurrence-b", &sonority_id_b) == ENTITY_ID_OK);
 
     Chord *chord_a;
-    assert(common_practice_build_triad_chord(triad, sonority_id_a, &chord_a) == CHORD_OK);
+    assert(common_practice_build_triad_chord_with_confidence(triad, sonority_id_a, 1, 1, NULL, &chord_a) == CHORD_OK);
     Chord *chord_b;
-    assert(common_practice_build_triad_chord(triad, sonority_id_b, &chord_b) == CHORD_OK);
+    assert(common_practice_build_triad_chord_with_confidence(triad, sonority_id_b, 1, 1, NULL, &chord_b) == CHORD_OK);
 
     const EntityID *interpretation_id_a = interpretation_id(chord_interpretation(chord_a));
     const EntityID *interpretation_id_b = interpretation_id(chord_interpretation(chord_b));
@@ -102,11 +93,10 @@ static void check_quality_set(void) {
 
 static void check_seventh(CommonPracticeSeventh seventh, const char *expected_label, const char *sonority_id_value) {
     assert(strcmp(common_practice_seventh_label(seventh), expected_label) == 0);
-    assert(common_practice_seventh_rule(seventh) != NULL && common_practice_seventh_constraint(seventh) != NULL);
     EntityID *sonority_id;
     assert(entity_id_create(sonority_id_value, &sonority_id) == ENTITY_ID_OK);
     Chord *chord;
-    assert(common_practice_build_seventh_chord(seventh, sonority_id, &chord) == CHORD_OK);
+    assert(common_practice_build_seventh_chord_with_confidence(seventh, sonority_id, 1, 1, NULL, &chord) == CHORD_OK);
     assert(strcmp(chord_label(chord), expected_label) == 0);
     chord_destroy(chord);
 }

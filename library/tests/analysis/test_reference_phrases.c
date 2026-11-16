@@ -8,6 +8,7 @@
 #include "semantics/analysis_key.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
+#include "../key_index_test_util.h"
 
 /*
  * The chain's phrases against Michelle's readings of the Clementi and Mozart reference pieces (R-393; the readings are
@@ -97,7 +98,7 @@ static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, Analysi
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
-    config.home_key_index = common_practice_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run(&p->set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);
     *key_events_out = key_events;

@@ -8,6 +8,7 @@
 #include "standard-form/phrase_level_form.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
+#include "../key_index_test_util.h"
 
 /*
  * The repeats and returns the chain finds, and the grid that follows them (R-400). The chain is analysis_chain_run to the form stage,
@@ -75,7 +76,7 @@ static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, Analysi
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
-    config.home_key_index = common_practice_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run(&p->set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);
     *key_events_out = key_events;

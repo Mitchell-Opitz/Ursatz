@@ -8,6 +8,7 @@
 #include "key_regions.h"
 #include "time/note_value.h"
 #include "time/time_signature.h"
+#include "../../../tests/key_index_test_util.h"
 
 /*
  * Key regions, step 1: windowed key scoring. Segments are built straight from pitch-class weights (one whole
@@ -133,7 +134,7 @@ static void test_a_minor_distribution_scores_the_minor_key(void) {
     CommonPracticeKeyWindows windows = {0};
     assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(windows.count == 1);
-    assert(best_key(&windows.items[0]) == common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MINOR));
+    assert(best_key(&windows.items[0]) == test_key_index_of(9, COMMON_PRACTICE_KEY_MINOR));
     common_practice_key_windows_destroy(&windows);
     destroy_piece(&piece);
     meter_map_destroy(map);
@@ -259,9 +260,6 @@ static void test_key_index_helpers(void) {
     assert(common_practice_key_index_tonic(0) == 0 && common_practice_key_index_mode(0) == COMMON_PRACTICE_KEY_MAJOR);
     assert(common_practice_key_index_tonic(21) == 9 && common_practice_key_index_mode(21) == COMMON_PRACTICE_KEY_MINOR);
     assert(common_practice_key_index_tonic(24) == -1 && common_practice_key_index_tonic(-1) == -1);
-    assert(common_practice_key_index_of(7, COMMON_PRACTICE_KEY_MAJOR) == 7);
-    assert(common_practice_key_index_of(7, COMMON_PRACTICE_KEY_MINOR) == 19);
-    assert(common_practice_key_index_of(12, COMMON_PRACTICE_KEY_MAJOR) == -1);
     assert(strcmp(common_practice_key_index_tonic_name(18), "F#") == 0);
     assert(strcmp(common_practice_key_index_tonic_name(3), "Eb") == 0);
     assert(common_practice_key_index_tonic_name(30) == NULL);
@@ -752,7 +750,7 @@ static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(vo
     assert(windows.count == 1);
     const CommonPracticeKeyWindow *window = &windows.items[0];
     assert(window->evidence[0] > window->evidence[7] && window->evidence[0] > window->evidence[5]);
-    assert(window->evidence[0] > window->evidence[common_practice_key_index_of(0, COMMON_PRACTICE_KEY_MINOR)]); /* not C minor */
+    assert(window->evidence[0] > window->evidence[test_key_index_of(0, COMMON_PRACTICE_KEY_MINOR)]); /* not C minor */
     assert(window->evidence[0] > 0.0 && window->evidence[0] <= 0.8 + 1e-12); /* weight 0.8, evidence per chord <= 1 */
     common_practice_key_windows_destroy(&windows);
 
@@ -767,8 +765,8 @@ static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(vo
     common_practice_key_windows_destroy(&windows);
 
     /* a dominant into a minor tonic is evidence for the minor key, not its parallel major */
-    int a_minor = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MINOR);
-    int a_major = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MAJOR);
+    int a_minor = test_key_index_of(9, COMMON_PRACTICE_KEY_MINOR);
+    int a_major = test_key_index_of(9, COMMON_PRACTICE_KEY_MAJOR);
     memset(&piece.items[2].chord, 0, sizeof(piece.items[2].chord));
     memset(&piece.items[3].chord, 0, sizeof(piece.items[3].chord));
     set_chord(&piece, 0, 4, triad_mask(4, 4, 7)); /* E G# B */

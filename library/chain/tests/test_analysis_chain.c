@@ -16,6 +16,7 @@
 #include "time/time_span.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "../../tests/integration/reference_pieces.h"
+#include "../../tests/key_index_test_util.h"
 
 /*
  * analysis_chain_run on four reference pieces (Bach 114, Mozart 545, Clementi 36 and Field 1 from tests/fixtures) against fixed expected
@@ -189,7 +190,7 @@ static AnalysisChainConfig reference_config(const Reference *ref) {
     AnalysisChainConfig config = analysis_chain_config_default();
     config.first_measure = ref->first_measure;
     config.last_measure = ref->last_measure;
-    config.home_key_index = common_practice_key_index_of(ref->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(ref->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR);
     return config;
 }
 

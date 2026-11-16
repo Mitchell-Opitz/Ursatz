@@ -8,6 +8,7 @@
 #include "weighted_pipeline.h"
 #include "semantics/analysis_key.h"
 #include "ursatz_chain/analysis_chain.h"
+#include "../key_index_test_util.h"
 
 /*
  * The chain's harmony against Michelle's hand harmony of the Clementi and Mozart reference pieces
@@ -307,7 +308,7 @@ static int report_piece(const Piece *piece) {
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
-    config.home_key_index = common_practice_key_index_of(ref.home, COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(ref.home, COMMON_PRACTICE_KEY_MAJOR);
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run(&p.set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);
 

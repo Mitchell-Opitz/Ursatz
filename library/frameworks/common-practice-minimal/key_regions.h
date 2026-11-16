@@ -84,8 +84,6 @@ CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void);
 /* Tonic pitch class (0..11) and mode of key index 0..23; -1 and MAJOR for an invalid index. */
 int common_practice_key_index_tonic(int key_index);
 CommonPracticeKeyMode common_practice_key_index_mode(int key_index);
-/* The index of a tonic and mode, or -1. */
-int common_practice_key_index_of(int tonic_pitch_class, CommonPracticeKeyMode mode);
 /* "C", "Db" ... the tonic name used for key labels (C Db D Eb E F F# G Ab A Bb B); NULL if invalid. */
 const char *common_practice_key_index_tonic_name(int key_index);
 

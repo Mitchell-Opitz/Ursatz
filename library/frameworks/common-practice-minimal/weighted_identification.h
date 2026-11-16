@@ -14,10 +14,8 @@
 
 /*
  * Weighted chord identification for common-practice-minimal-v1: a new way to choose a chord for a
- * segment of sounding notes, alongside the subset-match functions (triad_identification.h,
- * seventh_identification.h), which are unchanged. Subset matching ignores extra degrees, takes the first
- * match, and fails on two or more non-chord tones in a beat; this weighs what sounds, scores each
- * candidate chord, and reports a best chord, a runner-up and how close they were.
+ * segment of sounding notes: it weighs what sounds, scores each candidate chord, and reports a best chord, a runner-up
+ * and how close they were.
  *
  * Input is a plain per-member struct, like the integers the subset-match functions take: this framework
  * includes no other framework (the caller computes each member's BeatStrength with standard-meter and

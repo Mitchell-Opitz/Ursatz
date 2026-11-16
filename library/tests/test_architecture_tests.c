@@ -50,8 +50,6 @@ static const TestEdge ALLOWED_TEST_EDGES[] = {
     {"tests/analysis/", "io/", "analysis tests import the corpus MIDI files"},
     {"tests/analysis/", "standard-form/phrase_level_form.h", "phrase tests name the theme forms the chain reports"},
     {"frameworks/common-practice-minimal/tests/", "standard-tonality/", "declared dependency (the scale degree owner)"},
-    {"frameworks/common-practice-minimal/tests/", "analysis/outer_voice.h",
-     "the test builds kernel outer lines and hands them to the framework in its own input shape"},
     {"frameworks/scale-harmonization/tests/", "galant-schemas/", "declared dependency"},
     {"frameworks/standard-harmony/tests/", "standard-tonality/", "test-only edge: Roman numeral grammar cases"},
     {"frameworks/standard-harmony/tests/", "analysis/period_detection.h",

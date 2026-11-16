@@ -5,8 +5,6 @@
 
 #include "identity/entity_id.h"
 #include "interpretation/chord.h"
-#include "rules/constraint.h"
-#include "rules/rule.h"
 
 /*
  * Seventh-chord vocabulary for common-practice-minimal-v1: the four
@@ -14,14 +12,8 @@
  * natural-minor key -- dominant7, major7, minor7, half-diminished7 --
  * and the fully-diminished7 of harmonic minor (the raised leading tone's
  * seventh). Deliberately excludes chromatic/secondary-dominant
- * sevenths and any quality resolution that would need a scale degree
- * -- see seventh_identification.h for why matching is by root-relative
- * interval content rather than scale degree.
- *
- * Each quality has one Rule and one Constraint (CONSTRAINT_TYPE_HARD)
- * referencing the shared common_practice_minimal_framework(), same
- * shape as chord_vocabulary.h's triads. This module never calls
- * constraint_evaluate (see chord_vocabulary.h for that boundary note).
+ * sevenths and any quality resolution that would need a scale degree:
+ * matching is by root-relative interval content, not by scale degree.
  */
 
 typedef enum {
@@ -33,8 +25,8 @@ typedef enum {
     COMMON_PRACTICE_SEVENTH_COUNT
 } CommonPracticeSeventh;
 
-/* The first four sevenths are the diatonic set of a major key: the subset matcher (seventh_identification.h)
-   scans only these. The fully-diminished seventh is the harmonic-minor vii-dim-7. */
+/* The first four sevenths are the diatonic set of a major key. The fully-diminished seventh is the harmonic-minor
+   vii-dim-7. */
 #define COMMON_PRACTICE_SEVENTH_MAJOR_KEY_COUNT 4
 
 /*
@@ -46,25 +38,6 @@ bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]
 
 /* Quality label this framework assigns, e.g. "dominant7", "half-diminished7". */
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh);
-
-/*
- * Shared Rule/Constraint for this seventh-chord quality, lazily
- * constructed on first call and owned by this module (callers must not
- * destroy them). Return NULL only if one-time construction failed
- * (allocation failure).
- */
-const Rule *common_practice_seventh_rule(CommonPracticeSeventh seventh);
-const Constraint *common_practice_seventh_constraint(CommonPracticeSeventh seventh);
-
-/*
- * Builds a real, populated Chord claiming that the Sonority named by
- * sonority_target_id is this seventh-chord quality under
- * common-practice-minimal-v1. Takes ownership of sonority_target_id on
- * success (destroyed transitively by chord_destroy(*out)); on failure
- * the caller still owns sonority_target_id.
- */
-ChordResult common_practice_build_seventh_chord(CommonPracticeSeventh seventh, EntityID *sonority_target_id,
-                                                 Chord **out);
 
 /*
  * As common_practice_build_seventh_chord, but the Interpretation's scalar confidence is

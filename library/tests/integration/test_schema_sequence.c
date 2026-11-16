@@ -6,6 +6,7 @@
 #include "scale-harmonization/analysis/scale_analysis_detect.h"
 #include "schema_util.h"
 #include "ursatz_chain/chain_inputs.h"
+#include "../key_index_test_util.h"
 
 /*
  * Schema and sequence detection (L3.10) on a hand-written galant fixture, tests/fixtures/galant/galant_fixture.txt: 24 measures in C major planted with a
@@ -236,7 +237,7 @@ static void chain_adapters(const WeightedPipeline *p, const OuterVoiceLines *lin
     Chain chain;
     chain_run(&chain, p, map, home, p->segment_count);
     assert(chain_build_galant_segments(analysis_chain_segments(p->chain), chain.count, map, lines,
-                                       common_practice_key_index_of(home, COMMON_PRACTICE_KEY_MAJOR), chain.tonal_inputs, chain.romans,
+                                       test_key_index_of(home, COMMON_PRACTICE_KEY_MAJOR), chain.tonal_inputs, chain.romans,
                                        build) == CHAIN_INPUT_OK);
     chain_destroy(&chain);
     assert(galant_schema_match(&build->list, NULL, schemas) == GALANT_ANALYSIS_OK);

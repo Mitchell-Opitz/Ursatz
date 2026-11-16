@@ -30,7 +30,6 @@
     X(standard_voicing_framework)
 
 #define RULES(X)                                                                                                       \
-    X(common_practice_triad_rule)                                                                                      \
     X(standard_counterpoint_cantus_rule)                                                                               \
     X(harmony_applied_rule)                                                                                            \
     X(standard_markings_articulation_rule)                                                                             \
