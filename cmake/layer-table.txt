@@ -234,4 +234,6 @@ forbid library/chain (PROJECT_SOURCE_DIR\}/|CMAKE_SOURCE_DIR\}/|\.\./)src/ -- th
 forbid analyzer get_target_property\([^)]*SOURCE_DIR|\.\./library/tests -- an application reads no library sources
 forbid composer get_target_property\([^)]*SOURCE_DIR|\.\./library/tests|\.\./analyzer/src -- an application reads no library or Analyzer sources
 forbid gui get_target_property\([^)]*SOURCE_DIR|\.\./library/tests -- an application reads no library sources
+forbid gui URSATZ_GUI_LIBRARY_DIR|URSATZ_GUI_TEST_URSATZ_DIR -- GUI tests read the root fixtures, not library folders
+forbid analyzer URSATZ_ANALYZER_FIXTURE_DIR -- one fixtures folder
 forbid composer/src/CMakeLists.txt target_link_libraries\(ursatz_composer\s+(PUBLIC|INTERFACE) -- a Composer consumer sees no library or Analyzer header

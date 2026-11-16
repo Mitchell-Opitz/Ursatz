@@ -34,9 +34,6 @@
 
 #define PORT "18766"
 
-#ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
-#endif
 #ifndef URSATZ_GUI_TEST_ANALYZER_CLI
 #error "URSATZ_GUI_TEST_ANALYZER_CLI must name the ursatz-analyzer executable"
 #endif
@@ -938,17 +935,17 @@ int main(void) {
 #endif
   MKDIR("pieces");
 
-  const char *fixtures = URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/framework-v1-corpus";
+  const char *fixtures = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char mozart_path[512];
   char bach_path[512];
   snprintf(mozart_path, sizeof(mozart_path), "%s/Mozart 545.mid", fixtures);
   snprintf(bach_path, sizeof(bach_path), "%s/Bach 114.mid", fixtures);
 
   char folder[256] = "";
-  bool have_folder = first_corpus_folder(URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/accuracy-corpus", folder, sizeof(folder));
+  bool have_folder = first_corpus_folder(URSATZ_FIXTURES_DIR "/accuracy-corpus", folder, sizeof(folder));
   check(have_folder, "found the first accuracy corpus folder with a score.musicxml");
   char score_path[768];
-  snprintf(score_path, sizeof(score_path), URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/accuracy-corpus/%s/score.musicxml",
+  snprintf(score_path, sizeof(score_path), URSATZ_FIXTURES_DIR "/accuracy-corpus/%s/score.musicxml",
            folder);
 
   struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
@@ -1056,7 +1053,7 @@ int main(void) {
     }
     free(piece_id);
   }
-  char *chords_id = test_http_upload(PORT, URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/musicxml/chords_backup.musicxml", "chords_backup.musicxml", NULL);
+  char *chords_id = test_http_upload(PORT, URSATZ_FIXTURES_DIR "/musicxml/chords_backup.musicxml", "chords_backup.musicxml", NULL);
   check(chords_id != NULL, "chords_backup.musicxml uploads");
   if (chords_id) {
     check_score_drawn(chords_id, "chords_backup.musicxml");

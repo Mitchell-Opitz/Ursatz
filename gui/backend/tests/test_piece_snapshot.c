@@ -23,9 +23,6 @@
 #include "gui_check.h"
 #include "test_http.h"
 
-#ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
-#endif
 #ifndef URSATZ_GUI_TEST_PIECE_FIXTURES
 #error "URSATZ_GUI_TEST_PIECE_FIXTURES must name fixtures/pieces"
 #endif
@@ -127,7 +124,7 @@ int main(void) {
     return 1;
   }
 
-  const char *corpus = URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/framework-v1-corpus";
+  const char *corpus = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char path[512];
   snprintf(path, sizeof(path), "%s/Bach 114.mid", corpus);
   snapshot_piece("bach-114", path, "Bach%20114.mid");
@@ -139,7 +136,7 @@ int main(void) {
   test_write_file("no-meter.mid", (const char *)kNoMeterMidi, sizeof(kNoMeterMidi));
   snapshot_piece("no-meter", "no-meter.mid", "no-meter.mid");
 
-  snapshot_piece("chords-backup", URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/musicxml/chords_backup.musicxml",
+  snapshot_piece("chords-backup", URSATZ_FIXTURES_DIR "/musicxml/chords_backup.musicxml",
                  "chords_backup.musicxml");
 
   ursatz_gui_server_stop(ctx);

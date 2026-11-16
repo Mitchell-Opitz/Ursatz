@@ -32,10 +32,6 @@
 #define PORT "18769"
 #include "service/style_service.h"
 
-#ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
-#endif
-
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
   return cJSON_IsString(item) ? item->valuestring : "";
@@ -104,7 +100,7 @@ int main(void) {
 #endif
   MKDIR("pieces");
 
-  const char *fixtures = URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/framework-v1-corpus";
+  const char *fixtures = URSATZ_FIXTURES_DIR "/framework-v1-corpus";
   char clementi_path[512];
   char mozart_path[512];
   snprintf(clementi_path, sizeof(clementi_path), "%s/Clementi 36.mid", fixtures);

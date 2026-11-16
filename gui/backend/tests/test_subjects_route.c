@@ -44,10 +44,6 @@ static bool ok_true(const cJSON *json) {
 
 #define PORT "18771"
 
-#ifndef URSATZ_GUI_TEST_URSATZ_DIR
-#error "URSATZ_GUI_TEST_URSATZ_DIR must name the library folder"
-#endif
-
 static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
     "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[{\"label\":\"a\",\"first\":0,\"last\":2}],"
@@ -280,7 +276,7 @@ int main(void) {
 
   char clementi_path[512];
   snprintf(clementi_path, sizeof(clementi_path), "%s/Clementi 36.mid",
-           URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/framework-v1-corpus");
+           URSATZ_FIXTURES_DIR "/framework-v1-corpus");
 
   struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
   check(ctx != NULL, "server starts");

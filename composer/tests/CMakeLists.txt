@@ -437,12 +437,13 @@ foreach(mode statistics labels form smoke cli)
 endforeach()
 ursatz_test(test_style_blend_harmony TARGET test_style_blend ARGS harmony LABELS slow)
 
-# Seeding from a corpus (docs/style.md). "sonatinas" is Clementi 36 and Mozart 545 from Ursatz's reference corpus (kept in fixtures/corpus-sonatinas),
+# Seeding from a corpus (docs/style.md). "sonatinas" is Clementi 36 and Mozart 545 Clementi 36 from the root reference corpus and the Composer's own Mozart 545 (fixtures/corpus-sonatinas),
 # copied into the build tree at configure time and analyzed by the Analyzer CLI at build time; "empty" holds one file
 # the Analyzer cannot import, so nothing in its output is analyzed.
 set(SEED_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
 set(SEED_REFERENCE ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/corpus-sonatinas)
-file(COPY "${SEED_REFERENCE}/Clementi 36.mid" "${SEED_REFERENCE}/Mozart 545.mid" DESTINATION ${SEED_CORPORA_DIR}/sonatinas)
+file(COPY "${URSATZ_FIXTURES_DIR}/framework-v1-corpus/Clementi 36.mid" "${SEED_REFERENCE}/Mozart 545.mid"
+     DESTINATION ${SEED_CORPORA_DIR}/sonatinas)
 file(WRITE ${SEED_CORPORA_DIR}/empty/broken.mid "not a midi file")
 add_custom_command(
     OUTPUT ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json ${SEED_CORPORA_DIR}/empty-analyzed/corpus-index.json
