@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fails when backend/src or backend/include includes an Ursatz header, an Analyzer header outside ursatz_analyzer/, a
+# Fails when backend/src includes an Ursatz header, an Analyzer header outside ursatz_analyzer/, a
 # Composer header other than ursatz_composer/composer_api.h, or any *_internal.h. Prints each offending line. Run after
 # the build; the build directory is the first argument (it must exist).
 set -euo pipefail
@@ -31,7 +31,7 @@ submodule_has() {
 while IFS=: read -r file line text; do
     name="$(printf '%s' "$text" | sed -E 's/^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]([^">]+)[">].*/\1/')"
     local_found=0
-    for dir in backend/src backend/include "$(dirname "$file")" ../third_party/cjson; do
+    for dir in backend/src "$(dirname "$file")" ../third_party/cjson; do
         if [ -e "$dir/$name" ]; then
             local_found=1
             break
@@ -60,7 +60,7 @@ while IFS=: read -r file line text; do
             *) report "$file" "$line" "$name" "Ursatz header" ;;
         esac
     fi
-done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' backend/src backend/include || true)
+done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' backend/src || true)
 
 if [ "$failed" = 1 ]; then
     exit 1

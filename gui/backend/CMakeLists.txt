@@ -34,7 +34,6 @@ add_library(ursatz_gui_core STATIC
 )
 
 target_include_directories(ursatz_gui_core PUBLIC
-  include
   src
 )
 

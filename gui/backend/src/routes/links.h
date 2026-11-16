@@ -4,7 +4,7 @@
 struct mg_context;
 
 /* Registers the motive link routes ("/api/links/runs", "/api/links/runs/<id>", "/api/links/pieces/<piece id>")
- * against ctx, following the tool-registration convention described in ursatz_gui/tool.h. They only dispatch into
+ * against ctx, following the tool-registration convention in docs/architecture.md (Layers). They only dispatch into
  * service/link_service.h, which owns the links/ store. */
 void ursatz_gui_links_register(struct mg_context *ctx);
 
