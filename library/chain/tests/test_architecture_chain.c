@@ -23,8 +23,6 @@ static const char *KERNEL_PREFIXES[] = {
 };
 
 static const char *FRAMEWORK_HEADERS[] = {
-    "common-practice-minimal/triad_identification.h",
-    "common-practice-minimal/seventh_identification.h",
     "common-practice-minimal/key_identification.h",
     "standard-form/analysis/analysis_motive.h",
     "standard-form/analysis/analysis_motive_match.h",
