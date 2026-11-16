@@ -243,8 +243,6 @@ const item = {
 const updates = T.updatedUses(item);
 check(updates.length === 1 && updates[0].label === "Source updated: Alpha v2", "an updated source gets a notice");
 check(T.updatedUses({}).length === 0, "no uses give no notice");
-const moved = T.formWithUpdates(filled(), [{ item_id: "mot-1", current: 5 }]);
-check(moved.slots.find((s) => s.slot === "basic").version === 5 && moved.slots.find((s) => s.slot === "cadential").version === 3, "updating moves the named slot motif");
 
 /* Playback is served by the backend from the version's MIDI file (R-275); the fixture is the served JSON of theme.mid */
 const playback = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "theme.playback.json"), "utf8"));

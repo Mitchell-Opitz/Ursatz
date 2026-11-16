@@ -192,23 +192,6 @@
     return { index, unmatched };
   }
 
-  /* A claim's note id matches its own xml:id and the barline fragments
-   * Ursatz writes for a note split across bars: "<id>_<letter>" and
-   * "<id>_<number>". */
-  function findNotesForHighlightId(index, baseId) {
-    const matches = [];
-    if (index.has(baseId)) {
-      matches.push(...index.get(baseId));
-    }
-    const prefix = `${baseId}_`;
-    for (const [id, notes] of index) {
-      if (id.startsWith(prefix) && /^([a-z]|[0-9]+)$/.test(id.slice(prefix.length))) {
-        matches.push(...notes);
-      }
-    }
-    return matches;
-  }
-
   /* The caption under the score: only when the file declares no time
    * signature (meter_defaulted from /musicxml/meta), else null. */
   function meterCaption(meta) {
@@ -244,7 +227,6 @@
     osmdNoteKey,
     collectGraphicalNotes,
     buildNoteIndex,
-    findNotesForHighlightId,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

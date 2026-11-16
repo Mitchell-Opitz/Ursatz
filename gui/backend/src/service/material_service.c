@@ -1936,11 +1936,6 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, 
     return result;
 }
 
-UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const char *name, const char *project_id,
-                                                         const cJSON *body, cJSON **out_item) {
-    return ursatz_gui_material_item_create_noted(type, name, project_id, body, NULL, out_item);
-}
-
 bool ursatz_gui_material_item_is_variant(const cJSON *body) {
     const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
     const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");

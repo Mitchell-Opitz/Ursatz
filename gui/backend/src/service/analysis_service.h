@@ -152,7 +152,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_filename(const char *pieces_dir,
 UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id);
 
 /*
- * Changes a piece's metadata in its meta.json, written once. The source and
+ * A change of a piece's metadata in its meta.json (ursatz_gui_analysis_update_piece), written once. The source and
  * the analysis are untouched. NULL string fields are left unchanged.
  *
  *   filename            display name, stored as given (the caller rejects an empty one)
@@ -185,12 +185,8 @@ typedef struct {
     const UrsatzGuiNotation *notation;
 } UrsatzGuiMetaUpdate;
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
-                                                             const UrsatzGuiMetaUpdate *update, char *message,
-                                                             size_t message_size);
-
 /*
- * The PATCH of a piece as one hold of its lock: ursatz_gui_analysis_update_metadata, then, when the update changes
+ * The PATCH of a piece as one hold of its lock: the metadata change above, then, when the update changes
  * the notation override, ursatz_gui_analysis_reanalyze; if that fails the old override is put back, and a source
  * that no longer imports gives URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA with message "invalid notation".
  */

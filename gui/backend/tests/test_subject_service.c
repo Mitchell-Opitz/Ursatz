@@ -71,7 +71,7 @@ static char *new_item(const char *name) {
     cJSON *body = cJSON_Parse(kPieceBody);
     cJSON *item = NULL;
     char *id = NULL;
-    if (ursatz_gui_material_item_create("piece", name, g_project, body, &item) == URSATZ_GUI_MATERIAL_OK) {
+    if (ursatz_gui_material_item_create_noted("piece", name, g_project, body, NULL, &item) == URSATZ_GUI_MATERIAL_OK) {
         id = strdup(str(item, "id"));
     }
     cJSON_Delete(body);

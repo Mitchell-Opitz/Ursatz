@@ -1557,18 +1557,6 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir,
     return result;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
-                                                             const UrsatzGuiMetaUpdate *update, char *message,
-                                                             size_t message_size) {
-    UrsatzGuiAnalysisResult result;
-    if (!piece_lock_enter(id, &result)) {
-        return result;
-    }
-    result = update_metadata_unlocked(pieces_dir, id, update, message, message_size);
-    ursatz_gui_piece_unlock(id);
-    return result;
-}
-
 UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id) {
     UrsatzGuiAnalysisResult result;
     if (!piece_lock_enter(id, &result)) {

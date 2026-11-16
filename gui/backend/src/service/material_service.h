@@ -133,13 +133,9 @@ UrsatzGuiMaterialResult ursatz_gui_material_body_with_uses(const cJSON *body, cJ
  * Creates an item of type "motif", "theme" or "piece" (INVALID_TYPE) with a
  * generated id, in the project project_id (INVALID_ID, NOT_FOUND). name has
  * the project name limits (INVALID_NAME). body is the first version, v1
- * (INVALID_BODY when ursatz_gui_material_body_validate refuses it). On OK, *out_item (may be NULL)
- * is the item object (item.json), caller-owned.
+ * (INVALID_BODY when ursatz_gui_material_body_validate refuses it), with note (trimmed, at most 500 characters, NULL
+ * or "" for none) on version 1. On OK, *out_item (may be NULL) is the item object (item.json), caller-owned.
  */
-UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const char *name, const char *project_id,
-                                                         const cJSON *body, cJSON **out_item);
-
-/* As ursatz_gui_material_item_create, with note (trimmed, at most 500 characters, NULL or "" for none) on version 1. */
 UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, const char *name,
                                                                const char *project_id, const cJSON *body,
                                                                const char *note, cJSON **out_item);

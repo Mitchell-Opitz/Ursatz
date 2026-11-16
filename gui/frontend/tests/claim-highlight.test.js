@@ -124,26 +124,6 @@ const sameNoteOtherVoice = graphicalNote(0, 1, 1, 2, 0, 1, 0, 0, 5);
 ({ unmatched } = ScoreNotes.buildNoteIndex(entries, [sameNoteOtherVoice]));
 check(unmatched === 1, "the same pitch and onset in another voice is not the same note");
 
-/* Fragments: ids as Ursatz writes a note split at a barline. */
-const fragIndex = new Map([
-  ["n1", ["whole"]],
-  ["n1_a", ["a"]],
-  ["n1_b", ["b"]],
-  ["n1_2", ["two"]],
-  ["n10", ["ten"]],
-  ["n1_ab", ["ab"]],
-]);
-const found = ScoreNotes.findNotesForHighlightId(fragIndex, "n1");
-check(
-  found.length === 4 && ["whole", "a", "b", "two"].every((n) => found.includes(n)),
-  "a base id matches its own note and its _<letter> and _<number> fragments",
-);
-check(!found.includes("ten") && !found.includes("ab"), "a longer or unrelated id is not a fragment");
-check(ScoreNotes.findNotesForHighlightId(fragIndex, "missing").length === 0, "an id missing from the score matches nothing");
-
-const tie = ScoreNotes.findNotesForHighlightId(ScoreNotes.buildNoteIndex(entries, rendered).index, "tie");
-check(tie.length === 2 && tie.includes(graph.tie_a) && tie.includes(graph.tie_b), "a tied note across a barline highlights both halves");
-
 /* The workspace selects claims itself: the old app.js highlight path (a
  * pending claim colored through NoteheadColor and a re-render) is gone. */
 const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");

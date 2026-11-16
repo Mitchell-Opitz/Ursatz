@@ -167,15 +167,6 @@ check(
   "the provenance panel lists the document's metadata fields",
 );
 
-/* note_ids to xml:ids. */
-check(
-  JSON.stringify(tabs.mapNoteIdsToXmlIds([0, 2], ["midi-note-0", "midi-note-1", "midi-note-2"])) ===
-    JSON.stringify(["midi-note-0", "midi-note-2"]),
-  "a claim's note_ids are mapped through note_xml_ids",
-);
-check(tabs.mapNoteIdsToXmlIds([9], ["midi-note-0"]).length === 0, "a note id past the end of note_xml_ids is skipped");
-check(tabs.mapNoteIdsToXmlIds(undefined, undefined).length === 0, "a claim without note_ids maps to no notes");
-
 /* app.js carries no claim actions without a backend. */
 const appSource = fs.readFileSync(path.join(__dirname, "..", "public", "app.js"), "utf8");
 check(!/Accept|Dispute/.test(appSource), "app.js has no Accept or Dispute buttons");

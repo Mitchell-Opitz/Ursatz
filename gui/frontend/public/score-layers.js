@@ -71,23 +71,6 @@
     return NaN;
   }
 
-  function ratParts(value) {
-    return Array.isArray(value) ? value : [value.num, value.den];
-  }
-
-  /* Exact comparison by cross multiplication: negative, zero or positive. */
-  function ratCompare(a, b) {
-    let [an, ad] = ratParts(a);
-    let [bn, bd] = ratParts(b);
-    if (ad < 0) {
-      [an, ad] = [-an, -ad];
-    }
-    if (bd < 0) {
-      [bn, bd] = [-bn, -bd];
-    }
-    return Math.sign(an * bd - bn * ad);
-  }
-
   function isPlainObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
   }
@@ -406,7 +389,6 @@
     STORAGE_KEY,
     abbreviateCadence,
     rat,
-    ratCompare,
     collectLayerItems,
     discoverOtherLayers,
     scoreSectionNames,

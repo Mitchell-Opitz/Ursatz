@@ -247,19 +247,6 @@ async function loadTabState(cache, tab, fetchSections) {
   return ok ? buildTabState(tab, cache.document()) : null;
 }
 
-/* A claim's note_ids are indices into the imported notes; the score knows
- * notes by xml:id, which the piece detail lists in the same order. */
-function mapNoteIdsToXmlIds(noteIds, noteXmlIds) {
-  const ids = [];
-  for (const noteId of noteIds || []) {
-    const xmlId = (noteXmlIds || [])[noteId];
-    if (xmlId) {
-      ids.push(xmlId);
-    }
-  }
-  return ids;
-}
-
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     ANALYSIS_TABS,
@@ -271,7 +258,6 @@ if (typeof module !== "undefined" && module.exports) {
     buildSectionBlock,
     buildAnalysisHeader,
     buildProvenanceFields,
-    mapNoteIdsToXmlIds,
     formatLocation,
     formatPosition,
     claimLabel,
