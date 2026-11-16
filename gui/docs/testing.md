@@ -4,6 +4,8 @@ The backend and frontend tests and the checks CI runs. [Docs index](README.md).
 
 Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): a backend test is `ursatz_test(<name> LIBS ursatz_gui_core ... WORKING_DIRECTORY <its own build folder>)`, a frontend test is `ursatz_test(frontend_<name> COMMAND node <file>)`. The timeout is 120 s, or 1800 s for a `slow` test.
 
+The frontend tests share `frontend/tests/support/check.js` (`check`, `same`, `near`, `finish`: call `finish()` last, it sets the exit code). The backend tests use `tests/support/ursatz_test.h` and the HTTP client `tests/support/test_http.h` at the repository root.
+
 `ctest` runs the backend tests (the startup data check, analyzer, corpus, styles, composer, materials, theme, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node the configure prints one status line
