@@ -106,7 +106,7 @@ add_test(NAME framework_v1_thematic_returns COMMAND test_framework_v1_thematic_r
 # Under helgrind where valgrind is installed (memcheck as well), else plain.
 add_executable(test_concurrent_first_use test_concurrent_first_use.c)
 target_link_libraries(test_concurrent_first_use PRIVATE baroque_ground_bass common_practice_minimal galant_schemas
-                      high_baroque_fugue scale_harmonization standard_counterpoint standard_form
+                       scale_harmonization standard_counterpoint standard_form
                       standard_harmony standard_markings standard_meter
                       standard_texture standard_tonality standard_voicing western_periods)
 add_test(NAME concurrent_first_use COMMAND test_concurrent_first_use)
