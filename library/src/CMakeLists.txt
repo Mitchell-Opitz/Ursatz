@@ -21,7 +21,6 @@ add_library(ursatz
     time/time_instant.c
     time/temporal_anchor.c
     time/metronome_marking.c
-    time/historical_period.c
     time/note_value.c
     time/time_signature.c
     time/meter_map.c
@@ -287,7 +286,6 @@ ursatz_public_headers(ursatz
         theory/style_model_build.h
         theory/tendency.h
         time/duration.h
-        time/historical_period.h
         time/meter_arithmetic.h
         time/meter_map.h
         time/metrical_position.h
