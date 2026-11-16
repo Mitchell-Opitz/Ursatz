@@ -1,6 +1,7 @@
 #include "server.h"
 
 #include <civetweb.h>
+#include <stdio.h>
 
 #include "routes/analyzer.h"
 #include "routes/composer.h"
@@ -10,11 +11,14 @@
 #include "routes/materials.h"
 #include "routes/styles.h"
 #include "service/collection_service.h"
+#include "service/data_check.h"
 #include "service/job_queue.h"
 #include "service/link_service.h"
 #include "service/material_service.h"
 #include "service/subject_service.h"
 
+/* The data folder: every store path below is relative, so it is the backend's working directory. */
+static const char *kDataDir = ".";
 static const char *kCollectionsDir = "collections";
 static const char *kMaterialsDir = "materials";
 static const char *kSubjectsDir = "subjects";
@@ -28,6 +32,14 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
       "num_threads", "4",
       NULL,
   };
+
+  /* A data folder the one-time migrations of the GUI before the overhaul never ran on is refused (service/data_check.h),
+   * before any store is opened. */
+  char data_message[2048];
+  if (!ursatz_gui_data_check(kDataDir, data_message, sizeof(data_message))) {
+    fprintf(stderr, "ursatz-gui-backend: %s\n", data_message);
+    return NULL;
+  }
 
   /* Collections are files under collections/ (see
    * service/collection_service.h); the store is prepared once here. */

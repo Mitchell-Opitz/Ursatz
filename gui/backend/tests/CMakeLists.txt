@@ -24,6 +24,8 @@ ursatz_gui_add_test(corpus_route test_corpus_route.c ${CMAKE_CURRENT_BINARY_DIR}
 ursatz_gui_add_test(piece_metadata test_piece_metadata.c ${CMAKE_CURRENT_BINARY_DIR}/piece_metadata)
 
 ursatz_gui_add_test(id_service test_id_service.c ${CMAKE_CURRENT_BINARY_DIR}/id_service)
+# The test makes one data folder per case in its own working directory and removes it.
+ursatz_gui_add_test(data_check test_data_check.c ${CMAKE_CURRENT_BINARY_DIR}/data_check)
 
 ursatz_gui_add_test(job_queue test_job_queue.c ${CMAKE_CURRENT_BINARY_DIR}/job_queue)
 # The test cancels a theme compose made from a request fixture; no server is started.
