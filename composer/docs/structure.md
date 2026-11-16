@@ -30,7 +30,7 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 ## CLI snapshots
 
 `test_cli_snapshots` (`tests/cli_snapshots.cmake`) runs the seeded commands on the fixtures and compares each output with
-`tests/snapshots/<case>.<ext>`. The values of `analyzer_version`, `composer_version` and `ursatz_commit` are ignored; files
+`tests/snapshots/<case>.<ext>`. The values of `analyzer_version`, `composer_version` and `ursatz_commit` (the producer key) are ignored; files
 ending `.json` are compared as JSON values (member order and indentation do not matter, `test_cli_snapshot_compare` proves
 it); MIDI, MusicXML and text are compared byte for byte. After a change that is meant to move output, recapture and review
 the diff:

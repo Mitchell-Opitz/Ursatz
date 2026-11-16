@@ -99,9 +99,9 @@ Tests:
   valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and
   validates both JSON files against their schemas (see below).
 - `test_staleness`: each `AnalyzerDocumentStatus`, from keys and from snapshot documents with one key changed, also under
-  valgrind. `test_corpus` also resumes across a changed Ursatz commit.
-- `test_version`: the public version header returns the macros, the version of `project()` and a non-empty Ursatz
-  commit.
+  valgrind. `test_corpus` also resumes across a changed producer key.
+- `test_version`: the public version header returns the macros, the version of `project()` and a producer key of 16
+  lowercase hex digits.
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
@@ -140,9 +140,16 @@ call them and render the result:
 
 ## Version header and pin check
 
-`<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and
-`URSATZ_ANALYZER_URSATZ_COMMIT` and declares `ursatz_analyzer_version()` and `ursatz_analyzer_ursatz_commit()`, so a
-consumer reads the version from the library instead of parsing `CMakeLists.txt`.
+`<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and declares
+`ursatz_analyzer_version()` and `ursatz_analyzer_producer_key()`, so a consumer reads the version and the producer key
+from the library instead of parsing `CMakeLists.txt`.
+
+The producer key is computed at build time, not configure time (R-554). `analyzer/cmake/ProducerKey.cmake` hashes every
+file under `library/src`, `library/frameworks`, `library/chain`, `analyzer/src`, `analyzer/include`, `third_party/cjson` and
+`third_party/ezxml` (sources, headers and `*.in`, not `tests/`), as the text `<path> <SHA-256>` per file in path order, and
+keeps the first 16 hex digits of that text's SHA-256 in `producer_key.h` beside `version.h`. The header is rewritten only
+when the key changes. A change to a test, a doc or the GUI leaves the key as it was and marks nothing stale; a change to a
+listed source changes it and marks every stored analysis stale.
 
 The version is 0.7.0. Every analysis stored by an earlier version is stale by version.
 

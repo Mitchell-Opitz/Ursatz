@@ -44,7 +44,7 @@ are the Composer's to read: it refuses what it does not read with a message and 
 Routes (bodies are JSON; success bodies have `"ok":true`):
 
 - `GET /api/composer/status`: `{"ok":true,"available":true,"version":"ursatz-composer 0.4.0","api_version":"1.1",
-  "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (the last three are additive).
+  "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (`ursatz_commit` holds the Analyzer's producer key until the next version renames it) (the last three are additive).
 
 - `GET /api/composer/vocabulary`: the lists the Composer reads (`composer_api_vocabulary`), built once and kept: meters
   with their beats and second chord beat, modes, keys and `pitch_class_names`, cadences, pickups for each meter, the

@@ -35,7 +35,7 @@ removes the directory. Re-running the analysis rewrites `analysis.json` and
 the three version fields of `meta.json`; the filename and `uploaded_at` stay.
 
 Staleness keys: a stored analysis is current only when its `schema_version`, `metadata.analyzer_version` and
-`metadata.ursatz_commit` all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
+`metadata.ursatz_commit` (the Analyzer's producer key) all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
 `staleness.h`). `meta.json` holds the same three values as `document_schema_version`, `analyzer_version` and
 `ursatz_commit`, so the Library list reads the flag without opening a document. A `meta.json` from before
 `ursatz_commit` gets it from its document's `metadata.ursatz_commit` the first time the piece is opened (written back

@@ -223,7 +223,7 @@ renamed); a theme version uses it for its brief.
 
 A piece that cannot be added is skipped with a reason and the build goes on:
 `not found` (no such piece), `re-analysis failed` or `unreadable analysis`.
-When a piece's stored analysis is not current (another schema, Analyzer version or Ursatz commit; see
+When a piece's stored analysis is not current (another schema, Analyzer version or producer key; see
 [Staleness keys](../storage.md#piece-store)), the piece is analyzed again first, so older pieces still count. Only analysis documents are read,
 never the scores. A build runs on the request thread and one mutex serializes
 the style store.
@@ -281,7 +281,7 @@ A piece whose stored analysis has no motive features (an older analyzer version)
 re-run route does, and added again; one that still fails is skipped.
 
 Storage: `links/motive-link-cache.json` is one cache for every scope, keyed by the two sketches' fingerprints and valid
-only for the same Ursatz commit, analyzer version and link options, so a pair compared for one scope is not compared
+only for the same producer key, analyzer version and link options, so a pair compared for one scope is not compared
 again for another and a second run over the same scope reports `compared` 0. Each run is
 `links/runs/<id>/run.json`, written to a temporary file and renamed; ids are `lnk-<16 lowercase hex>`. Progress is
 kept in memory and written to `run.json` at most once a second and at the end. A server restart marks a run left

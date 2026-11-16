@@ -24,7 +24,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
-| `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and Ursatz commit all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [corpus.md](corpus.md). |
+| `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and producer key all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [corpus.md](corpus.md). |
 | `chord_sequence.h` | `analyzer_chord_sequence` and `analyzer_chord_sequence_from_document` give the joined chord sequence (consecutive entries with one numeral, key region and root are one chord) of a result or of a stored document; `analyzer_chord_sequence_free` releases it. |
 | `playback.h` | Playback timing for an import as the GUI player needs it. See [gui-api.md](gui-api.md). |
 | `score_export.h` | MusicXML score export of the imported notes, with the base `xml:id` of each note. See [gui-api.md](gui-api.md). |
