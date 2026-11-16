@@ -39,8 +39,8 @@ textbook; each README names the chapters it covers.
   imported notes (`chain/README.md`).
 - **Framework singleton.** Each exposes one lazily built `Framework` instance. Rules are
   checked with the framework's own `*_rule_holds()` and check functions. standard-harmony and
-  standard-counterpoint also build a `Preference` per soft rule, scored through
-  `preference_rank`; no other framework builds a `Rule`, `Constraint` or `Preference`.
+  standard-counterpoint also build a `Preference` per soft rule, scored by the
+  `Preference`'s callback; no other framework builds a `Rule`, `Constraint` or `Preference`.
 - **Hard vs. soft.** Rules phrased as "must" are hard. Rules phrased as "limit", "avoid" or
   "prefer" are soft.
 - **Dependency ceiling.** L0 to L6 plus `theory/framework.h`, `theory/framework_singleton.h`,

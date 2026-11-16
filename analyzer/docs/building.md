@@ -23,8 +23,8 @@ check's own fraction stay until the library owns them.
 Tests:
 
 - `test_analysis_pipeline`: the end-to-end pipeline.
-- `test_analysis_result`: the claims of each area on the five reference pieces, targets and confidences,
-  partial stages, and the document of the result against the snapshots (`smoke` runs Bach 114, also under
+- `test_analysis_result`: the chain's voice-leading and melody results against the report and the document on the five
+  reference pieces, partial stages, and the document of the result against the snapshots (`smoke` runs Bach 114, also under
   valgrind).
 - `test_corpus_key_estimation`: the home key of six reference pieces.
 - `test_key_regions_clementi_36`, `test_key_regions_mozart_545`: the key regions and principal
@@ -84,7 +84,7 @@ Tests:
   `tests/snapshots/style-model.reference.json`, the model file round trip, the distances between the `chorales` and
   `sonatinas` corpora CMake builds in the build tree, and the refusals. `test_cli_style_profile` checks the flags and exit
   codes. `test_style_model_schema` validates the model file against the schema (see below).
-- `test_chord_sequence`: the joined chord sequence of a result and of its document on the five reference pieces (equal, and each chord a run of document entries that no neighbour continues), a held chord, a key region change, an unlabelled entry and the refusals. `test_chord_sequence_smoke` (Bach 114) runs in CI.
+- `test_chord_sequence`: the joined chord sequence of a document on the five reference pieces (each chord a run of document entries that no neighbour continues), a held chord, a key region change, an unlabelled entry and the refusals. `test_chord_sequence_smoke` (Bach 114) runs in CI.
 - `test_playback`, `test_score_export`: the playback JSON and the MusicXML score of the five reference pieces and `pickup.musicxml`, `field-5.musicxml` against `tests/snapshots/gui/`, a value scale of 2, the numbers behind the JSON and the refusals. The `_smoke` runs (Bach 114, pickup) and valgrind runs are quick.
 - `test_similar_material`: the similar material search over the `reference` corpus: the opening of Mozart 545 as a
   motive, the same motive moved up, `I IV V I`, the results against `tests/snapshots/similar.reference.txt`, and the

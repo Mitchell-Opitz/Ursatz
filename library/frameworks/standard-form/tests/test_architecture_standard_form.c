@@ -15,7 +15,7 @@
  * and MUST NOT depend on any other theory/ or rules/ header
  * (Heuristic/Tendency/StatisticalModel/StyleModel, Preference
  * are not needed by this extension; no Constraint is
- * evaluated here -- see rule_pair.c).
+ * evaluated here).
  *
  * Scans every .h/.c file directly under frameworks/standard-form/ and its analysis/ subdirectory (not tests/)
  * (not its tests/ subdirectory) and flags any local include ("...")

@@ -6,7 +6,7 @@ Layer L6 (`music-context`). Path `src/context/`, tests `tests/context/`. One of 
 
 ## Provides
 
-`Context`, which takes an optional parent at creation.
+The opaque type `Context` (`context/context.h`) and nothing else. The rule callbacks of `rules/` (`ConstraintEvaluateFn`, `PreferenceScoreFn`) take a `const Context *`, and nothing constructs one: `context_create` and `context_destroy` and the parent link were deleted (P55), with `context.c` and its test.
 
 ## Notes
 

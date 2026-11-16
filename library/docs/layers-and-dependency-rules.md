@@ -26,7 +26,7 @@ The analysis chain (`chain/`, target `ursatz_chain`) is an extension above the n
 
 A framework may depend on L0 to L6, on `theory/framework.h`, `theory/framework_singleton.h`, `rules/rule.h`, `rules/constraint.h` and `rules/preference.h`, and on another framework only where that edge is recorded in `frameworks/README.md`.
 
-Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests run from the root build like the module ones (since PR #99); see `docs/BUILDING.md`. `tests/test_architecture_tests.c` applies the same layer rules to the test sources (`tests/<module>/` and `frameworks/<name>/tests/`); the test-only edges it allows are listed in its `ALLOWED_TEST_EDGES`, one reason each. Two of them reach kernel L8 from a framework test: `common-practice-minimal` tests include `analysis/outer_voice.h` and `standard-harmony` tests include `analysis/period_detection.h`; framework sources never include L8.
+Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests run from the root build like the module ones (since PR #99); see `docs/BUILDING.md`. `tests/test_architecture_tests.c` applies the same layer rules to the test sources (`tests/<module>/` and `frameworks/<name>/tests/`); the test-only edges it allows are listed in its `ALLOWED_TEST_EDGES`, one reason each. No framework test reaches kernel L8 (the one that included `analysis/period_detection.h` went with that header, P55); framework sources never include L8.
 
 ## Open issues
 
@@ -34,5 +34,5 @@ Every module and every framework has an architecture test that allowlists the di
 
 ## Resolved issues
 
-- **Interpretation-family to Framework** (Dependency Spec §7.1, closed). `Interpretation`, `ScaleDegree`, `Chord`, and `Key` (L6) carry an optional `FrameworkReference` (`core`, L1) rather than a live `Framework` reference. `Chord`, `Key`, `ScaleDegree` and `Texture` require it at construction. Detail in `docs/modules/l6-notes.md`.
+- **Interpretation-family to Framework** (Dependency Spec §7.1, closed). `Interpretation`, `Chord`, and `Key` (L6) carry an optional `FrameworkReference` (`core`, L1) rather than a live `Framework` reference. `Chord`, `Key` and `Texture` require it at construction. Detail in `docs/modules/l6-notes.md`.
 - **Reference-type Registry synchronization.** `VoiceReference` and `ProvenanceReference` are authorized in the System Registry and implemented in `core`. See `docs/modules/core.md`.

@@ -23,7 +23,6 @@ analysis_prolongation.h frameworks/standard-harmony/analysis/analysis_prolongati
 analysis_resolution.h frameworks/standard-harmony/analysis/analysis_resolution.h 
 analysis_six_four.h frameworks/standard-harmony/analysis/analysis_six_four.h 
 analysis_voices.h frameworks/standard-harmony/analysis/analysis_voices.h 
-analyzer.h src/analysis/analyzer.h 
 applied_chords.h frameworks/standard-tonality/analysis/applied_chords.h 
 beat_grid.h frameworks/standard-meter/beat_grid.h 
 borrowed_rules.h frameworks/standard-meter/borrowed_rules.h 

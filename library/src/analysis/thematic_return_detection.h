@@ -14,8 +14,8 @@
  * branch's scope (section order is analysis/form_structure_detection.h).
  *
  * No new Structure/Occurrence type: a theme occurrence is an id and
- * its region of event ids that the caller holds; this module produces a
- * generic Interpretation the same "no new named type" pattern every
+ * its region of event ids that the caller holds; this module produces
+ * Relationships only, the same "no new named type" pattern every
  * other analysis module in this pass uses.
  *
  * Matching mechanism (requirement 3): reuses MotifWindowMatching's exact
@@ -43,16 +43,15 @@
  * with earlier appearing before later in input order whose windows
  * match, this module builds one Relationship (source = later
  * ThemeOccurrence id, predicate "resembles", target = earlier
- * ThemeOccurrence id) and one Interpretation targeting that
- * Relationship's id. "resembles" (TDD Sec77's documented predicate
- * vocabulary) is used rather than SentenceDetection's "transformed_from"
+ * ThemeOccurrence id). "resembles" (TDD Sec77's documented predicate
+ * vocabulary) is used rather than "transformed_from"
  * because thematic return is recurrence/recognition, not derivation --
  * "transformed_from" claims a transformation lineage (X was transformed
  * from Y); "resembles" claims similarity with no claimed direction of
  * derivation, the correct fit for "this later passage recalls that
  * earlier one" (requirement 1). Multiple earlier occurrences matching
  * the same later one (or vice versa) each produce their own
- * Relationship/Interpretation pair -- this module does not collapse or
+ * Relationship -- this module does not collapse or
  * pick a single "best" match.
  *
  * Where no two ThemeOccurrence windows match, this module produces no
@@ -102,8 +101,7 @@ ThematicReturnDetectionConfig thematic_return_detection_default_config(void);
 
 /*
  * The evidence of one return: the scores of the best stretch pair (see ThematicReturnDetectionConfig) and where
- * the stretches sit, as event offsets inside the earlier and the later theme's window. Carried on the
- * Interpretation's claim and, as a Value of type THEMATIC_RETURN_SIMILARITY_VALUE_TYPE, in the qualifiers of the
+ * the stretches sit, as event offsets inside the earlier and the later theme's window. Carried, as a Value of type THEMATIC_RETURN_SIMILARITY_VALUE_TYPE, in the qualifiers of the
  * "resembles" Relationship (read it with value_content). similarity = lower of contour_score and rhythm_score.
  */
 #define THEMATIC_RETURN_SIMILARITY_VALUE_TYPE "thematic-return-similarity"

@@ -8,7 +8,7 @@ Framework overview: [frameworks/standard-harmony/README.md](../../frameworks/sta
 The phrase model and cadence rule groups have pure check functions. A rule that states what
 the music requires is hard; "usually", "almost always", and "not common" features are soft. Each
 soft rule has a `Preference` (`harmony_phrase_preference`, `harmony_cadence_preference`) whose
-scoring callback makes `preference_rank` score a candidate `Value` tagged
+scoring callback scores a candidate `Value` tagged
 `standard-harmony/<table prefix>`, holding the rule's subject struct, 1/1 when the rule holds and
 0/1 when it does not. The other groups classify chords and build no rules.
 

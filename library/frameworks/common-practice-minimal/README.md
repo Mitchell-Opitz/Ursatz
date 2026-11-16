@@ -74,11 +74,11 @@ separate `frameworks/<name>/` extensions.
 
 Weighted identification and chords in context are documented in [common-practice-minimal-weighted.md](../../docs/modules/common-practice-minimal-weighted.md).
 
-## Boundary with `rules/constraint_evaluate`
+## Boundary with `rules/`
 
-This module builds no `Rule` or `Constraint` and never calls
-`constraint_evaluate`; it uses `Chord` and `Key` only for their existing
-shape and metadata.
+This module builds no `Rule` or `Constraint` and evaluates none (the
+`constraint_evaluate` function was deleted, P55); it uses `Chord` and
+`Key` only for their existing shape and metadata.
 
 ## Dependencies
 

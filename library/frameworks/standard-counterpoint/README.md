@@ -21,7 +21,7 @@ i of the upper line sounding with the note at position i of the lower line.
 Rhythm is not modeled. Each group below has a pure check function. The soft
 rules of the melodic and harmonic groups have a `Preference`
 (`standard_counterpoint_melodic_preference`, `standard_counterpoint_harmonic_preference`)
-whose scoring callback makes `preference_rank` score a candidate `Value` tagged
+whose scoring callback scores a candidate `Value` tagged
 `standard-counterpoint/<table prefix>`, holding the rule's subject, 1/1 when the rule holds
 and 0/1 when it does not; the multi-input subjects are in `counterpoint_subject.h`.
 

@@ -6,11 +6,11 @@ Layer L8 (`music-analysis`). Path `src/analysis/`, tests `tests/analysis/`. The 
 
 ## Provides
 
-`Analyzer` and `AnalysisResult` (the types the chain's subset chord analyzer and `PeriodDetection` use), the phrase boundary loop (`PhraseBoundaryDetection`), `PeriodDetection`, `FormStructureDetection` and `ThematicReturnDetection`, plus the motive, outer voice and voice separation modules listed below.
+The phrase boundary loop (`PhraseBoundaryDetection`), `FormStructureDetection` and `ThematicReturnDetection`, plus the motive, outer voice and voice separation modules listed below.
 
 ## Notes
 
-An `Analyzer` never returns a bare conclusion; it derives owned `Interpretation`/`Evidence` objects (L6) into an `AnalysisResult`, which owns them (there is nowhere else for them to live once `analyze()` returns). `PitchIdentity` carries no tuning-system semantics, so no analyzer can derive its own measurements (semitone displacement, scale/chord/key fit, motion classification, boundary confidence) from raw pitch tokens; each takes that dimension as an already-computed input field (scale degrees, tonic-relative pitch classes, and so on).
+The kernel has no `Analyzer` type, no `AnalysisResult` and no `Evidence` (`analysis/analyzer.h`, `period_detection.h` and `interpretation/evidence.h` were deleted, P55, since nothing called them): the modules below return plain results and `Relationship`s. `PitchIdentity` carries no tuning-system semantics, so no module here can derive its own measurements (semitone displacement, scale/chord/key fit, motion classification, boundary confidence) from raw pitch tokens; each takes that dimension as an already-computed input field (scale degrees, tonic-relative pitch classes, and so on).
 
 
 The analyzers are documented by topic:

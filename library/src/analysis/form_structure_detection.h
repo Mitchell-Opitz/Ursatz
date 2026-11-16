@@ -38,7 +38,7 @@
  * entry) closes a Section spanning entries since the previous boundary
  * (or the start) through i, inclusive. If NO entry (other than possibly
  * the last) carries a structural cadence, NO boundary is found and this
- * analyzer produces no output at all (requirement 4 -- no detected form
+ * procedure produces no output at all (requirement 4 -- no detected form
  * structure is a legitimate outcome, never forced). A trailing run of
  * entries after the last boundary that never reaches another structural
  * cadence is not turned into a Section of its own -- only spans that are
@@ -49,10 +49,8 @@
  * the underlying L4 Phrase ids of its member PhraseOccurrences, via
  * phrase_occurrence_phrase_id). Consecutive Sections (in input order)
  * are linked by one Relationship each (source = earlier Section id,
- * predicate "precedes", target = later Section id),
- * then one Interpretation targeting that Relationship's id, carrying a
- * FormStructureDetectionClaim with both Sections' ids and closing
- * cadence types.
+ * predicate "precedes", target = later Section id).
+ * No Interpretation is built for them.
  */
 
 typedef struct {
@@ -70,7 +68,7 @@ typedef enum {
 /*
  * Builds the Section objects FormStructureDetection identifies, using
  * the identical boundary rule. entries/entry_count validation matches
- * form_structure_detection_analyze. No boundary found is valid and
+ * form_structure_detection_build_relationships. No boundary found is valid and
  * yields *out_sections = NULL, *out_section_count = 0.
  *
  * On success, *out_sections is a freshly allocated array (caller frees
@@ -92,11 +90,11 @@ typedef enum {
 } FormStructureDetectionRelationshipResult;
 
 /*
- * Builds the Relationship objects backing form_structure_detection_
- * analyze's Interpretations, using the identical boundary rule and the
- * identical Section ids form_structure_detection_build_sections mints.
+ * Builds the Relationship objects that link the identified Sections,
+ * using the identical boundary rule and the identical Section ids
+ * form_structure_detection_build_sections mints.
  * entries/entry_count validation matches form_structure_detection_
- * analyze. Fewer than 2 Sections found is valid and yields
+ * build_sections. Fewer than 2 Sections found is valid and yields
  * *out_relationships = NULL, *out_relationship_count = 0.
  *
  * On success, *out_relationships is a freshly allocated array (caller

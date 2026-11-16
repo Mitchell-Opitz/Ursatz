@@ -3,16 +3,15 @@
 The `AnalyzerResult` the analysis returns and the exports built from it. Back to the [docs index](README.md).
 
 `analyzer_analyze` (`<ursatz_analyzer/analysis_result.h>`) runs the analysis once over `ImportedNotes` and returns an
-`AnalyzerResult`: the library's results, the claims of every area as `Interpretation`s, and the report view the
-document is exported from (R-217, R-220, R-252). The analysis document is an export of the
+`AnalyzerResult`: the library chain's results and the report view the document is exported from (R-217, R-220, R-252,
+R-530). The analysis document is an export of the
 result, not its source.
 
 ```c
 AnalyzerResult *result = NULL;
 AnalyzerOptions options = analyzer_options_default();
 if (analyzer_analyze(&notes, &options, &result) == ANALYZER_OK) {
-    size_t cadences = analyzer_result_claim_count(result, ANALYZER_AREA_CADENCES);
-    const Interpretation *first = analyzer_result_claim(result, ANALYZER_AREA_CADENCES, 0);
+    const AnalysisReport *report = analyzer_result_report(result);
     char *json = analysis_document_render_result("piece.mid", result);
     ...
     analyzer_result_destroy(result);
@@ -44,7 +43,7 @@ Analyzer.
 Ursatz P39. The Composer's hearing sets it false until P41 (R-378). Nothing records it in the document, report or schema.
 
 The report view, and so the document, is built only when every chain stage ran. With fewer,
-the result holds the chain and the claims of the stages that ran; `analyzer_result_report` is an empty report and
+the result holds the chain's results of the stages that ran; `analyzer_result_report` is an empty report and
 `analysis_document_build_from_result` returns NULL.
 
 ## Library results
@@ -53,40 +52,11 @@ the result holds the chain and the claims of the stages that ran; `analyzer_resu
 read through its accessors. It is NULL for a piece with no notes. The header and the chain's headers reach only a target that
 links `ursatz_analyzer::chain`; a target linking `ursatz_analyzer` alone sees no chain or framework header.
 
-## Claims
+## No claim layer
 
-`analyzer_result_claim_count(result, area)` and `analyzer_result_claim(result, area, index)`. A claim is borrowed from
-the result. Each targets the id of its note, segment or shell and keeps the library's scalar confidence. They are built
-once, in the order the library returns them.
-
-| `AnalyzerArea` | Claims | Source |
-| --- | --- | --- |
-| `KEYS` | the key of each key region | `common-practice-minimal` |
-| `CHORDS` | the best chord of each segment that has one | `common-practice-minimal` |
-| `NUMERALS` | the Roman numeral of each segment that has one | `standard-tonality` |
-| `CADENCES` | each cadence's primary reading | `standard-harmony` |
-| `PHRASES`, `THEMES`, `MOTIVES` | each phrase, theme and motive family | `standard-form` |
-| `METER` | syncopations, hemiolas, hypermeasures, reinterpretations, densities, and the meter check | `standard-meter` |
-| `TEXTURE` | each texture passage and each change between passages | `standard-texture` |
-| `VOICE_LEADING` | each motion, perfect-interval violation and resolution | `standard-counterpoint`, `standard-harmony` |
-| `MELODY` | the soprano's intervals, contour summaries, climaxes and leap recoveries | `standard-counterpoint` |
-| `SCHEMAS` | each galant schema and scale sequence | `galant-schemas`, `scale-harmonization` |
-| `PROGRESSIONS` | each recurring progression | the Analyzer's count, as a `standard-harmony` claim |
-| `RHYTHM` | each tuplet run | the Analyzer's, as a `standard-meter` claim |
-
-The progression and tuplet claims are made with the kernel's `claim_interpretation_create` (R-236): they have no
-library owner, and carry no uncertainty of their own. The meter check targets the piece's first chord segment, since
-the claim has no notes.
-
-How the claims relate to the document's sections:
-
-- `KEYS`, `CADENCES`, `PHRASES`, `THEMES`, `MOTIVES`, `TEXTURE`, `SCHEMAS` and `PROGRESSIONS` equal the entries of the
-  section of the same name (`keys.regions`, `cadences`, ...).
-- `CHORDS` and `NUMERALS` equal the `chords` entries with a chord reading and with a labelled Roman numeral.
-- `METER` and `RHYTHM` together are the document's `rhythm` entries, except that a hypermeasure and a reinterpretation
-  are one claim each where the document has one entry per phrase.
-- `VOICE_LEADING` and `MELODY` are the chain's own results. The document aggregates them per chord and per phrase, so
-  the counts differ.
+The result has no claims (R-530): it is the chain's results plus the report view. There is no per-area list of
+`Interpretation`s to read: a caller reads the chain's own results through `analyzer_result_chain` and the document's
+entries through `analyzer_result_report` or the exported document.
 
 ## Exports
 

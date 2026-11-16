@@ -19,7 +19,7 @@ AnalyzerHearing hearing = {events, count, midi, meter, has_key, tonic_pitch_clas
 AnalyzerHearingOptions options = analyzer_hearing_options_default(); /* all stages, no document */
 AnalyzerResult *result = NULL;
 if (analyzer_hear(&hearing, &options, &result) == ANALYZER_OK) {
-    /* read the claims: analyzer_result_claim_count / analyzer_result_claim */
+    /* read the report: analyzer_result_report, or the chain: analyzer_result_chain */
     analyzer_result_destroy(result);
 }
 ```
@@ -88,7 +88,7 @@ without them, and a reference that drops nothing against the latter still lists 
 unchanged. The `test_composer_api_valgrind` run uses `tests/valgrind.supp`, which silences a few bytes that Ursatz's
 melody and motive code leaks on every analysis.
 
-`tests/test_hearing.c`: on the five reference pieces, the result's notes point at the caller's events; the claim counts equal those of `analyzer_analyze`; the profile
+`tests/test_hearing.c`: on the five reference pieces, the result's notes point at the caller's events; the report's entry, key region and progression counts equal those of `analyzer_analyze`; the profile
 of a result equals the profile of its rendered document (`style_profile_add_result`); the distance against a reference
 equals that of a second hearing of the same events; the violations equal those of `analyzer_analyze` on the same notes;
 bad arguments are refused. `test_hearing_smoke` runs Bach 114 only;

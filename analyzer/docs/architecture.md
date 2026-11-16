@@ -83,7 +83,7 @@ The Ursatz headers the Analyzer includes, found by `tools/ci/check-library-inclu
 | `ursatz_chain/analysis_chain.h`, `ursatz_chain/chain_inputs.h` (`analysis_chain_run` and the `analysis_chain_*` accessors) | Ursatz | The one analysis run and its results; the public headers reach them only through `result_chain.h` |
 | `io/midi_importer.h`, `io/midi_key_signature.h`, `io/musicxml_importer.h` | Ursatz | Reading MIDI and MusicXML files |
 | `core/`, `time/`, `pitch/`, `events/`, `identity/` | Ursatz | Rationals, meters, tempo maps, pitches, notes, ids |
-| `interpretation/`, `semantics/`, `structure/`, `containers/`, `relationship/` | Ursatz | Claims as `Interpretation`s and the kernel vocabulary |
+| `interpretation/`, `semantics/`, `structure/`, `containers/`, `relationship/` | Ursatz | The chain's `Interpretation`s and the kernel vocabulary |
 | `common-practice-minimal/`, `standard-tonality/` | Ursatz | Key regions, weighted chord identification, Roman numerals |
 | `standard-harmony/analysis/` | Ursatz | Cadences, functions, six-fours, prolongations, the phrase model |
 | `standard-form/analysis/`, `analysis/` (form structure, thematic returns, motive link and recognition, voice separation, outer voices, progression patterns) | Ursatz | Phrases, themes, the form plan, motives, motive links, voices |
@@ -103,7 +103,7 @@ One file, `piece.mid` or `piece.musicxml`, through `ursatz-analyzer piece.mid`:
 4. `analysis_chain_run` runs once over every stage: segments, key regions, chords, Roman numerals, outer voices, cadences, form, motives, meter, texture, voice leading, melody, schemas and sequences.
 5. The stage files read the chain's accessors into the `AnalysisReport`; the library calls the chain does not run (functions, six-fours, prolongations, phrase model) are made over its prepared harmony segments. See [analyses/harmony.md](analyses/harmony.md).
 6. The Analyzer-only stages read the collected report: progressions, harmonic rhythm, form plan, meter check, rhythm, markings, voicing check and pivot chords. See [analyses/form-and-motive.md](analyses/form-and-motive.md) and [analyses/rhythm-texture-voice-leading.md](analyses/rhythm-texture-voice-leading.md).
-7. The result is an `AnalyzerResult`: the claims of every area as `Interpretation`s plus the report view ([analysis-result.md](analysis-result.md)).
+7. The result is an `AnalyzerResult`: the chain's results plus the report view ([analysis-result.md](analysis-result.md)).
 8. `analysis_document` builds the analysis document once from the result ([analysis-document.md](analysis-document.md)).
 9. `main.c` writes `piece.analysis.json` next to the input.
 

@@ -34,12 +34,12 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/events.md](modules/events.md): L3 events: the canonical NoteEvent.
 - [docs/modules/containers.md](modules/containers.md): L4 containers: sections and phrases.
 - [docs/modules/structure.md](modules/structure.md): L5 structure: occurrences of structures.
-- [docs/modules/context.md](modules/context.md): L6 context.
+- [docs/modules/context.md](modules/context.md): L6 context: the opaque Context type.
 - [docs/modules/semantics.md](modules/semantics.md): L6 semantics: shared theory vocabulary and neutral analysis inputs.
 - [docs/modules/relationship.md](modules/relationship.md): L6 relationship: typed links between entities.
 - [docs/modules/interpretation.md](modules/interpretation.md): L6 interpretation: claims, chords, keys, uncertainty.
 - [docs/modules/theory.md](modules/theory.md): L7 theory: Theory Framework type, style models.
-- [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference.
+- [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference and their callbacks.
 - [docs/modules/analysis.md](modules/analysis.md): L8 analysis: overview of the analyzers and what is deferred.
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
 - [docs/modules/export.md](modules/export.md): L9 export: MusicXML writer.

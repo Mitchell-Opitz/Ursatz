@@ -33,7 +33,7 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 | Directory | Header | Route or entry | What it does | Doc |
 |---|---|---|---|---|
 | identity | `entity_id.h` | `EntityID` | Identity of every entity. | [identity](modules/identity.md) |
-| core | `entity.h`, `provenance_reference.h` and 3 more | `Value`, `Rational`, references | Typed values, exact rationals, provenance and voice references. | [core](modules/core.md) |
+| core | `provenance_reference.h`, `rational.h` and 2 more | `Value`, `Rational`, references | Typed values, exact rationals, provenance and voice references. | [core](modules/core.md) |
 | time | `duration.h`, `meter_arithmetic.h` and 11 more | `MeterMap`, `TempoMap`, `MusicalTime` | Exact musical time, meter and tempo. | [time](modules/time.md) |
 | pitch | `key_signature.h`, `midi_pitch.h` and 5 more | `PitchSpelling`, `pitch_arithmetic` | Pitch identity, spelling, MIDI numbers, key signatures. | [pitch](modules/pitch.md) |
 | events | `note_event.h` | `NoteEvent` | The canonical note. | [events](modules/events.md) |
@@ -41,9 +41,9 @@ The headers the apps include, from the union of `scripts/app_includes.sh` output
 | structure | `phrase_occurrence.h`, `structure.h` | `PhraseOccurrence`, `Structure` | Occurrences of structures. | [structure](modules/structure.md) |
 | semantics | `analysis_key.h`, `analysis_note.h` and 9 more | `CadenceType`, `sonority_segmentation`, vocabulary enums | Shared theory vocabulary and the neutral analysis inputs. | [semantics](modules/semantics.md) |
 | relationship | `relationship.h` | `Relationship` | Typed link between two entities. | [relationship](modules/relationship.md) |
-| interpretation | `chord.h`, `claim_interpretation.h` and 4 more | `Interpretation`, `Chord`, `Uncertainty` | Claims under a named framework, with uncertainty. | [interpretation](modules/interpretation.md) |
+| interpretation | `chord.h`, `interpretation.h` and 1 more | `Interpretation`, `Chord`, `Uncertainty` | Claims under a named framework, with uncertainty. | [interpretation](modules/interpretation.md) |
 | theory | `framework.h`, `style_features.h` and 3 more | `Framework`, `StyleModel` | Theory Framework type and style models. | [theory](modules/theory.md) |
-| analysis | `analyzer.h`, `form_structure_detection.h` and 9 more | `Analyzer`, `motive_sketch`, `outer_voice_extract`, `voice_separate` | Kernel analyses: motives, voices, progressions, form. | [analysis](modules/analysis.md), [motive link](modules/motive-link.md) |
+| analysis | `form_structure_detection.h`, `motive_link.h` and 8 more | `motive_sketch`, `outer_voice_extract`, `voice_separate` | Kernel analyses: motives, voices, progressions, form. | [analysis](modules/analysis.md), [motive link](modules/motive-link.md) |
 | io | `midi_importer.h`, `midi_key_signature.h` and 2 more | `midi_importer_import_complete`, `MusicXMLImporter` | Import of MIDI and MusicXML into notes, meter, tempo and keys. | [io](modules/io.md), [MIDI](modules/io-midi.md), [MusicXML](modules/io-musicxml.md) |
 | export | `musicxml_export.h`, `score_quantize.h` and 1 more | `musicxml_export_write_score`, `score_quantize` | MusicXML export of a MeterMap and notes. | [export](modules/export.md) |
 | query | `similarity_model.h`, `similarity_scoring.h` | `similarity_model.h` | Similarity scoring over sequences. | [query](modules/query.md) |
@@ -77,9 +77,9 @@ Nothing. Ursatz sits at the bottom of the stack; its only dependencies are POSIX
 
 | App | Headers used | Mostly from |
 |---|---|---|
-| Analyzer | 157 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
+| Analyzer | 148 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
 | Composer | 114 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, io |
-| GUI | 1 | analysis (`analyzer.h`) |
+| GUI | 0 | none: the GUI reads the library through the Analyzer |
 
 Made with `scripts/app_includes.sh <app checkout>...`; the combined list is in `docs/public-headers-baseline.txt`.
 

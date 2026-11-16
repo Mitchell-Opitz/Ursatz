@@ -21,7 +21,7 @@ ctest --test-dir build -C Debug --output-on-failure
 (Drop `-C Debug` if you're not using a multi-config generator like Visual Studio.)
 
 This runs every test from the root build: the kernel tests under `tests/`, the framework tests
-under `frameworks/*/tests/` and the chain tests under `chain/tests/` (468 in all with valgrind
+under `frameworks/*/tests/` and the chain tests under `chain/tests/` (451 in all with valgrind
 installed), including one architecture-guard test per module and per framework. Tests labeled
 `slow` can be skipped with `-LE slow`. CI runs configure, build and `ctest -LE slow` on Ubuntu,
 then the accuracy gate.

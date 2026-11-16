@@ -1,6 +1,6 @@
 # Analysis: phrases and form
 
-PhraseBoundaryDetection, PeriodDetection, FormStructureDetection and ThematicReturnDetection in the kernel `analysis` module. [Docs index](../README.md)
+PhraseBoundaryDetection, FormStructureDetection and ThematicReturnDetection in the kernel `analysis` module, and where periods are read. [Docs index](../README.md)
 
 ## PhraseBoundaryDetection
 
@@ -13,27 +13,17 @@ The chain's form bridge (`chain/ursatz_chain/form_bridge.h`) fills the points fr
 
 Out of scope: pitch or interval math beyond what Contour and RhythmicPattern provide, and L9 query infrastructure (`PatternMatching`, `SimilarityModel`, `SearchResult`).
 
-## PeriodDetection
+## Periods
 
-A Period structure has no named type in the System Registry. `PeriodDetection` (`analysis/period_detection.h`) adds no new type: it emits a generic `Interpretation` whose claim describes the antecedent and consequent relationship.
-
-Given an ordered sequence of `PhraseOccurrence`s, each annotated with the `CadenceType` that triggered its boundary, it identifies a period pair between two consecutive phrases when the first's cadence ranks strictly weaker than the second's. The kernel does not own that order: the caller injects a ranking function (`PeriodDetectionRankFn`, `int (*)(CadenceType)`, larger is stronger, `<= 0` is not rankable) in `PeriodDetectionInput.rank` and in `period_detection_build_relationships`. `frameworks/standard-harmony` owns the order (`harmony_cadence_strength`, weakest to strongest: half < deceptive < plagal < authentic (unspecified) < imperfect authentic < perfect authentic; a subverted cadence ranks 0 and `CADENCE_TYPE_UNKNOWN` is unranked), so a caller passes it in:
-
-```c
-PeriodDetectionInput input = {entries, entry_count, harmony_cadence_strength};
-```
-
-Analysis code never includes a framework header. A pair where either phrase's cadence is unranked (`CADENCE_TYPE_UNKNOWN`, subverted, or invalid) is skipped entirely, with no Interpretation and no guess.
-
-An `Interpretation` has a single `EntityID` target, but a period pair is two `PhraseOccurrence`s, so the link is a `Relationship` (L6, `relationship/relationship.h`): `source_id` is the antecedent `PhraseOccurrence` id, `predicate_name` is `"precedes"`, `target_id` is the consequent id. `period_detection_analyze` emits one `Interpretation` per pair targeting that `Relationship`'s id, derived deterministically from the phrase-id pair. It carries a `PeriodDetectionClaim` (both phrase ids and cadence types) and a 1/1 scalar-confidence `Uncertainty`. The kernel builds no `Relationship` object for it.
+The kernel has no period detector: `PeriodDetection`, its `Interpretation` and the injected ranking function were deleted (P55), since nothing called them. A period is read by `frameworks/standard-form` (`period_rules.h`, `standard_form_period_cadences_valid`; themes): two consecutive phrases are a period when both cadences are ranked and the first is strictly weaker than the second. The order is owned by `frameworks/standard-harmony` (`harmony_cadence_strength`, weakest to strongest: half < deceptive < plagal < authentic (unspecified) < imperfect authentic < perfect authentic; a subverted cadence ranks 0 and `CADENCE_TYPE_UNKNOWN` is unranked), and standard-form takes it from there. A pair where either cadence is unranked is skipped, with no guess. `tests/test_harmony_period_ranking.c` in standard-harmony checks the order as a period test.
 
 ## FormStructureDetection
 
 `Section` (`containers/section.h`, L4) is a real, non-transient container: `id` plus `phrase_ids`. `FormStructureDetection` (`analysis/form_structure_detection.h`) mints a `Section` per identified group directly with `section_create`; nothing is transient.
 
-Given the same ordered, cadence-annotated `PhraseOccurrence` sequence `PeriodDetection` consumes, it answers a coarser question: which cadences close a Section rather than a phrase. Only `CADENCE_TYPE_PERFECT_AUTHENTIC` and `CADENCE_TYPE_IMPERFECT_AUTHENTIC` count as structural, because they are the only two cadence types that achieve tonic resolution. This is a stated default, narrower than `PeriodDetection`'s ranking, and not Registry-settled. `CADENCE_TYPE_AUTHENTIC_UNSPECIFIED`, plagal, deceptive and half cadences work as internal phrase punctuation but never as section-ending closure, and an ambiguous PAC or IAC call is never promoted to structural. A structural cadence at entry `i` (other than the last entry) closes a Section spanning the entries since the previous boundary through `i`. A trailing run of entries after the last boundary that never reaches another structural cadence does not become a Section. With no structural cadence anywhere there is no boundary, no Section and no output.
+Given an ordered sequence of `PhraseOccurrence`s, each annotated with the `CadenceType` that triggered its boundary, it answers a coarser question than a period does: which cadences close a Section rather than a phrase. Only `CADENCE_TYPE_PERFECT_AUTHENTIC` and `CADENCE_TYPE_IMPERFECT_AUTHENTIC` count as structural, because they are the only two cadence types that achieve tonic resolution. This is a stated default, narrower than the period order of standard-harmony, and not Registry-settled. `CADENCE_TYPE_AUTHENTIC_UNSPECIFIED`, plagal, deceptive and half cadences work as internal phrase punctuation but never as section-ending closure, and an ambiguous PAC or IAC call is never promoted to structural. A structural cadence at entry `i` (other than the last entry) closes a Section spanning the entries since the previous boundary through `i`. A trailing run of entries after the last boundary that never reaches another structural cadence does not become a Section. With no structural cadence anywhere there is no boundary, no Section and no output.
 
-Consecutive Sections are linked as `PeriodDetection` links phrases, by one `Relationship` each (`source_id` is the earlier Section id, `predicate_name` is `"precedes"`, `target_id` is the later Section id). `form_structure_detection_build_sections` and `form_structure_detection_build_relationships` mint the `Section`s and the `Relationship`s from the same boundary computation, so the ids match; there is no `Interpretation` and no `AnalysisResult` for it.
+Consecutive Sections are linked by one `Relationship` each (`source_id` is the earlier Section id, `predicate_name` is `"precedes"`, `target_id` is the later Section id). `form_structure_detection_build_sections` and `form_structure_detection_build_relationships` mint the `Section`s and the `Relationship`s from the same boundary computation, so the ids match; there is no `Interpretation` for it.
 
 ## ThematicReturnDetection
 
@@ -41,7 +31,7 @@ Consecutive Sections are linked as `PeriodDetection` links phrases, by one `Rela
 
 It applies `MotifWindowMatching`'s comparison rule at Theme granularity. The rule is granularity-agnostic: it compares whatever `Contour` and `RhythmicPattern` the caller built for a window. A theme occurrence's region (possibly several phrases) is such a window, and the caller builds one `MotifWindow` per theme occurrence as for any other `MotifWindow`. `ThematicReturnDetection` implements the comparison itself rather than calling `motif_window_matching_find`, because that function reports only a per-window "matched something" flag, and a return needs the matching pair (which later theme occurrence recalls which earlier one). `MotifWindowMatching`'s public surface is untouched.
 
-The predicate is `"resembles"`, not `"transformed_from"`: a return asserts similarity with no claimed direction of derivation. For every ordered pair of theme occurrence entries (earlier, later) whose windows match, it builds one `Relationship` (`source_id` is the later theme occurrence id, `predicate_name` is `"resembles"`, `target_id` is the earlier id; the claim is about the Theme material, not the Section it sits in) and nothing else: there is no `Interpretation` and no `AnalysisResult`. No matching windows means no output (`thematic_return_detection_build_relationships_configured` yields no `Relationship`).
+The predicate is `"resembles"`, not `"transformed_from"`: a return asserts similarity with no claimed direction of derivation. For every ordered pair of theme occurrence entries (earlier, later) whose windows match, it builds one `Relationship` (`source_id` is the later theme occurrence id, `predicate_name` is `"resembles"`, `target_id` is the earlier id; the claim is about the Theme material, not the Section it sits in) and nothing else: there is no `Interpretation`. No matching windows means no output (`thematic_return_detection_build_relationships_configured` yields no `Relationship`).
 
 Minimum window length: any window below `THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH` (4 events) is excluded from matching, because short generic windows (for example a 3-event stepwise run) match across unrelated occurrences. It is a fixed constant, local to `ThematicReturnDetection`, like `PhraseBoundaryDetection`'s default of 8. 4 is a stated default, not Registry-settled, and may move as more of the corpus is checked. `motif_window_matching_find` has no such floor; its callers hand it short, curated candidate windows.
 

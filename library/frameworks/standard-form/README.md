@@ -2,9 +2,9 @@
 
 Theory Framework instance `standard-form-v1`: how Western tonal music is
 organized into phrase-level form. Path `frameworks/standard-form/`, tests
-in `frameworks/standard-form/tests/`. The name
-it uses is a plain value type in `src/semantics/` (`FormLevel`); this
-framework gives it its conventions.
+in `frameworks/standard-form/tests/`. The plain value types it
+uses stay in `src/semantics/` (`CadenceType`, `SubphraseRole`); this
+framework gives them their conventions.
 
 ## Scope
 
@@ -76,7 +76,7 @@ framework gives it its conventions.
 The suggested listening process for phrase-level forms (its tables are
 encoded as the beginning and ending classifiers), other signals of closure
 besides the cadence, and the harmonic start of a presentation. `analysis/` does
-not use these rules yet (`period_detection`). Phrase expansion and contraction
+not use these rules yet. Phrase expansion and contraction
 are rules over caller-supplied lengths only: detecting them in real music
 arrives with the form adapter (L3.6).
 
@@ -90,7 +90,7 @@ arrives with the form adapter (L3.6).
 
 ## Vocabulary enums
 
-Owned here (moved from `src/semantics/`; type names and values unchanged), each in its own header: `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `ContinuationTrait`, `PhraseLevelForm`, `PhraseLengthChange`, `ExpansionPlacement`, `InternalExpansionTechnique`, `ExternalExpansionKind`. `FormLevel` and `SubphraseRole` stay in `src/semantics/` because `src/containers` uses them; `CadenceType` stays because it is shared.
+Owned here (moved from `src/semantics/`; type names and values unchanged), each in its own header: `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `ContinuationTrait`, `PhraseLevelForm`, `PhraseLengthChange`, `ExpansionPlacement`, `InternalExpansionTechnique`, `ExternalExpansionKind`. `SubphraseRole` stays in `src/semantics/` because the Composer's grow check uses it; `CadenceType` stays because it is shared. `FormLevel` was deleted (P55): nothing read it.
 
 Two of them look a value up by name, false with the output untouched for an unknown name or NULL: `phrase_beginning_from_name` and `phrase_ending_from_name`.
 
