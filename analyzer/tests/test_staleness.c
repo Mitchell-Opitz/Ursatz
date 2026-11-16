@@ -83,7 +83,7 @@ static AnalyzerDocumentStatus status_of_variant(const char *snapshot, int schema
 
 int main(void) {
     const char *analyzer = ursatz_analyzer_version();
-    const char *commit = ursatz_analyzer_ursatz_commit();
+    const char *commit = ursatz_analyzer_producer_key();
     const int schema = URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION;
 
     CHECK(analyzer_document_status_of(schema, analyzer, commit) == ANALYZER_DOCUMENT_CURRENT, "all keys match");
