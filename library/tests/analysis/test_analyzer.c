@@ -63,7 +63,7 @@ static AnalyzerResult mock_analyze(const void *input, const Context *context, co
     assert(value_create("directed-semitones", &claim_content, sizeof(claim_content), &claim) == VALUE_OK);
 
     Uncertainty *uncertainty;
-    assert(uncertainty_create_unknown(&uncertainty) == UNCERTAINTY_OK);
+    assert(uncertainty_create_scalar_confidence(1, 1, &uncertainty) == UNCERTAINTY_OK);
 
     ProvenanceReference *interpretation_provenance;
     assert(provenance_reference_create_absent(&interpretation_provenance) == PROVENANCE_REFERENCE_OK);
@@ -137,7 +137,6 @@ int main(void) {
     assert(analysis_result_interpretation_count(result) == 1);
     const Interpretation *interpretation = analysis_result_interpretation_at(result, 0);
     assert(strcmp(entity_id_value(interpretation_target_id(interpretation)), "note-event-mock-1") == 0);
-    assert(interpretation_status(interpretation) == INTERPRETATION_STATUS_MACHINE_GENERATED);
     size_t claim_size;
     const long *claim_content = (const long *)value_content(interpretation_claim(interpretation), &claim_size);
     assert(claim_size == sizeof(long));

@@ -74,10 +74,8 @@ int main(void) {
 
     /* Coexistence: both competing Interpretations point at the same
        target and both remain independently accessible with their own
-       distinct claim/status. */
+       distinct claim. */
     assert(entity_id_equals(interpretation_target_id(interpretation_a), interpretation_target_id(interpretation_b)));
-    assert(interpretation_status(interpretation_a) == INTERPRETATION_STATUS_PROPOSED);
-    assert(interpretation_status(interpretation_b) == INTERPRETATION_STATUS_DISPUTED);
 
     size_t claim_a_size;
     const void *claim_a_content = value_content(interpretation_claim(interpretation_a), &claim_a_size);

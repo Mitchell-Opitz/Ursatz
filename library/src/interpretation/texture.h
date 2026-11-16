@@ -54,14 +54,4 @@ void texture_destroy(Texture *texture);
 const Interpretation *texture_interpretation(const Texture *texture);
 const char *texture_label(const Texture *texture);
 
-/*
- * Ownership-transferring unwrap: destroys only the Texture shell (its
- * owned label) and hands back the embedded Interpretation with ownership
- * transferred to the caller (the caller must eventually
- * interpretation_destroy it). Use this when a caller needs the
- * Interpretation on its own, e.g. to place it into an AnalysisResult
- * (analysis/analyzer.h). texture must be non-NULL.
- */
-Interpretation *texture_take_interpretation(Texture *texture);
-
 #endif

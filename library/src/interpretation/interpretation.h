@@ -29,8 +29,7 @@
  * resolution to an actual Framework happens only at L7+.
  *
  * target is an opaque EntityID reference to the object being
- * interpreted -- referenced, never embedded, the same pattern as
- * Assertion/Observation's subject. Interpretations MUST NOT mutate the
+ * interpreted -- referenced, never embedded. Interpretations MUST NOT mutate the
  * canonical objects they claim about (Law 8): this type holds only an
  * EntityID for target and exposes no accessor that resolves it to a
  * mutable object, let alone a mutator reaching into NoteEvent/Sonority/
@@ -57,8 +56,7 @@
  * uncertainty is a required Uncertainty (interpretation/uncertainty.h).
  *
  * author/method are opaque identifier strings for now (ProvenanceAgent
- * does not exist yet -- same placeholder treatment as Assertion's
- * agent field, interpretation/assertion.h).
+ * does not exist yet).
  *
  * status is TDD §88's status vocabulary.
  *
@@ -116,12 +114,9 @@ const EntityID *interpretation_id(const Interpretation *interpretation);
 const EntityID *interpretation_target_id(const Interpretation *interpretation);
 const Value *interpretation_claim(const Interpretation *interpretation);
 const EntityID *interpretation_context_id(const Interpretation *interpretation);
-const EntityID *interpretation_evidence_id(const Interpretation *interpretation);
 const FrameworkReference *interpretation_framework_reference(const Interpretation *interpretation);
 const Uncertainty *interpretation_uncertainty(const Interpretation *interpretation);
 const char *interpretation_author(const Interpretation *interpretation);
 const char *interpretation_method(const Interpretation *interpretation);
-InterpretationStatus interpretation_status(const Interpretation *interpretation);
-const ProvenanceReference *interpretation_provenance(const Interpretation *interpretation);
 
 #endif

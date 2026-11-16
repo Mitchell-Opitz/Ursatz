@@ -54,10 +54,3 @@ const Interpretation *texture_interpretation(const Texture *texture) {
 const char *texture_label(const Texture *texture) {
     return texture->label;
 }
-
-Interpretation *texture_take_interpretation(Texture *texture) {
-    Interpretation *interpretation = texture->interpretation;
-    free(texture->label);
-    free(texture);
-    return interpretation;
-}

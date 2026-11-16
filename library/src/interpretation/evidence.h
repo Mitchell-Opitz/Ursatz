@@ -11,16 +11,15 @@
  *
  * Fields per TDD §104: strength, relevance, reliability, independence,
  * method, source. These MUST NOT collapse to a single scalar "evidence
- * score" -- each is its own field, independently settable and
- * independently queryable. strength/relevance/reliability are each
+ * score" -- each is its own field, independently settable. strength/relevance/reliability are each
  * represented as exact rational fractions in [0, 1]
  * (numerator/denominator), never float/double (Law 19), the same
  * representation Uncertainty (interpretation/uncertainty.h) uses for
  * its confidence values.
  *
- * Evidence is distinguishable from the Interpretation/Hypothesis it
+ * Evidence is distinguishable from the Interpretation it
  * supports: it is its own object with its own identity (EntityID),
- * referenced by id from those types (see Relationship's evidence_id,
+ * referenced by id from that type (see Relationship's evidence_id,
  * relationship/relationship.h), never embedded/duplicated into them.
  */
 
@@ -48,20 +47,5 @@ EvidenceResult evidence_create(EntityID *id, unsigned long strength_numerator, u
                                 unsigned long reliability_numerator, unsigned long reliability_denominator,
                                 bool independence, const char *method, const char *source, Evidence **out);
 void evidence_destroy(Evidence *evidence);
-
-const EntityID *evidence_id(const Evidence *evidence);
-
-unsigned long evidence_strength_numerator(const Evidence *evidence);
-unsigned long evidence_strength_denominator(const Evidence *evidence);
-
-unsigned long evidence_relevance_numerator(const Evidence *evidence);
-unsigned long evidence_relevance_denominator(const Evidence *evidence);
-
-unsigned long evidence_reliability_numerator(const Evidence *evidence);
-unsigned long evidence_reliability_denominator(const Evidence *evidence);
-
-bool evidence_independence(const Evidence *evidence);
-const char *evidence_method(const Evidence *evidence);
-const char *evidence_source(const Evidence *evidence);
 
 #endif

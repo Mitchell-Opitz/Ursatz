@@ -40,7 +40,6 @@ static void test_fields(void) {
                   "framework-demo") == 0);
     assert(strcmp(interpretation_author(interpretation), "demo-v1") == 0);
     assert(strcmp(interpretation_method(interpretation), "demo-method") == 0);
-    assert(interpretation_status(interpretation) == INTERPRETATION_STATUS_MACHINE_GENERATED);
     interpretation_destroy(interpretation);
 }
 

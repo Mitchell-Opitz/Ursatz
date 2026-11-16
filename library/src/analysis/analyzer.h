@@ -26,9 +26,8 @@
  * objects to live once analyze() returns.
  *
  * interpretations and evidences are independent arrays (an
- * Interpretation may cite an Evidence by id, interpretation_evidence_id,
- * but nothing here forces a 1:1 count between the two -- an
- * Interpretation may cite no Evidence, or multiple Interpretations may
+ * Interpretation may cite an Evidence by id, but nothing
+ * here forces a 1:1 count between the two -- an Interpretation may cite no Evidence, or multiple Interpretations may
  * cite the same Evidence). Both may be empty (count == 0, pass NULL for
  * the corresponding array): an analyzer that found nothing still
  * returns a valid, empty AnalysisResult, not an error.

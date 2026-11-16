@@ -105,9 +105,6 @@ add_library(ursatz
     relationship/predicate_definition.c
     interpretation/uncertainty.c
     interpretation/evidence.c
-    interpretation/assertion.c
-    interpretation/observation.c
-    interpretation/hypothesis.c
     interpretation/interpretation.c
     interpretation/claim_interpretation.c
     interpretation/chord.c

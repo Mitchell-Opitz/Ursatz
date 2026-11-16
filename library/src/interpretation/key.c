@@ -75,13 +75,6 @@ const char *key_label(const Key *key) {
     return key->label;
 }
 
-Interpretation *key_take_interpretation(Key *key) {
-    Interpretation *interpretation = key->interpretation;
-    free(key->label);
-    free(key);
-    return interpretation;
-}
-
 bool key_structure(const Key *key, KeyStructure *out) {
     if (!key->has_structure) {
         return false;

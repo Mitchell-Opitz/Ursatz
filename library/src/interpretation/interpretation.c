@@ -111,10 +111,6 @@ const EntityID *interpretation_context_id(const Interpretation *interpretation) 
     return interpretation->context_id;
 }
 
-const EntityID *interpretation_evidence_id(const Interpretation *interpretation) {
-    return interpretation->evidence_id;
-}
-
 const FrameworkReference *interpretation_framework_reference(const Interpretation *interpretation) {
     return interpretation->framework_reference;
 }
@@ -129,12 +125,4 @@ const char *interpretation_author(const Interpretation *interpretation) {
 
 const char *interpretation_method(const Interpretation *interpretation) {
     return interpretation->method;
-}
-
-InterpretationStatus interpretation_status(const Interpretation *interpretation) {
-    return interpretation->status;
-}
-
-const ProvenanceReference *interpretation_provenance(const Interpretation *interpretation) {
-    return interpretation->provenance;
 }

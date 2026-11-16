@@ -32,7 +32,7 @@ static Interpretation *make_interpretation(const char *id_value, const char *cla
     Value *claim;
     assert(value_create("CandidateClaim", claim_content, strlen(claim_content) + 1, &claim) == VALUE_OK);
     Uncertainty *uncertainty;
-    assert(uncertainty_create_unknown(&uncertainty) == UNCERTAINTY_OK);
+    assert(uncertainty_create_scalar_confidence(1, 1, &uncertainty) == UNCERTAINTY_OK);
     Interpretation *interpretation;
     assert(interpretation_create(make_id(id_value), make_id("target-mock"), claim, NULL, NULL, NULL, uncertainty,
                                   "mock-evaluator", "mock-method", INTERPRETATION_STATUS_MACHINE_GENERATED,
