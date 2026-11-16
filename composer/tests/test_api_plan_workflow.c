@@ -536,7 +536,7 @@ static void test_refusals(void) {
     /* A plan that is an analysis of the Analyzer is not a plan. */
     request = cJSON_CreateObject();
     assert(request && cJSON_AddItemToObject(request, "plan", load_json(FIXTURE("analysis_small.json"))));
-    expect_refused(composer_api_fill, request, COMPOSER_ERR_UNSATISFIABLE, "/plan", "plan_from_analyzer_result");
+    expect_refused(composer_api_fill, request, COMPOSER_ERR_UNSATISFIABLE, "/plan", "analysis document");
     request = plan_request(plan_path);
     assert(cJSON_AddStringToObject(request, "seed", "x"));
     expect_refused(composer_api_fill, request, COMPOSER_ERR_REQUEST, "/seed", "seed must be a whole number from 0 to 4294967295");

@@ -2309,7 +2309,8 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
 }
 
 /*
- * Version 2 records metadata.analyzer_version only for a plan loaded from an Analyzer result. A version 1 file wrote the
+ * Version 2 records metadata.analyzer_version only for a plan that carries one (an earlier Composer loaded it from an
+ * Analyzer result). A version 1 file wrote the
  * Composer's own version under that key (B-A-10), so it says nothing about an analysis and is ignored.
  */
 static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *plan) {
