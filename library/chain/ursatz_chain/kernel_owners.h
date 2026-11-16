@@ -12,7 +12,7 @@
 
 /*
  * The callbacks that put the kernel owners (R-243) behind the frameworks: the chain, which may include L8, hands them to the weighted
- * chord identifier, the melody stage and the motive stage (AnalysisChainConfig.inject_kernel_owners).
+ * chord identifier, the melody stage and the motive stage (always injected unless the caller set its own).
  *
  *   non-chord tones   motive_tone_roles (analysis/motive_tone_roles.h) as a NonChordToneClassifier
  *   motive relations  motive_variant_recognize (analysis/motive_variant_recognition.h) as a StandardFormRelationMatchFn

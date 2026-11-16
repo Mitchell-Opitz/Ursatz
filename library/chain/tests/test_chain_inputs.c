@@ -195,9 +195,11 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(count == segments->count && lines != NULL && chords != NULL && romans != NULL);
 
     /* the segment lines: one entry per chord segment, the voice segment sounding at its start (here the chord segments merge: 4 over 14) */
-    const OuterVoiceLines *segment_lines = analysis_chain_segment_outer_voices(chain);
     const ChainSegments *voice_segments = analysis_chain_voice_segments(chain);
-    assert(analysis_chain_segment_outer_voices(NULL) == NULL);
+    OuterVoiceLines built_lines;
+    memset(&built_lines, 0, sizeof(built_lines));
+    assert(chain_build_segment_lines(voice_segments, lines, segments, count, &built_lines) == CHAIN_INPUT_OK);
+    const OuterVoiceLines *segment_lines = &built_lines;
     assert(segment_lines != NULL && segment_lines->count == count && lines->count == voice_segments->count && lines->count > count);
     for (size_t i = 0; i < count; i++) {
         size_t v = 0;
@@ -208,6 +210,7 @@ static void test_stage_inputs(TestPiece *piece) {
         assert(strcmp(entity_id_value(segment_lines->soprano[i].note_id), entity_id_value(lines->soprano[v].note_id)) == 0);
         assert(strcmp(entity_id_value(segment_lines->bass[i].note_id), entity_id_value(lines->bass[v].note_id)) == 0);
     }
+    outer_voice_lines_destroy(&built_lines);
 
     /* harmony and cadences */
     ChainHarmonyInputs harmony;

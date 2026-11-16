@@ -16,7 +16,7 @@
  * default the library's, with the file's key signature events and C major as the home key. The readings are
  * tests/fixtures/annotations/{clementi36,mozart545}_key_regions.txt and *_v1_expected.txt.
  *
- * Asserted for Clementi 36: the key regions are exactly C major 1-7, G major 8-15, C minor 16-23 and C major 24-38; the grid units, the
+ * Asserted for Clementi 36: the key regions are exactly C major 1-7, G major 8-15, C minor 16-23 and C major 24-38; the
  * cadences claimed and the period of measures 1 to 8 are those test_reference_phrases asserts.
  * Asserted for Mozart 545:
  *   - the key regions begin C major 1-12, G major 13-28, C major 29-40, G major 41-56; the key is G minor at measures 57 and 102, F major
@@ -238,17 +238,7 @@ static void check_clementi(void) {
     check_region(regions, 2, "Clementi", 16, 23, 0, COMMON_PRACTICE_KEY_MINOR);
     check_region(regions, 3, "Clementi", 24, 38, 0, COMMON_PRACTICE_KEY_MAJOR);
 
-    /* the grid, cadences and period of test_reference_phrases, unchanged */
-    const StandardFormPhraseGrid *grid = analysis_chain_phrase_grid(chain);
-    assert(grid != NULL);
-    static const int UNITS[5][3] = {{1, 8, 0}, {8, 15, 1}, {16, 23, 0}, {24, 31, 0}, {32, 38, 0}};
-    CHECK(grid->count == 5, "Clementi: %zu grid units, expected 5", grid->count);
-    for (size_t i = 0; i < grid->count && i < 5; i++) {
-        CHECK(grid->units[i].first_measure == UNITS[i][0] && grid->units[i].last_measure == UNITS[i][1] &&
-                  grid->units[i].elided == (UNITS[i][2] == 1),
-              "Clementi: grid unit %zu is %d-%d, expected %d-%d", i, grid->units[i].first_measure, grid->units[i].last_measure, UNITS[i][0],
-              UNITS[i][1]);
-    }
+    /* the cadences and period of test_reference_phrases, unchanged */
     Claimed claimed[MAX_CADENCES];
     size_t count = claimed_of(chain, p.set.map, claimed);
     CHECK(count == 4, "Clementi: %zu cadences claimed, expected 4", count);

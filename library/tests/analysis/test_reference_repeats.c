@@ -11,13 +11,12 @@
 #include "../key_index_test_util.h"
 
 /*
- * The repeats and returns the chain finds, and the grid that follows them (R-400). The chain is analysis_chain_run to the form stage,
+ * The repeats and returns the chain finds (R-400). The chain is analysis_chain_run to the form stage,
  * every default the library's, with the file's key signature events and C major as the home key.
  *
  * Asserted for Clementi 36: the returns are measures 1-4 to 24-27 (-12 semitones) and 8-12 to 31-35 (-7), no repeat.
  * Asserted for Mozart 545:
  *   - the repeats are measures 1-28 to 29-56 and 57-101 to 102-146, the return is 1-8 to 70-77 (+5);
- *   - the grid units of the second development are 101-108 (elided), 108-115 (elided), 115-122 (elided), 123-130 and 131-146;
  *   - its cadences and phrases in measures 102 to 146 are those of measures 57 to 101 moved by 45.
  * URSATZ_CORPUS_DIR comes from CMake.
  */
@@ -129,27 +128,6 @@ static void check_mozart(void) {
     CHECK(has_item(repeats, STANDARD_FORM_REPEAT, 1, 28, 29, 56, 0), "Mozart: repeat 1-28 to 29-56 missing");
     CHECK(has_item(repeats, STANDARD_FORM_REPEAT, 57, 101, 102, 146, 0), "Mozart: repeat 57-101 to 102-146 missing");
     CHECK(has_item(repeats, STANDARD_FORM_RETURN, 1, 8, 70, 77, 5), "Mozart: return 1-8 to 70-77 (+5) missing");
-
-    const StandardFormPhraseGrid *grid = analysis_chain_phrase_grid(chain);
-    assert(grid != NULL);
-    static const int UNITS[5][3] = {{101, 108, 1}, {108, 115, 1}, {115, 122, 1}, {123, 130, 0}, {131, 146, 0}};
-    size_t first = grid->count;
-    for (size_t i = 0; i < grid->count; i++) {
-        if (grid->units[i].last_measure == 108 && grid->units[i].first_measure == 101) {
-            first = i;
-        }
-    }
-    printf("  grid units:");
-    for (size_t i = 0; i < grid->count; i++) {
-        printf(" %d-%d%s", grid->units[i].first_measure, grid->units[i].last_measure, grid->units[i].elided ? "e" : "");
-    }
-    printf("\n");
-    CHECK(first + 5 == grid->count, "Mozart: the grid does not end with the five units of the second development");
-    for (size_t k = 0; first + k < grid->count && k < 5; k++) {
-        const StandardFormGridUnit *u = &grid->units[first + k];
-        CHECK(u->first_measure == UNITS[k][0] && u->last_measure == UNITS[k][1] && u->elided == (UNITS[k][2] == 1),
-              "Mozart: development unit %zu is %d-%d, expected %d-%d", k, u->first_measure, u->last_measure, UNITS[k][0], UNITS[k][1]);
-    }
 
     /* The cadences of 102 to 146 are those of 57 to 101 moved by 45. */
     const ChainSegments *segments = analysis_chain_segments(chain);

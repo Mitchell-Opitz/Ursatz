@@ -17,7 +17,6 @@
  * (both pieces are in C major).
  *
  * Asserted for Clementi 36:
- *   - the phrase grid units are 1-8, 8-15 (elided: it starts on the last measure of the unit before), 16-23, 24-31 and 32-38;
  *   - the cadences claimed are exactly a half cadence at measure 4 beat 1, an imperfect authentic cadence at measure 8 beat 1, a half
  *     cadence at measure 23 beat 1 with the perfect authentic reading as its alternative at measure 24 beat 1, and a half cadence at
  *     measure 27 beat 1;
@@ -152,22 +151,6 @@ static void check_clementi(void) {
     AnalysisChain *chain = run_chain(&CLEMENTI, &p, &key_events);
 
     printf("%s, phrases first\n", CLEMENTI.name);
-    const StandardFormPhraseGrid *grid = analysis_chain_phrase_grid(chain);
-    assert(grid != NULL);
-    static const int UNITS[5][3] = {{1, 8, 0}, {8, 15, 1}, {16, 23, 0}, {24, 31, 0}, {32, 38, 0}};
-    printf("  grid units:");
-    for (size_t i = 0; i < grid->count; i++) {
-        printf(" %d-%d%s", grid->units[i].first_measure, grid->units[i].last_measure, grid->units[i].elided ? " (elided)" : "");
-    }
-    printf("\n");
-    CHECK(grid->count == 5, "Clementi: %zu grid units, expected 5", grid->count);
-    for (size_t i = 0; i < grid->count && i < 5; i++) {
-        CHECK(grid->units[i].first_measure == UNITS[i][0] && grid->units[i].last_measure == UNITS[i][1] &&
-                  grid->units[i].elided == (UNITS[i][2] == 1),
-              "Clementi: grid unit %zu is %d-%d, expected %d-%d", i, grid->units[i].first_measure, grid->units[i].last_measure, UNITS[i][0],
-              UNITS[i][1]);
-    }
-
     Claimed claimed[MAX_CADENCES];
     size_t count = claimed_of(chain, p.set.map, claimed);
     printf("  cadences claimed:");
