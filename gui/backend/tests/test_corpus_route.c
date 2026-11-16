@@ -2,8 +2,7 @@
  * paths): create with a description, list order, read, rename, delete, bulk
  * add, removal, the cleanup when a piece is deleted, persistence across a
  * restart, and the one-time import of the old data/corpus.db. Uses a plain
- * TCP socket for the HTTP requests, same as test_health_route.c and
- * test_analyzer_route.c. Runs in its own working directory (collections/,
+ * TCP socket for the HTTP requests, same as test_analyzer_route.c. Runs in its own working directory (collections/,
  * pieces/ and data/ are created there). */
 
 #include <civetweb.h>

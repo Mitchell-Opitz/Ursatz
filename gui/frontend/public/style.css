@@ -190,18 +190,6 @@ body {
   font-size: 16px;
 }
 
-.health-status {
-  color: var(--text-dim);
-}
-
-.health-status.ok {
-  color: var(--accent);
-}
-
-.health-status.error {
-  color: #f87171;
-}
-
 .piece-list-status {
   color: var(--text-dim);
   margin-bottom: 8px;

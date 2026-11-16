@@ -2,8 +2,7 @@
  * the source and the Analyzer's analysis document under pieces/<id>/, and
  * the list, detail, rename, delete and MusicXML routes read that store back.
  * The stored document is compared with what the Analyzer CLI writes for the
- * same file. Uses a plain TCP socket for the HTTP requests, same as
- * test_health_route.c. */
+ * same file. Uses a plain TCP socket for the HTTP requests. */
 
 #include <civetweb.h>
 #include <math.h>

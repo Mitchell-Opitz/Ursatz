@@ -4,7 +4,6 @@ add_library(ursatz_gui_core STATIC
   src/util/fs_util.c
   src/util/json_util.c
   src/routes/route_util.c
-  src/service/persistence_service.c
   src/service/analysis_service.c
   src/service/import_cache.c
   src/service/piece_metadata.c
@@ -24,7 +23,6 @@ add_library(ursatz_gui_core STATIC
   src/service/playback_service.c
   src/service/subject_service.c
   src/service/link_service.c
-  src/routes/health.c
   src/routes/analyzer.c
   src/routes/corpus.c
   src/routes/composer.c

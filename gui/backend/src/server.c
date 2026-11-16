@@ -5,7 +5,6 @@
 #include "routes/analyzer.h"
 #include "routes/composer.h"
 #include "routes/corpus.h"
-#include "routes/health.h"
 #include "routes/jobs.h"
 #include "routes/links.h"
 #include "routes/materials.h"
@@ -87,7 +86,6 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
 
   /* Route registration: each tool module registers itself here. This is
    * the only place that wires tool routes into the running server. */
-  ursatz_gui_health_register(ctx);
   ursatz_gui_analyzer_register(ctx);
   ursatz_gui_corpus_register(ctx);
   ursatz_gui_composer_register(ctx);

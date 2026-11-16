@@ -8,8 +8,8 @@
 /*
  * Shared analysis service: import, analyze and store a piece.
  *
- * This is the ONLY place outside persistence_service.c and
- * collection_service.c allowed to call into Ursatz or the Analyzer. Every
+ * This is the ONLY place outside collection_service.c allowed to call
+ * into Ursatz or the Analyzer. Every
  * analysis goes through the Analyzer library (input_pipeline_import_file,
  * run_analysis_pipeline, analysis_document_build); the GUI keeps no
  * analysis code of its own (R-084).

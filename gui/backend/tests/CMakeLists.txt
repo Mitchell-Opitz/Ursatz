@@ -6,7 +6,6 @@ function(ursatz_gui_add_test name source workdir)
   add_test(NAME ${name} COMMAND test_${name} WORKING_DIRECTORY ${workdir})
 endfunction()
 
-ursatz_gui_add_test(health_route test_health_route.c ${CMAKE_CURRENT_BINARY_DIR}/health_route)
 
 ursatz_gui_add_test(analyzer_route test_analyzer_route.c ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 # Slow: about 363 s in a -j4 run (R-307).
