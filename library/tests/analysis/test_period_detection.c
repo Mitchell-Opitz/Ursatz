@@ -83,10 +83,6 @@ int main(void) {
     PeriodDetectionInput no_rank_input = {NULL, 0, NULL};
     assert(period_detection_analyze(&no_rank_input, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
     assert(untouched == (AnalysisResult *)0x1);
-    Relationship **no_rank_relationships = (Relationship **)0x1;
-    size_t no_rank_count = 7;
-    assert(period_detection_build_relationships(NULL, 0, NULL, &no_rank_relationships, &no_rank_count) ==
-           PERIOD_DETECTION_REL_ERR_NULL_RANK);
 
     /* Behavioral contract: 0 or 1 entries is valid and empty (no consecutive pair). */
     PeriodDetectionInput empty_input = {NULL, 0, test_rank};
@@ -94,13 +90,6 @@ int main(void) {
     assert(period_detection_analyze(&empty_input, NULL, NULL, &empty_result) == ANALYZER_OK);
     assert(analysis_result_interpretation_count(empty_result) == 0);
     analysis_result_destroy(empty_result);
-
-    Relationship **empty_relationships;
-    size_t empty_relationship_count;
-    assert(period_detection_build_relationships(NULL, 0, test_rank, &empty_relationships, &empty_relationship_count) ==
-           PERIOD_DETECTION_REL_OK);
-    assert(empty_relationships == NULL);
-    assert(empty_relationship_count == 0);
 
     PhraseOccurrence *phrase0 = make_phrase_occurrence("phrase-occ-0", "phrase-0", "note-0");
     PeriodDetectionEntry single_entry[1] = {{phrase0, CADENCE_TYPE_HALF}};
@@ -149,19 +138,6 @@ int main(void) {
     assert(strcmp(interpretation_author(interpretation), "PeriodDetection") == 0);
 
     analysis_result_destroy(result);
-
-    /* period_detection_build_relationships mirrors the same single pair, with matching id. */
-    Relationship **relationships;
-    size_t relationship_count;
-    assert(period_detection_build_relationships(entries, 4, test_rank, &relationships, &relationship_count) ==
-           PERIOD_DETECTION_REL_OK);
-    assert(relationship_count == 1);
-    assert(strcmp(entity_id_value(relationship_id(relationships[0])), "relationship-period-phrase-occ-0-phrase-occ-1") ==
-           0);
-    assert(strcmp(entity_id_value(relationship_source_id(relationships[0])), "phrase-occ-0") == 0);
-    assert(strcmp(relationship_predicate_name(relationships[0]), "precedes") == 0);
-    assert(strcmp(entity_id_value(relationship_target_id(relationships[0])), "phrase-occ-1") == 0);
-    period_detection_destroy_relationships(relationships, relationship_count);
 
     /* Plagal pairs like any ranked cadence: HC -> plagal is a period; plagal -> HC and a
        subverted or unknown cadence on either side are not. */

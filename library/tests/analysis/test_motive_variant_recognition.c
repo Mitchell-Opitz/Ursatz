@@ -105,8 +105,7 @@ static MotiveRecognition recover_one(const MotiveSketch *source, MotiveRelationS
     MotiveSketch target;
     MotiveRelationResult result = motive_relation_apply(source, &relation, &target);
     if (result != MOTIVE_RELATION_OK) {
-        fprintf(stderr, "%s refused: %s\n", motive_relation_name(relation.kind),
-                motive_relation_result_name(result));
+        fprintf(stderr, "%s refused: result %d\n", motive_relation_name(relation.kind), (int)result);
     }
     assert(result == MOTIVE_RELATION_OK);
     MotiveRecognition found = recognize(source, &target);

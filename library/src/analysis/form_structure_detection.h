@@ -64,44 +64,6 @@ typedef struct {
     CadenceType cadence_type; /* CADENCE_TYPE_UNKNOWN: no reliable cadence for this phrase */
 } FormStructureDetectionEntry;
 
-typedef struct {
-    const FormStructureDetectionEntry *entries;
-    size_t entry_count;
-} FormStructureDetectionInput;
-
-#define FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE 128
-
-typedef struct {
-    char earlier_section_id[FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE];
-    char later_section_id[FORM_STRUCTURE_DETECTION_ID_BUFFER_SIZE];
-    CadenceType earlier_section_closing_cadence_type;
-} FormStructureDetectionClaim;
-
-/*
- * Conforms to AnalyzerFn (analysis/analyzer.h): input MUST point to a
- * FormStructureDetectionInput; context and config are accepted per the
- * interface but unused. Every entry's phrase_occurrence MUST be
- * non-NULL. entry_count == 0, or an input with no structural cadence
- * among entries[0..entry_count-2], is valid and yields an empty
- * AnalysisResult (no Section boundary found -- requirement 4).
- *
- * On finding N >= 2 Sections (N - 1 >= 1 "precedes" links), produces
- * N - 1 Interpretations, one per consecutive Section pair, in
- * chronological order. AnalysisResult here holds only the
- * Interpretations (and their backing absent-provenance) -- neither the
- * Section nor Relationship objects themselves are owned by
- * AnalysisResult (it only ever holds Interpretation/Evidence, per
- * analysis/analyzer.h); callers wanting those objects use
- * form_structure_detection_build_sections /
- * form_structure_detection_build_relationships below instead/in
- * addition. Ids are deterministically derived from the same
- * PhraseOccurrence ids those calls use, so a caller running all three
- * against the same input gets matching ids without this call
- * constructing the Section/Relationship objects itself.
- */
-AnalyzerResult form_structure_detection_analyze(const void *input, const Context *context, const Value *config,
-                                                 AnalysisResult **out);
-
 typedef enum {
     FORM_STRUCTURE_DETECTION_OK = 0,
     FORM_STRUCTURE_DETECTION_ERR_NULL_ENTRIES,

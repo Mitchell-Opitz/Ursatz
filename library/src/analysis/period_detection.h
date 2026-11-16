@@ -110,34 +110,4 @@ typedef struct {
 AnalyzerResult period_detection_analyze(const void *input, const Context *context, const Value *config,
                                          AnalysisResult **out);
 
-typedef enum {
-    PERIOD_DETECTION_REL_OK = 0,
-    PERIOD_DETECTION_REL_ERR_NULL_ENTRIES,
-    PERIOD_DETECTION_REL_ERR_NULL_ENTRY,
-    PERIOD_DETECTION_REL_ERR_NULL_RANK,
-    PERIOD_DETECTION_REL_ERR_ALLOC
-} PeriodDetectionRelationshipResult;
-
-/*
- * Builds the Relationship objects backing period_detection_analyze's
- * Interpretations, using the identical pairing rule. entries/entry_count/rank
- * validation matches period_detection_analyze. entry_count < 2 is valid
- * and yields *out_relationships = NULL, *out_relationship_count = 0.
- *
- * On success, *out_relationships is a freshly allocated array (caller
- * frees with period_detection_destroy_relationships) of Relationship
- * pointers, one per identified pair, in input order -- the same
- * ids period_detection_analyze's Interpretations reference as their
- * target (source_id/target_id are the PhraseOccurrences' own ids,
- * predicate_name "precedes").
- */
-PeriodDetectionRelationshipResult period_detection_build_relationships(const PeriodDetectionEntry *entries,
-                                                                         size_t entry_count,
-                                                                         PeriodDetectionRankFn rank,
-                                                                         Relationship ***out_relationships,
-                                                                         size_t *out_relationship_count);
-
-/* Destroys each Relationship in relationships and the array itself. */
-void period_detection_destroy_relationships(Relationship **relationships, size_t relationship_count);
-
 #endif

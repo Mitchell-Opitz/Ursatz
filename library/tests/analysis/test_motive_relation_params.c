@@ -91,7 +91,7 @@ static void test_every_parameter(void) {
         MotiveRelationParamInfo info;
         for (size_t i = 0; i < count; i++) {
             assert(motive_relation_param_info(kind, i, &info));
-            assert(info.name != NULL && strcmp(info.name, motive_relation_param_name(kind, i)) == 0);
+            assert(info.name != NULL);
             assert(info.description != NULL && info.description[0] != '\0');
             assert(info.min <= info.max);
             assert((int)info.kind >= MOTIVE_RELATION_PARAM_INT && info.kind <= MOTIVE_RELATION_PARAM_CHOICE);

@@ -189,7 +189,7 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
     }
     Relationship **rels = NULL;
     size_t rel_count = 0;
-    assert(thematic_return_detection_build_relationships(entries, entry_count, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(entries, entry_count, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     for (size_t r = 0; r < rel_count; r++) {
         assert(strcmp(relationship_predicate_name(rels[r]), "resembles") == 0);
     }
@@ -317,7 +317,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
     }
     Relationship **rels = NULL;
     size_t rel_count = 0;
-    assert(thematic_return_detection_build_relationships(entries, windows, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(entries, windows, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     printf("  PR #37 regression: %zu sliding three-note windows, %zu pairs of them share contour and rhythm, %zu reported as returns\n",
            windows, same_shape, rel_count);
     assert(same_shape >= 20);
@@ -357,7 +357,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
     EntityID *e1 = fv1_id("bach-first-strain");
     EntityID *e2 = fv1_id("bach-first-strain-repeat");
     ThematicReturnDetectionEntry pair[2] = {{e1, &w1}, {e2, &w2}};
-    assert(thematic_return_detection_build_relationships(pair, 2, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(pair, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     printf("  PR #37 regression: the first strain (%zu notes) and its written-out repeat: %zu \"resembles\" link(s)\n", length, rel_count);
     assert(rel_count == 1);
     assert(strcmp(entity_id_value(relationship_source_id(rels[0])), "bach-first-strain-repeat") == 0);
@@ -377,7 +377,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
     EntityID *eo = fv1_id("bach-opening-idea");
     EntityID *el = fv1_id("bach-second-strain");
     ThematicReturnDetectionEntry partial[2] = {{eo, &wo}, {el, &wl}};
-    assert(thematic_return_detection_build_relationships(partial, 2, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    assert(thematic_return_detection_build_relationships_configured(partial, 2, NULL, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
     printf("  partial return: the opening idea (%zu notes) inside the repeat (%zu notes): %zu \"resembles\" link(s)", opening, n - second_start,
            rel_count);
     assert(rel_count == 1);

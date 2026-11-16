@@ -96,8 +96,7 @@ static void assert_note(const MotiveSketch *sketch, size_t index, int pitch, Rat
 /* --- the catalog ------------------------------------------------------------------------------ */
 
 static void test_catalog(void) {
-    assert(motive_relation_count() == MOTIVE_RELATION_KIND_COUNT);
-    for (size_t i = 0; i < motive_relation_count(); i++) {
+    for (size_t i = 0; i < MOTIVE_RELATION_KIND_COUNT; i++) {
         const char *name = motive_relation_name((MotiveRelationKind)i);
         assert(name != NULL);
         MotiveRelationKind found;
@@ -122,15 +121,15 @@ static void test_catalog(void) {
     assert(strcmp(motive_relation_name(MOTIVE_RELATION_INTERVAL_CHANGE), "interval-change") == 0);
     assert(motive_relation_param_count(MOTIVE_RELATION_TRANSPOSE) == 3);
     assert(motive_relation_param_count(MOTIVE_RELATION_RETROGRADE) == 0);
-    assert(strcmp(motive_relation_result_name(MOTIVE_RELATION_NO_SCALE), "no scale") == 0);
 
     assert(strcmp(motive_relation_name(MOTIVE_RELATION_REDUCE_TO_FRAME), "reduce-to-frame") == 0);
     assert(strcmp(motive_relation_name(MOTIVE_RELATION_ADD_NON_CHORD_TONE), "add-non-chord-tone") == 0);
     assert(strcmp(motive_relation_name(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE), "remove-non-chord-tone") == 0);
     assert(strcmp(motive_relation_name(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE), "change-non-chord-tone") == 0);
     assert(strcmp(motive_relation_name(MOTIVE_RELATION_REHARMONIZE_FRAME), "reharmonize-frame") == 0);
-    assert(strcmp(motive_relation_param_name(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1), "type") == 0);
-    assert(strcmp(motive_relation_param_name(MOTIVE_RELATION_REHARMONIZE_FRAME, 0), "degree") == 0);
+    MotiveRelationParamInfo info;
+    assert(motive_relation_param_info(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, &info) && strcmp(info.name, "type") == 0);
+    assert(motive_relation_param_info(MOTIVE_RELATION_REHARMONIZE_FRAME, 0, &info) && strcmp(info.name, "degree") == 0);
     assert(motive_relation_cost(MOTIVE_RELATION_REDUCE_TO_FRAME) == 2);
 
     char text[80];

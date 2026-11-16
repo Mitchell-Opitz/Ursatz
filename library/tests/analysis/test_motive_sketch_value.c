@@ -10,7 +10,7 @@
 /*
  * MotiveSketch as the one motive value: validate, equal and fingerprint over the form, key source, tonic spelling and
  * tone overrides; three fingerprints pinned from before those fields existed; the tone overrides carried through
- * motive_tone_roles_of; bar, offset in bar and on-beat with and without a pickup.
+ * motive_tone_roles with its own overrides; bar, offset in bar and on-beat with and without a pickup.
  */
 
 static Rational q(unsigned long long n, unsigned long long d) {
@@ -195,7 +195,7 @@ static void test_tone_roles_of(void) {
 
     /* No overrides: the same as the plain call. */
     assert(motive_tone_roles(&sketch, NULL, 0, plain) == MOTIVE_TONE_OK);
-    assert(motive_tone_roles_of(&sketch, own) == MOTIVE_TONE_OK);
+    assert(motive_tone_roles(&sketch, sketch.tone_overrides, sketch.tone_override_count, own) == MOTIVE_TONE_OK);
     assert(labels_equal(plain, own, 4));
     assert(plain[1].role == MOTIVE_TONE_NON_CHORD && plain[1].type == NON_CHORD_TONE_PASSING);
 
@@ -203,7 +203,7 @@ static void test_tone_roles_of(void) {
     sketch.tone_overrides[0] = (MotiveToneOverride){1, MOTIVE_TONE_NON_CHORD, NON_CHORD_TONE_NEIGHBOR};
     sketch.tone_overrides[1] = (MotiveToneOverride){3, MOTIVE_TONE_UNCLASSIFIED, NON_CHORD_TONE_PASSING};
     sketch.tone_override_count = 2;
-    assert(motive_tone_roles_of(&sketch, own) == MOTIVE_TONE_OK);
+    assert(motive_tone_roles(&sketch, sketch.tone_overrides, sketch.tone_override_count, own) == MOTIVE_TONE_OK);
     assert(motive_tone_roles(&sketch, sketch.tone_overrides, 2, given) == MOTIVE_TONE_OK);
     assert(labels_equal(given, own, 4));
     assert(own[1].overridden && own[1].type == NON_CHORD_TONE_NEIGHBOR);
@@ -211,14 +211,12 @@ static void test_tone_roles_of(void) {
     assert(!own[0].overridden && !own[2].overridden);
 
     /* Refusals. */
-    assert(motive_tone_roles_of(NULL, own) == MOTIVE_TONE_INVALID);
+    assert(motive_tone_roles(NULL, NULL, 0, own) == MOTIVE_TONE_INVALID);
     sketch.tone_overrides[1].note = 9;
-    assert(motive_tone_roles_of(&sketch, own) == MOTIVE_TONE_BAD_OVERRIDE);
-    sketch.tone_override_count = MOTIVE_SKETCH_MAX_NOTES + 1;
-    assert(motive_tone_roles_of(&sketch, own) == MOTIVE_TONE_BAD_OVERRIDE);
+    assert(motive_tone_roles(&sketch, sketch.tone_overrides, sketch.tone_override_count, own) == MOTIVE_TONE_BAD_OVERRIDE);
     sketch.tone_override_count = 0;
     sketch.has_scale = false;
-    assert(motive_tone_roles_of(&sketch, own) == MOTIVE_TONE_NO_SCALE);
+    assert(motive_tone_roles(&sketch, sketch.tone_overrides, sketch.tone_override_count, own) == MOTIVE_TONE_NO_SCALE);
 }
 
 static void test_bars_without_pickup(void) {

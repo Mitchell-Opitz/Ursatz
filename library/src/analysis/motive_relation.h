@@ -141,7 +141,6 @@ typedef enum {
 MotiveRelationResult motive_relation_apply(const MotiveSketch *in, const MotiveRelationStep *step,
                                            MotiveSketch *out);
 
-size_t motive_relation_count(void);
 /* The registry name: "transpose", "interval-change". NULL for a kind out of range. */
 const char *motive_relation_name(MotiveRelationKind kind);
 /* False for a name that is not a relation. */
@@ -154,14 +153,6 @@ size_t motive_relation_param_count(MotiveRelationKind kind);
 bool motive_relation_harmony_changes_notes(const MotiveSketch *in, const MotiveRelationStep *step);
 /* The fixed cost of a step (R-142): exact 0; transpose, augment, diminish 1; change-meter 3; every other 2. */
 int motive_relation_cost(MotiveRelationKind kind);
-/* "ok", "not applicable" and so on. */
-const char *motive_relation_result_name(MotiveRelationResult result);
-
-/*
- * The name of a kind's parameter at index (0-based, below motive_relation_param_count), as the header comment
- * above names it: "tonal", "by", "ratio". NULL when the kind or the index is out of range.
- */
-const char *motive_relation_param_name(MotiveRelationKind kind, size_t index);
 
 typedef enum {
     MOTIVE_RELATION_PARAM_INT,
