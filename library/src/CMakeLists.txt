@@ -102,7 +102,6 @@ add_library(ursatz
     semantics/analysis_note.c
     semantics/analysis_key.c
     relationship/relationship.c
-    relationship/predicate_definition.c
     interpretation/uncertainty.c
     interpretation/evidence.c
     interpretation/interpretation.c

@@ -39,15 +39,9 @@ int main(void) {
     assert(entity_id_equals(relationship_source_id(relationship), source_id));
     assert(entity_id_equals(relationship_target_id(relationship), target_id));
 
-    /* Optional reference fields left unset stay NULL, not defaulted. */
-    assert(relationship_context_id(relationship) == NULL);
-    assert(relationship_evidence_id(relationship) == NULL);
+    /* Optional fields left unset stay NULL, not defaulted. */
     assert(relationship_scope(relationship) == NULL);
     assert(relationship_qualifiers(relationship) == NULL);
-    assert(relationship_uncertainty(relationship) == NULL);
-
-    assert(relationship_provenance(relationship) != NULL);
-    assert(provenance_reference_state(relationship_provenance(relationship)) == PROVENANCE_REFERENCE_ABSENT);
 
     relationship_destroy(relationship);
 

@@ -100,22 +100,6 @@ const Value *relationship_scope(const Relationship *relationship) {
     return relationship->scope;
 }
 
-const EntityID *relationship_context_id(const Relationship *relationship) {
-    return relationship->context_id;
-}
-
 const Value *relationship_qualifiers(const Relationship *relationship) {
     return relationship->qualifiers;
-}
-
-const EntityID *relationship_evidence_id(const Relationship *relationship) {
-    return relationship->evidence_id;
-}
-
-const Value *relationship_uncertainty(const Relationship *relationship) {
-    return relationship->uncertainty;
-}
-
-const ProvenanceReference *relationship_provenance(const Relationship *relationship) {
-    return relationship->provenance;
 }
