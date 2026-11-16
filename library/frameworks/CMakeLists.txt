@@ -1,7 +1,6 @@
 add_subdirectory(common-practice-minimal)
 add_subdirectory(standard-tonality)
 add_subdirectory(standard-markings)
-add_subdirectory(standard-rhythm)
 add_subdirectory(standard-meter)
 add_subdirectory(standard-form)
 add_subdirectory(standard-texture)
