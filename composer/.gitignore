@@ -1,1 +1,4 @@
 build/
+# Test outputs some tests write in their working directory: never committed.
+/api_*.json
+/plan_written_*
