@@ -11,6 +11,9 @@ extern "C" {
 /* The Analyzer's version, from project(). */
 const char *ursatz_analyzer_version(void);
 
+/* The producer key of this build: a hash of the sources that produce an analysis. */
+const char *ursatz_analyzer_producer_key(void);
+
 /* The commit of the Ursatz submodule the Analyzer was configured against, or "unknown". */
 const char *ursatz_analyzer_ursatz_commit(void);
 
