@@ -28,8 +28,7 @@
     X(standard_meter_framework)                                                                                        \
     X(standard_texture_framework)                                                                                      \
     X(standard_tonality_framework)                                                                                     \
-    X(standard_voicing_framework)                                                                                      \
-    X(western_periods_framework)
+    X(standard_voicing_framework)
 
 #define RULES(X)                                                                                                       \
     X(common_practice_triad_rule)                                                                                      \
@@ -42,8 +41,7 @@
     X(standard_meter_anacrusis_rule)                                                                                   \
     X(standard_texture_mixed_rule)                                                                                     \
     X(standard_tonality_chord_symbol_rule)                                                                             \
-    X(standard_voicing_doubling_rule)                                                                                  \
-    X(western_periods_rule)
+    X(standard_voicing_doubling_rule)
 
 #define DECLARE_FRAMEWORK(name) const Framework *name(void);
 #define DECLARE_RULE(name) const Rule *name(int which);

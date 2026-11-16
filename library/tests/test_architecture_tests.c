@@ -31,10 +31,9 @@ static const ModuleLayer KERNEL_MODULES[] = {
 };
 
 static const char *const FRAMEWORKS[] = {
-    "common-practice-minimal", "galant-schemas", "scale-harmonization",
-    "standard-counterpoint", "standard-form", "standard-harmony", "standard-markings",
-    "standard-meter", "standard-texture", "standard-tonality",
-    "standard-voicing", "western-periods",
+    "common-practice-minimal", "galant-schemas", "scale-harmonization", "standard-counterpoint", "standard-form",
+    "standard-harmony", "standard-markings", "standard-meter", "standard-texture", "standard-tonality",
+    "standard-voicing",
 };
 
 typedef struct {

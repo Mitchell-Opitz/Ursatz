@@ -105,10 +105,9 @@ add_test(NAME framework_v1_thematic_returns COMMAND test_framework_v1_thematic_r
 # Eight threads make the first call of every framework accessor and one rule accessor per framework together (core/once.h).
 # Under helgrind where valgrind is installed (memcheck as well), else plain.
 add_executable(test_concurrent_first_use test_concurrent_first_use.c)
-target_link_libraries(test_concurrent_first_use PRIVATE common_practice_minimal galant_schemas
-                       scale_harmonization standard_counterpoint standard_form
-                      standard_harmony standard_markings standard_meter
-                      standard_texture standard_tonality standard_voicing western_periods)
+target_link_libraries(test_concurrent_first_use PRIVATE common_practice_minimal galant_schemas scale_harmonization
+                      standard_counterpoint standard_form standard_harmony standard_markings standard_meter
+                      standard_texture standard_tonality standard_voicing)
 add_test(NAME concurrent_first_use COMMAND test_concurrent_first_use)
 find_program(URSATZ_INTEGRATION_VALGRIND valgrind)
 if(URSATZ_INTEGRATION_VALGRIND)
