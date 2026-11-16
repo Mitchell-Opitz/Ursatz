@@ -34,19 +34,6 @@ static int musical_time_compare(const MusicalTime *a, const MusicalTime *b) {
     return 0;
 }
 
-bool sonority_builder_note_active_at(const NoteEvent *note, const MusicalTime *at) {
-    const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(note));
-
-    MusicalTime *release;
-    if (musical_time_add(onset, note_event_duration(note), &release) != MUSICAL_TIME_OK) {
-        return false;
-    }
-
-    bool active = musical_time_compare(at, onset) >= 0 && musical_time_compare(at, release) < 0;
-    musical_time_destroy(release);
-    return active;
-}
-
 static EntityID *clone_entity_id(const EntityID *id) {
     EntityID *clone;
     if (entity_id_create(entity_id_value(id), &clone) != ENTITY_ID_OK) {
@@ -59,7 +46,7 @@ static EntityID *clone_entity_id(const EntityID *id) {
  * True iff note's onset falls within the half-open beat window
  * [window_start, window_end) -- each note is sampled into exactly the
  * one beat it is struck in. A note that is still sounding (per
- * sonority_builder_note_active_at's onset-release interval) into a
+ * its onset-release interval) into a
  * LATER beat is deliberately not re-included in that later beat's
  * Sonority: in an arpeggiated texture a note's own duration commonly
  * exceeds one beat (e.g. a held bass tone under faster-moving upper

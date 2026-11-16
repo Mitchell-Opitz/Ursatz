@@ -343,7 +343,7 @@ static Score evaluate(const Annotation *a, const double *starts, const HarmonyCa
                 } else if (print) {
                     printf("  wrong type at ");
                     print_where(a, a->cadences[e].at);
-                    printf(": annotated %s, got %s\n", a->cadences[e].text, cadence_type_label(cadences->items[c].type));
+                    printf(": annotated %s, got %s\n", a->cadences[e].text, cadence_type_name(cadences->items[c].type));
                 }
                 break;
             }
@@ -363,7 +363,7 @@ static Score evaluate(const Annotation *a, const double *starts, const HarmonyCa
         if (!used[c]) {
             score.false_positives++;
             if (print) {
-                printf("  false positive %s at ", cadence_type_label(cadences->items[c].type));
+                printf("  false positive %s at ", cadence_type_name(cadences->items[c].type));
                 print_where(a, arrival);
                 printf("\n");
             }

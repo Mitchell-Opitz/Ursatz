@@ -23,8 +23,7 @@
  * SCOPE (System Registry, Problem A only): each NoteEvent is modeled as
  * active over the interval [onset, onset + duration) -- left-closed,
  * right-open, the same boundary treatment TIME_SPAN_BOUNDARY_LEFT_CLOSED
- * already uses elsewhere in this codebase (queryable via
- * sonority_builder_note_active_at below) -- and the grid this builder
+ * already uses elsewhere in this codebase) -- and the grid this builder
  * samples groups notes by ATTACK: each beat's Sonority is formed from
  * every note whose onset falls within that beat's half-open span [beat,
  * beat + 1/4) (fixed to a quarter note, MusicalTime 1/4, whole-note-
@@ -75,12 +74,6 @@ typedef enum {
     SONORITY_BUILDER_ERR_NULL_NOTE,
     SONORITY_BUILDER_ERR_ALLOC
 } SonorityBuilderResult;
-
-/*
- * True iff note is active (onset <= at < onset + duration) at the given
- * MusicalTime position. note and at must be non-NULL.
- */
-bool sonority_builder_note_active_at(const NoteEvent *note, const MusicalTime *at);
 
 /*
  * Builds one Sonority per non-empty fixed-beat-grid sample point covering
