@@ -75,11 +75,6 @@ size_t similarity_model_dimension_count(const SimilarityModel *model);
 int similarity_model_dimension_at(const SimilarityModel *model, size_t index, SimilarityDimension *out_dimension,
                                   unsigned long *out_weight_numerator, unsigned long *out_weight_denominator);
 
-/* Whether a dimension is declared, and (if so) its weight in lowest terms; 0 and untouched outputs otherwise. */
-int similarity_model_declares(const SimilarityModel *model, SimilarityDimension dimension);
-int similarity_model_weight(const SimilarityModel *model, SimilarityDimension dimension,
-                            unsigned long *out_numerator, unsigned long *out_denominator);
-
 /* The sum of all weights in lowest terms (0/1 for NULL); never zero for a model that exists. */
 void similarity_model_total_weight(const SimilarityModel *model, unsigned long *out_numerator,
                                    unsigned long *out_denominator);

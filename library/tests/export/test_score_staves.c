@@ -41,8 +41,8 @@ static void piece_free(Piece *piece) {
 }
 
 static void assign(const Piece *piece, const int *part_staff_count, size_t part_count, int *out) {
-    assert(score_staves_assign(piece->bag.events, piece->values, piece->bag.count, piece->bag.part, part_staff_count,
-                               part_count, out) == SCORE_STAVES_OK);
+    assert(score_staves_assign_hinted(piece->bag.events, piece->values, piece->bag.count, piece->bag.part,
+                                      part_staff_count, part_count, NULL, out) == SCORE_STAVES_OK);
 }
 
 static void test_program_table(void) {
@@ -347,17 +347,17 @@ static void test_bad_input(void) {
     piece_add(&piece, 0, 1, 1, 4, 60, 3);
     int staff[1];
     const int counts[1] = {2};
-    assert(score_staves_assign(piece.bag.events, piece.values, 1, piece.bag.part, counts, 1, staff) ==
+    assert(score_staves_assign_hinted(piece.bag.events, piece.values, 1, piece.bag.part, counts, 1, NULL, staff) ==
            SCORE_STAVES_ERR_INCONSISTENT_INPUT);
     const int bad_counts[1] = {3};
     piece.bag.part[0] = 0;
-    assert(score_staves_assign(piece.bag.events, piece.values, 1, piece.bag.part, bad_counts, 1, staff) ==
+    assert(score_staves_assign_hinted(piece.bag.events, piece.values, 1, piece.bag.part, bad_counts, 1, NULL, staff) ==
            SCORE_STAVES_ERR_INCONSISTENT_INPUT);
-    assert(score_staves_assign(piece.bag.events, piece.values, 1, piece.bag.part, counts, 1, NULL) ==
+    assert(score_staves_assign_hinted(piece.bag.events, piece.values, 1, piece.bag.part, counts, 1, NULL, NULL) ==
            SCORE_STAVES_ERR_NULL_ARG);
     pitch_numeric_value_destroy(piece.values[0]);
     piece.values[0] = NULL;
-    assert(score_staves_assign(piece.bag.events, piece.values, 1, piece.bag.part, counts, 1, staff) ==
+    assert(score_staves_assign_hinted(piece.bag.events, piece.values, 1, piece.bag.part, counts, 1, NULL, staff) ==
            SCORE_STAVES_ERR_INCONSISTENT_INPUT);
     piece_free(&piece);
 }

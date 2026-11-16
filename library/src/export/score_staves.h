@@ -76,9 +76,4 @@ ScoreStavesResult score_staves_assign_hinted(NoteEvent *const *events, PitchNume
                                              size_t count, const size_t *part_index, const int *part_staff_count,
                                              size_t part_count, const int *staff_hint, int *out_staff);
 
-/* score_staves_assign_hinted without hints. */
-ScoreStavesResult score_staves_assign(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                      const size_t *part_index, const int *part_staff_count, size_t part_count,
-                                      int *out_staff);
-
 #endif

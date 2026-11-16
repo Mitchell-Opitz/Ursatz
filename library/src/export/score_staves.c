@@ -228,13 +228,6 @@ static void assign_part(Item *items, size_t n, size_t *active, Rational reach) {
     }
 }
 
-ScoreStavesResult score_staves_assign(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                      const size_t *part_index, const int *part_staff_count, size_t part_count,
-                                      int *out_staff) {
-    return score_staves_assign_hinted(events, pitch_values, count, part_index, part_staff_count, part_count, NULL,
-                                      out_staff);
-}
-
 ScoreStavesResult score_staves_assign_hinted(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
                                              size_t count, const size_t *part_index, const int *part_staff_count,
                                              size_t part_count, const int *staff_hint, int *out_staff) {
