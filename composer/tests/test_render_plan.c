@@ -255,14 +255,12 @@ static void test_midi_round_trip(void) {
     assert(time_signature_bottom_number(signature) == 4);
 
     /* D minor: one flat, minor. */
-    MidiKeySignatureEvents keys = {NULL, 0};
-    assert(midi_key_signature_scan_all(data, size, &keys) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
-    assert(keys.count == 1);
-    assert(keys.events[0].sharps_flats == -1);
-    assert(keys.events[0].mode_hint == MIDI_MODE_HINT_MINOR);
-    assert(musical_time_numerator(keys.events[0].position) == 0);
+    const MidiKeySignatureEvents *keys = &import.key_signatures;
+    assert(keys->count == 1);
+    assert(keys->events[0].sharps_flats == -1);
+    assert(keys->events[0].mode_hint == MIDI_MODE_HINT_MINOR);
+    assert(musical_time_numerator(keys->events[0].position) == 0);
 
-    midi_key_signature_events_destroy(&keys);
     midi_import_destroy(&import);
     free(data);
     rendered_plan_destroy(&rendered);
@@ -397,17 +395,10 @@ static void test_division_is_exact(void) {
     assert(rendered_plan_midi_bytes(&rendered, NULL, &data, &size, NULL) == PLAN_EXPORT_OK);
     assert(size > 14 && data[12] == 0 && data[13] == 7);
 
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitches = NULL;
-    size_t count = 0;
-    assert(midi_importer_import(data, size, &events, &pitches, &count) == MIDI_IMPORT_OK);
-    assert_same_notes(&rendered, events, pitches, count, NULL, NULL);
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitches[i]);
-    }
-    free(events);
-    free(pitches);
+    MidiImport import;
+    assert(midi_importer_import_complete(data, size, &import) == MIDI_IMPORT_OK);
+    assert_same_notes(&rendered, import.events, import.pitch_values, import.count, NULL, NULL);
+    midi_import_destroy(&import);
     free(data);
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);

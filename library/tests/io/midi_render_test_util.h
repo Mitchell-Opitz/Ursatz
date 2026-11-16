@@ -355,7 +355,8 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
                                    const MidiKeySignatureEvent *keys, size_t key_count, unsigned division) {
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(events, pitches, count, meter_map, tempo_map, keys, key_count, division, &data, &size) ==
+    assert(midi_renderer_render_with_options(events, pitches, count, meter_map, tempo_map, keys, key_count, NULL,
+                                             division, &data, &size) ==
            MIDI_RENDER_OK);
 
     /* The file: format 1, this division, the conductor and one track per voice group. */
@@ -424,7 +425,7 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
     midi_tempo_import_destroy(&tempo);
 
     MidiKeySignatureEvents back_keys = {NULL, 0};
-    assert(midi_key_signature_scan_all(data, size, &back_keys) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(test_midi_import_key_signatures(data, size, &back_keys) == MIDI_IMPORT_OK);
     assert(back_keys.count == key_count);
     for (size_t i = 0; i < key_count; i++) {
         assert(musical_time_equals(back_keys.events[i].position, keys[i].position));

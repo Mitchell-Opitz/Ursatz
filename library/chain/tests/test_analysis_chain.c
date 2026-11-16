@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "identity/entity_id.h"
-#include "io/import_notes.h"
+#include "../../tests/import_notes_test_util.h"
 #include "io/midi_importer.h"
 #include "pitch/pitch_numeric_value.h"
 #include "time/meter_map.h"

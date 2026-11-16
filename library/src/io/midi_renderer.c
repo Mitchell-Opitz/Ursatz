@@ -528,14 +528,6 @@ static MidiRenderResult check_options(const MidiRenderOptions *options) {
     return MIDI_RENDER_OK;
 }
 
-MidiRenderResult midi_renderer_render(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                      const MeterMap *meter_map, const TempoMap *tempo_map,
-                                      const MidiKeySignatureEvent *key_signatures, size_t key_signature_count,
-                                      unsigned division, unsigned char **out_data, size_t *out_size) {
-    return midi_renderer_render_with_options(events, pitch_values, count, meter_map, tempo_map, key_signatures,
-                                             key_signature_count, NULL, division, out_data, out_size);
-}
-
 MidiRenderResult midi_renderer_render_with_options(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
                                                    size_t count, const MeterMap *meter_map, const TempoMap *tempo_map,
                                                    const MidiKeySignatureEvent *key_signatures,

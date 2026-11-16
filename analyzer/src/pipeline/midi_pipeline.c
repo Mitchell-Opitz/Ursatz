@@ -259,7 +259,7 @@ static void read_opening_tempo(const TempoMap *tempo_map, ImportedSource *source
     }
 }
 
-/* The first key signature of the file in track then byte order, as midi_key_signature_scan reports it. */
+/* The first key signature of the file in track then byte order (the mode byte decides minor). */
 static MidiKeySignature first_key_signature(const MidiKeySignatureEvents *events) {
     MidiKeySignature first = {false, 0, false};
     const MidiKeySignatureEvent *best = NULL;

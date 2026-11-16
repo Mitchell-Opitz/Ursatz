@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "io/import_notes.h"
+#include "../../tests/import_notes_test_util.h"
 #include "io/musicxml_importer.h"
 
 /*

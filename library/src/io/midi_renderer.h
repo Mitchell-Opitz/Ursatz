@@ -17,14 +17,14 @@
  *
  * INPUTS. All borrowed and never mutated.
  *   - events / pitch_values / count: count NoteEvents and, index-paired with them, the
- *     PitchNumericValue of each note's pitch -- the pairing midi_importer_import returns.
+ *     PitchNumericValue of each note's pitch -- the pairing a MidiImport holds (midi_importer_import_complete).
  *     The renderer needs no PitchSpelling. count may be 0 (events and pitch_values may
  *     then be NULL): the file is the conductor track alone.
  *   - meter_map, tempo_map: optional. With none supplied the file carries no time
  *     signature or tempo event, i.e. the SMF defaults (4/4, 120 quarter notes per
  *     minute) apply; the renderer never invents them.
  *   - key_signatures / key_signature_count: optional MidiKeySignatureEvents, the type
- *     midi_key_signature_scan_all returns (position, sf byte, mi byte). None supplied
+ *     a MidiImport's key_signatures holds (position, sf byte, mi byte). None supplied
  *     means no key signature event is written.
  *   - division: ticks per quarter note, 1 to 0x7FFF. SMPTE division is out of scope.
  *
@@ -74,7 +74,7 @@
  *
  * Track names and markers: midi_renderer_render_with_options writes a Sequence/Track Name (0xFF 0x03) at tick 0
  * of track 0 and of each named voice track, and markers (0xFF 0x06) in track 0 after the tempo, time signature and
- * key signature events of an equal tick. midi_renderer_render writes neither.
+ * key signature events of an equal tick. Without options it writes neither.
  */
 
 typedef enum {
@@ -130,15 +130,7 @@ typedef struct {
 
 /*
  * Renders to a newly allocated SMF buffer (see above). events and pitch_values are each
- * count entries, index-paired; no entry may be NULL.
- */
-MidiRenderResult midi_renderer_render(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
-                                      const MeterMap *meter_map, const TempoMap *tempo_map,
-                                      const MidiKeySignatureEvent *key_signatures, size_t key_signature_count,
-                                      unsigned division, unsigned char **out_data, size_t *out_size);
-
-/*
- * midi_renderer_render with options (NULL options: the same bytes as midi_renderer_render, which calls this).
+ * count entries, index-paired; no entry may be NULL. NULL options write no track names and no markers.
  */
 MidiRenderResult midi_renderer_render_with_options(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
                                                    size_t count, const MeterMap *meter_map, const TempoMap *tempo_map,

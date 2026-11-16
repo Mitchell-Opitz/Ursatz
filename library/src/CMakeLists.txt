@@ -157,7 +157,6 @@ add_library(ursatz
     io/smf_reader.c
     io/midi_renderer.c
     io/musicxml_importer.c
-    io/import_notes.c
     query/query_fraction.c
     query/similarity_model.c
     query/similarity_scoring.c
@@ -213,7 +212,6 @@ ursatz_public_headers(ursatz
         interpretation/scale_degree.h
         interpretation/texture.h
         interpretation/uncertainty.h
-        io/import_notes.h
         io/midi_importer.h
         io/midi_key_signature.h
         io/midi_renderer.h

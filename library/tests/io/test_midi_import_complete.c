@@ -1,5 +1,4 @@
 #include "io/midi_importer.h"
-#include "midi_import_split.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -21,8 +20,7 @@
  * Complete MIDI import: midi_importer_import_complete returns notes, meter, tempo, key signatures and the tracks
  * with their names and program changes from one parse. SMF files are built in code (a type 0 and a type 1 file, with
  * track names and program changes, which the renderer does not write for programs) and the five framework-v1-corpus
- * files are read from URSATZ_CORPUS_DIR. Every file is also imported through the three older entry points and
- * midi_key_signature_scan_all, and the results are compared part by part. Division is 480 ticks per quarter note.
+ * files are read from URSATZ_CORPUS_DIR. Division is 480 ticks per quarter note.
  */
 
 #define DIVISION 480
@@ -324,91 +322,10 @@ static void test_type1(void) {
     free(file.data);
 }
 
-static void assert_meters_equal(const MidiMeterImport *a, const MidiMeterImport *b) {
-    assert(meter_map_is_defaulted(a->meter_map) == meter_map_is_defaulted(b->meter_map));
-    assert(meter_map_region_count(a->meter_map) == meter_map_region_count(b->meter_map));
-    for (size_t i = 0; i < meter_map_region_count(a->meter_map); i++) {
-        const MeterMapRegion *left = meter_map_region(a->meter_map, i);
-        const MeterMapRegion *right = meter_map_region(b->meter_map, i);
-        assert(time_signature_equals(meter_map_region_time_signature(left), meter_map_region_time_signature(right)));
-        assert(musical_time_equals(meter_map_region_start(left), meter_map_region_start(right)));
-        assert(meter_map_region_is_pickup(left) == meter_map_region_is_pickup(right));
-    }
-    assert(musical_time_equals(a->end_time, b->end_time));
-    assert(a->conflict_count == b->conflict_count);
-    for (size_t i = 0; i < a->conflict_count; i++) {
-        assert(a->conflict_ticks[i] == b->conflict_ticks[i]);
-    }
-}
-
-static void assert_tempos_equal(const MidiTempoImport *a, const MidiTempoImport *b) {
-    assert(tempo_map_is_defaulted(a->tempo_map) == tempo_map_is_defaulted(b->tempo_map));
-    assert(tempo_map_region_count(a->tempo_map) == tempo_map_region_count(b->tempo_map));
-    for (size_t i = 0; i < tempo_map_region_count(a->tempo_map); i++) {
-        const TempoMapRegion *left = tempo_map_region(a->tempo_map, i);
-        const TempoMapRegion *right = tempo_map_region(b->tempo_map, i);
-        assert(tempo_map_region_microseconds_per_quarter(left) == tempo_map_region_microseconds_per_quarter(right));
-        assert(musical_time_equals(tempo_map_region_start(left), tempo_map_region_start(right)));
-    }
-    assert(a->conflict_count == b->conflict_count);
-    for (size_t i = 0; i < a->conflict_count; i++) {
-        assert(a->conflict_ticks[i] == b->conflict_ticks[i]);
-    }
-}
-
-static void assert_notes_equal(const MidiImport *import, NoteEvent **events, PitchNumericValue **pitch_values,
-                               size_t count) {
-    assert(import->count == count);
-    for (size_t i = 0; i < count; i++) {
-        assert(note_event_equals_by_value(import->events[i], events[i]));
-        assert(pitch_numeric_value_equals(import->pitch_values[i], pitch_values[i]));
-        const VoiceReference *left = note_event_optional_voice(import->events[i]);
-        const VoiceReference *right = note_event_optional_voice(events[i]);
-        assert((left == NULL) == (right == NULL));
-        if (left != NULL) {
-            assert(voice_reference_equals(left, right));
-        }
-    }
-}
-
-static void destroy_notes(NoteEvent **events, PitchNumericValue **pitch_values, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitch_values[i]);
-    }
-    free(events);
-    free(pitch_values);
-}
-
-/* The complete import equals what midi_importer_import and midi_key_signature_scan_all return. */
-static void assert_matches_old_entry_points(const File *file) {
+/* Every note maps to a real track, every track entry is in file order, and the key signatures are in time order. */
+static void assert_tracks_consistent(const File *file) {
     MidiImport import;
     assert(midi_importer_import_complete(file->data, file->size, &import) == MIDI_IMPORT_OK);
-
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitch_values = NULL;
-    size_t count = 0;
-    assert(midi_importer_import(file->data, file->size, &events, &pitch_values, &count) == MIDI_IMPORT_OK);
-    assert_notes_equal(&import, events, pitch_values, count);
-    destroy_notes(events, pitch_values, count);
-
-    MidiKeySignatureEvents keys = {NULL, 0};
-    assert(midi_key_signature_scan_all(file->data, file->size, &keys) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
-    assert(import.key_signatures.count == keys.count);
-    for (size_t i = 0; i < keys.count; i++) {
-        const MidiKeySignatureEvent *left = &import.key_signatures.events[i];
-        const MidiKeySignatureEvent *right = &keys.events[i];
-        assert(left->tick == right->tick);
-        assert(left->track_index == right->track_index);
-        assert(left->sharps_flats == right->sharps_flats);
-        assert(left->mode_byte == right->mode_byte);
-        assert(left->mode_hint == right->mode_hint);
-        assert(key_signature_equals(left->key_signature, right->key_signature));
-        assert(musical_time_equals(left->position, right->position));
-    }
-    midi_key_signature_events_destroy(&keys);
-
-    /* Every note maps to a real track, and every track entry is in file order. */
     for (size_t i = 0; i < import.count; i++) {
         assert(import.note_tracks[i] < import.track_count);
         assert(import.note_channels[i] < 16);
@@ -416,23 +333,25 @@ static void assert_matches_old_entry_points(const File *file) {
     for (size_t t = 0; t < import.track_count; t++) {
         assert(import.tracks[t].index == t);
     }
-
+    for (size_t i = 1; i < import.key_signatures.count; i++) {
+        assert(import.key_signatures.events[i - 1].tick <= import.key_signatures.events[i].tick);
+    }
     midi_import_destroy(&import);
 }
 
-static void test_equals_old_entry_points(void) {
+static void test_tracks_consistent(void) {
     File type0 = fixture_type0();
-    assert_matches_old_entry_points(&type0);
+    assert_tracks_consistent(&type0);
     free(type0.data);
 
     File type1 = fixture_type1();
-    assert_matches_old_entry_points(&type1);
+    assert_tracks_consistent(&type1);
     free(type1.data);
 
     const char *corpus[] = {"Bach 114.mid", "Clementi 36.mid", "Field 1.mid", "Field 5.mid", "Mozart 545.mid"};
     for (size_t i = 0; i < sizeof(corpus) / sizeof(corpus[0]); i++) {
         File file = read_corpus_file(corpus[i]);
-        assert_matches_old_entry_points(&file);
+        assert_tracks_consistent(&file);
         free(file.data);
     }
 }
@@ -447,19 +366,11 @@ static void test_failures(void) {
     MidiImportResult short_header = midi_importer_import_complete(file.data, 5, &import);
     assert(short_header == MIDI_IMPORT_ERR_TRUNCATED || short_header == MIDI_IMPORT_ERR_BAD_HEADER);
 
-    /* Every truncation of a valid file fails or imports cleanly and leaves nothing behind (valgrind checks it),
-       and the three older entry points give the same verdict as the complete import. */
+    /* Every truncation of a valid file fails or imports cleanly and leaves nothing behind (valgrind checks it). */
     for (size_t cut = 0; cut < file.size; cut += 3) {
         MidiImport cut_import;
-        MidiImportResult complete = midi_importer_import_complete(file.data, cut, &cut_import);
-        NoteEvent **events = NULL;
-        PitchNumericValue **pitch_values = NULL;
-        size_t count = 0;
-        MidiImportResult plain = midi_importer_import(file.data, cut, &events, &pitch_values, &count);
-        assert(complete == plain);
-        if (complete == MIDI_IMPORT_OK) {
+        if (midi_importer_import_complete(file.data, cut, &cut_import) == MIDI_IMPORT_OK) {
             midi_import_destroy(&cut_import);
-            destroy_notes(events, pitch_values, count);
         }
     }
 
@@ -515,11 +426,6 @@ static void test_destroy_after_partial_failure(void) {
     MidiImport before = sentinel;
     assert(midi_importer_import_complete(file.data, file.size, &sentinel) == MIDI_IMPORT_ERR_BAD_TRACK);
     assert(memcmp(&sentinel, &before, sizeof(sentinel)) == 0);
-
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitch_values = NULL;
-    size_t count = 0;
-    assert(midi_importer_import(file.data, file.size, &events, &pitch_values, &count) == MIDI_IMPORT_ERR_BAD_TRACK);
     free(file.data);
 
     /* The same file without the broken track imports. */
@@ -559,7 +465,7 @@ static void test_destroy_edges(void) {
 int main(void) {
     test_type0();
     test_type1();
-    test_equals_old_entry_points();
+    test_tracks_consistent();
     test_failures();
     test_destroy_after_partial_failure();
     test_destroy_edges();

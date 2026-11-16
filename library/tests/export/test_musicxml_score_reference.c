@@ -109,7 +109,7 @@ static void round_trip_piece(const char *name, const char *expected_beats) {
     first.tempo_map = tempo.tempo_map;
 
     MidiKeySignatureEvents keys = {NULL, 0};
-    assert(midi_key_signature_scan_all(data, size, &keys) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(test_midi_import_key_signatures(data, size, &keys) == MIDI_IMPORT_OK);
     first.key_signatures = (MusicXmlKeySignatureEvent *)calloc(keys.count > 0 ? keys.count : 1,
                                                                sizeof(MusicXmlKeySignatureEvent));
     assert(first.key_signatures != NULL);

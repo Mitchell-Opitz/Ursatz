@@ -6,6 +6,7 @@
 
 #include "export/musicxml_export.h"
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 #include "io/musicxml_importer.h"
 #include "core/rational.h"
 #include "time/time_rational.h"
@@ -83,7 +84,7 @@ static void roundtrip(const char *file, bool exact) {
     NoteEvent **events = NULL;
     PitchNumericValue **values = NULL;
     size_t count = 0;
-    assert(midi_importer_import(data, size, &events, &values, &count) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, size, &events, &values, &count, NULL, NULL) == MIDI_IMPORT_OK);
     free(data);
     assert(count > 0);
 

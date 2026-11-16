@@ -10,7 +10,7 @@
 /*
  * Export: a plan as a MIDI file or a MusicXML file. The Composer writes neither
  * format itself. It renders the plan (render.h) and hands the NoteEvents,
- * meter and key signatures to Ursatz's MIDI renderer (midi_renderer_render)
+ * meter and key signatures to Ursatz's MIDI renderer (midi_renderer_render_with_options)
  * and MusicXML exporter (musicxml_export_write_score) and returns the bytes; the caller writes the file.
  *
  * MIDI: one track per part, at 480 ticks per quarter when every time lands on a

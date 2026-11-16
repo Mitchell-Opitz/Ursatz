@@ -11,7 +11,8 @@ static void assert_bytes(const unsigned char *data, size_t size, const unsigned 
 static void test_empty_file(void) {
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(NULL, NULL, 0, NULL, NULL, NULL, 0, 480, &data, &size) == MIDI_RENDER_OK);
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 480, &data,
+                                             &size) == MIDI_RENDER_OK);
     static const unsigned char expected[] = {'M',  'T',  'h',  'd',  0x00, 0x00, 0x00, 0x06, 0x00, 0x01, 0x00, 0x01, 0x01,
                                              0xE0, 'M',  'T',  'r',  'k',  0x00, 0x00, 0x00, 0x04, 0x00, 0xFF, 0x2F, 0x00};
     assert_bytes(data, size, expected, sizeof(expected));
@@ -21,10 +22,12 @@ static void test_empty_file(void) {
 static void test_division_is_written(void) {
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(NULL, NULL, 0, NULL, NULL, NULL, 0, 96, &data, &size) == MIDI_RENDER_OK);
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, 96, &data,
+                                             &size) == MIDI_RENDER_OK);
     assert(size == 26 && data[12] == 0x00 && data[13] == 0x60);
     free(data);
-    assert(midi_renderer_render(NULL, NULL, 0, NULL, NULL, NULL, 0, MIDI_RENDER_MAX_DIVISION, &data, &size) ==
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, NULL, 0, NULL, MIDI_RENDER_MAX_DIVISION, &data,
+                                             &size) ==
            MIDI_RENDER_OK);
     assert(data[12] == 0x7F && data[13] == 0xFF);
     free(data);
@@ -47,7 +50,8 @@ static void test_conductor_track(void) {
 
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(midi_renderer_render(NULL, NULL, 0, meter_map, tempo_map, keys, 2, 480, &data, &size) == MIDI_RENDER_OK);
+    assert(midi_renderer_render_with_options(NULL, NULL, 0, meter_map, tempo_map, keys, 2, NULL, 480, &data,
+                                             &size) == MIDI_RENDER_OK);
     static const unsigned char expected[] = {
         'M',  'T',  'h',  'd',  0x00, 0x00, 0x00, 0x06, 0x00, 0x01, 0x00, 0x01, 0x01, 0xE0, 'M',  'T',  'r',
         'k',  0x00, 0x00, 0x00, 0x30,

@@ -47,7 +47,7 @@
  * a power of two are skipped.
  *
  * Keys. Each <key> gives a key-signature event {KeySignature, mode hint, position}, the same entry shape as
- * midi_key_signature_scan_all: <fifths> is the sharps/flats count (-7..7), <mode> major or minor gives the
+ * the key_signatures of a MidiImport: <fifths> is the sharps/flats count (-7..7), <mode> major or minor gives the
  * hint, and any other mode (dorian ...) or none is UNKNOWN, as it makes no claim the signature does not. Events
  * that repeat exactly (same position, fifths and mode, in other staves or parts) are kept once, on the lowest
  * part.

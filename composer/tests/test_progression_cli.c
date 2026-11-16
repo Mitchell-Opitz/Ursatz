@@ -250,7 +250,7 @@ static void test_midi_and_musicxml(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitches = NULL;
     size_t count = 0;
-    assert(data && midi_importer_import(data, size, &events, &pitches, &count) == MIDI_IMPORT_OK);
+    assert(data && test_midi_import_notes(data, size, &events, &pitches, &count) == MIDI_IMPORT_OK);
     assert(count == notes);
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);

@@ -224,7 +224,7 @@ static void test_plain(const RenderedPlan *rendered) {
         assert(tracks[i].name_count == 0 && tracks[i].marker_count == 0);
     }
 
-    /* Ursatz's renderer with no options, the old export. */
+    /* Ursatz's renderer with no options writes the same bytes. */
     MidiKeySignatureEvent *keys = calloc(rendered->key_count ? rendered->key_count : 1, sizeof(*keys));
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
@@ -234,8 +234,9 @@ static void test_plain(const RenderedPlan *rendered) {
     }
     unsigned char *old = NULL;
     size_t old_size = 0;
-    assert(midi_renderer_render(rendered->events, rendered->pitch_values, rendered->count, rendered->meter_map, NULL,
-                                keys, rendered->key_count, DIVISION, &old, &old_size) == MIDI_RENDER_OK);
+    assert(midi_renderer_render_with_options(rendered->events, rendered->pitch_values, rendered->count,
+                                             rendered->meter_map, NULL, keys, rendered->key_count, NULL, DIVISION, &old,
+                                             &old_size) == MIDI_RENDER_OK);
     assert(old_size == size && memcmp(old, data, size) == 0);
     free(keys);
     free(old);

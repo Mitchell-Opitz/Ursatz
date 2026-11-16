@@ -4,12 +4,30 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
- * midi_event_decoder tests: note-on/note-off extraction (including
- * velocity-0-as-note-off and running status), non-note events skipped
- * without error, and clean failure on truncated/malformed bytes.
+ * midi_event_decoder tests, through midi_event_decoder_scan (the one pass the complete MIDI import is built on):
+ * note-on/note-off extraction (including velocity-0-as-note-off and running status), non-note events skipped
+ * without error, time signature and set-tempo events merged across tracks, and clean failure on truncated/malformed
+ * bytes.
  */
+
+/* One-track scan: moves the track's notes out (free them with free) and destroys the rest. */
+static MidiEventDecoderResult decode_notes(const unsigned char *track_data, size_t track_size,
+                                           MidiNoteEvent **out_events, size_t *out_count) {
+    SmfTrack tracks[1] = {{track_data, track_size}};
+    MidiFileScan scan;
+    MidiEventDecoderResult result = midi_event_decoder_scan(tracks, 1, NULL, &scan);
+    if (result != MIDI_EVENT_DECODER_OK) {
+        return result;
+    }
+    *out_events = scan.tracks[0].notes;
+    *out_count = scan.tracks[0].note_count;
+    scan.tracks[0].notes = NULL;
+    midi_file_scan_destroy(&scan);
+    return MIDI_EVENT_DECODER_OK;
+}
 
 static void test_decodes_note_on_and_off(void) {
     unsigned char track[] = {
@@ -19,7 +37,7 @@ static void test_decodes_note_on_and_off(void) {
 
     MidiNoteEvent *events = NULL;
     size_t count = 0;
-    MidiEventDecoderResult r = midi_event_decoder_decode(track, sizeof(track), &events, &count);
+    MidiEventDecoderResult r = decode_notes(track, sizeof(track), &events, &count);
 
     assert(r == MIDI_EVENT_DECODER_OK);
     assert(count == 2);
@@ -42,7 +60,7 @@ static void test_note_on_velocity_zero_is_note_off(void) {
 
     MidiNoteEvent *events = NULL;
     size_t count = 0;
-    MidiEventDecoderResult r = midi_event_decoder_decode(track, sizeof(track), &events, &count);
+    MidiEventDecoderResult r = decode_notes(track, sizeof(track), &events, &count);
 
     assert(r == MIDI_EVENT_DECODER_OK);
     assert(count == 2);
@@ -61,7 +79,7 @@ static void test_running_status_reuses_previous_status_byte(void) {
 
     MidiNoteEvent *events = NULL;
     size_t count = 0;
-    MidiEventDecoderResult r = midi_event_decoder_decode(track, sizeof(track), &events, &count);
+    MidiEventDecoderResult r = decode_notes(track, sizeof(track), &events, &count);
 
     assert(r == MIDI_EVENT_DECODER_OK);
     assert(count == 3);
@@ -83,7 +101,7 @@ static void test_skips_non_note_events_without_error(void) {
 
     MidiNoteEvent *events = NULL;
     size_t count = 0;
-    MidiEventDecoderResult r = midi_event_decoder_decode(track, sizeof(track), &events, &count);
+    MidiEventDecoderResult r = decode_notes(track, sizeof(track), &events, &count);
 
     assert(r == MIDI_EVENT_DECODER_OK);
     assert(count == 1);
@@ -98,16 +116,15 @@ static void test_rejects_truncated_track(void) {
 
     MidiNoteEvent *events = NULL;
     size_t count = 0;
-    MidiEventDecoderResult r = midi_event_decoder_decode(track, sizeof(track), &events, &count);
+    MidiEventDecoderResult r = decode_notes(track, sizeof(track), &events, &count);
 
     assert(r == MIDI_EVENT_DECODER_ERR_TRUNCATED);
 }
 
 static void test_rejects_null_track(void) {
-    MidiNoteEvent *events = NULL;
-    size_t count = 0;
-    MidiEventDecoderResult r = midi_event_decoder_decode(NULL, 0, &events, &count);
-    assert(r == MIDI_EVENT_DECODER_ERR_NULL_TRACK);
+    MidiFileScan scan;
+    assert(midi_event_decoder_scan(NULL, 1, NULL, &scan) == MIDI_EVENT_DECODER_ERR_NULL_TRACK);
+    assert(midi_event_decoder_scan(NULL, 0, NULL, NULL) == MIDI_EVENT_DECODER_ERR_NULL_TRACK);
 }
 
 /* --- time signature meta-events (0xFF 0x58) --- */
@@ -115,7 +132,15 @@ static void test_rejects_null_track(void) {
 static MidiEventDecoderResult collect(const unsigned char *a, size_t a_size, const unsigned char *b, size_t b_size,
                                       MidiTimeSignatureEvents *out) {
     SmfTrack tracks[2] = {{a, a_size}, {b, b_size}};
-    return midi_event_decoder_collect_time_signatures(tracks, b == NULL ? 1 : 2, out);
+    MidiFileScan scan;
+    MidiEventDecoderResult result = midi_event_decoder_scan(tracks, b == NULL ? 1 : 2, NULL, &scan);
+    if (result != MIDI_EVENT_DECODER_OK) {
+        return result;
+    }
+    *out = scan.time_signatures;
+    memset(&scan.time_signatures, 0, sizeof(scan.time_signatures));
+    midi_file_scan_destroy(&scan);
+    return MIDI_EVENT_DECODER_OK;
 }
 
 static void test_collects_time_signature(void) {
@@ -198,16 +223,15 @@ static void test_note_decode_ignores_time_signatures(void) {
     unsigned char track[] = {0x00, 0xFF, 0x58, 0x04, 0x03, 0x02, 0x18, 0x08, 0x00, 0x90, 0x3C, 0x64};
     MidiNoteEvent *events = NULL;
     size_t count = 0;
-    assert(midi_event_decoder_decode(track, sizeof(track), &events, &count) == MIDI_EVENT_DECODER_OK);
+    assert(decode_notes(track, sizeof(track), &events, &count) == MIDI_EVENT_DECODER_OK);
     assert(count == 1);
     free(events);
 }
 
-static void test_collect_rejects_truncated_track_and_null(void) {
+static void test_collect_rejects_truncated_track(void) {
     unsigned char track[] = {0x00, 0xFF, 0x58, 0x04, 0x03};
     MidiTimeSignatureEvents events = {0};
     assert(collect(track, sizeof(track), NULL, 0, &events) == MIDI_EVENT_DECODER_ERR_TRUNCATED);
-    assert(midi_event_decoder_collect_time_signatures(NULL, 0, NULL) == MIDI_EVENT_DECODER_ERR_NULL_TRACK);
 }
 
 /* --- set-tempo meta-events (0xFF 0x51) --- */
@@ -215,7 +239,15 @@ static void test_collect_rejects_truncated_track_and_null(void) {
 static MidiEventDecoderResult collect_tempos(const unsigned char *a, size_t a_size, const unsigned char *b,
                                              size_t b_size, MidiTempoEvents *out) {
     SmfTrack tracks[2] = {{a, a_size}, {b, b_size}};
-    return midi_event_decoder_collect_tempos(tracks, b == NULL ? 1 : 2, out);
+    MidiFileScan scan;
+    MidiEventDecoderResult result = midi_event_decoder_scan(tracks, b == NULL ? 1 : 2, NULL, &scan);
+    if (result != MIDI_EVENT_DECODER_OK) {
+        return result;
+    }
+    *out = scan.tempos;
+    memset(&scan.tempos, 0, sizeof(scan.tempos));
+    midi_file_scan_destroy(&scan);
+    return MIDI_EVENT_DECODER_OK;
 }
 
 static void test_collects_tempos(void) {
@@ -297,18 +329,17 @@ static void test_no_tempos_is_ok_and_empty(void) {
     midi_tempo_events_destroy(&events);
 }
 
-static void test_tempo_collect_rejects_truncated_track_and_null(void) {
+static void test_tempo_collect_rejects_truncated_track(void) {
     unsigned char track[] = {0x00, 0xFF, 0x51, 0x03, 0x07};
     MidiTempoEvents events = {0};
     assert(collect_tempos(track, sizeof(track), NULL, 0, &events) == MIDI_EVENT_DECODER_ERR_TRUNCATED);
-    assert(midi_event_decoder_collect_tempos(NULL, 0, NULL) == MIDI_EVENT_DECODER_ERR_NULL_TRACK);
 }
 
 static void test_note_decode_ignores_tempos(void) {
     unsigned char track[] = {0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20, 0x00, 0x90, 0x3C, 0x64};
     MidiNoteEvent *events = NULL;
     size_t count = 0;
-    assert(midi_event_decoder_decode(track, sizeof(track), &events, &count) == MIDI_EVENT_DECODER_OK);
+    assert(decode_notes(track, sizeof(track), &events, &count) == MIDI_EVENT_DECODER_OK);
     assert(count == 1);
     free(events);
 }
@@ -327,7 +358,7 @@ int main(void) {
     test_skips_malformed_time_signatures();
     test_no_time_signatures_is_ok_and_empty();
     test_note_decode_ignores_time_signatures();
-    test_collect_rejects_truncated_track_and_null();
+    test_collect_rejects_truncated_track();
     test_collects_tempos();
     test_collects_tempo_from_a_non_first_track_in_time_order();
     test_merges_exact_duplicate_tempos();
@@ -335,7 +366,7 @@ int main(void) {
     test_repeated_tempo_at_a_later_tick_is_kept();
     test_skips_malformed_tempos();
     test_no_tempos_is_ok_and_empty();
-    test_tempo_collect_rejects_truncated_track_and_null();
+    test_tempo_collect_rejects_truncated_track();
     test_note_decode_ignores_tempos();
     printf("test_midi_event_decoder: ok\n");
     return 0;

@@ -54,7 +54,7 @@ static void round_trip_reference_piece(const char *name) {
     free(tempo_pitches);
 
     MidiKeySignatureEvents keys = {NULL, 0};
-    assert(midi_key_signature_scan_all(data, size, &keys) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    assert(test_midi_import_key_signatures(data, size, &keys) == MIDI_IMPORT_OK);
 
     test_round_trip(events, pitches, count, meter.meter_map, tempo.tempo_map, keys.events, keys.count, division);
 

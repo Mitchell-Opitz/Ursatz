@@ -289,24 +289,6 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
     return MIDI_EVENT_DECODER_OK;
 }
 
-MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data, size_t track_size,
-                                                  MidiNoteEvent **out_events, size_t *out_count) {
-    if (track_data == NULL || out_events == NULL || out_count == NULL) {
-        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
-    }
-
-    EventList list = {NULL, 0, 0};
-    MidiEventDecoderResult result = walk_track(track_data, track_size, &(TrackSinks){.notes = &list});
-    if (result != MIDI_EVENT_DECODER_OK) {
-        free(list.items);
-        return result;
-    }
-
-    *out_events = list.items;
-    *out_count = list.count;
-    return MIDI_EVENT_DECODER_OK;
-}
-
 typedef struct {
     RawTimeSignature raw;
     size_t track_index;
@@ -437,32 +419,6 @@ static MidiEventDecoderResult finish_time_signatures(SequencedTimeSignature *all
     return MIDI_EVENT_DECODER_OK;
 }
 
-MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack *tracks, size_t track_count,
-                                                                    MidiTimeSignatureEvents *out) {
-    if ((tracks == NULL && track_count > 0) || out == NULL) {
-        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
-    }
-
-    SequencedTimeSignature *all = NULL;
-    size_t all_count = 0;
-    size_t all_capacity = 0;
-    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
-
-    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
-        RawTimeSignatureList raw = {NULL, 0, 0};
-        failure = walk_track(tracks[t].data, tracks[t].size, &(TrackSinks){.time_signatures = &raw});
-        if (failure == MIDI_EVENT_DECODER_OK) {
-            failure = append_time_signatures(&all, &all_count, &all_capacity, t, &raw);
-        }
-        free(raw.items);
-    }
-    if (failure != MIDI_EVENT_DECODER_OK) {
-        free(all);
-        return failure;
-    }
-    return finish_time_signatures(all, all_count, out);
-}
-
 typedef struct {
     RawTempo raw;
     size_t track_index;
@@ -566,32 +522,6 @@ static MidiEventDecoderResult finish_tempos(SequencedTempo *all, size_t all_coun
     }
     *out = result;
     return MIDI_EVENT_DECODER_OK;
-}
-
-MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks, size_t track_count,
-                                                          MidiTempoEvents *out) {
-    if ((tracks == NULL && track_count > 0) || out == NULL) {
-        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
-    }
-
-    SequencedTempo *all = NULL;
-    size_t all_count = 0;
-    size_t all_capacity = 0;
-    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
-
-    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
-        RawTempoList raw = {NULL, 0, 0};
-        failure = walk_track(tracks[t].data, tracks[t].size, &(TrackSinks){.tempos = &raw});
-        if (failure == MIDI_EVENT_DECODER_OK) {
-            failure = append_tempos(&all, &all_count, &all_capacity, t, &raw);
-        }
-        free(raw.items);
-    }
-    if (failure != MIDI_EVENT_DECODER_OK) {
-        free(all);
-        return failure;
-    }
-    return finish_tempos(all, all_count, out);
 }
 
 void midi_file_scan_destroy(MidiFileScan *scan) {

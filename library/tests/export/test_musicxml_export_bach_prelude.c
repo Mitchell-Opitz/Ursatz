@@ -10,6 +10,7 @@
 #include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "io/midi_importer.h"
+#include "../io/midi_import_split.h"
 
 /*
  * Regression for the multi-track voice-assignment bug: Bach_Prelude_C_
@@ -48,7 +49,7 @@ int main(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    MidiImportResult import_result = midi_importer_import(data, size, &events, &pitch_values, &count);
+    MidiImportResult import_result = test_midi_import_parts(data, size, &events, &pitch_values, &count, NULL, NULL);
     free(data);
     assert(import_result == MIDI_IMPORT_OK);
     assert(count > 0);

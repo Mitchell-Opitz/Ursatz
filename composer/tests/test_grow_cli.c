@@ -221,7 +221,7 @@ static void test_files(void) {
     NoteEvent **events = NULL;
     PitchNumericValue **values = NULL;
     size_t count = 0;
-    assert(midi_importer_import((const unsigned char *)midi_bytes, size, &events, &values, &count) == MIDI_IMPORT_OK);
+    assert(test_midi_import_notes((const unsigned char *)midi_bytes, size, &events, &values, &count) == MIDI_IMPORT_OK);
     assert(count > 8);
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);

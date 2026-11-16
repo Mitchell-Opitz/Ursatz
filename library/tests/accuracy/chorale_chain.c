@@ -11,7 +11,7 @@
 #include "standard-tonality/analysis/applied_chords.h"
 #include "standard-tonality/analysis/chord_input.h"
 #include "core/rational.h"
-#include "io/import_notes.h"
+#include "../import_notes_test_util.h"
 #include "io/musicxml_importer.h"
 #include "common-practice-minimal/key_regions.h"
 #include "common-practice-minimal/key_vocabulary.h"
