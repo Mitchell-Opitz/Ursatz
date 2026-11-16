@@ -11,6 +11,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/plan_json.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * Seeding from a corpus (corpus_seed.h, docs/style.md). The corpus is the output directory of `ursatz-analyzer --corpus`
@@ -202,7 +203,7 @@ static int test_plan(void) {
     assert(output_contains(", score "));
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file("seed_plan.json", &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file("seed_plan.json", &plan, &error) == PLAN_OK);
     NodeId node;
     char piece[PLAN_SOURCE_PIECE_MAX];
     assert(source_of(plan, &node, piece));
@@ -222,7 +223,7 @@ static int test_plan(void) {
     assert(run("grow --from-corpus \"" COMPOSER_SONATINAS_CORPUS "\" --like \"" PASSAGE
                "\" --into sentence --key \"D major\" --meter 4/4 --seed 1 --out seed_theme.json") == 0);
     assert(output_contains("motive from Mozart 545.mid m."));
-    assert(plan_read_json_file("seed_theme.json", &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file("seed_theme.json", &plan, &error) == PLAN_OK);
     assert(source_of(plan, &node, piece));
     assert(plan_node_kind(plan, node) == PLAN_NODE_MOTIVE && strcmp(piece, "Mozart 545.mid") == 0);
     plan_destroy(plan);
@@ -253,7 +254,7 @@ static int test_progression(void) {
     assert(output_contains("progression from "));
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file("seed_progression.json", &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file("seed_progression.json", &plan, &error) == PLAN_OK);
     NodeId node;
     char piece[PLAN_SOURCE_PIECE_MAX];
     assert(source_of(plan, &node, piece) && plan_node_kind(plan, node) == PLAN_NODE_SECTION);

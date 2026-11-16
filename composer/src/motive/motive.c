@@ -16,8 +16,6 @@
 #include "motive/motive_internal.h"
 #include "plan/plan_json_internal.h"
 
-#define FILE_SIZE_LIMIT (64L * 1024L * 1024L)
-
 /* ----------------------------------------------------------------- scores */
 
 bool motive_score_from_rational(Rational value, MotiveScore *out) {
@@ -52,7 +50,7 @@ Rational motive_score_rational(MotiveScore score) {
 
 /* ------------------------------------------------------------------ names */
 
-static const char *const RESULT_NAMES[] = {"ok",    "null",       "alloc",     "io",        "format",     "syntax",
+static const char *const RESULT_NAMES[] = {"ok",    "null",       "alloc",     "format",     "syntax",
                                            "value", "empty",      "too many notes", "polyphonic", "meter", "import"};
 
 const char *motive_result_name(MotiveResult result) {
@@ -702,47 +700,6 @@ MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, con
         motive_set_error(error, "", "unknown format");
         return MOTIVE_ERR_FORMAT;
     }
-}
-
-MotiveResult motive_load_file(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
-                              MotiveError *error) {
-    if (!path || !out) {
-        motive_set_error(error, "", "path or output is NULL");
-        return MOTIVE_ERR_NULL;
-    }
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        motive_set_error(error, path, "cannot open the file");
-        return MOTIVE_ERR_IO;
-    }
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    if (size < 0 || size > FILE_SIZE_LIMIT) {
-        fclose(file);
-        motive_set_error(error, path, "the file is empty or larger than %ld bytes", FILE_SIZE_LIMIT);
-        return MOTIVE_ERR_IO;
-    }
-    unsigned char *data = malloc((size_t)size + 1);
-    if (!data) {
-        fclose(file);
-        motive_set_error(error, path, "out of memory");
-        return MOTIVE_ERR_ALLOC;
-    }
-    size_t read = fread(data, 1, (size_t)size, file);
-    fclose(file);
-    if (read != (size_t)size) {
-        free(data);
-        motive_set_error(error, path, "cannot read the file");
-        return MOTIVE_ERR_IO;
-    }
-    data[size] = '\0';
-    MotiveResult result = size == 0 ? MOTIVE_ERR_EMPTY : motive_load(data, (size_t)size, format, options, out, error);
-    if (size == 0) {
-        motive_set_error(error, path, "the file is empty");
-    }
-    free(data);
-    return result;
 }
 
 /* ------------------------------------------------------------------ value */

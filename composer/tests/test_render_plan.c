@@ -328,14 +328,6 @@ static PiecePlan *plan_with_one_melody(const PlanNote *notes, size_t count, Plan
     return plan;
 }
 
-static bool file_exists(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (file) {
-        fclose(file);
-    }
-    return file != NULL;
-}
-
 static void test_constrained_is_skipped(void) {
     PlanNote notes[] = {note(60, time_of(0, 1), time_of(1, 1))};
     PiecePlan *plan = plan_with_one_melody(notes, 1, PLAN_STATE_CONSTRAINED);
@@ -346,10 +338,13 @@ static void test_constrained_is_skipped(void) {
     assert(rendered.skipped_count == 1);
     assert(rendered.skipped[0].lane == PLAN_LANE_MELODY);
     assert(rendered.skipped[0].reason == RENDER_SKIP_NOT_REALIZED);
-    assert(rendered_plan_export_midi(&rendered, NULL, "render_test_none.mid", &error) == PLAN_EXPORT_ERR_NO_CONTENT);
+    unsigned char *bytes = NULL;
+    size_t byte_count = 0;
+    char *xml = NULL;
+    assert(rendered_plan_midi_bytes(&rendered, NULL, &bytes, &byte_count, &error) == PLAN_EXPORT_ERR_NO_CONTENT);
     assert(error.message[0] != '\0');
-    assert(plan_export_musicxml(plan, NULL, "render_test_none.xml", &error) == PLAN_EXPORT_ERR_NO_CONTENT);
-    assert(!file_exists("render_test_none.mid") && !file_exists("render_test_none.xml"));
+    assert(rendered_plan_musicxml_text(&rendered, NULL, &xml, &error) == PLAN_EXPORT_ERR_NO_CONTENT);
+    assert(bytes == NULL && xml == NULL);
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);
 }
@@ -360,31 +355,34 @@ static void test_export_errors(void) {
     /* Two notes of one pitch overlapping in one voice. */
     PlanNote overlapping[] = {note(60, time_of(0, 1), time_of(1, 2)), note(60, time_of(1, 4), time_of(1, 2))};
     PiecePlan *plan = plan_with_one_melody(overlapping, 2, PLAN_STATE_REALIZED);
-    assert(plan_export_midi(plan, NULL, "render_test_overlap.mid", &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
+    RenderedPlan rendered;
+    unsigned char *bytes = NULL;
+    size_t byte_count = 0;
+    char *xml = NULL;
+    assert(plan_export_render(plan, &rendered, &error) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(&rendered, NULL, &bytes, &byte_count, &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
     assert(error.message[0] != '\0');
     /* MusicXML writes the overlap as a second voice of the part; MIDI refuses it and writes nothing. */
-    assert(plan_export_musicxml(plan, NULL, "render_test_overlap.xml", &error) == PLAN_EXPORT_OK);
-    assert(!file_exists("render_test_overlap.mid") && file_exists("render_test_overlap.xml"));
+    assert(rendered_plan_musicxml_text(&rendered, NULL, &xml, &error) == PLAN_EXPORT_OK);
+    assert(bytes == NULL && xml != NULL);
+    free(xml);
+    rendered_plan_destroy(&rendered);
     plan_destroy(plan);
 
-    /* A file that cannot be written. */
-    PlanNote one[] = {note(60, time_of(0, 1), time_of(1, 1))};
-    plan = plan_with_one_melody(one, 1, PLAN_STATE_REALIZED);
-    assert(plan_export_midi(plan, NULL, "no/such/directory/out.mid", &error) == PLAN_EXPORT_ERR_IO);
-    assert(error.message[0] != '\0');
-    assert(plan_export_midi(NULL, NULL, "x.mid", &error) == PLAN_EXPORT_ERR_NULL);
-    assert(plan_export_midi(plan, NULL, NULL, &error) == PLAN_EXPORT_ERR_NULL);
-    plan_destroy(plan);
+    assert(plan_export_render(NULL, &rendered, &error) == PLAN_EXPORT_ERR_NULL);
 
     /* More voices than MIDI has tracks. */
+    PlanNote one[] = {note(60, time_of(0, 1), time_of(1, 1))};
     plan = plan_create();
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 1), "form");
     for (int voice = 1; voice <= 16; voice++) {
         LaneSpanId span = add_notes(plan, form, PLAN_LANE_INNER_VOICE, voice, bars(0, 1), one, 1);
         assert(plan_lane_span_set_state(plan, span, PLAN_STATE_REALIZED) == PLAN_OK);
     }
-    assert(plan_export_midi(plan, NULL, "render_test_voices.mid", &error) == PLAN_EXPORT_ERR_TOO_MANY_VOICES);
-    assert(!file_exists("render_test_voices.mid"));
+    assert(plan_export_render(plan, &rendered, &error) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(&rendered, NULL, &bytes, &byte_count, &error) == PLAN_EXPORT_ERR_TOO_MANY_VOICES);
+    assert(bytes == NULL);
+    rendered_plan_destroy(&rendered);
     plan_destroy(plan);
 }
 
@@ -428,15 +426,31 @@ static long file_size(const char *path) {
     return size;
 }
 
+static void write_bytes(const char *path, const void *data, size_t size) {
+    FILE *file = fopen(path, "wb");
+    assert(file != NULL);
+    assert(fwrite(data, 1, size, file) == size);
+    assert(fclose(file) == 0);
+}
+
 static void test_files_and_cli(void) {
     PiecePlan *plan = build_sentence_plan();
     PlanExportError error;
     PlanJsonError json_error;
 
-    assert(plan_export_midi(plan, NULL, "render_test_plan.mid", &error) == PLAN_EXPORT_OK);
-    assert(plan_export_musicxml(plan, NULL, "render_test_plan.xml", &error) == PLAN_EXPORT_OK);
+    RenderedPlan rendered;
+    unsigned char *midi = NULL;
+    size_t midi_size = 0;
+    char *xml = NULL;
+    assert(plan_export_render(plan, &rendered, &error) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(&rendered, NULL, &midi, &midi_size, &error) == PLAN_EXPORT_OK);
+    assert(rendered_plan_musicxml_text(&rendered, NULL, &xml, &error) == PLAN_EXPORT_OK);
+    write_bytes("render_test_plan.mid", midi, midi_size);
+    write_bytes("render_test_plan.xml", xml, strlen(xml));
+    free(midi);
+    free(xml);
+    rendered_plan_destroy(&rendered);
     assert(file_size("render_test_plan.mid") > 0 && file_size("render_test_plan.xml") > 0);
-    assert(!file_exists("render_test_plan.mid.tmp") && !file_exists("render_test_plan.xml.tmp"));
 
     MusicXmlImport imported;
     memset(&imported, 0, sizeof(imported));
@@ -445,7 +459,10 @@ static void test_files_and_cli(void) {
     musicxml_import_destroy(&imported);
 
     /* The CLI exports the same plan from its JSON. */
-    assert(plan_write_json_file(plan, "render_test_cli_plan.json", &json_error) == PLAN_OK);
+    char *plan_text = plan_to_json(plan, &json_error);
+    assert(plan_text != NULL);
+    write_bytes("render_test_cli_plan.json", plan_text, strlen(plan_text));
+    free(plan_text);
     char command[1024];
     snprintf(command, sizeof(command),
              "\"%s\" export render_test_cli_plan.json --midi render_test_cli.mid --musicxml render_test_cli.xml "

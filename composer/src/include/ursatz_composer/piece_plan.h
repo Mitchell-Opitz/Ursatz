@@ -34,7 +34,6 @@ typedef enum {
     PLAN_ERR_BAD_PAYLOAD,
     PLAN_ERR_GIVEN_LOCKED,
     PLAN_ERR_BAD_INDEX,
-    PLAN_ERR_IO,
     PLAN_ERR_PARSE,
     PLAN_ERR_FORMAT
 } PlanResult;

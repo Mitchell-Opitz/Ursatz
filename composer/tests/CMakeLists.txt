@@ -2,8 +2,10 @@
 link_libraries(ursatz_composer_internal)
 
 # Helpers the tests share (tests/support).
-add_library(composer_test_support STATIC support/test_support.c)
+add_library(composer_test_support STATIC support/test_support.c support/test_composer.c)
+target_link_libraries(composer_test_support PUBLIC ursatz_composer cjson)
 target_include_directories(composer_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(composer_test_support PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 target_compile_options(composer_test_support PRIVATE -Wall -Wextra -Wpedantic)
 
 add_executable(test_smoke test_smoke.c)
@@ -117,7 +119,7 @@ add_test(NAME test_progression_cli COMMAND test_progression_cli)
 endif()
 
 add_executable(test_motive test_motive.c)
-target_link_libraries(test_motive PRIVATE ursatz_composer)
+target_link_libraries(test_motive PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_motive PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_motive PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_motive PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -192,7 +194,7 @@ target_compile_options(test_motif_preferences PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_motif_preferences COMMAND test_motif_preferences)
 
 add_executable(test_form_hear test_form_hear.c)
-target_link_libraries(test_form_hear PRIVATE ursatz_composer)
+target_link_libraries(test_form_hear PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_form_hear PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_hear PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_form_hear COMMAND test_form_hear)
@@ -302,7 +304,7 @@ set_tests_properties(test_grow_cli PROPERTIES LABELS slow)
 endif()
 
 add_executable(test_accompaniment test_accompaniment.c)
-target_link_libraries(test_accompaniment PRIVATE ursatz_composer)
+target_link_libraries(test_accompaniment PRIVATE ursatz_composer composer_test_support)
 target_include_directories(test_accompaniment PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_options(test_accompaniment PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_accompaniment PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -364,7 +366,7 @@ target_compile_options(test_motive_invent PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_motive_invent COMMAND test_motive_invent)
 
 add_executable(test_form_templates test_form_templates.c)
-target_link_libraries(test_form_templates PRIVATE ursatz_composer)
+target_link_libraries(test_form_templates PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_form_templates PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_form_templates PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Four tests for each template: the plan's structure, a quick compose run, the compose sweep, and the share heard as
@@ -453,7 +455,7 @@ endforeach()
 if(TARGET ursatz-composer)
 # Theme and progression fills (R-170). The theme plan comes from the theme command, run as a process in a directory of its own.
 add_executable(test_piece_fills test_piece_fills.c)
-target_link_libraries(test_piece_fills PRIVATE ursatz_composer)
+target_link_libraries(test_piece_fills PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_piece_fills PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_piece_fills PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")

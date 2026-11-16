@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The `grow` command, run as a process: each form and a hybrid from the D minor motive fixture, the files it writes
@@ -196,7 +197,7 @@ static void test_files(void) {
 
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file("grow_cli.json", &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file("grow_cli.json", &plan, &error) == PLAN_OK);
     NodeId theme = PLAN_NODE_NONE;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
@@ -262,7 +263,7 @@ static void test_suggest(void) {
         snprintf(path, sizeof(path), "grow_cli_s-%d.json", k);
         PiecePlan *plan = NULL;
         PlanJsonError error;
-        assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+        assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
         plan_destroy(plan);
         plans[k - 1] = test_read_file(path, NULL);
         snprintf(path, sizeof(path), "grow_cli_s-%d.mid", k);
@@ -384,7 +385,7 @@ static void test_accompaniment(void) {
 
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file("grow_cli_alberti.json", &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file("grow_cli_alberti.json", &plan, &error) == PLAN_OK);
     PlanSpan all = plan_node_span(plan, plan_root(plan));
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_INNER_VOICE, 1, all, spans, 64);

@@ -31,14 +31,12 @@ typedef struct {
 
 /* Returns the plan as pretty-printed JSON (2-space indent, trailing newline), or NULL with error set. Caller frees. */
 char *plan_to_json(const PiecePlan *plan, PlanJsonError *error);
-PlanResult plan_write_json_file(const PiecePlan *plan, const char *path, PlanJsonError *error);
 
 /*
  * Parses a plan. On PLAN_OK, *out is a plan the caller destroys. On failure *out
  * is NULL and the result is PLAN_ERR_PARSE (not JSON), PLAN_ERR_FORMAT (JSON
- * that is not a valid plan), PLAN_ERR_IO or PLAN_ERR_ALLOC.
+ * that is not a valid plan) or PLAN_ERR_ALLOC.
  */
 PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *error);
-PlanResult plan_read_json_file(const char *path, PiecePlan **out, PlanJsonError *error);
 
 #endif

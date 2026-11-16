@@ -329,60 +329,6 @@ PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const
     }
 }
 
-/* ----------------------------------------------------------------- files */
-
-static PlanExportResult write_file(const char *path, const void *data, size_t size, PlanExportError *error) {
-    if (!path) {
-        set_message(error, "path is NULL");
-        return PLAN_EXPORT_ERR_NULL;
-    }
-    size_t path_length = strlen(path);
-    char *temporary = malloc(path_length + sizeof(".tmp"));
-    if (!temporary) {
-        set_message(error, "out of memory");
-        return PLAN_EXPORT_ERR_ALLOC;
-    }
-    memcpy(temporary, path, path_length);
-    memcpy(temporary + path_length, ".tmp", sizeof(".tmp"));
-
-    FILE *file = fopen(temporary, "wb");
-    bool wrote = file && fwrite(data, 1, size, file) == size;
-    bool closed = file && fclose(file) == 0;
-    if (!wrote || !closed || rename(temporary, path) != 0) {
-        remove(temporary);
-        free(temporary);
-        set_message(error, "could not write '%s'", path);
-        return PLAN_EXPORT_ERR_IO;
-    }
-    free(temporary);
-    return PLAN_EXPORT_OK;
-}
-
-PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const PlanExportOptions *options,
-                                           const char *path, PlanExportError *error) {
-    unsigned char *data = NULL;
-    size_t size = 0;
-    PlanExportResult result = rendered_plan_midi_bytes(rendered, options, &data, &size, error);
-    if (result != PLAN_EXPORT_OK) {
-        return result;
-    }
-    result = write_file(path, data, size, error);
-    free(data);
-    return result;
-}
-
-PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, const PlanExportOptions *options,
-                                               const char *path, PlanExportError *error) {
-    char *xml = NULL;
-    PlanExportResult result = rendered_plan_musicxml_text(rendered, options, &xml, error);
-    if (result != PLAN_EXPORT_OK) {
-        return result;
-    }
-    result = write_file(path, xml, strlen(xml), error);
-    free(xml);
-    return result;
-}
-
 PlanExportResult plan_export_render(const PiecePlan *plan, RenderedPlan *rendered, PlanExportError *error) {
     switch (plan_render(plan, rendered)) {
     case PLAN_RENDER_OK:
@@ -398,28 +344,4 @@ PlanExportResult plan_export_render(const PiecePlan *plan, RenderedPlan *rendere
     }
     set_message(error, "out of memory");
     return PLAN_EXPORT_ERR_ALLOC;
-}
-
-PlanExportResult plan_export_midi(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
-                                  PlanExportError *error) {
-    RenderedPlan rendered;
-    PlanExportResult result = plan_export_render(plan, &rendered, error);
-    if (result != PLAN_EXPORT_OK) {
-        return result;
-    }
-    result = rendered_plan_export_midi(&rendered, options, path, error);
-    rendered_plan_destroy(&rendered);
-    return result;
-}
-
-PlanExportResult plan_export_musicxml(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
-                                      PlanExportError *error) {
-    RenderedPlan rendered;
-    PlanExportResult result = plan_export_render(plan, &rendered, error);
-    if (result != PLAN_EXPORT_OK) {
-        return result;
-    }
-    result = rendered_plan_export_musicxml(&rendered, options, path, error);
-    rendered_plan_destroy(&rendered);
-    return result;
 }

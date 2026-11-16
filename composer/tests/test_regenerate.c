@@ -15,6 +15,7 @@
 #include <ursatz_composer/regenerate.h>
 #include "check/hearing.h"
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * Locking and regenerating (regenerate.h, R-072): a rounded binary of 24 bars in C major 4/4 with an invented motive,
@@ -1093,7 +1094,7 @@ static void expect_failure(const char *command, const char *arguments, int statu
 /* The text of a section of a plan file, by the child index in the form. */
 static char *file_section_text(const char *path, size_t index) {
     PiecePlan *plan = NULL;
-    assert(plan_read_json_file(path, &plan, NULL) == PLAN_OK);
+    assert(test_read_plan_file(path, &plan, NULL) == PLAN_OK);
     char *text = section_text(plan, plan_node_child_at(plan, plan_root(plan), index));
     plan_destroy(plan);
     return text;
@@ -1107,7 +1108,7 @@ static int test_cli(void) {
     /* lock */
     expect_success("lock", "regenerate_cli_filled.json --section A --out regenerate_cli_locked.json", "locked section A:");
     PiecePlan *locked = NULL;
-    assert(plan_read_json_file("regenerate_cli_locked.json", &locked, NULL) == PLAN_OK);
+    assert(test_read_plan_file("regenerate_cli_locked.json", &locked, NULL) == PLAN_OK);
     assert(plan_node_state(locked, plan_node_child_at(locked, plan_root(locked), 0)) == PLAN_STATE_GIVEN);
     assert(plan_node_state(locked, plan_node_child_at(locked, plan_root(locked), 1)) == PLAN_STATE_REALIZED);
     plan_destroy(locked);

@@ -57,7 +57,6 @@ typedef enum {
     MOTIVE_OK = 0,
     MOTIVE_ERR_NULL,
     MOTIVE_ERR_ALLOC,
-    MOTIVE_ERR_IO,            /* the file could not be read */
     MOTIVE_ERR_FORMAT,        /* an unknown format name */
     MOTIVE_ERR_SYNTAX,        /* text that is not a note list or not JSON */
     MOTIVE_ERR_VALUE,         /* a value that is not allowed: a pitch, a duration, an overlap, an unknown name */
@@ -262,8 +261,6 @@ MotiveResult motive_from_musicxml(const char *data, size_t size, const MotiveOpt
 /* Any of the formats; MOTIVE_FORMAT_AUTO uses motive_detect_format. */
 MotiveResult motive_load(const void *data, size_t size, MotiveFormat format, const MotiveOptions *options, Motive *out,
                          MotiveError *error);
-MotiveResult motive_load_file(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
-                              MotiveError *error);
 
 /* The same meter, key, notes, harmony, features and role. */
 bool motive_equal(const Motive *a, const Motive *b);

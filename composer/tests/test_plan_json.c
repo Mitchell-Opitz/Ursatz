@@ -430,12 +430,6 @@ static void test_round_trip(void) {
     assert(again != NULL);
     assert(strcmp(text, again) == 0);
 
-    /* Through a file. */
-    assert(plan_write_json_file(plan, "test_plan_json_roundtrip.json", &error) == PLAN_OK);
-    PiecePlan *from_file = NULL;
-    assert(plan_read_json_file("test_plan_json_roundtrip.json", &from_file, &error) == PLAN_OK);
-    assert(plans_equal(plan, from_file));
-
     /* A Given item stays refusing writes after the round trip. */
     PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     length.params.bars = 1;
@@ -445,7 +439,6 @@ static void test_round_trip(void) {
     free(again);
     plan_destroy(plan);
     plan_destroy(parsed);
-    plan_destroy(from_file);
 }
 
 /*
@@ -1368,8 +1361,6 @@ static void test_malformed_input(void) {
     assert(plan_from_json("{\"schema_version\":1,\"extra\":[1,2],\"form\":null}", &parsed, &error) == PLAN_OK);
     plan_destroy(parsed);
 
-    assert(plan_read_json_file("no/such/file.json", &parsed, &error) == PLAN_ERR_IO);
-    assert(parsed == NULL);
 }
 
 /* ------------------------------------------------------------ format versions 1 and 2 */

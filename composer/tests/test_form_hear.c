@@ -12,6 +12,7 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * Hearing the phrase form of a written plan. Two hand-written Realized themes are heard as what they
@@ -28,7 +29,7 @@ static PiecePlan *load(const char *name) {
     snprintf(path, sizeof(path), "%s/%s", COMPOSER_FIXTURE_DIR, name);
     PiecePlan *plan = NULL;
     PlanJsonError error;
-    assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+    assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
 }
 

@@ -10,6 +10,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "util/request_parse.h"
+#include "support/test_composer.h"
 
 /*
  * Motive input and analysis. The same motive is loaded from MIDI, MusicXML, a note list and JSON and must come out
@@ -98,7 +99,7 @@ static void expect_json_error(const char *text, const PlanMeter *meter, MotiveRe
 
 static MotiveResult load_fixture(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
                                  MotiveError *error) {
-    return motive_load_file(path, format, options, out, error);
+    return test_load_motive_file(path, format, options, out, error);
 }
 
 /* ------------------------------------------------------- the four formats */
@@ -590,9 +591,6 @@ static void test_file_errors(void) {
            MOTIVE_ERR_IMPORT);
     assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_JSON, NULL, &motive, &error) != MOTIVE_OK);
     assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_NOTES, NULL, &motive, &error) != MOTIVE_OK);
-
-    assert(load_fixture(FIXTURE("no_such_file.mid"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) == MOTIVE_ERR_IO);
-    assert(motive_load_file(NULL, MOTIVE_FORMAT_AUTO, NULL, &motive, &error) == MOTIVE_ERR_NULL);
 
     /* Nothing crashes on any bytes in any format, and nothing is accepted that is not a motive. */
     static const char *const GARBAGE[] = {"", "\xFF\xFF\xFF", "MThd", "MThd\0\0\0\6\0\0\0\1\1\340MTrk\0\0\0\4\0\0\0\0",

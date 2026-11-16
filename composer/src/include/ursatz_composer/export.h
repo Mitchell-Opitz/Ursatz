@@ -11,7 +11,7 @@
  * Export: a plan as a MIDI file or a MusicXML file. The Composer writes neither
  * format itself. It renders the plan (render.h) and hands the NoteEvents,
  * meter and key signatures to Ursatz's MIDI renderer (midi_renderer_render)
- * and MusicXML exporter (musicxml_export_write_score), then writes the file.
+ * and MusicXML exporter (musicxml_export_write_score) and returns the bytes; the caller writes the file.
  *
  * MIDI: one track per part, at 480 ticks per quarter when every time lands on a
  * whole tick there and otherwise at the smallest division that does. A plan
@@ -33,9 +33,6 @@
  * MusicXML: one part per lane voice, named for its lane ("melody", "bass",
  * "inner_voice_2"). With no meter span the document is flagged
  * meter-defaulted (4/4).
- *
- * A file is written to "<path>.tmp" and renamed, so a failed export leaves no
- * half-written file at path.
  */
 
 #define PLAN_EXPORT_MESSAGE_MAX 160
@@ -44,7 +41,6 @@ typedef enum {
     PLAN_EXPORT_OK = 0,
     PLAN_EXPORT_ERR_NULL,
     PLAN_EXPORT_ERR_NO_CONTENT,         /* no Given or Realized note to write */
-    PLAN_EXPORT_ERR_IO,                 /* the file could not be written */
     PLAN_EXPORT_ERR_NOT_REPRESENTABLE,  /* Ursatz refused the notes, meter or key as given */
     PLAN_EXPORT_ERR_TOO_MANY_VOICES,    /* MIDI has 15 voice tracks */
     PLAN_EXPORT_ERR_OVERLAP,            /* two notes overlap within one voice; MusicXML now writes them as extra voices, so this is unused */
@@ -77,22 +73,11 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
 PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const PlanExportOptions *options,
                                              char **out_xml, PlanExportError *error);
 
-/* From an already rendered plan, to a file. */
-PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const PlanExportOptions *options,
-                                           const char *path, PlanExportError *error);
-PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, const PlanExportOptions *options,
-                                               const char *path, PlanExportError *error);
-
 /*
  * Renders plan for an export into *rendered, which the caller destroys with rendered_plan_destroy: the one place a
- * command renders a plan to write files, then writes any number of them with the rendered_plan_ functions. error may be NULL.
+ * command renders a plan to write files, then gets any number of them as bytes or text with the rendered_plan_ functions.
+ * error may be NULL.
  */
 PlanExportResult plan_export_render(const PiecePlan *plan, RenderedPlan *rendered, PlanExportError *error);
-
-/* Renders the plan, then writes the file. Use the rendered_plan_ functions to render once and write both. */
-PlanExportResult plan_export_midi(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
-                                  PlanExportError *error);
-PlanExportResult plan_export_musicxml(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
-                                      PlanExportError *error);
 
 #endif
