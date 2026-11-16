@@ -18,10 +18,6 @@
    tools/ci/check-statics.sh refuses; nothing in src reads it. */
 atomic_size_t hearing_analyzer_calls_made;
 
-size_t hearing_analyzer_calls(void) {
-    return atomic_load(&hearing_analyzer_calls_made);
-}
-
 /* One span heard: the result and the arrays it borrows, kept together. */
 typedef struct {
     PlanSpan span;

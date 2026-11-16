@@ -15,6 +15,7 @@
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_oracles.h"
+#include "support/test_composer.h"
 
 /*
  * The melody operator, run through the fill loop after the harmony and bass operators, with the motive Given or
@@ -248,7 +249,7 @@ static unsigned chord_pcs(KeyStructureMode mode, int tonic, const char *roman) {
     size_t count;
     int root;
     unsigned mask = 0;
-    if (harmony_roman_parse_applied(mode, roman, &applied)) {
+    if (test_roman_parse_applied(mode, roman, &applied)) {
         root = harmony_applied_root_semitone(harmony_mode, &applied);
         switch (applied.quality) {
         case HARMONY_APPLIED_MAJOR_TRIAD:

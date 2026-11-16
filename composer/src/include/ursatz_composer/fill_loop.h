@@ -120,16 +120,4 @@ typedef struct FillRecord FillRecord;
 FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                     FillOutcome *outcome, FillRecord **record);
 
-/* --- propagation helper ------------------------------------------------- */
-
-/*
- * The target's relatives, for operators that propagate constraints:
- *   node       its parent, its children, and the sibling before and after it
- *   lane span  its owner node, and the spans before and after it in the same
- *              lane and voice
- * Writes up to capacity targets to out (which may be NULL when capacity is 0)
- * and returns how many there are in all.
- */
-size_t fill_relatives(const PiecePlan *plan, FillTarget target, FillTarget *out, size_t capacity);
-
 #endif

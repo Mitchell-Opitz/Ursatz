@@ -8,6 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 /*
  * The section functions in the piece entry (P51 B8, R-510): the rows of a main-and-subordinate piece name each section's
@@ -45,7 +46,7 @@ static char *print(cJSON *request) {
 static cJSON *composed(const char *printed, ComposerResponse *response) {
     ComposerStatus status = composer_api_piece(printed, NULL, response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "test_api_parts: %s: %s\n", composer_status_name(status), response->error.message);
+        fprintf(stderr, "test_api_parts: %s: %s\n", test_status_name(status), response->error.message);
     }
     assert(status == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response->json);

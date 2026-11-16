@@ -348,16 +348,6 @@ static size_t chords_between(const PiecePlan *plan, Rational start, Rational end
     return plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, NULL, 0);
 }
 
-bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
-    ComposerHearing *hearing = NULL;
-    if (!plan || !out || hearing_create(plan, &hearing) != HEARING_OK) {
-        return false;
-    }
-    bool read = piece_check_keys_in(hearing, plan, out);
-    hearing_destroy(hearing);
-    return read;
-}
-
 bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceKeyCheck *out) {
     if (!hearing || !plan || !out) {
         return false;

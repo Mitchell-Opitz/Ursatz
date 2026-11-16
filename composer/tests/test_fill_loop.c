@@ -654,7 +654,6 @@ static void test_suggestions(void) {
     assert(candidate_score_numerator(candidate_set_candidate_at(set, 1)) == 1);
     assert(strcmp(fill_suggestion_label(suggestions, 0), "split-2") == 0);
     assert(strcmp(fill_suggestion_label(suggestions, 1), "split-4") == 0);
-    assert(strcmp(fill_suggestion_operator(suggestions, 0), "split") == 0);
     assert(fill_suggestion_label(suggestions, 2) == NULL);
 
     /* The plan is as it was. */

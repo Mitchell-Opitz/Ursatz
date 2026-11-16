@@ -86,7 +86,7 @@ GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const Pl
  * A realized section of another plan (a theme the theme command composed) given to a section of this one: its harmony,
  * bass, melody and inner voice spans become Given spans owned by the section, moved to its start and transposed by the
  * key difference between the two (the key lanes must have the same shape and mode), and its phrase and idea nodes are
- * copied under the section so that form_hear hears it as the theme it was. The section ends Realized, so no stage
+ * copied under the section so that form_hear_in hears it as the theme it was. The section ends Realized, so no stage
  * targets it. References to motive nodes of the source plan are dropped: the plan holds none of them.
  *
  * The section must be a theme section of the plan with no nodes under it and nothing of the copy's lanes in it. The

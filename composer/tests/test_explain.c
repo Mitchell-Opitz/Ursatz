@@ -77,13 +77,13 @@ static PiecePlan *period_a_minor(Motive *motive) {
     request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
     request.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
 
 static ComposerStyle *chorales(void) {
     ComposerStyle *style = NULL;
-    assert(composer_style_load(CHORALES, &style) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(CHORALES, NULL, 0, &style) == COMPOSER_STYLE_OK);
     return style;
 }
 

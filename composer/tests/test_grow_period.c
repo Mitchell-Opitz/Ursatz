@@ -555,7 +555,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     for (int round = 0; round < rounds; round++) {
         PiecePlan *plan = NULL;
         GrowOutcome outcome;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         GrowResult result = grow_run(plan, &config, &outcome);
         if (result != GROW_OK) {
             fprintf(stderr, "%s, %zu bars, pairing %d+%d, seed %lu: %s at %s\n", scenario->name, bars, (int)beginning,
@@ -609,7 +609,7 @@ static void test_first_cadence(void) {
         GrowConfig config;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
         CadenceType weak = CADENCE_TYPE_HALF;
         assert(node_cadence(plan, find_node(plan, "antecedent"), &weak) && weak == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
@@ -636,30 +636,30 @@ static void test_bad_requests(void) {
     GrowRequest period = make_request(scenario, &motive, 8, PLAN_THEME_BEGINNING_ANTECEDENT,
                                       PLAN_THEME_ENDING_CONSEQUENT);
     GrowRequest changed = period;
-    assert(grow_build_plan(&period, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&period, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
     /* Equal cadences are not a period, and nothing is weaker than a half cadence. */
     changed.first_cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
     changed.cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST && plan == NULL);
     changed = period;
     changed.cadence = CADENCE_TYPE_HALF;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* An antecedent ends in a half or an imperfect authentic cadence, and no other. */
     changed = period;
     changed.first_cadence = CADENCE_TYPE_DECEPTIVE;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     changed.first_cadence = CADENCE_TYPE_PLAGAL;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* The weak cadence is read only for an antecedent: a presentation ignores it. */
     changed = make_request(scenario, &motive, 8, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONSEQUENT);
     changed.first_cadence = CADENCE_TYPE_DECEPTIVE;
-    assert(grow_build_plan(&changed, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
     /* A pairing that is none of the nine. */
     changed = period;
     changed.pairing.ending = (PlanThemeEnding)9;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
 }
 
 int main(int argc, char **argv) {

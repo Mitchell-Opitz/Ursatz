@@ -126,7 +126,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, bool sentenc
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.basic = motive;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     if (result != GROW_OK) {
         grow_outcome_destroy(&outcome);
@@ -281,7 +281,7 @@ int main(void) {
         memset(&config, 0, sizeof(config));
         config.seed = seed;
         config.basic = &chordless;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         if (grow_run(plan, &config, &outcome) == GROW_OK) {
             const FillRecord *record = outcome.records[GROW_STAGE_HARMONY];
             assert(record && record->step_count > 0);

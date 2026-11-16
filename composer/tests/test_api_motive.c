@@ -7,6 +7,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -199,7 +200,7 @@ static void expect_refused(const char *request, ComposerStatus status, const cha
     ComposerResponse response;
     ComposerStatus result = composer_api_motive(request, NULL, &response);
     if (result != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
-        fprintf(stderr, "'%s': status %s, path '%s', message '%s'\n", request, composer_status_name(result),
+        fprintf(stderr, "'%s': status %s, path '%s', message '%s'\n", request, test_status_name(result),
                 response.error.path, response.error.message);
     }
     assert(result == status);

@@ -104,10 +104,4 @@ const char *plan_node_name(const PiecePlan *plan, NodeId id);
 size_t plan_node_child_count(const PiecePlan *plan, NodeId id);
 NodeId plan_node_child_at(const PiecePlan *plan, NodeId id, size_t index);
 
-/* Called once per node. Return false to stop the walk. */
-typedef bool (*PlanVisitFn)(const PiecePlan *plan, NodeId id, size_t depth, void *context);
-
-/* Visits every node in pre-order: a node before its children, children in insertion order. */
-PlanResult plan_walk(const PiecePlan *plan, PlanVisitFn visit, void *context);
-
 #endif

@@ -52,7 +52,7 @@ static void run(const Scenario *scenario, unsigned long seed) {
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     if (result != GROW_OK) {
         fprintf(stderr, "%s, seed %lu: %s at %s\n", scenario->name, seed, grow_result_name(result),

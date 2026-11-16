@@ -194,7 +194,7 @@ static bool bar_length(const PiecePlan *plan, PlanSpan span, Rational *bar) {
     return meter->beat_unit > 0 && rational_make(meter->beats_per_bar, (long long)meter->beat_unit, bar) == RATIONAL_OK;
 }
 
-/* Adds the themes heard in a section to themes; form_hear counts bars from the start of the plan. */
+/* Adds the themes heard in a section to themes; form_hear_in counts bars from the start of the plan. */
 static ReturnHearResult read_section(ComposerHearing *hearing, const PiecePlan *plan, NodeId section, Theme *themes, size_t *count) {
     FormHeard heard;
     PlanSpan span = plan_node_span(plan, section);
@@ -405,21 +405,6 @@ static bool add_pair(ReturnHeard *out, size_t *capacity, const ReturnHeardPair *
     }
     out->pairs[out->count++] = *pair;
     return true;
-}
-
-ReturnHearResult return_hear(const PiecePlan *plan, ReturnHeard *out) {
-    ComposerHearing *hearing = NULL;
-    if (!plan || !out) {
-        return RETURN_HEAR_ERR_NULL;
-    }
-    HearingResult made = hearing_create(plan, &hearing);
-    if (made != HEARING_OK) {
-        memset(out, 0, sizeof(*out));
-        return made == HEARING_ERR_ALLOC ? RETURN_HEAR_ERR_ALLOC : RETURN_HEAR_ERR_ANALYSIS;
-    }
-    ReturnHearResult status = return_hear_in(hearing, plan, out);
-    hearing_destroy(hearing);
-    return status;
 }
 
 ReturnHearResult return_hear_in(ComposerHearing *hearing, const PiecePlan *plan, ReturnHeard *out) {

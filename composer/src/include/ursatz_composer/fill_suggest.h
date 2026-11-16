@@ -35,8 +35,7 @@ FillResult fill_suggest(const PiecePlan *plan, const FillOperatorRegistry *regis
 /* The suggested candidates, best first. Owned by the suggestions. */
 const CandidateSet *fill_suggestions_set(const FillSuggestions *suggestions);
 size_t fill_suggestions_count(const FillSuggestions *suggestions);
-/* The operator that proposed suggestion index, and its label. NULL past the end. */
-const char *fill_suggestion_operator(const FillSuggestions *suggestions, size_t index);
+/* The label of suggestion index. NULL past the end. */
 const char *fill_suggestion_label(const FillSuggestions *suggestions, size_t index);
 
 /*

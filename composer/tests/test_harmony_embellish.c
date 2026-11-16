@@ -10,6 +10,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_oracles.h"
+#include "support/test_composer.h"
 
 /*
  * The embellishment operator, run through the fill loop after the phrase-model operator wrote a plain
@@ -160,7 +161,7 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
         }
         applied[i] = is_applied(roman);
         if (applied[i]) {
-            assert(harmony_roman_parse_applied(scenario->mode, roman, &applied_chords[i]));
+            assert(test_roman_parse_applied(scenario->mode, roman, &applied_chords[i]));
         } else {
             assert(harmony_roman_parse(scenario->mode, roman, &chords[i]));
         }

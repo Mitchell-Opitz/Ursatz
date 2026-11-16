@@ -80,11 +80,6 @@ static MotiveScore coherence(const Motive *previous, const Motive *candidate) {
     return allowed ? fraction(1, 1) : fraction(0, 1);
 }
 
-bool motive_connection(const Motive *basic, const Motive *previous, const Motive *candidate, const MotiveScore *distance,
-                       MotiveConnection *out) {
-    return motive_connection_limited(basic, previous, candidate, distance, NULL, out);
-}
-
 bool motive_connection_limited(const Motive *basic, const Motive *previous, const Motive *candidate,
                                const MotiveScore *distance, const MotiveScore *limit, MotiveConnection *out) {
     if (!basic || !candidate || !out || basic->note_count == 0 || candidate->note_count == 0) {
@@ -143,11 +138,3 @@ bool motive_connection_limited(const Motive *basic, const Motive *previous, cons
     return true;
 }
 
-bool motive_connection_score(const Motive *basic, const Motive *previous, const Motive *candidate, MotiveScore *out) {
-    MotiveConnection connection;
-    if (!out || !motive_connection(basic, previous, candidate, NULL, &connection)) {
-        return false;
-    }
-    *out = connection.total;
-    return true;
-}

@@ -9,6 +9,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -64,7 +65,7 @@ static void expect_refused_as(ComposerStatus expected, const char *fixture, cons
     ComposerResponse validated;
     ComposerStatus status = composer_api_validate("theme", text, &validated);
     if (status != expected || strcmp(validated.error.path, path) != 0 || !strstr(validated.error.message, message)) {
-        fprintf(stderr, "validate: %s '%s' at '%s', expected '%s' at '%s'\n", composer_status_name(status),
+        fprintf(stderr, "validate: %s '%s' at '%s', expected '%s' at '%s'\n", test_status_name(status),
                 validated.error.message, validated.error.path, message, path);
     }
     assert(status == expected);
@@ -76,7 +77,7 @@ static void expect_refused_as(ComposerStatus expected, const char *fixture, cons
     ComposerStatus compose_status = composer_api_theme(text, NULL, &composed);
     if (compose_status != status || strcmp(composed.error.path, validated.error.path) != 0 ||
         strcmp(composed.error.message, validated.error.message) != 0) {
-        fprintf(stderr, "compose: %s '%s' at '%s'\n", composer_status_name(compose_status), composed.error.message,
+        fprintf(stderr, "compose: %s '%s' at '%s'\n", test_status_name(compose_status), composed.error.message,
                 composed.error.path);
     }
     assert(compose_status == status);
@@ -92,7 +93,7 @@ static void expect_valid(const char *fixture, const char *const edits[][2], size
     ComposerResponse response;
     ComposerStatus status = composer_api_validate("theme", text, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "validate: %s '%s' at '%s'\n", composer_status_name(status), response.error.message, response.error.path);
+        fprintf(stderr, "validate: %s '%s' at '%s'\n", test_status_name(status), response.error.message, response.error.path);
     }
     assert(status == COMPOSER_OK);
     composer_response_destroy(&response);

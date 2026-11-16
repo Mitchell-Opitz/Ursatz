@@ -8,6 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -66,7 +67,7 @@ static ComposerStatus call(ComposerStatus (*entry)(const char *, const ComposerJ
     *printed = print(request);
     ComposerStatus status = entry(*printed, job, response);
     if (status != COMPOSER_OK && !job && !response->json) {
-        fprintf(stderr, "%s: %s\n", composer_status_name(status), response->error.message);
+        fprintf(stderr, "%s: %s\n", test_status_name(status), response->error.message);
     }
     return status;
 }
@@ -241,8 +242,8 @@ static void expect_refused(ComposerStatus (*entry)(const char *, const ComposerJ
     char *printed = print(request);
     ComposerStatus got = entry(printed, NULL, &response);
     if (got != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
-        fprintf(stderr, "expected %s at '%s' with '%s', got %s at '%s': %s\n", composer_status_name(status), path, message,
-                composer_status_name(got), response.error.path, response.error.message);
+        fprintf(stderr, "expected %s at '%s' with '%s', got %s at '%s': %s\n", test_status_name(status), path, message,
+                test_status_name(got), response.error.path, response.error.message);
     }
     assert(got == status && strcmp(response.error.path, path) == 0 && strstr(response.error.message, message));
     assert(!response.plan_json && !response.midi && !response.musicxml);
@@ -619,7 +620,7 @@ static void test_cancel(void) {
         }
         ComposerStatus status = call(entries[i], request, &job, &response, &printed);
         if (status != COMPOSER_ERR_CANCELLED) {
-            fprintf(stderr, "%s: %s: %s\n", names[i], composer_status_name(status), response.error.message);
+            fprintf(stderr, "%s: %s: %s\n", names[i], test_status_name(status), response.error.message);
         }
         assert(status == COMPOSER_ERR_CANCELLED && !response.plan_json && !response.json && !response.midi);
         assert(watch.reports >= 1);

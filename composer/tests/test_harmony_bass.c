@@ -10,6 +10,7 @@
 #include <ursatz_composer/harmony_embellish.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * The bass operators, run through the fill loop after the harmony operators. The first group writes a bass
@@ -177,7 +178,7 @@ static bool bass_matches(KeyStructureMode mode, int tonic, const char *roman, in
     HarmonyChord chord;
     HarmonyAppliedChord applied;
     HarmonyMode harmony_mode = mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-    if (harmony_roman_parse_applied(mode, roman, &applied)) {
+    if (test_roman_parse_applied(mode, roman, &applied)) {
         return bass_pc == (tonic + harmony_applied_root_semitone(harmony_mode, &applied)) % 12;
     }
     assert(harmony_roman_parse(mode, roman, &chord));

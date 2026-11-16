@@ -143,7 +143,7 @@ static bool is_theme_section(const PiecePlan *plan, NodeId id) {
     return (archetype && pairing) || free_phrase || liquidation;
 }
 
-/* Whether a lane span in the section (a lane span reopened by plan_regenerate) is still open. */
+/* Whether a lane span in the section (a lane span reopened by plan_regenerate_all) is still open. */
 static bool has_open_span(const PiecePlan *plan, NodeId section) {
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (plan_has_lane_span(plan, id) && plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED &&
@@ -1088,7 +1088,7 @@ static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, c
 }
 
 /*
- * The Analyzer's check of a piece structure plan (R-172): the whole of it in one check, analyzer_check_piece, kept as
+ * The Analyzer's check of a piece structure plan (R-172): the whole of it in one check, analyzer_check_piece_in, kept as
  * the only member of outcome->analyzer_checks. A plan it cannot read is left out, as a section is.
  */
 static PieceResult check_analyzer_piece(ComposerHearing *hearing, ComposeOutcome *outcome) {

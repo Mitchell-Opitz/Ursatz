@@ -36,10 +36,6 @@ const char *piece_result_name(PieceResult result) {
     return "unknown";
 }
 
-size_t piece_material_bars(size_t section_count) {
-    return piece_material_bars_of(section_count, 1);
-}
-
 size_t piece_material_bars_of(size_t section_count, size_t motive_bars) {
     return motive_bars + MATERIAL_BARS_PER_SECTION * motive_bars * section_count;
 }

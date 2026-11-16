@@ -515,7 +515,7 @@ static void test_library_slots_and_pool(void) {
        consequent's contrasting idea m3 is made from it, not from the basic motive. */
     GrowRequest request = library_request(&basic, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &contrast;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId s1 = library_find(plan, "s1");
     assert(s1 != PLAN_NODE_NONE && node_holds(plan, s1, &contrast) && library_find(plan, "s2") == PLAN_NODE_NONE);
     GrowConfig config;
@@ -534,7 +534,7 @@ static void test_library_slots_and_pool(void) {
     request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
     request.slot_motives[GROW_SLOT_CONTINUATION] = &continuation;
     request.slot_motives[GROW_SLOT_CADENTIAL] = &cadential;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(library_find(plan, "s2") != PLAN_NODE_NONE && library_find(plan, "s3") != PLAN_NODE_NONE);
     config.seed = 1;
     GrowResult ran = grow_run(plan, &config, &outcome);
@@ -557,7 +557,7 @@ static void test_library_slots_and_pool(void) {
     snprintf(pool.item, sizeof(pool.item), "mot-form");
     snprintf(pool.chain, sizeof(pool.chain), "transpose tonal=1 by=1");
     request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     memset(&config, 0, sizeof(config));
     config.seed = 1;
     config.basic = &basic;
@@ -569,7 +569,7 @@ static void test_library_slots_and_pool(void) {
     plan_destroy(plan);
 
     pool.functions = GROW_FUNCTION_CADENTIAL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     assert(!node_holds(plan, library_find(plan, "m1"), &form));
     grow_outcome_destroy(&outcome);
@@ -578,7 +578,7 @@ static void test_library_slots_and_pool(void) {
     /* A form of a slot's motive is not offered for the basic motive's ideas. */
     pool.functions = GROW_FUNCTION_BEGINNING;
     pool.slot_motive_of = GROW_SLOT_CONTINUATION;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     assert(!node_holds(plan, library_find(plan, "m1"), &form));
     grow_outcome_destroy(&outcome);
@@ -592,35 +592,35 @@ static void test_library_bad_slots(void) {
     GrowRequest request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
     /* A slot the pairing has no idea for: no contrasting idea in a sentence, no continuation in a period. */
     request.slot_motives[GROW_SLOT_CONTRASTING] = &fits;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && plan == NULL);
     request = library_request(&basic, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
     request.slot_motives[GROW_SLOT_CONTINUATION] = &fits;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     request.slot_motives[GROW_SLOT_CONTINUATION] = NULL;
     request.slot_motives[GROW_SLOT_CADENTIAL] = &fits;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* A motive of another meter, of another key, of one note, and one that is not a full motive. */
     request.slot_motives[GROW_SLOT_CADENTIAL] = NULL;
     Motive other = fits;
     motive_set_meter(&other, (PlanMeter){3, 4, 0});
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     other = fits;
     AnalysisKey other_key = plan_key_of_pitch_class(7, other.minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
     motive_set_key(&other, &other_key, other.key_source);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     other = fits;
     other.note_count = 1;
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     other = fits;
     other.form = MOTIVE_SKETCH_FORM_RHYTHM;
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
-    assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* Its own is fine, and the material is a bar longer for it. */
     request.slot_motives[GROW_SLOT_CONTRASTING] = &fits;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
 }
 

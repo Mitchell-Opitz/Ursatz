@@ -65,7 +65,7 @@ static PiecePlan *grow(const Motive *motive, GrowDevelopment development, unsign
     config.seed = seed;
     config.basic = motive;
     config.context.development = development;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     grow_outcome_destroy(&outcome);
     return plan;

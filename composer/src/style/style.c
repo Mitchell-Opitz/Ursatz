@@ -124,7 +124,7 @@ static ComposerStyleResult read_statistics(ComposerStyle *style) {
 
 /*
  * Prepares the style's distances once (analyzer_style_reference_create): the model with the without list dropped. An
- * unknown category name leaves no reference, and composer_style_measure then reports it as an analysis failure.
+ * unknown category name leaves no reference, and composer_style_measure_in then reports it as an analysis failure.
  */
 static ComposerStyleResult refresh_reference(ComposerStyle *style) {
     analyzer_style_reference_destroy(style->reference);
@@ -159,10 +159,6 @@ ComposerStyleResult composer_style_from_model(StyleModel *model, size_t pieces, 
     }
     *out = style;
     return COMPOSER_STYLE_OK;
-}
-
-ComposerStyleResult composer_style_load(const char *path, ComposerStyle **out) {
-    return composer_style_load_without(path, NULL, 0, out);
 }
 
 ComposerStyleResult composer_style_load_without(const char *path, const char *const *categories, size_t count,

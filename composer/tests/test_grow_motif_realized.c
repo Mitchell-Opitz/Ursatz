@@ -113,7 +113,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, GivenChord *
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.basic = motive;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
     if (result != GROW_OK) {
         fprintf(stderr, "seed %lu: stuck at %s\n", seed, grow_stage_name(outcome.stuck_stage));

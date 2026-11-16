@@ -1024,7 +1024,6 @@ static void test_scores_in_the_loop(void) {
         const Candidate *candidate = candidate_set_candidate_at(set, i);
         assert(candidate_score_denominator(candidate) >= 1);
         assert(candidate_score_numerator(candidate) <= candidate_score_denominator(candidate));
-        assert(strcmp(fill_suggestion_operator(suggestions, i), MOTIVE_FRAGMENT_OPERATOR_NAME) == 0);
         assert(strncmp(fill_suggestion_label(suggestions, i), "fragment ", 9) == 0);
         if (i > 0) {
             const Candidate *before = candidate_set_candidate_at(set, i - 1);

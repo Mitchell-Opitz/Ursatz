@@ -91,8 +91,6 @@ typedef enum {
 
 #define FORM_CHECK_ALL (FORM_CHECK_SECTIONS | FORM_CHECK_RETURNS | FORM_CHECK_KEYS | FORM_CHECK_CADENCES | FORM_CHECK_SEAM)
 
-/* The name a check goes by in a document ("sections", "returns", "keys", "cadences", "seam"); NULL for none. */
-const char *form_check_name(FormCheck check);
 
 /* A key a piece may move to: the degrees of the home key it is drawn from in a major and in a minor home key. */
 typedef struct {

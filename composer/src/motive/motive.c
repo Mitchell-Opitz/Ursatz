@@ -72,10 +72,6 @@ bool motive_format_parse(const char *name, MotiveFormat *out) {
     return false;
 }
 
-const char *motive_format_name(MotiveFormat format) {
-    return (size_t)format < sizeof(FORMAT_NAMES) / sizeof(FORMAT_NAMES[0]) ? FORMAT_NAMES[format] : "unknown";
-}
-
 static const char *const FORM_NAMES[] = {"full", "rhythm", "contour"};
 
 bool motive_form_parse(const char *name, MotiveSketchForm *out) {
@@ -850,10 +846,6 @@ char *motive_json_text(cJSON *document) {
     char *text = printed ? json_indent_with_spaces(printed) : NULL;
     cJSON_free(printed);
     return text;
-}
-
-char *motive_to_json(const Motive *motive) {
-    return motive ? motive_json_text(motive_json_object(motive)) : NULL;
 }
 
 static bool read_time(JsonReader *reader, const cJSON *item, const char *path, long min_num, Rational *out) {

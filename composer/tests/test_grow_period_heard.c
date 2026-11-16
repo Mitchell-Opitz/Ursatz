@@ -10,6 +10,7 @@
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * The grown periods and hybrids, heard. The same runs as test_grow_period (four keys and meters, seeds 1 to 10) for
@@ -109,7 +110,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
 
     PhraseLevelForm wanted;
@@ -118,7 +119,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     wanted = period ? PHRASE_LEVEL_FORM_PERIOD : (sentence ? PHRASE_LEVEL_FORM_SENTENCE : PHRASE_LEVEL_FORM_HYBRID);
 
     PlanSpan theme = plan_node_span(plan, find_node(plan, "theme"));
-    assert(form_hear(plan, theme, &heard) == FORM_HEAR_OK);
+    assert(test_form_hear(plan, theme, &heard) == FORM_HEAR_OK);
     share->runs++;
     bool as_requested = false;
     if (heard.count == 0) {

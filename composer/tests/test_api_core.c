@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_json.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -35,12 +36,12 @@ static char *export_request(const char *plan_text, const char *options) {
 
 static void test_versions(void) {
     assert(strcmp(composer_api_version(), "1.25") == 0);
-    assert(strcmp(composer_status_name(COMPOSER_OK), "ok") == 0);
-    assert(strcmp(composer_status_name(COMPOSER_ERR_REQUEST), "request") == 0);
-    assert(strcmp(composer_status_name(COMPOSER_ERR_UNSATISFIABLE), "unsatisfiable") == 0);
-    assert(strcmp(composer_status_name(COMPOSER_ERR_CANCELLED), "cancelled") == 0);
-    assert(strcmp(composer_status_name(COMPOSER_ERR_ALLOC), "alloc") == 0);
-    assert(strcmp(composer_status_name(COMPOSER_ERR_INTERNAL), "internal") == 0);
+    assert(strcmp(test_status_name(COMPOSER_OK), "ok") == 0);
+    assert(strcmp(test_status_name(COMPOSER_ERR_REQUEST), "request") == 0);
+    assert(strcmp(test_status_name(COMPOSER_ERR_UNSATISFIABLE), "unsatisfiable") == 0);
+    assert(strcmp(test_status_name(COMPOSER_ERR_CANCELLED), "cancelled") == 0);
+    assert(strcmp(test_status_name(COMPOSER_ERR_ALLOC), "alloc") == 0);
+    assert(strcmp(test_status_name(COMPOSER_ERR_INTERNAL), "internal") == 0);
 
     ComposerResponse response;
     assert(composer_api_versions(&response) == COMPOSER_OK);

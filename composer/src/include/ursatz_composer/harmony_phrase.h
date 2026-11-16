@@ -124,7 +124,6 @@ bool harmony_roman_parse(KeyStructureMode mode, const char *roman, HarmonyChord 
 /* Formats and reads an applied chord. False for an invalid chord or other text. */
 bool harmony_roman_format_applied(KeyStructureMode mode, const HarmonyAppliedChord *applied,
                                   char out[PLAN_ROMAN_NUMERAL_MAX]);
-bool harmony_roman_parse_applied(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out);
 /*
  * The same with an inversion, for the applied chords that standard-harmony's schemas use: a triad in
  * root position or first inversion (V/vi, V6/vi), a seventh chord in any inversion (V7/V, V6/5/V,

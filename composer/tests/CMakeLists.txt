@@ -86,7 +86,7 @@ target_compile_options(test_harmony_phrase PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_phrase COMMAND test_harmony_phrase)
 
 add_executable(test_harmony_roman test_harmony_roman.c)
-target_link_libraries(test_harmony_roman PRIVATE ursatz_composer)
+target_link_libraries(test_harmony_roman PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_harmony_roman PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_roman COMMAND test_harmony_roman)
 
@@ -96,7 +96,7 @@ target_compile_options(test_harmony_embellish PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_embellish COMMAND test_harmony_embellish)
 
 add_executable(test_harmony_bass test_harmony_bass.c)
-target_link_libraries(test_harmony_bass PRIVATE ursatz_composer)
+target_link_libraries(test_harmony_bass PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_harmony_bass PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_bass COMMAND test_harmony_bass)
 
@@ -176,7 +176,7 @@ target_compile_options(test_melody_fill PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_melody_fill COMMAND test_melody_fill)
 
 add_executable(test_preferences test_preferences.c)
-target_link_libraries(test_preferences PRIVATE ursatz_composer cjson)
+target_link_libraries(test_preferences PRIVATE ursatz_composer cjson composer_test_support)
 target_compile_options(test_preferences PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_preferences COMMAND test_preferences)
 
@@ -220,7 +220,7 @@ target_compile_options(test_grow_half_cadence PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_half_cadence COMMAND test_grow_half_cadence)
 
 add_executable(test_grow_sentence_heard test_grow_sentence_heard.c)
-target_link_libraries(test_grow_sentence_heard PRIVATE ursatz_composer)
+target_link_libraries(test_grow_sentence_heard PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_grow_sentence_heard PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_grow_sentence_heard COMMAND test_grow_sentence_heard)
 # The share of grown sentences standard-form hears as a sentence is below 100% (measured, with the cause, in docs/grow.md):
@@ -271,7 +271,7 @@ foreach(beginning RANGE 2)
     endforeach()
 endforeach()
 add_executable(test_grow_period_heard test_grow_period_heard.c)
-target_link_libraries(test_grow_period_heard PRIVATE ursatz_composer)
+target_link_libraries(test_grow_period_heard PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_grow_period_heard PRIVATE -Wall -Wextra -Wpedantic)
 foreach(beginning RANGE 2)
     foreach(ending RANGE 2)
@@ -427,7 +427,7 @@ add_test(NAME test_piece_perform_parts COMMAND test_piece_perform parts)
 add_test(NAME test_piece_perform_part_bars COMMAND test_piece_perform part-bars)
 
 add_executable(test_piece_keys test_piece_keys.c)
-target_link_libraries(test_piece_keys PRIVATE ursatz_composer)
+target_link_libraries(test_piece_keys PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_piece_keys PRIVATE -Wall -Wextra -Wpedantic)
 # The plans and a quick compose run, and for each template the compose sweep (seeds 1 to 10, C major and A minor).
 add_test(NAME test_piece_keys_plan COMMAND test_piece_keys plan)
@@ -502,7 +502,7 @@ endforeach()
 set_tests_properties(test_form_figure_sweep test_form_figure_parallel PROPERTIES LABELS slow)
 
 add_executable(test_return_heard test_return_heard.c)
-target_link_libraries(test_return_heard PRIVATE ursatz_composer)
+target_link_libraries(test_return_heard PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_return_heard PRIVATE -Wall -Wextra -Wpedantic)
 # The returns heard in composed pieces: the smoke test is quick; the sweep fails when a share falls below its baseline.
 add_test(NAME test_return_heard_smoke COMMAND test_return_heard smoke)
@@ -623,7 +623,7 @@ set_tests_properties(test_cli_snapshots PROPERTIES LABELS slow)
 endif()
 
 add_executable(test_analyzer_check test_analyzer_check.c)
-target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
+target_link_libraries(test_analyzer_check PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
 # The Analyzer check (docs/analyzer-check.md): the modes are quick except the sweep, which CI leaves out (ctest -LE slow);
 # its smoke test is the sweep on one seed.

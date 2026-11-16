@@ -86,7 +86,7 @@ typedef struct {
     bool (*generate)(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context, FillCandidateList *out);
     /* Applies one candidate to the plan. PLAN_OK on success. Required. */
     PlanResult (*apply)(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context);
-    /* Adds constraints to the target's relatives (see fill_relatives) after apply. May be NULL. */
+    /* Adds constraints to the target's relatives (its parent, children and neighbours) after apply. May be NULL. */
     void (*propagate)(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context);
     void *context; /* passed to every hook; may be NULL */
 } FillOperator;

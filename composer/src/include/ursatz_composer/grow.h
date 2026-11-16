@@ -29,7 +29,7 @@ struct GrowPoolForm;
  * antecedent or a compound basic idea, with a continuation, a consequent or a cadential ending), and the cadence it
  * ends in.
  *
- * grow_build_plan makes the plan:
+ * grow_build_plan_checked makes the plan:
  *   - a Form over the theme and the source material, with a meter and a key lane span, both Given, over all of it;
  *   - a Section "theme" over the bars, Constrained, with an ARCHETYPE (sentence for a presentation and a continuation,
  *     period for an antecedent and a consequent, hybrid for the other seven), a THEME_PAIRING, the CADENCE and the
@@ -69,8 +69,6 @@ struct GrowPoolForm;
 
 /* "basic", "contrasting", "continuation" or "cadential". */
 const char *grow_slot_name(GrowSlot slot);
-/* The function of the slot's ideas (R-143): "beginning", "contrast", "continuation" or "cadential". */
-const char *grow_slot_function(GrowSlot slot);
 
 
 /* "basic idea", "repetition", "contrasting idea", ... as the plan's idea nodes are named. */
@@ -105,7 +103,7 @@ typedef struct {
      * The bars of each idea of the theme (R-468), NULL for none: the theme is then 4 or 8 bars, its ideas fixed fractions
      * of it. It is added to the theme section as a CONSTRUCTION constraint; with it the theme is `bars` bars, 3 to 16,
      * and its ideas are the bars it gives with its extensions (grow_layout_of). Refused (GROW_ERR_BAD_REQUEST) when the
-     * ideas and the extensions do not fit the pairing, the cadence and the bars. Must outlive grow_build_plan only.
+     * ideas and the extensions do not fit the pairing, the cadence and the bars. Must outlive grow_build_plan_checked only.
      */
     const PlanConstruction *construction;
     CadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
@@ -142,7 +140,7 @@ typedef struct {
      * the contrasting idea and the cadential idea or cadential 1, one for fragment 1; a motive as long as the idea
      * fills it whole, as written), or for a slot the pairing has no
      * idea for (a contrasting slot in a sentence, a continuation slot without a continuation). Must outlive
-     * grow_build_plan only.
+     * grow_build_plan_checked only.
      */
     const Motive *slot_motives[GROW_SLOT_COUNT];
     /*
@@ -152,13 +150,13 @@ typedef struct {
      * idea; the other ideas of the slot are made as before. The same Motive may be given for several ideas and slots.
      * Refused (GROW_ERR_BAD_REQUEST) with an idea the pairing does not have, an entry for the basic idea, a motive that
      * is not a full motive of two notes or more in the theme's key and meter, or one longer than its idea (a bar, or
-     * the idea's eighths of the theme when less). Must outlive grow_build_plan only.
+     * the idea's eighths of the theme when less). Must outlive grow_build_plan_checked only.
      */
     const Motive *idea_motives[GROW_IDEA_COUNT];
     /*
      * Chords Given over the theme (R-208), onsets from the theme's start (plan_give_chords), NULL for none. The harmony
      * stage fills what they leave open. Refused (GROW_ERR_BAD_REQUEST) when plan_give_chords refuses them. Must outlive
-     * grow_build_plan only.
+     * grow_build_plan_checked only.
      */
     const GivenChord *chords;
     size_t chord_count;
@@ -192,12 +190,9 @@ typedef struct {
     char message[256];
 } GrowRefusal;
 
-/* Builds the plan of the request into *out, which the caller destroys with plan_destroy. */
-GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out);
-
 /*
- * grow_build_plan with the reason for a refusal: when refusal is not NULL and the result is not GROW_OK, it holds the
- * result, the path of the field and a message. Only the first refusal is reported.
+ * Builds the plan of the request into *out, which the caller destroys with plan_destroy. When refusal is not NULL and the
+ * result is not GROW_OK, it holds the result, the path of the field and a message. Only the first refusal is reported.
  */
 GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal);
 
@@ -207,7 +202,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
  * (FROM_LENGTH). The halves follow from it and the ending's excess over its regular length becomes extensions: a
  * stretch, a repeat, an evaded cadence, an addition. False, with *out zeroed, when none fits: 4 and 8 bars with a motif
  * of 2 bars or fewer (the theme is built as it always was), a motif longer than the basic idea, an excess the ending
- * cannot take, a construction grow_build_plan would refuse. `cadence` is the theme's. A NULL motive is one still to be
+ * cannot take, a construction grow_build_plan_checked would refuse. `cadence` is the theme's. A NULL motive is one still to be
  * invented, of one bar.
  */
 bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
@@ -346,7 +341,7 @@ typedef struct {
     GrowStage stuck_stage;                 /* the stage that left a target open, when stuck */
     bool cancelled;                        /* the job was cancelled (GrowConfig.job); stuck is false */
     FormHearResult heard_result;           /* FORM_HEAR_ERR_NOT_WRITTEN when the run did not complete */
-    FormHeard heard;                       /* owned; the themes form_hear found over the theme section */
+    FormHeard heard;                       /* owned; the themes form_hear_in found over the theme section */
     int heard_form;                        /* PhraseLevelForm of the first theme heard, -1 for none */
     int requested_form;                    /* PhraseLevelForm the theme section asks for */
     int requested_beginning;               /* PhraseBeginning and PhraseEnding of the pairing it asks for, -1 for none */
@@ -363,9 +358,9 @@ typedef struct {
 void grow_outcome_destroy(GrowOutcome *outcome);
 
 /*
- * Runs the stages on a plan made by grow_build_plan. GROW_OK with the plan complete, or GROW_ERR_STUCK with the
+ * Runs the stages on a plan made by grow_build_plan_checked. GROW_OK with the plan complete, or GROW_ERR_STUCK with the
  * stage that failed in outcome->stuck_stage (the plan is then partly filled). After a complete run the theme is
- * heard (form_hear): heard as the requested form adds to the score; a mismatch is reported, not rejected.
+ * heard (form_hear_in): heard as the requested form adds to the score; a mismatch is reported, not rejected.
  */
 GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outcome);
 

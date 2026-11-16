@@ -52,10 +52,6 @@ MotiveScore grow_fidelity_minimum_in(const GrowFidelityTable *table, GrowDevelop
     return table ? table->minimum[development][role] : FIDELITY_MINIMUM[development][role];
 }
 
-MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role) {
-    return grow_fidelity_minimum_in(NULL, development, role);
-}
-
 GrowIdeaRole grow_idea_role(const char *idea_name) {
     const ThemeShapeIdea *row = theme_shape_idea_find(idea_name);
     return row ? row->role : GROW_ROLE_NONE;

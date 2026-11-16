@@ -335,7 +335,7 @@ static bool run_case(const Scenario *scenario, const Case *item, unsigned long s
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     check_constraint(plan, &construction);
     GrowResult result = grow_run(plan, &config, &outcome);
     bool composed = result == GROW_OK && !outcome.stuck;
@@ -474,7 +474,7 @@ static void test_refusals(void) {
     PlanConstruction construction = construction_of(&CASES[0]);
     GrowRequest request = make_request(scenario, &motive, &CASES[0], &construction);
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
 
     /* An extension after an idea it cannot follow, or one the pairing does not have. */

@@ -186,7 +186,7 @@ static bool run_case(const Scenario *scenario, const Case *item, unsigned long s
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     check_constraint(plan, &construction);
     GrowResult result = grow_run(plan, &config, &outcome);
     bool composed = result == GROW_OK && !outcome.stuck;
@@ -237,14 +237,14 @@ static void test_refusals(void) {
     PlanConstruction construction = construction_of(&CASES[0]);
     GrowRequest request = make_request(scenario, &motive, &CASES[0], &construction);
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
 
     /* A theme without a construction has one chosen from its length (R-469), or none: then it is 4 or 8 bars. */
     GrowRequest plain = request;
     plain.construction = NULL;
     plain.bars = 6;
-    assert(grow_build_plan(&plain, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&plain, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
     plain.bars = 2;
     expect_refusal(&plain, "/bars", "no construction makes a 2-bar period from this motif");
@@ -302,7 +302,7 @@ static void test_round_trip(void) {
         construction.reason = (PlanConstructionReason)(c % 3);
         GrowRequest request = make_request(scenario, &motive, &CASES[c], &construction);
         PiecePlan *plan = NULL;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         PlanJsonError error;
         char *text = plan_to_json(plan, &error);
         assert(text && strstr(text, "\"construction\""));
@@ -324,7 +324,7 @@ static void test_round_trip(void) {
     Motive motive = make_motive(scenario, scenario->motive);
     PlanConstruction construction = construction_of(&CASES[3]);
     GrowRequest request = make_request(scenario, &motive, &CASES[3], &construction);
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = find_node(plan, "theme");
     PlanConstraint extended = {PLAN_CONSTRAINT_CONSTRUCTION, {0}};
     extended.params.construction = construction;
@@ -333,7 +333,7 @@ static void test_round_trip(void) {
     extended.params.construction.extensions[1] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 2, true};
     extended.params.construction.reason = PLAN_CONSTRUCTION_FROM_LENGTH;
     PiecePlan *scratch = NULL;
-    assert(grow_build_plan(&request, &scratch) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &scratch, NULL) == GROW_OK);
     NodeId scratch_theme = find_node(scratch, "theme");
     assert(plan_node_remove_constraint(scratch, scratch_theme, plan_node_constraint_count(scratch, scratch_theme) - 1) == PLAN_OK);
     assert(plan_node_add_constraint(scratch, scratch_theme, &extended) == PLAN_OK);
@@ -376,7 +376,7 @@ static void test_round_trip(void) {
     /* A plan with an unknown idea in a construction is refused with its path. */
     const char *marker = "\"basic idea\"";
     PiecePlan *good = NULL;
-    assert(grow_build_plan(&request, &good) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &good, NULL) == GROW_OK);
     char *good_text = plan_to_json(good, &error);
     assert(good_text);
     char *at = strstr(good_text, "\"ideas\"");

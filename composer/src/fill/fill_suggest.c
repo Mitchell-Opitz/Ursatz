@@ -38,14 +38,6 @@ size_t fill_suggestions_count(const FillSuggestions *suggestions) {
     return suggestions ? suggestions->count : 0;
 }
 
-const char *fill_suggestion_operator(const FillSuggestions *suggestions, size_t index) {
-    if (!suggestions || index >= suggestions->count) {
-        return NULL;
-    }
-    size_t operator_index = suggestions->entries.items[suggestions->ranked[index]].operator_index;
-    return fill_registry_at(suggestions->registry, operator_index)->generator.name;
-}
-
 const char *fill_suggestion_label(const FillSuggestions *suggestions, size_t index) {
     if (!suggestions || index >= suggestions->count) {
         return NULL;

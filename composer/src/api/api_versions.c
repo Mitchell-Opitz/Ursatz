@@ -8,16 +8,10 @@
 
 #include "api_internal.h"
 
-static const char *const STATUS_NAMES[] = {"ok", "request", "unsatisfiable", "cancelled", "alloc", "internal"};
-
 const char *composer_api_version(void) {
 #define API_STR2(x) #x
 #define API_STR(x) API_STR2(x)
     return API_STR(COMPOSER_API_VERSION_MAJOR) "." API_STR(COMPOSER_API_VERSION_MINOR);
-}
-
-const char *composer_status_name(ComposerStatus status) {
-    return (unsigned)status < sizeof STATUS_NAMES / sizeof STATUS_NAMES[0] ? STATUS_NAMES[status] : "unknown";
 }
 
 void composer_response_destroy(ComposerResponse *response) {

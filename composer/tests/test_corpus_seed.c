@@ -81,7 +81,7 @@ static int test_motive(void) {
     Motive expected = bar_in(&meter, &d_major, "D5:h F#5:q A5:q");
     expected.key_source = MOTIVE_SKETCH_KEY_GIVEN;
     if (!motive_equal(&seed.motive, &expected)) {
-        char *got = motive_to_json(&seed.motive);
+        char *got = test_motive_json(&seed.motive);
         fprintf(stderr, "the seeded motive is not the bar in D major:\n%s\n", got ? got : "(null)");
         free(got);
         return 1;

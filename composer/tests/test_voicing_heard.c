@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
             memset(&config, 0, sizeof(config));
             memset(&outcome, 0, sizeof(outcome));
             config.seed = seed;
-            assert(grow_build_plan(&request, &plan) == GROW_OK);
+            assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
             GrowResult result = grow_run(plan, &config, &outcome);
             themes++;
             if (result != GROW_OK || outcome.stuck) {

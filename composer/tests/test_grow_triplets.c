@@ -8,6 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "support/test_composer.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -107,7 +108,7 @@ static void grow(const char *degrees, const char *meter, const char *into, unsig
     ComposerResponse response;
     ComposerStatus status = composer_api_theme(request, NULL, &response);
     if (status != COMPOSER_OK) {
-        fprintf(stderr, "%s %s seed %u: %s: %s\n", into, meter, seed, composer_status_name(status), response.error.message);
+        fprintf(stderr, "%s %s seed %u: %s: %s\n", into, meter, seed, test_status_name(status), response.error.message);
     }
     assert(status == COMPOSER_OK);
     free(request);

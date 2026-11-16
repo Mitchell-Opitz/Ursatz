@@ -556,14 +556,13 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
  */
 /* GROW_ROLE_NONE for a NULL name or one that is no idea's. */
 GrowIdeaRole grow_idea_role(const char *idea_name);
+/* The default table: the minimums grow_fidelity_minimum_in reads. */
+void grow_fidelity_table_default(GrowFidelityTable *out);
 /*
  * The least fidelity (R-354's score) an idea of the role may have under the development setting before the melody stage
- * refuses it (R-355); 0 for GROW_ROLE_NONE, GROW_ROLE_CONTRAST and values out of range.
+ * refuses it (R-355); 0 for GROW_ROLE_NONE, GROW_ROLE_CONTRAST and values out of range. Over a table (R-411); a NULL
+ * table is the default one.
  */
-MotiveScore grow_fidelity_minimum(GrowDevelopment development, GrowIdeaRole role);
-/* The default table: the minimums grow_fidelity_minimum reads. */
-void grow_fidelity_table_default(GrowFidelityTable *out);
-/* grow_fidelity_minimum over a table (R-411); a NULL table is the default one. */
 MotiveScore grow_fidelity_minimum_in(const GrowFidelityTable *table, GrowDevelopment development, GrowIdeaRole role);
 /*
  * The motive an idea's melody span asks for is made from, as the ref says: the span's MOTIVE_REF names the idea's motive
@@ -617,7 +616,7 @@ typedef struct {
 /*
  * Runs context->inner first; a hard violation stands. For a melody-fill candidate whose target span has a MOTIVE_REF and
  * whose owner idea has a role (grow_idea_role): the realized notes (melody_candidate_realized) are measured against the
- * idea's source, and a score under the role's minimum (grow_fidelity_minimum) is a hard violation, "motive fidelity n/d
+ * idea's source, and a score under the role's minimum (grow_fidelity_minimum_in) is a hard violation, "motive fidelity n/d
  * under n/d (role)". Otherwise the score becomes
  *   ((agree * 100 + floor(100 * fidelity)) * (total + 1) + held) / (201 * (total + 1))
  * where held/total is the inner score, so agreement ranks first, then fidelity, then the melody rules' share; the style

@@ -1,6 +1,7 @@
 #ifndef URSATZ_COMPOSER_HEARING_H
 #define URSATZ_COMPOSER_HEARING_H
 
+#include <stdatomic.h>
 #include <stddef.h>
 
 #include <ursatz_composer/analyzer_check.h>
@@ -44,15 +45,15 @@ const PiecePlan *hearing_plan(const ComposerHearing *hearing);
 
 /* Test only: how many spans, in all hearings of this process so far, were handed to analyzer_hear. A test reads it before
    and after a run to see which sections the run heard. */
-size_t hearing_analyzer_calls(void);
+extern atomic_size_t hearing_analyzer_calls_made;
 
 /* NULL is a no-op. */
 void hearing_destroy(ComposerHearing *hearing);
 
 /*
  * The checks that hear the written music, over a hearing the caller already has: the public check of the same name
- * (analyzer_check_section, analyzer_check_piece, piece_check_keys, return_hear, composer_style_measure) makes one
- * hearing of its own and calls these. One compose run makes one hearing and every check reads it.
+ * (analyzer_check_section for a section; the tests' test_form_hear, test_return_hear, test_piece_check_keys,
+ * test_analyzer_check_piece and test_style_measure) makes one hearing of its own and calls these. One compose run makes one hearing and every check reads it.
  */
 AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId section, AnalyzerCheck *out);
 AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCheck *out);

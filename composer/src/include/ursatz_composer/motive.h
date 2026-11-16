@@ -166,8 +166,6 @@ const char *motive_result_name(MotiveResult result);
 
 /* Reads "auto", "midi", "musicxml", "notes", "json", "degrees", "rhythm" or "contour". False for any other text. */
 bool motive_format_parse(const char *name, MotiveFormat *out);
-/* "midi", "musicxml", "notes", "json", "degrees", "rhythm", "contour" or "auto". */
-const char *motive_format_name(MotiveFormat format);
 
 /* Reads "full", "rhythm" or "contour". False for any other text. */
 bool motive_form_parse(const char *name, MotiveSketchForm *out);
@@ -318,9 +316,6 @@ MotiveResult motive_feature_parse(const char *text, MotiveSketchFeature *out, Mo
 bool motive_role_parse(const char *name, bool *accompaniment);
 /* "melodic" (false) or "accompaniment" (true). */
 const char *motive_role_name(bool accompaniment);
-
-/* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
-char *motive_to_json(const Motive *motive);
 
 /*
  * Attaches the motive to the plan as Given material: a motive node under

@@ -44,21 +44,21 @@ static MotiveScore fraction(unsigned long numerator, unsigned long denominator) 
 static void test_same_form_scores_highest(void) {
     Motive basic = load("C4:q E4:q G4:q C5:q", NULL);
     MotiveConnection same;
-    assert(motive_connection(&basic, &basic, &basic, &(MotiveScore){0, 1}, &same));
+    assert(motive_connection_limited(&basic, &basic, &basic, &(MotiveScore){0, 1}, NULL, &same));
     assert(equals(same.common, 1, 1) && equals(same.rhythm, 1, 1) && equals(same.harmony, 1, 2));
     assert(!same.halved && equals(same.total, 7, 8));
 
     /* Searched, the same motive is also at distance 0. */
-    MotiveScore searched;
-    assert(motive_connection_score(&basic, &basic, &basic, &searched) && equals(searched, 7, 8));
+    MotiveConnection searched;
+    assert(motive_connection_limited(&basic, &basic, &basic, NULL, NULL, &searched) && equals(searched.total, 7, 8));
 
     /* A form with another rhythm, or further from the basic idea, scores lower with the same chord. */
     Motive other_rhythm = load("C4:e E4:e G4:q C5:h", NULL);
     MotiveConnection changed;
-    assert(motive_connection(&basic, &basic, &other_rhythm, &(MotiveScore){0, 1}, &changed));
+    assert(motive_connection_limited(&basic, &basic, &other_rhythm, &(MotiveScore){0, 1}, NULL, &changed));
     assert(changed.total.numerator * same.total.denominator < same.total.numerator * changed.total.denominator);
     MotiveConnection far;
-    assert(motive_connection(&basic, &basic, &basic, &(MotiveScore){2, 3}, &far));
+    assert(motive_connection_limited(&basic, &basic, &basic, &(MotiveScore){2, 3}, NULL, &far));
     assert(equals(far.common, 1, 3) && far.total.numerator * same.total.denominator < same.total.numerator * far.total.denominator);
 }
 
@@ -67,14 +67,14 @@ static void test_remote_form_is_halved(void) {
     Motive basic = load("C4:q E4:q G4:q C5:q", NULL);
     MotiveConnection near;
     MotiveConnection remote;
-    assert(motive_connection(&basic, &basic, &basic, &(MotiveScore){3, 4}, &near));
+    assert(motive_connection_limited(&basic, &basic, &basic, &(MotiveScore){3, 4}, NULL, &near));
     assert(!near.halved && equals(near.common, 1, 4) && equals(near.total, 1, 2));
-    assert(motive_connection(&basic, &basic, &basic, &(MotiveScore){4, 5}, &remote));
+    assert(motive_connection_limited(&basic, &basic, &basic, &(MotiveScore){4, 5}, NULL, &remote));
     assert(remote.halved && equals(remote.common, 1, 5));
     /* (2/5 + 1 + 1/2) / 4 = 19/40, halved 19/80. */
     assert(equals(remote.total, 19, 80));
     /* No chain within the depth is distance 1: nothing in common. */
-    assert(motive_connection(&basic, &basic, &basic, &(MotiveScore){1, 1}, &remote));
+    assert(motive_connection_limited(&basic, &basic, &basic, &(MotiveScore){1, 1}, NULL, &remote));
     assert(remote.halved && equals(remote.common, 0, 1) && equals(remote.total, 3, 16));
 }
 
@@ -101,7 +101,7 @@ static void test_harmony_progression(void) {
         Motive before = load("G4:q B4:q D5:q G5:q", from);
         Motive after = load("G4:q B4:q D5:q G5:q", to);
         MotiveConnection connection;
-        assert(motive_connection(&basic, &before, &after, &(MotiveScore){0, 1}, &connection));
+        assert(motive_connection_limited(&basic, &before, &after, &(MotiveScore){0, 1}, NULL, &connection));
         assert(equals(connection.harmony, CASES[i].numerator, CASES[i].denominator));
     }
 }
@@ -116,7 +116,7 @@ static void test_no_chord_no_harmony(void) {
     rhythm.key_source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
     Motive basic = load("C4:q E4:q G4:q C5:q", NULL);
     MotiveConnection connection;
-    assert(motive_connection(&basic, &basic, &rhythm, &(MotiveScore){1, 3}, &connection));
+    assert(motive_connection_limited(&basic, &basic, &rhythm, &(MotiveScore){1, 3}, NULL, &connection));
     assert(equals(connection.harmony, 0, 1));
 }
 
@@ -141,12 +141,11 @@ static void test_bad_arguments(void) {
     Motive basic = load("C4:q E4:q G4:q C5:q", NULL);
     MotiveConnection connection;
     MotiveScore score;
-    assert(!motive_connection(NULL, &basic, &basic, &(MotiveScore){0, 1}, &connection));
-    assert(!motive_connection(&basic, &basic, NULL, &(MotiveScore){0, 1}, &connection));
-    assert(!motive_connection(&basic, &basic, &basic, &(MotiveScore){0, 1}, NULL));
-    assert(!motive_connection_score(&basic, &basic, &basic, NULL));
+    assert(!motive_connection_limited(NULL, &basic, &basic, &(MotiveScore){0, 1}, NULL, &connection));
+    assert(!motive_connection_limited(&basic, &basic, NULL, &(MotiveScore){0, 1}, NULL, &connection));
+    assert(!motive_connection_limited(&basic, &basic, &basic, &(MotiveScore){0, 1}, NULL, NULL));
     /* previous NULL is the basic idea. */
-    assert(motive_connection(&basic, NULL, &basic, &(MotiveScore){0, 1}, &connection) && equals(connection.total, 7, 8));
+    assert(motive_connection_limited(&basic, NULL, &basic, &(MotiveScore){0, 1}, NULL, &connection) && equals(connection.total, 7, 8));
     (void)score;
 }
 

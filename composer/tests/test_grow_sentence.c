@@ -264,7 +264,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     for (int round = 0; round < 2; round++) {
         PiecePlan *plan = NULL;
         GrowOutcome outcome;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         GrowResult result = grow_run(plan, &config, &outcome);
         if (result != GROW_OK) {
             fprintf(stderr, "%s, %zu bars, seed %lu: %s at %s\n", scenario->name, bars, seed, grow_result_name(result),
@@ -313,7 +313,7 @@ static void test_seeds_vary(void) {
         GrowConfig config;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
         char *json = plan_to_json(plan, NULL);
         bool known = false;
@@ -338,26 +338,26 @@ static void test_bad_requests(void) {
     Motive motive = make_motive(&SCENARIOS[0]);
     GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(NULL, &plan) == GROW_ERR_NULL);
-    assert(grow_build_plan(&request, NULL) == GROW_ERR_NULL);
+    assert(grow_build_plan_checked(NULL, &plan, NULL) == GROW_ERR_NULL);
+    assert(grow_build_plan_checked(&request, NULL, NULL) == GROW_ERR_NULL);
 
     GrowRequest changed = request;
     changed.bars = 6;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST && plan == NULL);
     changed = request;
     changed.meter.beats_per_bar = 5;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* An antecedent ends in a cadence weaker than the theme's, and no cadence is weaker than a half cadence. */
     changed = request;
     changed.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
     changed.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
     changed.cadence = CADENCE_TYPE_HALF;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     changed.pairing.beginning = (PlanThemeBeginning)7;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     changed = request;
     changed.cadence = CADENCE_TYPE_DECEPTIVE;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
 
     /* A motive longer than the basic idea (two bars of eight): three whole notes. */
     Motive long_motive;
@@ -368,19 +368,19 @@ static void test_bad_requests(void) {
     assert(motive_from_notes_text("E4:w G4:w F4:w", &options, &long_motive, NULL) == MOTIVE_OK);
     changed = request;
     changed.motive = &long_motive;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_MOTIVE_TOO_LONG && plan == NULL);
 
     /* A motive of one note has nothing to fragment. */
     Motive single;
     assert(motive_from_notes_text("E4:q", &options, &single, NULL) == MOTIVE_OK);
     changed.motive = &single;
-    assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
+    assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
 
     /* grow_run wants an open theme. */
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     grow_outcome_destroy(&outcome);
     assert(grow_run(plan, &config, &outcome) == GROW_ERR_BAD_REQUEST);
@@ -393,7 +393,7 @@ static void test_built_plan(void) {
     Motive motive = make_motive(&SCENARIOS[1]);
     GrowRequest request = make_request(&SCENARIOS[1], &motive, 8);
     PiecePlan *plan = NULL;
-    assert(grow_build_plan(&request, &plan) == GROW_OK);
+    assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = find_node(plan, "theme");
     NodeId material = find_node(plan, "material");
     assert(theme != PLAN_NODE_NONE && material != PLAN_NODE_NONE);
@@ -473,7 +473,7 @@ static void test_motive_forms(void) {
         memset(&config, 0, sizeof(config));
         config.seed = seed;
         config.basic = &motive;
-        assert(grow_build_plan(&request, &plan) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
 
         /* The repetition's chords: when the first one is the dominant, its motive is the basic idea's dominant form. */
@@ -515,7 +515,7 @@ static void test_motive_forms(void) {
         /* The same seed gives the same theme, motives and records. */
         PiecePlan *again = NULL;
         GrowOutcome second;
-        assert(grow_build_plan(&request, &again) == GROW_OK && grow_run(again, &config, &second) == GROW_OK);
+        assert(grow_build_plan_checked(&request, &again, NULL) == GROW_OK && grow_run(again, &config, &second) == GROW_OK);
         char *first_json = plan_to_json(plan, NULL);
         char *second_json = plan_to_json(again, NULL);
         char *first_records = records_text(&outcome);

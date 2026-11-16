@@ -242,7 +242,7 @@ static void test_forms(void) {
 
 static void test_style(void) {
     ComposerStyle *style = NULL;
-    assert(composer_style_load(COMPOSER_FIXTURE_DIR "/styles/chorales.style.json", &style) == COMPOSER_STYLE_OK);
+    assert(composer_style_load_without(COMPOSER_FIXTURE_DIR "/styles/chorales.style.json", NULL, 0, &style) == COMPOSER_STYLE_OK);
     MotiveRandomOptions options = options_of(&SCENARIOS[0], 5);
     options.style = style;
     Motive styled[COUNT];

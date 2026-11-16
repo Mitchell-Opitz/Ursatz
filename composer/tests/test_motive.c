@@ -305,15 +305,6 @@ static void test_analysis_rest_and_dotted(void) {
     assert(time_is(a.rhythm[1].rest_before, 0, 1));
     assert(time_is(a.rhythm[2].beat, 5, 2) && !a.rhythm[2].on_beat && !a.rhythm[2].dotted);
 
-    char name[16];
-    motive_duration_name(a.rhythm[1].duration, name, sizeof(name));
-    assert(strcmp(name, "q.") == 0);
-    motive_duration_name(a.rhythm[0].rest_before, name, sizeof(name));
-    assert(strcmp(name, "e") == 0);
-    Rational odd = {5, 16};
-    motive_duration_name(odd, name, sizeof(name));
-    assert(strcmp(name, "5/16") == 0);
-
     /*
      * No note is on a downbeat, so the notes weigh 1/8, 3/8 and 1/8: 5/8. I (C E G) has G and C, 4/5; IV (F A C) and
      * vi (A C E) have C, 3/5; V (G B D), iii (E G B) and V7 have G and B, 2/5; vii (B D F) has B, 1/5. Equal fits
@@ -437,30 +428,6 @@ static void test_analysis_output(void) {
     assert(unkeyed && strstr(unkeyed, "\"steps\": null") != NULL && strstr(unkeyed, "\"scale_degrees\": null") != NULL);
     free(unkeyed);
 
-    FILE *file = tmpfile();
-    assert(file);
-    motive_analysis_print(&motive, &a, file);
-    rewind(file);
-    char text[4096];
-    size_t length = fread(text, 1, sizeof(text) - 1, file);
-    text[length] = '\0';
-    fclose(file);
-    assert(strstr(text, "Notes: D4 F4 A4 D5") != NULL);
-    assert(strstr(text, "Meter: 4/4") != NULL);
-    assert(strstr(text, "Key: D minor (given)") != NULL);
-    assert(strstr(text, "Contour: ascending (up, up, up)") != NULL);
-    assert(strstr(text, "Range: D4 to D5 (12 semitones)") != NULL);
-    assert(strstr(text, "1. i (tonic) fits 100%") != NULL);
-
-    file = tmpfile();
-    assert(file);
-    motive_analysis_print(&no_key, &none, file);
-    rewind(file);
-    length = fread(text, 1, sizeof(text) - 1, file);
-    text[length] = '\0';
-    fclose(file);
-    assert(strstr(text, "Key: unspecified") != NULL);
-    assert(strstr(text, "Implied harmony: unknown (no key)") != NULL);
 }
 
 /* ----------------------------------------------------------------- JSON */
@@ -473,7 +440,7 @@ static void test_json_round_trip(void) {
     motives[3] = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, NULL); /* inferred key */
     motives[4] = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, NULL);                    /* no key */
     for (size_t i = 0; i < 5; i++) {
-        char *json = motive_to_json(&motives[i]);
+        char *json = test_motive_json(&motives[i]);
         assert(json);
         Motive back;
         MotiveError error;
@@ -783,7 +750,6 @@ static void test_degrees_reading(void) {
     assert(motive_format_parse("degrees", &format) && format == MOTIVE_FORMAT_DEGREES);
     assert(motive_format_parse("rhythm", &format) && format == MOTIVE_FORMAT_RHYTHM);
     assert(motive_format_parse("contour", &format) && format == MOTIVE_FORMAT_CONTOUR);
-    assert(strcmp(motive_format_name(MOTIVE_FORMAT_CONTOUR), "contour") == 0);
 }
 
 static void test_degrees_errors(void) {
@@ -915,20 +881,6 @@ static void test_triplet_values(void) {
     assert(time_is(motive.notes[0].duration, 1, 4) && time_is(motive.notes[1].duration, 7, 12));
     expect_text(motive_to_notes_text(&motive), "D4:q E4:h3~ E4:q F4:h3 F4:h3 F4:h3");
 
-    /* The name of a duration. */
-    char name[16];
-    motive_duration_name(motive.notes[2].duration, name, sizeof(name));
-    assert(strcmp(name, "h3") == 0);
-    Rational sixth = {1, 6};
-    motive_duration_name(sixth, name, sizeof(name));
-    assert(strcmp(name, "q3") == 0);
-    Rational twelfth = {1, 12};
-    motive_duration_name(twelfth, name, sizeof(name));
-    assert(strcmp(name, "e3") == 0);
-    Rational ninth = {1, 9};
-    motive_duration_name(ninth, name, sizeof(name));
-    assert(strcmp(name, "1/9") == 0);
-
     /* A triplet value takes no dots. */
     expect_read_error(motive_from_rhythm_text, "x:q.3", NULL, MOTIVE_ERR_VALUE, "token 1 (column 1)",
                       "'q.3' is not a duration; a triplet value takes no dots");
@@ -989,7 +941,7 @@ static void test_pickup_and_form_in_json(void) {
     Motive motive;
     MotiveError error;
     assert(motive_from_rhythm_text("x:q x:h.", &options, &motive, &error) == MOTIVE_OK);
-    char *json = motive_to_json(&motive);
+    char *json = test_motive_json(&motive);
     assert(json && strstr(json, "\"form\": \"rhythm\"") && strstr(json, "\"pickup\""));
     Motive again;
     options = options_with(NULL, NULL);
@@ -999,7 +951,7 @@ static void test_pickup_and_form_in_json(void) {
 
     /* A full motive without a pickup writes neither, and the two differ in motive_equal. */
     Motive plain = load_notes("D4:q F4:q", &FOUR_FOUR, NULL);
-    json = motive_to_json(&plain);
+    json = test_motive_json(&plain);
     assert(json && !strstr(json, "\"form\"") && !strstr(json, "\"pickup\""));
     free(json);
     Motive shifted = plain;
@@ -1205,14 +1157,14 @@ static void test_extras_in_json(void) {
     assert(strcmp(motive.features[1].label, "b") == 0 && motive.features[1].first == 2 && motive.features[1].last == 3);
 
     /* The JSON written reads back as the same motive; a motive with none of it writes none of it. */
-    char *written = motive_to_json(&motive);
+    char *written = test_motive_json(&motive);
     assert(written && strstr(written, "\"harmony\": \"I V6@2 I@3\"") && strstr(written, "\"role\": \"accompaniment\""));
     Motive again;
     assert(motive_from_json(written, NULL, &again, &error) == MOTIVE_OK);
     assert(motive_equal(&motive, &again));
     free(written);
     Motive plain = load_notes("C4:q E4:q G4:q C5:q", &FOUR_FOUR, &C_MAJOR);
-    written = motive_to_json(&plain);
+    written = test_motive_json(&plain);
     assert(written && !strstr(written, "harmony") && !strstr(written, "features") && !strstr(written, "role"));
     free(written);
 

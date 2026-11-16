@@ -4,6 +4,7 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/preferences.h>
+#include "support/test_composer.h"
 
 /*
  * The preferences document (R-411): the defaults written and read back, the melody part of the document in the shape
@@ -82,7 +83,7 @@ static void l4_members_round_trip(void) {
            read.melody.leap_weight == 9 && read.melody.register_weight == 20);
     assert(read.contrast.distance[GROW_CONTRAST_SIMILAR] == 2 && read.contrast.distance[GROW_CONTRAST_DISTANT] == 5 &&
            read.contrast.new_material == 4);
-    assert(!composer_preferences_is_default(&read));
+    assert(!test_preferences_are_default(&read));
     cJSON *document = composer_preferences_write(&read);
     assert(document);
     assert(composer_preferences_read(document, &again, path, sizeof(path), message, sizeof(message)));
@@ -107,11 +108,11 @@ static void l4_members_round_trip(void) {
                                         "{\"development\":{\"contrast\":{\"new_material\":1}}}"};
     for (size_t i = 0; i < sizeof(ALONE) / sizeof(ALONE[0]); i++) {
         assert(read_text(ALONE[i], &read, path, message));
-        assert(!composer_preferences_is_default(&read));
+        assert(!test_preferences_are_default(&read));
     }
     assert(read_text("{\"development\":{\"contrast\":{\"distance\":{\"similar\":0,\"distant\":0}}}}", &read, path, message));
     assert(read.contrast.distance[GROW_CONTRAST_SIMILAR] == 1 && read.contrast.distance[GROW_CONTRAST_DISTANT] == 0);
-    assert(composer_preferences_is_default(&read));
+    assert(test_preferences_are_default(&read));
     assert(read_text("{\"melody\":{\"closure\":{\"first\":3}}}", &read, path, message));
     assert(read.melody.closure_final == 0 && read.melody.closure_first == 3);
 }
@@ -122,7 +123,7 @@ static void defaults_round_trip(void) {
     char path[COMPOSER_PREFERENCES_PATH_MAX];
     char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
     composer_preferences_default(&defaults);
-    assert(composer_preferences_is_default(&defaults));
+    assert(test_preferences_are_default(&defaults));
 
     cJSON *document = composer_preferences_write(&defaults);
     assert(document);
@@ -144,7 +145,7 @@ static void defaults_round_trip(void) {
     cJSON_free(text);
 
     assert(composer_preferences_read(document, &read, path, sizeof(path), message, sizeof(message)));
-    assert(composer_preferences_is_default(&read));
+    assert(test_preferences_are_default(&read));
     assert(read.melody.range_low == defaults.melody.range_low && read.melody.keep == defaults.melody.keep &&
            read.melody.nct_types == defaults.melody.nct_types);
     cJSON *again = composer_preferences_write(&read);
@@ -178,13 +179,13 @@ static void members_read_over_defaults(void) {
     ComposerPreferences preferences;
     char path[COMPOSER_PREFERENCES_PATH_MAX];
     char message[COMPOSER_PREFERENCES_MESSAGE_MAX];
-    assert(read_text("{}", &preferences, path, message) && composer_preferences_is_default(&preferences));
-    assert(read_text("{\"melody\":{}}", &preferences, path, message) && composer_preferences_is_default(&preferences));
+    assert(read_text("{}", &preferences, path, message) && test_preferences_are_default(&preferences));
+    assert(read_text("{\"melody\":{}}", &preferences, path, message) && test_preferences_are_default(&preferences));
     assert(read_text("{\"melody\":{\"keep\":3,\"attempts\":12,\"range\":{\"high\":90},\"density\":2,"
                      "\"nct_types\":[\"suspension\",\"passing\"],\"second_nearest_chord_tone\":\"1/2\","
                      "\"plain_shaping\":true,\"weights\":{\"waves\":0,\"central_range\":20}}}",
                      &preferences, path, message));
-    assert(!composer_preferences_is_default(&preferences));
+    assert(!test_preferences_are_default(&preferences));
     assert(preferences.melody.keep == 3 && preferences.melody.attempts == 12 && preferences.melody.density == 2);
     assert(preferences.melody.range_low == 60 && preferences.melody.range_high == 90);
     assert(preferences.melody.nct_types == (MELODY_NCT_SUSPENSION | MELODY_NCT_PASSING));
@@ -204,7 +205,7 @@ static void members_read_over_defaults(void) {
                      "\"leap\":{\"low\":4,\"high\":4},\"plans_two\":{\"I-IV\":7}},"
                      "\"development\":{\"fidelity_minimum\":{\"theme\":{\"presentation\":\"1/1\"}}}}",
                      &preferences, path, message));
-    assert(!composer_preferences_is_default(&preferences));
+    assert(!test_preferences_are_default(&preferences));
     assert(preferences.motif.pickup_one_in == 0 && preferences.motif.bars[0] == 1 && preferences.motif.bars[1] == 0);
     assert(preferences.motif.features[0] == 1 && preferences.motif.features[1] == 0 && preferences.motif.features[2] == 0);
     assert(preferences.motif.leap_low == 4 && preferences.motif.leap_high == 4 && preferences.motif.plans_two[1] == 7 &&
@@ -224,7 +225,7 @@ static void members_read_over_defaults(void) {
                      "\"avoid_repeats\":true,\"leaps_per_motif\":2,\"leap_recovery\":true,\"pickup_from_accent\":true,"
                      "\"contrast_fidelity_min\":\"1/3\",\"long_on_weak\":4,\"final_long\":true}}",
                      &preferences, path, message));
-    assert(!composer_preferences_is_default(&preferences));
+    assert(!test_preferences_are_default(&preferences));
     assert(preferences.motif.accented_one_in == 3 && preferences.motif.accented_types[0] == 0 &&
            preferences.motif.accented_types[1] == 2 && preferences.motif.accented_types[2] == 5 &&
            preferences.motif.avoid_repeats && preferences.motif.leaps_per_motif == 2 && preferences.motif.leap_recovery &&
@@ -255,7 +256,7 @@ static void members_read_over_defaults(void) {
                      "\"seventh\":4},\"long_nct_beats\":{\"downbeat\":0,\"middle\":6,\"other\":7},"
                      "\"long_nct_lengths\":{\"beat\":8,\"dotted_beat\":0,\"two_beats\":9}}}",
                      &preferences, path, message));
-    assert(!composer_preferences_is_default(&preferences));
+    assert(!test_preferences_are_default(&preferences));
     assert(preferences.motif.durations[3] == 2 && preferences.motif.durations[7] == 6 && preferences.motif.compound_beats &&
            preferences.motif.endings[0] == 0 && preferences.motif.endings[1] == 2 && preferences.motif.endings[3] == 1 &&
            preferences.motif.long_nct_one_in == 7 && preferences.motif.long_nct_types[0] == 0 &&
@@ -279,7 +280,7 @@ static void members_read_over_defaults(void) {
                      "\"fragment_lengths\":{\"segment\":0,\"half_bar\":3,\"beat\":2},\"diminish\":true,\"liquidate\":true,"
                      "\"faster_harmony\":true},\"basic_as_written\":true}}",
                      &preferences, path, message));
-    assert(!composer_preferences_is_default(&preferences));
+    assert(!test_preferences_are_default(&preferences));
     assert(preferences.motif.syncopation_one_in == 3 && preferences.motif.syncopation_types[0] == 0 &&
            preferences.motif.syncopation_types[1] == 2 && preferences.motif.syncopation_types[3] == 5 &&
            preferences.motif.syncopation_levels[0] == 4 && preferences.motif.syncopation_levels[1] == 0 &&
@@ -321,7 +322,7 @@ static void members_read_over_defaults(void) {
            preferences.motif.durations[3] == 0 && preferences.motif.durations[7] == 0);
 
     /* A single setting equal to its default is still the defaults. */
-    assert(read_text("{\"melody\":{\"keep\":6}}", &preferences, path, message) && composer_preferences_is_default(&preferences));
+    assert(read_text("{\"melody\":{\"keep\":6}}", &preferences, path, message) && test_preferences_are_default(&preferences));
 }
 
 static void limits_are_refused(void) {

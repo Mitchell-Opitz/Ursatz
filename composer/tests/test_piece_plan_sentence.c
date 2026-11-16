@@ -19,17 +19,9 @@
  *      Subphrase "continuation"    bars 4-8
  *       Motive "fragment"          bar 4
  *
- * The plan is built, walked and checked for span coverage, state rules and
+ * The plan is built and checked for span coverage, state rules and
  * refused writes to Given material.
  */
-
-#define MAX_VISITED 16
-
-typedef struct {
-    const char *names[MAX_VISITED];
-    size_t depths[MAX_VISITED];
-    size_t count;
-} Visited;
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
@@ -43,23 +35,6 @@ static NodeId add(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan sp
     assert(plan_add_node(plan, parent, kind, span, name, &id) == PLAN_OK);
     assert(id != PLAN_NODE_NONE);
     return id;
-}
-
-static bool record(const PiecePlan *plan, NodeId id, size_t depth, void *context) {
-    Visited *visited = context;
-    assert(visited->count < MAX_VISITED);
-    visited->names[visited->count] = plan_node_name(plan, id);
-    visited->depths[visited->count] = depth;
-    visited->count++;
-    return true;
-}
-
-static bool stop_after_three(const PiecePlan *plan, NodeId id, size_t depth, void *context) {
-    size_t *seen = context;
-    (void)plan;
-    (void)id;
-    (void)depth;
-    return ++(*seen) < 3;
 }
 
 static PlanLanePayload meter_payload(void) {
@@ -108,21 +83,6 @@ int main(void) {
     assert(plan_node_parent(plan, m1) == basic_idea);
     assert(plan_node_kind(plan, phrase) == PLAN_NODE_PHRASE);
     assert(strcmp(plan_node_name(plan, continuation), "continuation") == 0);
-
-    /* Walk order is pre-order, children in insertion order. */
-    Visited visited = {{NULL}, {0}, 0};
-    assert(plan_walk(plan, record, &visited) == PLAN_OK);
-    const char *expected_names[] = {"form",       "A",          "sentence",     "presentation", "basic idea",
-                                    "m1",         "repetition", "continuation", "fragment"};
-    const size_t expected_depths[] = {0, 1, 2, 3, 4, 5, 4, 3, 4};
-    assert(visited.count == 9);
-    for (size_t i = 0; i < visited.count; i++) {
-        assert(strcmp(visited.names[i], expected_names[i]) == 0);
-        assert(visited.depths[i] == expected_depths[i]);
-    }
-    size_t seen = 0;
-    assert(plan_walk(plan, stop_after_three, &seen) == PLAN_OK);
-    assert(seen == 3);
 
     /* Span coverage: the phrase's children tile it with no gap or overlap. */
     assert(plan_node_child_count(plan, phrase) == 2);
