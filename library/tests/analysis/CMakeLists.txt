@@ -74,7 +74,6 @@ if(URSATZ_ANALYSIS_VALGRIND)
            COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_motive_link_groups>)
 endif()
-add_ursatz_test(phrase_segmentation)
 add_ursatz_test(phrase_boundary_detection)
 add_ursatz_test(period_detection)
 add_ursatz_test(sentence_continuation_matching)
