@@ -78,7 +78,10 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [grow-construction.md](grow-construction.md): a theme of any whole bars from 3 to 16 and ideas of any whole bars, given by a construction (P47).
 - [grow-hearing.md](grow-hearing.md): how a grown theme is heard, with periods and hybrids.
 - [piece.md](piece.md): pieces from forms and the compose run.
-- [forms.md](forms.md): forms as JSON documents (P44): the members, the thirteen built-in forms and the game loop, how to add one.
+- [piece-tests.md](piece-tests.md): the piece tests and their measured results.
+- [forms.md](forms.md): forms as JSON documents (P44): the members, the game loop, how to add one.
+- [form-sections.md](form-sections.md): the members of a section of a size.
+- [forms-builtin.md](forms-builtin.md): the thirteen built-in forms.
 - [small-ternary.md](small-ternary.md): the built-in ternary form after Schoenberg ch. XIII (P46): A, B over a pedal or in the away region, A1 varied, and what was measured.
 - [minuet.md](minuet.md): the built-in minuet, trio and minuet and trio forms after Schoenberg ch. XV (P48): 3/4 at 112, written-out repeats, B leading into A1, the trio in its own key, and what was measured.
 - [scherzo.md](scherzo.md): the built-in scherzo and scherzo and trio forms after Schoenberg ch. XVI (P49): a ternary with a modulating middle, sequences of a pattern, a liquidation and an extended return, the planned keys, and what was measured.
@@ -94,4 +97,9 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 ## Limits and changes
 
 - [changelog.md](changelog.md): the Composer versions and what each changed.
-- [changelog-archive.md](changelog-archive.md): the older changelog entries.
+- [changelog-archive.md](changelog-archive.md): the changelog entries before P44.
+- [changelog-archive-2.md](changelog-archive-2.md): the changelog entries of P51 and P50.
+- [changelog-archive-3.md](changelog-archive-3.md): the changelog entries of P49 and P48.
+- [changelog-archive-4.md](changelog-archive-4.md): the changelog entries of L4 and P47.
+- [changelog-archive-5.md](changelog-archive-5.md): the changelog entries of L3, P46 and L2.
+- [changelog-archive-6.md](changelog-archive-6.md): the changelog entries of P45, L1 and P44.

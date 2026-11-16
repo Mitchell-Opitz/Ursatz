@@ -4,7 +4,7 @@ A section of a form that takes the pattern apart over a dominant pedal and ends 
 
 ## The section
 
-A form section of role `liquidation` has 4 bars, the half cadence and no theme shape. grow-theme builds it with its own operator (`src/grow/grow_liquidate.c`), not as a theme: the section has a `liquidation` constraint and no `archetype` or `theme_pairing`. The reader's refusals are in [forms.md](forms.md#a-section-of-a-size).
+A form section of role `liquidation` has 4 bars, the half cadence and no theme shape. grow-theme builds it with its own operator (`src/grow/grow_liquidate.c`), not as a theme: the section has a `liquidation` constraint and no `archetype` or `theme_pairing`. The reader's refusals are in [forms.md](form-sections.md#a-section-of-a-size).
 
 The operator applies to a Constrained section with no children and a `liquidation` constraint, no `return`, `hold`, `archetype` or `theme_pairing`, a half cadence, 4 whole bars from a barline, one meter span over it and one key span (a liquidation never opens a key). A half bar holds 2 to 4 eighths, so it works in 2/4, 3/4, 6/8 and 4/4 (R-505). The same operator grows a retransition (below). Anything else it leaves to the other operators. A draw whose source motive has fewer than 2 notes or is longer than a bar offers no candidate.
 

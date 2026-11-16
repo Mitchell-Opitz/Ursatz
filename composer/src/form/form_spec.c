@@ -84,6 +84,7 @@ static const struct {
 typedef struct {
     FormSpecError *error;
     bool failed;
+    bool part; /* reading a built-in form for the part of another: it is not itself compound */
 } Reader;
 
 static bool fail(Reader *reader, const char *path, const char *format, ...) {
@@ -1127,8 +1128,18 @@ static bool read_repeats(Reader *reader, const cJSON *root, FormSpec *form) {
 
 /* ------------------------------------------------------------- parts */
 
-/* How deep a built-in form is being read for the part of another: a part's form is not itself compound. */
-static _Thread_local unsigned part_depth;
+static FormSpecResult parse_form(const char *json, FormSpec **out, FormSpecError *error, bool part);
+
+/* A built-in form read for the part of another: its own parts are not allowed. */
+static FormSpecResult builtin_part_form(const char *name, FormSpec **out) {
+    for (size_t i = 0; form_spec_builtin_name(i); i++) {
+        if (strcmp(name, form_spec_builtin_name(i)) == 0) {
+            return parse_form(form_spec_builtin_document(i), out, NULL, true);
+        }
+    }
+    *out = NULL;
+    return FORM_SPEC_ERR_UNKNOWN;
+}
 
 /* parts (R-485): the parts of a compound form, each a piece of a built-in form with sizes, or an earlier part again. */
 static bool read_parts(Reader *reader, const cJSON *root, FormSpec *form) {
@@ -1141,7 +1152,7 @@ static bool read_parts(Reader *reader, const cJSON *root, FormSpec *form) {
     if (form->request_sections) {
         return fail(reader, at, "only a form with sizes has this member");
     }
-    if (part_depth > 0) {
+    if (reader->part) {
         return fail(reader, at, "a part's form is not itself compound");
     }
     size_t n = (size_t)cJSON_GetArraySize(list);
@@ -1209,9 +1220,7 @@ static bool read_parts(Reader *reader, const cJSON *root, FormSpec *form) {
             if (strcmp(part->form, form->name) == 0) {
                 return fail(reader, member_at, "a part's form is not itself compound");
             }
-            part_depth++;
-            FormSpecResult found = form_spec_builtin(part->form, &sub);
-            part_depth--;
+            FormSpecResult found = builtin_part_form(part->form, &sub);
             if (found == FORM_SPEC_ERR_UNKNOWN) {
                 return fail(reader, member_at, "\"%s\" is not a built-in form", part->form);
             }
@@ -1732,7 +1741,7 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
     return true;
 }
 
-FormSpecResult form_spec_parse(const char *json, FormSpec **out, FormSpecError *error) {
+static FormSpecResult parse_form(const char *json, FormSpec **out, FormSpecError *error, bool part) {
     if (out) {
         *out = NULL;
     }
@@ -1754,7 +1763,7 @@ FormSpecResult form_spec_parse(const char *json, FormSpec **out, FormSpecError *
         cJSON_Delete(root);
         return FORM_SPEC_ERR_ALLOC;
     }
-    Reader reader = {error, false};
+    Reader reader = {error, false, part};
     bool ok = read_document(&reader, root, form);
     cJSON_Delete(root);
     if (!ok) {
@@ -1763,6 +1772,10 @@ FormSpecResult form_spec_parse(const char *json, FormSpec **out, FormSpecError *
     }
     *out = form;
     return FORM_SPEC_OK;
+}
+
+FormSpecResult form_spec_parse(const char *json, FormSpec **out, FormSpecError *error) {
+    return parse_form(json, out, error, false);
 }
 
 void form_spec_destroy(FormSpec *form) {
