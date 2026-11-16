@@ -18,7 +18,6 @@
 #define THREAD_COUNT 8
 
 #define FRAMEWORKS(X)                                                                                                  \
-    X(baroque_ground_bass_framework)                                                                                   \
     X(common_practice_minimal_framework)                                                                               \
     X(galant_schemas_framework)                                                                                        \
     X(scale_harmonization_framework)                                                                                   \
@@ -33,7 +32,6 @@
     X(western_periods_framework)
 
 #define RULES(X)                                                                                                       \
-    X(ground_bass_rule)                                                                                                \
     X(common_practice_triad_rule)                                                                                      \
     X(galant_matching_rule)                                                                                            \
     X(scale_octave_rule)                                                                                               \
