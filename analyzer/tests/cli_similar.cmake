@@ -1,6 +1,6 @@
 # Checks the --similar flag, its output and its exit codes, and validates the JSON output against the schema when
 # python3 with jsonschema was found at configure time. Run with cmake -P and -DCLI=<ursatz-analyzer>,
-# -DCORPORA_DIR=<test corpora>, -DMOTIVE=<a four-note MIDI motive>, -DPYTHON, -DHAVE_JSONSCHEMA, -DVALIDATOR, -DSCHEMA
+# -DCORPORA_DIR=<test corpora>, -DMOTIVE=<a four-note MIDI motive>, -DPYTHON (empty skips validation), -DVALIDATOR, -DSCHEMA
 # and -DWORK_DIR=<scratch dir>.
 
 foreach(var CLI CORPORA_DIR MOTIVE WORK_DIR SCHEMA)
@@ -58,7 +58,7 @@ expect_output("no match" "^no match in 5 pieces\n")
 check_case("no match json" 0 --similar "${REFERENCE}" --progression "I IV V I" --min 1/1 --format json)
 file(WRITE "${WORK_DIR}/empty.json" "${last_output}")
 
-if(HAVE_JSONSCHEMA)
+if(PYTHON)
     foreach(name motive progression empty)
         execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" "${SCHEMA}" "${WORK_DIR}/${name}.json" RESULT_VARIABLE result)
         if(NOT result EQUAL 0)

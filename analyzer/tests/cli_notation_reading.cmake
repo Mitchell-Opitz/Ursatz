@@ -1,5 +1,5 @@
 # Checks the CLI's notation reading flags: what they do to the analysis document and which invocations they reject.
-# Run with cmake -P and -DCLI=<ursatz-analyzer> -DFIXTURE=<a MusicXML file> -DPYTHON=<python3> -DHAVE_JSONSCHEMA=<bool>
+# Run with cmake -P and -DCLI=<ursatz-analyzer> -DFIXTURE=<a MusicXML file> -DPYTHON=<python3, or empty to skip validation>
 # -DVALIDATOR=<validate_schema.py> -DSCHEMA=<schema file> -DWORK_DIR=<scratch dir>.
 
 foreach(var CLI FIXTURE WORK_DIR)
@@ -60,7 +60,7 @@ if(NOT source STREQUAL "override" OR NOT numerator EQUAL 3 OR NOT denominator EQ
    OR NOT scale_num EQUAL 2 OR NOT scale_den EQUAL 1 OR NOT pickup_num EQUAL 1 OR NOT pickup_den EQUAL 4)
     message(FATAL_ERROR "reading: unexpected meter ${source} ${numerator}/${denominator} ${overridden} ${scale_num}/${scale_den} ${pickup_num}/${pickup_den}")
 endif()
-if(DEFINED PYTHON AND HAVE_JSONSCHEMA)
+if(PYTHON)
     execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" "${SCHEMA}" "${DOCUMENT}" RESULT_VARIABLE result)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "the document with a reading does not match the schema")
