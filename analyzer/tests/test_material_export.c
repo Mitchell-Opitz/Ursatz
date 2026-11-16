@@ -58,7 +58,7 @@ static void check_memory_matches_file(const char *path, InputFormat format, cons
 static void test_import_memory(void) {
     const char *musicxml = URSATZ_MUSICXML_DIR "/pickup.musicxml";
     const char *compressed = URSATZ_MUSICXML_DIR "/pickup.mxl";
-    const char *midi = URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Field 1.mid";
+    const char *midi = URSATZ_FIXTURES_DIR "/framework-v1-corpus/Field 1.mid";
 
     check_memory_matches_file(musicxml, INPUT_FORMAT_AUTO, "musicxml, auto");
     check_memory_matches_file(musicxml, INPUT_FORMAT_MUSICXML, "musicxml, named");

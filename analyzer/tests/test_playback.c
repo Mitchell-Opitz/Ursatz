@@ -38,7 +38,7 @@ static const struct {
 
 static void file_path(size_t i, char *path, size_t size) {
     if (strcmp(FILES[i].dir, "midi") == 0) {
-        snprintf(path, size, "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, FILES[i].file);
+        snprintf(path, size, "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, FILES[i].file);
     } else {
         snprintf(path, size, "%s/%s", URSATZ_MUSICXML_DIR, FILES[i].file);
     }

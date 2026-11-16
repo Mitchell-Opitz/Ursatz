@@ -5,17 +5,17 @@ ursatz_test(test_analysis_pipeline LIBS ursatz_analyzer analyzer_test_support)
 
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
 ursatz_test(test_corpus_key_estimation LIBS ursatz_analyzer
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 # Over 10 s in the fast set (about 37 s of CPU measured): runs nightly.
 ursatz_test(test_long_labels LIBS ursatz_analyzer
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 ursatz_test(test_analysis_document LIBS ursatz_analyzer analyzer_test_support cjson)
 
 ursatz_test(test_cli_output_flags COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DFIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
 
@@ -26,7 +26,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
-                     -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus
+                     -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/framework-v1-corpus
                      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake
         LABELS schema slow)
@@ -34,12 +34,10 @@ endif()
 
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
 ursatz_test(test_document_snapshots LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS slow)
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS slow)
 
 ursatz_test_executable(test_analysis_result LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 ursatz_test(test_analysis_result_smoke TARGET test_analysis_result ARGS smoke)
 # Over 10 s in the fast set (about 43 s of CPU measured): runs nightly.
 ursatz_test(test_analysis_result TARGET test_analysis_result LABELS slow)
@@ -49,8 +47,7 @@ if(URSATZ_VALGRIND)
         valgrind)
 endif()
 
-ursatz_test_executable(test_chord_sequence LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_chord_sequence LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
 ursatz_test(test_chord_sequence_smoke TARGET test_chord_sequence ARGS smoke)
 ursatz_test(test_chord_sequence TARGET test_chord_sequence LABELS slow)
 if(URSATZ_VALGRIND)
@@ -60,8 +57,7 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test_executable(test_playback LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 ursatz_test(test_playback TARGET test_playback)
 ursatz_test(test_playback_smoke TARGET test_playback ARGS smoke)
@@ -71,8 +67,7 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test_executable(test_score_export LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 ursatz_test(test_score_export TARGET test_score_export PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
 ursatz_test(test_score_export_smoke TARGET test_score_export ARGS smoke PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
@@ -84,16 +79,15 @@ endif()
 
 # Over 10 s in the fast set (about 40 s of CPU measured): runs nightly.
 ursatz_test(test_measure_locations LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
 ursatz_test(test_chord_coverage LIBS ursatz_analyzer
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 ursatz_test(test_chord_details LIBS ursatz_analyzer analyzer_test_support cjson)
 
-ursatz_test_executable(test_key_regions LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_key_regions LIBS ursatz_analyzer analyzer_test_support cjson)
 # Both pass since keys are placed on phrases (Ursatz P42, R-397): the regions follow the phrases that arrive in a
 # new key. Before P42 they failed (Clementi missed 1 core measure, Mozart 38 core measures and 5 modulations) and ran
 # under WILL_FAIL.
@@ -104,20 +98,20 @@ ursatz_test(test_key_regions_constructed TARGET test_key_regions ARGS constructe
 
 # Over 10 s in the fast set (about 42 s of CPU measured): runs nightly.
 ursatz_test(test_roman_numerals LIBS ursatz_analyzer analyzer_test_support cjson m
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 ursatz_test(test_outer_voices LIBS ursatz_analyzer analyzer_test_support cjson)
 
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
 ursatz_test(test_cadences LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 # Over 10 s in the fast set (about 40 s of CPU measured): runs nightly.
 ursatz_test(test_harmonic_function LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 ursatz_test_executable(test_progressions LIBS ursatz_analyzer analyzer_test_support cjson
-    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
 ursatz_test(test_progressions TARGET test_progressions LABELS slow)
 # Expected to fail: the library's Roman numerals give Bach 114 the most common progression I > IV7 (6 occurrences,
@@ -127,33 +121,30 @@ ursatz_test(test_progressions_bach_114_top TARGET test_progressions ARGS bach-to
 
 # Over 10 s in the fast set (about 42 s of CPU measured): runs nightly.
 ursatz_test(test_phrases LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 # Over 10 s in the fast set (about 44 s of CPU measured): runs nightly.
 ursatz_test(test_themes LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" LABELS slow)
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" LABELS slow)
 
 # Over 10 s in the fast set (about 46 s of CPU measured): runs nightly.
 ursatz_test(test_form_plan LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" LABELS slow)
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" LABELS slow)
 
 # Over 10 s in the fast set (about 80 s of CPU measured): runs nightly.
 ursatz_test(test_motives LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 
 # Over 10 s in the fast set (about 37 s of CPU measured): runs nightly.
 ursatz_test(test_motive_sketch_map LIBS ursatz_analyzer analyzer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+    LABELS slow)
 if(URSATZ_VALGRIND)
     ursatz_test(test_motive_sketch_map_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
         --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_motive_sketch_map> LABELS slow
         valgrind)
 endif()
 
-ursatz_test_executable(test_melody LIBS ursatz_analyzer analyzer_test_support cjson m
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_melody LIBS ursatz_analyzer analyzer_test_support cjson m)
 ursatz_test(test_melody TARGET test_melody)
 # Expected to fail: the extracted soprano of Bach 114 misses the annotated ranges (the extractor adopts a left-hand note
 # where the right hand rests, at the start of measure 4) and gets the right recovery status for 4 of the 11 annotated
@@ -161,8 +152,7 @@ ursatz_test(test_melody TARGET test_melody)
 # Both climaxes are right. The assertions stay as the target; remove WILL_FAIL when the extraction meets it.
 ursatz_test(test_melody_bach_114_target TARGET test_melody ARGS bach-114-target PROPERTIES WILL_FAIL TRUE)
 
-ursatz_test_executable(test_rhythm LIBS ursatz_analyzer analyzer_test_support cjson m
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_rhythm LIBS ursatz_analyzer analyzer_test_support cjson m)
 ursatz_test(test_rhythm TARGET test_rhythm)
 ursatz_test(test_rhythm_constructed TARGET test_rhythm ARGS constructed)
 # Expected to fail: the form adapter reports no elided cadence, so the hypermeter has no reinterpretation, and Field 5's
@@ -171,8 +161,7 @@ ursatz_test(test_rhythm_constructed TARGET test_rhythm ARGS constructed)
 # stay as the target; remove WILL_FAIL when the form adapter reports elision.
 ursatz_test(test_rhythm_field5_target TARGET test_rhythm ARGS field5-target PROPERTIES WILL_FAIL TRUE)
 
-ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer)
 
 ursatz_test(test_voice_leading LIBS ursatz_test_support ursatz_analyzer
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
@@ -182,20 +171,16 @@ ursatz_test(test_markings LIBS ursatz_test_support ursatz_analyzer
 
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
 ursatz_test(test_schemas LIBS ursatz_test_support ursatz_analyzer m
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}" LABELS slow)
+    DEFINITIONS URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}" LABELS slow)
 
 # Over 10 s in the fast set (about 76 s of CPU measured): runs nightly.
 ursatz_test(test_musicxml_midi_agreement LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" LABELS slow)
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" LABELS slow)
 
 ursatz_test(test_musicxml_input LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-ursatz_test(test_midi_parts LIBS ursatz_analyzer analyzer_test_support
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test(test_midi_parts LIBS ursatz_analyzer analyzer_test_support)
 
 ursatz_test(test_tempo_map_import LIBS ursatz_analyzer analyzer_test_support cjson
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
@@ -220,7 +205,7 @@ ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
 
 ursatz_test(test_cli_input_formats COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DMIDI_FIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DMIDI_FIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
@@ -228,7 +213,7 @@ ursatz_test(test_cli_input_formats COMMAND ${CMAKE_COMMAND}
 # Test corpora, built in the build tree at configure time (never committed twice). "reference" is the five framework-v1
 # pieces; "mixed" has one MIDI, one MusicXML in a subfolder, one .txt and one broken .mid.
 set(URSATZ_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
-set(URSATZ_REFERENCE_FIXTURES ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus)
+set(URSATZ_REFERENCE_FIXTURES ${URSATZ_FIXTURES_DIR}/framework-v1-corpus)
 file(REMOVE_RECURSE ${URSATZ_CORPORA_DIR})
 file(GLOB reference_pieces ${URSATZ_REFERENCE_FIXTURES}/*.mid)
 file(COPY ${reference_pieces} DESTINATION ${URSATZ_CORPORA_DIR}/reference)
@@ -238,8 +223,12 @@ file(WRITE ${URSATZ_CORPORA_DIR}/mixed/notes.txt "not a piece\n")
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/broken.mid "not a midi file\n")
 # "chorales" is the ten accuracy-corpus chorales (private use, R-016), one MusicXML file each;
 # "sonatinas" is the two sonatina movements.
-file(GLOB chorale_scores ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/chorales/*.musicxml)
-file(COPY ${chorale_scores} DESTINATION ${URSATZ_CORPORA_DIR}/chorales)
+file(MAKE_DIRECTORY ${URSATZ_CORPORA_DIR}/chorales)
+file(GLOB chorale_folders LIST_DIRECTORIES true ${URSATZ_FIXTURES_DIR}/accuracy-corpus/chorale-*)
+foreach(chorale_folder IN LISTS chorale_folders)
+    get_filename_component(chorale ${chorale_folder} NAME)
+    file(COPY_FILE ${chorale_folder}/score.musicxml ${URSATZ_CORPORA_DIR}/chorales/${chorale}.musicxml)
+endforeach()
 file(COPY "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid" "${URSATZ_REFERENCE_FIXTURES}/Mozart 545.mid"
      DESTINATION ${URSATZ_CORPORA_DIR}/sonatinas)
 
@@ -324,8 +313,7 @@ ursatz_test(test_cli_similar COMMAND ${CMAKE_COMMAND}
     PROPERTIES FIXTURES_REQUIRED similar_motive_file)
 
 ursatz_test_executable(test_composer_api LIBS ursatz_test_support ursatz_analyzer cjson
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+    DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_COMPOSER_API_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/composer_api_work")
 ursatz_test(test_composer_api_smoke TARGET test_composer_api ARGS smoke PROPERTIES RESOURCE_LOCK composer_api_work)
 # Over 10 s in the fast set (about 130 s of CPU measured): runs nightly.
@@ -337,8 +325,7 @@ if(URSATZ_VALGRIND)
 endif()
 
 ursatz_test_executable(test_hearing LIBS ursatz_test_support ursatz_analyzer cjson ursatz_analyzer::chain
-    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_HEARING_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/hearing_work")
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS URSATZ_HEARING_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/hearing_work")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hearing_work)
 ursatz_test(test_hearing_smoke TARGET test_hearing ARGS smoke PROPERTIES RESOURCE_LOCK hearing_work)
 ursatz_test(test_hearing TARGET test_hearing LABELS slow PROPERTIES RESOURCE_LOCK hearing_work)
@@ -397,16 +384,13 @@ ursatz_test(test_consumer_isolation COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE
 ursatz_test(test_score_text_reader LIBS ursatz_test_support ursatz_analyzer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 ursatz_test(test_text_export LIBS ursatz_test_support ursatz_analyzer
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
 # Over 10 s in the fast set (about 19 s of CPU measured): runs nightly.
 ursatz_test(test_text_export_snapshots LIBS ursatz_analyzer analyzer_test_support
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS slow)
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS slow)
 
 ursatz_test(test_material_export LIBS ursatz_analyzer analyzer_test_support
-    DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
+    DEFINITIONS URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")

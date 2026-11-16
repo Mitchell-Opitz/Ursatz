@@ -39,7 +39,7 @@ static const struct {
 static bool import_file(size_t i, ImportedNotes *notes) {
     char path[512];
     if (strcmp(FILES[i].dir, "midi") == 0) {
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, FILES[i].file);
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, FILES[i].file);
     } else {
         snprintf(path, sizeof(path), "%s/%s", URSATZ_MUSICXML_DIR, FILES[i].file);
     }

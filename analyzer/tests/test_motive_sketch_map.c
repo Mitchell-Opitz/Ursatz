@@ -61,7 +61,7 @@ static bool scope_sketch(const MotiveLinkScope *scope, const char *piece_id, siz
 
 int main(void) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_ANALYZER_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {

@@ -79,7 +79,7 @@ static size_t check_against_entries(const char *slug, const cJSON *document, con
 
 static void check_piece(const char *fixture, const char *slug) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
         CHECKF(false, "%s: cannot import %s", slug, path);

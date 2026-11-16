@@ -127,7 +127,7 @@ static void check_structure(const ImportedNotes *notes, const AnalysisReport *re
 
 int main(void) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Field 1.mid", URSATZ_ANALYZER_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Field 1.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK) {
@@ -140,7 +140,7 @@ int main(void) {
         return 1;
     }
     Annotation annotation;
-    snprintf(path, sizeof(path), "%s/annotations/field1_texture.txt", URSATZ_ANALYZER_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/annotations/field1_texture.txt", URSATZ_FIXTURES_DIR);
     if (!load_annotation(path, &annotation)) {
         fprintf(stderr, "cannot read %s\n", path);
         analysis_report_destroy(&report);

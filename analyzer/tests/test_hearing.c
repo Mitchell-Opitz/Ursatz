@@ -169,7 +169,7 @@ static void check_violations(const char *fixture, const AnalyzerResult *heard, c
 static void check_piece(size_t piece, const StyleModel *reference_model) {
     const char *fixture = PIECES[piece];
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
         CHECKF(false, "cannot import %s", path);
@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
     bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     /* The reference style is Bach 114's own profile: short to make, and every category it has is present. */
     char path[1024], file[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, "Bach 114.mid");
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, "Bach 114.mid");
     snprintf(file, sizeof(file), "%s/hearing-reference.style.json", URSATZ_HEARING_WORK_DIR);
     ImportedNotes notes;
     StyleModel *model = NULL;

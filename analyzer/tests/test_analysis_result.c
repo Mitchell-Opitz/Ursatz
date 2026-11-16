@@ -89,7 +89,7 @@ static void check_snapshots(const char *slug, const char *fixture, const Analyze
 
 static void check_piece(const char *fixture, const char *slug) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
         CHECKF(false, "%s: cannot import %s", slug, path);
@@ -119,7 +119,7 @@ static void check_piece(const char *fixture, const char *slug) {
 
 static void check_options(const char *fixture) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
         CHECKF(false, "cannot import %s", path);

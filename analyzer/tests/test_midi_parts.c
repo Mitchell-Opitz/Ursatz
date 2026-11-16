@@ -126,7 +126,7 @@ static size_t lower_stream(const ImportedNotes *notes) {
 
 static void import_reference(const char *name, ImportedNotes *notes) {
     char path[1024];
-    snprintf(path, sizeof path, "%s/framework-v1-corpus/%s.mid", URSATZ_ANALYZER_FIXTURE_DIR, name);
+    snprintf(path, sizeof path, "%s/framework-v1-corpus/%s.mid", URSATZ_FIXTURES_DIR, name);
     assert(midi_pipeline_import_file(path, notes) == MIDI_PIPELINE_OK);
 }
 

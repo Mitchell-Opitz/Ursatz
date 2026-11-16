@@ -257,7 +257,7 @@ static void check_triplet_piece(void) {
 
 static void check_bach_piece(void) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_ANALYZER_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
     Piece piece;
     if (!piece_load(&piece, path, "Bach 114.mid")) {
         CHECKF(false, "cannot analyze %s", path);
@@ -317,7 +317,7 @@ static void check_repeat_pieces(void) {
     };
     for (size_t p = 0; p < sizeof(PIECES) / sizeof(PIECES[0]); p++) {
         char path[512];
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, PIECES[p].file);
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, PIECES[p].file);
         Piece piece;
         if (!piece_load(&piece, path, PIECES[p].name)) {
             CHECKF(false, "cannot analyze %s", path);
