@@ -2,12 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
-#include "core/value.h"
-#include "generation/candidate.h"
-#include "identity/entity_id.h"
-#include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
+#include <core/provenance_reference.h>
+#include <core/value.h>
+#include <identity/entity_id.h>
+#include <interpretation/interpretation.h>
+#include <interpretation/uncertainty.h>
+
+#include <ursatz_composer/candidate.h>
 
 /*
  * Construction test: Candidate is a proposed result pre-acceptance --

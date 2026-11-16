@@ -27,7 +27,7 @@ typedef struct {
 static const ModuleLayer KERNEL_MODULES[] = {
     {"identity", 0},  {"core", 1},          {"time", 2},     {"pitch", 2},       {"events", 3},       {"containers", 4},
     {"structure", 5}, {"context", 6},       {"semantics", 6}, {"relationship", 6}, {"interpretation", 6}, {"theory", 7},
-    {"rules", 7},     {"analysis", 8},      {"generation", 8}, {"io", 9},        {"export", 9},       {"query", 9},
+    {"rules", 7},     {"analysis", 8},      {"io", 9},        {"export", 9},       {"query", 9},
 };
 
 static const char *const FRAMEWORKS[] = {

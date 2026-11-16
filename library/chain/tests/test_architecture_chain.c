@@ -19,7 +19,7 @@
 static const char *KERNEL_PREFIXES[] = {
     "identity/",    "core/",     "time/",           "pitch/",     "events/", "containers/",
     "structure/",   "context/",  "semantics/",      "relationship/", "interpretation/",
-    "theory/",      "rules/",    "analysis/",       "generation/",
+    "theory/",      "rules/",    "analysis/",
 };
 
 static const char *FRAMEWORK_HEADERS[] = {

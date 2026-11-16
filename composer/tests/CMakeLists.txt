@@ -75,6 +75,16 @@ target_link_libraries(test_fill_loop PRIVATE ursatz_composer)
 target_compile_options(test_fill_loop PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_fill_loop COMMAND test_fill_loop)
 
+add_executable(test_candidate test_candidate.c)
+target_link_libraries(test_candidate PRIVATE ursatz_composer)
+target_compile_options(test_candidate PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_candidate COMMAND test_candidate)
+
+add_executable(test_generation_record test_generation_record.c)
+target_link_libraries(test_generation_record PRIVATE ursatz_composer)
+target_compile_options(test_generation_record PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_generation_record COMMAND test_generation_record)
+
 add_executable(test_lane_resize test_lane_resize.c)
 target_link_libraries(test_lane_resize PRIVATE ursatz_composer)
 target_compile_options(test_lane_resize PRIVATE -Wall -Wextra -Wpedantic)

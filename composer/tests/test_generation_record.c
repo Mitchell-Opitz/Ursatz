@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
-#include "core/value.h"
-#include "generation/generation_record.h"
-#include "identity/entity_id.h"
+#include <core/provenance_reference.h>
+#include <core/value.h>
+#include <identity/entity_id.h>
+
+#include <ursatz_composer/generation_record.h>
 
 /*
  * Construction test: GenerationRecord is the durable record of a

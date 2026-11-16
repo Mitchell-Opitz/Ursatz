@@ -161,8 +161,6 @@ add_library(ursatz
     analysis/sentence_detection.c
     analysis/form_structure_detection.c
     analysis/thematic_return_detection.c
-    generation/candidate.c
-    generation/generation_record.c
     io/midi_importer.c
     io/midi_event_decoder.c
     io/midi_key_signature.c
@@ -218,9 +216,6 @@ ursatz_public_headers(ursatz
         export/musicxml_export.h
         export/score_quantize.h
         export/score_staves.h
-        generation/candidate.h
-        generation/generation_record.h
-        generation/generator.h
         identity/entity_id.h
         identity/schema_version.h
         identity/version.h

@@ -1,10 +1,10 @@
-#ifndef MUSIC_GENERATION_GENERATOR_H
-#define MUSIC_GENERATION_GENERATOR_H
+#ifndef URSATZ_COMPOSER_GENERATOR_H
+#define URSATZ_COMPOSER_GENERATOR_H
 
 #include <stdbool.h>
 
 /*
- * Generator (Registry #26): the declared metadata of a generator, the descriptor a fill operator carries. A Generator
+ * Generator: the declared metadata of a generator, the descriptor a fill operator carries (fill_operator.h). A Generator
  * declares, not merely implements (TDD Sec160): what it takes and gives, what configuration it accepts, what
  * Constraint and Preference vocabulary it honors, whether the same input, seed and configuration always give the same
  * output, and its version. Nothing is invoked through this struct: the function-pointer interface it once had is gone,

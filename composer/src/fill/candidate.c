@@ -1,9 +1,9 @@
-#include "generation/candidate.h"
+#include <ursatz_composer/candidate.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/string_copy.h"
+#include "util/util.h"
 
 struct Candidate {
     EntityID *id;
@@ -198,7 +198,7 @@ CandidateSetResult candidate_set_create(EntityID *id, Candidate **candidates, si
         }
     }
 
-    char *copied_version = ursatz_string_copy(generator_version);
+    char *copied_version = util_copy_string(generator_version);
     if (copied_version == NULL) {
         free(copied_candidates);
         free(set);
@@ -207,7 +207,7 @@ CandidateSetResult candidate_set_create(EntityID *id, Candidate **candidates, si
 
     char *copied_framework_version = NULL;
     if (framework_version != NULL) {
-        copied_framework_version = ursatz_string_copy(framework_version);
+        copied_framework_version = util_copy_string(framework_version);
         if (copied_framework_version == NULL) {
             free(copied_version);
             free(copied_candidates);

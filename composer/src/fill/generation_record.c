@@ -1,9 +1,9 @@
-#include "generation/generation_record.h"
+#include <ursatz_composer/generation_record.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/string_copy.h"
+#include "util/util.h"
 
 struct GenerationRecord {
     EntityID *id;
@@ -33,7 +33,7 @@ GenerationRecordResult generation_record_create(EntityID *id, unsigned long rand
         return GENERATION_RECORD_ERR_ALLOC;
     }
 
-    record->generator_version = ursatz_string_copy(generator_version);
+    record->generator_version = util_copy_string(generator_version);
     if (record->generator_version == NULL) {
         free(record);
         return GENERATION_RECORD_ERR_ALLOC;
@@ -41,7 +41,7 @@ GenerationRecordResult generation_record_create(EntityID *id, unsigned long rand
 
     record->framework_version = NULL;
     if (framework_version != NULL) {
-        record->framework_version = ursatz_string_copy(framework_version);
+        record->framework_version = util_copy_string(framework_version);
         if (record->framework_version == NULL) {
             free(record->generator_version);
             free(record);

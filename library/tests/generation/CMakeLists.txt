@@ -1,3 +1,0 @@
-add_ursatz_test(candidate)
-add_ursatz_test(generation_record)
-add_ursatz_architecture_test(generation)

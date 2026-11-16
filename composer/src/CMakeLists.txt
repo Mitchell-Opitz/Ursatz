@@ -49,6 +49,8 @@ add_library(ursatz_composer STATIC
     fill/fill_operator.c
     fill/fill_loop.c
     fill/fill_rng.c
+    fill/candidate.c
+    fill/generation_record.c
     fill/fill_record.c
     fill/fill_suggest.c
     fill/variations.c

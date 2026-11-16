@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <generation/candidate.h>
-
+#include <ursatz_composer/candidate.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_suggest.h>
