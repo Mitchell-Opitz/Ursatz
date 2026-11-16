@@ -26,12 +26,4 @@ typedef enum {
 /* True for the four parts above; false for any other value. */
 bool voice_part_valid(VoicePart part);
 
-/* "soprano" "alto" "tenor" "bass"; NULL for an invalid part. */
-const char *voice_part_name(VoicePart part);
-
-/* True when `a` is a higher part than `b` in the soprano-to-bass order
-   (soprano above alto above tenor above bass). False when either is
-   invalid, or for equal parts. */
-bool voice_part_is_above(VoicePart a, VoicePart b);
-
 #endif

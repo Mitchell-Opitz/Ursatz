@@ -25,7 +25,7 @@
  * it already knows.
  *
  * Contour is a Value, not an Entity -- it carries no EntityID of its
- * own (same as Sonority/Scale). Contour has no FrameworkReference: an
+ * own (same as Sonority). Contour has no FrameworkReference: an
  * observed pitch-direction sequence does not require an interpretive
  * claim to exist. Registry non-normative, descriptive examples only
  * (docs/modules/semantics.md).
@@ -61,7 +61,6 @@ ContourResult contour_create(PitchIdentity **pitch_ids, size_t pitch_id_count, C
 void contour_destroy(Contour *contour);
 
 size_t contour_pitch_id_count(const Contour *contour);
-const PitchIdentity *contour_pitch_id_at(const Contour *contour, size_t index);
 
 size_t contour_direction_count(const Contour *contour);
 ContourDirection contour_direction_at(const Contour *contour, size_t index);

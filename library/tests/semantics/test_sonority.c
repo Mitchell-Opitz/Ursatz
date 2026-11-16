@@ -67,18 +67,6 @@ int main(void) {
     entity_id_destroy(expected_b);
     entity_id_destroy(expected_c);
 
-    assert(sonority_voice_id_count(sonority) == 2);
-    EntityID *expected_soprano;
-    assert(entity_id_create("voice-soprano", &expected_soprano) == ENTITY_ID_OK);
-    EntityID *expected_alto;
-    assert(entity_id_create("voice-alto", &expected_alto) == ENTITY_ID_OK);
-    assert(entity_id_equals(sonority_voice_id_at(sonority, 0), expected_soprano));
-    assert(entity_id_equals(sonority_voice_id_at(sonority, 1), expected_alto));
-    entity_id_destroy(expected_soprano);
-    entity_id_destroy(expected_alto);
-
-    assert(sonority_event_domain(sonority) == SONORITY_EVENT_DOMAIN_SOUNDING);
-
     sonority_destroy(sonority);
 
     /* Empty voice set is a valid, explicit "no restriction" selection. */
@@ -91,8 +79,6 @@ int main(void) {
     SonorityResult unrestricted_result =
         sonority_create(window_2, solo_ids, 1, NULL, 0, SONORITY_EVENT_DOMAIN_SYMBOLIC, &unrestricted);
     assert(unrestricted_result == SONORITY_OK);
-    assert(sonority_voice_id_count(unrestricted) == 0);
-    assert(sonority_event_domain(unrestricted) == SONORITY_EVENT_DOMAIN_SYMBOLIC);
     sonority_destroy(unrestricted);
 
     /* An empty event set is not a Sonority. */

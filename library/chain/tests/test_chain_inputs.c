@@ -13,6 +13,14 @@
  * checked against them.
  */
 
+/* The cell of a segment and voice, or NULL when either is out of range or the grid has no cells. */
+static const AnalysisVoiceCell *grid_cell(const AnalysisVoiceGrid *grid, size_t segment, size_t voice) {
+    if (grid->cells == NULL || segment >= grid->segment_count || voice >= grid->voice_count) {
+        return NULL;
+    }
+    return &grid->cells[segment * grid->voice_count + voice];
+}
+
 static MusicalTime *time_at(long numerator, unsigned long denominator) {
     MusicalTime *time = NULL;
     assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
@@ -326,7 +334,7 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(grid.grid.segment_count == count && grid.grid.voice_count >= 3 && strcmp(grid.grid.segment_ids[0], "seg-0") == 0);
     size_t present = 0;
     for (size_t v = 0; v < grid.grid.voice_count; v++) {
-        const AnalysisVoiceCell *cell = analysis_voice_grid_cell(&grid.grid, 0, v);
+        const AnalysisVoiceCell *cell = grid_cell(&grid.grid, 0, v);
         present += cell->present ? 1 : 0;
         assert(!cell->present || (cell->attacked && cell->pitch != NULL && cell->note_id != NULL));
     }

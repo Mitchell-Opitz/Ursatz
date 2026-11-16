@@ -31,8 +31,4 @@ typedef enum {
 /* True for the eight levels above; false for any other value. */
 bool form_level_valid(FormLevel level);
 
-/* "piece" "movement" "section" "theme" "phrase" "subphrase" "idea" "motive"; NULL for an
-   invalid level. */
-const char *form_level_name(FormLevel level);
-
 #endif

@@ -54,34 +54,10 @@ void interval_destroy(Interval *interval) {
     free(interval);
 }
 
-const PitchIdentity *interval_pitch_a(const Interval *interval) {
-    return interval->pitch_a;
-}
-
-const PitchIdentity *interval_pitch_b(const Interval *interval) {
-    return interval->pitch_b;
-}
-
 bool interval_has_directed_semitones(const Interval *interval) {
     return interval->has_directed_semitones;
 }
 
 long interval_directed_semitones(const Interval *interval) {
     return interval->directed_semitones;
-}
-
-bool interval_has_undirected_semitones(const Interval *interval) {
-    return interval->has_undirected_semitones;
-}
-
-unsigned long interval_undirected_semitones(const Interval *interval) {
-    return interval->undirected_semitones;
-}
-
-bool interval_has_chromatic_distance(const Interval *interval) {
-    return interval->has_chromatic_distance;
-}
-
-unsigned long interval_chromatic_distance(const Interval *interval) {
-    return interval->chromatic_distance;
 }

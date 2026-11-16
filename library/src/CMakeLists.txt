@@ -89,7 +89,6 @@ add_library(ursatz
     semantics/sonority_builder.c
     semantics/sonority_segmentation.c
     semantics/rhythmic_pattern.c
-    semantics/scale.c
     semantics/contour.c
     semantics/voice_part.c
     semantics/beat_strength.c
@@ -100,12 +99,8 @@ add_library(ursatz
     semantics/applied_chord_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
-    semantics/expected_length_basis.c
-    semantics/subphrase_role.c
     semantics/analysis_note.c
-    semantics/analysis_segment.c
     semantics/analysis_key.c
-    semantics/voice_grid.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c

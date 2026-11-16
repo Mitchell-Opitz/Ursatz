@@ -65,16 +65,4 @@ bool non_chord_tone_valid(NonChordTone type);
    "appoggiatura" "escape-tone" "retardation" "pedal"; NULL for an invalid type. */
 const char *non_chord_tone_name(NonChordTone type);
 
-/* True for the figures that include a leap: the double neighbor (between its
-   two neighbors), the changing tone (out of its dissonance), the appoggiatura
-   (into it), and the escape tone (out of it). False for the stepwise ones (the
-   suspension and retardation resolve by step, and the anticipation repeats a
-   pitch), for the pedal, and for an invalid type. */
-bool non_chord_tone_involves_leap(NonChordTone type);
-
-/* True for the figures that involve static notes (notes that do not move): the
-   suspension, retardation, pedal, and anticipation. False for the others and for
-   an invalid type. */
-bool non_chord_tone_involves_static_note(NonChordTone type);
-
 #endif

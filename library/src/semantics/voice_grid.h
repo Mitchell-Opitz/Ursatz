@@ -40,7 +40,4 @@ typedef struct {
     const AnalysisVoiceCell *cells;
 } AnalysisVoiceGrid;
 
-/* The cell of a segment and voice, or NULL when either is out of range or the grid has no cells. */
-const AnalysisVoiceCell *analysis_voice_grid_cell(const AnalysisVoiceGrid *grid, size_t segment, size_t voice);
-
 #endif

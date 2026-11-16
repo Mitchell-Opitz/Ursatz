@@ -6,7 +6,7 @@
 
 /*
  * ScaleDegree (Interpretation): a framework-relative claim naming what
- * a specific pitch within a Scale (semantics/scale.h) is called under
+ * a specific pitch within a scale is called under
  * some Framework -- e.g. what a Roman-numeral framework would
  * eventually populate here, but this layer does not know or care what
  * framework is used.
@@ -14,17 +14,16 @@
  * ScaleDegree embeds and owns an Interpretation
  * (interpretation/interpretation.h) -- the same relationship
  * structure/motif_occurrence.h's MotifOccurrence has to
- * core/occurrence.h's Occurrence. The underlying Scale this
+ * core/occurrence.h's Occurrence. The underlying scale this
  * ScaleDegree is about is carried by the embedded Interpretation's own
- * target_id -- the caller sets target_id to the Scale's EntityID when
- * building that Interpretation. This file does not include
- * semantics/scale.h and never resolves target_id to an actual Scale:
- * per the L6 cross-cutting rule (docs/modules/l6-notes.md),
+ * target_id -- the caller sets target_id to the scale's EntityID when
+ * building that Interpretation. This file never resolves target_id to an
+ * actual scale: per the L6 cross-cutting rule (docs/modules/l6-notes.md),
  * music-interpretation never imports music-semantics, even sideways
  * for this reference.
  *
  * pitch is the specific PitchIdentity (pitch/pitch_identity.h) within
- * that Scale this ScaleDegree names -- owned by value here (not
+ * that scale this ScaleDegree names -- owned by value here (not
  * referenced by EntityID), since PitchIdentity is an opaque token, not
  * an Entity with its own identity to reference.
  *

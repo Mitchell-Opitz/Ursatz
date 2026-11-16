@@ -24,9 +24,6 @@ int main(void) {
     assert(contour_create(pitch_ids, 3, directions, 2, &contour) == CONTOUR_OK);
 
     assert(contour_pitch_id_count(contour) == 3);
-    assert(contour_pitch_id_at(contour, 0) == pitch_ids[0]);
-    assert(contour_pitch_id_at(contour, 1) == pitch_ids[1]);
-    assert(contour_pitch_id_at(contour, 2) == pitch_ids[2]);
 
     assert(contour_direction_count(contour) == 2);
     assert(contour_direction_at(contour, 0) == CONTOUR_DIRECTION_UP);

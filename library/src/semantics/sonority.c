@@ -101,15 +101,3 @@ size_t sonority_event_id_count(const Sonority *sonority) {
 const EntityID *sonority_event_id_at(const Sonority *sonority, size_t index) {
     return sonority->event_ids[index];
 }
-
-size_t sonority_voice_id_count(const Sonority *sonority) {
-    return sonority->voice_id_count;
-}
-
-const EntityID *sonority_voice_id_at(const Sonority *sonority, size_t index) {
-    return sonority->voice_ids[index];
-}
-
-SonorityEventDomain sonority_event_domain(const Sonority *sonority) {
-    return sonority->event_domain;
-}

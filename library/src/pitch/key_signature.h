@@ -26,7 +26,7 @@
  * mixed or repeated accidentals is representable here.
  *
  * A KeySignature is a Value, not an Entity -- it carries no EntityID of
- * its own (same as Scale, semantics/scale.h). It has no mutator: a
+ * its own (same as Sonority, semantics/sonority.h). It has no mutator: a
  * revision is a new KeySignature construction, not an in-place field
  * change (Law C2).
  */

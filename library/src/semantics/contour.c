@@ -78,10 +78,6 @@ size_t contour_pitch_id_count(const Contour *contour) {
     return contour->pitch_id_count;
 }
 
-const PitchIdentity *contour_pitch_id_at(const Contour *contour, size_t index) {
-    return contour->pitch_ids[index];
-}
-
 size_t contour_direction_count(const Contour *contour) {
     return contour->direction_count;
 }

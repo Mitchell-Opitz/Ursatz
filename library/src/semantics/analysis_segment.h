@@ -1,8 +1,6 @@
 #ifndef MUSIC_SEMANTICS_ANALYSIS_SEGMENT_H
 #define MUSIC_SEMANTICS_ANALYSIS_SEGMENT_H
 
-#include <stdbool.h>
-
 #include "semantics/beat_strength.h"
 #include "time/metrical_position.h"
 #include "time/time_span.h"
@@ -18,8 +16,5 @@ typedef struct {
     const MetricalPosition *position;
     BeatStrength strength;
 } AnalysisSegment;
-
-/* Non-NULL id and span, a span that ends after it starts, a valid strength. */
-bool analysis_segment_valid(const AnalysisSegment *segment);
 
 #endif
