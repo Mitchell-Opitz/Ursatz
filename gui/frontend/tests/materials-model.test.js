@@ -1,7 +1,8 @@
 /* Covers the pure materials helpers (public/materials-model.js): request
  * builders, new item bodies, the project filter, item and version rows.
- * Plain Node script: `node frontend/tests/materials-model.test.js`. */
-require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
+ * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
+const { generated } = require("./support/fixtures.js");
+require("../public/vocabulary.js").set(require(generated("vocabulary.json")));
 const M = require("../public/materials-model.js");
 
 const { check, same, finish } = require("./support/check.js");

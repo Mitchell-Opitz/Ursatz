@@ -27,6 +27,7 @@ int main(void) {
   test_sleep_ms(200);
 
   int status = 0;
+  char where[256] = "";
   cJSON *json = test_http_json(PORT, "GET", "/api/composer/status", NULL, &status);
   const cJSON *version_text = json ? cJSON_GetObjectItemCaseSensitive(json, "version") : NULL;
   check(status == 200 && cJSON_IsString(version_text) && strncmp(version_text->valuestring, "ursatz-composer", 15) == 0,
@@ -44,7 +45,8 @@ int main(void) {
   check(status == 405, "status accepts only GET");
   cJSON_Delete(json);
 
-  /* The vocabulary: the Composer's lists, kept for the process, equal to the fixture the frontend tests load. */
+  /* The vocabulary: the Composer's lists, kept for the process, equal to the file the build generates for the frontend
+   * tests. */
   json = test_http_json(PORT, "GET", "/api/composer/vocabulary", NULL, &status);
   check(status == 200 && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(json, "meters")) &&
             cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(json, "pitch_class_names")) &&
@@ -56,7 +58,8 @@ int main(void) {
   char *fixture_text = test_read_file(URSATZ_GUI_TEST_VOCABULARY_FIXTURE, NULL);
   cJSON *fixture = fixture_text ? cJSON_Parse(fixture_text) : NULL;
   free(fixture_text);
-  check(fixture && cJSON_Compare(json, fixture, 1), "the frontend vocabulary fixture is what the route gives");
+  check(fixture && test_json_equal(fixture, json, where, sizeof where),
+        "the generated vocabulary fixture is what the route gives");
   cJSON_Delete(fixture);
   cJSON_Delete(json);
   json = test_http_json(PORT, "POST", "/api/composer/vocabulary", "{}", &status);
@@ -77,6 +80,12 @@ int main(void) {
   again = test_http_json(PORT, "GET", "/api/composer/forms", NULL, &status);
   check(status == 200 && cJSON_Compare(json, again, 1), "the forms are the same on every call");
   cJSON_Delete(again);
+  /* The generated forms are 300 KB, so they are read whole, not into a fixed buffer. */
+  fixture_text = test_read_file(URSATZ_GUI_TEST_FORMS_FIXTURE, NULL);
+  fixture = fixture_text ? cJSON_Parse(fixture_text) : NULL;
+  free(fixture_text);
+  check(fixture && test_json_equal(fixture, json, where, sizeof where), "the generated forms fixture is what the route gives");
+  cJSON_Delete(fixture);
   cJSON_Delete(json);
   json = test_http_json(PORT, "POST", "/api/composer/forms", "{}", &status);
   check(status == 405, "the forms accept only GET");

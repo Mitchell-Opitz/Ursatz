@@ -2,11 +2,12 @@
  * of the motive switches, the brief from picks, the compose request, the result rows and the MIDI playback.
  * theme-summary.json is the output of `ursatz-composer theme --format json` for a sentence with two slot motives,
  * a style, `without: ["motive-nct-figure"]`, mode style, tempo 132 and --check.
- * Plain Node script: `node frontend/tests/themes-model.test.js`. */
+ * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
 const fs = require("fs");
 const path = require("path");
 const Vocabulary = require("../public/vocabulary.js");
-Vocabulary.set(require("./fixtures/vocabulary.json"));
+const { generated } = require("./support/fixtures.js");
+Vocabulary.set(require(generated("vocabulary.json")));
 const T = require("../public/themes-model.js");
 
 const { check, same, finish } = require("./support/check.js");
@@ -103,12 +104,12 @@ check(same(T.formProblems(twice), []), "one motif in two slots is allowed");
 const many = filled();
 many.slots = [1, 2, 3, 4, 5].map((n) => ({ slot: "basic", item_id: `mot-${n}`, version: 1 }));
 check(T.formProblems(many).some((p) => /at most 4/.test(p)), "more than 4 slots is a problem");
-const fiveSlots = JSON.parse(JSON.stringify(require("./fixtures/vocabulary.json")));
+const fiveSlots = JSON.parse(JSON.stringify(require(generated("vocabulary.json"))));
 fiveSlots.theme_slots.push({ value: "coda", label: "Coda", required: false });
 Vocabulary.set(fiveSlots);
 check(!T.formProblems(many).some((p) => /at most/.test(p)), "a vocabulary with a fifth slot allows five slots");
 check(T.REQUIRED_SLOT === "basic" && T.SLOT_NAMES.length === 5, "the required slot and the slot names are the vocabulary's");
-Vocabulary.set(require("./fixtures/vocabulary.json"));
+Vocabulary.set(require(generated("vocabulary.json")));
 const keyed = T.bodyFromForm({ ...filled(), key: "D", pool: "approved" });
 check(!("key" in keyed.theme.form) && !("pool" in keyed.theme), "the body has no key and no pool");
 check(!("key" in T.emptyState("x")) && !("pool" in T.emptyState("x")), "the form has no key and no pool");

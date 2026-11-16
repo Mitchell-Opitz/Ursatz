@@ -1,6 +1,20 @@
 # Every test links ursatz_gui_core (backend/CMakeLists.txt) and the shared test support (tests/support: ursatz_test_support,
 # or ursatz_test_http for the tests that talk to a server or sleep), and runs in its own working directory.
 
+# The frontend's vocabulary.json and forms.json are written at build time by the in-tree Composer (the strings the two
+# routes serve), so the frontend tests and composer_route read what the Composer says now. gui/CMakeLists.txt adds this
+# folder before frontend/tests, so the variable is set when the frontend tests are registered.
+ursatz_test_executable(gui_write_frontend_fixtures SOURCES write_frontend_fixtures.c LIBS ursatz_gui_core)
+set(URSATZ_GUI_GENERATED_FIXTURES ${CMAKE_BINARY_DIR}/gui/frontend/tests/fixtures CACHE INTERNAL "")
+add_custom_command(
+    OUTPUT ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${URSATZ_GUI_GENERATED_FIXTURES}
+    COMMAND gui_write_frontend_fixtures ${URSATZ_GUI_GENERATED_FIXTURES}
+    DEPENDS gui_write_frontend_fixtures
+    COMMENT "Writing the frontend vocabulary and forms fixtures")
+add_custom_target(gui_frontend_fixtures ALL
+    DEPENDS ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json)
+
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 ursatz_test(analyzer_route LIBS ursatz_gui_core ursatz_test_http DEFINITIONS URSATZ_GUI_TEST_ANALYZER_CLI="$<TARGET_FILE:ursatz-analyzer>" LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
@@ -30,10 +44,12 @@ ursatz_test(job_queue LIBS ursatz_gui_core ursatz_test_http
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
 ursatz_test(composer_route LIBS ursatz_gui_core ursatz_test_http
-    DEFINITIONS URSATZ_GUI_TEST_VOCABULARY_FIXTURE="${PROJECT_SOURCE_DIR}/frontend/tests/fixtures/vocabulary.json"
+    DEFINITIONS URSATZ_GUI_TEST_VOCABULARY_FIXTURE="${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json"
+    URSATZ_GUI_TEST_FORMS_FIXTURE="${URSATZ_GUI_GENERATED_FIXTURES}/forms.json"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
-# The test asks the linked Composer for its versions and its vocabulary (which it compares with the frontend's fixture),
-# in its own working directory.
+# The test asks the linked Composer for its versions, its vocabulary and its forms (which it compares with the files the
+# build generated for the frontend tests, gui_frontend_fixtures), in its own working directory.
+add_dependencies(test_composer_route gui_frontend_fixtures)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
 ursatz_test(styles_route LIBS ursatz_gui_core ursatz_test_http LABELS slow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)

@@ -1,8 +1,10 @@
 /* Covers the pure variant tree helpers (public/variant-tree.js): tree rows
  * with depth, flags and the rejected filter, the operation groups, chain
  * steps from the picker, generate and reroll requests, candidate naming and
- * candidate bodies. Plain Node script: `node frontend/tests/variant-tree.test.js`. */
-require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
+ * candidate bodies. Plain Node script, run through ctest: it reads the vocabulary the build generates
+ * (support/fixtures.js). */
+const { generated } = require("./support/fixtures.js");
+require("../public/vocabulary.js").set(require(generated("vocabulary.json")));
 const V = require("../public/variant-tree.js");
 
 const { check, same, finish } = require("./support/check.js");
