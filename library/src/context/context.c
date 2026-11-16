@@ -45,22 +45,3 @@ void context_destroy(Context *context) {
     free(context->label);
     free(context);
 }
-
-const EntityID *context_id(const Context *context) {
-    return context->id;
-}
-
-const char *context_label(const Context *context) {
-    return context->label;
-}
-
-const Context *context_parent(const Context *context) {
-    return context->parent;
-}
-
-bool context_identity_equals(const Context *a, const Context *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
-}

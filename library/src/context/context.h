@@ -1,8 +1,6 @@
 #ifndef MUSIC_CONTEXT_CONTEXT_H
 #define MUSIC_CONTEXT_CONTEXT_H
 
-#include <stdbool.h>
-
 #include "identity/entity_id.h"
 
 /*
@@ -40,11 +38,5 @@ typedef enum {
  */
 ContextResult context_create(EntityID *id, const char *label, const Context *parent, Context **out);
 void context_destroy(Context *context);
-
-const EntityID *context_id(const Context *context);
-const char *context_label(const Context *context);
-const Context *context_parent(const Context *context);
-
-bool context_identity_equals(const Context *a, const Context *b);
 
 #endif
