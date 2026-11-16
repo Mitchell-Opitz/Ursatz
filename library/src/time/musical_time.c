@@ -14,10 +14,6 @@ typedef struct {
     unsigned long denominator;
 } MusicalTimeContent;
 
-static unsigned long abs_ul(long n) {
-    return n < 0 ? (unsigned long)(-n) : (unsigned long)n;
-}
-
 MusicalTimeResult musical_time_create(long numerator, unsigned long denominator, MusicalTime **out) {
     if (denominator == 0) {
         return MUSICAL_TIME_ERR_NON_POSITIVE_DENOMINATOR;
