@@ -1,2 +1,1 @@
-add_ursatz_test(context)
 add_ursatz_architecture_test(context)

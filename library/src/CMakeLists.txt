@@ -41,7 +41,6 @@ add_library(ursatz
     structure/motif_occurrence.c
     structure/cadence.c
     structure/phrase_occurrence.c
-    context/context.c
     semantics/interval.c
     semantics/sonority.c
     semantics/sonority_segmentation.c

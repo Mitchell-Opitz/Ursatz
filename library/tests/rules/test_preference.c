@@ -117,16 +117,12 @@ int main(void) {
     assert(preference_rank(preference, candidate, NULL, &numerator, &denominator) == PREFERENCE_RANK_NOT_IMPLEMENTED);
     assert(numerator == 99 && denominator == 99);
 
-    /* The context is passed through. */
-    EntityID *context_id;
-    assert(entity_id_create("context-for-preference", &context_id) == ENTITY_ID_OK);
-    Context *context;
-    assert(context_create(context_id, "test", NULL, &context) == CONTEXT_OK);
+    /* The context is passed through (opaque: the callback only records the pointer). */
+    Context *context = (Context *)&g_score;
     g_score.numerator = 1;
     g_score.denominator = 3;
     assert(preference_rank(preference, candidate, context, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
     assert(g_seen_context == context);
-    context_destroy(context);
 
     /* Replacing and clearing the callback. */
     preference_set_score_fn(preference, other_callback);
