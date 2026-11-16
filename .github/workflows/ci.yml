@@ -10,51 +10,16 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # A part is tested when it or anything it builds on changed: library, then Analyzer, then Composer, then GUI.
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      parts: ${{ steps.filter.outputs.changes }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            library:
-              - 'library/**'
-              - 'CMakeLists.txt'
-              - '.github/**'
-            analyzer:
-              - 'library/**'
-              - 'analyzer/**'
-              - 'CMakeLists.txt'
-              - '.github/**'
-            composer:
-              - 'library/**'
-              - 'analyzer/**'
-              - 'composer/**'
-              - 'CMakeLists.txt'
-              - '.github/**'
-            gui:
-              - 'library/**'
-              - 'analyzer/**'
-              - 'composer/**'
-              - 'gui/**'
-              - 'CMakeLists.txt'
-              - '.github/**'
-
   build-and-test:
-    needs: changes
-    if: needs.changes.outputs.parts != '[]'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        part: ${{ fromJSON(needs.changes.outputs.parts) }}
-    name: ${{ matrix.part }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check docs
+        run: |
+          for part in library analyzer composer gui; do
+            bash tools/ci/check-docs.sh "$part"
+          done
 
       - name: Install dependencies
         run: |
@@ -64,7 +29,7 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-ccache-${{ matrix.part }}
+          key: ${{ runner.os }}-ccache
 
       - name: Configure
         env:
@@ -75,57 +40,39 @@ jobs:
       - name: Build
         run: cmake --build build -j
 
-      # Boundary checks, run from the part's folder against the root build.
-      - name: Check library includes
-        if: matrix.part != 'library'
-        working-directory: ${{ matrix.part }}
-        run: bash scripts/check-library-includes.sh ../build
+      # Boundary checks, run from the repository root against the build.
+      - name: Check Analyzer library includes
+        run: bash tools/ci/check-library-includes-analyzer.sh build
+      - name: Check Composer library includes
+        run: bash tools/ci/check-library-includes-composer.sh build
+      - name: Check GUI library includes
+        run: bash tools/ci/check-library-includes-gui.sh build
       - name: Check chain builds
-        if: matrix.part == 'analyzer'
-        working-directory: analyzer
-        run: bash scripts/check-chain-builds.sh
-      - name: Check file scope state
-        if: matrix.part == 'analyzer' || matrix.part == 'composer'
-        working-directory: ${{ matrix.part }}
-        run: bash scripts/check-statics.sh
+        run: bash tools/ci/check-chain-builds.sh
       - name: Check that the CLI includes only the composer API
-        if: matrix.part == 'composer'
-        working-directory: composer
-        run: bash scripts/check-cli-api.sh
+        run: bash tools/ci/check-cli-api.sh
+      - name: Check file scope state
+        run: bash tools/ci/check-statics.sh analyzer composer
       - name: Check that API internals stay in the API layer
-        if: matrix.part == 'composer'
-        working-directory: composer
-        run: bash scripts/check-layers.sh
+        run: bash tools/ci/check-layers.sh
       - name: Check that music is heard through the Analyzer
-        if: matrix.part == 'composer'
-        working-directory: composer
-        run: bash scripts/check-hearing.sh
+        run: bash tools/ci/check-hearing.sh
       - name: Check frontend theory
-        if: matrix.part == 'gui'
-        working-directory: gui
-        run: bash scripts/check-frontend-theory.sh
+        run: bash tools/ci/check-frontend-theory.sh
 
       - name: Test (fast set)
-        if: ${{ !cancelled() }}
-        run: ctest --test-dir build/${{ matrix.part }} --output-on-failure --no-tests=error -j$(nproc) -LE slow
+        run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc) -LE slow
       - name: Ten slowest tests
-        if: ${{ !cancelled() }}
-        working-directory: ${{ matrix.part }}
-        run: bash scripts/slowest-tests.sh ../build/${{ matrix.part }}
+        if: always()
+        run: bash tools/ci/slowest-tests.sh build
 
       - name: Accuracy gate
-        if: ${{ !cancelled() && matrix.part == 'library' }}
         run: ./build/library/tests/accuracy/accuracy_harness
       - name: Upload accuracy report
-        if: ${{ !cancelled() && matrix.part == 'library' }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: accuracy-report
           path: |
             build/library/tests/accuracy/report.md
             build/library/tests/accuracy/report.json
-
-      - name: Check docs
-        if: ${{ !cancelled() }}
-        working-directory: ${{ matrix.part }}
-        run: bash scripts/check-docs.sh
