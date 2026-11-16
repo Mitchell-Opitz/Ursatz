@@ -6,7 +6,7 @@ Build requirements, the test list and the checks CI runs beyond the configure, b
 Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
 `common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is off
 (Ursatz's default), so the build sees only the staged public headers. the layer table checks this
-(see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the library's own test folders (see `tests/fixtures/README.md`).
+(see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the library's own test folders (see [`tests/fixtures/README.md`](../../tests/fixtures/README.md)).
 
 The Analyzer holds no arithmetic of its own on times, pitches, key signatures or numerals. Exact times are `Rational`
 (`core/rational.h`, with the `time/time_rational.h` bridges); an overflow fails the stage that met it, and a document
@@ -20,7 +20,7 @@ check's own fraction stay until the library owns them.
 
 ## Tests
 
-Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps only what is Analyzer-specific.
+Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together. Test inputs come from the root `tests/fixtures/`; `URSATZ_FIXTURES_DIR` names it. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps only what is Analyzer-specific.
 
 Tests:
 

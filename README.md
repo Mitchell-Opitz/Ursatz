@@ -37,6 +37,10 @@ Options (both ON by default):
 - `URSATZ_TESTS`: build and register the tests of every part.
 - `URSATZ_GUI`: build the GUI and its HTTP server.
 
+## Test fixtures
+
+`tests/fixtures/` holds the reference pieces and annotations every part's tests read, once ([README](tests/fixtures/README.md)). Tests find it through `URSATZ_FIXTURES_DIR`.
+
 ## Test support
 
 `tests/support/` holds what every part's tests share: `ursatz_test.h` (library `ursatz_test_support`: `CHECK`, `CHECKF`, `test_finish`, file reading and writing, temp paths, JSON helpers) and `test_http.h` (library `ursatz_test_http`: a plain HTTP client, linked only by the GUI backend tests). Helpers that belong to one part (the Analyzer's MIDI builders, the Composer's oracles, the GUI's `gui_check.h`) stay in that part's `tests/support` or `tests/` folder. The frontend tests share `gui/frontend/tests/support/check.js`.

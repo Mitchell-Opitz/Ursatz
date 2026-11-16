@@ -6,6 +6,8 @@ Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the r
 
 The frontend tests share `frontend/tests/support/check.js` (`check`, `same`, `near`, `finish`: call `finish()` last, it sets the exit code). The backend tests use `tests/support/ursatz_test.h` and the HTTP client `tests/support/test_http.h` at the repository root.
 
+The reference pieces and the link fixtures come from the root `tests/fixtures/` (`URSATZ_FIXTURES_DIR`); `backend/tests/fixtures` and `frontend/tests/fixtures` hold only what the GUI captured.
+
 `ctest` runs the backend tests (the startup data check, analyzer, corpus, styles, composer, materials, theme, subjects, links and id routes, the piece metadata rules, the material store and the link service) and,
 when `node` is installed, the frontend tests too (`frontend/tests/*.test.js`,
 registered as `frontend_<name>`). Without node the configure prints one status line
