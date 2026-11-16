@@ -79,9 +79,6 @@ add_library(ursatz
     structure/motif.c
     structure/motif_occurrence.c
     structure/cadence.c
-    structure/figure.c
-    structure/theme.c
-    structure/theme_occurrence.c
     structure/phrase_occurrence.c
     context/context.c
     semantics/interval.c
@@ -250,7 +247,6 @@ ursatz_public_headers(ursatz
         structure/motif_occurrence.h
         structure/phrase_occurrence.h
         structure/structure.h
-        structure/theme.h
         theory/framework.h
         theory/framework_singleton.h
         theory/style_features.h

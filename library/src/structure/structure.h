@@ -8,9 +8,9 @@
 
 /*
  * Structure: base category for higher-level semantic organization of
- * musical material (this pass: Motif, Cadence; later/deferred: Figure,
- * Phrase, Theme, Section, Movement, Work -- see the music-structure
- * module notes for what is and is not built yet).
+ * musical material (Motif, Cadence and the phrase occurrence; Section,
+ * Movement and Work are not built -- see the music-structure module
+ * notes for what is and is not built yet).
  *
  * A Structure composes an Entity (for identity) with a set of event
  * references -- EntityID pointers at the NoteEvents that make up the
@@ -20,7 +20,7 @@
  * which event data could be embedded or duplicated.
  *
  * No hierarchy is assumed between Structure subtypes (TDD Sec57) -- a
- * Structure graph is not required to follow Motif -> Phrase -> Theme
+ * Structure graph is not required to follow Motif -> Phrase
  * -> Section as a universal shape, and nothing in this base type
  * hard-codes that shape.
  */

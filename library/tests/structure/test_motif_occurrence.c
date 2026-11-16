@@ -44,13 +44,7 @@ int main(void) {
     assert(!entity_id_equals(motif_occurrence_id(first), motif_occurrence_id(second)));
 
     assert(motif_occurrence_region_event_id_count(first) == 1);
-    EntityID *expected_region_a = dup_id("event-a");
-    assert(entity_id_equals(motif_occurrence_region_event_id_at(first, 0), expected_region_a));
-    entity_id_destroy(expected_region_a);
-
-    EntityID *expected_region_b = dup_id("event-b");
-    assert(entity_id_equals(motif_occurrence_region_event_id_at(second, 0), expected_region_b));
-    entity_id_destroy(expected_region_b);
+    assert(motif_occurrence_region_event_id_count(second) == 1);
 
     motif_occurrence_destroy(first);
     motif_occurrence_destroy(second);

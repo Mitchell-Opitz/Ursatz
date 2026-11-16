@@ -52,6 +52,5 @@ const EntityID *motif_occurrence_id(const MotifOccurrence *motif_occurrence);
 /* The id of the Motif this is an occurrence of. */
 const EntityID *motif_occurrence_motif_id(const MotifOccurrence *motif_occurrence);
 size_t motif_occurrence_region_event_id_count(const MotifOccurrence *motif_occurrence);
-const EntityID *motif_occurrence_region_event_id_at(const MotifOccurrence *motif_occurrence, size_t index);
 
 #endif

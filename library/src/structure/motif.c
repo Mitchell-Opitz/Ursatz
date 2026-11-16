@@ -62,14 +62,3 @@ const EntityID *motif_id(const Motif *motif) {
 size_t motif_event_id_count(const Motif *motif) {
     return motif->event_id_count;
 }
-
-const EntityID *motif_event_id_at(const Motif *motif, size_t index) {
-    return motif->event_ids[index];
-}
-
-bool motif_identity_equals(const Motif *a, const Motif *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
-}

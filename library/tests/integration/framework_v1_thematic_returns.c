@@ -3,15 +3,12 @@
 #include "ursatz_chain/chain_inputs.h"
 
 #include "analysis/thematic_return_detection.h"
-#include "core/occurrence.h"
-#include "structure/theme_occurrence.h"
 
 /*
  * Framework v1 verification, thematic returns (Mozart K. 545 and Clementi Op. 36 No. 1), and the Bach regression for PR #37.
  *
  * THE GLUE. The themes are those of the L3.6 standard-form adapter on the cadences the chain found (framework_v1_chain.h). Each theme becomes a
- * ThemeOccurrence (structure/theme_occurrence.h: its own id, the id of its Theme, and the ids of the soprano notes of the theme, which the adapter
- * keeps in the theme's shell) and a MotifWindow: the Contour of those notes' pitches (up, down or same), their RhythmicPattern (the durations of
+ * theme occurrence (its own id and the ids of the soprano notes of the theme, which the adapter keeps in the theme's shell) and a MotifWindow: the Contour of those notes' pitches (up, down or same), their RhythmicPattern (the durations of
  * the notes), and their event ids. The kernel's ThematicReturnDetection (analysis/thematic_return_detection.h, with its minimum window of
  * THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH events) compares the windows and builds one "resembles" Relationship from each later occurrence to
  * each earlier one it matches. Nothing in the library changed to feed it.
@@ -31,7 +28,9 @@ typedef struct {
     int last;
     char form[24];
     char id[48];
-    ThemeOccurrence *occurrence;
+    EntityID *occurrence_id;
+    EntityID **region_ids;
+    size_t region_count;
     Contour *contour;
     RhythmicPattern *rhythm;
     const EntityID **window_ids;
@@ -123,22 +122,18 @@ static Occs fv1_occurrences(const Chain *c) {
             events[i] = fv1_find_event(&c->p, value);
             assert(events[i] != NULL);
         }
-        char target[48];
-        snprintf(target, sizeof(target), "theme-%zu", t);
-        Occurrence *occurrence = NULL;
-        assert(occurrence_create(fv1_id(o->id), fv1_id(target), &occurrence) == OCCURRENCE_OK);
         if (n == 0) {
-            occurrence_destroy(occurrence);
             free(region);
             free(events);
             continue;
         }
-        assert(theme_occurrence_create(occurrence, region, n, &o->occurrence) == THEME_OCCURRENCE_OK);
-        free(region); /* the ThemeOccurrence owns the ids and copies the array */
+        o->occurrence_id = fv1_id(o->id);
+        o->region_ids = region; /* the occurrence owns the ids and the array */
+        o->region_count = n;
         o->window_ids = (const EntityID **)calloc(n, sizeof(EntityID *));
         assert(o->window_ids != NULL);
         for (size_t i = 0; i < n; i++) {
-            o->window_ids[i] = theme_occurrence_region_event_id_at(o->occurrence, i);
+            o->window_ids[i] = o->region_ids[i];
         }
         o->usable = fv1_window_of_events(events, n, o->window_ids, &o->contour, &o->rhythm, &o->window);
         free(events);
@@ -156,8 +151,12 @@ static void fv1_occurrences_destroy(Occs *occs) {
             rhythmic_pattern_destroy(o->rhythm);
         }
         free(o->window_ids);
-        if (o->occurrence != NULL) {
-            theme_occurrence_destroy(o->occurrence);
+        if (o->occurrence_id != NULL) {
+            entity_id_destroy(o->occurrence_id);
+            for (size_t k = 0; k < o->region_count; k++) {
+                entity_id_destroy(o->region_ids[k]);
+            }
+            free(o->region_ids);
         }
     }
     free(occs->items);
@@ -165,7 +164,7 @@ static void fv1_occurrences_destroy(Occs *occs) {
 
 static const Occ *fv1_occ_by_id(const Occs *occs, const char *id) {
     for (size_t i = 0; i < occs->count; i++) {
-        if (occs->items[i].usable && strcmp(entity_id_value(theme_occurrence_id(occs->items[i].occurrence)), id) == 0) {
+        if (occs->items[i].usable && strcmp(entity_id_value(occs->items[i].occurrence_id), id) == 0) {
             return &occs->items[i];
         }
     }
@@ -182,7 +181,7 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
     size_t entry_count = 0;
     for (size_t i = 0; i < occs.count; i++) {
         if (occs.items[i].usable) {
-            entries[entry_count].theme_occurrence_id = theme_occurrence_id(occs.items[i].occurrence);
+            entries[entry_count].theme_occurrence_id = occs.items[i].occurrence_id;
             entries[entry_count].window = &occs.items[i].window;
             entry_count++;
         }

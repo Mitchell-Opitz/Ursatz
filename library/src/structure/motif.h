@@ -49,12 +49,5 @@ void motif_destroy(Motif *motif);
 
 const EntityID *motif_id(const Motif *motif);
 size_t motif_event_id_count(const Motif *motif);
-const EntityID *motif_event_id_at(const Motif *motif, size_t index);
-
-/*
- * Identity equality: same EntityID, regardless of instance or how many
- * MotifOccurrences (if any) point at it.
- */
-bool motif_identity_equals(const Motif *a, const Motif *b);
 
 #endif

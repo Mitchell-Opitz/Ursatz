@@ -57,10 +57,5 @@ void cadence_destroy(Cadence *cadence);
 const EntityID *cadence_id(const Cadence *cadence);
 size_t cadence_event_id_count(const Cadence *cadence);
 const EntityID *cadence_event_id_at(const Cadence *cadence, size_t index);
-/* NULL if not present. */
-const Value *cadence_optional_harmonic_context(const Cadence *cadence);
-
-/* Identity equality: same EntityID, regardless of instance. */
-bool cadence_identity_equals(const Cadence *a, const Cadence *b);
 
 #endif

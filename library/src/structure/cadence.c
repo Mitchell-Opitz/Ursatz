@@ -70,14 +70,3 @@ size_t cadence_event_id_count(const Cadence *cadence) {
 const EntityID *cadence_event_id_at(const Cadence *cadence, size_t index) {
     return cadence->event_ids[index];
 }
-
-const Value *cadence_optional_harmonic_context(const Cadence *cadence) {
-    return cadence->optional_harmonic_context;
-}
-
-bool cadence_identity_equals(const Cadence *a, const Cadence *b) {
-    if (a == NULL || b == NULL) {
-        return false;
-    }
-    return entity_id_equals(a->id, b->id);
-}

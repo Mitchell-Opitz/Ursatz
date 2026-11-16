@@ -67,7 +67,3 @@ const EntityID *phrase_occurrence_phrase_id(const PhraseOccurrence *phrase_occur
 size_t phrase_occurrence_region_event_id_count(const PhraseOccurrence *phrase_occurrence) {
     return phrase_occurrence->region_event_id_count;
 }
-
-const EntityID *phrase_occurrence_region_event_id_at(const PhraseOccurrence *phrase_occurrence, size_t index) {
-    return phrase_occurrence->region_event_ids[index];
-}

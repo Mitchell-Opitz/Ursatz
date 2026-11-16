@@ -67,7 +67,3 @@ const EntityID *motif_occurrence_motif_id(const MotifOccurrence *motif_occurrenc
 size_t motif_occurrence_region_event_id_count(const MotifOccurrence *motif_occurrence) {
     return motif_occurrence->region_event_id_count;
 }
-
-const EntityID *motif_occurrence_region_event_id_at(const MotifOccurrence *motif_occurrence, size_t index) {
-    return motif_occurrence->region_event_ids[index];
-}

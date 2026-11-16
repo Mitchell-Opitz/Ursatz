@@ -11,15 +11,13 @@
 /*
  * ThematicReturnDetection (Procedure -> Analyzer implementation):
  * identifies thematic return -- a later section's Theme material
- * recognizably recurring from an earlier one (structure/theme.h,
- * structure/theme_occurrence.h) -- the thematic-return half of this
+ * recognizably recurring from an earlier one -- the thematic-return half of this
  * branch's scope (section order is analysis/form_structure_detection.h).
  *
- * No new Structure/Occurrence type: Theme/ThemeOccurrence already exist
- * as L5 shells (Registry "No, example only", same non-normative status
- * Motif carries); this module produces a generic Interpretation the
- * same "no new named type" pattern every other analysis module in this
- * pass uses.
+ * No new Structure/Occurrence type: a theme occurrence is an id and
+ * its region of event ids that the caller holds; this module produces a
+ * generic Interpretation the same "no new named type" pattern every
+ * other analysis module in this pass uses.
  *
  * Matching mechanism (requirement 3): reuses MotifWindowMatching's exact
  * Contour+RhythmicPattern comparison rule DIRECTLY, at Theme granularity
