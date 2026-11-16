@@ -113,7 +113,7 @@ The Analyzer, Corpus, Styles and Motive links routes. [Docs index](../README.md)
 ## Corpus routes
 
 The Collections tool keeps its `/api/corpus` paths. Collections are owned by
-the GUI (`service/collection_service.c`), not by Ursatz's `corpus_api`:
+the GUI (`service/collection_service.c`):
 
 - `POST /api/corpus`: body `{"name":"<name>"}`, with an optional
   `"description":"<text>"` and an optional `"id":"<collection-id>"` (accepted
@@ -157,16 +157,8 @@ piece ids: tagging a piece later does not add it.
 `DELETE /api/analyzer/pieces/<id>` also removes the id from every collection
 that holds it (a service call, `ursatz_gui_collection_remove_piece_everywhere`).
 
-One-time import: when `collections/` does not exist yet and `data/corpus.db`
-(the old Corpus store) does, the server start copies each corpus into a
-collection (same id and name, no description) with the piece refs whose
-`pieces/<id>/meta.json` exists; the others are dropped and counted on stderr.
-`collections/.imported-from-corpus-db` marks it done and `data/corpus.db` is
-left in place. If the import fails, the server does not start and the next
-start tries again.
-
-`GET /api/health/status` calls the persistence service to confirm
-`persistence_open` succeeds against a test database path, and returns JSON.
+A `data/corpus.db` of the old Corpus store is not read: the start refuses a folder that never imported it (see
+[Data check](../storage.md#data-check)).
 
 ## Styles routes
 
