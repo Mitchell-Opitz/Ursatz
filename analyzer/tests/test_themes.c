@@ -11,6 +11,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Themes and expansions: two constructed pieces the library hears as a sentence and as a period, a third as a compound
@@ -23,16 +24,6 @@
  * phrases, its parts lie inside it and follow each other, a part's cadence arrives in the part, a compound period's
  * halves are themes it spans, and every expansion names a theme and a phrase that exist and lies inside its phrase.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 static void check_claim(const cJSON *claim, size_t note_count) {
     CHECK(strcmp(test_json_string(claim, "framework"), "standard-form-v1") == 0);
@@ -52,7 +43,7 @@ static bool analyze(const char *path, bool midi, ImportedNotes *notes, AnalysisR
                          : musicxml_pipeline_import_file(path, notes) == MUSICXML_PIPELINE_OK;
     if (!imported || !run_analysis_pipeline(notes, report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
-        failures++;
+        test_failure_count++;
         return false;
     }
     char *json = test_render_document(path, notes, report);
@@ -68,7 +59,7 @@ static const cJSON *theme_at(const cJSON *document, int index) {
 
 /* The measures object {first, last} equals first..last. */
 static bool measures_are(const cJSON *measures, int first, int last) {
-    return (int)test_json_number(measures, "first") == first && (int)test_json_number(measures, "last") == last;
+    return (int)test_json_number(measures, "first", -1e9) == first && (int)test_json_number(measures, "last", -1e9) == last;
 }
 
 /* The type of the cadence the part ends with, or "none". */
@@ -98,9 +89,9 @@ static void check_sentence(const char *dir) {
         CHECK(strcmp(test_json_string(theme, "beginning"), "presentation") == 0);
         CHECK(strcmp(test_json_string(theme, "ending"), "continuation") == 0);
         CHECK(strcmp(test_json_string(theme, "commonality"), "very-common") == 0);
-        CHECK((int)test_json_number(theme, "index") == 0);
-        CHECK((int)test_json_number(test_json_member(theme, "phrases"), "first") == 0 && (int)test_json_number(test_json_member(theme, "phrases"), "count") == 1);
-        CHECK(measures_are(test_json_member(theme, "measures"), 1, 8) && (int)test_json_number(theme, "length") == 8);
+        CHECK((int)test_json_number(theme, "index", -1e9) == 0);
+        CHECK((int)test_json_number(test_json_member(theme, "phrases"), "first", -1e9) == 0 && (int)test_json_number(test_json_member(theme, "phrases"), "count", -1e9) == 1);
+        CHECK(measures_are(test_json_member(theme, "measures"), 1, 8) && (int)test_json_number(theme, "length", -1e9) == 8);
         CHECK(cJSON_IsFalse(test_json_member(theme, "parts_are_phrases")));
         CHECK(cJSON_IsFalse(test_json_member(theme, "part_of_compound")));
         CHECK(test_json_member(theme, "halves") == NULL);
@@ -110,10 +101,10 @@ static void check_sentence(const char *dir) {
         const cJSON *presentation = cJSON_GetArrayItem(parts, 0);
         const cJSON *continuation = cJSON_GetArrayItem(parts, 1);
         CHECK(strcmp(test_json_string(presentation, "name"), "presentation") == 0);
-        CHECK(measures_are(test_json_member(presentation, "measures"), 1, 4) && (int)test_json_number(presentation, "length") == 4);
+        CHECK(measures_are(test_json_member(presentation, "measures"), 1, 4) && (int)test_json_number(presentation, "length", -1e9) == 4);
         CHECK(strcmp(part_cadence(document, presentation), "none") == 0);
         CHECK(strcmp(test_json_string(continuation, "name"), "continuation") == 0);
-        CHECK(measures_are(test_json_member(continuation, "measures"), 5, 8) && (int)test_json_number(continuation, "length") == 4);
+        CHECK(measures_are(test_json_member(continuation, "measures"), 5, 8) && (int)test_json_number(continuation, "length", -1e9) == 4);
         CHECK(strcmp(part_cadence(document, continuation), "perfect-authentic") == 0);
         CHECK(cJSON_IsTrue(test_json_member(theme, "cadences_usual")));
         CHECK(cJSON_IsTrue(test_json_member(theme, "lengths_usual")));
@@ -144,8 +135,8 @@ static void check_period(const char *dir) {
         CHECK(strcmp(test_json_string(theme, "beginning"), "antecedent") == 0);
         CHECK(strcmp(test_json_string(theme, "ending"), "consequent") == 0);
         CHECK(strcmp(test_json_string(theme, "commonality"), "very-common") == 0);
-        CHECK((int)test_json_number(test_json_member(theme, "phrases"), "first") == 0 && (int)test_json_number(test_json_member(theme, "phrases"), "count") == 2);
-        CHECK(measures_are(test_json_member(theme, "measures"), 1, 8) && (int)test_json_number(theme, "length") == 8);
+        CHECK((int)test_json_number(test_json_member(theme, "phrases"), "first", -1e9) == 0 && (int)test_json_number(test_json_member(theme, "phrases"), "count", -1e9) == 2);
+        CHECK(measures_are(test_json_member(theme, "measures"), 1, 8) && (int)test_json_number(theme, "length", -1e9) == 8);
         CHECK(cJSON_IsTrue(test_json_member(theme, "parts_are_phrases")));
         const cJSON *parts = test_json_member(theme, "parts");
         const cJSON *antecedent = cJSON_GetArrayItem(parts, 0);
@@ -160,8 +151,8 @@ static void check_period(const char *dir) {
         CHECK(strcmp(part_cadence(document, consequent), "perfect-authentic") == 0);
         /* each part ends with the cadence of its phrase */
         const cJSON *phrases = test_json_member(document, "phrases");
-        CHECK(test_json_number(antecedent, "cadence") == test_json_number(cJSON_GetArrayItem(phrases, 0), "cadence"));
-        CHECK(test_json_number(consequent, "cadence") == test_json_number(cJSON_GetArrayItem(phrases, 1), "cadence"));
+        CHECK(test_json_number(antecedent, "cadence", -1e9) == test_json_number(cJSON_GetArrayItem(phrases, 0), "cadence", -1e9));
+        CHECK(test_json_number(consequent, "cadence", -1e9) == test_json_number(cJSON_GetArrayItem(phrases, 1), "cadence", -1e9));
         CHECK(cJSON_IsFalse(test_json_member(theme, "cadences_usual")));
     }
     cJSON_Delete(document);
@@ -219,12 +210,12 @@ static void check_themes(const cJSON *document, size_t note_count) {
     const cJSON *theme;
     cJSON_ArrayForEach(theme, themes) {
         check_claim(theme, note_count);
-        CHECK((int)test_json_number(theme, "index") == index);
+        CHECK((int)test_json_number(theme, "index", -1e9) == index);
         const char *form = test_json_string(theme, "label");
         CHECK(strcmp(form, "sentence") == 0 || strcmp(form, "period") == 0 || strcmp(form, "hybrid") == 0 ||
               strcmp(form, "compound-period") == 0 || strcmp(form, "repeated-phrase") == 0);
-        int first = (int)test_json_number(test_json_member(theme, "phrases"), "first");
-        int count = (int)test_json_number(test_json_member(theme, "phrases"), "count");
+        int first = (int)test_json_number(test_json_member(theme, "phrases"), "first", -1e9);
+        int count = (int)test_json_number(test_json_member(theme, "phrases"), "count", -1e9);
         CHECK(first >= 0 && count >= 1 && count <= 2 && first + count <= phrase_count);
         /* themes follow the phrases in order (a compound period after its two sentences, so it may start again) */
         CHECK(first >= last_first_phrase || strcmp(form, "compound-period") == 0);
@@ -239,11 +230,11 @@ static void check_themes(const cJSON *document, size_t note_count) {
                   test_rational_of(test_json_member(test_json_member(start_phrase, "span"), "start")) - 1e-12);
             CHECK(test_rational_of(test_json_member(test_json_member(theme, "span"), "end")) <=
                   test_rational_of(test_json_member(test_json_member(end_phrase, "span"), "end")) + 1e-12);
-            CHECK((int)test_json_number(test_json_member(theme, "measures"), "first") == (int)test_json_number(test_json_member(start_phrase, "measures"), "first"));
-            CHECK((int)test_json_number(test_json_member(theme, "measures"), "last") == (int)test_json_number(test_json_member(end_phrase, "measures"), "last"));
+            CHECK((int)test_json_number(test_json_member(theme, "measures"), "first", -1e9) == (int)test_json_number(test_json_member(start_phrase, "measures"), "first", -1e9));
+            CHECK((int)test_json_number(test_json_member(theme, "measures"), "last", -1e9) == (int)test_json_number(test_json_member(end_phrase, "measures"), "last", -1e9));
         }
-        int first_measure = (int)test_json_number(test_json_member(theme, "measures"), "first");
-        int last_measure = (int)test_json_number(test_json_member(theme, "measures"), "last");
+        int first_measure = (int)test_json_number(test_json_member(theme, "measures"), "first", -1e9);
+        int last_measure = (int)test_json_number(test_json_member(theme, "measures"), "last", -1e9);
         CHECK(last_measure >= first_measure);
 
         /* the parts lie inside the theme, in order, and a part's cadence arrives in it */
@@ -253,11 +244,11 @@ static void check_themes(const cJSON *document, size_t note_count) {
         const cJSON *part;
         cJSON_ArrayForEach(part, parts) {
             const cJSON *measures = test_json_member(part, "measures");
-            int part_first = (int)test_json_number(measures, "first");
-            int part_last = (int)test_json_number(measures, "last");
+            int part_first = (int)test_json_number(measures, "first", -1e9);
+            int part_last = (int)test_json_number(measures, "last", -1e9);
             CHECK(part_first >= first_measure && part_last <= last_measure && part_last >= part_first);
             CHECK(part_first > previous_last || strcmp(form, "repeated-phrase") == 0);
-            CHECK((int)test_json_number(part, "length") >= 1);
+            CHECK((int)test_json_number(part, "length", -1e9) >= 1);
             previous_last = part_last;
             const cJSON *cadence_index = test_json_member(part, "cadence");
             if (cJSON_IsNumber(cadence_index)) {
@@ -265,7 +256,7 @@ static void check_themes(const cJSON *document, size_t note_count) {
                 CHECK(cadence != NULL);
                 if (cadence) {
                     const cJSON *arrival_start = test_json_member(test_json_member(test_json_member(cadence, "arrival"), "location"), "start");
-                    int arrival = (int)test_json_number(arrival_start, "measure");
+                    int arrival = (int)test_json_number(arrival_start, "measure", -1e9);
                     /* On harmonic spans a part can name the cadence that arrives one measure before it begins (Field 1,
                        the hybrid at m5 to m6 names the cadence at m4); P41 reads the cadences and themes on the spans. */
                     CHECK(arrival >= part_first - 1 && arrival <= part_last);
@@ -306,16 +297,16 @@ static void check_expansions(const cJSON *document) {
             const cJSON *theme = test_json_member(expansion, "theme");
             CHECK(cJSON_IsNull(theme) || (theme->valuedouble >= 0 && (int)theme->valuedouble < theme_count));
             CHECK(cJSON_IsNull(theme) || strcmp(kind, "external") == 0 || cJSON_IsNumber(theme));
-            int expected = (int)test_json_number(expansion, "expected_length");
-            int actual = (int)test_json_number(expansion, "actual_length");
-            int changed = (int)test_json_number(expansion, "measures_changed");
+            int expected = (int)test_json_number(expansion, "expected_length", -1e9);
+            int actual = (int)test_json_number(expansion, "actual_length", -1e9);
+            int changed = (int)test_json_number(expansion, "measures_changed", -1e9);
             CHECK(changed >= 1);
             CHECK(strcmp(change, "expansion") == 0 ? actual - expected == changed : expected - actual == changed);
             CHECK(test_within(test_json_member(expansion, "span"), test_json_member(phrase, "span")));
             CHECK((strcmp(kind, "external") == 0) == (test_json_member(expansion, "external_kind") != NULL));
-            CHECK((int)test_json_number(test_json_member(expansion, "measures"), "first") >= (int)test_json_number(test_json_member(phrase, "measures"), "first"));
-            CHECK((int)test_json_number(test_json_member(expansion, "measures"), "last") <=
-                  (int)test_json_number(test_json_member(phrase, "measures"), "last") + (int)test_json_number(phrase, "extension_measures"));
+            CHECK((int)test_json_number(test_json_member(expansion, "measures"), "first", -1e9) >= (int)test_json_number(test_json_member(phrase, "measures"), "first", -1e9));
+            CHECK((int)test_json_number(test_json_member(expansion, "measures"), "last", -1e9) <=
+                  (int)test_json_number(test_json_member(phrase, "measures"), "last", -1e9) + (int)test_json_number(phrase, "extension_measures", -1e9));
         }
     }
 }
@@ -362,10 +353,5 @@ int main(void) {
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
         check_piece(&PIECES[i]);
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_themes: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_themes: ok\n");
-    return 0;
+    return test_finish("test_themes");
 }

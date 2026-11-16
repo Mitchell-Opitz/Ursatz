@@ -11,6 +11,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The five reference pieces (Ursatz framework-v1 corpus) are analyzed from

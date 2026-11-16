@@ -19,24 +19,14 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 #include <ursatz_analyzer/style_profile.h>
 
+#include "ursatz_test.h"
+
 /*
  * The API the Composer calls (composer_api.h), through analyzer_hear. A constructed four-voice fragment with a parallel
  * fifth gives one parallel-fifths violation at its measure and beat; an empty hearing has no chords and no violations;
  * Mozart 545 is closer to the sonatinas model than to the chorales; the caller's events are not changed. With the argument "smoke" the style models (which analyze two corpora) are skipped, so the
  * valgrind run stays short.
  */
-
-static int failures = 0;
-
-#define CHECK(condition, ...)                                                                                          \
-    do {                                                                                                               \
-        if (!(condition)) {                                                                                            \
-            fprintf(stderr, "FAIL line %d: ", __LINE__);                                                               \
-            fprintf(stderr, __VA_ARGS__);                                                                              \
-            fprintf(stderr, "\n");                                                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
 
 static void piece_path(char *out, size_t size, const char *file) {
     snprintf(out, size, "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, file);
@@ -138,15 +128,15 @@ static void test_parallel_fifth(void) {
                                    {77, 1, 0}, {65, 1, 1}, {57, 1, 2}, {50, 1, 3}};
     EntityID *tuning_id = NULL;
     TuningSystem *tuning = NULL;
-    CHECK(entity_id_create("midi-note-number", &tuning_id) == ENTITY_ID_OK &&
-              tuning_system_create(tuning_id, "MIDI note number", &tuning) == TUNING_SYSTEM_OK,
-          "tuning system");
+    CHECKF(entity_id_create("midi-note-number", &tuning_id) == ENTITY_ID_OK &&
+               tuning_system_create(tuning_id, "MIDI note number", &tuning) == TUNING_SYSTEM_OK,
+           "tuning system");
     NoteEvent *events[8];
     size_t streams[8];
     for (size_t i = 0; i < 8; i++) {
         events[i] = make_event(tuning, i, plan[i].midi, plan[i].start, 1);
         streams[i] = (size_t)plan[i].voice;
-        CHECK(events[i] != NULL, "event %zu", i);
+        CHECKF(events[i] != NULL, "event %zu", i);
     }
     int midi[8];
     for (size_t i = 0; i < 8; i++) {
@@ -155,23 +145,23 @@ static void test_parallel_fifth(void) {
     char *before = fingerprint((const NoteEvent *const *)events, 8);
     AnalyzerHearing hearing = {(const NoteEvent *const *)events, 8, midi, NULL, true, 0, false, streams};
     AnalyzerResult *heard = NULL;
-    CHECK(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "hearing");
+    CHECKF(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "hearing");
     AnalyzerViolation *violations = NULL;
     size_t count = 0;
-    CHECK(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK, "violations");
-    CHECK(count_rule(violations, count, "parallel-fifths") == 1, "%zu parallel fifths", count_rule(violations, count, "parallel-fifths"));
-    CHECK(count_rule(violations, count, "parallel-octaves") == 0, "no parallel octaves");
+    CHECKF(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK, "violations");
+    CHECKF(count_rule(violations, count, "parallel-fifths") == 1, "%zu parallel fifths", count_rule(violations, count, "parallel-fifths"));
+    CHECKF(count_rule(violations, count, "parallel-octaves") == 0, "no parallel octaves");
     for (size_t i = 0; i < count; i++) {
         if (strcmp(violations[i].rule, "parallel-fifths") == 0) {
-            CHECK(violations[i].hard, "a parallel fifth is a hard fault");
-            CHECK(violations[i].measure == 1 && violations[i].beat == 3.0, "at measure %d beat %.2f", violations[i].measure,
-                  violations[i].beat);
-            CHECK(violations[i].note_id_count == 4, "four notes");
+            CHECKF(violations[i].hard, "a parallel fifth is a hard fault");
+            CHECKF(violations[i].measure == 1 && violations[i].beat == 3.0, "at measure %d beat %.2f", violations[i].measure,
+                   violations[i].beat);
+            CHECKF(violations[i].note_id_count == 4, "four notes");
         }
     }
     analyzer_violations_free(violations, count);
     char *after = fingerprint((const NoteEvent *const *)events, 8);
-    CHECK(before && after && strcmp(before, after) == 0, "the events were changed");
+    CHECKF(before && after && strcmp(before, after) == 0, "the events were changed");
     free(before);
     free(after);
     analyzer_result_destroy(heard);
@@ -186,16 +176,16 @@ static void test_parallel_fifth(void) {
 static void test_refusals(void) {
     AnalyzerHearing empty = {NULL, 0, NULL, NULL, false, 0, false, NULL};
     AnalyzerResult *heard = NULL;
-    CHECK(analyzer_hear(&empty, NULL, &heard) == ANALYZER_OK && heard, "an empty hearing");
-    CHECK(analyzer_result_report(heard)->entry_count == 0, "no chords");
+    CHECKF(analyzer_hear(&empty, NULL, &heard) == ANALYZER_OK && heard, "an empty hearing");
+    CHECKF(analyzer_result_report(heard)->entry_count == 0, "no chords");
     AnalyzerViolation *violations = NULL;
     size_t count = 7;
-    CHECK(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK && count == 0 && violations == NULL,
-          "no violations");
+    CHECKF(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK && count == 0 && violations == NULL,
+           "no violations");
     analyzer_result_destroy(heard);
     AnalyzerHearing bad_key = {NULL, 0, NULL, NULL, true, 12, false, NULL};
-    CHECK(analyzer_hear(&bad_key, NULL, &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
-    CHECK(analyzer_hear(NULL, NULL, &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
+    CHECKF(analyzer_hear(&bad_key, NULL, &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
+    CHECKF(analyzer_hear(NULL, NULL, &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
 }
 
 /* ---- style distance ---- */
@@ -213,15 +203,15 @@ static StyleModel *corpus_model_without(const char *name, size_t pieces, const c
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
     CorpusRunOptions options = {input, output, false, NULL, NULL};
     CorpusRunSummary summary;
-    CHECK(corpus_run(&options, &summary) == CORPUS_RUN_OK && summary.analyzed == pieces && summary.failed == 0,
-          "%s analyzed", name);
+    CHECKF(corpus_run(&options, &summary) == CORPUS_RUN_OK && summary.analyzed == pieces && summary.failed == 0,
+           "%s analyzed", name);
     StyleProfile *profile = style_profile_create();
-    CHECK(profile && style_profile_add_corpus(profile, output) == STYLE_PROFILE_OK, "%s profile", name);
+    CHECKF(profile && style_profile_add_corpus(profile, output) == STYLE_PROFILE_OK, "%s profile", name);
     snprintf(file, sizeof(file), "%s/%s.style.json", work_dir, name);
     StyleModel *model = NULL;
-    CHECK(profile && style_model_file_write(profile, name, file) == STYLE_MODEL_FILE_OK &&
-              style_model_file_read_without(file, without, count, &model, NULL) == STYLE_MODEL_FILE_OK,
-          "%s model", name);
+    CHECKF(profile && style_model_file_write(profile, name, file) == STYLE_MODEL_FILE_OK &&
+               style_model_file_read_without(file, without, count, &model, NULL) == STYLE_MODEL_FILE_OK,
+           "%s model", name);
     style_profile_destroy(profile);
     return model;
 }
@@ -266,24 +256,24 @@ static AnalyzerStatus distance(const AnalyzerResult *result, const StyleModel *m
 static void check_without(const AnalyzerResult *result, const StyleModel *full, const StyleModel *cut,
                           const char *name) {
     StyleComparison against_full = {0}, against_cut = {0}, plain = {0};
-    CHECK(distance(result, full, motive_categories, MOTIVE_COUNT, &against_full) == ANALYZER_OK &&
-              distance(result, cut, motive_categories, MOTIVE_COUNT, &against_cut) == ANALYZER_OK,
-          "%s without", name);
-    CHECK(distance(result, cut, NULL, 0, &plain) == ANALYZER_OK, "%s plain", name);
+    CHECKF(distance(result, full, motive_categories, MOTIVE_COUNT, &against_full) == ANALYZER_OK &&
+               distance(result, cut, motive_categories, MOTIVE_COUNT, &against_cut) == ANALYZER_OK,
+           "%s without", name);
+    CHECKF(distance(result, cut, NULL, 0, &plain) == ANALYZER_OK, "%s plain", name);
     bool only = false;
-    CHECK(!has_motive(&against_full, &only) && !has_motive(&against_cut, &only), "%s: motive category left in", name);
-    CHECK(against_full.category_count == against_cut.category_count, "%s: category counts differ", name);
-    CHECK(against_full.overall_present == against_cut.overall_present &&
-              (!against_full.overall_present || same_rational(against_full.overall, against_cut.overall)),
-          "%s: overall differs", name);
+    CHECKF(!has_motive(&against_full, &only) && !has_motive(&against_cut, &only), "%s: motive category left in", name);
+    CHECKF(against_full.category_count == against_cut.category_count, "%s: category counts differ", name);
+    CHECKF(against_full.overall_present == against_cut.overall_present &&
+               (!against_full.overall_present || same_rational(against_full.overall, against_cut.overall)),
+           "%s: overall differs", name);
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-        CHECK(against_full.dimension_present[d] == against_cut.dimension_present[d] &&
-                  (!against_full.dimension_present[d] ||
-                   same_rational(against_full.dimension[d], against_cut.dimension[d])),
-              "%s: dimension %d differs", name, d);
+        CHECKF(against_full.dimension_present[d] == against_cut.dimension_present[d] &&
+                   (!against_full.dimension_present[d] ||
+                    same_rational(against_full.dimension[d], against_cut.dimension[d])),
+               "%s: dimension %d differs", name, d);
     }
     /* Why the call exists: the plain reference lists the result's motive categories with in_b false. */
-    CHECK(has_motive(&plain, &only) && only, "%s: plain call does not list motive categories as missing", name);
+    CHECKF(has_motive(&plain, &only) && only, "%s: plain call does not list motive categories as missing", name);
     style_comparison_destroy(&against_full);
     style_comparison_destroy(&against_cut);
     style_comparison_destroy(&plain);
@@ -297,7 +287,7 @@ static void test_style_distance(void) {
     char path[1024];
     piece_path(path, sizeof(path), "Mozart 545.mid");
     ImportedNotes notes;
-    CHECK(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK, "cannot import %s", path);
+    CHECKF(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK, "cannot import %s", path);
     int *midi = midi_of(&notes);
     AnalyzerHearing hearing = {(const NoteEvent *const *)notes.events,
                                notes.count,
@@ -308,17 +298,17 @@ static void test_style_distance(void) {
                                notes.key_signature.is_minor,
                                notes.streams};
     AnalyzerResult *analysis = NULL;
-    CHECK(analyzer_hear(&hearing, NULL, &analysis) == ANALYZER_OK && analysis, "hearing");
+    CHECKF(analyzer_hear(&hearing, NULL, &analysis) == ANALYZER_OK && analysis, "hearing");
     StyleComparison near_style = {0}, far_style = {0};
     if (sonatinas && chorales) {
-        CHECK(distance(analysis, sonatinas, NULL, 0, &near_style) == ANALYZER_OK, "near");
-        CHECK(distance(analysis, chorales, NULL, 0, &far_style) == ANALYZER_OK, "far");
-        CHECK(near_style.overall_present && far_style.overall_present, "overall distances");
+        CHECKF(distance(analysis, sonatinas, NULL, 0, &near_style) == ANALYZER_OK, "near");
+        CHECKF(distance(analysis, chorales, NULL, 0, &far_style) == ANALYZER_OK, "far");
+        CHECKF(near_style.overall_present && far_style.overall_present, "overall distances");
         if (near_style.overall_present && far_style.overall_present) {
             double near_distance = style_rational_value(near_style.overall);
             double far_distance = style_rational_value(far_style.overall);
             printf("Mozart 545 against sonatinas %.4f, against chorales %.4f\n", near_distance, far_distance);
-            CHECK(near_distance < far_distance, "Mozart 545 is not closer to the sonatinas");
+            CHECKF(near_distance < far_distance, "Mozart 545 is not closer to the sonatinas");
         }
     }
     style_comparison_destroy(&near_style);
@@ -329,12 +319,12 @@ static void test_style_distance(void) {
         StyleComparison refused = {0};
         const char *unknown[] = {"no-such-category"};
         const char *known[] = {STYLE_CATEGORY_MOTIVE_RHYTHM};
-        CHECK(distance(analysis, sonatinas, unknown, 1, &refused) == ANALYZER_ERR_ARGUMENT,
-              "unknown category name");
-        CHECK(distance(analysis, sonatinas, NULL, 1, &refused) == ANALYZER_ERR_ARGUMENT,
-              "NULL categories with a count");
-        CHECK(distance(analysis, sonatinas, known, 1, &refused) == ANALYZER_OK,
-              "one category left out");
+        CHECKF(distance(analysis, sonatinas, unknown, 1, &refused) == ANALYZER_ERR_ARGUMENT,
+               "unknown category name");
+        CHECKF(distance(analysis, sonatinas, NULL, 1, &refused) == ANALYZER_ERR_ARGUMENT,
+               "NULL categories with a count");
+        CHECKF(distance(analysis, sonatinas, known, 1, &refused) == ANALYZER_OK,
+               "one category left out");
         style_comparison_destroy(&refused);
     }
     analyzer_result_destroy(analysis);
@@ -344,25 +334,25 @@ static void test_style_distance(void) {
     /* A fragment too short for most categories lists them as missing and leaves them out of the means. */
     EntityID *tuning_id = NULL;
     TuningSystem *tuning = NULL;
-    CHECK(entity_id_create("midi-note-number", &tuning_id) == ENTITY_ID_OK &&
-              tuning_system_create(tuning_id, "MIDI note number", &tuning) == TUNING_SYSTEM_OK,
-          "tuning system");
+    CHECKF(entity_id_create("midi-note-number", &tuning_id) == ENTITY_ID_OK &&
+               tuning_system_create(tuning_id, "MIDI note number", &tuning) == TUNING_SYSTEM_OK,
+           "tuning system");
     NoteEvent *events[2] = {make_event(tuning, 0, 60, 0, 1), make_event(tuning, 1, 62, 1, 1)};
     const int tiny_midi[2] = {60, 62};
     AnalyzerHearing tiny = {(const NoteEvent *const *)events, 2, tiny_midi, NULL, false, 0, false, NULL};
-    CHECK(analyzer_hear(&tiny, NULL, &analysis) == ANALYZER_OK && analysis, "tiny fragment");
+    CHECKF(analyzer_hear(&tiny, NULL, &analysis) == ANALYZER_OK && analysis, "tiny fragment");
     StyleComparison tiny_style = {0};
     if (sonatinas) {
-        CHECK(distance(analysis, sonatinas, NULL, 0, &tiny_style) == ANALYZER_OK, "tiny distance");
+        CHECKF(distance(analysis, sonatinas, NULL, 0, &tiny_style) == ANALYZER_OK, "tiny distance");
         size_t missing = 0, shared = 0;
         for (size_t i = 0; i < tiny_style.category_count; i++) {
             missing += !tiny_style.categories[i].in_a && tiny_style.categories[i].in_b;
             shared += tiny_style.categories[i].in_a && tiny_style.categories[i].in_b;
         }
-        CHECK(missing > 0, "categories the fragment lacks are listed");
+        CHECKF(missing > 0, "categories the fragment lacks are listed");
         printf("tiny fragment: %zu categories missing, %zu shared\n", missing, shared);
         if (shared == 0) {
-            CHECK(!tiny_style.overall_present, "no shared category, no overall distance");
+            CHECKF(!tiny_style.overall_present, "no shared category, no overall distance");
         }
     }
     style_comparison_destroy(&tiny_style);
@@ -390,10 +380,5 @@ int main(int argc, char **argv) {
     if (!smoke) {
         test_style_distance();
     }
-    if (failures > 0) {
-        fprintf(stderr, "%d check(s) failed\n", failures);
-        return 1;
-    }
-    printf("composer api: all checks passed\n");
-    return 0;
+    return test_finish("test_composer_api");
 }

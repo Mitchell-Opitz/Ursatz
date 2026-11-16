@@ -1,4 +1,4 @@
-ursatz_test_library(analyzer_test_support SOURCES support/test_support.c LIBS ursatz_analyzer cjson
+ursatz_test_library(analyzer_test_support SOURCES support/test_support.c LIBS ursatz_analyzer ursatz_test_support cjson
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/support)
 
 ursatz_test(test_analysis_pipeline LIBS ursatz_analyzer analyzer_test_support)
@@ -171,16 +171,17 @@ ursatz_test(test_rhythm_constructed TARGET test_rhythm ARGS constructed)
 # stay as the target; remove WILL_FAIL when the form adapter reports elision.
 ursatz_test(test_rhythm_field5_target TARGET test_rhythm ARGS field5-target PROPERTIES WILL_FAIL TRUE)
 
-ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_analyzer
+ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
-ursatz_test(test_voice_leading LIBS ursatz_analyzer
+ursatz_test(test_voice_leading LIBS ursatz_test_support ursatz_analyzer
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-ursatz_test(test_markings LIBS ursatz_analyzer DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+ursatz_test(test_markings LIBS ursatz_test_support ursatz_analyzer
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
-ursatz_test(test_schemas LIBS ursatz_analyzer m
+ursatz_test(test_schemas LIBS ursatz_test_support ursatz_analyzer m
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}" LABELS slow)
 
@@ -269,7 +270,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema slow)
 endif()
 
-ursatz_test(test_analyzer_style_labels SOURCES test_style_labels.c LIBS ursatz_analyzer
+ursatz_test(test_analyzer_style_labels SOURCES test_style_labels.c LIBS ursatz_test_support ursatz_analyzer
     INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
 # Over 10 s in the fast set (about 84 s of CPU measured): runs nightly.
@@ -322,7 +323,7 @@ ursatz_test(test_cli_similar COMMAND ${CMAKE_COMMAND}
     LABELS slow
     PROPERTIES FIXTURES_REQUIRED similar_motive_file)
 
-ursatz_test_executable(test_composer_api LIBS ursatz_analyzer cjson
+ursatz_test_executable(test_composer_api LIBS ursatz_test_support ursatz_analyzer cjson
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_COMPOSER_API_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/composer_api_work")
@@ -335,7 +336,7 @@ if(URSATZ_VALGRIND)
         valgrind PROPERTIES RESOURCE_LOCK composer_api_work)
 endif()
 
-ursatz_test_executable(test_hearing LIBS ursatz_analyzer cjson ursatz_analyzer::chain
+ursatz_test_executable(test_hearing LIBS ursatz_test_support ursatz_analyzer cjson ursatz_analyzer::chain
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_HEARING_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/hearing_work")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hearing_work)
@@ -369,7 +370,7 @@ ursatz_test(test_cli_link_motives COMMAND ${CMAKE_COMMAND}
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
 
-ursatz_test(test_staleness LIBS ursatz_analyzer cjson
+ursatz_test(test_staleness LIBS ursatz_test_support ursatz_analyzer cjson
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 if(URSATZ_VALGRIND)
     ursatz_test(test_staleness_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
@@ -377,7 +378,7 @@ if(URSATZ_VALGRIND)
 endif()
     # Over 10 s in the fast set (about 84 s of CPU measured): runs nightly.
 
-ursatz_test(test_analyzer_version SOURCES test_version.c LIBS ursatz_analyzer)
+ursatz_test(test_analyzer_version SOURCES test_version.c LIBS ursatz_test_support ursatz_analyzer)
 
 # Consumer isolation (A20261104-31): a target linking only ursatz_analyzer cannot include a chain or framework header; one
 # linking ursatz_analyzer::chain reads the chain. The leak targets must fail to compile, so they are left out of the default
@@ -393,9 +394,9 @@ endforeach()
 ursatz_test(test_consumer_isolation COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
 
-ursatz_test(test_score_text_reader LIBS ursatz_analyzer INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_score_text_reader LIBS ursatz_test_support ursatz_analyzer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-ursatz_test(test_text_export LIBS ursatz_analyzer
+ursatz_test(test_text_export LIBS ursatz_test_support ursatz_analyzer
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 

@@ -13,32 +13,14 @@
 /* A format 0 MIDI file with one track into buf; returns its size. */
 size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size);
 
-/* The member of an object, or NULL. */
-const cJSON *test_json_member(const cJSON *object, const char *key);
-
 /* The member of an object; asserts that it exists. */
 const cJSON *test_json_require(const cJSON *object, const char *key);
-
-/* A number member, or -1e9 when it is missing or not a number. */
-double test_json_number(const cJSON *object, const char *key);
-
-/* A string member, or "" when it is missing or not a string. */
-const char *test_json_string(const cJSON *object, const char *key);
 
 /* The value of a {num, den} rational object. */
 double test_rational_of(const cJSON *rational);
 
 /* True when the {start, end} span of inner lies inside the span of outer. */
 bool test_within(const cJSON *inner, const cJSON *outer);
-
-/* The whole file as a NUL-terminated string the caller frees; NULL when it cannot be read. */
-char *test_read_file(const char *path);
-
-/* Writes the text to the file; false on failure. */
-bool test_write_file(const char *path, const char *data);
-
-/* Writes "<TMPDIR or /tmp>/ursatz_analyzer_<pid>_<name>" into out, so parallel test processes never share a file. */
-void test_temp_path(char *out, size_t size, const char *name);
 
 /* analysis_document_build, then analysis_document_to_json, for an input path, its notes and report. Returns a heap
    string the caller frees, or NULL on allocation failure. */

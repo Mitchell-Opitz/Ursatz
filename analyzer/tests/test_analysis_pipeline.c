@@ -1,12 +1,14 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * End-to-end test: a hand-constructed SMF type 0 fixture (same
@@ -60,8 +62,7 @@ int main(void) {
     unsigned char buf[256];
     size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
-    char path[512];
-    test_temp_path(path, sizeof(path), "test_fixture.mid");
+    char *path = test_temp_path("test_fixture.mid");
     FILE *file = fopen(path, "wb");
     assert(file != NULL);
     assert(fwrite(buf, 1, size, file) == size);
@@ -95,6 +96,7 @@ int main(void) {
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     remove(path);
+    free(path);
 
     printf("test_analysis_pipeline: ok\n");
     return 0;

@@ -10,6 +10,7 @@
 
 #include "cJSON.h"
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Key regions, tonicizations, modulations and pivot chords.
@@ -29,16 +30,6 @@
  * key per stretch, for a piece with no modulation, an excursion whose cadence makes it a weak modulation, a
  * modulation, and a notated key signature that the music does not fit.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* ---- Reference pieces ---- */
 
@@ -135,17 +126,17 @@ static int run_reference_piece(const ReferencePiece *piece) {
         const char *closing = report.key_regions[report.key_region_count - 1].label;
         if (piece->home_label && strcmp(home, piece->home_label) != 0) {
             fprintf(stderr, "%s: home key '%s', expected '%s'\n", piece->name, home, piece->home_label);
-            failures++;
+            test_failure_count++;
         }
         if (strcmp(closing, piece->closing_label) != 0) {
             fprintf(stderr, "%s: closing key '%s', expected '%s'\n", piece->name, closing, piece->closing_label);
-            failures++;
+            test_failure_count++;
         }
         if (report.key_regions[0].first_measure != 1 ||
             strcmp(report.key_regions[0].label, piece->regions[0].label) != 0) {
             fprintf(stderr, "%s: opening region is '%s' from m. %d, expected '%s' from m. 1\n", piece->name,
                     report.key_regions[0].label, report.key_regions[0].first_measure, piece->regions[0].label);
-            failures++;
+            test_failure_count++;
         }
     }
 
@@ -163,7 +154,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
             if (!found || strcmp(found->label, expected->label) != 0) {
                 fprintf(stderr, "%s: m. %d (core of m. %d-%d) is %s, expected %s\n", piece->name, measure,
                         expected->first, expected->last, found ? found->label : "no key", expected->label);
-                failures++;
+                test_failure_count++;
             }
         }
     }
@@ -181,7 +172,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
         if (!found) {
             fprintf(stderr, "%s: no modulation to %s within 2 measures of m. %d\n", piece->name, expected->label,
                     expected->measure);
-            failures++;
+            test_failure_count++;
         }
     }
 
@@ -208,7 +199,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
 
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
-    return failures == 0 ? 0 : 1;
+    return test_failure_count == 0 ? 0 : 1;
 }
 
 /* ---- Constructed pieces ---- */
@@ -463,14 +454,10 @@ int main(int argc, char **argv) {
         return 2;
     }
     if (strcmp(argv[1], "constructed") == 0) {
-        char none[512];
-        char tonicization[512];
-        char modulation[512];
-        char signature[512];
-        test_temp_path(none, sizeof(none), "key_regions_none.mid");
-        test_temp_path(tonicization, sizeof(tonicization), "key_regions_tonicization.mid");
-        test_temp_path(modulation, sizeof(modulation), "key_regions_modulation.mid");
-        test_temp_path(signature, sizeof(signature), "key_regions_signature.mid");
+        char *none = test_temp_path("key_regions_none.mid");
+        char *tonicization = test_temp_path("key_regions_tonicization.mid");
+        char *modulation = test_temp_path("key_regions_modulation.mid");
+        char *signature = test_temp_path("key_regions_signature.mid");
         test_no_modulation(none);
         test_excursion_with_cadence(tonicization);
         test_modulation(modulation);
@@ -479,6 +466,10 @@ int main(int argc, char **argv) {
         remove(tonicization);
         remove(modulation);
         remove(signature);
+        free(none);
+        free(tonicization);
+        free(modulation);
+        free(signature);
     } else {
         for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
             if (strcmp(argv[1], PIECES[i].name) == 0) {
@@ -490,10 +481,5 @@ int main(int argc, char **argv) {
         return 2;
     }
 done:
-    if (failures > 0) {
-        fprintf(stderr, "test_key_regions %s: %d failure(s)\n", argv[1], failures);
-        return 1;
-    }
-    printf("test_key_regions %s: ok\n", argv[1]);
-    return 0;
+    return test_finish("test_key_regions");
 }

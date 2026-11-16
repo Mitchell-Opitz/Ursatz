@@ -14,6 +14,7 @@
 #include <ursatz_chain/analysis_chain.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The joined chord sequence (chord_sequence.h):
@@ -34,21 +35,9 @@ static const struct {
     {"Field 1.mid", "field-1"},   {"Field 5.mid", "field-5"},
 };
 
-static int failures = 0;
-
-#define CHECK(condition, ...)                                \
-    do {                                                     \
-        if (!(condition)) {                                  \
-            fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__); \
-            fprintf(stderr, __VA_ARGS__);                    \
-            fprintf(stderr, "\n");                           \
-            failures++;                                      \
-        }                                                    \
-    } while (0)
-
 static bool spans_equal(const cJSON *span, const char *edge, Rational expected) {
     const cJSON *fraction = cJSON_GetObjectItemCaseSensitive(span, edge);
-    Rational value = rational_ratio((long long)test_json_number(fraction, "num"), (long long)test_json_number(fraction, "den"));
+    Rational value = rational_ratio((long long)test_json_number(fraction, "num", -1e9), (long long)test_json_number(fraction, "den", -1e9));
     return rational_equals(value, expected);
 }
 
@@ -60,29 +49,29 @@ static size_t check_against_entries(const char *slug, const cJSON *document, con
     size_t held = 0;
     for (size_t i = 0; i < count; i++) {
         const AnalyzerChord *chord = &chords[i];
-        CHECK(chord->first_entry <= chord->last_entry && chord->last_entry < (size_t)cJSON_GetArraySize(entries),
-              "%s: chord %zu has entries %zu to %zu", slug, i, chord->first_entry, chord->last_entry);
+        CHECKF(chord->first_entry <= chord->last_entry && chord->last_entry < (size_t)cJSON_GetArraySize(entries),
+               "%s: chord %zu has entries %zu to %zu", slug, i, chord->first_entry, chord->last_entry);
         if (chord->first_entry > chord->last_entry || chord->last_entry >= (size_t)cJSON_GetArraySize(entries)) {
             return held;
         }
-        CHECK(i == 0 || chord->first_entry > chords[i - 1].last_entry, "%s: chord %zu overlaps the one before", slug, i);
+        CHECKF(i == 0 || chord->first_entry > chords[i - 1].last_entry, "%s: chord %zu overlaps the one before", slug, i);
         held += chord->last_entry > chord->first_entry;
         for (size_t e = chord->first_entry; e <= chord->last_entry; e++) {
             const cJSON *entry = cJSON_GetArrayItem(entries, (int)e);
             const cJSON *roman = cJSON_GetObjectItemCaseSensitive(entry, "roman_numeral");
             char *numeral = style_label_numeral(test_json_string(roman, "base_numeral"));
-            CHECK(numeral && strcmp(numeral, chord->numeral) == 0, "%s: chord %zu entry %zu numeral", slug, i, e);
+            CHECKF(numeral && strcmp(numeral, chord->numeral) == 0, "%s: chord %zu entry %zu numeral", slug, i, e);
             free(numeral);
-            CHECK((long)test_json_number(roman, "key_region") == chord->key_region, "%s: chord %zu entry %zu region", slug,
-                  i, e);
+            CHECKF((long)test_json_number(roman, "key_region", -1e9) == chord->key_region, "%s: chord %zu entry %zu region", slug,
+                   i, e);
         }
         const cJSON *first = cJSON_GetArrayItem(entries, (int)chord->first_entry);
         const cJSON *last = cJSON_GetArrayItem(entries, (int)chord->last_entry);
-        CHECK(spans_equal(cJSON_GetObjectItemCaseSensitive(first, "span"), "start", chord->start), "%s: chord %zu start", slug, i);
-        CHECK(spans_equal(cJSON_GetObjectItemCaseSensitive(last, "span"), "end", chord->end), "%s: chord %zu end", slug, i);
+        CHECKF(spans_equal(cJSON_GetObjectItemCaseSensitive(first, "span"), "start", chord->start), "%s: chord %zu start", slug, i);
+        CHECKF(spans_equal(cJSON_GetObjectItemCaseSensitive(last, "span"), "end", chord->end), "%s: chord %zu end", slug, i);
         if (i > 0 && chord->first_entry == chords[i - 1].last_entry + 1 && chord->key_region == chords[i - 1].key_region) {
-            CHECK(strcmp(chord->numeral, chords[i - 1].numeral) != 0 || chord->root_pitch_class != chords[i - 1].root_pitch_class,
-                  "%s: chords %zu and %zu are one chord", slug, i - 1, i);
+            CHECKF(strcmp(chord->numeral, chords[i - 1].numeral) != 0 || chord->root_pitch_class != chords[i - 1].root_pitch_class,
+                   "%s: chords %zu and %zu are one chord", slug, i - 1, i);
         }
     }
     return held;
@@ -93,23 +82,23 @@ static void check_piece(const char *fixture, const char *slug) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
-        CHECK(false, "%s: cannot import %s", slug, path);
+        CHECKF(false, "%s: cannot import %s", slug, path);
         return;
     }
     AnalyzerResult *result = NULL;
-    CHECK(analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK && result, "%s: analyze", slug);
+    CHECKF(analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK && result, "%s: analyze", slug);
     if (result) {
         AnalyzerChord *chords = NULL;
         size_t count = 0;
         char *json = analysis_document_render_result(fixture, result);
         cJSON *document = json ? cJSON_Parse(json) : NULL;
-        CHECK(document != NULL, "%s: no document", slug);
-        CHECK(json && analyzer_chord_sequence_from_document(json, &chords, &count) == ANALYZER_OK,
-              "%s: document sequence", slug);
-        CHECK(count > 0, "%s: empty sequence", slug);
+        CHECKF(document != NULL, "%s: no document", slug);
+        CHECKF(json && analyzer_chord_sequence_from_document(json, &chords, &count) == ANALYZER_OK,
+               "%s: document sequence", slug);
+        CHECKF(count > 0, "%s: empty sequence", slug);
         if (document) {
             size_t held = check_against_entries(slug, document, chords, count);
-            CHECK(held > 0, "%s: no chord is held across segments", slug);
+            CHECKF(held > 0, "%s: no chord is held across segments", slug);
         }
         analyzer_chord_sequence_free(chords, count);
         cJSON_Delete(document);
@@ -149,16 +138,16 @@ static void check_case(const char *name, const CaseEntry *entries, size_t count,
     char *json = case_document(entries, count, URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
     AnalyzerChord *chords = NULL;
     size_t found = 0;
-    CHECK(analyzer_chord_sequence_from_document(json, &chords, &found) == ANALYZER_OK, "%s: not read", name);
-    CHECK(found == expected_count, "%s: %zu chords, expected %zu", name, found, expected_count);
+    CHECKF(analyzer_chord_sequence_from_document(json, &chords, &found) == ANALYZER_OK, "%s: not read", name);
+    CHECKF(found == expected_count, "%s: %zu chords, expected %zu", name, found, expected_count);
     for (size_t i = 0; i < found && i < expected_count; i++) {
-        CHECK(chords[i].first_entry == expected[i][0] && chords[i].last_entry == expected[i][1],
-              "%s: chord %zu is entries %zu to %zu, expected %zu to %zu", name, i, chords[i].first_entry, chords[i].last_entry,
-              expected[i][0], expected[i][1]);
+        CHECKF(chords[i].first_entry == expected[i][0] && chords[i].last_entry == expected[i][1],
+               "%s: chord %zu is entries %zu to %zu, expected %zu to %zu", name, i, chords[i].first_entry, chords[i].last_entry,
+               expected[i][0], expected[i][1]);
         const CaseEntry *first = &entries[expected[i][0]], *last = &entries[expected[i][1]];
-        CHECK(rational_equals(chords[i].start, rational_ratio(first->start, 4)) &&
-                  rational_equals(chords[i].end, rational_ratio(last->end, 4)),
-              "%s: chord %zu times", name, i);
+        CHECKF(rational_equals(chords[i].start, rational_ratio(first->start, 4)) &&
+                   rational_equals(chords[i].end, rational_ratio(last->end, 4)),
+               "%s: chord %zu times", name, i);
     }
     analyzer_chord_sequence_free(chords, found);
     free(json);
@@ -192,16 +181,16 @@ static void check_cases(void) {
 static void check_arguments(void) {
     AnalyzerChord *chords = (AnalyzerChord *)0x1;
     size_t count = 7;
-    CHECK(analyzer_chord_sequence_from_document(NULL, &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL &&
-              count == 0,
-          "a NULL document");
-    CHECK(analyzer_chord_sequence_from_document("not json", &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL,
-          "text that is not JSON");
+    CHECKF(analyzer_chord_sequence_from_document(NULL, &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL &&
+               count == 0,
+           "a NULL document");
+    CHECKF(analyzer_chord_sequence_from_document("not json", &chords, &count) == ANALYZER_ERR_ARGUMENT && chords == NULL,
+           "text that is not JSON");
     char *old_version = case_document(NULL, 0, 1);
-    CHECK(analyzer_chord_sequence_from_document(old_version, &chords, &count) == ANALYZER_ERR_ARGUMENT,
-          "another schema version");
+    CHECKF(analyzer_chord_sequence_from_document(old_version, &chords, &count) == ANALYZER_ERR_ARGUMENT,
+           "another schema version");
     free(old_version);
-    CHECK(analyzer_chord_sequence_from_document("{}", NULL, &count) == ANALYZER_ERR_ARGUMENT, "a NULL out");
+    CHECKF(analyzer_chord_sequence_from_document("{}", NULL, &count) == ANALYZER_ERR_ARGUMENT, "a NULL out");
     analyzer_chord_sequence_free(NULL, 0);
 }
 
@@ -213,8 +202,5 @@ int main(int argc, char **argv) {
     }
     check_cases();
     check_arguments();
-    if (failures == 0) {
-        printf("chord sequence: ok\n");
-    }
-    return failures == 0 ? 0 : 1;
+    return test_finish("test_chord_sequence");
 }

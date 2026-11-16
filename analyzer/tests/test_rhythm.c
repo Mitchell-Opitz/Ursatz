@@ -11,6 +11,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The rhythm and meter of the report.
@@ -37,16 +38,6 @@
 
 #define TARGET_RATE 0.80
 #define BEAT_TOLERANCE 0.01
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* --- the analysis of a file --- */
 
@@ -310,8 +301,7 @@ static bool write_midi(const char *path, unsigned numerator, unsigned exponent, 
 
 /* Four measures of 4/4: eighth-note triplets on the first two beats of the first, then quarter notes. */
 static void check_triplets(void) {
-    char path[512];
-    test_temp_path(path, sizeof(path), "test_triplets.mid");
+    char *path = test_temp_path("test_triplets.mid");
     TestNote notes[32];
     size_t count = 0;
     for (unsigned i = 0; i < 6; i++) {
@@ -331,22 +321,22 @@ static void check_triplets(void) {
     size_t found = claims_of(analysis.document, "tuplet", claims, 8);
     CHECK(found == 1);
     if (found == 1) {
-        CHECK(test_json_number(test_json_member(claims[0], "ratio"), "actual") == 3 && test_json_number(test_json_member(claims[0], "ratio"), "normal") == 2);
+        CHECK(test_json_number(test_json_member(claims[0], "ratio"), "actual", -1e9) == 3 && test_json_number(test_json_member(claims[0], "ratio"), "normal", -1e9) == 2);
         CHECK(strcmp(test_json_string(claims[0], "name"), "triplet") == 0 && strcmp(test_json_string(claims[0], "meter"), "simple") == 0);
         CHECK(cJSON_IsTrue(test_json_member(claims[0], "borrowed")));
         CHECK(strcmp(test_json_string(claims[0], "level"), "beat") == 0 && cJSON_IsTrue(test_json_member(claims[0], "level_typical")));
-        CHECK(test_json_number(claims[0], "attacks") == 6 && cJSON_GetArraySize(test_json_member(claims[0], "note_ids")) == 6);
-        CHECK(test_json_number(claims[0], "measure") == 1 && fabs(test_json_number(claims[0], "beat") - 1.0) < BEAT_TOLERANCE);
+        CHECK(test_json_number(claims[0], "attacks", -1e9) == 6 && cJSON_GetArraySize(test_json_member(claims[0], "note_ids")) == 6);
+        CHECK(test_json_number(claims[0], "measure", -1e9) == 1 && fabs(test_json_number(claims[0], "beat", -1e9) - 1.0) < BEAT_TOLERANCE);
     }
     check_structure(&analysis);
     analysis_destroy(&analysis);
     remove(path);
+    free(path);
 }
 
 /* Three measures of 6/8: a duplet on the first beat of the first (two notes of a dotted eighth), then eighths. */
 static void check_duplet(void) {
-    char path[512];
-    test_temp_path(path, sizeof(path), "test_duplet.mid");
+    char *path = test_temp_path("test_duplet.mid");
     TestNote notes[32];
     size_t count = 0;
     notes[count++] = (TestNote){0, 360, 72};
@@ -366,21 +356,21 @@ static void check_duplet(void) {
     size_t found = claims_of(analysis.document, "tuplet", claims, 8);
     CHECK(found == 1);
     if (found == 1) {
-        CHECK(test_json_number(test_json_member(claims[0], "ratio"), "actual") == 2 && test_json_number(test_json_member(claims[0], "ratio"), "normal") == 3);
+        CHECK(test_json_number(test_json_member(claims[0], "ratio"), "actual", -1e9) == 2 && test_json_number(test_json_member(claims[0], "ratio"), "normal", -1e9) == 3);
         CHECK(strcmp(test_json_string(claims[0], "name"), "duplet") == 0 && strcmp(test_json_string(claims[0], "meter"), "compound") == 0);
         CHECK(cJSON_IsTrue(test_json_member(claims[0], "borrowed")));
         CHECK(strcmp(test_json_string(claims[0], "level"), "beat") == 0);
-        CHECK(test_json_number(claims[0], "attacks") == 2);
+        CHECK(test_json_number(claims[0], "attacks", -1e9) == 2);
     }
     check_structure(&analysis);
     analysis_destroy(&analysis);
     remove(path);
+    free(path);
 }
 
 /* Six measures of 3/4: quarter notes, then two measures of three half notes (a hemiola), then quarter notes. */
 static void check_hemiola(void) {
-    char path[512];
-    test_temp_path(path, sizeof(path), "test_hemiola.mid");
+    char *path = test_temp_path("test_hemiola.mid");
     static const unsigned char quarters[] = {72, 74, 76, 77, 79, 81, 74, 72, 71, 72, 74, 72};
     static const unsigned char halves[] = {79, 77, 76};
     TestNote notes[32];
@@ -401,13 +391,14 @@ static void check_hemiola(void) {
     size_t found = claims_of(analysis.document, "hemiola", claims, 8);
     CHECK(found == 1);
     if (found == 1) {
-        CHECK(test_json_number(test_json_member(claims[0], "measures"), "first") == 3 && test_json_number(test_json_member(claims[0], "measures"), "last") == 4);
-        CHECK(test_json_number(test_json_member(claims[0], "evidence"), "agreeing") >= 2);
+        CHECK(test_json_number(test_json_member(claims[0], "measures"), "first", -1e9) == 3 && test_json_number(test_json_member(claims[0], "measures"), "last", -1e9) == 4);
+        CHECK(test_json_number(test_json_member(claims[0], "evidence"), "agreeing", -1e9) >= 2);
         CHECK(cJSON_GetArraySize(test_json_member(claims[0], "note_ids")) == 3);
     }
     check_structure(&analysis);
     analysis_destroy(&analysis);
     remove(path);
+    free(path);
 }
 
 int main(int argc, char **argv) {
@@ -438,10 +429,5 @@ int main(int argc, char **argv) {
         check_field5(&analysis, &annotation, target);
         analysis_destroy(&analysis);
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_rhythm: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_rhythm: ok\n");
-    return 0;
+    return test_finish("test_rhythm");
 }

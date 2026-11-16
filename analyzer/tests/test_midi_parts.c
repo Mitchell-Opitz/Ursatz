@@ -6,6 +6,7 @@
 
 #include <ursatz_analyzer/midi_pipeline.h>
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * MIDI parts: a generated type-1 file whose tracks cover a track with two channels, a single-channel track with a
@@ -253,8 +254,7 @@ int main(void) {
     put_note(&tracks[4], 0, 3, 62);
     put_end(&tracks[4]);
 
-    char path[512];
-    test_temp_path(path, sizeof path, "test_midi_parts.mid");
+    char *path = test_temp_path("test_midi_parts.mid");
     write_file(path, tracks, 5);
     ImportedNotes notes;
     assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
@@ -319,6 +319,7 @@ int main(void) {
     remove(path);
     assert(!notes.source.tempo_declared);
     imported_notes_destroy(&notes);
+    free(path);
     check_reference_pieces();
     puts("test_midi_parts: ok");
     return 0;

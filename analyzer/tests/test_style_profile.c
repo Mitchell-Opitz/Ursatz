@@ -12,6 +12,7 @@
 #include <ursatz_analyzer/style_profile.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Style labels and profiles over the corpora CMake builds in the build tree: "reference" (the five framework-v1
@@ -21,18 +22,6 @@
  * instead. The distance between the chorales and the sonatinas is printed; docs/style-profile.md records it.
  */
 
-static int failures = 0;
-
-#define CHECK(condition, ...)                                                                                          \
-    do {                                                                                                               \
-        if (!(condition)) {                                                                                            \
-            fprintf(stderr, "FAIL line %d: ", __LINE__);                                                               \
-            fprintf(stderr, __VA_ARGS__);                                                                              \
-            fprintf(stderr, "\n");                                                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
-
 static void make_dir(const char *path) {
     mkdir(path, 0777);
 }
@@ -41,21 +30,21 @@ static void make_dir(const char *path) {
 
 static void check_numeral(const char *input, const char *expected) {
     char *label = style_label_numeral(input);
-    CHECK((label == NULL) == (expected == NULL) && (!label || strcmp(label, expected) == 0), "numeral '%s' gives '%s', expected '%s'",
-          input, label ? label : "(none)", expected ? expected : "(none)");
+    CHECKF((label == NULL) == (expected == NULL) && (!label || strcmp(label, expected) == 0), "numeral '%s' gives '%s', expected '%s'",
+           input, label ? label : "(none)", expected ? expected : "(none)");
     free(label);
 }
 
 static void check_interval(int semitones, const char *expected) {
     char label[16];
     style_label_interval(semitones, label, sizeof(label));
-    CHECK(strcmp(label, expected) == 0, "interval %d gives '%s', expected '%s'", semitones, label, expected);
+    CHECKF(strcmp(label, expected) == 0, "interval %d gives '%s', expected '%s'", semitones, label, expected);
 }
 
 static void check_duration(unsigned long numerator, unsigned long denominator, const char *expected) {
     char label[48];
     style_label_duration(numerator, denominator, label, sizeof(label));
-    CHECK(strcmp(label, expected) == 0, "duration %lu/%lu gives '%s', expected '%s'", numerator, denominator, label, expected);
+    CHECKF(strcmp(label, expected) == 0, "duration %lu/%lu gives '%s', expected '%s'", numerator, denominator, label, expected);
 }
 
 static void test_labels(void) {
@@ -91,32 +80,32 @@ static void test_labels(void) {
     check_duration(4, 4, "1/1");
     check_duration(1, 0, "0/1");
 
-    CHECK(strcmp(style_label_contour(3), "up") == 0 && strcmp(style_label_contour(-1), "down") == 0 &&
-              strcmp(style_label_contour(0), "same") == 0,
-          "contour labels");
+    CHECKF(strcmp(style_label_contour(3), "up") == 0 && strcmp(style_label_contour(-1), "down") == 0 &&
+               strcmp(style_label_contour(0), "same") == 0,
+           "contour labels");
 
     const char *pair[] = {"ii", "V7", "I"};
     char *progression = style_label_progression(pair, 3);
-    CHECK(progression && strcmp(progression, "ii-V7-I") == 0, "progression label '%s'", progression ? progression : "(none)");
+    CHECKF(progression && strcmp(progression, "ii-V7-I") == 0, "progression label '%s'", progression ? progression : "(none)");
     free(progression);
-    CHECK(style_label_progression(pair, 0) == NULL, "empty progression has no label");
+    CHECKF(style_label_progression(pair, 0) == NULL, "empty progression has no label");
 
     StyleDimension dimension;
-    CHECK(style_category_dimension("chord-progression-3", &dimension) && dimension == STYLE_DIMENSION_HARMONY, "harmony category");
-    CHECK(style_category_dimension("syncopation-per-phrase", &dimension) && dimension == STYLE_DIMENSION_RHYTHM, "rhythm category");
-    CHECK(style_category_dimension("phrase-range", &dimension) && dimension == STYLE_DIMENSION_MELODY, "melody category");
-    CHECK(style_category_dimension("mode", &dimension) && dimension == STYLE_DIMENSION_FORM, "form category");
-    CHECK(style_category_dimension("motive-degrees", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-              style_category_dimension("motive-intervals", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-              style_category_dimension("motive-rhythm", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-              style_category_dimension("motive-nct-figure", &dimension) && dimension == STYLE_DIMENSION_MELODY,
-          "motive categories are melody");
-    CHECK(style_category_dimension("tempo", &dimension) && dimension == STYLE_DIMENSION_RHYTHM &&
-              style_category_dimension("note-density", &dimension) && dimension == STYLE_DIMENSION_RHYTHM,
-          "tempo and note density are rhythm");
-    CHECK(!style_category_dimension("no-such-category", &dimension), "unknown category");
-    CHECK(style_dimension_from_name("melody", &dimension) && dimension == STYLE_DIMENSION_MELODY, "dimension from name");
-    CHECK(!style_dimension_from_name("timbre", &dimension), "unknown dimension name");
+    CHECKF(style_category_dimension("chord-progression-3", &dimension) && dimension == STYLE_DIMENSION_HARMONY, "harmony category");
+    CHECKF(style_category_dimension("syncopation-per-phrase", &dimension) && dimension == STYLE_DIMENSION_RHYTHM, "rhythm category");
+    CHECKF(style_category_dimension("phrase-range", &dimension) && dimension == STYLE_DIMENSION_MELODY, "melody category");
+    CHECKF(style_category_dimension("mode", &dimension) && dimension == STYLE_DIMENSION_FORM, "form category");
+    CHECKF(style_category_dimension("motive-degrees", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
+               style_category_dimension("motive-intervals", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
+               style_category_dimension("motive-rhythm", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
+               style_category_dimension("motive-nct-figure", &dimension) && dimension == STYLE_DIMENSION_MELODY,
+           "motive categories are melody");
+    CHECKF(style_category_dimension("tempo", &dimension) && dimension == STYLE_DIMENSION_RHYTHM &&
+               style_category_dimension("note-density", &dimension) && dimension == STYLE_DIMENSION_RHYTHM,
+           "tempo and note density are rhythm");
+    CHECKF(!style_category_dimension("no-such-category", &dimension), "unknown category");
+    CHECKF(style_dimension_from_name("melody", &dimension) && dimension == STYLE_DIMENSION_MELODY, "dimension from name");
+    CHECKF(!style_dimension_from_name("timbre", &dimension), "unknown dimension name");
 }
 
 /* ---- profiles ---- */
@@ -130,22 +119,22 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
     CorpusRunOptions options = {input, output, false, NULL, NULL};
     CorpusRunSummary summary;
-    CHECK(corpus_run(&options, &summary) == CORPUS_RUN_OK, "%s run failed", name);
-    CHECK(summary.analyzed == expected_pieces && summary.failed == 0, "%s: %zu analyzed, %zu failed", name, summary.analyzed,
-          summary.failed);
+    CHECKF(corpus_run(&options, &summary) == CORPUS_RUN_OK, "%s run failed", name);
+    CHECKF(summary.analyzed == expected_pieces && summary.failed == 0, "%s: %zu analyzed, %zu failed", name, summary.analyzed,
+           summary.failed);
     StyleProfile *profile = style_profile_create();
-    CHECK(profile && style_profile_add_corpus(profile, output) == STYLE_PROFILE_OK, "%s profile failed", name);
-    CHECK(profile && style_profile_piece_count(profile) == expected_pieces, "%s profile counts %zu pieces", name,
-          profile ? style_profile_piece_count(profile) : 0);
+    CHECKF(profile && style_profile_add_corpus(profile, output) == STYLE_PROFILE_OK, "%s profile failed", name);
+    CHECKF(profile && style_profile_piece_count(profile) == expected_pieces, "%s profile counts %zu pieces", name,
+           profile ? style_profile_piece_count(profile) : 0);
     return profile;
 }
 
 static StyleModel *model_of(StyleProfile *profile, const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s.style.json", work_dir, name);
-    CHECK(style_model_file_write(profile, name, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
+    CHECKF(style_model_file_write(profile, name, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
     StyleModel *model = NULL;
-    CHECK(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK, "cannot read %s", path);
+    CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK, "cannot read %s", path);
     return model;
 }
 
@@ -161,7 +150,7 @@ static const StyleStatistic *find_statistic(const StyleStatistic *list, size_t c
 static void test_profile_statistics(StyleProfile *reference) {
     StyleStatistic *statistics;
     size_t count;
-    CHECK(style_profile_statistics(reference, &statistics, &count) == STYLE_PROFILE_OK && count > 0, "no statistics");
+    CHECKF(style_profile_statistics(reference, &statistics, &count) == STYLE_PROFILE_OK && count > 0, "no statistics");
 
     bool sorted = true;
     unsigned long sums[64] = {0};
@@ -179,33 +168,33 @@ static void test_profile_statistics(StyleProfile *reference) {
             categories_seen++;
         }
     }
-    CHECK(sorted, "statistics are not sorted by category then label");
+    CHECKF(sorted, "statistics are not sorted by category then label");
     category_index = 0;
     for (size_t i = 0; i < count; i++) {
         if (i > 0 && strcmp(statistics[i - 1].category, statistics[i].category) != 0) {
             category_index++;
         }
-        CHECK(statistics[i].total == sums[category_index], "%s total %lu is not the sum %lu", statistics[i].category,
-              statistics[i].total, sums[category_index]);
+        CHECKF(statistics[i].total == sums[category_index], "%s total %lu is not the sum %lu", statistics[i].category,
+               statistics[i].total, sums[category_index]);
     }
-    CHECK(categories_seen == 21, "%zu categories, expected 21", categories_seen);
+    CHECKF(categories_seen == 21, "%zu categories, expected 21", categories_seen);
 
     /* Hand-checked against the pieces: the five reference pieces each have a home key and a meter. */
     const StyleStatistic *major = find_statistic(statistics, count, "mode", "major");
     const StyleStatistic *minor = find_statistic(statistics, count, "mode", "minor");
     unsigned long modes = (major ? major->count : 0) + (minor ? minor->count : 0);
-    CHECK((major || minor) && modes == 5 && (major ? major->total : minor->total) == 5, "mode counts one per piece");
-    CHECK(find_statistic(statistics, count, "chord-numeral", "V7") != NULL, "V7 is a chord numeral");
-    CHECK(find_statistic(statistics, count, "chord-numeral", "V6/5") == NULL, "no inversion figure in a numeral label");
-    CHECK(find_statistic(statistics, count, "cadence-type", "perfect-authentic") != NULL, "perfect authentic cadences");
-    CHECK(find_statistic(statistics, count, "melodic-interval", "+2") != NULL, "an ascending second");
-    CHECK(find_statistic(statistics, count, "contour", "up") != NULL && find_statistic(statistics, count, "contour", "down"),
-          "up and down contours");
+    CHECKF((major || minor) && modes == 5 && (major ? major->total : minor->total) == 5, "mode counts one per piece");
+    CHECKF(find_statistic(statistics, count, "chord-numeral", "V7") != NULL, "V7 is a chord numeral");
+    CHECKF(find_statistic(statistics, count, "chord-numeral", "V6/5") == NULL, "no inversion figure in a numeral label");
+    CHECKF(find_statistic(statistics, count, "cadence-type", "perfect-authentic") != NULL, "perfect authentic cadences");
+    CHECKF(find_statistic(statistics, count, "melodic-interval", "+2") != NULL, "an ascending second");
+    CHECKF(find_statistic(statistics, count, "contour", "up") != NULL && find_statistic(statistics, count, "contour", "down"),
+           "up and down contours");
     free(statistics);
 }
 
 static char *masked_model(const char *path) {
-    char *text = test_read_file(path);
+    char *text = test_read_file(path, NULL);
     cJSON *root = cJSON_Parse(text);
     free(text);
     if (!root) {
@@ -226,24 +215,24 @@ static char *masked_model(const char *path) {
 static void test_reference_snapshot(StyleProfile *reference) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/reference.style.json", work_dir);
-    CHECK(style_model_file_write(reference, "reference", path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
+    CHECKF(style_model_file_write(reference, "reference", path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
 
     char *masked = masked_model(path);
     char snapshot_path[1024];
     snprintf(snapshot_path, sizeof(snapshot_path), "%s/style-model.reference.json", URSATZ_SNAPSHOT_DIR);
     const char *update = getenv("UPDATE_SNAPSHOTS");
     if (update && strcmp(update, "1") == 0) {
-        CHECK(masked && test_write_file(snapshot_path, masked), "cannot write %s", snapshot_path);
+        CHECKF(masked && test_write_file(snapshot_path, masked, strlen(masked)), "cannot write %s", snapshot_path);
     } else {
-        char *expected = test_read_file(snapshot_path);
-        CHECK(expected && masked && strcmp(expected, masked) == 0, "model differs from %s", snapshot_path);
+        char *expected = test_read_file(snapshot_path, NULL);
+        CHECKF(expected && masked && strcmp(expected, masked) == 0, "model differs from %s", snapshot_path);
         free(expected);
     }
     free(masked);
 
     /* The corpus label is the folder given to the run. */
-    CHECK(strstr(style_profile_training_corpus(reference), "reference") != NULL, "training corpus '%s'",
-          style_profile_training_corpus(reference));
+    CHECKF(strstr(style_profile_training_corpus(reference), "reference") != NULL, "training corpus '%s'",
+           style_profile_training_corpus(reference));
 }
 
 static void test_round_trip(StyleProfile *reference) {
@@ -253,39 +242,39 @@ static void test_round_trip(StyleProfile *reference) {
 
     StyleModel *model = NULL;
     size_t pieces = 0;
-    CHECK(style_model_file_read(first, &model, &pieces) == STYLE_MODEL_FILE_OK && model, "cannot read the reference model");
-    CHECK(pieces == 5, "model counts %zu pieces", pieces);
+    CHECKF(style_model_file_read(first, &model, &pieces) == STYLE_MODEL_FILE_OK && model, "cannot read the reference model");
+    CHECKF(pieces == 5, "model counts %zu pieces", pieces);
     if (!model) {
         return;
     }
 
     StyleStatistic *from_profile, *from_model;
     size_t profile_count, model_count;
-    CHECK(style_profile_statistics(reference, &from_profile, &profile_count) == STYLE_PROFILE_OK, "profile statistics");
-    CHECK(style_model_statistics(model, &from_model, &model_count) == STYLE_MODEL_FILE_OK, "model statistics");
-    CHECK(profile_count == model_count, "%zu statistics became %zu", profile_count, model_count);
+    CHECKF(style_profile_statistics(reference, &from_profile, &profile_count) == STYLE_PROFILE_OK, "profile statistics");
+    CHECKF(style_model_statistics(model, &from_model, &model_count) == STYLE_MODEL_FILE_OK, "model statistics");
+    CHECKF(profile_count == model_count, "%zu statistics became %zu", profile_count, model_count);
     for (size_t i = 0; i < profile_count && i < model_count; i++) {
-        CHECK(strcmp(from_profile[i].category, from_model[i].category) == 0 && strcmp(from_profile[i].label, from_model[i].label) == 0 &&
-                  from_profile[i].count == from_model[i].count && from_profile[i].total == from_model[i].total,
-              "statistic %zu differs after the round trip", i);
+        CHECKF(strcmp(from_profile[i].category, from_model[i].category) == 0 && strcmp(from_profile[i].label, from_model[i].label) == 0 &&
+                   from_profile[i].count == from_model[i].count && from_profile[i].total == from_model[i].total,
+               "statistic %zu differs after the round trip", i);
     }
     free(from_profile);
     style_statistics_free(from_model, model_count);
 
     /* The same profile written again gives the same bytes, and reading a file twice gives the same name. */
-    CHECK(style_model_file_write(reference, "reference", second) == STYLE_MODEL_FILE_OK, "cannot write again");
-    char *a = test_read_file(first), *b = test_read_file(second);
-    CHECK(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
+    CHECKF(style_model_file_write(reference, "reference", second) == STYLE_MODEL_FILE_OK, "cannot write again");
+    char *a = test_read_file(first, NULL), *b = test_read_file(second, NULL);
+    CHECKF(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
     free(a);
     free(b);
     StyleModel *again = NULL;
-    CHECK(style_model_file_read(first, &again, NULL) == STYLE_MODEL_FILE_OK, "second read");
+    CHECKF(style_model_file_read(first, &again, NULL) == STYLE_MODEL_FILE_OK, "second read");
     if (again) {
-        CHECK(strcmp(style_model_style_name(again), style_model_style_name(model)) == 0, "the same file gave two names");
+        CHECKF(strcmp(style_model_style_name(again), style_model_style_name(model)) == 0, "the same file gave two names");
         style_model_destroy(again);
     }
-    CHECK(strcmp(style_model_style_name(model), "reference") == 0 && strcmp(style_model_model_version(model), PROJECT_VERSION_FOR_TESTS) == 0,
-          "name and version");
+    CHECKF(strcmp(style_model_style_name(model), "reference") == 0 && strcmp(style_model_model_version(model), PROJECT_VERSION_FOR_TESTS) == 0,
+           "name and version");
     style_model_destroy(model);
 }
 
@@ -308,9 +297,9 @@ static bool all_zero(const StyleComparison *comparison) {
 
 static void test_self_comparison(StyleModel *reference) {
     StyleComparison comparison;
-    CHECK(style_profile_compare(reference, reference, &comparison) == STYLE_COMPARE_OK, "self comparison failed");
-    CHECK(all_zero(&comparison), "a model is not at distance 0 from itself");
-    CHECK(comparison.category_count == 21, "%zu categories compared", comparison.category_count);
+    CHECKF(style_profile_compare(reference, reference, &comparison) == STYLE_COMPARE_OK, "self comparison failed");
+    CHECKF(all_zero(&comparison), "a model is not at distance 0 from itself");
+    CHECKF(comparison.category_count == 21, "%zu categories compared", comparison.category_count);
     style_comparison_destroy(&comparison);
 }
 
@@ -322,7 +311,7 @@ static void check_tempo_and_density(const StyleProfile *chorale_profile, const S
         StyleStatistic *statistics = NULL;
         size_t count = 0;
         if (!profiles[p] || style_profile_statistics(profiles[p], &statistics, &count) != STYLE_PROFILE_OK) {
-            CHECK(false, "no statistics for profile %d", p);
+            CHECKF(false, "no statistics for profile %d", p);
             continue;
         }
         size_t density_labels = 0;
@@ -334,16 +323,16 @@ static void check_tempo_and_density(const StyleProfile *chorale_profile, const S
             } else if (strcmp(statistics[i].category, "tempo") == 0) {
                 tempo_labels++;
                 printf("profile %d tempo %s x%lu\n", p, statistics[i].label, statistics[i].count);
-                CHECK(strchr(statistics[i].label, '-') != NULL || strchr(statistics[i].label, '<') != NULL ||
-                          strchr(statistics[i].label, '+') != NULL,
-                      "tempo label '%s'", statistics[i].label);
+                CHECKF(strchr(statistics[i].label, '-') != NULL || strchr(statistics[i].label, '<') != NULL ||
+                           strchr(statistics[i].label, '+') != NULL,
+                       "tempo label '%s'", statistics[i].label);
             }
         }
-        CHECK(density_labels > 0, "profile %d has no note-density labels", p);
+        CHECKF(density_labels > 0, "profile %d has no note-density labels", p);
         if (p == 1) {
-            CHECK(tempo_labels == 2 && find_statistic(statistics, count, "tempo", "120-139") != NULL &&
-                      find_statistic(statistics, count, "tempo", "160-179") != NULL,
-                  "the sonatinas' MIDI tempos are not read");
+            CHECKF(tempo_labels == 2 && find_statistic(statistics, count, "tempo", "120-139") != NULL &&
+                       find_statistic(statistics, count, "tempo", "160-179") != NULL,
+                   "the sonatinas' MIDI tempos are not read");
         }
         free(statistics);
     }
@@ -354,26 +343,26 @@ static void test_chorales_and_sonatinas(void) {
     StyleProfile *sonatina_profile = profile_of("sonatinas", 2);
     StyleModel *chorales = chorale_profile ? model_of(chorale_profile, "chorales") : NULL;
     StyleModel *sonatinas = sonatina_profile ? model_of(sonatina_profile, "sonatinas") : NULL;
-    CHECK(chorales && sonatinas, "models for the chorales and the sonatinas");
+    CHECKF(chorales && sonatinas, "models for the chorales and the sonatinas");
     if (chorales && sonatinas) {
         StyleComparison forward, backward;
-        CHECK(style_profile_compare(chorales, sonatinas, &forward) == STYLE_COMPARE_OK, "chorales against sonatinas");
-        CHECK(style_profile_compare(sonatinas, chorales, &backward) == STYLE_COMPARE_OK, "sonatinas against chorales");
+        CHECKF(style_profile_compare(chorales, sonatinas, &forward) == STYLE_COMPARE_OK, "chorales against sonatinas");
+        CHECKF(style_profile_compare(sonatinas, chorales, &backward) == STYLE_COMPARE_OK, "sonatinas against chorales");
         for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-            CHECK(forward.dimension_present[d] && forward.dimension[d].numerator > 0, "%s distance is 0",
-                  style_dimension_name((StyleDimension)d));
-            CHECK(forward.dimension[d].numerator == backward.dimension[d].numerator &&
-                      forward.dimension[d].denominator == backward.dimension[d].denominator,
-                  "%s distance is not symmetric", style_dimension_name((StyleDimension)d));
+            CHECKF(forward.dimension_present[d] && forward.dimension[d].numerator > 0, "%s distance is 0",
+                   style_dimension_name((StyleDimension)d));
+            CHECKF(forward.dimension[d].numerator == backward.dimension[d].numerator &&
+                       forward.dimension[d].denominator == backward.dimension[d].denominator,
+                   "%s distance is not symmetric", style_dimension_name((StyleDimension)d));
             printf("chorales vs sonatinas %-8s %.4f\n", style_dimension_name((StyleDimension)d),
                    style_rational_value(forward.dimension[d]));
         }
-        CHECK(forward.overall_present && forward.overall.numerator > 0 && forward.overall.numerator <= forward.overall.denominator,
-              "overall distance out of range");
+        CHECKF(forward.overall_present && forward.overall.numerator > 0 && forward.overall.numerator <= forward.overall.denominator,
+               "overall distance out of range");
         printf("chorales vs sonatinas overall  %.4f\n", style_rational_value(forward.overall));
         for (size_t i = 0; i < forward.category_count; i++) {
             const StyleCategoryDistance *c = &forward.categories[i];
-            CHECK(c->distance.numerator <= c->distance.denominator, "%s distance above 1", c->category);
+            CHECKF(c->distance.numerator <= c->distance.denominator, "%s distance above 1", c->category);
             printf("chorales vs sonatinas   %-24s %.4f\n", c->category, style_rational_value(c->distance));
         }
         style_comparison_destroy(&forward);
@@ -408,10 +397,10 @@ static void test_hand_distances(void) {
                                       {"mode", "major", 1, 1}};
     StyleModel *a = build_model("a", a_stats, 2);
     StyleModel *b = build_model("b", b_stats, 3);
-    CHECK(a && b, "cannot build the hand models");
+    CHECKF(a && b, "cannot build the hand models");
     if (a && b) {
         StyleComparison comparison;
-        CHECK(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_OK, "hand comparison");
+        CHECKF(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_OK, "hand comparison");
         const StyleCategoryDistance *cadence = NULL, *mode = NULL;
         for (size_t i = 0; i < comparison.category_count; i++) {
             if (strcmp(comparison.categories[i].category, "cadence-type") == 0) {
@@ -420,24 +409,24 @@ static void test_hand_distances(void) {
                 mode = &comparison.categories[i];
             }
         }
-        CHECK(cadence && cadence->distance.numerator == 1 && cadence->distance.denominator == 2, "cadence distance");
-        CHECK(cadence && cadence->in_a && cadence->in_b && strcmp(cadence->top_a[0], "half") == 0 &&
-                  strcmp(cadence->top_b[0], "perfect-authentic") == 0 && strcmp(cadence->top_a[1], "perfect-authentic") == 0 &&
-                  cadence->top_a[2] == NULL,
-              "top labels");
-        CHECK(mode && mode->distance.numerator == 1 && mode->distance.denominator == 1 && !mode->in_a && mode->in_b,
-              "a category in one model only is distance 1");
+        CHECKF(cadence && cadence->distance.numerator == 1 && cadence->distance.denominator == 2, "cadence distance");
+        CHECKF(cadence && cadence->in_a && cadence->in_b && strcmp(cadence->top_a[0], "half") == 0 &&
+                   strcmp(cadence->top_b[0], "perfect-authentic") == 0 && strcmp(cadence->top_a[1], "perfect-authentic") == 0 &&
+                   cadence->top_a[2] == NULL,
+               "top labels");
+        CHECKF(mode && mode->distance.numerator == 1 && mode->distance.denominator == 1 && !mode->in_a && mode->in_b,
+               "a category in one model only is distance 1");
         /* harmony: cadence-type only, 1/2. form: mode only, 1. Rhythm and melody have no categories. */
-        CHECK(comparison.dimension_present[STYLE_DIMENSION_HARMONY] && comparison.dimension[STYLE_DIMENSION_HARMONY].numerator == 1 &&
-                  comparison.dimension[STYLE_DIMENSION_HARMONY].denominator == 2,
-              "harmony dimension");
-        CHECK(comparison.dimension_present[STYLE_DIMENSION_FORM] && comparison.dimension[STYLE_DIMENSION_FORM].numerator == 1 &&
-                  comparison.dimension[STYLE_DIMENSION_FORM].denominator == 1,
-              "form dimension");
-        CHECK(!comparison.dimension_present[STYLE_DIMENSION_RHYTHM] && !comparison.dimension_present[STYLE_DIMENSION_MELODY],
-              "empty dimensions are left out");
-        CHECK(comparison.overall_present && comparison.overall.numerator == 3 && comparison.overall.denominator == 4,
-              "overall distance");
+        CHECKF(comparison.dimension_present[STYLE_DIMENSION_HARMONY] && comparison.dimension[STYLE_DIMENSION_HARMONY].numerator == 1 &&
+                   comparison.dimension[STYLE_DIMENSION_HARMONY].denominator == 2,
+               "harmony dimension");
+        CHECKF(comparison.dimension_present[STYLE_DIMENSION_FORM] && comparison.dimension[STYLE_DIMENSION_FORM].numerator == 1 &&
+                   comparison.dimension[STYLE_DIMENSION_FORM].denominator == 1,
+               "form dimension");
+        CHECKF(!comparison.dimension_present[STYLE_DIMENSION_RHYTHM] && !comparison.dimension_present[STYLE_DIMENSION_MELODY],
+               "empty dimensions are left out");
+        CHECKF(comparison.overall_present && comparison.overall.numerator == 3 && comparison.overall.denominator == 4,
+               "overall distance");
         style_comparison_destroy(&comparison);
     }
     style_model_destroy(a);
@@ -451,11 +440,11 @@ static void test_overflow(void) {
     const StyleStatistic b_stats[] = {{"contour", "up", 1, big - 1}};
     StyleModel *a = build_model("big-a", a_stats, 1);
     StyleModel *b = build_model("big-b", b_stats, 1);
-    CHECK(a && b, "cannot build the large models");
+    CHECKF(a && b, "cannot build the large models");
     if (a && b) {
         StyleComparison comparison;
-        CHECK(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_ERR_OVERFLOW, "an overflowing comparison is refused");
-        CHECK(comparison.category_count == 0 && comparison.categories == NULL, "nothing is left behind after an overflow");
+        CHECKF(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_ERR_OVERFLOW, "an overflowing comparison is refused");
+        CHECKF(comparison.category_count == 0 && comparison.categories == NULL, "nothing is left behind after an overflow");
     }
     style_model_destroy(a);
     style_model_destroy(b);
@@ -495,24 +484,24 @@ static void test_motive_categories(void) {
         "{\"occurrences\": [{\"note_ids\": [3, 4, 5], \"degrees\": [\"1\", \"2\", \"3\"]}]}"
         "]}";
     StyleProfile *profile = style_profile_create();
-    CHECK(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "motive document");
+    CHECKF(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "motive document");
     StyleStatistic *statistics = NULL;
     size_t count = 0;
     if (!profile || style_profile_statistics(profile, &statistics, &count) != STYLE_PROFILE_OK) {
         style_profile_destroy(profile);
         return;
     }
-    CHECK(label_count(statistics, count, "motive-degrees", "1 b6 5") == 2, "motive degrees '1 b6 5' twice");
-    CHECK(label_count(statistics, count, "motive-degrees", "1 1 2") == 1, "motive degrees '1 1 2'");
-    CHECK(category_size(statistics, count, "motive-degrees") == 2, "a family without features adds no degrees");
-    CHECK(label_count(statistics, count, "motive-intervals", "+8 -1") == 2, "motive intervals '+8 -1' twice");
-    CHECK(label_count(statistics, count, "motive-intervals", "0 +2") == 1, "a zero interval is unsigned");
-    CHECK(label_count(statistics, count, "motive-rhythm", "1/8 1/8 1/4") == 2, "motive rhythm twice");
-    CHECK(label_count(statistics, count, "motive-rhythm", "1/4 1/4 1/2") == 1, "motive rhythm once");
-    CHECK(label_count(statistics, count, "motive-nct-figure", "1 b6:appoggiatura 5") == 1,
-          "a note in two occurrences counts one figure");
-    CHECK(label_count(statistics, count, "motive-nct-figure", "2 3:passing 4") == 1, "a figure in the second occurrence");
-    CHECK(category_size(statistics, count, "motive-nct-figure") == 2, "an unclassified tone has no figure");
+    CHECKF(label_count(statistics, count, "motive-degrees", "1 b6 5") == 2, "motive degrees '1 b6 5' twice");
+    CHECKF(label_count(statistics, count, "motive-degrees", "1 1 2") == 1, "motive degrees '1 1 2'");
+    CHECKF(category_size(statistics, count, "motive-degrees") == 2, "a family without features adds no degrees");
+    CHECKF(label_count(statistics, count, "motive-intervals", "+8 -1") == 2, "motive intervals '+8 -1' twice");
+    CHECKF(label_count(statistics, count, "motive-intervals", "0 +2") == 1, "a zero interval is unsigned");
+    CHECKF(label_count(statistics, count, "motive-rhythm", "1/8 1/8 1/4") == 2, "motive rhythm twice");
+    CHECKF(label_count(statistics, count, "motive-rhythm", "1/4 1/4 1/2") == 1, "motive rhythm once");
+    CHECKF(label_count(statistics, count, "motive-nct-figure", "1 b6:appoggiatura 5") == 1,
+           "a note in two occurrences counts one figure");
+    CHECKF(label_count(statistics, count, "motive-nct-figure", "2 3:passing 4") == 1, "a figure in the second occurrence");
+    CHECKF(category_size(statistics, count, "motive-nct-figure") == 2, "an unclassified tone has no figure");
     free(statistics);
     style_profile_destroy(profile);
 }
@@ -525,15 +514,15 @@ static void test_motive_figure_ends(void) {
         " \"motives\": [{\"features\": {\"degrees\": [\"1\", \"2\", \"3\"], \"intervals\": [2, 2], \"rhythm\": [\"1/4\", \"1/4\", \"1/4\"]},"
         " \"occurrences\": [{\"note_ids\": [1, 2, 3, 4], \"degrees\": [\"6\", \"1\", \"2\", \"3\"]}]}]}";
     StyleProfile *profile = style_profile_create();
-    CHECK(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "figure document");
+    CHECKF(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "figure document");
     StyleStatistic *statistics = NULL;
     size_t count = 0;
     if (!profile || style_profile_statistics(profile, &statistics, &count) != STYLE_PROFILE_OK) {
         style_profile_destroy(profile);
         return;
     }
-    CHECK(label_count(statistics, count, "motive-nct-figure", "- 6:neighbor 1") == 1, "no previous note");
-    CHECK(label_count(statistics, count, "motive-nct-figure", "2 3:escape-tone -") == 1, "no next note");
+    CHECKF(label_count(statistics, count, "motive-nct-figure", "- 6:neighbor 1") == 1, "no previous note");
+    CHECKF(label_count(statistics, count, "motive-nct-figure", "2 3:escape-tone -") == 1, "no next note");
     free(statistics);
     style_profile_destroy(profile);
 }
@@ -544,9 +533,9 @@ static void test_read_without(StyleProfile *reference) {
     snprintf(path, sizeof(path), "%s/reference.style.json", work_dir);
     const char *motive[] = {"motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
     StyleModel *all = NULL, *without = NULL, *none = NULL;
-    CHECK(style_model_file_read(path, &all, NULL) == STYLE_MODEL_FILE_OK, "read all");
-    CHECK(style_model_file_read_without(path, motive, 4, &without, NULL) == STYLE_MODEL_FILE_OK && without, "read without");
-    CHECK(style_model_file_read_without(path, NULL, 0, &none, NULL) == STYLE_MODEL_FILE_OK && none, "read without none");
+    CHECKF(style_model_file_read(path, &all, NULL) == STYLE_MODEL_FILE_OK, "read all");
+    CHECKF(style_model_file_read_without(path, motive, 4, &without, NULL) == STYLE_MODEL_FILE_OK && without, "read without");
+    CHECKF(style_model_file_read_without(path, NULL, 0, &none, NULL) == STYLE_MODEL_FILE_OK && none, "read without none");
     StyleStatistic *all_statistics = NULL, *kept = NULL, *same = NULL;
     size_t all_count = 0, kept_count = 0, same_count = 0;
     if (all && without && none && style_model_statistics(all, &all_statistics, &all_count) == STYLE_MODEL_FILE_OK &&
@@ -556,20 +545,20 @@ static void test_read_without(StyleProfile *reference) {
         for (size_t i = 0; i < all_count; i++) {
             motive_labels += strncmp(all_statistics[i].category, "motive-", 7) == 0 ? 1 : 0;
         }
-        CHECK(motive_labels > 0, "the reference pieces have motive labels");
-        CHECK(kept_count + motive_labels == all_count, "%zu kept and %zu dropped of %zu", kept_count, motive_labels, all_count);
+        CHECKF(motive_labels > 0, "the reference pieces have motive labels");
+        CHECKF(kept_count + motive_labels == all_count, "%zu kept and %zu dropped of %zu", kept_count, motive_labels, all_count);
         for (size_t i = 0; i < kept_count; i++) {
-            CHECK(strncmp(kept[i].category, "motive-", 7) != 0, "%s was kept", kept[i].category);
+            CHECKF(strncmp(kept[i].category, "motive-", 7) != 0, "%s was kept", kept[i].category);
         }
-        CHECK(same_count == all_count, "dropping none keeps every statistic");
+        CHECKF(same_count == all_count, "dropping none keeps every statistic");
         StyleComparison comparison;
-        CHECK(style_profile_compare(all, without, &comparison) == STYLE_COMPARE_OK, "compare with and without");
-        CHECK(comparison.category_count == 21, "%zu categories compared", comparison.category_count);
+        CHECKF(style_profile_compare(all, without, &comparison) == STYLE_COMPARE_OK, "compare with and without");
+        CHECKF(comparison.category_count == 21, "%zu categories compared", comparison.category_count);
         size_t one_sided = 0;
         for (size_t i = 0; i < comparison.category_count; i++) {
             one_sided += comparison.categories[i].in_a != comparison.categories[i].in_b ? 1 : 0;
         }
-        CHECK(one_sided == 4, "%zu categories in one model only", one_sided);
+        CHECKF(one_sided == 4, "%zu categories in one model only", one_sided);
         style_comparison_destroy(&comparison);
     }
     free(all_statistics);
@@ -581,9 +570,9 @@ static void test_read_without(StyleProfile *reference) {
 
     StyleModel *unknown = NULL;
     const char *bad[] = {"no-such-category"};
-    CHECK(style_model_file_read_without(path, bad, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT && unknown == NULL,
-          "an unknown category is refused");
-    CHECK(style_model_file_read_without(path, NULL, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no list");
+    CHECKF(style_model_file_read_without(path, bad, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT && unknown == NULL,
+           "an unknown category is refused");
+    CHECKF(style_model_file_read_without(path, NULL, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no list");
     (void)reference;
 }
 
@@ -591,15 +580,15 @@ static void test_read_without(StyleProfile *reference) {
 
 static void test_refusals(void) {
     StyleProfile *profile = style_profile_create();
-    CHECK(profile != NULL, "cannot create a profile");
-    CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 8}") == STYLE_PROFILE_ERR_FORMAT, "version 8 is refused");
-    CHECK(style_profile_add_document_json(profile, "{}") == STYLE_PROFILE_ERR_FORMAT, "a document without a version is refused");
-    CHECK(style_profile_add_document_json(profile, "not json") == STYLE_PROFILE_ERR_FORMAT, "text is refused");
-    CHECK(style_profile_add_document_json(profile, "{\"schema_version\": 12}") == STYLE_PROFILE_OK &&
-              style_profile_piece_count(profile) == 1,
-          "an empty version 9 document counts as a piece with no labels");
-    CHECK(style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");
-    CHECK(style_profile_add_document_json(NULL, "{}") == STYLE_PROFILE_ERR_ARGUMENT, "no profile");
+    CHECKF(profile != NULL, "cannot create a profile");
+    CHECKF(style_profile_add_document_json(profile, "{\"schema_version\": 8}") == STYLE_PROFILE_ERR_FORMAT, "version 8 is refused");
+    CHECKF(style_profile_add_document_json(profile, "{}") == STYLE_PROFILE_ERR_FORMAT, "a document without a version is refused");
+    CHECKF(style_profile_add_document_json(profile, "not json") == STYLE_PROFILE_ERR_FORMAT, "text is refused");
+    CHECKF(style_profile_add_document_json(profile, "{\"schema_version\": 12}") == STYLE_PROFILE_OK &&
+               style_profile_piece_count(profile) == 1,
+           "an empty version 9 document counts as a piece with no labels");
+    CHECKF(style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");
+    CHECKF(style_profile_add_document_json(NULL, "{}") == STYLE_PROFILE_ERR_ARGUMENT, "no profile");
     style_profile_destroy(profile);
 
     char path[1024];
@@ -630,19 +619,19 @@ static void test_refusals(void) {
     };
     for (size_t i = 0; i < sizeof(refused) / sizeof(refused[0]); i++) {
         StyleModel *model = NULL;
-        CHECK(test_write_file(path, refused[i]), "cannot write %s", path);
-        CHECK(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_ERR_FORMAT && model == NULL, "refused file %zu was read", i);
+        CHECKF(test_write_file(path, refused[i], strlen(refused[i])), "cannot write %s", path);
+        CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_ERR_FORMAT && model == NULL, "refused file %zu was read", i);
         style_model_destroy(model);
     }
     StyleModel *model = NULL;
-    CHECK(style_model_file_read("/nonexistent.style.json", &model, NULL) == STYLE_MODEL_FILE_ERR_IO, "a missing file is an I/O error");
+    CHECKF(style_model_file_read("/nonexistent.style.json", &model, NULL) == STYLE_MODEL_FILE_ERR_IO, "a missing file is an I/O error");
 
     /* A profile with nothing in it still writes and reads. */
     StyleProfile *empty = style_profile_create();
-    CHECK(style_model_file_write(empty, "empty", path) == STYLE_MODEL_FILE_OK, "empty write");
-    CHECK(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK && model, "empty read");
+    CHECKF(style_model_file_write(empty, "empty", path) == STYLE_MODEL_FILE_OK, "empty write");
+    CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK && model, "empty read");
     style_model_destroy(model);
-    CHECK(style_model_file_write(empty, "", path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
+    CHECKF(style_model_file_write(empty, "", path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
     style_profile_destroy(empty);
 }
 
@@ -678,10 +667,5 @@ int main(void) {
     test_overflow();
     test_refusals();
 
-    if (failures) {
-        fprintf(stderr, "%d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_style_profile: ok\n");
-    return 0;
+    return test_finish("test_style_profile");
 }

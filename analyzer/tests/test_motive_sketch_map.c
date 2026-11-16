@@ -12,6 +12,7 @@
 #include "links/links_internal.h"
 #include "pipeline/motive_sketch_map.h"
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The one mapping from motive features to a MotiveSketch (motive_features_to_sketch). Every family of Mozart 545 is
@@ -20,16 +21,6 @@
  * same fingerprint, so the links cache keys stay equal to the ones the report prints. The links path moves a sketch to
  * the key of C before it keeps it; the report's sketch is moved the same way here.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 static bool same_time(Rational a, Rational b) {
     return rational_cmp(a, b) == 0;
@@ -105,5 +96,5 @@ int main(void) {
     free(json);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
-    return failures == 0 ? 0 : 1;
+    return test_finish("test_motive_sketch_map");
 }

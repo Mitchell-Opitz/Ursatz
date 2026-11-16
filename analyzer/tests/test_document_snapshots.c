@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/input_pipeline.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Golden snapshots of the analysis document of the five reference pieces
@@ -65,16 +66,6 @@ static char *render_piece(const char *fixture) {
     return text;
 }
 
-static bool write_file(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    size_t length = strlen(text);
-    bool ok = fwrite(text, 1, length, file) == length;
-    return fclose(file) == 0 && ok;
-}
-
 /* Prints the 1-based number and both versions of the first line where
    expected and actual differ. */
 static void print_first_difference(const char *slug, const char *expected, const char *actual) {
@@ -115,7 +106,7 @@ int main(void) {
         }
 
         if (update) {
-            if (write_file(snapshot_path, actual)) {
+            if (test_write_file(snapshot_path, actual, strlen(actual))) {
                 printf("%s: snapshot updated\n", PIECES[i].slug);
             } else {
                 fprintf(stderr, "%s: cannot write %s\n", PIECES[i].slug, snapshot_path);
@@ -125,7 +116,7 @@ int main(void) {
             continue;
         }
 
-        char *expected = test_read_file(snapshot_path);
+        char *expected = test_read_file(snapshot_path, NULL);
         if (!expected) {
             fprintf(stderr, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)\n", PIECES[i].slug,
                     snapshot_path);

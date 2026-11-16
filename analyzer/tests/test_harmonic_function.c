@@ -10,6 +10,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Harmonic function, six-fours and prolongations on Bach 114 and Mozart 545 (Ursatz's framework-v1-corpus).
@@ -22,16 +23,6 @@
  * six-fours (m24, m52, m97, m142): the I6/4 before the V7 in the G and the C closing sections. Since keys are placed on
  * phrases (Ursatz P42) m22 to 24 are read in G, not A minor, and the six-four there is read.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 typedef struct {
     const char *name;
@@ -137,7 +128,7 @@ static void run_piece(const Piece *piece) {
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
-        failures++;
+        test_failure_count++;
         return;
     }
     char *json = test_render_document(path, &notes, &report);
@@ -162,10 +153,5 @@ int main(void) {
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
         run_piece(&PIECES[i]);
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_harmonic_function: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_harmonic_function: ok\n");
-    return 0;
+    return test_finish("test_harmonic_function");
 }

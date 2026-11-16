@@ -13,6 +13,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The meter check: Bach 114 as the file declares it (4/4) is offered 3/4 at scale 2; read as 3/4 at scale 2 it is

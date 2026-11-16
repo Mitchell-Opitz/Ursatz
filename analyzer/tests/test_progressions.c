@@ -12,6 +12,7 @@
 #include "pipeline/progression_pipeline.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Recurring progressions: the finder on hand-built chord lists, then the progressions section of two reference pieces
@@ -28,16 +29,6 @@
  *   test_progressions bach-top   Bach 114's most common progression ends on I. The library's numerals give I > IV7
  *                                (6 occurrences, tied with ii > iii7), so this is expected to fail.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* ---- Hand-built chord lists ---- */
 
@@ -263,7 +254,7 @@ static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes 
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, piece->file);
     if (midi_pipeline_import_file(path, notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(notes, report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
-        failures++;
+        test_failure_count++;
         return NULL;
     }
     char *json = test_render_document(path, notes, report);
@@ -322,10 +313,5 @@ int main(int argc, char **argv) {
             run_piece(&PIECES[i]);
         }
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_progressions: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_progressions: ok\n");
-    return 0;
+    return test_finish("test_progressions");
 }

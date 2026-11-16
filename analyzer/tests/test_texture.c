@@ -7,6 +7,8 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
+#include "ursatz_test.h"
+
 /*
  * The texture of the report, against the hand reading of Field 1 (Nocturne No. 1 in E-flat major, in 12/8), the same
  * DRAFT annotation (tests/fixtures/annotations/field1_texture.txt) that Ursatz's tests/integration/test_texture_field1.c
@@ -24,16 +26,6 @@
  */
 
 #define MEASURE_TARGET 0.80
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 typedef struct {
     int first;
@@ -194,10 +186,5 @@ int main(void) {
 
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
-    if (failures > 0) {
-        fprintf(stderr, "test_texture: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_texture: ok\n");
-    return 0;
+    return test_finish("test_texture");
 }

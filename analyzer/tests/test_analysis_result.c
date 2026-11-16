@@ -13,6 +13,7 @@
 #include <ursatz_chain/analysis_chain.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The analysis result API (analysis_result.h) on the five reference pieces (Ursatz framework-v1 corpus):
@@ -31,18 +32,6 @@ static const struct {
     {"Bach 114.mid", "bach-114"}, {"Mozart 545.mid", "mozart-545"},   {"Clementi 36.mid", "clementi-36"},
     {"Field 1.mid", "field-1"},   {"Field 5.mid", "field-5"},
 };
-
-static int failures = 0;
-
-#define CHECK(condition, ...)                       \
-    do {                                            \
-        if (!(condition)) {                         \
-            fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__); \
-            fprintf(stderr, __VA_ARGS__);           \
-            fprintf(stderr, "\n");                  \
-            failures++;                             \
-        }                                           \
-    } while (0)
 
 static size_t array_length(const cJSON *root, const char *key) {
     const cJSON *array = cJSON_GetObjectItemCaseSensitive(root, key);
@@ -65,31 +54,31 @@ static void check_chain_against_document(const char *slug, const AnalyzerResult 
     /* The voice-leading and melody results are the chain's own; the document aggregates them. */
     const AnalysisChainVoiceLeading *leading = analysis_chain_voice_leading(chain);
     size_t voice_results = leading ? leading->motions.count + leading->perfects.count + leading->resolutions.count : 0;
-    CHECK(leading && leading->perfects.count == report->voice_leading.violation_count,
-          "%s: violations %zu, report %zu", slug, leading ? leading->perfects.count : 0,
-          report->voice_leading.violation_count);
+    CHECKF(leading && leading->perfects.count == report->voice_leading.violation_count,
+           "%s: violations %zu, report %zu", slug, leading ? leading->perfects.count : 0,
+           report->voice_leading.violation_count);
     const AnalysisChainMelody *melody = analysis_chain_melody(chain);
     size_t melody_results = melody ? melody->intervals.count + melody->summaries.count + melody->climaxes.count +
                                          melody->recoveries.count
                                    : 0;
-    CHECK(array_length(document, "voice_leading") > 0 || voice_results == 0, "%s: no voice-leading section", slug);
-    CHECK(array_length(document, "melody") > 0 || melody_results == 0, "%s: no melody section", slug);
+    CHECKF(array_length(document, "voice_leading") > 0 || voice_results == 0, "%s: no voice-leading section", slug);
+    CHECKF(array_length(document, "melody") > 0 || melody_results == 0, "%s: no melody section", slug);
 }
 
 static void check_snapshots(const char *slug, const char *fixture, const AnalyzerResult *result) {
     char path[512];
 
     char *json = analysis_document_render_result(fixture, result);
-    CHECK(json != NULL, "%s: no document from the result", slug);
+    CHECKF(json != NULL, "%s: no document from the result", slug);
     if (json) {
         cJSON *root = cJSON_Parse(json);
-        CHECK(root != NULL, "%s: the document does not parse", slug);
+        CHECKF(root != NULL, "%s: the document does not parse", slug);
         if (root) {
             strip_run_metadata(root);
             char *text = cJSON_Print(root);
             snprintf(path, sizeof(path), "%s/%s.analysis.json", URSATZ_SNAPSHOT_DIR, slug);
-            char *expected = test_read_file(path);
-            CHECK(expected && text && strcmp(expected, text) == 0, "%s: the document differs from %s", slug, path);
+            char *expected = test_read_file(path, NULL);
+            CHECKF(expected && text && strcmp(expected, text) == 0, "%s: the document differs from %s", slug, path);
             free(expected);
             cJSON_free(text);
             cJSON_Delete(root);
@@ -103,20 +92,20 @@ static void check_piece(const char *fixture, const char *slug) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
-        CHECK(false, "%s: cannot import %s", slug, path);
+        CHECKF(false, "%s: cannot import %s", slug, path);
         return;
     }
 
     AnalyzerResult *result = NULL;
     AnalyzerStatus status = analyzer_analyze(&notes, NULL, &result);
-    CHECK(status == ANALYZER_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
+    CHECKF(status == ANALYZER_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
     if (result) {
         const AnalysisReport *report = analyzer_result_report(result);
-        CHECK(report && report->entry_count > 0, "%s: empty report view", slug);
+        CHECKF(report && report->entry_count > 0, "%s: empty report view", slug);
 
         char *json = analysis_document_render_result(fixture, result);
         cJSON *document = json ? cJSON_Parse(json) : NULL;
-        CHECK(document != NULL, "%s: no document", slug);
+        CHECKF(document != NULL, "%s: no document", slug);
         if (document) {
             check_chain_against_document(slug, result, document);
             cJSON_Delete(document);
@@ -133,36 +122,36 @@ static void check_options(const char *fixture) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
-        CHECK(false, "cannot import %s", path);
+        CHECKF(false, "cannot import %s", path);
         return;
     }
 
     /* The defaults: all stages, chords on harmonic spans. */
     AnalyzerOptions defaults = analyzer_options_default();
-    CHECK(defaults.stages == ANALYZER_STAGE_ALL && defaults.harmonic_spans, "the default options are not all stages on spans");
+    CHECKF(defaults.stages == ANALYZER_STAGE_ALL && defaults.harmonic_spans, "the default options are not all stages on spans");
 
     /* Arguments. */
     AnalyzerResult *result = (AnalyzerResult *)0x1;
-    CHECK(analyzer_analyze(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "NULL notes");
-    CHECK(analyzer_analyze(&notes, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
+    CHECKF(analyzer_analyze(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "NULL notes");
+    CHECKF(analyzer_analyze(&notes, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
     AnalyzerOptions none = analyzer_options_default();
     none.stages = 0;
-    CHECK(analyzer_analyze(&notes, &none, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no stages");
+    CHECKF(analyzer_analyze(&notes, &none, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no stages");
     analyzer_result_destroy(NULL);
-    CHECK(analyzer_result_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
+    CHECKF(analyzer_result_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
 
     /* A partial stage set: the chain's results, an empty report view, no export. */
     AnalyzerOptions texture = analyzer_options_default();
     texture.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
     result = NULL;
-    CHECK(analyzer_analyze(&notes, &texture, &result) == ANALYZER_OK && result, "texture stage only");
+    CHECKF(analyzer_analyze(&notes, &texture, &result) == ANALYZER_OK && result, "texture stage only");
     if (result) {
         const AnalysisChain *chain = analyzer_result_chain(result);
-        CHECK(analysis_chain_texture(chain) != NULL, "texture results from the texture stage");
-        CHECK(analysis_chain_cadences(chain) == NULL, "cadence results without the stage");
-        CHECK(analyzer_result_report(result)->progression_count == 0, "progressions without the report");
-        CHECK(analyzer_result_report(result)->entry_count == 0, "report entries from a partial chain");
-        CHECK(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
+        CHECKF(analysis_chain_texture(chain) != NULL, "texture results from the texture stage");
+        CHECKF(analysis_chain_cadences(chain) == NULL, "cadence results without the stage");
+        CHECKF(analyzer_result_report(result)->progression_count == 0, "progressions without the report");
+        CHECKF(analyzer_result_report(result)->entry_count == 0, "report entries from a partial chain");
+        CHECKF(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
     }
     analyzer_result_destroy(result);
     imported_notes_destroy(&notes);
@@ -177,8 +166,5 @@ int main(int argc, char **argv) {
             check_options(PIECES[i].fixture);
         }
     }
-    if (failures == 0) {
-        printf("analysis result: ok\n");
-    }
-    return failures == 0 ? 0 : 1;
+    return test_finish("test_analysis_result");
 }

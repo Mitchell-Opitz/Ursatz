@@ -10,6 +10,7 @@
 
 #include "cJSON.h"
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Soprano and bass scale degrees per chord, and the outer_voices section of the analysis document, on small
@@ -25,16 +26,6 @@
  *   monophonic    One line. Where one note sounds, soprano and bass are that note.
  *   held chord    One measure of a held chord under four soprano quarter notes: one chord, four soprano entries.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* ---- A minimal MIDI writer ---- */
 
@@ -497,16 +488,11 @@ static void test_held_chord(const char *path) {
 }
 
 int main(void) {
-    char progression[512];
-    char tonicization[512];
-    char texture[512];
-    char monophonic[512];
-    char held[512];
-    test_temp_path(progression, sizeof(progression), "outer_progression.mid");
-    test_temp_path(tonicization, sizeof(tonicization), "outer_tonicization.mid");
-    test_temp_path(texture, sizeof(texture), "outer_texture.mid");
-    test_temp_path(monophonic, sizeof(monophonic), "outer_monophonic.mid");
-    test_temp_path(held, sizeof(held), "outer_held_chord.mid");
+    char *progression = test_temp_path("outer_progression.mid");
+    char *tonicization = test_temp_path("outer_tonicization.mid");
+    char *texture = test_temp_path("outer_texture.mid");
+    char *monophonic = test_temp_path("outer_monophonic.mid");
+    char *held = test_temp_path("outer_held_chord.mid");
     test_progression(progression);
     test_tonicization(tonicization);
     test_texture(texture);
@@ -517,10 +503,10 @@ int main(void) {
     remove(texture);
     remove(monophonic);
     remove(held);
-    if (failures > 0) {
-        fprintf(stderr, "test_outer_voices: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_outer_voices: ok\n");
-    return 0;
+    free(progression);
+    free(tonicization);
+    free(texture);
+    free(monophonic);
+    free(held);
+    return test_finish("test_outer_voices");
 }

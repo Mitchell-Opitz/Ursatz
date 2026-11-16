@@ -9,6 +9,7 @@
 #include <ursatz_analyzer/text_export.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Golden snapshots of the text export of the five reference pieces (Ursatz framework-v1 corpus, MIDI files). Each piece
@@ -94,16 +95,6 @@ static size_t measure_count(const char *text) {
     return count;
 }
 
-static bool write_file(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    size_t length = strlen(text);
-    bool ok = fwrite(text, 1, length, file) == length;
-    return fclose(file) == 0 && ok;
-}
-
 /* Prints the 1-based number and both versions of the first line where expected and actual differ. */
 static void print_first_difference(const char *slug, const char *expected, const char *actual) {
     size_t line = 1;
@@ -154,14 +145,14 @@ int main(void) {
         }
 
         if (update) {
-            if (write_file(snapshot_path, actual)) {
+            if (test_write_file(snapshot_path, actual, strlen(actual))) {
                 printf("%s: snapshot updated (%zu bytes, %zu measures)\n", PIECES[i].slug, strlen(full), measures);
             } else {
                 fprintf(stderr, "%s: cannot write %s\n", PIECES[i].slug, snapshot_path);
                 failures++;
             }
         } else {
-            char *expected = test_read_file(snapshot_path);
+            char *expected = test_read_file(snapshot_path, NULL);
             if (!expected) {
                 fprintf(stderr, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)\n", PIECES[i].slug,
                         snapshot_path);

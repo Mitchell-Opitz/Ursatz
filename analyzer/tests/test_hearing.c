@@ -15,6 +15,7 @@
 
 #include "pipeline/analysis_result_internal.h"
 #include "style/style_profile_internal.h"
+#include "ursatz_test.h"
 
 /*
  * The hearing entry and the style reference (composer_api.h) on the five reference pieces:
@@ -42,18 +43,6 @@ typedef struct {
    0, 8, 8, 8, 2 (were 2, 9, 7, 8, 3) and with spans 0, 16, 4, 9, 0 (were 0, 15, 4, 9, 1); the entries did not move. */
 static const Reading WITHOUT_SPANS[] = {{155, 0}, {606, 8}, {205, 8}, {268, 8}, {169, 2}};
 static const Reading WITH_SPANS[] = {{54, 0}, {210, 16}, {46, 4}, {107, 9}, {82, 0}};
-
-static int failures = 0;
-
-#define CHECK(condition, ...)                                          \
-    do {                                                               \
-        if (!(condition)) {                                            \
-            fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__);       \
-            fprintf(stderr, __VA_ARGS__);                              \
-            fprintf(stderr, "\n");                                     \
-            failures++;                                                \
-        }                                                              \
-    } while (0)
 
 static int tonic_of(const ImportedNotes *notes) {
     int fifths = notes->key_signature.sharps_flats;
@@ -103,10 +92,10 @@ static bool same_statistics(const StyleProfile *a, const StyleProfile *b) {
 static StyleModel *model_of_document(const char *json, const char *file) {
     StyleProfile *profile = style_profile_create();
     StyleModel *model = NULL;
-    CHECK(profile && style_profile_add_document_json(profile, json) == STYLE_PROFILE_OK, "reference profile");
-    CHECK(profile && style_model_file_write(profile, "reference", file) == STYLE_MODEL_FILE_OK &&
-              style_model_file_read_without(file, NULL, 0, &model, NULL) == STYLE_MODEL_FILE_OK,
-          "reference model");
+    CHECKF(profile && style_profile_add_document_json(profile, json) == STYLE_PROFILE_OK, "reference profile");
+    CHECKF(profile && style_model_file_write(profile, "reference", file) == STYLE_MODEL_FILE_OK &&
+               style_model_file_read_without(file, NULL, 0, &model, NULL) == STYLE_MODEL_FILE_OK,
+           "reference model");
     style_profile_destroy(profile);
     return model;
 }
@@ -123,20 +112,20 @@ static void check_arguments(const AnalyzerHearing *hearing) {
     AnalyzerResult *result = (AnalyzerResult *)1;
     AnalyzerHearing no_midi = *hearing;
     no_midi.midi = NULL;
-    CHECK(analyzer_hear(&no_midi, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no midi");
-    CHECK(analyzer_hear(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT, "no hearing");
-    CHECK(analyzer_hear(hearing, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "no out");
+    CHECKF(analyzer_hear(&no_midi, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no midi");
+    CHECKF(analyzer_hear(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT, "no hearing");
+    CHECKF(analyzer_hear(hearing, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "no out");
     int *bad = malloc(hearing->count * sizeof *bad);
     memcpy(bad, hearing->midi, hearing->count * sizeof *bad);
     bad[0] = 200;
     AnalyzerHearing out_of_range = *hearing;
     out_of_range.midi = bad;
-    CHECK(analyzer_hear(&out_of_range, NULL, &result) == ANALYZER_ERR_ARGUMENT, "midi 200");
+    CHECKF(analyzer_hear(&out_of_range, NULL, &result) == ANALYZER_ERR_ARGUMENT, "midi 200");
     free(bad);
     AnalyzerHearing bad_key = *hearing;
     bad_key.has_key = true;
     bad_key.key_tonic_pitch_class = 12;
-    CHECK(analyzer_hear(&bad_key, NULL, &result) == ANALYZER_ERR_ARGUMENT, "tonic 12");
+    CHECKF(analyzer_hear(&bad_key, NULL, &result) == ANALYZER_ERR_ARGUMENT, "tonic 12");
 }
 
 static bool same_violations(const AnalyzerViolation *a, const AnalyzerViolation *b, size_t count) {
@@ -155,26 +144,26 @@ static bool same_violations(const AnalyzerViolation *a, const AnalyzerViolation 
 static void check_violations(const char *fixture, const AnalyzerResult *heard, const AnalyzerResult *direct) {
     AnalyzerViolation *from_result = NULL, *from_fragment = NULL;
     size_t result_count = 99, fragment_count = 99;
-    CHECK(analyzer_result_violations(heard, &from_result, &result_count) == ANALYZER_OK, "%s: result violations",
-          fixture);
-    CHECK(analyzer_result_violations(direct, &from_fragment, &fragment_count) == ANALYZER_OK,
-          "%s: direct violations", fixture);
-    CHECK(result_count == fragment_count, "%s: %zu result violations, %zu direct violations", fixture, result_count,
-          fragment_count);
-    CHECK((result_count == 0) == (from_result == NULL), "%s: array and count disagree", fixture);
+    CHECKF(analyzer_result_violations(heard, &from_result, &result_count) == ANALYZER_OK, "%s: result violations",
+           fixture);
+    CHECKF(analyzer_result_violations(direct, &from_fragment, &fragment_count) == ANALYZER_OK,
+           "%s: direct violations", fixture);
+    CHECKF(result_count == fragment_count, "%s: %zu result violations, %zu direct violations", fixture, result_count,
+           fragment_count);
+    CHECKF((result_count == 0) == (from_result == NULL), "%s: array and count disagree", fixture);
     if (result_count == fragment_count) {
-        CHECK(same_violations(from_result, from_fragment, result_count), "%s: the violations differ", fixture);
+        CHECKF(same_violations(from_result, from_fragment, result_count), "%s: the violations differ", fixture);
     }
     analyzer_violations_free(from_result, result_count);
     analyzer_violations_free(from_fragment, fragment_count);
 
     AnalyzerViolation *none = (AnalyzerViolation *)1;
     size_t count = 7;
-    CHECK(analyzer_result_violations(NULL, &none, &count) == ANALYZER_ERR_ARGUMENT, "%s: violations of NULL", fixture);
-    CHECK(analyzer_result_violations(heard, NULL, &count) == ANALYZER_ERR_ARGUMENT, "%s: violations without out",
-          fixture);
-    CHECK(analyzer_result_violations(heard, &none, NULL) == ANALYZER_ERR_ARGUMENT, "%s: violations without count",
-          fixture);
+    CHECKF(analyzer_result_violations(NULL, &none, &count) == ANALYZER_ERR_ARGUMENT, "%s: violations of NULL", fixture);
+    CHECKF(analyzer_result_violations(heard, NULL, &count) == ANALYZER_ERR_ARGUMENT, "%s: violations without out",
+           fixture);
+    CHECKF(analyzer_result_violations(heard, &none, NULL) == ANALYZER_ERR_ARGUMENT, "%s: violations without count",
+           fixture);
 }
 
 static void check_piece(size_t piece, const StyleModel *reference_model) {
@@ -183,7 +172,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
-        CHECK(false, "cannot import %s", path);
+        CHECKF(false, "cannot import %s", path);
         return;
     }
     int *midi = midi_of(&notes);
@@ -198,26 +187,26 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
 
     /* The events are the caller's. */
     AnalyzerResult *heard = NULL;
-    CHECK(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
+    CHECKF(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
     if (heard) {
         const AnalysisReport *report = analyzer_result_report(heard);
-        CHECK(report->entry_count == WITH_SPANS[piece].entries && report->cadence_count == WITH_SPANS[piece].cadences,
-              "%s: default hearing %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
-              report->cadence_count, WITH_SPANS[piece].entries, WITH_SPANS[piece].cadences);
+        CHECKF(report->entry_count == WITH_SPANS[piece].entries && report->cadence_count == WITH_SPANS[piece].cadences,
+               "%s: default hearing %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
+               report->cadence_count, WITH_SPANS[piece].entries, WITH_SPANS[piece].cadences);
     }
     AnalyzerHearingOptions no_spans = analyzer_hearing_options_default();
     no_spans.analysis.harmonic_spans = false;
     AnalyzerResult *unspanned = NULL;
-    CHECK(analyzer_hear(&hearing, &no_spans, &unspanned) == ANALYZER_OK && unspanned, "%s: hear without spans", fixture);
+    CHECKF(analyzer_hear(&hearing, &no_spans, &unspanned) == ANALYZER_OK && unspanned, "%s: hear without spans", fixture);
     if (unspanned) {
         const AnalysisReport *report = analyzer_result_report(unspanned);
-        CHECK(report->entry_count == WITHOUT_SPANS[piece].entries && report->cadence_count == WITHOUT_SPANS[piece].cadences,
-              "%s: hearing without spans %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
-              report->cadence_count, WITHOUT_SPANS[piece].entries, WITHOUT_SPANS[piece].cadences);
+        CHECKF(report->entry_count == WITHOUT_SPANS[piece].entries && report->cadence_count == WITHOUT_SPANS[piece].cadences,
+               "%s: hearing without spans %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
+               report->cadence_count, WITHOUT_SPANS[piece].entries, WITHOUT_SPANS[piece].cadences);
     }
     analyzer_result_destroy(unspanned);
     AnalyzerResult *direct = NULL;
-    CHECK(analyzer_analyze(&notes, NULL, &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
+    CHECKF(analyzer_analyze(&notes, NULL, &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
     if (!heard || !direct) {
         free(midi);
         imported_notes_destroy(&notes);
@@ -228,44 +217,44 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     for (size_t i = 0; same_events && i < notes.count; i++) {
         same_events = borrowed->events[i] == notes.events[i];
     }
-    CHECK(same_events, "%s: the result's notes do not point at the caller's events", fixture);
+    CHECKF(same_events, "%s: the result's notes do not point at the caller's events", fixture);
     const AnalysisReport *heard_report = analyzer_result_report(heard);
     const AnalysisReport *direct_report = analyzer_result_report(direct);
-    CHECK(heard_report->entry_count == direct_report->entry_count &&
-              heard_report->key_region_count == direct_report->key_region_count &&
-              heard_report->progression_count == direct_report->progression_count,
-          "%s: the hearing's report differs from the direct analysis", fixture);
+    CHECKF(heard_report->entry_count == direct_report->entry_count &&
+               heard_report->key_region_count == direct_report->key_region_count &&
+               heard_report->progression_count == direct_report->progression_count,
+           "%s: the hearing's report differs from the direct analysis", fixture);
 
     /* The document of a second hearing of the same events (the notes carry no file source). */
     AnalyzerResult *rendered = NULL;
-    CHECK(analyzer_hear(&hearing, NULL, &rendered) == ANALYZER_OK && rendered, "%s: hear again", fixture);
+    CHECKF(analyzer_hear(&hearing, NULL, &rendered) == ANALYZER_OK && rendered, "%s: hear again", fixture);
     char *json = rendered ? analysis_document_render_result("<fragment>", rendered) : NULL;
     /* The result's profile equals the profile of its document. */
     StyleProfile *from_result = style_profile_create();
     StyleProfile *from_json = style_profile_create();
-    CHECK(from_result && from_json && style_profile_add_result(from_result, heard) == STYLE_PROFILE_OK &&
-              style_profile_add_document_json(from_json, json) == STYLE_PROFILE_OK,
-          "%s: profiles", fixture);
-    CHECK(from_result && from_json && same_statistics(from_result, from_json),
-          "%s: profile of the result differs from the profile of its document", fixture);
+    CHECKF(from_result && from_json && style_profile_add_result(from_result, heard) == STYLE_PROFILE_OK &&
+               style_profile_add_document_json(from_json, json) == STYLE_PROFILE_OK,
+           "%s: profiles", fixture);
+    CHECKF(from_result && from_json && same_statistics(from_result, from_json),
+           "%s: profile of the result differs from the profile of its document", fixture);
     style_profile_destroy(from_result);
     style_profile_destroy(from_json);
 
     /* The rendered document exists and holds the profile of the heard result; the distance of the result is that of
        a second hearing of the same events. */
-    CHECK(json != NULL, "%s: no rendered document", fixture);
+    CHECKF(json != NULL, "%s: no rendered document", fixture);
     AnalyzerStyleReference *reference = NULL;
-    CHECK(analyzer_style_reference_create(reference_model, NULL, 0, &reference) == ANALYZER_OK && reference,
-          "%s: reference", fixture);
+    CHECKF(analyzer_style_reference_create(reference_model, NULL, 0, &reference) == ANALYZER_OK && reference,
+           "%s: reference", fixture);
     StyleComparison old_distance = {0}, new_distance = {0};
-    CHECK(analyzer_result_style_distance(rendered, reference, &old_distance) == ANALYZER_OK, "%s: second distance",
-          fixture);
-    CHECK(analyzer_result_style_distance(heard, reference, &new_distance) == ANALYZER_OK, "%s: new distance", fixture);
-    CHECK(same_comparison(&old_distance, &new_distance), "%s: the distances differ", fixture);
+    CHECKF(analyzer_result_style_distance(rendered, reference, &old_distance) == ANALYZER_OK, "%s: second distance",
+           fixture);
+    CHECKF(analyzer_result_style_distance(heard, reference, &new_distance) == ANALYZER_OK, "%s: new distance", fixture);
+    CHECKF(same_comparison(&old_distance, &new_distance), "%s: the distances differ", fixture);
     AnalyzerStyleReference *unknown = (AnalyzerStyleReference *)1;
     const char *const bad_name[] = {"no-such-category"};
-    CHECK(analyzer_style_reference_create(reference_model, bad_name, 1, &unknown) == ANALYZER_ERR_ARGUMENT && !unknown,
-          "%s: unknown category", fixture);
+    CHECKF(analyzer_style_reference_create(reference_model, bad_name, 1, &unknown) == ANALYZER_ERR_ARGUMENT && !unknown,
+           "%s: unknown category", fixture);
     check_violations(fixture, heard, direct);
     style_comparison_destroy(&old_distance);
     style_comparison_destroy(&new_distance);
@@ -297,17 +286,12 @@ int main(int argc, char **argv) {
         model = json ? model_of_document(json, file) : NULL;
         free(json);
     }
-    CHECK(model != NULL, "reference model");
+    CHECKF(model != NULL, "reference model");
     analyzer_result_destroy(result);
     imported_notes_destroy(&notes);
     for (size_t i = 0; model && i < (smoke ? 1 : sizeof PIECES / sizeof PIECES[0]); i++) {
         check_piece(i, model);
     }
     style_model_destroy(model);
-    if (failures) {
-        fprintf(stderr, "%d failures\n", failures);
-        return 1;
-    }
-    printf("test_hearing: ok\n");
-    return 0;
+    return test_finish("test_hearing");
 }

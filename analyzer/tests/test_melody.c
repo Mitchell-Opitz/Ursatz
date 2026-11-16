@@ -15,6 +15,7 @@
 #include "time/temporal_anchor.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The melody of the report, for Bach 114 (Minuet in G, BWV Anh. 114).
@@ -44,16 +45,6 @@
 #define TICKS_PER_WHOLE 1536.0
 #define MEASURE_TICKS 1152.0
 #define TIME_TOLERANCE 1e-6
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* A note's onset in whole notes and its pitch as a MIDI note number. */
 static double onset_of(const ImportedNotes *notes, size_t index) {
@@ -92,10 +83,10 @@ static void check_melody(const ImportedNotes *notes, const AnalysisReport *repor
         CHECK(strcmp(test_json_string(claim, "framework"), "standard-counterpoint-v1") == 0);
         CHECK(strcmp(test_json_string(claim, "label"), "melody") == 0);
         CHECK((double)entry->phrase > previous_phrase && entry->phrase < report->phrase_count);
-        CHECK((int)test_json_number(claim, "index") == (int)entry->phrase);
+        CHECK((int)test_json_number(claim, "index", -1e9) == (int)entry->phrase);
         CHECK(cJSON_GetArrayItem(phrases, (int)entry->phrase) != NULL);
         previous_phrase = (double)entry->phrase;
-        CHECK(entry->note_id_count > 0 && entry->note_id_count == (size_t)test_json_number(claim, "note_count"));
+        CHECK(entry->note_id_count > 0 && entry->note_id_count == (size_t)test_json_number(claim, "note_count", -1e9));
 
         /* the notes: in time order, inside the phrase's span, and the pitch range they span */
         const AnalysisPhrase *phrase = &report->phrases[entry->phrase];
@@ -153,8 +144,8 @@ static void check_melody(const ImportedNotes *notes, const AnalysisReport *repor
         }
         const cJSON *leaps = test_json_member(claim, "leaps");
         CHECK(cJSON_GetArraySize(test_json_member(leaps, "items")) == (int)entry->leap_total);
-        CHECK((int)(test_json_number(leaps, "recovered") + test_json_number(leaps, "unrecovered") + test_json_number(leaps, "not_required") +
-                    test_json_number(leaps, "not_judged")) == (int)entry->leap_total);
+        CHECK((int)(test_json_number(leaps, "recovered", -1e9) + test_json_number(leaps, "unrecovered", -1e9) + test_json_number(leaps, "not_required", -1e9) +
+                    test_json_number(leaps, "not_judged", -1e9)) == (int)entry->leap_total);
         CHECK(cJSON_GetArraySize(test_json_member(claim, "consecutive_leaps")) == (int)entry->consecutive_leap_count);
 
         /* the non-chord tones */
@@ -179,7 +170,7 @@ static void check_melody(const ImportedNotes *notes, const AnalysisReport *repor
         printf("  phrase %zu: %zu notes, %s to %s, climax %ld x%d, %d leaps (%d unrecovered), %d non-chord tones, "
                "seventh degree followed %d broken %d\n",
                entry->phrase + 1, entry->note_id_count, entry->lowest_name, entry->highest_name, highest,
-               entry->climax_occurrences, entry->leap_count, (int)test_json_number(leaps, "unrecovered"),
+               entry->climax_occurrences, entry->leap_count, (int)test_json_number(leaps, "unrecovered", -1e9),
                entry->non_chord_tone_count, entry->seventh_followed, entry->seventh_broken);
     }
 }
@@ -403,10 +394,5 @@ int main(int argc, char **argv) {
     cJSON_Delete(document);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
-    if (failures > 0) {
-        fprintf(stderr, "test_melody: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_melody: ok\n");
-    return 0;
+    return test_finish("test_melody");
 }
