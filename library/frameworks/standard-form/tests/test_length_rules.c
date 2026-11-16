@@ -2,12 +2,6 @@
 #include <stdio.h>
 
 #include "length_rules.h"
-#include "rule_check.h"
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_form_length_rule, standard_form_length_constraint,
-                                    STANDARD_FORM_LENGTH_RULE_COUNT);
-}
 
 static void test_classify_length_change(void) {
     PhraseLengthChange change = PHRASE_LENGTH_CHANGE_CONTRACTION;
@@ -38,13 +32,6 @@ static void test_placement(void) {
     assert(!standard_form_placement_allowed(PHRASE_LENGTH_CHANGE_EXPANSION, EXPANSION_PLACEMENT_COUNT));
 }
 
-static void test_expected_length_available(void) {
-    assert(standard_form_expected_length_available(true, false));
-    assert(standard_form_expected_length_available(false, true));
-    assert(standard_form_expected_length_available(true, true));
-    assert(!standard_form_expected_length_available(false, false));
-}
-
 /* An ending is as long as its beginning. */
 static void test_balance(void) {
     assert(standard_form_expected_ending_length(4) == 4);
@@ -60,10 +47,8 @@ static void test_balance(void) {
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_classify_length_change();
     test_placement();
-    test_expected_length_available();
     test_balance();
     printf("test_length_rules (standard-form): ok\n");
     return 0;

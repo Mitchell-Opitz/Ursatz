@@ -56,23 +56,6 @@ void standard_form_phrases_destroy(StandardFormPhrases *phrases) {
     phrases->count = 0;
 }
 
-bool standard_form_phrase_claim_read(const Interpretation *interpretation, StandardFormPhraseClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), STANDARD_FORM_PHRASE_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}
-
 /* A new left-closed TimeSpan [start, end) the caller destroys, or NULL. */
 static TimeSpan *make_span(Rational start, Rational end) {
     MusicalTime *from = NULL;

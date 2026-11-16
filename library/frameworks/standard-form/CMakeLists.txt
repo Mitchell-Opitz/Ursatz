@@ -1,16 +1,12 @@
 add_library(standard_form
     framework.c
-    motive_rules.c
-    hierarchy_rules.c
     phrase_rules.c
     segmentation_rules.c
     sentence_rules.c
     period_rules.c
     combination_rules.c
-    unique_rules.c
     beginning_rules.c
     ending_rules.c
-    cadential_bass_rules.c
     hybrid_rules.c
     length_rules.c
     internal_expansion_rules.c
@@ -27,18 +23,15 @@ add_library(standard_form
     analysis/analysis_motive_shape.c
     analysis/analysis_motive_match.c
     analysis/analysis_motive.c
-    alternative_path_kind.c
     continuation_trait.c
     expansion_placement.c
     external_expansion_kind.c
     idea_label.c
     internal_expansion_technique.c
-    motive_kind.c
     phrase_beginning.c
     phrase_ending.c
     phrase_length_change.c
     phrase_level_form.c
-    phrase_role.c
 )
 # Public headers (R-223), staged under standard-form/ in the build tree; the source directories are private.
 ursatz_public_headers(standard_form

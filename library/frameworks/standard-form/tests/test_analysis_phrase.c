@@ -56,8 +56,6 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
                   entity_id_value(phrase_occurrence_id(phrase->occurrence))) == 0);
     assert(interpretation_framework_reference(phrase->interpretation) != NULL);
     assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(phrase->interpretation)) == 800000UL);
-    StandardFormPhraseClaim read;
-    assert(standard_form_phrase_claim_read(phrase->interpretation, &read) && read.length_measures == 4);
     Rational start;
     Rational end;
     assert(score_time_span(phrase->span, &start, &end) && start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);

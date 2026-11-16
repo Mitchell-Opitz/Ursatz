@@ -2,12 +2,6 @@
 #include <stdio.h>
 
 #include "period_rules.h"
-#include "rule_check.h"
-
-static void test_rules_reference_framework(void) {
-    CHECK_RULES_REFERENCE_FRAMEWORK(standard_form_period_rule, standard_form_period_constraint,
-                                    STANDARD_FORM_PERIOD_RULE_COUNT);
-}
 
 static void test_structure(void) {
     assert(standard_form_phrase_roles_in_order(PHRASE_ROLE_ANTECEDENT, PHRASE_ROLE_CONSEQUENT));
@@ -45,25 +39,15 @@ static void test_lengths(void) {
     assert(!standard_form_consequent_length_usual(0, 4));
 }
 
-static void test_modulation(void) {
-    assert(standard_form_phrase_role_usually_modulates(PHRASE_ROLE_CONSEQUENT));
-    assert(!standard_form_phrase_role_usually_modulates(PHRASE_ROLE_ANTECEDENT));
-    assert(!standard_form_phrase_role_usually_modulates(PHRASE_ROLE_COUNT));
-}
-
 static void test_consequent_ideas(void) {
     assert(standard_form_consequent_contrast_usual(true));
     assert(!standard_form_consequent_contrast_usual(false));
-    assert(standard_form_basic_ideas_need_numbering(true));
-    assert(!standard_form_basic_ideas_need_numbering(false));
 }
 
 int main(void) {
-    test_rules_reference_framework();
     test_structure();
     test_cadences();
     test_lengths();
-    test_modulation();
     test_consequent_ideas();
     printf("test_period_rules (standard-form): ok\n");
     return 0;

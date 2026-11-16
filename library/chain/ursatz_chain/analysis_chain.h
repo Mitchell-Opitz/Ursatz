@@ -113,9 +113,9 @@
  * caller that finds its own phrase ends does (the accuracy harness). The boundaries are borrowed and must outlive the run. Default off.
  *
  * inject_kernel_owners (default true): the chain hands the kernel owners to the frameworks (ursatz_chain/kernel_owners.h): motive_tone_roles
- * labels the leftover tones of the weighted chord identifier and the notes of the melody stage, and motive_variant_recognize decides the
- * transposed, inverted and retrograde occurrences of the motive stage. Off: the frameworks' own fallback rules, as before R-243. A
- * classifier or matcher the caller already set in weighting or form is kept.
+ * labels the leftover tones of the weighted chord identifier and the notes of the melody stage. Off: the frameworks' own fallback rules,
+ * as before R-243. A classifier the caller already set in weighting is kept. The motive stage always gets motive_variant_recognize as its
+ * relation matcher (it decides the transposed, inverted and retrograde occurrences), unless the caller already set form.relation_match.
  *
  * home_key_index: the home key as a key index 0..23 (key_regions.h), or -1 for the key of the first key region. It is the key of the
  * boundary cadences, the motive degrees, the melody degrees and the schema key degrees.

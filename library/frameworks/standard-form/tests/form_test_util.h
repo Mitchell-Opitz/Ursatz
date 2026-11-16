@@ -9,6 +9,7 @@
 #include "core/provenance_reference.h"
 #include "events/note_event.h"
 #include "ursatz_chain/form_bridge.h"
+#include "ursatz_chain/kernel_owners.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
 #include "time/duration.h"
@@ -158,6 +159,16 @@ static inline void form_destroy(FormFixture *f) {
         time_span_destroy(f->cadence_spans[i]);
     }
     meter_map_destroy(f->map);
+}
+
+/* The defaults plus the kernel's motive relation matcher (the motive analysis requires one): C major for generic shapes. */
+static ChainRelationContext form_motive_context = {true, 0, false};
+
+static inline StandardFormConfig form_motive_config(void) {
+    StandardFormConfig config = standard_form_config_default();
+    config.relation_match = chain_match_motive_relation;
+    config.relation_context = &form_motive_context;
+    return config;
 }
 
 #endif

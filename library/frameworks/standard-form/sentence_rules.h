@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "continuation_trait.h"
 #include "semantics/subphrase_role.h"
 
@@ -37,23 +34,6 @@
  * Lengths are in a single consistent unit chosen by the caller (measures in the examples).
  */
 
-typedef enum {
-    STANDARD_FORM_SENTENCE_RULE_STRUCTURE = 0,
-    STANDARD_FORM_SENTENCE_RULE_PRESENTATION_LENGTH,
-    STANDARD_FORM_SENTENCE_RULE_BASIC_IDEA_LENGTH,
-    STANDARD_FORM_SENTENCE_RULE_CONTINUATION_LENGTH,
-    STANDARD_FORM_SENTENCE_RULE_FRAGMENTATION,
-    STANDARD_FORM_SENTENCE_RULE_CONTINUATION_TRAITS,
-    STANDARD_FORM_SENTENCE_RULE_REPETITION_CONTOUR,
-    STANDARD_FORM_SENTENCE_RULE_BASIC_IDEA_TRANSFORMATIONS,
-    STANDARD_FORM_SENTENCE_RULE_SENTENTIAL,
-    STANDARD_FORM_SENTENCE_RULE_ARCHETYPAL,
-    STANDARD_FORM_SENTENCE_RULE_COUNT
-} StandardFormSentenceRule;
-
-const Rule *standard_form_sentence_rule(StandardFormSentenceRule which);
-const Constraint *standard_form_sentence_constraint(StandardFormSentenceRule which);
-
 /* STRUCTURE: true only for a presentation followed by a continuation. */
 bool standard_form_subphrase_roles_in_order(SubphraseRole first, SubphraseRole second);
 
@@ -62,9 +42,6 @@ bool standard_form_presentation_length_usual(size_t measures);
 
 /* BASIC_IDEA_LENGTH: true for the lengths 1, 2, and 4. */
 bool standard_form_basic_idea_length_valid(size_t measures);
-
-/* BASIC_IDEA_LENGTH: true for the most usual basic-idea length, two. */
-bool standard_form_basic_idea_length_usual(size_t measures);
 
 /* CONTINUATION_LENGTH: true when the continuation is at least as long as the presentation (a
    zero-length presentation is not valid). A shorter continuation is uncommon, not wrong. */
@@ -78,42 +55,9 @@ bool standard_form_continuation_balanced(size_t presentation, size_t continuatio
    are in the same unit. Only length counts, not melodic content. */
 bool standard_form_is_fragmentation(size_t established_unit_size, size_t unit_size);
 
-/* CONTINUATION_TRAITS: the bit for a trait in a trait mask. Zero for an invalid trait. */
-unsigned standard_form_continuation_trait_bit(ContinuationTrait trait);
-
-/* CONTINUATION_TRAITS: how many distinct traits a mask holds. */
-size_t standard_form_continuation_trait_count(unsigned traits);
-
-/* CONTINUATION_TRAITS: true when the mask holds fragmentation, which usually signals a
-   continuation even with no other trait. A continuation without it is still possible. */
-bool standard_form_fragmentation_signals_continuation(unsigned traits);
-
 /* REPETITION_CONTOUR: true when a second idea reads as a varied repetition of the first
    (same contour); false when it reads as contrast. */
 bool standard_form_idea_reads_as_repetition(bool same_contour);
-
-typedef enum {
-    STANDARD_FORM_BASIC_IDEA_TRANSFORMATION_EMBELLISHMENT = 0,
-    STANDARD_FORM_BASIC_IDEA_TRANSFORMATION_TRANSPOSITION,
-    STANDARD_FORM_BASIC_IDEA_TRANSFORMATION_CHANGE_OF_HARMONIZATION,
-    STANDARD_FORM_BASIC_IDEA_TRANSFORMATION_CHANGE_OF_INTERVAL,
-    STANDARD_FORM_BASIC_IDEA_TRANSFORMATION_COUNT
-} StandardFormBasicIdeaTransformation;
-
-/* True for the four transformations above; false for any other value. */
-bool standard_form_basic_idea_transformation_valid(StandardFormBasicIdeaTransformation transformation);
-
-/* "embellishment" "transposition" "change-of-harmonization" "change-of-interval"; NULL for an
-   invalid value. */
-const char *standard_form_basic_idea_transformation_name(StandardFormBasicIdeaTransformation transformation);
-
-/*
- * The Transformation subtype that carries it out, by its src/transform/ file name:
- * "ornamentation" "transposition" NULL "intervallic_manipulation". Change of harmonization
- * has no NoteEvent transformation, since it changes the chords and not the notes of the idea,
- * so it has no type. NULL for an invalid value too.
- */
-const char *standard_form_basic_idea_transformation_type(StandardFormBasicIdeaTransformation transformation);
 
 /* SENTENTIAL: true when both subphrases are present. */
 bool standard_form_phrase_is_sentential(bool has_presentation, bool has_continuation);

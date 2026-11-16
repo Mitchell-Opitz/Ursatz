@@ -41,23 +41,6 @@ void standard_form_themes_destroy(StandardFormThemes *themes) {
     themes->count = 0;
 }
 
-bool standard_form_theme_claim_read(const Interpretation *interpretation, StandardFormThemeClaim *out) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t size = 0;
-    if (claim == NULL || strcmp(value_type(claim), STANDARD_FORM_THEME_CLAIM_TYPE) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &size);
-    if (content == NULL || size != sizeof(*out)) {
-        return false;
-    }
-    memcpy(out, content, sizeof(*out));
-    return true;
-}
-
 typedef struct {
     const StandardFormInput *input;
     const StandardFormPhrases *phrases;

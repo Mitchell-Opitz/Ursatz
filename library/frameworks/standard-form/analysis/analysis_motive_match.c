@@ -27,52 +27,6 @@ static bool same_rhythm(const StandardFormMotiveShape *a, const StandardFormMoti
     return true;
 }
 
-bool standard_form_motive_match_pattern(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                        StandardFormMotiveMatch *out) {
-    if (out == NULL || !comparable(prototype, candidate) ||
-        memcmp(prototype->steps, candidate->steps, prototype->intervals * sizeof(int)) != 0 || !same_rhythm(prototype, candidate)) {
-        return false;
-    }
-    StandardFormMotiveKind kind;
-    if (memcmp(prototype->semitones, candidate->semitones, prototype->intervals * sizeof(int)) != 0) {
-        kind = MOTIVE_OCCURRENCE_TONAL;
-    } else {
-        kind = prototype->first_semitone == candidate->first_semitone ? MOTIVE_OCCURRENCE_EXACT : MOTIVE_OCCURRENCE_REAL;
-    }
-    full(out, kind, prototype->intervals);
-    return true;
-}
-
-bool standard_form_motive_match_inversion(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                          StandardFormMotiveMatch *out) {
-    if (out == NULL || !comparable(prototype, candidate) || !same_rhythm(prototype, candidate)) {
-        return false;
-    }
-    for (size_t i = 0; i < prototype->intervals; i++) {
-        if (candidate->steps[i] != -prototype->steps[i]) {
-            return false;
-        }
-    }
-    full(out, MOTIVE_OCCURRENCE_INVERTED, prototype->intervals);
-    return true;
-}
-
-bool standard_form_motive_match_retrograde(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                           StandardFormMotiveMatch *out) {
-    if (out == NULL || !comparable(prototype, candidate)) {
-        return false;
-    }
-    size_t n = prototype->intervals;
-    for (size_t i = 0; i < n; i++) {
-        if (candidate->steps[i] != -prototype->steps[n - 1 - i] ||
-            rational_cmp(candidate->ioi[i], prototype->ioi[n - 1 - i]) != 0) {
-            return false;
-        }
-    }
-    full(out, MOTIVE_OCCURRENCE_RETROGRADE, n);
-    return true;
-}
-
 bool standard_form_motive_match_varied(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
                                        size_t max_mismatch, StandardFormMotiveMatch *out) {
     if (out == NULL || !comparable(prototype, candidate) || prototype->intervals + 1 < 5) {
@@ -99,18 +53,6 @@ bool standard_form_motive_match_varied(const StandardFormMotiveShape *prototype,
 size_t standard_form_motive_fragment_min_intervals(size_t intervals) {
     size_t half = (intervals + 1) / 2;
     return half > 2 ? half : 2;
-}
-
-bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                   size_t varied_max_mismatch, StandardFormMotiveMatch *out) {
-    if (out == NULL) {
-        return false;
-    }
-    /* the order is the precedence: the first that applies wins */
-    return standard_form_motive_match_pattern(prototype, candidate, out) ||
-           standard_form_motive_match_inversion(prototype, candidate, out) ||
-           standard_form_motive_match_retrograde(prototype, candidate, out) ||
-           standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
 }
 
 bool standard_form_motive_classify_match(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,

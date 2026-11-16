@@ -3,9 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-
-#include "rules/constraint.h"
-#include "rules/rule.h"
 #include "idea_label.h"
 #include "phrase_beginning.h"
 
@@ -31,29 +28,6 @@
  * A repetition of a basic idea counts as a basic idea again: it is the same material, often
  * varied, and a different contour makes it contrast instead (see sentence_rules.h).
  */
-
-typedef enum {
-    STANDARD_FORM_BEGINNING_RULE_CADENCE = 0,
-    STANDARD_FORM_BEGINNING_RULE_IDEAS,
-    STANDARD_FORM_BEGINNING_RULE_COMPOUND_BASIC_IDEA,
-    STANDARD_FORM_BEGINNING_RULE_CLASSIFY,
-    STANDARD_FORM_BEGINNING_RULE_COUNT
-} StandardFormBeginningRule;
-
-const Rule *standard_form_beginning_rule(StandardFormBeginningRule which);
-const Constraint *standard_form_beginning_constraint(StandardFormBeginningRule which);
-
-/* BEGINNING_CADENCE: true only for an antecedent. False for the others and for an invalid
-   beginning. */
-bool standard_form_beginning_ends_with_cadence(PhraseBeginning beginning);
-
-/* BEGINNING_IDEAS: the labels of the first and second idea. False, leaving *first and
-   *second untouched, for an invalid beginning. */
-bool standard_form_beginning_ideas(PhraseBeginning beginning, IdeaLabel *first, IdeaLabel *second);
-
-/* COMPOUND_BASIC_IDEA: true for an antecedent that lacks its cadence, which is how a
-   compound basic idea is built. Only valid beginnings count. */
-bool standard_form_beginning_is_cadence_free_antecedent(PhraseBeginning beginning);
 
 /*
  * BEGINNING_CLASSIFY: the beginning with this cadence and these two ideas. False, leaving

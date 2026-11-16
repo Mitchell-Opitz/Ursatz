@@ -1107,14 +1107,12 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         return ANALYSIS_CHAIN_ERR_ALLOC;
     }
     chain->config = *config;
-    if (config->inject_kernel_owners) {
-        if (chain->config.weighting.classifier == NULL) {
-            chain->config.weighting.classifier = chain_classify_tones;
-        }
-        if (chain->config.form.relation_match == NULL) {
-            chain->config.form.relation_match = chain_match_motive_relation;
-            chain->config.form.relation_context = &chain->relation_context;
-        }
+    if (config->inject_kernel_owners && chain->config.weighting.classifier == NULL) {
+        chain->config.weighting.classifier = chain_classify_tones;
+    }
+    if (chain->config.form.relation_match == NULL) {
+        chain->config.form.relation_match = chain_match_motive_relation;
+        chain->config.form.relation_context = &chain->relation_context;
     }
     chain->stages = stage_closure(config->stages);
     chain->notes = notes;

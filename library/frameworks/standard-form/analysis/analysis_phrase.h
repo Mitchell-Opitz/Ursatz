@@ -149,9 +149,6 @@ StandardFormAnalysisStatus standard_form_segment_phrases_on_grid(const StandardF
                                                                  const StandardFormPhraseGrid *grid, StandardFormPhrases *out);
 void standard_form_phrases_destroy(StandardFormPhrases *phrases);
 
-/* Reads the claim back out of a phrase Interpretation. False if it is not one. */
-bool standard_form_phrase_claim_read(const Interpretation *interpretation, StandardFormPhraseClaim *out);
-
 /* True for a phrase-goal cadence in this adapter's reading: the framework's goals, and AUTHENTIC_UNSPECIFIED. */
 bool standard_form_cadence_ends_phrase(CadenceType type);
 

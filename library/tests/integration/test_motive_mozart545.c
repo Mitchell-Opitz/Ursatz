@@ -1,6 +1,7 @@
 #include "standard-form/analysis/analysis_motive.h"
 #include "standard-harmony/harmony_cadence_rules.h"
 #include "ursatz_chain/form_bridge.h"
+#include "ursatz_chain/kernel_owners.h"
 #include "hand_cadences.h"
 #include "weighted_pipeline.h"
 
@@ -125,8 +126,12 @@ static void test_mozart_545(void) {
     assert(standard_form_segment_phrases(&build.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&build.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_identify_themes(&build.input, &phrases, &segmentation, NULL, &themes) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, chain_form_match_windows, NULL,
-                                      &motives) == STANDARD_FORM_ANALYSIS_OK);
+    ChainRelationContext relation_context = {true, 0, false}; /* C major */
+    StandardFormConfig motive_config = standard_form_config_default();
+    motive_config.relation_match = chain_match_motive_relation;
+    motive_config.relation_context = &relation_context;
+    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, &motive_config, chain_form_match_windows,
+                                      NULL, &motives) == STANDARD_FORM_ANALYSIS_OK);
     printf("  the adapter found %zu motive famil%s\n", motives.family_count, motives.family_count == 1 ? "y" : "ies");
 
     size_t families_found = 0;
@@ -161,7 +166,7 @@ static void test_mozart_545(void) {
             right += occurrence_right ? 1 : 0;
             if (!occurrence_right) {
                 printf("    %s: occurrence at measure %d beat %.2f (%s): %s\n", want->name, want->occurrences[o].measure,
-                       want->occurrences[o].beat, standard_form_motive_kind_name(want->occurrences[o].kind),
+                       want->occurrences[o].beat, motive_occurrence_kind_name((MotiveOccurrenceKind)want->occurrences[o].kind),
                        occurrence_found ? "found with another kind" : "not found");
             }
         }

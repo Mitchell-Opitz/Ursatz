@@ -63,31 +63,6 @@ bool standard_form_phrase_ideas(const StandardFormSegmentation *segmentation, in
     return found;
 }
 
-static bool read_claim(const Interpretation *interpretation, const char *type, void *out, size_t size) {
-    if (interpretation == NULL || out == NULL) {
-        return false;
-    }
-    const Value *claim = interpretation_claim(interpretation);
-    size_t content_size = 0;
-    if (claim == NULL || strcmp(value_type(claim), type) != 0) {
-        return false;
-    }
-    const void *content = value_content(claim, &content_size);
-    if (content == NULL || content_size != size) {
-        return false;
-    }
-    memcpy(out, content, size);
-    return true;
-}
-
-bool standard_form_idea_claim_read(const Interpretation *interpretation, StandardFormIdeaClaim *out) {
-    return read_claim(interpretation, STANDARD_FORM_IDEA_CLAIM_TYPE, out, sizeof(*out));
-}
-
-bool standard_form_subphrase_claim_read(const Interpretation *interpretation, StandardFormSubphraseClaim *out) {
-    return read_claim(interpretation, STANDARD_FORM_SUBPHRASE_CLAIM_TYPE, out, sizeof(*out));
-}
-
 /* The notes of [note_first, note_end) whose first measure lies in [first, last]: the contiguous range, empty when none. */
 static bool notes_in_measures(const StandardFormInput *input, int note_first, int note_end, int first, int last,
                               int *from, int *to) {

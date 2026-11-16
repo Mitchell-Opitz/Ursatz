@@ -90,7 +90,7 @@ typedef enum {
     STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT,
     STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT,   /* a missing id, span or event; an invalid type; uncertainty outside [0, 1]; notes out of order */
     STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG,
-    STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR, /* no boundary detector was injected */
+    STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR, /* no boundary detector, window matcher or relation matcher was injected */
     STANDARD_FORM_ANALYSIS_ERR_DETECTOR,    /* the injected detector failed */
     STANDARD_FORM_ANALYSIS_ERR_METER,       /* a time the MeterMap cannot place */
     STANDARD_FORM_ANALYSIS_ERR_ALLOC
@@ -158,8 +158,9 @@ typedef bool (*StandardFormRelationMatchFn)(const StandardFormMotiveShape *proto
  *   no_signal_uncertainty        the uncertainty of a phrase that ends with no cadence and no discontinuity, only at the end of
  *                                the input (default 0.5)
  *   motive_min_notes, motive_max_notes, varied_max_mismatch, include_bass   the motive analysis (analysis_motive.h): 3, 8, 1, false
- *   relation_match, relation_context   NULL (default): the matchers below. Set: it replaces the pattern, inversion, retrograde,
- *                                augmentation, diminution and fragment matchers, in their places in the match order; varied stays the framework's
+ *   relation_match, relation_context   NULL (default), and required by the motive analysis (NO_DETECTOR without it): the owner of every
+ *                                kind but varied (pattern, inversion, retrograde, augmentation, diminution and fragment matching); varied stays the
+ *                                framework's
  */
 typedef struct {
     size_t max_length_without_cadence;
@@ -173,7 +174,7 @@ typedef struct {
     size_t varied_max_mismatch;   /* interval mismatches a varied motive allows (default 1) */
     bool include_bass;            /* also look for motives in the bass line, apart from the soprano's (default false) */
     void *relation_context;
-    StandardFormRelationMatchFn relation_match; /* injected owner of every kind but varied (default NULL) */
+    StandardFormRelationMatchFn relation_match; /* injected owner of every kind but varied (NULL by default, required by the motive analysis) */
 } StandardFormConfig;
 
 StandardFormConfig standard_form_config_default(void);

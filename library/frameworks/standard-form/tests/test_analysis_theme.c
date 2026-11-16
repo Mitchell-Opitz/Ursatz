@@ -79,8 +79,6 @@ static void test_a_sentence(void) {
     assert(interpretation_framework_reference(theme->interpretation) != NULL);
     assert(structure_event_id_count(theme->shell) == 32);
     assert(fabs(theme->uncertainty - 0.1) < 1e-12); /* the cadence's; the similarity is a certain match */
-    StandardFormThemeClaim read;
-    assert(standard_form_theme_claim_read(theme->interpretation, &read) && read.form == (int)PHRASE_LEVEL_FORM_SENTENCE);
     finish(&r);
 }
 
