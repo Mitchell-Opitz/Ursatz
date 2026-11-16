@@ -11,14 +11,14 @@ What the Ursatz-Composer is, how its parts fit and where each is documented. Bac
 
 ## Where it sits
 
-| Direction | Repo | How it is pinned |
+| Direction | Part | How it is linked |
 |---|---|---|
-| Below | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) (kernel and frameworks) | git submodule `external/ursatz` (`49a5523`), linked PRIVATE |
-| Below | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md) (hearing, styles, corpus) | git submodule `external/ursatz-analyzer` (`4374060`), linked PRIVATE |
-| Vendored | cJSON 1.7.18 | `external/cjson`, added before the submodules |
-| Above | [Ursatz-GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI/blob/main/docs/architecture.md) | links `ursatz_composer` and includes only `composer_api.h` |
+| Below | The library in [`library/`](../../library/docs/architecture.md) (kernel and frameworks) | target `ursatz`, linked PRIVATE |
+| Below | The Analyzer in [`analyzer/`](../../analyzer/docs/architecture.md) (hearing, styles, corpus) | target `ursatz_analyzer`, linked PRIVATE |
+| Vendored | cJSON 1.7.18 | `third_party/cjson`, added by the root before the parts |
+| Above | The GUI in [`gui/`](../../gui/docs/architecture.md) | links `ursatz_composer` and includes only `composer_api.h` |
 
-The pins are checked by `scripts/check-pins.sh` (see [building.md](building.md#submodules)).
+All four are built by the root `CMakeLists.txt`, in that order.
 
 ## Module map
 

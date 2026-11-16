@@ -9,9 +9,8 @@ pieces as the MIDI files in Ursatz's `tests/fixtures/framework-v1-corpus`, and
 
 Provenance: derived from those MIDI files. Each file was imported with Ursatz's MIDIImporter (notes,
 the MIDI time signatures as a MeterMap, the MIDI key signature events) and written with
-`musicxml_export_write_score` from Ursatz main at `543ba31`, one part per piece (the export is newer
-than the commit the submodule is pinned to; the fixtures are plain files, so the pin does not matter
-to them). Three consequences:
+`musicxml_export_write_score` from Ursatz main at `543ba31`, one part per piece (the fixtures are plain
+files, so the library's present state does not matter to them). Three consequences:
 
 - Meter and key signatures are the MIDI file's. A MIDI file with no time signature is written with a
   4/4 the exporter marks as defaulted, which the importer reads as notated; Bach 114 has no key

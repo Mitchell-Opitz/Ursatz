@@ -11,8 +11,8 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 
 ## Where it sits
 
-- Below: the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) library, a git submodule at `external/ursatz`. `scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`. Details in [building.md](building.md#version-header-and-pin-check).
-- Above: the [Composer](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md) calls `composer_api.h`, and the [GUI](https://github.com/Mitchell-Opitz/Ursatz-GUI/blob/main/docs/architecture.md) calls the playback and score export entries and reads the analysis document. Both link `ursatz_analyzer`.
+- Below: the [Ursatz library](../../library/docs/architecture.md) in `library/`, built by the same root. `tools/ci/check-library-includes-analyzer.sh` allows only its staged public headers (see [building.md](building.md#library-include-check)).
+- Above: the [Composer](../../composer/docs/architecture.md) calls `composer_api.h`, and the [GUI](../../gui/docs/architecture.md) calls the playback and score export entries and reads the analysis document. Both link `ursatz_analyzer`.
 
 ## Module map
 
@@ -25,10 +25,9 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 | `src/util/` | Private JSON, file and misc helpers | [library.md](library.md) |
 | `src/main.c` | The CLI | [README](../README.md#usage) |
 | `schema/` | JSON Schemas of the document and the other JSON files | [analysis-document.md](analysis-document.md) |
-| `scripts/` | Pin, include, chain build, file scope and docs checks | [building.md](building.md) |
+| `../tools/ci/` (repository root) | Include, chain build, file scope and docs checks, shared by every part | [building.md](building.md) |
 | `tests/` | Unit, snapshot and CLI tests | [building.md](building.md#tests) |
 | `docs/analyses/` | What each analysis reads from the library and how | [harmony](analyses/harmony.md), [form and motive](analyses/form-and-motive.md), [rhythm, texture and voice leading](analyses/rhythm-texture-voice-leading.md) |
-| `external/` | The Ursatz submodule and vendored cJSON | [building.md](building.md) |
 
 ## Public API
 
@@ -65,8 +64,8 @@ The other public headers (analysis result, report, document, corpus, staleness, 
 
 | Name | File | Current value | Doc |
 | --- | --- | --- | --- |
-| `URSATZ_ANALYZER_VERSION`, `ursatz_analyzer_version()` | `<ursatz_analyzer/version.h>`, generated from `src/version.h.in` at configure time | 0.7.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-pin-check) |
-| `ursatz_analyzer_producer_key()` | `<ursatz_analyzer/version.h>`, the key from the generated `producer_key.h` | a hash of the sources that produce an analysis, 16 hex digits | [building.md](building.md#version-header-and-pin-check) |
+| `URSATZ_ANALYZER_VERSION`, `ursatz_analyzer_version()` | `<ursatz_analyzer/version.h>`, generated from `src/version.h.in` at configure time | 0.7.0 (from `project()` in `CMakeLists.txt`) | [building.md](building.md#version-header-and-producer-key) |
+| `ursatz_analyzer_producer_key()` | `<ursatz_analyzer/version.h>`, the key from the generated `producer_key.h` | a hash of the sources that produce an analysis, 16 hex digits | [building.md](building.md#version-header-and-producer-key) |
 | `URSATZ_ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/text_export.h` | 2 | [text-export.md](text-export.md) |
 | `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analysis_document.h` | 11 | [versions.md](analysis-document/versions.md) |
 | analysis document schema | `schema/analysis-document.v11.schema.json` | v11 | [analysis-document.md](analysis-document.md) |
@@ -76,7 +75,7 @@ A stored document is current only when its schema version, analyzer version and 
 
 ## What it calls below
 
-The Ursatz headers the Analyzer includes, found by `scripts/check-library-includes.sh`, which allows only staged public paths. All come from [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md).
+The Ursatz headers the Analyzer includes, found by `tools/ci/check-library-includes-analyzer.sh`, which allows only staged public paths. All come from the [library](../../library/docs/architecture.md).
 
 | Entry used | From which repo | For what |
 | --- | --- | --- |

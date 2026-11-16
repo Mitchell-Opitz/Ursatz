@@ -8,7 +8,7 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 
 ## Build and test
 
-- [building.md](building.md): build requirements, the test list, the include, file scope and pin checks, the theory taken from the library.
+- [building.md](building.md): build requirements, the test list, the include and file scope checks, the theory taken from the library.
 
 ## Using it
 

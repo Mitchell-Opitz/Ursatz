@@ -23,7 +23,7 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 | `src/style/` | Style models, blending, style checks and seeding from a corpus. |
 | `src/api/` | The composer API behind `composer_api.h`: one file for each request kind. |
 | `src/util/` | Private helpers the sources share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
-| `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and `scripts/check-cli-api.sh` (CI runs it) fails on any other include. |
+| `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and `tools/ci/check-cli-api.sh` (CI runs it) fails on any other include. |
 | `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share; `tests/snapshots/` holds the CLI snapshots. |
 | `schema/` | `plan.v2.schema.json`, the JSON Schema of the plan file, and `api/`, the JSON Schemas of the composer API requests and responses; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
 
@@ -54,5 +54,5 @@ not move while the CLI is moved onto the composer API:
 
 ## File scope state
 
-`scripts/check-statics.sh` fails when a file in `src/` declares a file-scope static variable that is not `const`, so the
+`tools/ci/check-statics.sh composer` fails when a file in `src/` declares a file-scope static variable that is not `const`, so the
 library is safe to link in process. Pass state through the caller's context. CI runs it after the build.

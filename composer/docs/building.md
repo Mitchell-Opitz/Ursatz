@@ -1,28 +1,15 @@
 # Building and library layout
 
-Build and test beyond the basic commands: the slow tests, the public header rule, the submodule pins and what the Composer takes from the library. Back to the [docs index](README.md).
+Build and test beyond the basic commands: the slow tests, the public header rule and what the Composer takes from the library. Back to the [docs index](README.md).
 
-cd Ursatz-Composer
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure -LE slow
+The Composer builds from the repository root ([README](../../README.md#build-and-test)): `cmake -S . -B build`,
+`cmake --build build -j`, then `ctest --test-dir build/composer --output-on-failure -LE slow` for the fast set. The slow
+tests (the grow fidelity sweep takes about 12 minutes alone, and several others run for tens of seconds in parallel) are
+left out of that command and of CI. Run them all, with plain `ctest --test-dir build/composer -j8 --output-on-failure`,
+before pushing a branch.
 
-parallel) are left out of that command and of CI. Run them all, with plain `ctest --test-dir build -j8
---output-on-failure`, before pushing a branch.
-
-If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`.
-
-
-## Submodules
-
-| Path | Pinned at |
-| --- | --- |
-| `external/ursatz` | Ursatz `main` at PR #195 (`d2b85ce`). |
-| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #73 (`168b7c2`), version 0.7.0. |
-
-cJSON 1.7.18 is vendored at `external/cjson` and added before the submodules, so the Analyzer reuses it. `scripts/check-pins.sh`
-fails when a pin is not on its remote's `main` or when one repository is pinned at two commits; CI runs it after the
-submodule checkout.
+The library, the Analyzer and cJSON are the root's targets, built from `library/`, `analyzer/` and `third_party/cjson`
+in the same tree, so there is nothing to pin or fetch.
 
 Theory comes from the frameworks (R-217): the Composer holds plan structure and composing decisions and asks
 standard-meter for the accented beats, standard-counterpoint for the melodic moves, standard-tonality for the scales and
@@ -31,10 +18,10 @@ cells per beat, the answer to a leap, a chord's member degree) stays in the Comp
 
 Library headers are included by their staged public paths only: kernel headers as `<time/meter_map.h>`, framework headers
 with their folder (`<standard-harmony/harmony_cadence_rules.h>`), Analyzer headers as `<ursatz_analyzer/...>`; Composer
-headers keep their own paths. `scripts/check-library-includes.sh` (run after the build, CI runs it) fails on an Ursatz
-header outside the staged public roots in `build/external/ursatz/public/manifest.txt`, an Analyzer header outside
-`external/ursatz-analyzer/include/ursatz_analyzer/`, any `*_internal.h` of either, or a CMake file that reads the
-`SOURCE_DIR` of an Ursatz or Analyzer target or a path under `external/ursatz/tests` or `external/ursatz-analyzer/src`.
+headers keep their own paths. `tools/ci/check-library-includes-composer.sh build` (run after the build, CI runs it) fails on an Ursatz
+header outside the staged public roots in `build/library/public/manifest.txt`, an Analyzer header outside
+`analyzer/include/ursatz_analyzer/`, any `*_internal.h` of either, or a CMake file that reads the
+`SOURCE_DIR` of an Ursatz or Analyzer target or a path under `library/tests` or `analyzer/src`.
 
 ## Library primitives
 

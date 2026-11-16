@@ -9,7 +9,7 @@ functions: it reads its arguments into a request, calls the API and prints the r
 This page covers what every entry shares, and indexes every entry: the core, export, the motive entries, variants, recognize, random motives, themes, pieces, the
 plan workflow, the material commands (progression, counterpoint, develop, grow), the vocabularies and request validation.
 Each entry has its request and response in a file under `docs/api/` (see [Entries](#entries)), an example in
-[examples](api/examples.md), and its JSON Schemas under `schema/api/` (draft 2020-12). The CLI (`cli/`) includes no header but `composer_api.h` (`scripts/check-cli-api.sh`, run by CI).
+[examples](api/examples.md), and its JSON Schemas under `schema/api/` (draft 2020-12). The CLI (`cli/`) includes no header but `composer_api.h` (`tools/ci/check-cli-api.sh`, run by CI).
 
 A minimal client in C is in [Using the API from C](#using-the-api-from-c).
 
@@ -76,7 +76,7 @@ In the library, `FillConfig`, `ComposeConfig` and `GrowConfig` carry `const Comp
 The engine reports through the engine job hook in `src/util/job.h`: `job_step(job, stage, done, total)` calls `progress` and
 returns whether the job is cancelled, and `job_cancelled(job)` asks `cancelled` alone. `fill_loop.c`, `compose_run.c`,
 `grow_run.c` and the API files use these two and nothing else; `api/api_internal.h` is for `src/api/` only
-(`scripts/check-layers.sh` in CI).
+(`tools/ci/check-layers.sh` in CI).
 
 ## Threading
 
@@ -151,20 +151,19 @@ include the one header.
 
 ### Linking
 
-An application that already has the `cjson`, `ursatz` and `ursatz_analyzer` targets adds those first and the Composer after
-them; the Composer adds a target only when it is not there, so the tree keeps one copy of each (pin all four repositories to
-the same commits, `scripts/check-pins.sh`):
+An application that vendors this repository adds the root's `third_party`, `library` and `analyzer` first and the Composer
+after them, so the tree has one copy of each target (`tests/consumer/CMakeLists.txt` is such an application):
 
 ```cmake
-add_subdirectory(external/cjson)
-add_subdirectory(external/ursatz)
-add_subdirectory(external/ursatz-analyzer)
+add_subdirectory(ursatz/third_party)
+add_subdirectory(ursatz/library)
+add_subdirectory(ursatz/analyzer)
 set(URSATZ_COMPOSER_BUILD_CLI OFF CACHE BOOL "")
-add_subdirectory(external/ursatz-composer)
+add_subdirectory(ursatz/composer)
 target_link_libraries(app PRIVATE ursatz_composer)
 ```
 
-`URSATZ_COMPOSER_BUILD_CLI` (on only when the Composer is the top project) builds the `ursatz-composer` command; the tests that
+`URSATZ_COMPOSER_BUILD_CLI` (on in the repository's root build) builds the `ursatz-composer` command; the tests that
 run it are registered only when it is built. `tests/consumer/` is such an application, built by the `consumer_build` test.
 
 This grows a theme from a motive and writes its MIDI file:
