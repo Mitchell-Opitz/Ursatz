@@ -24,7 +24,7 @@ again. `test_styles_route` uploads Clementi 36 and Mozart 545,
 tags them and builds styles from a tag, a collection and ids, then reads the
 model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
 `test_link_service` resolves each scope kind (a project through its subjects), runs the four link fixtures
-(`backend/tests/fixtures/links`, copied from the Analyzer's `tests/links`), checks that a second run over the same
+(`tests/fixtures/links` at the repository root), checks that a second run over the same
 scope compares nothing, analyzes a document without features again and reads an interrupted run as failed.
 `test_links_route` starts runs over HTTP, polls them to done, and covers the `409`, `400`, `404` and `422` answers,
 the list, delete and a piece's links.

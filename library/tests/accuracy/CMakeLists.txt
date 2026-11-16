@@ -6,21 +6,21 @@ ursatz_test(accuracy_romantext SOURCES test_romantext.c LIBS accuracy_support LA
 ursatz_test(accuracy_score_layout SOURCES test_score_layout.c LIBS accuracy_support LABELS accuracy)
 
 ursatz_test(accuracy_corpus_load SOURCES test_corpus_load.c LIBS accuracy_support ursatz_test_support
-    DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus" LABELS accuracy)
+    DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/accuracy-corpus" LABELS accuracy)
 
 # Every corpus chorale through the whole analysis chain to the form stage (P41 B6, R-396).
 ursatz_test(accuracy_chorale_form SOURCES test_chorale_form.c LIBS accuracy_support ursatz_test_support ursatz_chain standard_form
     standard_harmony common_practice_minimal standard_meter standard_tonality
-    DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus" VALGRIND LABELS accuracy)
+    DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/accuracy-corpus" VALGRIND LABELS accuracy)
 
 # The chain over the annotated corpus and the existing fixture tests, read through the harness. Each fixture
 # wrapper compiles one tests/integration test as it is (main renamed) in its own library, linked to what that test
 # links, because frameworks share header names (analysis_phrase.h is in more than one) and a translation unit must
 # see only the include directories of its own frameworks. The libraries link into the harness link-only.
 set(ACCURACY_FIXTURE_DEFINITIONS
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/galant"
+    URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations"
+    URSATZ_FIXTURE_DIR="${URSATZ_FIXTURES_DIR}/galant"
     URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 
 # accuracy_fixture(name test_file libs...): the test file with its `int main(void)` renamed to accuracy_run_<name>,
@@ -65,7 +65,7 @@ target_compile_options(accuracy_chain PRIVATE -UNDEBUG)
 ursatz_test_executable(accuracy_harness SOURCES accuracy_harness.c accuracy_report.c accuracy_gate.c fixtures.c
     LIBS accuracy_chain accuracy_fixture_cadences accuracy_fixture_form accuracy_fixture_texture
     accuracy_fixture_rhythm accuracy_fixture_melody accuracy_fixture_motive accuracy_fixture_phrase_model
-    accuracy_fixture_schema DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus"
+    accuracy_fixture_schema DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/accuracy-corpus"
     URSATZ_ACCURACY_DIR="${CMAKE_CURRENT_SOURCE_DIR}" URSATZ_ACCURACY_OUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 # The harness fails when an overall metric is more than the baseline's tolerance below tests/accuracy/baseline.json.
 ursatz_test(accuracy_harness TARGET accuracy_harness LABELS accuracy)

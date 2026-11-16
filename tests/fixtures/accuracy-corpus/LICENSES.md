@@ -2,7 +2,7 @@
 
 **Status: private use only. Review or replace before publishing, sharing or commercializing this repository.**
 
-Every file under `tests/accuracy/corpus/` is third-party material, copied byte for byte (nothing edited). It is
+Every file under `tests/fixtures/accuracy-corpus/` is third-party material, copied byte for byte (nothing edited). It is
 test data for the accuracy harness only and is not part of the library. The music (J. S. Bach, died 1750) is in the
 public domain; the encodings and analyses below are separate works with the status recorded here. Nothing with a
 known non-commercial or no-derivatives license is included (the Chorale-Corpus and Sapp kern editions, CC BY-NC-SA,

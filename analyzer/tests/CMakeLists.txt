@@ -353,7 +353,7 @@ ursatz_test(test_meter_check LIBS ursatz_analyzer analyzer_test_support cjson m
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" LABELS slow)
 
 ursatz_test(test_motive_links LIBS ursatz_analyzer analyzer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
-    DEFINITIONS URSATZ_LINKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/links"
+    DEFINITIONS URSATZ_LINKS_DIR="${URSATZ_FIXTURES_DIR}/links"
     URSATZ_LINKS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/motive_links_work" PROPERTIES RESOURCE_LOCK motive_links_work)
 if(URSATZ_VALGRIND)
     ursatz_test(test_motive_links_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
@@ -362,7 +362,7 @@ if(URSATZ_VALGRIND)
 endif()
 ursatz_test(test_cli_link_motives COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/links
+                 -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/links
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                  -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
@@ -407,5 +407,6 @@ ursatz_test(test_text_export_snapshots LIBS ursatz_analyzer analyzer_test_suppor
 
 ursatz_test(test_material_export LIBS ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")

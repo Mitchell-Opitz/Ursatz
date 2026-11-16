@@ -945,10 +945,10 @@ int main(void) {
   snprintf(bach_path, sizeof(bach_path), "%s/Bach 114.mid", fixtures);
 
   char folder[256] = "";
-  bool have_folder = first_corpus_folder(URSATZ_GUI_TEST_URSATZ_DIR "/tests/accuracy/corpus", folder, sizeof(folder));
+  bool have_folder = first_corpus_folder(URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/accuracy-corpus", folder, sizeof(folder));
   check(have_folder, "found the first accuracy corpus folder with a score.musicxml");
   char score_path[768];
-  snprintf(score_path, sizeof(score_path), URSATZ_GUI_TEST_URSATZ_DIR "/tests/accuracy/corpus/%s/score.musicxml",
+  snprintf(score_path, sizeof(score_path), URSATZ_GUI_TEST_URSATZ_DIR "/tests/fixtures/accuracy-corpus/%s/score.musicxml",
            folder);
 
   struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");

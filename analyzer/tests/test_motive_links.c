@@ -14,7 +14,7 @@
 #include "ursatz_test.h"
 
 /*
- * Motive links over the four pieces of tests/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
+ * Motive links over the four pieces of tests/fixtures/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
  * link by one step across keys, d (a's motive inverted) links to both, c (unrelated) is in no link. Checks the chain
  * replays from one prototype sketch to the other, the cache (a second run compares nothing; adding a piece compares only
  * the pairs with its families; another analyzer version empties it), the scope's errors and the JSON text.

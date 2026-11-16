@@ -11,13 +11,13 @@ ursatz_test(standard_meter_borrowed_rules SOURCES test_borrowed_rules.c LIBS sta
 ursatz_test(standard_meter_metric_position_rules SOURCES test_metric_position_rules.c LIBS standard_meter)
 
 ursatz_test(standard_meter_metric_position_integration SOURCES test_metric_position_integration.c LIBS standard_meter
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus")
 
 ursatz_test(standard_meter_segmentation_beat_grid SOURCES test_segmentation_beat_grid.c LIBS standard_meter)
 
 ursatz_test(standard_meter_adaptive_segmentation_eval SOURCES test_adaptive_segmentation_eval.c LIBS standard_meter ursatz_test_support
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
 
 ursatz_test(standard_meter_hemiola_rules SOURCES test_hemiola_rules.c LIBS standard_meter)
 

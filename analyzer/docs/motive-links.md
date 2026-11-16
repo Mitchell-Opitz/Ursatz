@@ -93,7 +93,7 @@ cannot be read or written.
 
 ## Measured time
 
-`tests/links` (four pieces of one motive family each) on the default build: 3 pairs compared in about 0.05 s, the same run
+`tests/fixtures/links` (four pieces of one motive family each) on the default build: 3 pairs compared in about 0.05 s, the same run
 from the cache in about 0.01 s (reading the four documents). A pair that is not a link and passes the gate costs up to
 about 330 ms, so a corpus costs at most `families x candidates` of those on a first run, and nothing for the pairs it has
 seen before.

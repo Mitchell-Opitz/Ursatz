@@ -19,7 +19,7 @@
  * must now import and export cleanly.
  */
 
-#define FIXTURE_PATH "../fixtures/framework-v1-corpus/Mozart 545.mid"
+#define FIXTURE_PATH URSATZ_FIXTURES_DIR "/framework-v1-corpus/Mozart 545.mid"
 
 int main(void) {
     size_t size = 0;

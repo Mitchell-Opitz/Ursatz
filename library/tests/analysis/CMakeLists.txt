@@ -22,38 +22,38 @@ ursatz_test(phrase_boundary_detection LIBS ursatz)
 ursatz_test(form_structure_detection LIBS ursatz)
 ursatz_test(thematic_return_detection LIBS ursatz)
 ursatz_test(field1_weighted_harmony LIBS ursatz_chain common_practice_minimal standard_meter
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
 
 ursatz_test(reference_harmony LIBS ursatz_chain common_practice_minimal standard_meter
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
 
 ursatz_test(reference_phrases LIBS ursatz_chain common_practice_minimal standard_meter ursatz_test_support
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" VALGRIND)
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus" VALGRIND)
 
 ursatz_test(reference_keys LIBS ursatz_chain common_practice_minimal standard_meter ursatz_test_support
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations" VALGRIND)
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations" VALGRIND)
 
 ursatz_test(reference_repeats LIBS ursatz_chain common_practice_minimal standard_meter ursatz_test_support
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" VALGRIND)
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus" VALGRIND)
 
 ursatz_test(two_voice_spans LIBS ursatz_chain common_practice_minimal standard_meter
-    DEFINITIONS URSATZ_TWO_VOICE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/two-voice")
+    DEFINITIONS URSATZ_TWO_VOICE_DIR="${URSATZ_FIXTURES_DIR}/two-voice")
 
 ursatz_test(outer_voices_written_parts LIBS ursatz_chain common_practice_minimal standard_meter standard_tonality
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
 
 ursatz_test(voice_separation_corpus LIBS standard_meter standard_tonality ursatz_test_support
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
 
 ursatz_test(key_regions_corpus LIBS ursatz_chain common_practice_minimal standard_meter
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
 
 ursatz_test(bach114_roman_numerals LIBS ursatz_chain standard_tonality common_practice_minimal standard_meter
-    DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")

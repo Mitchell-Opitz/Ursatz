@@ -114,7 +114,7 @@ static void test_import_memory(void) {
 static char *fixture(const char *name) {
     char path[512];
     size_t size = 0;
-    snprintf(path, sizeof(path), "%s/export/%s", URSATZ_ANALYZER_FIXTURE_DIR, name);
+    snprintf(path, sizeof(path), "%s/%s", URSATZ_ANALYZER_EXPORT_DIR, name);
     char *bytes = test_read_file(path, &size);
     CHECKF(bytes != NULL, "cannot read %s", path);
     return bytes;

@@ -22,7 +22,7 @@
  *   3. report.md and report.json are written to the report directory.
  *
  * Options:
- *   --corpus-dir DIR     the chorale corpus (default: tests/accuracy/corpus)
+ *   --corpus-dir DIR     the chorale corpus (default: tests/fixtures/accuracy-corpus)
  *   --report-dir DIR     where report.md and report.json go (default: the build directory)
  *   --update-baseline    also write baseline.json and copy the report next to it (tests/accuracy), recording this
  *                        run as the baseline. Raising the baseline is a deliberate act; see docs/testing/accuracy.md.
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
     char path[1100];
     snprintf(path, sizeof(path), "%s/report.md", report_dir);
     char note[256];
-    snprintf(note, sizeof(note), "Corpus: %zu chorales (`tests/accuracy/corpus/`, see `LICENSES.md` there).", chorales);
+    snprintf(note, sizeof(note), "Corpus: %zu chorales (`tests/fixtures/accuracy-corpus/`, see `LICENSES.md` there).", chorales);
     bool ok = accuracy_write_markdown(&report, path, note);
     snprintf(path, sizeof(path), "%s/report.json", report_dir);
     ok = accuracy_write_json(&report, path) && ok;

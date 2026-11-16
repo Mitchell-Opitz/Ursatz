@@ -92,7 +92,7 @@ Tests:
   motive, the same motive moved up, `I IV V I`, the results against `tests/snapshots/similar.reference.txt`, and the
   refusals. `test_cli_similar` checks the flags, the output and the exit codes, and validates the JSON against the
   schema (see below).
-- `test_motive_links`: the library over the four pieces of `tests/links`: a link across keys that replays from one
+- `test_motive_links`: the library over the four pieces of `tests/fixtures/links`: a link across keys that replays from one
   prototype sketch to the other, a family in no link, the groups, the cache (a second run compares nothing, adding a piece
   compares only its pairs, another analyzer version or other options empty it) and the scope's refusals, also under
   valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and

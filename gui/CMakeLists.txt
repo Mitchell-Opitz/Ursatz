@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # The Analyzer is the only analysis path (R-084); every Composer request calls the Composer API in process (R-219): the
 # quick ones on request threads, the long runs on the job queue's workers.
 # The library checkout, for tests that read its fixtures.
-set(URSATZ_GUI_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/library)
+set(URSATZ_GUI_LIBRARY_DIR ${CMAKE_SOURCE_DIR})
 
 add_subdirectory(backend)
 

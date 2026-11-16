@@ -24,7 +24,7 @@
  * assigned to distinct voices and export cleanly.
  */
 
-#define FIXTURE_PATH "../fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid"
+#define FIXTURE_PATH URSATZ_FIXTURES_DIR "/arpeggiation-investigation/Bach_Prelude_C_Major.mid"
 
 int main(void) {
     size_t size = 0;

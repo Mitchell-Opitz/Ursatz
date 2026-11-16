@@ -14,7 +14,7 @@ a second.
 
 ## What it measures
 
-**Chorales.** Each piece under `tests/accuracy/corpus/chorale-*` has a MusicXML score and a RomanText analysis. The
+**Chorales.** Each piece under `tests/fixtures/accuracy-corpus/chorale-*` has a MusicXML score and a RomanText analysis. The
 harness runs the chain on the score and compares it with the analysis over time.
 
 **Reference fixtures.** The existing accuracy checks under `tests/integration/` (cadences, phrase form, texture,
@@ -141,7 +141,7 @@ position outside the score is an error that names the line.
 
 ## Corpus and licenses
 
-`tests/accuracy/corpus/chorale-<number>-bwv<number>/{score.musicxml, analysis.rntxt}`: ten Bach chorales, scores from
+`tests/fixtures/accuracy-corpus/chorale-<number>-bwv<number>/{score.musicxml, analysis.rntxt}`: ten Bach chorales, scores from
 the music21 corpus and analyses from When in Rome, each copied unmodified. `corpus/LICENSES.md` records the source
 URL, commit, license text and status of every file. The music is public domain; the encodings and analyses are not
 all stated to be. **The corpus is for private use. Review or replace it before publishing the repository, sharing it

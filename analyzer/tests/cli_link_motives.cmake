@@ -1,5 +1,5 @@
-# Checks the --link-motives flag over a corpus run of the tests/links fixtures: text and JSON output, the cache, the
-# options and the exit codes. Run with cmake -P and -DCLI=<ursatz-analyzer>, -DFIXTURE_DIR=<tests/links>,
+# Checks the --link-motives flag over a corpus run of the tests/fixtures/links fixtures: text and JSON output, the cache, the
+# options and the exit codes. Run with cmake -P and -DCLI=<ursatz-analyzer>, -DFIXTURE_DIR=<tests/fixtures/links>,
 # -DPYTHON (empty skips validation), -DVALIDATOR, -DLINKS_SCHEMA, -DCACHE_SCHEMA and -DWORK_DIR=<scratch dir>.
 
 foreach(var CLI FIXTURE_DIR WORK_DIR)
