@@ -5,7 +5,7 @@ ursatz_test(midi_renderer LIBS ursatz VALGRIND)
 ursatz_test(midi_renderer_notes LIBS ursatz VALGRIND)
 ursatz_test(midi_renderer_errors LIBS ursatz VALGRIND)
 ursatz_test(midi_renderer_meta LIBS ursatz VALGRIND)
-ursatz_test(midi_renderer_roundtrip LIBS ursatz
+ursatz_test(midi_renderer_roundtrip LIBS ursatz ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" VALGRIND)
 ursatz_test(midi_key_signature LIBS ursatz
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" VALGRIND)
@@ -19,5 +19,5 @@ ursatz_test(midi_corpus_tempo LIBS ursatz
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" VALGRIND)
 ursatz_test(musicxml_importer LIBS ursatz
     DEFINITIONS URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml" VALGRIND)
-ursatz_test(musicxml_roundtrip LIBS ursatz
+ursatz_test(musicxml_roundtrip LIBS ursatz ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")

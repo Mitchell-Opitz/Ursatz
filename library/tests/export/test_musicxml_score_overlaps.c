@@ -2,6 +2,7 @@
 
 #include "io/midi_importer.h"
 #include "../io/midi_import_split.h"
+#include "ursatz_test.h"
 
 /*
  * musicxml_export_write_score writes chords and overlapping notes instead of refusing them: a chord as notes with
@@ -164,26 +165,12 @@ static void test_lane_voice_numbers(void) {
     bag_free(&bag);
 }
 
-static unsigned char *read_file(const char *directory, const char *name, size_t *size) {
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/%s", directory, name);
-    FILE *file = fopen(path, "rb");
-    assert(file != NULL);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    assert(length > 0);
-    unsigned char *data = (unsigned char *)malloc((size_t)length);
-    assert(data != NULL && fread(data, 1, (size_t)length, file) == (size_t)length);
-    fclose(file);
-    *size = (size_t)length;
-    return data;
-}
-
 /* The MIDI file with no staff or part arrays at all: every overlap of its implicit voices becomes a lane. */
 static void test_midi_without_staves(const char *name) {
     size_t size = 0;
-    unsigned char *data = read_file(URSATZ_CORPUS_DIR, name, &size);
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, name);
+    unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
     MusicXmlExportScore score;
     memset(&score, 0, sizeof(score));
     NoteEvent **events = NULL;
@@ -212,7 +199,7 @@ static void test_midi_without_staves(const char *name) {
 
 static void test_chords_backup_fixture(void) {
     size_t size = 0;
-    unsigned char *data = read_file(URSATZ_MUSICXML_DIR, "chords_backup.musicxml", &size);
+    unsigned char *data = (unsigned char *)test_must_read_file(URSATZ_MUSICXML_DIR "/chords_backup.musicxml", &size);
     MusicXmlImport first;
     assert(musicxml_import_buffer((const char *)data, size, &first) == MUSICXML_IMPORT_OK);
     MusicXmlExportScore score;

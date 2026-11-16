@@ -7,6 +7,7 @@
 #include "alignment.h"
 #include "io/musicxml_importer.h"
 #include "score_layout.h"
+#include "ursatz_test.h"
 
 /*
  * Every piece under corpus/ loads: its score imports, its measure layout is read, and its RomanText analysis
@@ -17,25 +18,11 @@
 
 #define ALIGNMENT_MINIMUM 0.85
 
-static char *read_file(const char *path, size_t *size) {
-    FILE *f = fopen(path, "rb");
-    assert(f != NULL);
-    fseek(f, 0, SEEK_END);
-    long length = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buffer = (char *)malloc((size_t)length + 1);
-    assert(buffer != NULL);
-    *size = fread(buffer, 1, (size_t)length, f);
-    buffer[*size] = '\0';
-    fclose(f);
-    return buffer;
-}
-
 static void check_piece(const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s/score.musicxml", URSATZ_ACCURACY_CORPUS_DIR, name);
     size_t score_size = 0;
-    char *score = read_file(path, &score_size);
+    char *score = test_must_read_file(path, &score_size);
 
     MusicXmlImport imported;
     assert(musicxml_import_buffer(score, score_size, &imported) == MUSICXML_IMPORT_OK);

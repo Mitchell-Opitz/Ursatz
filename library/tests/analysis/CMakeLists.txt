@@ -29,14 +29,14 @@ ursatz_test(reference_harmony LIBS ursatz_chain common_practice_minimal standard
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 
-ursatz_test(reference_phrases LIBS ursatz_chain common_practice_minimal standard_meter
+ursatz_test(reference_phrases LIBS ursatz_chain common_practice_minimal standard_meter ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" VALGRIND)
 
-ursatz_test(reference_keys LIBS ursatz_chain common_practice_minimal standard_meter
+ursatz_test(reference_keys LIBS ursatz_chain common_practice_minimal standard_meter ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations" VALGRIND)
 
-ursatz_test(reference_repeats LIBS ursatz_chain common_practice_minimal standard_meter
+ursatz_test(reference_repeats LIBS ursatz_chain common_practice_minimal standard_meter ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" VALGRIND)
 
 ursatz_test(two_voice_spans LIBS ursatz_chain common_practice_minimal standard_meter
@@ -46,7 +46,7 @@ ursatz_test(outer_voices_written_parts LIBS ursatz_chain common_practice_minimal
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 
-ursatz_test(voice_separation_corpus LIBS standard_meter standard_tonality
+ursatz_test(voice_separation_corpus LIBS standard_meter standard_tonality ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 

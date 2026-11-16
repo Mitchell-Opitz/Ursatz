@@ -1,30 +1,16 @@
 #include "midi_render_test_util.h"
+#include "ursatz_test.h"
 
 /*
  * Round trips: the reference pieces of the framework-v1-corpus (import -> render -> import) and synthetic pieces in
  * 3/4, 6/8, 12/8, with tempo changes and with a pickup. URSATZ_CORPUS_DIR is passed in by CMake.
  */
 
-static unsigned char *read_file(const char *name, size_t *size) {
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, name);
-    FILE *file = fopen(path, "rb");
-    assert(file != NULL);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    assert(length > 0);
-    unsigned char *data = (unsigned char *)malloc((size_t)length);
-    assert(data != NULL);
-    assert(fread(data, 1, (size_t)length, file) == (size_t)length);
-    fclose(file);
-    *size = (size_t)length;
-    return data;
-}
-
 static void round_trip_reference_piece(const char *name) {
     size_t size = 0;
-    unsigned char *data = read_file(name, &size);
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, name);
+    unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
 
     SmfHeader header;
     SmfTrack *tracks = NULL;

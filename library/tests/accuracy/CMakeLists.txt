@@ -5,11 +5,11 @@ ursatz_test(accuracy_romantext SOURCES test_romantext.c LIBS accuracy_support LA
 
 ursatz_test(accuracy_score_layout SOURCES test_score_layout.c LIBS accuracy_support LABELS accuracy)
 
-ursatz_test(accuracy_corpus_load SOURCES test_corpus_load.c LIBS accuracy_support
+ursatz_test(accuracy_corpus_load SOURCES test_corpus_load.c LIBS accuracy_support ursatz_test_support
     DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus" LABELS accuracy)
 
 # Every corpus chorale through the whole analysis chain to the form stage (P41 B6, R-396).
-ursatz_test(accuracy_chorale_form SOURCES test_chorale_form.c LIBS accuracy_support ursatz_chain standard_form
+ursatz_test(accuracy_chorale_form SOURCES test_chorale_form.c LIBS accuracy_support ursatz_test_support ursatz_chain standard_form
     standard_harmony common_practice_minimal standard_meter standard_tonality
     DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/corpus" VALGRIND LABELS accuracy)
 

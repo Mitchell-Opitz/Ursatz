@@ -17,6 +17,7 @@
 #include "ursatz_chain/analysis_chain.h"
 #include "../../tests/integration/reference_pieces.h"
 #include "../../tests/key_index_test_util.h"
+#include "ursatz_test.h"
 #include "chain_test_access.h"
 
 /*
@@ -27,14 +28,6 @@
  * mismatch readable. A change in a digest is a change in the analysis: if it is deliberate, capture the new values in their own commit with
  * `URSATZ_CHAIN_DUMP=1 test_analysis_chain` (R-015). Then a stage subset runs only what it needs.
  */
-
-#define CHECK(condition)                                                                                                   \
-    do {                                                                                                                   \
-        if (!(condition)) {                                                                                                \
-            fprintf(stderr, "%s:%d: %s: %s\n", __FILE__, __LINE__, context, #condition);                                    \
-            abort();                                                                                                       \
-        }                                                                                                                  \
-    } while (0)
 
 /* --- the pieces and their expected values --- */
 
@@ -138,28 +131,12 @@ typedef struct {
     AnalysisNoteSet set;
 } ChainInput;
 
-static unsigned char *read_file(const char *path, size_t *out_size) {
-    FILE *file = fopen(path, "rb");
-    assert(file != NULL);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    assert(length > 0);
-    unsigned char *data = (unsigned char *)malloc((size_t)length + 1);
-    assert(data != NULL);
-    size_t read_count = fread(data, 1, (size_t)length, file);
-    fclose(file);
-    assert(read_count == (size_t)length);
-    *out_size = (size_t)length;
-    return data;
-}
-
 static void chain_input_init(ChainInput *in, const Reference *ref) {
     memset(in, 0, sizeof(*in));
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, ref->midi);
     size_t size = 0;
-    unsigned char *data = read_file(path, &size);
+    unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
     assert(midi_importer_import_complete(data, size, &in->import) == MIDI_IMPORT_OK);
     free(data);
     assert(midi_import_analysis_notes(&in->import, &in->notes, &in->note_count));
@@ -545,16 +522,16 @@ static void digest_voice_leading(Digest *d, const AnalysisChain *c) {
 static void check_voice_leading(const char *context, const AnalysisChain *c) {
     const AnalysisChainVoiceLeading *vl = analysis_chain_voice_leading(c);
     size_t count = analysis_chain_segment_count(c);
-    CHECK(vl != NULL && vl->voice_count >= 2 && vl->voice_count <= 8);
-    CHECK(vl->motions.count > 0);
+    if (!CHECK(vl != NULL && vl->voice_count >= 2 && vl->voice_count <= 8)) abort();
+    if (!CHECK(vl->motions.count > 0)) abort();
     for (size_t i = 0; i < vl->motions.count; i++) {
-        CHECK(vl->motions.items[i].segment_to < count);
+        if (!CHECK(vl->motions.items[i].segment_to < count)) abort();
     }
     for (size_t i = 0; i < vl->perfects.count; i++) {
-        CHECK(vl->perfects.items[i].segment_to < count && vl->perfects.items[i].upper_voice < vl->perfects.items[i].lower_voice);
+        if (!CHECK(vl->perfects.items[i].segment_to < count && vl->perfects.items[i].upper_voice < vl->perfects.items[i].lower_voice)) abort();
     }
     for (size_t i = 0; i < vl->resolutions.count; i++) {
-        CHECK(vl->resolutions.items[i].segment_to < count && vl->resolutions.items[i].voice < vl->voice_count);
+        if (!CHECK(vl->resolutions.items[i].segment_to < count && vl->resolutions.items[i].voice < vl->voice_count)) abort();
     }
 }
 
@@ -577,36 +554,36 @@ static void check_subsets(const char *context, ChainInput *input, const Referenc
     config.stages = ANALYSIS_CHAIN_STAGE_CADENCES;
     AnalysisChain *cadences = NULL;
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &cadences) == ANALYSIS_CHAIN_OK);
-    CHECK(analysis_chain_segments(cadences) != NULL && analysis_chain_key_regions(cadences) != NULL && analysis_chain_chords(cadences) != NULL);
-    CHECK(analysis_chain_numerals(cadences) != NULL && analysis_chain_outer_voices(cadences) != NULL && analysis_chain_cadences(cadences) != NULL);
-    CHECK(analysis_chain_phrases(cadences) == NULL && analysis_chain_motives(cadences) == NULL && analysis_chain_meter(cadences) == NULL);
-    CHECK(analysis_chain_texture(cadences) == NULL && analysis_chain_voice_leading(cadences) == NULL && analysis_chain_melody(cadences) == NULL);
-    CHECK(analysis_chain_schemas(cadences) == NULL && analysis_chain_sequences(cadences) == NULL);
+    if (!CHECK(analysis_chain_segments(cadences) != NULL && analysis_chain_key_regions(cadences) != NULL && analysis_chain_chords(cadences) != NULL)) abort();
+    if (!CHECK(analysis_chain_numerals(cadences) != NULL && analysis_chain_outer_voices(cadences) != NULL && analysis_chain_cadences(cadences) != NULL)) abort();
+    if (!CHECK(analysis_chain_phrases(cadences) == NULL && analysis_chain_motives(cadences) == NULL && analysis_chain_meter(cadences) == NULL)) abort();
+    if (!CHECK(analysis_chain_texture(cadences) == NULL && analysis_chain_voice_leading(cadences) == NULL && analysis_chain_melody(cadences) == NULL)) abort();
+    if (!CHECK(analysis_chain_schemas(cadences) == NULL && analysis_chain_sequences(cadences) == NULL)) abort();
     /* with no form there is no second pass: the keys are the first pass's, and the cadences their own */
-    CHECK(analysis_chain_home_key(cadences) == config.home_key_index);
+    if (!CHECK(analysis_chain_home_key(cadences) == config.home_key_index)) abort();
     analysis_chain_destroy(cadences);
 
     config.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
     AnalysisChain *texture = NULL;
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &texture) == ANALYSIS_CHAIN_OK);
-    CHECK(analysis_chain_texture(texture) != NULL && analysis_chain_segments(texture) == NULL && analysis_chain_key_regions(texture) == NULL);
-    CHECK(stage_digest(STAGE_TEXTURE, texture) == stage_digest(STAGE_TEXTURE, full));
+    if (!CHECK(analysis_chain_texture(texture) != NULL && analysis_chain_segments(texture) == NULL && analysis_chain_key_regions(texture) == NULL)) abort();
+    if (!CHECK(stage_digest(STAGE_TEXTURE, texture) == stage_digest(STAGE_TEXTURE, full))) abort();
     analysis_chain_destroy(texture);
 
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     AnalysisChain *form = NULL;
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &form) == ANALYSIS_CHAIN_OK);
-    CHECK(stage_digest(STAGE_KEYS, form) == ref->digest[STAGE_KEYS]);
-    CHECK(stage_digest(STAGE_FORM, form) == ref->digest[STAGE_FORM]);
-    CHECK(analysis_chain_motives(form) != NULL && analysis_chain_meter(form) == NULL && analysis_chain_texture(form) == NULL);
+    if (!CHECK(stage_digest(STAGE_KEYS, form) == ref->digest[STAGE_KEYS])) abort();
+    if (!CHECK(stage_digest(STAGE_FORM, form) == ref->digest[STAGE_FORM])) abort();
+    if (!CHECK(analysis_chain_motives(form) != NULL && analysis_chain_meter(form) == NULL && analysis_chain_texture(form) == NULL)) abort();
     analysis_chain_destroy(form);
 
     /* the keys alone, and a run with refine_keys off, differ only in the second pass */
     config.stages = ANALYSIS_CHAIN_STAGE_KEYS;
     AnalysisChain *keys = NULL;
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &keys) == ANALYSIS_CHAIN_OK);
-    CHECK(analysis_chain_key_regions(keys) != NULL && analysis_chain_chords(keys) == NULL && analysis_chain_cadences(keys) == NULL);
-    CHECK(analysis_chain_key_regions(keys)->region_count >= 1);
+    if (!CHECK(analysis_chain_key_regions(keys) != NULL && analysis_chain_chords(keys) == NULL && analysis_chain_cadences(keys) == NULL)) abort();
+    if (!CHECK(analysis_chain_key_regions(keys)->region_count >= 1)) abort();
     analysis_chain_destroy(keys);
 }
 
@@ -617,22 +594,22 @@ static void check_segment_lines(const char *context, const AnalysisChain *c) {
     const ChainSegments *voice_segments = analysis_chain_voice_segments(c);
     OuterVoiceLines built;
     memset(&built, 0, sizeof(built));
-    CHECK(chain_build_segment_lines(voice_segments, voice_lines, segments, segments->count, &built) == CHAIN_INPUT_OK);
+    if (!CHECK(chain_build_segment_lines(voice_segments, voice_lines, segments, segments->count, &built) == CHAIN_INPUT_OK)) abort();
     const OuterVoiceLines *lines = &built;
-    CHECK(lines != NULL && voice_lines != NULL && lines->count == segments->count && voice_lines->count == voice_segments->count);
+    if (!CHECK(lines != NULL && voice_lines != NULL && lines->count == segments->count && voice_lines->count == voice_segments->count)) abort();
     for (size_t i = 0; i < lines->count; i++) {
         size_t v = 0;
         while (v + 1 < voice_segments->count && voice_segments->starts[v + 1] <= segments->starts[i] + 1e-12) {
             v++;
         }
         bool has = voice_segments->starts[0] <= segments->starts[i] + 1e-12;
-        CHECK(lines->soprano[i].present == (has && voice_lines->soprano[v].present));
-        CHECK(lines->bass[i].present == (has && voice_lines->bass[v].present));
+        if (!CHECK(lines->soprano[i].present == (has && voice_lines->soprano[v].present))) abort();
+        if (!CHECK(lines->bass[i].present == (has && voice_lines->bass[v].present))) abort();
         if (lines->soprano[i].present) {
-            CHECK(strcmp(entity_id_value(lines->soprano[i].note_id), entity_id_value(voice_lines->soprano[v].note_id)) == 0);
+            if (!CHECK(strcmp(entity_id_value(lines->soprano[i].note_id), entity_id_value(voice_lines->soprano[v].note_id)) == 0)) abort();
         }
         if (lines->bass[i].present) {
-            CHECK(strcmp(entity_id_value(lines->bass[i].note_id), entity_id_value(voice_lines->bass[v].note_id)) == 0);
+            if (!CHECK(strcmp(entity_id_value(lines->bass[i].note_id), entity_id_value(voice_lines->bass[v].note_id)) == 0)) abort();
         }
     }
     outer_voice_lines_destroy(&built);
@@ -640,17 +617,17 @@ static void check_segment_lines(const char *context, const AnalysisChain *c) {
 
 /* The stage inputs the chain keeps: all there after a full run, none on a NULL chain, and the ones the stages read are the ones they built. */
 static void check_stage_inputs(const char *context, const AnalysisChain *c) {
-    CHECK(analysis_chain_harmony_inputs(NULL) == NULL && analysis_chain_prepared_harmony(NULL) == NULL);
-    CHECK(analysis_chain_form_input(NULL) == NULL && analysis_chain_motive_input(NULL) == NULL && analysis_chain_voice_grid(NULL) == NULL);
-    CHECK(analysis_chain_galant_segments(NULL) == NULL);
-    CHECK(analysis_chain_harmony_inputs(c) != NULL && analysis_chain_prepared_harmony(c) != NULL);
-    CHECK(analysis_chain_form_input(c) != NULL && analysis_chain_motive_input(c) != NULL && analysis_chain_voice_grid(c) != NULL);
-    CHECK(analysis_chain_galant_segments(c) != NULL);
-    CHECK(analysis_chain_harmony_inputs(c)->count == analysis_chain_segment_count(c));
-    CHECK(analysis_chain_form_input(c)->input.finished && analysis_chain_motive_input(c)->input.finished);
-    CHECK(analysis_chain_form_input(c)->input.segment_count > 0 && analysis_chain_motive_input(c)->input.note_count > 0);
-    CHECK(analysis_chain_voice_grid(c)->grid.voice_count == analysis_chain_voice_leading(c)->voice_count);
-    CHECK(analysis_chain_galant_segments(c)->list.count > 0);
+    if (!CHECK(analysis_chain_harmony_inputs(NULL) == NULL && analysis_chain_prepared_harmony(NULL) == NULL)) abort();
+    if (!CHECK(analysis_chain_form_input(NULL) == NULL && analysis_chain_motive_input(NULL) == NULL && analysis_chain_voice_grid(NULL) == NULL)) abort();
+    if (!CHECK(analysis_chain_galant_segments(NULL) == NULL)) abort();
+    if (!CHECK(analysis_chain_harmony_inputs(c) != NULL && analysis_chain_prepared_harmony(c) != NULL)) abort();
+    if (!CHECK(analysis_chain_form_input(c) != NULL && analysis_chain_motive_input(c) != NULL && analysis_chain_voice_grid(c) != NULL)) abort();
+    if (!CHECK(analysis_chain_galant_segments(c) != NULL)) abort();
+    if (!CHECK(analysis_chain_harmony_inputs(c)->count == analysis_chain_segment_count(c))) abort();
+    if (!CHECK(analysis_chain_form_input(c)->input.finished && analysis_chain_motive_input(c)->input.finished)) abort();
+    if (!CHECK(analysis_chain_form_input(c)->input.segment_count > 0 && analysis_chain_motive_input(c)->input.note_count > 0)) abort();
+    if (!CHECK(analysis_chain_voice_grid(c)->grid.voice_count == analysis_chain_voice_leading(c)->voice_count)) abort();
+    if (!CHECK(analysis_chain_galant_segments(c)->list.count > 0)) abort();
 }
 
 /* The distinct soprano note ids of a line, runs counted once (a present entry on the id before it is the same note). */
@@ -671,33 +648,33 @@ static void check_voice_line_inputs(const char *context, const ChainInput *input
     const OuterVoiceLines *voice_lines = analysis_chain_outer_voices(c);
     OuterVoiceLines segment_lines;
     memset(&segment_lines, 0, sizeof(segment_lines));
-    CHECK(chain_build_segment_lines(analysis_chain_voice_segments(c), voice_lines, analysis_chain_segments(c), analysis_chain_segments(c)->count,
-                                    &segment_lines) == CHAIN_INPUT_OK);
+    if (!CHECK(chain_build_segment_lines(analysis_chain_voice_segments(c), voice_lines, analysis_chain_segments(c), analysis_chain_segments(c)->count,
+                                    &segment_lines) == CHAIN_INPUT_OK)) abort();
     size_t runs = soprano_runs(voice_lines);
-    CHECK(runs > soprano_runs(&segment_lines));
+    if (!CHECK(runs > soprano_runs(&segment_lines))) abort();
     outer_voice_lines_destroy(&segment_lines);
     const StandardCounterpointMelodyLine *melody = &analysis_chain_melody(c)->line.line;
     size_t present = 0;
     for (size_t i = 0; i < melody->count; i++) {
         present += melody->notes[i].present ? 1 : 0;
     }
-    CHECK(present == runs);
+    if (!CHECK(present == runs)) abort();
 
     ChainMeterInput meter;
     memset(&meter, 0, sizeof(meter));
     int last = ref->last_measure > 0 ? ref->last_measure : INT_MAX;
-    CHECK(chain_build_meter_input(&input->set, voice_lines, analysis_chain_segments(c), NULL, ref->first_measure, last, NULL, NULL, NULL, &meter) ==
-          CHAIN_INPUT_OK);
+    if (!CHECK(chain_build_meter_input(&input->set, voice_lines, analysis_chain_segments(c), NULL, ref->first_measure, last, NULL, NULL, NULL, &meter) ==
+          CHAIN_INPUT_OK)) abort();
     size_t soprano_notes = 0;
     for (size_t n = 0; n < meter.input.note_count; n++) {
         bool in_line = false;
         for (size_t i = 0; i < voice_lines->count && !in_line; i++) {
             in_line = voice_lines->soprano[i].present && strcmp(entity_id_value(voice_lines->soprano[i].note_id), meter.input.notes[n].id) == 0;
         }
-        CHECK((meter.input.notes[n].line == 0) == in_line);
+        if (!CHECK((meter.input.notes[n].line == 0) == in_line)) abort();
         soprano_notes += in_line ? 1 : 0;
     }
-    CHECK(soprano_notes > 0 && soprano_notes <= runs);
+    if (!CHECK(soprano_notes > 0 && soprano_notes <= runs)) abort();
     chain_meter_input_destroy(&meter);
 }
 
@@ -725,7 +702,7 @@ static void check_piece(const Reference *ref, bool dump) {
         }
         printf("}},\n");
     } else {
-        CHECK(segments == ref->segments && key_regions == ref->key_regions && cadences == ref->cadences && phrases == ref->phrases);
+        if (!CHECK(segments == ref->segments && key_regions == ref->key_regions && cadences == ref->cadences && phrases == ref->phrases)) abort();
         for (int s = 0; s < STAGE_COUNT; s++) {
             if (stage_digest(s, chain) != ref->digest[s]) {
                 fprintf(stderr, "%s: the %s stage no longer gives its expected results\n", context, STAGE_NAMES[s]);
@@ -758,7 +735,7 @@ int main(void) {
         check_piece(&REFERENCES[i], dump);
     }
     if (!dump) {
-        printf("test_analysis_chain: ok\n");
+        return test_finish("test_analysis_chain");
     }
     return 0;
 }

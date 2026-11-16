@@ -11,6 +11,7 @@
 #include "core/rational.h"
 #include "time/time_rational.h"
 #include "time/time_span.h"
+#include "ursatz_test.h"
 
 /*
  * Adaptive sonority segmentation against hand-marked chord changes in Bach 114, and corpus statistics.
@@ -26,25 +27,6 @@
  * URSATZ_CORPUS_DIR and URSATZ_ANNOTATION_DIR are passed in by CMake.
  */
 
-static unsigned char *read_file(const char *dir, const char *name, size_t *out_size) {
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/%s", dir, name);
-    FILE *file = fopen(path, "rb");
-    assert(file != NULL);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    assert(length > 0);
-    unsigned char *data = (unsigned char *)malloc((size_t)length + 1);
-    assert(data != NULL);
-    size_t read_count = fread(data, 1, (size_t)length, file);
-    fclose(file);
-    assert(read_count == (size_t)length);
-    data[length] = '\0';
-    *out_size = (size_t)length;
-    return data;
-}
-
 typedef struct {
     NoteEvent **events;
     PitchNumericValue **pitch_values;
@@ -54,7 +36,9 @@ typedef struct {
 
 static Imported import_corpus_file(const char *name) {
     size_t size = 0;
-    unsigned char *data = read_file(URSATZ_CORPUS_DIR, name, &size);
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, name);
+    unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
     Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
     assert(test_midi_import_parts(data, size, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
@@ -84,7 +68,7 @@ typedef struct {
 
 static Marks load_marks(void) {
     size_t size = 0;
-    unsigned char *text = read_file(URSATZ_ANNOTATION_DIR, "bach114_chord_changes.txt", &size);
+    unsigned char *text = (unsigned char *)test_must_read_file(URSATZ_ANNOTATION_DIR "/bach114_chord_changes.txt", &size);
     Marks marks = {(Rational *)calloc(256, sizeof(Rational)), 0};
     char *line = strtok((char *)text, "\n");
     while (line != NULL) {

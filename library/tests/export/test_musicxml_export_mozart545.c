@@ -7,6 +7,7 @@
 
 #include "io/midi_importer.h"
 #include "../io/midi_import_split.h"
+#include "ursatz_test.h"
 
 /*
  * Direct regression for the false-positive overlap bug: Mozart 545.mid
@@ -20,26 +21,9 @@
 
 #define FIXTURE_PATH "../fixtures/framework-v1-corpus/Mozart 545.mid"
 
-static unsigned char *read_fixture(const char *path, size_t *out_size) {
-    FILE *f = fopen(path, "rb");
-    assert(f != NULL);
-    assert(fseek(f, 0, SEEK_END) == 0);
-    long size = ftell(f);
-    assert(size > 0);
-    assert(fseek(f, 0, SEEK_SET) == 0);
-
-    unsigned char *buf = malloc((size_t)size);
-    assert(buf != NULL);
-    assert(fread(buf, 1, (size_t)size, f) == (size_t)size);
-    fclose(f);
-
-    *out_size = (size_t)size;
-    return buf;
-}
-
 int main(void) {
     size_t size = 0;
-    unsigned char *data = read_fixture(FIXTURE_PATH, &size);
+    unsigned char *data = (unsigned char *)test_must_read_file(FIXTURE_PATH, &size);
 
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;

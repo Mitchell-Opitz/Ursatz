@@ -7,7 +7,7 @@ ursatz_test(chain_inputs LIBS ursatz_chain VALGRIND)
 
 # The chain on four reference pieces against fixed expected results (captured while it was proven equal to the test glue it replaced).
 # 13 s measured (serial, 10 s rule); runs in the nightly.
-ursatz_test(analysis_chain LIBS ursatz_chain
+ursatz_test(analysis_chain LIBS ursatz_chain ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus" LABELS slow)
 
 # The smallest fixture only, to keep the memcheck run short.

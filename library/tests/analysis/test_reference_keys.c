@@ -9,6 +9,7 @@
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
 #include "../key_index_test_util.h"
+#include "ursatz_test.h"
 
 /*
  * The chain's keys against Michelle's readings of the Clementi and Mozart reference pieces (R-401): the keys are placed on the phrases of the
@@ -41,17 +42,6 @@ typedef struct {
 
 static const Piece CLEMENTI = {"Clementi 36", "Clementi 36.mid"};
 static const Piece MOZART = {"Mozart 545", "Mozart 545.mid"};
-
-static int failures = 0;
-
-#define CHECK(condition, ...)                \
-    do {                                     \
-        if (!(condition)) {                  \
-            printf("  FAIL " __VA_ARGS__);   \
-            printf("\n");                    \
-            failures++;                      \
-        }                                    \
-    } while (0)
 
 static double to_double(const MusicalTime *time) {
     return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
@@ -209,11 +199,11 @@ static void annotated_keys(const char *file, int *keys) {
 static void check_region(const CommonPracticeKeyRegions *regions, size_t index, const char *piece, int first, int last, int tonic,
                          CommonPracticeKeyMode mode) {
     if (index >= regions->region_count) {
-        CHECK(false, "%s: no key region %zu", piece, index + 1);
+        CHECKF(false, "%s: no key region %zu", piece, index + 1);
         return;
     }
     const CommonPracticeKeyRegion *r = &regions->regions[index];
-    CHECK(r->first_measure == first && r->last_measure == last && r->key_index == test_key_index_of(tonic, mode),
+    CHECKF(r->first_measure == first && r->last_measure == last && r->key_index == test_key_index_of(tonic, mode),
           "%s: key region %zu is %d-%d, key %d, expected %d-%d, key %d", piece, index + 1, r->first_measure, r->last_measure, r->key_index,
           first, last, test_key_index_of(tonic, mode));
 }
@@ -232,7 +222,7 @@ static void check_clementi(void) {
         printf(" %d-%d %s", regions->regions[i].first_measure, regions->regions[i].last_measure, key_name(regions->regions[i].key_index, name));
     }
     printf("\n");
-    CHECK(regions->region_count == 4, "Clementi: %zu key regions, expected 4", regions->region_count);
+    CHECKF(regions->region_count == 4, "Clementi: %zu key regions, expected 4", regions->region_count);
     check_region(regions, 0, "Clementi", 1, 7, 0, COMMON_PRACTICE_KEY_MAJOR);
     check_region(regions, 1, "Clementi", 8, 15, 7, COMMON_PRACTICE_KEY_MAJOR);
     check_region(regions, 2, "Clementi", 16, 23, 0, COMMON_PRACTICE_KEY_MINOR);
@@ -241,11 +231,11 @@ static void check_clementi(void) {
     /* the cadences and period of test_reference_phrases, unchanged */
     Claimed claimed[MAX_CADENCES];
     size_t count = claimed_of(chain, p.set.map, claimed);
-    CHECK(count == 4, "Clementi: %zu cadences claimed, expected 4", count);
-    CHECK(has_claimed(claimed, count, 4, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 4 beat 1");
-    CHECK(has_claimed(claimed, count, 8, CADENCE_TYPE_IMPERFECT_AUTHENTIC), "Clementi: no imperfect authentic cadence at measure 8 beat 1");
-    CHECK(has_claimed(claimed, count, 23, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 23 beat 1");
-    CHECK(has_claimed(claimed, count, 27, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 27 beat 1");
+    CHECKF(count == 4, "Clementi: %zu cadences claimed, expected 4", count);
+    CHECKF(has_claimed(claimed, count, 4, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 4 beat 1");
+    CHECKF(has_claimed(claimed, count, 8, CADENCE_TYPE_IMPERFECT_AUTHENTIC), "Clementi: no imperfect authentic cadence at measure 8 beat 1");
+    CHECKF(has_claimed(claimed, count, 23, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 23 beat 1");
+    CHECKF(has_claimed(claimed, count, 27, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 27 beat 1");
     bool alternative = false;
     for (size_t i = 0; i < count; i++) {
         if (claimed[i].measure == 23 && claimed[i].alternative_measure == 24 && claimed[i].alternative_beat_one &&
@@ -253,7 +243,7 @@ static void check_clementi(void) {
             alternative = true;
         }
     }
-    CHECK(alternative, "Clementi: the half cadence at measure 23 has no perfect authentic alternative at measure 24 beat 1");
+    CHECKF(alternative, "Clementi: the half cadence at measure 23 has no perfect authentic alternative at measure 24 beat 1");
     const StandardFormThemes *themes = analysis_chain_themes(chain);
     bool period = false;
     for (size_t i = 0; i < themes->count; i++) {
@@ -263,7 +253,7 @@ static void check_clementi(void) {
             period = true;
         }
     }
-    CHECK(period, "Clementi: no period of measures 1-8 with parts 1-4 and 5-8");
+    CHECKF(period, "Clementi: no period of measures 1-8 with parts 1-4 and 5-8");
 
     /* reported, not asserted (R-401) */
     printf("  reported: PAC m15 %s (m14 reads iii6 in G, not V7: the span seventh penalty, R-376)\n",
@@ -314,7 +304,7 @@ static void check_same_numerals(const char *piece, const int *measures, const ch
         a++;
         b++;
     }
-    CHECK(differing == 0 && compared > 0 && a >= count && b >= count, "%s: numerals of measures %d-%d differ from those %d measures earlier (%zu of %zu, first at "
+    CHECKF(differing == 0 && compared > 0 && a >= count && b >= count, "%s: numerals of measures %d-%d differ from those %d measures earlier (%zu of %zu, first at "
           "measure %d)", piece, first, last, shift, differing, compared, first_difference);
 }
 
@@ -324,14 +314,14 @@ static void check_same_cadences(const char *piece, const Claimed *claimed, size_
     for (size_t i = 0; i < count; i++) {
         if (claimed[i].measure >= first && claimed[i].measure <= last) {
             later++;
-            CHECK(has_claimed(claimed, count, claimed[i].measure - shift, claimed[i].type), "%s: %s at measure %d has no match at measure %d",
+            CHECKF(has_claimed(claimed, count, claimed[i].measure - shift, claimed[i].type), "%s: %s at measure %d has no match at measure %d",
                   piece, type_name(claimed[i].type), claimed[i].measure, claimed[i].measure - shift);
         }
         if (claimed[i].measure >= first - shift && claimed[i].measure <= last - shift) {
             earlier++;
         }
     }
-    CHECK(later == earlier, "%s: %zu cadences in measures %d-%d, %zu in the measures %d earlier", piece, later, first, last, earlier, shift);
+    CHECKF(later == earlier, "%s: %zu cadences in measures %d-%d, %zu in the measures %d earlier", piece, later, first, last, earlier, shift);
 }
 
 static void check_mozart(void) {
@@ -357,27 +347,27 @@ static void check_mozart(void) {
     const int g_minor = test_key_index_of(7, COMMON_PRACTICE_KEY_MINOR);
     const int f_major = test_key_index_of(5, COMMON_PRACTICE_KEY_MAJOR);
     const int c_major = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
-    CHECK(keys[57] == g_minor, "Mozart: measure 57 is not G minor");
-    CHECK(keys[102] == g_minor, "Mozart: measure 102 is not G minor");
+    CHECKF(keys[57] == g_minor, "Mozart: measure 57 is not G minor");
+    CHECKF(keys[102] == g_minor, "Mozart: measure 102 is not G minor");
     for (int m = 70; m <= 77; m++) {
-        CHECK(keys[m] == f_major, "Mozart: measure %d is not F major", m);
+        CHECKF(keys[m] == f_major, "Mozart: measure %d is not F major", m);
     }
     for (int m = 115; m <= 122; m++) {
-        CHECK(keys[m] == f_major, "Mozart: measure %d is not F major", m);
+        CHECKF(keys[m] == f_major, "Mozart: measure %d is not F major", m);
     }
     for (int m = 79; m <= 101; m++) {
-        CHECK(keys[m] == c_major, "Mozart: measure %d is not C major", m);
+        CHECKF(keys[m] == c_major, "Mozart: measure %d is not C major", m);
     }
     for (int m = 124; m <= 146; m++) {
-        CHECK(keys[m] == c_major, "Mozart: measure %d is not C major", m);
+        CHECKF(keys[m] == c_major, "Mozart: measure %d is not C major", m);
     }
 
     /* the repeats read the same: keys, numerals and cadences */
     for (int m = 1; m <= 28; m++) {
-        CHECK(keys[m + 28] == keys[m], "Mozart: measure %d reads a different key from measure %d", m + 28, m);
+        CHECKF(keys[m + 28] == keys[m], "Mozart: measure %d reads a different key from measure %d", m + 28, m);
     }
     for (int m = 57; m <= 101; m++) {
-        CHECK(keys[m + 45] == keys[m], "Mozart: measure %d reads a different key from measure %d", m + 45, m);
+        CHECKF(keys[m + 45] == keys[m], "Mozart: measure %d reads a different key from measure %d", m + 45, m);
     }
     int *measures = calloc(analysis_chain_segment_count(chain) + 1, sizeof(int));
     const char **labels = calloc(analysis_chain_segment_count(chain) + 1, sizeof(char *));
@@ -400,7 +390,7 @@ static void check_mozart(void) {
         agree += annotated[m] >= 0 && keys[m] == annotated[m] ? 1 : 0;
     }
     printf("  key by measure: %d of 146 agree with the annotation (%.1f%%)\n", agree, 100.0 * agree / 146.0);
-    CHECK(agree >= 124, "Mozart: %d of 146 measures agree with the annotation, expected at least 124", agree);
+    CHECKF(agree >= 124, "Mozart: %d of 146 measures agree with the annotation, expected at least 124", agree);
 
     /* reported, not asserted (R-401) */
     char got[16];
@@ -421,10 +411,5 @@ static void check_mozart(void) {
 int main(void) {
     check_clementi();
     check_mozart();
-    if (failures > 0) {
-        printf("test_reference_keys: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_reference_keys: ok\n");
-    return 0;
+    return test_finish("test_reference_keys");
 }
