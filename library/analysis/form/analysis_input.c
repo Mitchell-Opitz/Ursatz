@@ -72,13 +72,13 @@ static bool grow(void **items, size_t *capacity, size_t count, size_t item_size)
 }
 
 StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *input, const char *id,
-                                                           const TimeSpan *arrival, CadenceType type, int strength_rank,
+                                                           TimeSpan arrival, CadenceType type, int strength_rank,
                                                            bool post_cadential, double uncertainty) {
     if (input == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (arrival == NULL || !cadence_type_valid(type) || !(uncertainty >= 0.0 && uncertainty <= 1.0) ||
-        !score_time_span(arrival, NULL, NULL)) {
+    if (!cadence_type_valid(type) || !(uncertainty >= 0.0 && uncertainty <= 1.0) ||
+        !score_time_span(&arrival, NULL, NULL)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     if (!grow((void **)&input->cadences, &input->cadence_capacity, input->cadence_count, sizeof(StandardFormCadence))) {
@@ -89,7 +89,7 @@ StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *in
     if (!copy_id(cadence->id, sizeof(cadence->id), id)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
-    cadence->arrival = *arrival;
+    cadence->arrival = arrival;
     cadence->type = type;
     cadence->strength_rank = strength_rank;
     cadence->post_cadential = post_cadential;

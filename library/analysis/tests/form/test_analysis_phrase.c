@@ -264,8 +264,7 @@ static void test_bad_calls_are_refused(void) {
            STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG);
     assert(standard_form_segment_phrases(NULL, NULL, chain_form_boundary_detect, NULL, &phrases) ==
            STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
-    assert(standard_form_input_add_cadence(&f.input, "x", NULL, PAC, 3, false, 0.1) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
-    assert(standard_form_input_add_cadence(&f.input, "x", &f.note_spans[0], PAC, 3, false, 1.5) ==
+    assert(standard_form_input_add_cadence(&f.input, "x", f.note_spans[0], PAC, 3, false, 1.5) ==
            STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
     form_destroy(&f);
 

@@ -443,7 +443,7 @@ static AnalysisChain *run_analysis_chain(const WeightedPipeline *p, const MeterM
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
-        key_events[i].time = *event->position;
+        key_events[i].time = event->position;
         assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
     }
     AnalysisNoteSet set = {p->notes, p->note_count, map};

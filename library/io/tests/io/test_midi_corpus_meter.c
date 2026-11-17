@@ -38,7 +38,7 @@ static Imported import_corpus_file(const char *name) {
     fclose(file);
     assert(read_count == (size_t)length);
 
-    Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
+    Imported imported = {NULL, NULL, 0, {NULL, {{0, 1}}, NULL, 0}};
     assert(test_midi_import_parts(data, (size_t)length, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     assert(imported.count > 0);
@@ -112,7 +112,7 @@ static void check_piece(const char *name, const Signature *signatures, size_t re
     assert(imported.meter.conflict_count == 0);
 
     size_t measure_count = 0;
-    assert(meter_map_measure_count(map, imported.meter.end_time, &measure_count) == METER_MAP_OK);
+    assert(meter_map_measure_count(map, &imported.meter.end_time, &measure_count) == METER_MAP_OK);
     assert(measure_count == expected_measure_count);
     assert(measure_of_note(&imported, imported.count - 1) == expected_final_note_measure);
 

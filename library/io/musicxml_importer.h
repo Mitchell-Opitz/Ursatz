@@ -121,7 +121,7 @@ typedef enum {
 typedef struct {
     KeySignature *key_signature;  /* owned: built as midi_key_signature_build builds it */
     MusicXmlModeHint mode_hint;   /* next to the signature, never part of it */
-    MusicalTime *position;        /* owned; whole notes */
+    MusicalTime position;         /* whole notes */
     int8_t sharps_flats;          /* the raw <fifths>, -7..7 */
     size_t part_index;            /* the lowest part that declared it */
 } MusicXmlKeySignatureEvent;

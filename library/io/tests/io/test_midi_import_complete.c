@@ -225,7 +225,7 @@ static void assert_program(const MidiProgramChange *change, uint64_t tick, unsig
     assert(change->tick == tick);
     assert(change->channel == channel);
     assert(change->program == program);
-    assert_time(change->time, (long)tick, 4 * DIVISION);
+    assert_time(&change->time, (long)tick, 4 * DIVISION);
 }
 
 static void test_type0(void) {
@@ -252,7 +252,7 @@ static void test_type0(void) {
     assert(!meter_map_is_defaulted(import.meter.meter_map));
     const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter.meter_map, 0));
     assert(time_signature_top_number(signature) == 3 && time_signature_bottom_number(signature) == 4);
-    assert_time(import.meter.end_time, 960, 4 * DIVISION);
+    assert_time(&import.meter.end_time, 960, 4 * DIVISION);
 
     assert(tempo_map_region_count(import.tempo.tempo_map) == 1);
     assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo.tempo_map, 0)) == 600000);

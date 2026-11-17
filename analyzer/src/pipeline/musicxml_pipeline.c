@@ -201,12 +201,11 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
         }
     }
 
-    MusicalTime *end_time = notes_last_end((const NoteEvent *const *)import.events, import.count);
-    bool ok = end_time && take_key_signatures(&import, &notes.key_signature_events, &notes.key_signature) &&
+    MusicalTime end_time;
+    bool ok = notes_last_end((const NoteEvent *const *)import.events, import.count, &end_time) && take_key_signatures(&import, &notes.key_signature_events, &notes.key_signature) &&
               copy_parts(&import, &notes.source) &&
               copy_markings(&import, &notes.source);
     if (!ok) {
-        musical_time_destroy(end_time);
         midi_key_signature_events_destroy(&notes.key_signature_events);
         imported_notes_destroy(&notes);
         musicxml_import_destroy(&import);
@@ -219,7 +218,6 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
     notes.count = import.count;
     notes.streams = malloc((import.count > 0 ? import.count : 1) * sizeof *notes.streams);
     if (!notes.streams) {
-        musical_time_destroy(end_time);
         imported_notes_destroy(&notes);
         musicxml_import_destroy(&import);
         fprintf(stderr, "Error: out of memory importing '%s'\n", path);

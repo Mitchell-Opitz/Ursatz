@@ -69,7 +69,7 @@ typedef enum {
 typedef struct {
     KeySignature *key_signature;
     MidiModeHint mode_hint;
-    MusicalTime *position;
+    MusicalTime position;
     uint64_t tick;
     size_t track_index;
     int8_t sharps_flats; /* the raw sf byte */
@@ -92,7 +92,7 @@ typedef enum {
     MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_ALLOC
 } MidiKeySignatureScanAllResult;
 
-/* Destroys every event's KeySignature and position, and the list. NULL is a no-op. Leaves
+/* Destroys every event's KeySignature and the list. NULL is a no-op. Leaves
    events NULL and count 0. */
 void midi_key_signature_events_destroy(MidiKeySignatureEvents *events);
 

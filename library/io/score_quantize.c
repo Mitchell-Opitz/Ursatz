@@ -108,13 +108,9 @@ static int rational_distance(Rational a, Rational b, Rational *out) {
 /* The beat that holds time t: a simple meter's beat is its bottom unit, a compound meter's (6, 9 or 12 over 8 or 16)
    is three of them. A short measure's last beat ends at its barline. */
 static ScoreQuantizeResult locate_beat(const MeterMap *meter, Rational t, Span *beat) {
-    MusicalTime *time = NULL;
-    if (musical_time_from_rational(t, &time) != TIME_RATIONAL_OK) {
-        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
-    }
+    MusicalTime time = musical_time_of(t);
     int index = 0;
-    MeterMapResult status = meter_map_measure_index_at(meter, time, &index);
-    musical_time_destroy(time);
+    MeterMapResult status = meter_map_measure_index_at(meter, &time, &index);
     TimeSpan span;
     if (status != METER_MAP_OK || meter_map_measure_span(meter, index, &span) != METER_MAP_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;

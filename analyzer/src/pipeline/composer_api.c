@@ -90,12 +90,11 @@ static bool add_key_signature(ImportedNotes *notes, int tonic, bool minor) {
     if (!event) {
         return false;
     }
-    if (midi_key_signature_build(fifths, &event->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK ||
-        musical_time_create(0, 1, &event->position) != MUSICAL_TIME_OK) {
-        key_signature_destroy(event->key_signature);
+    if (midi_key_signature_build(fifths, &event->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK) {
         free(event);
         return false;
     }
+    event->position = musical_time_of(rational_ratio(0, 1));
     event->mode_hint = minor ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     event->tick = 0;
     event->track_index = 0;
@@ -178,8 +177,7 @@ static HearingNotes *hearing_notes_build(const AnalyzerHearing *hearing) {
     if (ok) {
         built->owns_meter = !hearing->meter || meter_map_is_defaulted(hearing->meter);
         notes->meter.meter_map = built->owns_meter ? copy_meter_map(NULL) : (MeterMap *)hearing->meter;
-        notes->meter.end_time = notes_last_end(hearing->events, hearing->count);
-        ok = notes->meter.meter_map && notes->meter.end_time;
+        ok = notes_last_end(hearing->events, hearing->count, &notes->meter.end_time) && notes->meter.meter_map;
     }
     if (ok && hearing->has_key) {
         ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_minor);

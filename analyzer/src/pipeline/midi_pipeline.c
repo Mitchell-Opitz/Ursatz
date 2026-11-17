@@ -347,7 +347,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     import.events = NULL;
     import.pitch_values = NULL;
     import.count = 0;
-    import.meter = (MidiMeterImport){NULL, NULL, NULL, 0};
+    import.meter = (MidiMeterImport){NULL, {{0, 1}}, NULL, 0};
     import.key_signatures = (MidiKeySignatureEvents){NULL, 0};
     import.tempo.tempo_map = NULL;
     midi_import_destroy(&import);

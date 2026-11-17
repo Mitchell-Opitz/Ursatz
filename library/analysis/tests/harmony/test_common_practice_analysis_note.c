@@ -31,7 +31,7 @@ static void test_member(void) {
     /* Attacked inside the segment and ending inside it: the whole note counts. */
     TimeSpan inside_span = make_span(1, 2, 4);
     AnalysisNote inside = {"inside", NULL, inside_span, 60, NULL, "voice-a", 0, 0, 1.0};
-    assert(common_practice_member_from_analysis_note(&inside, &segment, BEAT_STRENGTH_MEDIUM, &member));
+    assert(common_practice_member_from_analysis_note(&inside, segment, BEAT_STRENGTH_MEDIUM, &member));
     assert(strcmp(member.note_id, "inside") == 0);
     assert(member.pitch == 60);
     assert(!member.held);
@@ -43,7 +43,7 @@ static void test_member(void) {
     /* Sounding before the segment and ending inside it: held, with the partial overlap. */
     TimeSpan held_span = make_span(0, 2, 4);
     AnalysisNote held = {"held", NULL, held_span, 64, NULL, NULL, 0, 0, 1.0};
-    assert(common_practice_member_from_analysis_note(&held, &segment, BEAT_STRENGTH_STRONG, &member));
+    assert(common_practice_member_from_analysis_note(&held, segment, BEAT_STRENGTH_STRONG, &member));
     assert(member.held);
     near(member.duration, 0.25);
     near(member.onset, 0.0);
@@ -52,7 +52,7 @@ static void test_member(void) {
     /* Attacked inside and running past the end: the overlap is cut at the segment's end. */
     TimeSpan long_span = make_span(2, 6, 4);
     AnalysisNote running = {"running", NULL, long_span, 67, NULL, NULL, 0, 0, 1.0};
-    assert(common_practice_member_from_analysis_note(&running, &segment, BEAT_STRENGTH_WEAK, &member));
+    assert(common_practice_member_from_analysis_note(&running, segment, BEAT_STRENGTH_WEAK, &member));
     assert(!member.held);
     near(member.duration, 0.25);
     near(member.onset, 0.5);
@@ -60,7 +60,7 @@ static void test_member(void) {
     /* Covering the whole segment, from before to after: held, duration the segment's length. */
     TimeSpan cover_span = make_span(0, 4, 4);
     AnalysisNote cover = {"cover", NULL, cover_span, 55, NULL, NULL, 0, 0, 1.0};
-    assert(common_practice_member_from_analysis_note(&cover, &segment, BEAT_STRENGTH_WEAK, &member));
+    assert(common_practice_member_from_analysis_note(&cover, segment, BEAT_STRENGTH_WEAK, &member));
     assert(member.held);
     near(member.duration, 0.5);
 
@@ -68,21 +68,20 @@ static void test_member(void) {
     TimeSpan third_segment = make_span(0, 1, 3);
     TimeSpan third_span = make_span(0, 1, 6);
     AnalysisNote third = {"third", NULL, third_span, 62, NULL, NULL, 0, 0, 1.0};
-    assert(common_practice_member_from_analysis_note(&third, &third_segment, BEAT_STRENGTH_STRONG, &member));
+    assert(common_practice_member_from_analysis_note(&third, third_segment, BEAT_STRENGTH_STRONG, &member));
     near(member.duration, 1.0 / 6.0);
 
     /* Rejected: no overlap, unknown pitch, invalid note, NULL arguments; *out is left alone. */
     member.pitch = 99;
     TimeSpan after_span = make_span(3, 4, 4);
     AnalysisNote after = {"after", NULL, after_span, 60, NULL, NULL, 0, 0, 1.0};
-    assert(!common_practice_member_from_analysis_note(&after, &segment, BEAT_STRENGTH_WEAK, &member));
+    assert(!common_practice_member_from_analysis_note(&after, segment, BEAT_STRENGTH_WEAK, &member));
     AnalysisNote unknown = {"unknown", NULL, inside_span, ANALYSIS_PITCH_UNKNOWN, NULL, NULL, 0, 0, 1.0};
-    assert(!common_practice_member_from_analysis_note(&unknown, &segment, BEAT_STRENGTH_WEAK, &member));
+    assert(!common_practice_member_from_analysis_note(&unknown, segment, BEAT_STRENGTH_WEAK, &member));
     AnalysisNote invalid = {NULL, NULL, inside_span, 60, NULL, NULL, 0, 0, 1.0};
-    assert(!common_practice_member_from_analysis_note(&invalid, &segment, BEAT_STRENGTH_WEAK, &member));
-    assert(!common_practice_member_from_analysis_note(NULL, &segment, BEAT_STRENGTH_WEAK, &member));
-    assert(!common_practice_member_from_analysis_note(&inside, NULL, BEAT_STRENGTH_WEAK, &member));
-    assert(!common_practice_member_from_analysis_note(&inside, &segment, BEAT_STRENGTH_WEAK, NULL));
+    assert(!common_practice_member_from_analysis_note(&invalid, segment, BEAT_STRENGTH_WEAK, &member));
+    assert(!common_practice_member_from_analysis_note(NULL, segment, BEAT_STRENGTH_WEAK, &member));
+    assert(!common_practice_member_from_analysis_note(&inside, segment, BEAT_STRENGTH_WEAK, NULL));
     assert(member.pitch == 99);
 
 }

@@ -150,7 +150,7 @@ static Imported import_corpus_file(const char *name) {
     fclose(file);
     assert(read_count == (size_t)length);
 
-    Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
+    Imported imported = {NULL, NULL, 0, {NULL, {{0, 1}}, NULL, 0}};
     assert(test_midi_import_parts(data, (size_t)length, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     return imported;

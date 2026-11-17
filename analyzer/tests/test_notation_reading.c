@@ -171,8 +171,8 @@ static void test_scale_keeps_identity(void) {
     /* The end time doubles, and the existing 4/4 map keeps its meter, so there are half as many measures. */
     size_t old_measures = 0;
     size_t new_measures = 0;
-    assert(meter_map_measure_count(before.meter.meter_map, before.meter.end_time, &old_measures) == METER_MAP_OK);
-    assert(meter_map_measure_count(notes.meter.meter_map, notes.meter.end_time, &new_measures) == METER_MAP_OK);
+    assert(meter_map_measure_count(before.meter.meter_map, &before.meter.end_time, &old_measures) == METER_MAP_OK);
+    assert(meter_map_measure_count(notes.meter.meter_map, &notes.meter.end_time, &new_measures) == METER_MAP_OK);
     assert(new_measures >= 2 * old_measures - 1 && new_measures <= 2 * old_measures);
     assert(notes.source.reading_applied && notes.source.reading.scale_numerator == 2);
     assert(!before.source.reading_applied);
@@ -219,8 +219,8 @@ static void test_scales_markings(void) {
     }
     assert(later);
     for (size_t i = 0; i < notes.key_signature_events.count; i++) {
-        const MusicalTime *old = before.key_signature_events.events[i].position;
-        const MusicalTime *now = notes.key_signature_events.events[i].position;
+        const MusicalTime *old = &before.key_signature_events.events[i].position;
+        const MusicalTime *now = &notes.key_signature_events.events[i].position;
         assert(musical_time_numerator(now) * (long)musical_time_denominator(old) * 2 ==
                musical_time_numerator(old) * (long)musical_time_denominator(now));
     }
@@ -289,8 +289,8 @@ static Snapshot snapshot(const ImportedNotes *notes) {
     snapshot.count = notes->count;
     snapshot.first_start_numerator = musical_time_numerator(start);
     snapshot.first_start_denominator = musical_time_denominator(start);
-    snapshot.end_numerator = musical_time_numerator(notes->meter.end_time);
-    snapshot.end_denominator = musical_time_denominator(notes->meter.end_time);
+    snapshot.end_numerator = musical_time_numerator(&notes->meter.end_time);
+    snapshot.end_denominator = musical_time_denominator(&notes->meter.end_time);
     snapshot.regions = meter_map_region_count(notes->meter.meter_map);
     snapshot.pickup = meter_map_has_pickup(notes->meter.meter_map);
     snapshot.applied = notes->source.reading_applied;
@@ -361,7 +361,7 @@ static void test_bach_114_three_four(void) {
     assert(notation_reading_apply(&notes, &reading) == NOTATION_READING_OK);
 
     size_t measures = 0;
-    assert(meter_map_measure_count(notes.meter.meter_map, notes.meter.end_time, &measures) == METER_MAP_OK);
+    assert(meter_map_measure_count(notes.meter.meter_map, &notes.meter.end_time, &measures) == METER_MAP_OK);
     assert(measures == 64);
 
     const char *ids[2] = {first_copy, second_copy};

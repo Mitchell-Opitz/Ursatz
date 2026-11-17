@@ -555,10 +555,9 @@ static void test_import_with_meter_defaults_to_four_four_without_a_time_signatur
     assert(time_signature_bottom_number(meter_map_region_time_signature(region)) == 4);
     assert(meter.conflict_count == 0);
 
-    MusicalTime *quarter = NULL;
-    musical_time_create(1, 4, &quarter);
-    assert(musical_time_equals(meter.end_time, quarter));
-    musical_time_destroy(quarter);
+    MusicalTime quarter;
+    assert(musical_time_make(1, 4, &quarter) == MUSICAL_TIME_OK);
+    assert(musical_time_same(meter.end_time, quarter));
 
     midi_meter_import_destroy(&meter);
     free_import(events, pitch_values, count);

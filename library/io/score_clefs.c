@@ -109,13 +109,9 @@ static void measures_free(Measures *measures) {
 
 /* The measures of meter that cover everything up to extent, at least one. */
 static ScoreClefResult measures_lay(const MeterMap *meter, Rational extent, Measures *measures) {
-    MusicalTime *extent_time = NULL;
-    if (musical_time_from_rational(extent, &extent_time) != TIME_RATIONAL_OK) {
-        return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
-    }
+    MusicalTime extent_time = musical_time_of(extent);
     size_t count = 0;
-    MeterMapResult status = meter_map_measure_count(meter, extent_time, &count);
-    musical_time_destroy(extent_time);
+    MeterMapResult status = meter_map_measure_count(meter, &extent_time, &count);
     if (status != METER_MAP_OK) {
         return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
     }

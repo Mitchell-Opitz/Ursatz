@@ -56,10 +56,10 @@ typedef struct {
 /*
  * The member an AnalysisNote makes in a segment spanning `segment`, with the attack's beat strength the caller read. note_id, pitch
  * (midi) and voice_id carry over. held is true when the note starts before the segment; onset is the note's start and duration the
- * overlap of the note with the segment, both in whole notes as double (rational_to_double). False, *out untouched, for a NULL argument,
+ * overlap of the note with the segment, both in whole notes as double (rational_to_double). False, *out untouched, for a NULL note or out,
  * an invalid note, an unknown pitch or a note that does not overlap the segment.
  */
-bool common_practice_member_from_analysis_note(const AnalysisNote *note, const TimeSpan *segment, BeatStrength strength,
+bool common_practice_member_from_analysis_note(const AnalysisNote *note, TimeSpan segment, BeatStrength strength,
                                                CommonPracticeMember *out);
 
 typedef struct {

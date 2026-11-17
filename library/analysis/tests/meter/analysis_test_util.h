@@ -88,7 +88,7 @@ static inline void piece_note(Piece *piece, int line, long sn, unsigned long sd,
 static inline void piece_chord_change(Piece *piece, long n, unsigned long d) {
     char id[32];
     snprintf(id, sizeof(id), "c%d", piece->next_id++);
-    assert(standard_meter_input_add_chord_change(&piece->input, id, piece_time(piece, n, d)) == STANDARD_METER_ANALYSIS_OK);
+    assert(standard_meter_input_add_chord_change(&piece->input, id, *piece_time(piece, n, d)) == STANDARD_METER_ANALYSIS_OK);
 }
 
 static inline void piece_phrase(Piece *piece, long sn, unsigned long sd, long en, unsigned long ed, bool cadence,
@@ -98,7 +98,7 @@ static inline void piece_phrase(Piece *piece, long sn, unsigned long sd, long en
     snprintf(id, sizeof(id), "p%d", piece->next_id++);
     const TimeSpan *span = piece_span(piece, sn, sd, en, ed);
     const TimeSpan *arrival = cadence ? piece_span(piece, cn, cd, cen, ced) : NULL;
-    assert(standard_meter_input_add_phrase(&piece->input, id, span, arrival, expansion, expansion_measures, elided) ==
+    assert(standard_meter_input_add_phrase(&piece->input, id, *span, arrival, expansion, expansion_measures, elided) ==
            STANDARD_METER_ANALYSIS_OK);
 }
 

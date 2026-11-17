@@ -33,7 +33,7 @@ void imported_notes_destroy(ImportedNotes *notes) {
     }
     free(notes->source.dynamics);
     notes->source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
-    notes->meter = (MidiMeterImport){NULL, NULL, NULL, 0};
+    notes->meter = (MidiMeterImport){NULL, {{0, 1}}, NULL, 0};
     notes->events = NULL;
     notes->pitch_values = NULL;
     notes->streams = NULL;

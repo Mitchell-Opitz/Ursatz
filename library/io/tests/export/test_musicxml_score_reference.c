@@ -88,7 +88,7 @@ static void round_trip_piece(const char *name, const char *expected_beats) {
     MusicXmlImport first;
     memset(&first, 0, sizeof(first));
 
-    MidiMeterImport meter = {NULL, NULL, NULL, 0};
+    MidiMeterImport meter = {NULL, {{0, 1}}, NULL, 0};
     assert(test_midi_import_parts(data, size, &first.events, &first.pitch_values, &first.count, &meter, NULL) ==
            MIDI_IMPORT_OK);
     assert(first.count > 0);

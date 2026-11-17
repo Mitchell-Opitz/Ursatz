@@ -324,7 +324,7 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     assert(c->key_events != NULL);
     for (size_t i = 0; i < c->key_event_count; i++) {
         const MidiKeySignatureEvent *event = &c->p.import.key_signatures.events[i];
-        c->key_events[i].time = *event->position;
+        c->key_events[i].time = event->position;
         assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &c->key_events[i].key));
     }
     AnalysisNoteSet set = {c->p.notes, c->p.note_count, c->map};

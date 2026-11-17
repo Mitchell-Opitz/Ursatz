@@ -128,6 +128,12 @@ static inline MusicalTime *test_time(long numerator, unsigned long denominator) 
     return time;
 }
 
+static inline MusicalTime test_time_value(long long numerator, long long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, denominator, &time) == MUSICAL_TIME_OK);
+    return time;
+}
+
 /* A MeterMap from (signature, start) pairs given as plain values. */
 typedef struct {
     unsigned top;
@@ -380,7 +386,7 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
     NoteEvent **back_events = NULL;
     PitchNumericValue **back_pitches = NULL;
     size_t back_count = 0;
-    MidiMeterImport meter = {NULL, NULL, NULL, 0};
+    MidiMeterImport meter = {NULL, {{0, 1}}, NULL, 0};
     assert(test_midi_import_parts(data, size, &back_events, &back_pitches, &back_count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(back_count == count);
     TestNoteFact *original_facts = test_facts_of(events, pitches, count);
@@ -425,7 +431,7 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
     assert(test_midi_import_key_signatures(data, size, &back_keys) == MIDI_IMPORT_OK);
     assert(back_keys.count == key_count);
     for (size_t i = 0; i < key_count; i++) {
-        assert(musical_time_equals(back_keys.events[i].position, keys[i].position));
+        assert(musical_time_same(back_keys.events[i].position, keys[i].position));
         assert(back_keys.events[i].sharps_flats == keys[i].sharps_flats);
         assert(back_keys.events[i].mode_byte == keys[i].mode_byte);
     }

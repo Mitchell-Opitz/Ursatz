@@ -359,7 +359,7 @@ static cJSON *meter_json(DocBuild *build, const ImportedNotes *notes) {
     const TimeSignature *time_signature = meter_map_region_time_signature(meter_map_region(map, primary_index));
 
     size_t measure_count = 0;
-    if (meter_map_measure_count(map, notes->meter.end_time, &measure_count) != METER_MAP_OK) {
+    if (meter_map_measure_count(map, &notes->meter.end_time, &measure_count) != METER_MAP_OK) {
         return NULL;
     }
 
@@ -418,7 +418,7 @@ static cJSON *key_signatures_json(DocBuild *build, const ImportedNotes *notes) {
         int major = key_signature_major_tonic(event->sharps_flats);
         char *major_label = key_label_create(major, true);
         char *minor_label = key_label_create((major + 9) % 12, false);
-        Rational start = time_rational(build, event->position);
+        Rational start = time_rational(build, &event->position);
         cJSON *object = cJSON_CreateObject();
         bool ok = major_label && minor_label && object &&
                   json_add(object, "start", rational_json(start)) &&
@@ -903,7 +903,7 @@ static cJSON *notes_json(DocBuild *build, const ImportedNotes *notes, const Anal
             continue; /* the same signature repeated is not a new one (the library does not treat it as a boundary) */
         }
         size_t region_index = 0;
-        const AnalysisKeyRegion *region = region_at(build, report, time_rational(build, event->position), &region_index);
+        const AnalysisKeyRegion *region = region_at(build, report, time_rational(build, &event->position), &region_index);
         if (region && !key_fits_signature(region, event->sharps_flats) &&
             !json_append(list, disagreement_json("region_at_signature", (long)i, event, region_index, region))) {
             cJSON_Delete(list);

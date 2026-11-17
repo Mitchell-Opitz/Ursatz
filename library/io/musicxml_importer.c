@@ -1013,7 +1013,6 @@ void musicxml_import_destroy(MusicXmlImport *import) {
     free(import->dynamics_staff);
     for (size_t i = 0; i < import->key_signature_count; i++) {
         key_signature_destroy(import->key_signatures[i].key_signature);
-        musical_time_destroy(import->key_signatures[i].position);
     }
     free(import->key_signatures);
     clear_import(import);
@@ -1093,24 +1092,20 @@ static bool build_meter_map(Ctx *ctx) {
     }
 
     MeterMapChangePoint *points = (MeterMapChangePoint *)calloc(kept_count, sizeof(MeterMapChangePoint));
-    MusicalTime **starts = (MusicalTime **)calloc(kept_count, sizeof(MusicalTime *));
     TimeSignature **signatures = (TimeSignature **)calloc(kept_count, sizeof(TimeSignature *));
-    bool ok = points != NULL && starts != NULL && signatures != NULL;
+    bool ok = points != NULL && signatures != NULL;
     for (size_t i = 0; i < kept_count && ok; i++) {
         NoteValue *unit = NULL;
-        starts[i] = musical_time_from_rational_or_null(kept[i].position);
-        ok = starts[i] != NULL && note_value_create(kept[i].exponent, &unit) == NOTE_VALUE_OK &&
+        ok = note_value_create(kept[i].exponent, &unit) == NOTE_VALUE_OK &&
              time_signature_create(kept[i].beats, unit, &signatures[i]) == TIME_SIGNATURE_OK;
         note_value_destroy(unit);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
+        points[i].start = musical_time_of(kept[i].position);
     }
     ok = ok && meter_map_create(map_id, points, kept_count, &out->meter_map) == METER_MAP_OK;
-    for (size_t i = 0; starts != NULL && signatures != NULL && i < kept_count; i++) {
-        musical_time_destroy(starts[i]);
+    for (size_t i = 0; signatures != NULL && i < kept_count; i++) {
         time_signature_destroy(signatures[i]);
     }
-    free(starts);
     free(signatures);
     free(points);
     free(kept);
@@ -1136,22 +1131,18 @@ static bool build_key_signatures(Ctx *ctx) {
         bool duplicate = false;
         for (size_t k = 0; k < out->key_signature_count && !duplicate; k++) {
             const MusicXmlKeySignatureEvent *seen = &out->key_signatures[k];
-            MusicalTime *position = musical_time_from_rational_or_null(event->position);
-            duplicate = position != NULL && musical_time_equals(seen->position, position) &&
+            duplicate = musical_time_same(seen->position, musical_time_of(event->position)) &&
                         seen->sharps_flats == event->fifths && seen->mode_hint == event->hint;
-            musical_time_destroy(position);
         }
         if (duplicate) {
             continue;
         }
         MusicXmlKeySignatureEvent *slot = &out->key_signatures[out->key_signature_count];
-        slot->position = musical_time_from_rational_or_null(event->position);
+        slot->position = musical_time_of(event->position);
         slot->sharps_flats = (int8_t)event->fifths;
         slot->mode_hint = event->hint;
         slot->part_index = event->part;
-        if (slot->position == NULL || midi_key_signature_build(event->fifths, &slot->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK) {
-            musical_time_destroy(slot->position);
-            slot->position = NULL;
+        if (midi_key_signature_build(event->fifths, &slot->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK) {
             return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
         }
         out->key_signature_count++;
@@ -1211,9 +1202,8 @@ static bool build_tempo_map(Ctx *ctx) {
     qsort(ctx->tempos, ctx->tempo_count, sizeof(TempoEvent), compare_tempo_events);
     TempoEvent *kept = (TempoEvent *)calloc(ctx->tempo_count, sizeof(TempoEvent));
     TempoMapChangePoint *points = (TempoMapChangePoint *)calloc(ctx->tempo_count, sizeof(TempoMapChangePoint));
-    MusicalTime **starts = (MusicalTime **)calloc(ctx->tempo_count, sizeof(MusicalTime *));
     size_t kept_count = 0;
-    bool ok = kept != NULL && points != NULL && starts != NULL;
+    bool ok = kept != NULL && points != NULL;
     for (size_t i = 0; i < ctx->tempo_count && ok; i++) {
         if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, ctx->tempos[i].position) == 0) {
             if (kept[kept_count - 1].microseconds_per_quarter != ctx->tempos[i].microseconds_per_quarter) {
@@ -1224,16 +1214,10 @@ static bool build_tempo_map(Ctx *ctx) {
         kept[kept_count++] = ctx->tempos[i];
     }
     for (size_t i = 0; i < kept_count && ok; i++) {
-        starts[i] = musical_time_from_rational_or_null(kept[i].position);
-        ok = starts[i] != NULL;
-        points[i].start = *starts[i];
+        points[i].start = musical_time_of(kept[i].position);
         points[i].microseconds_per_quarter = kept[i].microseconds_per_quarter;
     }
     TempoMapResult made = ok ? tempo_map_create(map_id, points, kept_count, &out->tempo_map) : TEMPO_MAP_ERR_ALLOC;
-    for (size_t i = 0; starts != NULL && i < kept_count; i++) {
-        musical_time_destroy(starts[i]);
-    }
-    free(starts);
     free(points);
     free(kept);
     if (made != TEMPO_MAP_OK) {
@@ -1258,16 +1242,15 @@ static bool build_tempo_markings(Ctx *ctx) {
     for (size_t i = 0; i < ctx->marking_count; i++) {
         const MarkingEvent *event = &ctx->markings[i];
         TemporalAnchor *anchor = NULL;
-        Duration *unit = NULL;
+        Duration unit;
         MetronomeMarking *metronome = NULL;
         bool ok = temporal_anchor_create(musical_time_of(event->position), &anchor) == TEMPORAL_ANCHOR_OK;
         if (ok && event->has_metronome) {
-            ok = event->beat_unit.num <= (unsigned long long)LONG_MAX && event->beat_unit.den <= (unsigned long long)ULONG_MAX &&
-                 duration_create((long)event->beat_unit.num, (unsigned long)event->beat_unit.den, &unit) == DURATION_OK &&
-                 metronome_marking_create(unit, event->bpm_numerator, event->bpm_denominator, &metronome) ==
+            ok = event->beat_unit.num <= (unsigned long long)LLONG_MAX && event->beat_unit.den <= (unsigned long long)LLONG_MAX &&
+                 duration_make((long long)event->beat_unit.num, (long long)event->beat_unit.den, &unit) == DURATION_OK &&
+                 metronome_marking_create(&unit, event->bpm_numerator, event->bpm_denominator, &metronome) ==
                      METRONOME_MARKING_OK;
         }
-        duration_destroy(unit);
         TempoMarking *marking = NULL;
         ok = ok && tempo_marking_create(anchor, event->has_text ? event->text : NULL, metronome, &marking) ==
                        TEMPO_MARKING_OK;

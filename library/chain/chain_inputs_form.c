@@ -69,7 +69,7 @@ static ChainInputStatus add_cadences(ChainFormInput *build, const ChainSegments 
         }
         char id[32];
         snprintf(id, sizeof(id), "chain-%zu", i);
-        if (standard_form_input_add_cadence(&build->input, id, &span, c->type, harmony_cadence_strength(c->type), c->post_cadential,
+        if (standard_form_input_add_cadence(&build->input, id, span, c->type, harmony_cadence_strength(c->type), c->post_cadential,
                                             c->uncertainty) != STANDARD_FORM_ANALYSIS_OK) {
             return CHAIN_INPUT_ERR_BAD_NOTES;
         }
@@ -263,7 +263,7 @@ static ChainInputStatus add_grid_cadence(ChainFormInput *build, const ChainSegme
     const TimeSpan *window = sonority_time_window(segments->sonorities.items[arrival_first].sonority);
     char id[32];
     snprintf(id, sizeof(id), "grid-cadence-%zu", (*serial)++);
-    if (standard_form_input_add_cadence(&build->input, id, window, type, harmony_cadence_strength(type), post_cadential, uncertainty) !=
+    if (standard_form_input_add_cadence(&build->input, id, *window, type, harmony_cadence_strength(type), post_cadential, uncertainty) !=
         STANDARD_FORM_ANALYSIS_OK) {
         return CHAIN_INPUT_ERR_BAD_NOTES;
     }

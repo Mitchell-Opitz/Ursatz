@@ -152,7 +152,7 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
             }
             const AnalysisNote *note = &notes->notes[found->index];
             CommonPracticeMember *member = &members[next];
-            if (!common_practice_member_from_analysis_note(note, window, BEAT_STRENGTH_STRONG, member)) {
+            if (!common_practice_member_from_analysis_note(note, *window, BEAT_STRENGTH_STRONG, member)) {
                 status = CHAIN_INPUT_ERR_MEMBER;
                 break;
             }

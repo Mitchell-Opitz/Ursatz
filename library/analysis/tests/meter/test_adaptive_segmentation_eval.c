@@ -39,7 +39,7 @@ static Imported import_corpus_file(const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, name);
     unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
-    Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
+    Imported imported = {NULL, NULL, 0, {NULL, {{0, 1}}, NULL, 0}};
     assert(test_midi_import_parts(data, size, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     return imported;

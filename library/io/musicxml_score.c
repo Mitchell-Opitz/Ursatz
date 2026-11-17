@@ -461,21 +461,18 @@ static MusicXmlExportResult gather_keys(Prep *prep) {
     const MusicXmlExportScore *score = prep->score;
     for (size_t i = 0; i < score->key_signature_count; i++) {
         const MusicXmlExportKeySignature *key = &score->key_signatures[i];
-        if (key->position == NULL) {
-            return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
-        }
         if (key->part_index >= prep->part_count) {
             return MUSICXML_EXPORT_ERR_UNKNOWN_PART;
         }
-        if (key->sharps_flats < -7 || key->sharps_flats > 7 || musical_time_numerator(key->position) < 0) {
+        if (key->sharps_flats < -7 || key->sharps_flats > 7 || musical_time_numerator(&key->position) < 0) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
         Dir *dir = &prep->dirs[prep->dir_count++];
         dir->kind = DIR_KEY;
         dir->part = key->part_index;
         dir->staff = 1;
-        dir->raw_n = musical_time_numerator(key->position);
-        dir->raw_d = musical_time_denominator(key->position);
+        dir->raw_n = musical_time_numerator(&key->position);
+        dir->raw_d = musical_time_denominator(&key->position);
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -784,13 +781,12 @@ static MusicXmlExportResult build_measures(Prep *prep) {
     if (prep->dir_max_tick >= 0 && prep->dir_max_tick + 1 > covered) {
         covered = prep->dir_max_tick + 1;
     }
-    MusicalTime *extent_time = NULL;
-    if (musical_time_create((long)covered, (unsigned long)(4 * prep->divisions), &extent_time) != MUSICAL_TIME_OK) {
+    MusicalTime extent_time;
+    if (musical_time_make((long)covered, (long long)(4 * prep->divisions), &extent_time) != MUSICAL_TIME_OK) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     size_t count = 0;
-    MeterMapResult status = meter_map_measure_count(prep->meter, extent_time, &count);
-    musical_time_destroy(extent_time);
+    MeterMapResult status = meter_map_measure_count(prep->meter, &extent_time, &count);
     if (status != METER_MAP_OK) {
         return from_meter_status(status);
     }

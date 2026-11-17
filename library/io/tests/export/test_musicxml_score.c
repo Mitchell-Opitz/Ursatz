@@ -526,15 +526,13 @@ static void test_key_tempo_marking_and_dynamics(void) {
     TempoMap *tempo_map = tu_tempo_map(tempos, 2);
 
     MusicXmlExportKeySignature keys[2];
-    MusicalTime *key_at_start = tu_time(0, 1);
-    MusicalTime *key_mid = tu_time(1, 4);
     keys[0].sharps_flats = -1;
     keys[0].mode = MUSICXML_EXPORT_MODE_MAJOR;
-    keys[0].position = key_at_start;
+    assert(musical_time_make(0, 1, &keys[0].position) == MUSICAL_TIME_OK);
     keys[0].part_index = 0;
     keys[1].sharps_flats = 2;
     keys[1].mode = MUSICXML_EXPORT_MODE_MINOR;
-    keys[1].position = key_mid;
+    assert(musical_time_make(1, 4, &keys[1].position) == MUSICAL_TIME_OK);
     keys[1].part_index = 0;
 
     TempoMarking *markings[1] = {tu_tempo_marking(0, 1, "Allegro", 1, 4, 120, 1)};
@@ -570,8 +568,6 @@ static void test_key_tempo_marking_and_dynamics(void) {
     assert(!TU_HAS(xml, "<tie"));
     free(xml);
 
-    musical_time_destroy(key_at_start);
-    musical_time_destroy(key_mid);
     tempo_marking_destroy(markings[0]);
     dynamics_destroy(dynamics[0]);
     dynamics_destroy(dynamics[1]);

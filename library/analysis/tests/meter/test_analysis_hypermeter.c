@@ -130,7 +130,7 @@ static void test_bad_calls(void) {
     assert(found.phrase_count == 0 && found.hypermeasures == NULL);
     standard_meter_hypermeter_destroy(&found);
     /* an expansion needs a measure count and a count needs an expansion */
-    assert(standard_meter_input_add_phrase(&piece.input, "bad", piece_span(&piece, 0, 1, 1, 1), NULL, STANDARD_METER_EXPANSION_NONE,
+    assert(standard_meter_input_add_phrase(&piece.input, "bad", *piece_span(&piece, 0, 1, 1, 1), NULL, STANDARD_METER_EXPANSION_NONE,
                                            2, false) == STANDARD_METER_ANALYSIS_ERR_INVALID);
     piece_destroy(&piece);
 }

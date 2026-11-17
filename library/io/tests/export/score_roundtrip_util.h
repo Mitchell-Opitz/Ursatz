@@ -212,7 +212,7 @@ static inline void rt_assert_same(const MusicXmlImport *a, const MusicXmlImport 
 
     assert(a->key_signature_count == b->key_signature_count);
     for (size_t i = 0; i < a->key_signature_count; i++) {
-        assert(musical_time_equals(a->key_signatures[i].position, b->key_signatures[i].position));
+        assert(musical_time_same(a->key_signatures[i].position, b->key_signatures[i].position));
         assert(a->key_signatures[i].sharps_flats == b->key_signatures[i].sharps_flats);
         assert(a->key_signatures[i].mode_hint == b->key_signatures[i].mode_hint);
         assert(a->key_signatures[i].part_index == b->key_signatures[i].part_index);

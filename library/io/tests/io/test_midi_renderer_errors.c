@@ -170,20 +170,18 @@ static void test_map_and_key_limits(void) {
 
     MidiKeySignatureEvent key;
     memset(&key, 0, sizeof(key));
-    key.position = test_time(0, 1);
+    assert(musical_time_make(0, 1, &key.position) == MUSICAL_TIME_OK);
     key.sharps_flats = 8;
     assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, &key, 1, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NOT_REPRESENTABLE);
     key.sharps_flats = -8;
     assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, &key, 1, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NOT_REPRESENTABLE);
-    musical_time_destroy(key.position);
-    key.position = test_time(1, 7);
+    assert(musical_time_make(1, 7, &key.position) == MUSICAL_TIME_OK);
     key.sharps_flats = 1;
     assert(midi_renderer_render_with_options(NULL, NULL, 0, NULL, NULL, &key, 1, NULL, 480, &data, &size) ==
            MIDI_RENDER_ERR_NOT_REPRESENTABLE);
     assert(data == SENTINEL_DATA && size == SENTINEL_SIZE);
-    musical_time_destroy(key.position);
 }
 
 static void add_voices(TestNotes *notes, int voices) {

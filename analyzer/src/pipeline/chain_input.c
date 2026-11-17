@@ -65,10 +65,7 @@ static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
     }
     for (size_t i = 0; i < count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
-        if (event->position == NULL) {
-            return false;
-        }
-        out->key_events[i].time = *event->position;
+        out->key_events[i].time = event->position;
         if (!analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &out->key_events[i].key)) {
             return false;
         }

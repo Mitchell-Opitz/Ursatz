@@ -155,7 +155,7 @@ static void add_hand_phrase(StandardMeterInput *input, HandSpans *kept, int inde
     }
     char id[32];
     snprintf(id, sizeof(id), "phrase-%d", index);
-    assert(standard_meter_input_add_phrase(input, id, span, arrival_span, STANDARD_METER_EXPANSION_NONE, 0, elided) ==
+    assert(standard_meter_input_add_phrase(input, id, *span, arrival_span, STANDARD_METER_EXPANSION_NONE, 0, elided) ==
            STANDARD_METER_ANALYSIS_OK);
 }
 

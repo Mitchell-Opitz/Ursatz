@@ -97,7 +97,7 @@ typedef struct {
 static Imported import_track(const TrackBuilder *track) {
     static unsigned char file[8192];
     size_t size = build_smf(file, track);
-    Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
+    Imported imported = {NULL, NULL, 0, {NULL, {{0, 1}}, NULL, 0}};
     assert(test_midi_import_parts(file, size, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     return imported;
 }
@@ -135,7 +135,7 @@ static void assert_measure_span(const Imported *imported, int index, long sn, un
 
 static size_t measure_count_of(const Imported *imported) {
     size_t count = 0;
-    assert(meter_map_measure_count(imported->meter.meter_map, imported->meter.end_time, &count) == METER_MAP_OK);
+    assert(meter_map_measure_count(imported->meter.meter_map, &imported->meter.end_time, &count) == METER_MAP_OK);
     return count;
 }
 

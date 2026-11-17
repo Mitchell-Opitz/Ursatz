@@ -67,7 +67,7 @@ typedef enum {
 typedef struct {
     int sharps_flats;
     MusicXmlExportMode mode;
-    const MusicalTime *position; /* borrowed; whole notes */
+    MusicalTime position; /* whole notes */
     size_t part_index;
 } MusicXmlExportKeySignature;
 

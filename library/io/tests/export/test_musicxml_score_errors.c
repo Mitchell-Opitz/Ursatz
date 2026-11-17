@@ -166,14 +166,11 @@ static void test_unknown_part_and_staff(void) {
     assert(write_failing(&score) == MUSICXML_EXPORT_ERR_BAD_STAFF);
     dynamics_destroy(dynamics[0]);
 
-    MusicXmlExportKeySignature key = {0, MUSICXML_EXPORT_MODE_MAJOR, NULL, 5};
-    MusicalTime *at = tu_time(0, 1);
-    key.position = at;
+    MusicXmlExportKeySignature key = {0, MUSICXML_EXPORT_MODE_MAJOR, {{0, 1}}, 5};
     score = score_of(&bag);
     score.key_signatures = &key;
     score.key_signature_count = 1;
     assert(write_failing(&score) == MUSICXML_EXPORT_ERR_UNKNOWN_PART);
-    musical_time_destroy(at);
     bag_free(&bag);
 }
 
@@ -187,8 +184,7 @@ static void test_not_representable(void) {
 
     memset(&bag, 0, sizeof(bag));
     bag_add_note(&bag, "a", 0, 1, 1, 4, PITCH_LETTER_C, NULL);
-    MusicalTime *at = tu_time(0, 1);
-    MusicXmlExportKeySignature key = {8, MUSICXML_EXPORT_MODE_MAJOR, at, 0}; /* eight sharps */
+    MusicXmlExportKeySignature key = {8, MUSICXML_EXPORT_MODE_MAJOR, {{0, 1}}, 0}; /* eight sharps */
     score = score_of(&bag);
     score.key_signatures = &key;
     score.key_signature_count = 1;
@@ -197,7 +193,6 @@ static void test_not_representable(void) {
     assert(write_failing(&score) == MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE);
     key.sharps_flats = 7;
     assert(write_failing(&score) == MUSICXML_EXPORT_OK);
-    musical_time_destroy(at);
 
     /* a beat unit MusicXML has no name for (a third of a whole note), and a tempo that is not a terminating decimal */
     TempoMarking *markings[1] = {tu_tempo_marking(0, 1, NULL, 1, 3, 100, 1)};

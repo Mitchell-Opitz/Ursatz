@@ -8,7 +8,6 @@ library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of te
 library/model/time/duration.c duration_add  # the heap API no application calls since B2 commit 3 returned values from the beat grid; P58 B4 deletes it, tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/duration.c duration_same  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
-library/model/time/musical_time.c musical_time_same  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/knowledge_snapshot.c compare_slots  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
@@ -34,3 +33,8 @@ library/theory/knowledge/pitch_material.c pitch_material_contains  # the knowled
 library/theory/knowledge/pitch_material.c pitch_material_step  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/model/time/time_span.c time_span_boundary  # no application reads the boundary since P58 B3 commit 1 held spans as values; tests call it, until P58 B4
 library/model/time/time_span.c time_span_is_valid  # no application checks a span through the heap API since P58 B3 commit 1; tests call it, until P58 B4
+library/model/time/duration.c duration_create  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
+library/model/time/duration.c duration_destroy  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
+library/model/time/musical_time.c musical_time_add  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
+library/model/time/musical_time.c musical_time_equals  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
+library/model/time/time_rational.c musical_time_from_rational_or_null  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it

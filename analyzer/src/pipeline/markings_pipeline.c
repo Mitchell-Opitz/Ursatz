@@ -79,7 +79,7 @@ static bool collect_tempo(const ImportedNotes *notes, const char *framework, Ana
     if (!report->tempo_markings) {
         return false;
     }
-    const MusicalTime *piece_end = notes->meter.end_time;
+    const MusicalTime *piece_end = &notes->meter.end_time;
     for (size_t i = 0; i < source->tempo_marking_count; i++) {
         const ImportedTempoMarking *in = &source->tempo_markings[i];
         AnalysisTempoMarking *out = &report->tempo_markings[i];

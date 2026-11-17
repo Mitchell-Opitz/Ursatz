@@ -113,14 +113,14 @@ static inline int standard_meter_note_line(const AnalysisNote *note) {
 StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map,
                                                       const AnalysisNote *notes, size_t note_count);
 
-/* Adds a phrase; the spans are copied. ERR_INVALID for a bad id or span, a negative measure count, or a measure count with no expansion. */
-StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, const TimeSpan *span,
+/* Adds a phrase; the spans are copied (cadence_arrival is NULL for a phrase with none). ERR_INVALID for a bad id or span, a negative measure count, or a measure count with no expansion. */
+StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, TimeSpan span,
                                                             const TimeSpan *cadence_arrival,
                                                             StandardMeterExpansionKind expansion, int expansion_measures,
                                                             bool elided_with_next);
 
 StandardMeterAnalysisStatus standard_meter_input_add_chord_change(StandardMeterInput *input, const char *id,
-                                                                  const MusicalTime *time);
+                                                                  MusicalTime time);
 
 void standard_meter_input_destroy(StandardMeterInput *input);
 

@@ -141,7 +141,7 @@ static inline void form_cadence(FormFixture *f, const char *id, int m, double be
     long start = (long)((form_measure_start(f, m) + beat) * 4.0 + 0.5);
     long length = (long)(quarters * 4.0 + 0.5);
     f->cadence_spans[f->cadence_count] = form_span(start, start + length);
-    assert(standard_form_input_add_cadence(&f->input, id, &f->cadence_spans[f->cadence_count], type, rank, post_cadential,
+    assert(standard_form_input_add_cadence(&f->input, id, f->cadence_spans[f->cadence_count], type, rank, post_cadential,
                                            uncertainty) == STANDARD_FORM_ANALYSIS_OK);
     f->cadence_count++;
 }

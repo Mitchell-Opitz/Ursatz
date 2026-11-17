@@ -506,7 +506,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
         goto done;
     }
     for (size_t i = 0; i < r.key_event_count; i++) {
-        r.key_events[i].time = *r.imported.key_signatures[i].position;
+        r.key_events[i].time = r.imported.key_signatures[i].position;
         if (!analysis_key_from_fifths(r.imported.key_signatures[i].sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &r.key_events[i].key)) {
             goto done;
         }

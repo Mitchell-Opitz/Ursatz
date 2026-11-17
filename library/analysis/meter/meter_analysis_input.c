@@ -67,14 +67,14 @@ StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input,
     return STANDARD_METER_ANALYSIS_OK;
 }
 
-StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, const TimeSpan *span,
+StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, TimeSpan span,
                                                             const TimeSpan *cadence_arrival,
                                                             StandardMeterExpansionKind expansion, int expansion_measures,
                                                             bool elided_with_next) {
     if (input == NULL) {
         return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (!valid_id(id) || span == NULL || !time_span_holds(*span) ||
+    if (!valid_id(id) || !time_span_holds(span) ||
         (cadence_arrival != NULL && !time_span_holds(*cadence_arrival)) ||
         expansion < STANDARD_METER_EXPANSION_NONE || expansion > STANDARD_METER_EXPANSION_CONTRACTION ||
         expansion_measures < 0 || (expansion == STANDARD_METER_EXPANSION_NONE && expansion_measures != 0)) {
@@ -86,7 +86,7 @@ StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *
     StandardMeterPhrase *phrase = &input->phrases[input->phrase_count++];
     memset(phrase, 0, sizeof(*phrase));
     strcpy(phrase->id, id);
-    phrase->span = *span;
+    phrase->span = span;
     phrase->has_cadence_arrival = cadence_arrival != NULL;
     if (cadence_arrival != NULL) {
         phrase->cadence_arrival = *cadence_arrival;
@@ -98,11 +98,11 @@ StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *
 }
 
 StandardMeterAnalysisStatus standard_meter_input_add_chord_change(StandardMeterInput *input, const char *id,
-                                                                  const MusicalTime *time) {
+                                                                  MusicalTime time) {
     if (input == NULL) {
         return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (!valid_id(id) || time == NULL) {
+    if (!valid_id(id)) {
         return STANDARD_METER_ANALYSIS_ERR_INVALID;
     }
     if (!grow((void **)&input->chord_changes, &input->chord_change_capacity, input->chord_change_count,
@@ -112,7 +112,7 @@ StandardMeterAnalysisStatus standard_meter_input_add_chord_change(StandardMeterI
     StandardMeterChordChange *change = &input->chord_changes[input->chord_change_count++];
     memset(change, 0, sizeof(*change));
     strcpy(change->id, id);
-    change->time = *time;
+    change->time = time;
     return STANDARD_METER_ANALYSIS_OK;
 }
 

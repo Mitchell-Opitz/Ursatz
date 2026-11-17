@@ -332,13 +332,13 @@ static void test_key_signature_events(void) {
     assert(import.count == 6 && import.warnings.count == 0);
     assert(import.key_signature_count == 3); /* the second part's repeat of the first is not a new event */
     const MusicXmlKeySignatureEvent *events = import.key_signatures;
-    assert_time(events[0].position, 0, 1);
+    assert_time(&events[0].position, 0, 1);
     assert(events[0].sharps_flats == 0 && events[0].mode_hint == MUSICXML_MODE_HINT_MAJOR && events[0].part_index == 0);
     assert(key_signature_entry_count(events[0].key_signature) == 0);
-    assert_time(events[1].position, 1, 1);
+    assert_time(&events[1].position, 1, 1);
     assert(events[1].sharps_flats == -3 && events[1].mode_hint == MUSICXML_MODE_HINT_MINOR);
     assert(key_signature_entry_count(events[1].key_signature) == 3); /* B E A flats */
-    assert_time(events[2].position, 2, 1);
+    assert_time(&events[2].position, 2, 1);
     assert(events[2].sharps_flats == 2 && events[2].mode_hint == MUSICXML_MODE_HINT_UNKNOWN);
     assert(key_signature_entry_count(events[2].key_signature) == 2); /* F C sharps */
     musicxml_import_destroy(&import);

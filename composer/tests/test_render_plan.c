@@ -259,7 +259,7 @@ static void test_midi_round_trip(void) {
     assert(keys->count == 1);
     assert(keys->events[0].sharps_flats == -1);
     assert(keys->events[0].mode_hint == MIDI_MODE_HINT_MINOR);
-    assert(musical_time_numerator(keys->events[0].position) == 0);
+    assert(musical_time_numerator(&keys->events[0].position) == 0);
 
     midi_import_destroy(&import);
     free(data);

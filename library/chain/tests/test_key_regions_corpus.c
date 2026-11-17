@@ -189,7 +189,7 @@ static void report_piece(const char *label, const char *file, const char *annota
         (CommonPracticeKeySignatureEvent *)calloc(scanned.count + 1, sizeof(CommonPracticeKeySignatureEvent));
     assert(events != NULL);
     for (size_t i = 0; i < scanned.count; i++) {
-        events[i].position = *scanned.events[i].position;
+        events[i].position = scanned.events[i].position;
         events[i].sharps_flats = scanned.events[i].sharps_flats;
     }
 

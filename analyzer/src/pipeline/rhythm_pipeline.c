@@ -225,7 +225,7 @@ static bool build_chord_changes(RhythmBuild *build, const AnalysisReport *report
         const MusicalTime *time = keep_time(build, entry->time_numerator, entry->time_denominator);
         char id[48];
         snprintf(id, sizeof(id), "chord-change-%zu", i);
-        if (!time || standard_meter_input_add_chord_change(&build->input, id, time) != STANDARD_METER_ANALYSIS_OK) {
+        if (!time || standard_meter_input_add_chord_change(&build->input, id, *time) != STANDARD_METER_ANALYSIS_OK) {
             free(change);
             return false;
         }
@@ -272,7 +272,7 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
         }
         char id[48];
         snprintf(id, sizeof(id), "phrase-%zu", i);
-        if (!span || standard_meter_input_add_phrase(&build->input, id, span, arrival, expansion, measures, false) !=
+        if (!span || standard_meter_input_add_phrase(&build->input, id, *span, arrival, expansion, measures, false) !=
                          STANDARD_METER_ANALYSIS_OK) {
             return false;
         }

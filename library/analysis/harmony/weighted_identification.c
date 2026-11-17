@@ -417,16 +417,16 @@ unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chor
     return mask;
 }
 
-bool common_practice_member_from_analysis_note(const AnalysisNote *note, const TimeSpan *segment, BeatStrength strength,
+bool common_practice_member_from_analysis_note(const AnalysisNote *note, TimeSpan segment, BeatStrength strength,
                                                CommonPracticeMember *out) {
-    if (note == NULL || segment == NULL || out == NULL || !analysis_note_valid(note) ||
+    if (note == NULL || out == NULL || !analysis_note_valid(note) ||
         note->midi == ANALYSIS_PITCH_UNKNOWN) {
         return false;
     }
     Rational onset = note->span.start.value;
     Rational release = note->span.end.value;
-    Rational from = segment->start.value;
-    Rational to = segment->end.value;
+    Rational from = segment.start.value;
+    Rational to = segment.end.value;
     Rational start = rational_cmp(onset, from) > 0 ? onset : from;
     Rational stop = rational_cmp(release, to) < 0 ? release : to;
     Rational overlap;

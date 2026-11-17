@@ -103,7 +103,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
         }
         char id[48];
         snprintf(id, sizeof(id), "chord-change-%zu", s);
-        if (standard_meter_input_add_chord_change(&build.input, id, start) != STANDARD_METER_ANALYSIS_OK) {
+        if (standard_meter_input_add_chord_change(&build.input, id, *start) != STANDARD_METER_ANALYSIS_OK) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
         }
     }
@@ -125,7 +125,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
         }
         char id[32];
         snprintf(id, sizeof(id), "phrase-%zu", i);
-        if (standard_meter_input_add_phrase(&build.input, id, &phrase->span, arrival, expansion, measures, false) !=
+        if (standard_meter_input_add_phrase(&build.input, id, phrase->span, arrival, expansion, measures, false) !=
             STANDARD_METER_ANALYSIS_OK) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
         }

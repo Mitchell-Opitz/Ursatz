@@ -73,7 +73,7 @@ typedef enum {
    result). Cadences are added after and owned; bass_notes and degrees are set by the caller before finish. */
 void standard_form_input_init(StandardFormInput *input, const MeterMap *map, const AnalysisNote *notes, size_t note_count);
 StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *input, const char *id,
-                                                           const TimeSpan *arrival, CadenceType type, int strength_rank,
+                                                           TimeSpan arrival, CadenceType type, int strength_rank,
                                                            bool post_cadential, double uncertainty);
 /* Checks the notes (each with an event, a valid span, a non-empty id under 64 characters and a known pitch; starts not decreasing;
    the bass line the same) and the degrees (0 to 7), and sorts the cadences by arrival. BAD_INPUT for what it cannot read. Call once,
