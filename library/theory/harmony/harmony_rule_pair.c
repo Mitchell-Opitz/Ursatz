@@ -17,7 +17,7 @@ bool harmony_build_rule_pair(const char *name, ConstraintType type, ConstraintEv
 
     char id_value[256];
 
-    snprintf(id_value, sizeof(id_value), "scale-rule-%s", name);
+    snprintf(id_value, sizeof(id_value), "standard-harmony-rule-%s", name);
     EntityID *rule_id;
     if (entity_id_create(id_value, &rule_id) != ENTITY_ID_OK) {
         return false;
@@ -28,7 +28,7 @@ bool harmony_build_rule_pair(const char *name, ConstraintType type, ConstraintEv
         return false;
     }
 
-    snprintf(id_value, sizeof(id_value), "scale-constraint-%s", name);
+    snprintf(id_value, sizeof(id_value), "standard-harmony-constraint-%s", name);
     EntityID *constraint_id;
     if (entity_id_create(id_value, &constraint_id) != ENTITY_ID_OK) {
         rule_destroy(rule);

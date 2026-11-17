@@ -26,8 +26,8 @@ typedef struct {
 } HarmonyRulePair;
 
 /*
- * Builds the pair with ids "scale-rule-<name>" and
- * "scale-constraint-<name>"; the constraint has the given type
+ * Builds the pair with ids "standard-harmony-rule-<name>" and
+ * "standard-harmony-constraint-<name>"; the constraint has the given type
  * (never WEIGHTED: no weight is supplied). Returns false (leaving *out
  * untouched) on allocation failure or a WEIGHTED type. evaluate is the
  * callback registered on the Constraint (constraint_set_evaluate_fn); NULL
