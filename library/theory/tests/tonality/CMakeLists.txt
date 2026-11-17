@@ -30,3 +30,5 @@ ursatz_test(standard_tonality_degree_of_semitone SOURCES test_degree_of_semitone
 ursatz_test(common_practice_materials SOURCES test_common_practice_materials.c LIBS ursatz_theory)
 
 ursatz_test(tonal_key_materials SOURCES test_tonal_key_materials.c LIBS ursatz_theory)
+
+ursatz_test(region_relation SOURCES test_region_relation.c LIBS ursatz_theory cjson VALGRIND)
