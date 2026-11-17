@@ -162,7 +162,7 @@ static size_t notes_before(const PiecePlan *plan, double limit, Note *out, size_
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     for (size_t i = 0; i < rendered.count; i++) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i]));
-        double onset = (double)musical_time_numerator(position) / (double)musical_time_denominator(position);
+        double onset = (double)position->value.num / (double)position->value.den;
         if (onset < limit) {
             assert(count < capacity);
             out[count].onset = onset;

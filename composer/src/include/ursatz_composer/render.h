@@ -64,13 +64,13 @@ typedef struct {
 typedef struct {
     int sharps_flats;
     KeyStructureMode mode;
-    MusicalTime *position; /* owned */
+    MusicalTime position;
 } RenderedKey;
 
 /* A section's start: where an export puts a marker. label is the form letter ("A", "B", "A'") or the node name. */
 typedef struct {
     char *label;           /* owned */
-    MusicalTime *position; /* owned; from the start of the render */
+    MusicalTime position;  /* from the start of the render */
 } RenderedSection;
 
 typedef enum {

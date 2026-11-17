@@ -53,8 +53,8 @@ static MotiveResult notes_from_events(NoteEvent *const *events, PitchNumericValu
         }
         MotiveSketchNote note;
         note.pitch = (int)pitch_numeric_value_position_numerator(values[i]);
-        note.onset = motive_time(musical_time_numerator(position), musical_time_denominator(position));
-        note.duration = motive_time(duration_numerator(duration), duration_denominator(duration));
+        note.onset = motive_time((long)position->value.num, (unsigned long)position->value.den);
+        note.duration = motive_time((long)duration->value.num, (unsigned long)duration->value.den);
         if (rational_cmp(note.onset, end) < 0) {
             snprintf(location, sizeof(location), "at %lld/%lld (note %zu)", note.onset.num, note.onset.den, i + 1);
             motive_set_error(error, location,

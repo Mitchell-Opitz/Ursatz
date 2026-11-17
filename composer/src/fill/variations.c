@@ -92,8 +92,8 @@ static uint64_t signature_of(const PiecePlan *plan, bool harmony_only) {
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i]));
         const Duration *duration = note_event_duration(rendered.events[i]);
         hash = hash_value(hash, rendered.part_index[i]);
-        hash = hash_fraction(hash, musical_time_numerator(onset), musical_time_denominator(onset));
-        hash = hash_fraction(hash, duration_numerator(duration), duration_denominator(duration));
+        hash = hash_fraction(hash, (long)onset->value.num, (unsigned long)onset->value.den);
+        hash = hash_fraction(hash, (long)duration->value.num, (unsigned long)duration->value.den);
         hash = hash_value(hash, (uint64_t)pitch_numeric_value_position_numerator(rendered.pitch_values[i]));
     }
     rendered_plan_destroy(&rendered);

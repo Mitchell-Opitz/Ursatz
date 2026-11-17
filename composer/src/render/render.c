@@ -55,14 +55,10 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
     free(rendered->spans);
     free(rendered->parts);
     meter_map_destroy(rendered->meter_map);
-    for (size_t i = 0; i < rendered->key_count; i++) {
-        musical_time_destroy(rendered->keys[i].position);
-    }
     free(rendered->keys);
     free(rendered->skipped);
     for (size_t i = 0; i < rendered->section_count; i++) {
         free(rendered->sections[i].label);
-        musical_time_destroy(rendered->sections[i].position);
     }
     free(rendered->sections);
     free(rendered->form_name);
@@ -560,11 +556,8 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         keys[i].key = *key;
         out->keys[i].sharps_flats = key_sharps_flats(key);
         out->keys[i].mode = key->mode;
-        if (musical_time_from_rational(key_start, &out->keys[i].position) != TIME_RATIONAL_OK) {
-            result = PLAN_RENDER_ERR_ALLOC;
-        } else {
-            out->key_count++;
-        }
+        out->keys[i].position = musical_time_of(key_start);
+        out->key_count++;
     }
 
     /* Meter. */
@@ -761,12 +754,7 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
             break;
         }
         memcpy(entry->label, label, length + 1);
-        if (musical_time_from_rational(shifted, &entry->position) != TIME_RATIONAL_OK) {
-            free(entry->label);
-            entry->label = NULL;
-            result = PLAN_RENDER_ERR_ALLOC;
-            break;
-        }
+        entry->position = musical_time_of(shifted);
         starts[out->section_count++] = shifted;
     }
     /* Insertion sort by start; the children are normally in order already. */

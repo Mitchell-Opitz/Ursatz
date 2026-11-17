@@ -119,9 +119,9 @@ static PiecePlan *filled_rounded_binary(void) {
 
 static bool same_event(const NoteEvent *a, long pitch_a, const NoteEvent *b, long pitch_b) {
     return pitch_a == pitch_b &&
-           musical_time_equals(temporal_anchor_position(note_event_temporal_anchor(a)),
-                               temporal_anchor_position(note_event_temporal_anchor(b))) &&
-           duration_equals(note_event_duration(a), note_event_duration(b));
+           musical_time_same(*temporal_anchor_position(note_event_temporal_anchor(a)),
+                             *temporal_anchor_position(note_event_temporal_anchor(b))) &&
+           duration_same(*note_event_duration(a), *note_event_duration(b));
 }
 
 static bool has_name(const TrackMeta *track, const char *name) {
@@ -227,7 +227,7 @@ static void test_plain(const RenderedPlan *rendered) {
     /* Ursatz's renderer with no options writes the same bytes. */
     MidiKeySignatureEvent *keys = calloc(rendered->key_count ? rendered->key_count : 1, sizeof(*keys));
     for (size_t i = 0; i < rendered->key_count; i++) {
-        keys[i].position = *rendered->keys[i].position;
+        keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
         keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
         keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;

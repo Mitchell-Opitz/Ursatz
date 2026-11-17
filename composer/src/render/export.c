@@ -96,25 +96,25 @@ static unsigned choose_division(const RenderedPlan *rendered, const PlanExportOp
     for (size_t i = 0; i < rendered->count; i++) {
         const NoteEvent *event = rendered->events[i];
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
-        if (!need_division_for(musical_time_denominator(position), &needed) ||
-            !need_division_for(duration_denominator(note_event_duration(event)), &needed)) {
+        if (!need_division_for((unsigned long)position->value.den, &needed) ||
+            !need_division_for((unsigned long)note_event_duration(event)->value.den, &needed)) {
             return 0;
         }
     }
     for (size_t i = 0; i < rendered->key_count; i++) {
-        if (!need_division_for(musical_time_denominator(rendered->keys[i].position), &needed)) {
+        if (!need_division_for((unsigned long)rendered->keys[i].position.value.den, &needed)) {
             return 0;
         }
     }
     for (size_t i = 0; with_markers && i < rendered->section_count; i++) {
-        if (!need_division_for(musical_time_denominator(rendered->sections[i].position), &needed)) {
+        if (!need_division_for((unsigned long)rendered->sections[i].position.value.den, &needed)) {
             return 0;
         }
     }
     if (rendered->meter_map) {
         for (size_t i = 0; i < meter_map_region_count(rendered->meter_map); i++) {
             MusicalTime start = meter_map_region_start(meter_map_region(rendered->meter_map, i));
-            if (!need_division_for(musical_time_denominator(&start), &needed)) {
+            if (!need_division_for((unsigned long)start.value.den, &needed)) {
                 return 0;
             }
         }
@@ -145,7 +145,7 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
         return PLAN_EXPORT_ERR_ALLOC;
     }
     for (size_t i = 0; i < rendered->key_count; i++) {
-        keys[i].position = *rendered->keys[i].position;
+        keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
         keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
         keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
@@ -191,7 +191,7 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     memset(&midi_options, 0, sizeof(midi_options));
     if (markers) {
         for (size_t i = 0; i < section_markers; i++) {
-            markers[i].position = *rendered->sections[i].position;
+            markers[i].position = rendered->sections[i].position;
             markers[i].text = rendered->sections[i].label;
         }
         if (options.loop_markers) {
@@ -272,7 +272,7 @@ PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const
         keys[i].sharps_flats = rendered->keys[i].sharps_flats;
         keys[i].mode = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MUSICXML_EXPORT_MODE_MINOR
                                                                   : MUSICXML_EXPORT_MODE_MAJOR;
-        keys[i].position = *rendered->keys[i].position;
+        keys[i].position = rendered->keys[i].position;
         keys[i].part_index = 0;
     }
 
