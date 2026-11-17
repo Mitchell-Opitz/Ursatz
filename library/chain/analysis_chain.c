@@ -1006,13 +1006,13 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
     if (!valid_config(config)) {
         return ANALYSIS_CHAIN_ERR_BAD_CONFIG;
     }
-    if (!analysis_note_set_valid(notes) || notes->count == 0) {
-        return ANALYSIS_CHAIN_ERR_NOTES;
-    }
     CommonPracticeMaterials materials;
     char message[160];
     if (config->knowledge == NULL || !common_practice_materials_resolve(config->knowledge, &materials, message, sizeof(message))) {
         return ANALYSIS_CHAIN_ERR_KNOWLEDGE;
+    }
+    if (!analysis_note_set_valid(notes) || notes->count == 0) {
+        return ANALYSIS_CHAIN_ERR_NOTES;
     }
     AnalysisChain *chain = calloc(1, sizeof(AnalysisChain));
     if (chain == NULL) {

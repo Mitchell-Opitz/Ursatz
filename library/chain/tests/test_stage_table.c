@@ -5,6 +5,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/analysis_chain_internal.h"
 #include "chain_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * The chain's stage table: each stage bit is in one row, every row needs only earlier rows, a row's error status is its bit's place
@@ -60,6 +61,23 @@ static unsigned table_closure(unsigned stages) {
     return stages;
 }
 
+/* The chain reads its pitch materials from the config's knowledge snapshot: a config without one (and the NULL config, which is the
+   defaults) is refused before the notes are looked at, and a config with one gets as far as the notes. */
+static void test_knowledge_refusal(void) {
+    AnalysisNoteSet empty;
+    memset(&empty, 0, sizeof(empty));
+    AnalysisChain *chain = NULL;
+    assert(analysis_chain_run(&empty, NULL, 0, NULL, &chain) == ANALYSIS_CHAIN_ERR_KNOWLEDGE && chain == NULL);
+    AnalysisChainConfig config = analysis_chain_config_default();
+    assert(config.knowledge == NULL);
+    assert(analysis_chain_run(&empty, NULL, 0, &config, &chain) == ANALYSIS_CHAIN_ERR_KNOWLEDGE && chain == NULL);
+    config.knowledge = test_knowledge();
+    assert(analysis_chain_run(&empty, NULL, 0, &config, &chain) == ANALYSIS_CHAIN_ERR_NOTES && chain == NULL);
+    /* The status is not a stage's, and comes before the stages' in the enumeration. */
+    assert(analysis_chain_stage_name(ANALYSIS_CHAIN_ERR_KNOWLEDGE) == NULL);
+    assert((unsigned)ANALYSIS_CHAIN_ERR_KNOWLEDGE < (unsigned)ANALYSIS_CHAIN_ERR_SEGMENTS);
+}
+
 int main(void) {
     assert(ANALYSIS_CHAIN_STAGE_COUNT == 12u);
     assert(ANALYSIS_CHAIN_STAGE_ALL == 0xFFFu);
@@ -92,6 +110,8 @@ int main(void) {
     for (unsigned mask = 0; mask <= ANALYSIS_CHAIN_STAGE_ALL; mask++) {
         assert(table_closure(mask) == old_stage_closure(mask));
     }
+
+    test_knowledge_refusal();
 
     puts("chain stage table: ok");
     return 0;

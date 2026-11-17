@@ -26,3 +26,7 @@ ursatz_test(standard_tonality_key_tonic_of_pitch_class SOURCES test_key_tonic_of
 ursatz_test(standard_tonality_mode_pitch_classes SOURCES test_mode_pitch_classes.c LIBS ursatz_theory)
 
 ursatz_test(standard_tonality_degree_of_semitone SOURCES test_degree_of_semitone.c LIBS ursatz_theory)
+
+ursatz_test(common_practice_materials SOURCES test_common_practice_materials.c LIBS ursatz_theory)
+
+ursatz_test(tonal_key_materials SOURCES test_tonal_key_materials.c LIBS ursatz_theory)
