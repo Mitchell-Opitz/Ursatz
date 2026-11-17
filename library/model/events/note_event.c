@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include "model/time/tuplet.h"
+
 struct NoteEvent {
     EntityID *id;
     TemporalAnchor *temporal_anchor;
@@ -10,6 +12,9 @@ struct NoteEvent {
     PitchSpelling *optional_pitch_spelling;
     VoiceReference *optional_voice;
     ProvenanceReference *provenance;
+    bool has_tuplet;
+    unsigned tuplet_actual;
+    unsigned tuplet_normal;
 };
 
 NoteEventResult note_event_create(EntityID *id, MusicalTime onset, Duration duration,
@@ -43,6 +48,9 @@ NoteEventResult note_event_create(EntityID *id, MusicalTime onset, Duration dura
     note_event->optional_pitch_spelling = optional_pitch_spelling;
     note_event->optional_voice = optional_voice;
     note_event->provenance = provenance;
+    note_event->has_tuplet = false;
+    note_event->tuplet_actual = 0;
+    note_event->tuplet_normal = 0;
 
     *out = note_event;
     return NOTE_EVENT_OK;
@@ -87,4 +95,33 @@ const VoiceReference *note_event_optional_voice(const NoteEvent *note_event) {
 
 const ProvenanceReference *note_event_provenance(const NoteEvent *note_event) {
     return note_event->provenance;
+}
+
+bool note_event_tuplet(const NoteEvent *note_event, unsigned *actual, unsigned *normal) {
+    if (!note_event->has_tuplet) {
+        return false;
+    }
+    if (actual != NULL) {
+        *actual = note_event->tuplet_actual;
+    }
+    if (normal != NULL) {
+        *normal = note_event->tuplet_normal;
+    }
+    return true;
+}
+
+NoteEventResult note_event_set_tuplet(NoteEvent *note_event, unsigned actual, unsigned normal) {
+    Tuplet *tuplet = NULL;
+    TupletResult result = tuplet_create(actual, normal, &tuplet);
+    if (result == TUPLET_ERR_ALLOC) {
+        return NOTE_EVENT_ERR_ALLOC;
+    }
+    if (result != TUPLET_OK) {
+        return NOTE_EVENT_ERR_BAD_TUPLET;
+    }
+    note_event->has_tuplet = true;
+    note_event->tuplet_actual = tuplet_actual(tuplet);
+    note_event->tuplet_normal = tuplet_normal(tuplet);
+    tuplet_destroy(tuplet);
+    return NOTE_EVENT_OK;
 }

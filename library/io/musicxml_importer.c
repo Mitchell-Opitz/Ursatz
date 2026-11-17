@@ -25,6 +25,7 @@
 #include "model/time/note_value.h"
 #include "model/time/tempo_map.h"
 #include "model/time/time_span.h"
+#include "model/time/tuplet.h"
 #include "model/events/dynamics.h"
 #include "model/events/tempo_marking.h"
 #include "model/time/metronome_marking.h"
@@ -54,6 +55,8 @@ typedef struct {
     size_t order;    /* document order within the part */
     char voice[32];  /* the notated <voice>, or "" */
     int staff;       /* the <staff>, 1 when none */
+    unsigned tuplet_actual; /* <time-modification>: actual notes in the time of normal, 0 and 0 when none */
+    unsigned tuplet_normal;
 } XNote;
 
 typedef struct {
@@ -356,6 +359,25 @@ static bool advance(Ctx *ctx, PartState *state, Rational by) {
     return true;
 }
 
+/* <time-modification> is the notated tuplet: <actual-notes> in the time of <normal-notes>. One that is not a Tuplet
+   (counts outside 2 to 64 and 1 to 64, or equal) is warned about and left off; the duration stays exact. */
+static void read_time_modification(Ctx *ctx, ezxml_t note, XNote *parsed) {
+    ezxml_t modification = ezxml_child(note, "time-modification");
+    if (modification == NULL) {
+        return;
+    }
+    long actual = 0;
+    long normal = 0;
+    if (!read_long(ezxml_child(modification, "actual-notes"), &actual) ||
+        !read_long(ezxml_child(modification, "normal-notes"), &normal) || actual < TUPLET_MIN_ACTUAL ||
+        actual > TUPLET_MAX_COUNT || normal < 1 || normal > TUPLET_MAX_COUNT || actual == normal) {
+        warn(ctx, "<time-modification> is not a tuplet ratio; left off");
+        return;
+    }
+    parsed->tuplet_actual = (unsigned)actual;
+    parsed->tuplet_normal = (unsigned)normal;
+}
+
 static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, ezxml_t note) {
     bool is_chord = ezxml_child(note, "chord") != NULL;
     bool is_grace = ezxml_child(note, "grace") != NULL;
@@ -410,6 +432,7 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
     }
     parsed.staff = (int)staff;
     parsed.midi += state->transpose;
+    read_time_modification(ctx, note, &parsed);
 
     if (length.num == 0) {
         warn(ctx, "note with a zero duration skipped");
@@ -435,6 +458,10 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
                     return false;
                 }
                 open->duration = extended;
+                if (open->tuplet_actual != parsed.tuplet_actual || open->tuplet_normal != parsed.tuplet_normal) {
+                    open->tuplet_actual = 0; /* tied to a note written another way: no one ratio describes it */
+                    open->tuplet_normal = 0;
+                }
                 if (tie_start) {
                     ctx->ties[t].end = end;
                 } else {
@@ -970,6 +997,15 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
             }
         }
         ok = ok && note_event_create(id, musical_time_of(note->onset), duration, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK;
+        if (ok) {
+            /* the event owns id, pitch, spelling, voice and provenance now */
+            id = NULL; pitch = NULL; spelling = NULL; voice = NULL; provenance = NULL;
+            if (note->tuplet_actual != 0 && note_event_set_tuplet(event, note->tuplet_actual, note->tuplet_normal) != NOTE_EVENT_OK) {
+                note_event_destroy(event);
+                event = NULL;
+                ok = false;
+            }
+        }
     }
     if (!ok) {
         if (!fits) {
