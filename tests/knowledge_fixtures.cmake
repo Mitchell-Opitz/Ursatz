@@ -1,0 +1,36 @@
+# Runs tools/ci/check-knowledge.py on the knowledge fixtures: the valid folder must pass, and every folder under invalid/ must fail
+# with the text its expect.txt names in the output. Run with cmake -P and -DPYTHON, -DCHECK, -DFIXTURES, -DSCHEMA.
+foreach(variable PYTHON CHECK FIXTURES SCHEMA)
+    if(NOT DEFINED ${variable})
+        message(FATAL_ERROR "knowledge_fixtures: -D${variable} is not set")
+    endif()
+endforeach()
+
+execute_process(COMMAND ${PYTHON} ${CHECK} ${FIXTURES}/valid ${SCHEMA}
+    RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE output)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "knowledge_fixtures: the valid fixtures failed (${result}):\n${output}")
+endif()
+
+file(GLOB invalid LIST_DIRECTORIES true ${FIXTURES}/invalid/*)
+list(LENGTH invalid count)
+if(count EQUAL 0)
+    message(FATAL_ERROR "knowledge_fixtures: no invalid fixtures under ${FIXTURES}/invalid")
+endif()
+foreach(folder IN LISTS invalid)
+    if(NOT IS_DIRECTORY ${folder})
+        continue()
+    endif()
+    get_filename_component(name ${folder} NAME)
+    file(READ ${folder}/expect.txt expected)
+    string(STRIP "${expected}" expected)
+    execute_process(COMMAND ${PYTHON} ${CHECK} ${folder} ${SCHEMA}
+        RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE output)
+    if(NOT result EQUAL 1)
+        message(FATAL_ERROR "knowledge_fixtures: ${name} exited ${result}, not 1:\n${output}")
+    endif()
+    string(FIND "${output}" "${expected}" found)
+    if(found EQUAL -1)
+        message(FATAL_ERROR "knowledge_fixtures: ${name} does not report '${expected}':\n${output}")
+    endif()
+endforeach()

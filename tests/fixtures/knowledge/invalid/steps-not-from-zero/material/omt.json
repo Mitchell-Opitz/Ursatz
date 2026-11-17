@@ -1,0 +1,40 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.material.test-unordered",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "test unordered",
+      "content": {
+        "steps": [
+          1,
+          3,
+          5
+        ],
+        "family": "diatonic"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "pitches": [
+            "Db",
+            "Eb",
+            "F"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

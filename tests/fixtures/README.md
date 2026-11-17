@@ -15,6 +15,7 @@ The reference pieces and annotations every part's tests read, once. Tests reach 
 | `two-voice/`, `voice_leading/` | Two-voice MIDI and the voice leading expectations | library analysis and integration |
 | `accuracy-corpus/` | Ten Bach chorales (`chorale-*/score.musicxml`, `analysis.rntxt`) and `LICENSES.md` | library accuracy harness, Analyzer (the `chorales` test corpus), GUI |
 | `links/` | Four pieces of one motive family each | library chain, Analyzer, GUI |
+| `knowledge/` | `valid/` entries and `invalid/<problem>/` folders (each with its `expect.txt`) for `tools/ci/check-knowledge.py` | the `knowledge_validate_fixtures` test |
 | `tools/` | `cut_midi.py`, the script that cut the reference MIDI files | by hand |
 
 Licensing: the chorales are third-party material, private use only (see `accuracy-corpus/LICENSES.md`); the READMEs in

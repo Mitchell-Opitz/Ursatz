@@ -18,4 +18,12 @@ endif()
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(knowledge_validate COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_SOURCE_DIR}/tools/ci/check-knowledge.py
         ${CMAKE_SOURCE_DIR}/knowledge LABELS schema)
+
+    # The check itself: one valid set of entries passes, and each of nine broken sets fails with its own message.
+    ursatz_test(knowledge_validate_fixtures COMMAND ${CMAKE_COMMAND}
+        -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+        -DCHECK=${CMAKE_SOURCE_DIR}/tools/ci/check-knowledge.py
+        -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/knowledge
+        -DSCHEMA=${CMAKE_SOURCE_DIR}/knowledge/schema
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/knowledge_fixtures.cmake LABELS schema)
 endif()

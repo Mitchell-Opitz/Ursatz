@@ -1,0 +1,85 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.material.test-unordered",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "test unordered",
+      "content": {
+        "steps": [
+          0,
+          2,
+          4,
+          5,
+          7,
+          9,
+          11
+        ],
+        "family": "diatonic"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "pitches": [
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "A",
+            "B"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.material.test-ordered",
+      "kind": "material",
+      "subtype": "ordered",
+      "name": "test ordered",
+      "content": {
+        "row": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "forms": [
+          "P",
+          "I",
+          "R",
+          "RI"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "reference",
+      "version": 1
+    }
+  ]
+}
