@@ -1,4 +1,4 @@
-# Validates the plan files against schema/plan.v2.schema.json: the CLI snapshots' plan files and every plan file the
+# Validates the plan files against schema/plan.v3.schema.json: the CLI snapshots' plan files and every plan file the
 # plan JSON test wrote back from the fixtures and snapshots (plan_written_*). Run with cmake -P and -DPYTHON,
 # -DVALIDATOR, -DSCHEMA, -DSNAPSHOT_DIR and -DWRITTEN_DIR. The test is registered only when python3 with jsonschema was
 # found at configure time (-DPYTHON is that python3).

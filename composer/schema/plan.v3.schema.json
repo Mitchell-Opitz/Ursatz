@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v2.schema.json",
-  "title": "Ursatz Composer plan, format version 2",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v3.schema.json",
+  "title": "Ursatz Composer plan, format version 3",
   "type": "object",
   "required": ["format", "format_version", "metadata", "form"],
   "properties": {
     "format": { "const": "ursatz-composer-plan" },
-    "format_version": { "const": 2 },
+    "format_version": { "const": 3 },
     "metadata": {
       "type": "object",
       "required": ["composer_version", "ursatz_commit"],
@@ -52,7 +52,9 @@
     },
     "state": { "enum": ["constrained", "given", "realized"] },
     "tonic": { "type": "string", "pattern": "^[A-G](bb|b|#|x)?$" },
-    "mode": { "enum": ["major", "minor"] },
+    "materialId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
+    "relationId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "maxLength": 63 },
+    "anchor": { "enum": ["home", "previous"] },
     "time": { "type": "string", "pattern": "^-?[0-9]+/[0-9]+$" },
     "node": {
       "type": "object",
@@ -112,8 +114,14 @@
               "then": {
                 "properties": {
                   "payload": {
-                    "required": ["tonic", "mode"],
-                    "properties": { "tonic": { "$ref": "#/$defs/tonic" }, "mode": { "$ref": "#/$defs/mode" } },
+                    "properties": {
+                      "tonic": { "$ref": "#/$defs/tonic" },
+                      "material": { "$ref": "#/$defs/materialId" },
+                      "relation": { "$ref": "#/$defs/relationId" },
+                      "anchor": { "$ref": "#/$defs/anchor" }
+                    },
+                    "dependentRequired": { "relation": ["anchor"], "anchor": ["relation"], "tonic": ["material"], "material": ["tonic"] },
+                    "anyOf": [{ "required": ["tonic", "material"] }, { "required": ["relation", "anchor"] }],
                     "additionalProperties": false
                   }
                 }
@@ -176,8 +184,8 @@
         {
           "if": { "properties": { "kind": { "const": "key" } } },
           "then": {
-            "required": ["tonic", "mode"],
-            "properties": { "tonic": { "$ref": "#/$defs/tonic" }, "mode": { "$ref": "#/$defs/mode" } }
+            "required": ["tonic", "material"],
+            "properties": { "tonic": { "$ref": "#/$defs/tonic" }, "material": { "$ref": "#/$defs/materialId" } }
           }
         },
         {

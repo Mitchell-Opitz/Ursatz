@@ -78,6 +78,25 @@ typedef struct {
     size_t note_count;
 } PlanNotes;
 
+/*
+ * A key span may be named by a relation instead of a key (R-597): the K6 relation entry (`omt.relation.dominant`) and the anchor it
+ * is taken from, the plan's home key or the key span before. A span the Composer drew from a form region has both beside its key
+ * (resolved); a span a plan file names only by them is unresolved, its payload holds the zero key until plan_resolve_key_spans
+ * (plan_json.h) writes the key it reaches. Writing the payload of a key span does not change the relation.
+ */
+typedef enum {
+    PLAN_KEY_ANCHOR_HOME,
+    PLAN_KEY_ANCHOR_PREVIOUS
+} PlanKeyAnchor;
+
+#define PLAN_KEY_RELATION_MAX 64
+
+typedef struct {
+    char relation[PLAN_KEY_RELATION_MAX]; /* the K6 id; "" for a span with no relation */
+    PlanKeyAnchor anchor;
+    bool resolved; /* false while the span's payload holds no key yet */
+} PlanKeyRelation;
+
 /* Which member is used follows the lane: meter, key, harmony, or notes for bass, melody and inner voice. */
 typedef union {
     PlanMeter meter;
@@ -124,6 +143,16 @@ const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId 
  */
 size_t plan_lane_find(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan range, LaneSpanId *out_ids,
                       size_t capacity);
+
+/*
+ * Names a key span by a relation and an anchor (see PlanKeyRelation); `resolved` says its payload holds the key the relation reaches.
+ * Fails with PLAN_ERR_NOT_FOUND for an unknown id, PLAN_ERR_BAD_PAYLOAD for a span of another lane or a relation id that is empty
+ * or does not fit PLAN_KEY_RELATION_MAX, and PLAN_ERR_NULL for a NULL relation. A Given span takes it too (it is a name, not a key).
+ */
+PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor, bool resolved);
+
+/* The relation a key span is named by, or NULL for a span with none (or an unknown id). */
+const PlanKeyRelation *plan_lane_span_key_relation(const PiecePlan *plan, LaneSpanId id);
 
 /* The spans owned by a node, in the order they were added. Same out_ids rules as plan_lane_find. */
 size_t plan_node_lane_spans(const PiecePlan *plan, NodeId owner, LaneSpanId *out_ids, size_t capacity);

@@ -63,6 +63,16 @@ bool composer_key_valid(const AnalysisKey *key) {
     return key && (key->material == NULL || composer_material_valid(key->material));
 }
 
+#define MAJOR_MATERIAL_ID "omt.material.major"
+
+const char *composer_key_material_id(const AnalysisKey *key) {
+    return key && key->material ? key->material->id : MAJOR_MATERIAL_ID;
+}
+
+const char *composer_key_word(const AnalysisKey *key) {
+    return key && key->material ? key->material->key_word : "major";
+}
+
 void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material) {
     key->material = material;
 }

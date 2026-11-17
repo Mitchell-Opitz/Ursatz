@@ -31,10 +31,15 @@
  * Only a section that begins with an antecedent can open a key, so a key never opens in a presentation.
  */
 
-/* The keys a section starts and ends in. */
+/*
+ * The keys a section starts and ends in, and for a key that is not home the K6 relation entry that reached it from the home key
+ * (R-597: `omt.relation.dominant`; a static string), NULL for home. The key lane writes it beside the key.
+ */
 typedef struct {
     AnalysisKey start;
     AnalysisKey end;
+    const char *start_relation;
+    const char *end_relation;
 } PieceSectionKeys;
 
 typedef struct {

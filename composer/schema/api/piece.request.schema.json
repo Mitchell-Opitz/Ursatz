@@ -91,7 +91,7 @@
           "type": "string"
         }
       },
-      "description": "A plan object (docs/plan-format.md, schema/plan.v2.schema.json)."
+      "description": "A plan object (docs/plan-format.md, schema/plan.v3.schema.json)."
     },
     "piece_request": {
       "type": "object",

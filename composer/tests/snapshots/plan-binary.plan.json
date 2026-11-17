@@ -1,6 +1,6 @@
 {
   "format": "ursatz-composer-plan",
-  "format_version": 2,
+  "format_version": 3,
   "metadata": {
     "composer_version": "",
     "ursatz_commit": ""
@@ -61,7 +61,7 @@
         "constraints": [],
         "payload": {
           "tonic": "C",
-          "mode": "major"
+          "material": "omt.material.major"
         }
       }
     }],
@@ -109,7 +109,7 @@
             }, {
               "kind": "key",
               "tonic": "C",
-              "mode": "major"
+              "material": "omt.material.major"
             }, {
               "kind": "section_letter",
               "letter": "A"
@@ -145,7 +145,7 @@
             }, {
               "kind": "key",
               "tonic": "C",
-              "mode": "major"
+              "material": "omt.material.major"
             }, {
               "kind": "section_letter",
               "letter": "B"

@@ -31,6 +31,7 @@ typedef struct {
     NodeId owner;
     PlanSpan span;
     PlanLanePayload payload;
+    PlanKeyRelation key_relation; /* relation[0] is '\0' for a span with none; key lane only */
     PlanState state;
     ConstraintList constraints;
     bool removed; /* as for a node */

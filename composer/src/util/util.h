@@ -91,6 +91,12 @@ void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material);
  */
 bool composer_key_valid(const AnalysisKey *key);
 
+/* The id of the key's material; the major's for a key with none, which reads as major. */
+const char *composer_key_material_id(const AnalysisKey *key);
+
+/* The word after the tonic in the key's name ("minor" in "D minor"): the material's key word; "major" for a key with none. */
+const char *composer_key_word(const AnalysisKey *key);
+
 /* The name of a chord's harmonic function, "unknown" for a chord with none. */
 const char *util_function_name(bool has_function, HarmonicFunction function);
 

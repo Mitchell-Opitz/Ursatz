@@ -610,8 +610,9 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * five changed. Before: P35 B1 (realized motive notes, R-338).
  */
 /* Re-recorded at P36 B3 (liquidated residues, R-345) and at P37 B2 (ideas ranked by fidelity, R-355: seeds 1, 3 and 5). */
-static const unsigned long long MAIN_HASH[5] = {0x0a947488498a3fe5ULL, 0xd7d125680cfed013ULL, 0x09f6d8f3606878fbULL,
-                                                0xd8917a74dfdac22dULL, 0x1739b7abbedb6cf7ULL};
+/* Re-recorded at P58 B14 (plan format 3: keys name their material, a key from a form region names its relation); the notes are the same. */
+static const unsigned long long MAIN_HASH[5] = {0xcc6b2002ceda07f5ULL, 0x44ef43437f101ec7ULL, 0x2cf20d8dda38cec7ULL,
+                                                0x17efe6174bea5901ULL, 0x3d91958ff2c04907ULL};
 
 static int test_same(void) {
     /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */

@@ -419,7 +419,7 @@ static void test_round_trip(void) {
     char *text = plan_to_json(plan, &error);
     assert(text != NULL);
     assert(text[strlen(text) - 1] == '\n');
-    assert(strstr(text, "\"format_version\": 2") != NULL);
+    assert(strstr(text, "\"format_version\": 3") != NULL);
 
     PiecePlan *parsed = NULL;
     expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
@@ -1372,7 +1372,7 @@ static unsigned char *midi_of(const PiecePlan *plan, size_t *size) {
 }
 
 /*
- * A plan file of either version reads, writes as version 2, reads back equal and renders the same MIDI. The version 2 text
+ * A plan file of any version reads, writes as version 3, reads back equal and renders the same MIDI. The version 3 text
  * is kept as plan_written_<name> for the schema test.
  */
 static void check_plan_file(const char *path, const char *name) {
@@ -1384,7 +1384,7 @@ static void check_plan_file(const char *path, const char *name) {
     char *written = plan_to_json(first, &error);
     assert(written != NULL);
     assert(strstr(written, "\"format\": \"ursatz-composer-plan\"") != NULL);
-    assert(strstr(written, "\"format_version\": 2") != NULL);
+    assert(strstr(written, "\"format_version\": 3") != NULL);
     assert(strstr(written, "schema_version") == NULL && strstr(written, "tonic_pitch_class") == NULL);
     assert(strstr(written, "\"ticks_per_quarter\"") == NULL && strstr(written, "\"voice_leading\"") == NULL);
     assert(plan_from_json(test_knowledge(), written, &second, &error) == PLAN_OK);
@@ -1435,10 +1435,14 @@ static void test_plan_files(void) {
     }
 }
 
-/* A version 2 text turned into the version 1 text the same plan had, member by member. */
-static char *as_version_one(const char *v2) {
-    char *step = replace_all(v2, "\"format\": \"ursatz-composer-plan\"", "\"schema_version\": 1");
-    char *next = replace_all(step, "\"format_version\": 2", "\"ticks\": null");
+/* A version 3 text turned into the version 1 text the same plan had, member by member. */
+static char *as_version_one(const char *v3) {
+    char *step = replace_all(v3, "\"format\": \"ursatz-composer-plan\"", "\"schema_version\": 1");
+    char *next = replace_all(step, "\"format_version\": 3", "\"ticks\": null");
+    free(step);
+    step = replace_all(next, "\"material\": \"omt.material.major\"", "\"mode\": \"major\"");
+    free(next);
+    next = replace_all(step, "\"material\": \"omt.material.natural-minor\"", "\"mode\": \"minor\"");
     free(step);
     step = replace_all(next, "\"tonic\": \"D#\"", "\"tonic_pitch_class\": 3");
     free(next);
@@ -1547,7 +1551,7 @@ static void test_format_errors(void) {
     assert(strcmp(error.path, "format") == 0);
     assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"form\":null}", &plan, &error) == PLAN_ERR_FORMAT);
     assert(strcmp(error.path, "format_version") == 0);
-    assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"format_version\":3,\"form\":null}", &plan, &error) ==
+    assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"format_version\":4,\"form\":null}", &plan, &error) ==
            PLAN_ERR_FORMAT);
     assert(strcmp(error.path, "format_version") == 0);
     assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"format_version\":2,\"form\":null}", &plan, &error) == PLAN_OK);
