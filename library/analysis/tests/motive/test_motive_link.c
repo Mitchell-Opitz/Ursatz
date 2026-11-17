@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive/motive_link.h"
+#include "test_knowledge.h"
 
 /*
  * Analysis-regression tests for motive links: the gate, both directions, replaying a found chain,
@@ -28,6 +29,7 @@ static MotiveSketch motive(void) {
     }
     sketch.note_count = 5;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.tonic_pc = 0;
     sketch.bar = q(1, 1);
     sketch.beat = q(1, 4);
@@ -123,6 +125,7 @@ static void test_gated(void) {
     }
     other.note_count = 3;
     other.has_scale = true;
+    other.material = test_materials()->major;
     other.bar = q(1, 1);
     other.beat = q(1, 4);
     other.pickup = q(0, 1);
@@ -166,7 +169,7 @@ static void test_fingerprints(void) {
     tonic.tonic_pc = 7;
     assert(motive_sketch_fingerprint(&a) != motive_sketch_fingerprint(&tonic));
     MotiveSketch minor = motive();
-    minor.minor = true;
+    minor.material = test_materials()->natural_minor;
     assert(motive_sketch_fingerprint(&a) != motive_sketch_fingerprint(&minor));
     MotiveSketch meter = motive();
     meter.bar = q(3, 4);

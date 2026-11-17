@@ -725,7 +725,7 @@ bool grow_make_distant(const GrowThemeRequest *request, FillRng *rng, GrowThemeS
                         break;
                     }
                 }
-                pitch = developed.has_scale ? scale_step(pitch, direction, developed.tonic_pc, developed.minor)
+                pitch = developed.has_scale ? scale_step(pitch, direction, developed.tonic_pc, motive_sketch_minor(&developed))
                                             : pitch + 2 * direction;
             }
             result.notes[j].pitch = pitch;

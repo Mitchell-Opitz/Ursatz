@@ -149,7 +149,7 @@ typedef struct {
 } Scored;
 
 static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, const ChordSpec *spec, Scored *out) {
-    KeyStructureMode mode = motive->minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+    KeyStructureMode mode = motive_sketch_minor(motive) ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
     PhraseChord chord;
     if (spec->leading_tone) {
         if (mode != KEY_STRUCTURE_MODE_MINOR || !harmony_make_leading_tone(mode, 0, 1, &chord)) {
@@ -266,7 +266,7 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
         if (result.degrees_known) {
             int pitch = motive_pitch(motive, i) - motive->tonic_pc;
             long octave = floor_div(pitch, 12);
-            result.degrees[i] = degree_of(motive->minor, (int)(pitch - octave * 12));
+            result.degrees[i] = degree_of(motive_sketch_minor(motive), (int)(pitch - octave * 12));
             positions[i] = octave * 7 + (result.degrees[i].degree - 1);
         }
     }

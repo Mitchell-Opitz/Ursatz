@@ -63,8 +63,6 @@ library/theory/knowledge/knowledge_snapshot.c slot_release  # the snapshot loade
 library/theory/knowledge/knowledge_snapshot.c string_of  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
 library/theory/knowledge/knowledge_snapshot.c text_field  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
-library/theory/tonality/common_practice_materials.c common_practice_key_mode_of  # the chain resolves the materials from the snapshot in P58 B10 commit 5; its tests (commit 6) call it
-library/theory/tonality/common_practice_materials.c common_practice_material  # the chain resolves the materials from the snapshot in P58 B10 commit 5; its tests (commit 6) call it
 library/theory/tonality/common_practice_materials.c common_practice_materials_resolve  # the chain resolves the materials from the snapshot in P58 B10 commit 5; its tests (commit 6) call it
 library/theory/tonality/tonal_key.c standard_tonality_natural_degree_of_semitone  # the forced-major sites read it from P58 B10 commit 4
 library/theory/tonality/tonal_key.c standard_tonality_natural_degree_semitone  # the forced-major sites read it from P58 B10 commit 4

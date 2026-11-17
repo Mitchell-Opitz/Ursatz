@@ -42,7 +42,7 @@ static void check_equal(const MotiveSketch *a, const MotiveSketch *b) {
         CHECK(same_time(a->notes[i].onset, b->notes[i].onset));
         CHECK(same_time(a->notes[i].duration, b->notes[i].duration));
     }
-    CHECK(a->has_scale == b->has_scale && a->tonic_pc == b->tonic_pc && a->minor == b->minor);
+    CHECK(a->has_scale == b->has_scale && a->tonic_pc == b->tonic_pc && motive_sketch_minor(a) == motive_sketch_minor(b));
     CHECK(same_time(a->bar, b->bar) && same_time(a->beat, b->beat) && same_time(a->pickup, b->pickup));
     CHECK(same_time(a->length, b->length));
     CHECK(motive_sketch_fingerprint(a) == motive_sketch_fingerprint(b));

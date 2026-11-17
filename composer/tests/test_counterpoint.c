@@ -39,12 +39,12 @@ typedef struct {
 
 static const Cantus CANTI[] = {
     {"Fux, D Dorian",
-     {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR},
+     {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR, NULL},
      11,
      {62, 65, 64, 62, 67, 65, 69, 67, 65, 64, 62},
      {62, 65, 64, 62, 67, 65, 69, 67, 65, 64, 62}},
     {"C major",
-     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
+     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL},
      11,
      {60, 64, 62, 65, 64, 67, 69, 67, 64, 62, 60},
      {60, 64, 62, 65, 64, 67, 69, 67, 64, 62, 60}},

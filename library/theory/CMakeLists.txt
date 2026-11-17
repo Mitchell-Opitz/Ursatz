@@ -173,9 +173,12 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/non_chord_tone.h
         theory/vocabulary/subphrase_role.h
         theory/vocabulary/voice_part.h
+        theory/knowledge/knowledge_snapshot.h
+        theory/knowledge/relation.h
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_framework.h
+        theory/tonality/common_practice_materials.h
         theory/tonality/framework.h
         theory/tonality/interval.h
         theory/tonality/key_vocabulary.h

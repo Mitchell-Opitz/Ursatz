@@ -12,7 +12,7 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
 
 static MotiveAnalysis analyze(const char *text, const PlanMeter *meter, const MotiveOptions *extra) {
     MotiveOptions options;

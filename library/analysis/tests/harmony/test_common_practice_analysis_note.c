@@ -10,6 +10,7 @@
 #include "model/time/time_span.h"
 #include "analysis/harmony/weighted_identification.h"
 #include "tests/key_index_test_util.h"
+#include "test_knowledge.h"
 
 static TimeSpan make_span(long start, long end, unsigned long den) {
     MusicalTime from;
@@ -93,25 +94,28 @@ static void test_region_key(void) {
         memset(&region, 0, sizeof(region));
         region.key_index = index;
         AnalysisKey key;
-        assert(common_practice_key_region_analysis_key(&region, &key));
+        assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
         assert(analysis_key_tonic_pitch_class(&key) == common_practice_key_index_tonic(index));
         assert((key.mode == KEY_STRUCTURE_MODE_MINOR) == (common_practice_key_index_mode(index) == COMMON_PRACTICE_KEY_MINOR));
         assert(key.id == NULL);
+        assert(key.material == common_practice_material(test_materials(), common_practice_key_index_mode(index)));
     }
     CommonPracticeKeyRegion region;
     memset(&region, 0, sizeof(region));
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
     region.key_index = test_key_index_of(3, COMMON_PRACTICE_KEY_MINOR);
-    assert(common_practice_key_region_analysis_key(&region, &key));
+    assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
     assert(key.tonic_letter == PITCH_LETTER_E && key.tonic_accidental == -1 && key.mode == KEY_STRUCTURE_MODE_MINOR);
     region.key_index = test_key_index_of(6, COMMON_PRACTICE_KEY_MAJOR);
-    assert(common_practice_key_region_analysis_key(&region, &key));
+    assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
     assert(key.tonic_letter == PITCH_LETTER_F && key.tonic_accidental == 1 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
 
     region.key_index = 24;
-    assert(!common_practice_key_region_analysis_key(&region, &key));
-    assert(!common_practice_key_region_analysis_key(NULL, &key));
-    assert(!common_practice_key_region_analysis_key(&region, NULL));
+    assert(!common_practice_key_region_analysis_key(&region, test_materials(), &key));
+    assert(!common_practice_key_region_analysis_key(NULL, test_materials(), &key));
+    assert(!common_practice_key_region_analysis_key(&region, test_materials(), NULL));
+    region.key_index = 0;
+    assert(!common_practice_key_region_analysis_key(&region, NULL, &key));
 }
 
 static void test_signature_event(void) {
@@ -131,7 +135,7 @@ static void test_signature_event(void) {
     }
 
     out.sharps_flats = 99;
-    AnalysisKeyEvent too_sharp = {time, {NULL, PITCH_LETTER_G, 1, KEY_STRUCTURE_MODE_MAJOR}}; /* G sharp major: 8 sharps */
+    AnalysisKeyEvent too_sharp = {time, {NULL, PITCH_LETTER_G, 1, KEY_STRUCTURE_MODE_MAJOR, NULL}}; /* G sharp major: 8 sharps */
     assert(!common_practice_key_signature_event_from_analysis(&too_sharp, &out));
     assert(!common_practice_key_signature_event_from_analysis(NULL, &out));
     assert(!common_practice_key_signature_event_from_analysis(&too_sharp, NULL));

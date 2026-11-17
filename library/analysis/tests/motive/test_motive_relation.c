@@ -4,6 +4,7 @@
 
 #include "analysis/motive/motive_relation.h"
 #include "analysis/motive/motive_tone_roles.h"
+#include "test_knowledge.h"
 
 /*
  * Analysis-regression tests for the motive relations. Each relation has a case that checks its result, the
@@ -27,6 +28,7 @@ static MotiveSketch line(const int *pitches, size_t count, Rational each) {
     }
     sketch.note_count = count;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.tonic_pc = 0;
     sketch.bar = q(1, 1);
     sketch.beat = q(1, 4);

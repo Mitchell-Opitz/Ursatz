@@ -440,7 +440,7 @@ static const char *motive_reason(const GrowRequest *request, const Motive *motiv
     }
     if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
         (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
-         motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR))) {
+         motive_sketch_minor(motive) != (request->key.mode == KEY_STRUCTURE_MODE_MINOR))) {
         return "is not in the theme's key";
     }
     /* The idea has units eighths of the theme; the longest motive is as long as that idea. */

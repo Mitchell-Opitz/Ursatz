@@ -12,6 +12,7 @@
 #include "chain/analysis_chain.h"
 #include "analysis/form/analysis_motive_match.h"
 #include "chain/kernel_owners.h"
+#include "test_knowledge.h"
 
 /*
  * The chain's kernel-owner callbacks: the tone classifier gives motive_tone_roles_line's labels; the relation matcher recognizes an
@@ -75,7 +76,7 @@ static void test_equal_and_transposed_shapes(void) {
     const int semis_b[3] = {2, 1, -3};
     StandardFormMotiveShape tonal_proto = shape(true, 3, semis_a, generic_up, gaps, 60);
     StandardFormMotiveShape tonal_cand = shape(true, 3, semis_b, generic_up, gaps, 62);
-    ChainRelationContext key = {true, 0, false};
+    ChainRelationContext key = {true, 0, test_materials()->major};
     assert(chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, &key) && m.kind == MOTIVE_OCCURRENCE_TONAL);
     /* without a key the same shapes are not a transposition of a scale: no match as a tonal one */
     assert(!chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, NULL) || m.kind != MOTIVE_OCCURRENCE_TONAL);

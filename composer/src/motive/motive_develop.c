@@ -60,8 +60,8 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
         result.notes[i] = developed->notes[i];
     }
     if (developed->has_scale && (!template_motive->has_scale || developed->tonic_pc != template_motive->tonic_pc ||
-                                 developed->minor != template_motive->minor)) {
-        AnalysisKey moved = plan_key_of_pitch_class(developed->tonic_pc, developed->minor ? KEY_STRUCTURE_MODE_MINOR
+                                 motive_sketch_minor(developed) != motive_sketch_minor(template_motive))) {
+        AnalysisKey moved = plan_key_of_pitch_class(developed->tonic_pc, motive_sketch_minor(developed) ? KEY_STRUCTURE_MODE_MINOR
                                                                                            : KEY_STRUCTURE_MODE_MAJOR);
         motive_set_key(&result, &moved, MOTIVE_SKETCH_KEY_GIVEN);
     }

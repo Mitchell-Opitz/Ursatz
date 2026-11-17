@@ -304,7 +304,7 @@ static bool draw_accelerating_fragments(FillRng *rng, const GrowThemeRequest *re
  */
 static bool liquid_in_range(const Motive *motive, bool in_scale) {
     unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
-        0, motive->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
+        0, motive_sketch_minor(motive) ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
     for (size_t i = 0; i < motive->note_count; i++) {
         int pitch = motive_pitch(motive, i);
         if (pitch < LIQUID_LOW || pitch > LIQUID_HIGH) {
@@ -344,7 +344,7 @@ static bool liquid_take_cadence(Motive *motive, bool has_cadence, CadenceType ca
     if (motive->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         return false;
     }
-    int want = (motive->tonic_pc + (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? 0 : (motive->minor ? 3 : 4))) % 12;
+    int want = (motive->tonic_pc + (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? 0 : (motive_sketch_minor(motive) ? 3 : 4))) % 12;
     MotiveSketchNote *last = &motive->notes[motive->note_count - 1];
     int pitch = motive_pitch(motive, motive->note_count - 1);
     int shift = util_pitch_class(want - pitch);

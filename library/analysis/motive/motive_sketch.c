@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "model/pitch/pitch_arithmetic.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/tonal_key.h"
 
 static long floor_div(long a, long b) {
@@ -10,13 +11,15 @@ static long floor_div(long a, long b) {
     return (a % b != 0 && ((a < 0) != (b < 0))) ? quotient - 1 : quotient;
 }
 
-static StandardTonalityMode scale_mode(const MotiveSketch *sketch) {
-    return sketch->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR;
+#define THIRD_MINOR 3
+
+bool motive_sketch_minor(const MotiveSketch *sketch) {
+    return sketch != NULL && pitch_material_third(sketch->material) == THIRD_MINOR;
 }
 
 /* The semitones above the tonic of scale step `degree` (0 to 6) of the sketch's scale. */
 static int scale_step_semitone(const MotiveSketch *sketch, int degree) {
-    return standard_tonality_degree_semitone(scale_mode(sketch), degree + 1);
+    return standard_tonality_material_degree_semitone(sketch->material, degree + 1);
 }
 
 /* --- equality and validation --------------------------------------------- */
@@ -41,7 +44,7 @@ bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b) {
             return false;
         }
     }
-    if (a->has_scale && (a->tonic_pc != b->tonic_pc || a->minor != b->minor)) {
+    if (a->has_scale && (a->tonic_pc != b->tonic_pc || motive_sketch_minor(a) != motive_sketch_minor(b))) {
         return false;
     }
     if (!msk_eq(a->bar, b->bar) || !msk_eq(a->beat, b->beat) || !msk_eq(a->pickup, b->pickup) ||
@@ -107,7 +110,7 @@ unsigned long long motive_sketch_fingerprint(const MotiveSketch *sketch) {
     hash = fnv_byte(hash, sketch->has_scale ? 1 : 0);
     if (sketch->has_scale) {
         hash = fnv_signed(hash, sketch->tonic_pc);
-        hash = fnv_byte(hash, sketch->minor ? 1 : 0);
+        hash = fnv_byte(hash, motive_sketch_minor(sketch) ? 1 : 0);
     }
     hash = fnv_time(hash, sketch->bar);
     hash = fnv_time(hash, sketch->beat);
@@ -165,7 +168,7 @@ bool motive_sketch_validate(const MotiveSketch *sketch) {
         sketch->chord_count > MOTIVE_SKETCH_MAX_CHORDS || sketch->feature_count > MOTIVE_SKETCH_MAX_FEATURES) {
         return false;
     }
-    if (sketch->has_scale && (sketch->tonic_pc < 0 || sketch->tonic_pc > 11)) {
+    if (sketch->has_scale && (sketch->tonic_pc < 0 || sketch->tonic_pc > 11 || sketch->material == NULL)) {
         return false;
     }
     if ((int)sketch->form < MOTIVE_SKETCH_FORM_FULL || sketch->form > MOTIVE_SKETCH_FORM_CONTOUR ||
@@ -248,7 +251,7 @@ long motive_sketch_step(const MotiveSketch *sketch, int pitch, int *alteration) 
     int inside = (int)(relative - octave * 12);
     int degree = 1;
     int raised = 0;
-    standard_tonality_degree_at_or_below_semitone(inside, scale_mode(sketch), &degree, &raised);
+    standard_tonality_material_degree_at_or_below_semitone(inside, sketch->material, &degree, &raised);
     if (alteration) {
         *alteration = raised;
     }
@@ -288,7 +291,7 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     for (size_t i = 0; i < count; i++) {
         pcs[i] = (sketch->tonic_pc + scale_step_semitone(sketch, (root_index + 2 * (int)i) % 7)) % 12;
     }
-    if (sketch->minor && chord->degree == 5) {
+    if (motive_sketch_minor(sketch) && chord->degree == 5) {
         pcs[1] = (sketch->tonic_pc + 11) % 12;
     }
     return count;
@@ -322,7 +325,7 @@ bool motive_sketch_contour_normalize(const MotiveSketch *in, MotiveSketch *out) 
     if (!scale.has_scale) {
         scale.has_scale = true;
         scale.tonic_pc = 0;
-        scale.minor = false;
+        scale.material = common_practice_materials_builtin()->major; /* TRANSITIONAL until the snapshot reaches the stages (P58 B10) */
     }
     for (size_t i = 0; i < in->note_count; i++) {
         if (ranks[i] >= 64) {

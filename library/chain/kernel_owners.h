@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "analysis/form/analysis_input.h"
+#include "model/pitch/pitch_material.h"
 #include "analysis/form/analysis_motive_shape.h"
 #include "chain/chain_inputs.h"
 #include "analysis/notes/tone_line.h"
@@ -25,7 +26,7 @@ bool chain_classify_tones(const ToneLineNote *notes, size_t count, ToneLineLabel
 typedef struct {
     bool has_key;
     int tonic_pitch_class; /* 0..11 */
-    bool minor;
+    const PitchMaterial *material; /* the home key's material, from the snapshot; read only when has_key */
 } ChainRelationContext;
 
 /*

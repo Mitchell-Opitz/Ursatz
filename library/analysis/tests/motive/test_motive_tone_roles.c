@@ -4,6 +4,7 @@
 
 #include "analysis/motive/motive_chord_internal.h"
 #include "analysis/motive/motive_tone_roles.h"
+#include "test_knowledge.h"
 
 /*
  * Analysis-regression tests for the motive tone roles: each non-chord tone type on a small sketch in C major,
@@ -28,6 +29,7 @@ static MotiveSketch line(const int *pitches, size_t count) {
     }
     sketch.note_count = count;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.bar = q(1, 1);
     sketch.beat = q(1, 4);
     sketch.pickup = q(0, 1);

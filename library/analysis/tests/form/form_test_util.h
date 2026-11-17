@@ -18,6 +18,7 @@
 #include "model/time/note_value.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_signature.h"
+#include "test_knowledge.h"
 
 /*
  * A form-analysis input built by hand: a MeterMap of `top`/4 (with a pickup of `pickup_quarters` quarter notes when it is
@@ -159,11 +160,14 @@ static inline void form_destroy(FormFixture *f) {
 }
 
 /* The defaults plus the kernel's motive relation matcher (the motive analysis requires one): C major for generic shapes. */
-static ChainRelationContext form_motive_context = {true, 0, false};
+static ChainRelationContext form_motive_context;
 
 static inline StandardFormConfig form_motive_config(void) {
     StandardFormConfig config = standard_form_config_default();
     config.relation_match = chain_match_motive_relation;
+    form_motive_context.has_key = true;
+    form_motive_context.tonic_pitch_class = 0;
+    form_motive_context.material = test_materials()->major;
     config.relation_context = &form_motive_context;
     return config;
 }

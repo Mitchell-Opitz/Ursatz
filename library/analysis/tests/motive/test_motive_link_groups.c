@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive/motive_link.h"
+#include "test_knowledge.h"
 
 /*
  * motive_link_candidates (the nearest few in other pieces, gated, as unordered pairs) and motive_link_groups
@@ -29,6 +30,7 @@ static MotiveSketch motive(int last_pitch) {
     sketch.notes[4].pitch = last_pitch;
     sketch.note_count = 5;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.tonic_pc = 0;
     sketch.bar = q(1, 1);
     sketch.beat = q(1, 4);

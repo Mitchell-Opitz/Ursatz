@@ -10,7 +10,7 @@
 #include "util/util.h"
 
 AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode) {
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, mode};
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, mode, NULL};
     PitchLetter letter;
     int accidental;
     if (standard_tonality_key_tonic_of_pitch_class(util_pitch_class(pitch_class), mode == KEY_STRUCTURE_MODE_MINOR, &letter,

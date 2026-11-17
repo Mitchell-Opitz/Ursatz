@@ -4,6 +4,7 @@
 
 #include "analysis/motive/motive_variant_recognition.h"
 #include "model/pitch/pitch_spelling.h"
+#include "test_knowledge.h"
 
 /*
  * The three depth two variants the Composer's variant round trip did not recover. The notes are the
@@ -50,8 +51,9 @@ static MotiveSketch build(const Shape *shape) {
     }
     sketch.note_count = shape->note_count;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.tonic_pc = 0;
-    sketch.minor = false;
+    sketch.material = test_materials()->major;
     sketch.key_source = MOTIVE_SKETCH_KEY_GIVEN;
     sketch.has_tonic_spelling = true;
     sketch.tonic_letter = PITCH_LETTER_C;
@@ -183,7 +185,7 @@ static MotiveSketch d_minor(bool with_chord) {
                    4, 1, 1, {{"a", 1, 2}}, 1, with_chord};
     MotiveSketch sketch = build(&shape);
     sketch.tonic_pc = 2;
-    sketch.minor = true;
+    sketch.material = test_materials()->natural_minor;
     sketch.tonic_letter = PITCH_LETTER_D;
     assert(motive_sketch_validate(&sketch));
     return sketch;

@@ -29,6 +29,7 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.phrase_count = 0;
     config.repeats = NULL;
     config.repeat_count = 0;
+    config.materials = common_practice_materials_builtin();
     return config;
 }
 
@@ -309,8 +310,9 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }
 
-bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, AnalysisKey *out) {
-    if (region == NULL || out == NULL) {
+bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
+                                             AnalysisKey *out) {
+    if (region == NULL || materials == NULL || out == NULL) {
         return false;
     }
     const char *name = common_practice_key_index_tonic_name(region->key_index);
@@ -324,9 +326,10 @@ bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *regi
     out->id = NULL;
     out->tonic_letter = letter;
     out->tonic_accidental = name[1] == '#' ? 1 : (name[1] == 'b' ? -1 : 0);
-    out->mode = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR
-                                                                                              : KEY_STRUCTURE_MODE_MAJOR;
-    return true;
+    CommonPracticeKeyMode mode = common_practice_key_index_mode(region->key_index);
+    out->mode = mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+    out->material = common_practice_material(materials, mode);
+    return out->material != NULL;
 }
 
 bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *event, CommonPracticeKeySignatureEvent *out) {

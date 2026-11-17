@@ -22,9 +22,9 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
-static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
-static const AnalysisKey G_MAJOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR};
+static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR, NULL};
+static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+static const AnalysisKey G_MAJOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
 
 static MotiveOptions options_with(const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
@@ -131,7 +131,7 @@ static void test_same_motive_from_each_format(void) {
     assert(time_is(midi.length, 1, 1));
     assert(motive_meter(&midi).beats_per_bar == 4 && motive_meter(&midi).beat_unit == 4);
     assert(midi.key_source == MOTIVE_SKETCH_KEY_GIVEN);
-    assert(midi.tonic_pc == 2 && midi.minor);
+    assert(midi.tonic_pc == 2 && motive_sketch_minor(&midi));
 
     assert(motive_equal(&midi, &musicxml));
     assert(motive_equal(&midi, &text));
@@ -168,7 +168,7 @@ static void test_options(void) {
     Motive motive;
     MotiveError error;
     assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &bossa, &motive, &error) == MOTIVE_OK);
-    assert(motive.tonic_pc == 0 && !motive.minor);
+    assert(motive.tonic_pc == 0 && !motive_sketch_minor(&motive));
     assert(motive.key_source == MOTIVE_SKETCH_KEY_GIVEN);
 
     /* The same meter as the file's is fine; a different one changes the bars and is refused. */
@@ -386,17 +386,17 @@ static void test_analysis_without_a_key(void) {
 static void test_key_is_inferred_only_when_the_pitches_settle(void) {
     Motive scale = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, NULL);
     assert(scale.key_source == MOTIVE_SKETCH_KEY_INFERRED);
-    assert(scale.tonic_pc == 2 && scale.minor);
+    assert(scale.tonic_pc == 2 && motive_sketch_minor(&scale));
     Motive major = load_notes("F4:q G4:q A4:q Bb4:q C5:q D5:q E5:q F5:q", &FOUR_FOUR, NULL);
     assert(major.key_source == MOTIVE_SKETCH_KEY_INFERRED);
-    assert(major.tonic_pc == 5 && !major.minor);
+    assert(major.tonic_pc == 5 && !motive_sketch_minor(&major));
     /* A given key is never replaced. */
     Motive given = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, &C_MAJOR);
     assert(given.key_source == MOTIVE_SKETCH_KEY_GIVEN && given.tonic_pc == 0);
     /* Seven notes of a scale with no note to settle the relative keys stay open. */
     Motive open = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q C5:q", &FOUR_FOUR, NULL);
     assert(open.key_source == MOTIVE_SKETCH_KEY_INFERRED && open.tonic_pc == 0 &&
-           !open.minor);
+           !motive_sketch_minor(&open));
     Motive undecided = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q", &FOUR_FOUR, NULL);
     assert(undecided.key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED);
 }
@@ -713,7 +713,7 @@ static void test_degrees_reading(void) {
     assert(note_is(&motive, 1, 64, 1, 4, 1, 8));
     assert(note_is(&motive, 2, 69, 3, 8, 1, 8));
     assert(note_is(&motive, 3, 74, 1, 2, 1, 2));
-    assert(motive.key_source == MOTIVE_SKETCH_KEY_GIVEN && motive.minor);
+    assert(motive.key_source == MOTIVE_SKETCH_KEY_GIVEN && motive_sketch_minor(&motive));
 
     /* Octave 0 puts the tonic in MIDI 60 to 71: G is 67. Marks are any number, up or down. */
     motive = load_with(motive_from_degrees_text, "1:q 1,:q 1':q 1'':q 1,,:q 1',:q", &FOUR_FOUR, &G_MAJOR);
@@ -1000,10 +1000,10 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    static const AnalysisKey G_MINOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MINOR};
+    static const AnalysisKey G_MINOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MINOR, NULL};
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
-    assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && moved.minor);
+    assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && motive_sketch_minor(&moved));
     assert(moved.note_count == 4 && moved.notes[0].pitch == 67 && moved.notes[1].pitch == 70 &&
            moved.notes[2].pitch == 74 && moved.notes[3].pitch == 79);
     assert(moved.length.num == source.length.num && moved.length.den == source.length.den);

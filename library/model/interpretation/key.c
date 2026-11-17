@@ -35,10 +35,23 @@ KeyResult key_create(Interpretation *interpretation, const char *label, Key **ou
     return KEY_OK;
 }
 
+#define THIRD_MINOR 3
+#define THIRD_MAJOR 4
+
+bool key_structure_mode_of(const PitchMaterial *material, KeyStructureMode *out) {
+    int third = pitch_material_third(material);
+    if (out == NULL || (third != THIRD_MINOR && third != THIRD_MAJOR)) {
+        return false;
+    }
+    *out = third == THIRD_MAJOR ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR;
+    return true;
+}
+
 KeyResult key_create_with_structure(Interpretation *interpretation, const char *label, const KeyStructure *structure,
                                      Key **out) {
+    KeyStructureMode material_mode;
     if (structure == NULL || structure->tonic_pitch_class < 0 || structure->tonic_pitch_class > 11 ||
-        (structure->mode != KEY_STRUCTURE_MODE_MAJOR && structure->mode != KEY_STRUCTURE_MODE_MINOR)) {
+        !key_structure_mode_of(structure->material, &material_mode) || structure->mode != material_mode) {
         return KEY_ERR_BAD_STRUCTURE;
     }
     Key *key = NULL;

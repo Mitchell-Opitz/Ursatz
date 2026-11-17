@@ -6,6 +6,7 @@
 #include "model/interpretation/key.h"
 #include "analysis/harmony/key_identification.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Identification tests: major and natural-minor pitch-class collections
@@ -24,7 +25,7 @@ static void check_identification(const int *pitch_classes, size_t pitch_class_co
     assert(entity_id_create(context_id_value, &context_id) == ENTITY_ID_OK);
 
     Key *key;
-    assert(common_practice_build_key(mode, tonic_name, context_id, &key) == KEY_OK);
+    assert(common_practice_build_key(common_practice_material(test_materials(), mode), tonic_name, context_id, &key) == KEY_OK);
     assert(strcmp(key_label(key), expected_label) == 0);
     key_destroy(key);
 }

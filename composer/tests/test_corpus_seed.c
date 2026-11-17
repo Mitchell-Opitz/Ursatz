@@ -107,7 +107,7 @@ static int test_motive(void) {
     assert(seed.motive.notes[0].pitch % 12 == 9);
     assert(seed.motive.notes[1].pitch - seed.motive.notes[0].pitch == 4);
     assert(seed.motive.notes[2].pitch - seed.motive.notes[1].pitch == 3);
-    assert(seed.motive.tonic_pc == 9 && seed.motive.minor);
+    assert(seed.motive.tonic_pc == 9 && motive_sketch_minor(&seed.motive));
 
     /* Cut at the barline: a 6/8 bar (three quarters) takes the half note and the quarter, which ends on the barline;
        a 5/8 bar takes the half note and a quarter shortened to the eighth that is left. */

@@ -74,7 +74,7 @@ typedef enum {
  *                                                    MOTIVE_SKETCH_PITCH_UNKNOWN (see motive_pitch)
  *   length, pickup                                   where the last note ends; the part of a bar before the first barline
  *   bar, beat                                        the meter, read and set through motive_meter_of and motive_set_meter
- *   has_scale, tonic_pc, minor, key_source, tonic spelling   the key, read and set through motive_key_of and motive_set_key
+ *   has_scale, tonic_pc, material, key_source, tonic spelling   the key, read and set through motive_key_of and motive_set_key
  *   chords, chord_count                              its own harmony (MotiveSketchChord)
  *   features, feature_count                          labelled runs of notes (MotiveSketchFeature)
  *   accompaniment                                    the part it plays: false the tune, true what goes under it

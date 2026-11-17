@@ -596,7 +596,7 @@ static void test_library_bad_slots(void) {
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     other = fits;
-    AnalysisKey other_key = plan_key_of_pitch_class(7, other.minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey other_key = plan_key_of_pitch_class(7, motive_sketch_minor(&other) ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
     motive_set_key(&other, &other_key, other.key_source);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);

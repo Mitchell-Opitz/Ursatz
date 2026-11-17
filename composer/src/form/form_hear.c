@@ -5,6 +5,7 @@
 
 #include <analysis/form/analysis_theme.h>
 #include <theory/form/phrase_level_form.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <model/time/time_span.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/result_chain.h>
@@ -183,7 +184,7 @@ static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out
     for (size_t i = 0; i < regions->region_count; i++) {
         const CommonPracticeKeyRegion *region = &regions->regions[i];
         keys[i].start = region->span.start.value;
-        if (!common_practice_key_region_analysis_key(region, &keys[i].key)) {
+        if (!common_practice_key_region_analysis_key(region, common_practice_materials_builtin(), &keys[i].key)) {
             free(keys);
             return FORM_HEAR_ERR_ANALYSIS;
         }

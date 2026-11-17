@@ -1279,7 +1279,7 @@ static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *pat
         json_child_path(at, path, "tonic_pitch_class");
         return json_bad_format(reader, at, "no key on this pitch class");
     }
-    AnalysisKey key = {NULL, letter, accidental, mode};
+    AnalysisKey key = {NULL, letter, accidental, mode, NULL};
     *out = key;
     return true;
 }
@@ -1304,7 +1304,7 @@ static bool read_key_members(JsonReader *reader, const cJSON *object, const char
     if (!cJSON_IsString(tonic) || !pitch_spelling_parse_name(tonic->valuestring, &letter, &accidental, NULL)) {
         return json_bad_format(reader, at, "expected a tonic like \"C\", \"F#\" or \"Bb\"");
     }
-    AnalysisKey key = {NULL, letter, accidental, (KeyStructureMode)mode};
+    AnalysisKey key = {NULL, letter, accidental, (KeyStructureMode)mode, NULL};
     *out = key;
     return true;
 }

@@ -4,6 +4,7 @@
 #include "chain/kernel_owners.h"
 #include "hand_cadences.h"
 #include "chain/tests/weighted_pipeline.h"
+#include "test_knowledge.h"
 
 /*
  * The motive families of Mozart 545, the exposition (measures 1-28), against tests/fixtures/annotations/mozart545_motives.txt: a DRAFT hand
@@ -126,7 +127,7 @@ static void test_mozart_545(void) {
     assert(standard_form_segment_phrases(&build.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&build.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_identify_themes(&build.input, &phrases, &segmentation, NULL, &themes) == STANDARD_FORM_ANALYSIS_OK);
-    ChainRelationContext relation_context = {true, 0, false}; /* C major */
+    ChainRelationContext relation_context = {true, 0, test_materials()->major}; /* C major */
     StandardFormConfig motive_config = standard_form_config_default();
     motive_config.relation_match = chain_match_motive_relation;
     motive_config.relation_context = &relation_context;

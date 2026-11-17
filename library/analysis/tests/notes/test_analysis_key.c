@@ -48,7 +48,7 @@ static void test_known_keys(void) {
 }
 
 static void test_from_fifths_rejects(void) {
-    AnalysisKey key = {"keep", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
+    AnalysisKey key = {"keep", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR, NULL};
     assert(!analysis_key_from_fifths(8, KEY_STRUCTURE_MODE_MAJOR, &key));
     assert(!analysis_key_from_fifths(-8, KEY_STRUCTURE_MODE_MINOR, &key));
     assert(!analysis_key_from_fifths(0, (KeyStructureMode)5, &key));
@@ -57,9 +57,9 @@ static void test_from_fifths_rejects(void) {
 }
 
 static void test_tonic_pitch_class(void) {
-    AnalysisKey c = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
-    AnalysisKey fs = {NULL, PITCH_LETTER_F, 1, KEY_STRUCTURE_MODE_MINOR};
-    AnalysisKey bb = {NULL, PITCH_LETTER_B, -1, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey c = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    AnalysisKey fs = {NULL, PITCH_LETTER_F, 1, KEY_STRUCTURE_MODE_MINOR, NULL};
+    AnalysisKey bb = {NULL, PITCH_LETTER_B, -1, KEY_STRUCTURE_MODE_MAJOR, NULL};
     assert(analysis_key_tonic_pitch_class(&c) == 0);
     assert(analysis_key_tonic_pitch_class(&fs) == 6);
     assert(analysis_key_tonic_pitch_class(&bb) == 10);
@@ -67,14 +67,14 @@ static void test_tonic_pitch_class(void) {
 }
 
 static void test_equals(void) {
-    AnalysisKey a = {"one", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MAJOR};
-    AnalysisKey b = {"two", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey a = {"one", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    AnalysisKey b = {"two", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
     assert(analysis_key_equals(&a, &b));
-    AnalysisKey minor = {"one", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
+    AnalysisKey minor = {"one", PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR, NULL};
     assert(!analysis_key_equals(&a, &minor));
     /* The same pitch class spelled differently is a different key. */
-    AnalysisKey sharp = {NULL, PITCH_LETTER_C, 1, KEY_STRUCTURE_MODE_MAJOR};
-    AnalysisKey flat = {NULL, PITCH_LETTER_D, -1, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey sharp = {NULL, PITCH_LETTER_C, 1, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    AnalysisKey flat = {NULL, PITCH_LETTER_D, -1, KEY_STRUCTURE_MODE_MAJOR, NULL};
     assert(analysis_key_tonic_pitch_class(&sharp) == analysis_key_tonic_pitch_class(&flat));
     assert(!analysis_key_equals(&sharp, &flat));
     assert(!analysis_key_equals(&a, NULL));
@@ -84,7 +84,7 @@ static void test_equals(void) {
 static void test_key_event(void) {
     MusicalTime time;
     assert(musical_time_make(3, 2, &time) == MUSICAL_TIME_OK);
-    AnalysisKeyEvent event = {time, {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR}};
+    AnalysisKeyEvent event = {time, {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR, NULL}};
     assert(musical_time_same(event.time, time) && analysis_key_tonic_pitch_class(&event.key) == 7);
 }
 

@@ -262,7 +262,7 @@ typedef struct {
 /* Every pitch within the range, and in the key's scale (a minor key also has the raised seventh). */
 static bool within_range(const Motive *motive) {
     unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
-        0, motive->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
+        0, motive_sketch_minor(motive) ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
     for (size_t i = 0; i < motive->note_count; i++) {
         int pitch = motive_pitch(motive, i);
         if (pitch < FORM_LOW || pitch > FORM_HIGH) {
@@ -352,7 +352,7 @@ static bool cadence_tone_holds(const Request *request, const Motive *motive) {
     }
     int tonic = motive->tonic_pc;
     int last = util_pitch_class(motive_pitch(motive, motive->note_count - 1) - tonic);
-    int third = motive->minor ? 3 : 4;
+    int third = motive_sketch_minor(motive) ? 3 : 4;
     return !((request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && last != 0) || (request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && last != third));
 }
 

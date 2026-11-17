@@ -102,7 +102,7 @@ static int step_of(int midi, const Motive *key) {
     int relative = midi - key->tonic_pc;
     int octave = relative >= 0 ? relative / 12 : -((11 - relative) / 12);
     int within = relative - octave * 12;
-    return octave * 7 + (key->minor ? MINOR : MAJOR)[within];
+    return octave * 7 + (motive_sketch_minor(key) ? MINOR : MAJOR)[within];
 }
 
 static bool same_rhythm(const PlanNote *a, const PlanNote *b, size_t count) {

@@ -15,6 +15,7 @@
 #include "analysis/harmony/analysis_cadence_claims.h"
 #include "chain/form_bridge.h"
 #include "chain/kernel_owners.h"
+#include "theory/tonality/common_practice_materials.h"
 
 AnalysisChainConfig analysis_chain_config_default(void) {
     AnalysisChainConfig config;
@@ -522,7 +523,9 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
     chain->have_motive_input = true;
     chain->relation_context.has_key = true;
     chain->relation_context.tonic_pitch_class = common_practice_key_index_tonic(home);
-    chain->relation_context.minor = common_practice_key_index_mode(home) == COMMON_PRACTICE_KEY_MINOR;
+    /* TRANSITIONAL until the chain resolves the snapshot's materials (P58 B10) */
+    chain->relation_context.material =
+        common_practice_material(common_practice_materials_builtin(), common_practice_key_index_mode(home));
     const StandardFormInput *input = &chain->motive_input.input;
     if (standard_form_segment_phrases(input, &chain->config.form, chain_form_boundary_detect, NULL, &chain->motive_phrases) !=
         STANDARD_FORM_ANALYSIS_OK) {

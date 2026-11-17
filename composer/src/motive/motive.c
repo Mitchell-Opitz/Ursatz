@@ -9,6 +9,7 @@
 
 #include <cJSON.h>
 #include <analysis/harmony/key_identification.h>
+#include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>
@@ -185,7 +186,7 @@ bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key) {
     if (!sketch || !key || !sketch->has_scale || sketch->tonic_pc < 0 || sketch->tonic_pc > 11) {
         return false;
     }
-    KeyStructureMode mode = sketch->minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+    KeyStructureMode mode = motive_sketch_minor(sketch) ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
     *key = plan_key_of_pitch_class(sketch->tonic_pc, mode);
     if (sketch->has_tonic_spelling) {
         key->tonic_letter = (PitchLetter)sketch->tonic_letter;
@@ -202,7 +203,7 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
         /* No key: no scale, so the relations that need one refuse the motive (motive_key reads C major). */
         sketch->has_scale = false;
         sketch->tonic_pc = 0;
-        sketch->minor = false;
+        sketch->material = NULL;
         sketch->key_source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
         sketch->has_tonic_spelling = false;
         sketch->tonic_letter = 0;
@@ -211,7 +212,10 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
     }
     sketch->has_scale = true;
     sketch->tonic_pc = analysis_key_tonic_pitch_class(key);
-    sketch->minor = key->mode == KEY_STRUCTURE_MODE_MINOR;
+    /* The key's own material; a key written by the mode-based code has none yet, and takes the builtin one (until P58 B13). */
+    const CommonPracticeMaterials *builtin = common_practice_materials_builtin();
+    sketch->material = key->material != NULL ? key->material
+                                             : (key->mode == KEY_STRUCTURE_MODE_MINOR ? builtin->natural_minor : builtin->major);
     sketch->key_source = source;
     sketch->has_tonic_spelling = true;
     sketch->tonic_letter = (int)key->tonic_letter;
@@ -711,7 +715,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
         return false;
     }
     if (a->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
-        (a->has_scale != b->has_scale || (a->has_scale && (a->tonic_pc != b->tonic_pc || a->minor != b->minor)))) {
+        (a->has_scale != b->has_scale || (a->has_scale && (a->tonic_pc != b->tonic_pc || motive_sketch_minor(a) != motive_sketch_minor(b))))) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {

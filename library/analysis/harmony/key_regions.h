@@ -11,6 +11,7 @@
 
 #include "model/core/rational.h"
 #include "model/interpretation/key.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/key_vocabulary.h"
 #include "analysis/notes/analysis_key.h"
 #include "theory/vocabulary/key_change_extent.h"
@@ -137,11 +138,12 @@ typedef struct {
     size_t phrase_count;                       /* default 0 */
     const CommonPracticeKeyRepeat *repeats;    /* optional: written-out repeats whose measures share keys; borrowed */
     size_t repeat_count;                       /* default 0 */
+    const CommonPracticeMaterials *materials;  /* default common_practice_materials_builtin() until P58 B10 passes the snapshot's; NULL means that default; borrowed */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
    "key-region", pivot_search_measures 2, evidence_weight 0.8, no phrase boundaries, snap_reach_measures 1, hold_tolerance 0.05,
-   no phrases and no repeats. */
+   no phrases and no repeats, the builtin common-practice materials. */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
 
 typedef enum {
@@ -360,9 +362,10 @@ typedef struct {
     CommonPracticeRegionSource source;
 } CommonPracticeKeyRegion;
 
-/* The AnalysisKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor,
-   id NULL. False, *out untouched, for a NULL argument or an index outside 0..23. */
-bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, AnalysisKey *out);
+/* The AnalysisKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor and
+   the material of that mode from `materials`, id NULL. False, *out untouched, for a NULL argument or an index outside 0..23. */
+bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
+                                             AnalysisKey *out);
 
 typedef struct {
     size_t from_region;            /* indices into regions[]; to_region == from_region + 1 */

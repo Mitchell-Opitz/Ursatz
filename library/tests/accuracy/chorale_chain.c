@@ -25,6 +25,7 @@
 #include "analysis/harmony/weighted_chord_identification.h"
 #include "../rational_test_util.h"
 #include "../key_index_test_util.h"
+#include "test_knowledge.h"
 
 /* The analysis (segments, key regions in two passes, chords, Roman numerals) is analysis_chain_run on the imported notes. What stays here
    is the harness's own: the phrase ends it finds between the passes (cadence ends, on outer degrees read from the segment members), the
@@ -174,7 +175,7 @@ static bool read_numerals(Run *r) {
         snprintf(id, sizeof(id), "annotation-key-%zu", region_total);
         EntityID *context = NULL;
         if (entity_id_create(id, &context) != ENTITY_ID_OK ||
-            common_practice_build_key(mode, common_practice_key_index_tonic_name(index), context,
+            common_practice_build_key(common_practice_material(test_materials(), mode), common_practice_key_index_tonic_name(index), context,
                                       &r->annotation_keys[region_total]) != KEY_OK) {
             return false;
         }

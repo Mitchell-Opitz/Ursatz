@@ -10,6 +10,7 @@
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_span.h"
+#include <theory/tonality/common_practice_materials.h>
 
 static bool build_span(const NoteEvent *event, TimeSpan *out) {
     MusicalTime start = *temporal_anchor_position(note_event_temporal_anchor(event));
@@ -66,7 +67,9 @@ static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
     for (size_t i = 0; i < count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
         out->key_events[i].time = event->position;
-        if (!analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &out->key_events[i].key)) {
+        /* The file's mode hint never reached the chain: every key is the major one. TRANSITIONAL until the snapshot reaches here (P58 B10). */
+        if (!analysis_key_from_fifths_material(event->sharps_flats, common_practice_materials_builtin()->major,
+                                               &out->key_events[i].key)) {
             return false;
         }
     }

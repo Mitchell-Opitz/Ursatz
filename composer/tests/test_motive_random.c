@@ -60,7 +60,7 @@ static Rational time_of(long num, unsigned long den) {
 static void check_motive(const Scenario *scenario, const Motive *motive) {
     assert(motive_meter(motive).beats_per_bar == scenario->beats && motive_meter(motive).beat_unit == scenario->unit);
     assert(motive->key_source == MOTIVE_SKETCH_KEY_GIVEN);
-    assert(motive->minor == (scenario->mode == KEY_STRUCTURE_MODE_MINOR));
+    assert(motive_sketch_minor(motive) == (scenario->mode == KEY_STRUCTURE_MODE_MINOR));
     int tonic = scenario->has_key ? scenario->tonic : (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? 0 : 9);
     assert(motive->tonic_pc == tonic);
     assert(motive->form == MOTIVE_SKETCH_FORM_FULL);
