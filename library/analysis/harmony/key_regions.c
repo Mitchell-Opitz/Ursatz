@@ -9,6 +9,7 @@
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/time/time_rational.h"
 #include "model/pitch/midi_pitch.h"
+#include "theory/tonality/tonal_key.h"
 
 CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     CommonPracticeKeyProfiles profiles = {
@@ -690,16 +691,10 @@ static CommonPracticeKeyRegionsStatus plan_spans(const CommonPracticeKeySignatur
 /* The pitch classes of a key's natural collection as a 12-bit mask: the major scale, or the relative major's
    for a minor key. */
 static unsigned natural_collection(int key_index) {
-    static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
-    int tonic = common_practice_key_index_tonic(key_index);
-    if (common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR) {
-        tonic = (tonic + 3) % 12;
-    }
-    unsigned mask = 0;
-    for (int i = 0; i < 7; i++) {
-        mask |= 1u << ((tonic + MAJOR_SCALE[i]) % 12);
-    }
-    return mask;
+    StandardTonalityMode mode = common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR
+                                    ? STANDARD_TONALITY_MODE_NATURAL_MINOR
+                                    : STANDARD_TONALITY_MODE_MAJOR;
+    return standard_tonality_mode_pitch_classes(common_practice_key_index_tonic(key_index), mode);
 }
 
 /* True when the key `to` is closely related to `from`: the dominant or subdominant in the same mode, or the
@@ -718,11 +713,10 @@ static bool closely_related(int from, int to) {
 
 /* The tones a key's diatonic chords are made of: its natural collection, plus the raised seventh in minor. */
 static unsigned held_collection(int key_index) {
-    unsigned mask = natural_collection(key_index);
-    if (common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR) {
-        mask |= PITCH_CLASS_BIT(common_practice_key_index_tonic(key_index) + 11);
-    }
-    return mask;
+    StandardTonalityMode mode = common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR
+                                    ? STANDARD_TONALITY_MODE_NATURAL_MINOR
+                                    : STANDARD_TONALITY_MODE_MAJOR;
+    return standard_tonality_mode_pitch_classes_with_leading_tone(common_practice_key_index_tonic(key_index), mode);
 }
 
 /* Folds a region back into the key before it when it is a passage of IV, V and ii of that key (see key_regions.h,
@@ -1383,10 +1377,12 @@ bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *regi
     if (name == NULL) {
         return false;
     }
-    static const PitchLetter LETTERS[7] = {PITCH_LETTER_A, PITCH_LETTER_B, PITCH_LETTER_C, PITCH_LETTER_D,
-                                           PITCH_LETTER_E, PITCH_LETTER_F, PITCH_LETTER_G};
+    PitchLetter letter;
+    if (!pitch_letter_from_char(name[0], &letter)) {
+        return false;
+    }
     out->id = NULL;
-    out->tonic_letter = LETTERS[name[0] - 'A'];
+    out->tonic_letter = letter;
     out->tonic_accidental = name[1] == '#' ? 1 : (name[1] == 'b' ? -1 : 0);
     out->mode = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR
                                                                                               : KEY_STRUCTURE_MODE_MAJOR;

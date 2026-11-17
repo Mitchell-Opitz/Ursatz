@@ -10,6 +10,7 @@
 #include "theory/harmony/harmony_steps.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/midi_pitch.h"
+#include "theory/tonality/tonal_key.h"
 
 HarmonyResolutionConfig harmony_resolution_config_default(void) {
     HarmonyResolutionConfig config;
@@ -41,9 +42,11 @@ static int pitch_class(long semitone) {
 
 /* A move of `delta` semitones as diatonic steps: 1 or 2 semitones a step, 3 or 4 a third, and so on. */
 static int steps_of(long delta) {
-    static const int STEPS[12] = {0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6};
     long magnitude = delta < 0 ? -delta : delta;
-    int steps = (int)(magnitude / 12) * 7 + STEPS[magnitude % 12];
+    int degree = 1;
+    int alteration = 0;
+    standard_tonality_degree_of_semitone((int)(magnitude % 12), STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration);
+    int steps = (int)(magnitude / 12) * 7 + degree - 1;
     return delta < 0 ? -steps : steps;
 }
 

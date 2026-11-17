@@ -4,9 +4,7 @@
 
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
-
-/* The semitones above the tonic of degrees 1 to 7 of the major scale. */
-static const int MAJOR_SEMITONES[7] = {0, 2, 4, 5, 7, 9, 11};
+#include "theory/tonality/tonal_key.h"
 
 static int modulo(int value, int divisor) {
     int m = value % divisor;
@@ -20,7 +18,7 @@ bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, Ga
     int steps = modulo(pitch_spelling_step_number(pitch) - pitch_spelling_step_number(tonic), 7);
     int semitones = modulo(pitch_spelling_midi(pitch) - pitch_spelling_midi(tonic),
                            12);
-    int alteration = semitones - MAJOR_SEMITONES[steps];
+    int alteration = semitones - standard_tonality_degree_semitone(STANDARD_TONALITY_MODE_MAJOR, steps + 1);
     if (alteration > 6) {
         alteration -= 12;
     } else if (alteration < -6) {
@@ -32,9 +30,10 @@ bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, Ga
 }
 
 GalantPitchDegree galant_degree_of_semitones(int semitones) {
-    static const GalantPitchDegree TABLE[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
-                                                {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
-    return TABLE[pitch_class_of_midi(semitones)];
+    GalantPitchDegree reading = {1, 0};
+    standard_tonality_degree_of_semitone(pitch_class_of_midi(semitones), STANDARD_TONALITY_MODE_MAJOR, &reading.degree,
+                                         &reading.alteration);
+    return reading;
 }
 
 bool galant_degree_allows(const GalantDegree *wanted, const GalantPitchDegree *actual) {

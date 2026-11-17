@@ -10,6 +10,7 @@
 #include "theory/tonality/common_practice_framework.h"
 #include "model/interpretation/uncertainty.h"
 #include "model/pitch/midi_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 static const char *mode_suffix(CommonPracticeKeyMode mode) {
     switch (mode) {
@@ -25,11 +26,11 @@ static const char *mode_suffix(CommonPracticeKeyMode mode) {
 /* The pitch class of a tonic name: a letter A-G then any number of '#' or 'b' accidentals. -1 if it is not
    one, in which case the Key is built without a structure. */
 static int tonic_pitch_class_of(const char *name) {
-    static const int LETTER_PITCH_CLASS[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
-    if (name[0] < 'A' || name[0] > 'G') {
+    PitchLetter letter;
+    if (!pitch_letter_from_char(name[0], &letter)) {
         return -1;
     }
-    int pitch_class = LETTER_PITCH_CLASS[name[0] - 'A'];
+    int pitch_class = pitch_letter_semitone(letter);
     for (const char *c = name + 1; *c != '\0'; c++) {
         if (*c == '#') {
             pitch_class++;

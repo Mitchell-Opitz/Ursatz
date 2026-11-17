@@ -15,6 +15,7 @@
 #include "theory/tonality/roman_numeral_analysis_rules.h"
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "theory/tonality/seventh_rules.h"
+#include "theory/tonality/tonal_key.h"
 #include "theory/framework/framework.h"
 #include "theory/tonality/triad_rules.h"
 #include "model/pitch/midi_pitch.h"
@@ -22,10 +23,6 @@
 #define CONFIDENCE_DENOMINATOR 1000000UL
 #define NO_RESOLUTION ((size_t)-1)
 
-static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
-static const int NATURAL_MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
-static const int RAISED_LEADING_TONE_OFFSET = 11;
-static const int RAISED_SIXTH_OFFSET = 9;
 
 typedef struct {
     int intervals[3];
@@ -50,21 +47,30 @@ static const SeventhShape SEVENTHS[] = {{{0, 4, 7, 11}, STANDARD_TONALITY_SEVENT
 /* The degree 1..7 of the root `offset` semitones above the tonic, or 0; *raised set for minor's raised 7th,
    *raised_sixth for its raised 6th (melodic minor). */
 static int degree_of_offset(StandardTonalityRomanKeyMode mode, int offset, bool *raised, bool *raised_sixth) {
-    const int *scale = mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_SCALE : NATURAL_MINOR_SCALE;
     *raised = false;
     *raised_sixth = false;
-    for (int i = 0; i < 7; i++) {
-        if (scale[i] == offset) {
-            return i + 1;
+    int degree = 0;
+    int alteration = 0;
+    if (!standard_tonality_degree_of_semitone(offset,
+                                              mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR
+                                                  ? STANDARD_TONALITY_MODE_MAJOR
+                                                  : STANDARD_TONALITY_MODE_NATURAL_MINOR,
+                                              &degree, &alteration)) {
+        return 0;
+    }
+    if (alteration == 0) {
+        return degree;
+    }
+    /* In minor a seventh or a sixth a semitone above its natural place is the raised leading tone or sixth. */
+    if (mode == STANDARD_TONALITY_ROMAN_KEY_MINOR && alteration == 1) {
+        if (degree == 7) {
+            *raised = true;
+            return 7;
         }
-    }
-    if (mode == STANDARD_TONALITY_ROMAN_KEY_MINOR && offset == RAISED_LEADING_TONE_OFFSET) {
-        *raised = true;
-        return 7;
-    }
-    if (mode == STANDARD_TONALITY_ROMAN_KEY_MINOR && offset == RAISED_SIXTH_OFFSET) {
-        *raised_sixth = true;
-        return 6;
+        if (degree == 6) {
+            *raised_sixth = true;
+            return 6;
+        }
     }
     return 0;
 }

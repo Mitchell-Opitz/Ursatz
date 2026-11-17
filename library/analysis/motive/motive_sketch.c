@@ -3,17 +3,20 @@
 #include <string.h>
 
 #include "model/pitch/pitch_arithmetic.h"
-
-static const int MAJOR_STEPS[7] = {0, 2, 4, 5, 7, 9, 11};
-static const int MINOR_STEPS[7] = {0, 2, 3, 5, 7, 8, 10};
+#include "theory/tonality/tonal_key.h"
 
 static long floor_div(long a, long b) {
     long quotient = a / b;
     return (a % b != 0 && ((a < 0) != (b < 0))) ? quotient - 1 : quotient;
 }
 
-static const int *scale_steps(const MotiveSketch *sketch) {
-    return sketch->minor ? MINOR_STEPS : MAJOR_STEPS;
+static StandardTonalityMode scale_mode(const MotiveSketch *sketch) {
+    return sketch->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR;
+}
+
+/* The semitones above the tonic of scale step `degree` (0 to 6) of the sketch's scale. */
+static int scale_step_semitone(const MotiveSketch *sketch, int degree) {
+    return standard_tonality_degree_semitone(scale_mode(sketch), degree + 1);
 }
 
 /* --- equality and validation --------------------------------------------- */
@@ -240,30 +243,16 @@ long motive_sketch_step(const MotiveSketch *sketch, int pitch, int *alteration) 
         }
         return pitch;
     }
-    const int *steps = scale_steps(sketch);
     long relative = (long)pitch - sketch->tonic_pc;
     long octave = floor_div(relative, 12);
     int inside = (int)(relative - octave * 12);
-    int degree = 0;
+    int degree = 1;
     int raised = 0;
-    bool exact = false;
-    for (int d = 0; d < 7 && !exact; d++) {
-        if (steps[d] == inside) {
-            degree = d;
-            exact = true;
-        }
-    }
-    for (int d = 0; d < 7 && !exact; d++) {
-        if (steps[d] == inside - 1) {
-            degree = d;
-            raised = 1;
-            break;
-        }
-    }
+    standard_tonality_degree_at_or_below_semitone(inside, scale_mode(sketch), &degree, &raised);
     if (alteration) {
         *alteration = raised;
     }
-    return octave * 7 + degree;
+    return octave * 7 + degree - 1;
 }
 
 int motive_sketch_pitch_at_step(const MotiveSketch *sketch, long step, int alteration) {
@@ -272,7 +261,7 @@ int motive_sketch_pitch_at_step(const MotiveSketch *sketch, long step, int alter
     }
     long octave = floor_div(step, 7);
     int degree = (int)(step - octave * 7);
-    return (int)(sketch->tonic_pc + octave * 12 + scale_steps(sketch)[degree] + alteration);
+    return (int)(sketch->tonic_pc + octave * 12 + scale_step_semitone(sketch, degree) + alteration);
 }
 
 int motive_sketch_degree_of_step(const MotiveSketch *sketch, long step) {
@@ -286,9 +275,8 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     if (!sketch->has_scale || !chord) {
         return 0;
     }
-    const int *steps = scale_steps(sketch);
     int root_index = chord->degree - 1;
-    int root = steps[root_index] + chord->alteration;
+    int root = scale_step_semitone(sketch, root_index) + chord->alteration;
     size_t count = chord->seventh ? 4 : 3;
     if (chord->alteration != 0) {
         static const int OFFSETS[4] = {0, 4, 7, 10};
@@ -298,7 +286,7 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
         return count;
     }
     for (size_t i = 0; i < count; i++) {
-        pcs[i] = (sketch->tonic_pc + steps[(root_index + 2 * (int)i) % 7]) % 12;
+        pcs[i] = (sketch->tonic_pc + scale_step_semitone(sketch, (root_index + 2 * (int)i) % 7)) % 12;
     }
     if (sketch->minor && chord->degree == 5) {
         pcs[1] = (sketch->tonic_pc + 11) % 12;

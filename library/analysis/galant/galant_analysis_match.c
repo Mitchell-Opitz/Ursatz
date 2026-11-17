@@ -13,6 +13,7 @@
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/time/time_rational.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 #define NONE ((size_t)-1)
 #define MAX_FRAMES 8
@@ -151,9 +152,7 @@ static void push_candidate(Search *search, const Candidate *candidate) {
 }
 
 static PitchLetter letter_of(int degree) {
-    static const PitchLetter LETTERS[7] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F,
-                                           PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_B};
-    return LETTERS[(degree - 1) % 7];
+    return pitch_letter_offset(PITCH_LETTER_C, degree - 1);
 }
 
 static PitchSpelling *spell(GalantPitchDegree degree, int octave) {

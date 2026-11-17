@@ -1,4 +1,5 @@
 #include "analysis/harmony/harmonic_spans.h"
+#include "model/pitch/midi_pitch.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -164,10 +165,6 @@ static bool sounds_at_start(const CommonPracticeMember *member, double start) {
     return member->held || fabs(member->onset - start) <= TIME_TOLERANCE;
 }
 
-static int pitch_class_of(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 /* The member that resolves member `m`: the first of m's voice attacked after m (by more than TIME_TOLERANCE), when it is attacked
    inside the window, one or two semitones from m, and a member on the bass pitch sounds at `start` and still sounds after it is
    attacked (its end later than that onset by more than TIME_TOLERANCE): a bass that ends as the step lands holds nothing. SIZE_MAX
@@ -255,8 +252,8 @@ HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *mem
             if (resolution[i] == SIZE_MAX) {
                 continue;
             }
-            bool resolved_to_chord_tone = (mask & (1u << pitch_class_of(members[resolution[i]].pitch))) != 0;
-            bool accent_is_chord_tone = (mask & (1u << pitch_class_of(members[i].pitch))) != 0;
+            bool resolved_to_chord_tone = (mask & (1u << pitch_class_of_midi(members[resolution[i]].pitch))) != 0;
+            bool accent_is_chord_tone = (mask & (1u << pitch_class_of_midi(members[i].pitch))) != 0;
             members[i].resolves_in_segment = status == HARMONIC_SPAN_OK && resolved_to_chord_tone && !accent_is_chord_tone;
         }
         if (status != HARMONIC_SPAN_OK) {
@@ -298,7 +295,7 @@ static size_t merge_members(const Grouper *g, size_t a, size_t b) {
 
 /* The shorter way round between two pitch classes, 0 to 6. */
 static int pitch_class_distance(int a, int b) {
-    int d = abs(pitch_class_of(a) - pitch_class_of(b));
+    int d = abs(pitch_class_of_midi(a) - pitch_class_of_midi(b));
     return d > 6 ? 12 - d : d;
 }
 
@@ -317,13 +314,13 @@ static int bass_after(const Grouper *g, size_t c) {
 static bool altered_chord_tone(const Grouper *g, size_t c, unsigned mask) {
     int bass = g->bass[c];
     int after = bass_after(g, c);
-    if (bass < 0 || after < 0 || (mask & (1u << pitch_class_of(bass))) != 0 || pitch_class_distance(bass, after) != 1) {
+    if (bass < 0 || after < 0 || (mask & (1u << pitch_class_of_midi(bass))) != 0 || pitch_class_distance(bass, after) != 1) {
         return false;
     }
     const CommonPracticeSegment *segment = g->cells[c].segment;
     for (size_t i = 0; i < segment->member_count; i++) {
         const CommonPracticeMember *member = &segment->members[i];
-        if (member->pitch != bass && (mask & (1u << pitch_class_of(member->pitch))) != 0 &&
+        if (member->pitch != bass && (mask & (1u << pitch_class_of_midi(member->pitch))) != 0 &&
             pitch_class_distance(member->pitch, bass) == 1 && sounds_at_start(member, g->cells[c].start)) {
             return true;
         }
@@ -357,7 +354,7 @@ static bool is_new_bass(const Grouper *g, size_t c) {
    bass before it and a step to the bass after it, or it is an altered chord tone of the mask (R-383). */
 static bool bass_explained_by(const Grouper *g, size_t a, size_t b, unsigned mask) {
     for (size_t c = a + 1; c <= b; c++) {
-        if (!is_new_bass(g, c) || (mask & (1u << pitch_class_of(g->bass[c]))) != 0) {
+        if (!is_new_bass(g, c) || (mask & (1u << pitch_class_of_midi(g->bass[c]))) != 0) {
             continue;
         }
         int before = g->bass[c - 1];

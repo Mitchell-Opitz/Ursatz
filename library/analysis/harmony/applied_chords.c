@@ -6,9 +6,17 @@
 #include "theory/tonality/roman_numeral_analysis_rules.h"
 #include "theory/tonality/triad_in_key_rules.h"
 #include "model/pitch/midi_pitch.h"
+#include "theory/tonality/tonal_key.h"
 
-static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
-static const int NATURAL_MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
+static StandardTonalityMode key_mode(const StandardTonalityChordInput *input) {
+    return input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? STANDARD_TONALITY_MODE_MAJOR
+                                                            : STANDARD_TONALITY_MODE_NATURAL_MINOR;
+}
+
+/* The semitones above the tonic of a scale degree of the key (natural minor in minor). */
+static int scale_semitone(const StandardTonalityChordInput *input, int degree) {
+    return standard_tonality_degree_semitone(key_mode(input), degree);
+}
 
 /* The targets: scale degree 1..7 of the key. */
 static const int MAJOR_TARGETS[5] = {2, 3, 4, 5, 6};
@@ -78,13 +86,8 @@ static double score_chord(const double weights[12], double total, int root, cons
 
 static bool in_key(const StandardTonalityChordInput *input, int pitch_class) {
     int offset = pitch_class_of_midi(pitch_class - input->tonic_pitch_class);
-    const int *scale = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_SCALE : NATURAL_MINOR_SCALE;
-    for (int i = 0; i < 7; i++) {
-        if (scale[i] == offset) {
-            return true;
-        }
-    }
-    return input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR && offset == 11; /* the raised leading tone */
+    /* The scale and, in minor, the raised leading tone. */
+    return (standard_tonality_mode_pitch_classes_with_leading_tone(0, key_mode(input)) & (1u << offset)) != 0;
 }
 
 static int member_in_bass(int bass_pitch_class, int root, const int *intervals, size_t count) {
@@ -150,7 +153,6 @@ bool standard_tonality_read_applied_chord(const StandardTonalityChordInput *inpu
         return false;
     }
     const int *targets = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_TARGETS : MINOR_TARGETS;
-    const int *scale = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_SCALE : NATURAL_MINOR_SCALE;
     for (int s = 0; s < 4; s++) {
         const Shape *shape = &SHAPES[s];
         if (input->interval_count != shape->interval_count) {
@@ -165,7 +167,7 @@ bool standard_tonality_read_applied_chord(const StandardTonalityChordInput *inpu
         }
         int target_root = pitch_class_of_midi(input->root_pitch_class - shape->root_offset);
         for (int t = 0; t < 5; t++) {
-            if (pitch_class_of_midi(input->tonic_pitch_class + scale[targets[t] - 1]) == target_root) {
+            if (pitch_class_of_midi(input->tonic_pitch_class + scale_semitone(input, targets[t])) == target_root) {
                 return fill_applied_reading(input->mode, shape, targets[t], input->root_pitch_class,
                                             input->bass_pitch_class, out);
             }
@@ -235,13 +237,12 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
                                         input->interval_count, input->sounding_bass_pitch_class, config);
 
     const int *targets = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_TARGETS : MINOR_TARGETS;
-    const int *scale = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_SCALE : NATURAL_MINOR_SCALE;
     bool found = false;
     double best_score = 0.0;
     int best_target = 0;
     const Shape *best_shape = NULL;
     for (int t = 0; t < 5; t++) {
-        int target_root = pitch_class_of_midi(input->tonic_pitch_class + scale[targets[t] - 1]);
+        int target_root = pitch_class_of_midi(input->tonic_pitch_class + scale_semitone(input, targets[t]));
         /* The resolution must be the target or (deceptively) its submediant, and it must be a different
            chord from the one being relabelled. */
         int resolution_root = inputs[resolution].root_pitch_class;
@@ -268,7 +269,7 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
         return false;
     }
 
-    int target_root = pitch_class_of_midi(input->tonic_pitch_class + scale[best_target - 1]);
+    int target_root = pitch_class_of_midi(input->tonic_pitch_class + scale_semitone(input, best_target));
     int root = pitch_class_of_midi(target_root + best_shape->root_offset);
     StandardTonalityRomanReading reading;
     if (!fill_applied_reading(input->mode, best_shape, best_target, root, input->sounding_bass_pitch_class,

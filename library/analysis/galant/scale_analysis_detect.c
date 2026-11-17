@@ -11,6 +11,7 @@
 #include "analysis/galant/scale_analysis_claim.h"
 #include "theory/galant/scale_harmonization.h"
 #include "theory/galant/scale_sequence_rules.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 #define NONE ((size_t)-1)
 
@@ -53,9 +54,7 @@ static bool adjacent(const Chord *chords, size_t k) {
 /* --- spelled pitches in a C frame --- */
 
 static PitchLetter letter_of(int degree) {
-    static const PitchLetter LETTERS[7] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F,
-                                           PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_B};
-    return LETTERS[(degree - 1) % 7];
+    return pitch_letter_offset(PITCH_LETTER_C, degree - 1);
 }
 
 static PitchSpelling *spell_at(GalantPitchDegree degree, long position) {

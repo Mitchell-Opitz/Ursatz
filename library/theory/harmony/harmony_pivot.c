@@ -4,17 +4,15 @@
 
 #include "theory/harmony/harmony_applied.h"
 #include "theory/harmony/harmony_functions.h"
+#include "theory/tonality/triad_in_key_rules.h"
 
-typedef enum { TRIAD_MAJOR = 0, TRIAD_MINOR, TRIAD_DIMINISHED } Triad;
-
-/* The quality of the triad on each degree of the natural scale. */
-static const Triad MAJOR_TRIADS[7] = {TRIAD_MAJOR, TRIAD_MINOR, TRIAD_MINOR, TRIAD_MAJOR,
-                                      TRIAD_MAJOR, TRIAD_MINOR, TRIAD_DIMINISHED};
-static const Triad MINOR_TRIADS[7] = {TRIAD_MINOR, TRIAD_DIMINISHED, TRIAD_MAJOR, TRIAD_MINOR,
-                                      TRIAD_MINOR, TRIAD_MAJOR,      TRIAD_MAJOR};
-
-static Triad quality(HarmonyMode mode, int degree) {
-    return mode == HARMONY_MODE_MAJOR ? MAJOR_TRIADS[degree - 1] : MINOR_TRIADS[degree - 1];
+/* The quality of the triad on a degree of the natural scale of the mode. */
+static StandardTonalityTriadQuality quality(HarmonyMode mode, int degree) {
+    StandardTonalityTriadQuality triad = STANDARD_TONALITY_TRIAD_MAJOR;
+    standard_tonality_triad_quality_in_key(mode == HARMONY_MODE_MAJOR ? STANDARD_TONALITY_TRIAD_KEY_MAJOR
+                                                                      : STANDARD_TONALITY_TRIAD_KEY_MINOR_NATURAL,
+                                           degree, &triad);
+    return triad;
 }
 
 /* The triad on the new key's degree, as its root in semitones above the old tonic. */

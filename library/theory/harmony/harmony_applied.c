@@ -1,14 +1,28 @@
 #include "theory/harmony/harmony_applied.h"
 
 #include <stdio.h>
+#include <string.h>
+
 #include "model/pitch/midi_pitch.h"
+#include "theory/tonality/roman_numeral_grammar.h"
+#include "theory/tonality/tonal_key.h"
+#include "theory/tonality/triad_in_key_rules.h"
 
-/* The label of the applied chord itself, by quality. */
-static const char *const QUALITY_SYMBOLS[HARMONY_APPLIED_QUALITY_COUNT] = {"V", "V7", "viio", "viio7", "vii%7"};
+/* The applied chord's own numeral, by quality: degree 5 for a dominant, 7 for a leading-tone chord. */
+static const struct {
+    int degree;
+    StandardTonalityNumeralQuality quality;
+} QUALITY_NUMERALS[HARMONY_APPLIED_QUALITY_COUNT] = {
+    {5, STANDARD_TONALITY_NUMERAL_MAJOR},
+    {5, STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH},
+    {7, STANDARD_TONALITY_NUMERAL_DIMINISHED},
+    {7, STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH},
+    {7, STANDARD_TONALITY_NUMERAL_HALF_DIMINISHED_SEVENTH},
+};
 
-/* Roman numerals of the diatonic triads, indexed by degree. */
-static const char *const MAJOR_NUMERALS[8] = {"", "I", "ii", "iii", "IV", "V", "vi", "viio"};
-static const char *const MINOR_NUMERALS[8] = {"", "i", "iio", "III", "iv", "V", "VI", "VII"};
+static StandardTonalityMode tonality_mode(HarmonyMode mode) {
+    return mode == HARMONY_MODE_MAJOR ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR;
+}
 
 bool harmony_applied_quality_valid(HarmonyAppliedQuality quality) {
     return quality >= 0 && quality < HARMONY_APPLIED_QUALITY_COUNT;
@@ -60,24 +74,29 @@ bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, c
     if (out == NULL || !harmony_applied_valid(mode, chord)) {
         return false;
     }
-    const char *target = mode == HARMONY_MODE_MAJOR ? MAJOR_NUMERALS[chord->target] : MINOR_NUMERALS[chord->target];
-    char label[32];
-    int length = snprintf(label, sizeof(label), "%s/%s", QUALITY_SYMBOLS[chord->quality], target);
-    if (length < 0 || (size_t)length >= size) {
+    /* The target is a triad of its key: the natural scale's, but with the major dominant of the harmonic minor. */
+    StandardTonalityTriadKey key = mode == HARMONY_MODE_MAJOR ? STANDARD_TONALITY_TRIAD_KEY_MAJOR
+                                   : chord->target == 5       ? STANDARD_TONALITY_TRIAD_KEY_MINOR_HARMONIC
+                                                              : STANDARD_TONALITY_TRIAD_KEY_MINOR_NATURAL;
+    StandardTonalityTriadQuality target_quality;
+    if (!standard_tonality_triad_quality_in_key(key, chord->target, &target_quality)) {
         return false;
     }
-    snprintf(out, size, "%s", label);
-    return true;
+    StandardTonalityNumeralText text;
+    memset(&text, 0, sizeof(text));
+    text.degree = QUALITY_NUMERALS[chord->quality].degree;
+    text.quality = QUALITY_NUMERALS[chord->quality].quality;
+    text.has_target = true;
+    text.target_degree = chord->target;
+    text.target_minor = target_quality == STANDARD_TONALITY_TRIAD_MINOR;
+    return standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_PLAN, out, size);
 }
-
-static const int MAJOR_SEMITONES[7] = {0, 2, 4, 5, 7, 9, 11};
-static const int MINOR_SEMITONES[7] = {0, 2, 3, 5, 7, 8, 10};
 
 int harmony_applied_scale_semitone(HarmonyMode mode, int degree) {
     if (!harmony_mode_valid(mode) || degree < 1 || degree > 7) {
         return -1;
     }
-    return mode == HARMONY_MODE_MAJOR ? MAJOR_SEMITONES[degree - 1] : MINOR_SEMITONES[degree - 1];
+    return standard_tonality_degree_semitone(tonality_mode(mode), degree);
 }
 
 int harmony_applied_root_degree(HarmonyMode mode, const HarmonyAppliedChord *chord) {
