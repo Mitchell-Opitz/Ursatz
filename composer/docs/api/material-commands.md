@@ -14,7 +14,7 @@ is the first), `musicxml` is rendered in memory (in each entry, and `musicxml` o
 file of the first is `midi`; the MIDI file of another is `composer_api_export` of its plan. A refused option is the member of
 the same name with its path.
 
-### `composer_api_progression(request_json, job, out)`
+### `composer_api_progression(context, request_json, job, out)`
 
 A chord progression for one phrase, with a bass line ([cli-progression.md](../cli-progression.md)).
 
@@ -37,7 +37,7 @@ is `COMPOSER_ERR_CANCELLED`. A phrase too short for the cadence, a schema that c
 seed completes are `COMPOSER_ERR_UNSATISFIABLE`. Schemas: `progression.request.schema.json`,
 `progression.response.schema.json`.
 
-### `composer_api_counterpoint(request_json, job, out)`
+### `composer_api_counterpoint(context, request_json, job, out)`
 
 A counter-melody against a line in strict species ([cli-counterpoint.md](../cli-counterpoint.md)). The request is the motive
 request of the line (any length) with:
@@ -56,7 +56,7 @@ species cannot be written against, or no counter-melody that holds the rules fro
 for), is `COMPOSER_ERR_UNSATISFIABLE`. Progress per seed (`"counterpoint"`). Schemas: `counterpoint.request.schema.json`,
 `counterpoint.response.schema.json`.
 
-### `composer_api_develop(request_json, job, out)`
+### `composer_api_develop(context, request_json, job, out)`
 
 Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)). The request is the motive request with:
 
@@ -71,7 +71,7 @@ Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)).
 "score_denominator", "text"}]}`. A development that can be made from nothing is `COMPOSER_ERR_UNSATISFIABLE`. Progress once
 (`"develop"`). Schemas: `develop.request.schema.json`, `develop.response.schema.json`.
 
-### `composer_api_grow(request_json, job, out)`
+### `composer_api_grow(context, request_json, job, out)`
 
 A theme grown from a motive ([cli-grow.md](../cli-grow.md)). The request is the motive request, or, in place of `input`,
 `corpus` (a corpus directory) with `like` (a passage file): the first bar of a similar passage becomes the motive and the

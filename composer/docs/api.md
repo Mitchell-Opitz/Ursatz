@@ -46,6 +46,27 @@ the CLI's own (the API writes none) and stays 3 where it was 3 (`export` has alw
 On any failure `ComposerResponse.error` holds `message` and `path`, the JSON Pointer of the request member at fault
 (`"/tempo"`, `"/plan/form/children/1"`), or `""` when no member is at fault. Nothing else is set.
 
+## The call context
+
+Every entry that composes or reads music takes a `const ComposerContext *context` first. The context holds one member, `knowledge`,
+the knowledge snapshot (`theory/knowledge/knowledge_snapshot.h`) the call reads: the pitch materials, the relations and the chord
+types. The caller builds the snapshot once with the library's `knowledge_snapshot_build` (the embedded entries, with any user files)
+and keeps it alive for the calls and for every plan, motive and key made from it; a snapshot is read-only, so calls on several
+threads may share one. The Composer holds no copy of the knowledge and no table of scales of its own: a key is a tonic and a
+material of the snapshot, a key text is a tonic and the word of a material (`"D minor"`: the key word, name, id or alias of the
+entry, in any case), and the scale, the third and the signature of a key are read from the material.
+
+A NULL context, a context with a NULL `knowledge`, or a snapshot that lacks one of the four materials of common practice
+(`omt.material.major`, `.natural-minor`, `.harmonic-minor`, `.melodic-minor`) is `COMPOSER_ERR_REQUEST` with the message `a knowledge
+snapshot is required` (or the missing id), and the path `""`. The entries that take none are `composer_api_version`,
+`composer_api_versions`, `composer_api_variant_operations` and `composer_api_forms`, which read no key.
+
+The Composer composes in the major and the natural minor. A key text that names another material the snapshot knows (`"C dorian"`,
+`"C harmonic minor"`) is refused at its member with `the Composer writes major and minor keys; '<word>' is not one of them`; a text
+that names no material is refused as an unknown key, as before. The request formats are unchanged: `mode` is still `major` or
+`minor`, and a plan file still names a key by a tonic and a mode, which the reader maps to the snapshot's major and natural minor.
+The command line builds one snapshot per process.
+
 ## Memory
 
 An entry zeroes the `ComposerResponse` first and fills only the members it produces: `json`, `plan_json`, `midi` and
@@ -169,6 +190,7 @@ This grows a theme from a motive and writes its MIDI file:
 
 ```c
 #include <stdio.h>
+#include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/composer_api.h>
 
 int main(void) {
@@ -178,11 +200,20 @@ int main(void) {
         " \"motives\": [{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:q 3:e 5:e 1':h\"}],"
         " \"slots\": {\"basic\": \"A\"}, \"seed\": 1, \"midi\": true}";
 
+    KnowledgeSnapshot *knowledge = NULL;
+    char message[256];
+    if (knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
+        fprintf(stderr, "%s\n", message);
+        return 1;
+    }
+    ComposerContext context = {knowledge};
+
     ComposerResponse response;
-    ComposerStatus status = composer_api_theme(request, NULL, &response);
+    ComposerStatus status = composer_api_theme(&context, request, NULL, &response);
     if (status != COMPOSER_OK) {
         fprintf(stderr, "status %d: %s (at '%s')\n", (int)status, response.error.message, response.error.path);
         composer_response_destroy(&response);
+        knowledge_snapshot_destroy(knowledge);
         return 1;
     }
     printf("%s\n", response.json);   /* the theme document */
@@ -192,6 +223,7 @@ int main(void) {
         fclose(file);
     }
     composer_response_destroy(&response);
+    knowledge_snapshot_destroy(knowledge);
     return 0;
 }
 ```

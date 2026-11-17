@@ -215,7 +215,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     input.meter = rendered->meter_map;
     input.has_key = true;
     input.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
-    /* The Composer's keys hold only their mode until P58 B13: the mode picks the material of the hearing's snapshot. */
+    /* The key's mode (major or minor) picks the major or natural minor material of the hearing's snapshot. */
     CommonPracticeMaterials materials;
     if (!common_practice_materials_resolve(hearing->knowledge, &materials, NULL, 0)) {
         heard_span_release(&heard);

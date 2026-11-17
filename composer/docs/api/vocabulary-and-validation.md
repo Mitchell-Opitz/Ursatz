@@ -8,7 +8,7 @@ Core versions, vocabulary and validation entries of the Composer API. Back to th
 Composer was built with (the Analyzer's, and its producer key, held in `ursatz_commit` until the next versions rename it, are the ones a plan or
 an analysis is stale against). Schema: `schema/api/versions.schema.json`.
 
-## Vocabularies: `composer_api_vocabulary(out)`
+## Vocabularies: `composer_api_vocabulary(context, out)`
 
 The words an application offers and the requests accept, in the order an application shows them, so it holds no table of its own (R-270: where the Composer and an application differ, the Composer's list wins). No request. `json`:
 
@@ -61,7 +61,7 @@ The built-in forms, in registry order (API 1.13, R-428): what the Pieces view ne
 
 Schema: `schema/api/forms.schema.json`. A piece of any form but the game loop is not composed yet: the forms are listed here, the piece entries take them in P45 B2.
 
-## Validation: `composer_api_validate(kind, request_json, out)`
+## Validation: `composer_api_validate(context, kind, request_json, out)`
 
 Reads a request as its entry does and composes nothing, so an application can check a form and show the Composer's defaults. `kind`: `motive` (the request of `composer_api_motive`), `theme` (of `composer_api_theme`), `piece` (the piece request object of `docs/piece-request.md`, not the `{"request", ...}` wrapper of `composer_api_piece`) and `random_motive` (of `composer_api_random_motive`). `json`: `{"request": <the request with the Composer's defaults filled>}`:
 

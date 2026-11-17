@@ -13,7 +13,7 @@
 #include "util/request_parse.h"
 
 /*
- * The Composer's knowledge (P58 B13): a key text is a tonic and the word of a material the snapshot knows, and the Composer writes
+ * The Composer's knowledge: a key text is a tonic and the word of a material the snapshot knows, and the Composer writes
  * only the major and the natural minor; every entry that composes or reads takes a call context with a snapshot; and the key of a
  * form's region is the key its relation entry resolves, the closely related key standard-harmony names.
  */

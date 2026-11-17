@@ -2,7 +2,7 @@
 
 Theme, piece and piece variations entries of the Composer API. Back to the [docs index](../README.md).
 
-## `composer_api_theme(request_json, job, out)`
+## `composer_api_theme(context, request_json, job, out)`
 
 Grows a theme from the theme request v2 of [theme-request.md](../theme-request.md) (`"schema": "ursatz-theme-request"`,
 `"schema_version": 2`). Its motives are inline: each motive object carries its content in `degrees`, a motive with a `path`
@@ -38,7 +38,7 @@ theme. Each item of `developments` is `{"motive", "idea", "development", "segmen
 same theme on any thread; the entry keeps no state, so requests may run at the same time. Schemas:
 `theme.request.schema.json`, `theme.response.schema.json`.
 
-## `composer_api_piece(request_json, job, out)`
+## `composer_api_piece(context, request_json, job, out)`
 
 Composes a looping game track from the piece request of [piece-request.md](../piece-request.md) (`"schema":
 "ursatz-piece-request"`, `"schema_version": 1`, the game loop, or `2` with a `form`: any built-in form, API 1.14; the `preferences` document gained the L2 motif members in 1.15), or writes
@@ -83,7 +83,7 @@ one is the game loop document's default (an HC at the end of the intro and of th
 ending, an IAC elsewhere), and a request without an ending gets the default ending. The same request and seed give the same
 piece on any thread; the entry keeps no state. Schemas: `piece.request.schema.json`, `piece.response.schema.json`.
 
-## `composer_api_piece_variations(request_json, job, out)`
+## `composer_api_piece_variations(context, request_json, job, out)`
 
 Makes up to `count` different versions of one section of a loop plan: the section is written again (as `regenerate` does,
 the seam and the loop's end included) from the seeds `seed`, `seed + 1`, ..., at most 4 times `count` of them, and a version

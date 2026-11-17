@@ -11,7 +11,7 @@ they name a style model, a corpus directory or a passage to look for in a corpus
 a string of digits. Where a command line option is refused, the entry refuses the member of the same name (`seed`,
 `style_weight`) with its path.
 
-### `composer_api_plan(request_json, job, out)`
+### `composer_api_plan(context, request_json, job, out)`
 
 Plans a whole short piece from a form template ([cli-plan.md](../cli-plan.md)); nothing is composed.
 
@@ -33,7 +33,7 @@ not fit a bar, a passage no corpus entry matches, or material that does not fit 
 the member (`/form`, `/bars`, `/like`, `/given/<i>`, `/given/<i>/at`). Schemas: `plan.request.schema.json`,
 `plan.response.schema.json`.
 
-### `composer_api_fill(request_json, job, out)`
+### `composer_api_fill(context, request_json, job, out)`
 
 Realizes a plan ([cli-fill.md](../cli-fill.md)): every open theme section is composed in stages from the seeds `seed`,
 `seed + 1`, ..., at most 16, each from the plan as it was given.
@@ -60,7 +60,7 @@ A plan no seed completes is `COMPOSER_ERR_UNSATISFIABLE` with the message `the p
 `COMPOSER_ERR_CANCELLED`. Progress is reported for each seed (`"seed"`) and each compose stage. Schemas:
 `fill.request.schema.json`, `fill.response.schema.json`.
 
-### `composer_api_lock(request_json, job, out)`
+### `composer_api_lock(context, request_json, job, out)`
 
 Locks a node, or one lane of it, as Given ([cli-regenerate.md](../cli-regenerate.md#lock)). The node is `"node"` (an id of the
 plan) or `"section"` (a form letter), exactly one, with an optional `"lane"` (`harmony`, `bass`, `melody`, `inner`). `json`:
@@ -68,7 +68,7 @@ plan) or `"section"` (a form letter), exactly one, with an optional `"lane"` (`h
 A node with a span still open is `COMPOSER_ERR_UNSATISFIABLE`; a node or section the plan does not have has the path `/node`
 or `/section`. Schemas: `lock.request.schema.json`, `lock.response.schema.json`.
 
-### `composer_api_regenerate(request_json, job, out)`
+### `composer_api_regenerate(context, request_json, job, out)`
 
 Writes one node of a filled plan again and what depends on it ([cli-regenerate.md](../cli-regenerate.md)). Members: `plan`,
 the node as for `lock`, `seed`, and `midi`, `musicxml`, `plain_midi`, `tempo`. `json` is the document of `fill` with
@@ -76,7 +76,7 @@ the node as for `lock`, `seed`, and `midi`, `musicxml`, `plain_midi`, `tempo`. `
 reopened. A locked or unwritable node is `COMPOSER_ERR_UNSATISFIABLE` with the reason; a stuck run is reported as for `fill`.
 Schemas: `regenerate.request.schema.json`, `regenerate.response.schema.json`.
 
-### `composer_api_variations(request_json, job, out)` and `composer_api_harmonize(request_json, job, out)`
+### `composer_api_variations(context, request_json, job, out)` and `composer_api_harmonize(context, request_json, job, out)`
 
 Several distinct versions of a node ([cli-variations.md](../cli-variations.md)): the node is written again from the seeds
 `seed`, `seed + 1`, ..., at most 4 times `count` of them, and a version is kept when it sounds different from the plan and

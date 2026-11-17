@@ -80,7 +80,7 @@ typedef struct {
 typedef struct KnowledgeSnapshot KnowledgeSnapshot;
 
 /*
- * What the Composer knows (P58 B13): the knowledge snapshot every composing and reading entry takes first. The snapshot
+ * What the Composer knows: the knowledge snapshot every composing and reading entry takes first. The snapshot
  * holds the pitch materials, relations and chord types the Composer reads; the caller builds it once and keeps it alive
  * for the calls (a snapshot is read-only, so calls on several threads may share one). A NULL context, or one with a NULL
  * knowledge, is COMPOSER_ERR_REQUEST with the message "a knowledge snapshot is required". composer_api_version,

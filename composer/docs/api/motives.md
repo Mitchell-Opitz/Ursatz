@@ -2,7 +2,7 @@
 
 Motive entries of the Composer API: core export, motive requests, motive, MIDI, render, variants, recognize and random motive. Back to the [docs index](../README.md).
 
-## `composer_api_export(request_json, job, out)`
+## `composer_api_export(context, request_json, job, out)`
 
 Renders a plan once and exports it, as `ursatz-composer export` does.
 
@@ -46,19 +46,19 @@ Schema: `schema/api/motive.request.schema.json`.
 
 Key and meter text. Every entry reads a `key` and a `meter` with one parser (`request_parse_key`, `request_parse_meter`): a key is a tonic letter, an optional `#` or `b`, a space and `major` or `minor` in any case (`"D minor"`, `"F# major"`); a meter is whole numbers only, 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16 (`"3/4"`, `"6/8"`), with no sign and no white space.
 
-## `composer_api_motive(request_json, job, out)`
+## `composer_api_motive(context, request_json, job, out)`
 
 Analyzes a motive, as `ursatz-composer motive <input> --json` does. `json`: the document that command prints,
 `{"motive", "analysis"}`: the motive in the motive-document format and its analysis (intervals, contour, rhythm, range,
 scale degrees, implied harmony, base harmony, the segments and the tone labels with their warnings). `analysis.segments` is `{"given": bool, "items": [{"label", "first", "last"}]}`: the motive's own `features` when it has any, otherwise a proposal (API 1.2; see [motive-format.md](../motive-format.md#segments)); every response that carries a motive analysis has it. Schema:
 `schema/api/motive.response.schema.json`.
 
-## `composer_api_motive_from_midi(bytes, size, request_json, job, out)`
+## `composer_api_motive_from_midi(context, bytes, size, request_json, job, out)`
 
 The same for a motive that is a Standard MIDI File (type 0 or 1), read in memory. The request has the members above
 without `input`. A buffer that is not a MIDI file, or holds notes sounding together, is `COMPOSER_ERR_UNSATISFIABLE`.
 
-## `composer_api_motive_render(request_json, job, out)`
+## `composer_api_motive_render(context, request_json, job, out)`
 
 The motive request, and the motive is rendered.
 
@@ -81,7 +81,7 @@ The variant operations of the registry, as `ursatz-composer variants --list-ops 
 `label`, `category`, `citation`, `relation`, `params` (`name`, `kind`, `min`, `max`, `description`, `optional`) and `forms`.
 Schema: `schema/api/variant_operations.schema.json`.
 
-## `composer_api_variants(request_json, job, out)`
+## `composer_api_variants(context, request_json, job, out)`
 
 Variants of a motive: each applies a chain of up to 4 operations, and a parameter the chain leaves open is drawn from the
 seed. The request is the motive request (above, without `tones`) with these members:
@@ -108,7 +108,7 @@ Progress is reported once for each variant tried, stage `"variants"` (`done` of 
 `each_op`), and a cancel is honored there with `COMPOSER_ERR_CANCELLED`. Schemas: `schema/api/variants.request.schema.json`,
 `variants.response.schema.json`.
 
-## `composer_api_recognize(request_json, job, out)`
+## `composer_api_recognize(context, request_json, job, out)`
 
 Names the chain of operations that turns a source motive into a target.
 
@@ -125,7 +125,7 @@ Names the chain of operations that turns a source motive into a target.
 `json`: `{"found", "chain", "distance", "remoteness", "kept", "changed", "derivation"}`. A search that finds no chain is a
 response with `found` false. Schemas: `recognize.request.schema.json`, `recognize.response.schema.json`.
 
-## `composer_api_random_motive(request_json, job, out)`
+## `composer_api_random_motive(context, request_json, job, out)`
 
 Random motives that keep the hard melodic rules of standard counterpoint; their length, pickup, number of notes, rhythm and
 range are drawn from defaults in the Composer.

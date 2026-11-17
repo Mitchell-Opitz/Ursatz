@@ -10,6 +10,10 @@ Style-dependent generators live here; the Generator descriptor, Candidate and Ge
 
 Intents are structured (CLI flags or a JSON request), never natural language.
 
+The Composer knows its music through a knowledge snapshot ([`knowledge/`](../knowledge/README.md)): every API entry that composes or
+reads takes a call context holding one, and the keys it writes are of the pitch materials in it (the major and the natural minor).
+It holds no scale table of its own ([the call context](docs/api.md#the-call-context)). The command line builds one snapshot per process.
+
 ## Build
 
 The Composer builds from the repository root with the other parts ([README](../README.md#build-and-test)); it needs

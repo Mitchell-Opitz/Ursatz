@@ -59,7 +59,7 @@ of any length that composes; a sentence at the loop's end (nothing after it but 
 | --- | --- | --- |
 | `empty` | | Nothing of its own: made from the piece's basic motive. |
 | `motif` | `motive`, `forms`, `into`, `hybrid`, `construction` | A motive of its own (`null`: the basic motive), saved forms of it for the motives stage (as in the theme request, at most 64 in the request), and for a section of 4 or 8 whole bars the theme it is built into: `into` `sentence` (default), `period` or `hybrid` (with `hybrid` as `--hybrid` writes it). With a `construction` (`"auto"`, or `{"ideas": {...}, "extensions": [...]}` as the [theme request](theme-request.md) gives it) the section is a theme of its whole bars, 3 to 16, with no pickup, built with that construction, whatever its length; a construction on a section of other bars or with a pickup is refused at `/sections/<i>/fill/construction`. Without one any other length is a free phrase. |
-| `theme` | `plan` | A plan the `theme` or `grow` command wrote: its realized lanes are Given to the section, moved and transposed to it. The theme must be as long as the section, in the same meter and mode. In the request file of the `piece` command `plan` is the path of the plan file; in a request to the [API](api/theme-and-piece.md#composer_api_piecerequest_json-job-out) it is the plan object itself, with an optional `source` (the name shown as the section's source), and a path is refused. The command reads the file into the request. |
+| `theme` | `plan` | A plan the `theme` or `grow` command wrote: its realized lanes are Given to the section, moved and transposed to it. The theme must be as long as the section, in the same meter and mode. In the request file of the `piece` command `plan` is the path of the plan file; in a request to the [API](api/theme-and-piece.md#composer_api_piececontext-request_json-job-out) it is the plan object itself, with an optional `source` (the name shown as the section's source), and a path is refused. The command reads the file into the request. |
 | `progression` | `numerals`, `cells` | Roman numerals separated by spaces (`"i iv V i"`), `cells` harmony cells each (a bar when left out; a cell is half a bar in 4/4). The harmony stage fills the rest of the section. |
 
 ## A piece of another form (schema version 2)
@@ -82,7 +82,7 @@ tried (up to 16), with the plan built again for each, so a modulating piece plan
 
 ## Errors
 
-The `piece` command and the [composer API](api/theme-and-piece.md#composer_api_piecerequest_json-job-out) read the request the same way: the command
+The `piece` command and the [composer API](api/theme-and-piece.md#composer_api_piececontext-request_json-job-out) read the request the same way: the command
 reads the file (and the plan file of each theme fill) into the API request, and a member that is not valid is refused with its
 path in the request (`/request/sections/<i>/cadence`) in the API and as a message and exit 1 in the command. The saved forms
 and motives of a motif fill are inline in both.
