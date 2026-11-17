@@ -24,6 +24,7 @@ add_library(ursatz_theory
     tonality/chord_vocabulary.c
     tonality/chord_vocabulary_seventh.c
     tonality/common_practice_framework.c
+    tonality/common_practice_materials.c
     tonality/framework.c
     tonality/interval.c
     tonality/key_vocabulary.c
