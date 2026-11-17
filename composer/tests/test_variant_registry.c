@@ -21,7 +21,7 @@ static Motive load(const char *notes, const char *meter, const char *key, Motive
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.has_meter = request_parse_meter(meter, &options.meter);
-    options.has_key = key && request_parse_key(key, test_materials(), &options.key);
+    options.has_key = key && request_parse_key(key, test_knowledge(), &options.key);
     assert(options.has_meter);
     Motive motive;
     MotiveError error;

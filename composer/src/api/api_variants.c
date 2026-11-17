@@ -199,7 +199,7 @@ static cJSON *read_as(const cJSON *part, const cJSON *meter_key_role_from, const
  * The basic motive of "basic": read in the meter, key and role of the request and the form of form_from's input. Not an
  * error when absent.
  */
-static ComposerStatus read_basic(const cJSON *request, const CommonPracticeMaterials *materials, const cJSON *form_from,
+static ComposerStatus read_basic(const cJSON *request, const KnowledgeSnapshot *knowledge, const cJSON *form_from,
                                  Motive *basic, bool *given, ComposerError *error) {
     const cJSON *part = cJSON_GetObjectItemCaseSensitive(request, "basic");
     *given = part && !cJSON_IsNull(part);
@@ -213,7 +213,7 @@ static ComposerStatus read_basic(const cJSON *request, const CommonPracticeMater
     if (!copy) {
         return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
-    ComposerStatus status = api_read_motive(copy, "/basic", materials, basic, NULL, error);
+    ComposerStatus status = api_read_motive(copy, "/basic", knowledge, basic, NULL, error);
     cJSON_Delete(copy);
     return status;
 }
@@ -535,7 +535,7 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
 }
 
 /* The variants proper: load the source, make "count" variants, build the document. */
-static ComposerStatus make_variants(const cJSON *request, const CommonPracticeMaterials *materials, const ComposerJob *job,
+static ComposerStatus make_variants(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
                                     ComposerResponse *out) {
     ComposerError *error = &out->error;
     VariantsRequest read;
@@ -544,12 +544,12 @@ static ComposerStatus make_variants(const cJSON *request, const CommonPracticeMa
         return status;
     }
     Motive source;
-    status = api_read_motive(request, "", materials, &source, NULL, error);
+    status = api_read_motive(request, "", knowledge, &source, NULL, error);
     if (status != COMPOSER_OK) {
         return status;
     }
     Motive basic = source;
-    status = read_basic(request, materials, request, &basic, &read.filter.basic_given, error);
+    status = read_basic(request, knowledge, request, &basic, &read.filter.basic_given, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -705,7 +705,7 @@ static cJSON *recognize_document(const Motive *source, const VariantChain *chain
 
 /* The motive request of "source" or "target": its own input, harmony and features, read in the request's meter, key and
    role with the pickup the request gives it. The errors of the members the request gives are put at their own paths. */
-static ComposerStatus read_recognize_motive(const cJSON *request, const CommonPracticeMaterials *materials, const char *name,
+static ComposerStatus read_recognize_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, const char *name,
                                             const char *pickup_name, Motive *out, ComposerError *error) {
     char base[32];
     snprintf(base, sizeof base, "/%s", name);
@@ -728,7 +728,7 @@ static ComposerStatus read_recognize_motive(const cJSON *request, const CommonPr
     if (!copy) {
         return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
-    ComposerStatus status = api_read_motive(copy, base, materials, out, NULL, error);
+    ComposerStatus status = api_read_motive(copy, base, knowledge, out, NULL, error);
     cJSON_Delete(copy);
     if (status == COMPOSER_ERR_REQUEST) {
         /* The members the request gives for both motives are named at the request's own path. */
@@ -748,7 +748,7 @@ static ComposerStatus read_recognize_motive(const cJSON *request, const CommonPr
     return status;
 }
 
-static ComposerStatus recognize_request(const cJSON *request, const CommonPracticeMaterials *materials, const ComposerJob *job,
+static ComposerStatus recognize_request(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
                                         ComposerResponse *out) {
     ComposerError *error = &out->error;
     if (job_step(job, "recognize", 0, 1)) {
@@ -766,9 +766,9 @@ static ComposerStatus recognize_request(const cJSON *request, const CommonPracti
     }
     Motive source;
     Motive target;
-    ComposerStatus status = read_recognize_motive(request, materials, "source", "pickup", &source, error);
+    ComposerStatus status = read_recognize_motive(request, knowledge, "source", "pickup", &source, error);
     if (status == COMPOSER_OK) {
-        status = read_recognize_motive(request, materials, "target", "target_pickup", &target, error);
+        status = read_recognize_motive(request, knowledge, "target", "target_pickup", &target, error);
     }
     if (status != COMPOSER_OK) {
         return status;
@@ -784,7 +784,7 @@ static ComposerStatus recognize_request(const cJSON *request, const CommonPracti
     memset(&remoteness, 0, sizeof remoteness);
     Motive basic;
     bool basic_given = false;
-    status = read_basic(request, materials, cJSON_GetObjectItemCaseSensitive(request, "source"), &basic, &basic_given, error);
+    status = read_basic(request, knowledge, cJSON_GetObjectItemCaseSensitive(request, "source"), &basic, &basic_given, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -806,7 +806,7 @@ static ComposerStatus recognize_request(const cJSON *request, const CommonPracti
 
 /* --- entries -------------------------------------------------------------- */
 
-typedef ComposerStatus (*RequestRunner)(const cJSON *request, const CommonPracticeMaterials *materials, const ComposerJob *job,
+typedef ComposerStatus (*RequestRunner)(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
                                         ComposerResponse *out);
 
 static ComposerStatus run_entry(const ComposerContext *context, RequestRunner run, const char *request_json,
@@ -822,7 +822,7 @@ static ComposerStatus run_entry(const ComposerContext *context, RequestRunner ru
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = run(request, &materials, job, out);
+    status = run(request, context->knowledge, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;

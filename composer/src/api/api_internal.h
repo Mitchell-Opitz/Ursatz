@@ -22,6 +22,12 @@ ComposerStatus api_parse_request(const char *text, cJSON **out, ComposerError *e
 ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...);
 
 /*
+ * For a key text the request parser refused: when it names a material the Composer does not compose in (request_key_refusal), sets
+ * error to that message at path and returns true; false when it does not, and the caller reports the key as unknown.
+ */
+bool api_fail_unsupported_key(ComposerError *error, const char *path, const KnowledgeSnapshot *knowledge, const char *key_text);
+
+/*
  * Checks the call context an entry takes first: COMPOSER_OK when context and its knowledge are present, else
  * COMPOSER_ERR_REQUEST with error set to "a knowledge snapshot is required" (no path). The entry zeroes its response first.
  * materials, when not NULL, gets the common-practice materials of the snapshot, resolved once for the call
@@ -80,16 +86,16 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
 
 /*
  * Reads a motive from the request object (docs/api.md, "Motive requests"): "input" {"format", "form", "text"}, "meter",
- * "key" (read in the materials), "pickup", and the extras of api_read_motive_extras. base is the JSON Pointer of the object in the request ("" for
+ * "key" (read through the knowledge snapshot), "pickup", and the extras of api_read_motive_extras. base is the JSON Pointer of the object in the request ("" for
  * the request itself), which the error paths start with. Returns COMPOSER_OK; COMPOSER_ERR_REQUEST for a member that is
  * not valid (error path set); COMPOSER_ERR_UNSATISFIABLE for text that is not a motive of the kind asked for. options
  * (may be NULL) gets the options the motive was read with.
  */
-ComposerStatus api_read_motive(const cJSON *request, const char *base, const CommonPracticeMaterials *materials, Motive *out,
+ComposerStatus api_read_motive(const cJSON *request, const char *base, const KnowledgeSnapshot *knowledge, Motive *out,
                                MotiveOptions *options, ComposerError *error);
 
 /* As api_read_motive for a motive that arrives as the bytes of a Standard MIDI File: the request has no "input". */
-ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const CommonPracticeMaterials *materials,
+ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const KnowledgeSnapshot *knowledge,
                                      const unsigned char *bytes, size_t size, Motive *out, MotiveOptions *options,
                                      ComposerError *error);
 

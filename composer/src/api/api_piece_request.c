@@ -345,8 +345,11 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         snprintf(tonic_key, sizeof(tonic_key), "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!request_parse_key(key_text, request->materials, &piece->key)) {
+    if (!request_parse_key(key_text, request->knowledge, &piece->key)) {
         snprintf(path, sizeof path, "%s/key", base);
+        if (api_fail_unsupported_key(error, path, request->knowledge, key_text)) {
+            return COMPOSER_ERR_REQUEST;
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\"", request->key_text);
     }

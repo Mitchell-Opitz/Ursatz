@@ -193,10 +193,20 @@ static void test_options(void) {
     assert(strcmp(error.location, "meter") == 0);
 
     AnalysisKey key;
-    assert(request_parse_key("Bb minor", test_materials(), &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(request_parse_key("F# major", test_materials(), &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
-    assert(!request_parse_key("H major", test_materials(), &key));
-    assert(!request_parse_key("D dorian", test_materials(), &key));
+    assert(request_parse_key("Bb minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(request_parse_key("F# major", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
+    assert(!request_parse_key("H major", test_knowledge(), &key));
+    assert(!request_parse_key("D dorian", test_knowledge(), &key));
+    assert(!request_parse_key("C harmonic minor", test_knowledge(), &key) && !request_parse_key("D", test_knowledge(), &key));
+    assert(request_parse_key("c MINOR", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 0 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(request_parse_key("G natural minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 7 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    char refusal[160];
+    assert(request_key_refusal("C dorian", test_knowledge(), refusal, sizeof refusal) &&
+           strcmp(refusal, "the Composer writes major and minor keys; 'dorian' is not one of them") == 0);
+    assert(request_key_refusal("C harmonic minor", test_knowledge(), refusal, sizeof refusal) &&
+           strcmp(refusal, "the Composer writes major and minor keys; 'harmonic minor' is not one of them") == 0);
+    assert(!request_key_refusal("C minor", test_knowledge(), refusal, sizeof refusal) && !request_key_refusal("H major", test_knowledge(), refusal, sizeof refusal) &&
+           !request_key_refusal("C nonsense", test_knowledge(), refusal, sizeof refusal));
     PlanMeter meter;
     assert(request_parse_meter("6/8", &meter) && meter.beats_per_bar == 6 && meter.beat_unit == 8);
     assert(!request_parse_meter("4/5", &meter));

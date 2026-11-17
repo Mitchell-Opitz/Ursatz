@@ -70,7 +70,7 @@ static Motive load(const char *notes, const char *meter, const char *key, Motive
         exit(2);
     }
     options.has_meter = true;
-    options.has_key = key && request_parse_key(key, test_materials(), &options.key);
+    options.has_key = key && request_parse_key(key, test_knowledge(), &options.key);
     Motive motive;
     MotiveError error;
     if (motive_load(notes, strlen(notes), format, &options, &motive, &error) != MOTIVE_OK) {

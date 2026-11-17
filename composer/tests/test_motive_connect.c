@@ -19,7 +19,7 @@ static Motive load(const char *notes, const char *harmony) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.has_meter = request_parse_meter("4/4", &options.meter);
-    options.has_key = request_parse_key("C major", test_materials(), &options.key);
+    options.has_key = request_parse_key("C major", test_knowledge(), &options.key);
     if (harmony) {
         /* One chord at the start: the degree is the numeral's. */
         options.has_harmony = true;

@@ -51,6 +51,10 @@ bool composer_material_valid(const PitchMaterial *material) {
     return common_practice_key_mode_of(material, &mode);
 }
 
+bool composer_material_supported(const CommonPracticeMaterials *materials, const PitchMaterial *material) {
+    return materials != NULL && material != NULL && (material == materials->major || material == materials->natural_minor);
+}
+
 bool composer_key_is_minor(const AnalysisKey *key) {
     return key && composer_material_is_minor(key->material);
 }

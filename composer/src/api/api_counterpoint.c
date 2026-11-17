@@ -58,7 +58,7 @@ static const char *value_text(const cJSON *item, char *buffer, size_t size) {
 
 /* --- reading the request ---------------------------------------------------------------------------------- */
 
-static ComposerStatus read_request(const cJSON *request, const CommonPracticeMaterials *materials, Options *options,
+static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
                                    ApiOutputs *outputs, cJSON **line, ComposerError *error) {
     const char *mode_text = NULL;
     const char *position_text = NULL;
@@ -103,10 +103,13 @@ static ComposerStatus read_request(const cJSON *request, const CommonPracticeMat
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key already names a mode; give a tonic alone with mode");
         }
         snprintf(combined, sizeof(combined), "%s %s", options->key_text, mode_text);
-        if (!request_parse_key(combined, materials, &options->key)) {
+        if (!request_parse_key(combined, knowledge, &options->key)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "unknown key '%s'", options->key_text);
         }
-    } else if (!request_parse_key(options->key_text, materials, &options->key)) {
+    } else if (!request_parse_key(options->key_text, knowledge, &options->key)) {
+        if (api_fail_unsupported_key(error, "/key", knowledge, options->key_text)) {
+            return COMPOSER_ERR_REQUEST;
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",
@@ -367,13 +370,13 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
     memset(&outputs, 0, sizeof(outputs));
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status == COMPOSER_OK) {
-        status = read_request(request, &materials, &options, &outputs, &line, &out->error);
+        status = read_request(request, context->knowledge, &options, &outputs, &line, &out->error);
         options.job = job;
         last_seed = options.seed;
     }
     if (status == COMPOSER_OK) {
         /* A line of any length is read here: the one-bar limit belongs to a motive, not to a line to write against. */
-        status = api_read_motive(line, "", &materials, &motive, NULL, &out->error);
+        status = api_read_motive(line, "", context->knowledge, &motive, NULL, &out->error);
     }
     /* Whether the line is one the species can be written against, before any seed is tried. */
     if (status == COMPOSER_OK) {

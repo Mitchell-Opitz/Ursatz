@@ -569,7 +569,7 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
         status = api_read_outputs(request, false, &outputs, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_read_motive(request, "", &materials, &source, NULL, &out->error);
+        status = api_read_motive(request, "", context->knowledge, &source, NULL, &out->error);
     }
     MotiveDevelopContext develop_context;
     PlanMotiveRef ref;

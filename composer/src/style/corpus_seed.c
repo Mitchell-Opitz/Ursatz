@@ -158,7 +158,7 @@ static bool same_place(int measure_a, double beat_a, int measure_b, double beat_
 /* --- the key the source was heard in ------------------------------------------------ */
 
 /* The key of the last chord that starts at or before the passage, else of the first chord; false when no chord names one. */
-static bool source_key(const CommonPracticeMaterials *materials, const DocumentChord *chords, size_t count, int measure,
+static bool source_key(const KnowledgeSnapshot *knowledge, const DocumentChord *chords, size_t count, int measure,
                        double beat, AnalysisKey *out) {
     const DocumentChord *found = NULL;
     for (size_t i = 0; i < count; i++) {
@@ -171,7 +171,7 @@ static bool source_key(const CommonPracticeMaterials *materials, const DocumentC
             break;
         }
     }
-    return found && request_parse_key(found->key_label, materials, out);
+    return found && request_parse_key(found->key_label, knowledge, out);
 }
 
 /* --- the motive ------------------------------------------------------------------- */
@@ -330,7 +330,7 @@ CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const ch
             size_t chord_count = 0;
             AnalysisKey from;
             if (read_chords(text, document, &chords, &chord_count, &stale) &&
-                source_key(&materials, chords, chord_count, match->start_measure, match->start_beat, &from)) {
+                source_key(knowledge, chords, chord_count, match->start_measure, match->start_beat, &from)) {
                 shift = transposition(match->notes[0].pitch, &from, key);
             }
             chords_free(chords, chord_count);

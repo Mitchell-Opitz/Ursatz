@@ -72,7 +72,7 @@ static ComposerStatus export_failure(ComposerError *error, const char *path, Pla
  * The motive as it sounds in the request's "render_key" (its own key without one), and as the files asked for by "midi"
  * and "musicxml", written into out. The failure paths /midi and /musicxml name the file that could not be made.
  */
-static ComposerStatus render_motive(const cJSON *request, const CommonPracticeMaterials *materials, const Motive *motive,
+static ComposerStatus render_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, const Motive *motive,
                                     Motive *rendered, ComposerResponse *out) {
     *rendered = *motive;
     const char *key_text = NULL;
@@ -87,7 +87,10 @@ static ComposerStatus render_motive(const cJSON *request, const CommonPracticeMa
     }
     if (has_key) {
         AnalysisKey key;
-        if (!request_parse_key(key_text, materials, &key)) {
+        if (!request_parse_key(key_text, knowledge, &key)) {
+            if (api_fail_unsupported_key(error, "/render_key", knowledge, key_text)) {
+                return COMPOSER_ERR_REQUEST;
+            }
             return api_fail(error, COMPOSER_ERR_REQUEST, "/render_key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",
@@ -129,14 +132,14 @@ static ComposerStatus render_motive(const cJSON *request, const CommonPracticeMa
 }
 
 /* The motive's input: text in the request, or the bytes of a MIDI file when bytes is not NULL. */
-static ComposerStatus analyze_request(const cJSON *request, const CommonPracticeMaterials *materials, const unsigned char *bytes,
+static ComposerStatus analyze_request(const cJSON *request, const KnowledgeSnapshot *knowledge, const unsigned char *bytes,
                                       size_t size, bool render, const ComposerJob *job, ComposerResponse *out) {
     if (job_step(job, "motive", 0, 1)) {
         return api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
     }
     Motive motive;
-    ComposerStatus status = bytes ? api_read_motive_bytes(request, "", materials, bytes, size, &motive, NULL, &out->error)
-                                  : api_read_motive(request, "", materials, &motive, NULL, &out->error);
+    ComposerStatus status = bytes ? api_read_motive_bytes(request, "", knowledge, bytes, size, &motive, NULL, &out->error)
+                                  : api_read_motive(request, "", knowledge, &motive, NULL, &out->error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -163,7 +166,7 @@ static ComposerStatus analyze_request(const cJSON *request, const CommonPractice
     }
     Motive rendered;
     if (render) {
-        status = render_motive(request, materials, &motive, &rendered, out);
+        status = render_motive(request, knowledge, &motive, &rendered, out);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -186,7 +189,7 @@ static ComposerStatus run_request(const ComposerContext *context, const char *re
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = analyze_request(request, &materials, bytes, size, render, job, out);
+    status = analyze_request(request, context->knowledge, bytes, size, render, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;

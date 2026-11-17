@@ -21,11 +21,23 @@ bool request_parse_whole_number(const char *text, unsigned long maximum, unsigne
 /* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
 bool request_parse_ratio(const char *text, ComposerRatio *out);
 
+/* The longest word after a key's tonic: "harmonic minor" and the like. */
+#define REQUEST_KEY_WORD_MAX 64
+
 /*
- * A tonic letter, an optional # or b, whitespace, then major or minor ("D minor", "F# major"); any case for the mode. The key's
- * material is the major or the natural minor of the materials (the call's, resolved once from its snapshot), its mode set from it.
+ * A tonic letter, an optional # or b, whitespace, then the word of a material the snapshot knows by its key word, id, name or alias
+ * (knowledge_snapshot_material_named: "D minor", "F# major", "G natural minor"; any case for the word), the key of that material. A
+ * word that names no material or a material the Composer does not compose in (composer_material_supported: anything but the major
+ * and the natural minor) is refused. False for a NULL snapshot.
  */
-bool request_parse_key(const char *text, const CommonPracticeMaterials *materials, AnalysisKey *key);
+bool request_parse_key(const char *text, const KnowledgeSnapshot *knowledge, AnalysisKey *key);
+
+/*
+ * Whether the key text is a tonic and the word of a material the snapshot knows but the Composer does not compose in ("C dorian",
+ * "C harmonic minor"): true, with message "the Composer writes major and minor keys; '<word>' is not one of them", for the callers to
+ * report in place of "unknown key". False for any other text (a key it refuses for another reason, or one it accepts).
+ */
+bool request_key_refusal(const char *text, const KnowledgeSnapshot *knowledge, char *message, size_t size);
 
 /* "3/4", "6/8": 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16. The meters the harmony operators support are checked by the caller (harmony_meter_supported). */
 bool request_parse_meter(const char *text, PlanMeter *meter);

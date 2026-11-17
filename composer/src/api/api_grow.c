@@ -301,7 +301,10 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         snprintf(tonic_key, sizeof tonic_key, "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!request_parse_key(key_text, out->materials, &out->key)) {
+    if (!request_parse_key(key_text, out->knowledge, &out->key)) {
+        if (api_fail_unsupported_key(error, "/key", out->knowledge, key_text)) {
+            return COMPOSER_ERR_REQUEST;
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",

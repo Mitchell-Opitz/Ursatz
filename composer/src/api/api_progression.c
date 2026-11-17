@@ -68,7 +68,7 @@ static bool present(const cJSON *request, const char *name) {
     return item && !cJSON_IsNull(item);
 }
 
-static ComposerStatus read_request(const cJSON *request, const CommonPracticeMaterials *materials, Options *options,
+static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
                                    ApiOutputs *outputs, ComposerError *error) {
     const char *cadence_text = NULL;
     const char *embellish_text = NULL;
@@ -88,7 +88,10 @@ static ComposerStatus read_request(const cJSON *request, const CommonPracticeMat
         !api_member_bool(request, "plans", &options->plans, &found, error)) {
         return COMPOSER_ERR_REQUEST;
     }
-    if (!request_parse_key(options->key_text, materials, &options->key)) {
+    if (!request_parse_key(options->key_text, knowledge, &options->key)) {
+        if (api_fail_unsupported_key(error, "/key", knowledge, options->key_text)) {
+            return COMPOSER_ERR_REQUEST;
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                         "for example \"D minor\"",
@@ -746,7 +749,7 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
         }
     }
     if (status == COMPOSER_OK) {
-        status = read_request(request, &materials, &options, &outputs, &out->error);
+        status = read_request(request, context->knowledge, &options, &outputs, &out->error);
         if (status == COMPOSER_OK) {
             options.job = job;
             seed = options.seed;

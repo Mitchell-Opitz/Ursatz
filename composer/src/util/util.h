@@ -64,6 +64,12 @@ bool composer_material_is_minor(const PitchMaterial *material);
 bool composer_material_valid(const PitchMaterial *material);
 
 /*
+ * Whether the Composer composes in the material: the major or the natural minor of the materials, and no other (the harmonic and
+ * the melodic minor are forms of the minor key, the modes and the rest are not keys it writes). The one check every key text passes.
+ */
+bool composer_material_supported(const CommonPracticeMaterials *materials, const PitchMaterial *material);
+
+/*
  * Whether the key reads as a minor key: its material has a minor third (common_practice_key_mode_of). False for a key with no
  * material (the zero key reads as major, as a request left at its defaults holds) or a material that is neither major nor
  * minor; the Composer writes keys that have one (P58 B13). Every read of a key's mode goes through this.

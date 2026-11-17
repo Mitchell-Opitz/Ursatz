@@ -30,7 +30,8 @@ static unsigned long mix_seed(unsigned long seed) {
 }
 
 /* Reads the members that make the options, without the style. drawn_mode and drawn_meter are set to what was drawn. */
-static ComposerStatus read_options(const cJSON *request, const CommonPracticeMaterials *materials, MotiveRandomOptions *out,
+static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
+                                   MotiveRandomOptions *out,
                                    bool *accompaniment, bool *has_role, const char **drawn_mode, const char **drawn_meter,
                                    ComposerPreferences *preferences, bool *has_preferences, ComposerError *error) {
     memset(out, 0, sizeof *out);
@@ -87,7 +88,10 @@ static ComposerStatus read_options(const cJSON *request, const CommonPracticeMat
                         "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8", meter_text);
     }
     if (has_key) {
-        if (!request_parse_key(key_text, materials, &out->key)) {
+        if (!request_parse_key(key_text, knowledge, &out->key)) {
+            if (api_fail_unsupported_key(error, "/key", knowledge, key_text)) {
+                return COMPOSER_ERR_REQUEST;
+            }
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",
@@ -200,7 +204,8 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
     return document;
 }
 
-static ComposerStatus make_random(const cJSON *request, const CommonPracticeMaterials *materials, const ComposerJob *job,
+static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
+                                  const ComposerJob *job,
                                   ComposerResponse *out) {
     ComposerError *error = &out->error;
     MotiveRandomOptions options;
@@ -210,7 +215,7 @@ static ComposerStatus make_random(const cJSON *request, const CommonPracticeMate
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, knowledge, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     if (status != COMPOSER_OK) {
         return status;
@@ -249,7 +254,6 @@ static ComposerStatus make_random(const cJSON *request, const CommonPracticeMate
 
 ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
                                    cJSON *filled, ComposerError *error) {
-    (void)knowledge;
     MotiveRandomOptions options;
     bool accompaniment = false;
     bool has_role = false;
@@ -257,7 +261,7 @@ ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const Com
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, knowledge, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     ComposerStyle *style = NULL;
     if (status == COMPOSER_OK) {
@@ -294,7 +298,7 @@ ComposerStatus composer_api_random_motive(const ComposerContext *context, const 
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = make_random(request, &materials, job, out);
+    status = make_random(request, context->knowledge, &materials, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;

@@ -354,13 +354,13 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
         setup->seeded = true;
         state->motive = setup->seed_found.motive;
     } else {
-        status = api_read_motive(state->line, "", state->setup.materials, &state->motive, NULL, error);
+        status = api_read_motive(state->line, "", state->setup.knowledge, &state->motive, NULL, error);
         if (status != COMPOSER_OK) {
             return status;
         }
     }
     if (state->accompaniment_line) {
-        status = api_read_motive(state->accompaniment_line, "/accompaniment_motive", state->setup.materials, &state->accompaniment_motive,
+        status = api_read_motive(state->accompaniment_line, "/accompaniment_motive", state->setup.knowledge, &state->accompaniment_motive,
                                 NULL, error);
         if (status != COMPOSER_OK) {
             return status;

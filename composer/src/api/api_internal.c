@@ -21,6 +21,15 @@ ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char 
     return status;
 }
 
+bool api_fail_unsupported_key(ComposerError *error, const char *path, const KnowledgeSnapshot *knowledge, const char *key_text) {
+    char message[REQUEST_KEY_WORD_MAX + 96];
+    if (!request_key_refusal(key_text, knowledge, message, sizeof message)) {
+        return false;
+    }
+    api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
+    return true;
+}
+
 ComposerStatus api_require_knowledge(const ComposerContext *context, CommonPracticeMaterials *materials, ComposerError *error) {
     if (!context || !context->knowledge) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "", "a knowledge snapshot is required");

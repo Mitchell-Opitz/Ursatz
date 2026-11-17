@@ -30,11 +30,11 @@ static bool default_string(cJSON *object, const char *name, const char *value) {
     return (item && !cJSON_IsNull(item)) || cJSON_AddStringToObject(object, name, value) != NULL;
 }
 
-static ComposerStatus validate_motive(const cJSON *request, const CommonPracticeMaterials *materials, cJSON *filled,
+static ComposerStatus validate_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, cJSON *filled,
                                       ComposerError *error) {
     Motive motive;
     MotiveOptions options;
-    ComposerStatus status = api_read_motive(request, "", materials, &motive, &options, error);
+    ComposerStatus status = api_read_motive(request, "", knowledge, &motive, &options, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -96,7 +96,7 @@ ComposerStatus composer_api_validate(const ComposerContext *context, const char 
     }
     if (status == COMPOSER_OK) {
         if (strcmp(kind, "motive") == 0) {
-            status = validate_motive(request, &materials, filled, error);
+            status = validate_motive(request, context->knowledge, filled, error);
         } else if (strcmp(kind, "theme") == 0) {
             status = api_theme_validate(context->knowledge, &materials, request, error);
         } else if (strcmp(kind, "piece") == 0) {
