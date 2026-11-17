@@ -84,17 +84,6 @@ int main(void) {
     assert(standard_form_input_add_analysis_note(&input, NULL, false) == STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(input.note_count == 2);
 
-    AnalysisSegment segment = {"seg-1", second_span, NULL, BEAT_STRENGTH_WEAK};
-    assert(standard_form_input_add_analysis_segment(&input, &segment, 2, 5) == STANDARD_FORM_ANALYSIS_OK);
-    assert(input.segment_count == 1);
-    assert(strcmp(input.segments[0].id, "seg-1") == 0);
-    assert(input.segments[0].span == second_span);
-    assert(input.segments[0].function == 2);
-    assert(input.segments[0].phrase_model_label == 5);
-    AnalysisSegment no_span = {"seg-2", NULL, NULL, BEAT_STRENGTH_WEAK};
-    assert(standard_form_input_add_analysis_segment(&input, &no_span, 0, 0) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
-    assert(standard_form_input_add_analysis_segment(&input, NULL, 0, 0) == STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
-
     standard_form_input_destroy(&input);
     note_event_destroy(first_event);
     note_event_destroy(second_event);

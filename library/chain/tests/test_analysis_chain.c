@@ -625,7 +625,7 @@ static void check_stage_inputs(const char *context, const AnalysisChain *c) {
     if (!CHECK(analysis_chain_galant_segments(c) != NULL)) abort();
     if (!CHECK(analysis_chain_harmony_inputs(c)->count == analysis_chain_segment_count(c))) abort();
     if (!CHECK(analysis_chain_form_input(c)->input.finished && analysis_chain_motive_input(c)->input.finished)) abort();
-    if (!CHECK(analysis_chain_form_input(c)->input.segment_count > 0 && analysis_chain_motive_input(c)->input.note_count > 0)) abort();
+    if (!CHECK(analysis_chain_motive_input(c)->input.note_count > 0)) abort();
     if (!CHECK(analysis_chain_voice_grid(c)->grid.voice_count == analysis_chain_voice_leading(c)->voice_count)) abort();
     if (!CHECK(analysis_chain_galant_segments(c)->list.count > 0)) abort();
 }

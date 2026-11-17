@@ -908,16 +908,6 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
         }
         current_end = time_span_end(window);
     }
-    for (size_t s = 0; s < segments->count && status == CHAIN_INPUT_OK; s++) {
-        const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
-        int measure = measure_of(notes->map, time_span_start(window));
-        if (measure >= first_measure && measure <= last_measure) {
-            AnalysisSegment segment = {segments->ids[s], window, NULL, BEAT_STRENGTH_WEAK};
-            if (standard_form_input_add_analysis_segment(&build.input, &segment, 0, 0) != STANDARD_FORM_ANALYSIS_OK) {
-                status = CHAIN_INPUT_ERR_BAD_NOTES;
-            }
-        }
-    }
     free(keys);
     if (status == CHAIN_INPUT_OK) {
         status = add_cadences(&build, segments, cadences);

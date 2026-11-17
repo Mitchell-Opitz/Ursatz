@@ -40,7 +40,6 @@ void standard_form_input_destroy(StandardFormInput *input) {
     }
     free(input->cadences);
     free(input->notes);
-    free(input->segments);
     free(input->bass_notes);
     const MeterMap *map = input->map;
     memset(input, 0, sizeof(*input));
@@ -196,37 +195,6 @@ StandardFormAnalysisStatus standard_form_input_add_analysis_note(StandardFormInp
     }
     return bass ? standard_form_input_add_bass_note(input, note->note_id, note->event, note->span, NULL, note->midi)
                 : standard_form_input_add_note(input, note->note_id, note->event, note->span, NULL, note->midi);
-}
-
-StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *input, const char *id,
-                                                           const TimeSpan *span, int function, int phrase_model_label) {
-    if (input == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
-    }
-    if (span == NULL || !score_time_span(span, NULL, NULL)) {
-        return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
-    }
-    if (!grow((void **)&input->segments, &input->segment_capacity, input->segment_count, sizeof(StandardFormSegment))) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    StandardFormSegment *segment = &input->segments[input->segment_count];
-    memset(segment, 0, sizeof(*segment));
-    if (!copy_id(segment->id, sizeof(segment->id), id)) {
-        return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
-    }
-    segment->span = span;
-    segment->function = function;
-    segment->phrase_model_label = phrase_model_label;
-    input->segment_count++;
-    return STANDARD_FORM_ANALYSIS_OK;
-}
-
-StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardFormInput *input, const AnalysisSegment *segment,
-                                                                    int function, int phrase_model_label) {
-    if (input == NULL || segment == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
-    }
-    return standard_form_input_add_segment(input, segment->id, segment->span, function, phrase_model_label);
 }
 
 static int compare_cadences(const void *a, const void *b) {

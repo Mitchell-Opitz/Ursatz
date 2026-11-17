@@ -6,7 +6,6 @@
 
 #include "model/events/note_event.h"
 #include "analysis/notes/analysis_note.h"
-#include "analysis/notes/analysis_segment.h"
 #include "theory/vocabulary/cadence_type.h"
 #include "analysis/notes/contour.h"
 #include "theory/vocabulary/motive_occurrence_kind.h"
@@ -62,13 +61,6 @@ typedef struct {
 } StandardFormNote;
 
 typedef struct {
-    char id[64];
-    const TimeSpan *span;
-    int function;
-    int phrase_model_label;
-} StandardFormSegment;
-
-typedef struct {
     const MeterMap *map;
     StandardFormCadence *cadences;
     size_t cadence_count;
@@ -76,9 +68,6 @@ typedef struct {
     StandardFormNote *notes;
     size_t note_count;
     size_t note_capacity;
-    StandardFormSegment *segments;
-    size_t segment_count;
-    size_t segment_capacity;
     StandardFormNote *bass_notes; /* the optional bass line, same shape as the soprano's */
     size_t bass_count;
     size_t bass_capacity;
@@ -114,11 +103,6 @@ StandardFormAnalysisStatus standard_form_input_add_analysis_note(StandardFormInp
    motive analysis a generic (scale-step) interval, so a diatonic sequence matches. BAD_INPUT for an index out of range. */
 StandardFormAnalysisStatus standard_form_input_set_degree(StandardFormInput *input, bool bass, size_t index, int degree,
                                                           int alteration);
-StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *input, const char *id,
-                                                           const TimeSpan *span, int function, int phrase_model_label);
-/* Adds an AnalysisSegment (id and span) with the function and phrase model label the caller reads for it. */
-StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardFormInput *input, const AnalysisSegment *segment,
-                                                                    int function, int phrase_model_label);
 /* Fills the interval and contour to the next note and sorts the cadences by arrival. Call once, after the last add. */
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);

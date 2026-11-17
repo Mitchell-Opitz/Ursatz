@@ -281,7 +281,7 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(chain_build_form_input(&piece->set, &aligned, NULL, &aligned_lines, 1, 4, &cadences, &form) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
     assert(chain_build_form_input(&piece->set, &aligned, &aligned, &aligned_lines, 1, 4, &cadences, &form) == CHAIN_INPUT_OK);
     assert(form.input.finished && form.input.note_count > 0 && form.input.note_count <= 16);
-    assert(form.input.segment_count == aligned.count && form.input.cadence_count == cadences.count);
+    assert(form.input.cadence_count == cadences.count);
     assert(form.input.notes[0].semitone == 76); /* E5 */
     chain_form_input_destroy(&form);
     assert(chain_build_form_input(&piece->set, &aligned, &aligned, &aligned_lines, 3, 3, NULL, &form) == CHAIN_INPUT_OK);
