@@ -2,8 +2,17 @@
 # (R-241). Sources are added as the chain grows.
 add_library(ursatz_chain
     analysis_chain.c
-    chain_inputs.c
     chain_inputs_common.c
+    chain_inputs_segments.c
+    chain_inputs_keys.c
+    chain_inputs_outer_voices.c
+    chain_inputs_cadences.c
+    chain_inputs_form.c
+    chain_inputs_meter.c
+    chain_inputs_texture.c
+    chain_inputs_voice_leading.c
+    chain_inputs_melody.c
+    chain_inputs_schemas.c
     form_bridge.c
     kernel_owners.c
 )
